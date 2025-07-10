@@ -55,15 +55,11 @@ export const shouldHideToggle = (data: ReportDetectionData): boolean => {
     return true;
   }
   
-  // Hide toggle if we don't have both content types
+  // Hide toggle only if we have neither content type
   const hasMeaningfulReportContent = reportContent && reportContent.trim().length > 20;
   const hasSwissData = !!swissData;
   
-  if (!hasMeaningfulReportContent || !hasSwissData) {
-    return true;
-  }
-  
-  return false;
+  return !(hasMeaningfulReportContent || hasSwissData);
 };
 
 /**

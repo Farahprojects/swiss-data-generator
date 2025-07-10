@@ -40,6 +40,12 @@ export const ReportHeader = ({
   swissBoolean,
   isPureAstroReport
 }: ReportHeaderProps) => {
+  // Debug logging to verify props
+  console.log("ReportHeader props:", {
+    reportPdfData,
+    swissData,
+    reportContent,
+  });
   // Use utility function for reliable toggle detection
   const reportData = { reportContent, swissData, swissBoolean, hasReport };
   const hideToggle = shouldHideToggle(reportData);
@@ -94,22 +100,19 @@ export const ReportHeader = ({
               <Copy className="h-4 w-4" />
               Copy
             </Button>
-            {reportPdfData && (
+            {(reportPdfData || swissData) && (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={onDownloadPdf}
-                className="flex items-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                PDF
-              </Button>
-            )}
-            {swissData && onDownloadAstroPdf && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onDownloadAstroPdf}
+                onClick={() => {
+                  if (reportPdfData && swissData) {
+                    onDownloadAstroPdf?.(); // Combined version
+                  } else if (reportPdfData) {
+                    onDownloadPdf();
+                  } else if (swissData) {
+                    onDownloadAstroPdf?.();
+                  }
+                }}
                 className="flex items-center gap-2"
               >
                 <Download className="h-4 w-4" />
