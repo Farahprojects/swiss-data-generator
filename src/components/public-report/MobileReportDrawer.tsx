@@ -16,6 +16,7 @@ import { X } from 'lucide-react';
 import { useMobileDrawerForm } from '@/hooks/useMobileDrawerForm';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
+import { clearGuestReportId, getGuestReportId } from '@/utils/urlHelpers';
 import Step1ReportType from './drawer-steps/Step1ReportType';
 import Step1_5SubCategory from './drawer-steps/Step1_5SubCategory';
 import Step1_5AstroData from './drawer-steps/Step1_5AstroData';
@@ -210,6 +211,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     setSubmittedData(null);
     setReportData(null);
     setKeyboardVisible(false);
+    clearGuestReportId(); // Clear URL and localStorage
   };
 
   const promoValidationState = useMemo(
@@ -475,7 +477,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
               name={submittedData.name}
               email={submittedData.email}
               onViewReport={handleViewReport}
-              guestReportId={localStorage.getItem('currentGuestReportId') || undefined}
+              guestReportId={getGuestReportId() || undefined}
             />
           </div>
         )}

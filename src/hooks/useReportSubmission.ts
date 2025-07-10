@@ -7,6 +7,7 @@ import { buildCompleteReportType } from '@/services/report-pricing';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { ReportFormData } from '@/types/public-report';
 import { logToAdmin } from '@/utils/adminLogger';
+import { storeGuestReportId } from '@/utils/urlHelpers';
 
 interface PromoValidationState {
   status: 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid';
@@ -133,8 +134,8 @@ export const useReportSubmission = () => {
         const result = await createFreeReport(data.promoCode, reportData);
         
         setReportCreated(true);
-        // Store the guest report ID for polling
-        localStorage.setItem('currentGuestReportId', result.reportId);
+        // Store the guest report ID for polling and URL
+        storeGuestReportId(result.reportId);
         toast({
           title: "Free Report Created!",
           description: "Your report has been generated and will be sent to your email shortly.",

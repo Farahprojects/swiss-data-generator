@@ -8,6 +8,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { motion } from 'framer-motion';
 import { logToAdmin } from '@/utils/adminLogger';
 import { useNavigate } from 'react-router-dom';
+import { getGuestReportId } from '@/utils/urlHelpers';
 
 type ReportType = 'essence' | 'sync';
 const VIDEO_SRC = 'https://auth.theraiastro.com/storage/v1/object/public/therai-assets/loading-video.mp4';
@@ -65,9 +66,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     caseNumber,
     fetchReport,
     triggerErrorHandling,
-    fetchReportContent,
-    fetchAstroData,
-    fetchBothReportData,
+    fetchCompleteReport,
     setupRealtimeListener,
   } = useGuestReportStatus();
 
@@ -94,45 +93,48 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   }, []);
 
   const handleViewReport = useCallback(async () => {
-    const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
-    if (!reportIdToUse || !onViewReport) return;
+    if (!onViewReport) return;
 
-    // Check if this is a Swiss-only report first
-    const isSwissOnly = report?.swiss_boolean === true || reportType === 'essence' || reportType === 'sync';
-    
-    console.log('🔄 SuccessScreen - Report detection:', {
-      reportType,
-      swiss_boolean: report?.swiss_boolean,
-      has_report: report?.has_report,
-      isSwissOnly
-    });
-
-    if (isSwissOnly) {
-      // For Swiss-only reports, only fetch astro data and pass empty report content
-      console.log('🔬 Swiss-only report detected - fetching only astro data');
-      const swissData = await fetchAstroData(reportIdToUse);
+    try {
+      console.log('🔄 SuccessScreen - Fetching complete report data');
       
+      const reportData = await fetchCompleteReport(guestReportId);
+      
+      console.log('✅ Report data received:', {
+        content_type: reportData.metadata.content_type,
+        has_report_content: !!reportData.report_content,
+        has_swiss_data: !!reportData.swiss_data
+      });
+
+      // Extract content based on type
+      let reportContent = '';
+      if (reportData.metadata.is_ai_report && reportData.report_content) {
+        reportContent = reportData.report_content;
+      } else if (reportData.metadata.is_astro_report && reportData.swiss_data?.report?.content) {
+        reportContent = reportData.swiss_data.report.content;
+      } else if (reportData.metadata.is_astro_report && typeof reportData.swiss_data?.report === 'string') {
+        reportContent = reportData.swiss_data.report;
+      }
+
       onViewReport(
-        '', // Empty report content for Swiss-only reports
-        null, 
-        swissData,
-        false, // hasReport = false for Swiss-only
-        true   // swissBoolean = true for Swiss-only
+        reportContent || 'Report content could not be loaded',
+        null, // PDF data
+        reportData.swiss_data,
+        reportData.metadata.is_ai_report,
+        reportData.metadata.is_astro_report
       );
-    } else {
-      // For regular reports, fetch both content types
-      console.log('🔄 Regular report - fetching both report and Swiss data');
-      const { reportContent, swissData } = await fetchBothReportData(reportIdToUse);
       
+    } catch (error) {
+      console.error('❌ Error fetching report data:', error);
       onViewReport(
-        reportContent ?? 'Report content could not be loaded', 
-        null, 
-        swissData,
-        report?.has_report ?? true,
-        report?.swiss_boolean ?? false
+        'Failed to load report content. Please try again.',
+        null,
+        null,
+        false,
+        false
       );
     }
-  }, [guestReportId, onViewReport, reportType, fetchBothReportData, fetchAstroData, report?.swiss_boolean, report?.has_report]);
+  }, [guestReportId, onViewReport, fetchCompleteReport]);
 
   useEffect(() => {
     const scrollToProcessing = () => {
@@ -141,7 +143,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     };
     scrollToProcessing();
 
-    const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
+    const reportIdToUse = guestReportId || getGuestReportId();
     if (reportIdToUse) {
       fetchReport(reportIdToUse);
       
@@ -163,7 +165,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       countdownRef.current = setTimeout(() => {
         setCountdown((c) => {
           if (c <= 1) {
-            const reportIdToUse = guestReportId || localStorage.getItem('currentGuestReportId');
+            const reportIdToUse = guestReportId || getGuestReportId();
             if (reportIdToUse) triggerErrorHandling(reportIdToUse);
             return 0;
           }

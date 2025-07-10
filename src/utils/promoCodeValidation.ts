@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { storeGuestReportId } from '@/utils/urlHelpers';
 
 export interface PromoCodeValidation {
   isValid: boolean;
@@ -121,6 +122,9 @@ export const createFreeReport = async (promoCode: string, reportData: any) => {
     }
 
     console.log('✅ Guest report created:', guestReport.id);
+
+    // Store guest report ID in URL and localStorage
+    storeGuestReportId(guestReport.id);
 
     // Update promo code usage count
     const { error: updateError } = await supabase

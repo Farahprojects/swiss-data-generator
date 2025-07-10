@@ -11,6 +11,7 @@ import SuccessScreen from '@/components/public-report/SuccessScreen';
 import DesktopReportViewer from '@/components/public-report/DesktopReportViewer';
 import { FormValidationStatus } from '@/components/public-report/FormValidationStatus';
 import { logToAdmin } from '@/utils/adminLogger';
+import { clearGuestReportId, getGuestReportId } from '@/utils/urlHelpers';
 
 interface ReportFormProps {
   coachSlug?: string;
@@ -62,9 +63,18 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     },
   });
 
-  // Clear old state and localStorage on component mount to prevent stale success screens
+  // Handle URL guest_id parameter for refresh support
   React.useEffect(() => {
-    localStorage.removeItem('currentGuestReportId');
+    const urlGuestId = getGuestReportId();
+    if (urlGuestId) {
+      // If there's a guest ID in URL, we're likely in a refresh scenario
+      // Don't clear it - let SuccessScreen handle the flow
+      console.log('🔄 Found guest report ID in URL:', urlGuestId);
+      return;
+    }
+    
+    // Only clear if no URL guest ID (fresh start)
+    clearGuestReportId();
     localStorage.removeItem('pending_report_email');
   }, []);
 
@@ -171,7 +181,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     setHasReport(false);
     setSwissBoolean(false);
     form.reset();
-    localStorage.removeItem('currentGuestReportId');
+    clearGuestReportId();
     localStorage.removeItem('pending_report_email');
     resetReportState();
     // Form reset handled by React state - no page reload needed
@@ -231,14 +241,15 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
 
-  if (reportCreated && userName && userEmail) {
-    const guestReportId = localStorage.getItem('currentGuestReportId');
+  // Show success screen if report was created OR if there's a guest ID in URL (refresh case)
+  const urlGuestId = getGuestReportId();
+  if ((reportCreated && userName && userEmail) || urlGuestId) {
     return (
       <SuccessScreen 
-        name={userName} 
-        email={userEmail} 
+        name={userName || 'Guest'} 
+        email={userEmail || 'guest@example.com'} 
         onViewReport={handleViewReport}
-        guestReportId={guestReportId || undefined}
+        guestReportId={urlGuestId || undefined}
       />
     );
   }

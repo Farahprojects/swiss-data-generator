@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { getGuestReportId } from '@/utils/urlHelpers';
 
 interface GuestReport {
   id: string;
@@ -25,13 +26,14 @@ interface UseGuestReportStatusReturn {
   isLoading: boolean;
   error: string | null;
   caseNumber: string | null;
-  fetchReport: (guestReportId: string) => Promise<void>;
-  triggerErrorHandling: (guestReportId: string) => Promise<void>;
-  fetchReportContent: (guestReportId: string) => Promise<string | null>;
-  fetchAstroData: (guestReportId: string) => Promise<string | null>;
-  fetchBothReportData: (guestReportId: string) => Promise<ReportData>;
+  fetchReport: (guestReportId?: string) => Promise<void>;
+  triggerErrorHandling: (guestReportId?: string) => Promise<void>;
+  fetchReportContent: (guestReportId?: string) => Promise<string | null>;
+  fetchAstroData: (guestReportId?: string) => Promise<string | null>;
+  fetchBothReportData: (guestReportId?: string) => Promise<ReportData>;
+  fetchCompleteReport: (guestReportId?: string) => Promise<any>;
   isAstroReport: (reportType: string | null) => boolean;
-  setupRealtimeListener: (guestReportId: string, onReportReady?: () => void) => () => void;
+  setupRealtimeListener: (guestReportId?: string, onReportReady?: () => void) => () => void;
 }
 
 export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
@@ -65,15 +67,21 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     }
   }, []);
 
-  const fetchReport = useCallback(async (guestReportId: string) => {
+  const fetchReport = useCallback(async (guestReportId?: string) => {
+    const reportId = guestReportId || getGuestReportId();
+    if (!reportId) {
+      console.warn('No guest report ID available');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      console.log('🔍 Fetching report status for guest ID:', guestReportId);
+      console.log('🔍 Fetching report status for guest ID:', reportId);
 
       const { data, error } = await supabase
         .from('guest_reports')
         .select('*')
-        .eq('id', guestReportId)
+        .eq('id', reportId)
         .single();
 
       if (error && error.code !== 'PGRST116') {
@@ -91,7 +99,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
         setReport(data);
         setError(null);
       } else {
-        console.log('❌ No report found for guest ID:', guestReportId);
+        console.log('❌ No report found for guest ID:', reportId);
         setReport(null);
       }
     } catch (err) {
@@ -102,12 +110,15 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     }
   }, []);
 
-  const fetchReportContent = useCallback(async (guestReportId: string) => {
+  const fetchReportContent = useCallback(async (guestReportId?: string) => {
+    const reportId = guestReportId || getGuestReportId();
+    if (!reportId) return null;
+
     try {
       const { data, error } = await supabase
         .from('guest_reports')
         .select(`report_log_id, report_logs!inner(report_text)`)
-        .eq('id', guestReportId)
+        .eq('id', reportId)
         .single();
 
       if (error) {
@@ -122,12 +133,15 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     }
   }, []);
 
-  const fetchAstroData = useCallback(async (guestReportId: string) => {
+  const fetchAstroData = useCallback(async (guestReportId?: string) => {
+    const reportId = guestReportId || getGuestReportId();
+    if (!reportId) return null;
+
     try {
       const { data: guestData, error: guestError } = await supabase
         .from('guest_reports')
         .select('translator_log_id')
-        .eq('id', guestReportId)
+        .eq('id', reportId)
         .single();
 
       if (guestError) {
@@ -170,19 +184,22 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     }
   }, []);
 
-  const fetchBothReportData = useCallback(async (guestReportId: string): Promise<ReportData> => {
+  const fetchBothReportData = useCallback(async (guestReportId?: string): Promise<ReportData> => {
+    const reportId = guestReportId || getGuestReportId();
+    if (!reportId) return { reportContent: null, swissData: null };
+
     try {
       // Fetch both report content and Swiss data in parallel
       const [reportContent, astroDataRaw] = await Promise.all([
-        fetchReportContent(guestReportId),
-        fetchAstroData(guestReportId)
+        fetchReportContent(reportId),
+        fetchAstroData(reportId)
       ]);
 
       // Get raw Swiss data for formatting
       const { data: guestData } = await supabase
         .from('guest_reports')
         .select('translator_log_id')
-        .eq('id', guestReportId)
+        .eq('id', reportId)
         .single();
 
       let swissData = null;
@@ -205,15 +222,44 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     }
   }, [fetchReportContent, fetchAstroData]);
 
+  const fetchCompleteReport = useCallback(async (guestReportId?: string) => {
+    const reportId = guestReportId || getGuestReportId();
+    if (!reportId) {
+      throw new Error('No guest report ID available');
+    }
+
+    try {
+      console.log('🔄 Fetching complete report data using get-guest-report endpoint');
+      
+      const { data, error } = await supabase.functions.invoke('get-guest-report', {
+        body: { id: reportId }
+      });
+
+      if (error) {
+        console.error('❌ Error fetching complete report:', error);
+        throw new Error(`Failed to fetch report: ${error.message}`);
+      }
+
+      console.log('✅ Complete report data fetched:', data.metadata);
+      return data;
+    } catch (err) {
+      console.error('❌ Error in fetchCompleteReport:', err);
+      throw err;
+    }
+  }, []);
+
   const isAstroReport = useCallback((reportType: string | null) => {
     if (!reportType) return false;
     const type = reportType.toLowerCase();
     return type === 'sync' || type === 'essence';
   }, []);
 
-  const triggerErrorHandling = useCallback(async (guestReportId: string) => {
+  const triggerErrorHandling = useCallback(async (guestReportId?: string) => {
+    const reportId = guestReportId || getGuestReportId();
+    if (!reportId) return;
+
     const case_number = await logUserError(
-      guestReportId,
+      reportId,
       'timeout_no_report',
       'Report not found after timeout'
     );
@@ -221,22 +267,28 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     setError('We are looking into this issue. Please reference your case number if you contact support.');
   }, [logUserError]);
 
-  const setupRealtimeListener = useCallback((guestReportId: string, onReportReady?: () => void) => {
-    console.log('🔄 Setting up realtime listener for guest report:', guestReportId);
+  const setupRealtimeListener = useCallback((guestReportId?: string, onReportReady?: () => void) => {
+    const reportId = guestReportId || getGuestReportId();
+    if (!reportId) {
+      console.warn('No guest report ID available for realtime listener');
+      return () => {};
+    }
+
+    console.log('🔄 Setting up realtime listener for guest report:', reportId);
 
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current);
     }
 
     const channel = supabase
-      .channel(`guest-report-${guestReportId}`)
+      .channel(`guest-report-${reportId}`)
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
           table: 'guest_reports',
-          filter: `id=eq.${guestReportId}`
+          filter: `id=eq.${reportId}`
         },
         async (payload) => {
           const updatedRecord = payload.new as GuestReport & { modal_ready?: boolean };
@@ -288,6 +340,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     fetchReportContent,
     fetchAstroData,
     fetchBothReportData,
+    fetchCompleteReport,
     isAstroReport,
     setupRealtimeListener,
   };
