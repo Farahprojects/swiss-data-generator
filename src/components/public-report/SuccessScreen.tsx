@@ -243,7 +243,15 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
 
   const StatusIcon = status.icon;
 
-  const handleTryAgain = () => navigate('/report');
+  const handleTryAgain = async () => {
+    if (currentGuestReportId) {
+      setError(null);
+      setCaseNumber(null);
+      await fetchReport(currentGuestReportId);
+    } else {
+      navigate('/report');
+    }
+  };
   
   const handleBackToForm = () => {
     clearAllSessionData();
