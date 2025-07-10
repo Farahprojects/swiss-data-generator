@@ -241,9 +241,9 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     }
   };
   
-  const handleBackToHome = () => {
+  const handleBackToForm = () => {
     clearAllSessionData();
-    navigate('/');
+    navigate('/report');
   };
   
   const handleContactSupport = () => {
