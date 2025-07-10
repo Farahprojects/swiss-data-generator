@@ -223,6 +223,17 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const StatusIcon = status.icon;
 
   const handleTryAgain = () => navigate('/');
+  
+  const handleBackToForm = () => {
+    // Clear all state memory
+    localStorage.removeItem('currentGuestReportId');
+    localStorage.removeItem('reportFormData');
+    window.history.replaceState({}, '', window.location.pathname);
+    
+    // Navigate back to form
+    navigate('/');
+  };
+  
   const handleContactSupport = () => {
     const errorMessage = `Hi, I'm experiencing an issue with my report generation.\n\nReport Details:\n- Name: ${name}\n- Email: ${email}\n- Report ID: ${guestReportId || 'N/A'}\n- Case Number: ${caseNumber || 'N/A'}\n- Time: ${new Date().toLocaleString()}\n`;
     localStorage.setItem('contactFormPrefill', JSON.stringify({ name, email, subject: 'Report Issue', message: errorMessage }));
@@ -316,9 +327,14 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                   Hi {firstName}! Your report is ready. <br />
                   <span className="font-medium">{email}</span>
                 </div>
-                <Button onClick={handleViewReport} className="bg-gray-900 hover:bg-gray-800 text-white font-light">
-                  View Report
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Button onClick={handleViewReport} className="bg-gray-900 hover:bg-gray-800 text-white font-light">
+                    View Report
+                  </Button>
+                  <Button variant="outline" onClick={handleBackToForm} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
+                    Back to Form
+                  </Button>
+                </div>
               </>
             )}
             {error && (
