@@ -56,7 +56,7 @@ const VideoLoader: React.FC<{ onVideoReady?: () => void }> = ({ onVideoReady }) 
 interface SuccessScreenProps {
   name: string;
   email: string;
-  onViewReport?: (content: string, pdf?: string | null, swissData?: any, hasReport?: boolean, swissBoolean?: boolean) => void;
+  onViewReport?: (content: string, pdf?: string | null, swissData?: any, hasReport?: boolean, swissBoolean?: boolean, reportType?: string) => void;
   guestReportId?: string;
 }
 
@@ -152,7 +152,8 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
         null, // PDF data
         swissData, // Swiss data from edge function
         hasAiReport,
-        hasAstroData
+        hasAstroData,
+        data.metadata?.report_type || report?.report_type // Pass the report type
       );
       
     } catch (error) {

@@ -33,6 +33,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const [swissData, setSwissData] = useState<any>(null);
   const [hasReport, setHasReport] = useState<boolean>(false);
   const [swissBoolean, setSwissBoolean] = useState<boolean>(false);
+  const [currentReportType, setCurrentReportType] = useState<string>('');
   
   const form = useForm<ReportFormData>({
     mode: 'onBlur',
@@ -161,13 +162,15 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     pdfData?: string | null, 
     swissData?: any,
     hasReport?: boolean,
-    swissBoolean?: boolean
+    swissBoolean?: boolean,
+    reportType?: string
   ) => {
     setReportContent(content);
     setReportPdfData(pdfData || null);
     setSwissData(swissData);
     setHasReport(hasReport || false);
     setSwissBoolean(swissBoolean || false);
+    setCurrentReportType(reportType || '');
     setViewingReport(true);
   };
 
@@ -252,6 +255,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         onBack={handleCloseReportViewer}
         hasReport={hasReport}
         swissBoolean={swissBoolean}
+        reportType={currentReportType}
       />
     );
   }

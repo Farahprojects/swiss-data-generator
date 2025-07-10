@@ -16,6 +16,7 @@ interface DesktopReportViewerProps {
   onBack: () => void;
   hasReport?: boolean;
   swissBoolean?: boolean;
+  reportType?: string;
 }
 
 const DesktopReportViewer = ({ 
@@ -25,7 +26,8 @@ const DesktopReportViewer = ({
   swissData,
   onBack,
   hasReport,
-  swissBoolean
+  swissBoolean,
+  reportType
 }: DesktopReportViewerProps) => {
   const { toast } = useToast();
   const [isCopyCompleted, setIsCopyCompleted] = useState(false);
@@ -159,7 +161,8 @@ const DesktopReportViewer = ({
         reportContent: reportContent,
         swissData: swissData,
         customerName: customerName,
-        reportPdfData: reportPdfData
+        reportPdfData: reportPdfData,
+        reportType: reportType
       });
 
       // Determine what was included for the toast message

@@ -242,7 +242,8 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     reportPdfData?: string | null,
     swissData?: any,
     hasReport?: boolean,
-    swissBoolean?: boolean
+    swissBoolean?: boolean,
+    reportType?: string
   ) => {
     setReportData({ 
       content: reportContent, 
