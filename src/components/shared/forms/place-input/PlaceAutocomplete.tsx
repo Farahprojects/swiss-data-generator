@@ -74,7 +74,7 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
     };
 
     const handleShowFallback = () => {
-      console.log('🔄 Switching to server-based autocomplete due to Web Components issues');
+      // Switch to server-based autocomplete due to Web Components issues
       setShowFallback(true);
       setUseServerAutocomplete(true);
       setHasTriedWebComponents(true);

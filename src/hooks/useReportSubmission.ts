@@ -96,7 +96,7 @@ export const useReportSubmission = () => {
 
       // Handle free report with promo code
       if (data.promoCode && validatedPromo?.isFree && validatedPromo.isValid) {
-        console.log('Processing free report with promo code:', data.promoCode);
+        // Processing free report with promo code
         
         // FIXED: Use request field for astro data detection
         const isAstroData = data.request && data.request.trim() !== '';

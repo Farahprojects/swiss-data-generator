@@ -61,7 +61,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
         return null;
       }
 
-      console.log('📝 Logged error successfully');
+      // Error logged successfully
       return data?.case_number || 'CASE-' + Date.now();
     } catch (err) {
       console.error('❌ Error logging user error:', err);
@@ -78,7 +78,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
 
     setIsLoading(true);
     try {
-      console.log('🔍 Fetching report status for guest ID:', reportId);
+      // Fetching report status
 
       const { data, error } = await supabase
         .from('guest_reports')
@@ -91,17 +91,9 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
       }
 
       if (data) {
-        console.log('📊 Report status:', {
-          id: data.id,
-          has_report: data.has_report,
-          payment_status: data.payment_status,
-          created_at: data.created_at,
-          swiss_boolean: data.swiss_boolean,
-        });
         setReport(data);
         setError(null);
       } else {
-        console.log('❌ No report found for guest ID:', reportId);
         setReport(null);
       }
     } catch (err) {
@@ -231,7 +223,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     }
 
     try {
-      console.log('🔄 Fetching complete report data using get-guest-report endpoint');
+      // Fetching complete report data
       
       const { data, error } = await supabase.functions.invoke('get-guest-report', {
         body: { guest_id: reportId }
@@ -242,7 +234,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
         throw new Error(`Failed to fetch report: ${error.message}`);
       }
 
-      console.log('✅ Complete report data fetched:', data.metadata);
+      // Complete report data fetched
       return data;
     } catch (err) {
       console.error('❌ Error in fetchCompleteReport:', err);
@@ -288,7 +280,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
       return () => {};
     }
 
-    console.log('🔄 Setting up realtime listener for guest report:', reportId);
+    // Setting up realtime listener
 
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current);
@@ -315,23 +307,15 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
           const shouldTriggerModal = updatedRecord.modal_ready === true;
 
           if (isReportReady || shouldTriggerModal) {
-            console.log('✅ Report ready:', {
-              swiss_boolean: updatedRecord.swiss_boolean,
-              has_report: updatedRecord.has_report,
-              translator_log_id: !!updatedRecord.translator_log_id,
-              report_log_id: !!updatedRecord.report_log_id,
-              modal_ready: updatedRecord.modal_ready
-            });
             setReport(updatedRecord);
             if (shouldTriggerModal) {
-              console.log('🔥 Modal ready flag detected - triggering modal');
             }
             onReportReady?.();
           }
         }
       )
       .subscribe((status) => {
-        console.log('📡 Realtime subscription status:', status);
+        // Realtime subscription status updated
       });
 
     channelRef.current = channel;

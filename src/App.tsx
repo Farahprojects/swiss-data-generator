@@ -52,10 +52,7 @@ const queryClient = new QueryClient({
 function App() {
   // SSR Environment Detection
   if (typeof window === 'undefined') {
-    console.log('[🧠 SSR ENVIRONMENT DETECTED]');
-    console.log('[🧠 SSR] App.tsx is rendering on server');
-  } else {
-    console.log('[🌐 CLIENT ENVIRONMENT DETECTED]');
+  // Production ready - no environment logging
   }
 
   // Guard against SSR - only render full app in browser

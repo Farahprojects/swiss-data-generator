@@ -12,10 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import Logo from '@/components/Logo';
 
 const PublicReport = () => {
-  // Debug logging reduced to prevent spam
-  if (typeof window === 'undefined') {
-    console.log('[🧠 SSR] PublicReport.tsx is rendering on server');
-  }
+  // Production ready - no debug logs
 
   // Hard fail test for SSR debugging (uncomment to test error boundary)
   // if (typeof window === 'undefined') {
@@ -46,26 +43,7 @@ const PublicReport = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Global error handlers to catch client-side errors
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const handleError = (event: ErrorEvent) => {
-        console.error('[CLIENT ERROR]', event?.error || event?.message || event);
-      };
-
-      const handleRejection = (event: PromiseRejectionEvent) => {
-        console.error('[CLIENT PROMISE ERROR]', event?.reason || event);
-      };
-
-      window.addEventListener('error', handleError);
-      window.addEventListener('unhandledrejection', handleRejection);
-
-      return () => {
-        window.removeEventListener('error', handleError);
-        window.removeEventListener('unhandledrejection', handleRejection);
-      };
-    }
-  }, []);
+  // Production ready - no error logging to console
 
   // Removed diagnostic code that was leaking database data to console
 
@@ -329,7 +307,6 @@ const PublicReport = () => {
       </div>
     );
   } catch (err: any) {
-    console.error('[REPORT RUNTIME ERROR]', err);
     return <div>Sorry, something went wrong.</div>;
   }
 };

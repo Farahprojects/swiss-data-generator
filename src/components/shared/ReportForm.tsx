@@ -69,7 +69,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     if (urlGuestId) {
       // If there's a guest ID in URL, we're likely in a refresh scenario
       // Don't clear it - let SuccessScreen handle the flow
-      console.log('🔄 Found guest report ID in URL:', urlGuestId);
       return;
     }
     

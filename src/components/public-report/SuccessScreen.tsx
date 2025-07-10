@@ -99,15 +99,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     if (!onViewReport) return;
 
     try {
-      console.log('🔄 SuccessScreen - Fetching complete report data');
-      
       const reportData = await fetchCompleteReport(guestReportId);
-      
-      console.log('✅ Report data received:', {
-        content_type: reportData.metadata.content_type,
-        has_report_content: !!reportData.report_content,
-        has_swiss_data: !!reportData.swiss_data
-      });
 
       // Extract content based on type
       let reportContent = '';
@@ -152,7 +144,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       
       // Setup realtime listener to auto-trigger modal
       const cleanup = setupRealtimeListener(reportIdToUse, () => {
-        console.log('🔥 Realtime detected report ready - auto-triggering modal');
         if (!modalTriggered) {
           setModalTriggered(true);
           handleViewReport();
@@ -177,7 +168,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
           if (error) {
             console.error('Failed to log missing ID error:', error);
           } else {
-            console.log('📝 Logged missing ID error with case number:', data?.case_number);
             setCaseNumber(data?.case_number || 'MISSING-' + Date.now());
           }
         } catch (err) {
