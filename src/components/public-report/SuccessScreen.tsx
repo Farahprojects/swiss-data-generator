@@ -231,7 +231,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     window.history.replaceState({}, '', window.location.pathname);
     
     // Navigate back to form
-    navigate('/');
+    navigate('/report');
   };
   
   const handleContactSupport = () => {
@@ -332,7 +332,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                     View Report
                   </Button>
                   <Button variant="outline" onClick={handleBackToForm} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
-                    Back to Form
+                    Home
                   </Button>
                 </div>
               </>
