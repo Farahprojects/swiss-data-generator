@@ -83,6 +83,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const [countdown, setCountdown] = useState(24);
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [modalTriggered, setModalTriggered] = useState(false);
+  const [fetchedReportData, setFetchedReportData] = useState<any>(null);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
   // Preload guest report ID using useMemo
@@ -93,11 +94,12 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const reportType = report?.report_type as ReportType | undefined;
   const isAstroDataOnly = isAstroOnlyType(reportType);
 
-  const isReady =
-    // Astro-only (essence/sync) types need just Swiss
-    (isAstroDataOnly && report?.swiss_boolean === true) ||
-    // AI reports must have both AI content + Swiss data
-    (!isAstroDataOnly && !!report?.has_report && !!report?.swiss_boolean);
+  const isReady = fetchedReportData?.metadata?.content_type === 'both' || 
+                   fetchedReportData?.metadata?.content_type === 'astro' || 
+                   fetchedReportData?.metadata?.content_type === 'ai' ||
+                   // Fallback to original logic if edge function data not available
+                   (isAstroDataOnly && report?.swiss_boolean === true) ||
+                   (!isAstroDataOnly && !!report?.has_report && !!report?.swiss_boolean);
 
   const handleVideoReady = useCallback(() => {
     setIsVideoReady(true);
@@ -107,64 +109,49 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     if (!onViewReport || !currentGuestReportId) return;
 
     try {
-      console.log('🔍 SuccessScreen - Using get-guest-report edge function for:', currentGuestReportId);
-      
-      // Use the get-guest-report edge function which has proper data extraction logic
+      console.log('🔍 SuccessScreen - Fetching report for:', currentGuestReportId);
       const data = await fetchCompleteReport(currentGuestReportId);
-      
-      console.log('🔍 SuccessScreen - Edge function response:', {
-        hasReportContent: !!data?.report_content,
-        hasSwissData: !!data?.swiss_data,
-        contentType: data?.metadata?.content_type,
-        isAstroReport: data?.metadata?.is_astro_report,
-        isAiReport: data?.metadata?.is_ai_report
-      });
 
-      if (!data) {
-        throw new Error('No data returned from edge function');
-      }
+      if (!data) throw new Error('No data returned from edge function');
 
-      // Use the structured data from the edge function
-      const reportContent = data.report_content || 'Report content could not be loaded';
-      const swissData = data.swiss_data;
-      const hasAiReport = data.metadata?.is_ai_report || false;
-      const hasAstroData = data.metadata?.is_astro_report || false;
+      const { report_content, swiss_data, guest_report, metadata } = data;
+      const reportType = guest_report.report_type;
+      const hasSwiss = !!swiss_data;
+      const hasAi = !!report_content;
+      const contentType = metadata?.content_type;
 
-      // Guard: Don't proceed unless everything is ready
-      if ((hasAiReport && (!reportContent || !swissData)) || (!hasAiReport && !swissData)) {
-        console.warn("🛑 Report not ready — skipping modal load", {
-          hasAiReport,
-          hasReportContent: !!reportContent,
-          hasSwissData: !!swissData
-        });
+      console.log('✅ Report Data:', { contentType, hasSwiss, hasAi });
+
+      // Store fetched data for readiness check
+      setFetchedReportData(data);
+
+      const isAstro = contentType === 'astro' || contentType === 'both';
+      const isAi = contentType === 'ai' || contentType === 'both';
+
+      // If it's an AI report, we MUST have both content and Swiss data
+      if (isAi && (!hasSwiss || !hasAi)) {
+        console.warn('🛑 AI report missing required content or Swiss data');
         return;
       }
 
-      console.log('🔍 SuccessScreen - Final data being passed to onViewReport:', {
-        reportContent: reportContent ? 'HAS_CONTENT' : 'NO_CONTENT',
-        swissData: swissData ? 'HAS_SWISS_DATA' : 'NO_SWISS_DATA',
-        hasAiReport,
-        hasAstroData
-      });
+      // If it's Astro only, we MUST have Swiss data
+      if (isAstro && !hasSwiss) {
+        console.warn('🛑 Astro report missing Swiss data');
+        return;
+      }
 
       onViewReport(
-        reportContent,
-        null, // PDF data
-        swissData, // Swiss data from edge function
-        hasAiReport,
-        hasAstroData,
-        data.metadata?.report_type || report?.report_type // Pass the report type
+        report_content || 'No content available',
+        null,
+        swiss_data,
+        isAi,
+        isAstro,
+        reportType
       );
-      
+
     } catch (error) {
-      console.error('❌ Error fetching report data via edge function:', error);
-      onViewReport(
-        'Failed to load report content. Please try again.',
-        null,
-        null,
-        false,
-        false
-      );
+      console.error('❌ Error fetching report data:', error);
+      onViewReport('Failed to load report content.', null, null, false, false);
     }
   }, [currentGuestReportId, onViewReport, fetchCompleteReport]);
 
@@ -179,9 +166,18 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       fetchReport(currentGuestReportId);
       
       // Setup realtime listener to auto-trigger modal
-      const cleanup = setupRealtimeListener(currentGuestReportId, () => {
+      const cleanup = setupRealtimeListener(currentGuestReportId, async () => {
         if (!modalTriggered) {
           setModalTriggered(true);
+          // Try to fetch complete report data first
+          try {
+            const data = await fetchCompleteReport(currentGuestReportId);
+            if (data) {
+              setFetchedReportData(data);
+            }
+          } catch (error) {
+            console.error('Error fetching complete report in listener:', error);
+          }
           handleViewReport();
         }
       });
