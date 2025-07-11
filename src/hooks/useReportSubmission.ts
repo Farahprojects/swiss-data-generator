@@ -42,6 +42,20 @@ export const useReportSubmission = () => {
     
     setIsProcessing(true);
     
+    // Define AI report detection function
+    const isAIReport = (data: ReportFormData): boolean => {
+      // AI report-generating types that will have a 'report' field added
+      if (data.reportType === 'essence' && data.essenceType) return true;
+      if (data.reportType?.startsWith('sync') && data.relationshipType) return true;
+      
+      const reportGeneratingTypes = ['return', 'flow', 'mindset', 'monthly', 'focus'];
+      if (data.reportType && reportGeneratingTypes.includes(data.reportType)) return true;
+      
+      return false;
+    };
+    
+    const isCurrentReportAI = isAIReport(data);
+    
     try {
       // Validate promo code if present and not skipping validation
       let validatedPromo = null;
@@ -98,18 +112,16 @@ export const useReportSubmission = () => {
       if (data.promoCode && validatedPromo?.isFree && validatedPromo.isValid) {
         // Processing free report with promo code
         
-        // FIXED: Use request field for astro data detection
-        const isAstroData = data.request && data.request.trim() !== '';
         
         await logToAdmin('useReportSubmission', 'free_report', 'Processing free report', {
-          isAstroData: isAstroData,
+          isAIReport: isCurrentReportAI,
           request: data.request
         });
         
         
         const reportData = {
           reportType: reportTypeToUse,
-          request: isAstroData ? data.request : '',
+          request: !isCurrentReportAI ? data.request : '',
           relationshipType: data.relationshipType,
           essenceType: data.essenceType,
           name: data.name,
@@ -137,7 +149,7 @@ export const useReportSubmission = () => {
         // Store the guest report ID for polling and URL
         storeGuestReportId(result.reportId);
         // Store report type for immediate access in SuccessScreen
-        localStorage.setItem(`report_type_${result.reportId}`, isAstroData ? 'astro' : 'ai');
+        localStorage.setItem(`report_type_${result.reportId}`, isCurrentReportAI ? 'ai' : 'astro');
         toast({
           title: "Free Report Created!",
           description: "Your report has been generated and will be sent to your email shortly.",
@@ -167,11 +179,8 @@ export const useReportSubmission = () => {
         finalAmount = amount * (1 - validatedPromo.discountPercent / 100);
       }
 
-      // FIXED: Use request field for astro data detection
-      const isAstroData = data.request && data.request.trim() !== '';
-      
       await logToAdmin('useReportSubmission', 'paid_flow', 'Processing paid report', {
-        isAstroData: isAstroData,
+        isAIReport: isCurrentReportAI,
         request: data.request,
         amount: finalAmount
       });
@@ -179,7 +188,7 @@ export const useReportSubmission = () => {
       
       const reportData = {
         reportType: reportTypeToUse,
-        request: isAstroData ? data.request : '',
+        request: !isCurrentReportAI ? data.request : '',
         relationshipType: data.relationshipType,
         essenceType: data.essenceType,
         name: data.name,
@@ -205,7 +214,7 @@ export const useReportSubmission = () => {
       
       // Store report type for immediate access in SuccessScreen (before checkout)
       // We'll use a temporary key that gets updated once we have the actual guest report ID
-      localStorage.setItem('pending_report_type', isAstroData ? 'astro' : 'ai');
+      localStorage.setItem('pending_report_type', isCurrentReportAI ? 'ai' : 'astro');
       
       await logToAdmin('useReportSubmission', 'checkout', 'Calling checkout', {
         amount: finalAmount,
