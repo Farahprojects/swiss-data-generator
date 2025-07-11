@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { initiateGuestCheckout } from '@/utils/guest-checkout';
 import { createFreeReport, validatePromoCode } from '@/utils/promoCodeValidation';
-import { buildCompleteReportType } from '@/services/report-pricing';
+
 import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { ReportFormData } from '@/types/public-report';
 import { logToAdmin } from '@/utils/adminLogger';

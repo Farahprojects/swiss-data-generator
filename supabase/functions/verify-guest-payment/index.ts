@@ -11,15 +11,6 @@ const corsHeaders = {
 type ReportData = Record<string, any>;
 
 
-function assertPresent(obj: Record<string, any>, keys: string[]) {
-  const missing = keys.filter(k => {
-    const v = obj[k];
-    return v === undefined || v === null || v === "" || Number.isNaN(v);
-  });
-  if (missing.length) {
-    throw new Error(`Missing fields: ${missing.join(", ")}`);
-  }
-}
 
 async function buildTranslatorPayload(productId: string, reportData: ReportData, supabase: any) {
   const { data: priceRow, error } = await supabase
@@ -133,8 +124,8 @@ serve(async (req) => {
         }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // For free sessions, we need to determine the product_id from report_data
-      const freeProductId = record.report_data?.reportType || record.report_data?.request || "unknown";
+      // For free sessions, extract product_id from report_data
+      const freeProductId = record.report_data?.product_id || record.report_data?.reportType || record.report_data?.request || "essence";
       
       EdgeRuntime.waitUntil(
         processSwissDataInBackground(record.id, record.report_data, supabase, freeProductId)

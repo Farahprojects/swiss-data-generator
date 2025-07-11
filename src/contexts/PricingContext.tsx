@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { GLOBAL_PRICING_FALLBACK, getGlobalPricing, getGlobalPricingByReportType } from '@/utils/globalPricing';
 
 interface PriceData {
   id: string;
@@ -74,21 +73,11 @@ export const PricingProvider: React.FC<PricingProviderProps> = ({ children }) =>
   }, []);
 
   const getPriceById = (id: string): PriceData | null => {
-    const price = prices.find(p => p.id === id);
-    if (!price) {
-      // Use global fallback if not found in fetched prices
-      return getGlobalPricing(id);
-    }
-    return price;
+    return prices.find(p => p.id === id) || null;
   };
 
   const getPriceByReportType = (reportType: string): PriceData | null => {
-    const price = prices.find(p => p.report_type === reportType);
-    if (!price) {
-      // Use global fallback if not found in fetched prices
-      return getGlobalPricingByReportType(reportType);
-    }
-    return price;
+    return prices.find(p => p.report_type === reportType) || null;
   };
 
   const value: PricingContextType = {

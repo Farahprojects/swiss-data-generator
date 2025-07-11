@@ -15,49 +15,11 @@ const ReportTypeMappingSchema = z.object({
 
 export type ReportTypeMapping = z.infer<typeof ReportTypeMappingSchema>;
 
-// Map form data to price_list identifiers
-const mapReportTypeToId = (data: ReportTypeMapping): string => {
-  const { reportType, essenceType, relationshipType, reportCategory, reportSubCategory, request } = data;
-  
-  // Handle astro data based on request field (new logic)
-  if (request && !reportType) {
-    if (request === 'essence') return 'essence';
-    if (request === 'sync') return 'sync';
-  }
-  
-  // Handle essence reports
-  if (reportType === 'essence') {
-    if (essenceType) {
-      return `essence_${essenceType}`;
-    } else {
-      // Default to personal essence if no essenceType specified
-      return 'essence_personal';
-    }
-  }
-  
-  // Handle sync/compatibility reports
-  if (reportType === 'sync' || reportType === 'compatibility') {
-    const relationship = relationshipType || 'personal'; // Default to personal if not specified
-    return `sync_${relationship}`;
-  }
-  
-  // Handle astro data reports - map to correct price IDs
-  if (reportCategory === 'astro-data' && request) {
-    return request; // essence, sync (direct mapping to price_list)
-  }
-  
-  // Handle snapshot reports - map subcategory to actual report type
-  if (reportCategory === 'snapshot' && reportSubCategory) {
-    return reportSubCategory; // focus, monthly, mindset
-  }
-  
-  // Handle direct report types
-  if (['focus', 'monthly', 'mindset', 'flow'].includes(reportType)) {
-    return reportType;
-  }
-  
-  // Fallback to reportType
-  return reportType || '';
+// Simple function to extract price_list identifier from form data
+const getProductId = (data: ReportTypeMapping): string => {
+  // Frontend should pass the correct price_list.id directly
+  // This is a simplified version that expects the frontend to provide the product ID
+  return data.reportType || data.request || '';
 };
 
 // Custom hook for getting report price using context
@@ -69,20 +31,15 @@ export const usePriceFetch = () => {
       // Validate input data
       const validatedData = ReportTypeMappingSchema.parse(formData);
       
-      // Map to price_list identifier
-      const priceId = mapReportTypeToId(validatedData);
+      // Get product ID from form data
+      const priceId = getProductId(validatedData);
       
       if (!priceId) {
         throw new Error('No price identifier could be determined from form data');
       }
       
-      // Try to get price by ID first
-      let priceData = getPriceById(priceId);
-      
-      // Fallback: try by report_type
-      if (!priceData) {
-        priceData = getPriceByReportType(priceId);
-      }
+      // Get price by ID from price_list
+      const priceData = getPriceById(priceId);
       
       if (!priceData) {
         // Silenced: Only log in development mode since this can be expected behavior
