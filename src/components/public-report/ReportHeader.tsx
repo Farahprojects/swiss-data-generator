@@ -3,7 +3,7 @@ import React from 'react';
 import { ArrowLeft, Copy, Download, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { hasValidAstroData } from '@/utils/swissDataFormatter';
-import { shouldHideToggle } from '@/utils/reportTypeUtils';
+import { getToggleDisplayLogic } from '@/utils/reportTypeUtils';
 
 interface ReportHeaderProps {
   customerName: string;
@@ -46,10 +46,10 @@ export const ReportHeader = ({
     swissData,
     reportContent,
   });
-  // Use utility function for reliable toggle detection
+  // Use intelligent content detection for toggle logic
   const reportData = { reportContent, swissData, swissBoolean, hasReport };
-  const hideToggle = shouldHideToggle(reportData);
-  const showToggle = !hideToggle;
+  const toggleLogic = getToggleDisplayLogic(reportData);
+  const showToggle = toggleLogic.showToggle;
   
   return (
     <div className="sticky top-0 z-[100] bg-background border-b shadow-sm" style={{ position: 'relative' }}>

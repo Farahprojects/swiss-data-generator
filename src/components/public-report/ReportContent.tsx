@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ReportRenderer } from '@/components/shared/ReportRenderer';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AstroDataRenderer } from './AstroDataRenderer';
-import { isSwissOnlyReport, getDefaultView, shouldHideToggle } from '@/utils/reportTypeUtils';
+import { getToggleDisplayLogic } from '@/utils/reportTypeUtils';
 
 interface ReportContentProps {
   reportContent: string;
@@ -27,25 +27,23 @@ export const ReportContent = ({
   swissBoolean,
   isPureAstroReport,
 }: ReportContentProps) => {
-  // Use utility function for reliable detection
+  // Use intelligent content detection
   const reportData = { reportContent, swissData, swissBoolean, hasReport };
-  const isSwissOnly = isSwissOnlyReport(reportData);
-  const defaultView = getDefaultView(reportData);
-  const [internalActiveView, setInternalActiveView] = useState<'report' | 'astro'>(defaultView);
+  const toggleLogic = getToggleDisplayLogic(reportData);
+  const [internalActiveView, setInternalActiveView] = useState<'report' | 'astro'>(toggleLogic.defaultView);
 
   const activeView = externalActiveView || internalActiveView;
   const setActiveView = externalSetActiveView || setInternalActiveView;
 
-  // Enforce Swiss-only mode: force astro view
+  // Enforce content-based view restrictions
   useEffect(() => {
-    if (isSwissOnly) {
-      setActiveView('astro');
+    if (!toggleLogic.showToggle) {
+      setActiveView(toggleLogic.defaultView);
     }
-  }, [isSwissOnly, setActiveView]);
+  }, [toggleLogic.showToggle, toggleLogic.defaultView, setActiveView]);
 
-  // Hide toggle using utility function
-  const hideToggle = shouldHideToggle(reportData);
-  const showToggle = !hideToggle && !externalActiveView && hasReport;
+  // Smart toggle visibility
+  const showToggle = toggleLogic.showToggle && !externalActiveView;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -53,7 +51,7 @@ export const ReportContent = ({
         <CardHeader className="pb-6 border-b border-gray-100">
           <div className="flex items-center justify-between">
             <CardTitle className="text-xl font-light text-gray-900 tracking-tight">
-              Your <em className="italic font-light">{activeView === 'astro' ? 'Astro Data' : 'Report'}</em> — Generated for {customerName}
+              {toggleLogic.title} — Generated for {customerName}
             </CardTitle>
 
             {showToggle && (

@@ -6,7 +6,7 @@ import { logToAdmin } from '@/utils/adminLogger';
 import { PdfGenerator } from '@/services/pdf/PdfGenerator';
 import { ReportHeader } from './ReportHeader';
 import { ReportContent } from './ReportContent';
-import { isSwissOnlyReport, getDefaultView, shouldHideToggle } from '@/utils/reportTypeUtils';
+import { getToggleDisplayLogic } from '@/utils/reportTypeUtils';
 
 interface DesktopReportViewerProps {
   reportContent: string;
@@ -32,13 +32,12 @@ const DesktopReportViewer = ({
   const { toast } = useToast();
   const [isCopyCompleted, setIsCopyCompleted] = useState(false);
   
-  // Use utility function for reliable detection
+  // Use intelligent content detection
   const reportData = { reportContent, swissData, swissBoolean, hasReport };
-  const isPureAstroReport = isSwissOnlyReport(reportData);
-  const defaultView = getDefaultView(reportData);
-  const [activeView, setActiveView] = useState<'report' | 'astro'>(defaultView);
-
-  const shouldHideToggleValue = shouldHideToggle(reportData);
+  const toggleLogic = getToggleDisplayLogic(reportData);
+  const [activeView, setActiveView] = useState<'report' | 'astro'>(toggleLogic.defaultView);
+  
+  const isPureAstroReport = toggleLogic.availableViews.length === 1 && toggleLogic.availableViews[0] === 'astro';
 
   const handleDownloadPdf = () => {
     if (!reportPdfData) {
