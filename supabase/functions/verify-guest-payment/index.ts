@@ -10,17 +10,6 @@ const corsHeaders = {
 
 type ReportData = Record<string, any>;
 
-const mapReportTypeToRequest = (rt: string) => ({
-  essence_personal: "essence",
-  essence_professional: "essence",
-  essence_relational: "essence",
-  sync_personal: "sync",
-  sync_professional: "sync",
-  flow: "flow",
-  mindset: "mindset",
-  monthly: "monthly",
-  focus: "focus",
-}[rt] ?? "unknown");
 
 function assertPresent(obj: Record<string, any>, keys: string[]) {
   const missing = keys.filter(k => {
@@ -32,135 +21,41 @@ function assertPresent(obj: Record<string, any>, keys: string[]) {
   }
 }
 
-// MAIN ROUTER
-function buildTranslatorPayload(rd: ReportData) {
-  const hasRequest = !!rd.request?.trim();
-  const hasReportType = !!rd.reportType?.trim();
+async function buildTranslatorPayload(productId: string, reportData: ReportData, supabase: any) {
+  const { data: priceRow, error } = await supabase
+    .from("price_list")
+    .select("*")
+    .eq("id", productId)
+    .single();
 
-  if (hasRequest && !hasReportType) return buildAstroPayload(rd);
-  if (hasReportType && !hasRequest) return buildAiPayload(rd);
-
-  throw new Error(`Ambiguous or invalid payload: must contain either 'request' or 'reportType', not both`);
-}
-
-// ASTRODATA PATH (raw request field)
-function buildAstroPayload(rd: ReportData) {
-  const request = rd.request?.trim();
-
-  if (!["essence", "sync"].includes(request)) {
-    throw new Error(`Invalid AstroData request: '${request}'`);
+  if (error || !priceRow) {
+    throw new Error(`Unable to find product in price_list for id: ${productId}`);
   }
 
-  if (request === "essence") {
-    assertPresent(rd, ["birthDate", "birthTime", "birthLatitude", "birthLongitude"]);
+  const isAstroOnly = !priceRow.report_type; // astro-only if report_type is null
+  const endpoint = priceRow.endpoint;
 
-    return {
-      request,
-      birth_date: rd.birthDate,
-      birth_time: rd.birthTime,
-      latitude: parseFloat(rd.birthLatitude),
-      longitude: parseFloat(rd.birthLongitude),
-      name: rd.name ?? "Guest",
-    };
-  }
-
-  if (request === "sync") {
-    assertPresent(rd, [
-      "birthDate", "birthTime", "birthLatitude", "birthLongitude",
-      "secondPersonBirthDate", "secondPersonBirthTime",
-      "secondPersonLatitude", "secondPersonLongitude",
-    ]);
-
-    return {
-      request,
-      person_a: {
-        birth_date: rd.birthDate,
-        birth_time: rd.birthTime,
-        latitude: parseFloat(rd.birthLatitude),
-        longitude: parseFloat(rd.birthLongitude),
-        name: rd.name ?? "A",
-      },
-      person_b: {
-        birth_date: rd.secondPersonBirthDate,
-        birth_time: rd.secondPersonBirthTime,
-        latitude: parseFloat(rd.secondPersonLatitude),
-        longitude: parseFloat(rd.secondPersonLongitude),
-        name: rd.secondPersonName ?? "B",
-      },
-      relationship_type: rd.relationshipType ?? "general",
-    };
-  }
-
-  throw new Error(`Unhandled AstroData request type: '${request}'`);
-}
-
-// AI REPORT PATH (reportType → mapped request)
-function buildAiPayload(rd: ReportData) {
-  const reportType = rd.reportType;
-  const request = mapReportTypeToRequest(reportType);
-
-  if (!request || request === "unknown") {
-    throw new Error(`Unsupported AI reportType: '${reportType}'`);
-  }
-
-  const payload: Record<string, any> = {
-    request,
-    name: rd.name ?? "Guest",
+  const payload: any = {
+    ...reportData,
+    request: endpoint,
+    source: 'guest'
   };
 
-  if (["essence", "flow", "mindset", "monthly", "focus"].includes(request)) {
-    assertPresent(rd, ["birthDate", "birthTime", "birthLatitude", "birthLongitude"]);
-
-    Object.assign(payload, {
-      birth_date: rd.birthDate,
-      birth_time: rd.birthTime,
-      latitude: parseFloat(rd.birthLatitude),
-      longitude: parseFloat(rd.birthLongitude),
-      report: reportType,
-    });
-
-    return payload;
+  if (!isAstroOnly) {
+    payload.reportType = productId;
   }
 
-  if (request === "sync") {
-    assertPresent(rd, [
-      "birthDate", "birthTime", "birthLatitude", "birthLongitude",
-      "secondPersonBirthDate", "secondPersonBirthTime",
-      "secondPersonLatitude", "secondPersonLongitude",
-    ]);
-
-    return {
-      request,
-      person_a: {
-        birth_date: rd.birthDate,
-        birth_time: rd.birthTime,
-        latitude: parseFloat(rd.birthLatitude),
-        longitude: parseFloat(rd.birthLongitude),
-        name: rd.name ?? "A",
-      },
-      person_b: {
-        birth_date: rd.secondPersonBirthDate,
-        birth_time: rd.secondPersonBirthTime,
-        latitude: parseFloat(rd.secondPersonLatitude),
-        longitude: parseFloat(rd.secondPersonLongitude),
-        name: rd.secondPersonName ?? "B",
-      },
-      relationship_type: rd.relationshipType ?? "general",
-      report: reportType,
-    };
-  }
-
-  throw new Error(`Unhandled AI request type: '${request}'`);
+  return payload;
 }
 
 // SWISS PROCESSING
-async function processSwissDataInBackground(guestReportId: string, reportData: ReportData, supabase: any) {
+async function processSwissDataInBackground(guestReportId: string, reportData: ReportData, supabase: any, productId: string) {
   let swissData: any;
   let swissError: string | null = null;
 
   try {
     const payload = {
-      ...buildTranslatorPayload(reportData),
+      ...await buildTranslatorPayload(productId, reportData, supabase),
       is_guest: true,
       user_id: guestReportId,
     };
@@ -238,8 +133,11 @@ serve(async (req) => {
         }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
+      // For free sessions, we need to determine the product_id from report_data
+      const freeProductId = record.report_data?.reportType || record.report_data?.request || "unknown";
+      
       EdgeRuntime.waitUntil(
-        processSwissDataInBackground(record.id, record.report_data, supabase)
+        processSwissDataInBackground(record.id, record.report_data, supabase, freeProductId)
       );
 
       return new Response(JSON.stringify({
@@ -320,8 +218,11 @@ serve(async (req) => {
       is_guest: true,
     };
 
-    if (reportData.reportType || reportData.request) {
-      buildTranslatorPayload(reportData); // validate
+    const stripeMetadata = session.metadata;
+    const productId = stripeMetadata?.product_id;
+
+    if (!productId) {
+      throw new Error("Missing product_id in Stripe metadata");
     }
 
     const insertData: any = {
@@ -355,11 +256,9 @@ serve(async (req) => {
 
     if (insertErr) throw new Error(`DB insert failed: ${insertErr.message}`);
 
-    if (reportData.reportType || reportData.request) {
-      EdgeRuntime.waitUntil(
-        processSwissDataInBackground(guestRec.id, reportData, supabase)
-      );
-    }
+    EdgeRuntime.waitUntil(
+      processSwissDataInBackground(guestRec.id, reportData, supabase, productId)
+    );
 
     return new Response(JSON.stringify({
       success: true,
