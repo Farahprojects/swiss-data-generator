@@ -10,6 +10,7 @@ import { logToAdmin } from '@/utils/adminLogger';
 import { useNavigate } from 'react-router-dom';
 import { getGuestToken, clearAllSessionData } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
+import EntertainmentWindow from './EntertainmentWindow';
 
 type ReportType = 'essence' | 'sync';
 const VIDEO_SRC = 'https://auth.theraiastro.com/storage/v1/object/public/therai-assets/loading-video.mp4';
@@ -93,6 +94,8 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const [waitTimeRemaining, setWaitTimeRemaining] = useState(24);
   const [isLoadingReport, setIsLoadingReport] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
+  const [isAiReport, setIsAiReport] = useState<boolean | null>(null);
+  const [entertainmentMode, setEntertainmentMode] = useState<'text' | 'video' | 'image'>('text');
 
   const currentGuestReportId = useMemo(() => {
     return guestReportId || getGuestToken();
@@ -217,12 +220,44 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     }
   }, [currentGuestReportId, onViewReport, fetchCompleteReport, isLoadingReport]);
 
-  // 24-second delay timer that runs only once per session
+  // Fetch is_ai_report flag to determine if we need countdown
   useEffect(() => {
+    const checkReportType = async () => {
+      if (!currentGuestReportId) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('guest_reports')
+          .select('is_ai_report')
+          .eq('id', currentGuestReportId)
+          .single();
+          
+        if (!error && data) {
+          setIsAiReport(data.is_ai_report);
+        }
+      } catch (err) {
+        console.error('Error fetching report type:', err);
+        // Default to showing countdown for safety
+        setIsAiReport(true);
+      }
+    };
+    
+    checkReportType();
+  }, [currentGuestReportId]);
+
+  // 24-second delay timer that runs only for AI reports
+  useEffect(() => {
+    // Don't start countdown if we don't know the report type yet or it's not an AI report
+    if (isAiReport === null || isAiReport === false) {
+      setIsWaitingPeriod(false);
+      setWaitTimeRemaining(0);
+      return;
+    }
+    
     const waitStarted = sessionStorage.getItem("reportWaitStarted");
     
     if (!waitStarted) {
-      // Start the 24-second delay
+      // Start the 24-second delay only for AI reports
       setIsWaitingPeriod(true);
       sessionStorage.setItem("reportWaitStarted", "true");
       
@@ -243,7 +278,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       setIsWaitingPeriod(false);
       setWaitTimeRemaining(0);
     }
-  }, []);
+  }, [isAiReport]);
 
   useEffect(() => {
     const scrollToProcessing = () => {
@@ -360,23 +395,62 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                   <h2 className="text-2xl font-light text-gray-900 mb-1 tracking-tight">{status.title}</h2>
                   <p className="text-gray-600 font-light">{status.desc}</p>
                 </div>
-                 <div className="bg-muted/50 rounded-lg p-4 text-sm">
-                   Hi {firstName}! Your report.<br />
-                   <span className="font-medium">{email}</span>
-                 </div>
-                 
-                 {isWaitingPeriod ? (
-                   <div className="flex flex-col items-center gap-4">
-                     <div className="text-gray-600 font-light">
-                       Report preparing... {waitTimeRemaining}s remaining
-                     </div>
-                     <Button disabled className="bg-gray-400 text-white font-light cursor-not-allowed">
-                       View Report ({waitTimeRemaining}s)
-                     </Button>
-                     <Button variant="outline" onClick={handleBackToForm} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
-                       Home
-                     </Button>
-                   </div>
+                   <div className="bg-muted/50 rounded-lg p-4 text-sm">
+                    Hi {firstName}! Your report.<br />
+                    <span className="font-medium">{email}</span>
+                  </div>
+                  
+                  {/* Show entertainment window only for AI reports during waiting period */}
+                  {isWaitingPeriod && isAiReport && (
+                    <EntertainmentWindow 
+                      mode={entertainmentMode}
+                      countdown={waitTimeRemaining}
+                      className="mb-4"
+                    />
+                  )}
+                  
+                  {isWaitingPeriod ? (
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="text-gray-600 font-light">
+                        {isAiReport 
+                          ? `AI report preparing... ${waitTimeRemaining}s remaining`
+                          : 'Report preparing...'
+                        }
+                      </div>
+                      <Button disabled className="bg-gray-400 text-white font-light cursor-not-allowed">
+                        {isAiReport 
+                          ? `View Report (${waitTimeRemaining}s)`
+                          : 'View Report'
+                        }
+                      </Button>
+                      <Button variant="outline" onClick={handleBackToForm} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
+                        Home
+                      </Button>
+                      
+                      {/* Entertainment mode switcher for AI reports */}
+                      {isAiReport && (
+                        <div className="flex gap-2 text-xs">
+                          <button
+                            onClick={() => setEntertainmentMode('text')}
+                            className={`px-2 py-1 rounded ${entertainmentMode === 'text' ? 'bg-gray-200' : 'bg-gray-100'}`}
+                          >
+                            Text
+                          </button>
+                          <button
+                            onClick={() => setEntertainmentMode('video')}
+                            className={`px-2 py-1 rounded ${entertainmentMode === 'video' ? 'bg-gray-200' : 'bg-gray-100'}`}
+                          >
+                            Video
+                          </button>
+                          <button
+                            onClick={() => setEntertainmentMode('image')}
+                            className={`px-2 py-1 rounded ${entertainmentMode === 'image' ? 'bg-gray-200' : 'bg-gray-100'}`}
+                          >
+                            Images
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <div className="space-y-4">
                       {/* Error display */}
