@@ -230,14 +230,18 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     }
   }, [currentGuestReportId, onViewReport, fetchCompleteReport, isLoadingReport]);
 
-  // 24-second delay timer that runs only once per session
+  // 24-second delay timer that runs only once per specific report
   useEffect(() => {
-    const waitStarted = sessionStorage.getItem("reportWaitStarted");
+    if (!currentGuestReportId) return;
+    
+    const entertainmentKey = `entertainment_shown_${currentGuestReportId}`;
+    const waitStarted = localStorage.getItem(entertainmentKey);
     
     if (!waitStarted) {
-      // Start the 24-second delay
+      // Start the 24-second delay for this specific report
       setIsWaitingPeriod(true);
-      sessionStorage.setItem("reportWaitStarted", "true");
+      localStorage.setItem(entertainmentKey, "true");
+      localStorage.setItem(`${entertainmentKey}_timestamp`, Date.now().toString());
       
       const timer = setInterval(() => {
         setWaitTimeRemaining((prev) => {
@@ -252,11 +256,11 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       
       return () => clearInterval(timer);
     } else {
-      // Skip delay if already started in this session
+      // Skip delay if already shown for this specific report
       setIsWaitingPeriod(false);
       setWaitTimeRemaining(0);
     }
-  }, []);
+  }, [currentGuestReportId]);
 
   useEffect(() => {
     const scrollToProcessing = () => {

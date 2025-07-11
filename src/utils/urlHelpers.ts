@@ -80,20 +80,59 @@ export const clearGuestReportId = (): void => {
  * Clear all session data and navigate to home
  */
 export const clearAllSessionData = (): void => {
-  // Clear all localStorage items
+  // Clear all localStorage items except entertainment flags (preserve user experience)
   localStorage.removeItem('currentGuestReportId');
   localStorage.removeItem('reportFormData');
   localStorage.removeItem('guestReportData');
   localStorage.removeItem('formStep');
   localStorage.removeItem('paymentSession');
   localStorage.removeItem('reportProgress');
+  localStorage.removeItem('autoOpenModal');
   
   // Clear sessionStorage
   sessionStorage.clear();
+  
+  // Clean up old entertainment flags (older than 24 hours) to prevent accumulation
+  cleanupOldEntertainmentFlags();
   
   // Clear URL state
   window.history.replaceState({}, '', '/');
   
   // Force navigation to home
   window.location.replace('/');
+};
+
+/**
+ * Clean up entertainment flags older than 24 hours to prevent localStorage bloat
+ */
+export const cleanupOldEntertainmentFlags = (): void => {
+  const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
+  
+  // Get all localStorage keys
+  const keys = Object.keys(localStorage);
+  
+  for (const key of keys) {
+    if (key.startsWith('entertainment_shown_')) {
+      try {
+        const timestamp = localStorage.getItem(`${key}_timestamp`);
+        if (timestamp && parseInt(timestamp) < oneDayAgo) {
+          localStorage.removeItem(key);
+          localStorage.removeItem(`${key}_timestamp`);
+        } else if (!timestamp) {
+          // Add timestamp to existing flags without timestamps
+          localStorage.setItem(`${key}_timestamp`, Date.now().toString());
+        }
+      } catch (error) {
+        console.warn('Error cleaning up entertainment flag:', key, error);
+      }
+    }
+  }
+};
+
+/**
+ * Force clear entertainment flag for specific report (dev/testing purposes)
+ */
+export const clearEntertainmentFlag = (guestReportId: string): void => {
+  localStorage.removeItem(`entertainment_shown_${guestReportId}`);
+  localStorage.removeItem(`entertainment_shown_${guestReportId}_timestamp`);
 };
