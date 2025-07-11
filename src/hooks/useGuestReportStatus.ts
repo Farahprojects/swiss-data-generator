@@ -1,7 +1,7 @@
-import { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import { getGuestReportId } from '@/utils/urlHelpers';
+import { getGuestReportId, getCaseNumber, storeCaseNumber } from '@/utils/urlHelpers';
 
 interface GuestReport {
   id: string;
@@ -47,6 +47,14 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const errorLoggedRef = useRef<Set<string>>(new Set());
 
+  // Initialize case number from localStorage on mount
+  React.useEffect(() => {
+    const existingCaseNumber = getCaseNumber();
+    if (existingCaseNumber) {
+      setCaseNumber(existingCaseNumber);
+    }
+  }, []);
+
   const getSwissErrorMessage = useCallback((reportType: string | null) => {
     if (reportType === 'essence') {
       return 'Unable to generate your astrological essence data. This can happen due to incomplete birth information or system issues.';
@@ -85,7 +93,14 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
       }
 
       // Error logged successfully
-      return data?.case_number || 'CASE-' + Date.now();
+      const case_number = data?.case_number || 'CASE-' + Date.now();
+      
+      // Store case number in localStorage associated with guest token
+      if (guestReportId) {
+        storeCaseNumber(guestReportId, case_number);
+      }
+      
+      return case_number;
     } catch (err) {
       console.error('❌ Error logging user error:', err);
       // Remove from tracking since it failed
@@ -293,6 +308,15 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
   const triggerErrorHandling = useCallback(async (guestReportId?: string) => {
     const reportId = guestReportId || getGuestReportId();
     
+    // Check if we already have a case number for this guest token
+    const existingCaseNumber = getCaseNumber(reportId);
+    if (existingCaseNumber) {
+      console.log('⚠️ Case number already exists, using existing:', existingCaseNumber);
+      setCaseNumber(existingCaseNumber);
+      setError('We are looking into this issue. Please reference your case number if you contact support.');
+      return;
+    }
+    
     // Handle case where no report ID is available
     if (!reportId) {
       console.warn('⚠️ Triggering error handling without report ID');
@@ -311,7 +335,9 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
       'timeout_no_report',
       'Report not found after timeout'
     );
-    if (case_number) setCaseNumber(case_number);
+    if (case_number) {
+      setCaseNumber(case_number);
+    }
     setError('We are looking into this issue. Please reference your case number if you contact support.');
   }, [logUserError]);
 
