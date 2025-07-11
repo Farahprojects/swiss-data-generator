@@ -173,6 +173,19 @@ async function processSwissDataInBackground(guestReportId: string, reportData: R
       timestamp: new Date().toISOString(),
     };
 
+    // Log error to report_logs table for reliable error detection
+    await supabase
+      .from("report_logs")
+      .insert({
+        user_id: guestReportId,
+        endpoint: reportData.request || reportData.reportType || 'unknown',
+        report_type: reportData.reportType,
+        status: 'failed',
+        error_message: err.message,
+        duration_ms: null,
+        engine_used: 'translator'
+      });
+
     await supabase
       .from("guest_reports")
       .update({

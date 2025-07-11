@@ -988,6 +988,7 @@ export type Database = {
           endpoint: string | null
           engine_used: string | null
           error_message: string | null
+          has_error: boolean
           id: string
           report_text: string | null
           report_type: string | null
@@ -1002,6 +1003,7 @@ export type Database = {
           endpoint?: string | null
           engine_used?: string | null
           error_message?: string | null
+          has_error?: boolean
           id?: string
           report_text?: string | null
           report_type?: string | null
@@ -1016,6 +1018,7 @@ export type Database = {
           endpoint?: string | null
           engine_used?: string | null
           error_message?: string | null
+          has_error?: boolean
           id?: string
           report_text?: string | null
           report_type?: string | null

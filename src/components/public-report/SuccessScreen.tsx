@@ -180,22 +180,32 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     }
   }, [currentGuestReportId, fetchReport, setupRealtimeListener, handleViewReport, modalTriggered, email]);
 
-  // 🔥 Immediate Error Trigger Based on Boolean Conditions (with duplicate prevention)
+  // 🔥 Check report_logs for reliable error detection
   useEffect(() => {
-    if (
-      report &&
-      !hasSwissError &&
-      !errorHandlingTriggered &&
-      !caseNumber && // Don't trigger if we already have a case number
-      report.has_report === false &&
-      report.swiss_boolean === false &&
-      report.payment_status === 'paid'
-    ) {
-      console.warn('🚨 Triggering error handler IMMEDIATELY: has_report=false, swiss_boolean=false');
-      setErrorHandlingTriggered(true);
-      triggerErrorHandling(currentGuestReportId);
+    const checkReportError = async () => {
+      if (!currentGuestReportId || errorHandlingTriggered || caseNumber) return;
+      
+      try {
+        const { data: reportLog, error } = await supabase
+          .from('report_logs')
+          .select('has_error, error_message')
+          .eq('user_id', currentGuestReportId)
+          .maybeSingle();
+          
+        if (!error && reportLog?.has_error) {
+          console.warn('🚨 Error detected in report_logs:', reportLog.error_message);
+          setErrorHandlingTriggered(true);
+          triggerErrorHandling(currentGuestReportId);
+        }
+      } catch (err) {
+        console.error('Error checking report_logs:', err);
+      }
+    };
+
+    if (report?.payment_status === 'paid') {
+      checkReportError();
     }
-  }, [report, hasSwissError, triggerErrorHandling, currentGuestReportId, errorHandlingTriggered, caseNumber]);
+  }, [report, currentGuestReportId, errorHandlingTriggered, caseNumber, triggerErrorHandling]);
 
   const status = (() => {
     if (hasSwissError) return { title: 'We\'re sorry', desc: 'Technical issue encountered', icon: CheckCircle };
