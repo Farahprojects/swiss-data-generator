@@ -114,8 +114,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const hasSwissError = report?.has_swiss_error === true;
   const hasProcessingError = !!error;
 
-  const isReady = !hasSwissError && !!report;
-
   const handleVideoReady = useCallback(() => {
     setIsVideoReady(true);
   }, []);
@@ -225,8 +223,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     if (hasSwissError) return { title: 'We\'re sorry', desc: 'Technical issue encountered', icon: CheckCircle };
     if (!report) return { title: 'Processing Your Request', desc: 'Setting up your report', icon: Clock };
     if (report.payment_status === 'pending') return { title: 'Payment Processing', desc: 'Confirming payment', icon: Clock };
-    if (isReady) return { title: 'Report Ready!', desc: 'Your report is complete', icon: CheckCircle };
-    return { title: 'Generating Report', desc: 'Preparing insights', icon: Clock };
+    return { title: 'Report Ready!', desc: 'Your report is ready', icon: CheckCircle };
   })();
 
   const StatusIcon = status.icon;
@@ -285,31 +282,18 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                   <h2 className="text-2xl font-light text-gray-900 mb-1 tracking-tight">{status.title}</h2>
                   <p className="text-gray-600 font-light">{status.desc}</p>
                 </div>
-                {!isReady && !isAstroDataOnly && (
-                  <>
-                    <VideoLoader onVideoReady={handleVideoReady} />
-                    <div className="bg-muted/50 rounded-lg p-4 text-sm">
-                      Hi {firstName}! We're working on your report.<br />
-                      <span className="font-medium">{email}</span>
-                    </div>
-                  </>
-                )}
-                {isReady && (
-                  <>
-                    <div className="bg-muted/50 rounded-lg p-4 text-sm">
-                      Hi {firstName}! Your report is ready.<br />
-                      <span className="font-medium">{email}</span>
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                      <Button onClick={handleViewReport} className="bg-gray-900 hover:bg-gray-800 text-white font-light">
-                        View Report
-                      </Button>
-                      <Button variant="outline" onClick={handleBackToForm} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
-                        Home
-                      </Button>
-                    </div>
-                  </>
-                )}
+                <div className="bg-muted/50 rounded-lg p-4 text-sm">
+                  Hi {firstName}! Your report.<br />
+                  <span className="font-medium">{email}</span>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Button onClick={handleViewReport} className="bg-gray-900 hover:bg-gray-800 text-white font-light">
+                    View Report
+                  </Button>
+                  <Button variant="outline" onClick={handleBackToForm} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
+                    Home
+                  </Button>
+                </div>
               </>
             )}
           </CardContent>
