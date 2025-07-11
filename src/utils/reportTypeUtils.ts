@@ -1,5 +1,5 @@
 /**
- * Utility functions for detecting report types and handling Swiss-only reports
+ * Utility functions for interpreting report types and handling Astro-only views
  */
 
 import { getReportMeta } from '@/constants/report-types';
@@ -13,23 +13,23 @@ export interface ReportDetectionData {
 }
 
 /**
- * Reliably detects if this is a Swiss-only astro report that should not show the toggle
- * Now uses clean lookup from report-types instead of heuristic logic
+ * Determines if this report is Astro-only (Swiss) based on type
  */
 export const isSwissOnlyReport = (data: ReportDetectionData): boolean => {
-  return getReportMeta(data.reportType || '').isAstroOnly;
+  const meta = getReportMeta(data.reportType || '');
+  return meta.isAstroOnly;
 };
 
 /**
- * Determines if the toggle should be hidden based on report data
- * Toggle should only show when we have BOTH meaningful report content AND Swiss data
+ * Should we hide the toggle switch? 
+ * Hide toggle if report is Swiss-only (i.e., no AI content expected)
  */
 export const shouldHideToggle = (data: ReportDetectionData): boolean => {
   return isSwissOnlyReport(data);
 };
 
 /**
- * Gets the default view for a report based on its data
+ * Sets default view mode: 'astro' for Astro-only, otherwise 'report' (AI)
  */
 export const getDefaultView = (data: ReportDetectionData): 'report' | 'astro' => {
   return isSwissOnlyReport(data) ? 'astro' : 'report';
