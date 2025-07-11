@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { CheckCircle, Clock, Volume2, VolumeX } from 'lucide-react';
+import { CheckCircle, Clock, Volume2, VolumeX, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useGuestReportStatus } from '@/hooks/useGuestReportStatus';
@@ -91,6 +91,8 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const [errorHandlingTriggered, setErrorHandlingTriggered] = useState(false);
   const [isWaitingPeriod, setIsWaitingPeriod] = useState(false);
   const [waitTimeRemaining, setWaitTimeRemaining] = useState(24);
+  const [isLoadingReport, setIsLoadingReport] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
 
   const currentGuestReportId = useMemo(() => {
     return guestReportId || getGuestToken();
@@ -123,17 +125,35 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const handleViewReport = useCallback(async () => {
     console.log('🚀 View Report button clicked!', { currentGuestReportId, onViewReport });
     
+    if (isLoadingReport) {
+      console.log('⏳ Already loading, ignoring click');
+      return;
+    }
+
+    setIsLoadingReport(true);
+    setReportError(null);
+    
     // Track modal view state for auto-reopen on refresh
     localStorage.setItem('autoOpenModal', 'true');
     
     try {
       console.log('📡 Fetching fresh report data...');
-      const data = await fetchCompleteReport(currentGuestReportId);
+      
+      // Add timeout to prevent indefinite loading
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 30000)
+      );
+      
+      const data = await Promise.race([
+        fetchCompleteReport(currentGuestReportId),
+        timeoutPromise
+      ]);
+      
       console.log('📋 Fetched data:', data);
       
       if (!data) {
         console.log('❌ No data returned from edge function');
-        throw new Error('No data returned from edge function');
+        throw new Error('No data returned from server');
       }
 
       const { report_content, swiss_data, guest_report, metadata } = data;
@@ -164,7 +184,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
         reportType
       });
 
-      // Always open the modal with whatever data we have - let the modal handle what to display
+      // Only open modal after successful data fetch
       if (onViewReport) {
         onViewReport(
           report_content || 'No content available', 
@@ -176,14 +196,26 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
         );
       } else {
         console.warn('⚠️ onViewReport callback is missing');
+        throw new Error('Modal callback not available');
       }
     } catch (error) {
       console.error('❌ Error in handleViewReport:', error);
-      if (onViewReport) {
-        onViewReport('Failed to load report content.', null, null, false, false);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setReportError(errorMessage);
+      
+      // Don't open modal on error, just show error state
+      if (errorMessage.includes('timeout')) {
+        setReportError('Request timed out. Please try again.');
+      } else if (errorMessage.includes('No data')) {
+        setReportError('Report data not ready yet. Please wait a moment and try again.');
+      } else {
+        setReportError('Failed to load report. Please try again.');
       }
+    } finally {
+      setIsLoadingReport(false);
     }
-  }, [currentGuestReportId, onViewReport, fetchCompleteReport]);
+  }, [currentGuestReportId, onViewReport, fetchCompleteReport, isLoadingReport]);
 
   // 24-second delay timer that runs only once per session
   useEffect(() => {
@@ -345,16 +377,55 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                        Home
                      </Button>
                    </div>
-                 ) : (
-                   <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                     <Button onClick={handleViewReport} className="bg-gray-900 hover:bg-gray-800 text-white font-light">
-                       View Report
-                     </Button>
-                     <Button variant="outline" onClick={handleBackToForm} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
-                       Home
-                     </Button>
-                   </div>
-                 )}
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Error display */}
+                      {reportError && (
+                        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                          <p className="text-sm">{reportError}</p>
+                        </div>
+                      )}
+                      
+                      <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                        <Button 
+                          onClick={handleViewReport} 
+                          disabled={isLoadingReport}
+                          className="bg-gray-900 hover:bg-gray-800 text-white font-light disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isLoadingReport ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Loading Report...
+                            </>
+                          ) : (
+                            'View Report'
+                          )}
+                        </Button>
+                        <Button variant="outline" onClick={handleBackToForm} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
+                          Home
+                        </Button>
+                      </div>
+                      
+                      {/* Retry button for errors */}
+                      {reportError && (
+                        <div className="text-center">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              setReportError(null);
+                              handleViewReport();
+                            }}
+                            disabled={isLoadingReport}
+                            className="border-gray-400 text-gray-600 font-light hover:bg-gray-50"
+                          >
+                            Try Again
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
               </>
             )}
           </CardContent>
