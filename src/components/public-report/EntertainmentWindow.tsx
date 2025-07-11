@@ -125,23 +125,13 @@ const VideoComponent: React.FC = () => {
         <source src="https://placeholder-video-url.mp4" type="video/mp4" />
       </video>
       
-      <div className="absolute bottom-3 right-3 flex gap-2">
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={togglePlay}
-          className="bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm"
-        >
-          {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-        </Button>
-        <Button
-          size="sm"
-          variant="secondary"
+      <div className="absolute bottom-3 right-3">
+        <button
           onClick={toggleMute}
-          className="bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm"
+          className="text-white hover:text-gray-300 transition-colors"
         >
-          {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-        </Button>
+          {isMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
+        </button>
       </div>
       
       {/* Placeholder overlay for demo */}
