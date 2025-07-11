@@ -198,7 +198,7 @@ const DesktopReportViewer = ({
       className="min-h-screen bg-background"
     >
       <ReportHeader
-        customerName={customerName}
+        customerName={customerName || 'there'}
         onBack={onBack}
         onCopyToClipboard={handleCopyToClipboard}
         onDownloadPdf={handleDownloadPdf}
