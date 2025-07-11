@@ -340,9 +340,8 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
           keyboardVisible ? 'keyboard-visible' : ''
         }`}
         style={{
-          height: 'calc(var(--vh, 1vh) * 100 - env(safe-area-inset-top, 20px))',
-          maxHeight: 'calc(var(--vh, 1vh) * 100 - env(safe-area-inset-top, 20px))',
-          paddingTop: 'env(safe-area-inset-top, 20px)',
+          height: 'calc(var(--vh, 1vh) * 100)',
+          maxHeight: 'calc(var(--vh, 1vh) * 100)',
           overflowY: currentView === 'form' ? 'hidden' : 'auto',
           WebkitOverflowScrolling: 'touch',
           overscrollBehavior: 'none',
@@ -363,7 +362,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
         {/* --------------------------- FORM VIEW ------------------------- */}
         {currentView === 'form' && (
           <div className="flex flex-col h-full">
-            <DrawerHeader className="flex-shrink-0 pt-6 pb-2 px-4" style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}>
+            <DrawerHeader className="flex-shrink-0 pt-[calc(env(safe-area-inset-top,20px)+24px)] pb-2 px-4">
               <ProgressDots />
               <DrawerTitle className="sr-only">Report Request Flow</DrawerTitle>
             </DrawerHeader>
@@ -372,7 +371,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
             <div
               ref={scrollContainerRef}
               className={`flex-1 px-6 overflow-y-auto scrollbar-hide ${
-                currentStep >= 2 ? 'pb-[calc(var(--footer-space,72px))]' : 'pb-6'
+                currentStep >= 2 ? 'pb-[calc(var(--footer-space,72px)+env(safe-area-inset-bottom,0px))]' : 'pb-6'
               }`}
             >
               <AnimatePresence mode="wait">
