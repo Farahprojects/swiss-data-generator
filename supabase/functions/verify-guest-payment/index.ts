@@ -63,7 +63,7 @@ function transformToTranslatorPayload(productRow: any, reportData: ReportData): 
   if (reportData.returnYear) basePayload.return_date = reportData.returnYear;
 
   // Handle two-person reports (sync, compatibility)
-  if ((endpoint === 'sync' || endpoint === 'compatibility' || (endpoint === 'report' && reportType && reportType.startsWith('sync'))) && reportData.secondPersonName) {
+  if ((requestEndpoint === 'sync' || requestEndpoint === 'compatibility') && reportData.secondPersonName) {
     basePayload.person_a = {
       name: reportData.name,
       birth_date: reportData.birthDate,
