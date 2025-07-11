@@ -136,6 +136,8 @@ export const useReportSubmission = () => {
         setReportCreated(true);
         // Store the guest report ID for polling and URL
         storeGuestReportId(result.reportId);
+        // Store report type for immediate access in SuccessScreen
+        localStorage.setItem(`report_type_${result.reportId}`, isAstroData ? 'astro' : 'ai');
         toast({
           title: "Free Report Created!",
           description: "Your report has been generated and will be sent to your email shortly.",
@@ -201,6 +203,9 @@ export const useReportSubmission = () => {
       };
       
       
+      // Store report type for immediate access in SuccessScreen (before checkout)
+      // We'll use a temporary key that gets updated once we have the actual guest report ID
+      localStorage.setItem('pending_report_type', isAstroData ? 'astro' : 'ai');
       
       await logToAdmin('useReportSubmission', 'checkout', 'Calling checkout', {
         amount: finalAmount,

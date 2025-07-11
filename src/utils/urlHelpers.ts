@@ -66,6 +66,13 @@ export const getGuestReportId = (): string | null => {
 export const storeGuestReportId = (guestReportId: string): void => {
   localStorage.setItem('currentGuestReportId', guestReportId);
   setGuestReportIdInUrl(guestReportId);
+  
+  // Move pending report type to specific report type if it exists
+  const pendingType = localStorage.getItem('pending_report_type');
+  if (pendingType) {
+    localStorage.setItem(`report_type_${guestReportId}`, pendingType);
+    localStorage.removeItem('pending_report_type');
+  }
 };
 
 /**
@@ -112,18 +119,21 @@ export const cleanupOldEntertainmentFlags = (): void => {
   const keys = Object.keys(localStorage);
   
   for (const key of keys) {
-    if (key.startsWith('entertainment_shown_')) {
+    if (key.startsWith('entertainment_shown_') || key.startsWith('report_type_')) {
       try {
         const timestamp = localStorage.getItem(`${key}_timestamp`);
         if (timestamp && parseInt(timestamp) < oneDayAgo) {
           localStorage.removeItem(key);
           localStorage.removeItem(`${key}_timestamp`);
-        } else if (!timestamp) {
-          // Add timestamp to existing flags without timestamps
+        } else if (!timestamp && key.startsWith('entertainment_shown_')) {
+          // Add timestamp to existing entertainment flags without timestamps
           localStorage.setItem(`${key}_timestamp`, Date.now().toString());
+        } else if (key.startsWith('report_type_') && !timestamp) {
+          // Clean up old report_type entries without timestamps
+          localStorage.removeItem(key);
         }
       } catch (error) {
-        console.warn('Error cleaning up entertainment flag:', key, error);
+        console.warn('Error cleaning up storage flag:', key, error);
       }
     }
   }

@@ -230,15 +230,19 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     }
   }, [currentGuestReportId, onViewReport, fetchCompleteReport, isLoadingReport]);
 
-  // 24-second delay timer that runs only once per specific report
+  // 24-second delay timer that runs only once per specific report (AI reports only)
   useEffect(() => {
     if (!currentGuestReportId) return;
     
+    const reportType = localStorage.getItem(`report_type_${currentGuestReportId}`);
     const entertainmentKey = `entertainment_shown_${currentGuestReportId}`;
     const waitStarted = localStorage.getItem(entertainmentKey);
     
-    if (!waitStarted) {
-      // Start the 24-second delay for this specific report
+    // Only run entertainment window for AI reports
+    const isAIReport = reportType === 'ai' || (!reportType && report?.report_type !== 'astro'); // Fallback for old reports
+    
+    if (!waitStarted && isAIReport) {
+      // Start the 24-second delay for this specific AI report
       setIsWaitingPeriod(true);
       localStorage.setItem(entertainmentKey, "true");
       localStorage.setItem(`${entertainmentKey}_timestamp`, Date.now().toString());
@@ -256,11 +260,11 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       
       return () => clearInterval(timer);
     } else {
-      // Skip delay if already shown for this specific report
+      // Skip delay if already shown for this specific report OR if it's not an AI report
       setIsWaitingPeriod(false);
       setWaitTimeRemaining(0);
     }
-  }, [currentGuestReportId]);
+  }, [currentGuestReportId, report?.report_type]);
 
   useEffect(() => {
     const scrollToProcessing = () => {
