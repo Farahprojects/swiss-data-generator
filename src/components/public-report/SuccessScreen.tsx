@@ -115,11 +115,8 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const hasProcessingError = !!error;
 
   const isReady = !hasSwissError && (
-    fetchedReportData?.metadata?.content_type === 'both' ||
-    fetchedReportData?.metadata?.content_type === 'astro' ||
-    fetchedReportData?.metadata?.content_type === 'ai' ||
     (isAstroDataOnly && report?.swiss_boolean === true) ||
-    (!isAstroDataOnly && !!report?.has_report && !!report?.swiss_boolean)
+    (!isAstroDataOnly && !!report?.has_report)
   );
 
   const handleVideoReady = useCallback(() => {
