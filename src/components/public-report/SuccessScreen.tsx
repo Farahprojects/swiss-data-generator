@@ -90,12 +90,12 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const [modalTriggered, setModalTriggered] = useState(false);
   const [fetchedReportData, setFetchedReportData] = useState<any>(null);
   const [errorHandlingTriggered, setErrorHandlingTriggered] = useState(false);
-  const [isWaitingPeriod, setIsWaitingPeriod] = useState(false);
-  const [waitTimeRemaining, setWaitTimeRemaining] = useState(24);
   const [isLoadingReport, setIsLoadingReport] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
   const [isAiReport, setIsAiReport] = useState<boolean | null>(null);
   const [entertainmentMode, setEntertainmentMode] = useState<'text' | 'video' | 'image'>('text');
+  const [showCountdown, setShowCountdown] = useState(false);
+  const [countdownTime, setCountdownTime] = useState(24);
 
   const currentGuestReportId = useMemo(() => {
     return guestReportId || getGuestToken();
@@ -245,40 +245,33 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     checkReportType();
   }, [currentGuestReportId]);
 
-  // 24-second delay timer that runs only for AI reports
+  // Visual 24-second countdown for AI reports
   useEffect(() => {
-    // Don't start countdown if we don't know the report type yet or it's not an AI report
-    if (isAiReport === null || isAiReport === false) {
-      setIsWaitingPeriod(false);
-      setWaitTimeRemaining(0);
+    if (!currentGuestReportId || isAiReport !== true) {
       return;
     }
-    
-    const waitStarted = sessionStorage.getItem("reportWaitStarted");
-    
-    if (!waitStarted) {
-      // Start the 24-second delay only for AI reports
-      setIsWaitingPeriod(true);
-      sessionStorage.setItem("reportWaitStarted", "true");
-      
+
+    const countdownKey = `countdown_shown_${currentGuestReportId}`;
+    const hasShownCountdown = localStorage.getItem(countdownKey) === 'true';
+
+    if (!hasShownCountdown) {
+      setShowCountdown(true);
+      localStorage.setItem(countdownKey, 'true');
+
       const timer = setInterval(() => {
-        setWaitTimeRemaining((prev) => {
+        setCountdownTime((prev) => {
           if (prev <= 1) {
             clearInterval(timer);
-            setIsWaitingPeriod(false);
+            setShowCountdown(false);
             return 0;
           }
           return prev - 1;
         });
       }, 1000);
-      
+
       return () => clearInterval(timer);
-    } else {
-      // Skip delay if already started in this session
-      setIsWaitingPeriod(false);
-      setWaitTimeRemaining(0);
     }
-  }, [isAiReport]);
+  }, [currentGuestReportId, isAiReport]);
 
   useEffect(() => {
     const scrollToProcessing = () => {
@@ -400,56 +393,48 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                     <span className="font-medium">{email}</span>
                   </div>
                   
-                  {/* Show entertainment window only for AI reports during waiting period */}
-                  {isWaitingPeriod && isAiReport && (
+                  {/* Show entertainment window for AI reports */}
+                  {isAiReport && (showCountdown || report?.payment_status === 'paid') && (
                     <EntertainmentWindow 
                       mode={entertainmentMode}
-                      countdown={waitTimeRemaining}
+                      countdown={showCountdown ? countdownTime : undefined}
                       className="mb-4"
                     />
                   )}
                   
-                  {isWaitingPeriod ? (
+                  {showCountdown ? (
                     <div className="flex flex-col items-center gap-4">
                       <div className="text-gray-600 font-light">
-                        {isAiReport 
-                          ? `AI report preparing... ${waitTimeRemaining}s remaining`
-                          : 'Report preparing...'
-                        }
+                        AI report preparing... {countdownTime}s remaining
                       </div>
                       <Button disabled className="bg-gray-400 text-white font-light cursor-not-allowed">
-                        {isAiReport 
-                          ? `View Report (${waitTimeRemaining}s)`
-                          : 'View Report'
-                        }
+                        View Report ({countdownTime}s)
                       </Button>
                       <Button variant="outline" onClick={handleBackToForm} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
                         Home
                       </Button>
                       
                       {/* Entertainment mode switcher for AI reports */}
-                      {isAiReport && (
-                        <div className="flex gap-2 text-xs">
-                          <button
-                            onClick={() => setEntertainmentMode('text')}
-                            className={`px-2 py-1 rounded ${entertainmentMode === 'text' ? 'bg-gray-200' : 'bg-gray-100'}`}
-                          >
-                            Text
-                          </button>
-                          <button
-                            onClick={() => setEntertainmentMode('video')}
-                            className={`px-2 py-1 rounded ${entertainmentMode === 'video' ? 'bg-gray-200' : 'bg-gray-100'}`}
-                          >
-                            Video
-                          </button>
-                          <button
-                            onClick={() => setEntertainmentMode('image')}
-                            className={`px-2 py-1 rounded ${entertainmentMode === 'image' ? 'bg-gray-200' : 'bg-gray-100'}`}
-                          >
-                            Images
-                          </button>
-                        </div>
-                      )}
+                      <div className="flex gap-2 text-xs">
+                        <button
+                          onClick={() => setEntertainmentMode('text')}
+                          className={`px-2 py-1 rounded ${entertainmentMode === 'text' ? 'bg-gray-200' : 'bg-gray-100'}`}
+                        >
+                          Text
+                        </button>
+                        <button
+                          onClick={() => setEntertainmentMode('video')}
+                          className={`px-2 py-1 rounded ${entertainmentMode === 'video' ? 'bg-gray-200' : 'bg-gray-100'}`}
+                        >
+                          Video
+                        </button>
+                        <button
+                          onClick={() => setEntertainmentMode('image')}
+                          className={`px-2 py-1 rounded ${entertainmentMode === 'image' ? 'bg-gray-200' : 'bg-gray-100'}`}
+                        >
+                          Images
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <div className="space-y-4">
