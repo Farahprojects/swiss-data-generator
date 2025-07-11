@@ -141,6 +141,8 @@ const Step1_5SubCategory = ({ control, setValue, onNext, onPrev, selectedCategor
                     } else if (selectedCategory === 'snapshot' && 'reportType' in option) {
                       setValue('reportType', option.reportType);
                     }
+                    
+                    setTimeout(() => onNext(), 100);
                   }}
                   className={`w-full p-6 rounded-2xl border transition-all duration-200 shadow-md bg-background/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98] ${
                     isSelected 
@@ -151,7 +153,7 @@ const Step1_5SubCategory = ({ control, setValue, onNext, onPrev, selectedCategor
                 >
                   <div className="flex gap-4 items-center">
                     <div className="bg-background shadow-inner w-12 h-12 flex items-center justify-center rounded-full">
-                      <IconComponent className={`h-6 w-6 ${isFocus ? 'text-destructive' : 'text-primary'}`} />
+                      <IconComponent className="h-6 w-6 text-gray-700" />
                     </div>
                     <div className="flex-1 text-left">
                       <h3 className="text-lg font-semibold text-foreground mb-1">{option.title}</h3>
