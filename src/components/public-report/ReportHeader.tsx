@@ -52,7 +52,7 @@ export const ReportHeader = ({
   const showToggle = !hideToggle;
   
   return (
-    <div className="sticky top-0 z-10 bg-background border-b shadow-sm">
+    <div className="sticky top-0 z-60 bg-background border-b shadow-sm">
       <div className="max-w-6xl mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -60,7 +60,7 @@ export const ReportHeader = ({
               variant="ghost"
               size="sm"
               onClick={onBack}
-              className="flex items-center gap-2 cursor-pointer"
+              className="flex items-center gap-2 cursor-pointer pointer-events-auto"
             >
               <ArrowLeft className="h-4 w-4" />
               <span>Back to Form</span>
@@ -95,7 +95,7 @@ export const ReportHeader = ({
               variant="outline"
               size="sm"
               onClick={onCopyToClipboard}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 pointer-events-auto"
             >
               <Copy className="h-4 w-4" />
               Copy
@@ -115,7 +115,7 @@ export const ReportHeader = ({
                     onDownloadAstroPdf?.(); // Use unified PDF for AI content
                   }
                 }}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 pointer-events-auto"
               >
                 <Download className="h-4 w-4" />
                 PDF
@@ -124,10 +124,10 @@ export const ReportHeader = ({
             <Button
               size="sm"
               onClick={onChatGPTClick}
-              className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 shadow-sm hover:shadow-md font-inter transition-all duration-200"
+              className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 shadow-sm hover:shadow-md font-inter transition-all duration-200 pointer-events-auto"
             >
               <img 
-                src="/lovable-uploads/6c5be1f5-cd98-48a0-962f-2dd52fc0604e.png" 
+                src="/lovable-uploads/6ce62a53-c4d4-488e-b29f-6972c5cabfae.png" 
                 alt="ChatGPT" 
                 className="h-4 w-4"
               />
@@ -137,7 +137,7 @@ export const ReportHeader = ({
               variant="ghost"
               size="sm"
               onClick={onBack}
-              className="p-2"
+              className="p-2 pointer-events-auto"
             >
               <X className="h-4 w-4" />
             </Button>
