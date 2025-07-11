@@ -133,7 +133,10 @@ async function buildTranslatorPayload(productId: string, reportData: ReportData,
     throw new Error(`Unable to find product in price_list for id: ${productId}`);
   }
 
-  return transformToTranslatorPayload(priceRow, reportData);
+  return { 
+    payload: transformToTranslatorPayload(priceRow, reportData),
+    isAiReport: priceRow.endpoint === "report"
+  };
 }
 
 // SWISS PROCESSING
@@ -142,15 +145,16 @@ async function processSwissDataInBackground(guestReportId: string, reportData: R
   let swissError: string | null = null;
 
   try {
-    const payload = {
-      ...await buildTranslatorPayload(productId, reportData, supabase),
+    const { payload } = await buildTranslatorPayload(productId, reportData, supabase);
+    const translatorPayload = {
+      ...payload,
       is_guest: true,
       user_id: guestReportId,
     };
 
-    console.log("[edge][translator_payload]", JSON.stringify(payload, null, 2));
+    console.log("[edge][translator_payload]", JSON.stringify(translatorPayload, null, 2));
 
-    const translated = await translate(payload);
+    const translated = await translate(translatorPayload);
     swissData = JSON.parse(translated.text);
 
     console.log("[edge][swiss_result]", JSON.stringify(swissData, null, 2));
@@ -236,6 +240,15 @@ serve(async (req) => {
 
       // For free sessions, extract product_id from report_data
       const freeProductId = record.report_data?.product_id || record.report_data?.reportType || record.report_data?.request || "essence";
+      
+      // Determine if this is an AI report for free sessions
+      const { isAiReport } = await buildTranslatorPayload(freeProductId, record.report_data, supabase);
+      
+      // Update the guest report with is_ai_report flag
+      await supabase
+        .from("guest_reports")
+        .update({ is_ai_report: isAiReport })
+        .eq("id", record.id);
       
       EdgeRuntime.waitUntil(
         processSwissDataInBackground(record.id, record.report_data, supabase, freeProductId)
@@ -326,6 +339,9 @@ serve(async (req) => {
       throw new Error("Missing product_id in Stripe metadata");
     }
 
+    // Determine if this is an AI report based on price_list.endpoint
+    const { isAiReport } = await buildTranslatorPayload(productId, reportData, supabase);
+
     const insertData: any = {
       stripe_session_id: session.id,
       email: reportData.email,
@@ -334,6 +350,7 @@ serve(async (req) => {
       report_data: reportData,
       payment_status: "paid",
       purchase_type: md.purchase_type || "report",
+      is_ai_report: isAiReport,
     };
 
     if (md.coach_slug) {

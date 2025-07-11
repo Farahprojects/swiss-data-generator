@@ -588,6 +588,7 @@ export type Database = {
           has_report: boolean
           has_swiss_error: boolean | null
           id: string
+          is_ai_report: boolean | null
           modal_ready: boolean | null
           payment_status: string
           promo_code_used: string | null
@@ -611,6 +612,7 @@ export type Database = {
           has_report?: boolean
           has_swiss_error?: boolean | null
           id?: string
+          is_ai_report?: boolean | null
           modal_ready?: boolean | null
           payment_status?: string
           promo_code_used?: string | null
@@ -634,6 +636,7 @@ export type Database = {
           has_report?: boolean
           has_swiss_error?: boolean | null
           id?: string
+          is_ai_report?: boolean | null
           modal_ready?: boolean | null
           payment_status?: string
           promo_code_used?: string | null
