@@ -16,8 +16,21 @@ function transformToTranslatorPayload(productRow: any, reportData: ReportData): 
   const reportType = productRow.report_type;
   const endpoint = productRow.endpoint;
 
+  // Map endpoint for AI reports - translator expects base endpoint, not generic "report"
+  let requestEndpoint = endpoint;
+  if (endpoint === 'report' && reportType) {
+    // Map report types to their base endpoints
+    if (reportType === 'essence') requestEndpoint = 'essence';
+    else if (reportType === 'sync') requestEndpoint = 'sync';
+    else if (reportType === 'flow') requestEndpoint = 'flow';
+    else if (reportType === 'mindset') requestEndpoint = 'mindset';
+    else if (reportType === 'monthly') requestEndpoint = 'monthly';
+    else if (reportType === 'focus') requestEndpoint = 'focus';
+    else if (reportType === 'return') requestEndpoint = 'return';
+  }
+
   const basePayload: any = {
-    request: endpoint,
+    request: requestEndpoint,
     source: 'guest'
   };
 
