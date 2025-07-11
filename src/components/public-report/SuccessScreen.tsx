@@ -56,7 +56,14 @@ const VideoLoader: React.FC<{ onVideoReady?: () => void }> = ({ onVideoReady }) 
 interface SuccessScreenProps {
   name: string;
   email: string;
-  onViewReport?: (content: string, pdf?: string | null, swissData?: any, hasReport?: boolean, swissBoolean?: boolean, reportType?: string) => void;
+  onViewReport?: (
+    content: string,
+    pdf?: string | null,
+    swissData?: any,
+    hasReport?: boolean,
+    swissBoolean?: boolean,
+    reportType?: string
+  ) => void;
   guestReportId?: string;
 }
 
@@ -68,7 +75,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     fetchReport,
     triggerErrorHandling,
     fetchCompleteReport,
-    fetchBothReportData,
     setupRealtimeListener,
     setError,
     setCaseNumber,
@@ -77,31 +83,23 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const firstName = name?.split(' ')[0] || 'there';
   const isMobile = useIsMobile();
   const navigate = useNavigate();
-
   useViewportHeight();
 
-  const [countdown, setCountdown] = useState(24);
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [modalTriggered, setModalTriggered] = useState(false);
   const [fetchedReportData, setFetchedReportData] = useState<any>(null);
-  const countdownRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Clean token retrieval
   const currentGuestReportId = useMemo(() => {
     return guestReportId || getGuestToken();
   }, [guestReportId]);
 
-  // Protect against null tokens - redirect if no token found
   if (!currentGuestReportId) {
     return (
       <div className="w-full py-10 px-4 flex justify-center">
         <Card className="border-2 border-gray-200 shadow-lg">
           <CardContent className="p-8 text-center">
             <p className="text-gray-600">Session expired. Please start a new report.</p>
-            <Button 
-              onClick={() => navigate('/report')} 
-              className="mt-4 bg-gray-900 text-white font-light hover:bg-gray-800"
-            >
+            <Button onClick={() => navigate('/report')} className="mt-4 bg-gray-900 text-white font-light hover:bg-gray-800">
               Start New Report
             </Button>
           </CardContent>
@@ -112,14 +110,12 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
 
   const reportType = report?.report_type as ReportType | undefined;
   const isAstroDataOnly = isAstroOnlyType(reportType);
-
   const hasSwissError = report?.has_swiss_error === true;
-  
+
   const isReady = !hasSwissError && (
-    fetchedReportData?.metadata?.content_type === 'both' || 
-    fetchedReportData?.metadata?.content_type === 'astro' || 
+    fetchedReportData?.metadata?.content_type === 'both' ||
+    fetchedReportData?.metadata?.content_type === 'astro' ||
     fetchedReportData?.metadata?.content_type === 'ai' ||
-    // Fallback to original logic if edge function data not available
     (isAstroDataOnly && report?.swiss_boolean === true) ||
     (!isAstroDataOnly && !!report?.has_report && !!report?.swiss_boolean)
   );
@@ -132,9 +128,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     if (!onViewReport || !currentGuestReportId) return;
 
     try {
-      console.log('🔍 SuccessScreen - Fetching report for:', currentGuestReportId);
       const data = await fetchCompleteReport(currentGuestReportId);
-
       if (!data) throw new Error('No data returned from edge function');
 
       const { report_content, swiss_data, guest_report, metadata } = data;
@@ -143,37 +137,16 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       const hasAi = !!report_content;
       const contentType = metadata?.content_type;
 
-      console.log('✅ Report Data:', { contentType, hasSwiss, hasAi });
-
-      // Store fetched data for readiness check
       setFetchedReportData(data);
 
       const isAstro = contentType === 'astro' || contentType === 'both';
       const isAi = contentType === 'ai' || contentType === 'both';
 
-      // If it's an AI report, we MUST have both content and Swiss data
-      if (isAi && (!hasSwiss || !hasAi)) {
-        console.warn('🛑 AI report missing required content or Swiss data');
-        return;
-      }
+      if (isAi && (!hasSwiss || !hasAi)) return;
+      if (isAstro && !hasSwiss) return;
 
-      // If it's Astro only, we MUST have Swiss data
-      if (isAstro && !hasSwiss) {
-        console.warn('🛑 Astro report missing Swiss data');
-        return;
-      }
-
-      onViewReport(
-        report_content || 'No content available',
-        null,
-        swiss_data,
-        isAi,
-        isAstro,
-        reportType
-      );
-
+      onViewReport(report_content || 'No content available', null, swiss_data, isAi, isAstro, reportType);
     } catch (error) {
-      console.error('❌ Error fetching report data:', error);
       onViewReport('Failed to load report content.', null, null, false, false);
     }
   }, [currentGuestReportId, onViewReport, fetchCompleteReport]);
@@ -187,54 +160,37 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
 
     if (currentGuestReportId) {
       fetchReport(currentGuestReportId);
-      
-      // Setup realtime listener to auto-trigger modal
+
       const cleanup = setupRealtimeListener(currentGuestReportId, async () => {
         if (!modalTriggered) {
           setModalTriggered(true);
-          // Try to fetch complete report data first
           try {
             const data = await fetchCompleteReport(currentGuestReportId);
             if (data) {
               setFetchedReportData(data);
             }
-          } catch (error) {
-            console.error('Error fetching complete report in listener:', error);
-          }
+          } catch (error) {}
           handleViewReport();
         }
       });
-      
+
       return cleanup;
     }
   }, [currentGuestReportId, fetchReport, setupRealtimeListener, handleViewReport, modalTriggered, email]);
 
-  // Countdown logic - stop if Swiss error detected
-  useEffect(() => {
-    if (!isReady && isVideoReady && !hasSwissError) {
-      countdownRef.current = setTimeout(() => {
-        setCountdown((c) => (c <= 1 ? 0 : c - 1));
-      }, 1000);
-    }
-    return () => clearTimeout(countdownRef.current as NodeJS.Timeout);
-  }, [countdown, isReady, isVideoReady, hasSwissError]);
-
-  // Intelligence layer: Trigger error handler if conditions indicate failure
+  // 🔥 Immediate Error Trigger Based on Boolean Conditions
   useEffect(() => {
     if (
-      report && 
-      countdown === 0 && 
-      !hasSwissError && 
-      !isReady &&
-      report.has_report === false && 
+      report &&
+      !hasSwissError &&
+      report.has_report === false &&
       report.swiss_boolean === false &&
       report.payment_status === 'paid'
     ) {
-      console.warn('🚨 Triggering error handler: has_report=false, swiss_boolean=false after timeout');
+      console.warn('🚨 Triggering error handler IMMEDIATELY: has_report=false, swiss_boolean=false');
       triggerErrorHandling(currentGuestReportId);
     }
-  }, [report, countdown, hasSwissError, isReady, triggerErrorHandling, currentGuestReportId]);
-
+  }, [report, hasSwissError, triggerErrorHandling, currentGuestReportId]);
 
   const status = (() => {
     if (hasSwissError) return { title: 'We\'re sorry', desc: 'Technical issue encountered', icon: CheckCircle };
@@ -247,30 +203,15 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
 
   const StatusIcon = status.icon;
 
-  const handleTryAgain = async () => {
-    if (currentGuestReportId) {
-      setError(null);
-      setCaseNumber(null);
-      await fetchReport(currentGuestReportId);
-    } else {
-      navigate('/report');
-    }
-  };
-  
   const handleBackToForm = () => {
     clearAllSessionData();
     navigate('/report');
   };
-  
+
   const handleContactSupport = () => {
     const errorMessage = `Hi, I'm experiencing an issue with my report generation.\n\nReport Details:\n- Name: ${name}\n- Email: ${email}\n- Report ID: ${currentGuestReportId || 'N/A'}\n- Case Number: ${caseNumber || 'N/A'}\n- Time: ${new Date().toLocaleString()}\n`;
     localStorage.setItem('contactFormPrefill', JSON.stringify({ name, email, subject: 'Report Issue', message: errorMessage }));
     navigate('/contact');
-  };
-
-  const handleHome = () => {
-    clearAllSessionData();
-    navigate('/report');
   };
 
   return (
@@ -278,7 +219,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       <div className={isMobile ? 'w-full max-w-md' : 'w-full max-w-4xl'}>
         <Card className="border-2 border-gray-200 shadow-lg">
           <CardContent className="p-8 text-center space-y-6">
-            {/* Swiss Error State */}
             {hasSwissError ? (
               <>
                 <div className="flex items-center justify-center gap-4 py-4">
@@ -290,16 +230,12 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                   <h2 className="text-2xl font-light text-gray-900 mb-1 tracking-tight">{status.title}</h2>
                   <p className="text-gray-600 font-light">{status.desc}</p>
                 </div>
-                
                 <div className="text-center space-y-3">
                   <p className="text-gray-800 font-medium">
                     We are having technical issues, your case has been logged as: {caseNumber || 'Processing...'}
                   </p>
-                  <p className="text-gray-600">
-                    We will send you an email within 24 hours.
-                  </p>
+                  <p className="text-gray-600">We will send you an email within 24 hours.</p>
                 </div>
-
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
                   <Button variant="outline" onClick={handleContactSupport} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
                     Contact Support
@@ -311,18 +247,11 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
               </>
             ) : (
               <>
-                {/* Normal Loading/Ready State */}
                 <div className="flex items-center justify-center gap-4 py-4">
                   <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
                     <StatusIcon className="h-6 w-6 text-gray-600" />
                   </div>
-                  {!isReady && (
-                    <>
-                      <div className="text-3xl font-light text-gray-900">{countdown}s</div>
-                      <div className="text-gray-600 font-light">Report generating...</div>
-                    </>
-                  )}
-                  {isReady && <div className="text-gray-600 font-light">Ready to view</div>}
+                  <div className="text-gray-600 font-light">Processing...</div>
                 </div>
                 <div>
                   <h2 className="text-2xl font-light text-gray-900 mb-1 tracking-tight">{status.title}</h2>
@@ -340,7 +269,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                 {isReady && (
                   <>
                     <div className="bg-muted/50 rounded-lg p-4 text-sm">
-                      Hi {firstName}! Your report is ready. <br />
+                      Hi {firstName}! Your report is ready.<br />
                       <span className="font-medium">{email}</span>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
