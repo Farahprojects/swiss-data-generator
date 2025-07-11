@@ -21,7 +21,6 @@ export const essenceTypes: ReportTypeOption[] = [
   { value: 'relational', label: 'Relational' },
 ];
 
-// Main report categories - shared between mobile and desktop
 export const reportCategories = [
   {
     value: 'the-self',
@@ -53,7 +52,6 @@ export const reportCategories = [
   },
 ];
 
-// Snapshot subcategories
 export const snapshotSubCategories = [
   {
     value: 'focus',
@@ -78,7 +76,6 @@ export const snapshotSubCategories = [
   },
 ];
 
-// Detailed essence types with icons and descriptions
 export const detailedEssenceTypes = [
   {
     value: 'personal',
@@ -100,7 +97,6 @@ export const detailedEssenceTypes = [
   },
 ];
 
-// Detailed relationship types with icons and descriptions
 export const detailedRelationshipTypes = [
   {
     value: 'personal',
@@ -116,7 +112,7 @@ export const detailedRelationshipTypes = [
   },
 ];
 
-// 🔥 NEW: Astro Data subcategories - raw ephemeris data requests
+// 🔥 Astro Data subcategories - raw ephemeris data
 export const astroRequestCategories = [
   {
     value: 'essence',
@@ -134,19 +130,33 @@ export const astroRequestCategories = [
   },
 ];
 
+// 🧠 Canonical map: request → reportType
+export const requestToReportTypeMap: Record<string, string> = {
+  essence: 'essence',
+  sync: 'sync',
+  // Add others here if needed later (e.g., positions → astro-positions)
+};
+
+// Optional reverse map if needed
+export const reportTypeToRequestMap: Record<string, string> = {
+  essence: 'essence',
+  sync: 'sync',
+};
+
 /**
- * Helper function to get report metadata based on report type
- * This replaces complex heuristic logic with a clean lookup
+ * Returns metadata about a report from either request or reportType
  */
-export function getReportMeta(reportType: string) {
-  const astroOnly = reportType === 'astro-data';
+export function getReportMeta(input: string) {
+  const resolvedType = requestToReportTypeMap[input] ?? input;
+  const isAstroOnly = Object.keys(requestToReportTypeMap).includes(input);
 
   return {
-    isAstroOnly: astroOnly,
-    hasAIContent: !astroOnly,
+    reportType: resolvedType,
+    isAstroOnly,
+    hasAIContent: !isAstroOnly,
     label:
-      reportTypes.find(r => r.value === reportType)?.label ??
-      reportCategories.find(r => r.reportType === reportType)?.title ??
+      reportTypes.find(r => r.value === resolvedType)?.label ??
+      reportCategories.find(r => r.reportType === resolvedType)?.title ??
       'Unknown Report',
   };
 }
