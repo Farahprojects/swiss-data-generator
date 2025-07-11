@@ -127,6 +127,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     if (!onViewReport || !currentGuestReportId) return;
 
     try {
+      console.log('🔍 handleViewReport: Starting to fetch complete report');
       const data = await fetchCompleteReport(currentGuestReportId);
       if (!data) throw new Error('No data returned from edge function');
 
@@ -136,16 +137,35 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       const hasAi = !!report_content;
       const contentType = metadata?.content_type;
 
+      console.log('🔍 handleViewReport: Report data:', {
+        reportType,
+        hasSwiss,
+        hasAi,
+        contentType,
+        has_report: guest_report.has_report
+      });
+
       setFetchedReportData(data);
 
       const isAstro = contentType === 'astro' || contentType === 'both';
       const isAi = contentType === 'ai' || contentType === 'both';
 
-      if (isAi && (!hasSwiss || !hasAi)) return;
-      if (isAstro && !hasSwiss) return;
+      console.log('🔍 handleViewReport: Report type flags:', { isAstro, isAi });
 
+      // Fixed logic: AI reports don't need Swiss data, only Astro reports do
+      if (isAi && !hasAi) {
+        console.log('❌ AI report missing content, returning');
+        return;
+      }
+      if (isAstro && !hasSwiss) {
+        console.log('❌ Astro report missing Swiss data, returning');
+        return;
+      }
+
+      console.log('✅ Opening modal with report data');
       onViewReport(report_content || 'No content available', null, swiss_data, isAi, isAstro, reportType);
     } catch (error) {
+      console.error('❌ Error in handleViewReport:', error);
       onViewReport('Failed to load report content.', null, null, false, false);
     }
   }, [currentGuestReportId, onViewReport, fetchCompleteReport]);
