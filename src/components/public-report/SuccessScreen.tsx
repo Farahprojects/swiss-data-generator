@@ -121,11 +121,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const handleViewReport = useCallback(async () => {
     console.log('🚀 View Report button clicked!', { currentGuestReportId, onViewReport });
     
-    if (!onViewReport || !currentGuestReportId) {
-      console.log('❌ Missing onViewReport callback or guest report ID');
-      return;
-    }
-
     try {
       console.log('📡 Fetching fresh report data...');
       const data = await fetchCompleteReport(currentGuestReportId);
@@ -165,17 +160,23 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       });
 
       // Always open the modal with whatever data we have - let the modal handle what to display
-      onViewReport(
-        report_content || 'No content available', 
-        null, 
-        swiss_data, 
-        hasAi, 
-        isAstro, 
-        reportType
-      );
+      if (onViewReport) {
+        onViewReport(
+          report_content || 'No content available', 
+          null, 
+          swiss_data, 
+          hasAi, 
+          isAstro, 
+          reportType
+        );
+      } else {
+        console.warn('⚠️ onViewReport callback is missing');
+      }
     } catch (error) {
       console.error('❌ Error in handleViewReport:', error);
-      onViewReport('Failed to load report content.', null, null, false, false);
+      if (onViewReport) {
+        onViewReport('Failed to load report content.', null, null, false, false);
+      }
     }
   }, [currentGuestReportId, onViewReport, fetchCompleteReport]);
 
