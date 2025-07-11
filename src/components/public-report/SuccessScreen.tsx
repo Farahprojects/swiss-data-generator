@@ -124,11 +124,22 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   }, []);
 
   const handleViewReport = useCallback(async () => {
-    if (!onViewReport || !currentGuestReportId) return;
+    console.log('🚀 View Report button clicked!', { currentGuestReportId, onViewReport });
+    
+    if (!onViewReport || !currentGuestReportId) {
+      console.log('❌ Missing onViewReport callback or guest report ID');
+      return;
+    }
 
     try {
+      console.log('📡 Fetching fresh report data...');
       const data = await fetchCompleteReport(currentGuestReportId);
-      if (!data) throw new Error('No data returned from edge function');
+      console.log('📋 Fetched data:', data);
+      
+      if (!data) {
+        console.log('❌ No data returned from edge function');
+        throw new Error('No data returned from edge function');
+      }
 
       const { report_content, swiss_data, guest_report, metadata } = data;
       const reportType = guest_report.report_type;
@@ -136,16 +147,39 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       const hasAi = !!report_content;
       const contentType = metadata?.content_type;
 
+      console.log('📊 Data summary:', {
+        hasSwiss,
+        hasAi,
+        reportType,
+        contentType,
+        hasReportContent: !!report_content,
+        hasSwissData: !!swiss_data
+      });
+
       setFetchedReportData(data);
 
       const isAstro = contentType === 'astro' || contentType === 'both';
       const isAi = contentType === 'ai' || contentType === 'both';
 
-      if (isAi && (!hasSwiss || !hasAi)) return;
-      if (isAstro && !hasSwiss) return;
+      console.log('🎯 Opening modal with data:', {
+        content: report_content ? 'Present' : 'Missing',
+        swiss_data: swiss_data ? 'Present' : 'Missing',
+        isAi,
+        isAstro,
+        reportType
+      });
 
-      onViewReport(report_content || 'No content available', null, swiss_data, isAi, isAstro, reportType);
+      // Always open the modal with whatever data we have - let the modal handle what to display
+      onViewReport(
+        report_content || 'No content available', 
+        null, 
+        swiss_data, 
+        hasAi, 
+        isAstro, 
+        reportType
+      );
     } catch (error) {
+      console.error('❌ Error in handleViewReport:', error);
       onViewReport('Failed to load report content.', null, null, false, false);
     }
   }, [currentGuestReportId, onViewReport, fetchCompleteReport]);
