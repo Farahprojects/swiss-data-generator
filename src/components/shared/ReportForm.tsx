@@ -327,7 +327,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   };
 
   // Show report viewer if user is viewing a report
-  if (viewingReport && reportContent && userName) {
+  if (viewingReport && userName) {
     return (
       <DesktopReportViewer
         reportContent={reportContent}
