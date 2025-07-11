@@ -108,7 +108,7 @@ export const createFreeReport = async (promoCode: string, reportData: any) => {
         report_type: reportData.reportType,
         report_data: reportData,
         amount_paid: 0,
-        payment_status: 'free',
+        payment_status: 'paid',
         promo_code_used: promoCode,
         has_report: false,
         email_sent: false
