@@ -80,6 +80,9 @@ async function logToSupabase(
 
   const isGuest = requestPayload?.is_guest === true;
 
+  // 🚨 Additional debugging for user_id tracking
+  console.log(`[logToSupabase] user_id: "${userId}", is_guest: ${isGuest}, type: ${typeof userId}, length: ${userId?.length || 'N/A'}`);
+
   const { error } = await sb.from("translator_logs").insert({
     request_type:        requestType,
     request_payload:     requestPayload,
@@ -173,6 +176,11 @@ export async function translate(
   const userId        = raw.user_id;
   const skipLogging   = raw.skip_logging === true;
   const requestId     = crypto.randomUUID().substring(0, 8);
+
+  // 🚨 Guard against missing or invalid user_id for guest requests
+  if (raw.is_guest && (!userId || typeof userId !== 'string' || userId.length < 32)) {
+    throw new Error(`Missing or invalid user_id passed to translator for guest request: ${userId}`);
+  }
 
   // VERSION DEBUG LOG - This will appear in edge function logs
   console.log(`[translator][${requestId}] ✅ TRANSLATOR VERSION: ${TRANSLATOR_VERSION} - LATEST FILE LOADED`);
