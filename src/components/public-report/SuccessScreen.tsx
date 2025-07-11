@@ -186,6 +186,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       report &&
       !hasSwissError &&
       !errorHandlingTriggered &&
+      !caseNumber && // Don't trigger if we already have a case number
       report.has_report === false &&
       report.swiss_boolean === false &&
       report.payment_status === 'paid'
@@ -194,7 +195,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       setErrorHandlingTriggered(true);
       triggerErrorHandling(currentGuestReportId);
     }
-  }, [report, hasSwissError, triggerErrorHandling, currentGuestReportId, errorHandlingTriggered]);
+  }, [report, hasSwissError, triggerErrorHandling, currentGuestReportId, errorHandlingTriggered, caseNumber]);
 
   const status = (() => {
     if (hasSwissError) return { title: 'We\'re sorry', desc: 'Technical issue encountered', icon: CheckCircle };

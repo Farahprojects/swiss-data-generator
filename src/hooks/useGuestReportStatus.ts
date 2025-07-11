@@ -300,6 +300,12 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
   const triggerErrorHandling = useCallback(async (guestReportId?: string) => {
     const reportId = guestReportId || getGuestReportId();
     
+    // Check if we already have a case number to prevent duplicates
+    if (caseNumber) {
+      console.log('⚠️ Error handling already completed, case number exists:', caseNumber);
+      return;
+    }
+    
     // Handle case where no report ID is available
     if (!reportId) {
       console.warn('⚠️ Triggering error handling without report ID');
@@ -320,7 +326,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     );
     if (case_number) setCaseNumber(case_number);
     setError('We are looking into this issue. Please reference your case number if you contact support.');
-  }, [logUserError]);
+  }, [logUserError, caseNumber]);
 
   const setupRealtimeListener = useCallback((guestReportId?: string, onReportReady?: () => void) => {
     const reportId = guestReportId || getGuestReportId();
