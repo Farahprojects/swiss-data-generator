@@ -10,8 +10,6 @@ import { logToAdmin } from '@/utils/adminLogger';
 import { useNavigate } from 'react-router-dom';
 import { getGuestToken, clearAllSessionData } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
-import { EntertainmentWindow, EntertainmentConfig } from '@/components/ui/EntertainmentWindow';
-import { getEntertainmentConfig, createDynamicConfig } from '@/utils/entertainmentConfig';
 
 type ReportType = 'essence' | 'sync';
 const VIDEO_SRC = 'https://auth.theraiastro.com/storage/v1/object/public/therai-assets/loading-video.mp4';
@@ -67,10 +65,9 @@ interface SuccessScreenProps {
     reportType?: string
   ) => void;
   guestReportId?: string;
-  shouldShowEntertainment?: boolean;
 }
 
-const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport, guestReportId, shouldShowEntertainment = false }) => {
+const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport, guestReportId }) => {
   const {
     report,
     error,
@@ -96,17 +93,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const [waitTimeRemaining, setWaitTimeRemaining] = useState(24);
   const [isLoadingReport, setIsLoadingReport] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
-
-  // Entertainment window configuration - dynamically chosen based on user context
-  const entertainmentConfig: EntertainmentConfig = getEntertainmentConfig(
-    'textTypewriter', // Default type - can be changed to: 'video', 'interactive', 'cosmicAnimation', etc.
-    {
-      preferVideo: !isMobile, // Desktop users might prefer video
-      preferInteractive: !isMobile, // Desktop users can interact better
-      fastConnection: true, // Assume fast connection for now
-      mobile: isMobile
-    }
-  );
 
   const currentGuestReportId = useMemo(() => {
     return guestReportId || getGuestToken();
@@ -231,31 +217,33 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     }
   }, [currentGuestReportId, onViewReport, fetchCompleteReport, isLoadingReport]);
 
-  // Simple 24-second delay timer for AI reports
+  // 24-second delay timer that runs only once per session
   useEffect(() => {
-    if (!shouldShowEntertainment) {
+    const waitStarted = sessionStorage.getItem("reportWaitStarted");
+    
+    if (!waitStarted) {
+      // Start the 24-second delay
+      setIsWaitingPeriod(true);
+      sessionStorage.setItem("reportWaitStarted", "true");
+      
+      const timer = setInterval(() => {
+        setWaitTimeRemaining((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            setIsWaitingPeriod(false);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      
+      return () => clearInterval(timer);
+    } else {
+      // Skip delay if already started in this session
       setIsWaitingPeriod(false);
       setWaitTimeRemaining(0);
-      return;
     }
-    
-    // Start the 24-second countdown for AI reports
-    setIsWaitingPeriod(true);
-    setWaitTimeRemaining(24);
-    
-    const timer = setInterval(() => {
-      setWaitTimeRemaining((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          setIsWaitingPeriod(false);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    
-    return () => clearInterval(timer);
-  }, [shouldShowEntertainment]);
+  }, []);
 
   useEffect(() => {
     const scrollToProcessing = () => {
@@ -377,28 +365,19 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                    <span className="font-medium">{email}</span>
                  </div>
                  
-                  {isWaitingPeriod ? (
-                    <div className="space-y-6">
-                      {/* Entertainment Window */}
-                      <EntertainmentWindow
-                        isOpen={isWaitingPeriod}
-                        duration={24}
-                        timeRemaining={waitTimeRemaining}
-                        config={entertainmentConfig}
-                        onComplete={() => setIsWaitingPeriod(false)}
-                      />
-                      
-                      {/* Fallback controls */}
-                      <div className="flex flex-col items-center gap-4">
-                        <Button disabled className="bg-gray-400 text-white font-light cursor-not-allowed">
-                          View Report ({waitTimeRemaining}s)
-                        </Button>
-                        <Button variant="outline" onClick={handleBackToForm} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
-                          Home
-                        </Button>
-                      </div>
-                    </div>
-                   ) : (
+                 {isWaitingPeriod ? (
+                   <div className="flex flex-col items-center gap-4">
+                     <div className="text-gray-600 font-light">
+                       Report preparing... {waitTimeRemaining}s remaining
+                     </div>
+                     <Button disabled className="bg-gray-400 text-white font-light cursor-not-allowed">
+                       View Report ({waitTimeRemaining}s)
+                     </Button>
+                     <Button variant="outline" onClick={handleBackToForm} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
+                       Home
+                     </Button>
+                   </div>
+                  ) : (
                     <div className="space-y-4">
                       {/* Error display */}
                       {reportError && (

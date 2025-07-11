@@ -106,7 +106,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     control,
     formState: { errors },
   } = form;
-  const { isProcessing, submitReport, shouldShowEntertainment } = useReportSubmission();
+  const { isProcessing, submitReport } = useReportSubmission();
   const { promoValidation, isValidatingPromo } = usePromoValidation();
 
   const reportCategory = watch('reportCategory');
@@ -479,7 +479,6 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
               email={submittedData.email}
               onViewReport={handleViewReport}
               guestReportId={getGuestReportId() || undefined}
-              shouldShowEntertainment={shouldShowEntertainment}
             />
           </div>
         )}

@@ -203,8 +203,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     pendingSubmissionData,
     handlePromoConfirmationTryAgain,
     handlePromoConfirmationContinue,
-    resetReportState,
-    shouldShowEntertainment
+    resetReportState
   } = useReportSubmission();
 
   // Auto-scroll functionality for desktop
@@ -354,7 +353,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         email={userEmail} 
         onViewReport={handleViewReport}
         guestReportId={urlGuestId || undefined}
-        shouldShowEntertainment={shouldShowEntertainment}
       />
     );
   }
@@ -423,7 +421,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           email={tokenRecoveryState.recoveredEmail} 
           onViewReport={handleViewReport}
           guestReportId={urlGuestId}
-          shouldShowEntertainment={false}
         />
       );
     }
