@@ -95,24 +95,7 @@ serve(async (req) => {
     let reportContent: string | null = null;
     let swissData: any | null = null;
 
-    // Fetch AI report content (if available)
-    const isAiReport = guestReport.has_report && !!guestReport.report_log_id;
-
-    if (isAiReport) {
-      const { data: reportLog, error: reportError } = await supabase
-        .from('report_logs')
-        .select('report_text')
-        .eq('id', guestReport.report_log_id)
-        .single();
-
-      if (!reportError) {
-        reportContent = reportLog?.report_text || null;
-      } else {
-        console.error('[get-guest-report] Error fetching AI report:', reportError);
-      }
-    }
-
-    // Fetch Swiss astro data (if translator log exists)
+    // Fetch Swiss astro data first (if translator log exists)
     if (hasTranslatorLog) {
       const { data: translatorLog, error: translatorError } = await supabase
         .from('translator_logs')
@@ -127,8 +110,32 @@ serve(async (req) => {
       }
     }
 
-    // ✅ Use Swiss data presence as source of truth (not swiss_boolean)
+    // Determine report types based on actual data and report_type
+    const isEssenceOrSyncReport = ['essence', 'sync'].includes(guestReport.report_type);
     const isAstroReport = !!swissData;
+    const isAiReport = guestReport.has_report && !!guestReport.report_log_id;
+
+    // Extract content based on report type
+    if (isEssenceOrSyncReport && swissData?.report?.content) {
+      // For astro reports (essence/sync), extract from swiss_data.report.content
+      reportContent = swissData.report.content;
+      console.log('[get-guest-report] Extracted astro report content from swiss_data');
+    } else if (isAiReport) {
+      // For AI reports, fetch from report_logs
+      const { data: reportLog, error: reportError } = await supabase
+        .from('report_logs')
+        .select('report_text')
+        .eq('id', guestReport.report_log_id)
+        .single();
+
+      if (!reportError) {
+        reportContent = reportLog?.report_text || null;
+        console.log('[get-guest-report] Extracted AI report content from report_logs');
+      } else {
+        console.error('[get-guest-report] Error fetching AI report:', reportError);
+      }
+    }
+
     const isAstroOnly = isAstroReport && !isAiReport;
 
     let contentType: 'astro' | 'ai' | 'both' | 'none' = 'none';
