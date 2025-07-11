@@ -2,6 +2,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ThemeProvider } from "next-themes";
 import { AuthProvider } from './contexts/AuthContext';
 import { ModalStateProvider } from './contexts/ModalStateProvider';
 import { SettingsModalProvider } from './contexts/SettingsModalContext';
@@ -63,13 +64,20 @@ function App() {
   return (
     <SSRErrorBoundary>
       <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <Router>
-          <NavigationStateProvider>
-            <AuthProvider>
-              <PricingProvider>
-                <ModalStateProvider>
-                  <SettingsModalProvider>
+        <ThemeProvider 
+          attribute="class" 
+          defaultTheme="light" 
+          forcedTheme="light"
+          enableSystem={false}
+          disableTransitionOnChange
+        >
+          <QueryClientProvider client={queryClient}>
+            <Router>
+              <NavigationStateProvider>
+                <AuthProvider>
+                  <PricingProvider>
+                    <ModalStateProvider>
+                      <SettingsModalProvider>
                   <div className="min-h-screen bg-background">
                     <Routes>
                       <Route path="/" element={<Index />} />
@@ -110,14 +118,15 @@ function App() {
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </div>
-                    <Toaster />
-                  </SettingsModalProvider>
-                </ModalStateProvider>
-              </PricingProvider>
-            </AuthProvider>
-          </NavigationStateProvider>
-        </Router>
-      </QueryClientProvider>
+                      <Toaster />
+                    </SettingsModalProvider>
+                  </ModalStateProvider>
+                </PricingProvider>
+              </AuthProvider>
+            </NavigationStateProvider>
+          </Router>
+        </QueryClientProvider>
+      </ThemeProvider>
       </ErrorBoundary>
     </SSRErrorBoundary>
   );
