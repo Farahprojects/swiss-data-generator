@@ -114,10 +114,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const hasSwissError = report?.has_swiss_error === true;
   const hasProcessingError = !!error;
 
-  const isReady = !hasSwissError && (
-    (isAstroDataOnly && report?.swiss_boolean === true) ||
-    (!isAstroDataOnly && !!report?.has_report)
-  );
+  const isReady = !hasSwissError && !!report;
 
   const handleVideoReady = useCallback(() => {
     setIsVideoReady(true);
@@ -196,26 +193,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     }
   }, [currentGuestReportId, fetchReport]);
 
-  // Check if report is ready immediately for AI reports
-  useEffect(() => {
-    const checkIfReportReady = async () => {
-      if (!report || modalTriggered || !currentGuestReportId) return;
-      
-      // For AI reports, check if report is ready immediately
-      if (isReady && !modalTriggered) {
-        setModalTriggered(true);
-        try {
-          const data = await fetchCompleteReport(currentGuestReportId);
-          if (data) {
-            setFetchedReportData(data);
-          }
-        } catch (error) {}
-        handleViewReport();
-      }
-    };
-
-    checkIfReportReady();
-  }, [report, isReady, modalTriggered, currentGuestReportId, fetchCompleteReport, handleViewReport]);
 
   // 🔥 Check report_logs for reliable error detection
   useEffect(() => {
@@ -248,9 +225,8 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     if (hasSwissError) return { title: 'We\'re sorry', desc: 'Technical issue encountered', icon: CheckCircle };
     if (!report) return { title: 'Processing Your Request', desc: 'Setting up your report', icon: Clock };
     if (report.payment_status === 'pending') return { title: 'Payment Processing', desc: 'Confirming payment', icon: Clock };
-    if (report.payment_status === 'paid' && !report.has_report) return { title: 'Generating Report', desc: 'Preparing insights', icon: Clock };
     if (isReady) return { title: 'Report Ready!', desc: 'Your report is complete', icon: CheckCircle };
-    return { title: '', desc: 'Please wait', icon: Clock };
+    return { title: 'Generating Report', desc: 'Preparing insights', icon: Clock };
   })();
 
   const StatusIcon = status.icon;
