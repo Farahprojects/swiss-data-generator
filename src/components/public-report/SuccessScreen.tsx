@@ -89,6 +89,8 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const [modalTriggered, setModalTriggered] = useState(false);
   const [fetchedReportData, setFetchedReportData] = useState<any>(null);
   const [errorHandlingTriggered, setErrorHandlingTriggered] = useState(false);
+  const [isWaitingPeriod, setIsWaitingPeriod] = useState(false);
+  const [waitTimeRemaining, setWaitTimeRemaining] = useState(24);
 
   const currentGuestReportId = useMemo(() => {
     return guestReportId || getGuestToken();
@@ -182,6 +184,34 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       }
     }
   }, [currentGuestReportId, onViewReport, fetchCompleteReport]);
+
+  // 24-second delay timer that runs only once per session
+  useEffect(() => {
+    const waitStarted = sessionStorage.getItem("reportWaitStarted");
+    
+    if (!waitStarted) {
+      // Start the 24-second delay
+      setIsWaitingPeriod(true);
+      sessionStorage.setItem("reportWaitStarted", "true");
+      
+      const timer = setInterval(() => {
+        setWaitTimeRemaining((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            setIsWaitingPeriod(false);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      
+      return () => clearInterval(timer);
+    } else {
+      // Skip delay if already started in this session
+      setIsWaitingPeriod(false);
+      setWaitTimeRemaining(0);
+    }
+  }, []);
 
   useEffect(() => {
     const scrollToProcessing = () => {
@@ -298,18 +328,33 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                   <h2 className="text-2xl font-light text-gray-900 mb-1 tracking-tight">{status.title}</h2>
                   <p className="text-gray-600 font-light">{status.desc}</p>
                 </div>
-                <div className="bg-muted/50 rounded-lg p-4 text-sm">
-                  Hi {firstName}! Your report.<br />
-                  <span className="font-medium">{email}</span>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button onClick={handleViewReport} className="bg-gray-900 hover:bg-gray-800 text-white font-light">
-                    View Report
-                  </Button>
-                  <Button variant="outline" onClick={handleBackToForm} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
-                    Home
-                  </Button>
-                </div>
+                 <div className="bg-muted/50 rounded-lg p-4 text-sm">
+                   Hi {firstName}! Your report.<br />
+                   <span className="font-medium">{email}</span>
+                 </div>
+                 
+                 {isWaitingPeriod ? (
+                   <div className="flex flex-col items-center gap-4">
+                     <div className="text-gray-600 font-light">
+                       Report preparing... {waitTimeRemaining}s remaining
+                     </div>
+                     <Button disabled className="bg-gray-400 text-white font-light cursor-not-allowed">
+                       View Report ({waitTimeRemaining}s)
+                     </Button>
+                     <Button variant="outline" onClick={handleBackToForm} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
+                       Home
+                     </Button>
+                   </div>
+                 ) : (
+                   <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                     <Button onClick={handleViewReport} className="bg-gray-900 hover:bg-gray-800 text-white font-light">
+                       View Report
+                     </Button>
+                     <Button variant="outline" onClick={handleBackToForm} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
+                       Home
+                     </Button>
+                   </div>
+                 )}
               </>
             )}
           </CardContent>
