@@ -9,13 +9,13 @@ export const useMobileAutocomplete = () => {
       const mobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       setIsMobile(mobile);
       
-      // Check for known mobile browser issues with Google Web Components
-      const isOldAndroid = /Android [1-4]\./.test(navigator.userAgent);
-      const isOldIOS = /OS [1-9]_/.test(navigator.userAgent);
-      const hasLowMemory = (navigator as any).deviceMemory && (navigator as any).deviceMemory < 2;
+      // Only fallback for genuinely old devices - let modern mobile browsers use native Google components
+      const isVeryOldAndroid = /Android [1-4]\./.test(navigator.userAgent);
+      const isVeryOldIOS = /OS [1-9]_/.test(navigator.userAgent);
       
-      if (mobile && (isOldAndroid || isOldIOS || hasLowMemory)) {
-        console.warn('🚨 Detected older mobile device or low memory, using fallback input');
+      // Only fallback for extremely old devices, not all mobile
+      if (isVeryOldAndroid || isVeryOldIOS) {
+        console.warn('🚨 Detected very old mobile device, using fallback input');
         setShouldUseFallback(true);
       }
     }

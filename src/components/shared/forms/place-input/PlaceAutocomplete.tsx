@@ -74,8 +74,7 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
     };
 
     const handleShowFallback = () => {
-      // Switch to server-based autocomplete due to Web Components issues
-      setShowFallback(true);
+      // Switch to server-based autocomplete only when actually needed
       setUseServerAutocomplete(true);
       setHasTriedWebComponents(true);
       autocompleteMonitor.log('fallback_used', { 
@@ -94,8 +93,8 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
       return null;
     }
 
-    // Enhanced fallback logic for production - prefer server autocomplete for reliability
-    const shouldShowFallback = (showFallback || isError || disabled) && !forceAutocomplete;
+    // Simplified fallback logic - only use server autocomplete when explicitly needed
+    const shouldShowFallback = (showFallback || disabled) && !forceAutocomplete;
     const shouldUseServerAutocomplete = useServerAutocomplete || (isError && !forceAutocomplete);
 
     return (
