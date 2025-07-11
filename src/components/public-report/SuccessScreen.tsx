@@ -219,6 +219,22 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     return () => clearTimeout(countdownRef.current as NodeJS.Timeout);
   }, [countdown, isReady, isVideoReady, hasSwissError]);
 
+  // Intelligence layer: Trigger error handler if conditions indicate failure
+  useEffect(() => {
+    if (
+      report && 
+      countdown === 0 && 
+      !hasSwissError && 
+      !isReady &&
+      report.has_report === false && 
+      report.swiss_boolean === false &&
+      report.payment_status === 'paid'
+    ) {
+      console.warn('🚨 Triggering error handler: has_report=false, swiss_boolean=false after timeout');
+      triggerErrorHandling(currentGuestReportId);
+    }
+  }, [report, countdown, hasSwissError, isReady, triggerErrorHandling, currentGuestReportId]);
+
 
   const status = (() => {
     if (hasSwissError) return { title: 'We\'re sorry', desc: 'Technical issue encountered', icon: CheckCircle };
@@ -288,7 +304,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                   <Button variant="outline" onClick={handleContactSupport} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
                     Contact Support
                   </Button>
-                  <Button variant="outline" onClick={handleBackToHome} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
+                  <Button variant="outline" onClick={handleBackToForm} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
                     Back to Home
                   </Button>
                 </div>
@@ -331,7 +347,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                       <Button onClick={handleViewReport} className="bg-gray-900 hover:bg-gray-800 text-white font-light">
                         View Report
                       </Button>
-                      <Button variant="outline" onClick={handleBackToHome} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
+                      <Button variant="outline" onClick={handleBackToForm} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
                         Home
                       </Button>
                     </div>
