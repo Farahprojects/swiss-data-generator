@@ -63,7 +63,7 @@ function transformToTranslatorPayload(productRow: any, reportData: ReportData): 
   if (reportData.returnYear) basePayload.return_date = reportData.returnYear;
 
   // Handle two-person reports (sync, compatibility)
-  if (['sync', 'compatibility'].includes(endpoint) && reportData.secondPersonName) {
+  if ((endpoint === 'sync' || endpoint === 'compatibility' || (endpoint === 'report' && reportType && reportType.startsWith('sync'))) && reportData.secondPersonName) {
     basePayload.person_a = {
       name: reportData.name,
       birth_date: reportData.birthDate,
@@ -109,7 +109,7 @@ function transformToTranslatorPayload(productRow: any, reportData: ReportData): 
     } else {
       basePayload.report = `essence_${reportData.essenceType}`;
     }
-  } else if (reportType === 'sync' && reportData.relationshipType) {
+  } else if (reportType.startsWith('sync') && reportData.relationshipType) {
     basePayload.report = `sync_${reportData.relationshipType}`;
   } else {
     // For other report types, use the report type directly
