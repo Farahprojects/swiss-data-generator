@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ReportContent } from './ReportContent';
 import { useToast } from '@/hooks/use-toast';
 import { logToAdmin } from '@/utils/adminLogger';
+import openaiLogo from '@/assets/openai-logo.png';
 
 interface MobileReportViewerProps {
   reportContent: string;
@@ -182,17 +183,16 @@ const MobileReportViewer = ({
       </div>
 
       {/* Report Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1">
         <div className="px-6 py-8 pb-24">
-          <div className="max-w-4xl mx-auto">
-            <ReportContent 
-              reportContent={reportContent} 
-              swissData={swissData} 
-              customerName={customerName}
-              hasReport={hasReport}
-              swissBoolean={swissBoolean}
-            />
-          </div>
+          <ReportContent 
+            reportContent={reportContent} 
+            swissData={swissData} 
+            customerName={customerName}
+            hasReport={hasReport}
+            swissBoolean={swissBoolean}
+            isMobile={true}
+          />
         </div>
       </div>
 
@@ -211,7 +211,7 @@ const MobileReportViewer = ({
             className="flex items-center text-gray-700 font-light text-lg hover:text-gray-900 transition-colors duration-300"
           >
             <img 
-              src="/lovable-uploads/6c5be1f5-cd98-48a0-962f-2dd52fc0604e.png" 
+              src={openaiLogo} 
               alt="ChatGPT" 
               className="h-5 w-5 mr-2"
             />
