@@ -162,23 +162,29 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
 
     if (currentGuestReportId) {
       fetchReport(currentGuestReportId);
-
-      const cleanup = setupRealtimeListener(currentGuestReportId, async () => {
-        if (!modalTriggered) {
-          setModalTriggered(true);
-          try {
-            const data = await fetchCompleteReport(currentGuestReportId);
-            if (data) {
-              setFetchedReportData(data);
-            }
-          } catch (error) {}
-          handleViewReport();
-        }
-      });
-
-      return cleanup;
     }
-  }, [currentGuestReportId, fetchReport, setupRealtimeListener, handleViewReport, modalTriggered, email]);
+  }, [currentGuestReportId, fetchReport]);
+
+  // Check if report is ready immediately for AI reports
+  useEffect(() => {
+    const checkIfReportReady = async () => {
+      if (!report || modalTriggered || !currentGuestReportId) return;
+      
+      // For AI reports, check if report is ready immediately
+      if (isReady && !modalTriggered) {
+        setModalTriggered(true);
+        try {
+          const data = await fetchCompleteReport(currentGuestReportId);
+          if (data) {
+            setFetchedReportData(data);
+          }
+        } catch (error) {}
+        handleViewReport();
+      }
+    };
+
+    checkIfReportReady();
+  }, [report, isReady, modalTriggered, currentGuestReportId, fetchCompleteReport, handleViewReport]);
 
   // 🔥 Check report_logs for reliable error detection
   useEffect(() => {
