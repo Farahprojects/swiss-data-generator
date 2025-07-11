@@ -457,6 +457,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
                   setValue={setValue}
                   watch={watch}
                   errors={errors}
+                  onPlaceSelected={handlePlaceSelected}
                 />
               )}
             </>

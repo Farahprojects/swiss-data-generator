@@ -14,9 +14,10 @@ interface SecondPersonFormProps {
   setValue: UseFormSetValue<ReportFormData>;
   watch: UseFormWatch<ReportFormData>;
   errors: FieldErrors<ReportFormData>;
+  onPlaceSelected?: () => void;
 }
 
-const SecondPersonForm = ({ register, setValue, watch, errors }: SecondPersonFormProps) => {
+const SecondPersonForm = ({ register, setValue, watch, errors, onPlaceSelected }: SecondPersonFormProps) => {
   const [hasInteracted, setHasInteracted] = useState({
     name: false,
     birthDate: false,
@@ -47,6 +48,9 @@ const SecondPersonForm = ({ register, setValue, watch, errors }: SecondPersonFor
     if (placeData.placeId) {
       setValue('secondPersonPlaceId', placeData.placeId);
     }
+    
+    // Trigger auto-scroll callback
+    onPlaceSelected?.();
   };
 
   const handleFieldInteraction = (fieldName: string) => {
