@@ -148,8 +148,8 @@ export const useReportSubmission = () => {
         setReportCreated(true);
         // Store the guest report ID for polling and URL
         storeGuestReportId(result.reportId);
-        // Store report type for immediate access in SuccessScreen
-        localStorage.setItem(`report_type_${result.reportId}`, isCurrentReportAI ? 'ai' : 'astro');
+        // Store report type for the prop logic
+        localStorage.setItem('pending_report_type', isCurrentReportAI ? 'ai' : 'astro');
         toast({
           title: "Free Report Created!",
           description: "Your report has been generated and will be sent to your email shortly.",
@@ -294,6 +294,7 @@ export const useReportSubmission = () => {
     pendingSubmissionData,
     handlePromoConfirmationTryAgain,
     handlePromoConfirmationContinue,
-    resetReportState
+    resetReportState,
+    shouldShowEntertainment: reportCreated && localStorage.getItem('pending_report_type') === 'ai'
   };
 };

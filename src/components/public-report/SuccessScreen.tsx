@@ -67,9 +67,10 @@ interface SuccessScreenProps {
     reportType?: string
   ) => void;
   guestReportId?: string;
+  shouldShowEntertainment?: boolean;
 }
 
-const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport, guestReportId }) => {
+const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport, guestReportId, shouldShowEntertainment = false }) => {
   const {
     report,
     error,
@@ -230,41 +231,31 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     }
   }, [currentGuestReportId, onViewReport, fetchCompleteReport, isLoadingReport]);
 
-  // 24-second delay timer that runs only once per specific report (AI reports only)
+  // Simple 24-second delay timer for AI reports
   useEffect(() => {
-    if (!currentGuestReportId) return;
-    
-    const reportType = localStorage.getItem(`report_type_${currentGuestReportId}`);
-    const entertainmentKey = `entertainment_shown_${currentGuestReportId}`;
-    const waitStarted = localStorage.getItem(entertainmentKey);
-    
-    // Only run entertainment window for AI reports
-    const isAIReport = reportType === 'ai' || (!reportType && report?.report_type !== 'astro'); // Fallback for old reports
-    
-    if (!waitStarted && isAIReport) {
-      // Start the 24-second delay for this specific AI report
-      setIsWaitingPeriod(true);
-      localStorage.setItem(entertainmentKey, "true");
-      localStorage.setItem(`${entertainmentKey}_timestamp`, Date.now().toString());
-      
-      const timer = setInterval(() => {
-        setWaitTimeRemaining((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            setIsWaitingPeriod(false);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      
-      return () => clearInterval(timer);
-    } else {
-      // Skip delay if already shown for this specific report OR if it's not an AI report
+    if (!shouldShowEntertainment) {
       setIsWaitingPeriod(false);
       setWaitTimeRemaining(0);
+      return;
     }
-  }, [currentGuestReportId, report?.report_type]);
+    
+    // Start the 24-second countdown for AI reports
+    setIsWaitingPeriod(true);
+    setWaitTimeRemaining(24);
+    
+    const timer = setInterval(() => {
+      setWaitTimeRemaining((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setIsWaitingPeriod(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [shouldShowEntertainment]);
 
   useEffect(() => {
     const scrollToProcessing = () => {
