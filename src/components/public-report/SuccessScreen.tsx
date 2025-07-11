@@ -111,6 +111,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const reportType = report?.report_type as ReportType | undefined;
   const isAstroDataOnly = isAstroOnlyType(reportType);
   const hasSwissError = report?.has_swiss_error === true;
+  const hasProcessingError = !!error;
 
   const isReady = !hasSwissError && (
     fetchedReportData?.metadata?.content_type === 'both' ||
@@ -219,7 +220,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       <div className={isMobile ? 'w-full max-w-md' : 'w-full max-w-4xl'}>
         <Card className="border-2 border-gray-200 shadow-lg">
           <CardContent className="p-8 text-center space-y-6">
-            {hasSwissError ? (
+            {(hasSwissError || hasProcessingError) ? (
               <>
                 <div className="flex items-center justify-center gap-4 py-4">
                   <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
