@@ -212,7 +212,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
   // Auto-scroll to payment step when step2 is complete and place was recently selected (desktop only)
   React.useEffect(() => {
-    const isDesktop = window.innerWidth >= 768; // md breakpoint
+    const isDesktop = window.innerWidth >= 640; // sm breakpoint
     if (step2Done && lastPlaceSelectionTime > 0 && isDesktop) {
       const timeSinceSelection = Date.now() - lastPlaceSelectionTime;
       if (timeSinceSelection < 2000) { // Within 2 seconds of place selection

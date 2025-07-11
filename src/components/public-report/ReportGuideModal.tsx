@@ -171,7 +171,7 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
   };
 
   return (
-    <div className="hidden md:block">
+    <div className="hidden sm:block">
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-white/95 backdrop-blur-sm border border-gray-200/50">
           <DialogClose className="absolute right-6 top-6 rounded-full opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
@@ -180,13 +180,13 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
           </DialogClose>
 
           <DialogHeader className="pb-8">
-            <DialogTitle className="text-4xl md:text-5xl font-light text-gray-900 text-center mb-4 tracking-tight">
+            <DialogTitle className="text-4xl lg:text-6xl font-light text-gray-900 text-center mb-6 tracking-tight">
               Choose Your Report
             </DialogTitle>
             <p className="text-gray-500 text-center leading-relaxed">Select the insights that matter most to you right now</p>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mt-6">
             {reportGuides.map((report) => {
               const isTargeted = targetReportType && getReportType(targetReportType) === report.type;
               

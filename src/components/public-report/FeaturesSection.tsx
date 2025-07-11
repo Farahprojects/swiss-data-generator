@@ -23,7 +23,7 @@ const FeaturesSection = ({ onGetReportClick }: FeaturesSectionProps) => {
 
   return (
     <section className="py-24 bg-gradient-to-b from-white to-gray-50/30">
-      <div className="w-full md:px-4 md:container md:mx-auto">
+      <div className="w-full px-4 container mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -31,12 +31,12 @@ const FeaturesSection = ({ onGetReportClick }: FeaturesSectionProps) => {
           viewport={{ once: true }}
           className="text-center mb-20"
         >
-          <h2 className="text-4xl md:text-5xl font-light text-gray-900 mb-6 tracking-tight">
+          <h2 className="text-4xl lg:text-6xl font-light text-gray-900 mb-8 tracking-tight">
             Why Choose Our Reports?
           </h2>
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-16 max-w-5xl mx-auto mb-20">
+        <div className="grid lg:grid-cols-3 gap-20 max-w-6xl mx-auto mb-24">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}

@@ -53,13 +53,13 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
 
   return (
     <section className="relative h-screen flex items-center justify-center bg-white overflow-hidden">
-      <div className="relative z-10 w-full md:px-4 md:container md:mx-auto text-center max-w-none md:max-w-4xl">
+      <div className="relative z-10 w-full px-4 container mx-auto text-center max-w-5xl">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, ease: "easeOut" }}
         >
-          <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-8xl lg:text-9xl font-light text-gray-900 leading-tight mb-8">
+          <h1 className="text-3xl xs:text-4xl sm:text-5xl lg:text-8xl xl:text-9xl font-light text-gray-900 leading-tight mb-8">
             Know
             <br />
             <span className="italic font-medium flex items-center justify-center gap-x-8 flex-wrap">

@@ -181,7 +181,7 @@ const PaymentStep = ({
     </div>
   ) : (
     <div className="max-w-6xl mx-auto">
-      <div className="flex flex-wrap md:flex-nowrap gap-6 w-full">
+      <div className="flex flex-wrap lg:flex-nowrap gap-8 w-full">
         {/* Left side - Order Summary */}
         <div className="flex-1 min-w-[280px]">
           <Card className="h-fit">

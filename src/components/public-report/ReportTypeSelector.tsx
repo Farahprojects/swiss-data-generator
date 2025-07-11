@@ -206,7 +206,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
                 control={control}
                 name="reportCategory"
                 render={({ field }) => (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {reportCategories.map((category) => {
                       const IconComponent = category.icon;
                       const isSelected = watchedCategory === category.value;
@@ -255,7 +255,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
                   control={control}
                   name="reportSubCategory"
                   render={({ field }) => (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                       {snapshotSubCategories.map((sub) => {
                         const IconComponent = sub.icon;
                         const isSelected = watchedSnapshot === sub.reportType;
@@ -305,7 +305,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
                   control={control}
                   name="request"
                   render={({ field }) => (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       {astroRequestCategories.map((sub) => {
                         const IconComponent = sub.icon;
                         const isSelected = watchedAstroData === sub.value;
@@ -358,7 +358,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
                   control={control}
                   name="essenceType"
                   render={({ field }) => (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
                       {detailedEssenceTypes.map((type) => {
                         const IconComponent = type.icon;
                         const isSelected = field.value === type.value;
@@ -433,7 +433,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
                   control={control}
                   name="relationshipType"
                   render={({ field }) => (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
                       {detailedRelationshipTypes.map((type) => {
                         const IconComponent = type.icon;
                         const isSelected = field.value === type.value;
