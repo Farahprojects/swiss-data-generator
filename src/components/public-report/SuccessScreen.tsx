@@ -121,6 +121,9 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const handleViewReport = useCallback(async () => {
     console.log('🚀 View Report button clicked!', { currentGuestReportId, onViewReport });
     
+    // Track modal view state for auto-reopen on refresh
+    localStorage.setItem('autoOpenModal', 'true');
+    
     try {
       console.log('📡 Fetching fresh report data...');
       const data = await fetchCompleteReport(currentGuestReportId);
@@ -192,6 +195,18 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     }
   }, [currentGuestReportId, fetchReport]);
 
+  // Auto-reopen modal after refresh if user was previously viewing it
+  useEffect(() => {
+    const shouldAutoOpen = localStorage.getItem('autoOpenModal') === 'true';
+    const reportReady = report?.payment_status === 'paid' && !hasSwissError;
+
+    if (shouldAutoOpen && reportReady && !modalTriggered) {
+      console.log('🔁 Auto-opening report modal after refresh');
+      handleViewReport();
+      setModalTriggered(true);
+      localStorage.removeItem('autoOpenModal');
+    }
+  }, [report, hasSwissError, modalTriggered, handleViewReport]);
 
   // 🔥 Check report_logs for reliable error detection
   useEffect(() => {
