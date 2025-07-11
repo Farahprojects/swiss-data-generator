@@ -20,8 +20,8 @@ function transformToTranslatorPayload(productRow: any, reportData: ReportData): 
   let requestEndpoint = endpoint;
   if (endpoint === 'report' && reportType) {
     // Map report types to their base endpoints
-    if (reportType === 'essence') requestEndpoint = 'essence';
-    else if (reportType === 'sync') requestEndpoint = 'sync';
+    if (reportType.startsWith('essence')) requestEndpoint = 'essence';
+    else if (reportType.startsWith('sync')) requestEndpoint = 'sync';
     else if (reportType === 'flow') requestEndpoint = 'flow';
     else if (reportType === 'mindset') requestEndpoint = 'mindset';
     else if (reportType === 'monthly') requestEndpoint = 'monthly';
