@@ -923,6 +923,7 @@ export type Database = {
           endpoint: string | null
           id: string
           name: string
+          product_code: string | null
           report_type: string | null
           unit_price_usd: number
         }
@@ -932,6 +933,7 @@ export type Database = {
           endpoint?: string | null
           id: string
           name: string
+          product_code?: string | null
           report_type?: string | null
           unit_price_usd: number
         }
@@ -941,6 +943,7 @@ export type Database = {
           endpoint?: string | null
           id?: string
           name?: string
+          product_code?: string | null
           report_type?: string | null
           unit_price_usd?: number
         }

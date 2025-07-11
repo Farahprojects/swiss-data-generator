@@ -88,6 +88,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [modalTriggered, setModalTriggered] = useState(false);
   const [fetchedReportData, setFetchedReportData] = useState<any>(null);
+  const [errorHandlingTriggered, setErrorHandlingTriggered] = useState(false);
 
   const currentGuestReportId = useMemo(() => {
     return guestReportId || getGuestToken();
@@ -179,19 +180,21 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     }
   }, [currentGuestReportId, fetchReport, setupRealtimeListener, handleViewReport, modalTriggered, email]);
 
-  // 🔥 Immediate Error Trigger Based on Boolean Conditions
+  // 🔥 Immediate Error Trigger Based on Boolean Conditions (with duplicate prevention)
   useEffect(() => {
     if (
       report &&
       !hasSwissError &&
+      !errorHandlingTriggered &&
       report.has_report === false &&
       report.swiss_boolean === false &&
       report.payment_status === 'paid'
     ) {
       console.warn('🚨 Triggering error handler IMMEDIATELY: has_report=false, swiss_boolean=false');
+      setErrorHandlingTriggered(true);
       triggerErrorHandling(currentGuestReportId);
     }
-  }, [report, hasSwissError, triggerErrorHandling, currentGuestReportId]);
+  }, [report, hasSwissError, triggerErrorHandling, currentGuestReportId, errorHandlingTriggered]);
 
   const status = (() => {
     if (hasSwissError) return { title: 'We\'re sorry', desc: 'Technical issue encountered', icon: CheckCircle };

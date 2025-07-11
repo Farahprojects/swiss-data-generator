@@ -45,6 +45,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
   const [error, setError] = useState<string | null>(null);
   const [caseNumber, setCaseNumber] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const errorLoggedRef = useRef<Set<string>>(new Set());
 
   const getSwissErrorMessage = useCallback((reportType: string | null) => {
     if (reportType === 'essence') {
@@ -54,7 +55,19 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
   }, []);
 
   const logUserError = useCallback(async (guestReportId: string, errorType: string, errorMessage?: string) => {
+    // Create a unique key for this error to prevent duplicates
+    const errorKey = `${guestReportId}-${errorType}`;
+    
+    // Check if we've already logged this error
+    if (errorLoggedRef.current.has(errorKey)) {
+      console.log('⚠️ Error already logged, skipping duplicate:', errorKey);
+      return null;
+    }
+
     try {
+      // Mark as being processed
+      errorLoggedRef.current.add(errorKey);
+
       const { data, error } = await supabase.functions.invoke('log-user-error', {
         body: {
           guestReportId: guestReportId || null,
@@ -66,6 +79,8 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
 
       if (error) {
         console.warn('Failed to log user error:', error.message);
+        // Remove from tracking since it failed
+        errorLoggedRef.current.delete(errorKey);
         return null;
       }
 
@@ -73,6 +88,8 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
       return data?.case_number || 'CASE-' + Date.now();
     } catch (err) {
       console.error('❌ Error logging user error:', err);
+      // Remove from tracking since it failed
+      errorLoggedRef.current.delete(errorKey);
       return null;
     }
   }, []);
@@ -106,13 +123,15 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
           const errorMessage = getSwissErrorMessage(data.report_type);
           setError(errorMessage);
           
-          // Log the Swiss error and get case number
-          const case_number = await logUserError(
-            reportId,
-            'swiss_data_generation_failed',
-            `Swiss data generation failed for report type: ${data.report_type || 'unknown'}`
-          );
-          if (case_number) setCaseNumber(case_number);
+          // Log the Swiss error and get case number (only if not already logged)
+          if (!caseNumber) {
+            const case_number = await logUserError(
+              reportId,
+              'swiss_data_generation_failed',
+              `Swiss data generation failed for report type: ${data.report_type || 'unknown'}`
+            );
+            if (case_number) setCaseNumber(case_number);
+          }
         } else {
           setError(null);
         }
