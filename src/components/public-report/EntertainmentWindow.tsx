@@ -125,13 +125,23 @@ const VideoComponent: React.FC = () => {
         <source src="https://placeholder-video-url.mp4" type="video/mp4" />
       </video>
       
-      <div className="absolute bottom-3 right-3">
-        <button
-          onClick={toggleMute}
-          className="text-white hover:text-gray-300 transition-colors"
+      <div className="absolute bottom-3 right-3 flex gap-2">
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={togglePlay}
+          className="bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm"
         >
-          {isMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
-        </button>
+          {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={toggleMute}
+          className="bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm"
+        >
+          {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+        </Button>
       </div>
       
       {/* Placeholder overlay for demo */}
@@ -210,12 +220,35 @@ const EntertainmentWindow: React.FC<EntertainmentWindowProps> = ({
       <Card className="border-2 border-gray-200 shadow-lg">
         <CardContent className="p-6">
           <div className="text-center space-y-4">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+              <span className="text-sm font-medium text-gray-600">
+                Preparing Your Report
+              </span>
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }} />
+            </div>
             
             {/* Content based on mode */}
             {mode === 'text' && <TextAnimation countdown={countdown} />}
             {mode === 'video' && <VideoComponent />}
             {mode === 'image' && <ImageComponent />}
             
+            {/* Countdown display */}
+            {countdown > 0 && (
+              <div className="text-center pt-4 border-t border-gray-200">
+                <p className="text-sm text-gray-500">
+                  Estimated time remaining: <span className="font-medium">{countdown}s</span>
+                </p>
+                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                  <motion.div
+                    className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full"
+                    initial={{ width: "100%" }}
+                    animate={{ width: `${(countdown / 24) * 100}%` }}
+                    transition={{ duration: 1, ease: "linear" }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
