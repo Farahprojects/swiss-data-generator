@@ -113,7 +113,7 @@ const Step1_5SubCategory = ({ control, setValue, onNext, onPrev, selectedCategor
       className="space-y-6"
     >
       <div className="text-center space-y-2">
-        <h2 className="text-2xl font-semibold tracking-tight text-gray-900">{getHeadingText(selectedCategory)}</h2>
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground">{getHeadingText(selectedCategory)}</h2>
       </div>
 
       <Controller
@@ -142,12 +142,22 @@ const Step1_5SubCategory = ({ control, setValue, onNext, onPrev, selectedCategor
                       setValue('reportType', option.reportType);
                     }
                   }}
-                  className={`w-full flex items-center gap-4 rounded-xl border px-4 py-3 transition-all duration-150
-                    ${isFocus ? 'border-red-600 bg-red-50' : isSelected ? 'border-blue-600 bg-blue-50' : 'border-gray-200 bg-white hover:bg-gray-50'}`}
-                  aria-pressed={isSelected}
+                  className={`w-full p-6 rounded-2xl border transition-all duration-200 shadow-md bg-background/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98] ${
+                    isSelected 
+                      ? 'border-primary shadow-lg' 
+                      : 'border-border hover:border-muted-foreground'
+                  }`}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  <IconComponent className={`w-6 h-6 ${isFocus ? 'text-red-600' : 'text-blue-600'}`} />
-                  <span className="text-lg font-medium text-gray-900">{option.title}</span>
+                  <div className="flex gap-4 items-center">
+                    <div className="bg-background shadow-inner w-12 h-12 flex items-center justify-center rounded-full">
+                      <IconComponent className={`h-6 w-6 ${isFocus ? 'text-destructive' : 'text-primary'}`} />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <h3 className="text-lg font-semibold text-foreground mb-1">{option.title}</h3>
+                      <p className="text-sm text-muted-foreground">{option.description}</p>
+                    </div>
+                  </div>
                 </motion.button>
               );
             })}
