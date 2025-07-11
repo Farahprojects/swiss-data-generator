@@ -384,29 +384,26 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                   </div>
                   <div className="text-gray-600 font-light">Processing...</div>
                 </div>
-                <div>
-                  <h2 className="text-2xl font-light text-gray-900 mb-1 tracking-tight">{status.title}</h2>
-                  <p className="text-gray-600 font-light">{status.desc}</p>
-                </div>
-                   <div className="bg-muted/50 rounded-lg p-4 text-sm">
-                    Hi {firstName}! Your report.<br />
-                    <span className="font-medium">{email}</span>
+                {/* Countdown at the top */}
+                {showCountdown && (
+                  <div className="text-center py-2">
+                    <span className="text-sm font-medium text-gray-600">
+                      {countdownTime}s
+                    </span>
                   </div>
+                )}
                   
-                  {/* Show entertainment window for AI reports */}
-                  {isAiReport && (showCountdown || report?.payment_status === 'paid') && (
-                    <EntertainmentWindow 
-                      mode={entertainmentMode}
-                      countdown={showCountdown ? countdownTime : undefined}
-                      className="mb-4"
-                    />
-                  )}
-                  
-                  {showCountdown ? (
-                    <div className="flex flex-col items-center gap-4">
-                      <div className="text-gray-600 font-light">
-                        AI report preparing... {countdownTime}s remaining
-                      </div>
+            {/* Show entertainment window for AI reports */}
+            {isAiReport && (showCountdown || report?.payment_status === 'paid') && (
+              <EntertainmentWindow 
+                mode={entertainmentMode}
+                countdown={showCountdown ? countdownTime : undefined}
+                className="mb-4"
+              />
+            )}
+            
+            {showCountdown ? (
+              <div className="flex flex-col items-center gap-4">
                       <Button disabled className="bg-gray-400 text-white font-light cursor-not-allowed">
                         View Report ({countdownTime}s)
                       </Button>

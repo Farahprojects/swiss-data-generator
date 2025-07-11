@@ -220,35 +220,12 @@ const EntertainmentWindow: React.FC<EntertainmentWindowProps> = ({
       <Card className="border-2 border-gray-200 shadow-lg">
         <CardContent className="p-6">
           <div className="text-center space-y-4">
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-              <span className="text-sm font-medium text-gray-600">
-                Preparing Your Report
-              </span>
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }} />
-            </div>
             
             {/* Content based on mode */}
             {mode === 'text' && <TextAnimation countdown={countdown} />}
             {mode === 'video' && <VideoComponent />}
             {mode === 'image' && <ImageComponent />}
             
-            {/* Countdown display */}
-            {countdown > 0 && (
-              <div className="text-center pt-4 border-t border-gray-200">
-                <p className="text-sm text-gray-500">
-                  Estimated time remaining: <span className="font-medium">{countdown}s</span>
-                </p>
-                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                  <motion.div
-                    className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full"
-                    initial={{ width: "100%" }}
-                    animate={{ width: `${(countdown / 24) * 100}%` }}
-                    transition={{ duration: 1, ease: "linear" }}
-                  />
-                </div>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>
