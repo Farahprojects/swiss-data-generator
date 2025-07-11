@@ -84,6 +84,13 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
         return null;
       }
 
+      // Check if this is a duplicate error
+      if (data?.is_duplicate) {
+        console.log('ℹ️ Duplicate error detected:', data.message);
+        setError(data.message);
+        return data.case_number;
+      }
+
       // Error logged successfully
       return data?.case_number || 'CASE-' + Date.now();
     } catch (err) {

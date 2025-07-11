@@ -35,6 +35,28 @@ serve(async (req) => {
       guestReport = data;
     }
 
+    // Check if there's already an existing error record for this guest report
+    if (guestReportId) {
+      const { data: existingError } = await supabase
+        .from('user_errors')
+        .select('case_number')
+        .eq('guest_report_id', guestReportId)
+        .single();
+
+      if (existingError) {
+        console.log("[log-user-error] Found existing error record:", existingError.case_number);
+        return new Response(JSON.stringify({
+          success: true,
+          case_number: existingError.case_number,
+          message: "We've already logged this issue and updated our backend. Would you like to return to the home page?",
+          is_duplicate: true
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+    }
+
     // Insert error log with service role permissions
     const { data: errorLog, error } = await supabase
       .from('user_errors')
