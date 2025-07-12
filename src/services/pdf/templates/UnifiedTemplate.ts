@@ -63,7 +63,7 @@ export class UnifiedTemplate implements PdfTemplate {
       this.addFooter(doc, pageWidth, pageHeight);
     }
 
-    // Download the PDF
+    // Download the PDF with exact customer name as passed
     const filename = `${data.customerName.replace(/\s+/g, '_')}_Complete_Report.pdf`;
     doc.save(filename);
   }
@@ -76,6 +76,7 @@ export class UnifiedTemplate implements PdfTemplate {
     doc.setFontSize(20).setFont("helvetica", "bold").text(reportTitle, pageWidth/2, startY + 28, { align: "center" });
     
     doc.setFontSize(12).setFont("helvetica", "normal").setTextColor(100);
+    // Use customerName directly as passed - no re-inference or modification
     doc.text(`Generated for: ${customerName}`, margins.left, startY + 45);
     doc.text(`Date: ${new Date().toLocaleDateString()}`, margins.left, startY + 55);
     

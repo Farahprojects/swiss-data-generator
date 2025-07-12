@@ -7,6 +7,7 @@ import { ReportContent } from './ReportContent';
 import { useToast } from '@/hooks/use-toast';
 
 import { getToggleDisplayLogic } from '@/utils/reportTypeUtils';
+import { PdfGenerator } from '@/services/pdf/PdfGenerator';
 import openaiLogo from '@/assets/openai-logo.png';
 
 interface MobileReportViewerProps {
@@ -33,6 +34,7 @@ const MobileReportViewer = ({
   const { toast } = useToast();
   const [showChatGPTConfirm, setShowChatGPTConfirm] = useState(false);
   const [isCopping, setIsCopping] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [activeView, setActiveView] = useState<'report' | 'astro'>('report');
 
   const reportAnalysisData = { reportContent, swissData, swissBoolean, hasReport };
@@ -114,6 +116,54 @@ const MobileReportViewer = ({
     }
   };
 
+  const handleDownloadUnifiedPdf = async () => {
+    // Guard: Check if we have either report content or astro data
+    if (!reportContent && !swissData) {
+      toast({
+        title: "Missing data",
+        description: "Nothing to generate.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Prevent multiple simultaneous downloads
+    if (isDownloading) return;
+
+    try {
+      setIsDownloading(true);
+      
+      // Pass fresh, correct props directly - no recalculation
+      await PdfGenerator.generateUnifiedPdf({
+        reportContent: reportContent, // already styled HTML string
+        swissData: swissData,
+        customerName: customerName,   // direct from form, cleaned
+        reportPdfData: reportPdfData,
+        reportType: undefined // mobile doesn't have reportType
+      });
+
+      // Determine what was included for success message
+      const sections = [];
+      if (reportContent) sections.push("AI Report");
+      if (swissData) sections.push("Astro Data");
+      
+      toast({
+        title: "PDF Downloaded!",
+        description: `Your ${sections.join(" + ")} report has been downloaded.`,
+      });
+      
+    } catch (error: any) {
+      console.error('PDF generation failed:', error);
+      toast({
+        title: "PDF generation failed",
+        description: error?.message || "Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-white z-50 flex flex-col">
       {/* Fixed Header */}
@@ -126,8 +176,24 @@ const MobileReportViewer = ({
             <Button variant="ghost" size="icon" onClick={handleCopyToClipboard} className="p-2 hover:bg-gray-50">
               <Copy className="h-5 w-5 text-gray-700" />
             </Button>
-            {reportPdfData && (
-              <Button variant="ghost" size="icon" onClick={handleDownloadPdf} className="p-2 hover:bg-gray-50">
+            {(reportPdfData || swissData || (reportContent && reportContent.trim().length > 20)) && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                disabled={isDownloading}
+                onClick={() => {
+                  if (reportPdfData && swissData) {
+                    handleDownloadUnifiedPdf(); // Combined version
+                  } else if (reportPdfData) {
+                    handleDownloadPdf();
+                  } else if (swissData) {
+                    handleDownloadUnifiedPdf();
+                  } else if (reportContent && reportContent.trim().length > 20) {
+                    handleDownloadUnifiedPdf(); // Use unified PDF for AI content
+                  }
+                }}
+                className="p-2 hover:bg-gray-50"
+              >
                 <Download className="h-5 w-5 text-gray-700" />
               </Button>
             )}
