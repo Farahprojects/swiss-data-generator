@@ -9,9 +9,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Import PDF print styles */
-@import url('./styles/pdf-print.css');
-
 /* -------------------------------------------------------------------------- */
 /*  CSS CUSTOM PROPERTIES                                                     */
 /*  ------------------------------------------------------------------------- */

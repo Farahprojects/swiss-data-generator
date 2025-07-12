@@ -132,6 +132,7 @@ const DesktopReportViewer = ({
   };
 
   const handleDownloadUnifiedPdf = async () => {
+    // Check if we have either report content or astro data
     if (!reportContent && !swissData) {
       toast({
         title: "No data available",
@@ -142,56 +143,18 @@ const DesktopReportViewer = ({
     }
 
     try {
-      const { default: html2canvas } = await import('html2canvas');
-      const { default: jsPDF } = await import('jspdf');
-      
-      // Find the report content element
-      const contentElement = document.querySelector('[data-report-content]') as HTMLElement;
-      if (!contentElement) {
-        throw new Error('Report content not found');
-      }
-      
-      // Add print mode class for clean PDF capture
-      contentElement.classList.add('pdf-print-mode');
-      
-      // Create canvas from DOM element
-      const canvas = await html2canvas(contentElement, {
-        scale: 2, // Higher resolution
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff'
+      await PdfGenerator.generateUnifiedPdf({
+        reportContent: reportContent,
+        swissData: swissData,
+        customerName: customerName,
+        reportPdfData: reportPdfData,
+        reportType: reportType
       });
-      
-      // Remove print mode class
-      contentElement.classList.remove('pdf-print-mode');
-      
-      // Create PDF
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgWidth = 210; // A4 width in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      const pageHeight = 297; // A4 height in mm
-      
-      let heightLeft = imgHeight;
-      let position = 0;
-      
-      // Add first page
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-      
-      // Add additional pages if content is too long
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-      
-      // Download PDF
+
+      // Determine what was included for the toast message
       const sections = [];
-      if (reportContent) sections.push("Report");
-      if (swissData) sections.push("Astro");
-      
-      pdf.save(`${customerName.replace(/\s+/g, '_')}_${sections.join('_')}.pdf`);
+      if (reportContent) sections.push("AI Report");
+      if (swissData) sections.push("Astro Data");
       
       toast({
         title: "PDF Generated!",

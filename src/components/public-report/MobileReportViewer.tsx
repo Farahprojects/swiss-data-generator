@@ -38,94 +38,28 @@ const MobileReportViewer = ({
   const reportAnalysisData = { reportContent, swissData, swissBoolean, hasReport };
   const toggleLogic = getToggleDisplayLogic(reportAnalysisData);
 
-  const handleDownloadPdf = async () => {
-    // If we have reportPdfData (AI-only report), use it
-    if (reportPdfData) {
-      try {
-        const byteCharacters = atob(reportPdfData);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${customerName.replace(/\s+/g, '_')}_Report.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      } catch (error) {
-      }
-      return;
-    }
-
-    // Otherwise, use DOM capture for unified reports
-    if (!reportContent && !swissData) {
-      toast({
-        title: "No data available", 
-        description: "Unable to generate PDF.",
-        variant: "destructive"
-      });
+  const handleDownloadPdf = () => {
+    if (!reportPdfData) {
       return;
     }
 
     try {
-      const { default: html2canvas } = await import('html2canvas');
-      const { default: jsPDF } = await import('jspdf');
-      
-      const contentElement = document.querySelector('[data-report-content]') as HTMLElement;
-      if (!contentElement) {
-        throw new Error('Report content not found');
+      const byteCharacters = atob(reportPdfData);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
       }
-      
-      contentElement.classList.add('pdf-print-mode');
-      
-      const canvas = await html2canvas(contentElement, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff'
-      });
-      
-      contentElement.classList.remove('pdf-print-mode');
-      
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgWidth = 210;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      const pageHeight = 297;
-      
-      let heightLeft = imgHeight;
-      let position = 0;
-      
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-      
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-      
-      const sections = [];
-      if (reportContent) sections.push("Report");
-      if (swissData) sections.push("Astro");
-      
-      pdf.save(`${customerName.replace(/\s+/g, '_')}_${sections.join('_')}.pdf`);
-      
-      toast({
-        title: "PDF Generated!",
-        description: `Your ${sections.join(" + ")} PDF has been downloaded.`,
-      });
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${customerName.replace(/\s+/g, '_')}_Report.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     } catch (error) {
-      toast({
-        title: "PDF generation failed",
-        description: "Unable to generate PDF. Please try again.",
-        variant: "destructive"
-      });
     }
   };
 
@@ -192,7 +126,7 @@ const MobileReportViewer = ({
             <Button variant="ghost" size="icon" onClick={handleCopyToClipboard} className="p-2 hover:bg-gray-50">
               <Copy className="h-5 w-5 text-gray-700" />
             </Button>
-            {(reportPdfData || reportContent || swissData) && (
+            {reportPdfData && (
               <Button variant="ghost" size="icon" onClick={handleDownloadPdf} className="p-2 hover:bg-gray-50">
                 <Download className="h-5 w-5 text-gray-700" />
               </Button>
@@ -230,7 +164,7 @@ const MobileReportViewer = ({
 
       {/* Scrollable Content Area */}
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="px-6 py-6" data-report-content>
+        <div className="px-6 py-6">
           <h1 className="text-xl font-light text-gray-900 tracking-tight mb-3">
             {toggleLogic.title} — Generated for {customerName}
           </h1>
