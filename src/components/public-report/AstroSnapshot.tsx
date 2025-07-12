@@ -61,7 +61,7 @@ const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON, reportData }) => {
         )}
         
         <p className="text-sm text-neutral-600">
-          Analysis: {formattedDate} — {formattedTime} ({data.tz})
+          Analysis: {formattedDate}
         </p>
         {data.meta?.location && (
           <p className="text-sm text-neutral-600">

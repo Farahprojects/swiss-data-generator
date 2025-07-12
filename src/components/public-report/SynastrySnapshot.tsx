@@ -125,7 +125,7 @@ const SynastrySnapshot: React.FC<Props> = ({ rawSyncJSON, reportData }) => {
         )}
         
         <p className="text-sm text-neutral-600">
-          Analysis: {formattedDate} — {formattedTime}
+          Analysis: {formattedDate}
         </p>
         {data.meta.lunarPhase && (
           <p className="text-xs text-neutral-500">{data.meta.lunarPhase}</p>
