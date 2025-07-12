@@ -7,10 +7,22 @@ function _mapReportPayload({
   swiss_data,
   metadata
 }: RawReportPayload): MappedReport {
+  console.log('mapReportPayload received payload:', {
+    guest_report: guest_report,
+    has_report_data: !!guest_report?.report_data,
+    report_data_keys: guest_report?.report_data ? Object.keys(guest_report.report_data) : [],
+    report_data_name: guest_report?.report_data?.name
+  });
+  
   // Extract person A data from guest_report.report_data (single source of truth)
   const reportData = guest_report?.report_data;
   
   if (!reportData?.name) {
+    console.error('Missing person A name - detailed debug:', {
+      reportData,
+      guest_report,
+      metadata
+    });
     throw new Error(`Missing person A name in guest_report.report_data. Received: ${JSON.stringify(reportData)}`);
   }
 

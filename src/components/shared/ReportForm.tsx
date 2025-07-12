@@ -37,6 +37,10 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const [hasReport, setHasReport] = useState<boolean>(false);
   const [swissBoolean, setSwissBoolean] = useState<boolean>(false);
   const [currentReportType, setCurrentReportType] = useState<string>('');
+
+  // Get guest report data - hook called unconditionally
+  const urlGuestId = getGuestReportId();
+  const { data: guestReportData, isLoading: isLoadingReport, error: reportError } = useGuestReportData(urlGuestId);
   
   // Token recovery state
   const [tokenRecoveryState, setTokenRecoveryState] = useState<{
@@ -353,38 +357,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     await onSubmit(formData);
   };
 
-  // Show report viewer if user is viewing a report
-  if (viewingReport) {
-    const urlGuestId = getGuestReportId();
-    const { data: guestReportData, isLoading, error } = useGuestReportData(urlGuestId);
-    
-    if (isLoading) {
-      return (
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading report...</p>
-          </div>
-        </div>
-      );
-    }
-    
-    if (error || !guestReportData) {
-      return (
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <p className="text-destructive mb-4">Failed to load report</p>
-            <button 
-              onClick={handleCloseReportViewer}
-              className="bg-primary text-primary-foreground px-4 py-2 rounded"
-            >
-              Go Back
-            </button>
-          </div>
-        </div>
-      );
-    }
-
+  // Show report viewer if user is viewing a report and data is available
+  if (viewingReport && guestReportData && !isLoadingReport) {
     return (
       <ReportViewer
         mappedReport={mapReportPayload({
@@ -399,8 +373,36 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
 
+  // Show loading state when viewing report
+  if (viewingReport && isLoadingReport) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading report...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state when viewing report fails
+  if (viewingReport && (reportError || !guestReportData)) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <p className="text-destructive mb-4">Failed to load report</p>
+          <button 
+            onClick={handleCloseReportViewer}
+            className="bg-primary text-primary-foreground px-4 py-2 rounded"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Handle token recovery and success screen logic
-  const urlGuestId = getGuestReportId();
   
   // Show success screen if report was created with valid form data
   if (reportCreated && userName && userEmail) {
