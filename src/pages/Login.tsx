@@ -11,7 +11,7 @@ import SocialLogin from '@/components/auth/SocialLogin';
 import { validateEmail } from '@/utils/authValidation';
 import { LoginVerificationModal } from '@/components/auth/LoginVerificationModal';
 import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
-import { logToSupabase } from '@/utils/batchedLogManager';
+
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -76,11 +76,6 @@ const Login = () => {
   useEffect(() => {
     if (pendingEmailAddress && !isPendingEmailCheck) {
       setShowVerificationModal(true);
-      logToSupabase('Showing verification modal (AuthContext)', {
-        level: 'info',
-        page: 'Login',
-        data: { pendingTo: pendingEmailAddress },
-      });
     }
   }, [pendingEmailAddress, isPendingEmailCheck]);
 
@@ -91,11 +86,6 @@ const Login = () => {
     const state = location.state as any;
     if (state?.showVerification && state?.pendingEmail) {
       setShowVerificationModal(true);
-      logToSupabase('Showing verification modal (location.state)', {
-        level: 'info',
-        page: 'Login',
-        data: { pendingEmail: state.pendingEmail },
-      });
     }
   }, [location.state]);
 
@@ -125,12 +115,6 @@ const Login = () => {
   /** Resend verification email (edge function) */
   const handleResendVerification = async (email: string): Promise<{ error: Error | null }> => {
     try {
-      logToSupabase('Resending verification email', {
-        level: 'info',
-        page: 'Login',
-        data: { userId: user?.id, email },
-      });
-
       // Use Supabase edge function via the client
       const { data, error } = await supabase.functions.invoke('email-verification', {
         body: { user_id: user?.id ?? '' }
@@ -147,11 +131,6 @@ const Login = () => {
       
       return { error: null };
     } catch (error: any) {
-      logToSupabase('Error resending verification', {
-        level: 'error',
-        page: 'Login',
-        data: { message: error.message },
-      });
       toast({
         title: 'Error',
         description: error.message ?? 'Unable to resend email',
@@ -193,7 +172,6 @@ const Login = () => {
       }
 
       // Step 3: success — redirect immediately
-      logToSupabase('Login successful', { level: 'info', page: 'Login' });
       
       // Force immediate redirect after successful login
       const from = (location.state as any)?.from?.pathname || '/dashboard';

@@ -7,7 +7,7 @@ import { CheckCircle, Loader2, AlertCircle } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
-import { logToSupabase } from "@/utils/batchedLogManager";
+
 import { validateEmail } from "@/utils/authValidation";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -118,16 +118,6 @@ const Contact = () => {
     }
     
     setIsSubmitting(true);
-    
-    logToSupabase("Contact form submission started", {
-      level: 'info',
-      page: 'Contact',
-      data: { 
-        name: formData.name,
-        email: formData.email,
-        subject: formData.subject
-      }
-    });
 
     try {
       // Set a timeout to detect slow responses
@@ -162,11 +152,6 @@ const Contact = () => {
         if (result.error) {
           throw new Error(result.error.message || 'Failed to send message');
         }
-        
-        logToSupabase("Contact form submission successful", {
-          level: 'info',
-          page: 'Contact'
-        });
         
         // IMPROVED: Immediately show success state without waiting for background operations
         setSubmitted(true);
@@ -211,12 +196,6 @@ const Contact = () => {
         }
       }
     } catch (error) {
-      logToSupabase("Contact form submission failed", {
-        level: 'error',
-        page: 'Contact',
-        data: { error: error instanceof Error ? error.message : String(error) }
-      });
-      
       toast({
         title: "Something went wrong",
         description: error instanceof Error ? error.message : "We couldn't send your message. Please try again later.",

@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { marked } from "marked";
-import { logToSupabase } from "@/utils/batchedLogManager";
+
 
 type LegalDocument = {
   title: string;
@@ -22,22 +22,12 @@ const Legal = () => {
 
   useEffect(() => {
     const fetchLegalDocuments = async () => {
-      logToSupabase('Fetching legal documents', { 
-        level: 'info',
-        page: 'Legal'
-      });
-
       const { data, error } = await supabase
         .from('legal_documents')
         .select('*')
         .filter('is_current', 'eq', true);
 
       if (error) {
-        logToSupabase('Error fetching legal documents', { 
-          level: 'error',
-          page: 'Legal',
-          data: { error: error.message }
-        });
         return;
       }
 
@@ -50,12 +40,6 @@ const Legal = () => {
           published_date: new Date(doc.published_date).toLocaleDateString(),
         }
       }), {});
-
-      logToSupabase('Legal documents loaded', { 
-        level: 'info',
-        page: 'Legal',
-        data: { docTypes: Object.keys(docs) }
-      });
 
       setDocuments(docs);
       setLoading(false);
