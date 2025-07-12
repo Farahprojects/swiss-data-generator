@@ -158,25 +158,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const formValues = form.watch();
   const step1Done = Boolean(formValues.reportType || formValues.request);
 
-  // Check if this is a compatibility report that needs second person data
-  const reportCategory = watch('reportCategory');
-  const reportType = watch('reportType');
-  const request = watch('request');
-  
-  const requiresSecondPerson = reportCategory === 'compatibility' || 
-                               reportType?.startsWith('sync_') || 
-                               request === 'sync';
-
-  // For compatibility reports, also require second person data
-  const secondPersonComplete = requiresSecondPerson ? Boolean(
-    formValues.secondPersonName &&
-    formValues.secondPersonBirthDate &&
-    formValues.secondPersonBirthTime &&
-    formValues.secondPersonBirthLocation &&
-    formValues.secondPersonLatitude &&
-    formValues.secondPersonLongitude
-  ) : true; // Not required for non-compatibility reports
-
   const step2Done =
     step1Done &&
     Boolean(
@@ -187,8 +168,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         formValues.birthLocation &&
         formValues.birthLatitude &&
         formValues.birthLongitude,
-    ) &&
-    secondPersonComplete;
+    );
 
   // Check if form should be unlocked (either reportType or request field filled)
   const shouldUnlockForm = !!(selectedReportType || selectedRequest);
@@ -222,6 +202,14 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     resetReportState
   } = useReportSubmission();
 
+  // Check if this is a compatibility report that needs second person data
+  const reportCategory = watch('reportCategory');
+  const reportType = watch('reportType');
+  const request = watch('request');
+  
+  const requiresSecondPerson = reportCategory === 'compatibility' || 
+                               reportType?.startsWith('sync_') || 
+                               request === 'sync';
 
   // Auto-scroll functionality for desktop
   const [lastFirstPersonPlaceTime, setLastFirstPersonPlaceTime] = React.useState<number>(0);
