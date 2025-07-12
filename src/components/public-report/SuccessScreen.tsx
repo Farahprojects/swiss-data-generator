@@ -380,31 +380,19 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
               <>
                 {/* Countdown timer at the top for AI reports */}
                 {isAiReport && showCountdown && (
-                  <div className="bg-gradient-to-r from-primary/10 to-secondary/10 rounded-lg p-4 mb-6">
-                    <div className="text-center">
-                      <div className="text-3xl font-light text-gray-900 mb-2">{countdownTime}s</div>
-                      <p className="text-sm text-gray-600">AI report generating...</p>
-                      <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
-                        <motion.div
-                          className="bg-gradient-to-r from-primary to-secondary h-2 rounded-full"
-                          initial={{ width: "100%" }}
-                          animate={{ width: `${(countdownTime / 24) * 100}%` }}
-                          transition={{ duration: 1, ease: "linear" }}
-                        />
-                      </div>
+                  <div className="text-center mb-6">
+                    <div className="text-3xl font-light text-gray-900 mb-2">{countdownTime}s</div>
+                    <p className="text-sm text-gray-600">AI report generating...</p>
+                    <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
+                      <motion.div
+                        className="bg-gradient-to-r from-primary to-secondary h-2 rounded-full"
+                        initial={{ width: "100%" }}
+                        animate={{ width: `${(countdownTime / 24) * 100}%` }}
+                        transition={{ duration: 1, ease: "linear" }}
+                      />
                     </div>
                   </div>
                 )}
-
-                <div className="flex items-center justify-center gap-4 py-4">
-                  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-                    <StatusIcon className="h-6 w-6 text-gray-600" />
-                  </div>
-                  {/* Only show "Processing..." for non-AI reports or when countdown is not active */}
-                  {(!isAiReport || !showCountdown) && (
-                    <div className="text-gray-600 font-light">Processing...</div>
-                  )}
-                </div>
                 
                 {/* Only show "Report Ready!" and description when actually ready */}
                 {(report?.payment_status === 'paid' && !showCountdown) ? (
@@ -412,16 +400,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                     <h2 className="text-2xl font-light text-gray-900 mb-1 tracking-tight">Report Ready!</h2>
                     <p className="text-gray-600 font-light">Your report is ready</p>
                   </div>
-                ) : (
-                  <div>
-                    <h2 className="text-2xl font-light text-gray-900 mb-1 tracking-tight">
-                      {showCountdown ? 'Generating Your Report' : 'Processing Your Request'}
-                    </h2>
-                    <p className="text-gray-600 font-light">
-                      {showCountdown ? 'Please wait while we prepare your personalized report' : 'Setting up your report'}
-                    </p>
-                  </div>
-                )}
+                ) : null}
                    <div className="bg-muted/50 rounded-lg p-4 text-sm">
                     Hi {firstName}! Your report.<br />
                     <span className="font-medium">{email}</span>
