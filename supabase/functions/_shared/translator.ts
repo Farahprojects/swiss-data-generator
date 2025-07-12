@@ -88,9 +88,10 @@ async function logToSupabase(
   if (responsePayload && typeof responsePayload === 'object' && responsePayload.swiss_data) {
     try {
       const { personA, personB } = extractPersonNames(requestPayload);
-      swissDataNamed = injectRealNames(responsePayload.swiss_data, personA, personB);
+      // Clone the swiss_data to avoid mutating the original responsePayload
+      swissDataNamed = injectRealNames(structuredClone(responsePayload.swiss_data), personA, personB);
       hasNamedData = true;
-      console.log(`[translator] Processed Swiss data with names: ${personA}${personB ? ` & ${personB}` : ''}`);
+      console.log(`[translator] Processed Swiss data with names: ${personA}${personB ? ` & ${personB}` : ''} (${new Date().toISOString()})`);
     } catch (err) {
       console.error('Failed to process Swiss data names:', err);
       // Continue without processed names - fallback to original data
@@ -102,7 +103,7 @@ async function logToSupabase(
     request_payload:     requestPayload,
     translator_payload:  translatorPayload ?? null,
     response_status:     responseStatus,
-    swiss_data:          responsePayload,
+    swiss_data:          responsePayload.swiss_data ?? null, // keep raw Swiss untouched
     swiss_data_named:    swissDataNamed,
     has_named_data:      hasNamedData,
     processing_time_ms:  processingTime,

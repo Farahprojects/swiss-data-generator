@@ -15,17 +15,29 @@ export function injectRealNames(
   swiss: any,
   personA: string,
   personB?: string
-): any {
+): typeof swiss {
   if (!swiss || !personA) {
     return swiss;
   }
 
+  // Size guard: skip processing if JSON too large (> 2MB)
+  try {
+    const jsonSize = JSON.stringify(swiss).length;
+    if (jsonSize > 2 * 1024 * 1024) {
+      console.warn(`[swissDataProcessor] Skipping large payload: ${(jsonSize / 1024 / 1024).toFixed(2)}MB`);
+      return swiss;
+    }
+  } catch (err) {
+    console.error('[swissDataProcessor] Failed to measure JSON size:', err);
+    return swiss;
+  }
+
   const replace = (val: any): any => {
-    // Handle strings - replace placeholders with real names
+    // Handle strings - replace placeholders with real names using word boundaries
     if (typeof val === 'string') {
       let result = val
-        .replace(/Person\s*A/gi, personA)
-        .replace(/Person\s*B/gi, personB || ''); // graceful if B missing
+        .replace(/\bPerson\s*A\b/gi, personA)
+        .replace(/\bPerson\s*B\b/gi, personB || ''); // graceful if B missing
       
       // Clean up any double spaces or trailing spaces from empty Person B replacements
       return result.replace(/\s+/g, ' ').trim();
@@ -47,7 +59,7 @@ export function injectRealNames(
     return val;
   };
 
-  return replace(swiss);
+  return replace(swiss) as typeof swiss;
 }
 
 /**
@@ -57,6 +69,7 @@ export function injectRealNames(
  */
 export function extractPersonNames(requestData: any): { personA: string; personB?: string } {
   const personA = requestData.person_a?.name ?? 
+                  requestData.report_data?.name ?? // guest flow fallback
                   requestData.name ?? 
                   'Person A';
   
