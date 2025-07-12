@@ -1,4 +1,5 @@
 
+const logToSupabase = () => {};
 import { useEffect, useState } from 'react';
 import { authService } from '@/services/authService';
 import { useAuth } from '@/contexts/AuthContext';

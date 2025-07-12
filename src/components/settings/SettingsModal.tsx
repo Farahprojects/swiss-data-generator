@@ -1,4 +1,5 @@
 
+const logToSupabase = () => {};
 import { useEffect } from "react";
 import { Dialog, DialogContent, DialogClose, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
