@@ -17,9 +17,26 @@ export type ReportTypeMapping = z.infer<typeof ReportTypeMappingSchema>;
 
 // Simple function to extract price_list identifier from form data
 const getProductId = (data: ReportTypeMapping): string => {
-  // Frontend should pass the correct price_list.id directly
-  // This is a simplified version that expects the frontend to provide the product ID
-  return data.reportType || data.request || '';
+  // Prioritize direct reportType for unified mobile/desktop behavior
+  if (data.reportType) {
+    return data.reportType;
+  }
+  
+  // Fallback to request field for astro data
+  if (data.request) {
+    return data.request;
+  }
+  
+  // Legacy fallback for form combinations (desktop compatibility)
+  if (data.essenceType && data.reportCategory === 'the-self') {
+    return `essence_${data.essenceType}`;
+  }
+  
+  if (data.relationshipType && data.reportCategory === 'compatibility') {
+    return `sync_${data.relationshipType}`;
+  }
+  
+  return '';
 };
 
 // Custom hook for getting report price using context

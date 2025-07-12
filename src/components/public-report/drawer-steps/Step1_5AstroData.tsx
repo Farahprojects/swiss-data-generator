@@ -42,11 +42,10 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
               const IconComponent = subCategory.icon;
               const isSelected = field.value === subCategory.value;
               
-              // Memoized price calculation to handle mobile race conditions
+              // Use unified pricing logic (same as desktop)
               const price = useMemo(() => {
                 const formData = {
-                  request: subCategory.value,
-                  reportCategory: 'astro-data'
+                  reportType: subCategory.value // Use reportType for astro data consistency
                 };
                 
                 try {
@@ -88,9 +87,9 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
                 
                 field.onChange(subCategory.value);
                 
-                // Set the request field - this IS the report type for astro data
+                // Use unified form data structure (same as desktop)
                 setValue('request', subCategory.value);
-                setValue('reportType', ''); // Clear reportType since astro data uses request
+                setValue('reportType', ''); // Clear reportType since astro data uses request field
                 
                 setTimeout(() => onNext(), 100);
               };

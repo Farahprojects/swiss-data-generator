@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { User, Briefcase, Heart, Target, Calendar, Brain, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ReportFormData } from '@/types/public-report';
+import { usePriceFetch } from '@/hooks/usePriceFetch';
 
 interface Step1_5SubCategoryProps {
   control: any;
@@ -93,6 +94,7 @@ const getHeadingText = (category: string) => {
 };
 
 const Step1_5SubCategory = ({ control, setValue, onNext, onPrev, selectedCategory, selectedSubCategory }: Step1_5SubCategoryProps) => {
+  const { getReportPrice } = usePriceFetch();
   const options = subCategoryOptions[selectedCategory as keyof typeof subCategoryOptions] || [];
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -124,7 +126,19 @@ const Step1_5SubCategory = ({ control, setValue, onNext, onPrev, selectedCategor
             {options.map((option) => {
               const IconComponent = option.icon;
               const isSelected = field.value === option.value;
-              const isFocus = option.value === 'focus';
+              
+              // Calculate price using unified pricing logic
+              let reportType = '';
+              if (selectedCategory === 'the-self' && 'essenceType' in option) {
+                reportType = `essence_${option.essenceType}`;
+              } else if (selectedCategory === 'compatibility' && 'relationshipType' in option) {
+                reportType = `sync_${option.relationshipType}`;
+              } else if (selectedCategory === 'snapshot' && 'reportType' in option) {
+                reportType = option.reportType;
+              }
+              
+              const price = reportType ? getReportPrice({ reportType }) : 0;
+              const formatPrice = (price: number) => `$${Math.round(price)}`;
               
               return (
                 <motion.button
@@ -133,10 +147,12 @@ const Step1_5SubCategory = ({ control, setValue, onNext, onPrev, selectedCategor
                   onClick={() => {
                     field.onChange(option.value);
                     
-                    // Set the appropriate type fields based on category
+                    // Use unified reportType setting logic (same as desktop)
                     if (selectedCategory === 'the-self' && 'essenceType' in option) {
+                      setValue('reportType', `essence_${option.essenceType}`);
                       setValue('essenceType', option.essenceType);
                     } else if (selectedCategory === 'compatibility' && 'relationshipType' in option) {
+                      setValue('reportType', `sync_${option.relationshipType}`);
                       setValue('relationshipType', option.relationshipType);
                     } else if (selectedCategory === 'snapshot' && 'reportType' in option) {
                       setValue('reportType', option.reportType);
@@ -156,7 +172,14 @@ const Step1_5SubCategory = ({ control, setValue, onNext, onPrev, selectedCategor
                       <IconComponent className="h-6 w-6 text-gray-700" />
                     </div>
                     <div className="flex-1 text-left">
-                      <h3 className="text-lg font-semibold text-foreground mb-1">{option.title}</h3>
+                      <div className="flex justify-between items-start mb-1">
+                        <h3 className="text-lg font-semibold text-foreground">{option.title}</h3>
+                        {reportType && (
+                          <span className="text-sm font-bold text-primary">
+                            {formatPrice(price)}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground">{option.description}</p>
                     </div>
                   </div>
