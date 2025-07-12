@@ -3,7 +3,6 @@ import React from 'react';
 import { Button, ButtonProps } from '@/components/ui/button';
 import { Settings } from 'lucide-react';
 import { useSettingsModal } from '@/contexts/SettingsModalContext';
-import { logToSupabase } from '@/utils/batchedLogManager';
 
 interface SettingsButtonProps extends ButtonProps {
   panel?: "general" | "account" | "notifications" | "delete" | "support" | "billing";
@@ -24,13 +23,6 @@ export const SettingsButton: React.FC<SettingsButtonProps> = ({
   
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    
-    logToSupabase("Settings button clicked", {
-      level: 'info',
-      page: 'SettingsButton',
-      data: { panel }
-    });
-    
     openSettings(panel);
   };
   
