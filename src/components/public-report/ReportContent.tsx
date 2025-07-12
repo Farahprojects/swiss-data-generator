@@ -102,7 +102,7 @@ export const ReportContent = ({
         </CardHeader>
         <CardContent className="p-0">
           <ScrollArea className="h-[600px] w-full">
-            <div className="p-8">
+            <div className="p-8" data-report-content>
               {activeView === 'report' ? (
                 <div className="prose prose-lg max-w-none text-left">
                   <ReportRenderer content={reportContent} />

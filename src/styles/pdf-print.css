@@ -1,0 +1,32 @@
+/* PDF Print Mode Styles */
+.pdf-print-mode {
+  overflow: visible !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
+.pdf-print-mode .scroll-area {
+  overflow: visible !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
+.pdf-print-mode .scroll-area > div {
+  overflow: visible !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
+/* Ensure all content is visible for capture */
+.pdf-print-mode * {
+  overflow: visible !important;
+  max-height: none !important;
+  height: auto !important;
+}
+
+/* Optimize colors and contrast for print */
+.pdf-print-mode {
+  color-adjust: exact;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
