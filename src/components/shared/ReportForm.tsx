@@ -35,6 +35,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const [hasReport, setHasReport] = useState<boolean>(false);
   const [swissBoolean, setSwissBoolean] = useState<boolean>(false);
   const [currentReportType, setCurrentReportType] = useState<string>('');
+  const [reportFormData, setReportFormData] = useState<any>(null);
   
   // Token recovery state
   const [tokenRecoveryState, setTokenRecoveryState] = useState<{
@@ -284,7 +285,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     swissData?: any,
     hasReport?: boolean,
     swissBoolean?: boolean,
-    reportType?: string
+    reportType?: string,
+    formData?: any
   ) => {
     setReportContent(content);
     setReportPdfData(pdfData || null);
@@ -292,6 +294,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     setHasReport(hasReport || false);
     setSwissBoolean(swissBoolean || false);
     setCurrentReportType(reportType || '');
+    setReportFormData(formData); // Store form data for names
     setViewingReport(true);
   };
 
@@ -359,7 +362,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         reportPdfData={reportPdfData}
         customerName={userName}
         swissData={swissData}
-        reportData={form.getValues()} // Pass form data for names and birth details
+        reportData={reportFormData || form.getValues()} // Use form data from guest report if available
         onBack={handleCloseReportViewer}
         hasReport={hasReport}
         swissBoolean={swissBoolean}

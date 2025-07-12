@@ -89,6 +89,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     swissData?: any;
     hasReport?: boolean;
     swissBoolean?: boolean;
+    formData?: any;
   } | null>(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const footerRef = useRef<HTMLDivElement>(null);
@@ -243,14 +244,16 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     swissData?: any,
     hasReport?: boolean,
     swissBoolean?: boolean,
-    reportType?: string
+    reportType?: string,
+    formData?: any
   ) => {
     setReportData({ 
       content: reportContent, 
       pdfData: reportPdfData,
       swissData,
       hasReport,
-      swissBoolean
+      swissBoolean,
+      formData // Store form data for names and birth details
     });
     setCurrentView('report-viewer');
   };
@@ -491,7 +494,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
               reportPdfData={reportData.pdfData}
               customerName={submittedData.name}
               swissData={reportData.swissData}
-              reportData={submittedData} // Pass form data for names and birth details
+              reportData={reportData.formData || submittedData} // Use form data from guest report if available
               onBack={handleBackFromReport}
               hasReport={reportData.hasReport}
               swissBoolean={reportData.swissBoolean}
