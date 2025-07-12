@@ -10,7 +10,11 @@ function _mapReportPayload({
   // Extract person A data from guest_report.report_data (single source of truth)
   const reportData = guest_report?.report_data;
   
+  console.log('🔍 mapReportPayload input:', { guest_report, reportData });
+  
   if (!reportData?.name) {
+    console.error('❌ Missing name in reportData:', reportData);
+    console.error('❌ Full guest_report:', guest_report);
     throw new Error('Missing person A name in guest_report.report_data');
   }
 
