@@ -148,10 +148,10 @@ const MobileReportViewer = ({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3 }}
-      className="flex flex-col h-full min-h-screen bg-white"
+      className="flex flex-col h-screen bg-white"
     >
-      {/* Header */}
-      <div className="flex items-center justify-center relative px-6 py-8 border-b border-gray-100">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-10 flex items-center justify-center relative px-6 py-4 bg-white border-b border-gray-100">
         <Button
           variant="ghost"
           size="icon"
@@ -182,9 +182,9 @@ const MobileReportViewer = ({
         </div>
       </div>
 
-      {/* Report Content */}
-      <div className="flex-1">
-        <div className="px-6 py-8 pb-24">
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-6 py-6">
           <ReportContent 
             reportContent={reportContent} 
             swissData={swissData} 
@@ -196,9 +196,9 @@ const MobileReportViewer = ({
         </div>
       </div>
 
-      {/* Bottom Action Bar */}
-      <div className="sticky bottom-0 left-0 right-0 bg-white px-6 py-6">
-        <div className="flex gap-8 max-w-4xl mx-auto justify-center">
+      {/* Sticky Footer */}
+      <div className="sticky bottom-0 z-10 bg-white border-t border-gray-100 px-6 py-4">
+        <div className="flex gap-8 justify-center">
           <button 
             onClick={handleCopyToClipboard}
             className="flex items-center text-gray-700 font-light text-lg hover:text-gray-900 transition-colors duration-300"
