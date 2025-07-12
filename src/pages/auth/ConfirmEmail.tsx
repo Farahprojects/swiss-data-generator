@@ -14,7 +14,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { Loader, CheckCircle, XCircle } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { useToast } from '@/hooks/use-toast';
-import { logToSupabase } from '@/utils/batchedLogManager';
 
 const BRAND_PURPLE = '#7C3AED';
 
@@ -29,11 +28,6 @@ const ConfirmEmail: React.FC = () => {
 
   const finishSuccess = (kind: 'signup' | 'email_change') => {
     console.log(`[EMAIL-VERIFY] ✓ SUCCESS: ${kind} verification completed`);
-    logToSupabase('verification success', {
-      level: 'info',
-      page: 'ConfirmEmail',
-      data: { kind, timestamp: new Date().toISOString() },
-    });
     
     setStatus('success');
     const msg =
@@ -76,11 +70,6 @@ const ConfirmEmail: React.FC = () => {
         };
 
         console.log(`[EMAIL-VERIFY:${requestId}] Extracted parameters:`, extractedParams);
-        logToSupabase('parameter extraction', {
-          level: 'info',
-          page: 'ConfirmEmail',
-          data: { requestId, extractedParams },
-        });
 
         const accessToken = hash.get('access_token');
         const refreshToken = hash.get('refresh_token');
@@ -91,11 +80,6 @@ const ConfirmEmail: React.FC = () => {
         // Flow path determination
         if (accessToken && refreshToken) {
           console.log(`[EMAIL-VERIFY:${requestId}] → Flow: ACCESS_TOKEN method`);
-          logToSupabase('flow path selected', {
-            level: 'info',
-            page: 'ConfirmEmail',
-            data: { requestId, flowType: 'access_token', hasNewEmail: !!newEmail },
-          });
 
           const { error } = await supabase.auth.setSession({
             access_token: accessToken,
@@ -121,11 +105,6 @@ const ConfirmEmail: React.FC = () => {
 
         if (pkceCode) {
           console.log(`[EMAIL-VERIFY:${requestId}] → Flow: PKCE method`);
-          logToSupabase('flow path selected', {
-            level: 'info',
-            page: 'ConfirmEmail',
-            data: { requestId, flowType: 'pkce', hasNewEmail: !!newEmail },
-          });
 
           const { data, error } = await supabase.auth.exchangeCodeForSession(pkceCode);
           if (error || !data.session) {
@@ -161,19 +140,8 @@ const ConfirmEmail: React.FC = () => {
           if (!email) missingParams.push('email');
           
           console.error(`[EMAIL-VERIFY:${requestId}] Missing OTP parameters:`, missingParams);
-          logToSupabase('missing parameters', {
-            level: 'error',
-            page: 'ConfirmEmail',
-            data: { requestId, missingParams, fullUrl: window.location.href },
-          });
           throw new Error(`Invalid link – missing: ${missingParams.join(', ')}`);
         }
-
-        logToSupabase('flow path selected', {
-          level: 'info',
-          page: 'ConfirmEmail',
-          data: { requestId, flowType: 'otp', tokenType, email },
-        });
 
         // Pre-verification logging
         console.log(`[EMAIL-VERIFY:${requestId}] Calling verifyOtp with:`, {
@@ -206,19 +174,6 @@ const ConfirmEmail: React.FC = () => {
           status: err?.status,
           code: err?.code,
           details: err,
-        });
-        
-        logToSupabase('verification failed', {
-          level: 'error',
-          page: 'ConfirmEmail',
-          data: { 
-            requestId,
-            error: err?.message,
-            errorCode: err?.code,
-            errorStatus: err?.status,
-            fullUrl: window.location.href,
-            timestamp: new Date().toISOString(),
-          },
         });
         
         setStatus('error');

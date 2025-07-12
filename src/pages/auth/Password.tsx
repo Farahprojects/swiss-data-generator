@@ -6,7 +6,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { Loader, CheckCircle, XCircle } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { useToast } from '@/hooks/use-toast';
-import { logToSupabase } from '@/utils/batchedLogManager';
 import PasswordResetForm from '@/components/auth/PasswordResetForm';
 
 const ResetPassword: React.FC = () => {
@@ -34,22 +33,12 @@ const ResetPassword: React.FC = () => {
         const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
         if (error) throw error;
 
-        logToSupabase('Password reset link verified successfully', {
-          level: 'info',
-          page: 'ResetPassword'
-        });
-
         // Instead of redirecting, show the password update form
         setStatus('update-password');
         setMessage('Please set your new password');
 
         window.history.replaceState({}, '', '/auth/password');
       } catch (err: any) {
-        logToSupabase('password reset failed', {
-          level: 'error',
-          page: 'ResetPassword',
-          data: { error: err?.message },
-        });
         setStatus('error');
         const msg = err?.message ?? 'Password reset failed – link may have expired.';
         setMessage(msg);
@@ -60,11 +49,6 @@ const ResetPassword: React.FC = () => {
   }, [location.hash, location.search, toast]);
 
   const handlePasswordUpdateSuccess = () => {
-    logToSupabase('Password update completed, redirecting to login', {
-      level: 'info',
-      page: 'ResetPassword'
-    });
-    
     setStatus('success');
     setMessage('Your password has been updated successfully!');
     

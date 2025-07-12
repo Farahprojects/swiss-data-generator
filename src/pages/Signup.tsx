@@ -10,7 +10,6 @@ import PasswordInput from '@/components/auth/PasswordInput';
 import SocialLogin from '@/components/auth/SocialLogin';
 import { validateEmail } from '@/utils/authValidation';
 import { Mail } from 'lucide-react';
-import { logToSupabase } from '@/utils/batchedLogManager';
 import { supabase } from '@/integrations/supabase/client';
 
 // Debug utility
@@ -86,12 +85,6 @@ const Signup = () => {
           setErrorMsg(error.message || 'An error occurred during signup');
         }
         
-        logToSupabase('Signup failed', {
-          level: 'warn',
-          page: 'Signup',
-          data: { email, error: error.message }
-        });
-        
         return;
       }
 
@@ -121,22 +114,10 @@ const Signup = () => {
         setVerificationEmail(email);
         setCurrentUserId(newUser.id);
         setSignupSuccess(true);
-        
-        logToSupabase('Signup successful', {
-          level: 'info',
-          page: 'Signup',
-          data: { email, userId: newUser.id }
-        });
       }
     } catch (err: any) {
       debug('Signup exception:', err);
       setErrorMsg('An unexpected error occurred. Please try again.');
-      
-      logToSupabase('Signup exception', {
-        level: 'error',
-        page: 'Signup',
-        data: { email, error: err.message }
-      });
     } finally {
       setLoading(false);
     }
@@ -150,22 +131,10 @@ const Signup = () => {
       if (error) {
         debug('Google sign in error:', error);
         setErrorMsg(error.message || 'Google sign in failed');
-        
-        logToSupabase('Google sign in failed', {
-          level: 'warn',
-          page: 'Signup',
-          data: { error: error.message }
-        });
       }
     } catch (err: any) {
       debug('Google sign in exception:', err);
       setErrorMsg('An error occurred with Google sign in');
-      
-      logToSupabase('Google sign in exception', {
-        level: 'error',
-        page: 'Signup',
-        data: { error: err.message }
-      });
     }
   };
   
@@ -177,22 +146,10 @@ const Signup = () => {
       if (error) {
         debug('Apple sign in error:', error);
         setErrorMsg(error.message || 'Apple sign in failed');
-        
-        logToSupabase('Apple sign in failed', {
-          level: 'warn',
-          page: 'Signup',
-          data: { error: error.message }
-        });
       }
     } catch (err: any) {
       debug('Apple sign in exception:', err);
       setErrorMsg('An error occurred with Apple sign in');
-      
-      logToSupabase('Apple sign in exception', {
-        level: 'error',
-        page: 'Signup',
-        data: { error: err.message }
-      });
     }
   };
 
