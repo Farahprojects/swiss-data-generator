@@ -21,7 +21,6 @@ interface ReportHeaderProps {
   hasReport?: boolean;
   swissBoolean?: boolean;
   isPureAstroReport?: boolean;
-  isDownloading?: boolean;
 }
 
 export const ReportHeader = ({
@@ -39,8 +38,7 @@ export const ReportHeader = ({
   setActiveView,
   hasReport,
   swissBoolean,
-  isPureAstroReport,
-  isDownloading = false
+  isPureAstroReport
 }: ReportHeaderProps) => {
   // Debug logging to verify props
   console.log("ReportHeader props:", {
@@ -112,7 +110,6 @@ export const ReportHeader = ({
               <Button
                 variant="outline"
                 size="sm"
-                disabled={isDownloading}
                 onClick={() => {
                   if (reportPdfData && swissData) {
                     onDownloadAstroPdf?.(); // Combined version
@@ -140,7 +137,7 @@ export const ReportHeader = ({
                 className="flex items-center gap-2 pointer-events-auto !cursor-pointer"
               >
                 <Download className="h-4 w-4" />
-                {isDownloading ? 'Generating...' : 'PDF'}
+                PDF
               </Button>
             )}
             <Button

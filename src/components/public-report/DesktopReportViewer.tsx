@@ -33,7 +33,6 @@ const DesktopReportViewer = ({
 }: DesktopReportViewerProps) => {
   const { toast } = useToast();
   const [isCopyCompleted, setIsCopyCompleted] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
   
   // Use intelligent content detection
   const reportAnalysisData = { reportContent, swissData, swissBoolean, hasReport };
@@ -133,50 +132,40 @@ const DesktopReportViewer = ({
   };
 
   const handleDownloadUnifiedPdf = async () => {
-    // Guard: Check if we have either report content or astro data
+    // Check if we have either report content or astro data
     if (!reportContent && !swissData) {
       toast({
-        title: "Missing data",
-        description: "Nothing to generate.",
+        title: "No data available",
+        description: "Unable to generate PDF without report or astro data.",
         variant: "destructive"
       });
       return;
     }
 
-    // Prevent multiple simultaneous downloads
-    if (isDownloading) return;
-
     try {
-      setIsDownloading(true);
-      
-      // Pass fresh, correct props directly - no recalculation
       await PdfGenerator.generateUnifiedPdf({
-        reportContent: reportContent, // already styled HTML string
+        reportContent: reportContent,
         swissData: swissData,
-        customerName: customerName,   // direct from form, cleaned
+        customerName: customerName,
         reportPdfData: reportPdfData,
         reportType: reportType
       });
 
-      // Determine what was included for success message
+      // Determine what was included for the toast message
       const sections = [];
       if (reportContent) sections.push("AI Report");
       if (swissData) sections.push("Astro Data");
       
       toast({
-        title: "PDF Downloaded!",
-        description: `Your ${sections.join(" + ")} report has been downloaded.`,
+        title: "PDF Generated!",
+        description: `Your ${sections.join(" + ")} PDF has been downloaded.`,
       });
-      
-    } catch (error: any) {
-      console.error('PDF generation failed:', error);
+    } catch (error) {
       toast({
         title: "PDF generation failed",
-        description: error?.message || "Please try again.",
+        description: "Unable to generate PDF. Please try again.",
         variant: "destructive"
       });
-    } finally {
-      setIsDownloading(false);
     }
   };
 
@@ -195,7 +184,6 @@ const DesktopReportViewer = ({
         onCopyToClipboard={handleCopyToClipboard}
         onDownloadPdf={handleDownloadPdf}
         onDownloadAstroPdf={handleDownloadUnifiedPdf}
-        isDownloading={isDownloading}
         onChatGPTClick={handleChatGPTClick}
         reportPdfData={reportPdfData}
         isCopyCompleted={isCopyCompleted}
