@@ -20,6 +20,7 @@ import CreateReportPage from './pages/dashboard/CreateReportPage';
 import UserSettings from './pages/UserSettings';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import ResetPassword from './pages/auth/Password';
 import { AuthGuard } from './components/auth/AuthGuard';
 import Index from './pages/Index';
 import PublicReport from './pages/PublicReport';
@@ -93,6 +94,7 @@ function App() {
                       
                       <Route path="/login" element={<Login />} />
                       <Route path="/signup" element={<Signup />} />
+                      <Route path="/auth/password" element={<ResetPassword />} />
                       
                       {/* Preview route for website builder */}
                       <Route path="/preview/:previewId" element={<PreviewWebsite />} />
