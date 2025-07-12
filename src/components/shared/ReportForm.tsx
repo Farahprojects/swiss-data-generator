@@ -354,19 +354,13 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
   // Show report viewer if user is viewing a report
   if (viewingReport) {
-    // Get form data and add logging to debug
-    const formData = form.getValues();
-    console.log('🔍 ReportForm form data:', formData);
-    
-    // Create a guest_report object with proper structure for mapping
+    // Create a guest_report object from available data for mapping
     const mockGuestReport = {
-      report_data: formData, // This should contain { name, birthDate, etc. }
+      report_data: form.getValues(),
       report_type: currentReportType,
       has_report: hasReport,
       swiss_boolean: swissBoolean
     };
-    
-    console.log('🔍 Mock guest report:', mockGuestReport);
 
     return (
       <ReportViewer
