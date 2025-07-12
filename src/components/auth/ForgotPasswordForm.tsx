@@ -7,7 +7,6 @@ import { validateEmail } from '@/utils/authValidation';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getAbsoluteUrl } from '@/utils/urlUtils';
-import { logToSupabase } from '@/utils/batchedLogManager';
 
 interface ForgotPasswordFormProps {
   onCancel: () => void;
@@ -27,43 +26,22 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onCancel }) => 
 
     setLoading(true);
     try {
-      logToSupabase(`Sending password reset email to ${email}`, {
-        level: 'info',
-        page: 'ForgotPasswordForm',
-        data: { email }
-      });
-      
       // Call the password_token edge function with email as payload
       const { error } = await supabase.functions.invoke('password_token', {
         body: { email }
       });
 
       if (error) {
-        logToSupabase("Password reset email error", {
-          level: 'error',
-          page: 'ForgotPasswordForm',
-          data: { error: error.message }
-        });
         toast({ 
           title: 'Error', 
           description: error.message,
           variant: 'destructive'
         });
       } else {
-        logToSupabase("Password reset email sent successfully", {
-          level: 'info',
-          page: 'ForgotPasswordForm',
-          data: { email }
-        });
         setEmailSent(true);
         setResetLinkSent(true);
       }
     } catch (err: any) {
-      logToSupabase("Password reset email error", {
-        level: 'error',
-        page: 'ForgotPasswordForm',
-        data: { error: err.message || String(err) }
-      });
       toast({ 
         title: 'Error', 
         description: err.message || 'Failed to send reset email',
