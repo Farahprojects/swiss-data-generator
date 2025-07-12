@@ -150,8 +150,8 @@ const MobileReportViewer = ({
       transition={{ duration: 0.3 }}
       className="flex flex-col h-screen bg-white"
     >
-      {/* Sticky Header */}
-      <div className="sticky top-0 z-10 flex items-center justify-center relative px-6 py-4 bg-white border-b border-gray-100">
+      {/* Sticky Header - Increased height for better balance */}
+      <div className="sticky top-0 z-10 flex items-center justify-center relative px-6 py-6 bg-white border-b border-gray-100 shadow-sm">
         <Button
           variant="ghost"
           size="icon"
@@ -182,22 +182,24 @@ const MobileReportViewer = ({
         </div>
       </div>
 
-      {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="px-6 py-6">
-          <ReportContent 
-            reportContent={reportContent} 
-            swissData={swissData} 
-            customerName={customerName}
-            hasReport={hasReport}
-            swissBoolean={swissBoolean}
-            isMobile={true}
-          />
+      {/* Scrollable Content - Proper overflow containment */}
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full overflow-y-auto">
+          <div className="px-6 py-6 pb-8">
+            <ReportContent 
+              reportContent={reportContent} 
+              swissData={swissData} 
+              customerName={customerName}
+              hasReport={hasReport}
+              swissBoolean={swissBoolean}
+              isMobile={true}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Sticky Footer */}
-      <div className="sticky bottom-0 z-10 bg-white border-t border-gray-100 px-6 py-4">
+      {/* Sticky Footer - Fixed positioning to prevent stretching */}
+      <div className="sticky bottom-0 z-10 bg-white border-t border-gray-100 px-6 py-5 shadow-lg">
         <div className="flex gap-8 justify-center">
           <button 
             onClick={handleCopyToClipboard}
