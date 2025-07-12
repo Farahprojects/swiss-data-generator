@@ -63,8 +63,7 @@ interface SuccessScreenProps {
     swissData?: any,
     hasReport?: boolean,
     swissBoolean?: boolean,
-    reportType?: string,
-    formData?: any
+    reportType?: string
   ) => void;
   guestReportId?: string;
 }
@@ -196,8 +195,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
           swiss_data, 
           hasAi, 
           isAstro, 
-          reportType,
-          guest_report.report_data // Pass form data containing names and birth details
+          reportType
         );
       } else {
         console.warn('⚠️ onViewReport callback is missing');
