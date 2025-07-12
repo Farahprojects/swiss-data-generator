@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { authService } from '@/services/authService';
 import { useAuth } from '@/contexts/AuthContext';
-import { logToSupabase } from '@/utils/batchedLogManager';
+
 
 interface UseAuthGuardResult {
   isReady: boolean;
@@ -39,11 +39,6 @@ export const useAuthGuard = (pageName: string): UseAuthGuardResult => {
           if (mounted) {
             setHasValidAuth(false);
             setError('Invalid session');
-            logToSupabase('Auth guard failed - invalid session', {
-              level: 'warn',
-              page: pageName,
-              data: { userId: user.id }
-            });
           }
           return;
         }
@@ -54,11 +49,6 @@ export const useAuthGuard = (pageName: string): UseAuthGuardResult => {
           if (mounted) {
             setHasValidAuth(false);
             setError('Backend authentication failed');
-            logToSupabase('Auth guard failed - backend auth invalid', {
-              level: 'warn',
-              page: pageName,
-              data: { userId: user.id }
-            });
           }
           return;
         }
@@ -66,24 +56,11 @@ export const useAuthGuard = (pageName: string): UseAuthGuardResult => {
         if (mounted) {
           setHasValidAuth(true);
           setError(null);
-          logToSupabase('Auth guard passed', {
-            level: 'debug',
-            page: pageName,
-            data: { userId: user.id }
-          });
         }
       } catch (error) {
         if (mounted) {
           setHasValidAuth(false);
           setError('Authentication verification failed');
-          logToSupabase('Auth guard exception', {
-            level: 'error',
-            page: pageName,
-            data: { 
-              userId: user?.id,
-              error: error instanceof Error ? error.message : String(error)
-            }
-          });
         }
       } finally {
         if (mounted) {

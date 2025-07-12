@@ -1,7 +1,5 @@
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { logToSupabase } from "@/utils/batchedLogManager";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -85,10 +83,6 @@ export function useUserPreferences() {
         loadTimeout = setTimeout(() => {
           if (isMounted()) {
             setError("Request timed out. Please try again.");
-            logToSupabase("Loading user preferences timed out", {
-              level: "error",
-              page: "useUserPreferences",
-            });
           }
         }, 8000);
 
@@ -108,10 +102,6 @@ export function useUserPreferences() {
           }
         } else if (data && isMounted()) {
           setPreferences(data as UserPreferences);
-          logToSupabase("User preferences loaded successfully", {
-            level: "info",
-            page: "useUserPreferences",
-          });
         }
       } catch (err: any) {
         clearTimeout(loadTimeout);
@@ -119,11 +109,6 @@ export function useUserPreferences() {
 
         if (isMounted()) {
           setError(errorMessage);
-          logToSupabase("Error loading user preferences", {
-            level: "error",
-            page: "useUserPreferences",
-            data: { error: errorMessage },
-          });
 
           if (!errorMessage.includes("timed out")) {
             toast({
@@ -160,12 +145,6 @@ export function useUserPreferences() {
               filter: `user_id=eq.${user.id}`,
             },
             (payload) => {
-              logToSupabase("Received real-time update for user preferences", {
-                level: "debug",
-                page: "useUserPreferences",
-                data: { event: payload.eventType },
-              });
-
               // Skip real-time updates if we're in the middle of saving or if the component is unmounted
               if (!isMounted() || saving) {
                 return;
@@ -174,10 +153,6 @@ export function useUserPreferences() {
               // Skip real-time updates that arrive within 2 seconds of a user change
               const now = Date.now();
               if (now - lastUpdateTimestampRef.current < 2000) {
-                logToSupabase("Ignoring real-time update - too close to user update", {
-                  level: "debug",
-                  page: "useUserPreferences",
-                });
                 return;
               }
 
@@ -189,10 +164,6 @@ export function useUserPreferences() {
                 if (incoming[key as keyof UserPreferences] === value) {
                   isRedundantUpdate = true;
                   pendingChangesRef.current.delete(key);
-                  logToSupabase(`Ignored redundant update for ${key}`, {
-                    level: "debug",
-                    page: "useUserPreferences",
-                  });
                 }
               });
               
@@ -213,19 +184,11 @@ export function useUserPreferences() {
           )
           .subscribe((status) => {
             if (status !== "SUBSCRIBED") {
-              logToSupabase("Failed to subscribe to real-time updates", {
-                level: "error",
-                page: "useUserPreferences",
-                data: { status },
-              });
+              console.error("Failed to subscribe to real-time updates:", status);
             }
           });
       } catch (err: any) {
-        logToSupabase("Error setting up real-time listener", {
-          level: "error",
-          page: "useUserPreferences",
-          data: { error: err.message || String(err) },
-        });
+        console.error("Error setting up real-time listener:", err);
       }
     };
 
@@ -261,16 +224,8 @@ export function useUserPreferences() {
       if (error) throw error;
       if (isMounted()) setPreferences(data as UserPreferences);
 
-      logToSupabase("Created default user preferences", {
-        level: "info",
-        page: "useUserPreferences",
-      });
     } catch (err: any) {
-      logToSupabase("Failed to create default preferences", {
-        level: "error",
-        page: "useUserPreferences",
-        data: { error: err.message || String(err) },
-      });
+      console.error("Failed to create default preferences:", err);
     }
   };
 
@@ -507,12 +462,12 @@ export function useUserPreferences() {
 
       if (showToast) {
         toast({
-          title: "View Preference Saved",
-          description: `Client view mode set to ${viewMode}`,
+          title: "View Mode Updated",
+          description: `Client view changed to ${viewMode}`,
         });
       }
-      
-      // After successful update, we can remove this change from pending
+
+      // After successful update, we can remove this change from pending changes
       pendingChangesRef.current.delete("client_view_mode");
       
       return true;
@@ -549,22 +504,6 @@ export function useUserPreferences() {
     }
   };
 
-  const formatNotificationTypeName = (type: string): string => {
-    switch (type) {
-      case "password_change_notifications":
-        return "Password change notifications";
-      case "email_change_notifications":
-        return "Email change notifications";
-      case "security_alert_notifications":
-        return "Security alert notifications";
-      default:
-        return type
-          .split("_")
-          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(" ");
-    }
-  };
-
   return {
     preferences,
     loading,
@@ -573,6 +512,21 @@ export function useUserPreferences() {
     updateMainNotificationsToggle,
     updateNotificationToggle,
     updateClientViewMode,
-    formatNotificationTypeName,
   };
 }
+
+// Helper function to format notification type names for display
+export const formatNotificationTypeName = (type: NotificationToggleType): string => {
+  switch (type) {
+    case "password_change_notifications":
+      return "Password change notifications";
+    case "email_change_notifications":
+      return "Email change notifications";
+    case "security_alert_notifications":
+      return "Security alert notifications";
+    default:
+      return type.replace(/_/g, " ");
+  }
+};
+
+export default useUserPreferences;

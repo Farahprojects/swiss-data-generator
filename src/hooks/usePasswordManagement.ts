@@ -1,7 +1,5 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { logToSupabase } from '@/utils/batchedLogManager';
 import { sendPasswordChangeNotification } from '@/utils/notificationService';
 
 export function usePasswordManagement() {
@@ -16,11 +14,6 @@ export function usePasswordManagement() {
     setIsUpdatingPassword(true);
     
     try {
-      logToSupabase("Verifying current password", {
-        level: 'info',
-        page: 'usePasswordManagement'
-      });
-      
       // Verify current password by attempting to sign in
       const { error } = await supabase.auth.signInWithPassword({
         email,
@@ -28,30 +21,13 @@ export function usePasswordManagement() {
       });
 
       if (error) {
-        logToSupabase("Current password verification failed", {
-          level: 'error',
-          page: 'usePasswordManagement',
-          data: { error: error.message }
-        });
-        
         setIsUpdatingPassword(false);
         return { success: false, error: "Current password is incorrect." };
       }
 
-      logToSupabase("Current password verified successfully", {
-        level: 'info',
-        page: 'usePasswordManagement'
-      });
-      
       setIsUpdatingPassword(false);
       return { success: true };
     } catch (error: any) {
-      logToSupabase("Error verifying current password", {
-        level: 'error',
-        page: 'usePasswordManagement',
-        data: { error: error.message || String(error) }
-      });
-      
       setIsUpdatingPassword(false);
       return { success: false, error: error.message || "There was an error verifying your password." };
     }
@@ -61,31 +37,15 @@ export function usePasswordManagement() {
     setIsUpdatingPassword(true);
     
     try {
-      logToSupabase("Updating password", {
-        level: 'info',
-        page: 'usePasswordManagement'
-      });
-      
       // Update the password
       const { error } = await supabase.auth.updateUser({ 
         password: newPassword 
       });
       
       if (error) {
-        logToSupabase("Password update failed", {
-          level: 'error',
-          page: 'usePasswordManagement',
-          data: { error: error.message }
-        });
-        
         setIsUpdatingPassword(false);
         return { success: false, error: error.message };
       }
-      
-      logToSupabase("Password updated successfully", {
-        level: 'info',
-        page: 'usePasswordManagement'
-      });
       
       // Send notification if the user has them enabled
       try {
@@ -111,22 +71,12 @@ export function usePasswordManagement() {
         }
       } catch (notifError) {
         // Log the error but don't fail the password change
-        logToSupabase("Failed to send password change notification", {
-          level: 'error',
-          page: 'usePasswordManagement',
-          data: { error: notifError }
-        });
+        console.error('Failed to send password change notification:', notifError);
       }
       
       setIsUpdatingPassword(false);
       return { success: true };
     } catch (error: any) {
-      logToSupabase("Error updating password", {
-        level: 'error',
-        page: 'usePasswordManagement',
-        data: { error: error.message || String(error) }
-      });
-      
       setIsUpdatingPassword(false);
       return { success: false, error: error.message };
     }
@@ -138,12 +88,6 @@ export function usePasswordManagement() {
     setResetEmailSent(false);
     
     try {
-      logToSupabase("Sending password reset email", {
-        level: 'info',
-        page: 'usePasswordManagement',
-        data: { email }
-      });
-      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: typeof window !== 'undefined' 
           ? `${window.location.origin}/dashboard/settings`
@@ -151,31 +95,13 @@ export function usePasswordManagement() {
       });
       
       if (error) {
-        logToSupabase("Failed to send reset password email", {
-          level: 'error',
-          page: 'usePasswordManagement',
-          data: { error: error.message }
-        });
-        
         return { success: false, error: error.message };
       }
-      
-      logToSupabase("Password reset email sent successfully", {
-        level: 'info',
-        page: 'usePasswordManagement',
-        data: { email }
-      });
       
       // Show inline success message
       setResetEmailSent(true);
       return { success: true };
     } catch (error: any) {
-      logToSupabase("Error sending password reset email", {
-        level: 'error',
-        page: 'usePasswordManagement',
-        data: { error: error.message || String(error) }
-      });
-      
       return { success: false, error: error.message };
     }
   };

@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
 import { useNavigationState } from '@/contexts/NavigationStateContext';
 import { getAbsoluteUrl } from '@/utils/urlUtils';
-import { logToSupabase } from '@/utils/batchedLogManager';
+
 import { authService } from '@/services/authService';
 import { SUPABASE_CONFIG } from '@/config/supabase-config';
 
@@ -56,11 +56,6 @@ const checkForPendingEmailChange = async (sessionToken: string, userEmail: strin
 
     return data;
   } catch (err) {
-    logToSupabase('email-check failed', {
-      level: 'warn',
-      page: 'AuthContext',
-      data: { error: err instanceof Error ? err.message : String(err) },
-    });
     return null;
   }
 };
@@ -89,27 +84,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     console.log('🔐 Initializing AuthContext with enhanced session management');
 
-    logToSupabase('Setting up auth state listener', {
-      page: 'AuthContext', 
-      level: 'debug'
-    });
-
     // Set up auth state listener
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, supaSession) => {
       console.log('🔄 Auth state change:', event, !!supaSession);
-      
-      logToSupabase('Auth state change event', {
-        page: 'AuthContext',
-        level: 'info',
-        data: {
-          event,
-          hasSession: !!supaSession,
-          userId: supaSession?.user?.id,
-          eventTime: new Date().toISOString()
-        }
-      });
       
       // Set user and session state immediately to avoid race conditions
       setUser(supaSession?.user ?? null);
@@ -131,28 +110,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 supaSession.user.email || ''
               );
               
-              logToSupabase('email-check response in AuthContext', {
-                level: 'debug',
-                page: 'AuthContext',
-                data: emailCheckData,
-              });
 
               if (emailCheckData?.status === 'pending') {
                 setPendingEmailAddress(emailCheckData.pending_to);
-                logToSupabase('Pending email change detected, setting pendingEmailAddress', {
-                  level: 'info',
-                  page: 'AuthContext',
-                  data: { pendingTo: emailCheckData.pending_to }
-                });
               } else {
                 setPendingEmailAddress(null);
               }
             } catch (error) {
-              logToSupabase('Error checking for pending email change', {
-                level: 'error',
-                page: 'AuthContext',
-                data: { error: error instanceof Error ? error.message : String(error) }
-              });
               setPendingEmailAddress(null);
             } finally {
               setIsPendingEmailCheck(false);
@@ -177,15 +141,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(({ data: { session: supaSession } }) => {
       console.log('📋 Initial session check:', !!supaSession);
       
-      logToSupabase('Initial session check', {
-        page: 'AuthContext',
-        level: 'info',
-        data: {
-          hasSession: !!supaSession,
-          userId: supaSession?.user?.id
-        }
-      });
-      
       setUser(supaSession?.user ?? null);
       setSession(supaSession);
       setLoading(false);
@@ -209,32 +164,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * ─────────────────────────────────*/
   const signIn = async (email: string, password: string) => {
     try {
-      logToSupabase('Sign-in attempt', {
-        page: 'AuthContext',
-        level: 'info',
-        data: { email }
-      });
 
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
-        logToSupabase('Sign-in failed', {
-          page: 'AuthContext',
-          level: 'warn',
-          data: { 
-            email,
-            errorCode: error.name,
-            errorMessage: error.message
-          }
-        });
         return { error, data: null };
       }
-      
-      logToSupabase('Sign-in successful', {
-        page: 'AuthContext',
-        level: 'info',
-        data: { userId: data.user?.id }
-      });
       
       // Manually set user state if auth state change doesn't fire
       if (data?.user) {
@@ -247,27 +182,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error('Unexpected sign-in error');
       
-      logToSupabase('Sign-in exception', {
-        page: 'AuthContext',
-        level: 'error',
-        data: { 
-          email,
-          errorMessage: error.message,
-          stack: error.stack
-        }
-      });
-      
       return { error, data: null };
     }
   };
 
   const signUp = async (email: string, password: string) => {
     try {
-      logToSupabase('Sign-up attempt', {
-        page: 'AuthContext',
-        level: 'info',
-        data: { email }
-      });
 
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -280,37 +200,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       
       if (error) {
-        logToSupabase('Sign-up failed', {
-          page: 'AuthContext',
-          level: 'warn',
-          data: { 
-            email,
-            errorCode: error.name,
-            errorMessage: error.message
-          }
-        });
         return { error };
       }
-      
-      logToSupabase('Sign-up successful', {
-        page: 'AuthContext',
-        level: 'info',
-        data: { userId: data.user?.id }
-      });
       
       return { error: null, user: data.user };
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error('Unexpected sign-up error');
-      
-      logToSupabase('Sign-up exception', {
-        page: 'AuthContext',
-        level: 'error',
-        data: { 
-          email,
-          errorMessage: error.message,
-          stack: error.stack
-        }
-      });
       
       return { error };
     }
@@ -356,10 +251,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
     try {
-      logToSupabase('Apple sign in attempt from context', {
-        page: 'AuthContext',
-        level: 'info',
-      });
       
       // Create popup window
       const popup = window.open(
@@ -390,11 +281,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error('Unexpected Apple sign-in error');
-      logToSupabase('Apple sign in exception', {
-        page: 'AuthContext',
-        level: 'error',
-        data: { errorMessage: error.message }
-      });
       return { error };
     }
   };
@@ -414,17 +300,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Sign out from Supabase with global scope
       await supabase.auth.signOut({ scope: 'global' });
       
-      logToSupabase('User signed out successfully', {
-        page: 'AuthContext',
-        level: 'info'
-      });
       
     } catch (error) {
-      logToSupabase('Error during sign out', {
-        page: 'AuthContext',
-        level: 'error',
-        data: { error: error instanceof Error ? error.message : String(error) }
-      });
     } finally {
       setLoading(false);
     }

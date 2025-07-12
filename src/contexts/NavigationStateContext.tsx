@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { isPasswordResetUrl } from '@/utils/urlUtils';
-import { logToSupabase } from '@/utils/batchedLogManager';
+
 
 type NavigationStateContextType = {
   lastRoute: string;
@@ -59,17 +59,9 @@ const cleanupPasswordResetURLs = () => {
     const storedParams = localStorage.getItem('last_route_params');
     
     if (storedRoute && storedRoute === '/auth/password') {
-      logToSupabase('Clearing stored password reset route', { 
-        level: 'info',
-        page: 'NavigationState' 
-      });
       localStorage.removeItem('last_route');
       localStorage.removeItem('last_route_params');
     } else if (storedParams && isPasswordResetUrl('', storedParams)) {
-      logToSupabase('Clearing stored password reset params', { 
-        level: 'info',
-        page: 'NavigationState' 
-      });
       localStorage.removeItem('last_route_params');
     }
   } catch (e) {

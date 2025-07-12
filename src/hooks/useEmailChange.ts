@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { logToSupabase } from '@/utils/batchedLogManager';
 import { sendEmailChangeNotification } from '@/utils/notificationService';
 
 export function useEmailChange() {
@@ -13,43 +12,18 @@ export function useEmailChange() {
 
   // Set up auth state listener for email change events
   useEffect(() => {
-    logToSupabase("Setting up email change auth state listener", {
-      level: 'debug',
-      page: 'useEmailChange'
-    });
-    
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      logToSupabase("useEmailChange: Auth state change event", {
-        level: 'debug',
-        page: 'useEmailChange',
-        data: { event }
-      });
-      
       if (event === 'USER_UPDATED' || event === 'SIGNED_IN') {
-        logToSupabase("useEmailChange: Email change confirmed or user updated", {
-          level: 'info',
-          page: 'useEmailChange',
-          data: { email: session?.user?.email, confirmed: session?.user?.email_confirmed_at }
-        });
-        
         // If the user has confirmed their email, close the verification modal
         if (session?.user?.email_confirmed_at && 
             pendingEmailVerification && 
             session?.user?.email === newEmailAddress) {
-          logToSupabase("useEmailChange: Email verified, closing modal", {
-            level: 'info',
-            page: 'useEmailChange'
-          });
           handleVerificationComplete();
         }
       }
     });
     
     return () => {
-      logToSupabase("Cleaning up auth state listener in useEmailChange", {
-        level: 'debug',
-        page: 'useEmailChange'
-      });
       subscription.unsubscribe();
     };
   }, [pendingEmailVerification, newEmailAddress]);
@@ -64,17 +38,7 @@ export function useEmailChange() {
         // If email is not confirmed, show the verification modal
         setPendingEmailVerification(true);
         setNewEmailAddress(user.email);
-        logToSupabase("User has pending email verification", {
-          level: 'info',
-          page: 'useEmailChange',
-          data: { email: user.email }
-        });
       } else {
-        logToSupabase("User email status", {
-          level: 'debug',
-          page: 'useEmailChange',
-          data: { email: user?.email, confirmed_at: user?.email_confirmed_at }
-        });
         setPendingEmailVerification(false);
       }
     };
@@ -83,12 +47,6 @@ export function useEmailChange() {
   }, []);
 
   const sendVerificationEmail = async (currentEmail: string, newEmail: string) => {
-    logToSupabase("Sending verification email", {
-      level: 'info',
-      page: 'useEmailChange',
-      data: { currentEmail, newEmail }
-    });
-    
     try {
       const { data: userData } = await supabase.auth.getUser();
       // Use Supabase edge function via the client
@@ -102,41 +60,17 @@ export function useEmailChange() {
         throw new Error(error.message || 'Failed to send verification email');
       }
       
-      logToSupabase("Verification email sent successfully", {
-        level: 'info',
-        page: 'useEmailChange',
-        data: { currentEmail, newEmail }
-      });
-      
       return result;
     } catch (err: any) {
-      logToSupabase("Error sending verification email", {
-        level: 'error',
-        page: 'useEmailChange',
-        data: { error: err.message || String(err), currentEmail, newEmail }
-      });
-      
       throw err;
     }
   };
 
   const resendVerificationEmail = async (currentEmail: string, newEmail: string) => {
-    logToSupabase("Resending email verification", {
-      level: 'info',
-      page: 'useEmailChange',
-      data: { currentEmail, newEmail }
-    });
-    
     try {
       await sendVerificationEmail(currentEmail, newEmail);
       return { error: null };
     } catch (err: any) {
-      logToSupabase("Error resending verification", {
-        level: 'error',
-        page: 'useEmailChange',
-        data: { error: err.message || String(err) }
-      });
-      
       return { error: err as Error };
     }
   };
@@ -155,12 +89,6 @@ export function useEmailChange() {
     clearToast();
     
     try {
-      logToSupabase("Initiating email change", {
-        level: 'info',
-        page: 'useEmailChange',
-        data: { from: currentEmail, to: newEmail }
-      });
-      
       // Store both emails before updating
       setCurrentEmailAddress(currentEmail);
       setNewEmailAddress(newEmail);
@@ -172,19 +100,7 @@ export function useEmailChange() {
         emailRedirectTo: undefined // Disable automatic email sending
       });
       
-      logToSupabase("Update user email response", {
-        level: 'debug',
-        page: 'useEmailChange',
-        data: { response: updateData, error: error?.message }
-      });
-      
       if (error) {
-        logToSupabase("Email update error", {
-          level: 'error',
-          page: 'useEmailChange',
-          data: { error: error.message }
-        });
-        
         toast({
           variant: "destructive",
           title: "Error",
@@ -211,12 +127,6 @@ export function useEmailChange() {
       setIsUpdatingEmail(false);
       return { success: true, pendingVerification: true };
     } catch (error: any) {
-      logToSupabase("Error updating email address", {
-        level: 'error',
-        page: 'useEmailChange',
-        data: { error: error.message || String(error) }
-      });
-      
       toast({
         variant: "destructive",
         title: "Error",
@@ -232,11 +142,6 @@ export function useEmailChange() {
     setPendingEmailVerification(false);
     
     try {
-      logToSupabase("Refreshing session after email verification", {
-        level: 'info',
-        page: 'useEmailChange'
-      });
-      
       await supabase.auth.refreshSession();
       
       toast({
@@ -246,12 +151,6 @@ export function useEmailChange() {
       
       return { success: true };
     } catch (error: any) {
-      logToSupabase("Error refreshing session", {
-        level: 'error',
-        page: 'useEmailChange',
-        data: { error: error.message || String(error) }
-      });
-      
       toast({
         variant: "destructive",
         title: "Error",
@@ -264,11 +163,6 @@ export function useEmailChange() {
 
   const cancelEmailChange = () => {
     setPendingEmailVerification(false);
-    
-    logToSupabase("Email change cancelled by user", {
-      level: 'info',
-      page: 'useEmailChange'
-    });
     
     toast({
       title: "Email change cancelled",
