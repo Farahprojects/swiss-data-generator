@@ -525,7 +525,9 @@ export const formatNotificationTypeName = (type: NotificationToggleType): string
     case "security_alert_notifications":
       return "Security alert notifications";
     default:
-      return type.replace(/_/g, " ");
+      // TypeScript type guard to ensure we never reach this case
+      const _exhaustiveCheck: never = type;
+      return _exhaustiveCheck;
   }
 };
 

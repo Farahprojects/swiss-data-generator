@@ -3,7 +3,6 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { FcGoogle } from "react-icons/fc";
 import { FaApple } from "react-icons/fa";
-import { logToSupabase } from '@/utils/batchedLogManager';
 
 interface SocialLoginProps {
   onGoogleSignIn: () => void;
@@ -13,19 +12,11 @@ interface SocialLoginProps {
 const SocialLogin: React.FC<SocialLoginProps> = ({ onGoogleSignIn, onAppleSignIn }) => {
   const handleGoogleSignIn = (e: React.MouseEvent) => {
     e.preventDefault();
-    logToSupabase('Google sign in attempted', {
-      level: 'info',
-      page: 'SocialLogin'
-    });
     onGoogleSignIn();
   };
   
   const handleAppleSignIn = (e: React.MouseEvent) => {
     e.preventDefault();
-    logToSupabase('Apple sign in attempted', {
-      level: 'info',
-      page: 'SocialLogin'
-    });
     onAppleSignIn();
   };
 
