@@ -209,7 +209,7 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
       
       // Combine Swiss API data with the report and include engine_used
       const combinedResponse = {
-        ...swissData,
+        swiss_data: swissData,  // Keep Swiss data nested and pure
         report: reportResult.report,
         engine_used: reportResult.report.engine_used // <- Engine info from report generation
       };

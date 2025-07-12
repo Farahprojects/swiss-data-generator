@@ -98,10 +98,10 @@ async function logToSupabase(
     }
   }
 
-  // [SWISS-DATA-SAVE] Saving swiss_data to translator_logs
-  console.log('[translator] [SWISS-DATA-SAVE] Saving swiss_data to translator_logs table');
-  console.log('[translator] [SWISS-DATA-SAVE] Swiss data keys being saved:', responsePayload.swiss_data ? Object.keys(responsePayload.swiss_data) : 'null');
-  console.log('[translator] [SWISS-DATA-SAVE] Swiss data contains report?', !!(responsePayload.swiss_data?.report));
+  // [DEBUG] Log responsePayload structure before saving
+  console.log('[translator] [DEBUG] responsePayload keys before saving:', Object.keys(responsePayload || {}));
+  console.log('[translator] [DEBUG] responsePayload.swiss_data exists:', !!responsePayload?.swiss_data);
+  console.log('[translator] [DEBUG] Swiss data keys being saved:', responsePayload?.swiss_data ? Object.keys(responsePayload.swiss_data) : 'null');
   
   const { error } = await sb.from("translator_logs").insert({
     request_type:        requestType,
@@ -285,6 +285,11 @@ export async function translate(
       });
 
       const finalData  = reportResult.responseData;
+      
+      // [DEBUG] Verify finalData.swiss_data exists after handleReportGeneration
+      console.log(`[translator][${requestId}] [DEBUG] finalData keys after handleReportGeneration:`, Object.keys(finalData || {}));
+      console.log(`[translator][${requestId}] [DEBUG] finalData.swiss_data exists:`, !!finalData?.swiss_data);
+      
       const finalError = reportResult.errorMessage || (!r.ok
         ? `Swiss API returned ${r.status}`
         : undefined);
@@ -329,9 +334,10 @@ export async function translate(
 
       const finalData  = reportResult.responseData;
       
-      // [REPORT-HANDLER-MOONPHASES] Log final data structure
-      console.log(`[translator][${requestId}] [REPORT-HANDLER-MOONPHASES] Final data keys:`, Object.keys(finalData || {}));
-      console.log(`[translator][${requestId}] [REPORT-HANDLER-MOONPHASES] Final data contains report?`, !!(finalData?.report));
+      // [DEBUG] Verify finalData.swiss_data exists after handleReportGeneration
+      console.log(`[translator][${requestId}] [DEBUG] finalData keys after handleReportGeneration:`, Object.keys(finalData || {}));
+      console.log(`[translator][${requestId}] [DEBUG] finalData.swiss_data exists:`, !!finalData?.swiss_data);
+      
       const finalError = reportResult.errorMessage || (!r.ok
         ? `Swiss API returned ${r.status}`
         : undefined);
@@ -377,9 +383,10 @@ export async function translate(
 
       const finalData  = reportResult.responseData;
       
-      // [REPORT-HANDLER-POSITIONS] Log final data structure
-      console.log(`[translator][${requestId}] [REPORT-HANDLER-POSITIONS] Final data keys:`, Object.keys(finalData || {}));
-      console.log(`[translator][${requestId}] [REPORT-HANDLER-POSITIONS] Final data contains report?`, !!(finalData?.report));
+      // [DEBUG] Verify finalData.swiss_data exists after handleReportGeneration
+      console.log(`[translator][${requestId}] [DEBUG] finalData keys after handleReportGeneration:`, Object.keys(finalData || {}));
+      console.log(`[translator][${requestId}] [DEBUG] finalData.swiss_data exists:`, !!finalData?.swiss_data);
+      
       const finalError = reportResult.errorMessage || (!r.ok
         ? `Swiss API returned ${r.status}`
         : undefined);
@@ -432,9 +439,10 @@ export async function translate(
 
     const finalData  = reportResult.responseData;
     
-    // [REPORT-HANDLER-CHARTS] Log final data structure
-    console.log(`[translator][${requestId}] [REPORT-HANDLER-CHARTS] Final data keys:`, Object.keys(finalData || {}));
-    console.log(`[translator][${requestId}] [REPORT-HANDLER-CHARTS] Final data contains report?`, !!(finalData?.report));
+    // [DEBUG] Verify finalData.swiss_data exists after handleReportGeneration
+    console.log(`[translator][${requestId}] [DEBUG] finalData keys after handleReportGeneration:`, Object.keys(finalData || {}));
+    console.log(`[translator][${requestId}] [DEBUG] finalData.swiss_data exists:`, !!finalData?.swiss_data);
+    
     const finalError = reportResult.errorMessage || (!r.ok
       ? `Swiss API returned ${r.status}`
       : undefined);
