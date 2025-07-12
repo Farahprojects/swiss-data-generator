@@ -10,7 +10,7 @@ function _mapReportPayload({
 }: RawReportPayload): MappedReport {
   // Extract person A data
   const personA = {
-    name: reportData?.name ?? guest_report?.report_data?.name ?? 'Person A',
+    name: reportData?.name ?? guest_report?.report_data?.name, // Remove fallback
     birthDate: reportData?.birthDate ?? guest_report?.report_data?.birthDate,
     birthTime: reportData?.birthTime ?? guest_report?.report_data?.birthTime,
     location: reportData?.birthLocation ?? guest_report?.report_data?.birthLocation,

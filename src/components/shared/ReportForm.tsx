@@ -357,7 +357,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     return (
       <ReportViewer
         mappedReport={mapReportPayload({
-          guest_report: form.getValues(),
+          reportData: form.getValues(), // Pass form data directly as reportData
           report_content: reportContent,
           swiss_data: swissData,
           metadata: {

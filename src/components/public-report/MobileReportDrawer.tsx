@@ -489,7 +489,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
           <div className="flex flex-col h-full">
             <ReportViewer
               mappedReport={mapReportPayload({
-                guest_report: submittedData,
+                reportData: form.getValues(), // Pass the actual form data from useMobileDrawerForm
                 report_content: reportData.content,
                 swiss_data: reportData.swissData,
                 metadata: {
