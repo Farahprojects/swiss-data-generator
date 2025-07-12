@@ -18,29 +18,14 @@ export const SettingsModal = () => {
   const { signOut } = useAuth();
 
   useEffect(() => {
-    if (isOpen) {
-      logToSupabase("Settings panel changed in modal", {
-        level: 'info',
-        page: 'SettingsModal',
-        data: { panel: activePanel }
-      });
-    }
+    // Panel tracking removed
   }, [activePanel, isOpen]);
 
   const handleTabChange = (value) => {
     setActivePanel(value);
-    logToSupabase("Settings tab changed via sidebar", {
-      level: 'info',
-      page: 'SettingsModal',
-      data: { panel: value }
-    });
   };
 
   const handleLogout = () => {
-    logToSupabase("User logged out from settings modal", {
-      level: 'info',
-      page: 'SettingsModal'
-    });
     signOut();
     closeSettings();
   };

@@ -65,28 +65,8 @@ export const PublishingModal: React.FC<PublishingModalProps> = ({
         description: "Your coaching website is now live and accessible to visitors."
       });
 
-      logToSupabase("Website published successfully", {
-        level: 'info',
-        page: 'PublishingModal',
-        data: { 
-          websiteId: website.id,
-          slug: website.site_slug,
-          url: websiteUrl
-        }
-      });
-
     } catch (error: any) {
       console.error("Publishing failed:", error);
-      
-      logToSupabase("Website publishing failed", {
-        level: 'error',
-        page: 'PublishingModal',
-        data: { 
-          error: error.message,
-          websiteId: website.id,
-          slug: website.site_slug
-        }
-      });
       
       toast({
         variant: "destructive",

@@ -20,13 +20,9 @@ export const NotificationsPanel = () => {
     formatNotificationTypeName
   } = useUserPreferences();
 
-  // Debug log for panel rendering
+  // Panel rendering tracking removed
   useEffect(() => {
-    logToSupabase("NotificationsPanel component rendered", {
-      level: 'debug',
-      page: 'NotificationsPanel',
-      data: { status: 'loaded', error }
-    });
+    // Component loaded
   }, [error]);
 
   // Helper function to determine if individual notification is enabled
@@ -43,13 +39,6 @@ export const NotificationsPanel = () => {
   // Optimistically handle toggle changes without waiting for backend response
   const handleMainToggleChange = (checked: boolean) => {
     updateMainNotificationsToggle(checked, { showToast: false });
-    
-    // Log action for analytics
-    logToSupabase("Main notification toggle changed", {
-      level: 'info',
-      page: 'NotificationsPanel',
-      data: { enabled: checked }
-    });
   };
 
   // Optimistically handle individual notification toggle changes
@@ -59,13 +48,6 @@ export const NotificationsPanel = () => {
       checked,
       { showToast: false }
     );
-    
-    // Log action for analytics
-    logToSupabase(`${type} notification toggle changed`, {
-      level: 'info',
-      page: 'NotificationsPanel',
-      data: { type, enabled: checked }
-    });
   };
 
   return (
