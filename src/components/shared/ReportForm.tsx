@@ -10,7 +10,7 @@ import PaymentStep from '@/components/public-report/PaymentStep';
 import SuccessScreen from '@/components/public-report/SuccessScreen';
 import DesktopReportViewer from '@/components/public-report/DesktopReportViewer';
 import { FormValidationStatus } from '@/components/public-report/FormValidationStatus';
-import { logToAdmin } from '@/utils/adminLogger';
+
 import { clearGuestReportId, getGuestReportId } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -176,16 +176,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       const hasLocationWithCoords = !!(formData.birthLocation && formData.birthLatitude && formData.birthLongitude);
       
       if (hasReportTypeOrRequest && hasPersonalInfo && hasLocationWithCoords) {
-        await logToAdmin('ReportForm', 'payload_ready', 'All required form data collected', {
-          reportType: formData.reportType,
-          request: formData.request,
-          name: formData.name,
-          email: formData.email,
-          birthDate: formData.birthDate,
-          birthTime: formData.birthTime,
-          birthLocation: formData.birthLocation,
-          coordinates: { lat: formData.birthLatitude, lng: formData.birthLongitude }
-        });
       }
       
       onFormStateChange?.(isValid, shouldUnlockForm);
@@ -288,20 +278,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   };
 
   const onSubmit = async (data: ReportFormData) => {
-    // Log payload when Review & Pay is pressed
-    await logToAdmin('ReportForm', 'review_pay_pressed', 'User clicked Review & Pay - Final payload', {
-      reportType: data.reportType,
-      request: data.request,
-      name: data.name,
-      email: data.email,
-      birthDate: data.birthDate,
-      birthTime: data.birthTime,
-      birthLocation: data.birthLocation,
-      coordinates: { lat: data.birthLatitude, lng: data.birthLongitude },
-      hasSecondPerson: !!(data.secondPersonName),
-      promoCode: data.promoCode || 'none'
-    });
-    
     const submissionData = coachSlug ? { ...data, coachSlug } : data;
     
     // Convert promoValidation to the expected format

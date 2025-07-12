@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
-import { logToAdmin } from '@/utils/adminLogger';
+
 import { PdfGenerator } from '@/services/pdf/PdfGenerator';
 import { ReportHeader } from './ReportHeader';
 import { ReportContent } from './ReportContent';
@@ -41,9 +41,6 @@ const DesktopReportViewer = ({
 
   const handleDownloadPdf = () => {
     if (!reportPdfData) {
-      logToAdmin('DesktopReportViewer', 'pdf_download_warning', 'No PDF data available for download', {
-        customerName: customerName
-      });
       return;
     }
 
@@ -69,10 +66,6 @@ const DesktopReportViewer = ({
 
       
     } catch (error) {
-      logToAdmin('DesktopReportViewer', 'pdf_download_error', 'Error downloading PDF', {
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : null
-      });
     }
   };
 
@@ -95,10 +88,6 @@ const DesktopReportViewer = ({
       
       
     } catch (error) {
-      logToAdmin('DesktopReportViewer', 'clipboard_copy_error', 'Error copying to clipboard', {
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : null
-      });
       toast({
         title: "Copy failed",
         description: "Unable to copy to clipboard. Please try selecting and copying the text manually.",
@@ -131,10 +120,6 @@ const DesktopReportViewer = ({
         }, 2000);
         
       } catch (error) {
-        logToAdmin('DesktopReportViewer', 'clipboard_copy_error_fallback', 'Error copying to clipboard fallback', {
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : null
-        });
         toast({
           title: "Copy failed",
           description: "Unable to copy to clipboard. Please try copying manually first.",
@@ -174,12 +159,6 @@ const DesktopReportViewer = ({
         description: `Your ${sections.join(" + ")} PDF has been downloaded.`,
       });
     } catch (error) {
-      logToAdmin('DesktopReportViewer', 'unified_pdf_error', 'Error generating unified PDF', {
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : null,
-        hasReportContent: !!reportContent,
-        hasSwissData: !!swissData
-      });
       toast({
         title: "PDF generation failed",
         description: "Unable to generate PDF. Please try again.",

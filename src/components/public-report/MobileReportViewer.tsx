@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ReportContent } from './ReportContent';
 import { useToast } from '@/hooks/use-toast';
-import { logToAdmin } from '@/utils/adminLogger';
+
 import { getToggleDisplayLogic } from '@/utils/reportTypeUtils';
 import openaiLogo from '@/assets/openai-logo.png';
 
@@ -38,9 +38,6 @@ const MobileReportViewer = ({
 
   const handleDownloadPdf = () => {
     if (!reportPdfData) {
-      logToAdmin('MobileReportViewer', 'pdf_download_warning', 'No PDF data available for download', {
-        customerName: customerName
-      });
       return;
     }
 
@@ -61,10 +58,6 @@ const MobileReportViewer = ({
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch (error) {
-      logToAdmin('MobileReportViewer', 'pdf_download_error', 'Error downloading PDF', {
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : null
-      });
     }
   };
 
@@ -80,10 +73,6 @@ const MobileReportViewer = ({
         variant: "success"
       });
     } catch (error) {
-      logToAdmin('MobileReportViewer', 'clipboard_copy_error', 'Error copying to clipboard', {
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : null
-      });
       toast({
         title: "Copy failed",
         description: "Unable to copy to clipboard. Please try selecting and copying the text manually.",
@@ -114,10 +103,6 @@ const MobileReportViewer = ({
         setIsCopping(false);
       }, 2000);
     } catch (error) {
-      logToAdmin('MobileReportViewer', 'clipboard_copy_error_fallback', 'Error copying to clipboard fallback', {
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : null
-      });
       setIsCopping(false);
       toast({
         title: "Copy failed",

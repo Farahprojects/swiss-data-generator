@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { logToAdmin } from '@/utils/adminLogger';
+
 import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { Tag, CheckCircle, AlertCircle, Loader2, AlertTriangle } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -81,13 +81,6 @@ const PaymentStep = ({
       
       basePrice = getReportPrice(formData);
       reportTitle = getReportTitle(formData);
-      
-      // Log price calculation (async but non-blocking)
-      logToAdmin('PaymentStep', 'price_calculation', 'Price calculation with form data', {
-        formData: formData,
-        basePrice: basePrice,
-        reportTitle: reportTitle
-      });
     }
   } catch (error) {
     // Silently handle pricing errors - global fallback will handle missing prices
@@ -96,11 +89,6 @@ const PaymentStep = ({
     }
     
     // Log error but don't set UI error
-    logToAdmin('PaymentStep', 'price_fetch_error_silent', 'Price fetch error (silenced)', {
-      error: error instanceof Error ? error.message : 'Failed to get price',
-      formData: { reportType, request, reportCategory },
-      note: 'Error silenced to prevent UI disruption'
-    });
   }
 
   // Calculate pricing - global fallback will handle missing prices  
@@ -132,32 +120,6 @@ const PaymentStep = ({
     
     // Show processing immediately
     setIsLocalProcessing(true);
-    
-    // Log the complete form data BEFORE payment
-    const formData = {
-      name: watch('name'),
-      email: watch('email'),
-      birthDate: watch('birthDate'), 
-      birthTime: watch('birthTime'),
-      birthLocation: watch('birthLocation'),
-      birthLatitude: watch('birthLatitude'),
-      birthLongitude: watch('birthLongitude'),
-      reportType: watch('reportType'),
-      request: watch('request'),
-      promoCode: promoCode
-    };
-    
-    await logToAdmin('PaymentStep', 'form_data_before_payment', 'Complete form data captured before payment', {
-      formData: formData,
-      hasName: !!formData.name,
-      hasEmail: !!formData.email,
-      hasBirthDate: !!formData.birthDate,
-      hasBirthTime: !!formData.birthTime,
-      hasLocation: !!formData.birthLocation,
-      hasCoordinates: !!(formData.birthLatitude && formData.birthLongitude),
-      reportType: formData.reportType,
-      request: formData.request
-    });
     
     // First validate promo code if present
     if (promoCode && promoCode.trim() !== '') {

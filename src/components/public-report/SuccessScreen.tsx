@@ -6,7 +6,7 @@ import { useGuestReportStatus } from '@/hooks/useGuestReportStatus';
 import { useViewportHeight } from '@/hooks/useViewportHeight';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { motion } from 'framer-motion';
-import { logToAdmin } from '@/utils/adminLogger';
+
 import { useNavigate } from 'react-router-dom';
 import { getGuestToken, clearAllSessionData } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
