@@ -378,8 +378,8 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
               </>
             ) : (
               <>
-                {/* Countdown timer at the top for AI reports */}
-                {isAiReport && showCountdown && (
+                {/* Countdown timer at the top for AI reports - Hide if has_swiss_error */}
+                {isAiReport && showCountdown && !hasSwissError && (
                   <div className="text-center mb-6">
                     <div className="text-3xl font-light text-gray-900 mb-2">{countdownTime}s</div>
                     <p className="text-sm text-gray-600">AI report generating...</p>
@@ -395,7 +395,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                 )}
                 
                 {/* Only show "Report Ready!" and description when actually ready */}
-                {(report?.payment_status === 'paid' && !showCountdown) ? (
+                {(report?.payment_status === 'paid' && !showCountdown && !hasSwissError) ? (
                   <div>
                     <h2 className="text-2xl font-light text-gray-900 mb-1 tracking-tight">Report Ready!</h2>
                     <p className="text-gray-600 font-light">Your report is ready</p>
@@ -406,15 +406,15 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                     <span className="font-medium">{email}</span>
                   </div>
                   
-                  {/* Show entertainment window for AI reports only during countdown */}
-                  {isAiReport && showCountdown && (
+                  {/* Show entertainment window for AI reports only during countdown and no Swiss error */}
+                  {isAiReport && showCountdown && !hasSwissError && (
                     <EntertainmentWindow 
                       mode={entertainmentMode}
                       className="mb-4"
                     />
                   )}
                   
-                   {showCountdown ? (
+                   {showCountdown && !hasSwissError ? (
                      <div className="flex flex-col items-center gap-4">
                        <Button disabled className="bg-gray-400 text-white font-light cursor-not-allowed">
                          View Report ({countdownTime}s)
