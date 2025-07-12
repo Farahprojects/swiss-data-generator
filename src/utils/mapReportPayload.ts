@@ -11,7 +11,7 @@ function _mapReportPayload({
   const reportData = guest_report?.report_data;
   
   if (!reportData?.name) {
-    throw new Error('Missing person A name in guest_report.report_data');
+    throw new Error(`Missing person A name in guest_report.report_data. Received: ${JSON.stringify(reportData)}`);
   }
 
   const personA = {
