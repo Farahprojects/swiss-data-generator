@@ -5,34 +5,28 @@ import { ReportRenderer } from '@/components/shared/ReportRenderer';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AstroDataRenderer } from './AstroDataRenderer';
 import { getToggleDisplayLogic } from '@/utils/reportTypeUtils';
+import { MappedReport } from '@/types/mappedReport';
 
 interface ReportContentProps {
-  reportContent: string;
-  swissData?: any;
-  reportData?: any; // Form data containing names and birth details
-  customerName: string;
+  mappedReport: MappedReport;
   activeView?: 'report' | 'astro';
   setActiveView?: (view: 'report' | 'astro') => void;
-  hasReport?: boolean;
-  swissBoolean?: boolean;
-  isPureAstroReport?: boolean;
   isMobile?: boolean;
 }
 
 export const ReportContent = ({
-  reportContent,
-  swissData,
-  reportData,
-  customerName,
+  mappedReport,
   activeView: externalActiveView,
   setActiveView: externalSetActiveView,
-  hasReport,
-  swissBoolean,
-  isPureAstroReport,
   isMobile = false,
 }: ReportContentProps) => {
   // Use intelligent content detection
-  const reportAnalysisData = { reportContent, swissData, swissBoolean, hasReport };
+  const reportAnalysisData = { 
+    reportContent: mappedReport.reportContent, 
+    swissData: mappedReport.swissData, 
+    swissBoolean: mappedReport.swissBoolean, 
+    hasReport: mappedReport.hasReport 
+  };
   const toggleLogic = getToggleDisplayLogic(reportAnalysisData);
   const [internalActiveView, setInternalActiveView] = useState<'report' | 'astro'>(toggleLogic.defaultView);
 
@@ -55,10 +49,10 @@ export const ReportContent = ({
       <div className="w-full">
         {activeView === 'report' ? (
           <div className="prose prose-lg max-w-none text-left">
-            <ReportRenderer content={reportContent} />
+            <ReportRenderer content={mappedReport.reportContent} />
           </div>
         ) : (
-          <AstroDataRenderer swissData={swissData} reportData={reportData} />
+          <AstroDataRenderer swissData={mappedReport.swissData} reportData={mappedReport} />
         )}
       </div>
     );
@@ -71,7 +65,7 @@ export const ReportContent = ({
         <CardHeader className="pb-6 border-b border-gray-100">
           <div className="flex items-center justify-between">
             <CardTitle className="text-xl font-light text-gray-900 tracking-tight">
-              {toggleLogic.title} — Generated for {customerName}
+              {toggleLogic.title} — Generated for {mappedReport.customerName}
             </CardTitle>
 
             {showToggle && (
@@ -105,10 +99,10 @@ export const ReportContent = ({
             <div className="p-8">
               {activeView === 'report' ? (
                 <div className="prose prose-lg max-w-none text-left">
-                  <ReportRenderer content={reportContent} />
+                  <ReportRenderer content={mappedReport.reportContent} />
                 </div>
               ) : (
-                <AstroDataRenderer swissData={swissData} reportData={reportData} />
+                <AstroDataRenderer swissData={mappedReport.swissData} reportData={mappedReport} />
               )}
             </div>
           </ScrollArea>
