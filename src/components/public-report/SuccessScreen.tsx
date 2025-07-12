@@ -414,37 +414,12 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                     />
                   )}
                   
-                  {showCountdown ? (
-                    <div className="flex flex-col items-center gap-4">
-                      <Button disabled className="bg-gray-400 text-white font-light cursor-not-allowed">
-                        View Report ({countdownTime}s)
-                      </Button>
-                      <Button variant="outline" onClick={handleBackToForm} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
-                        Home
-                      </Button>
-                      
-                      {/* Entertainment mode switcher for AI reports */}
-                      <div className="flex gap-2 text-xs">
-                        <button
-                          onClick={() => setEntertainmentMode('text')}
-                          className={`px-2 py-1 rounded ${entertainmentMode === 'text' ? 'bg-gray-200' : 'bg-gray-100'}`}
-                        >
-                          Text
-                        </button>
-                        <button
-                          onClick={() => setEntertainmentMode('video')}
-                          className={`px-2 py-1 rounded ${entertainmentMode === 'video' ? 'bg-gray-200' : 'bg-gray-100'}`}
-                        >
-                          Video
-                        </button>
-                        <button
-                          onClick={() => setEntertainmentMode('image')}
-                          className={`px-2 py-1 rounded ${entertainmentMode === 'image' ? 'bg-gray-200' : 'bg-gray-100'}`}
-                        >
-                          Images
-                        </button>
-                      </div>
-                    </div>
+                   {showCountdown ? (
+                     <div className="flex flex-col items-center gap-4">
+                       <Button disabled className="bg-gray-400 text-white font-light cursor-not-allowed">
+                         View Report ({countdownTime}s)
+                       </Button>
+                     </div>
                   ) : (
                     <div className="space-y-4">
                       {/* Error display */}
