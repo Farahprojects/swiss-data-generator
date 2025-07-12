@@ -5,11 +5,9 @@ import { useMobileAutocomplete } from '@/hooks/useMobileAutocomplete';
 import { autocompleteMonitor } from '@/utils/autocompleteMonitoring';
 import { PlaceData } from './utils/extractPlaceData';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { AutocompleteContainer } from './components/AutocompleteContainer';
 import { FallbackInput } from './components/FallbackInput';
 import { ServerAutocomplete } from './components/ServerAutocomplete';
-import { MobileFullScreenAutocomplete } from './components/MobileFullScreenAutocomplete';
 
 export interface PlaceAutocompleteProps {
   label?: string;
@@ -46,7 +44,6 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
     const [isClient, setIsClient] = useState(false);
     const [forceAutocomplete, setForceAutocomplete] = useState(false);
     const [hasTriedWebComponents, setHasTriedWebComponents] = useState(false);
-    const [showMobileOverlay, setShowMobileOverlay] = useState(false);
 
     // Handle client-side hydration
     useEffect(() => {
@@ -96,9 +93,6 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
       return null;
     }
 
-    // Check if we should use mobile full-screen on mobile devices
-    const shouldUseMobileOverlay = isMobile && !disabled && !isError;
-    
     // Simplified fallback logic - only use server autocomplete when explicitly needed
     const shouldShowFallback = (showFallback || disabled) && !forceAutocomplete;
     const shouldUseServerAutocomplete = useServerAutocomplete || (isError && !forceAutocomplete);
@@ -112,31 +106,7 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
           </Label>
         )}
         
-        {shouldUseMobileOverlay ? (
-          <>
-            {/* Mobile Input Trigger */}
-            <Input
-              id={id}
-              value={localValue}
-              placeholder={placeholder}
-              className="h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400 cursor-pointer"
-              style={{ fontSize: '16px' }} // Prevent zoom on iOS
-              readOnly
-              onClick={() => setShowMobileOverlay(true)}
-            />
-            
-            {/* Mobile Full-Screen Overlay */}
-            <MobileFullScreenAutocomplete
-              isOpen={showMobileOverlay}
-              onClose={() => setShowMobileOverlay(false)}
-              value={localValue}
-              onChange={handleLocalChange}
-              onPlaceSelect={onPlaceSelect}
-              placeholder={placeholder}
-              label={label}
-            />
-          </>
-        ) : shouldUseServerAutocomplete ? (
+        {shouldUseServerAutocomplete ? (
           <ServerAutocomplete
             id={id}
             value={localValue}
