@@ -1,18 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-export const useGuestReport = (reportId: string | null) => {
+export const useGuestReportData = (reportId: string | null) => {
   return useQuery({
-    queryKey: ['guest-report', reportId],
+    queryKey: ['guest-report-data', reportId],
     queryFn: async () => {
       if (!reportId) return null;
       
-      const { data, error } = await supabase
-        .from('guest_reports')
-        .select('*')
-        .eq('id', reportId)
-        .single();
-        
+      const { data, error } = await supabase.functions.invoke('get-guest-report', {
+        body: { id: reportId }
+      });
+      
       if (error) throw error;
       return data;
     },

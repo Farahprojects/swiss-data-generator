@@ -14,7 +14,7 @@ import { FormValidationStatus } from '@/components/public-report/FormValidationS
 
 import { clearGuestReportId, getGuestReportId } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
-import { useGuestReport } from '@/hooks/useGuestReport';
+import { useGuestReportData } from '@/hooks/useGuestReportData';
 
 interface ReportFormProps {
   coachSlug?: string;
@@ -356,7 +356,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   // Show report viewer if user is viewing a report
   if (viewingReport) {
     const urlGuestId = getGuestReportId();
-    const { data: guestReport, isLoading, error } = useGuestReport(urlGuestId);
+    const { data: guestReportData, isLoading, error } = useGuestReportData(urlGuestId);
     
     if (isLoading) {
       return (
@@ -369,7 +369,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       );
     }
     
-    if (error || !guestReport) {
+    if (error || !guestReportData) {
       return (
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
@@ -388,14 +388,10 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     return (
       <ReportViewer
         mappedReport={mapReportPayload({
-          guest_report: guestReport,
-          report_content: reportContent,
-          swiss_data: swissData,
-          metadata: {
-            is_ai_report: guestReport.has_report || false,
-            is_astro_report: guestReport.swiss_boolean || false,
-            content_type: guestReport.has_report ? 'ai' : 'astro'
-          }
+          guest_report: guestReportData.guest_report,
+          report_content: guestReportData.report_content,
+          swiss_data: guestReportData.swiss_data,
+          metadata: guestReportData.metadata
         })}
         onBack={handleCloseReportViewer}
         isMobile={false}
