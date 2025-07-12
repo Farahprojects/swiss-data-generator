@@ -55,16 +55,15 @@ export class AstroTemplate extends BaseTemplate {
     this.download(fname);
   }
 
-  public renderSynastryData(swissData: any, startY: number, targetDoc?: any, reportData?: any): number {
+  public renderSynastryData(swissData: any, startY: number, targetDoc?: any): number {
     const data = parseSynastryRich(swissData);
     const doc = targetDoc || this.doc;
     let y = startY;
 
     // Header
     doc.setFontSize(16).setFont('helvetica', 'bold').setTextColor(40, 40, 60);
-    // Use names from reportData as fallback if not in parsed data
-    const personADisplay = data.personA.name || reportData?.person_a_name || "Person A";
-    const personBDisplay = data.personB.name || reportData?.person_b_name || "Person B";
+    const personADisplay = data.personA.name || "Person A";
+    const personBDisplay = data.personB.name || "Person B";
     doc.text(`${personADisplay} & ${personBDisplay} - Compatibility Astro Data`, this.margins.left, y);
     y += 20;
 
@@ -108,7 +107,7 @@ export class AstroTemplate extends BaseTemplate {
     return y;
   }
 
-  public renderEssenceData(swissData: any, startY: number, targetDoc?: any, reportData?: any): number {
+  public renderEssenceData(swissData: any, startY: number, targetDoc?: any): number {
     const data = parseSwissDataRich(swissData);
     const doc = targetDoc || this.doc;
     let y = startY;
@@ -118,11 +117,9 @@ export class AstroTemplate extends BaseTemplate {
     doc.text('Your Astro Data', this.margins.left, y);
     y += 20;
 
-    // Use name from reportData as fallback if not in parsed data
-    const displayName = data.name || reportData?.name;
-    if (displayName) {
+    if (data.name) {
       doc.setFontSize(14).setFont('helvetica', 'bold').setTextColor(60);
-      doc.text(displayName, this.margins.left, y);
+      doc.text(data.name, this.margins.left, y);
       y += 15;
     }
 

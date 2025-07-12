@@ -10,7 +10,6 @@ export interface UnifiedPdfData {
   customerName: string;
   reportPdfData?: string;
   reportType?: string;
-  reportData?: any; // Form data containing names and birth details
 }
 
 export class UnifiedTemplate implements PdfTemplate {
@@ -56,7 +55,7 @@ export class UnifiedTemplate implements PdfTemplate {
 
     // Astro Data Section - Use the proper AstroTemplate methods
     if (data.swissData) {
-      currentY = this.renderAstroSection(doc, data.swissData, currentY, data.reportData);
+      currentY = this.renderAstroSection(doc, data.swissData, currentY);
     }
 
     // Footer
@@ -83,7 +82,7 @@ export class UnifiedTemplate implements PdfTemplate {
     return startY + 70;
   }
 
-  private renderAstroSection(doc: jsPDF, swissData: any, startY: number, reportData?: any): number {
+  private renderAstroSection(doc: jsPDF, swissData: any, startY: number): number {
     // Check if we need a new page
     const pageHeight = doc.internal.pageSize.getHeight();
     const margins = this.options.margins!;
@@ -101,9 +100,9 @@ export class UnifiedTemplate implements PdfTemplate {
     // Use the proper AstroTemplate rendering methods
     try {
       if (isSynastryData(swissData)) {
-        return this.astroTemplate.renderSynastryData(swissData, startY, doc, reportData);
+        return this.astroTemplate.renderSynastryData(swissData, startY, doc);
       } else {
-        return this.astroTemplate.renderEssenceData(swissData, startY, doc, reportData);
+        return this.astroTemplate.renderEssenceData(swissData, startY, doc);
       }
     } catch (error) {
       console.error('Error rendering astro data:', error);
