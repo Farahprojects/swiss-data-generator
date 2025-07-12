@@ -1726,16 +1726,6 @@ export type Database = {
         Args: { user_id_param: string; amount_param: number }
         Returns: undefined
       }
-      log_admin_event: {
-        Args: {
-          _page: string
-          _event_type: string
-          _logs: string
-          _user_id?: string
-          _meta?: Json
-        }
-        Returns: string
-      }
       record_api_usage: {
         Args: {
           _user_id: string

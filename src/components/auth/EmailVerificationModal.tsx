@@ -9,7 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { logToSupabase } from '@/utils/batchedLogManager';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -41,11 +40,6 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
     setResendError(null);
 
     try {
-      logToSupabase("Resending verification email", {
-        level: 'info',
-        page: 'EmailVerificationModal',
-        data: { currentEmail, newEmail, userId: user?.id }
-      });
 
       // Use Supabase edge function via the client
       const { data, error } = await supabase.functions.invoke('email-verification', {
@@ -62,21 +56,13 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
       
       if (result.status === 'sent') {
         setResendSuccess(true);
-        logToSupabase("Verification email resent successfully", {
-          level: 'info',
-          page: 'EmailVerificationModal'
-        });
       } else {
         throw new Error(result.error || 'Unexpected response from server');
       }
 
     } catch (error: any) {
       setResendError(error.message || 'Failed to resend verification email');
-      logToSupabase("Exception resending verification", {
-        level: 'error',
-        page: 'EmailVerificationModal',
-        data: { error: error.message || String(error) }
-      });
+      console.error('Exception resending verification:', error);
     } finally {
       setIsResending(false);
     }
