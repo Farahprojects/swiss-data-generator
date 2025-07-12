@@ -14,6 +14,7 @@ import { FormValidationStatus } from '@/components/public-report/FormValidationS
 
 import { clearGuestReportId, getGuestReportId } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
+import { useGuestReport } from '@/hooks/useGuestReport';
 
 interface ReportFormProps {
   coachSlug?: string;
@@ -354,24 +355,46 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
   // Show report viewer if user is viewing a report
   if (viewingReport) {
-    // Create a guest_report object from available data for mapping
-    const mockGuestReport = {
-      report_data: form.getValues(),
-      report_type: currentReportType,
-      has_report: hasReport,
-      swiss_boolean: swissBoolean
-    };
+    const urlGuestId = getGuestReportId();
+    const { data: guestReport, isLoading, error } = useGuestReport(urlGuestId);
+    
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading report...</p>
+          </div>
+        </div>
+      );
+    }
+    
+    if (error || !guestReport) {
+      return (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <p className="text-destructive mb-4">Failed to load report</p>
+            <button 
+              onClick={handleCloseReportViewer}
+              className="bg-primary text-primary-foreground px-4 py-2 rounded"
+            >
+              Go Back
+            </button>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <ReportViewer
         mappedReport={mapReportPayload({
-          guest_report: mockGuestReport,
+          guest_report: guestReport,
           report_content: reportContent,
           swiss_data: swissData,
           metadata: {
-            is_ai_report: hasReport || false,
-            is_astro_report: swissBoolean || false,
-            content_type: hasReport ? 'ai' : 'astro'
+            is_ai_report: guestReport.has_report || false,
+            is_astro_report: guestReport.swiss_boolean || false,
+            content_type: guestReport.has_report ? 'ai' : 'astro'
           }
         })}
         onBack={handleCloseReportViewer}
