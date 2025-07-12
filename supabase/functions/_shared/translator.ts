@@ -84,17 +84,31 @@ async function logToSupabase(
   // Process Swiss data with real names if available
   let swissDataNamed = null;
   let hasNamedData = false;
+  let pureSwissData = null;
 
-  if (responsePayload && typeof responsePayload === 'object' && responsePayload.swiss_data) {
-    try {
-      const { personA, personB } = extractPersonNames(requestPayload);
-      // Clone the swiss_data to avoid mutating the original responsePayload
-      swissDataNamed = injectRealNames(structuredClone(responsePayload.swiss_data), personA, personB);
-      hasNamedData = true;
-      console.log(`[translator] Processed Swiss data with names: ${personA}${personB ? ` & ${personB}` : ''} (${new Date().toISOString()})`);
-    } catch (err) {
-      console.error('Failed to process Swiss data names:', err);
-      // Continue without processed names - fallback to original data
+  // Handle separated data structure (swiss_data + ai_report) vs pure Swiss data
+  if (responsePayload && typeof responsePayload === 'object') {
+    if (responsePayload.swiss_data) {
+      // Separated structure from reportHandler - extract pure Swiss data
+      pureSwissData = responsePayload.swiss_data;
+      console.log(`[translator] Found separated data structure with swiss_data field`);
+    } else if (!responsePayload.ai_report && !responsePayload.report_error) {
+      // Pure Swiss data (no AI report mixed in)
+      pureSwissData = responsePayload;
+      console.log(`[translator] Found pure Swiss data (no AI report)`);
+    }
+
+    if (pureSwissData) {
+      try {
+        const { personA, personB } = extractPersonNames(requestPayload);
+        // Clone the swiss_data to avoid mutating the original responsePayload
+        swissDataNamed = injectRealNames(structuredClone(pureSwissData), personA, personB);
+        hasNamedData = true;
+        console.log(`[translator] Processed Swiss data with names: ${personA}${personB ? ` & ${personB}` : ''} (${new Date().toISOString()})`);
+      } catch (err) {
+        console.error('Failed to process Swiss data names:', err);
+        // Continue without processed names - fallback to original data
+      }
     }
   }
 
@@ -103,7 +117,7 @@ async function logToSupabase(
     request_payload:     requestPayload,
     translator_payload:  translatorPayload ?? null,
     response_status:     responseStatus,
-    swiss_data:          responsePayload.swiss_data ?? null, // keep raw Swiss untouched
+    swiss_data:          pureSwissData, // Only pure Swiss data, no AI reports
     swiss_data_named:    swissDataNamed,
     has_named_data:      hasNamedData,
     processing_time_ms:  processingTime,

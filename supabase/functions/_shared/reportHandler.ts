@@ -202,11 +202,11 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
     if (reportResult.success && reportResult.report) {
       console.log(`${logPrefix} Report generated successfully for "${reportPayload.report_type}"`);
       
-      // Combine Swiss API data with the report and include engine_used
-      const combinedResponse = {
-        ...swissData,
-        report: reportResult.report,
-        engine_used: reportResult.report.engine_used // <- Engine info from report generation
+      // Keep Swiss data and AI report separate - DON'T mix them!
+      const separatedResponse = {
+        swiss_data: swissData,
+        ai_report: reportResult.report,
+        engine_used: reportResult.report.engine_used
       };
       
       // Create AI-only data for logging (without Swiss data)
@@ -215,12 +215,12 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
         engine_used: reportResult.report.engine_used
       };
       
-      console.log(`${logPrefix} Combined response prepared with report and engine info included`);
+      console.log(`${logPrefix} Separated response prepared with clean Swiss data and AI report`);
       console.log(`${logPrefix} ========== REPORT GENERATION DEBUG END ==========`);
       
       return {
         success: true,
-        responseData: combinedResponse,
+        responseData: separatedResponse,
         aiOnlyData: aiOnlyData,
         errorMessage: undefined
       };
@@ -232,9 +232,9 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
         reportType: reportPayload.report_type
       });
       
-      // Return Swiss API data with detailed error message about report
+      // Return Swiss data with error message separately
       const responseWithError = {
-        ...swissData,
+        swiss_data: swissData,
         report_error: `Failed to generate ${reportPayload.report_type} report: ${errorMsg}`
       };
       
@@ -262,9 +262,9 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
       swissData = { raw_response: swissApiResponse };
     }
     
-    // Return Swiss API data with error message
+    // Return Swiss data with error message separately
     const responseWithError = {
-      ...swissData,
+      swiss_data: swissData,
       report_error: `Unexpected error during ${requestData?.report || 'unknown'} report generation: ${errorMsg}`
     };
     
