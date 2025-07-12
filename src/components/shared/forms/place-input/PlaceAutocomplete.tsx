@@ -5,11 +5,9 @@ import { useMobileAutocomplete } from '@/hooks/useMobileAutocomplete';
 import { autocompleteMonitor } from '@/utils/autocompleteMonitoring';
 import { PlaceData } from './utils/extractPlaceData';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { AutocompleteContainer } from './components/AutocompleteContainer';
 import { FallbackInput } from './components/FallbackInput';
 import { ServerAutocomplete } from './components/ServerAutocomplete';
-import { MobileAutocompleteModal } from './components/MobileAutocompleteModal';
 
 export interface PlaceAutocompleteProps {
   label?: string;
@@ -46,7 +44,6 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
     const [isClient, setIsClient] = useState(false);
     const [forceAutocomplete, setForceAutocomplete] = useState(false);
     const [hasTriedWebComponents, setHasTriedWebComponents] = useState(false);
-    const [showMobileModal, setShowMobileModal] = useState(false);
 
     // Handle client-side hydration
     useEffect(() => {
@@ -100,16 +97,6 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
     const shouldShowFallback = (showFallback || disabled) && !forceAutocomplete;
     const shouldUseServerAutocomplete = useServerAutocomplete || (isError && !forceAutocomplete);
 
-    const handleMobileInputClick = () => {
-      if (isMobile && !disabled) {
-        setShowMobileModal(true);
-      }
-    };
-
-    const handleMobileModalClose = () => {
-      setShowMobileModal(false);
-    };
-
     return (
       <div ref={ref} className={`space-y-2 ${className}`}>
         {label && (
@@ -119,27 +106,7 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
           </Label>
         )}
         
-        {isMobile ? (
-          <>
-            <Input
-              id={id}
-              value={localValue}
-              onClick={handleMobileInputClick}
-              readOnly
-              placeholder={placeholder}
-              disabled={disabled}
-              className="h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400 cursor-pointer"
-            />
-            <MobileAutocompleteModal
-              isOpen={showMobileModal}
-              onClose={handleMobileModalClose}
-              value={localValue}
-              onChange={handleLocalChange}
-              onPlaceSelect={onPlaceSelect}
-              placeholder={placeholder}
-            />
-          </>
-        ) : shouldUseServerAutocomplete ? (
+        {shouldUseServerAutocomplete ? (
           <ServerAutocomplete
             id={id}
             value={localValue}

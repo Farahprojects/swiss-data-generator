@@ -12,7 +12,6 @@ interface ServerAutocompleteProps {
   placeholder: string;
   disabled: boolean;
   className?: string;
-  hideInput?: boolean;
 }
 
 interface Prediction {
@@ -31,8 +30,7 @@ export const ServerAutocomplete: React.FC<ServerAutocompleteProps> = ({
   onPlaceSelect,
   placeholder,
   disabled,
-  className = '',
-  hideInput = false
+  className = ''
 }) => {
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -84,13 +82,6 @@ export const ServerAutocomplete: React.FC<ServerAutocompleteProps> = ({
       searchPlaces(newValue);
     }, 300);
   };
-
-  // Auto-search when value changes and input is hidden (for modal mode)
-  useEffect(() => {
-    if (hideInput && value) {
-      searchPlaces(value);
-    }
-  }, [hideInput, value]);
 
   const handlePlaceSelect = async (prediction: Prediction) => {
     onChange(prediction.description);
@@ -180,40 +171,34 @@ export const ServerAutocomplete: React.FC<ServerAutocompleteProps> = ({
 
   return (
     <div className={`relative ${className}`}>
-      {!hideInput && (
-        <div className="relative">
-          <Input
-            ref={inputRef}
-            id={id}
-            value={value}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            placeholder={placeholder}
-            disabled={disabled}
-            className="h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400"
-            style={{ fontSize: '16px' }} // Prevent zoom on iOS
-          />
-          {isLoading && (
-            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            </div>
-          )}
-        </div>
-      )}
+      <div className="relative">
+        <Input
+          ref={inputRef}
+          id={id}
+          value={value}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          disabled={disabled}
+          className="h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400"
+          style={{ fontSize: '16px' }} // Prevent zoom on iOS
+        />
+        {isLoading && (
+          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          </div>
+        )}
+      </div>
 
-      {(isOpen || hideInput) && predictions.length > 0 && (
+      {isOpen && predictions.length > 0 && (
         <ul
           ref={listRef}
-          className={hideInput ? "space-y-1 p-4" : "absolute z-50 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-auto"}
+          className="absolute z-50 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-auto"
         >
           {predictions.map((prediction, index) => (
             <li
               key={prediction.place_id}
-              className={`cursor-pointer hover:bg-muted rounded-md ${
-                hideInput 
-                  ? "p-3 border border-border bg-background" 
-                  : "px-3 py-2"
-              } ${
+              className={`px-3 py-2 cursor-pointer hover:bg-muted ${
                 index === highlightedIndex ? 'bg-muted' : 'bg-background'
               }`}
               onClick={() => handlePlaceSelect(prediction)}
@@ -228,12 +213,6 @@ export const ServerAutocomplete: React.FC<ServerAutocompleteProps> = ({
             </li>
           ))}
         </ul>
-      )}
-      
-      {hideInput && value.length >= 3 && isLoading && (
-        <div className="p-4 text-center">
-          <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
-        </div>
       )}
     </div>
   );
