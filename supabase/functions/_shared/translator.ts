@@ -98,11 +98,6 @@ async function logToSupabase(
     }
   }
 
-  // [STEP-3] Debug payload going into logToSupabase
-  console.log('[translator] [STEP-3-DEBUG] ENTIRE responsePayload keys:', Object.keys(responsePayload || {}));
-  console.log('[translator] [STEP-3-DEBUG] responsePayload type:', typeof responsePayload);
-  console.log('[translator] [STEP-3-DEBUG] responsePayload has swiss_data:', !!(responsePayload?.swiss_data));
-  
   // [SWISS-DATA-SAVE] Saving swiss_data to translator_logs
   console.log('[translator] [SWISS-DATA-SAVE] Saving swiss_data to translator_logs table');
   console.log('[translator] [SWISS-DATA-SAVE] Swiss data keys being saved:', responsePayload.swiss_data ? Object.keys(responsePayload.swiss_data) : 'null');
@@ -294,12 +289,6 @@ export async function translate(
         ? `Swiss API returned ${r.status}`
         : undefined);
 
-      // [STEP-1] Debug finalData before any processing
-      console.log(`[translator][${requestId}] [STEP-1-DEBUG] finalData keys:`, Object.keys(finalData || {}));
-      console.log(`[translator][${requestId}] [STEP-1-DEBUG] has swiss_data:`, !!(finalData && finalData.swiss_data));
-      console.log(`[translator][${requestId}] [STEP-1-DEBUG] finalData.swiss_data keys:`, finalData?.swiss_data ? Object.keys(finalData.swiss_data) : 'MISSING');
-      console.log(`[translator][${requestId}] [STEP-1-DEBUG] finalData type:`, typeof finalData);
-
       if (!skipLogging) {
         await logToSupabase(
           requestType,
@@ -339,12 +328,6 @@ export async function translate(
       });
 
       const finalData  = reportResult.responseData;
-      
-      // [STEP-1] Debug finalData before any processing - MOONPHASES
-      console.log(`[translator][${requestId}] [STEP-1-DEBUG-MOONPHASES] finalData keys:`, Object.keys(finalData || {}));
-      console.log(`[translator][${requestId}] [STEP-1-DEBUG-MOONPHASES] has swiss_data:`, !!(finalData && finalData.swiss_data));
-      console.log(`[translator][${requestId}] [STEP-1-DEBUG-MOONPHASES] finalData.swiss_data keys:`, finalData?.swiss_data ? Object.keys(finalData.swiss_data) : 'MISSING');
-      console.log(`[translator][${requestId}] [STEP-1-DEBUG-MOONPHASES] finalData type:`, typeof finalData);
       
       // [REPORT-HANDLER-MOONPHASES] Log final data structure
       console.log(`[translator][${requestId}] [REPORT-HANDLER-MOONPHASES] Final data keys:`, Object.keys(finalData || {}));
@@ -448,12 +431,6 @@ export async function translate(
     });
 
     const finalData  = reportResult.responseData;
-    
-    // [STEP-1] Debug finalData before any processing - CHARTS
-    console.log(`[translator][${requestId}] [STEP-1-DEBUG-CHARTS] finalData keys:`, Object.keys(finalData || {}));
-    console.log(`[translator][${requestId}] [STEP-1-DEBUG-CHARTS] has swiss_data:`, !!(finalData && finalData.swiss_data));
-    console.log(`[translator][${requestId}] [STEP-1-DEBUG-CHARTS] finalData.swiss_data keys:`, finalData?.swiss_data ? Object.keys(finalData.swiss_data) : 'MISSING');
-    console.log(`[translator][${requestId}] [STEP-1-DEBUG-CHARTS] finalData type:`, typeof finalData);
     
     // [REPORT-HANDLER-CHARTS] Log final data structure
     console.log(`[translator][${requestId}] [REPORT-HANDLER-CHARTS] Final data keys:`, Object.keys(finalData || {}));
