@@ -8,7 +8,8 @@ import CombinedPersonalDetailsForm from '@/components/public-report/CombinedPers
 import SecondPersonForm from '@/components/public-report/SecondPersonForm';
 import PaymentStep from '@/components/public-report/PaymentStep';
 import SuccessScreen from '@/components/public-report/SuccessScreen';
-import DesktopReportViewer from '@/components/public-report/DesktopReportViewer';
+import { ReportViewer } from '@/components/public-report/ReportViewer';
+import { mapReportPayload } from '@/utils/mapReportPayload';
 import { FormValidationStatus } from '@/components/public-report/FormValidationStatus';
 
 import { clearGuestReportId, getGuestReportId } from '@/utils/urlHelpers';
@@ -354,16 +355,20 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   // Show report viewer if user is viewing a report
   if (viewingReport) {
     return (
-      <DesktopReportViewer
-        reportContent={reportContent}
-        reportPdfData={reportPdfData}
-        customerName={userName}
-        swissData={swissData}
-        reportData={form.getValues()} // Pass form data for names and birth details
+      <ReportViewer
+        mappedReport={mapReportPayload({
+          guest_report: form.getValues(),
+          report_content: reportContent,
+          swiss_data: swissData,
+          metadata: {
+            hasReport: hasReport,
+            swissBoolean: swissBoolean,
+            pdfData: reportPdfData,
+            reportType: currentReportType
+          }
+        })}
         onBack={handleCloseReportViewer}
-        hasReport={hasReport}
-        swissBoolean={swissBoolean}
-        reportType={currentReportType}
+        isMobile={false}
       />
     );
   }

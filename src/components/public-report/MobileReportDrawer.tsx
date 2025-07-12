@@ -23,7 +23,8 @@ import Step1_5AstroData from './drawer-steps/Step1_5AstroData';
 import Step2BirthDetails from './drawer-steps/Step2BirthDetails';
 import Step3Payment from './drawer-steps/Step3Payment';
 import SuccessScreen from './SuccessScreen';
-import MobileReportViewer from './MobileReportViewer';
+import { ReportViewer } from './ReportViewer';
+import { mapReportPayload } from '@/utils/mapReportPayload';
 import { ReportFormData } from '@/types/public-report';
 
 /**
@@ -486,15 +487,19 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
         {/* --------------------- REPORT VIEWER ------------------------- */}
         {currentView === 'report-viewer' && reportData && submittedData && (
           <div className="flex flex-col h-full">
-            <MobileReportViewer
-              reportContent={reportData.content}
-              reportPdfData={reportData.pdfData}
-              customerName={submittedData.name}
-              swissData={reportData.swissData}
-              reportData={submittedData} // Pass form data for names and birth details
+            <ReportViewer
+              mappedReport={mapReportPayload({
+                guest_report: submittedData,
+                report_content: reportData.content,
+                swiss_data: reportData.swissData,
+                metadata: {
+                  hasReport: reportData.hasReport,
+                  swissBoolean: reportData.swissBoolean,
+                  pdfData: reportData.pdfData
+                }
+              })}
               onBack={handleBackFromReport}
-              hasReport={reportData.hasReport}
-              swissBoolean={reportData.swissBoolean}
+              isMobile={true}
             />
           </div>
         )}
