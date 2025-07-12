@@ -1,6 +1,5 @@
 
 import { useEffect, useState } from 'react';
-import { logToSupabase } from '@/utils/logStub';
 import { authService } from '@/services/authService';
 import { useAuth } from '@/contexts/AuthContext';
 

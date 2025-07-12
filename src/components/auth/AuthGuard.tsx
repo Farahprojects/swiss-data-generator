@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { log } from '@/utils/logStub';
+import { log } from '@/utils/logUtils';
 
 export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   const { user, loading, pendingEmailAddress, isPendingEmailCheck } = useAuth();

@@ -1,4 +1,3 @@
-const logToSupabase = () => {};
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
@@ -57,7 +56,11 @@ const checkForPendingEmailChange = async (sessionToken: string, userEmail: strin
 
     return data;
   } catch (err) {
-    // Logging removed
+    logToSupabase('email-check failed', {
+      level: 'warn',
+      page: 'AuthContext',
+      data: { error: err instanceof Error ? err.message : String(err) },
+    });
     return null;
   }
 };

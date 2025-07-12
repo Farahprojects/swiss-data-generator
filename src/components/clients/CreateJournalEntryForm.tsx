@@ -20,7 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { X, Mic } from 'lucide-react';
 import { CreateJournalEntryData, JournalEntry } from '@/types/database';
 import { journalEntriesService } from '@/services/journalEntries';
-import { log } from '@/utils/logStub';
+import { log } from '@/utils/logUtils';
 
 const journalEntrySchema = z.object({
   entry_text: z.string().min(1, 'Entry text is required'),

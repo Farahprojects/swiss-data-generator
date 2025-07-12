@@ -1,6 +1,5 @@
 
 import { useState, useEffect } from "react";
-import { logToSupabase } from '@/utils/logStub';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2 } from "lucide-react";

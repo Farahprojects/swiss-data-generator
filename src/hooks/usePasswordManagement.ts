@@ -1,6 +1,5 @@
 
 import { useState } from 'react';
-import { logToSupabase } from '@/utils/logStub';
 import { supabase } from '@/integrations/supabase/client';
 
 import { sendPasswordChangeNotification } from '@/utils/notificationService';
