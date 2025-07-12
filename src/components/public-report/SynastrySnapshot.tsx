@@ -57,10 +57,25 @@ const AspectTable: React.FC<{ aspects: EnrichedAspect[] }> = ({ aspects }) => (
 
 interface Props {
   rawSyncJSON: any;
+  reportData?: any; // Form data containing names and birth details
 }
 
-const SynastrySnapshot: React.FC<Props> = ({ rawSyncJSON }) => {
-  const data = parseSynastryRich(rawSyncJSON);
+const SynastrySnapshot: React.FC<Props> = ({ rawSyncJSON, reportData }) => {
+  // Extract names from report data (form submission)
+  const personAName = reportData?.name || reportData?.firstName;
+  const personBName = reportData?.secondPersonName;
+  
+  // Inject names into rawSyncJSON if available
+  const enrichedData = {
+    ...rawSyncJSON,
+    chartData: {
+      ...rawSyncJSON.chartData,
+      person_a_name: personAName,
+      person_b_name: personBName
+    }
+  };
+
+  const data = parseSynastryRich(enrichedData);
 
   const formattedDate = new Date(data.meta.dateISO).toLocaleDateString("en-US", {
     month: "long",
@@ -76,6 +91,12 @@ const SynastrySnapshot: React.FC<Props> = ({ rawSyncJSON }) => {
   // Use actual names if available, fallback to Person A/B
   const personADisplay = data.personA.name || "Person A";
   const personBDisplay = data.personB.name || "Person B";
+  
+  // Get birth details from report data
+  const personABirthDate = reportData?.birthDate;
+  const personABirthPlace = reportData?.birthLocation;
+  const personBBirthDate = reportData?.secondPersonBirthDate;
+  const personBBirthPlace = reportData?.secondPersonBirthLocation;
 
   return (
     <div className="w-full max-w-md mx-auto font-sans text-[14.5px] leading-relaxed text-neutral-900 tracking-tight">
@@ -84,8 +105,27 @@ const SynastrySnapshot: React.FC<Props> = ({ rawSyncJSON }) => {
         <h2 className="font-semibold text-lg mb-2">
           {personADisplay} & {personBDisplay} - Compatibility Astro Data
         </h2>
+        
+        {/* Person A Details */}
+        {(personABirthDate || personABirthPlace) && (
+          <div className="text-xs text-neutral-600 mb-1">
+            <strong>{personADisplay}:</strong> 
+            {personABirthDate && ` ${personABirthDate}`}
+            {personABirthPlace && `, ${personABirthPlace}`}
+          </div>
+        )}
+        
+        {/* Person B Details */}
+        {(personBBirthDate || personBBirthPlace) && (
+          <div className="text-xs text-neutral-600 mb-2">
+            <strong>{personBDisplay}:</strong> 
+            {personBBirthDate && ` ${personBBirthDate}`}
+            {personBBirthPlace && `, ${personBBirthPlace}`}
+          </div>
+        )}
+        
         <p className="text-sm text-neutral-600">
-          {formattedDate} — {formattedTime}
+          Analysis: {formattedDate} — {formattedTime}
         </p>
         {data.meta.lunarPhase && (
           <p className="text-xs text-neutral-500">{data.meta.lunarPhase}</p>

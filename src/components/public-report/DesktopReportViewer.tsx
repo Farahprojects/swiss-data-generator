@@ -13,6 +13,7 @@ interface DesktopReportViewerProps {
   reportPdfData?: string | null;
   customerName: string;
   swissData?: any;
+  reportData?: any; // Form data containing names and birth details
   onBack: () => void;
   hasReport?: boolean;
   swissBoolean?: boolean;
@@ -24,6 +25,7 @@ const DesktopReportViewer = ({
   reportPdfData, 
   customerName,
   swissData,
+  reportData,
   onBack,
   hasReport,
   swissBoolean,
@@ -33,8 +35,8 @@ const DesktopReportViewer = ({
   const [isCopyCompleted, setIsCopyCompleted] = useState(false);
   
   // Use intelligent content detection
-  const reportData = { reportContent, swissData, swissBoolean, hasReport };
-  const toggleLogic = getToggleDisplayLogic(reportData);
+  const reportAnalysisData = { reportContent, swissData, swissBoolean, hasReport };
+  const toggleLogic = getToggleDisplayLogic(reportAnalysisData);
   const [activeView, setActiveView] = useState<'report' | 'astro'>(toggleLogic.defaultView);
   
   const isPureAstroReport = toggleLogic.availableViews.length === 1 && toggleLogic.availableViews[0] === 'astro';
@@ -196,7 +198,8 @@ const DesktopReportViewer = ({
 
       <ReportContent 
         reportContent={reportContent} 
-        swissData={swissData} 
+        swissData={swissData}
+        reportData={reportData}
         customerName={customerName} 
         activeView={activeView} 
         setActiveView={setActiveView}

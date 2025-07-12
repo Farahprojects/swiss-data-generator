@@ -491,6 +491,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
               reportPdfData={reportData.pdfData}
               customerName={submittedData.name}
               swissData={reportData.swissData}
+              reportData={submittedData} // Pass form data for names and birth details
               onBack={handleBackFromReport}
               hasReport={reportData.hasReport}
               swissBoolean={reportData.swissBoolean}

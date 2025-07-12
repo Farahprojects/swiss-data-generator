@@ -9,6 +9,7 @@ import { getToggleDisplayLogic } from '@/utils/reportTypeUtils';
 interface ReportContentProps {
   reportContent: string;
   swissData?: any;
+  reportData?: any; // Form data containing names and birth details
   customerName: string;
   activeView?: 'report' | 'astro';
   setActiveView?: (view: 'report' | 'astro') => void;
@@ -21,6 +22,7 @@ interface ReportContentProps {
 export const ReportContent = ({
   reportContent,
   swissData,
+  reportData,
   customerName,
   activeView: externalActiveView,
   setActiveView: externalSetActiveView,
@@ -30,8 +32,8 @@ export const ReportContent = ({
   isMobile = false,
 }: ReportContentProps) => {
   // Use intelligent content detection
-  const reportData = { reportContent, swissData, swissBoolean, hasReport };
-  const toggleLogic = getToggleDisplayLogic(reportData);
+  const reportAnalysisData = { reportContent, swissData, swissBoolean, hasReport };
+  const toggleLogic = getToggleDisplayLogic(reportAnalysisData);
   const [internalActiveView, setInternalActiveView] = useState<'report' | 'astro'>(toggleLogic.defaultView);
 
   const activeView = externalActiveView || internalActiveView;
@@ -56,7 +58,7 @@ export const ReportContent = ({
             <ReportRenderer content={reportContent} />
           </div>
         ) : (
-          <AstroDataRenderer swissData={swissData} />
+          <AstroDataRenderer swissData={swissData} reportData={reportData} />
         )}
       </div>
     );
@@ -106,7 +108,7 @@ export const ReportContent = ({
                   <ReportRenderer content={reportContent} />
                 </div>
               ) : (
-                <AstroDataRenderer swissData={swissData} />
+                <AstroDataRenderer swissData={swissData} reportData={reportData} />
               )}
             </div>
           </ScrollArea>

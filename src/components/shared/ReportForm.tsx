@@ -359,6 +359,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         reportPdfData={reportPdfData}
         customerName={userName}
         swissData={swissData}
+        reportData={form.getValues()} // Pass form data for names and birth details
         onBack={handleCloseReportViewer}
         hasReport={hasReport}
         swissBoolean={swissBoolean}

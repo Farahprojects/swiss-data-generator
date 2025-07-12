@@ -14,6 +14,7 @@ interface MobileReportViewerProps {
   reportPdfData?: string | null;
   customerName: string;
   swissData?: any;
+  reportData?: any; // Form data containing names and birth details
   onBack: () => void;
   hasReport?: boolean;
   swissBoolean?: boolean;
@@ -24,6 +25,7 @@ const MobileReportViewer = ({
   reportPdfData, 
   customerName,
   swissData,
+  reportData,
   onBack,
   hasReport,
   swissBoolean
@@ -33,8 +35,8 @@ const MobileReportViewer = ({
   const [isCopping, setIsCopping] = useState(false);
   const [activeView, setActiveView] = useState<'report' | 'astro'>('report');
 
-  const reportData = { reportContent, swissData, swissBoolean, hasReport };
-  const toggleLogic = getToggleDisplayLogic(reportData);
+  const reportAnalysisData = { reportContent, swissData, swissBoolean, hasReport };
+  const toggleLogic = getToggleDisplayLogic(reportAnalysisData);
 
   const handleDownloadPdf = () => {
     if (!reportPdfData) {
@@ -168,7 +170,8 @@ const MobileReportViewer = ({
           </h1>
           <ReportContent 
             reportContent={reportContent} 
-            swissData={swissData} 
+            swissData={swissData}
+            reportData={reportData}
             customerName={customerName}
             hasReport={hasReport}
             swissBoolean={swissBoolean}

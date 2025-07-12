@@ -4,6 +4,7 @@ import { parseSwissDataRich, EnrichedSnapshot } from "@/utils/swissFormatter";
 
 interface Props {
   rawSwissJSON: any;
+  reportData?: any; // Form data containing names and birth details
 }
 
 const SectionTitle: React.FC<{ children: string }> = ({ children }) => (
@@ -12,7 +13,7 @@ const SectionTitle: React.FC<{ children: string }> = ({ children }) => (
   </h3>
 );
 
-const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON }) => {
+const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON, reportData }) => {
   // Add error handling for null/invalid data
   if (!rawSwissJSON) {
     return (
@@ -26,6 +27,11 @@ const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON }) => {
   }
 
   const data: EnrichedSnapshot = parseSwissDataRich(rawSwissJSON);
+  
+  // Extract name and birth details from report data
+  const personName = reportData?.name || reportData?.firstName;
+  const birthDate = reportData?.birthDate;
+  const birthPlace = reportData?.birthLocation;
 
   const formattedDate = new Date(data.dateISO).toLocaleDateString("en-US", {
     month: "long",
@@ -42,16 +48,24 @@ const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON }) => {
     <div className="w-full max-w-md mx-auto font-sans text-[15px] leading-relaxed text-neutral-900">
       {/* Header: Identity */}
       <div className="text-center mb-6">
-        <h2 className="font-semibold text-lg mb-2">Your Astro Data</h2>
-        {data.name && (
-          <p className="font-medium text-base mb-1">{data.name}</p>
+        <h2 className="font-semibold text-lg mb-2">
+          {personName ? `${personName}'s Astro Data` : 'Your Astro Data'}
+        </h2>
+        
+        {/* Person Details */}
+        {(birthDate || birthPlace) && (
+          <div className="text-xs text-neutral-600 mb-2">
+            {birthDate && <div>Born: {birthDate}</div>}
+            {birthPlace && <div>{birthPlace}</div>}
+          </div>
         )}
+        
         <p className="text-sm text-neutral-600">
-          {formattedDate} — {formattedTime} ({data.tz})
+          Analysis: {formattedDate} — {formattedTime} ({data.tz})
         </p>
         {data.meta?.location && (
           <p className="text-sm text-neutral-600">
-            {data.meta.location}
+            Calculation Location: {data.meta.location}
             {data.meta.lat && data.meta.lon && (
               <span> ({data.meta.lat.toFixed(2)}°, {data.meta.lon.toFixed(2)}°)</span>
             )}
