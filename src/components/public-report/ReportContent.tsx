@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Stars } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ReportRenderer } from '@/components/shared/ReportRenderer';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { AstroDataRenderer } from './AstroDataRenderer';
 import { getToggleDisplayLogic } from '@/utils/reportTypeUtils';
 import { MappedReport } from '@/types/mappedReport';
+import { ReportPrint } from '@/templates/ReportPrint';
 
 interface ReportContentProps {
   mappedReport: MappedReport;
@@ -47,13 +46,7 @@ export const ReportContent = ({
   if (isMobile) {
     return (
       <div className="w-full">
-        {activeView === 'report' ? (
-          <div className="prose prose-lg max-w-none text-left">
-            <ReportRenderer content={mappedReport.reportContent} />
-          </div>
-        ) : (
-          <AstroDataRenderer swissData={mappedReport.swissData} reportData={mappedReport} />
-        )}
+        <ReportPrint mappedReport={mappedReport} />
       </div>
     );
   }
@@ -97,13 +90,7 @@ export const ReportContent = ({
         <CardContent className="p-0">
           <ScrollArea className="h-[600px] w-full">
             <div className="p-8">
-              {activeView === 'report' ? (
-                <div className="prose prose-lg max-w-none text-left">
-                  <ReportRenderer content={mappedReport.reportContent} />
-                </div>
-              ) : (
-                <AstroDataRenderer swissData={mappedReport.swissData} reportData={mappedReport} />
-              )}
+              <ReportPrint mappedReport={mappedReport} />
             </div>
           </ScrollArea>
         </CardContent>
