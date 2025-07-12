@@ -13,57 +13,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SharedReportParser } from "../_shared/reportParser.ts";
 
-// Import mapReportPayload utility for name extraction
-// Note: We'll inline the logic since importing from src/ isn't available in edge functions
-function mapReportPayload(payload: any) {
-  const reportData = payload.guest_report?.report_data;
-  
-  if (!reportData?.name) {
-    console.error('Missing person A name in guest_report.report_data');
-    return null;
-  }
-
-  const personA = {
-    name: reportData.name,
-    birthDate: reportData.birthDate,
-    birthTime: reportData.birthTime,
-    location: reportData.birthLocation,
-    latitude: reportData.birthLatitude,
-    longitude: reportData.birthLongitude,
-  };
-
-  const personB = reportData.secondPersonName
-    ? {
-        name: reportData.secondPersonName,
-        birthDate: reportData.secondPersonBirthDate,
-        birthTime: reportData.secondPersonBirthTime,
-        location: reportData.secondPersonBirthLocation,
-        latitude: reportData.secondPersonLatitude,
-        longitude: reportData.secondPersonLongitude,
-      }
-    : undefined;
-
-  const isRelationship = !!personB;
-  const reportType = payload.guest_report?.report_type || '';
-  
-  const title = isRelationship 
-    ? `${personA.name} × ${personB.name}`
-    : `${personA.name} – ${reportType.charAt(0).toUpperCase() + reportType.slice(1)}`;
-
-  const customerName = personA.name;
-
-  return {
-    title,
-    isRelationship,
-    people: { 
-      A: personA, 
-      ...(personB && { B: personB }) 
-    },
-    customerName,
-    reportType,
-  };
-}
-
 // ─── ENV VARS ────────────────────────────────────────────────────────────────
 const SUPABASE_URL           = Deno.env.get("SUPABASE_URL")              ?? "";
 const SUPABASE_SERVICE_KEY   = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -79,14 +28,14 @@ const corsHeaders = {
 //  PDF-generation helpers using shared parser
 // ─────────────────────────────────────────────────────────────────────────────
 class ServerPdfGenerator {
-  static generateReportPdf(reportData: any, mappedData: any, logPrefix: string): string {
+  static generateReportPdf(reportData: any, logPrefix: string): string {
     console.log(`${logPrefix} Starting PDF generation`);
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
     // ── metadata + header
     doc.setProperties({
-      title: mappedData?.title || "Astro Report",
-      subject: "Astro Data",
+      title: "Essence Professional",
+      subject: "Client Energetic Insight",
       author: "Theria Astro",
       creator: "PDF Generator Service",
     });
@@ -96,19 +45,13 @@ class ServerPdfGenerator {
 
     doc.setFontSize(26).setFont("times", "bold").text("Therai.", pageW/2, 32, { align: "center" });
     
-    // Use mapped data for title with real names
-    const reportTitle = mappedData?.title || ServerPdfGenerator.getReportTitle(reportData.reportType);
+    // Use report type for title if available
+    const reportTitle = ServerPdfGenerator.getReportTitle(reportData.reportType);
     doc.setFontSize(20).setFont("helvetica", "bold")
        .text(reportTitle, pageW/2, 48, { align: "center" });
 
-    // Customer name from mapped data
-    if (mappedData?.customerName) {
-      doc.setFontSize(14).setFont("helvetica", "normal");
-      doc.text(`Generated for: ${mappedData.customerName}`, pageW/2, 62, { align: "center" });
-    }
-
     // ── meta
-    let y = 75;
+    let y = 60;
     doc.setFontSize(10).setFont("helvetica", "normal").setTextColor(100);
     doc.text("Report ID:", m.left, y);
     doc.setFont("helvetica", "bold")
@@ -118,7 +61,7 @@ class ServerPdfGenerator {
     doc.setFont("helvetica", "bold").text(reportData.generatedAt, m.left+40, y);
     y += 18;
     doc.setFontSize(13).setFont("helvetica", "bold").setTextColor(75,63,114);
-    doc.text("Astro Data", m.left, y);
+    doc.text("Client Energetic Insight", m.left, y);
 
     // ── body using shared parser
     const blocks = SharedReportParser.parseReport(reportData.content);
@@ -197,12 +140,11 @@ async function processGuestReportPdf(guestReportId: string, requestId: string) {
     log(`Failed to confirm edge function call: ${error}`);
   }
 
-  // 1. fetch complete guest report with report_data and swiss_data
+  // 1. fetch report with joins to get content from report_logs
   const { data: gr, error } = await supabase
     .from("guest_reports")
     .select(`
-      id, email, report_type, created_at, email_sent, report_data,
-      translator_logs!translator_log_id(swiss_data),
+      id, email, report_type, created_at, email_sent,
       report_logs!report_log_id(report_text)
     `)
     .eq("id", guestReportId)
@@ -213,25 +155,13 @@ async function processGuestReportPdf(guestReportId: string, requestId: string) {
   if (!reportContent) throw new Error("Report content empty - no linked report_logs entry");
   if (gr.email_sent) { log("Email already sent – skipping"); return { skipped:true }; }
 
-  // 2. Map the report payload to extract person names
-  const mappedData = mapReportPayload({
-    guest_report: gr,
-    report_content: reportContent,
-    swiss_data: gr.translator_logs?.swiss_data,
-    metadata: {}
-  });
-
-  if (!mappedData) {
-    log("Warning: Could not map report data, using fallback");
-  }
-
-  // 3. generate PDF with mapped data
+  // 2. generate PDF
   const pdfBase64 = ServerPdfGenerator.generateReportPdf({
     id: gr.id,
     content: reportContent,
     generatedAt: new Date(gr.created_at).toLocaleDateString(),
     reportType: gr.report_type,
-  }, mappedData, requestId);
+  }, requestId);
   if (!pdfBase64) throw new Error("PDF generation failed");
   
   log(`PDF generated successfully, size: ${pdfBase64.length} chars`);
@@ -248,11 +178,7 @@ async function processGuestReportPdf(guestReportId: string, requestId: string) {
     throw new Error(`Failed to save PDF: ${error}`);
   }
 
-  // Use mapped data for filename if available
-  const filenameBase = mappedData?.customerName ? 
-    `${mappedData.customerName.toLowerCase().replace(/\s+/g, '-')}-${gr.report_type}` :
-    `energetic-report-${gr.report_type}`;
-  const filename = `${filenameBase}-${gr.id.substring(0,8)}.pdf`;
+  const filename = `energetic-report-${gr.report_type}-${gr.id.substring(0,8)}.pdf`;
 
   // 4. fetch email template
   const { data: tmpl, error: tmplErr } = await supabase

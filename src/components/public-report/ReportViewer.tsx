@@ -7,7 +7,6 @@ import { useToast } from '@/hooks/use-toast';
 import { ReportContent } from './ReportContent';
 import { PdfGenerator } from '@/services/pdf/PdfGenerator';
 import { getToggleDisplayLogic } from '@/utils/reportTypeUtils';
-import { getGuestToken } from '@/utils/urlHelpers';
 import { MappedReport } from '@/types/mappedReport';
 import openaiLogo from '@/assets/openai-logo.png';
 
@@ -40,29 +39,19 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
     }
   }, [toggleLogic.showToggle, toggleLogic.defaultView]);
 
-  const handleDownloadPdf = async () => {
+  const handleDownloadPdf = () => {
+    if (!mappedReport.pdfData) {
+      return;
+    }
+
     try {
-      const guestReportId = getGuestToken();
-      if (!guestReportId) {
-        throw new Error('No guest report ID available');
+      const byteCharacters = atob(mappedReport.pdfData);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
       }
-
-      console.log('Generating PDF for guest report:', guestReportId);
-      
-      const response = await fetch(`https://wrvqqvqvwqmfdqvqmaar.supabase.co/functions/v1/generate-report-pdf`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0`
-        },
-        body: JSON.stringify({ guest_report_id: guestReportId }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate PDF');
-      }
-
-      const blob = await response.blob();
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -71,16 +60,10 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-
-      toast({
-        title: "PDF Generated!",
-        description: "Your report has been downloaded.",
-      });
     } catch (error) {
-      console.error('PDF generation failed:', error);
       toast({
         title: "Download failed",
-        description: "Unable to generate PDF. Please try again.",
+        description: "Unable to download PDF. Please try again.",
         variant: "destructive"
       });
     }
@@ -225,9 +208,11 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
               <Button variant="ghost" size="icon" onClick={handleCopyToClipboard} className="p-2 hover:bg-gray-50">
                 <Copy className="h-5 w-5 text-gray-700" />
               </Button>
-              <Button variant="ghost" size="icon" onClick={handleDownloadPdf} className="p-2 hover:bg-gray-50">
-                <Download className="h-5 w-5 text-gray-700" />
-              </Button>
+              {mappedReport.pdfData && (
+                <Button variant="ghost" size="icon" onClick={handleDownloadPdf} className="p-2 hover:bg-gray-50">
+                  <Download className="h-5 w-5 text-gray-700" />
+                </Button>
+              )}
             </div>
           </div>
 
@@ -390,7 +375,17 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleDownloadPdf}
+                  onClick={() => {
+                    if (mappedReport.pdfData && mappedReport.swissData) {
+                      handleDownloadUnifiedPdf(); // Combined version
+                    } else if (mappedReport.pdfData) {
+                      handleDownloadPdf();
+                    } else if (mappedReport.swissData) {
+                      handleDownloadUnifiedPdf();
+                    } else if (mappedReport.reportContent && mappedReport.reportContent.trim().length > 20) {
+                      handleDownloadUnifiedPdf(); // Use unified PDF for AI content
+                    }
+                  }}
                   tabIndex={0}
                   style={{ pointerEvents: 'auto', cursor: 'pointer', position: 'relative', zIndex: 10 }}
                   className="flex items-center gap-2 pointer-events-auto !cursor-pointer"

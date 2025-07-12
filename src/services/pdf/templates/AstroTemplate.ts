@@ -8,14 +8,6 @@ export interface AstroPdfData {
   title: string;
   customerName: string;
   swissData: any;
-  mappedData?: {
-    people: {
-      A: { name: string; birthDate?: string; location?: string };
-      B?: { name: string; birthDate?: string; location?: string };
-    };
-    isRelationship: boolean;
-    title: string;
-  };
   metadata: {
     generatedAt: string;
     reportType?: string;
@@ -47,9 +39,9 @@ export class AstroTemplate extends BaseTemplate {
     let y = logoY + 55;
 
     if (isSynastryData(data.swissData)) {
-      y = this.renderSynastryData(data.swissData, y, undefined, data.mappedData);
+      y = this.renderSynastryData(data.swissData, y);
     } else {
-      y = this.renderEssenceData(data.swissData, y, undefined, data.mappedData);
+      y = this.renderEssenceData(data.swissData, y);
     }
 
     // Footer
@@ -63,15 +55,15 @@ export class AstroTemplate extends BaseTemplate {
     this.download(fname);
   }
 
-  public renderSynastryData(swissData: any, startY: number, targetDoc?: any, mappedData?: any): number {
+  public renderSynastryData(swissData: any, startY: number, targetDoc?: any): number {
     const data = parseSynastryRich(swissData);
     const doc = targetDoc || this.doc;
     let y = startY;
 
-    // Header - Use mapped data names if available
+    // Header
     doc.setFontSize(16).setFont('helvetica', 'bold').setTextColor(40, 40, 60);
-    const personADisplay = mappedData?.people?.A?.name || data.personA.name || "Person A";
-    const personBDisplay = mappedData?.people?.B?.name || data.personB.name || "Person B";
+    const personADisplay = data.personA.name || "Person A";
+    const personBDisplay = data.personB.name || "Person B";
     doc.text(`${personADisplay} & ${personBDisplay} - Compatibility Astro Data`, this.margins.left, y);
     y += 20;
 
@@ -115,21 +107,19 @@ export class AstroTemplate extends BaseTemplate {
     return y;
   }
 
-  public renderEssenceData(swissData: any, startY: number, targetDoc?: any, mappedData?: any): number {
+  public renderEssenceData(swissData: any, startY: number, targetDoc?: any): number {
     const data = parseSwissDataRich(swissData);
     const doc = targetDoc || this.doc;
     let y = startY;
 
-    // Header - Use mapped data name if available
+    // Header
     doc.setFontSize(16).setFont('helvetica', 'bold').setTextColor(40, 40, 60);
-    const personName = mappedData?.people?.A?.name || data.name;
-    const headerText = personName ? `${personName} - Astro Data` : 'Your Astro Data';
-    doc.text(headerText, this.margins.left, y);
+    doc.text('Your Astro Data', this.margins.left, y);
     y += 20;
 
-    if (personName) {
+    if (data.name) {
       doc.setFontSize(14).setFont('helvetica', 'bold').setTextColor(60);
-      doc.text(personName, this.margins.left, y);
+      doc.text(data.name, this.margins.left, y);
       y += 15;
     }
 
