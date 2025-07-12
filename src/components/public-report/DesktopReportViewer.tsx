@@ -132,36 +132,74 @@ const DesktopReportViewer = ({
   };
 
   const handleDownloadUnifiedPdf = async () => {
-    // Check if we have either report content or astro data
-    if (!reportContent && !swissData) {
-      toast({
-        title: "No data available",
-        description: "Unable to generate PDF without report or astro data.",
-        variant: "destructive"
-      });
-      return;
-    }
-
     try {
-      await PdfGenerator.generateUnifiedPdf({
-        reportContent: reportContent,
-        swissData: swissData,
-        customerName: customerName,
-        reportPdfData: reportPdfData,
-        reportType: reportType,
-        reportData: reportData
+      // Import html2canvas and jsPDF dynamically
+      const html2canvas = (await import('html2canvas')).default;
+      const jsPDF = (await import('jspdf')).default;
+
+      // Find the modal content element (the Card component)
+      const reportElement = document.querySelector('.max-w-4xl .shadow-2xl') as HTMLElement;
+      
+      if (!reportElement) {
+        toast({
+          title: "PDF generation failed",
+          description: "Unable to find report content to capture.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Show loading toast
+      toast({
+        title: "Generating PDF...",
+        description: "Capturing your report content.",
       });
 
-      // Determine what was included for the toast message
-      const sections = [];
-      if (reportContent) sections.push("AI Report");
-      if (swissData) sections.push("Astro Data");
-      
+      // Capture the modal content as canvas
+      const canvas = await html2canvas(reportElement, {
+        scale: 2, // Higher quality
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      });
+
+      // Create PDF from canvas
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 295; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+
+      let position = 0;
+
+      // Add first page
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      // Add additional pages if needed
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      // Download the PDF
+      const filename = `${customerName.replace(/\s+/g, '_')}_Report.pdf`;
+      pdf.save(filename);
+
       toast({
         title: "PDF Generated!",
-        description: `Your ${sections.join(" + ")} PDF has been downloaded.`,
+        description: "Your complete report PDF has been downloaded.",
       });
     } catch (error) {
+      console.error('PDF generation error:', error);
       toast({
         title: "PDF generation failed",
         description: "Unable to generate PDF. Please try again.",
