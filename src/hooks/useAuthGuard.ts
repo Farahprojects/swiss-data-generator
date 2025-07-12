@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { authService } from '@/services/authService';
 import { useAuth } from '@/contexts/AuthContext';
-
+import { logToSupabase } from '@/utils/batchedLogManager';
 
 interface UseAuthGuardResult {
   isReady: boolean;

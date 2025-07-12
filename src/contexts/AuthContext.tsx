@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
 import { useNavigationState } from '@/contexts/NavigationStateContext';
 import { getAbsoluteUrl } from '@/utils/urlUtils';
-
+import { logToSupabase } from '@/utils/batchedLogManager';
 import { authService } from '@/services/authService';
 import { SUPABASE_CONFIG } from '@/config/supabase-config';
 

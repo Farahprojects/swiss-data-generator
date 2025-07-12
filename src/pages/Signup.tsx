@@ -10,7 +10,7 @@ import PasswordInput from '@/components/auth/PasswordInput';
 import SocialLogin from '@/components/auth/SocialLogin';
 import { validateEmail } from '@/utils/authValidation';
 import { Mail } from 'lucide-react';
-
+import { logToSupabase } from '@/utils/batchedLogManager';
 import { supabase } from '@/integrations/supabase/client';
 
 // Debug utility

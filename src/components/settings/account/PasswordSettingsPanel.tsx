@@ -13,7 +13,7 @@ import {
   FormLabel, 
   FormMessage 
 } from "@/components/ui/form";
-
+import { logToSupabase } from "@/utils/batchedLogManager";
 import PasswordInput from "@/components/auth/PasswordInput";
 import usePasswordManagement from "@/hooks/usePasswordManagement";
 import { cn } from "@/lib/utils";
@@ -78,22 +78,48 @@ export const PasswordSettingsPanel = () => {
       const userEmail = userData.user?.email;
       
       if (!userEmail) {
+        logToSupabase("Unable to verify user information", {
+          level: 'error',
+          page: 'PasswordSettingsPanel'
+        });
         setIsUpdatingPassword(false);
         return;
       }
       
+      logToSupabase("Verifying current password", {
+        level: 'info',
+        page: 'PasswordSettingsPanel'
+      });
+      
       const { success, error } = await verifyCurrentPassword(userEmail, currentPassword);
       
       if (!success) {
+        logToSupabase("Current password verification failed", {
+          level: 'error',
+          page: 'PasswordSettingsPanel',
+          data: { error }
+        });
+        
         setInvalidPasswordError(true);
         setIsUpdatingPassword(false);
         return;
       }
 
+      logToSupabase("Current password verified successfully", {
+        level: 'info',
+        page: 'PasswordSettingsPanel'
+      });
+      
       // Password verified, move to next step
       setPasswordStep('create');
       setIsUpdatingPassword(false);
     } catch (error: any) {
+      logToSupabase("Error verifying current password", {
+        level: 'error',
+        page: 'PasswordSettingsPanel',
+        data: { error: error.message || String(error) }
+      });
+      
       setIsUpdatingPassword(false);
     }
   };
@@ -110,12 +136,28 @@ export const PasswordSettingsPanel = () => {
     setUpdateSuccess(false);
     
     try {
+      logToSupabase("Updating password", {
+        level: 'info',
+        page: 'PasswordSettingsPanel'
+      });
+      
       const { success, error } = await updatePassword(data.newPassword);
       
       if (!success) {
+        logToSupabase("Password update failed", {
+          level: 'error',
+          page: 'PasswordSettingsPanel',
+          data: { error }
+        });
+        
         setIsUpdatingPassword(false);
         return;
       }
+      
+      logToSupabase("Password updated successfully", {
+        level: 'info',
+        page: 'PasswordSettingsPanel'
+      });
       
       // Show success button animation
       setShowSuccessButton(true);
@@ -129,6 +171,11 @@ export const PasswordSettingsPanel = () => {
       }, 3000);
       
     } catch (error: any) {
+      logToSupabase("Error updating password", {
+        level: 'error',
+        page: 'PasswordSettingsPanel',
+        data: { error: error.message || String(error) }
+      });
       setIsUpdatingPassword(false);
     }
   };
@@ -139,6 +186,10 @@ export const PasswordSettingsPanel = () => {
       const userEmail = userData.user?.email;
       
       if (!userEmail) {
+        logToSupabase("Unable to verify user information for password reset", {
+          level: 'error',
+          page: 'PasswordSettingsPanel'
+        });
         return;
       }
       
@@ -147,13 +198,22 @@ export const PasswordSettingsPanel = () => {
       const { success, error } = await resetPassword(userEmail);
       
       if (!success) {
+        logToSupabase("Failed to send reset password email", {
+          level: 'error',
+          page: 'PasswordSettingsPanel',
+          data: { error }
+        });
         return;
       }
       
       // Show inline success message instead of toast
       setResetEmailSent(true);
     } catch (error: any) {
-      // Silent error handling for password reset
+      logToSupabase("Error sending password reset email", {
+        level: 'error',
+        page: 'PasswordSettingsPanel',
+        data: { error: error.message || String(error) }
+      });
     }
   };
 

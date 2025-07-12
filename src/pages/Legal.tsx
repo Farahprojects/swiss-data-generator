@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { marked } from "marked";
-
+import { logToSupabase } from "@/utils/batchedLogManager";
 
 type LegalDocument = {
   title: string;

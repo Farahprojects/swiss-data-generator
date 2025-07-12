@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSettingsModal } from "@/contexts/SettingsModalContext";
-
+import { logToSupabase } from "@/utils/batchedLogManager";
 
 const UserSettings = () => {
   const navigate = useNavigate();
@@ -13,6 +13,11 @@ const UserSettings = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const panel = urlParams.get('panel') as "general" | "account" | "notifications" | "delete" | "support" || "general";
     
+    logToSupabase("UserSettings legacy page accessed, redirecting to modal", {
+      level: 'info',
+      page: 'UserSettings',
+      data: { panel }
+    });
     
     // Open the settings modal with the panel from URL or default to general
     openSettings(panel);

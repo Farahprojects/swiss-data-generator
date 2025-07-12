@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Loader, RefreshCw } from "lucide-react";
-
+import { logToSupabase } from "@/utils/batchedLogManager";
 import { useUserPreferences } from "@/hooks/useUserPreferences";
 import { Button } from "@/components/ui/button";
 
@@ -20,9 +20,13 @@ export const NotificationsPanel = () => {
     formatNotificationTypeName
   } = useUserPreferences();
 
-  // Panel rendering tracking removed
+  // Debug log for panel rendering
   useEffect(() => {
-    // Component loaded
+    logToSupabase("NotificationsPanel component rendered", {
+      level: 'debug',
+      page: 'NotificationsPanel',
+      data: { status: 'loaded', error }
+    });
   }, [error]);
 
   // Helper function to determine if individual notification is enabled
@@ -39,6 +43,13 @@ export const NotificationsPanel = () => {
   // Optimistically handle toggle changes without waiting for backend response
   const handleMainToggleChange = (checked: boolean) => {
     updateMainNotificationsToggle(checked, { showToast: false });
+    
+    // Log action for analytics
+    logToSupabase("Main notification toggle changed", {
+      level: 'info',
+      page: 'NotificationsPanel',
+      data: { enabled: checked }
+    });
   };
 
   // Optimistically handle individual notification toggle changes
@@ -48,6 +59,13 @@ export const NotificationsPanel = () => {
       checked,
       { showToast: false }
     );
+    
+    // Log action for analytics
+    logToSupabase(`${type} notification toggle changed`, {
+      level: 'info',
+      page: 'NotificationsPanel',
+      data: { type, enabled: checked }
+    });
   };
 
   return (

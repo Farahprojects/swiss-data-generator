@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff } from "lucide-react";
 import { passwordRequirements } from '@/utils/authValidation';
+import { logToSupabase } from '@/utils/batchedLogManager';
 
 interface PasswordInputProps {
   password: string;
@@ -35,6 +36,11 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
   const inputId = id || label.toLowerCase().replace(/\s/g, '-');
 
   const togglePasswordVisibility = () => {
+    logToSupabase('Password visibility toggled', {
+      level: 'debug',
+      page: 'PasswordInput',
+      data: { visible: !showPassword }
+    });
     setShowPassword(!showPassword);
   };
 

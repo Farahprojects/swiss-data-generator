@@ -10,7 +10,7 @@ import { NotificationsPanel } from "./panels/NotificationsPanel";
 import { DeleteAccountPanel } from "./panels/DeleteAccountPanel";
 import { ContactSupportPanel } from "./panels/ContactSupportPanel";
 import { BillingPanel } from "./panels/BillingPanel";
-
+import { logToSupabase } from "@/utils/batchedLogManager";
 import { useAuth } from "@/contexts/AuthContext";
 
 export const SettingsModal = () => {
@@ -18,14 +18,29 @@ export const SettingsModal = () => {
   const { signOut } = useAuth();
 
   useEffect(() => {
-    // Panel tracking removed
+    if (isOpen) {
+      logToSupabase("Settings panel changed in modal", {
+        level: 'info',
+        page: 'SettingsModal',
+        data: { panel: activePanel }
+      });
+    }
   }, [activePanel, isOpen]);
 
   const handleTabChange = (value) => {
     setActivePanel(value);
+    logToSupabase("Settings tab changed via sidebar", {
+      level: 'info',
+      page: 'SettingsModal',
+      data: { panel: value }
+    });
   };
 
   const handleLogout = () => {
+    logToSupabase("User logged out from settings modal", {
+      level: 'info',
+      page: 'SettingsModal'
+    });
     signOut();
     closeSettings();
   };

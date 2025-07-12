@@ -11,7 +11,7 @@ import SocialLogin from '@/components/auth/SocialLogin';
 import { validateEmail } from '@/utils/authValidation';
 import { LoginVerificationModal } from '@/components/auth/LoginVerificationModal';
 import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
-
+import { logToSupabase } from '@/utils/batchedLogManager';
 import { supabase } from '@/integrations/supabase/client';
 
 /**

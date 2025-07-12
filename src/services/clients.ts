@@ -1,7 +1,7 @@
 
 import { supabaseWithAuth } from '@/utils/supabaseWithAuth';
 import { Client, CreateClientData } from '@/types/database';
-
+import { logToSupabase } from '@/utils/batchedLogManager';
 import { authService } from '@/services/authService';
 
 export const clientsService = {

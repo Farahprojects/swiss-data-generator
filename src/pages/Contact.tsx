@@ -7,7 +7,7 @@ import { CheckCircle, Loader2, AlertCircle } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
-
+import { logToSupabase } from "@/utils/batchedLogManager";
 import { validateEmail } from "@/utils/authValidation";
 import { supabase } from "@/integrations/supabase/client";
 

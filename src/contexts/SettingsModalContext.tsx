@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState } from "react";
-
+import { logToSupabase } from "@/utils/batchedLogManager";
 
 type SettingsPanelType = "general" | "account" | "notifications" | "delete" | "support" | "billing";
 
@@ -22,6 +22,11 @@ export const SettingsModalProvider = ({ children }: { children: React.ReactNode 
     if (panel) {
       setActivePanel(panel);
       
+      logToSupabase("Settings modal opened with panel", {
+        level: 'info',
+        page: 'SettingsModalContext',
+        data: { panel }
+      });
     }
     
     setIsOpen(true);
@@ -30,6 +35,10 @@ export const SettingsModalProvider = ({ children }: { children: React.ReactNode 
   const closeSettings = () => {
     setIsOpen(false);
     
+    logToSupabase("Settings modal closed", {
+      level: 'info',
+      page: 'SettingsModalContext'
+    });
   };
 
   return (

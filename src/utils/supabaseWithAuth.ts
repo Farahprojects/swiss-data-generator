@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { authService } from '@/services/authService';
-
+import { logToSupabase } from '@/utils/batchedLogManager';
 
 /**
  * Enhanced Supabase client that ensures valid authentication before queries

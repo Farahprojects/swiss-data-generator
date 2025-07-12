@@ -6,6 +6,7 @@ import { createFreeReport, validatePromoCode } from '@/utils/promoCodeValidation
 
 import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { ReportFormData } from '@/types/public-report';
+import { logToAdmin } from '@/utils/adminLogger';
 import { storeGuestReportId } from '@/utils/urlHelpers';
 
 interface PromoValidationState {
@@ -100,6 +101,10 @@ export const useReportSubmission = () => {
         // FIXED: Use request field for astro data detection
         const isAstroData = data.request && data.request.trim() !== '';
         
+        await logToAdmin('useReportSubmission', 'free_report', 'Processing free report', {
+          isAstroData: isAstroData,
+          request: data.request
+        });
         
         
         const reportData = {
@@ -163,6 +168,11 @@ export const useReportSubmission = () => {
       // FIXED: Use request field for astro data detection
       const isAstroData = data.request && data.request.trim() !== '';
       
+      await logToAdmin('useReportSubmission', 'paid_flow', 'Processing paid report', {
+        isAstroData: isAstroData,
+        request: data.request,
+        amount: finalAmount
+      });
       
       
       const reportData = {
@@ -192,6 +202,10 @@ export const useReportSubmission = () => {
       
       
       
+      await logToAdmin('useReportSubmission', 'checkout', 'Calling checkout', {
+        amount: finalAmount,
+        email: data.email
+      });
       
       const result = await initiateGuestCheckout({
         amount: finalAmount,
@@ -200,6 +214,9 @@ export const useReportSubmission = () => {
         reportData,
       });
       
+      await logToAdmin('useReportSubmission', 'checkout_result', 'Checkout complete', {
+        success: result.success
+      });
       
       if (!result.success) {
         toast({
@@ -209,7 +226,9 @@ export const useReportSubmission = () => {
         });
       }
     } catch (error) {
-      console.error('Submit error:', error);
+      await logToAdmin('useReportSubmission', 'error', 'Submit error', {
+        error: error instanceof Error ? error.message : String(error)
+      });
       
       
       toast({

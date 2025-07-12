@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
-
+import { logToSupabase } from '@/utils/batchedLogManager';
 
 interface SessionValidationResult {
   isValid: boolean;

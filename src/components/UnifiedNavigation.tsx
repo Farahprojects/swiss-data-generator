@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { useSettingsModal } from '@/contexts/SettingsModalContext';
+import { logToSupabase } from '@/utils/batchedLogManager';
 import { SimpleSidebarMenu } from '@/components/dashboard/DashboardSidebar';
 import { Sheet, SheetContent, SheetPortal } from '@/components/ui/sheet';
 import * as SheetPrimitive from "@radix-ui/react-dialog";
@@ -98,6 +99,12 @@ const UnifiedNavigation = ({
   };
 
   const handleOpenSettings = (panel: string) => {
+    logToSupabase("Opening settings from navigation dropdown", {
+      level: 'info',
+      page: 'UnifiedNavigation',
+      data: { panel }
+    });
+    
     openSettings(panel as "general" | "account" | "notifications" | "support" | "billing");
   };
 

@@ -6,7 +6,7 @@ import { astroRequestCategories } from '@/constants/report-types';
 import { ReportFormData } from '@/types/public-report';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { useIsMobile } from '@/hooks/use-mobile';
-
+import { useBatchedLogging } from '@/hooks/use-batched-logging';
 
 interface Step1_5AstroDataProps {
   control: any;
@@ -18,7 +18,7 @@ interface Step1_5AstroDataProps {
 const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: Step1_5AstroDataProps) => {
   const { getReportPrice } = usePriceFetch();
   const isMobile = useIsMobile();
-  
+  const { logAction } = useBatchedLogging();
 
   return (
     <motion.div
@@ -56,6 +56,15 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
                     console.warn('Price calculation error (using fallback):', error);
                   }
                   
+                  // Log mobile price calculation errors in production for debugging only
+                  if (isMobile && process.env.NODE_ENV === 'production') {
+                    logAction('AstroData price calculation error', 'error', {
+                      subCategoryValue: subCategory.value,
+                      formData,
+                      error: error instanceof Error ? error.message : 'Unknown error',
+                      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'
+                    });
+                  }
                   
                   // Return fallback price to prevent UI breakage
                   return 19.99;
@@ -65,6 +74,16 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
               const formatPrice = (price: number) => `$${Math.round(price)}`;
               
               const handleClick = () => {
+                // Log mobile touch events in production for debugging
+                if (isMobile && process.env.NODE_ENV === 'production') {
+                  logAction('AstroData button tap', 'info', {
+                    selectedValue: subCategory.value,
+                    request: subCategory.request,
+                    calculatedPrice: price,
+                    timestamp: new Date().toISOString(),
+                    touchSupported: typeof window !== 'undefined' && 'ontouchstart' in window
+                  });
+                }
                 
                 field.onChange(subCategory.value);
                 

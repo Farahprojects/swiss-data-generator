@@ -15,7 +15,7 @@ import {
   FormMessage 
 } from "@/components/ui/form";
 import { Loader } from "lucide-react";
-
+import { logToSupabase } from "@/utils/batchedLogManager";
 import { LoginVerificationModal } from "@/components/auth/LoginVerificationModal";
 
 type EmailFormValues = {
@@ -55,12 +55,24 @@ export const EmailSettingsPanel = () => {
     clearToast();
     
     try {
+      logToSupabase("Initiating email change", {
+        level: 'info',
+        page: 'EmailSettingsPanel',
+        data: { from: user?.email, to: data.newEmail }
+      });
+      
       // Update the email using Supabase
       const { error } = await supabase.auth.updateUser({ 
         email: data.newEmail 
       });
       
       if (error) {
+        logToSupabase("Email update error", {
+          level: 'error',
+          page: 'EmailSettingsPanel',
+          data: { error: error.message }
+        });
+        
         toast({
           variant: "destructive",
           title: "Error",
@@ -82,6 +94,12 @@ export const EmailSettingsPanel = () => {
       emailForm.reset();
       
     } catch (error: any) {
+      logToSupabase("Error updating email address", {
+        level: 'error',
+        page: 'EmailSettingsPanel',
+        data: { error: error.message || String(error) }
+      });
+      
       toast({
         variant: "destructive",
         title: "Error",
@@ -94,6 +112,12 @@ export const EmailSettingsPanel = () => {
 
   const handleResendVerification = async (emailToVerify: string) => {
     try {
+      logToSupabase("Resending email verification from settings", {
+        level: 'info',
+        page: 'EmailSettingsPanel',
+        data: { emailToVerify, userId: user?.id }
+      });
+
       // Use Supabase edge function via the client
       const { data, error } = await supabase.functions.invoke('email-verification', {
         body: {
@@ -107,6 +131,11 @@ export const EmailSettingsPanel = () => {
 
       return { error: null };
     } catch (error: any) {
+      logToSupabase("Exception resending verification from settings", {
+        level: 'error',
+        page: 'EmailSettingsPanel',
+        data: { error: error.message || String(error) }
+      });
       return { error: error as Error };
     }
   };

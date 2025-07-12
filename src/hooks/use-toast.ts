@@ -13,6 +13,14 @@ export const useToast = () => {
   const [message, setMessage] = useState<ToastProps | null>(null);
 
   const toast = (props: ToastProps) => {
+    logToSupabase("Toast message displayed", {
+      level: 'debug',
+      page: 'InlineToast',
+      data: { 
+        title: props.title,
+        variant: props.variant
+      }
+    });
     setMessage(props);
   };
 
@@ -27,3 +35,5 @@ export const useToast = () => {
   };
 };
 
+// Add the import for logToSupabase
+import { logToSupabase } from "@/utils/batchedLogManager";

@@ -1,5 +1,5 @@
 
-
+import { logToSupabase } from "@/utils/batchedLogManager";
 import { supabase } from '@/integrations/supabase/client';
 
 /**
