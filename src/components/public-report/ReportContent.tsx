@@ -47,52 +47,17 @@ export const ReportContent = ({
   // Smart toggle visibility
   const showToggle = toggleLogic.showToggle && !externalActiveView;
 
-  // Mobile-first rendering without containers
+  // Mobile-first rendering without containers - header handled by parent
   if (isMobile) {
     return (
       <div className="w-full">
-        {/* Mobile header */}
-        <div className="mb-6">
-          <h1 className="text-xl font-light text-gray-900 tracking-tight">
-            {toggleLogic.title} — Generated for {customerName}
-          </h1>
-
-          {showToggle && (
-            <div className="flex bg-gray-100 rounded-lg p-1 mt-4">
-              <button
-                onClick={() => setActiveView('report')}
-                className={`px-4 py-2 rounded-md text-sm font-light transition-all ${
-                  activeView === 'report'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Report
-              </button>
-              <button
-                onClick={() => setActiveView('astro')}
-                className={`px-4 py-2 rounded-md text-sm font-light transition-all ${
-                  activeView === 'astro'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Astro
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Mobile content - no containers, natural flow */}
-        <div className="w-full">
-          {activeView === 'report' ? (
-            <div className="prose prose-lg max-w-none text-left">
-              <ReportRenderer content={reportContent} />
-            </div>
-          ) : (
-            <AstroDataRenderer swissData={swissData} />
-          )}
-        </div>
+        {activeView === 'report' ? (
+          <div className="prose prose-lg max-w-none text-left">
+            <ReportRenderer content={reportContent} />
+          </div>
+        ) : (
+          <AstroDataRenderer swissData={swissData} />
+        )}
       </div>
     );
   }

@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ReportContent } from './ReportContent';
 import { useToast } from '@/hooks/use-toast';
 import { logToAdmin } from '@/utils/adminLogger';
+import { getToggleDisplayLogic } from '@/utils/reportTypeUtils';
 import openaiLogo from '@/assets/openai-logo.png';
 
 interface MobileReportViewerProps {
@@ -32,6 +33,11 @@ const MobileReportViewer = ({
   const { toast } = useToast();
   const [showChatGPTConfirm, setShowChatGPTConfirm] = useState(false);
   const [isCopping, setIsCopping] = useState(false);
+  const [activeView, setActiveView] = useState<'report' | 'astro'>('report');
+
+  // Get toggle logic for header
+  const reportData = { reportContent, swissData, swissBoolean, hasReport };
+  const toggleLogic = getToggleDisplayLogic(reportData);
 
   const handleDownloadPdf = () => {
     if (!reportPdfData) {
@@ -145,33 +151,68 @@ const MobileReportViewer = ({
   return (
     <div className="fixed inset-0 bg-white z-50 flex flex-col">
       {/* Fixed Header */}
-      <div className="flex items-center justify-center relative px-6 py-6 bg-white border-b border-gray-100 shadow-sm flex-shrink-0">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onBack}
-          className="absolute left-6 p-2 hover:bg-gray-50"
-        >
-          <ArrowLeft className="h-5 w-5 text-gray-700" />
-        </Button>
-        <div className="absolute right-6 flex gap-2">
+      <div className="bg-white border-b border-gray-100 shadow-sm flex-shrink-0">
+        {/* Top row with back button and actions */}
+        <div className="flex items-center justify-center relative px-6 py-4">
           <Button
             variant="ghost"
             size="icon"
-            onClick={handleCopyToClipboard}
-            className="p-2 hover:bg-gray-50"
+            onClick={onBack}
+            className="absolute left-6 p-2 hover:bg-gray-50"
           >
-            <Copy className="h-5 w-5 text-gray-700" />
+            <ArrowLeft className="h-5 w-5 text-gray-700" />
           </Button>
-          {reportPdfData && (
+          <div className="absolute right-6 flex gap-2">
             <Button
               variant="ghost"
               size="icon"
-              onClick={handleDownloadPdf}
+              onClick={handleCopyToClipboard}
               className="p-2 hover:bg-gray-50"
             >
-              <Download className="h-5 w-5 text-gray-700" />
+              <Copy className="h-5 w-5 text-gray-700" />
             </Button>
+            {reportPdfData && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleDownloadPdf}
+                className="p-2 hover:bg-gray-50"
+              >
+                <Download className="h-5 w-5 text-gray-700" />
+              </Button>
+            )}
+          </div>
+        </div>
+        
+        {/* Title and Toggle row */}
+        <div className="px-6 pb-4">
+          <h1 className="text-xl font-light text-gray-900 tracking-tight mb-3">
+            {toggleLogic.title} — Generated for {customerName}
+          </h1>
+          
+          {toggleLogic.showToggle && (
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setActiveView('report')}
+                className={`px-4 py-2 rounded-md text-sm font-light transition-all ${
+                  activeView === 'report'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Report
+              </button>
+              <button
+                onClick={() => setActiveView('astro')}
+                className={`px-4 py-2 rounded-md text-sm font-light transition-all ${
+                  activeView === 'astro'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Astro
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -186,6 +227,8 @@ const MobileReportViewer = ({
               customerName={customerName}
               hasReport={hasReport}
               swissBoolean={swissBoolean}
+              activeView={activeView}
+              setActiveView={setActiveView}
               isMobile={true}
             />
           </div>
