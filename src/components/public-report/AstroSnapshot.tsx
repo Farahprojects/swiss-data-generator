@@ -28,10 +28,10 @@ const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON, reportData }) => {
 
   const data: EnrichedSnapshot = parseSwissDataRich(rawSwissJSON);
   
-  // Extract name and birth details from report data
-  const personName = reportData?.name || reportData?.firstName;
-  const birthDate = reportData?.birthDate;
-  const birthPlace = reportData?.birthLocation;
+  // Extract name and birth details from mapped report data
+  const personName = reportData?.people?.A?.name || reportData?.customerName || reportData?.name || reportData?.firstName;
+  const birthDate = reportData?.people?.A?.birthDate || reportData?.birthDate;
+  const birthPlace = reportData?.people?.A?.location || reportData?.birthLocation;
 
   const formattedDate = new Date(data.dateISO).toLocaleDateString("en-US", {
     month: "long",

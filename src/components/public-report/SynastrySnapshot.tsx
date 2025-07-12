@@ -61,9 +61,9 @@ interface Props {
 }
 
 const SynastrySnapshot: React.FC<Props> = ({ rawSyncJSON, reportData }) => {
-  // Extract names from report data (form submission)
-  const personAName = reportData?.name || reportData?.firstName;
-  const personBName = reportData?.secondPersonName;
+  // Extract names from mapped report data
+  const personAName = reportData?.people?.A?.name || reportData?.customerName || reportData?.name || reportData?.firstName;
+  const personBName = reportData?.people?.B?.name || reportData?.secondPersonName;
   
   // Inject names into rawSyncJSON if available
   const enrichedData = {
@@ -92,11 +92,11 @@ const SynastrySnapshot: React.FC<Props> = ({ rawSyncJSON, reportData }) => {
   const personADisplay = data.personA.name || "Person A";
   const personBDisplay = data.personB.name || "Person B";
   
-  // Get birth details from report data
-  const personABirthDate = reportData?.birthDate;
-  const personABirthPlace = reportData?.birthLocation;
-  const personBBirthDate = reportData?.secondPersonBirthDate;
-  const personBBirthPlace = reportData?.secondPersonBirthLocation;
+  // Get birth details from mapped report data
+  const personABirthDate = reportData?.people?.A?.birthDate || reportData?.birthDate;
+  const personABirthPlace = reportData?.people?.A?.location || reportData?.birthLocation;
+  const personBBirthDate = reportData?.people?.B?.birthDate || reportData?.secondPersonBirthDate;
+  const personBBirthPlace = reportData?.people?.B?.location || reportData?.secondPersonBirthLocation;
 
   return (
     <div className="w-full max-w-md mx-auto font-sans text-[14.5px] leading-relaxed text-neutral-900 tracking-tight">
