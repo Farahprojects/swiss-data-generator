@@ -143,15 +143,9 @@ const MobileReportViewer = ({
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.3 }}
-      className="flex flex-col h-screen bg-white"
-    >
-      {/* Sticky Header - Increased height for better balance */}
-      <div className="sticky top-0 z-10 flex items-center justify-center relative px-6 py-6 bg-white border-b border-gray-100 shadow-sm">
+    <div className="fixed inset-0 bg-white z-50 flex flex-col">
+      {/* Fixed Header */}
+      <div className="flex items-center justify-center relative px-6 py-6 bg-white border-b border-gray-100 shadow-sm flex-shrink-0">
         <Button
           variant="ghost"
           size="icon"
@@ -182,10 +176,10 @@ const MobileReportViewer = ({
         </div>
       </div>
 
-      {/* Scrollable Content - Proper overflow containment */}
-      <div className="flex-1 overflow-hidden">
-        <div className="h-full overflow-y-auto">
-          <div className="px-6 py-6 pb-8">
+      {/* Scrollable Content Area */}
+      <div className="flex-1 min-h-0">
+        <div className="h-full overflow-y-auto overscroll-contain">
+          <div className="px-6 py-6">
             <ReportContent 
               reportContent={reportContent} 
               swissData={swissData} 
@@ -198,8 +192,8 @@ const MobileReportViewer = ({
         </div>
       </div>
 
-      {/* Sticky Footer - Fixed positioning to prevent stretching */}
-      <div className="sticky bottom-0 z-10 bg-white border-t border-gray-100 px-6 py-5 shadow-lg">
+      {/* Fixed Footer */}
+      <div className="bg-white border-t border-gray-100 px-6 py-5 shadow-lg flex-shrink-0">
         <div className="flex gap-8 justify-center">
           <button 
             onClick={handleCopyToClipboard}
@@ -251,7 +245,7 @@ const MobileReportViewer = ({
           </div>
         </DialogContent>
       </Dialog>
-    </motion.div>
+    </div>
   );
 };
 

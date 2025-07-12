@@ -181,7 +181,7 @@ const Step3Payment = ({
             <Collapsible open={showPromoCode} onOpenChange={setShowPromoCode}>
               <CollapsibleTrigger asChild>
                 <button
-                  className="w-full bg-gray-100 text-gray-700 px-8 py-4 rounded-xl text-lg font-light hover:bg-gray-200 transition-all duration-300 flex items-center justify-center"
+                  className="w-full bg-gray-100 text-gray-700 px-6 py-3 rounded-xl text-base font-light hover:bg-gray-200 transition-all duration-300 flex items-center justify-center whitespace-nowrap"
                   type="button"
                   style={{ 
                     touchAction: 'manipulation',
@@ -189,8 +189,8 @@ const Step3Payment = ({
                     WebkitAppearance: 'none'
                   }}
                 >
-                  <Tag className="h-5 w-5 mr-3" />
-                  Have a promo code?
+                  <Tag className="h-4 w-4 mr-2 flex-shrink-0" />
+                  <span className="truncate">Have a promo code?</span>
                 </button>
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-6">
