@@ -99,14 +99,16 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
       autocompleteElement.setAttribute('placeholder', placeholder);
       autocompleteElement.value = value;
       
-      // Unified responsive styling with iOS fixes
+      // Unified responsive styling with iOS fixes and forced light mode
       autocompleteElement.style.width = '100%';
       autocompleteElement.style.height = '40px';
       autocompleteElement.style.fontSize = '16px';
       autocompleteElement.style.border = 'none';
       autocompleteElement.style.outline = 'none';
-      autocompleteElement.style.background = 'transparent';
-      autocompleteElement.style.backgroundColor = 'transparent';
+      autocompleteElement.style.background = 'white';
+      autocompleteElement.style.backgroundColor = 'white';
+      autocompleteElement.style.color = 'black';
+      autocompleteElement.style.colorScheme = 'light';
       
       container.appendChild(autocompleteElement);
       autocompleteRef.current = autocompleteElement;
