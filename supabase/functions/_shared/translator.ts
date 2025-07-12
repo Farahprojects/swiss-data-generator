@@ -98,6 +98,11 @@ async function logToSupabase(
     }
   }
 
+  // [SWISS-DATA-SAVE] Saving swiss_data to translator_logs
+  console.log('[translator] [SWISS-DATA-SAVE] Saving swiss_data to translator_logs table');
+  console.log('[translator] [SWISS-DATA-SAVE] Swiss data keys being saved:', responsePayload.swiss_data ? Object.keys(responsePayload.swiss_data) : 'null');
+  console.log('[translator] [SWISS-DATA-SAVE] Swiss data contains report?', !!(responsePayload.swiss_data?.report));
+  
   const { error } = await sb.from("translator_logs").insert({
     request_type:        requestType,
     request_payload:     requestPayload,
@@ -311,6 +316,10 @@ export async function translate(
       const r   = await fetch(`${SWISS_API}/moonphases?year=${year}`);
       const txt = await r.text();
 
+      // [REPORT-HANDLER-MOONPHASES] Processing report data in moonphases
+      console.log(`[translator][${requestId}] [REPORT-HANDLER-MOONPHASES] Processing report data in moonphases - Line 314`);
+      console.log(`[translator][${requestId}] [REPORT-HANDLER-MOONPHASES] Raw swiss response preview:`, txt.substring(0, 200));
+      
       const reportResult = await handleReportGeneration({
         requestData: raw,
         swissApiResponse: txt,
@@ -319,6 +328,10 @@ export async function translate(
       });
 
       const finalData  = reportResult.responseData;
+      
+      // [REPORT-HANDLER-MOONPHASES] Log final data structure
+      console.log(`[translator][${requestId}] [REPORT-HANDLER-MOONPHASES] Final data keys:`, Object.keys(finalData || {}));
+      console.log(`[translator][${requestId}] [REPORT-HANDLER-MOONPHASES] Final data contains report?`, !!(finalData?.report));
       const finalError = reportResult.errorMessage || (!r.ok
         ? `Swiss API returned ${r.status}`
         : undefined);
@@ -351,6 +364,10 @@ export async function translate(
       const r   = await fetch(`${SWISS_API}/positions?${qs}`);
       const txt = await r.text();
 
+      // [REPORT-HANDLER-POSITIONS] Processing report data in positions
+      console.log(`[translator][${requestId}] [REPORT-HANDLER-POSITIONS] Processing report data in positions - Line 354`);
+      console.log(`[translator][${requestId}] [REPORT-HANDLER-POSITIONS] Raw swiss response preview:`, txt.substring(0, 200));
+      
       const reportResult = await handleReportGeneration({
         requestData: raw,
         swissApiResponse: txt,
@@ -359,6 +376,10 @@ export async function translate(
       });
 
       const finalData  = reportResult.responseData;
+      
+      // [REPORT-HANDLER-POSITIONS] Log final data structure
+      console.log(`[translator][${requestId}] [REPORT-HANDLER-POSITIONS] Final data keys:`, Object.keys(finalData || {}));
+      console.log(`[translator][${requestId}] [REPORT-HANDLER-POSITIONS] Final data contains report?`, !!(finalData?.report));
       const finalError = reportResult.errorMessage || (!r.ok
         ? `Swiss API returned ${r.status}`
         : undefined);
@@ -398,6 +419,10 @@ export async function translate(
     });
     const txt = await r.text();
 
+    // [REPORT-HANDLER-CHARTS] Processing report data in chart routes
+    console.log(`[translator][${requestId}] [REPORT-HANDLER-CHARTS] Processing report data in chart routes (${path}) - Line 401`);
+    console.log(`[translator][${requestId}] [REPORT-HANDLER-CHARTS] Raw swiss response preview:`, txt.substring(0, 200));
+    
     const reportResult = await handleReportGeneration({
       requestData: raw,
       swissApiResponse: txt,
@@ -406,6 +431,10 @@ export async function translate(
     });
 
     const finalData  = reportResult.responseData;
+    
+    // [REPORT-HANDLER-CHARTS] Log final data structure
+    console.log(`[translator][${requestId}] [REPORT-HANDLER-CHARTS] Final data keys:`, Object.keys(finalData || {}));
+    console.log(`[translator][${requestId}] [REPORT-HANDLER-CHARTS] Final data contains report?`, !!(finalData?.report));
     const finalError = reportResult.errorMessage || (!r.ok
       ? `Swiss API returned ${r.status}`
       : undefined);

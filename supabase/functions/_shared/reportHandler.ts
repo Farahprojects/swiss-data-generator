@@ -202,12 +202,19 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
     if (reportResult.success && reportResult.report) {
       console.log(`${logPrefix} Report generated successfully for "${reportPayload.report_type}"`);
       
+      // [CONTAMINATION-POINT-1] Adding report to swiss_data in reportHandler
+      console.log(`${logPrefix} [CONTAMINATION-POINT-1] Adding report to swiss_data in reportHandler - Line 208`);
+      console.log(`${logPrefix} [CONTAMINATION-POINT-1] Report keys being added:`, Object.keys(reportResult.report || {}));
+      console.log(`${logPrefix} [CONTAMINATION-POINT-1] Swiss data keys before contamination:`, Object.keys(swissData || {}));
+      
       // Combine Swiss API data with the report and include engine_used
       const combinedResponse = {
         ...swissData,
         report: reportResult.report,
         engine_used: reportResult.report.engine_used // <- Engine info from report generation
       };
+      
+      console.log(`${logPrefix} [CONTAMINATION-POINT-1] Combined response keys after contamination:`, Object.keys(combinedResponse || {}));
       
       // Create AI-only data for logging (without Swiss data)
       const aiOnlyData = {

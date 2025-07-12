@@ -106,6 +106,10 @@ serve(async (req) => {
 
       if (!translatorError) {
         swissData = translatorLog?.swiss_data || null;
+        // [SWISS-DATA-ACCESS] Accessing swiss_data from translator_logs
+        console.log('[get-guest-report] [SWISS-DATA-ACCESS] Accessing swiss_data from translator_logs');
+        console.log('[get-guest-report] [SWISS-DATA-ACCESS] Swiss data keys found:', swissData ? Object.keys(swissData) : 'null');
+        console.log('[get-guest-report] [SWISS-DATA-ACCESS] Swiss data contains report?', !!(swissData?.report));
       } else {
         console.error('[get-guest-report] Error fetching Swiss data:', translatorError);
       }
@@ -118,6 +122,13 @@ serve(async (req) => {
 
     // Extract content based on report type
     if (isEssenceOrSyncReport && swissData?.report?.content) {
+      // [EXTRACTION-POINT-1] Extracting report from contaminated swiss_data
+      console.log('[get-guest-report] [EXTRACTION-POINT-1] Extracting report from contaminated swiss_data - Line 122');
+      console.log('[get-guest-report] [EXTRACTION-POINT-1] Swiss data structure:', {
+        hasReport: !!swissData.report,
+        reportKeys: swissData.report ? Object.keys(swissData.report) : [],
+        swissDataKeys: Object.keys(swissData)
+      });
       // For astro reports (essence/sync), extract from swiss_data.report.content
       reportContent = swissData.report.content;
       console.log('[get-guest-report] Extracted astro report content from swiss_data');
