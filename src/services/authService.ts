@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
-import { logToSupabase } from '@/utils/batchedLogManager';
+
 
 interface SessionValidationResult {
   isValid: boolean;
@@ -21,11 +21,6 @@ class AuthService {
       const { data: { session }, error } = await supabase.auth.getSession();
       
       if (error) {
-        logToSupabase('Session validation error', {
-          level: 'warn',
-          page: 'AuthService',
-          data: { error: error.message }
-        });
         return { isValid: false, session: null, user: null, needsRefresh: true };
       }
 
@@ -46,11 +41,6 @@ class AuthService {
         needsRefresh
       };
     } catch (error) {
-      logToSupabase('Session validation exception', {
-        level: 'error',
-        page: 'AuthService',
-        data: { error: error instanceof Error ? error.message : String(error) }
-      });
       return { isValid: false, session: null, user: null, needsRefresh: true };
     }
   }
@@ -75,29 +65,14 @@ class AuthService {
       const { data: { session }, error } = await supabase.auth.refreshSession();
       
       if (error) {
-        logToSupabase('Session refresh failed', {
-          level: 'warn',
-          page: 'AuthService',
-          data: { error: error.message }
-        });
         return null;
       }
 
       if (session) {
-        logToSupabase('Session refreshed successfully', {
-          level: 'info',
-          page: 'AuthService',
-          data: { userId: session.user.id }
-        });
       }
 
       return session;
     } catch (error) {
-      logToSupabase('Session refresh exception', {
-        level: 'error',
-        page: 'AuthService',
-        data: { error: error instanceof Error ? error.message : String(error) }
-      });
       return null;
     }
   }
@@ -133,21 +108,11 @@ class AuthService {
       const { data: { user }, error } = await supabase.auth.getUser();
       
       if (error || !user) {
-        logToSupabase('Backend auth verification failed', {
-          level: 'warn',
-          page: 'AuthService',
-          data: { error: error?.message || 'No user' }
-        });
         return false;
       }
 
       return true;
     } catch (error) {
-      logToSupabase('Backend auth verification exception', {
-        level: 'error',
-        page: 'AuthService',
-        data: { error: error instanceof Error ? error.message : String(error) }
-      });
       return false;
     }
   }

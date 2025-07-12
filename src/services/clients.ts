@@ -1,7 +1,7 @@
 
 import { supabaseWithAuth } from '@/utils/supabaseWithAuth';
 import { Client, CreateClientData } from '@/types/database';
-import { logToSupabase } from '@/utils/batchedLogManager';
+
 import { authService } from '@/services/authService';
 
 export const clientsService = {
@@ -14,11 +14,6 @@ export const clientsService = {
     );
 
     if (error) {
-      logToSupabase('Failed to fetch clients', {
-        level: 'error',
-        page: 'clientsService',
-        data: { error: error.message }
-      });
       throw new Error(error.message || 'Failed to fetch clients');
     }
 
@@ -35,11 +30,6 @@ export const clientsService = {
     );
 
     if (error) {
-      logToSupabase('Failed to fetch client by ID', {
-        level: 'error',
-        page: 'clientsService',
-        data: { error: error.message, clientId: id }
-      });
       throw new Error(error.message || 'Failed to fetch client');
     }
 
@@ -67,11 +57,6 @@ export const clientsService = {
     );
 
     if (error) {
-      logToSupabase('Failed to create client', {
-        level: 'error',
-        page: 'clientsService',
-        data: { error: error.message }
-      });
       throw new Error(error.message || 'Failed to create client');
     }
 
@@ -93,11 +78,6 @@ export const clientsService = {
     );
 
     if (error) {
-      logToSupabase('Failed to update client', {
-        level: 'error',
-        page: 'clientsService',
-        data: { error: error.message, clientId: id }
-      });
       throw new Error(error.message || 'Failed to update client');
     }
 
@@ -117,11 +97,6 @@ export const clientsService = {
     );
 
     if (error) {
-      logToSupabase('Failed to delete client', {
-        level: 'error',
-        page: 'clientsService',
-        data: { error: error.message, clientId: id }
-      });
       throw new Error(error.message || 'Failed to delete client');
     }
   }

@@ -1,5 +1,5 @@
 
-import { logToSupabase } from "@/utils/batchedLogManager";
+
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -32,11 +32,6 @@ export const sendEmailNotification = async (
   variables: NotificationVariables = {}
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    logToSupabase("Sending email notification", {
-      level: 'info',
-      page: 'notificationService',
-      data: { type, recipient: recipientEmail }
-    });
 
     // Call the edge function to send the notification (no auth token required)
     const { data, error } = await supabase.functions.invoke('send-notification-email', {
@@ -48,38 +43,15 @@ export const sendEmailNotification = async (
     });
 
     if (error) {
-      logToSupabase("Failed to send email notification", {
-        level: 'error',
-        page: 'notificationService',
-        data: { 
-          type, 
-          recipient: recipientEmail,
-          error: error.message 
-        }
-      });
       return { 
         success: false, 
         error: error.message || 'Failed to send notification' 
       };
     }
     
-    logToSupabase("Email notification sent successfully", {
-      level: 'info',
-      page: 'notificationService',
-      data: { type, recipient: recipientEmail }
-    });
     
     return { success: true };
   } catch (error: any) {
-    logToSupabase("Error sending email notification", {
-      level: 'error',
-      page: 'notificationService',
-      data: { 
-        type, 
-        recipient: recipientEmail,
-        error: error.message || String(error) 
-      }
-    });
     return { 
       success: false, 
       error: error.message || 'An unexpected error occurred sending notification' 

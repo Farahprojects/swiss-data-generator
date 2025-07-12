@@ -14,7 +14,7 @@ import { ImagesEditModal } from "@/components/website-builder/modals/ImagesEditM
 import { ServicesEditModal } from "@/components/website-builder/modals/ServicesEditModal";
 import { CtaEditModal } from "@/components/website-builder/modals/CtaEditModal";
 import { FooterEditModal } from "@/components/website-builder/modals/FooterEditModal";
-import { logToSupabase } from "@/utils/batchedLogManager";
+
 import { loadImagesFromStorage } from "@/utils/storageImageLoader";
 import { TheraLoader } from "@/components/ui/TheraLoader";
 import UnifiedNavigation from "@/components/UnifiedNavigation";
@@ -113,15 +113,6 @@ export default function WebsiteBuilder() {
       setAutoSaveStatus('error');
       setTimeout(() => setAutoSaveStatus('idle'), 3000);
       
-      logToSupabase("Error auto-saving website draft", {
-        level: 'error',
-        page: 'WebsiteBuilder',
-        data: { 
-          error: error.message,
-          templateId: selectedTemplate?.id,
-          hasUser: !!user 
-        }
-      });
     }
   };
 
@@ -200,11 +191,6 @@ export default function WebsiteBuilder() {
 
     } catch (error: any) {
       if (error.code !== 'PGRST116') { // Not found error is expected for new users
-        logToSupabase("Error loading website builder data", {
-          level: 'error',
-          page: 'WebsiteBuilder',
-          data: { error: error.message }
-        });
         toast({
           variant: "destructive",
           title: "Error",
