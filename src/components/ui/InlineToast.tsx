@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { CheckCircle, XCircle, AlertCircle, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { logToSupabase } from "@/utils/batchedLogManager";
+
 
 export function InlineToast() {
   const { message, clearToast } = useToast();

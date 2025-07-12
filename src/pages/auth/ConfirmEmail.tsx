@@ -14,7 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Loader, CheckCircle, XCircle } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { useToast } from '@/hooks/use-toast';
-import { logToSupabase } from '@/utils/batchedLogManager';
+
 
 const BRAND_PURPLE = '#7C3AED';
 

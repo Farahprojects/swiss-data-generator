@@ -13,7 +13,7 @@ import {
   FormLabel, 
   FormMessage 
 } from "@/components/ui/form";
-import { logToSupabase } from "@/utils/batchedLogManager";
+
 import PasswordInput from "@/components/auth/PasswordInput";
 import usePasswordManagement from "@/hooks/usePasswordManagement";
 import { cn } from "@/lib/utils";

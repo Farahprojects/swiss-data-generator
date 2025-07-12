@@ -10,7 +10,7 @@ import { NotificationsPanel } from "./panels/NotificationsPanel";
 import { DeleteAccountPanel } from "./panels/DeleteAccountPanel";
 import { ContactSupportPanel } from "./panels/ContactSupportPanel";
 import { BillingPanel } from "./panels/BillingPanel";
-import { logToSupabase } from "@/utils/batchedLogManager";
+
 import { useAuth } from "@/contexts/AuthContext";
 
 export const SettingsModal = () => {

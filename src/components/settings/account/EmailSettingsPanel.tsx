@@ -15,7 +15,7 @@ import {
   FormMessage 
 } from "@/components/ui/form";
 import { Loader } from "lucide-react";
-import { logToSupabase } from "@/utils/batchedLogManager";
+
 import { LoginVerificationModal } from "@/components/auth/LoginVerificationModal";
 
 type EmailFormValues = {

@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { logToSupabase } from '@/utils/batchedLogManager';
+
 import { sendPasswordChangeNotification } from '@/utils/notificationService';
 
 export function usePasswordManagement() {

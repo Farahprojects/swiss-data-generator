@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader, CheckCircle } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
-import { logToSupabase } from '@/utils/batchedLogManager';
+
 import PasswordInput from './PasswordInput';
 import { passwordRequirements } from '@/utils/authValidation';
 
@@ -28,11 +28,6 @@ const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    logToSupabase('Password reset form submitted', {
-      level: 'debug',
-      page: 'PasswordResetForm',
-      data: { passwordValid, passwordsMatch }
-    });
     
     if (!passwordValid) {
       toast({
@@ -55,10 +50,6 @@ const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess }) => {
     setIsUpdating(true);
 
     try {
-      logToSupabase('Updating password after reset', {
-        level: 'info',
-        page: 'PasswordResetForm'
-      });
 
       const { error } = await supabase.auth.updateUser({
         password: newPassword
@@ -66,10 +57,6 @@ const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess }) => {
 
       if (error) throw error;
 
-      logToSupabase('Password updated successfully after reset', {
-        level: 'info',
-        page: 'PasswordResetForm'
-      });
 
       // Sign out the user after password update to ensure clean state
       await supabase.auth.signOut();
@@ -87,11 +74,6 @@ const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess }) => {
       }, 2000);
 
     } catch (error: any) {
-      logToSupabase('Error updating password after reset', {
-        level: 'error',
-        page: 'PasswordResetForm',
-        data: { error: error.message || String(error) }
-      });
 
       toast({
         variant: 'destructive',

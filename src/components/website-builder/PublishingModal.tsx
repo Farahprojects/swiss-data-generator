@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Globe, ExternalLink, Copy, CheckCircle } from "lucide-react";
-import { logToSupabase } from "@/utils/batchedLogManager";
+
 
 interface PublishingModalProps {
   website: {

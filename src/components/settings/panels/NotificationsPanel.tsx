@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Loader, RefreshCw } from "lucide-react";
-import { logToSupabase } from "@/utils/batchedLogManager";
+
 import { useUserPreferences } from "@/hooks/useUserPreferences";
 import { Button } from "@/components/ui/button";
 

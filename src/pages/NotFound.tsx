@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Home, Settings, LayoutDashboard } from "lucide-react";
 import { useNavigationState } from "@/contexts/NavigationStateContext";
-import { logToSupabase } from "@/utils/batchedLogManager";
+
 
 const NotFound = () => {
   const location = useLocation();

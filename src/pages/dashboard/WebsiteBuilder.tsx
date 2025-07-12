@@ -14,7 +14,7 @@ import { ImagesEditModal } from "@/components/website-builder/modals/ImagesEditM
 import { ServicesEditModal } from "@/components/website-builder/modals/ServicesEditModal";
 import { CtaEditModal } from "@/components/website-builder/modals/CtaEditModal";
 import { FooterEditModal } from "@/components/website-builder/modals/FooterEditModal";
-import { logToSupabase } from "@/utils/batchedLogManager";
+
 import { loadImagesFromStorage } from "@/utils/storageImageLoader";
 import { TheraLoader } from "@/components/ui/TheraLoader";
 import UnifiedNavigation from "@/components/UnifiedNavigation";

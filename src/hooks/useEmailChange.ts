@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { logToSupabase } from '@/utils/batchedLogManager';
+
 import { sendEmailChangeNotification } from '@/utils/notificationService';
 
 export function useEmailChange() {

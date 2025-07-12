@@ -2,7 +2,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettingsModal } from "@/contexts/SettingsModalContext";
-import { logToSupabase } from "@/utils/batchedLogManager";
+
 import UnifiedNavigation from "@/components/UnifiedNavigation";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DashboardBreadcrumb } from "@/components/dashboard/DashboardBreadcrumb";
@@ -35,22 +35,12 @@ const DashboardLayout = () => {
       const searchParams = new URLSearchParams(location.search);
       const panel = searchParams.get('panel') || 'account';
       
-      logToSupabase("Redirecting from settings route to modal", {
-        level: 'info',
-        page: 'DashboardLayout',
-        data: { panel }
-      });
       
       openSettings(panel as "account" | "notifications" | "delete" | "support");
     }
   }, [location.pathname, location.search, openSettings]);
   
   useEffect(() => {
-    logToSupabase("DashboardLayout mounted", {
-      level: 'info',
-      page: 'DashboardLayout',
-      data: { user: user?.email, path: location.pathname }
-    });
   }, [user, location.pathname]);
 
   // Dashboard pages with burger menu get full width without sidebar (like website builder, messages, clients)

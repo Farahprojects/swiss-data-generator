@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { isPasswordResetUrl } from '@/utils/urlUtils';
-import { logToSupabase } from '@/utils/batchedLogManager';
+
 
 type NavigationStateContextType = {
   lastRoute: string;
