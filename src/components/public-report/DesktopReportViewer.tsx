@@ -148,7 +148,8 @@ const DesktopReportViewer = ({
         swissData: swissData,
         customerName: customerName,
         reportPdfData: reportPdfData,
-        reportType: reportType
+        reportType: reportType,
+        reportData: reportData
       });
 
       // Determine what was included for the toast message
