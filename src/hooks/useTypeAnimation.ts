@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { log } from '@/utils/logUtils';
+import { log } from '@/utils/logStub';
 
 interface UseTypeAnimationOptions {
   speed?: number;

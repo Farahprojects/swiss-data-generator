@@ -1,6 +1,6 @@
 
-const logToSupabase = () => {};
 import { useLocation, Link, useNavigate } from "react-router-dom";
+import { logToSupabase } from '@/utils/logStub';
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";

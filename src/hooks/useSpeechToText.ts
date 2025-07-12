@@ -2,7 +2,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { log } from '@/utils/logUtils';
+import { log } from '@/utils/logStub';
 
 export const useSpeechToText = (
   onTranscriptReady?: (transcript: string) => void,
