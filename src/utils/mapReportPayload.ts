@@ -5,28 +5,33 @@ function _mapReportPayload({
   guest_report,
   report_content,
   swiss_data,
-  metadata,
-  reportData
+  metadata
 }: RawReportPayload): MappedReport {
-  // Extract person A data
+  // Extract person A data from guest_report.report_data (single source of truth)
+  const reportData = guest_report?.report_data;
+  
+  if (!reportData?.name) {
+    throw new Error('Missing person A name in guest_report.report_data');
+  }
+
   const personA = {
-    name: reportData?.name ?? guest_report?.report_data?.name, // Remove fallback
-    birthDate: reportData?.birthDate ?? guest_report?.report_data?.birthDate,
-    birthTime: reportData?.birthTime ?? guest_report?.report_data?.birthTime,
-    location: reportData?.birthLocation ?? guest_report?.report_data?.birthLocation,
-    latitude: reportData?.birthLatitude ?? guest_report?.report_data?.birthLatitude,
-    longitude: reportData?.birthLongitude ?? guest_report?.report_data?.birthLongitude,
+    name: reportData.name,
+    birthDate: reportData.birthDate,
+    birthTime: reportData.birthTime,
+    location: reportData.birthLocation,
+    latitude: reportData.birthLatitude,
+    longitude: reportData.birthLongitude,
   };
 
   // Extract person B data (for relationships)
-  const personB = (reportData?.secondPersonName || guest_report?.report_data?.secondPersonName)
+  const personB = reportData.secondPersonName
     ? {
-        name: reportData?.secondPersonName ?? guest_report?.report_data?.secondPersonName,
-        birthDate: reportData?.secondPersonBirthDate ?? guest_report?.report_data?.secondPersonBirthDate,
-        birthTime: reportData?.secondPersonBirthTime ?? guest_report?.report_data?.secondPersonBirthTime,
-        location: reportData?.secondPersonBirthLocation ?? guest_report?.report_data?.secondPersonBirthLocation,
-        latitude: reportData?.secondPersonLatitude ?? guest_report?.report_data?.secondPersonLatitude,
-        longitude: reportData?.secondPersonLongitude ?? guest_report?.report_data?.secondPersonLongitude,
+        name: reportData.secondPersonName,
+        birthDate: reportData.secondPersonBirthDate,
+        birthTime: reportData.secondPersonBirthTime,
+        location: reportData.secondPersonBirthLocation,
+        latitude: reportData.secondPersonLatitude,
+        longitude: reportData.secondPersonLongitude,
       }
     : undefined;
 

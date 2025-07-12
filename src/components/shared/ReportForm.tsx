@@ -354,17 +354,24 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
   // Show report viewer if user is viewing a report
   if (viewingReport) {
+    // Create a guest_report object from available data for mapping
+    const mockGuestReport = {
+      report_data: form.getValues(),
+      report_type: currentReportType,
+      has_report: hasReport,
+      swiss_boolean: swissBoolean
+    };
+
     return (
       <ReportViewer
         mappedReport={mapReportPayload({
-          reportData: form.getValues(), // Pass form data directly as reportData
+          guest_report: mockGuestReport,
           report_content: reportContent,
           swiss_data: swissData,
           metadata: {
-            hasReport: hasReport,
-            swissBoolean: swissBoolean,
-            pdfData: reportPdfData,
-            reportType: currentReportType
+            is_ai_report: hasReport || false,
+            is_astro_report: swissBoolean || false,
+            content_type: hasReport ? 'ai' : 'astro'
           }
         })}
         onBack={handleCloseReportViewer}

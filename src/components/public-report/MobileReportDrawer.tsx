@@ -489,13 +489,13 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
           <div className="flex flex-col h-full">
             <ReportViewer
               mappedReport={mapReportPayload({
-                reportData: form.getValues(), // Pass the actual form data from useMobileDrawerForm
+                guest_report: submittedData, // Pass the complete guest_report object
                 report_content: reportData.content,
                 swiss_data: reportData.swissData,
                 metadata: {
-                  hasReport: reportData.hasReport,
-                  swissBoolean: reportData.swissBoolean,
-                  pdfData: reportData.pdfData
+                  is_ai_report: reportData.hasReport || false,
+                  is_astro_report: reportData.swissBoolean || false,
+                  content_type: reportData.hasReport ? 'ai' : 'astro'
                 }
               })}
               onBack={handleBackFromReport}

@@ -69,7 +69,8 @@ serve(async (req) => {
         created_at,
         promo_code_used,
         translator_log_id,
-        report_log_id
+        report_log_id,
+        report_data
       `)
       .eq('id', guestReportId)
       .single();
@@ -153,6 +154,7 @@ serve(async (req) => {
         payment_status: guestReport.payment_status,
         created_at: guestReport.created_at,
         promo_code_used: guestReport.promo_code_used,
+        report_data: guestReport.report_data,
       },
       report_content: reportContent,
       swiss_data: swissData,

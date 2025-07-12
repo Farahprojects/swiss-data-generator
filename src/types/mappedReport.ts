@@ -36,5 +36,4 @@ export interface RawReportPayload {
   report_content?: string;
   swiss_data?: any;
   metadata?: any;
-  reportData?: any;
 }
