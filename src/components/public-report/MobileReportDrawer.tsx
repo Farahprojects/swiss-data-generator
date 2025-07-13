@@ -17,6 +17,7 @@ import { useMobileDrawerForm } from '@/hooks/useMobileDrawerForm';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useGuestReportData } from '@/hooks/useGuestReportData';
 import { clearAllSessionData, getGuestReportId } from '@/utils/urlHelpers';
 import Step1ReportType from './drawer-steps/Step1ReportType';
 import Step1_5SubCategory from './drawer-steps/Step1_5SubCategory';
@@ -88,13 +89,19 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
   // Auto-open drawer and switch to success when guest report data is available (deep linking)
   const urlGuestId = getGuestReportId();
+  const { data: guestReportData, isLoading: isLoadingGuestData } = useGuestReportData(urlGuestId);
+  
   useEffect(() => {
-    if (urlGuestId) {
-      // Switch to success view for direct links with guest_id
+    if (urlGuestId && guestReportData && !isLoadingGuestData) {
+      // Extract real user data from the guest report
+      const reportData = guestReportData.report_data;
+      const realName = reportData?.name || 'Guest';
+      const realEmail = reportData?.email || 'guest@example.com';
+      
       setCurrentView('success');
-      setSubmittedData({ name: 'Guest', email: 'guest@example.com' });
+      setSubmittedData({ name: realName, email: realEmail });
     }
-  }, [urlGuestId]);
+  }, [urlGuestId, guestReportData, isLoadingGuestData]);
 
   const { form, currentStep, nextStep, prevStep } = useMobileDrawerForm();
   const {
@@ -472,7 +479,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
         )}
 
         {/* ------------------------- SUCCESS --------------------------- */}
-        {currentView === 'success' && submittedData && (
+        {currentView === 'success' && submittedData && !isLoadingGuestData && (
           <div className="flex flex-col h-full pt-12">
             <SuccessScreen
               name={submittedData.name}
