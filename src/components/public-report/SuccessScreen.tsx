@@ -450,19 +450,19 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                         <Button 
                           onClick={handleViewReport} 
                           disabled={isLoadingReport}
-                          className="bg-gray-900 hover:bg-gray-800 text-white font-light disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="bg-black hover:bg-gray-900 text-white font-medium h-12 px-8 rounded-full shadow-sm transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {isLoadingReport ? (
                             <>
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Loading Report...
+                              Loading...
                             </>
                           ) : (
-                            'View Report'
+                            'Open'
                           )}
                         </Button>
-                        <Button variant="outline" onClick={handleBackToForm} className="border-gray-900 text-gray-900 font-light hover:bg-gray-100">
-                          Home
+                        <Button variant="outline" onClick={handleBackToForm} className="border-2 border-gray-300 text-gray-700 hover:bg-gray-50 font-medium h-12 px-8 rounded-full transition-all duration-200 active:scale-95">
+                          Return Home
                         </Button>
                       </div>
                       
