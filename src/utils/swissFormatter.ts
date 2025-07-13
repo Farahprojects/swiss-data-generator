@@ -28,6 +28,7 @@ export interface EnrichedSnapshot {
     lat?: number;
     lon?: number;
     tz?: string;
+    error?: string;     // For error reporting
   };
   planets: EnrichedPlanet[];
   aspects: EnrichedAspect[];
@@ -60,9 +61,79 @@ export const degreesToSign = (lon: number) => {
   return { sign: ZODIAC_SIGNS[signIdx], glyph: ZODIAC_GLYPHS[signIdx], deg, min };
 };
 
+// Helper function to extract planets from Swiss data structure
+const extractPlanetsFromSwiss = (swissData: any): EnrichedPlanet[] => {
+  if (!swissData?.natal?.planets) return [];
+  
+  const planets: EnrichedPlanet[] = [];
+  const planetData = swissData.natal.planets;
+  
+  Object.keys(planetData).forEach(planetKey => {
+    const p = planetData[planetKey];
+    if (p && typeof p.deg === 'number' && p.sign) {
+      const planetName = PLANET_NAMES[planetKey.toLowerCase()] || planetKey;
+      planets.push({
+        name: planetName,
+        sign: p.sign,
+        signGlyph: ZODIAC_GLYPHS[ZODIAC_SIGNS.indexOf(p.sign)] || '?',
+        deg: Math.floor(p.deg),
+        min: Math.round((p.deg - Math.floor(p.deg)) * 60),
+        retro: !!p.retrograde
+      });
+    }
+  });
+  
+  return planets;
+};
+
+// Helper function to extract aspects from Swiss data structure
+const extractAspectsFromSwiss = (swissData: any): EnrichedAspect[] => {
+  if (!swissData?.natal?.aspects && !swissData?.transits?.aspects_to_natal) return [];
+  
+  const aspects: EnrichedAspect[] = [];
+  
+  // Try natal aspects first
+  let aspectsArray = swissData.natal?.aspects || swissData.transits?.aspects_to_natal || [];
+  
+  aspectsArray.forEach((a: any) => {
+    if (a && a.a && a.b && a.type && typeof a.orb === 'number') {
+      const orbDeg = Math.floor(a.orb);
+      const orbMin = Math.round((a.orb - orbDeg) * 60);
+      aspects.push({
+        a: PLANET_NAMES[a.a.toLowerCase()] || a.a,
+        b: PLANET_NAMES[a.b.toLowerCase()] || a.b,
+        type: a.type,
+        orbDeg,
+        orbMin
+      });
+    }
+  });
+  
+  return aspects;
+};
+
+// Helper function to debug Swiss data structure
+const debugSwissStructure = (raw: any): void => {
+  console.log('🔍 Swiss Data Debug:', {
+    hasRaw: !!raw,
+    hasNatal: !!raw?.natal,
+    hasTransits: !!raw?.transits,
+    natalKeys: raw?.natal ? Object.keys(raw.natal) : [],
+    transitKeys: raw?.transits ? Object.keys(raw.transits) : [],
+    planetCount: raw?.natal?.planets ? Object.keys(raw.natal.planets).length : 0,
+    aspectCount: raw?.natal?.aspects ? raw.natal.aspects.length : 0
+  });
+};
+
 export const parseSwissDataRich = (raw: any): EnrichedSnapshot => {
+  // Add debugging for development
+  if (process.env.NODE_ENV === 'development') {
+    debugSwissStructure(raw);
+  }
+
   // Return empty data structure if raw is null/undefined
   if (!raw) {
+    console.warn('⚠️ parseSwissDataRich: No raw data provided');
     return {
       dateISO: new Date().toISOString().slice(0, 10),
       timeISO: '00:00:00',
@@ -74,50 +145,62 @@ export const parseSwissDataRich = (raw: any): EnrichedSnapshot => {
     };
   }
 
-  const natal = raw.natal ?? raw;            // support {natal:{…}} or flat
-  const meta  = natal?.meta ?? {};
+  try {
+    // Handle nested Swiss data structure
+    const swissData = raw.swiss_data || raw;
+    const natal = swissData?.natal || swissData;
+    const meta = natal?.meta || {};
 
-  // --- Date & time ---------------------------------------------
-  const dateISO = meta.utc ? new Date(meta.utc).toISOString().slice(0,10) : meta.date;
-  const timeISO = meta.utc ? new Date(meta.utc).toISOString().slice(11,19) : meta.time;
-  const tz      = meta.tz ?? 'UTC';
+    // --- Date & time ---------------------------------------------
+    let dateISO: string;
+    let timeISO: string;
+    
+    if (meta.utc) {
+      const utcDate = new Date(meta.utc);
+      dateISO = utcDate.toISOString().slice(0, 10);
+      timeISO = utcDate.toISOString().slice(11, 19);
+    } else {
+      // Fallback to current date if no UTC available
+      const now = new Date();
+      dateISO = now.toISOString().slice(0, 10);
+      timeISO = '00:00:00';
+    }
+    
+    const tz = meta.tz || 'UTC';
 
-  // --- Name and location data ----------------------------------
-  const name = meta.name || natal.name || raw.name;
-  const metaInfo = {
-    location: meta.location || natal.location,
-    lat: meta.lat || natal.lat || natal.latitude,
-    lon: meta.lon || natal.lon || natal.longitude,
-    tz: tz
-  };
+    // --- Name and location data ----------------------------------
+    const name = meta.name || natal.name || raw.name || 'Unknown';
+    const metaInfo = {
+      location: meta.location || natal.location,
+      lat: meta.lat || natal.lat || natal.latitude,
+      lon: meta.lon || natal.lon || natal.longitude,
+      tz: tz
+    };
 
-  // --- Planets --------------------------------------------------
-  const planets: EnrichedPlanet[] = Array.isArray(natal.planets) 
-    ? natal.planets.map((p:any) => {
-        const { sign, glyph, deg, min } = degreesToSign(p.longitude);
-        return {
-          name : PLANET_NAMES[p.planet?.toLowerCase()] ?? p.planet,
-          sign, signGlyph: glyph,
-          deg, min,
-          retro : !!p.retrograde
-        };
-      })
-    : [];
+    // --- Extract planets and aspects using helper functions ---
+    const planets = extractPlanetsFromSwiss(swissData);
+    const aspects = extractAspectsFromSwiss(swissData);
 
-  // --- Aspects --------------------------------------------------
-  const aspects: EnrichedAspect[] = Array.isArray(natal.aspects) 
-    ? natal.aspects.map((a:any) => {
-        const orbDeg = Math.floor(a.orb);
-        const orbMin = Math.round((a.orb - orbDeg) * 60);
-        return {
-          a : PLANET_NAMES[a.a?.toLowerCase()] ?? a.a,
-          b : PLANET_NAMES[a.b?.toLowerCase()] ?? a.b,
-          type : a.type,
-          orbDeg,
-          orbMin
-        };
-      })
-    : [];
+    console.log('✅ parseSwissDataRich: Successfully parsed', {
+      planetCount: planets.length,
+      aspectCount: aspects.length,
+      hasLocation: !!metaInfo.location
+    });
 
-  return { dateISO, timeISO, tz, name, meta: metaInfo, planets, aspects };
+    return { dateISO, timeISO, tz, name, meta: metaInfo, planets, aspects };
+
+  } catch (error) {
+    console.error('❌ parseSwissDataRich: Error parsing Swiss data:', error);
+    
+    // Return minimal valid structure on error
+    return {
+      dateISO: new Date().toISOString().slice(0, 10),
+      timeISO: '00:00:00',
+      tz: 'UTC',
+      name: 'Parse Error',
+      meta: { error: 'Failed to parse Swiss data' },
+      planets: [],
+      aspects: []
+    };
+  }
 };
