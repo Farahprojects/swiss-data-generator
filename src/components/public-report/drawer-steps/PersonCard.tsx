@@ -1,26 +1,14 @@
 import React, { useState, useCallback } from 'react';
-import {
-  UseFormRegister,
-  UseFormSetValue,
-  UseFormWatch,
-  FieldErrors,
-} from 'react-hook-form';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { UseFormRegister, UseFormSetValue, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { AlertCircle } from 'lucide-react';
 import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import InlineDateTimeSelector from '@/components/ui/mobile-pickers/InlineDateTimeSelector';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ReportFormData } from '@/types/public-report';
-import { Button } from '@/components/ui/button';
 import { useSmartScroll } from '@/hooks/useSmartScroll';
+import { ReportFormData } from '@/types/public-report';
 
 interface PersonCardProps {
   personNumber: 1 | 2;
@@ -47,347 +35,127 @@ const PersonCard = ({
   helperText,
   onPlaceSelect,
 }: PersonCardProps) => {
-  const [hasInteracted, setHasInteracted] = useState({
-    name: false,
-    email: false,
-    birthDate: false,
-    birthTime: false,
-    birthLocation: false,
-  });
-
-  const [activeSelector, setActiveSelector] = useState<'date' | 'time' | null>(null);
-
   const isMobile = useIsMobile();
   const isSecondPerson = personNumber === 2;
   const prefix = isSecondPerson ? 'secondPerson' : '';
-  const { scrollToNextField, scrollToElement } = useSmartScroll();
+  const { scrollToElement, scrollToNextField } = useSmartScroll();
 
-  /* -------------------------------------------------------------------- */
-  /* Helpers                                                              */
-  /* -------------------------------------------------------------------- */
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [activeSelector, setActiveSelector] = useState<'date' | 'time' | null>(null);
 
-  const name = watch(isSecondPerson ? 'secondPersonName' : 'name') || '';
-  const email = watch('email') || '';
-  const birthDate =
-    watch(isSecondPerson ? 'secondPersonBirthDate' : 'birthDate') || '';
-  const birthTime =
-    watch(isSecondPerson ? 'secondPersonBirthTime' : 'birthTime') || '';
-  const birthLocation =
-    watch(isSecondPerson ? 'secondPersonBirthLocation' : 'birthLocation') || '';
+  const markTouched = (field: string) => setTouched(prev => ({ ...prev, [field]: true }));
+  const showError = (field: string) => (hasTriedToSubmit || touched[field]) && errors[field];
 
-  const handleFieldInteraction = (fieldName: string) =>
-    setHasInteracted((prev) => ({ ...prev, [fieldName]: true }));
-
-  const shouldShowError = (
-    fieldName: keyof typeof hasInteracted,
-    error: any,
-  ) => (hasTriedToSubmit || hasInteracted[fieldName]) && error;
-
-  const getFieldName = (field: string): keyof ReportFormData => {
-    if (isSecondPerson) {
-      // Fix the coordinate field mapping for second person
-      if (field === 'birthLatitude') return 'secondPersonLatitude' as keyof ReportFormData;
-      if (field === 'birthLongitude') return 'secondPersonLongitude' as keyof ReportFormData;
-      if (field === 'birthPlaceId') return 'secondPersonPlaceId' as keyof ReportFormData;
-      
-      return `secondPerson${field.charAt(0).toUpperCase()}${field.slice(1)}` as keyof ReportFormData;
-    }
-    return field as keyof ReportFormData;
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    scrollToElement(e.target, { block: 'center' });
   };
 
-  const getError = (field: string) => {
-    const fieldName = getFieldName(field);
-    return errors[fieldName];
+  const handleBlur = (field: string, nextFieldId?: string) => (e: React.FocusEvent<HTMLInputElement>) => {
+    markTouched(field);
+    if (e.target.value.trim() && nextFieldId) scrollToNextField(nextFieldId);
   };
 
-  // Enhanced input focus handler with proper scroll management
-  const handleInputFocus = useCallback((event: React.FocusEvent<HTMLInputElement>) => {
-    if (isMobile) {
-      const target = event.target;
-      
-      // Prevent any browser interference
-      event.preventDefault();
-      
-      // Custom controlled scroll behavior
-      setTimeout(() => {
-        target.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'nearest',
-          inline: 'nearest'
-        });
-      }, 50);
-    }
-  }, [isMobile]);
+  const getField = (name: string) => isSecondPerson ? `secondPerson${name.charAt(0).toUpperCase() + name.slice(1)}` : name;
 
-  const handleDateChange = (date: string) => {
-    const fieldName = getFieldName('birthDate');
-    setValue(fieldName, date);
-  };
-
-  const handleTimeChange = (time: string) => {
-    const fieldName = getFieldName('birthTime');
-    setValue(fieldName, time);
-  };
-
-  // Enhanced place selection handler with complete layout stabilization
-  const handlePlaceSelect = (placeData: PlaceData) => {
-    const locationField = getFieldName('birthLocation');
-    const latField = getFieldName('birthLatitude');
-    const lngField = getFieldName('birthLongitude');
-    const placeIdField = getFieldName('birthPlaceId');
-
-    // Use the full formatted address (which is now in placeData.name) or fallback to address field
-    const fullLocation = placeData.address || placeData.name;
-    
-    setValue(locationField, fullLocation);
-    setHasInteracted((prev) => ({ ...prev, birthLocation: true }));
-
-    if (placeData.latitude && placeData.longitude) {
-      setValue(latField, placeData.latitude);
-      setValue(lngField, placeData.longitude);
-    }
-    
-    if (placeData.placeId) {
-      setValue(placeIdField, placeData.placeId);
-    }
-
-    // Notify parent component that place was selected (for sequential loading)
+  const handlePlaceSelect = (place: PlaceData) => {
+    const loc = getField('birthLocation');
+    setValue(loc, place.address || place.name);
+    if (place.latitude) setValue(getField('birthLatitude'), place.latitude);
+    if (place.longitude) setValue(getField('birthLongitude'), place.longitude);
+    if (place.placeId) setValue(getField('birthPlaceId'), place.placeId);
     onPlaceSelect?.();
-
-    // Auto-scroll to next person or submit button when location is completed
-    if (personNumber === 1) {
-      // Look for second person card
-      setTimeout(() => {
-        const secondPersonCard = document.querySelector('[data-person="2"]');
-        if (secondPersonCard) {
-          scrollToElement(secondPersonCard, { delay: 500, block: 'start' });
-        }
-      }, 600);
-    }
-
-    // Enhanced layout stabilization for mobile with proper timing
-    if (isMobile && typeof window !== 'undefined') {
-      // Prevent scroll interference during Google's cleanup
-      document.body.style.pointerEvents = 'none';
-      
-      setTimeout(() => {
-        // Re-enable interactions
-        document.body.style.pointerEvents = '';
-        
-        // Force layout recalculation
-        const currentCard = document.querySelector(`[data-person="${personNumber}"]`);
-        if (currentCard) {
-          // Ensure card is properly positioned
-          const cardRect = currentCard.getBoundingClientRect();
-          const viewportHeight = window.innerHeight;
-          
-          // Only scroll if card is not fully visible
-          if (cardRect.bottom > viewportHeight || cardRect.top < 0) {
-            currentCard.scrollIntoView({ 
-              behavior: 'smooth', 
-              block: 'center',
-              inline: 'nearest'
-            });
-          }
-        }
-      }, 400); // Extended timeout to ensure Google's DOM cleanup is complete
-    }
+    scrollToNextField(loc);
   };
 
-  // Date selector handlers
-  const handleDateSelectorOpen = useCallback(() => {
-    setActiveSelector('date');
-  }, []);
-
-  const handleDateConfirm = useCallback(() => {
-    setHasInteracted((prev) => ({ ...prev, birthDate: true }));
-    setActiveSelector(null);
-    // Auto-scroll to next field (time)
-    const nextFieldId = isSecondPerson ? 'secondPersonBirthTime' : 'birthTime';
-    scrollToNextField(nextFieldId);
-  }, [isSecondPerson, scrollToNextField]);
-
-  const handleDateCancel = useCallback(() => {
-    setActiveSelector(null);
-  }, []);
-
-  // Time selector handlers
-  const handleTimeSelectorOpen = useCallback(() => {
-    setActiveSelector('time');
-  }, []);
-
-  const handleTimeConfirm = useCallback(() => {
-    setHasInteracted((prev) => ({ ...prev, birthTime: true }));
-    setActiveSelector(null);
-    // Auto-scroll to location field
-    const nextFieldId = isSecondPerson ? 'secondPersonBirthLocation' : 'birthLocation';
-    scrollToElement(`#${nextFieldId}`, { delay: 300, block: 'center' });
-  }, [isSecondPerson, scrollToElement]);
-
-  const handleTimeCancel = useCallback(() => {
-    setActiveSelector(null);
-  }, []);
-
-  // Enhanced error message component
-  const ErrorMessage: React.FC<{ message: string }> = ({ message }) => (
-    <div className="flex items-center gap-2 text-sm text-red-500 mt-1">
-      <AlertCircle className="h-4 w-4 shrink-0" />
-      <span>{message}</span>
+  const ErrorMsg = ({ msg }: { msg: string }) => (
+    <div className="text-sm text-red-500 mt-1 flex items-center gap-2">
+      <AlertCircle className="w-4 h-4" />
+      <span>{msg}</span>
     </div>
   );
-
-  /* -------------------------------------------------------------------- */
-  /* JSX                                                                  */
-  /* -------------------------------------------------------------------- */
 
   return (
     <div className="bg-white w-full mb-8" data-person={personNumber}>
       <div className="mb-8">
-        <h2 className="text-3xl font-light text-gray-900 mb-2 tracking-tight">
-          {title}
-        </h2>
+        <h2 className="text-3xl font-light text-gray-900 mb-2 tracking-tight">{title}</h2>
       </div>
-      
+
       <div className="space-y-8">
-        {/* NAME ------------------------------------------------------- */}
         <div className="space-y-3">
-          <Label htmlFor={`${prefix}name`} className="text-lg font-light text-gray-700">
-            Full Name *
-          </Label>
+          <Label htmlFor={`${prefix}name`} className="text-lg font-light text-gray-700">Full Name *</Label>
           <Input
             id={`${prefix}name`}
-            {...register(getFieldName('name') as any)}
+            {...register(getField('name'))}
             placeholder="Enter full name"
-            className={`h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400 ${shouldShowError('name', getError('name')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
-            onFocus={(e) => {
-              handleFieldInteraction('name');
-              handleInputFocus(e);
-            }}
-            onBlur={(e) => {
-              handleFieldInteraction('name');
-              // Auto-scroll to next field when name is completed
-              if (e.target.value.trim()) {
-                const nextFieldId = isSecondPerson ? 'secondPersonBirthDate' : 'email';
-                scrollToNextField(nextFieldId);
-              }
-            }}
+            className={`h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400 ${showError(getField('name')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+            onFocus={handleFocus}
+            onBlur={handleBlur(getField('name'), getField('email'))}
             inputMode="text"
-            style={{ fontSize: '16px' }} // Prevent zoom on iOS
+            style={{ fontSize: '16px' }}
           />
-          {shouldShowError('name', getError('name')) && (
-            <ErrorMessage message={getError('name')?.message as string} />
-          )}
+          {showError(getField('name')) && <ErrorMsg msg={errors[getField('name')]?.message as string} />}
         </div>
 
-        {/* EMAIL (only first person) ----------------------------------- */}
         {!isSecondPerson && (
           <div className="space-y-3">
-            <Label htmlFor="email" className="text-lg font-light text-gray-700">
-              Email Address *
-            </Label>
+            <Label htmlFor="email" className="text-lg font-light text-gray-700">Email Address *</Label>
             <Input
               id="email"
               type="email"
-              {...register('email' as any)}
+              {...register('email')}
               placeholder="your@email.com"
-              className={`h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400 ${shouldShowError('email', errors.email) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
-              onFocus={(e) => {
-                handleFieldInteraction('email');
-                handleInputFocus(e);
-              }}
-              onBlur={(e) => {
-                handleFieldInteraction('email');
-                // Auto-scroll to birth date when email is completed
-                if (e.target.value.trim()) {
-                  scrollToNextField('birthDate');
-                }
-              }}
+              className={`h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400 ${showError('email') ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+              onFocus={handleFocus}
+              onBlur={handleBlur('email', getField('birthDate'))}
               inputMode="email"
-              style={{ fontSize: '16px' }} // Prevent zoom on iOS
+              style={{ fontSize: '16px' }}
             />
-            {shouldShowError('email', errors.email) && (
-              <ErrorMessage message={errors.email?.message as string} />
-            )}
+            {showError('email') && <ErrorMsg msg={errors.email?.message as string} />}
           </div>
         )}
 
-        {/* DATE & TIME ------------------------------------------------- */}
         <div className="grid grid-cols-2 gap-6">
-          {/* DATE */}
           <div className="space-y-3">
-            <Label htmlFor={`${prefix}birthDate`} className="text-lg font-light text-gray-700">
-              Birth Date *
-            </Label>
-            {isMobile ? (
-              <InlineDateTimeSelector
-                type="date"
-                value={birthDate}
-                onChange={handleDateChange}
-                onConfirm={handleDateConfirm}
-                onCancel={handleDateCancel}
-                isOpen={activeSelector === 'date'}
-                placeholder="Select date"
-                hasError={shouldShowError('birthDate', getError('birthDate'))}
-                onOpen={handleDateSelectorOpen}
-              />
-            ) : (
-              <Input
-                id={`${prefix}birthDate`}
-                type="date"
-                {...register(getFieldName('birthDate') as any)}
-                className={`h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400 ${shouldShowError('birthDate', getError('birthDate')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
-                onFocus={(e) => {
-                  handleFieldInteraction('birthDate');
-                  handleInputFocus(e);
-                }}
-                onBlur={() => handleFieldInteraction('birthDate')}
-                style={{ fontSize: '16px' }} // Prevent zoom on iOS
-              />
-            )}
-            {shouldShowError('birthDate', getError('birthDate')) && (
-              <ErrorMessage message={getError('birthDate')?.message as string} />
-            )}
+            <Label htmlFor={`${prefix}birthDate`} className="text-lg font-light text-gray-700">Birth Date *</Label>
+            <InlineDateTimeSelector
+              type="date"
+              value={watch(getField('birthDate'))}
+              onChange={(date) => setValue(getField('birthDate'), date)}
+              onConfirm={() => {
+                markTouched(getField('birthDate'));
+                setActiveSelector(null);
+                scrollToNextField(getField('birthTime'));
+              }}
+              onCancel={() => setActiveSelector(null)}
+              isOpen={activeSelector === 'date'}
+              placeholder="Select date"
+              hasError={!!showError(getField('birthDate'))}
+              onOpen={() => setActiveSelector('date')}
+            />
+            {showError(getField('birthDate')) && <ErrorMsg msg={errors[getField('birthDate')]?.message as string} />}
           </div>
 
-          {/* TIME */}
           <div className="space-y-3">
-            <Label htmlFor={`${prefix}birthTime`} className="text-lg font-light text-gray-700">
-              Birth Time *
-            </Label>
-            {isMobile ? (
-              <InlineDateTimeSelector
-                type="time"
-                value={birthTime}
-                onChange={handleTimeChange}
-                onConfirm={handleTimeConfirm}
-                onCancel={handleTimeCancel}
-                isOpen={activeSelector === 'time'}
-                placeholder="Select time"
-                hasError={shouldShowError('birthTime', getError('birthTime'))}
-                onOpen={handleTimeSelectorOpen}
-              />
-            ) : (
-              <Input
-                id={`${prefix}birthTime`}
-                type="time"
-                step="60"
-                {...register(getFieldName('birthTime') as any)}
-                className={`h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400 ${shouldShowError('birthTime', getError('birthTime')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
-                onFocus={(e) => {
-                  handleFieldInteraction('birthTime');
-                  handleInputFocus(e);
-                }}
-                onBlur={() => handleFieldInteraction('birthTime')}
-                style={{ fontSize: '16px' }} // Prevent zoom on iOS
-              />
-            )}
-            {shouldShowError('birthTime', getError('birthTime')) && (
-              <ErrorMessage message={getError('birthTime')?.message as string} />
-            )}
+            <Label htmlFor={`${prefix}birthTime`} className="text-lg font-light text-gray-700">Birth Time *</Label>
+            <InlineDateTimeSelector
+              type="time"
+              value={watch(getField('birthTime'))}
+              onChange={(time) => setValue(getField('birthTime'), time)}
+              onConfirm={() => {
+                markTouched(getField('birthTime'));
+                setActiveSelector(null);
+                scrollToNextField(getField('birthLocation'));
+              }}
+              onCancel={() => setActiveSelector(null)}
+              isOpen={activeSelector === 'time'}
+              placeholder="Select time"
+              hasError={!!showError(getField('birthTime'))}
+              onOpen={() => setActiveSelector('time')}
+            />
+            {showError(getField('birthTime')) && <ErrorMsg msg={errors[getField('birthTime')]?.message as string} />}
           </div>
         </div>
 
-        {/* LOCATION ---------------------------------------------------- */}
         <div className="space-y-3">
           {helperText && autocompleteDisabled && (
             <div className="text-sm text-gray-500 mb-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
@@ -396,21 +164,13 @@ const PersonCard = ({
           )}
           <PlaceAutocomplete
             label="Birth Location *"
-            value={birthLocation}
-            onChange={(value) => {
-              const locationField = getFieldName('birthLocation');
-              setValue(locationField, value);
-              if (!hasInteracted.birthLocation && value) {
-                handleFieldInteraction('birthLocation');
-              }
-            }}
+            value={watch(getField('birthLocation')) || ''}
+            onChange={(val) => setValue(getField('birthLocation'), val)}
             onPlaceSelect={handlePlaceSelect}
             placeholder="Enter birth city, state, country"
             id={`${prefix}birthLocation`}
             disabled={autocompleteDisabled}
-            error={shouldShowError('birthLocation', getError('birthLocation'))
-              ? (getError('birthLocation')?.message as string)
-              : undefined}
+            error={showError(getField('birthLocation')) ? (errors[getField('birthLocation')]?.message as string) : undefined}
           />
         </div>
       </div>
