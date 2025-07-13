@@ -307,6 +307,9 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     setHasReport(false);
     setSwissBoolean(false);
     setReportType('');
+    
+    // Clear session memory for new purchase
+    clearAllSessionData();
   };
 
   // Step 3 validation and auto-scroll

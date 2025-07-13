@@ -219,7 +219,7 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
         {/* Unified Header */}
         <div className="flex items-center justify-between px-4 py-4 border-b bg-white shadow-sm">
           <Button variant="ghost" size="icon" onClick={onBack} className="p-2 hover:bg-gray-100 transition-colors active:scale-95">
-            <ArrowLeft className="h-6 w-6 text-gray-700" />
+            <X className="h-6 w-6 text-gray-700" />
           </Button>
           {toggleLogic.showToggle && (
             <div className="flex space-x-2 bg-gray-100 rounded-full p-1">
