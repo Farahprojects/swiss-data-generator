@@ -85,6 +85,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     name: string;
     email: string;
   } | null>(null);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const footerRef = useRef<HTMLDivElement>(null);
 
   // ----------------------------- Hooks -----------------------------------
@@ -156,6 +157,18 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     return () => window.clearTimeout(t);
   }, [currentStep]);
 
+  // ------------------------ Keyboard detection ---------------------------
+  useEffect(() => {
+    if (!isBrowser || !isOpen) return;
+    const initial = getViewportHeight();
+    const onResize = () =>
+      setKeyboardVisible(initial - getViewportHeight() > 150);
+    window.visualViewport?.addEventListener('resize', onResize, {
+      passive: true,
+    });
+    return () =>
+      window.visualViewport?.removeEventListener('resize', onResize);
+  }, [isOpen]);
 
   // --------------------- Stripe return handler ---------------------------
   useEffect(() => {
@@ -195,6 +208,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     form.reset();
     setCurrentView('form');
     setSubmittedData(null);
+    setKeyboardVisible(false);
     clearGuestReportId(); // Clear URL and localStorage
   };
 
@@ -314,7 +328,9 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   return (
     <Drawer open={isOpen} onOpenChange={resetDrawer} dismissible={false}>
       <DrawerContent
-        className="flex flex-col rounded-none [&>div:first-child]:hidden"
+        className={`flex flex-col rounded-none [&>div:first-child]:hidden ${
+          keyboardVisible ? 'keyboard-visible' : ''
+        }`}
         style={{
           height: 'calc(var(--vh, 1vh) * 100)',
           maxHeight: 'calc(var(--vh, 1vh) * 100)',
@@ -411,9 +427,9 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
             {currentStep >= 2 && (
               <div
                 ref={footerRef}
-                className="absolute inset-x-0 bg-white border-t border-gray-200 p-3 flex justify-between items-center z-50"
+                className="fixed inset-x-0 bottom-0 bg-white border-t border-gray-200 p-3 pb-safe flex justify-between items-center z-50"
                 style={{
-                  bottom: `calc(env(safe-area-inset-bottom,0px))`,
+                  // add OS safe area inset (iOS home gesture bar, etc.)
                   paddingBottom: `calc(env(safe-area-inset-bottom,0px) + 0.75rem)`,
                 }}
               >
