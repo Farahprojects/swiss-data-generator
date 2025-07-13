@@ -294,22 +294,10 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     setCurrentView('report');
   };
   
-  // Close report viewer and return to success screen
+  // Close report viewer and clear everything for new purchase
   const handleCloseReportViewer = () => {
-    console.log('📱 Mobile: Closing report viewer');
-    setViewingReport(false);
-    setCurrentView('success');
-    
-    // Clear report state
-    setReportContent('');
-    setReportPdf(null);
-    setSwissData(null);
-    setHasReport(false);
-    setSwissBoolean(false);
-    setReportType('');
-    
-    // Clear session memory for new purchase
-    clearAllSessionData();
+    console.log('📱 Mobile: Closing report viewer and resetting drawer');
+    resetDrawer(); // This closes the drawer and clears all session data
   };
 
   // Step 3 validation and auto-scroll
