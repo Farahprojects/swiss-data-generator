@@ -204,16 +204,13 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
             <Button variant="ghost" size="icon" onClick={onBack} className="absolute left-6 p-2 hover:bg-gray-50">
               <ArrowLeft className="h-5 w-5 text-gray-700" />
             </Button>
-            <div className="absolute right-6 flex gap-2">
-              <Button variant="ghost" size="icon" onClick={handleCopyToClipboard} className="p-2 hover:bg-gray-50">
-                <Copy className="h-5 w-5 text-gray-700" />
-              </Button>
-              {mappedReport.pdfData && (
+            {mappedReport.pdfData && (
+              <div className="absolute right-6">
                 <Button variant="ghost" size="icon" onClick={handleDownloadPdf} className="p-2 hover:bg-gray-50">
                   <Download className="h-5 w-5 text-gray-700" />
                 </Button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           {toggleLogic.showToggle && (
@@ -269,6 +266,10 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
             <button onClick={handleChatGPT} className="flex items-center text-gray-700 font-light text-lg hover:text-gray-900 transition-colors duration-300">
               <img src={openaiLogo} alt="ChatGPT" className="h-5 w-5 mr-2" />
               GPT
+            </button>
+            <button onClick={onBack} className="flex items-center text-gray-700 font-light text-lg hover:text-gray-900 transition-colors duration-300">
+              <X className="h-5 w-5 mr-2" />
+              Close
             </button>
           </div>
         </div>

@@ -348,16 +348,6 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
           touchAction: 'manipulation',
         }}
       >
-        {/* ----- Header close button ------------------------------------- */}
-        <button
-          type="button"
-          onClick={resetDrawer}
-          aria-label="Close report drawer"
-          className="absolute top-4 right-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 z-10"
-          style={{ WebkitTapHighlightColor: 'transparent' }}
-        >
-          <X className="h-4 w-4" />
-        </button>
 
         {/* --------------------------- FORM VIEW ------------------------- */}
         {currentView === 'form' && (
