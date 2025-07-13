@@ -2,14 +2,20 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { useIsMobile } from '@/hooks/use-mobile';
 interface DesktopStickyTriggerProps {
   onGetReportClick?: () => void;
 }
 
 const DesktopStickyTrigger = ({ onGetReportClick }: DesktopStickyTriggerProps) => {
   const [isVisible, setIsVisible] = useState(false);
-  const isMobile = useIsMobile();
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Safe mobile detection on client side only
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
