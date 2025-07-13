@@ -464,7 +464,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
             {currentStep >= 2 && (
               <div
                 ref={footerRef}
-                className="fixed inset-x-0 bottom-0 bg-white border-t border-gray-200 flex justify-between items-center z-50"
+                className="absolute inset-x-0 bottom-0 bg-white border-t border-gray-200 flex justify-between items-center z-50"
                 style={{
                   height: 'var(--footer-h)',
                   padding: '0.75rem',
