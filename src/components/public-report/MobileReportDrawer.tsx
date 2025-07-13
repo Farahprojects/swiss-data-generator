@@ -31,12 +31,14 @@ import { ReportFormData } from '@/types/public-report';
 /**
  * MobileReportDrawer – end‑to‑end drawer flow optimised for mobile browsers.
  *
- * Tweaks:
- *   • keyboard‑safe vh workaround (footer stable)
- *   • footer height reduced (p‑2) so it feels lighter on mobile
- *   • dynamic scroll‑padding still follows footer height
+ * Key production‑readiness tweaks:
+ *   • keyboard‑safe 100 vh workaround (footer no longer jumps)
+ *   • dynamic scroll‑padding that always matches footer height
+ *   • smooth‑scroll polyfill on legacy browsers only
+ *   • body‑scroll lock while drawer is open
  */
 
+// ---------- Helpers -------------------------------------------------------
 const isBrowser = typeof window !== 'undefined';
 
 // Smooth‑scroll polyfill (legacy Safari / Android 9)
@@ -63,6 +65,7 @@ const useBodyScrollLock = (active: boolean) => {
   }, [active]);
 };
 
+// -------------------------------------------------------------------------
 interface MobileReportDrawerProps {
   isOpen: boolean;
   onClose: () => void;
@@ -71,19 +74,33 @@ interface MobileReportDrawerProps {
 type DrawerView = 'form' | 'success' | 'report-viewer';
 
 const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
+  // ------------------------------ State ----------------------------------
   const [currentView, setCurrentView] = useState<DrawerView>('form');
-  const [submittedData, setSubmittedData] = useState<{ name: string; email: string } | null>(null);
+  const [submittedData, setSubmittedData] = useState<{
+    name: string;
+    email: string;
+  } | null>(null);
 
   const footerRef = useRef<HTMLDivElement>(null);
 
+  // ----------------------------- Hooks -----------------------------------
   useSmoothScrollPolyfill();
   useBodyScrollLock(isOpen);
 
+  // Get guest report data for viewing reports - same as desktop
   const urlGuestId = getGuestReportId();
-  const { data: guestReportData, isLoading: isLoadingReport, error: reportError } = useGuestReportData(urlGuestId);
+  const { data: guestReportData, isLoading: isLoadingReport, error: reportError } =
+    useGuestReportData(urlGuestId);
 
   const { form, currentStep, nextStep, prevStep } = useMobileDrawerForm();
-  const { register, handleSubmit, setValue, watch, control, formState: { errors } } = form;
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    control,
+    formState: { errors },
+  } = form;
   const { isProcessing, submitReport } = useReportSubmission();
   const { promoValidation, isValidatingPromo } = usePromoValidation();
 
@@ -91,43 +108,65 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   const reportSubCategory = watch('reportSubCategory');
   const request = watch('request');
 
-  /** Keyboard‑safe vh variable */
+  // --------------- Viewport height CSS var (keyboard‑safe) -----------------
   useEffect(() => {
     if (!isBrowser) return;
-    const THRESHOLD = 150;
-    const setVH = (h: number) => document.documentElement.style.setProperty('--vh', `${h * 0.01}px`);
+
+    const KEYBOARD_THRESHOLD = 150; // px – ignore viewport loss bigger than this (likely keyboard)
+    const setVH = (h: number) =>
+      document.documentElement.style.setProperty('--vh', `${h * 0.01}px`);
+
+    // 1) lock to height when drawer opens
     setVH(window.innerHeight);
+
+    // 2) only react to orientation/real resizes, not keyboard
     const handleResize = () => {
       const lost = window.innerHeight - window.visualViewport.height;
-      if (lost > THRESHOLD) return; // Ignore keyboard
+      if (lost > KEYBOARD_THRESHOLD) return; // keyboard visible – ignore
       setVH(window.visualViewport.height);
     };
+
     window.addEventListener('orientationchange', () => setVH(window.innerHeight));
     window.visualViewport?.addEventListener('resize', handleResize, { passive: true });
+
     return () => window.visualViewport?.removeEventListener('resize', handleResize);
   }, []);
 
+  // ----------------------------- Auto‑scroll -----------------------------
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const t = window.setTimeout(() => {
       const container = scrollContainerRef.current;
       if (!container) return;
       container.scrollTo({ top: 0, behavior: 'smooth' });
-      const firstFocusable = container.querySelector<HTMLElement>('input, select, textarea');
+
+      // Only focus actual form inputs, not selection buttons
+      const firstFocusable = container.querySelector<HTMLElement>(
+        'input[type="text"], input[type="email"], input[type="date"], input[type="time"], select, textarea',
+      );
       if (firstFocusable) {
         firstFocusable.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        // Ensure no accidental focus on interactive elements
+        setTimeout(() => {
+          const activeElement = document.activeElement as HTMLElement;
+          if (activeElement && activeElement.tagName === 'BUTTON') {
+            activeElement.blur();
+          }
+        }, 100);
       }
     }, 350);
     return () => window.clearTimeout(t);
   }, [currentStep]);
 
+  // --------------------- Stripe return handler ---------------------------
   useEffect(() => {
     if (!isOpen || !isBrowser) return;
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get('session_id');
     const status = params.get('status');
     if (sessionId && status === 'success') {
-      const email = params.get('email') || localStorage.getItem('pending_report_email');
+      const email =
+        params.get('email') || localStorage.getItem('pending_report_email');
       if (email) {
         setSubmittedData({ name: 'Customer', email });
         setCurrentView('success');
@@ -137,28 +176,44 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     }
   }, [isOpen]);
 
+  // -------------------- Dynamic footer height ---------------------------
   useLayoutEffect(() => {
     if (!footerRef.current) return;
-    const setSpace = () => document.documentElement.style.setProperty('--footer-space', `${footerRef.current!.offsetHeight}px`);
+    const setSpace = () => {
+      document.documentElement.style.setProperty(
+        '--footer-space', `${footerRef.current!.offsetHeight}px`,
+      );
+    };
     setSpace();
     const ro = new ResizeObserver(setSpace);
     ro.observe(footerRef.current);
     return () => ro.disconnect();
   }, [currentStep]);
 
+  // --------------------------- Helpers ----------------------------------
   const resetDrawer = () => {
     onClose();
     form.reset();
     setCurrentView('form');
     setSubmittedData(null);
-    clearGuestReportId();
+
+    clearGuestReportId(); // Clear URL and localStorage
   };
 
-  const promoValidationState = useMemo(() => ({
-    status: promoValidation?.isValid ? (promoValidation.isFree ? 'valid-free' : 'valid-discount') : promoValidation ? 'invalid' : 'none',
-    message: promoValidation?.message || '',
-    discountPercent: promoValidation?.discountPercent || 0,
-  }), [promoValidation]);
+  const promoValidationState = useMemo(
+    () => ({
+      status: (promoValidation?.isValid
+        ? promoValidation.isFree
+          ? 'valid-free'
+          : 'valid-discount'
+        : promoValidation
+        ? 'invalid'
+        : 'none') as 'valid-free' | 'valid-discount' | 'invalid' | 'none' | 'validating',
+      message: promoValidation?.message || '',
+      discountPercent: promoValidation?.discountPercent || 0,
+    }),
+    [promoValidation],
+  );
 
   const onSubmit = async (data: ReportFormData) => {
     setSubmittedData({ name: data.name, email: data.email });
@@ -168,52 +223,297 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   };
   const handleFormSubmit = () => handleSubmit(onSubmit)();
 
-  const handleViewReport = () => setCurrentView('report-viewer');
+  const handleViewReport = (
+    reportContent: string,
+    reportPdfData?: string | null,
+    swissData?: any,
+    hasReport?: boolean,
+    swissBoolean?: boolean,
+    reportType?: string,
+  ) => {
+    // Just switch to report viewer - data will be loaded from database
+    setCurrentView('report-viewer');
+  };
   const handleBackFromReport = () => resetDrawer();
 
+  // Step 3 validation and auto-scroll
   const handleStep3Continue = () => {
-    const isCompatibility = reportCategory === 'compatibility' || request === 'sync';
-    const required: { name: keyof ReportFormData }[] = [
-      { name: 'name' },
-      { name: 'email' },
-      { name: 'birthDate' },
-      { name: 'birthTime' },
-      { name: 'birthLocation' },
+    const reportCategory = watch('reportCategory');
+    const request = watch('request');
+    const isCompatibilityReport = reportCategory === 'compatibility' || request === 'sync';
+
+    // Required fields for person 1
+    const requiredFields = [
+      { name: 'name', label: 'Full Name' },
+      { name: 'email', label: 'Email Address' },
+      { name: 'birthDate', label: 'Birth Date' },
+      { name: 'birthTime', label: 'Birth Time' },
+      { name: 'birthLocation', label: 'Birth Location' },
     ];
-    if (isCompatibility) {
-      required.push(
-        { name: 'secondPersonName' },
-        { name: 'secondPersonBirthDate' },
-        { name: 'secondPersonBirthTime' },
-        { name: 'secondPersonBirthLocation' },
+
+    // Add second person fields for compatibility reports
+    if (isCompatibilityReport) {
+      requiredFields.push(
+        { name: 'secondPersonName', label: 'Partner Name' },
+        { name: 'secondPersonBirthDate', label: 'Partner Birth Date' },
+        { name: 'secondPersonBirthTime', label: 'Partner Birth Time' },
+        { name: 'secondPersonBirthLocation', label: 'Partner Birth Location' },
       );
     }
-    const missing = required.filter((f) => !watch(f.name));
-    if (missing.length) {
-      const el = document.querySelector(`#${missing[0].name}`);
-      el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-      (el as HTMLInputElement | null)?.focus?.();
+
+    // Check for empty fields
+    const emptyFields = requiredFields.filter(
+      (field) => !watch(field.name as keyof ReportFormData),
+    );
+
+    if (emptyFields.length > 0) {
+      // Scroll to first empty field
+      const firstEmptyField = emptyFields[0];
+      const fieldElement =
+        document.querySelector(`#${firstEmptyField.name}`) ||
+        document.querySelector(
+          `#secondPerson${firstEmptyField.name.replace('secondPerson', '')}`,
+        );
+
+      if (fieldElement) {
+        fieldElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        (fieldElement as HTMLInputElement).focus?.();
+      }
+
+      // Add red highlighting to empty fields
+      emptyFields.forEach((field) => {
+        const element =
+          document.querySelector(`#${field.name}`) ||
+          document.querySelector(
+            `#secondPerson${field.name.replace('secondPerson', '')}`,
+          );
+        if (element) {
+          element.classList.add('border-red-500', 'ring-1', 'ring-red-500');
+          setTimeout(() => {
+            element.classList.remove('border-red-500', 'ring-1', 'ring-red-500');
+          }, 3000);
+        }
+      });
+
       return;
     }
+
+    // All fields are filled, proceed to next step
     nextStep();
   };
 
+  // Tailwind helper for dots
   const ProgressDots = () => (
     <div className="flex justify-center space-x-2 mb-3" aria-hidden="true">
-      {[1, 2, 3, 4].map((s) => (
-        <div key={s} className={`w-2 h-2 rounded-full transition-colors duration-200 ${s === currentStep ? 'bg-primary' : s < currentStep ? 'bg-primary/60' : 'bg-gray-300'}`} />
+      {[1, 2, 3, 4].map((step) => (
+        <div
+          key={step}
+          className={`w-2 h-2 rounded-full transition-colors duration-200 ${
+            step === currentStep
+              ? 'bg-primary'
+              : step < currentStep
+              ? 'bg-primary/60'
+              : 'bg-gray-300'
+          }`}
+        />
       ))}
     </div>
   );
 
+  // ---------------------------------------------------------------------
   return (
     <Drawer open={isOpen} onOpenChange={resetDrawer} dismissible={false}>
       <DrawerContent
         className="flex flex-col rounded-none [&>div:first-child]:hidden"
-        style={{ height: 'calc(var(--vh,1vh)*100)', maxHeight: 'calc(var(--vh,1vh)*100)', overflowY: currentView === 'form' ? 'hidden' : 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'none', touchAction: 'manipulation' }}
+        style={{
+          height: 'calc(var(--vh, 1vh) * 100)',
+          maxHeight: 'calc(var(--vh, 1vh) * 100)',
+          overflowY: currentView === 'form' ? 'hidden' : 'auto',
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehavior: 'none',
+          touchAction: 'manipulation',
+        }}
       >
+        {/* ----- Header close button ------------------------------------- */}
         <button
           type="button"
           onClick={resetDrawer}
           aria-label="Close report drawer"
-          className="absolute top-[calc(env(safe
+          className="absolute top-[calc(env(safe-area-inset-top,20px)+12px)] right-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 z-10"
+          style={{ WebkitTapHighlightColor: 'transparent' }}
+        >
+          <X className="h-4 w-4" />
+        </button>
+
+        {/* --------------------------- FORM VIEW ------------------------- */}
+        {currentView === 'form' && (
+          <div className="flex flex-col h-full">
+            <DrawerHeader className="flex-shrink-0 pt-[calc(env(safe-area-inset-top,20px)+24px)] pb-2 px-4">
+              <ProgressDots />
+              <DrawerTitle className="sr-only">Report Request Flow</DrawerTitle>
+            </DrawerHeader>
+
+            {/* ----- Scroll container ---------------------------------- */}
+            <div
+              ref={scrollContainerRef}
+              className={`flex-1 px-6 overflow-y-auto scrollbar-hide ${
+                currentStep >= 2
+                  ? 'pb-[calc(var(--footer-space,72px)+env(safe-area-inset-bottom,0px))]'
+                  : 'pb-6'
+              }`}
+            >
+              <AnimatePresence mode="wait">
+                {currentStep === 1 && (
+                  <Step1ReportType
+                    key="step1"
+                    control={control}
+                    setValue={setValue}
+                    onNext={nextStep}
+                    selectedCategory={reportCategory}
+                  />
+                )}
+
+                {currentStep === 2 && reportCategory === 'astro-data' && (
+                  <Step1_5AstroData
+                    key="step1_5_astro"
+                    control={control}
+                    setValue={setValue}
+                    onNext={nextStep}
+                    selectedSubCategory={request}
+                  />
+                )}
+
+                {currentStep === 2 && reportCategory !== 'astro-data' && (
+                  <Step1_5SubCategory
+                    key="step1_5"
+                    control={control}
+                    setValue={setValue}
+                    onNext={nextStep}
+                    onPrev={prevStep}
+                    selectedCategory={reportCategory}
+                    selectedSubCategory={reportSubCategory}
+                  />
+                )}
+
+                {currentStep === 3 && (
+                  <Step2BirthDetails
+                    key="step2"
+                    register={register}
+                    setValue={setValue}
+                    watch={watch}
+                    errors={errors}
+                  />
+                )}
+
+                {currentStep === 4 && (
+                  <Step3Payment
+                    key="step3"
+                    register={register}
+                    watch={watch}
+                    errors={errors}
+                    isProcessing={isProcessing}
+                    promoValidation={promoValidationState}
+                    isValidatingPromo={isValidatingPromo}
+                  />
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* ----------------------- FOOTER -------------------------- */}
+            {currentStep >= 2 && (
+              <div
+                ref={footerRef}
+                className="absolute inset-x-0 bottom-0 bg-white border-t border-gray-200 p-3 pb-safe flex justify-between items-center z-50"
+                style={{
+                  // add OS safe area inset (iOS home gesture bar, etc.)
+                  paddingBottom: `calc(env(safe-area-inset-bottom,0px) + 0.75rem)`,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={prevStep}
+                  className="w-auto min-w-fit bg-gray-100 text-gray-700 px-6 py-2 rounded-lg text-base font-medium hover:bg-gray-200 transition-all duration-300"
+                  style={{ WebkitTapHighlightColor: 'transparent' }}
+                >
+                  Back
+                </button>
+                {currentStep >= 3 && (
+                  <button
+                    type="button"
+                    onClick={currentStep === 3 ? handleStep3Continue : handleFormSubmit}
+                    disabled={currentStep === 4 && (isProcessing || isValidatingPromo)}
+                    className="w-auto min-w-fit bg-gray-900 text-white px-8 py-2 rounded-lg text-base font-medium hover:bg-gray-800 transition-all duration-300 disabled:opacity-50"
+                    style={{ WebkitTapHighlightColor: 'transparent' }}
+                  >
+                    {currentStep === 3
+                      ? 'Continue'
+                      : isProcessing
+                      ? 'Processing…'
+                      : isValidatingPromo
+                      ? 'Validating…'
+                      : 'Confirm'}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ------------------------- SUCCESS --------------------------- */}
+        {currentView === 'success' && submittedData && (
+          <div className="flex flex-col h-full pt-12">
+            <SuccessScreen
+              name={submittedData.name}
+              email={submittedData.email}
+              onViewReport={handleViewReport}
+              guestReportId={getGuestReportId() || undefined}
+            />
+          </div>
+        )}
+
+        {/* --------------------- REPORT VIEWER ------------------------- */}
+        {currentView === 'report-viewer' && guestReportData && !isLoadingReport && (
+          <div className="flex flex-col h-full">
+            <ReportViewer
+              mappedReport={mapReportPayload({
+                guest_report: guestReportData.guest_report,
+                report_content: guestReportData.report_content,
+                swiss_data: guestReportData.swiss_data,
+                metadata: guestReportData.metadata,
+              })}
+              onBack={handleBackFromReport}
+              isMobile={true}
+            />
+          </div>
+        )}
+
+        {/* Loading state when viewing report */}
+        {currentView === 'report-viewer' && isLoadingReport && (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading report...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Error state when viewing report fails */}
+        {currentView === 'report-viewer' && (reportError || !guestReportData) && !isLoadingReport && (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center space-y-4">
+              <p className="text-destructive mb-4">Failed to load report</p>
+              <button
+                onClick={handleBackFromReport}
+                className="bg-primary text-primary-foreground px-4 py-2 rounded"
+              >
+                Go Back
+              </button>
+            </div>
+          </div>
+        )}
+      </DrawerContent>
+    </Drawer>
+  );
+};
+
+export default MobileReportDrawer;
