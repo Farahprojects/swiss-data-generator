@@ -29,7 +29,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   fontFamily = 'Inter',
   onFormStateChange
 }) => {
-  const { promoValidation, isValidatingPromo } = usePromoValidation();
+  const { promoValidation, isValidatingPromo, validatePromoManually, resetValidation } = usePromoValidation();
   const [viewingReport, setViewingReport] = useState(false);
   const [reportContent, setReportContent] = useState<string>('');
   const [reportPdfData, setReportPdfData] = useState<string | null>(null);
@@ -349,7 +349,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       discountPercent: 0
     };
     
-    await submitReport(submissionData, promoValidationState, () => {});
+    await submitReport(submissionData, promoValidationState, resetValidation);
   };
 
   const handleButtonClick = async () => {
@@ -553,7 +553,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
               showPromoConfirmation={showPromoConfirmation}
               pendingSubmissionData={pendingSubmissionData}
               onPromoConfirmationTryAgain={handlePromoConfirmationTryAgain}
-              onPromoConfirmationContinue={() => handlePromoConfirmationContinue(() => {})}
+              onPromoConfirmationContinue={() => handlePromoConfirmationContinue(resetValidation)}
               />
             </div>
           )}

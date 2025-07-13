@@ -114,7 +114,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   } = form;
 
   const { isProcessing, submitReport } = useReportSubmission();
-  const { promoValidation, isValidatingPromo } = usePromoValidation();
+  const { promoValidation, isValidatingPromo, validatePromoManually, resetValidation } = usePromoValidation();
 
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');
@@ -212,7 +212,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   const onSubmit = async (data: ReportFormData) => {
     setSubmittedData({ name: data.name, email: data.email });
     localStorage.setItem('pending_report_email', data.email);
-    await submitReport(data, promoValidationState, () => {});
+    await submitReport(data, promoValidationState, resetValidation);
     setCurrentView('success');
   };
   const handleFormSubmit = () => handleSubmit(onSubmit)();
