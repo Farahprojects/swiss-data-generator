@@ -69,6 +69,24 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
     }
   };
 
+  // Smart PDF download logic that matches desktop behavior
+  const handleSmartPdfDownload = () => {
+    const hasPdfData = !!mappedReport.pdfData;
+    const hasSwissData = !!mappedReport.swissData;
+    const hasReportContent = !!mappedReport.reportContent && mappedReport.reportContent.trim().length > 20;
+
+    if (hasPdfData && hasSwissData) {
+      // Both exist - generate unified PDF
+      handleDownloadUnifiedPdf();
+    } else if (hasPdfData) {
+      // Only PDF exists - use simple download
+      handleDownloadPdf();
+    } else if (hasSwissData || hasReportContent) {
+      // Only Swiss data or report content exists - generate unified PDF
+      handleDownloadUnifiedPdf();
+    }
+  };
+
   const handleDownloadUnifiedPdf = async () => {
     if (!mappedReport.reportContent && !mappedReport.swissData) {
       toast({
@@ -224,7 +242,7 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
             </div>
           )}
           {(mappedReport.pdfData || mappedReport.swissData || (mappedReport.reportContent && mappedReport.reportContent.trim().length > 20)) && (
-            <Button variant="ghost" size="icon" onClick={handleDownloadPdf} className="p-2 hover:bg-gray-100 transition-colors active:scale-95">
+            <Button variant="ghost" size="icon" onClick={handleSmartPdfDownload} className="p-2 hover:bg-gray-100 transition-colors active:scale-95">
               <Download className="h-5 w-5 text-gray-700" />
             </Button>
           )}

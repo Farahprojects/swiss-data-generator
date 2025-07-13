@@ -404,7 +404,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
       <DrawerContent
         className="flex flex-col rounded-none h-screen max-h-screen"
         style={{
-          overflowY: currentView === 'form' ? 'hidden' : 'auto',
+          overflowY: currentView === 'report' ? 'hidden' : currentView === 'form' ? 'hidden' : 'auto',
           WebkitOverflowScrolling: 'touch',
           overscrollBehavior: 'none',
           touchAction: 'manipulation',
