@@ -400,14 +400,15 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
   // ---------------------------------------------------------------------
   return (
-    <Drawer open={isOpen} onOpenChange={resetDrawer} dismissible={false}>
-      <DrawerContent
-        className="flex flex-col rounded-none h-screen max-h-screen"
-        style={{
-          overflowY: currentView === 'report' ? 'hidden' : currentView === 'form' ? 'hidden' : 'auto',
-          WebkitOverflowScrolling: 'touch',
-          overscrollBehavior: 'none',
-          touchAction: 'manipulation',
+    <>
+      <Drawer open={isOpen && currentView !== 'report'} onOpenChange={resetDrawer} dismissible={false}>
+        <DrawerContent
+          className="flex flex-col rounded-none h-screen max-h-screen"
+          style={{
+            overflowY: currentView === 'report' ? 'hidden' : currentView === 'form' ? 'hidden' : 'auto',
+            WebkitOverflowScrolling: 'touch',
+            overscrollBehavior: 'none',
+            touchAction: 'manipulation',
         }}
       >
 
@@ -579,25 +580,26 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
             />
           </div>
         )}
+        </DrawerContent>
+      </Drawer>
 
-        {/* ------------------------- REPORT VIEWER -------------------- */}
-        {currentView === 'report' && viewingReport && (
-          <ReportViewer
-            mappedReport={{
-              reportContent,
-              pdfData: reportPdf,
-              swissData,
-              hasReport,
-              swissBoolean,
-              reportType,
-              customerName: submittedData?.name || 'Customer'
-            } as MappedReport}
-            onBack={handleCloseReportViewer}
-            isMobile={true}
-          />
-        )}
-      </DrawerContent>
-    </Drawer>
+      {/* ------------------------- REPORT VIEWER (OUTSIDE DRAWER) -------------------- */}
+      {currentView === 'report' && viewingReport && (
+        <ReportViewer
+          mappedReport={{
+            reportContent,
+            pdfData: reportPdf,
+            swissData,
+            hasReport,
+            swissBoolean,
+            reportType,
+            customerName: submittedData?.name || 'Customer'
+          } as MappedReport}
+          onBack={handleCloseReportViewer}
+          isMobile={true}
+        />
+      )}
+    </>
   );
 };
 
