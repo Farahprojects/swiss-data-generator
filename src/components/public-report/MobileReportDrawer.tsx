@@ -17,16 +17,13 @@ import { useMobileDrawerForm } from '@/hooks/useMobileDrawerForm';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { clearGuestReportId, getGuestReportId } from '@/utils/urlHelpers';
-import { useGuestReportData } from '@/hooks/useGuestReportData';
+import { clearAllSessionData, getGuestReportId } from '@/utils/urlHelpers';
 import Step1ReportType from './drawer-steps/Step1ReportType';
 import Step1_5SubCategory from './drawer-steps/Step1_5SubCategory';
 import Step1_5AstroData from './drawer-steps/Step1_5AstroData';
 import Step2BirthDetails from './drawer-steps/Step2BirthDetails';
 import Step3Payment from './drawer-steps/Step3Payment';
 import SuccessScreen from './SuccessScreen';
-import { ReportViewer } from './ReportViewer';
-import { mapReportPayload } from '@/utils/mapReportPayload';
 import { ReportFormData } from '@/types/public-report';
 
 /**
@@ -72,7 +69,7 @@ interface MobileReportDrawerProps {
   onClose: () => void;
 }
 
-type DrawerView = 'form' | 'success' | 'report-viewer';
+type DrawerView = 'form' | 'success';
 
 const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   // ------------------------------ State ----------------------------------
@@ -89,18 +86,15 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   useBodyScrollLock(isOpen);
   const isMobile = useIsMobile();
 
-  // Get guest report data for viewing reports - same as desktop
+  // Auto-open drawer and switch to success when guest report data is available (deep linking)
   const urlGuestId = getGuestReportId();
-  const { data: guestReportData, isLoading: isLoadingReport, error: reportError } =
-    useGuestReportData(urlGuestId);
-
-  // Auto-open drawer and switch to report-viewer when guest report data is available (deep linking)
   useEffect(() => {
-    if (guestReportData && !isLoadingReport && !reportError) {
-      // Switch to report viewer when guest report data is available
-      setCurrentView('report-viewer');
+    if (urlGuestId) {
+      // Switch to success view for direct links with guest_id
+      setCurrentView('success');
+      setSubmittedData({ name: 'Guest', email: 'guest@example.com' });
     }
-  }, [guestReportData, isLoadingReport, reportError]);
+  }, [urlGuestId]);
 
   const { form, currentStep, nextStep, prevStep } = useMobileDrawerForm();
   const {
@@ -190,7 +184,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     setCurrentView('form');
     setSubmittedData(null);
 
-    clearGuestReportId(); // Clear URL and localStorage
+    clearAllSessionData(); // Clear URL and localStorage
   };
 
   const promoValidationState = useMemo(
@@ -216,18 +210,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   };
   const handleFormSubmit = () => handleSubmit(onSubmit)();
 
-  const handleViewReport = (
-    reportContent: string,
-    reportPdfData?: string | null,
-    swissData?: any,
-    hasReport?: boolean,
-    swissBoolean?: boolean,
-    reportType?: string,
-  ) => {
-    // Just switch to report viewer - data will be loaded from database
-    setCurrentView('report-viewer');
-  };
-  const handleBackFromReport = () => resetDrawer();
+  // No need for handleViewReport - SuccessScreen handles everything
 
   // Step 3 validation and auto-scroll
   const handleStep3Continue = () => {
@@ -494,62 +477,8 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
             <SuccessScreen
               name={submittedData.name}
               email={submittedData.email}
-              onViewReport={handleViewReport}
               guestReportId={getGuestReportId() || undefined}
             />
-          </div>
-        )}
-
-        {/* --------------------- REPORT VIEWER ------------------------- */}
-        {currentView === 'report-viewer' && guestReportData && !isLoadingReport && (
-          <div className="flex flex-col h-full">
-            <DrawerHeader className="pt-4 px-4">
-              <DrawerTitle>
-                {mapReportPayload({
-                  guest_report: guestReportData.guest_report,
-                  report_content: guestReportData.report_content,
-                  swiss_data: guestReportData.swiss_data,
-                  metadata: guestReportData.metadata,
-                }).customerName || 'Guest Report'}
-              </DrawerTitle>
-            </DrawerHeader>
-            <div className="px-4">
-              <ReportViewer
-                mappedReport={mapReportPayload({
-                  guest_report: guestReportData.guest_report,
-                  report_content: guestReportData.report_content,
-                  swiss_data: guestReportData.swiss_data,
-                  metadata: guestReportData.metadata,
-                })}
-                onBack={handleBackFromReport}
-                isMobile={true}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Loading state when viewing report */}
-        {currentView === 'report-viewer' && isLoadingReport && (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-muted-foreground">Loading report...</p>
-            </div>
-          </div>
-        )}
-
-        {/* Error state when viewing report fails */}
-        {currentView === 'report-viewer' && (reportError || !guestReportData) && !isLoadingReport && (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center space-y-4">
-              <p className="text-destructive mb-4">Failed to load report</p>
-              <button
-                onClick={handleBackFromReport}
-                className="bg-primary text-primary-foreground px-4 py-2 rounded"
-              >
-                Go Back
-              </button>
-            </div>
           </div>
         )}
       </DrawerContent>

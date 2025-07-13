@@ -4,10 +4,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { reportSchema } from '@/schemas/report-form-schema';
 import { ReportFormData } from '@/types/public-report';
+import { clearAllSessionData } from '@/utils/urlHelpers';
 
 export type DrawerStep = 1 | 2 | 3 | 4;
-export type DrawerView = 'form' | 'success' | 'report-viewer';
-
 export const useMobileDrawerForm = () => {
   const [currentStep, setCurrentStep] = useState<DrawerStep>(1);
   const [isOpen, setIsOpen] = useState(false);
@@ -52,6 +51,8 @@ export const useMobileDrawerForm = () => {
   const resetForm = () => {
     form.reset();
     setCurrentStep(1);
+    // Clear all session data when resetting
+    clearAllSessionData();
   };
 
   const openDrawer = () => {
