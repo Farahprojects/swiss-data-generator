@@ -553,6 +553,7 @@ export type Database = {
           coach_name: string | null
           coach_slug: string | null
           created_at: string
+          edge_function_confirmed: boolean | null
           email: string
           email_sent: boolean
           has_report: boolean
@@ -565,6 +566,7 @@ export type Database = {
           purchase_type: string | null
           report_data: Json
           report_log_id: string | null
+          report_pdf_data: string | null
           report_type: string | null
           stripe_session_id: string
           swiss_boolean: boolean | null
@@ -577,6 +579,7 @@ export type Database = {
           coach_name?: string | null
           coach_slug?: string | null
           created_at?: string
+          edge_function_confirmed?: boolean | null
           email: string
           email_sent?: boolean
           has_report?: boolean
@@ -589,6 +592,7 @@ export type Database = {
           purchase_type?: string | null
           report_data?: Json
           report_log_id?: string | null
+          report_pdf_data?: string | null
           report_type?: string | null
           stripe_session_id: string
           swiss_boolean?: boolean | null
@@ -601,6 +605,7 @@ export type Database = {
           coach_name?: string | null
           coach_slug?: string | null
           created_at?: string
+          edge_function_confirmed?: boolean | null
           email?: string
           email_sent?: boolean
           has_report?: boolean
@@ -613,6 +618,7 @@ export type Database = {
           purchase_type?: string | null
           report_data?: Json
           report_log_id?: string | null
+          report_pdf_data?: string | null
           report_type?: string | null
           stripe_session_id?: string
           swiss_boolean?: boolean | null
