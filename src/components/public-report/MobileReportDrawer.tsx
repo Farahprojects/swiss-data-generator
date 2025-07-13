@@ -344,7 +344,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
               ref={scrollContainerRef}
               className={`flex-1 px-6 overflow-y-auto scrollbar-hide ${
                 currentStep >= 1
-                  ? 'pb-[calc(var(--footer-h)*0.55+env(safe-area-inset-bottom,0px))]'
+                  ? 'pb-[calc(var(--footer-h)+env(safe-area-inset-bottom,0px))]'
                   : 'pb-6'
               }`}
             >
@@ -445,17 +445,23 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
             {currentStep >= 1 && (
               <div
                 ref={footerRef}
-                className="fixed inset-x-0 bottom-0 bg-white border-t border-gray-200 flex justify-between items-center z-50"
+                className="fixed inset-x-0 bottom-0 bg-white border-t border-gray-200"
                 style={{
-                  height: 'calc(var(--footer-h) * 0.55)',
-                  padding: '0.375rem',
-                  paddingBottom: `calc(env(safe-area-inset-bottom,0px) + 0.375rem)`,
+                  minHeight: 'var(--footer-h)',
+                  padding: '0.75rem',
+                  paddingBottom: `calc(env(safe-area-inset-bottom,0px) + 0.75rem)`,
+                  display: 'flex',
+                  gap: '0.5rem',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'nowrap',
+                  zIndex: 50,
                 }}
               >
                 <button
                   type="button"
                   onClick={currentStep === 1 ? resetDrawer : prevStep}
-                  className="w-auto min-w-fit bg-gray-100 text-gray-700 px-6 py-1 rounded-lg text-sm font-medium hover:bg-gray-200 transition-all duration-300"
+                  className="w-auto min-w-fit bg-gray-100 text-gray-700 px-6 py-1 rounded-lg text-sm font-medium hover:bg-gray-200 transition-all duration-300 whitespace-nowrap"
                   style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
                   {currentStep === 1 ? 'Close' : 'Back'}
@@ -465,7 +471,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                     type="button"
                     onClick={currentStep === 3 ? handleStep3Continue : handleFormSubmit}
                     disabled={currentStep === 4 && (isProcessing || isValidatingPromo)}
-                    className="w-auto min-w-fit bg-gray-900 text-white px-8 py-1 rounded-lg text-sm font-medium hover:bg-gray-800 transition-all duration-300 disabled:opacity-50"
+                    className="w-auto min-w-fit bg-gray-900 text-white px-8 py-1 rounded-lg text-sm font-medium hover:bg-gray-800 transition-all duration-300 disabled:opacity-50 whitespace-nowrap"
                     style={{ WebkitTapHighlightColor: 'transparent' }}
                   >
                     {currentStep === 3
