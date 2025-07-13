@@ -43,7 +43,8 @@ export class ReportParser {
         });
         return;
       }
-      if (/^\d+\.\s/.test(line)) {
+      // Check if it's a numbered action item (short lines with action words)
+      if (/^\d+\.\s/.test(line) && !this.isHeading(line)) {
         out.push({ type: 'action', text: line });
         return;
       }
@@ -55,6 +56,13 @@ export class ReportParser {
   static isHeading(line: string): boolean {
     const t = line.toLowerCase().trim();
     const h = ['summary','insights','actions','tags','conclusion','recommendations','overview','analysis','findings','key points','next steps','takeaways'];
+    
+    // Check for numbered section headings (like "1. The Core Polarity")
+    const numberedSectionPattern = /^\d+\.\s+[A-Z][^.]*$/;
+    if (numberedSectionPattern.test(line.trim()) && line.length < 100) {
+      return true;
+    }
+    
     return line.length < 60 && h.some(s => t === s || t === `${s}:` || t.startsWith(`${s}:`));
   }
 

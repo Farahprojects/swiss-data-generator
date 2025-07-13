@@ -57,11 +57,7 @@ export class AIReportTemplate extends BaseTemplate {
     // Reset font just in case
     doc.setFontSize(11).setFont('helvetica', 'normal').setTextColor(33);
 
-    // Section Title: AI Intelligence Report
-    const sectionTitle = 'AI Intelligence Report';
-    doc.setFontSize(16).setFont('helvetica', 'bold').setTextColor(58, 39, 96);
-    doc.text(sectionTitle, margins.left, currentY);
-    currentY += 14;
+    // Start directly with the report content
 
     const blocks = ReportParser.parseReport(reportContent);
     const lineHeight = 7;
