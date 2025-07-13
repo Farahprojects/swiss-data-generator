@@ -1,5 +1,10 @@
-import React, { useState, useCallback } from 'react';
-import { UseFormRegister, UseFormSetValue, UseFormWatch, FieldErrors } from 'react-hook-form';
+import React, { useState } from 'react';
+import {
+  UseFormRegister,
+  UseFormSetValue,
+  UseFormWatch,
+  FieldErrors
+} from 'react-hook-form';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { AlertCircle } from 'lucide-react';
@@ -59,12 +64,21 @@ const PersonCard = ({
 
   const handlePlaceSelect = (place: PlaceData) => {
     const loc = getField('birthLocation');
+
     setValue(loc, place.address || place.name);
     if (place.latitude) setValue(getField('birthLatitude'), place.latitude);
     if (place.longitude) setValue(getField('birthLongitude'), place.longitude);
     if (place.placeId) setValue(getField('birthPlaceId'), place.placeId);
+
+    document.activeElement?.blur?.();
+
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        scrollToNextField(loc);
+      }, 150);
+    });
+
     onPlaceSelect?.();
-    scrollToNextField(loc);
   };
 
   const ErrorMsg = ({ msg }: { msg: string }) => (
