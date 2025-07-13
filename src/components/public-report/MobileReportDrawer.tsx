@@ -17,6 +17,7 @@ import { useMobileDrawerForm } from '@/hooks/useMobileDrawerForm';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useMobileSafeTopPadding } from '@/hooks/useMobileSafeTopPadding';
 import { useGuestReportData } from '@/hooks/useGuestReportData';
 import { clearAllSessionData, getGuestReportId } from '@/utils/urlHelpers';
 import { handlePaymentSubmission } from '@/utils/paymentSubmissionHelper';
@@ -99,6 +100,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   useSmoothScrollPolyfill();
   useBodyScrollLock(isOpen);
   const isMobile = useIsMobile();
+  const topSafePadding = useMobileSafeTopPadding();
 
   // Auto-open drawer and switch to success when guest report data is available (deep linking)
   const urlGuestId = getGuestReportId();
@@ -396,9 +398,24 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     return null;
   }
 
+  // Visual debug mode for development
+  const debugOverlay = process.env.NODE_ENV === 'development' && (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      height: `${topSafePadding}px`,
+      width: '100%',
+      background: 'rgba(255, 0, 0, 0.2)',
+      zIndex: 9999,
+      pointerEvents: 'none'
+    }} />
+  );
+
   // ---------------------------------------------------------------------
   return (
     <>
+      {debugOverlay}
       <Drawer open={isOpen && currentView !== 'report'} onOpenChange={resetDrawer} dismissible={false}>
         <DrawerContent
           className="flex flex-col rounded-none h-screen max-h-screen"
@@ -413,7 +430,10 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
         {/* --------------------------- FORM VIEW ------------------------- */}
         {currentView === 'form' && (
           <div className="flex flex-col h-full">
-            <DrawerHeader className="flex-shrink-0 pt-[calc(env(safe-area-inset-top,20px)+24px)] pb-2 px-4">
+            <DrawerHeader
+              className="flex-shrink-0 pb-2 px-4"
+              style={{ paddingTop: `${topSafePadding + 24}px` }}
+            >
               <ProgressDots />
               <DrawerTitle className="sr-only">Report Request Flow</DrawerTitle>
             </DrawerHeader>
