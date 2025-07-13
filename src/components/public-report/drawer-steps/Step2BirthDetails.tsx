@@ -27,6 +27,23 @@ const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
   const reportCategory = watch('reportCategory');
   const request = watch('request');
   const isCompatibilityReport = reportCategory === 'compatibility' || request === 'sync';
+  
+  // State to manage which autocomplete is enabled (for mobile sequential loading)
+  const [person1LocationSelected, setPerson1LocationSelected] = React.useState(false);
+  
+  // Watch for person 1 location to enable person 2 autocomplete
+  const person1Location = watch('birthLocation');
+  
+  React.useEffect(() => {
+    if (person1Location && person1Location.trim().length > 0) {
+      setPerson1LocationSelected(true);
+    }
+  }, [person1Location]);
+  
+  // Callback when person 1 selects a location
+  const handlePerson1PlaceSelect = () => {
+    setPerson1LocationSelected(true);
+  };
 
   return (
     <div className="bg-white">
@@ -61,6 +78,7 @@ const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
             watch={watch}
             errors={errors}
             hasTriedToSubmit={false}
+            onPlaceSelect={handlePerson1PlaceSelect}
           />
         </div>
 
@@ -75,6 +93,8 @@ const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
               watch={watch}
               errors={errors}
               hasTriedToSubmit={false}
+              autocompleteDisabled={!person1LocationSelected}
+              helperText={!person1LocationSelected ? "Please complete your location first" : undefined}
             />
           </div>
         )}

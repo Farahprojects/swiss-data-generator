@@ -29,6 +29,9 @@ interface PersonCardProps {
   watch: UseFormWatch<ReportFormData>;
   errors: FieldErrors<ReportFormData>;
   hasTriedToSubmit: boolean;
+  autocompleteDisabled?: boolean;
+  helperText?: string;
+  onPlaceSelect?: () => void;
 }
 
 const PersonCard = ({
@@ -39,6 +42,9 @@ const PersonCard = ({
   watch,
   errors,
   hasTriedToSubmit,
+  autocompleteDisabled = false,
+  helperText,
+  onPlaceSelect,
 }: PersonCardProps) => {
   const [hasInteracted, setHasInteracted] = useState({
     name: false,
@@ -142,6 +148,9 @@ const PersonCard = ({
     if (placeData.placeId) {
       setValue(placeIdField, placeData.placeId);
     }
+
+    // Notify parent component that place was selected (for sequential loading)
+    onPlaceSelect?.();
 
     // Enhanced layout stabilization for mobile with proper timing
     if (isMobile && typeof window !== 'undefined') {
@@ -348,6 +357,11 @@ const PersonCard = ({
 
         {/* LOCATION ---------------------------------------------------- */}
         <div className="space-y-3">
+          {helperText && autocompleteDisabled && (
+            <div className="text-sm text-gray-500 mb-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+              {helperText}
+            </div>
+          )}
           <PlaceAutocomplete
             label="Birth Location *"
             value={birthLocation}
@@ -361,6 +375,7 @@ const PersonCard = ({
             onPlaceSelect={handlePlaceSelect}
             placeholder="Enter birth city, state, country"
             id={`${prefix}birthLocation`}
+            disabled={autocompleteDisabled}
             error={shouldShowError('birthLocation', getError('birthLocation'))
               ? (getError('birthLocation')?.message as string)
               : undefined}
