@@ -17,6 +17,7 @@ import { useMobileDrawerForm } from '@/hooks/useMobileDrawerForm';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
 import { clearGuestReportId, getGuestReportId } from '@/utils/urlHelpers';
+import { useGuestReportData } from '@/hooks/useGuestReportData';
 import Step1ReportType from './drawer-steps/Step1ReportType';
 import Step1_5SubCategory from './drawer-steps/Step1_5SubCategory';
 import Step1_5AstroData from './drawer-steps/Step1_5AstroData';
@@ -84,19 +85,16 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     name: string;
     email: string;
   } | null>(null);
-  const [reportData, setReportData] = useState<{
-    content: string;
-    pdfData?: string | null;
-    swissData?: any;
-    hasReport?: boolean;
-    swissBoolean?: boolean;
-  } | null>(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const footerRef = useRef<HTMLDivElement>(null);
 
   // ----------------------------- Hooks -----------------------------------
   useSmoothScrollPolyfill();
   useBodyScrollLock(isOpen);
+
+  // Get guest report data for viewing reports - same as desktop
+  const urlGuestId = getGuestReportId();
+  const { data: guestReportData, isLoading: isLoadingReport, error: reportError } = useGuestReportData(urlGuestId);
 
   const { form, currentStep, nextStep, prevStep } = useMobileDrawerForm();
   const {
@@ -210,7 +208,6 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     form.reset();
     setCurrentView('form');
     setSubmittedData(null);
-    setReportData(null);
     setKeyboardVisible(false);
     clearGuestReportId(); // Clear URL and localStorage
   };
@@ -246,13 +243,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     swissBoolean?: boolean,
     reportType?: string
   ) => {
-    setReportData({ 
-      content: reportContent, 
-      pdfData: reportPdfData,
-      swissData,
-      hasReport,
-      swissBoolean
-    });
+    // Just switch to report viewer - data will be loaded from database
     setCurrentView('report-viewer');
   };
   const handleBackFromReport = () => resetDrawer();
@@ -485,22 +476,43 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
         )}
 
         {/* --------------------- REPORT VIEWER ------------------------- */}
-        {currentView === 'report-viewer' && reportData && submittedData && (
+        {currentView === 'report-viewer' && guestReportData && !isLoadingReport && (
           <div className="flex flex-col h-full">
             <ReportViewer
               mappedReport={mapReportPayload({
-                guest_report: submittedData, // Pass the complete guest_report object
-                report_content: reportData.content,
-                swiss_data: reportData.swissData,
-                metadata: {
-                  is_ai_report: reportData.hasReport || false,
-                  is_astro_report: reportData.swissBoolean || false,
-                  content_type: reportData.hasReport ? 'ai' : 'astro'
-                }
+                guest_report: guestReportData.guest_report,
+                report_content: guestReportData.report_content,
+                swiss_data: guestReportData.swiss_data,
+                metadata: guestReportData.metadata
               })}
               onBack={handleBackFromReport}
               isMobile={true}
             />
+          </div>
+        )}
+
+        {/* Loading state when viewing report */}
+        {currentView === 'report-viewer' && isLoadingReport && (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading report...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Error state when viewing report fails */}
+        {currentView === 'report-viewer' && (reportError || !guestReportData) && !isLoadingReport && (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center space-y-4">
+              <p className="text-destructive mb-4">Failed to load report</p>
+              <button 
+                onClick={handleBackFromReport}
+                className="bg-primary text-primary-foreground px-4 py-2 rounded"
+              >
+                Go Back
+              </button>
+            </div>
           </div>
         )}
       </DrawerContent>
