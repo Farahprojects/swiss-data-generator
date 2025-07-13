@@ -6,6 +6,7 @@ import { useGuestReportStatus } from '@/hooks/useGuestReportStatus';
 import { useViewportHeight } from '@/hooks/useViewportHeight';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { motion } from 'framer-motion';
+import { useToast } from '@/hooks/use-toast';
 
 import { useNavigate } from 'react-router-dom';
 import { getGuestToken, clearAllSessionData } from '@/utils/urlHelpers';
@@ -79,7 +80,10 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     setupRealtimeListener,
     setError,
     setCaseNumber,
+    triggerPdfEmail,
   } = useGuestReportStatus();
+
+  const { toast } = useToast();
 
   const firstName = name?.split(' ')[0] || 'there';
   const isMobile = useIsMobile();
@@ -185,6 +189,18 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
         isAi,
         isAstro,
         reportType
+      });
+
+      // Trigger PDF email in background (non-blocking)
+      triggerPdfEmail(currentGuestReportId).then((success) => {
+        if (success) {
+          toast({
+            title: "📧 Report PDF sent to your email",
+            description: "Check your inbox for the PDF version of your report",
+          });
+        }
+      }).catch((err) => {
+        console.warn('PDF email failed (non-critical):', err);
       });
 
       // Only open modal after successful data fetch

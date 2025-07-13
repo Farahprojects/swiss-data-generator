@@ -15,6 +15,7 @@ interface GuestReport {
   report_type?: string | null;
   swiss_boolean?: boolean | null;
   has_swiss_error?: boolean | null;
+  email_sent?: boolean;
 }
 
 interface ReportData {
@@ -37,6 +38,7 @@ interface UseGuestReportStatusReturn {
   setupRealtimeListener: (guestReportId?: string, onReportReady?: () => void) => () => void;
   setError: (error: string | null) => void;
   setCaseNumber: (caseNumber: string | null) => void;
+  triggerPdfEmail: (guestReportId?: string) => Promise<boolean>;
 }
 
 export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
@@ -328,6 +330,50 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     setError('We are looking into this issue. Please reference your case number if you contact support.');
   }, [logUserError, caseNumber]);
 
+  const triggerPdfEmail = useCallback(async (guestReportId?: string): Promise<boolean> => {
+    const reportId = guestReportId || getGuestReportId();
+    if (!reportId) {
+      console.warn('No guest report ID available for PDF email');
+      return false;
+    }
+
+    try {
+      // Check if email was already sent
+      const { data: reportData, error: fetchError } = await supabase
+        .from('guest_reports')
+        .select('email_sent')
+        .eq('id', reportId)
+        .single();
+
+      if (fetchError) {
+        console.error('❌ Error checking email status:', fetchError);
+        return false;
+      }
+
+      if (reportData?.email_sent) {
+        console.log('📧 Email already sent, skipping duplicate');
+        return true; // Consider this success since email was already sent
+      }
+
+      // Trigger PDF generation and email
+      console.log('📧 Triggering PDF email generation...');
+      const { data, error } = await supabase.functions.invoke('process-guest-report-pdf', {
+        body: { guest_report_id: reportId }
+      });
+
+      if (error) {
+        console.error('❌ Error triggering PDF email:', error);
+        return false;
+      }
+
+      console.log('✅ PDF email triggered successfully');
+      return true;
+    } catch (err) {
+      console.error('❌ Error in triggerPdfEmail:', err);
+      return false;
+    }
+  }, []);
+
   const setupRealtimeListener = useCallback((guestReportId?: string, onReportReady?: () => void) => {
     const reportId = guestReportId || getGuestReportId();
     if (!reportId) {
@@ -406,5 +452,6 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     setupRealtimeListener,
     setError,
     setCaseNumber,
+    triggerPdfEmail,
   };
 };
