@@ -69,35 +69,6 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
     }
   };
 
-  const handleDownloadRenderedPdf = async () => {
-    const reportElement = document.getElementById('report-content');
-    if (!reportElement) {
-      toast({
-        title: "Error",
-        description: "Could not find report content to capture",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const filename = `${mappedReport.customerName.replace(/\s+/g, '_')}_Rendered_Report.pdf`;
-      await PdfGenerator.generateFromDom(reportElement, filename);
-      
-      toast({
-        title: "Success",
-        description: "Rendered PDF downloaded successfully",
-      });
-    } catch (error) {
-      console.error('Error generating rendered PDF:', error);
-      toast({
-        title: "Error",
-        description: "Failed to generate rendered PDF",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleDownloadUnifiedPdf = async () => {
     if (!mappedReport.reportContent && !mappedReport.swissData) {
       toast({
@@ -242,9 +213,6 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
                   <Download className="h-5 w-5 text-gray-700" />
                 </Button>
               )}
-              <Button variant="ghost" size="icon" onClick={handleDownloadRenderedPdf} className="p-2 hover:bg-gray-50">
-                <Download className="h-5 w-5 text-blue-600" />
-              </Button>
             </div>
           </div>
 
@@ -426,25 +394,14 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
                   PDF
                 </Button>
               )}
-               <Button
-                 variant="outline"
-                 size="sm"
-                 onClick={handleDownloadRenderedPdf}
-                 tabIndex={0}
-                 style={{ pointerEvents: 'auto', cursor: 'pointer', position: 'relative', zIndex: 10 }}
-                 className="flex items-center gap-2 pointer-events-auto !cursor-pointer"
-               >
-                 <Download className="h-4 w-4 text-blue-600" />
-                 Rendered PDF
-               </Button>
-               <Button
-                 size="sm"
-                 onClick={handleChatGPT}
-                 onMouseDown={handleChatGPT}
-                 tabIndex={0}
-                 style={{ pointerEvents: 'auto', cursor: 'pointer', position: 'relative', zIndex: 10 }}
-                 className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 shadow-sm hover:shadow-md font-inter transition-all duration-200 pointer-events-auto !cursor-pointer"
-               >
+              <Button
+                size="sm"
+                onClick={handleChatGPT}
+                onMouseDown={handleChatGPT}
+                tabIndex={0}
+                style={{ pointerEvents: 'auto', cursor: 'pointer', position: 'relative', zIndex: 10 }}
+                className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 shadow-sm hover:shadow-md font-inter transition-all duration-200 pointer-events-auto !cursor-pointer"
+              >
                 <img 
                   src="/lovable-uploads/a27cf867-e7a3-4d2f-af1e-16aaa70117e4.png" 
                   alt="ChatGPT" 

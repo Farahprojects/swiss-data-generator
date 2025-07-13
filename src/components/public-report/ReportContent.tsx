@@ -46,7 +46,7 @@ export const ReportContent = ({
   // Mobile-first rendering without containers - header handled by parent
   if (isMobile) {
     return (
-      <div id="report-content" className="w-full">
+      <div className="w-full">
         {activeView === 'report' ? (
           <div className="prose prose-lg max-w-none text-left">
             <ReportRenderer content={mappedReport.reportContent} />
@@ -60,7 +60,7 @@ export const ReportContent = ({
 
   // Desktop rendering with containers
   return (
-    <div id="report-content" className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-4xl mx-auto px-4 py-8">
       <Card className="shadow-lg border-0 shadow-2xl">
         <CardHeader className="pb-6 border-b border-gray-100">
           <div className="flex items-center justify-between">
