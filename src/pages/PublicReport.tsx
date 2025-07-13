@@ -10,6 +10,7 @@ import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
 import Footer from '@/components/Footer';
 import { supabase } from '@/integrations/supabase/client';
 import Logo from '@/components/Logo';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const PublicReport = () => {
   // Production ready - no debug logs
@@ -21,15 +22,8 @@ const PublicReport = () => {
 
   // ALL HOOKS MUST BE DECLARED FIRST - NEVER INSIDE TRY-CATCH
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isClientMobile, setIsClientMobile] = useState(false);
   const [scrollY, setScrollY] = useState(0);
-
-  // Safe mobile detection on client side only
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setIsClientMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
-    }
-  }, []);
+  const isMobile = useIsMobile();
 
   // Scroll position tracking
   useEffect(() => {
@@ -48,7 +42,7 @@ const PublicReport = () => {
   // Removed diagnostic code that was leaking database data to console
 
   const handleGetReportClick = () => {
-    if (isClientMobile) {
+    if (isMobile) {
       setIsDrawerOpen(true);
     } else if (typeof window !== 'undefined') {
       // For desktop, scroll to form
@@ -280,7 +274,7 @@ const PublicReport = () => {
         </section>
 
         <TestsSection />
-        {!isClientMobile && (
+        {!isMobile && (
           <div id="report-form">
             <ReportForm />
           </div>

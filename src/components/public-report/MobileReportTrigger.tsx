@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
 interface MobileReportTriggerProps {
   isDrawerOpen: boolean;
   onOpenDrawer: () => void;
@@ -9,14 +10,7 @@ interface MobileReportTriggerProps {
 
 const MobileReportTrigger = ({ isDrawerOpen, onOpenDrawer }: MobileReportTriggerProps) => {
   const [isVisible, setIsVisible] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-
-  // Safe mobile detection on client side only
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
-    }
-  }, []);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
