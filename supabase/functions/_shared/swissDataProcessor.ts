@@ -16,42 +16,74 @@ export function injectRealNames(
   personA: string,
   personB?: string
 ): typeof swiss {
+  console.log('[swissDataProcessor] [INJECT] Starting injectRealNames with:', { personA, personB });
+  
   if (!swiss || !personA) {
+    console.warn('[swissDataProcessor] [INJECT] Invalid input - swiss:', !!swiss, 'personA:', !!personA);
+    return swiss;
+  }
+
+  // Size guard: skip processing if JSON too large (> 2MB)
+  try {
+    const jsonSize = JSON.stringify(swiss).length;
+    console.log('[swissDataProcessor] [INJECT] Swiss data size:', jsonSize, 'characters');
+    
+    if (jsonSize > 2 * 1024 * 1024) {
+      console.warn(`[swissDataProcessor] [INJECT] Skipping large payload: ${(jsonSize / 1024 / 1024).toFixed(2)}MB`);
+      return swiss;
+    }
+  } catch (err) {
+    console.error('[swissDataProcessor] [INJECT] Failed to measure JSON size:', err);
     return swiss;
   }
 
   let replacementCount = 0;
   
   const replace = (val: any): any => {
+    // Handle strings - replace placeholders with real names using word boundaries
     if (typeof val === 'string') {
+      const original = val;
       let result = val
-        .replace(/\bPerson\s*A\b/gi, () => {
+        .replace(/\bPerson\s*A\b/gi, (match) => {
+          console.log('[swissDataProcessor] [INJECT] Replacing Person A:', match, '→', personA);
           replacementCount++;
           return personA;
         })
-        .replace(/\bPerson\s*B\b/gi, () => {
+        .replace(/\bPerson\s*B\b/gi, (match) => {
+          console.log('[swissDataProcessor] [INJECT] Replacing Person B:', match, '→', personB || '');
           replacementCount++;
           return personB || '';
         });
       
-      return result.replace(/\s+/g, ' ').trim();
+      // Clean up any double spaces or trailing spaces from empty Person B replacements
+      result = result.replace(/\s+/g, ' ').trim();
+      
+      // Log significant changes
+      if (original !== result) {
+        console.log('[swissDataProcessor] [INJECT] String transformation:', { original: original.substring(0, 100), result: result.substring(0, 100) });
+      }
+      
+      return result;
     }
     
+    // Handle arrays - recursively process each element
     if (Array.isArray(val)) {
       return val.map(replace);
     }
     
+    // Handle objects - recursively process each property
     if (val && typeof val === 'object') {
       return Object.fromEntries(
         Object.entries(val).map(([k, v]) => [k, replace(v)])
       );
     }
     
+    // Return primitive values unchanged
     return val;
   };
 
   const result = replace(swiss) as typeof swiss;
-  console.log('[swissDataProcessor] Processed with', replacementCount, 'replacements for', personA, personB ? `& ${personB}` : '');
+  console.log('[swissDataProcessor] [INJECT] Total replacements made:', replacementCount);
   
   return result;
 }
@@ -62,14 +94,26 @@ export function injectRealNames(
  * @returns Object with personA and personB names
  */
 export function extractPersonNames(requestData: any): { personA: string; personB?: string } {
+  console.log('[swissDataProcessor] [EXTRACT] Extracting person names from request data...');
+  console.log('[swissDataProcessor] [EXTRACT] Request data keys:', Object.keys(requestData || {}));
+  
   const personA = requestData.person_a?.name ?? 
-                  requestData.report_data?.name ?? 
+                  requestData.report_data?.name ?? // guest flow fallback
                   requestData.name ?? 
                   'Person A';
   
   const personB = requestData.person_b?.name ?? 
                   requestData.secondPersonName ?? 
                   undefined;
+
+  console.log('[swissDataProcessor] [EXTRACT] Extracted names result:', { personA, personB });
+  console.log('[swissDataProcessor] [EXTRACT] Name sources used:', {
+    personA_source: requestData.person_a?.name ? 'person_a.name' : 
+                   requestData.report_data?.name ? 'report_data.name' :
+                   requestData.name ? 'name' : 'fallback',
+    personB_source: requestData.person_b?.name ? 'person_b.name' :
+                   requestData.secondPersonName ? 'secondPersonName' : 'none'
+  });
 
   return { personA, personB };
 }
