@@ -10,6 +10,7 @@ import { ReportFormData } from '@/types/public-report';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { PromoConfirmationDialog } from '@/components/public-report/PromoConfirmationDialog';
 import { useMobileSafeTopPadding } from '@/hooks/useMobileSafeTopPadding';
+import { useSmartScroll } from '@/hooks/useSmartScroll';
 
 interface PromoValidationState {
   status: 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid';
@@ -45,6 +46,7 @@ const Step3Payment = ({
 }: Step3PaymentProps) => {
   const topSafePadding = useMobileSafeTopPadding();
   const [showPromoCode, setShowPromoCode] = useState(false);
+  const { scrollToElement } = useSmartScroll();
   
   // SSR-safe pricing hook initialization
   const { getReportPrice, getReportTitle, calculatePricing, isLoading: isPricingLoading, error: pricingError } = typeof window !== 'undefined' ? usePriceFetch() : {
@@ -180,7 +182,18 @@ const Step3Payment = ({
 
           {/* Promo Code Section */}
           <div className="px-6">
-            <Collapsible open={showPromoCode} onOpenChange={setShowPromoCode}>
+            <Collapsible 
+              open={showPromoCode} 
+              onOpenChange={(open) => {
+                setShowPromoCode(open);
+                // Auto-scroll to promo input when opened
+                if (open) {
+                  setTimeout(() => {
+                    scrollToElement('#promoCode', { delay: 200, block: 'center' });
+                  }, 100);
+                }
+              }}
+            >
               <CollapsibleTrigger asChild>
                 <button
                   className="w-full bg-gray-100 text-gray-700 px-6 py-3 rounded-xl text-base font-light hover:bg-gray-200 transition-all duration-300 flex items-center justify-center whitespace-nowrap"

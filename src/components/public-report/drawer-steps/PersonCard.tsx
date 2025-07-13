@@ -20,6 +20,7 @@ import InlineDateTimeSelector from '@/components/ui/mobile-pickers/InlineDateTim
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ReportFormData } from '@/types/public-report';
 import { Button } from '@/components/ui/button';
+import { useSmartScroll } from '@/hooks/useSmartScroll';
 
 interface PersonCardProps {
   personNumber: 1 | 2;
@@ -59,6 +60,7 @@ const PersonCard = ({
   const isMobile = useIsMobile();
   const isSecondPerson = personNumber === 2;
   const prefix = isSecondPerson ? 'secondPerson' : '';
+  const { scrollToNextField, scrollToElement } = useSmartScroll();
 
   /* -------------------------------------------------------------------- */
   /* Helpers                                                              */
@@ -152,6 +154,17 @@ const PersonCard = ({
     // Notify parent component that place was selected (for sequential loading)
     onPlaceSelect?.();
 
+    // Auto-scroll to next person or submit button when location is completed
+    if (personNumber === 1) {
+      // Look for second person card
+      setTimeout(() => {
+        const secondPersonCard = document.querySelector('[data-person="2"]');
+        if (secondPersonCard) {
+          scrollToElement(secondPersonCard, { delay: 500, block: 'start' });
+        }
+      }, 600);
+    }
+
     // Enhanced layout stabilization for mobile with proper timing
     if (isMobile && typeof window !== 'undefined') {
       // Prevent scroll interference during Google's cleanup
@@ -189,7 +202,10 @@ const PersonCard = ({
   const handleDateConfirm = useCallback(() => {
     setHasInteracted((prev) => ({ ...prev, birthDate: true }));
     setActiveSelector(null);
-  }, []);
+    // Auto-scroll to next field (time)
+    const nextFieldId = isSecondPerson ? 'secondPersonBirthTime' : 'birthTime';
+    scrollToNextField(nextFieldId);
+  }, [isSecondPerson, scrollToNextField]);
 
   const handleDateCancel = useCallback(() => {
     setActiveSelector(null);
@@ -203,7 +219,10 @@ const PersonCard = ({
   const handleTimeConfirm = useCallback(() => {
     setHasInteracted((prev) => ({ ...prev, birthTime: true }));
     setActiveSelector(null);
-  }, []);
+    // Auto-scroll to location field
+    const nextFieldId = isSecondPerson ? 'secondPersonBirthLocation' : 'birthLocation';
+    scrollToElement(`#${nextFieldId}`, { delay: 300, block: 'center' });
+  }, [isSecondPerson, scrollToElement]);
 
   const handleTimeCancel = useCallback(() => {
     setActiveSelector(null);
@@ -244,7 +263,14 @@ const PersonCard = ({
               handleFieldInteraction('name');
               handleInputFocus(e);
             }}
-            onBlur={() => handleFieldInteraction('name')}
+            onBlur={(e) => {
+              handleFieldInteraction('name');
+              // Auto-scroll to next field when name is completed
+              if (e.target.value.trim()) {
+                const nextFieldId = isSecondPerson ? 'secondPersonBirthDate' : 'email';
+                scrollToNextField(nextFieldId);
+              }
+            }}
             inputMode="text"
             style={{ fontSize: '16px' }} // Prevent zoom on iOS
           />
@@ -269,7 +295,13 @@ const PersonCard = ({
                 handleFieldInteraction('email');
                 handleInputFocus(e);
               }}
-              onBlur={() => handleFieldInteraction('email')}
+              onBlur={(e) => {
+                handleFieldInteraction('email');
+                // Auto-scroll to birth date when email is completed
+                if (e.target.value.trim()) {
+                  scrollToNextField('birthDate');
+                }
+              }}
               inputMode="email"
               style={{ fontSize: '16px' }} // Prevent zoom on iOS
             />
