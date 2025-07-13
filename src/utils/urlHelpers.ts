@@ -77,7 +77,7 @@ export const clearGuestReportId = (): void => {
 };
 
 /**
- * Clear all session data and navigate to home
+ * Clear all session data without navigation
  */
 export const clearAllSessionData = (): void => {
   // Clear all localStorage items
@@ -93,7 +93,4 @@ export const clearAllSessionData = (): void => {
   
   // Clear URL state
   window.history.replaceState({}, '', '/');
-  
-  // Force navigation to home
-  window.location.replace('/');
 };
