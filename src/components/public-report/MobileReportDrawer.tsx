@@ -94,6 +94,18 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   const { data: guestReportData, isLoading: isLoadingReport, error: reportError } =
     useGuestReportData(urlGuestId);
 
+  // Auto-open drawer and switch to report-viewer when guest report data is available (deep linking)
+  useEffect(() => {
+    if (guestReportData && !isLoadingReport && !reportError) {
+      if (!isOpen) {
+        // Open the drawer if it's not already open
+        // This will be handled by the parent component when it detects the URL change
+      }
+      // Switch to report viewer when guest report data is available
+      setCurrentView('report-viewer');
+    }
+  }, [guestReportData, isLoadingReport, reportError, isOpen]);
+
   const { form, currentStep, nextStep, prevStep } = useMobileDrawerForm();
   const {
     register,
@@ -341,7 +353,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
           type="button"
           onClick={resetDrawer}
           aria-label="Close report drawer"
-          className="absolute top-[calc(env(safe-area-inset-top,20px)+12px)] right-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 z-10"
+          className="absolute top-4 right-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 z-10"
           style={{ WebkitTapHighlightColor: 'transparent' }}
         >
           <X className="h-4 w-4" />
@@ -476,16 +488,28 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
         {/* --------------------- REPORT VIEWER ------------------------- */}
         {currentView === 'report-viewer' && guestReportData && !isLoadingReport && (
           <div className="flex flex-col h-full">
-            <ReportViewer
-              mappedReport={mapReportPayload({
-                guest_report: guestReportData.guest_report,
-                report_content: guestReportData.report_content,
-                swiss_data: guestReportData.swiss_data,
-                metadata: guestReportData.metadata,
-              })}
-              onBack={handleBackFromReport}
-              isMobile={true}
-            />
+            <DrawerHeader className="pt-4 px-4">
+              <DrawerTitle>
+                {mapReportPayload({
+                  guest_report: guestReportData.guest_report,
+                  report_content: guestReportData.report_content,
+                  swiss_data: guestReportData.swiss_data,
+                  metadata: guestReportData.metadata,
+                }).customerName || 'Guest Report'}
+              </DrawerTitle>
+            </DrawerHeader>
+            <div className="px-4">
+              <ReportViewer
+                mappedReport={mapReportPayload({
+                  guest_report: guestReportData.guest_report,
+                  report_content: guestReportData.report_content,
+                  swiss_data: guestReportData.swiss_data,
+                  metadata: guestReportData.metadata,
+                })}
+                onBack={handleBackFromReport}
+                isMobile={true}
+              />
+            </div>
           </div>
         )}
 
