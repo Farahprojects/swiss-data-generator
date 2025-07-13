@@ -8,6 +8,7 @@ import { ReportContent } from './ReportContent';
 import { PdfGenerator } from '@/services/pdf/PdfGenerator';
 import { getToggleDisplayLogic } from '@/utils/reportTypeUtils';
 import { MappedReport } from '@/types/mappedReport';
+import { extractAstroDataAsText } from '@/utils/astroTextExtractor';
 import openaiLogo from '@/assets/openai-logo.png';
 
 interface ReportViewerProps {
@@ -125,16 +126,24 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
 
   const handleCopyToClipboard = async () => {
     try {
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = mappedReport.reportContent;
-      const cleanText = tempDiv.textContent || tempDiv.innerText || '';
-      await navigator.clipboard.writeText(cleanText);
+      let textToCopy: string;
       
+      if (activeView === 'astro' && mappedReport.swissData) {
+        // Copy astro data as formatted text
+        textToCopy = extractAstroDataAsText(mappedReport.swissData, mappedReport);
+      } else {
+        // Copy report content
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = mappedReport.reportContent;
+        textToCopy = tempDiv.textContent || tempDiv.innerText || '';
+      }
+      
+      await navigator.clipboard.writeText(textToCopy);
       setIsCopyCompleted(true);
       
       toast({
         title: "Copied to clipboard!",
-        description: "Your report has been copied and is ready to paste anywhere.",
+        description: `Your ${activeView === 'astro' ? 'astro data' : 'report'} has been copied and is ready to paste anywhere.`,
         variant: "success"
       });
     } catch (error) {
@@ -159,15 +168,21 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
       window.open('https://chatgpt.com/g/g-68636dbe19588191b04b0a60bcbf3df3-therai', '_blank');
     } else {
       try {
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = mappedReport.reportContent;
-        const cleanText = tempDiv.textContent || tempDiv.innerText || '';
+        let textToCopy: string;
         
-        await navigator.clipboard.writeText(cleanText);
+        if (activeView === 'astro' && mappedReport.swissData) {
+          textToCopy = extractAstroDataAsText(mappedReport.swissData, mappedReport);
+        } else {
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = mappedReport.reportContent;
+          textToCopy = tempDiv.textContent || tempDiv.innerText || '';
+        }
+        
+        await navigator.clipboard.writeText(textToCopy);
         setIsCopyCompleted(true);
         
         toast({
-          title: "Report copied to clipboard!",
+          title: `${activeView === 'astro' ? 'Astro data' : 'Report'} copied to clipboard!`,
           description: "Redirecting to ChatGPT..."
         });
         
@@ -188,16 +203,24 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
   const handleChatGPTCopyAndGo = async () => {
     setIsCopping(true);
     try {
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = mappedReport.reportContent;
-      const cleanText = tempDiv.textContent || tempDiv.innerText || '';
-      await navigator.clipboard.writeText(cleanText);
+      let textToCopy: string;
+      
+      if (activeView === 'astro' && mappedReport.swissData) {
+        textToCopy = extractAstroDataAsText(mappedReport.swissData, mappedReport);
+      } else {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = mappedReport.reportContent;
+        textToCopy = tempDiv.textContent || tempDiv.innerText || '';
+      }
+      
+      await navigator.clipboard.writeText(textToCopy);
       toast({
         title: "Copied!",
-        description: "Report copied to clipboard",
+        description: `${activeView === 'astro' ? 'Astro data' : 'Report'} copied to clipboard`,
       });
+      
       setTimeout(() => {
-        const chatGPTUrl = `https://chat.openai.com/?model=gpt-4&prompt=${encodeURIComponent(`Please analyze this astrological report and provide additional insights or answer any questions I might have:\n\n${cleanText}`)}`;
+        const chatGPTUrl = `https://chat.openai.com/?model=gpt-4&prompt=${encodeURIComponent(`Please analyze this astrological ${activeView === 'astro' ? 'data' : 'report'} and provide additional insights or answer any questions I might have:\n\n${textToCopy}`)}`;
         window.open(chatGPTUrl, '_blank');
         setShowChatGPTConfirm(false);
         setIsCopping(false);
