@@ -6,6 +6,7 @@ import { reportSchema } from '@/schemas/report-form-schema';
 import { ReportFormData } from '@/types/public-report';
 
 export type DrawerStep = 1 | 2 | 3 | 4;
+export type DrawerView = 'form' | 'success' | 'report-viewer';
 
 export const useMobileDrawerForm = () => {
   const [currentStep, setCurrentStep] = useState<DrawerStep>(1);
@@ -48,6 +49,11 @@ export const useMobileDrawerForm = () => {
     }
   };
 
+  const resetForm = () => {
+    form.reset();
+    setCurrentStep(1);
+  };
+
   const openDrawer = () => {
     setIsOpen(true);
     setCurrentStep(1);
@@ -55,8 +61,7 @@ export const useMobileDrawerForm = () => {
 
   const closeDrawer = () => {
     setIsOpen(false);
-    form.reset();
-    setCurrentStep(1);
+    resetForm();
   };
 
   return {
@@ -67,5 +72,6 @@ export const useMobileDrawerForm = () => {
     prevStep,
     openDrawer,
     closeDrawer,
+    resetForm,
   };
 };

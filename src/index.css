@@ -43,6 +43,9 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
 
+    /* Footer height for mobile drawer */
+    --footer-h: 72px;
+    
     /* Dynamic viewport unit – updated via JS to fix mobile 100vh bugs */
     --vh: 1vh;
   }
@@ -90,9 +93,10 @@
 /*  MOBILE VIEWPORT UTILS (Fix for iOS Safari 100vh)                           */
 /* -------------------------------------------------------------------------- */
 @layer utilities {
-  .h-screen-safe       { height: calc(var(--vh, 1vh) * 100); }
-  .min-h-screen-safe   { min-height: calc(var(--vh, 1vh) * 100); }
-  .max-h-screen-safe   { max-height: calc(var(--vh, 1vh) * 100); }
+  /* Modern viewport units with fallback */
+  .h-screen-safe       { height: 100svh; height: calc(var(--vh, 1vh) * 100); }
+  .min-h-screen-safe   { min-height: 100svh; min-height: calc(var(--vh, 1vh) * 100); }
+  .max-h-screen-safe   { max-height: 100svh; max-height: calc(var(--vh, 1vh) * 100); }
 }
 
 /* -------------------------------------------------------------------------- */

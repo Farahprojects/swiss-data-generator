@@ -122,28 +122,22 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   const reportSubCategory = watch('reportSubCategory');
   const request = watch('request');
 
-  // --------------- Viewport height CSS var (keyboard‑safe) -----------------
+  // --------------- Modern viewport height with minimal JS -----------------
   useEffect(() => {
-    if (!isBrowser) return;
+    if (!isBrowser || !window.visualViewport) return;
 
-    const KEYBOARD_THRESHOLD = 150; // px – ignore viewport loss bigger than this (likely keyboard)
+    // Only set fallback for older browsers that don't support modern viewport units
     const setVH = (h: number) =>
       document.documentElement.style.setProperty('--vh', `${h * 0.01}px`);
 
-    // 1) lock to height when drawer opens
+    // Initial setup for fallback
     setVH(window.innerHeight);
 
-    // 2) only react to orientation/real resizes, not keyboard
-    const handleResize = () => {
-      const lost = window.innerHeight - window.visualViewport.height;
-      if (lost > KEYBOARD_THRESHOLD) return; // keyboard visible – ignore
-      setVH(window.visualViewport.height);
-    };
+    // Only handle orientation changes for fallback browsers
+    const handleOrientationChange = () => setVH(window.innerHeight);
+    window.addEventListener('orientationchange', handleOrientationChange);
 
-    window.addEventListener('orientationchange', () => setVH(window.innerHeight));
-    window.visualViewport?.addEventListener('resize', handleResize, { passive: true });
-
-    return () => window.visualViewport?.removeEventListener('resize', handleResize);
+    return () => window.removeEventListener('orientationchange', handleOrientationChange);
   }, []);
 
   // ----------------------------- Auto‑scroll -----------------------------
@@ -190,19 +184,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     }
   }, [isOpen]);
 
-  // -------------------- Dynamic footer height ---------------------------
-  useLayoutEffect(() => {
-    if (!footerRef.current) return;
-    const setSpace = () => {
-      document.documentElement.style.setProperty(
-        '--footer-space', `${footerRef.current!.offsetHeight}px`,
-      );
-    };
-    setSpace();
-    const ro = new ResizeObserver(setSpace);
-    ro.observe(footerRef.current);
-    return () => ro.disconnect();
-  }, [currentStep]);
+  // Footer height is now static via CSS variable
 
   // --------------------------- Helpers ----------------------------------
   const resetDrawer = () => {
@@ -338,10 +320,8 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   return (
     <Drawer open={isOpen} onOpenChange={resetDrawer} dismissible={false}>
       <DrawerContent
-        className="flex flex-col rounded-none [&>div:first-child]:hidden"
+        className="flex flex-col rounded-none [&>div:first-child]:hidden h-screen-safe max-h-screen-safe"
         style={{
-          height: 'calc(var(--vh, 1vh) * 100)',
-          maxHeight: 'calc(var(--vh, 1vh) * 100)',
           overflowY: currentView === 'form' ? 'hidden' : 'auto',
           WebkitOverflowScrolling: 'touch',
           overscrollBehavior: 'none',
@@ -362,7 +342,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
               ref={scrollContainerRef}
               className={`flex-1 px-6 overflow-y-auto scrollbar-hide ${
                 currentStep >= 2
-                  ? 'pb-[calc(var(--footer-space,72px)+env(safe-area-inset-bottom,0px))]'
+                  ? 'pb-[calc(var(--footer-h)+env(safe-area-inset-bottom,0px))]'
                   : 'pb-6'
               }`}
             >
@@ -427,9 +407,10 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
             {currentStep >= 2 && (
               <div
                 ref={footerRef}
-                className="absolute inset-x-0 bottom-0 bg-white border-t border-gray-200 p-3 pb-safe flex justify-between items-center z-50"
+                className="fixed inset-x-0 bottom-0 bg-white border-t border-gray-200 flex justify-between items-center z-50"
                 style={{
-                  // add OS safe area inset (iOS home gesture bar, etc.)
+                  height: 'var(--footer-h)',
+                  padding: '0.75rem',
                   paddingBottom: `calc(env(safe-area-inset-bottom,0px) + 0.75rem)`,
                 }}
               >
