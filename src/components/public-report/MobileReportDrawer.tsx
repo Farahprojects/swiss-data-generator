@@ -346,61 +346,101 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                   : 'pb-6'
               }`}
             >
-              <AnimatePresence mode="wait">
-                {currentStep === 1 && (
-                  <Step1ReportType
-                    key="step1"
-                    control={control}
-                    setValue={setValue}
-                    onNext={nextStep}
-                    selectedCategory={reportCategory}
-                  />
-                )}
+              {/* Debug Info - Remove in production */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="mb-4 p-2 bg-yellow-100 text-xs">
+                  Step: {currentStep}, Category: {reportCategory || 'none'}, Request: {request || 'none'}
+                </div>
+              )}
+              
+              {/* Error Boundary with fallback */}
+              {(() => {
+                try {
+                  // Temporarily remove AnimatePresence to test
+                  if (currentStep === 1) {
+                    return (
+                      <Step1ReportType
+                        key="step1"
+                        control={control}
+                        setValue={setValue}
+                        onNext={nextStep}
+                        selectedCategory={reportCategory}
+                      />
+                    );
+                  }
 
-                {currentStep === 2 && reportCategory === 'astro-data' && (
-                  <Step1_5AstroData
-                    key="step1_5_astro"
-                    control={control}
-                    setValue={setValue}
-                    onNext={nextStep}
-                    selectedSubCategory={request}
-                  />
-                )}
+                  if (currentStep === 2 && reportCategory === 'astro-data') {
+                    return (
+                      <Step1_5AstroData
+                        key="step1_5_astro"
+                        control={control}
+                        setValue={setValue}
+                        onNext={nextStep}
+                        selectedSubCategory={request}
+                      />
+                    );
+                  }
 
-                {currentStep === 2 && reportCategory !== 'astro-data' && (
-                  <Step1_5SubCategory
-                    key="step1_5"
-                    control={control}
-                    setValue={setValue}
-                    onNext={nextStep}
-                    onPrev={prevStep}
-                    selectedCategory={reportCategory}
-                    selectedSubCategory={reportSubCategory}
-                  />
-                )}
+                  if (currentStep === 2 && reportCategory !== 'astro-data') {
+                    return (
+                      <Step1_5SubCategory
+                        key="step1_5"
+                        control={control}
+                        setValue={setValue}
+                        onNext={nextStep}
+                        onPrev={prevStep}
+                        selectedCategory={reportCategory}
+                        selectedSubCategory={reportSubCategory}
+                      />
+                    );
+                  }
 
-                {currentStep === 3 && (
-                  <Step2BirthDetails
-                    key="step2"
-                    register={register}
-                    setValue={setValue}
-                    watch={watch}
-                    errors={errors}
-                  />
-                )}
+                  if (currentStep === 3) {
+                    return (
+                      <Step2BirthDetails
+                        key="step2"
+                        register={register}
+                        setValue={setValue}
+                        watch={watch}
+                        errors={errors}
+                      />
+                    );
+                  }
 
-                {currentStep === 4 && (
-                  <Step3Payment
-                    key="step3"
-                    register={register}
-                    watch={watch}
-                    errors={errors}
-                    isProcessing={isProcessing}
-                    promoValidation={promoValidationState}
-                    isValidatingPromo={isValidatingPromo}
-                  />
-                )}
-              </AnimatePresence>
+                  if (currentStep === 4) {
+                    return (
+                      <Step3Payment
+                        key="step3"
+                        register={register}
+                        watch={watch}
+                        errors={errors}
+                        isProcessing={isProcessing}
+                        promoValidation={promoValidationState}
+                        isValidatingPromo={isValidatingPromo}
+                      />
+                    );
+                  }
+
+                  // Fallback content
+                  return (
+                    <div className="p-4 text-center">
+                      <p>Step {currentStep} content loading...</p>
+                      <p className="text-sm text-gray-500 mt-2">
+                        Category: {reportCategory || 'none'}<br/>
+                        Request: {request || 'none'}
+                      </p>
+                    </div>
+                  );
+                } catch (error) {
+                  console.error('Step component error:', error);
+                  return (
+                    <div className="p-4 text-center bg-red-50 border border-red-200 rounded">
+                      <p className="text-red-600">Error loading step {currentStep}</p>
+                      <p className="text-sm text-red-500 mt-2">{String(error)}</p>
+                    </div>
+                  );
+                }
+              })()}
             </div>
 
             {/* ----------------------- FOOTER -------------------------- */}
