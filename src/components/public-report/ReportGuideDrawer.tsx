@@ -18,6 +18,7 @@ import {
   CalendarDays,
 } from 'lucide-react';
 import { usePricing } from '@/contexts/PricingContext';
+import { useMobileSafeTopPadding } from '@/hooks/useMobileSafeTopPadding';
 interface ReportGuideDrawerProps {
   isOpen: boolean;
   onClose: () => void;
@@ -25,6 +26,7 @@ interface ReportGuideDrawerProps {
 }
 
 const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDrawerProps) => {
+  const topSafePadding = useMobileSafeTopPadding();
   const targetRef = useRef<HTMLDivElement>(null);
   const { getPriceById } = usePricing();
 
@@ -183,7 +185,10 @@ const ReportGuideDrawer = ({ isOpen, onClose, targetReportType }: ReportGuideDra
           <span className="sr-only">Close</span>
         </button>
 
-        <DrawerHeader className="flex-shrink-0 pt-12 pb-6">
+        <DrawerHeader 
+          className="flex-shrink-0 pb-6" 
+          style={{ paddingTop: `${topSafePadding + 48}px` }}
+        >
           <DrawerTitle className="text-2xl font-light text-center mb-3 tracking-tight text-gray-900">
             Choose Your Report
           </DrawerTitle>

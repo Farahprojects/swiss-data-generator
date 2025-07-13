@@ -9,6 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { ReportFormData } from '@/types/public-report';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { PromoConfirmationDialog } from '@/components/public-report/PromoConfirmationDialog';
+import { useMobileSafeTopPadding } from '@/hooks/useMobileSafeTopPadding';
 
 interface PromoValidationState {
   status: 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid';
@@ -42,6 +43,7 @@ const Step3Payment = ({
   onPromoConfirmationTryAgain = () => {},
   onPromoConfirmationContinue = () => {}
 }: Step3PaymentProps) => {
+  const topSafePadding = useMobileSafeTopPadding();
   const [showPromoCode, setShowPromoCode] = useState(false);
   
   // SSR-safe pricing hook initialization
@@ -129,7 +131,7 @@ const Step3Payment = ({
   } else {
     content = (
       <div className="bg-white">
-        <div className="space-y-12">
+        <div className="space-y-12" style={{ paddingTop: `${topSafePadding + 24}px` }}>
           {/* Header */}
           <div className="flex items-center justify-center px-6 py-8">
             <div className="text-center">

@@ -4,6 +4,7 @@ import { Controller, UseFormSetValue } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { reportCategories } from '@/constants/report-types';
 import { ReportFormData } from '@/types/public-report';
+import { useMobileSafeTopPadding } from '@/hooks/useMobileSafeTopPadding';
 
 interface Step1ReportTypeProps {
   control: any;
@@ -13,6 +14,8 @@ interface Step1ReportTypeProps {
 }
 
 const Step1ReportType = ({ control, setValue, onNext, selectedCategory }: Step1ReportTypeProps) => {
+  const topSafePadding = useMobileSafeTopPadding();
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 50 }}
@@ -20,6 +23,7 @@ const Step1ReportType = ({ control, setValue, onNext, selectedCategory }: Step1R
       exit={{ opacity: 0, x: -50 }}
       transition={{ duration: 0.3 }}
       className="space-y-6"
+      style={{ paddingTop: `${topSafePadding + 24}px` }}
     >
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-semibold tracking-tight text-gray-900">What area would you like guidance on?</h2>

@@ -6,6 +6,7 @@ import { astroRequestCategories } from '@/constants/report-types';
 import { ReportFormData } from '@/types/public-report';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useMobileSafeTopPadding } from '@/hooks/useMobileSafeTopPadding';
 
 interface Step1_5AstroDataProps {
   control: any;
@@ -15,6 +16,7 @@ interface Step1_5AstroDataProps {
 }
 
 const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: Step1_5AstroDataProps) => {
+  const topSafePadding = useMobileSafeTopPadding();
   const { getReportPrice } = usePriceFetch();
   const isMobile = useIsMobile();
 
@@ -25,6 +27,7 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
       exit={{ opacity: 0, x: -50 }}
       transition={{ duration: 0.3 }}
       className="space-y-6"
+      style={{ paddingTop: `${topSafePadding + 24}px` }}
     >
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Choose your astro data type</h2>

@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 
 import { ReportFormData } from '@/types/public-report';
 import PersonCard from './PersonCard';
+import { useMobileSafeTopPadding } from '@/hooks/useMobileSafeTopPadding';
 
 
 interface Step2BirthDetailsProps {
@@ -24,6 +25,7 @@ const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
   watch,
   errors,
 }) => {
+  const topSafePadding = useMobileSafeTopPadding();
   const reportCategory = watch('reportCategory');
   const request = watch('request');
   const isCompatibilityReport = reportCategory === 'compatibility' || request === 'sync';
@@ -53,6 +55,7 @@ const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
         exit={{ opacity: 0, x: -50 }}
         transition={{ duration: 0.3 }}
         className="space-y-12"
+        style={{ paddingTop: `${topSafePadding + 24}px` }}
       >
         {/* Header */}
         <div className="flex items-center justify-center px-6 py-8">

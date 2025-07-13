@@ -5,6 +5,7 @@ import { User, Briefcase, Heart, Target, Calendar, Brain, ArrowLeft } from 'luci
 import { Button } from '@/components/ui/button';
 import { ReportFormData } from '@/types/public-report';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
+import { useMobileSafeTopPadding } from '@/hooks/useMobileSafeTopPadding';
 
 interface Step1_5SubCategoryProps {
   control: any;
@@ -94,6 +95,7 @@ const getHeadingText = (category: string) => {
 };
 
 const Step1_5SubCategory = ({ control, setValue, onNext, onPrev, selectedCategory, selectedSubCategory }: Step1_5SubCategoryProps) => {
+  const topSafePadding = useMobileSafeTopPadding();
   const { getReportPrice } = usePriceFetch();
   const options = subCategoryOptions[selectedCategory as keyof typeof subCategoryOptions] || [];
   const containerRef = useRef<HTMLDivElement>(null);
@@ -113,6 +115,7 @@ const Step1_5SubCategory = ({ control, setValue, onNext, onPrev, selectedCategor
       exit={{ opacity: 0, x: -50 }}
       transition={{ duration: 0.3 }}
       className="space-y-6"
+      style={{ paddingTop: `${topSafePadding + 24}px` }}
     >
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-semibold tracking-tight text-foreground">{getHeadingText(selectedCategory)}</h2>
