@@ -16,6 +16,7 @@ import { X } from 'lucide-react';
 import { useMobileDrawerForm } from '@/hooks/useMobileDrawerForm';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { clearGuestReportId, getGuestReportId } from '@/utils/urlHelpers';
 import { useGuestReportData } from '@/hooks/useGuestReportData';
 import Step1ReportType from './drawer-steps/Step1ReportType';
@@ -86,6 +87,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   // ----------------------------- Hooks -----------------------------------
   useSmoothScrollPolyfill();
   useBodyScrollLock(isOpen);
+  const isMobile = useIsMobile();
 
   // Get guest report data for viewing reports - same as desktop
   const urlGuestId = getGuestReportId();
@@ -93,16 +95,25 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     useGuestReportData(urlGuestId);
 
   // Auto-open drawer and switch to report-viewer when guest report data is available (deep linking)
+  // BUT ONLY ON MOBILE DEVICES
   useEffect(() => {
-    if (guestReportData && !isLoadingReport && !reportError) {
-      if (!isOpen) {
-        // Open the drawer if it's not already open
-        // This will be handled by the parent component when it detects the URL change
-      }
+    console.debug('Auto-open logic:', { 
+      guestReportData: !!guestReportData, 
+      isLoadingReport, 
+      reportError: !!reportError, 
+      isOpen, 
+      isMobile,
+      urlGuestId 
+    });
+    
+    if (guestReportData && !isLoadingReport && !reportError && isMobile) {
+      console.debug('Guest report data available on mobile, switching to report viewer');
       // Switch to report viewer when guest report data is available
       setCurrentView('report-viewer');
+    } else if (guestReportData && !isLoadingReport && !reportError && !isMobile) {
+      console.debug('Guest report data available but not on mobile - drawer should not auto-open');
     }
-  }, [guestReportData, isLoadingReport, reportError, isOpen]);
+  }, [guestReportData, isLoadingReport, reportError, isOpen, isMobile, urlGuestId]);
 
   const { form, currentStep, nextStep, prevStep } = useMobileDrawerForm();
   const {
