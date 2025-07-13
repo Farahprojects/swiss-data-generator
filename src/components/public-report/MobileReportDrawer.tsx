@@ -415,7 +415,15 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
         {/* --------------------------- FORM VIEW ------------------------- */}
         {currentView === 'form' && (
           <div className="flex flex-col h-full">
-            <DrawerHeader className="flex-shrink-0 pt-[calc(env(safe-area-inset-top,20px)+24px)] pb-2 px-4">
+            <DrawerHeader className="flex-shrink-0 pt-[calc(env(safe-area-inset-top,20px)+24px)] pb-2 px-4 relative">
+              <button
+                type="button"
+                onClick={resetDrawer}
+                className="absolute top-[calc(env(safe-area-inset-top,20px)+24px)] right-4 z-10 p-2 hover:bg-gray-100 rounded-full transition-colors"
+                aria-label="Close drawer"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
               <ProgressDots />
               <DrawerTitle className="sr-only">Report Request Flow</DrawerTitle>
             </DrawerHeader>
@@ -542,10 +550,17 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                 <button
                   type="button"
                   onClick={currentStep === 1 ? resetDrawer : prevStep}
-                  className="w-auto min-w-fit bg-gray-100 text-gray-700 px-6 py-1 rounded-lg text-sm font-medium hover:bg-gray-200 transition-all duration-300 whitespace-nowrap"
+                  className="w-auto min-w-fit bg-gray-100 text-gray-700 px-4 py-1 rounded-lg text-sm font-medium hover:bg-gray-200 transition-all duration-300 whitespace-nowrap flex items-center gap-2"
                   style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
-                  {currentStep === 1 ? 'Close' : 'Back'}
+                  {currentStep === 1 ? (
+                    <>
+                      <X className="h-4 w-4" />
+                      Close
+                    </>
+                  ) : (
+                    'Back'
+                  )}
                 </button>
                 {currentStep >= 3 && (
                   <button
