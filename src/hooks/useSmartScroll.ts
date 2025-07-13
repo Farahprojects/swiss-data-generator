@@ -6,109 +6,112 @@ interface ScrollOptions {
   block?: 'start' | 'center' | 'end' | 'nearest';
   offset?: number;
   delay?: number;
+  inline?: ScrollLogicalPosition;
 }
+
+type TargetElement = Element | HTMLElement | string;
 
 export const useSmartScroll = () => {
   const isMobile = useIsMobile();
   const isScrollingRef = useRef(false);
 
+  // --------- Check visibility within viewport ----------
   const isElementVisible = useCallback((element: Element): boolean => {
     const rect = element.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
-    const viewportWidth = window.innerWidth;
-    
+    const buffer = 20; // px buffer zone for early scroll
+
     return (
-      rect.top >= 0 &&
-      rect.left >= 0 &&
-      rect.bottom <= viewportHeight &&
-      rect.right <= viewportWidth
+      rect.top >= 0 + buffer &&
+      rect.bottom <= window.innerHeight - buffer
     );
   }, []);
 
-  const scrollToElement = useCallback((
-    elementOrSelector: Element | string,
-    options: ScrollOptions = {}
-  ) => {
-    if (!isMobile || isScrollingRef.current) return;
+  // --------- Main smart scroll function ----------------
+  const scrollToElement = useCallback(
+    (target: TargetElement, options: ScrollOptions = {}) => {
+      if (!isMobile || isScrollingRef.current) return;
 
-    const {
-      behavior = 'smooth',
-      block = 'center',
-      offset = 0,
-      delay = 0
-    } = options;
+      const {
+        behavior = 'smooth',
+        block = 'center',
+        inline = 'nearest',
+        offset = 0,
+        delay = 0,
+      } = options;
 
-    const element = typeof elementOrSelector === 'string' 
-      ? document.querySelector(elementOrSelector)
-      : elementOrSelector;
+      const element: Element | null =
+        typeof target === 'string'
+          ? document.querySelector(target)
+          : target;
 
-    if (!element) return;
+      if (!element) return;
 
-    // Check if element is already visible
-    if (isElementVisible(element)) return;
+      // Avoid redundant scroll if already visible
+      if (isElementVisible(element)) return;
 
-    isScrollingRef.current = true;
+      isScrollingRef.current = true;
 
-    const performScroll = () => {
-      try {
-        if (offset !== 0) {
-          // Custom scroll with offset
-          const rect = element.getBoundingClientRect();
-          const targetY = rect.top + window.pageYOffset + offset;
-          
-          window.scrollTo({
-            top: targetY,
-            behavior
+      const executeScroll = () => {
+        try {
+          if (offset !== 0) {
+            const rect = element.getBoundingClientRect();
+            const scrollY = window.pageYOffset + rect.top + offset;
+            window.scrollTo({ top: scrollY, behavior });
+          } else {
+            element.scrollIntoView({ behavior, block, inline });
+          }
+        } catch (err) {
+          console.warn('Smart scroll error:', err);
+        } finally {
+          const duration = behavior === 'smooth' ? 400 : 100;
+          setTimeout(() => {
+            isScrollingRef.current = false;
+          }, duration);
+        }
+      };
+
+      const scrollWithDelay = () => {
+        if ('requestIdleCallback' in window) {
+          (window as any).requestIdleCallback(() => executeScroll(), {
+            timeout: 300,
           });
         } else {
-          // Standard scroll
-          element.scrollIntoView({
-            behavior,
-            block,
-            inline: 'nearest'
-          });
+          setTimeout(executeScroll, delay || 100);
         }
-      } catch (error) {
-        console.warn('Smart scroll error:', error);
-      } finally {
-        // Reset scrolling flag after animation completes
-        setTimeout(() => {
-          isScrollingRef.current = false;
-        }, behavior === 'smooth' ? 500 : 100);
+      };
+
+      if (delay > 0) {
+        setTimeout(scrollWithDelay, delay);
+      } else {
+        scrollWithDelay();
       }
-    };
+    },
+    [isMobile, isElementVisible]
+  );
 
-    if (delay > 0) {
-      setTimeout(performScroll, delay);
-    } else {
-      performScroll();
-    }
-  }, [isMobile, isElementVisible]);
-
+  // --------- Scroll to next field in logical form order ----------
   const scrollToNextField = useCallback((currentFieldId: string) => {
-    // Define field progression order
     const fieldOrder = [
       'name', 'secondPersonName',
       'email',
-      'birthDate', 'secondPersonBirthDate', 
+      'birthDate', 'secondPersonBirthDate',
       'birthTime', 'secondPersonBirthTime',
-      'birthLocation', 'secondPersonBirthLocation'
+      'birthLocation', 'secondPersonBirthLocation',
     ];
 
     const currentIndex = fieldOrder.indexOf(currentFieldId);
     if (currentIndex === -1 || currentIndex === fieldOrder.length - 1) return;
 
-    const nextFieldId = fieldOrder[currentIndex + 1];
-    const nextField = document.getElementById(nextFieldId);
-    
-    if (nextField) {
-      scrollToElement(nextField, { delay: 200, block: 'center' });
+    const nextId = fieldOrder[currentIndex + 1];
+    const nextEl = document.getElementById(nextId);
+    if (nextEl) {
+      scrollToElement(nextEl, { delay: 200, block: 'center' });
     }
   }, [scrollToElement]);
 
   return {
     scrollToElement,
     scrollToNextField,
-    isElementVisible
+    isElementVisible,
   };
 };
