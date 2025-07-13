@@ -26,7 +26,9 @@ import Step1_5AstroData from './drawer-steps/Step1_5AstroData';
 import Step2BirthDetails from './drawer-steps/Step2BirthDetails';
 import Step3Payment from './drawer-steps/Step3Payment';
 import SuccessScreen from './SuccessScreen';
+import { ReportViewer } from './ReportViewer';
 import { ReportFormData } from '@/types/public-report';
+import { MappedReport } from '@/types/mappedReport';
 
 /**
  * MobileReportDrawer – end‑to‑end drawer flow optimised for mobile browsers.
@@ -71,7 +73,7 @@ interface MobileReportDrawerProps {
   onClose: () => void;
 }
 
-type DrawerView = 'form' | 'success';
+type DrawerView = 'form' | 'success' | 'report';
 
 const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   // ------------------------------ State ----------------------------------
@@ -81,6 +83,15 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     email: string;
   } | null>(null);
   const [modalTriggered, setModalTriggered] = useState(false); // Prevent multiple modal opens like desktop
+  
+  // Mobile Report Viewer State (matches desktop)
+  const [viewingReport, setViewingReport] = useState(false);
+  const [reportContent, setReportContent] = useState<string>('');
+  const [reportPdf, setReportPdf] = useState<string | null>(null);
+  const [swissData, setSwissData] = useState<any>(null);
+  const [hasReport, setHasReport] = useState<boolean>(false);
+  const [swissBoolean, setSwissBoolean] = useState<boolean>(false);
+  const [reportType, setReportType] = useState<string>('');
 
   const footerRef = useRef<HTMLDivElement>(null);
 
@@ -249,7 +260,54 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     });
   };
 
-  // No need for handleViewReport - SuccessScreen handles everything
+  // Mobile Report Viewer Handler (matches desktop logic)
+  const handleViewReport = (
+    content: string,
+    pdf?: string | null,
+    swissData?: any,
+    hasReport?: boolean,
+    swissBoolean?: boolean,
+    reportType?: string
+  ) => {
+    console.log('📱 Mobile: Opening report viewer with data:', {
+      hasContent: !!content,
+      hasPdf: !!pdf,
+      hasSwissData: !!swissData,
+      hasReport,
+      swissBoolean,
+      reportType
+    });
+    
+    // Set report data state
+    setReportContent(content);
+    setReportPdf(pdf);
+    setSwissData(swissData);
+    setHasReport(hasReport || false);
+    setSwissBoolean(swissBoolean || false);
+    setReportType(reportType || '');
+    
+    // Clear auto-open modal flag like desktop
+    localStorage.removeItem('autoOpenModal');
+    
+    // Show report viewer
+    setViewingReport(true);
+    setCurrentView('report');
+  };
+  
+  // Close report viewer and return to success screen
+  const handleCloseReportViewer = () => {
+    console.log('📱 Mobile: Closing report viewer');
+    setViewingReport(false);
+    setCurrentView('success');
+    
+    // Clear report state
+    setReportContent('');
+    setReportPdf(null);
+    setSwissData(null);
+    setHasReport(false);
+    setSwissBoolean(false);
+    setReportType('');
+  };
 
   // Step 3 validation and auto-scroll
   const handleStep3Continue = () => {
@@ -516,9 +574,27 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
             <SuccessScreen
               name={submittedData.name}
               email={submittedData.email}
+              onViewReport={handleViewReport}
               guestReportId={getGuestReportId() || undefined}
             />
           </div>
+        )}
+
+        {/* ------------------------- REPORT VIEWER -------------------- */}
+        {currentView === 'report' && viewingReport && (
+          <ReportViewer
+            mappedReport={{
+              reportContent,
+              pdfData: reportPdf,
+              swissData,
+              hasReport,
+              swissBoolean,
+              reportType,
+              customerName: submittedData?.name || 'Customer'
+            } as MappedReport}
+            onBack={handleCloseReportViewer}
+            isMobile={true}
+          />
         )}
       </DrawerContent>
     </Drawer>
