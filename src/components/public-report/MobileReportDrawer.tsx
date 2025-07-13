@@ -297,7 +297,14 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   // Close report viewer and clear everything for new purchase
   const handleCloseReportViewer = () => {
     console.log('📱 Mobile: Closing report viewer and resetting drawer');
-    resetDrawer(); // This closes the drawer and clears all session data
+    
+    // First, close the report viewer overlay
+    setViewingReport(false);
+    
+    // Small delay to ensure state changes are processed sequentially
+    setTimeout(() => {
+      resetDrawer(); // This closes the drawer and clears all session data
+    }, 50);
   };
 
   // Step 3 validation and auto-scroll
