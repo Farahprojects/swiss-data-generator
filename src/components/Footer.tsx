@@ -1,9 +1,14 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 
 const Footer = () => {
   const { user } = useAuth();
   const isLoggedIn = !!user;
+  const isMobile = useIsMobile();
+  const [showAstroData, setShowAstroData] = useState(false);
 
   // Simplified footer for signed-in users
   if (isLoggedIn) {
@@ -158,7 +163,52 @@ const Footer = () => {
           </div>
         </div>
         
-        <div className="border-t border-gray-200/50 mt-16 pt-8 text-sm text-left">
+        {/* Mobile Astro Data Toggle */}
+        {isMobile && (
+          <div className="border-t border-gray-200/50 mt-16 pt-8">
+            <button
+              onClick={() => setShowAstroData(!showAstroData)}
+              className="flex items-center justify-center gap-2 w-full py-3 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors duration-200"
+            >
+              {showAstroData ? <EyeOff size={16} /> : <Eye size={16} />}
+              {showAstroData ? 'Hide Astro Data' : 'View Astro Data'}
+            </button>
+            
+            {showAstroData && (
+              <div className="mt-4 p-4 bg-gray-50/60 rounded-xl border border-gray-200/30 animate-fade-in">
+                <div className="text-center mb-4">
+                  <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Sample Astro Data</h4>
+                  <p className="text-xs text-gray-600">Precise astronomical calculations • Powered by Therai Swiss</p>
+                </div>
+                
+                <div className="space-y-3 text-xs">
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-700">Sun:</span>
+                    <span className="text-gray-600">Gemini 15°42'</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-700">Moon:</span>
+                    <span className="text-gray-600">Scorpio 28°13'</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-700">Rising:</span>
+                    <span className="text-gray-600">Virgo 3°51'</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-700">Mercury:</span>
+                    <span className="text-gray-600">Cancer 2°18'</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium text-gray-700">Venus:</span>
+                    <span className="text-gray-600">Taurus 19°05'</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        
+        <div className="border-t border-gray-200/50 mt-8 pt-8 text-sm text-left">
           <p className="text-gray-400 font-light">&copy; {new Date().getFullYear()} Therai Astro. All rights reserved.</p>
         </div>
       </div>
