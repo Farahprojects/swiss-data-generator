@@ -156,14 +156,11 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
       // Only run in browser environment
       if (typeof window === 'undefined') return;
       
-      // Add mobile-specific timeout handling
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      
       if (!apiKey) {
-        console.log(`🔄 Fetching API key... (Mobile: ${isMobile})`);
+        console.log('🔄 Fetching API key...');
         await fetchApiKey();
       } else if (!isLoaded && !isError) {
-        console.log(`🔄 Loading Google Maps script... (Mobile: ${isMobile})`);
+        console.log('🔄 Loading Google Maps script...');
         await loadGoogleMapsScript(apiKey);
       }
     };

@@ -13,8 +13,6 @@ interface AutocompleteContainerProps {
   onPlaceSelect?: (placeData: PlaceData) => void;
   placeholder: string;
   disabled: boolean;
-  onShowFallback: () => void;
-  retryCount: number;
 }
 
 export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
@@ -23,9 +21,7 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
   onChange,
   onPlaceSelect,
   placeholder,
-  disabled,
-  onShowFallback,
-  retryCount
+  disabled
 }) => {
   const { isLoaded, isError } = useGoogleMapsScript();
   const autocompleteRef = useRef<HTMLGmpPlaceAutocompleteElement | null>(null);
@@ -34,32 +30,7 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
 
   const handlePlaceSelect = usePlaceSelection(onChange, onPlaceSelect);
 
-  // Handle error state
-  useEffect(() => {
-    if (isError) {
-      console.error('Google Maps failed to load, using fallback input');
-      onShowFallback();
-    }
-  }, [isError, onShowFallback]);
-
-  // Enhanced timeout fallback for loading state - more aggressive on mobile
-  useEffect(() => {
-    if (!isLoaded && !isError) {
-      console.log('[DEBUG] Setting up timeout for Google Maps loading...');
-      // Much shorter timeout due to Web Components being unreliable
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      const timeoutDuration = isMobile ? 4000 : 3000; // Reduced timeout
-      
-      const timeout = setTimeout(() => {
-        console.warn(`Google Maps load timeout after ${timeoutDuration/1000} seconds. Showing fallback.`);
-        onShowFallback();
-      }, timeoutDuration);
-
-      return () => clearTimeout(timeout);
-    }
-  }, [isLoaded, isError, onShowFallback]);
-
-  // Unified setup effect
+  // Setup Google Web Components autocomplete
   useEffect(() => {
     console.log('[DEBUG] Setup effect triggered:', { 
       isLoaded, 
@@ -83,8 +54,7 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
       
       const container = containerRef.current;
       if (!container) {
-        console.error('Container not found, falling back to manual input');
-        onShowFallback();
+        console.error('Container not found');
         return;
       }
 
@@ -129,9 +99,8 @@ export const AutocompleteContainer: React.FC<AutocompleteContainerProps> = ({
       
     } catch (error) {
       console.error('Error setting up place autocomplete:', error);
-      onShowFallback();
     }
-  }, [isLoaded, value, id, placeholder, onChange, onPlaceSelect, disabled, retryCount, handlePlaceSelect, onShowFallback]);
+  }, [isLoaded, value, id, placeholder, disabled, handlePlaceSelect]);
 
   // Sync value with autocomplete element
   useEffect(() => {
