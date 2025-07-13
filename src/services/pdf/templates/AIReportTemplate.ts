@@ -48,99 +48,97 @@ export class AIReportTemplate extends BaseTemplate {
   }
 
   public renderAIReportSection(reportContent: string, startY: number, targetDoc?: any): number {
-    const doc = targetDoc || this.doc;
-    const margins = this.margins;
-    const pageWidth = targetDoc ? targetDoc.internal.pageSize.getWidth() : this.pageWidth;
-    const pageHeight = targetDoc ? targetDoc.internal.pageSize.getHeight() : this.pageHeight;
-    
-    let currentY = startY;
+  const doc = targetDoc || this.doc;
+  const margins = this.margins;
+  const pageWidth = targetDoc ? targetDoc.internal.pageSize.getWidth() : this.pageWidth;
+  const pageHeight = targetDoc ? targetDoc.internal.pageSize.getHeight() : this.pageHeight;
 
-    // Check if we need a new page
-    if (currentY > pageHeight - 100) {
+  let currentY = startY;
+
+  // Reset font + color just in case
+  doc.setFontSize(11).setFont('helvetica', 'normal').setTextColor(33);
+
+  // Add AI Section Title
+  const sectionTitle = 'AI Intelligence Report';
+  doc.setFontSize(16).setFont('helvetica', 'bold').setTextColor(58, 39, 96);
+  doc.text(sectionTitle, margins.left, currentY);
+  currentY += 14;
+
+  const blocks = ReportParser.parseReport(reportContent);
+  const lineHeight = 7;
+  const maxWidth = pageWidth - margins.left - margins.right;
+  const headingGap = 8;
+  const actionIndent = 15;
+
+  for (const block of blocks) {
+    if (currentY > pageHeight - 30) {
       doc.addPage();
       currentY = margins.top;
     }
 
+    switch (block.type) {
+      case 'heading':
+        if (currentY > margins.top + 20) currentY += headingGap;
 
-    // Parse content using the same parser as the modal
-    const blocks = ReportParser.parseReport(reportContent);
-    
-    const lineHeight = 7;
-    const maxWidth = pageWidth - margins.left - margins.right;
-    const headingGap = 8;
-    const actionIndent = 15;
-
-    for (const block of blocks) {
-      if (currentY > pageHeight - 30) {
-        doc.addPage();
-        currentY = margins.top;
-      }
-
-      switch (block.type) {
-        case 'heading':
-          // Add extra space before headings (except first)
-          if (currentY > margins.top + 20) currentY += headingGap;
-          
-          doc.setFontSize(14).setFont('helvetica', 'bold').setTextColor(40, 40, 60);
-          const headingLines = doc.splitTextToSize(block.text, maxWidth);
-          for (const line of headingLines) {
-            if (currentY > pageHeight - 30) {
-              doc.addPage();
-              currentY = margins.top;
-            }
-            doc.text(line, margins.left, currentY);
-            currentY += lineHeight + 1;
+        doc.setFontSize(14).setFont('helvetica', 'bold').setTextColor(58, 39, 96); // Use purple tone
+        const headingLines = doc.splitTextToSize(block.text, maxWidth);
+        for (const line of headingLines) {
+          if (currentY > pageHeight - 30) {
+            doc.addPage();
+            currentY = margins.top;
           }
-          currentY += 3;
-          break;
+          doc.text(line, margins.left, currentY);
+          currentY += lineHeight + 1;
+        }
+        currentY += 3;
+        break;
 
-        case 'action':
-          doc.setFontSize(10).setFont('helvetica', 'normal').setTextColor(60, 60, 60);
-          const actionLines = doc.splitTextToSize(block.text, maxWidth - actionIndent);
-          for (const line of actionLines) {
-            if (currentY > pageHeight - 30) {
-              doc.addPage();
-              currentY = margins.top;
-            }
-            doc.text(line, margins.left + actionIndent, currentY);
-            currentY += lineHeight;
+      case 'action':
+        doc.setFontSize(10).setFont('helvetica', 'normal').setTextColor(60, 60, 60);
+        const actionLines = doc.splitTextToSize(block.text, maxWidth - actionIndent);
+        for (const line of actionLines) {
+          if (currentY > pageHeight - 30) {
+            doc.addPage();
+            currentY = margins.top;
           }
-          currentY += 2;
-          break;
+          doc.text(line, margins.left + actionIndent, currentY);
+          currentY += lineHeight;
+        }
+        currentY += 2;
+        break;
 
-        case 'tag':
-          doc.setFontSize(9).setFont('helvetica', 'normal').setTextColor(100, 100, 100);
-          const tagLines = doc.splitTextToSize(block.text, maxWidth - actionIndent);
-          for (const line of tagLines) {
-            if (currentY > pageHeight - 30) {
-              doc.addPage();
-              currentY = margins.top;
-            }
-            doc.text(line, margins.left + actionIndent, currentY);
-            currentY += lineHeight - 1;
+      case 'tag':
+        doc.setFontSize(9).setFont('helvetica', 'normal').setTextColor(100, 100, 100);
+        const tagLines = doc.splitTextToSize(block.text, maxWidth - actionIndent);
+        for (const line of tagLines) {
+          if (currentY > pageHeight - 30) {
+            doc.addPage();
+            currentY = margins.top;
           }
-          break;
+          doc.text(line, margins.left + actionIndent, currentY);
+          currentY += lineHeight - 1;
+        }
+        break;
 
-        case 'spacer':
-          currentY += 4;
-          break;
+      case 'spacer':
+        currentY += 4;
+        break;
 
-        default: // normal paragraph
-          doc.setFontSize(11).setFont('helvetica', 'normal').setTextColor(33);
-          const normalLines = doc.splitTextToSize(block.text, maxWidth);
-          for (const line of normalLines) {
-            if (currentY > pageHeight - 30) {
-              doc.addPage();
-              currentY = margins.top;
-            }
-            doc.text(line, margins.left, currentY);
-            currentY += lineHeight;
+      default:
+        doc.setFontSize(11).setFont('helvetica', 'normal').setTextColor(33);
+        const normalLines = doc.splitTextToSize(block.text, maxWidth);
+        for (const line of normalLines) {
+          if (currentY > pageHeight - 30) {
+            doc.addPage();
+            currentY = margins.top;
           }
-          currentY += 4;
-          break;
-      }
+          doc.text(line, margins.left, currentY);
+          currentY += lineHeight;
+        }
+        currentY += 4;
+        break;
     }
-
-    return currentY + 20;
   }
+
+  return currentY + 20;
 }
