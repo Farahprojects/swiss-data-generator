@@ -348,12 +348,6 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                   : 'pb-6'
               }`}
             >
-              {/* Debug Info - Remove in production */}
-              {process.env.NODE_ENV === 'development' && (
-                <div className="mb-4 p-2 bg-yellow-100 text-xs">
-                  Step: {currentStep}, Category: {reportCategory || 'none'}, Request: {request || 'none'}
-                </div>
-              )}
               
               {/* Safe wrapper for step components */}
               {(() => {
