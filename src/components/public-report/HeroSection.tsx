@@ -10,7 +10,7 @@ interface HeroSectionProps {
 
 const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
   // Rotating words for the "Your..." animation - easily customizable
-  const rotatingWords = ['self', 'mind', 'bae', 'soul', 'will'];
+  const rotatingWords = ['Self', 'Mind', 'Bae', 'Soul', 'Will'];
   
   // Banner images for smooth transitions - from explore more section
   const bannerImages = [
@@ -59,7 +59,7 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, ease: "easeOut" }}
         >
-          <h1 className="text-3xl xs:text-4xl sm:text-5xl lg:text-8xl xl:text-9xl font-light text-gray-900 leading-tight mb-8">
+          <h1 className="text-4xl xs:text-5xl sm:text-6xl lg:text-8xl xl:text-9xl font-light text-gray-900 leading-tight mb-8">
             Know
             <br />
             <span className="italic font-medium flex items-center justify-center gap-x-8 flex-wrap">
