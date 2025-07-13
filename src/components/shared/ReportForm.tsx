@@ -292,6 +292,15 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     swissBoolean?: boolean,
     reportType?: string
   ) => {
+    console.log('[ReportForm] handleViewReport called with:', {
+      contentLength: content?.length || 0,
+      hasPdfData: !!pdfData,
+      hasSwissData: !!swissData,
+      hasReport,
+      swissBoolean,
+      reportType
+    });
+    
     setReportContent(content);
     setReportPdfData(pdfData || null);
     setSwissData(swissData);
@@ -299,6 +308,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     setSwissBoolean(swissBoolean || false);
     setCurrentReportType(reportType || '');
     setViewingReport(true);
+    
+    console.log('[ReportForm] setViewingReport(true) called');
   };
 
   const handleCloseReportViewer = () => {
@@ -358,7 +369,16 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   };
 
   // Show report viewer if user is viewing a report and data is available
+  console.log('[ReportForm] Render check - viewingReport:', viewingReport, 'guestReportData:', !!guestReportData, 'isLoadingReport:', isLoadingReport);
+  
   if (viewingReport && guestReportData && !isLoadingReport) {
+    console.log('[ReportForm] Rendering ReportViewer with data:', {
+      hasGuestReport: !!guestReportData.guest_report,
+      hasReportContent: !!guestReportData.report_content,
+      hasSwissData: !!guestReportData.swiss_data,
+      hasMetadata: !!guestReportData.metadata
+    });
+    
     return (
       <ReportViewer
         mappedReport={mapReportPayload({
