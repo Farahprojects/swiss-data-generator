@@ -398,24 +398,9 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     return null;
   }
 
-  // Visual debug mode for development
-  const debugOverlay = process.env.NODE_ENV === 'development' && (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      height: `${topSafePadding}px`,
-      width: '100%',
-      background: 'rgba(255, 0, 0, 0.2)',
-      zIndex: 9999,
-      pointerEvents: 'none'
-    }} />
-  );
-
   // ---------------------------------------------------------------------
   return (
     <>
-      {debugOverlay}
       <Drawer open={isOpen && currentView !== 'report'} onOpenChange={resetDrawer} dismissible={false}>
         <DrawerContent
           className="flex flex-col rounded-none h-screen max-h-screen"
