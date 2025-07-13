@@ -3,45 +3,28 @@ import { useEffect } from 'react';
 
 export const useViewportHeight = () => {
   useEffect(() => {
-    // Only run in browser environment
-    if (typeof window === 'undefined') return;
-    
-    // Only apply on small screens (mobile devices)
-    if (window.innerWidth > 768) return;
+    const isBrowser = typeof window !== 'undefined';
+    if (!isBrowser) return;
+    const MOBILE = 768;
 
-    const updateViewportHeight = () => {
-      const vh = window.innerHeight * 0.01;
-      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    const setVH = () =>
+      document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
+
+    const safeResize = () => {
+      // Ignore keyboard-driven visualViewport resizes
+      if (window.innerWidth > MOBILE) return;
+      const lost = window.innerHeight - (window.visualViewport?.height ?? window.innerHeight);
+      if (lost > 150) return;           // keyboard visible
+      setVH();
     };
 
-    // Set initial height
-    updateViewportHeight();
+    setVH();
+    window.addEventListener('orientationchange', setVH);
+    window.addEventListener('resize', safeResize, { passive: true });
 
-    // Update on resize and orientation change (handles keyboard show/hide)
-    const handleResize = () => {
-      if (window.innerWidth > 768) {
-        document.documentElement.style.removeProperty('--vh');
-        return;
-      }
-      // Use requestAnimationFrame to ensure smooth updates
-      requestAnimationFrame(updateViewportHeight);
-    };
-
-    window.addEventListener('resize', handleResize, { passive: true });
-    window.addEventListener('orientationchange', handleResize, { passive: true });
-    
-    // Also handle visual viewport changes for better keyboard support
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', handleResize, { passive: true });
-    }
-
-    // Cleanup
     return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('orientationchange', handleResize);
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', handleResize);
-      }
+      window.removeEventListener('orientationchange', setVH);
+      window.removeEventListener('resize', safeResize);
     };
   }, []);
 };

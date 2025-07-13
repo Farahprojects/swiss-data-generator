@@ -139,28 +139,24 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
   // ----------------------------- Auto‑scroll -----------------------------
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  // 👇 remembers the last step so we don't fire on redundant updates
+  const prevStepRef = useRef<number>();
   useEffect(() => {
-    const t = window.setTimeout(() => {
-      const container = scrollContainerRef.current;
-      if (!container) return;
-      container.scrollTo({ top: 0, behavior: 'smooth' });
+    if (prevStepRef.current === currentStep) return;   // ignore duplicates
+    prevStepRef.current = currentStep;
 
-      // Only focus actual form inputs, not selection buttons
-      const firstFocusable = container.querySelector<HTMLElement>(
-        'input[type="text"], input[type="email"], input[type="date"], input[type="time"], select, textarea',
-      );
-      if (firstFocusable) {
-        firstFocusable.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        // Ensure no accidental focus on interactive elements
-        setTimeout(() => {
-          const activeElement = document.activeElement as HTMLElement;
-          if (activeElement && activeElement.tagName === 'BUTTON') {
-            activeElement.blur();
-          }
-        }, 100);
-      }
-    }, 350);
-    return () => window.clearTimeout(t);
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    // 1️⃣ reset scroll only when entering a new step
+    container.scrollTo({ top: 0, behavior: 'instant' });
+
+    // 2️⃣ focus first real input, _once_
+    const firstInput = container.querySelector<HTMLElement>(
+      'input:not([type=hidden]), select, textarea'
+    );
+    firstInput?.focus();
+
   }, [currentStep]);
 
   // --------------------- Stripe return handler ---------------------------
