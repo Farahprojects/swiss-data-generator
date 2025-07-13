@@ -349,89 +349,70 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
               }`}
             >
               
-              {/* Safe wrapper for step components */}
+              {/* Step content */}
               {(() => {
-                const Safe = ({children}) => {
-                  try { 
-                    return children; 
-                  } catch(e) { 
-                    console.error('Safe wrapper error:', e); 
-                    return <p className="p-4 text-red-500">Error: {e.message}</p>;
-                  }
-                };
-
                 try {
                   if (currentStep === 1) {
                     return (
-                      <Safe>
-                        <Step1ReportType
-                          key="step1"
-                          control={control}
-                          setValue={setValue}
-                          onNext={nextStep}
-                          selectedCategory={reportCategory}
-                        />
-                      </Safe>
+                      <Step1ReportType
+                        key="step1"
+                        control={control}
+                        setValue={setValue}
+                        onNext={nextStep}
+                        selectedCategory={reportCategory}
+                      />
                     );
                   }
 
                   if (currentStep === 2 && reportCategory === 'astro-data') {
                     return (
-                      <Safe>
-                        <Step1_5AstroData
-                          key="step1_5_astro"
-                          control={control}
-                          setValue={setValue}
-                          onNext={nextStep}
-                          selectedSubCategory={request}
-                        />
-                      </Safe>
+                      <Step1_5AstroData
+                        key="step1_5_astro"
+                        control={control}
+                        setValue={setValue}
+                        onNext={nextStep}
+                        selectedSubCategory={request}
+                      />
                     );
                   }
 
                   if (currentStep === 2 && reportCategory !== 'astro-data') {
                     return (
-                      <Safe>
-                        <Step1_5SubCategory
-                          key="step1_5"
-                          control={control}
-                          setValue={setValue}
-                          onNext={nextStep}
-                          onPrev={prevStep}
-                          selectedCategory={reportCategory}
-                          selectedSubCategory={reportSubCategory}
-                        />
-                      </Safe>
+                      <Step1_5SubCategory
+                        key="step1_5"
+                        control={control}
+                        setValue={setValue}
+                        onNext={nextStep}
+                        onPrev={prevStep}
+                        selectedCategory={reportCategory}
+                        selectedSubCategory={reportSubCategory}
+                      />
                     );
                   }
 
                   if (currentStep === 3) {
                     return (
-                      <Safe>
-                        <Step2BirthDetails
-                          key="step2"
-                          register={register}
-                          setValue={setValue}
-                          watch={watch}
-                          errors={errors}
-                        />
-                      </Safe>
+                      <Step2BirthDetails
+                        key="step2"
+                        register={register}
+                        setValue={setValue}
+                        watch={watch}
+                        errors={errors}
+                      />
                     );
                   }
 
                   if (currentStep === 4) {
                     return (
-                      <Safe>
-                        <Step3Payment
-                          key="step3"
-                          register={register}
-                          watch={watch}
-                          errors={errors}
-                          isProcessing={isProcessing}
-                          promoValidation={promoValidationState}
-                          isValidatingPromo={isValidatingPromo}
-                        />
-                      </Safe>
+                      <Step3Payment
+                        key="step3"
+                        register={register}
+                        watch={watch}
+                        errors={errors}
+                        isProcessing={isProcessing}
+                        promoValidation={promoValidationState}
+                        isValidatingPromo={isValidatingPromo}
+                      />
                     );
                   }
 
