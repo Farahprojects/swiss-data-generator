@@ -16,31 +16,54 @@ export function injectRealNames(
   personA: string,
   personB?: string
 ): typeof swiss {
+  console.log('[swissDataProcessor] [INJECT] Starting injectRealNames with:', { personA, personB });
+  
   if (!swiss || !personA) {
+    console.warn('[swissDataProcessor] [INJECT] Invalid input - swiss:', !!swiss, 'personA:', !!personA);
     return swiss;
   }
 
   // Size guard: skip processing if JSON too large (> 2MB)
   try {
     const jsonSize = JSON.stringify(swiss).length;
+    console.log('[swissDataProcessor] [INJECT] Swiss data size:', jsonSize, 'characters');
+    
     if (jsonSize > 2 * 1024 * 1024) {
-      console.warn(`[swissDataProcessor] Skipping large payload: ${(jsonSize / 1024 / 1024).toFixed(2)}MB`);
+      console.warn(`[swissDataProcessor] [INJECT] Skipping large payload: ${(jsonSize / 1024 / 1024).toFixed(2)}MB`);
       return swiss;
     }
   } catch (err) {
-    console.error('[swissDataProcessor] Failed to measure JSON size:', err);
+    console.error('[swissDataProcessor] [INJECT] Failed to measure JSON size:', err);
     return swiss;
   }
 
+  let replacementCount = 0;
+  
   const replace = (val: any): any => {
     // Handle strings - replace placeholders with real names using word boundaries
     if (typeof val === 'string') {
+      const original = val;
       let result = val
-        .replace(/\bPerson\s*A\b/gi, personA)
-        .replace(/\bPerson\s*B\b/gi, personB || ''); // graceful if B missing
+        .replace(/\bPerson\s*A\b/gi, (match) => {
+          console.log('[swissDataProcessor] [INJECT] Replacing Person A:', match, '→', personA);
+          replacementCount++;
+          return personA;
+        })
+        .replace(/\bPerson\s*B\b/gi, (match) => {
+          console.log('[swissDataProcessor] [INJECT] Replacing Person B:', match, '→', personB || '');
+          replacementCount++;
+          return personB || '';
+        });
       
       // Clean up any double spaces or trailing spaces from empty Person B replacements
-      return result.replace(/\s+/g, ' ').trim();
+      result = result.replace(/\s+/g, ' ').trim();
+      
+      // Log significant changes
+      if (original !== result) {
+        console.log('[swissDataProcessor] [INJECT] String transformation:', { original: original.substring(0, 100), result: result.substring(0, 100) });
+      }
+      
+      return result;
     }
     
     // Handle arrays - recursively process each element
@@ -59,7 +82,10 @@ export function injectRealNames(
     return val;
   };
 
-  return replace(swiss) as typeof swiss;
+  const result = replace(swiss) as typeof swiss;
+  console.log('[swissDataProcessor] [INJECT] Total replacements made:', replacementCount);
+  
+  return result;
 }
 
 /**
@@ -68,6 +94,9 @@ export function injectRealNames(
  * @returns Object with personA and personB names
  */
 export function extractPersonNames(requestData: any): { personA: string; personB?: string } {
+  console.log('[swissDataProcessor] [EXTRACT] Extracting person names from request data...');
+  console.log('[swissDataProcessor] [EXTRACT] Request data keys:', Object.keys(requestData || {}));
+  
   const personA = requestData.person_a?.name ?? 
                   requestData.report_data?.name ?? // guest flow fallback
                   requestData.name ?? 
@@ -76,6 +105,15 @@ export function extractPersonNames(requestData: any): { personA: string; personB
   const personB = requestData.person_b?.name ?? 
                   requestData.secondPersonName ?? 
                   undefined;
+
+  console.log('[swissDataProcessor] [EXTRACT] Extracted names result:', { personA, personB });
+  console.log('[swissDataProcessor] [EXTRACT] Name sources used:', {
+    personA_source: requestData.person_a?.name ? 'person_a.name' : 
+                   requestData.report_data?.name ? 'report_data.name' :
+                   requestData.name ? 'name' : 'fallback',
+    personB_source: requestData.person_b?.name ? 'person_b.name' :
+                   requestData.secondPersonName ? 'secondPersonName' : 'none'
+  });
 
   return { personA, personB };
 }

@@ -87,14 +87,64 @@ async function logToSupabase(
 
   if (responsePayload && typeof responsePayload === 'object' && responsePayload.swiss_data) {
     try {
+      console.log('[translator] [NAME-INJECTION] Starting name injection process...');
+      console.log('[translator] [NAME-INJECTION] Swiss data size:', JSON.stringify(responsePayload.swiss_data).length, 'characters');
+      
       const { personA, personB } = extractPersonNames(requestPayload);
+      console.log('[translator] [NAME-INJECTION] Extracted names:', { personA, personB });
+      
+      // Check if Swiss data contains placeholders before processing
+      const swissDataStr = JSON.stringify(responsePayload.swiss_data);
+      const hasPersonA = /\bPerson\s*A\b/i.test(swissDataStr);
+      const hasPersonB = /\bPerson\s*B\b/i.test(swissDataStr);
+      console.log('[translator] [NAME-INJECTION] Placeholders found:', { hasPersonA, hasPersonB });
+      
+      if (!hasPersonA && !hasPersonB) {
+        console.warn('[translator] [NAME-INJECTION] No Person A/B placeholders found in Swiss data - name injection may be unnecessary');
+      }
+      
       // Clone the swiss_data to avoid mutating the original responsePayload
-      swissDataNamed = injectRealNames(structuredClone(responsePayload.swiss_data), personA, personB);
-      hasNamedData = true;
-      console.log(`[translator] Processed Swiss data with names: ${personA}${personB ? ` & ${personB}` : ''} (${new Date().toISOString()})`);
+      const originalData = structuredClone(responsePayload.swiss_data);
+      swissDataNamed = injectRealNames(originalData, personA, personB);
+      
+      // Compare before and after to confirm changes were made
+      const originalStr = JSON.stringify(originalData);
+      const namedStr = JSON.stringify(swissDataNamed);
+      const changesMade = originalStr !== namedStr;
+      console.log('[translator] [NAME-INJECTION] Changes made during injection:', changesMade);
+      
+      if (changesMade) {
+        // Count replacements to confirm they happened
+        const personAMatches = (originalStr.match(/\bPerson\s*A\b/gi) || []).length;
+        const personBMatches = (originalStr.match(/\bPerson\s*B\b/gi) || []).length;
+        console.log('[translator] [NAME-INJECTION] Replacements made:', { personAMatches, personBMatches });
+        hasNamedData = true;
+        console.log(`[translator] [NAME-INJECTION] ✅ Successfully processed Swiss data with names: ${personA}${personB ? ` & ${personB}` : ''}`);
+      } else {
+        console.warn('[translator] [NAME-INJECTION] ⚠️ No changes detected after name injection - placeholders may not exist');
+        hasNamedData = false;
+        swissDataNamed = {
+          error: 'NO_PLACEHOLDERS_FOUND',
+          message: 'Swiss data does not contain Person A/B placeholders for replacement',
+          original_data_size: originalStr.length,
+          searched_for: { personA, personB }
+        };
+      }
+      
     } catch (err) {
-      console.error('Failed to process Swiss data names:', err);
-      // Continue without processed names - fallback to original data
+      console.error('[translator] [NAME-INJECTION] ❌ Failed to process Swiss data names:', err);
+      hasNamedData = false;
+      swissDataNamed = {
+        error: 'INJECTION_FAILED',
+        message: err.message || 'Unknown error during name injection',
+        stack: err.stack,
+        timestamp: new Date().toISOString()
+      };
+    }
+  } else {
+    console.warn('[translator] [NAME-INJECTION] ⚠️ No swiss_data found in responsePayload for name injection');
+    if (responsePayload) {
+      console.log('[translator] [NAME-INJECTION] Available responsePayload keys:', Object.keys(responsePayload));
     }
   }
 
