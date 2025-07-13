@@ -26,8 +26,6 @@ export class AIReportTemplate extends BaseTemplate {
     this.doc.setFontSize(26).setFont('times', 'normal').setTextColor(40, 40, 60);
     this.doc.text('Therai.', this.pageWidth / 2, logoY + 12, { align: 'center' });
 
-    this.doc.setFontSize(20).setFont('helvetica', 'bold');
-    this.doc.text('AI Intelligence Report', this.pageWidth / 2, logoY + 28, { align: 'center' });
 
     // Customer name
     this.doc.setFontSize(14).setFont('helvetica', 'normal');
@@ -63,10 +61,6 @@ export class AIReportTemplate extends BaseTemplate {
       currentY = margins.top;
     }
 
-    // Section Header
-    doc.setFontSize(18).setFont('helvetica', 'bold').setTextColor(75, 63, 114);
-    doc.text('AI Intelligence Report', margins.left, currentY);
-    currentY += 15;
 
     // Parse content using the same parser as the modal
     const blocks = ReportParser.parseReport(reportContent);
@@ -87,7 +81,7 @@ export class AIReportTemplate extends BaseTemplate {
           // Add extra space before headings (except first)
           if (currentY > margins.top + 20) currentY += headingGap;
           
-          doc.setFontSize(12).setFont('helvetica', 'bold').setTextColor(40, 40, 60);
+          doc.setFontSize(14).setFont('helvetica', 'bold').setTextColor(40, 40, 60);
           const headingLines = doc.splitTextToSize(block.text, maxWidth);
           for (const line of headingLines) {
             if (currentY > pageHeight - 30) {
