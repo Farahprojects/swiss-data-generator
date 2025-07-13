@@ -13,16 +13,12 @@ export function useIsMobile() {
     
     const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
     const onChange = () => {
-      const newIsMobile = window.innerWidth < MOBILE_BREAKPOINT
-      console.debug('Mobile detection:', { width: window.innerWidth, isMobile: newIsMobile })
-      setIsMobile(newIsMobile)
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
     }
     mql.addEventListener("change", onChange)
     
     // Set initial value
-    const initialIsMobile = window.innerWidth < MOBILE_BREAKPOINT
-    console.debug('Initial mobile detection:', { width: window.innerWidth, isMobile: initialIsMobile })
-    setIsMobile(initialIsMobile)
+    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
     
     return () => mql.removeEventListener("change", onChange)
   }, [])

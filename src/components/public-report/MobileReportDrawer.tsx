@@ -89,31 +89,23 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   useBodyScrollLock(isOpen);
   const isMobile = useIsMobile();
 
+  // Don't render anything on desktop
+  if (!isMobile) {
+    return null;
+  }
+
   // Get guest report data for viewing reports - same as desktop
   const urlGuestId = getGuestReportId();
   const { data: guestReportData, isLoading: isLoadingReport, error: reportError } =
     useGuestReportData(urlGuestId);
 
   // Auto-open drawer and switch to report-viewer when guest report data is available (deep linking)
-  // BUT ONLY ON MOBILE DEVICES
   useEffect(() => {
-    console.debug('Auto-open logic:', { 
-      guestReportData: !!guestReportData, 
-      isLoadingReport, 
-      reportError: !!reportError, 
-      isOpen, 
-      isMobile,
-      urlGuestId 
-    });
-    
-    if (guestReportData && !isLoadingReport && !reportError && isMobile) {
-      console.debug('Guest report data available on mobile, switching to report viewer');
+    if (guestReportData && !isLoadingReport && !reportError) {
       // Switch to report viewer when guest report data is available
       setCurrentView('report-viewer');
-    } else if (guestReportData && !isLoadingReport && !reportError && !isMobile) {
-      console.debug('Guest report data available but not on mobile - drawer should not auto-open');
     }
-  }, [guestReportData, isLoadingReport, reportError, isOpen, isMobile, urlGuestId]);
+  }, [guestReportData, isLoadingReport, reportError]);
 
   const { form, currentStep, nextStep, prevStep } = useMobileDrawerForm();
   const {
@@ -125,11 +117,6 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     formState: { errors },
   } = form;
 
-  // Fast triage debugging
-  console.debug('currentStep', currentStep);
-  console.debug('isOpen', isOpen);
-  console.debug('CSS --vh:', typeof window !== 'undefined' ? getComputedStyle(document.documentElement).getPropertyValue('--vh') : 'server');
-  console.debug('Form state:', { reportCategory: watch('reportCategory'), request: watch('request') });
   const { isProcessing, submitReport } = useReportSubmission();
   const { promoValidation, isValidatingPromo } = usePromoValidation();
 
@@ -333,7 +320,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
   // ---------------------------------------------------------------------
   return (
-    <Drawer open onOpenChange={resetDrawer} dismissible={false}>
+    <Drawer open={isOpen} onOpenChange={resetDrawer} dismissible={false}>
       <DrawerContent
         className="flex flex-col rounded-none h-screen-safe max-h-screen-safe"
         style={{
