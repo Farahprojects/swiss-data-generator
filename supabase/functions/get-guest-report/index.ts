@@ -16,6 +16,7 @@ interface ReportData {
     payment_status: string;
     created_at: string;
     promo_code_used: string | null;
+    report_data: any; // Contains the user's form data with name, email, etc.
   };
   report_content: string | null;
   swiss_data: any | null;
