@@ -217,7 +217,7 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
     return (
       <div className="fixed inset-0 bg-white z-50 flex flex-col">
         {/* Unified Header */}
-        <div className="flex items-center justify-between px-4 pt-[calc(env(safe-area-inset-top,20px)+24px)] pb-2 border-b bg-white shadow-sm">
+        <div className="flex items-center justify-between px-4 py-4 border-b bg-white shadow-sm">
           <Button variant="ghost" size="icon" onClick={onBack} className="p-2 hover:bg-gray-100 transition-colors active:scale-95">
             <ArrowLeft className="h-6 w-6 text-gray-700" />
           </Button>
