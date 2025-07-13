@@ -359,6 +359,10 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
   // Show report viewer if user is viewing a report and data is available
   if (viewingReport && guestReportData && !isLoadingReport) {
+    console.log('🔍 ReportForm - guestReportData:', guestReportData);
+    console.log('🔍 ReportForm - guest_report:', guestReportData.guest_report);
+    console.log('🔍 ReportForm - guest_report.report_data:', guestReportData.guest_report?.report_data);
+    
     return (
       <ReportViewer
         mappedReport={mapReportPayload({
