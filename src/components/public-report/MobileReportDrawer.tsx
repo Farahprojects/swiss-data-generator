@@ -89,11 +89,6 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   useBodyScrollLock(isOpen);
   const isMobile = useIsMobile();
 
-  // Don't render anything on desktop
-  if (!isMobile) {
-    return null;
-  }
-
   // Get guest report data for viewing reports - same as desktop
   const urlGuestId = getGuestReportId();
   const { data: guestReportData, isLoading: isLoadingReport, error: reportError } =
@@ -317,6 +312,11 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
       ))}
     </div>
   );
+
+  // Don't render anything on desktop
+  if (!isMobile) {
+    return null;
+  }
 
   // ---------------------------------------------------------------------
   return (
