@@ -13,7 +13,6 @@
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { handleReportGeneration } from "./reportHandler.ts";
-import { injectRealNames, extractPersonNames } from "./swissDataProcessor.ts";
 
 /*──────────────── ENV ------------------------------------*/
 const SWISS_API = Deno.env.get("SWISS_EPHEMERIS_URL")!;
@@ -81,22 +80,6 @@ async function logToSupabase(
 
   const isGuest = requestPayload?.is_guest === true;
 
-  // Process Swiss data with real names if available
-  let swissDataNamed = null;
-  let hasNamedData = false;
-
-  if (responsePayload && typeof responsePayload === 'object' && responsePayload.swiss_data) {
-    try {
-      const { personA, personB } = extractPersonNames(requestPayload);
-      // Clone the swiss_data to avoid mutating the original responsePayload
-      swissDataNamed = injectRealNames(structuredClone(responsePayload.swiss_data), personA, personB);
-      hasNamedData = true;
-      console.log(`[translator] Processed Swiss data with names: ${personA}${personB ? ` & ${personB}` : ''} (${new Date().toISOString()})`);
-    } catch (err) {
-      console.error('Failed to process Swiss data names:', err);
-      // Continue without processed names - fallback to original data
-    }
-  }
 
   // [DEBUG] Log responsePayload structure before saving
   console.log('[translator] [DEBUG] responsePayload keys before saving:', Object.keys(responsePayload || {}));
@@ -109,8 +92,6 @@ async function logToSupabase(
     translator_payload:  translatorPayload ?? null,
     response_status:     responseStatus,
     swiss_data:          responsePayload.swiss_data ?? null, // keep raw Swiss untouched
-    swiss_data_named:    swissDataNamed,
-    has_named_data:      hasNamedData,
     processing_time_ms:  processingTime,
     error_message:       errorMessage,
     google_geo:          googleGeoUsed,
