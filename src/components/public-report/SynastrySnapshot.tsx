@@ -61,22 +61,21 @@ interface Props {
 }
 
 const SynastrySnapshot: React.FC<Props> = ({ rawSyncJSON, reportData }) => {
-  // COMMENTED OUT: Extract names from mapped report data (testing backend enrichment)
-  // const personAName = reportData?.people?.A?.name || reportData?.customerName || reportData?.name || reportData?.firstName;
-  // const personBName = reportData?.people?.B?.name || reportData?.secondPersonName;
+  // Extract names from mapped report data
+  const personAName = reportData?.people?.A?.name || reportData?.customerName || reportData?.name || reportData?.firstName;
+  const personBName = reportData?.people?.B?.name || reportData?.secondPersonName;
   
-  // COMMENTED OUT: Inject names into rawSyncJSON if available (testing backend enrichment)
-  // const enrichedData = {
-  //   ...rawSyncJSON,
-  //   chartData: {
-  //     ...rawSyncJSON.chartData,
-  //     person_a_name: personAName,
-  //     person_b_name: personBName
-  //   }
-  // };
+  // Inject names into rawSyncJSON if available
+  const enrichedData = {
+    ...rawSyncJSON,
+    chartData: {
+      ...rawSyncJSON.chartData,
+      person_a_name: personAName,
+      person_b_name: personBName
+    }
+  };
 
-  // TESTING: Use raw data directly from backend (should already have enriched names)
-  const data = parseSynastryRich(rawSyncJSON);
+  const data = parseSynastryRich(enrichedData);
 
   const formattedDate = new Date(data.meta.dateISO).toLocaleDateString("en-US", {
     month: "long",
