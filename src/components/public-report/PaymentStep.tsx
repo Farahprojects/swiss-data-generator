@@ -12,6 +12,7 @@ import { ReportFormData } from '@/types/public-report';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { PromoConfirmationDialog } from '@/components/public-report/PromoConfirmationDialog';
+import { handlePaymentSubmission } from '@/utils/paymentSubmissionHelper';
 import FormStep from './FormStep';
 
 interface PromoValidationState {
@@ -118,19 +119,12 @@ const PaymentStep = ({
     e.preventDefault();
     e.stopPropagation();
     
-    // Show processing immediately
-    setIsLocalProcessing(true);
-    
-    // First validate promo code if present
-    if (promoCode && promoCode.trim() !== '') {
-      const validation = await validatePromoManually(promoCode);
-      
-      // Give user time to see the validation result
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-    
-    // Then proceed with form submission via parent
-    onSubmit();
+    await handlePaymentSubmission({
+      promoCode,
+      validatePromoManually,
+      onSubmit,
+      setIsLocalProcessing
+    });
   };
 
   // Always show clean payment UI with global pricing fallback

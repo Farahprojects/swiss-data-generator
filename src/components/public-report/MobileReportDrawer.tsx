@@ -19,6 +19,7 @@ import { usePromoValidation } from '@/hooks/usePromoValidation';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useGuestReportData } from '@/hooks/useGuestReportData';
 import { clearAllSessionData, getGuestReportId } from '@/utils/urlHelpers';
+import { handlePaymentSubmission } from '@/utils/paymentSubmissionHelper';
 import Step1ReportType from './drawer-steps/Step1ReportType';
 import Step1_5SubCategory from './drawer-steps/Step1_5SubCategory';
 import Step1_5AstroData from './drawer-steps/Step1_5AstroData';
@@ -115,6 +116,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
   const { isProcessing, submitReport } = useReportSubmission();
   const { promoValidation, isValidatingPromo, validatePromoManually, resetValidation } = usePromoValidation();
+  const [isLocalProcessing, setIsLocalProcessing] = useState(false);
 
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');
@@ -215,7 +217,19 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     await submitReport(data, promoValidationState, resetValidation);
     setCurrentView('success');
   };
-  const handleFormSubmit = () => handleSubmit(onSubmit)();
+
+  // Use the same payment submission logic as desktop
+  const handleMobilePaymentSubmission = async () => {
+    const formData = form.getValues();
+    const promoCode = watch('promoCode') || '';
+    
+    await handlePaymentSubmission({
+      promoCode,
+      validatePromoManually,
+      onSubmit: () => handleSubmit(onSubmit)(),
+      setIsLocalProcessing
+    });
+  };
 
   // No need for handleViewReport - SuccessScreen handles everything
 
@@ -459,18 +473,18 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                 {currentStep >= 3 && (
                   <button
                     type="button"
-                    onClick={currentStep === 3 ? handleStep3Continue : handleFormSubmit}
-                    disabled={currentStep === 4 && (isProcessing || isValidatingPromo)}
+                    onClick={currentStep === 3 ? handleStep3Continue : handleMobilePaymentSubmission}
+                    disabled={currentStep === 4 && (isProcessing || isValidatingPromo || isLocalProcessing)}
                     className="w-auto min-w-fit bg-gray-900 text-white px-8 py-1 rounded-lg text-sm font-medium hover:bg-gray-800 transition-all duration-300 disabled:opacity-50 whitespace-nowrap"
                     style={{ WebkitTapHighlightColor: 'transparent' }}
                   >
                     {currentStep === 3
                       ? 'Continue'
-                      : isProcessing
+                      : isLocalProcessing || isProcessing
                       ? 'Processing…'
                       : isValidatingPromo
                       ? 'Validating…'
-                      : 'Confirm'}
+                      : 'Generate My Report'}
                   </button>
                 )}
               </div>
