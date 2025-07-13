@@ -322,7 +322,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   return (
     <Drawer open={isOpen} onOpenChange={resetDrawer} dismissible={false}>
       <DrawerContent
-        className="flex flex-col rounded-none h-screen-safe max-h-screen-safe"
+        className="flex flex-col rounded-none h-screen max-h-screen"
         style={{
           overflowY: currentView === 'form' ? 'hidden' : 'auto',
           WebkitOverflowScrolling: 'touch',
@@ -447,7 +447,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                 ref={footerRef}
                 className="fixed inset-x-0 bottom-0 bg-white border-t border-gray-200 flex justify-between items-center z-50"
                 style={{
-                  height: 'calc(var(--footer-h) * 0.5)',
+                  height: 'calc(var(--footer-h) * 0.55)',
                   padding: '0.375rem',
                   paddingBottom: `calc(env(safe-area-inset-bottom,0px) + 0.375rem)`,
                 }}
