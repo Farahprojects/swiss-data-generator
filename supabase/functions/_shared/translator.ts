@@ -13,7 +13,7 @@
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { handleReportGeneration } from "./reportHandler.ts";
-import { injectRealNames, extractPersonNames } from "./swissDataProcessor.ts";
+import { injectRealNames, extractPersonNames, enrichSwissDataWithNames } from "./swissDataProcessor.ts";
 
 /*──────────────── ENV ------------------------------------*/
 const SWISS_API = Deno.env.get("SWISS_EPHEMERIS_URL")!;
@@ -111,42 +111,34 @@ async function logToSupabase(
       const { personA, personB } = extractPersonNames(nameExtractionData);
       console.log('[translator] [NAME-INJECTION] Extracted names:', { personA, personB });
       
-      // Check if Swiss data contains placeholders before processing
-      const swissDataStr = JSON.stringify(responsePayload.swiss_data);
-      const hasPersonA = /\bPerson\s*A\b/i.test(swissDataStr);
-      const hasPersonB = /\bPerson\s*B\b/i.test(swissDataStr);
-      console.log('[translator] [NAME-INJECTION] Placeholders found:', { hasPersonA, hasPersonB });
-      
-      if (!hasPersonA && !hasPersonB) {
-        console.warn('[translator] [NAME-INJECTION] No Person A/B placeholders found in Swiss data - name injection may be unnecessary');
-      }
-      
       // Clone the swiss_data to avoid mutating the original responsePayload
       const originalData = structuredClone(responsePayload.swiss_data);
-      swissDataNamed = injectRealNames(originalData, personA, personB);
       
-      // Compare before and after to confirm changes were made
+      // Use the new enrichment function that adds structured name fields
+      console.log('[translator] [NAME-INJECTION] Starting structure enrichment process...');
+      swissDataNamed = enrichSwissDataWithNames(originalData, personA, personB);
+      
+      // Compare before and after to confirm enrichment happened
       const originalStr = JSON.stringify(originalData);
-      const namedStr = JSON.stringify(swissDataNamed);
-      const changesMade = originalStr !== namedStr;
-      console.log('[translator] [NAME-INJECTION] Changes made during injection:', changesMade);
+      const enrichedStr = JSON.stringify(swissDataNamed);
+      const changesMade = originalStr !== enrichedStr;
+      console.log('[translator] [NAME-INJECTION] Enrichment completed, changes made:', changesMade);
       
       if (changesMade) {
-        // Count replacements to confirm they happened
-        const personAMatches = (originalStr.match(/\bPerson\s*A\b/gi) || []).length;
-        const personBMatches = (originalStr.match(/\bPerson\s*B\b/gi) || []).length;
-        console.log('[translator] [NAME-INJECTION] Replacements made:', { personAMatches, personBMatches });
         hasNamedData = true;
-        console.log(`[translator] [NAME-INJECTION] ✅ Successfully processed Swiss data with names: ${personA}${personB ? ` & ${personB}` : ''}`);
+        console.log(`[translator] [NAME-INJECTION] ✅ Successfully enriched Swiss data with structured names: ${personA}${personB ? ` & ${personB}` : ''}`);
+        
+        // Log the structure that was added
+        if (swissDataNamed.chartData) {
+          console.log('[translator] [NAME-INJECTION] Added chartData structure:', {
+            person_a_name: swissDataNamed.chartData.person_a_name,
+            person_b_name: swissDataNamed.chartData.person_b_name,
+            person_name: swissDataNamed.chartData.person_name
+          });
+        }
       } else {
-        console.warn('[translator] [NAME-INJECTION] ⚠️ No changes detected after name injection - placeholders may not exist');
+        console.warn('[translator] [NAME-INJECTION] ⚠️ No changes made during enrichment - data may already be enriched');
         hasNamedData = false;
-        swissDataNamed = {
-          error: 'NO_PLACEHOLDERS_FOUND',
-          message: 'Swiss data does not contain Person A/B placeholders for replacement',
-          original_data_size: originalStr.length,
-          searched_for: { personA, personB }
-        };
       }
       
     } catch (err) {
