@@ -65,7 +65,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   const request = watch('request');
 
   const promoValidationState = useMemo(() => ({
-    status: promoValidation?.isValid ? (promoValidation.isFree ? 'valid-free' : 'valid-discount') : promoValidation ? 'invalid' : 'none',
+    status: (promoValidation?.isValid ? (promoValidation.isFree ? 'valid-free' : 'valid-discount') : promoValidation ? 'invalid' : 'none') as 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid',
     message: promoValidation?.message || '',
     discountPercent: promoValidation?.discountPercent || 0,
   }), [promoValidation]);

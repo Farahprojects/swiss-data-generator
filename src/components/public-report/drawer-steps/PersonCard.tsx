@@ -63,14 +63,14 @@ const PersonCard = ({
   const getField = (name: string) => isSecondPerson ? `secondPerson${name.charAt(0).toUpperCase() + name.slice(1)}` : name;
 
   const handlePlaceSelect = (place: PlaceData) => {
-    const loc = getField('birthLocation');
+    const loc = getField('birthLocation') as keyof ReportFormData;
 
     setValue(loc, place.address || place.name);
-    if (place.latitude) setValue(getField('birthLatitude'), place.latitude);
-    if (place.longitude) setValue(getField('birthLongitude'), place.longitude);
-    if (place.placeId) setValue(getField('birthPlaceId'), place.placeId);
+    if (place.latitude) setValue(getField('birthLatitude') as keyof ReportFormData, place.latitude);
+    if (place.longitude) setValue(getField('birthLongitude') as keyof ReportFormData, place.longitude);
+    if (place.placeId) setValue(getField('birthPlaceId') as keyof ReportFormData, place.placeId);
 
-    document.activeElement?.blur?.();
+    (document.activeElement as HTMLElement)?.blur?.();
 
     requestAnimationFrame(() => {
       setTimeout(() => {
@@ -99,7 +99,7 @@ const PersonCard = ({
           <Label htmlFor={`${prefix}name`} className="text-lg font-light text-gray-700">Full Name *</Label>
           <Input
             id={`${prefix}name`}
-            {...register(getField('name'))}
+            {...register(getField('name') as keyof ReportFormData)}
             placeholder="Enter full name"
             className={`h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400 ${showError(getField('name')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
             onFocus={handleFocus}
@@ -133,8 +133,8 @@ const PersonCard = ({
             <Label htmlFor={`${prefix}birthDate`} className="text-lg font-light text-gray-700">Birth Date *</Label>
             <InlineDateTimeSelector
               type="date"
-              value={watch(getField('birthDate'))}
-              onChange={(date) => setValue(getField('birthDate'), date)}
+              value={watch(getField('birthDate') as keyof ReportFormData) as string}
+              onChange={(date) => setValue(getField('birthDate') as keyof ReportFormData, date)}
               onConfirm={() => {
                 markTouched(getField('birthDate'));
                 setActiveSelector(null);
@@ -153,8 +153,8 @@ const PersonCard = ({
             <Label htmlFor={`${prefix}birthTime`} className="text-lg font-light text-gray-700">Birth Time *</Label>
             <InlineDateTimeSelector
               type="time"
-              value={watch(getField('birthTime'))}
-              onChange={(time) => setValue(getField('birthTime'), time)}
+              value={watch(getField('birthTime') as keyof ReportFormData) as string}
+              onChange={(time) => setValue(getField('birthTime') as keyof ReportFormData, time)}
               onConfirm={() => {
                 markTouched(getField('birthTime'));
                 setActiveSelector(null);
@@ -178,8 +178,8 @@ const PersonCard = ({
           )}
           <PlaceAutocomplete
             label="Birth Location *"
-            value={watch(getField('birthLocation')) || ''}
-            onChange={(val) => setValue(getField('birthLocation'), val)}
+            value={(watch(getField('birthLocation') as keyof ReportFormData) as string) || ''}
+            onChange={(val) => setValue(getField('birthLocation') as keyof ReportFormData, val)}
             onPlaceSelect={handlePlaceSelect}
             placeholder="Enter birth city, state, country"
             id={`${prefix}birthLocation`}
