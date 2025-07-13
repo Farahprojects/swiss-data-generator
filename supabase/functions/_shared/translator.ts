@@ -90,7 +90,25 @@ async function logToSupabase(
       console.log('[translator] [NAME-INJECTION] Starting name injection process...');
       console.log('[translator] [NAME-INJECTION] Swiss data size:', JSON.stringify(responsePayload.swiss_data).length, 'characters');
       
-      const { personA, personB } = extractPersonNames(requestPayload);
+      // For guest reports, fetch report_data from guest_reports table instead of using requestPayload
+      let nameExtractionData = requestPayload;
+      if (isGuest && userId) {
+        console.log('[translator] [NAME-INJECTION] Guest report detected, fetching report_data from guest_reports...');
+        const { data: guestReport } = await sb
+          .from('guest_reports')
+          .select('report_data')
+          .eq('id', userId)
+          .maybeSingle();
+        
+        if (guestReport?.report_data) {
+          nameExtractionData = guestReport.report_data;
+          console.log('[translator] [NAME-INJECTION] Using guest_reports.report_data for name extraction');
+        } else {
+          console.warn('[translator] [NAME-INJECTION] Guest report found but no report_data available');
+        }
+      }
+      
+      const { personA, personB } = extractPersonNames(nameExtractionData);
       console.log('[translator] [NAME-INJECTION] Extracted names:', { personA, personB });
       
       // Check if Swiss data contains placeholders before processing
