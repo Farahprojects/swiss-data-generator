@@ -113,6 +113,12 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     control,
     formState: { errors },
   } = form;
+
+  // Fast triage debugging
+  console.debug('currentStep', currentStep);
+  console.debug('isOpen', isOpen);
+  console.debug('CSS --vh:', typeof window !== 'undefined' ? getComputedStyle(document.documentElement).getPropertyValue('--vh') : 'server');
+  console.debug('Form state:', { reportCategory: watch('reportCategory'), request: watch('request') });
   const { isProcessing, submitReport } = useReportSubmission();
   const { promoValidation, isValidatingPromo } = usePromoValidation();
 
@@ -316,9 +322,9 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
   // ---------------------------------------------------------------------
   return (
-    <Drawer open={isOpen} onOpenChange={resetDrawer} dismissible={false}>
+    <Drawer open onOpenChange={resetDrawer} dismissible={false}>
       <DrawerContent
-        className="flex flex-col rounded-none [&>div:first-child]:hidden h-screen-safe max-h-screen-safe"
+        className="flex flex-col rounded-none h-screen-safe max-h-screen-safe"
         style={{
           overflowY: currentView === 'form' ? 'hidden' : 'auto',
           WebkitOverflowScrolling: 'touch',
@@ -351,81 +357,102 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                 </div>
               )}
               
-              {/* Error Boundary with fallback */}
+              {/* Safe wrapper for step components */}
               {(() => {
+                const Safe = ({children}) => {
+                  try { 
+                    return children; 
+                  } catch(e) { 
+                    console.error('Safe wrapper error:', e); 
+                    return <p className="p-4 text-red-500">Error: {e.message}</p>;
+                  }
+                };
+
                 try {
-                  // Temporarily remove AnimatePresence to test
                   if (currentStep === 1) {
                     return (
-                      <Step1ReportType
-                        key="step1"
-                        control={control}
-                        setValue={setValue}
-                        onNext={nextStep}
-                        selectedCategory={reportCategory}
-                      />
+                      <Safe>
+                        <Step1ReportType
+                          key="step1"
+                          control={control}
+                          setValue={setValue}
+                          onNext={nextStep}
+                          selectedCategory={reportCategory}
+                        />
+                      </Safe>
                     );
                   }
 
                   if (currentStep === 2 && reportCategory === 'astro-data') {
                     return (
-                      <Step1_5AstroData
-                        key="step1_5_astro"
-                        control={control}
-                        setValue={setValue}
-                        onNext={nextStep}
-                        selectedSubCategory={request}
-                      />
+                      <Safe>
+                        <Step1_5AstroData
+                          key="step1_5_astro"
+                          control={control}
+                          setValue={setValue}
+                          onNext={nextStep}
+                          selectedSubCategory={request}
+                        />
+                      </Safe>
                     );
                   }
 
                   if (currentStep === 2 && reportCategory !== 'astro-data') {
                     return (
-                      <Step1_5SubCategory
-                        key="step1_5"
-                        control={control}
-                        setValue={setValue}
-                        onNext={nextStep}
-                        onPrev={prevStep}
-                        selectedCategory={reportCategory}
-                        selectedSubCategory={reportSubCategory}
-                      />
+                      <Safe>
+                        <Step1_5SubCategory
+                          key="step1_5"
+                          control={control}
+                          setValue={setValue}
+                          onNext={nextStep}
+                          onPrev={prevStep}
+                          selectedCategory={reportCategory}
+                          selectedSubCategory={reportSubCategory}
+                        />
+                      </Safe>
                     );
                   }
 
                   if (currentStep === 3) {
                     return (
-                      <Step2BirthDetails
-                        key="step2"
-                        register={register}
-                        setValue={setValue}
-                        watch={watch}
-                        errors={errors}
-                      />
+                      <Safe>
+                        <Step2BirthDetails
+                          key="step2"
+                          register={register}
+                          setValue={setValue}
+                          watch={watch}
+                          errors={errors}
+                        />
+                      </Safe>
                     );
                   }
 
                   if (currentStep === 4) {
                     return (
-                      <Step3Payment
-                        key="step3"
-                        register={register}
-                        watch={watch}
-                        errors={errors}
-                        isProcessing={isProcessing}
-                        promoValidation={promoValidationState}
-                        isValidatingPromo={isValidatingPromo}
-                      />
+                      <Safe>
+                        <Step3Payment
+                          key="step3"
+                          register={register}
+                          watch={watch}
+                          errors={errors}
+                          isProcessing={isProcessing}
+                          promoValidation={promoValidationState}
+                          isValidatingPromo={isValidatingPromo}
+                        />
+                      </Safe>
                     );
                   }
 
-                  // Fallback content
+                  // Fallback content showing current step state
                   return (
                     <div className="p-4 text-center">
-                      <p>Step {currentStep} content loading...</p>
+                      <p>Current step: {currentStep} (should be 1-4)</p>
                       <p className="text-sm text-gray-500 mt-2">
                         Category: {reportCategory || 'none'}<br/>
                         Request: {request || 'none'}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-2">
+                        If you see this message, check console for debugging info
                       </p>
                     </div>
                   );
