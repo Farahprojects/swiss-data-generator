@@ -80,6 +80,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     name: string;
     email: string;
   } | null>(null);
+  const [modalTriggered, setModalTriggered] = useState(false); // Prevent multiple modal opens like desktop
 
   const footerRef = useRef<HTMLDivElement>(null);
 
@@ -95,7 +96,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   useEffect(() => {
     if (urlGuestId && guestReportData && !isLoadingGuestData) {
       // Extract real user data from the guest report
-      const reportData = guestReportData.report_data;
+      const reportData = guestReportData.guest_report?.report_data;
       const realName = reportData?.name || 'Guest';
       const realEmail = reportData?.email || 'guest@example.com';
       
@@ -184,6 +185,20 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     }
   }, [isOpen]);
 
+  // Auto-reopen success screen after refresh if user was previously viewing it (like desktop)
+  useEffect(() => {
+    if (!isOpen || !isBrowser) return;
+    
+    const shouldAutoOpen = localStorage.getItem('autoOpenModal') === 'true';
+    const hasGuestReport = !!urlGuestId && !!guestReportData;
+    
+    if (shouldAutoOpen && hasGuestReport && !modalTriggered && currentView === 'success') {
+      console.log('🔁 Mobile: Auto-opening report modal after refresh');
+      setModalTriggered(true);
+      localStorage.removeItem('autoOpenModal');
+    }
+  }, [isOpen, urlGuestId, guestReportData, modalTriggered, currentView]);
+
   // Footer height is now static via CSS variable
 
   // --------------------------- Helpers ----------------------------------
@@ -192,6 +207,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     form.reset();
     setCurrentView('form');
     setSubmittedData(null);
+    setModalTriggered(false); // Reset modal trigger state like desktop
 
     clearAllSessionData(); // Clear URL and localStorage
   };
@@ -214,6 +230,8 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   const onSubmit = async (data: ReportFormData) => {
     setSubmittedData({ name: data.name, email: data.email });
     localStorage.setItem('pending_report_email', data.email);
+    // Track modal view state for auto-reopen on refresh (like desktop)
+    localStorage.setItem('autoOpenModal', 'true');
     await submitReport(data, promoValidationState, resetValidation);
     setCurrentView('success');
   };
