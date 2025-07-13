@@ -447,15 +447,15 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                 ref={footerRef}
                 className="fixed inset-x-0 bottom-0 bg-white border-t border-gray-200 flex justify-between items-center z-50"
                 style={{
-                  height: 'var(--footer-h)',
-                  padding: '0.75rem',
-                  paddingBottom: `calc(env(safe-area-inset-bottom,0px) + 0.75rem)`,
+                  height: 'calc(var(--footer-h) * 0.5)',
+                  padding: '0.375rem',
+                  paddingBottom: `calc(env(safe-area-inset-bottom,0px) + 0.375rem)`,
                 }}
               >
                 <button
                   type="button"
                   onClick={currentStep === 1 ? resetDrawer : prevStep}
-                  className="w-auto min-w-fit bg-gray-100 text-gray-700 px-6 py-2 rounded-lg text-base font-medium hover:bg-gray-200 transition-all duration-300"
+                  className="w-auto min-w-fit bg-gray-100 text-gray-700 px-6 py-1 rounded-lg text-sm font-medium hover:bg-gray-200 transition-all duration-300"
                   style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
                   {currentStep === 1 ? 'Close' : 'Back'}
@@ -465,7 +465,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                     type="button"
                     onClick={currentStep === 3 ? handleStep3Continue : handleFormSubmit}
                     disabled={currentStep === 4 && (isProcessing || isValidatingPromo)}
-                    className="w-auto min-w-fit bg-gray-900 text-white px-8 py-2 rounded-lg text-base font-medium hover:bg-gray-800 transition-all duration-300 disabled:opacity-50"
+                    className="w-auto min-w-fit bg-gray-900 text-white px-8 py-1 rounded-lg text-sm font-medium hover:bg-gray-800 transition-all duration-300 disabled:opacity-50"
                     style={{ WebkitTapHighlightColor: 'transparent' }}
                   >
                     {currentStep === 3
