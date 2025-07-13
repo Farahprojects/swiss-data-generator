@@ -344,7 +344,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
               ref={scrollContainerRef}
               className={`flex-1 px-6 overflow-y-auto scrollbar-hide ${
                 currentStep >= 1
-                  ? 'pb-[calc(var(--footer-h)+env(safe-area-inset-bottom,0px))]'
+                  ? 'pb-[calc(var(--footer-h)*0.55+env(safe-area-inset-bottom,0px))]'
                   : 'pb-6'
               }`}
             >
