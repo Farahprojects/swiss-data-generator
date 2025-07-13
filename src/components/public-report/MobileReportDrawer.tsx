@@ -141,23 +141,25 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   // 👇 remembers the last step so we don't fire on redundant updates
   const prevStepRef = useRef<number>();
-  useEffect(() => {
-    if (prevStepRef.current === currentStep) return;   // ignore duplicates
-    prevStepRef.current = currentStep;
+  
+  // DISABLED FOR TESTING - Comment out ENTIRE effect
+  // useEffect(() => {
+  //   if (prevStepRef.current === currentStep) return;   // ignore duplicates
+  //   prevStepRef.current = currentStep;
 
-    const container = scrollContainerRef.current;
-    if (!container) return;
+  //   const container = scrollContainerRef.current;
+  //   if (!container) return;
 
-    // 1️⃣ reset scroll only when entering a new step
-    container.scrollTo({ top: 0, behavior: 'instant' });
+  //   // 1️⃣ reset scroll only when entering a new step
+  //   container.scrollTo({ top: 0, behavior: 'instant' });
 
-    // 2️⃣ focus first real input, _once_
-    const firstInput = container.querySelector<HTMLElement>(
-      'input:not([type=hidden]), select, textarea'
-    );
-    firstInput?.focus();
+  //   // 2️⃣ focus first real input, _once_
+  //   const firstInput = container.querySelector<HTMLElement>(
+  //     'input:not([type=hidden]), select, textarea'
+  //   );
+  //   firstInput?.focus();
 
-  }, [currentStep]);
+  // }, [currentStep]);
 
   // --------------------- Stripe return handler ---------------------------
   useEffect(() => {
