@@ -3,15 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { Star, Clock, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useIsMobile } from '@/hooks/use-mobile';
 
 interface HeroSectionProps {
   onGetReportClick?: () => void;
 }
 
 const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
-  const isMobile = useIsMobile();
-  
   // Rotating words for the "Your..." animation - easily customizable
   const rotatingWords = ['Self', 'Mind', 'Bae', 'Soul', 'Will'];
   
@@ -33,16 +30,14 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
     return () => clearInterval(interval);
   }, [bannerImages.length]);
 
-  // Word rotation effect - disabled on mobile to prevent touch interference
+  // Word rotation effect
   useEffect(() => {
-    if (isMobile) return; // Disable animation on mobile
-    
     const interval = setInterval(() => {
       setCurrentWordIndex((prev) => (prev + 1) % rotatingWords.length);
     }, 3000); // Change word every 3 seconds
 
     return () => clearInterval(interval);
-  }, [rotatingWords.length, isMobile]);
+  }, [rotatingWords.length]);
 
   const handleClick = () => {
     if (onGetReportClick) {
@@ -67,29 +62,21 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
           <h1 className="text-4xl xs:text-5xl sm:text-6xl lg:text-8xl xl:text-9xl font-light text-gray-900 leading-tight mb-8">
             Know
             <br />
-              <span className="italic font-medium flex items-center justify-center gap-x-7 flex-wrap">
-                <span>Your</span>
-                {isMobile ? (
-                  // Static text on mobile to prevent touch interference
-                  <span className="inline-block min-w-[3rem] sm:min-w-[4rem] md:min-w-[8rem] lg:min-w-[10rem] text-left">
-                    {rotatingWords[0]}
-                  </span>
-                ) : (
-                  // Lightweight animation on desktop only
-                  <AnimatePresence mode="wait">
-                    <motion.span
-                      key={currentWordIndex}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.4, ease: 'easeOut' }}
-                      className="inline-block min-w-[3rem] sm:min-w-[4rem] md:min-w-[8rem] lg:min-w-[10rem] text-left"
-                    >
-                      {rotatingWords[currentWordIndex]}
-                    </motion.span>
-                  </AnimatePresence>
-                )}
-              </span>
+            <span className="italic font-medium flex items-center justify-center gap-x-7 flex-wrap">
+              <span>Your</span>
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={currentWordIndex}
+                  initial={{ opacity: 0, rotateX: 90 }}
+                  animate={{ opacity: 1, rotateX: 0 }}
+                  exit={{ opacity: 0, rotateX: -90 }}
+                  transition={{ duration: 0.3 }}
+                  className="inline-block min-w-[3rem] sm:min-w-[4rem] md:min-w-[8rem] lg:min-w-[10rem] text-left"
+                >
+                  {rotatingWords[currentWordIndex]}
+                </motion.span>
+              </AnimatePresence>
+            </span>
           </h1>
         </motion.div>
         
