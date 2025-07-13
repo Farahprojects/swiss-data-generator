@@ -273,35 +273,33 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
 
         {/* Confirmation Popup */}
         <Dialog open={showChatGPTConfirm} onOpenChange={setShowChatGPTConfirm}>
-          <DialogContent className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full mx-auto overflow-hidden">
-              <div className="px-8 pt-8 pb-2">
-                <div className="text-center space-y-3">
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    Analyze with <span className="italic text-blue-600">ChatGPT</span>
-                  </h2>
-                  <p className="text-gray-600 text-base leading-relaxed">
-                    Ready to get AI insights on your report? We'll copy your report to clipboard and open ChatGPT for analysis.
-                  </p>
+          <DialogContent className="mx-4 rounded-2xl max-w-sm w-full p-0 shadow-xl">
+            <div className="bg-white">
+              <DialogHeader className="text-center px-6 pt-8 pb-4 space-y-3">
+                <DialogTitle className="text-xl font-semibold text-gray-900">
+                  Analyze with <span className="italic text-primary">ChatGPT</span>
+                </DialogTitle>
+                <DialogDescription className="text-sm text-gray-600">
+                  We'll copy your report to clipboard and open ChatGPT for you.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="px-6 pb-6">
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={handleChatGPTCopyAndGo}
+                    className="w-full bg-black text-white py-3 rounded-xl text-base font-medium hover:bg-gray-900 transition active:scale-95 shadow"
+                    disabled={isCopping}
+                  >
+                    {isCopping ? 'Copied!' : 'Copy & Go'}
+                  </button>
+                  <button
+                    onClick={() => setShowChatGPTConfirm(false)}
+                    className="w-full bg-gray-100 text-gray-700 py-3 rounded-xl text-base font-medium hover:bg-gray-200 transition active:scale-95"
+                    disabled={isCopping}
+                  >
+                    Cancel
+                  </button>
                 </div>
-              </div>
-              
-              <div className="px-8 pb-8 pt-4 space-y-3">
-                <button
-                  onClick={handleChatGPTCopyAndGo}
-                  className="w-full bg-gradient-to-r from-gray-900 to-black text-white py-4 rounded-full text-base font-semibold hover:from-gray-800 hover:to-gray-900 transition-all duration-200 active:scale-[0.98] shadow-lg"
-                  disabled={isCopping}
-                >
-                  {isCopping ? 'Copied!' : 'Copy & Go'}
-                </button>
-                
-                <button
-                  onClick={() => setShowChatGPTConfirm(false)}
-                  className="w-full bg-gray-50 text-gray-700 py-4 rounded-full text-base font-medium hover:bg-gray-100 transition-all duration-200 active:scale-[0.98] border border-gray-200"
-                  disabled={isCopping}
-                >
-                  Cancel
-                </button>
               </div>
             </div>
           </DialogContent>
