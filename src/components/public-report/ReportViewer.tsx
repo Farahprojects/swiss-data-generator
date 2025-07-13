@@ -276,30 +276,43 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
 
         {/* ChatGPT Confirmation Dialog */}
         <Dialog open={showChatGPTConfirm} onOpenChange={setShowChatGPTConfirm}>
-          <DialogContent className="mx-6 rounded-xl">
-            <DialogHeader className="text-center space-y-4">
-              <DialogTitle className="text-2xl font-light text-gray-900 tracking-tight">
-                Analyze with <em className="italic font-light">ChatGPT</em>
-              </DialogTitle>
-              <DialogDescription className="text-lg text-gray-500 font-light leading-relaxed">
-                Ready to get AI insights on your report? We'll copy your report to clipboard and open ChatGPT for analysis.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex gap-4 mt-8">
-              <button
-                onClick={() => setShowChatGPTConfirm(false)}
-                className="flex-1 bg-gray-100 text-gray-700 px-8 py-4 rounded-xl text-lg font-light hover:bg-gray-200 transition-all duration-300"
-                disabled={isCopping}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleChatGPTCopyAndGo}
-                className="flex-1 bg-gray-900 text-white px-8 py-4 rounded-xl text-lg font-light hover:bg-gray-800 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:transform-none disabled:shadow-lg"
-                disabled={isCopping}
-              >
-                {isCopping ? "Copied!" : "Copy & Go"}
-              </button>
+          <DialogContent className="mx-4 rounded-2xl max-w-sm w-full p-0 overflow-hidden">
+            <div className="bg-white">
+              <DialogHeader className="text-center px-6 pt-8 pb-6 space-y-3">
+                <DialogTitle className="text-xl font-semibold text-gray-900 tracking-tight">
+                  Analyze with <em className="italic font-medium text-primary">ChatGPT</em>
+                </DialogTitle>
+                <DialogDescription className="text-sm text-gray-600 leading-relaxed">
+                  Ready to get AI insights on your report? We'll copy your report to clipboard and open ChatGPT for analysis.
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="px-6 pb-6">
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={handleChatGPTCopyAndGo}
+                    className="w-full bg-gray-900 text-white px-6 py-3.5 rounded-xl text-base font-medium hover:bg-gray-800 transition-all duration-300 active:scale-95 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:transform-none disabled:shadow-lg"
+                    disabled={isCopping}
+                  >
+                    {isCopping ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Copied!
+                      </span>
+                    ) : (
+                      "Copy & Go"
+                    )}
+                  </button>
+                  
+                  <button
+                    onClick={() => setShowChatGPTConfirm(false)}
+                    className="w-full bg-gray-100 text-gray-700 px-6 py-3.5 rounded-xl text-base font-medium hover:bg-gray-200 transition-all duration-300 active:scale-95"
+                    disabled={isCopping}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
