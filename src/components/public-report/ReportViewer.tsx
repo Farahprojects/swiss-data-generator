@@ -194,112 +194,95 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
     }
   };
 
-  // Mobile layout
+  // Apple-polished Mobile Layout
   if (isMobile) {
     return (
       <div className="fixed inset-0 bg-white z-50 flex flex-col">
-        {/* Fixed Header */}
-        <div className="bg-white border-b border-gray-100 shadow-sm flex-shrink-0">
-          <div className="flex items-center justify-center relative px-6 py-4">
-            <Button variant="ghost" size="icon" onClick={onBack} className="absolute left-6 p-2 hover:bg-gray-50">
-              <ArrowLeft className="h-5 w-5 text-gray-700" />
-            </Button>
-            {mappedReport.pdfData && (
-              <div className="absolute right-6">
-                <Button variant="ghost" size="icon" onClick={handleDownloadPdf} className="p-2 hover:bg-gray-50">
-                  <Download className="h-5 w-5 text-gray-700" />
-                </Button>
-              </div>
-            )}
-          </div>
-
+        {/* Unified Header */}
+        <div className="flex items-center justify-between px-4 pt-[calc(env(safe-area-inset-top,20px)+24px)] pb-2 border-b bg-white shadow-sm">
+          <Button variant="ghost" size="icon" onClick={onBack} className="p-2 hover:bg-gray-100 transition-colors active:scale-95">
+            <ArrowLeft className="h-6 w-6 text-gray-700" />
+          </Button>
           {toggleLogic.showToggle && (
-            <div className="px-6 pb-4">
-              <div className="inline-flex bg-gray-100 rounded-full p-1 w-fit mx-auto">
-                <button
-                  onClick={() => setActiveView('report')}
-                  className={`px-4 py-2 rounded-md text-sm font-light transition-all ${
-                    activeView === 'report'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Report
-                </button>
-                <button
-                  onClick={() => setActiveView('astro')}
-                  className={`px-4 py-2 rounded-md text-sm font-light transition-all ${
-                    activeView === 'astro'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Astro
-                </button>
-              </div>
+            <div className="flex space-x-2 bg-gray-100 rounded-full p-1">
+              <button
+                onClick={() => setActiveView('report')}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                  activeView === 'report' ? 'bg-white text-black shadow' : 'text-gray-600 hover:text-black'
+                }`}
+              >
+                Report
+              </button>
+              <button
+                onClick={() => setActiveView('astro')}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                  activeView === 'astro' ? 'bg-white text-black shadow' : 'text-gray-600 hover:text-black'
+                }`}
+              >
+                Astro
+              </button>
             </div>
+          )}
+          {(mappedReport.pdfData || mappedReport.swissData || (mappedReport.reportContent && mappedReport.reportContent.trim().length > 20)) && (
+            <Button variant="ghost" size="icon" onClick={handleDownloadPdf} className="p-2 hover:bg-gray-100 transition-colors active:scale-95">
+              <Download className="h-5 w-5 text-gray-700" />
+            </Button>
           )}
         </div>
 
-        {/* Scrollable Content Area */}
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className="px-6 py-6">
-            <h1 className="text-xl font-light text-gray-900 tracking-tight mb-3">
-              {toggleLogic.title} — Generated for {mappedReport.customerName}
-            </h1>
-            <ReportContent 
-              mappedReport={mappedReport}
-              activeView={activeView}
-              setActiveView={setActiveView}
-              isMobile={true}
-            />
-          </div>
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          <h1 className="text-xl font-light text-gray-900 mb-4">
+            {toggleLogic.title} — Generated for {mappedReport.customerName}
+          </h1>
+          <ReportContent 
+            mappedReport={mappedReport}
+            activeView={activeView}
+            setActiveView={setActiveView}
+            isMobile
+          />
         </div>
 
-        {/* Fixed Footer */}
-        <div className="bg-white border-t border-gray-100 px-6 py-5 shadow-lg flex-shrink-0">
-          <div className="flex gap-8 justify-center">
-            <button onClick={handleCopyToClipboard} className="flex items-center text-gray-700 font-light text-lg hover:text-gray-900 transition-colors duration-300">
-              <Paperclip className="h-5 w-5 mr-2" />
-              Copy
-            </button>
-            <button onClick={handleChatGPT} className="flex items-center text-gray-700 font-light text-lg hover:text-gray-900 transition-colors duration-300">
-              <img src={openaiLogo} alt="ChatGPT" className="h-5 w-5 mr-2" />
-              GPT
-            </button>
-            <button onClick={onBack} className="flex items-center text-gray-700 font-light text-lg hover:text-gray-900 transition-colors duration-300">
-              <X className="h-5 w-5 mr-2" />
-              Close
-            </button>
-          </div>
+        {/* Footer with 2 buttons */}
+        <div className="px-6 py-4 border-t bg-white shadow-md flex justify-center gap-6">
+          <Button variant="ghost" onClick={handleCopyToClipboard} className="text-gray-700 text-base font-medium hover:text-black transition-colors active:scale-95">
+            <Paperclip className="h-5 w-5 mr-1" /> Copy
+          </Button>
+          <Button variant="ghost" onClick={handleChatGPT} className="text-gray-700 text-base font-medium hover:text-black transition-colors active:scale-95">
+            <img src={openaiLogo} alt="ChatGPT" className="h-5 w-5 mr-1" /> GPT
+          </Button>
         </div>
 
-        {/* ChatGPT Confirmation Dialog */}
+        {/* Confirmation Popup */}
         <Dialog open={showChatGPTConfirm} onOpenChange={setShowChatGPTConfirm}>
-          <DialogContent className="mx-6 rounded-xl">
-            <DialogHeader className="text-center space-y-4">
-              <DialogTitle className="text-2xl font-light text-gray-900 tracking-tight">
-                Analyze with <em className="italic font-light">ChatGPT</em>
-              </DialogTitle>
-              <DialogDescription className="text-lg text-gray-500 font-light leading-relaxed">
-                Ready to get AI insights on your report? We'll copy your report to clipboard and open ChatGPT for analysis.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex gap-4 mt-8">
-              <button
-                onClick={() => setShowChatGPTConfirm(false)}
-                className="flex-1 bg-gray-100 text-gray-700 px-8 py-4 rounded-xl text-lg font-light hover:bg-gray-200 transition-all duration-300"
-                disabled={isCopping}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleChatGPTCopyAndGo}
-                className="flex-1 bg-gray-900 text-white px-8 py-4 rounded-xl text-lg font-light hover:bg-gray-800 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:transform-none disabled:shadow-lg"
-                disabled={isCopping}
-              >
-                {isCopping ? "Copied!" : "Copy & Go"}
-              </button>
+          <DialogContent className="mx-4 rounded-2xl max-w-sm w-full p-0 shadow-xl">
+            <div className="bg-white">
+              <DialogHeader className="text-center px-6 pt-8 pb-4 space-y-3">
+                <DialogTitle className="text-xl font-semibold text-gray-900">
+                  Analyze with <span className="italic text-primary">ChatGPT</span>
+                </DialogTitle>
+                <DialogDescription className="text-sm text-gray-600">
+                  We'll copy your report to clipboard and open ChatGPT for you.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="px-6 pb-6">
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={handleChatGPTCopyAndGo}
+                    className="w-full bg-black text-white py-3 rounded-xl text-base font-medium hover:bg-gray-900 transition active:scale-95 shadow"
+                    disabled={isCopping}
+                  >
+                    {isCopping ? 'Copied!' : 'Copy & Go'}
+                  </button>
+                  <button
+                    onClick={() => setShowChatGPTConfirm(false)}
+                    className="w-full bg-gray-100 text-gray-700 py-3 rounded-xl text-base font-medium hover:bg-gray-200 transition active:scale-95"
+                    disabled={isCopping}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
