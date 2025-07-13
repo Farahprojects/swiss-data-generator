@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 
-export function useMobileSafeTopPadding(defaultFallback = 40) {
+export function useMobileSafeTopPadding(
+  defaultFallback = 40,
+  syncToCSSVar = true
+): number {
   const [topPadding, setTopPadding] = useState<number>(defaultFallback);
 
   useEffect(() => {
@@ -19,9 +22,16 @@ export function useMobileSafeTopPadding(defaultFallback = 40) {
     const computed = parseFloat(getComputedStyle(testEl).top || '0');
     document.body.removeChild(testEl);
 
-    const padding = Math.max(computed || 0, defaultFallback);
-    setTopPadding(padding);
-  }, [defaultFallback]);
+    const finalPadding = Math.max(computed, defaultFallback);
+    setTopPadding(finalPadding);
+
+    if (syncToCSSVar) {
+      document.documentElement.style.setProperty(
+        '--safe-top-padding',
+        `${finalPadding}px`
+      );
+    }
+  }, [defaultFallback, syncToCSSVar]);
 
   return topPadding;
 }
