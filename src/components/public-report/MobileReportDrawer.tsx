@@ -343,7 +343,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
             <div
               ref={scrollContainerRef}
               className={`flex-1 px-6 overflow-y-auto scrollbar-hide ${
-                currentStep >= 2
+                currentStep >= 1
                   ? 'pb-[calc(var(--footer-h)+env(safe-area-inset-bottom,0px))]'
                   : 'pb-6'
               }`}
@@ -442,7 +442,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
             </div>
 
             {/* ----------------------- FOOTER -------------------------- */}
-            {currentStep >= 2 && (
+            {currentStep >= 1 && (
               <div
                 ref={footerRef}
                 className="fixed inset-x-0 bottom-0 bg-white border-t border-gray-200 flex justify-between items-center z-50"
@@ -454,11 +454,11 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
               >
                 <button
                   type="button"
-                  onClick={prevStep}
+                  onClick={currentStep === 1 ? resetDrawer : prevStep}
                   className="w-auto min-w-fit bg-gray-100 text-gray-700 px-6 py-2 rounded-lg text-base font-medium hover:bg-gray-200 transition-all duration-300"
                   style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
-                  Back
+                  {currentStep === 1 ? 'Close' : 'Back'}
                 </button>
                 {currentStep >= 3 && (
                   <button
