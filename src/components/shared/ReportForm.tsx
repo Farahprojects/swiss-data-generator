@@ -149,6 +149,15 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const userName = watch('name');
   const userEmail = watch('email');
 
+  // Check if this is a compatibility report that needs second person data
+  const reportCategory = watch('reportCategory');
+  const reportType = watch('reportType');
+  const request = watch('request');
+  
+  const requiresSecondPerson = reportCategory === 'compatibility' || 
+                               reportType?.startsWith('sync_') || 
+                               request === 'sync';
+
   /** ------------------------------------------------------------------
    *  STEP-PROGRESS FLAGS
    *  ------------------------------------------------------------------
@@ -157,6 +166,18 @@ export const ReportForm: React.FC<ReportFormProps> = ({
    */
   const formValues = form.watch();
   const step1Done = Boolean(formValues.reportType || formValues.request);
+
+  // Helper function to check if second person data is complete
+  const isSecondPersonDataComplete = () => {
+    return Boolean(
+      formValues.secondPersonName &&
+      formValues.secondPersonBirthDate &&
+      formValues.secondPersonBirthTime &&
+      formValues.secondPersonBirthLocation &&
+      formValues.secondPersonLatitude &&
+      formValues.secondPersonLongitude
+    );
+  };
 
   const step2Done =
     step1Done &&
@@ -168,7 +189,9 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         formValues.birthLocation &&
         formValues.birthLatitude &&
         formValues.birthLongitude,
-    );
+    ) &&
+    // For compatibility reports, also require second person data
+    (!requiresSecondPerson || isSecondPersonDataComplete());
 
   // Check if form should be unlocked (either reportType or request field filled)
   const shouldUnlockForm = !!(selectedReportType || selectedRequest);
@@ -202,20 +225,11 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     resetReportState
   } = useReportSubmission();
 
-  // Check if this is a compatibility report that needs second person data
-  const reportCategory = watch('reportCategory');
-  const reportType = watch('reportType');
-  const request = watch('request');
-  
-  const requiresSecondPerson = reportCategory === 'compatibility' || 
-                               reportType?.startsWith('sync_') || 
-                               request === 'sync';
 
   // Auto-scroll functionality for desktop
-  const [lastFirstPersonPlaceTime, setLastFirstPersonPlaceTime] = React.useState<number>(0);
-  const [lastSecondPersonPlaceTime, setLastSecondPersonPlaceTime] = React.useState<number>(0);
   const paymentStepRef = React.useRef<HTMLDivElement>(null);
   const secondPersonRef = React.useRef<HTMLDivElement>(null);
+  const [prevStep2Done, setPrevStep2Done] = React.useState(false);
 
   // Check if first person form is complete (excluding second person requirements)
   const firstPersonData = {
@@ -223,66 +237,41 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     email: watch('email'),
     birthDate: watch('birthDate'),
     birthTime: watch('birthTime'),
-    birthLocation: watch('birthLocation')
+    birthLocation: watch('birthLocation'),
+    birthLatitude: watch('birthLatitude'),
+    birthLongitude: watch('birthLongitude')
   };
   const firstPersonComplete = firstPersonData.name && firstPersonData.email && 
                               firstPersonData.birthDate && firstPersonData.birthTime && 
-                              firstPersonData.birthLocation;
+                              firstPersonData.birthLocation && firstPersonData.birthLatitude && 
+                              firstPersonData.birthLongitude;
 
-  // Auto-scroll to second person when first person place is selected and compatibility report
+  // Auto-scroll to second person when first person is complete and compatibility report
   React.useEffect(() => {
     const isDesktop = window.innerWidth >= 640; // sm breakpoint
-    if (requiresSecondPerson && firstPersonComplete && lastFirstPersonPlaceTime > 0 && isDesktop) {
-      const timeSinceSelection = Date.now() - lastFirstPersonPlaceTime;
-      if (timeSinceSelection < 2000) { // Within 2 seconds of place selection
-        setTimeout(() => {
-          secondPersonRef.current?.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'start' 
-          });
-        }, 300); // Small delay to ensure DOM is updated
-      }
+    if (requiresSecondPerson && firstPersonComplete && isDesktop) {
+      setTimeout(() => {
+        secondPersonRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }, 300);
     }
-  }, [requiresSecondPerson, firstPersonComplete, lastFirstPersonPlaceTime]);
+  }, [requiresSecondPerson, firstPersonComplete]);
 
-  // Auto-scroll to payment step when second person place is selected or step2 is complete
+  // Auto-scroll to payment step when step2Done changes from false to true
   React.useEffect(() => {
     const isDesktop = window.innerWidth >= 640; // sm breakpoint
-    if (step2Done && isDesktop) {
-      // For compatibility reports, check if second person place was just selected
-      if (requiresSecondPerson && lastSecondPersonPlaceTime > 0) {
-        const timeSinceSelection = Date.now() - lastSecondPersonPlaceTime;
-        if (timeSinceSelection < 2000) {
-          setTimeout(() => {
-            paymentStepRef.current?.scrollIntoView({ 
-              behavior: 'smooth', 
-              block: 'start' 
-            });
-          }, 300);
-        }
-      }
-      // For non-compatibility reports, use first person place selection
-      else if (!requiresSecondPerson && lastFirstPersonPlaceTime > 0) {
-        const timeSinceSelection = Date.now() - lastFirstPersonPlaceTime;
-        if (timeSinceSelection < 2000) {
-          setTimeout(() => {
-            paymentStepRef.current?.scrollIntoView({ 
-              behavior: 'smooth', 
-              block: 'start' 
-            });
-          }, 300);
-        }
-      }
+    if (step2Done && !prevStep2Done && isDesktop) {
+      setTimeout(() => {
+        paymentStepRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }, 300);
     }
-  }, [step2Done, lastFirstPersonPlaceTime, lastSecondPersonPlaceTime, requiresSecondPerson]);
-
-  const handleFirstPersonPlaceSelected = () => {
-    setLastFirstPersonPlaceTime(Date.now());
-  };
-
-  const handleSecondPersonPlaceSelected = () => {
-    setLastSecondPersonPlaceTime(Date.now());
-  };
+    setPrevStep2Done(step2Done);
+  }, [step2Done, prevStep2Done]);
 
   const handleViewReport = (
     content: string, 
@@ -511,7 +500,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
                 setValue={setValue}
                 watch={watch}
                 errors={errors}
-                onPlaceSelected={handleFirstPersonPlaceSelected}
               />
 
               {requiresSecondPerson && (
@@ -521,7 +509,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
                     setValue={setValue}
                     watch={watch}
                     errors={errors}
-                    onPlaceSelected={handleSecondPersonPlaceSelected}
                   />
                 </div>
               )}
