@@ -32,19 +32,14 @@ import { ReportFormData } from '@/types/public-report';
  * MobileReportDrawer – end‑to‑end drawer flow optimised for mobile browsers.
  *
  * Key production‑readiness tweaks:
- *   • no hard‑coded footer height – adapts to content + safe‑area inset
+ *   • keyboard‑safe 100 vh workaround (footer no longer jumps)
  *   • dynamic scroll‑padding that always matches footer height
- *   • 100 vh bug workaround using --vh custom property
- *   • smooth‑scroll polyfill loaded on legacy browsers only
+ *   • smooth‑scroll polyfill on legacy browsers only
  *   • body‑scroll lock while drawer is open
  */
 
 // ---------- Helpers -------------------------------------------------------
 const isBrowser = typeof window !== 'undefined';
-const getViewportHeight = () =>
-  isBrowser && window.visualViewport
-    ? window.visualViewport.height
-    : window.innerHeight;
 
 // Smooth‑scroll polyfill (legacy Safari / Android 9)
 const useSmoothScrollPolyfill = () => {
@@ -85,7 +80,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     name: string;
     email: string;
   } | null>(null);
-  
+
   const footerRef = useRef<HTMLDivElement>(null);
 
   // ----------------------------- Hooks -----------------------------------
@@ -94,7 +89,8 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
 
   // Get guest report data for viewing reports - same as desktop
   const urlGuestId = getGuestReportId();
-  const { data: guestReportData, isLoading: isLoadingReport, error: reportError } = useGuestReportData(urlGuestId);
+  const { data: guestReportData, isLoading: isLoadingReport, error: reportError } =
+    useGuestReportData(urlGuestId);
 
   const { form, currentStep, nextStep, prevStep } = useMobileDrawerForm();
   const {
@@ -112,23 +108,28 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
   const reportSubCategory = watch('reportSubCategory');
   const request = watch('request');
 
-  // --------------- Viewport height CSS var (--vh) -------------------------
+  // --------------- Viewport height CSS var (keyboard‑safe) -----------------
   useEffect(() => {
     if (!isBrowser) return;
-    const updateVH = () => {
-      document.documentElement.style.setProperty(
-        '--vh', `${getViewportHeight() * 0.01}px`
-      );
+
+    const KEYBOARD_THRESHOLD = 150; // px – ignore viewport loss bigger than this (likely keyboard)
+    const setVH = (h: number) =>
+      document.documentElement.style.setProperty('--vh', `${h * 0.01}px`);
+
+    // 1) lock to height when drawer opens
+    setVH(window.innerHeight);
+
+    // 2) only react to orientation/real resizes, not keyboard
+    const handleResize = () => {
+      const lost = window.innerHeight - window.visualViewport.height;
+      if (lost > KEYBOARD_THRESHOLD) return; // keyboard visible – ignore
+      setVH(window.visualViewport.height);
     };
-    updateVH();
-    window.addEventListener('resize', updateVH, { passive: true });
-    window.visualViewport?.addEventListener('resize', updateVH, {
-      passive: true,
-    });
-    return () => {
-      window.removeEventListener('resize', updateVH);
-      window.visualViewport?.removeEventListener('resize', updateVH);
-    };
+
+    window.addEventListener('orientationchange', () => setVH(window.innerHeight));
+    window.visualViewport?.addEventListener('resize', handleResize, { passive: true });
+
+    return () => window.visualViewport?.removeEventListener('resize', handleResize);
   }, []);
 
   // ----------------------------- Auto‑scroll -----------------------------
@@ -138,10 +139,10 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
       const container = scrollContainerRef.current;
       if (!container) return;
       container.scrollTo({ top: 0, behavior: 'smooth' });
-      
+
       // Only focus actual form inputs, not selection buttons
       const firstFocusable = container.querySelector<HTMLElement>(
-        'input[type="text"], input[type="email"], input[type="date"], input[type="time"], select, textarea'
+        'input[type="text"], input[type="email"], input[type="date"], input[type="time"], select, textarea',
       );
       if (firstFocusable) {
         firstFocusable.scrollIntoView({ block: 'center', behavior: 'smooth' });
@@ -156,7 +157,6 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     }, 350);
     return () => window.clearTimeout(t);
   }, [currentStep]);
-
 
   // --------------------- Stripe return handler ---------------------------
   useEffect(() => {
@@ -181,7 +181,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     if (!footerRef.current) return;
     const setSpace = () => {
       document.documentElement.style.setProperty(
-        '--footer-space', `${footerRef.current!.offsetHeight}px`
+        '--footer-space', `${footerRef.current!.offsetHeight}px`,
       );
     };
     setSpace();
@@ -196,7 +196,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     form.reset();
     setCurrentView('form');
     setSubmittedData(null);
-    
+
     clearGuestReportId(); // Clear URL and localStorage
   };
 
@@ -212,7 +212,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
       message: promoValidation?.message || '',
       discountPercent: promoValidation?.discountPercent || 0,
     }),
-    [promoValidation]
+    [promoValidation],
   );
 
   const onSubmit = async (data: ReportFormData) => {
@@ -229,7 +229,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     swissData?: any,
     hasReport?: boolean,
     swissBoolean?: boolean,
-    reportType?: string
+    reportType?: string,
   ) => {
     // Just switch to report viewer - data will be loaded from database
     setCurrentView('report-viewer');
@@ -241,44 +241,52 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
     const reportCategory = watch('reportCategory');
     const request = watch('request');
     const isCompatibilityReport = reportCategory === 'compatibility' || request === 'sync';
-    
+
     // Required fields for person 1
     const requiredFields = [
       { name: 'name', label: 'Full Name' },
       { name: 'email', label: 'Email Address' },
       { name: 'birthDate', label: 'Birth Date' },
       { name: 'birthTime', label: 'Birth Time' },
-      { name: 'birthLocation', label: 'Birth Location' }
+      { name: 'birthLocation', label: 'Birth Location' },
     ];
-    
+
     // Add second person fields for compatibility reports
     if (isCompatibilityReport) {
       requiredFields.push(
         { name: 'secondPersonName', label: 'Partner Name' },
         { name: 'secondPersonBirthDate', label: 'Partner Birth Date' },
         { name: 'secondPersonBirthTime', label: 'Partner Birth Time' },
-        { name: 'secondPersonBirthLocation', label: 'Partner Birth Location' }
+        { name: 'secondPersonBirthLocation', label: 'Partner Birth Location' },
       );
     }
-    
+
     // Check for empty fields
-    const emptyFields = requiredFields.filter(field => !watch(field.name as keyof ReportFormData));
-    
+    const emptyFields = requiredFields.filter(
+      (field) => !watch(field.name as keyof ReportFormData),
+    );
+
     if (emptyFields.length > 0) {
       // Scroll to first empty field
       const firstEmptyField = emptyFields[0];
-      const fieldElement = document.querySelector(`#${firstEmptyField.name}`) || 
-                          document.querySelector(`#secondPerson${firstEmptyField.name.replace('secondPerson', '')}`);
-      
+      const fieldElement =
+        document.querySelector(`#${firstEmptyField.name}`) ||
+        document.querySelector(
+          `#secondPerson${firstEmptyField.name.replace('secondPerson', '')}`,
+        );
+
       if (fieldElement) {
         fieldElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
         (fieldElement as HTMLInputElement).focus?.();
       }
-      
+
       // Add red highlighting to empty fields
-      emptyFields.forEach(field => {
-        const element = document.querySelector(`#${field.name}`) || 
-                       document.querySelector(`#secondPerson${field.name.replace('secondPerson', '')}`);
+      emptyFields.forEach((field) => {
+        const element =
+          document.querySelector(`#${field.name}`) ||
+          document.querySelector(
+            `#secondPerson${field.name.replace('secondPerson', '')}`,
+          );
         if (element) {
           element.classList.add('border-red-500', 'ring-1', 'ring-red-500');
           setTimeout(() => {
@@ -286,10 +294,10 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
           }, 3000);
         }
       });
-      
+
       return;
     }
-    
+
     // All fields are filled, proceed to next step
     nextStep();
   };
@@ -349,7 +357,9 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
             <div
               ref={scrollContainerRef}
               className={`flex-1 px-6 overflow-y-auto scrollbar-hide ${
-                currentStep >= 2 ? 'pb-[calc(var(--footer-space,72px)+env(safe-area-inset-bottom,0px))]' : 'pb-6'
+                currentStep >= 2
+                  ? 'pb-[calc(var(--footer-space,72px)+env(safe-area-inset-bottom,0px))]'
+                  : 'pb-6'
               }`}
             >
               <AnimatePresence mode="wait">
@@ -469,7 +479,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
                 guest_report: guestReportData.guest_report,
                 report_content: guestReportData.report_content,
                 swiss_data: guestReportData.swiss_data,
-                metadata: guestReportData.metadata
+                metadata: guestReportData.metadata,
               })}
               onBack={handleBackFromReport}
               isMobile={true}
@@ -492,7 +502,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: MobileReportDrawerProps) => {
           <div className="flex items-center justify-center h-full">
             <div className="text-center space-y-4">
               <p className="text-destructive mb-4">Failed to load report</p>
-              <button 
+              <button
                 onClick={handleBackFromReport}
                 className="bg-primary text-primary-foreground px-4 py-2 rounded"
               >
