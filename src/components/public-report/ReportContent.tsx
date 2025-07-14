@@ -5,7 +5,7 @@ import { ReportRenderer } from '@/components/shared/ReportRenderer';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AstroDataRenderer } from './AstroDataRenderer';
 import { ProcessingIndicator } from '@/components/ui/ProcessingIndicator';
-import { getToggleDisplayLogic } from '@/utils/reportTypeUtils';
+import { getToggleDisplayLogic, getReportContentType } from '@/utils/reportTypeUtils';
 import { MappedReport } from '@/types/mappedReport';
 
 interface ReportContentProps {
@@ -44,22 +44,68 @@ export const ReportContent = ({
   // Smart toggle visibility
   const showToggle = toggleLogic.showToggle && !externalActiveView;
 
-  // Check if data is still loading/incomplete
+  // Check if data is still loading/incomplete - enhanced for sync reports
   const isDataLoading = () => {
-    if (activeView === 'report') {
+    const contentType = getReportContentType({
+      reportContent: mappedReport.reportContent,
+      swissData: mappedReport.swissData,
+      reportType: mappedReport.reportType,
+      hasReport: mappedReport.hasReport
+    });
+
+    // For hybrid reports (sync reports), we need BOTH pieces of data
+    if (contentType === 'hybrid') {
+      const hasValidReportContent = mappedReport.reportContent && mappedReport.reportContent.trim().length > 0;
+      const hasValidSwissData = mappedReport.swissData && Object.keys(mappedReport.swissData).length > 0;
+      return !hasValidReportContent || !hasValidSwissData;
+    }
+    
+    // For AI-only reports, only check reportContent
+    if (contentType === 'ai-only') {
       return !mappedReport.reportContent || mappedReport.reportContent.trim().length === 0;
-    } else {
+    }
+    
+    // For astro-only reports, only check swissData
+    if (contentType === 'astro-only') {
       return !mappedReport.swissData || Object.keys(mappedReport.swissData).length === 0;
     }
+    
+    // Default fallback: if we can't determine type, require both to be safe
+    return !mappedReport.reportContent || !mappedReport.swissData;
   };
 
-  // Render loading state
-  const renderLoadingState = () => (
-    <div className="flex flex-col items-center justify-center h-64 space-y-4">
-      <ProcessingIndicator message="Preparing your report..." className="text-lg" />
-      <p className="text-gray-500 font-light text-sm">Just one moment while we finalize your content</p>
-    </div>
-  );
+  // Render loading state with improved messaging
+  const renderLoadingState = () => {
+    const contentType = getReportContentType({
+      reportContent: mappedReport.reportContent,
+      swissData: mappedReport.swissData,
+      reportType: mappedReport.reportType,
+      hasReport: mappedReport.hasReport
+    });
+
+    let loadingMessage = "Preparing your report...";
+    let subMessage = "Just one moment while we finalize your content";
+
+    if (contentType === 'hybrid') {
+      if (!mappedReport.reportContent && !mappedReport.swissData) {
+        loadingMessage = "Loading your complete report...";
+        subMessage = "Preparing both AI analysis and astrology data";
+      } else if (!mappedReport.reportContent) {
+        loadingMessage = "Loading AI analysis...";
+        subMessage = "Astrology data ready, finalizing AI insights";
+      } else if (!mappedReport.swissData) {
+        loadingMessage = "Loading astrology data...";
+        subMessage = "AI analysis ready, finalizing astrology calculations";
+      }
+    }
+
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <ProcessingIndicator message={loadingMessage} className="text-lg" />
+        <p className="text-gray-500 font-light text-sm">{subMessage}</p>
+      </div>
+    );
+  };
 
   // Mobile-first rendering without containers - header handled by parent
   if (isMobile) {
