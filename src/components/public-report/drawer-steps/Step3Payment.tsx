@@ -92,10 +92,9 @@ const Step3Payment = ({
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: -50 }}
         transition={{ duration: 0.3 }}
-        className="space-y-6"
-        style={{ touchAction: 'pan-y' }}
+        className="space-y-6 pt-6"
       >
-        <div className="bg-white" style={{ paddingTop: `${topSafePadding + 24}px` }}>
+        <div className="bg-white">
           <div className="flex items-center justify-center px-6 py-8">
             <div className="text-center">
               <h1 className="text-4xl md:text-5xl font-light text-gray-900 mb-4 tracking-tight">

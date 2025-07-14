@@ -10,8 +10,6 @@ import { useMobileSafeTopPadding } from '@/hooks/useMobileSafeTopPadding';
 interface Step1_5SubCategoryProps {
   control: any;
   setValue: UseFormSetValue<ReportFormData>;
-  onNext: () => void;
-  onPrev: () => void;
   selectedCategory: string;
   selectedSubCategory: string;
 }
@@ -94,8 +92,7 @@ const getHeadingText = (category: string) => {
   }
 };
 
-const Step1_5SubCategory = ({ control, setValue, onNext, onPrev, selectedCategory, selectedSubCategory }: Step1_5SubCategoryProps) => {
-  const topSafePadding = useMobileSafeTopPadding();
+const Step1_5SubCategory = ({ control, setValue, selectedCategory, selectedSubCategory }: Step1_5SubCategoryProps) => {
   const { getReportPrice } = usePriceFetch();
   const options = subCategoryOptions[selectedCategory as keyof typeof subCategoryOptions] || [];
   const containerRef = useRef<HTMLDivElement>(null);
@@ -114,8 +111,7 @@ const Step1_5SubCategory = ({ control, setValue, onNext, onPrev, selectedCategor
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -50 }}
       transition={{ duration: 0.3 }}
-      className="space-y-6"
-      style={{ paddingTop: `${topSafePadding + 24}px` }}
+      className="space-y-6 pt-6"
     >
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-semibold tracking-tight text-foreground">{getHeadingText(selectedCategory)}</h2>
@@ -160,8 +156,6 @@ const Step1_5SubCategory = ({ control, setValue, onNext, onPrev, selectedCategor
                     } else if (selectedCategory === 'snapshot' && 'reportType' in option) {
                       setValue('reportType', option.reportType);
                     }
-                    
-                    setTimeout(() => onNext(), 100);
                   }}
                   className={`w-full p-6 rounded-2xl border transition-all duration-200 shadow-md bg-background/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98] ${
                     isSelected 

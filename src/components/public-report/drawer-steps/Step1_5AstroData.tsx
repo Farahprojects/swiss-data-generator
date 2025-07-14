@@ -11,12 +11,10 @@ import { useMobileSafeTopPadding } from '@/hooks/useMobileSafeTopPadding';
 interface Step1_5AstroDataProps {
   control: any;
   setValue: UseFormSetValue<ReportFormData>;
-  onNext: () => void;
   selectedSubCategory: string;
 }
 
-const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: Step1_5AstroDataProps) => {
-  const topSafePadding = useMobileSafeTopPadding();
+const Step1_5AstroData = ({ control, setValue, selectedSubCategory }: Step1_5AstroDataProps) => {
   const { getReportPrice } = usePriceFetch();
   const isMobile = useIsMobile();
 
@@ -26,8 +24,7 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -50 }}
       transition={{ duration: 0.3 }}
-      className="space-y-6"
-      style={{ paddingTop: `${topSafePadding + 24}px` }}
+      className="space-y-6 pt-6"
     >
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Choose your astro data type</h2>
@@ -71,8 +68,6 @@ const Step1_5AstroData = ({ control, setValue, onNext, selectedSubCategory }: St
                 // Use unified form data structure (same as desktop)
                 setValue('request', subCategory.value);
                 setValue('reportType', ''); // Clear reportType since astro data uses request field
-                
-                setTimeout(() => onNext(), 100);
               };
               
               return (

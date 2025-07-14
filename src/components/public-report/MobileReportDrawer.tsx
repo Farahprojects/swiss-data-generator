@@ -4,7 +4,7 @@
 // - Google Autocomplete bug resolved
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { useMobileDrawerForm } from '@/hooks/useMobileDrawerForm';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
@@ -23,6 +23,8 @@ import { ReportViewer } from './ReportViewer';
 import { ReportFormData } from '@/types/public-report';
 import { MappedReport } from '@/types/mappedReport';
 import { mapReportPayload } from '@/utils/mapReportPayload';
+import MobileDrawerHeader from './drawer-components/MobileDrawerHeader';
+import MobileDrawerFooter from './drawer-components/MobileDrawerFooter';
 
 const isBrowser = typeof window !== 'undefined';
 
@@ -101,6 +103,33 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
     });
   };
 
+  // Validation logic for each step
+  const canGoNext = () => {
+    switch (currentStep) {
+      case 1:
+        return !!reportCategory;
+      case 2:
+        return reportCategory === 'astro-data' ? !!request : !!reportSubCategory;
+      case 3:
+        const requiredFields = ['name', 'email', 'birthDate', 'birthTime', 'birthLocation'];
+        return requiredFields.every(field => !!watch(field as keyof ReportFormData));
+      case 4:
+        return true; // Payment step - submit button handles validation
+      default:
+        return false;
+    }
+  };
+
+  const handleNext = () => {
+    if (canGoNext()) {
+      nextStep();
+    }
+  };
+
+  const handleSubmitForm = () => {
+    handleSubmit(onSubmit)();
+  };
+
   const handleViewReport = async () => {
     if (!urlGuestId) return;
     
@@ -151,21 +180,23 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
         <DrawerContent className="flex flex-col rounded-none h-screen max-h-screen">
           {currentView === 'form' && (
             <div className="flex flex-col h-full">
-              <DrawerHeader className="pb-2 px-4" style={{ paddingTop: `${topSafePadding + 24}px` }}>
-                <DrawerTitle className="sr-only">Report Request</DrawerTitle>
-              </DrawerHeader>
+              <MobileDrawerHeader 
+                currentStep={currentStep}
+                totalSteps={4}
+                onClose={resetDrawer}
+              />
               <div
                 ref={scrollContainerRef}
-                className="flex-1 px-6 overflow-y-auto scrollbar-hide pb-[calc(var(--footer-h)+env(safe-area-inset-bottom,0px))]"
+                className="flex-1 px-6 overflow-y-auto scrollbar-hide pb-20"
               >
                 {(() => {
                   switch (currentStep) {
                     case 1:
-                      return <Step1ReportType control={control} setValue={setValue} onNext={nextStep} selectedCategory={reportCategory} />;
+                      return <Step1ReportType control={control} setValue={setValue} selectedCategory={reportCategory} />;
                     case 2:
                       return reportCategory === 'astro-data'
-                        ? <Step1_5AstroData control={control} setValue={setValue} onNext={nextStep} selectedSubCategory={request} />
-                        : <Step1_5SubCategory control={control} setValue={setValue} onNext={nextStep} onPrev={prevStep} selectedCategory={reportCategory} selectedSubCategory={reportSubCategory} />;
+                        ? <Step1_5AstroData control={control} setValue={setValue} selectedSubCategory={request} />
+                        : <Step1_5SubCategory control={control} setValue={setValue} selectedCategory={reportCategory} selectedSubCategory={reportSubCategory} />;
                     case 3:
                       return <Step2BirthDetails register={register} setValue={setValue} watch={watch} errors={errors} />;
                     case 4:
@@ -175,6 +206,16 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                   }
                 })()}
               </div>
+              <MobileDrawerFooter
+                currentStep={currentStep}
+                totalSteps={4}
+                onPrevious={prevStep}
+                onNext={handleNext}
+                onSubmit={handleSubmitForm}
+                canGoNext={canGoNext()}
+                isProcessing={isProcessing}
+                isLastStep={currentStep === 4}
+              />
             </div>
           )}
 

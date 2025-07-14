@@ -9,12 +9,10 @@ import { useMobileSafeTopPadding } from '@/hooks/useMobileSafeTopPadding';
 interface Step1ReportTypeProps {
   control: any;
   setValue: UseFormSetValue<ReportFormData>;
-  onNext: () => void;
   selectedCategory: string;
 }
 
-const Step1ReportType = ({ control, setValue, onNext, selectedCategory }: Step1ReportTypeProps) => {
-  const topSafePadding = useMobileSafeTopPadding();
+const Step1ReportType = ({ control, setValue, selectedCategory }: Step1ReportTypeProps) => {
 
   return (
     <motion.div
@@ -22,8 +20,7 @@ const Step1ReportType = ({ control, setValue, onNext, selectedCategory }: Step1R
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -50 }}
       transition={{ duration: 0.3 }}
-      className="space-y-6"
-      style={{ paddingTop: `${topSafePadding + 24}px` }}
+      className="space-y-6 pt-6"
     >
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-semibold tracking-tight text-gray-900">What area would you like guidance on?</h2>
@@ -51,8 +48,6 @@ const Step1ReportType = ({ control, setValue, onNext, selectedCategory }: Step1R
                       // Clear reportType for astro-data since it uses request field
                       setValue('reportType', '');
                     }
-                    // Auto-advance to next step after selection
-                    setTimeout(() => onNext(), 100);
                   }}
                   className={`w-full p-6 rounded-2xl border transition-all duration-200 shadow-md bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98] ${
                     isSelected 
