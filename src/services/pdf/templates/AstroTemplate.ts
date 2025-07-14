@@ -237,10 +237,17 @@ export class AstroTemplate extends BaseTemplate {
           doc.setFont('helvetica', 'normal');
         }
       } else {
-        doc.text(item.a, this.margins.left, y);
-        doc.text(item.type, this.margins.left + 60, y);
-        doc.text(item.b, this.margins.left + 100, y);
-        doc.text(`${item.orbDeg}°${String(item.orbMin).padStart(2, "0")}'`, this.margins.left + 130, y);
+        // Handle both transit aspects (transitPlanet/natalPlanet) and natal aspects (a/b)
+        const planetA = item.transitPlanet || item.a || 'Unknown';
+        const planetB = item.natalPlanet || item.b || 'Unknown';
+        const aspectType = item.type || 'Unknown';
+        const orbDeg = item.orbDeg || 0;
+        const orbMin = item.orbMin || 0;
+        
+        doc.text(planetA, this.margins.left, y);
+        doc.text(aspectType, this.margins.left + 60, y);
+        doc.text(planetB, this.margins.left + 100, y);
+        doc.text(`${orbDeg}°${String(orbMin).padStart(2, "0")}'`, this.margins.left + 130, y);
       }
       y += 10;
     });
