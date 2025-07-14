@@ -24,7 +24,7 @@ export interface ToggleDisplayLogic {
 /**
  * Validates if content is meaningful (not empty/error)
  */
-export const hasValidContent = (content?: string): boolean => {
+const hasValidContent = (content?: string): boolean => {
   if (!content) return false;
   const trimmed = content.trim();
   return trimmed.length > 50 && !trimmed.toLowerCase().includes('error');

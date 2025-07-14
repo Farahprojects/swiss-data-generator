@@ -4,9 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ReportRenderer } from '@/components/shared/ReportRenderer';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AstroDataRenderer } from './AstroDataRenderer';
-import { ProcessingIndicator } from '@/components/ui/ProcessingIndicator';
-import { getToggleDisplayLogic, getReportContentType, hasValidContent } from '@/utils/reportTypeUtils';
-import { hasValidAstroData } from '@/utils/swissDataFormatter';
+import { getToggleDisplayLogic } from '@/utils/reportTypeUtils';
 import { MappedReport } from '@/types/mappedReport';
 
 interface ReportContentProps {
@@ -45,69 +43,11 @@ export const ReportContent = ({
   // Smart toggle visibility
   const showToggle = toggleLogic.showToggle && !externalActiveView;
 
-  // Check if data is still loading/incomplete - fixed to handle string/object swissData
-  const isDataLoading = () => {
-    const contentType = getReportContentType({
-      reportContent: mappedReport.reportContent,
-      swissData: mappedReport.swissData,
-      reportType: mappedReport.reportType,
-      hasReport: mappedReport.hasReport
-    });
-
-    const validReport = hasValidContent(mappedReport.reportContent);
-    const validSwiss = hasValidAstroData(mappedReport.swissData);
-
-    switch (contentType) {
-      case 'hybrid':     return !(validReport && validSwiss);
-      case 'ai-only':    return !validReport;
-      case 'astro-only': return !validSwiss;
-      default:           return !(validReport || validSwiss);
-    }
-  };
-
-  // Render loading state with improved messaging using validators
-  const renderLoadingState = () => {
-    const contentType = getReportContentType({
-      reportContent: mappedReport.reportContent,
-      swissData: mappedReport.swissData,
-      reportType: mappedReport.reportType,
-      hasReport: mappedReport.hasReport
-    });
-
-    const validReport = hasValidContent(mappedReport.reportContent);
-    const validSwiss = hasValidAstroData(mappedReport.swissData);
-
-    let loadingMessage = "Preparing your report...";
-    let subMessage = "Just one moment while we finalize your content";
-
-    if (contentType === 'hybrid') {
-      if (!validReport && !validSwiss) {
-        loadingMessage = "Loading your complete report...";
-        subMessage = "Preparing both AI analysis and astrology data";
-      } else if (!validReport) {
-        loadingMessage = "Loading AI analysis...";
-        subMessage = "Astrology data ready, finalizing AI insights";
-      } else if (!validSwiss) {
-        loadingMessage = "Loading astrology data...";
-        subMessage = "AI analysis ready, finalizing astrology calculations";
-      }
-    }
-
-    return (
-      <div className="flex flex-col items-center justify-center h-64 space-y-4">
-        <ProcessingIndicator message={loadingMessage} className="text-lg" />
-        <p className="text-gray-500 font-light text-sm">{subMessage}</p>
-      </div>
-    );
-  };
-
   // Mobile-first rendering without containers - header handled by parent
   if (isMobile) {
     return (
       <div className="w-full">
-        {isDataLoading() ? (
-          renderLoadingState()
-        ) : activeView === 'report' ? (
+        {activeView === 'report' ? (
           <div className="prose prose-lg max-w-none text-left">
             <ReportRenderer content={mappedReport.reportContent} />
           </div>
@@ -157,9 +97,7 @@ export const ReportContent = ({
         <CardContent className="p-0">
           <ScrollArea className="h-[600px] w-full">
             <div className="p-8">
-              {isDataLoading() ? (
-                renderLoadingState()
-              ) : activeView === 'report' ? (
+              {activeView === 'report' ? (
                 <div className="prose prose-lg max-w-none text-left">
                   <ReportRenderer content={mappedReport.reportContent} />
                 </div>

@@ -99,69 +99,43 @@ serve(async (req) => {
 
     // Fetch Swiss astro data first (if translator log exists)
     if (hasTranslatorLog) {
-      console.log('[get-guest-report] [DEBUG] Fetching translator log:', guestReport.translator_log_id);
       const { data: translatorLog, error: translatorError } = await supabase
         .from('translator_logs')
         .select('swiss_data')
         .eq('id', guestReport.translator_log_id)
         .single();
 
-      if (translatorError) {
-        console.error('[get-guest-report] [ERROR] Failed to fetch translator log:', translatorError);
-      } else if (!translatorLog) {
-        console.error('[get-guest-report] [ERROR] Translator log not found');
+      if (!translatorError) {
+        swissData = translatorLog?.swiss_data || null;
+        // [SWISS-DATA-ACCESS] Accessing swiss_data from translator_logs
+        console.log('[get-guest-report] [SWISS-DATA-ACCESS] Accessing swiss_data from translator_logs');
+        console.log('[get-guest-report] [SWISS-DATA-ACCESS] Swiss data keys found:', swissData ? Object.keys(swissData) : 'null');
+        console.log('[get-guest-report] [SWISS-DATA-ACCESS] Swiss data contains report?', !!(swissData?.report));
       } else {
-        swissData = translatorLog.swiss_data || null;
-        console.log('[get-guest-report] [SUCCESS] Swiss data extracted:', {
-          exists: !!swissData,
-          keys: swissData ? Object.keys(swissData) : 'null',
-          hasReport: !!(swissData?.report),
-          dataLength: swissData ? JSON.stringify(swissData).length : 0
-        });
+        console.error('[get-guest-report] Error fetching Swiss data:', translatorError);
       }
-    } else {
-      console.log('[get-guest-report] [INFO] No translator_log_id, skipping Swiss data fetch');
     }
 
-    // [FIX] Trust database state - don't recalculate based on data existence
+    // Determine report types based on actual data and report_type
     const isEssenceOrSyncReport = ['essence', 'sync'].includes(guestReport.report_type);
-    const isAstroReport = guestReport.swiss_boolean; // Trust database flag
-    const isAiReport = guestReport.is_ai_report; // Trust database flag
+    const isAstroReport = !!swissData;
+    const isAiReport = guestReport.is_ai_report && !!guestReport.report_log_id;
 
     // Extract content based on report type - prioritize AI reports from report_logs
     if (isAiReport) {
       // [CONTAMINATION-FIX] For AI reports, always fetch from report_logs (swiss_data is now pure)
-      console.log('[get-guest-report] [DEBUG] Fetching AI report from report_logs table, report_log_id:', guestReport.report_log_id);
+      console.log('[get-guest-report] [CONTAMINATION-FIX] Fetching AI report from report_logs table');
       const { data: reportLog, error: reportError } = await supabase
         .from('report_logs')
         .select('report_text')
         .eq('id', guestReport.report_log_id)
         .single();
 
-      console.log('[get-guest-report] [DEBUG] Report log query result:', {
-        error: reportError,
-        data: reportLog,
-        report_text_exists: !!reportLog?.report_text,
-        report_text_length: reportLog?.report_text?.length || 0,
-        first_100_chars: reportLog?.report_text?.substring(0, 100) || 'No content'
-      });
-
-      if (!reportError && reportLog) {
-        reportContent = reportLog.report_text || null;
-        console.log('[get-guest-report] [SUCCESS] AI report extracted from report_logs, length:', reportContent?.length || 0);
+      if (!reportError) {
+        reportContent = reportLog?.report_text || null;
+        console.log('[get-guest-report] [CONTAMINATION-FIX] Successfully fetched AI report from report_logs');
       } else {
-        console.error('[get-guest-report] [ERROR] Failed to fetch AI report:', reportError);
-        // Try to debug RLS issue by checking if the record exists at all
-        const { data: checkRecord, error: checkError } = await supabase
-          .from('report_logs')
-          .select('id, has_error, status')
-          .eq('id', guestReport.report_log_id)
-          .single();
-        console.log('[get-guest-report] [DEBUG] RLS check - record exists?:', {
-          exists: !!checkRecord,
-          error: checkError,
-          record: checkRecord
-        });
+        console.error('[get-guest-report] Error fetching AI report:', reportError);
       }
     } else if (isEssenceOrSyncReport && swissData?.report?.content) {
       // [LEGACY] This should not happen anymore since swiss_data is pure
@@ -191,19 +165,11 @@ serve(async (req) => {
       report_content: reportContent,
       swiss_data: swissData,
       metadata: {
-        is_astro_report: guestReport.swiss_boolean, // Trust database flag
-        is_ai_report: guestReport.is_ai_report, // Trust database flag
+        is_astro_report: isAstroReport,
+        is_ai_report: isAiReport,
         content_type: contentType,
       },
     };
-
-    console.log('[get-guest-report] [FINAL] Response summary:', {
-      has_swiss_data: !!swissData,
-      has_report_content: !!reportContent,
-      metadata_is_astro: responseData.metadata.is_astro_report,
-      metadata_is_ai: responseData.metadata.is_ai_report,
-      content_type: contentType
-    });
 
     return new Response(JSON.stringify(responseData), {
       status: 200,

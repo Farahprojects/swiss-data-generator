@@ -7,6 +7,12 @@ function _mapReportPayload({
   swiss_data,
   metadata
 }: RawReportPayload): MappedReport {
+  console.log('mapReportPayload received payload:', {
+    guest_report: guest_report,
+    has_report_data: !!guest_report?.report_data,
+    report_data_keys: guest_report?.report_data ? Object.keys(guest_report.report_data) : [],
+    report_data_name: guest_report?.report_data?.name
+  });
   
   // Extract person A data from guest_report.report_data (single source of truth)
   const reportData = guest_report?.report_data;
@@ -62,9 +68,9 @@ function _mapReportPayload({
   // Determine if this is a pure astro report (Swiss data only, no AI content)
   const isPureAstroReport = (reportType === 'essence' || reportType === 'sync') && !report_content;
 
-  // [FIX] Trust database flags - don't override with calculations
+  // Extract flags - use is_ai_report as single source of truth for AI reports
   const hasReport = guest_report?.is_ai_report ?? false;
-  const swissBoolean = guest_report?.swiss_boolean ?? false; // Trust database, don't fallback to calculations
+  const swissBoolean = guest_report?.swiss_boolean ?? metadata?.is_astro_report ?? !!swiss_data;
 
   const mappedReport: MappedReport = {
     title,
@@ -91,8 +97,15 @@ function _mapReportPayload({
   return Object.freeze(validated);
 }
 
-// Direct export without memoization to prevent caching incomplete data
-export const mapReportPayload = _mapReportPayload;
+// Memoized version for performance
+export const mapReportPayload = memoize(_mapReportPayload, {
+  // Custom resolver to handle object keys for memoization
+  normalizer: (args) => JSON.stringify(args[0]),
+  // Cache for 5 minutes
+  maxAge: 5 * 60 * 1000,
+  // Maximum 100 cached results
+  max: 100,
+});
 
 // Non-memoized version for testing or when fresh data is required
 export const mapReportPayloadFresh = _mapReportPayload;
