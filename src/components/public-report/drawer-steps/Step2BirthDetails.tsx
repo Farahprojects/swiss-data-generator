@@ -36,11 +36,30 @@ const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
   // Watch for person 1 location to enable person 2 autocomplete
   const person1Location = watch('birthLocation');
   
+  // Watch birth date and time for auto-scroll
+  const birthDate = watch('birthDate');
+  const birthTime = watch('birthTime');
+  
   React.useEffect(() => {
     if (person1Location && person1Location.trim().length > 0) {
       setPerson1LocationSelected(true);
     }
   }, [person1Location]);
+  
+  // Auto-scroll to birth location when both birth date and time are filled
+  React.useEffect(() => {
+    if (birthDate && birthTime) {
+      setTimeout(() => {
+        const locationField = document.querySelector('[data-birth-location]');
+        if (locationField) {
+          locationField.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
+        }
+      }, 300);
+    }
+  }, [birthDate, birthTime]);
   
   // Callback when person 1 selects a location
   const handlePerson1PlaceSelect = () => {

@@ -167,7 +167,7 @@ const PersonCard = ({
               {helperText}
             </div>
           )}
-          <div className="space-y-2">
+          <div className="space-y-2" data-birth-location>
             <Label htmlFor={`${prefix}birthLocation`} className="text-lg font-light text-gray-700">
               Birth Location *
             </Label>
