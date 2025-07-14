@@ -65,7 +65,7 @@ serve(async (req) => {
         email,
         report_type,
         swiss_boolean,
-        has_report,
+        is_ai_report,
         payment_status,
         created_at,
         promo_code_used,
@@ -87,7 +87,7 @@ serve(async (req) => {
       id: guestReport.id,
       report_type: guestReport.report_type,
       swiss_boolean: guestReport.swiss_boolean,
-      has_report: guestReport.has_report,
+      is_ai_report: guestReport.is_ai_report,
       translator_log_id: !!guestReport.translator_log_id,
       report_log_id: !!guestReport.report_log_id,
     });
@@ -119,7 +119,7 @@ serve(async (req) => {
     // Determine report types based on actual data and report_type
     const isEssenceOrSyncReport = ['essence', 'sync'].includes(guestReport.report_type);
     const isAstroReport = !!swissData;
-    const isAiReport = guestReport.has_report && !!guestReport.report_log_id;
+    const isAiReport = guestReport.is_ai_report && !!guestReport.report_log_id;
 
     // Extract content based on report type
     if (isEssenceOrSyncReport && swissData?.report?.content) {
