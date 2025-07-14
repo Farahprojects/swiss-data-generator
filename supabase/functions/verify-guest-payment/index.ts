@@ -154,10 +154,6 @@ async function processSwissDataInBackground(guestReportId: string, reportData: R
 
     console.log("[edge][translator_payload]", JSON.stringify(translatorPayload, null, 2));
 
-    // [CONTAMINATION-SOURCE-VERIFY-GUEST] About to call translator.ts from verify-guest-payment
-    console.log(`[verify-guest-payment] [CONTAMINATION-SOURCE-VERIFY-GUEST] guest_id: ${guestReportId || 'unknown'} - About to call translator.ts from verify-guest-payment`);
-    console.log(`[verify-guest-payment] [CONTAMINATION-SOURCE-VERIFY-GUEST] translatorPayload structure:`, JSON.stringify(translatorPayload, null, 2).substring(0, 500));
-
     const translated = await translate(translatorPayload);
     swissData = JSON.parse(translated.text);
 
