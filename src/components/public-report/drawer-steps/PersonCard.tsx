@@ -43,7 +43,7 @@ const PersonCard = ({
   const isMobile = useIsMobile();
   const isSecondPerson = personNumber === 2;
   const prefix = isSecondPerson ? 'secondPerson' : '';
-  const { scrollToElement, scrollToNextField } = useSmartScroll();
+  const { scrollToElement, scrollToNextField, debouncedScroll } = useSmartScroll();
 
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [activeSelector, setActiveSelector] = useState<'date' | 'time' | null>(null);
@@ -52,12 +52,17 @@ const PersonCard = ({
   const showError = (field: string) => (hasTriedToSubmit || touched[field]) && errors[field];
 
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    scrollToElement(e.target, { block: 'center' });
+    const fieldId = e.target.id;
+    const fieldType = fieldId.includes('Date') || fieldId.includes('Time') ? 'picker' : 
+                     fieldId.includes('Location') ? 'location' : 'text';
+    debouncedScroll(e.target, { fieldType, delay: 100 });
   };
 
   const handleBlur = (field: string, nextFieldId?: string) => (e: React.FocusEvent<HTMLInputElement>) => {
     markTouched(field);
-    if (e.target.value.trim() && nextFieldId) scrollToNextField(nextFieldId);
+    if (e.target.value.trim() && nextFieldId) {
+      scrollToNextField(nextFieldId, personNumber);
+    }
   };
 
   const getField = (name: string) => isSecondPerson ? `secondPerson${name.charAt(0).toUpperCase() + name.slice(1)}` : name;
@@ -74,8 +79,8 @@ const PersonCard = ({
 
     requestAnimationFrame(() => {
       setTimeout(() => {
-        scrollToNextField(loc);
-      }, 150);
+        scrollToNextField(loc, personNumber);
+      }, 400);
     });
 
     onPlaceSelect?.();
@@ -138,7 +143,7 @@ const PersonCard = ({
               onConfirm={() => {
                 markTouched(getField('birthDate'));
                 setActiveSelector(null);
-                scrollToNextField(getField('birthTime'));
+                scrollToNextField(getField('birthDate'), personNumber);
               }}
               onCancel={() => setActiveSelector(null)}
               isOpen={activeSelector === 'date'}
@@ -158,7 +163,7 @@ const PersonCard = ({
               onConfirm={() => {
                 markTouched(getField('birthTime'));
                 setActiveSelector(null);
-                scrollToNextField(getField('birthLocation'));
+                scrollToNextField(getField('birthTime'), personNumber);
               }}
               onCancel={() => setActiveSelector(null)}
               isOpen={activeSelector === 'time'}

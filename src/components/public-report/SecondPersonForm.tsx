@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { CleanPlaceAutocomplete } from '@/components/shared/forms/place-input/CleanPlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import { ReportFormData } from '@/types/public-report';
-import { useDebounced } from '@/hooks/useDebounced';
+import { useSmartScroll } from '@/hooks/useSmartScroll';
 import FormStep from './FormStep';
 
 interface SecondPersonFormProps {
@@ -18,6 +18,7 @@ interface SecondPersonFormProps {
 }
 
 const SecondPersonForm = ({ register, setValue, watch, errors, onPlaceSelected }: SecondPersonFormProps) => {
+  const { scrollToNextField, debouncedScroll } = useSmartScroll();
   const [hasInteracted, setHasInteracted] = useState({
     name: false,
     birthDate: false,
@@ -29,9 +30,6 @@ const SecondPersonForm = ({ register, setValue, watch, errors, onPlaceSelected }
   const secondPersonBirthDate = watch('secondPersonBirthDate') || '';
   const secondPersonBirthTime = watch('secondPersonBirthTime') || '';
   const secondPersonBirthLocation = watch('secondPersonBirthLocation') || '';
-
-  // Debounce the name value to prevent validation while typing
-  const debouncedName = useDebounced(secondPersonName, 500);
 
   const handlePlaceSelect = (placeData: PlaceData) => {
     // Use the full formatted address (which is now in placeData.name) or fallback to address field
@@ -78,8 +76,11 @@ const SecondPersonForm = ({ register, setValue, watch, errors, onPlaceSelected }
             {...register('secondPersonName')}
             placeholder="Enter second person's name"
             className="h-12"
-            onFocus={() => handleFieldInteraction('name')}
-            onBlur={() => handleFieldInteraction('name')}
+            onFocus={(e) => debouncedScroll(e.target, { fieldType: 'text' })}
+            onBlur={(e) => {
+              handleFieldInteraction('name');
+              if (e.target.value.trim()) scrollToNextField('secondPersonName', 2);
+            }}
           />
           {shouldShowError('name', errors.secondPersonName) ? (
             <p className="text-sm text-destructive">{errors.secondPersonName.message}</p>

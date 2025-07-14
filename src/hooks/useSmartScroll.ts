@@ -7,6 +7,7 @@ interface ScrollOptions {
   offset?: number;
   delay?: number;
   inline?: ScrollLogicalPosition;
+  fieldType?: 'text' | 'picker' | 'location';
 }
 
 type TargetElement = Element | HTMLElement | string;
@@ -14,6 +15,7 @@ type TargetElement = Element | HTMLElement | string;
 export const useSmartScroll = () => {
   const isMobile = useIsMobile();
   const isScrollingRef = useRef(false);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // --------- Check visibility within viewport ----------
   const isElementVisible = useCallback((element: Element): boolean => {
@@ -26,6 +28,20 @@ export const useSmartScroll = () => {
     );
   }, []);
 
+  // --------- Debounced scroll function ----------------
+  const debouncedScroll = useCallback(
+    (target: TargetElement, options: ScrollOptions = {}) => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+      
+      debounceTimeoutRef.current = setTimeout(() => {
+        scrollToElement(target, options);
+      }, 150);
+    },
+    []
+  );
+
   // --------- Main smart scroll function ----------------
   const scrollToElement = useCallback(
     (target: TargetElement, options: ScrollOptions = {}) => {
@@ -37,6 +53,7 @@ export const useSmartScroll = () => {
         inline = 'nearest',
         offset = 0,
         delay = 0,
+        fieldType = 'text',
       } = options;
 
       const element: Element | null =
@@ -53,17 +70,31 @@ export const useSmartScroll = () => {
 
       const executeScroll = () => {
         try {
-          if (offset !== 0) {
-            const rect = element.getBoundingClientRect();
-            const scrollY = window.pageYOffset + rect.top + offset;
-            window.scrollTo({ top: scrollY, behavior });
+          const rect = element.getBoundingClientRect();
+          
+          // Calculate smart offset based on field type and screen size
+          let smartOffset = offset;
+          if (smartOffset === 0) {
+            const screenHeight = window.innerHeight;
+            if (fieldType === 'picker') {
+              smartOffset = -screenHeight * 0.25; // Show more context for pickers
+            } else if (fieldType === 'location') {
+              smartOffset = -screenHeight * 0.3; // Show more context for location autocomplete
+            } else {
+              smartOffset = -screenHeight * 0.2; // Default for text inputs
+            }
+          }
+          
+          if (smartOffset !== 0) {
+            const scrollY = window.pageYOffset + rect.top + smartOffset;
+            window.scrollTo({ top: Math.max(0, scrollY), behavior });
           } else {
             element.scrollIntoView({ behavior, block, inline });
           }
         } catch (err) {
           console.warn('Smart scroll error:', err);
         } finally {
-          const duration = behavior === 'smooth' ? 400 : 100;
+          const duration = behavior === 'smooth' ? 600 : 100;
           setTimeout(() => {
             isScrollingRef.current = false;
           }, duration);
@@ -73,15 +104,18 @@ export const useSmartScroll = () => {
       const scrollWithDelay = () => {
         if ('requestIdleCallback' in window) {
           (window as any).requestIdleCallback(() => executeScroll(), {
-            timeout: 300,
+            timeout: 500,
           });
         } else {
-          setTimeout(executeScroll, delay || 100);
+          setTimeout(executeScroll, delay || 200);
         }
       };
 
-      if (delay > 0) {
-        setTimeout(scrollWithDelay, delay);
+      // Add smart delay based on field type
+      const smartDelay = delay > 0 ? delay : fieldType === 'picker' ? 300 : 150;
+      
+      if (smartDelay > 0) {
+        setTimeout(scrollWithDelay, smartDelay);
       } else {
         scrollWithDelay();
       }
@@ -89,29 +123,47 @@ export const useSmartScroll = () => {
     [isMobile, isElementVisible]
   );
 
-  // --------- Scroll to next field in logical form order ----------
-  const scrollToNextField = useCallback((currentFieldId: string) => {
-    const fieldOrder = [
-      'name', 'secondPersonName',
-      'email',
-      'birthDate', 'secondPersonBirthDate',
-      'birthTime', 'secondPersonBirthTime',
-      'birthLocation', 'secondPersonBirthLocation',
-    ];
-
-    const currentIndex = fieldOrder.indexOf(currentFieldId);
+  // --------- Enhanced scroll to next field with person context ----------
+  const scrollToNextField = useCallback((currentFieldId: string, personNumber?: 1 | 2) => {
+    const baseFields = ['name', 'email', 'birthDate', 'birthTime', 'birthLocation'];
+    const person1Fields = baseFields;
+    const person2Fields = baseFields.map(field => `secondPerson${field.charAt(0).toUpperCase() + field.slice(1)}`);
+    
+    let fieldOrder: string[];
+    let currentIndex: number;
+    
+    if (personNumber === 2 || currentFieldId.startsWith('secondPerson')) {
+      fieldOrder = person2Fields;
+      currentIndex = person2Fields.indexOf(currentFieldId);
+    } else {
+      fieldOrder = person1Fields;
+      currentIndex = person1Fields.indexOf(currentFieldId);
+      
+      // If we're at the end of person 1 fields, check if we should go to person 2
+      if (currentIndex === person1Fields.length - 1) {
+        const person2NameEl = document.getElementById('secondPersonName');
+        if (person2NameEl) {
+          debouncedScroll(person2NameEl, { fieldType: 'text', delay: 300 });
+          return;
+        }
+      }
+    }
+    
     if (currentIndex === -1 || currentIndex === fieldOrder.length - 1) return;
 
     const nextId = fieldOrder[currentIndex + 1];
     const nextEl = document.getElementById(nextId);
     if (nextEl) {
-      scrollToElement(nextEl, { delay: 200, block: 'center' });
+      const fieldType = nextId.includes('Date') || nextId.includes('Time') ? 'picker' : 
+                       nextId.includes('Location') ? 'location' : 'text';
+      debouncedScroll(nextEl, { fieldType, delay: 200 });
     }
-  }, [scrollToElement]);
+  }, [debouncedScroll]);
 
   return {
     scrollToElement,
     scrollToNextField,
+    debouncedScroll,
     isElementVisible,
   };
 };
