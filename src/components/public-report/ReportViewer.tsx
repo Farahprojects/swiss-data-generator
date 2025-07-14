@@ -206,11 +206,12 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
       let textToCopy: string;
       
       if (activeView === 'astro' && mappedReport.swissData) {
-        textToCopy = extractAstroDataAsText(mappedReport.swissData, mappedReport);
+        textToCopy = `Please analyze this astrological ${activeView === 'astro' ? 'data' : 'report'} and provide additional insights or answer any questions I might have, read it like an energy map not a horoscope:\n\n${extractAstroDataAsText(mappedReport.swissData, mappedReport)}`;
       } else {
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = mappedReport.reportContent;
-        textToCopy = tempDiv.textContent || tempDiv.innerText || '';
+        const reportText = tempDiv.textContent || tempDiv.innerText || '';
+        textToCopy = `Please analyze this astrological ${activeView === 'astro' ? 'data' : 'report'} and provide additional insights or answer any questions I might have, read it like an energy map not a horoscope:\n\n${reportText}`;
       }
       
       await navigator.clipboard.writeText(textToCopy);
@@ -220,8 +221,7 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
       });
       
       setTimeout(() => {
-        const chatGPTUrl = `https://chat.openai.com/?model=gpt-4&prompt=${encodeURIComponent(`Please analyze this astrological ${activeView === 'astro' ? 'data' : 'report'} and provide additional insights or answer any questions I might have:\n\n${textToCopy}`)}`;
-        window.open(chatGPTUrl, '_blank');
+        window.open('https://chatgpt.com/g/g-68636dbe19588191b04b0a60bcbf3df3-therai', '_blank');
         setShowChatGPTConfirm(false);
         setIsCopping(false);
       }, 2000);
