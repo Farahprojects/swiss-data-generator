@@ -31,45 +31,13 @@ const hasValidContent = (content?: string): boolean => {
 };
 
 /**
- * Validates if astro data contains meaningful information
- */
-const hasValidAstroData = (swissData?: any): boolean => {
-  if (!swissData) return false;
-  
-  // For objects, just check if they exist and don't contain errors
-  if (typeof swissData === 'object') {
-    const dataStr = JSON.stringify(swissData);
-    return dataStr.length > 10 && !dataStr.toLowerCase().includes('error');
-  }
-  
-  // For strings, be less restrictive
-  if (typeof swissData === 'string') {
-    return swissData.length > 10 && !swissData.toLowerCase().includes('error');
-  }
-  
-  return true;
-};
-
-/**
  * Determines the actual content type based on available data
  */
 export const getReportContentType = (data: ReportDetectionData): ReportContentType => {
   const hasValidReport = hasValidContent(data.reportContent);
-  const hasValidAstro = hasValidAstroData(data.swissData);
-  
-  // For essence and sync reports, prioritize astro data if it exists
-  if (data.reportType && ['essence', 'sync'].includes(data.reportType.toLowerCase())) {
-    if (hasValidAstro && hasValidReport) return 'hybrid';
-    if (hasValidAstro) return 'astro-only';
-    if (hasValidReport) return 'ai-only';
-    return 'empty';
-  }
 
-  // Default logic for other report types
-  if (hasValidReport && hasValidAstro) return 'hybrid';
-  if (hasValidAstro && !hasValidReport) return 'astro-only';
-  if (hasValidReport && !hasValidAstro) return 'ai-only';
-  return 'empty';
+  if (hasValidReport) return 'hybrid'; // AI + Astro (Astro always assumed present)
+  return 'astro-only'; // Only Astro is shown if no AI content
 };
 
 /**
@@ -77,41 +45,23 @@ export const getReportContentType = (data: ReportDetectionData): ReportContentTy
  */
 export const getToggleDisplayLogic = (data: ReportDetectionData): ToggleDisplayLogic => {
   const contentType = getReportContentType(data);
-  
-  switch (contentType) {
-    case 'hybrid':
-      return {
-        showToggle: true,
-        defaultView: 'report',
-        title: 'Your Report',
-        availableViews: ['report', 'astro']
-      };
-    
-    case 'astro-only':
-      return {
-        showToggle: false,
-        defaultView: 'astro',
-        title: 'Your Astro Data',
-        availableViews: ['astro']
-      };
-    
-    case 'ai-only':
-      return {
-        showToggle: false,
-        defaultView: 'report',
-        title: 'Your Report',
-        availableViews: ['report']
-      };
-    
-    case 'empty':
-    default:
-      return {
-        showToggle: false,
-        defaultView: 'report',
-        title: 'Your Report',
-        availableViews: []
-      };
+
+  if (contentType === 'hybrid') {
+    return {
+      showToggle: true,
+      defaultView: 'report',
+      title: 'Your Report',
+      availableViews: ['report', 'astro']
+    };
   }
+
+  // If no AI report, just show Astro data
+  return {
+    showToggle: false,
+    defaultView: 'astro',
+    title: 'Your Astro Data',
+    availableViews: ['astro']
+  };
 };
 
 /**
