@@ -11,6 +11,7 @@ import Footer from '@/components/Footer';
 import { supabase } from '@/integrations/supabase/client';
 import Logo from '@/components/Logo';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useReportSubmission } from '@/hooks/useReportSubmission';
 
 const PublicReport = () => {
   // Production ready - no debug logs
@@ -24,6 +25,7 @@ const PublicReport = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [scrollY, setScrollY] = useState(0);
   const isMobile = useIsMobile();
+  const { reportCreated } = useReportSubmission();
 
   // Scroll position tracking
   useEffect(() => {
@@ -274,7 +276,7 @@ const PublicReport = () => {
         </section>
 
         <TestsSection />
-        {!isMobile && (
+        {(!isMobile || reportCreated) && (
           <div id="report-form">
             <ReportForm />
           </div>
