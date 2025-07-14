@@ -22,6 +22,7 @@ import SuccessScreen from './SuccessScreen';
 import { ReportViewer } from './ReportViewer';
 import { ReportFormData } from '@/types/public-report';
 import { MappedReport } from '@/types/mappedReport';
+import { mapReportPayload } from '@/utils/mapReportPayload';
 
 const isBrowser = typeof window !== 'undefined';
 
@@ -31,12 +32,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
 
   const [currentView, setCurrentView] = useState<'form' | 'success' | 'report'>('form');
   const [submittedData, setSubmittedData] = useState<{ name: string; email: string } | null>(null);
-  const [reportContent, setReportContent] = useState('');
-  const [reportPdf, setReportPdf] = useState<string | null>(null);
-  const [swissData, setSwissData] = useState<any>(null);
-  const [hasReport, setHasReport] = useState(false);
-  const [swissBoolean, setSwissBoolean] = useState(false);
-  const [reportType, setReportType] = useState('');
+  const [mappedReport, setMappedReport] = useState<MappedReport | null>(null);
   const [viewingReport, setViewingReport] = useState(false);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -87,13 +83,8 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
     });
   };
 
-  const handleViewReport = (content: string, pdf?: string | null, swiss?: any, has?: boolean, flag?: boolean, type?: string) => {
-    setReportContent(content);
-    setReportPdf(pdf || null);
-    setSwissData(swiss || null);
-    setHasReport(has || false);
-    setSwissBoolean(flag || false);
-    setReportType(type || '');
+  const handleViewReport = (mappedReportData: MappedReport) => {
+    setMappedReport(mappedReportData);
     setViewingReport(true);
     setCurrentView('report');
   };
@@ -154,17 +145,9 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
         </DrawerContent>
       </Drawer>
 
-      {currentView === 'report' && viewingReport && (
+      {currentView === 'report' && viewingReport && mappedReport && (
         <ReportViewer
-          mappedReport={{
-            reportContent,
-            pdfData: reportPdf,
-            swissData,
-            hasReport,
-            swissBoolean,
-            reportType,
-            customerName: submittedData?.name || 'Customer',
-          } as MappedReport}
+          mappedReport={mappedReport}
           onBack={() => {
             setViewingReport(false);
             setTimeout(() => resetDrawer(), 50);

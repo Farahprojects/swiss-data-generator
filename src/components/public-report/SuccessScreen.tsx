@@ -12,6 +12,8 @@ import { useNavigate } from 'react-router-dom';
 import { getGuestToken, clearAllSessionData } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
 import EntertainmentWindow from './EntertainmentWindow';
+import { mapReportPayload } from '@/utils/mapReportPayload';
+import { MappedReport } from '@/types/mappedReport';
 
 type ReportType = 'essence' | 'sync';
 const VIDEO_SRC = 'https://auth.theraiastro.com/storage/v1/object/public/therai-assets/loading-video.mp4';
@@ -58,14 +60,7 @@ const VideoLoader: React.FC<{ onVideoReady?: () => void }> = ({ onVideoReady }) 
 interface SuccessScreenProps {
   name: string;
   email: string;
-  onViewReport?: (
-    content: string,
-    pdf?: string | null,
-    swissData?: any,
-    hasReport?: boolean,
-    swissBoolean?: boolean,
-    reportType?: string
-  ) => void;
+  onViewReport?: (mappedReport: MappedReport) => void;
   guestReportId?: string;
 }
 
@@ -163,33 +158,18 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
         throw new Error('No data returned from server');
       }
 
-      const { report_content, swiss_data, guest_report, metadata } = data;
-      const reportType = guest_report.report_type;
-      const hasSwiss = !!swiss_data;
-      const hasAi = !!report_content;
-      const contentType = metadata?.content_type;
+      // Use mapReportPayload to get consistent data structure
+      const mappedReport = mapReportPayload(data);
 
-      console.log('📊 Data summary:', {
-        hasSwiss,
-        hasAi,
-        reportType,
-        contentType,
-        hasReportContent: !!report_content,
-        hasSwissData: !!swiss_data
+      console.log('📊 Mapped report data:', {
+        hasReport: mappedReport.hasReport,
+        swissBoolean: mappedReport.swissBoolean,
+        reportType: mappedReport.reportType,
+        hasReportContent: !!mappedReport.reportContent,
+        hasSwissData: !!mappedReport.swissData
       });
 
       setFetchedReportData(data);
-
-      const isAstro = contentType === 'astro' || contentType === 'both';
-      const isAi = contentType === 'ai' || contentType === 'both';
-
-      console.log('🎯 Opening modal with data:', {
-        content: report_content ? 'Present' : 'Missing',
-        swiss_data: swiss_data ? 'Present' : 'Missing',
-        isAi,
-        isAstro,
-        reportType
-      });
 
       // Trigger PDF email in background (non-blocking)
       triggerPdfEmail(currentGuestReportId).then((success) => {
@@ -205,14 +185,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
 
       // Only open modal after successful data fetch
       if (onViewReport) {
-        onViewReport(
-          report_content || 'No content available', 
-          null, 
-          swiss_data, 
-          hasAi, 
-          isAstro, 
-          reportType
-        );
+        onViewReport(mappedReport);
       } else {
         console.warn('⚠️ onViewReport callback is missing');
         throw new Error('Modal callback not available');

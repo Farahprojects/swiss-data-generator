@@ -11,6 +11,7 @@ import PaymentStep from '@/components/public-report/PaymentStep';
 import SuccessScreen from '@/components/public-report/SuccessScreen';
 import { ReportViewer } from '@/components/public-report/ReportViewer';
 import { mapReportPayload } from '@/utils/mapReportPayload';
+import { MappedReport } from '@/types/mappedReport';
 import { FormValidationStatus } from '@/components/public-report/FormValidationStatus';
 
 import { clearGuestReportId, getGuestReportId } from '@/utils/urlHelpers';
@@ -275,20 +276,14 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     setPrevStep2Done(step2Done);
   }, [step2Done, prevStep2Done]);
 
-  const handleViewReport = (
-    content: string, 
-    pdfData?: string | null, 
-    swissData?: any,
-    hasReport?: boolean,
-    swissBoolean?: boolean,
-    reportType?: string
-  ) => {
-    setReportContent(content);
-    setReportPdfData(pdfData || null);
-    setSwissData(swissData);
-    setHasReport(hasReport || false);
-    setSwissBoolean(swissBoolean || false);
-    setCurrentReportType(reportType || '');
+  const handleViewReport = (mappedReport: MappedReport) => {
+    // These are used by the loading states - though they're not needed since we're using mapReportPayload
+    setReportContent(mappedReport.reportContent);
+    setReportPdfData(mappedReport.pdfData || null);
+    setSwissData(mappedReport.swissData);
+    setHasReport(mappedReport.hasReport);
+    setSwissBoolean(mappedReport.swissBoolean);
+    setCurrentReportType(mappedReport.reportType);
     setViewingReport(true);
   };
 
