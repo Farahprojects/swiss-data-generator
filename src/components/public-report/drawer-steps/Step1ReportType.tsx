@@ -10,9 +10,10 @@ interface Step1ReportTypeProps {
   control: any;
   setValue: UseFormSetValue<ReportFormData>;
   selectedCategory: string;
+  onNext?: () => void;
 }
 
-const Step1ReportType = ({ control, setValue, selectedCategory }: Step1ReportTypeProps) => {
+const Step1ReportType = ({ control, setValue, selectedCategory, onNext }: Step1ReportTypeProps) => {
 
   return (
     <motion.div
@@ -23,7 +24,7 @@ const Step1ReportType = ({ control, setValue, selectedCategory }: Step1ReportTyp
       className="space-y-6 pt-6"
     >
       <div className="text-center space-y-2">
-        <h2 className="text-2xl font-semibold tracking-tight text-gray-900">What area would you like guidance on?</h2>
+        <h2 className="text-2xl font-light tracking-tight text-[hsl(var(--apple-gray-dark))]">What area would you like <em className="font-normal">guidance</em> on?</h2>
       </div>
 
       <Controller
@@ -48,21 +49,38 @@ const Step1ReportType = ({ control, setValue, selectedCategory }: Step1ReportTyp
                       // Clear reportType for astro-data since it uses request field
                       setValue('reportType', '');
                     }
+                    
+                    // Auto-advance to next step after selection with a small delay
+                    setTimeout(() => {
+                      onNext?.();
+                    }, 600);
                   }}
-                  className={`w-full p-6 rounded-2xl border transition-all duration-200 shadow-md bg-white/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98] ${
+                  className={`w-full p-6 rounded-3xl border transition-all duration-300 ease-out active:scale-95 min-h-[80px] ${
                     isSelected 
-                      ? 'border-primary shadow-lg' 
-                      : 'border-neutral-200 hover:border-neutral-300'
+                      ? 'border-[hsl(var(--apple-blue))] bg-[hsl(var(--apple-blue))]/5 shadow-[var(--apple-shadow-lg)]' 
+                      : 'border-[hsl(var(--apple-gray-light))] bg-white hover:bg-gray-50 hover:border-[hsl(var(--apple-gray))] shadow-[var(--apple-shadow-sm)]'
                   }`}
-                  whileTap={{ scale: 0.98 }}
+                  whileTap={{ scale: 0.95 }}
                 >
                   <div className="flex gap-4 items-center">
-                    <div className="bg-white shadow-inner w-12 h-12 flex items-center justify-center rounded-full">
-                      <IconComponent className="h-6 w-6 text-gray-700" />
+                    <div className={`w-14 h-14 flex items-center justify-center rounded-full transition-all duration-300 ${
+                      isSelected 
+                        ? 'bg-[hsl(var(--apple-blue))] shadow-[var(--apple-shadow-md)]' 
+                        : 'bg-white shadow-[var(--apple-shadow-sm)]'
+                    }`}>
+                      <IconComponent className={`h-7 w-7 transition-colors duration-300 ${
+                        isSelected 
+                          ? 'text-white' 
+                          : 'text-[hsl(var(--apple-gray-dark))]'
+                      }`} />
                     </div>
                     <div className="flex-1 text-left">
-                      <h3 className="text-lg font-semibold text-gray-900">{category.title}</h3>
-                      <p className="text-sm text-muted-foreground">{category.description}</p>
+                      <h3 className={`text-lg font-medium transition-colors duration-300 ${
+                        isSelected 
+                          ? 'text-[hsl(var(--apple-blue))]' 
+                          : 'text-[hsl(var(--apple-gray-dark))]'
+                      }`}>{category.title}</h3>
+                      <p className="text-sm text-[hsl(var(--apple-gray))] font-light leading-relaxed">{category.description}</p>
                     </div>
                   </div>
                 </motion.button>
