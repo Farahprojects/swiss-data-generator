@@ -16,6 +16,8 @@ import { FormValidationStatus } from '@/components/public-report/FormValidationS
 
 import { clearGuestReportId, getGuestReportId } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
+import { useGuestReportData } from '@/hooks/useGuestReportData';
+
 interface ReportFormProps {
   coachSlug?: string;
   themeColor?: string;
@@ -32,11 +34,16 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const navigate = useNavigate();
   const { promoValidation, isValidatingPromo, validatePromoManually, resetValidation } = usePromoValidation();
   const [viewingReport, setViewingReport] = useState(false);
-  const [guestReportData, setGuestReportData] = useState<any>(null);
-  const [isLoadingReport, setIsLoadingReport] = useState(false);
+  const [reportContent, setReportContent] = useState<string>('');
+  const [reportPdfData, setReportPdfData] = useState<string | null>(null);
+  const [swissData, setSwissData] = useState<any>(null);
+  const [hasReport, setHasReport] = useState<boolean>(false);
+  const [swissBoolean, setSwissBoolean] = useState<boolean>(false);
+  const [currentReportType, setCurrentReportType] = useState<string>('');
 
-  // Get guest report ID from URL
+  // Get guest report data - hook called unconditionally
   const urlGuestId = getGuestReportId();
+  const { data: guestReportData, isLoading: isLoadingReport, error: reportError } = useGuestReportData(urlGuestId);
   
   // Token recovery state
   const [tokenRecoveryState, setTokenRecoveryState] = useState<{
@@ -269,43 +276,26 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     setPrevStep2Done(step2Done);
   }, [step2Done, prevStep2Done]);
 
-  const fetchCompleteReport = async () => {
-    if (!urlGuestId) return;
-    
-    setIsLoadingReport(true);
-    try {
-      const { data, error } = await supabase
-        .from('guest_reports')
-        .select('*')
-        .eq('id', urlGuestId)
-        .single();
-
-      if (error || !data) {
-        console.error('Failed to fetch report:', error);
-        return;
-      }
-
-      setGuestReportData(data);
-    } catch (err) {
-      console.error('Error fetching report:', err);
-    } finally {
-      setIsLoadingReport(false);
-    }
-  };
-
-  const handleViewReport = () => {
-    if (guestReportData) {
-      setViewingReport(true);
-    } else {
-      fetchCompleteReport().then(() => {
-        setViewingReport(true);
-      });
-    }
+  const handleViewReport = (mappedReport: MappedReport) => {
+    // These are used by the loading states - though they're not needed since we're using mapReportPayload
+    setReportContent(mappedReport.reportContent);
+    setReportPdfData(mappedReport.pdfData || null);
+    setSwissData(mappedReport.swissData);
+    setHasReport(mappedReport.hasReport);
+    setSwissBoolean(mappedReport.swissBoolean);
+    setCurrentReportType(mappedReport.reportType);
+    setViewingReport(true);
   };
 
   const handleCloseReportViewer = () => {
+    // Smooth transition back to form - similar to mobile approach
     setViewingReport(false);
-    setGuestReportData(null);
+    setReportContent('');
+    setReportPdfData(null);
+    setSwissData(null);
+    setHasReport(false);
+    setSwissBoolean(false);
+    setCurrentReportType('');
     
     // Reset form to initial state
     form.reset();
@@ -348,50 +338,51 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   };
 
   // Show report viewer if user is viewing a report and data is available
-  if (viewingReport) {
-    if (isLoadingReport) {
-      return (
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading report...</p>
-          </div>
-        </div>
-      );
-    }
-
-    if (!guestReportData) {
-      return (
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <p className="text-destructive mb-4">Failed to load report</p>
-            <button 
-              onClick={handleCloseReportViewer}
-              className="bg-primary text-primary-foreground px-4 py-2 rounded"
-            >
-              Go Back
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    // Map the data and show the report
-    const rawPayload = {
-      guest_report: guestReportData,
-      report_content: guestReportData.report_content,
-      swiss_data: guestReportData.swiss_data,
-      metadata: guestReportData.metadata
-    };
-    
-    const mappedReport = mapReportPayload(rawPayload);
+  if (viewingReport && guestReportData && !isLoadingReport) {
+    console.log('🔍 ReportForm - guestReportData:', guestReportData);
+    console.log('🔍 ReportForm - guest_report:', guestReportData.guest_report);
+    console.log('🔍 ReportForm - guest_report.report_data:', guestReportData.guest_report?.report_data);
     
     return (
       <ReportViewer
-        mappedReport={mappedReport}
+        mappedReport={mapReportPayload({
+          guest_report: guestReportData.guest_report,
+          report_content: guestReportData.report_content,
+          swiss_data: guestReportData.swiss_data,
+          metadata: guestReportData.metadata
+        })}
         onBack={handleCloseReportViewer}
         isMobile={false}
       />
+    );
+  }
+
+  // Show loading state when viewing report
+  if (viewingReport && isLoadingReport) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading report...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state when viewing report fails
+  if (viewingReport && (reportError || !guestReportData)) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <p className="text-destructive mb-4">Failed to load report</p>
+          <button 
+            onClick={handleCloseReportViewer}
+            className="bg-primary text-primary-foreground px-4 py-2 rounded"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
     );
   }
 

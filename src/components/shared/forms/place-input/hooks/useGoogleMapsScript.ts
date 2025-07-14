@@ -1,5 +1,6 @@
+
 import { useState, useEffect, useCallback } from 'react';
-import { googleMapsApiKeyManager } from '@/services/googleMapsApiKeyManager';
+import { supabase } from '@/integrations/supabase/client';
 import { autocompleteMonitor } from '@/utils/autocompleteMonitoring';
 
 interface UseGoogleMapsScriptResult {
@@ -10,15 +11,52 @@ interface UseGoogleMapsScriptResult {
 }
 
 export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
+  const [apiKey, setApiKey] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [managerState, setManagerState] = useState(googleMapsApiKeyManager.getState());
+  const [isError, setIsError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
-  // Subscribe to manager state changes
-  useEffect(() => {
-    const unsubscribe = googleMapsApiKeyManager.subscribe(() => {
-      setManagerState(googleMapsApiKeyManager.getState());
-    });
-    return () => unsubscribe();
+  const fetchApiKey = useCallback(async () => {
+    try {
+      console.log('🔍 Fetching Google Maps API key from edge function...');
+      autocompleteMonitor.log('load_start');
+      
+      const { data, error } = await supabase.functions.invoke('get-google-maps-key', {
+        method: 'GET',
+      });
+      
+      if (error) {
+        console.error('❌ Supabase function error:', error);
+        autocompleteMonitor.log('load_error', { error: error.message });
+        setIsError(true);
+        setErrorMessage(`Function error: ${error.message}`);
+        return;
+      }
+      
+      console.log('📋 Function response:', data);
+      
+      if (!data?.apiKey) {
+        console.error('❌ No API key returned from edge function');
+        autocompleteMonitor.log('load_error', { error: 'No API key in response' });
+        setIsError(true);
+        setErrorMessage('No API key in response');
+        return;
+      }
+      
+      console.log('✅ Successfully retrieved Google Maps API key');
+      setApiKey(data.apiKey);
+      
+      // Store globally for reference
+      if (typeof window !== 'undefined') {
+        window.GOOGLE_MAPS_API_KEY = data.apiKey;
+      }
+    } catch (error) {
+      console.error('❌ Error fetching API key:', error);
+      const errorMsg = `Network error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      autocompleteMonitor.log('load_error', { error: errorMsg });
+      setIsError(true);
+      setErrorMessage(errorMsg);
+    }
   }, []);
 
   const loadGoogleWebComponents = useCallback(() => {
@@ -62,6 +100,8 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
     // Check if we're in browser environment
     if (typeof window === 'undefined' || typeof document === 'undefined') {
       console.error('❌ Not in browser environment');
+      setIsError(true);
+      setErrorMessage('Browser environment required');
       return;
     }
 
@@ -72,6 +112,8 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
         setIsLoaded(true);
       } catch (error) {
         console.error('❌ Error loading web components:', error);
+        setIsError(true);
+        setErrorMessage('Failed to load Google Web Components');
       }
       return;
     }
@@ -86,6 +128,8 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
           setIsLoaded(true);
         } catch (error) {
           console.error('❌ Error loading web components:', error);
+          setIsError(true);
+          setErrorMessage('Failed to load Google Web Components');
         }
       };
       
@@ -95,43 +139,34 @@ export const useGoogleMapsScript = (): UseGoogleMapsScriptResult => {
       script.defer = true;
       script.onerror = () => {
         console.error('❌ Error loading Google Maps script');
+        setIsError(true);
+        setErrorMessage('Failed to load Google Maps script');
       };
       
       document.head.appendChild(script);
     } catch (error) {
       console.error('❌ Error in loadGoogleMapsScript:', error);
+      setIsError(true);
+      setErrorMessage(`Script loading error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }, [loadGoogleWebComponents]);
 
-  // Initialize API key fetching
   useEffect(() => {
     const loadMaps = async () => {
       // Only run in browser environment
       if (typeof window === 'undefined') return;
       
-      if (!managerState.key && !managerState.isLoading && !managerState.error) {
-        console.log('🔄 Initiating API key fetch via manager...');
-        autocompleteMonitor.log('load_start');
-        
-        try {
-          await googleMapsApiKeyManager.getApiKey();
-        } catch (error) {
-          console.error('❌ Failed to get API key:', error);
-          autocompleteMonitor.log('load_error', { error: error instanceof Error ? error.message : 'Unknown error' });
-        }
-      } else if (managerState.key && !isLoaded) {
-        console.log('🔄 Loading Google Maps script with cached key...');
-        await loadGoogleMapsScript(managerState.key);
+      if (!apiKey) {
+        console.log('🔄 Fetching API key...');
+        await fetchApiKey();
+      } else if (!isLoaded && !isError) {
+        console.log('🔄 Loading Google Maps script...');
+        await loadGoogleMapsScript(apiKey);
       }
     };
     
     loadMaps();
-  }, [managerState, isLoaded, loadGoogleMapsScript]);
+  }, [apiKey, isLoaded, isError, fetchApiKey, loadGoogleMapsScript]);
 
-  return { 
-    isLoaded, 
-    isError: managerState.error !== null, 
-    apiKey: managerState.key, 
-    errorMessage: managerState.error || undefined 
-  };
+  return { isLoaded, isError, apiKey, errorMessage };
 };

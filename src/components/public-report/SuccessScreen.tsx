@@ -60,7 +60,7 @@ const VideoLoader: React.FC<{ onVideoReady?: () => void }> = ({ onVideoReady }) 
 interface SuccessScreenProps {
   name: string;
   email: string;
-  onViewReport?: () => void;
+  onViewReport?: (mappedReport: MappedReport) => void;
   guestReportId?: string;
 }
 
@@ -185,7 +185,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
 
       // Only open modal after successful data fetch
       if (onViewReport) {
-        onViewReport();
+        onViewReport(mappedReport);
       } else {
         console.warn('⚠️ onViewReport callback is missing');
         throw new Error('Modal callback not available');
