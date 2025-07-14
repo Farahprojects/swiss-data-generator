@@ -95,6 +95,8 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const [entertainmentMode, setEntertainmentMode] = useState<'text' | 'video' | 'image'>('text');
   const [showCountdown, setShowCountdown] = useState(false);
   const [countdownTime, setCountdownTime] = useState(24);
+  const [modalReadyDetected, setModalReadyDetected] = useState(false);
+  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const currentGuestReportId = useMemo(() => {
     return guestReportId || getGuestToken();
@@ -236,7 +238,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
 
   // Visual 24-second countdown for AI reports
   useEffect(() => {
-    if (!currentGuestReportId || isAiReport !== true) {
+    if (!currentGuestReportId || isAiReport !== true || modalReadyDetected) {
       return;
     }
 
@@ -258,9 +260,31 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
         });
       }, 1000);
 
+      countdownIntervalRef.current = timer;
       return () => clearInterval(timer);
     }
-  }, [currentGuestReportId, isAiReport]);
+  }, [currentGuestReportId, isAiReport, modalReadyDetected]);
+
+  // Handle automatic modal trigger when modal_ready = true
+  const handleModalReady = useCallback(async () => {
+    if (modalReadyDetected) {
+      console.log('⚠️ Modal already triggered, ignoring duplicate');
+      return;
+    }
+
+    console.log('🎯 Modal ready detected - stopping countdown and opening modal');
+    setModalReadyDetected(true);
+    
+    // Stop countdown immediately
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+    setShowCountdown(false);
+    
+    // Trigger modal automatically
+    await handleViewReport();
+  }, [modalReadyDetected, handleViewReport]);
 
   useEffect(() => {
     const scrollToProcessing = () => {
@@ -271,8 +295,17 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
 
     if (currentGuestReportId) {
       fetchReport(currentGuestReportId);
+      
+      // Set up realtime listener with modal ready callback
+      const cleanup = setupRealtimeListener(
+        currentGuestReportId,
+        undefined, // onReportReady - not needed for current flow
+        handleModalReady // onModalReady - triggers automatic modal
+      );
+      
+      return cleanup;
     }
-  }, [currentGuestReportId, fetchReport]);
+  }, [currentGuestReportId, fetchReport, setupRealtimeListener, handleModalReady]);
 
   // Auto-reopen modal after refresh if user was previously viewing it
   useEffect(() => {
@@ -383,8 +416,8 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                   </div>
                 )}
                 
-                {/* Only show "Report Ready!" and description when actually ready */}
-                {(report?.payment_status === 'paid' && !showCountdown && !hasSwissError) ? (
+                {/* Only show "Report Ready!" when actually ready and not auto-triggered */}
+                {(report?.payment_status === 'paid' && !showCountdown && !hasSwissError && !modalReadyDetected) ? (
                   <div>
                     <h2 className="text-2xl font-light text-gray-900 mb-1 tracking-tight">Report Ready!</h2>
                     <p className="text-gray-600 font-light">Your report is ready</p>
@@ -403,11 +436,18 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                     />
                   )}
                   
-                   {showCountdown && !hasSwissError ? (
+                   {(showCountdown && !hasSwissError && !modalReadyDetected) ? (
                      <div className="flex flex-col items-center gap-4">
                        <Button disabled className="bg-gray-400 text-white font-light cursor-not-allowed">
                          View Report ({countdownTime}s)
                        </Button>
+                     </div>
+                  ) : modalReadyDetected ? (
+                     <div className="flex flex-col items-center gap-4">
+                       <div className="flex items-center gap-2 text-gray-600">
+                         <Loader2 className="h-4 w-4 animate-spin" />
+                         <span>Opening report...</span>
+                       </div>
                      </div>
                   ) : (
                     <div className="space-y-4">

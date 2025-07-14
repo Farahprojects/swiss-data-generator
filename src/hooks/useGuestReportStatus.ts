@@ -17,6 +17,7 @@ interface GuestReport {
   swiss_boolean?: boolean | null;
   has_swiss_error?: boolean | null;
   email_sent?: boolean;
+  modal_ready?: boolean | null;
 }
 
 interface ReportData {
@@ -36,7 +37,7 @@ interface UseGuestReportStatusReturn {
   fetchBothReportData: (guestReportId?: string) => Promise<ReportData>;
   fetchCompleteReport: (guestReportId?: string) => Promise<any>;
   isAstroReport: (reportType: string | null) => boolean;
-  setupRealtimeListener: (guestReportId?: string, onReportReady?: () => void) => () => void;
+  setupRealtimeListener: (guestReportId?: string, onReportReady?: () => void, onModalReady?: () => void) => () => void;
   setError: (error: string | null) => void;
   setCaseNumber: (caseNumber: string | null) => void;
   triggerPdfEmail: (guestReportId?: string) => Promise<boolean>;
@@ -375,7 +376,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     }
   }, []);
 
-  const setupRealtimeListener = useCallback((guestReportId?: string, onReportReady?: () => void) => {
+  const setupRealtimeListener = useCallback((guestReportId?: string, onReportReady?: () => void, onModalReady?: () => void) => {
     const reportId = guestReportId || getGuestReportId();
     if (!reportId) {
       console.warn('No guest report ID available for realtime listener');
@@ -399,7 +400,12 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
           filter: `id=eq.${reportId}`
         },
         async (payload) => {
-          const updatedRecord = payload.new as GuestReport & { modal_ready?: boolean };
+          const updatedRecord = payload.new as GuestReport;
+          console.log('🔄 Realtime update received:', { 
+            modal_ready: updatedRecord.modal_ready,
+            has_report: updatedRecord.has_report,
+            swiss_boolean: updatedRecord.swiss_boolean 
+          });
 
           // Check for Swiss error first
           if (updatedRecord.has_swiss_error === true) {
@@ -409,24 +415,29 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
             return; // Don't trigger modal for errors
           }
 
-          // Check readiness based on correct flags
+          // Update report state
+          setReport(updatedRecord);
+
+          // Check if orchestrator set modal_ready flag - this triggers automatic modal
+          if (updatedRecord.modal_ready === true) {
+            console.log('🚀 Modal ready detected! Triggering automatic modal...');
+            onModalReady?.();
+            return;
+          }
+
+          // Check readiness based on correct flags for manual trigger
           const isReportReady =
             updatedRecord.swiss_boolean === true ||
             (updatedRecord.is_ai_report && updatedRecord.report_log_id);
 
-          // Check if orchestrator set modal_ready flag
-          const shouldTriggerModal = updatedRecord.modal_ready === true;
-
-          if (isReportReady || shouldTriggerModal) {
-            setReport(updatedRecord);
-            if (shouldTriggerModal) {
-            }
+          if (isReportReady) {
+            console.log('📋 Report ready detected');
             onReportReady?.();
           }
         }
       )
       .subscribe((status) => {
-        // Realtime subscription status updated
+        console.log('📡 Realtime subscription status:', status);
       });
 
     channelRef.current = channel;
@@ -437,7 +448,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
         channelRef.current = null;
       }
     };
-  }, []);
+  }, [getSwissErrorMessage]);
 
   return {
     report,
