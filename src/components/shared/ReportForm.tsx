@@ -45,6 +45,11 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const urlGuestId = getGuestReportId();
   const { data: guestReportData, isLoading: isLoadingReport, error: reportError } = useGuestReportData(urlGuestId);
   
+  // 📦 Debug: Track state changes to guestReportData
+  React.useEffect(() => {
+    console.log('📦 State guestReportData changed:', guestReportData);
+  }, [guestReportData]);
+  
   // Token recovery state
   const [tokenRecoveryState, setTokenRecoveryState] = useState<{
     isRecovering: boolean;
@@ -343,14 +348,21 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     console.log('🔍 ReportForm - guest_report:', guestReportData.guest_report);
     console.log('🔍 ReportForm - guest_report.report_data:', guestReportData.guest_report?.report_data);
     
+    // 🔁 Debug: Log raw payload before mapping
+    const rawPayload = {
+      guest_report: guestReportData.guest_report,
+      report_content: guestReportData.report_content,
+      swiss_data: guestReportData.swiss_data,
+      metadata: guestReportData.metadata
+    };
+    console.log('🔁 RAW payload from guestReportData:', rawPayload);
+    
+    const mappedReport = mapReportPayload(rawPayload);
+    console.log('🧬 MAPPED result:', mappedReport);
+    
     return (
       <ReportViewer
-        mappedReport={mapReportPayload({
-          guest_report: guestReportData.guest_report,
-          report_content: guestReportData.report_content,
-          swiss_data: guestReportData.swiss_data,
-          metadata: guestReportData.metadata
-        })}
+        mappedReport={mappedReport}
         onBack={handleCloseReportViewer}
         isMobile={false}
       />

@@ -80,7 +80,8 @@ function _mapReportPayload({
   };
 
   const validated = MappedReportSchema.parse(mappedReport);
-  return Object.freeze(validated);
+  // 🧯 Patch: Deep freeze mapped data to prevent mutation
+  return Object.freeze(JSON.parse(JSON.stringify(validated)));
 }
 
 export const mapReportPayload = memoize(_mapReportPayload, {
