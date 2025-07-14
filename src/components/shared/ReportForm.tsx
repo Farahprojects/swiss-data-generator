@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
 import { ReportFormData } from '@/types/public-report';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
@@ -29,6 +30,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   fontFamily = 'Inter',
   onFormStateChange
 }) => {
+  const navigate = useNavigate();
   const { promoValidation, isValidatingPromo, validatePromoManually, resetValidation } = usePromoValidation();
   const [viewingReport, setViewingReport] = useState(false);
   const [reportContent, setReportContent] = useState<string>('');
@@ -291,34 +293,28 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   };
 
   const handleCloseReportViewer = () => {
-    // Immediate hard reset with comprehensive state clearing
+    // Smooth transition back to form - similar to mobile approach
     setViewingReport(false);
     setReportContent('');
     setReportPdfData(null);
     setSwissData(null);
     setHasReport(false);
     setSwissBoolean(false);
+    setCurrentReportType('');
+    
+    // Reset form to initial state
     form.reset();
+    
+    // Clear guest report related storage
     clearGuestReportId();
-    
-    // Clear all localStorage and sessionStorage
     localStorage.removeItem('currentGuestReportId');
-    localStorage.removeItem('reportFormData');
-    localStorage.removeItem('guestReportData');
-    localStorage.removeItem('formStep');
-    localStorage.removeItem('paymentSession');
-    localStorage.removeItem('reportProgress');
     localStorage.removeItem('pending_report_email');
-    sessionStorage.clear();
     
-    // Reset form state
+    // Reset report submission state
     resetReportState();
     
-    // Clear URL state and force immediate navigation
-    window.history.replaceState({}, '', '/');
-    
-    // Force immediate page reload to completely reset state
-    window.location.replace('/');
+    // Navigate back to report page cleanly
+    navigate('/report');
   };
 
   const onSubmit = async (data: ReportFormData) => {
