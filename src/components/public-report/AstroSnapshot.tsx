@@ -106,8 +106,46 @@ const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON, reportData }) => {
         )}
       </div>
 
-      {/* Planetary Positions */}
-      <SectionTitle>CURRENT PLANETARY POSITIONS</SectionTitle>
+      {/* Chart Angles */}
+      {data.angles.length > 0 && (
+        <>
+          <SectionTitle>CHART ANGLES</SectionTitle>
+          <table className="w-full text-sm">
+            <tbody>
+              {data.angles.map((angle) => (
+                <tr key={angle.name}>
+                  <td className="py-1 pr-2 text-left font-medium">{angle.name}</td>
+                  <td className="py-1 text-left">
+                    {String(angle.deg).padStart(2, "0")}°{String(angle.min).padStart(2, "0")}' {angle.sign}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+
+      {/* House Cusps */}
+      {data.houses.length > 0 && (
+        <>
+          <SectionTitle>HOUSE CUSPS</SectionTitle>
+          <table className="w-full text-sm">
+            <tbody>
+              {data.houses.map((house) => (
+                <tr key={house.number}>
+                  <td className="py-1 pr-2 text-left">House {house.number}</td>
+                  <td className="py-1 text-left">
+                    {String(house.deg).padStart(2, "0")}°{String(house.min).padStart(2, "0")}' {house.sign}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+
+      {/* Natal Planetary Positions */}
+      <SectionTitle>NATAL PLANETARY POSITIONS</SectionTitle>
       {data.planets.length > 0 ? (
         <table className="w-full text-sm">
           <tbody>
@@ -115,7 +153,8 @@ const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON, reportData }) => {
               <tr key={p.name}>
                 <td className="py-1 pr-2 text-left">{p.name}</td>
                 <td className="py-1 text-left">
-                  {String(p.deg).padStart(2, "0")}°{String(p.min).padStart(2, "0")}' in {p.sign}
+                  {String(p.deg).padStart(2, "0")}°{String(p.min).padStart(2, "0")}' {p.sign}
+                  {p.house && <span className="text-neutral-500 ml-1">(House {p.house})</span>}
                   {p.retro && <span className="italic text-sm ml-1">Retrograde</span>}
                 </td>
               </tr>
@@ -136,8 +175,8 @@ const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON, reportData }) => {
         </div>
       )}
 
-      {/* Aspects */}
-      <SectionTitle>ASPECTS TO NATAL</SectionTitle>
+      {/* Natal Aspects */}
+      <SectionTitle>NATAL ASPECTS</SectionTitle>
       {data.aspects.length > 0 ? (
         <table className="w-full text-sm">
           <thead>
@@ -165,6 +204,65 @@ const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON, reportData }) => {
         <div className="text-center text-sm text-neutral-500 py-4">
           <p>No aspects found</p>
         </div>
+      )}
+
+      {/* Transit Data */}
+      {data.transits && (data.transits.planets.length > 0 || data.transits.aspects.length > 0) && (
+        <>
+          {/* Transit Planetary Positions */}
+          {data.transits.planets.length > 0 && (
+            <>
+              <SectionTitle>CURRENT TRANSIT POSITIONS</SectionTitle>
+              {data.transits.datetime && (
+                <p className="text-xs text-neutral-500 text-center mb-2">
+                  Calculated for: {new Date(data.transits.datetime).toLocaleString()}
+                </p>
+              )}
+              <table className="w-full text-sm">
+                <tbody>
+                  {data.transits.planets.map((p) => (
+                    <tr key={p.name}>
+                      <td className="py-1 pr-2 text-left">{p.name}</td>
+                      <td className="py-1 text-left">
+                        {String(p.deg).padStart(2, "0")}°{String(p.min).padStart(2, "0")}' {p.sign}
+                        {p.retro && <span className="italic text-sm ml-1">Retrograde</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+
+          {/* Transit Aspects to Natal */}
+          {data.transits.aspects.length > 0 && (
+            <>
+              <SectionTitle>TRANSIT ASPECTS TO NATAL</SectionTitle>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-neutral-500 text-xs tracking-wide">
+                    <th className="text-left py-1">Transit</th>
+                    <th className="text-left py-1">Aspect</th>
+                    <th className="text-left py-1">Natal</th>
+                    <th className="text-left py-1">Orb</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.transits.aspects.map((a, i) => (
+                    <tr key={i}>
+                      <td className="py-1 pr-2 text-left">{a.transitPlanet}</td>
+                      <td className="py-1 pr-2 text-left">{a.type}</td>
+                      <td className="py-1 pr-2 text-left">{a.natalPlanet}</td>
+                      <td className="py-1 text-left">
+                        {a.orbDeg}°{String(a.orbMin).padStart(2, "0")}'
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+        </>
       )}
     </div>
   );

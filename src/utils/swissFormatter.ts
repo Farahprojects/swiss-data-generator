@@ -8,6 +8,7 @@ export interface EnrichedPlanet {
   deg: number;            // 16
   min: number;            // 19
   retro: boolean;         // true | false
+  house?: number;         // 10 (which house the planet is in)
 }
 
 export interface EnrichedAspect {
@@ -16,6 +17,39 @@ export interface EnrichedAspect {
   type: string;           // "Square"
   orbDeg: number;         // 5
   orbMin: number;         // 26
+}
+
+export interface EnrichedHouse {
+  number: number;         // 1, 2, 3, ... 12
+  deg: number;            // 27
+  min: number;            // 45
+  sign: string;           // "Libra"
+  signGlyph: string;      // "♎︎"
+}
+
+export interface EnrichedAngle {
+  name: string;           // "ASC", "DSC", "MC", "IC"
+  deg: number;            // 27
+  min: number;            // 45
+  sign: string;           // "Libra"
+  signGlyph: string;      // "♎︎"
+}
+
+export interface EnrichedTransitPlanet {
+  name: string;           // "Sun"
+  sign: string;           // "Cancer"
+  signGlyph: string;      // "♋︎"
+  deg: number;            // 21
+  min: number;            // 48
+  retro: boolean;         // true | false
+}
+
+export interface EnrichedTransitAspect {
+  transitPlanet: string;  // "Sun" (transit)
+  natalPlanet: string;    // "Mars" (natal)
+  type: string;           // "Sextile"
+  orbDeg: number;         // 6
+  orbMin: number;         // 35
 }
 
 export interface EnrichedSnapshot {
@@ -32,6 +66,13 @@ export interface EnrichedSnapshot {
   };
   planets: EnrichedPlanet[];
   aspects: EnrichedAspect[];
+  houses: EnrichedHouse[];
+  angles: EnrichedAngle[];
+  transits?: {
+    planets: EnrichedTransitPlanet[];
+    aspects: EnrichedTransitAspect[];
+    datetime?: string;    // Transit calculation time
+  };
 }
 
 const ZODIAC_SIGNS = [
@@ -78,12 +119,111 @@ const extractPlanetsFromSwiss = (swissData: any): EnrichedPlanet[] => {
         signGlyph: ZODIAC_GLYPHS[ZODIAC_SIGNS.indexOf(p.sign)] || '?',
         deg: Math.floor(p.deg),
         min: Math.round((p.deg - Math.floor(p.deg)) * 60),
+        retro: !!p.retrograde,
+        house: p.house || undefined
+      });
+    }
+  });
+  
+  return planets;
+};
+
+// Helper function to extract house cusps from Swiss data structure
+const extractHousesFromSwiss = (swissData: any): EnrichedHouse[] => {
+  if (!swissData?.natal?.houses) return [];
+  
+  const houses: EnrichedHouse[] = [];
+  const houseData = swissData.natal.houses;
+  
+  Object.keys(houseData).forEach(houseKey => {
+    const h = houseData[houseKey];
+    const houseNumber = parseInt(houseKey);
+    if (h && typeof h.deg === 'number' && h.sign && !isNaN(houseNumber)) {
+      houses.push({
+        number: houseNumber,
+        deg: Math.floor(h.deg),
+        min: Math.round((h.deg - Math.floor(h.deg)) * 60),
+        sign: h.sign,
+        signGlyph: ZODIAC_GLYPHS[ZODIAC_SIGNS.indexOf(h.sign)] || '?'
+      });
+    }
+  });
+  
+  // Sort by house number
+  return houses.sort((a, b) => a.number - b.number);
+};
+
+// Helper function to extract chart angles from Swiss data structure
+const extractAnglesFromSwiss = (swissData: any): EnrichedAngle[] => {
+  if (!swissData?.natal?.angles) return [];
+  
+  const angles: EnrichedAngle[] = [];
+  const angleData = swissData.natal.angles;
+  
+  const angleOrder = ['ASC', 'DSC', 'MC', 'IC'];
+  angleOrder.forEach(angleName => {
+    const a = angleData[angleName];
+    if (a && typeof a.deg === 'number' && a.sign) {
+      angles.push({
+        name: angleName,
+        deg: Math.floor(a.deg),
+        min: Math.round((a.deg - Math.floor(a.deg)) * 60),
+        sign: a.sign,
+        signGlyph: ZODIAC_GLYPHS[ZODIAC_SIGNS.indexOf(a.sign)] || '?'
+      });
+    }
+  });
+  
+  return angles;
+};
+
+// Helper function to extract transit planets from Swiss data structure
+const extractTransitPlanetsFromSwiss = (swissData: any): EnrichedTransitPlanet[] => {
+  if (!swissData?.transits?.planets) return [];
+  
+  const planets: EnrichedTransitPlanet[] = [];
+  const planetData = swissData.transits.planets;
+  
+  Object.keys(planetData).forEach(planetKey => {
+    const p = planetData[planetKey];
+    if (p && typeof p.deg === 'number' && p.sign) {
+      const planetName = PLANET_NAMES[planetKey.toLowerCase()] || planetKey;
+      planets.push({
+        name: planetName,
+        sign: p.sign,
+        signGlyph: ZODIAC_GLYPHS[ZODIAC_SIGNS.indexOf(p.sign)] || '?',
+        deg: Math.floor(p.deg),
+        min: Math.round((p.deg - Math.floor(p.deg)) * 60),
         retro: !!p.retrograde
       });
     }
   });
   
   return planets;
+};
+
+// Helper function to extract transit aspects from Swiss data structure
+const extractTransitAspectsFromSwiss = (swissData: any): EnrichedTransitAspect[] => {
+  if (!swissData?.transits?.aspects_to_natal) return [];
+  
+  const aspects: EnrichedTransitAspect[] = [];
+  const aspectsArray = swissData.transits.aspects_to_natal;
+  
+  aspectsArray.forEach((a: any) => {
+    if (a && a.a && a.b && a.type && typeof a.orb === 'number') {
+      const orbDeg = Math.floor(a.orb);
+      const orbMin = Math.round((a.orb - orbDeg) * 60);
+      aspects.push({
+        transitPlanet: PLANET_NAMES[a.a.toLowerCase()] || a.a,
+        natalPlanet: PLANET_NAMES[a.b.toLowerCase()] || a.b,
+        type: a.type,
+        orbDeg,
+        orbMin
+      });
+    }
+  });
+  
+  return aspects;
 };
 
 // Helper function to extract aspects from Swiss data structure
@@ -141,7 +281,9 @@ export const parseSwissDataRich = (raw: any): EnrichedSnapshot => {
       name: 'Unknown',
       meta: {},
       planets: [],
-      aspects: []
+      aspects: [],
+      houses: [],
+      angles: []
     };
   }
 
@@ -177,17 +319,45 @@ export const parseSwissDataRich = (raw: any): EnrichedSnapshot => {
       tz: tz
     };
 
-    // --- Extract planets and aspects using helper functions ---
+    // --- Extract all data using helper functions ---
     const planets = extractPlanetsFromSwiss(swissData);
     const aspects = extractAspectsFromSwiss(swissData);
+    const houses = extractHousesFromSwiss(swissData);
+    const angles = extractAnglesFromSwiss(swissData);
+    
+    // Extract transit data if available
+    const transitPlanets = extractTransitPlanetsFromSwiss(swissData);
+    const transitAspects = extractTransitAspectsFromSwiss(swissData);
+    const transitDateTime = swissData?.transits?.datetime_utc;
+    
+    const transits = (transitPlanets.length > 0 || transitAspects.length > 0) ? {
+      planets: transitPlanets,
+      aspects: transitAspects,
+      datetime: transitDateTime
+    } : undefined;
 
     console.log('✅ parseSwissDataRich: Successfully parsed', {
       planetCount: planets.length,
       aspectCount: aspects.length,
+      houseCount: houses.length,
+      angleCount: angles.length,
+      transitPlanetCount: transitPlanets.length,
+      transitAspectCount: transitAspects.length,
       hasLocation: !!metaInfo.location
     });
 
-    return { dateISO, timeISO, tz, name, meta: metaInfo, planets, aspects };
+    return { 
+      dateISO, 
+      timeISO, 
+      tz, 
+      name, 
+      meta: metaInfo, 
+      planets, 
+      aspects, 
+      houses, 
+      angles, 
+      transits 
+    };
 
   } catch (error) {
     console.error('❌ parseSwissDataRich: Error parsing Swiss data:', error);
@@ -200,7 +370,9 @@ export const parseSwissDataRich = (raw: any): EnrichedSnapshot => {
       name: 'Parse Error',
       meta: { error: 'Failed to parse Swiss data' },
       planets: [],
-      aspects: []
+      aspects: [],
+      houses: [],
+      angles: []
     };
   }
 };
