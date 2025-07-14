@@ -83,8 +83,8 @@ const Step1_5AstroData = ({ control, setValue, selectedSubCategory, onNext }: St
                   onClick={handleClick}
                   className={`w-full p-6 rounded-3xl border transition-all duration-300 ease-out active:scale-95 min-h-[80px] ${
                     isSelected 
-                      ? 'border-[hsl(var(--apple-blue))] bg-[hsl(var(--apple-blue))]/5 shadow-[var(--apple-shadow-lg)]' 
-                      : 'border-[hsl(var(--apple-gray-light))] bg-white hover:bg-gray-50 hover:border-[hsl(var(--apple-blue))] shadow-[var(--apple-shadow-sm)]'
+                      ? 'border-primary bg-primary/5 shadow-lg' 
+                      : 'border-neutral-200 bg-white hover:bg-gray-50 hover:border-neutral-300 shadow-md'
                   }`}
                   whileTap={{ scale: 0.95 }}
                 >

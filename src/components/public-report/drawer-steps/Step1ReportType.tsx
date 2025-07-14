@@ -64,8 +64,8 @@ const Step1ReportType = ({ control, setValue, selectedCategory, onNext }: Step1R
                   onClick={() => handleCategoryClick(category.value, category.reportType, field.onChange)}
                   className={`w-full p-6 rounded-3xl border transition-all duration-300 ease-out active:scale-95 min-h-[80px] ${
                     isSelected 
-                      ? 'border-[hsl(var(--apple-blue))] bg-[hsl(var(--apple-blue))]/5 shadow-[var(--apple-shadow-lg)]' 
-                      : 'border-[hsl(var(--apple-gray-light))] bg-white hover:bg-gray-50 hover:border-[hsl(var(--apple-blue))] shadow-[var(--apple-shadow-sm)]'
+                      ? 'border-primary bg-primary/5 shadow-lg' 
+                      : 'border-neutral-200 bg-white hover:bg-gray-50 hover:border-neutral-300 shadow-md'
                   }`}
                   whileTap={{ scale: 0.95 }}
                 >
