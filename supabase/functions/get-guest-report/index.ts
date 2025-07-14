@@ -133,6 +133,11 @@ serve(async (req) => {
       // For astro reports (essence/sync), extract from swiss_data.report.content
       reportContent = swissData.report.content;
       console.log('[get-guest-report] Extracted astro report content from swiss_data');
+      
+      // [SWISS-DATA-CLEANUP] Remove the report property to clean the Swiss data
+      console.log('[get-guest-report] [SWISS-DATA-CLEANUP] Cleaning swiss_data by removing report property');
+      delete swissData.report;
+      console.log('[get-guest-report] [SWISS-DATA-CLEANUP] Cleaned swiss_data keys:', Object.keys(swissData));
     } else if (isAiReport) {
       // For AI reports, fetch from report_logs
       const { data: reportLog, error: reportError } = await supabase
