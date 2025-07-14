@@ -7,6 +7,7 @@ interface GuestReport {
   id: string;
   email: string;
   has_report: boolean;
+  is_ai_report?: boolean | null;
   translator_log_id?: string | null;
   report_log_id?: string | null;
   payment_status: string;
@@ -408,9 +409,10 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
             return; // Don't trigger modal for errors
           }
 
+          // Check readiness based on correct flags
           const isReportReady =
             updatedRecord.swiss_boolean === true ||
-            (updatedRecord.has_report && (updatedRecord.translator_log_id || updatedRecord.report_log_id));
+            (updatedRecord.is_ai_report && updatedRecord.report_log_id);
 
           // Check if orchestrator set modal_ready flag
           const shouldTriggerModal = updatedRecord.modal_ready === true;

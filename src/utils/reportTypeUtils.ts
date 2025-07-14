@@ -34,9 +34,8 @@ const hasValidContent = (content?: string): boolean => {
  * Determines the actual content type based on available data
  */
 export const getReportContentType = (data: ReportDetectionData): ReportContentType => {
-  const hasValidReport = hasValidContent(data.reportContent);
-
-  if (hasValidReport) return 'hybrid'; // AI + Astro (Astro always assumed present)
+  // Use hasReport flag (now properly sourced from is_ai_report) to determine content type
+  if (data.hasReport) return 'hybrid'; // AI + Astro (Astro always assumed present)
   return 'astro-only'; // Only Astro is shown if no AI content
 };
 
