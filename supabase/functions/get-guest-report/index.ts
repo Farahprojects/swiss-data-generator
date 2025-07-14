@@ -116,10 +116,10 @@ serve(async (req) => {
       }
     }
 
-    // Determine report types based on actual data and report_type
+    // [FIX] Trust database state - don't recalculate based on data existence
     const isEssenceOrSyncReport = ['essence', 'sync'].includes(guestReport.report_type);
-    const isAstroReport = !!swissData;
-    const isAiReport = guestReport.is_ai_report && !!guestReport.report_log_id;
+    const isAstroReport = guestReport.swiss_boolean; // Trust database flag
+    const isAiReport = guestReport.is_ai_report; // Trust database flag
 
     // Extract content based on report type - prioritize AI reports from report_logs
     if (isAiReport) {
@@ -165,8 +165,8 @@ serve(async (req) => {
       report_content: reportContent,
       swiss_data: swissData,
       metadata: {
-        is_astro_report: isAstroReport,
-        is_ai_report: isAiReport,
+        is_astro_report: guestReport.swiss_boolean, // Trust database flag
+        is_ai_report: guestReport.is_ai_report, // Trust database flag
         content_type: contentType,
       },
     };

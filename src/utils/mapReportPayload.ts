@@ -68,9 +68,9 @@ function _mapReportPayload({
   // Determine if this is a pure astro report (Swiss data only, no AI content)
   const isPureAstroReport = (reportType === 'essence' || reportType === 'sync') && !report_content;
 
-  // Extract flags - use is_ai_report as single source of truth for AI reports
+  // [FIX] Trust database flags - don't override with calculations
   const hasReport = guest_report?.is_ai_report ?? false;
-  const swissBoolean = guest_report?.swiss_boolean ?? metadata?.is_astro_report ?? !!swiss_data;
+  const swissBoolean = guest_report?.swiss_boolean ?? false; // Trust database, don't fallback to calculations
 
   const mappedReport: MappedReport = {
     title,
