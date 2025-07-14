@@ -8,7 +8,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { AlertCircle } from 'lucide-react';
-import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
+import { CleanPlaceAutocomplete } from '@/components/shared/forms/place-input/CleanPlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import InlineDateTimeSelector from '@/components/ui/mobile-pickers/InlineDateTimeSelector';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -176,16 +176,26 @@ const PersonCard = ({
               {helperText}
             </div>
           )}
-          <PlaceAutocomplete
-            label="Birth Location *"
-            value={(watch(getField('birthLocation') as keyof ReportFormData) as string) || ''}
-            onChange={(val) => setValue(getField('birthLocation') as keyof ReportFormData, val)}
-            onPlaceSelect={handlePlaceSelect}
-            placeholder="Enter birth city, state, country"
-            id={`${prefix}birthLocation`}
-            disabled={autocompleteDisabled}
-            error={showError(getField('birthLocation')) ? (errors[getField('birthLocation')]?.message as string) : undefined}
-          />
+          <div className="space-y-2">
+            <Label htmlFor={`${prefix}birthLocation`} className="text-lg font-light text-gray-700">
+              Birth Location *
+            </Label>
+            <div style={{ fontSize: '16px' }}>
+              <CleanPlaceAutocomplete
+                value={(watch(getField('birthLocation') as keyof ReportFormData) as string) || ''}
+                onChange={(val) => setValue(getField('birthLocation') as keyof ReportFormData, val)}
+                onPlaceSelect={handlePlaceSelect}
+                placeholder="Enter birth city, state, country"
+                className={`h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400 ${
+                  showError(getField('birthLocation')) ? 'border-red-500 ring-1 ring-red-500' : ''
+                }`}
+                disabled={autocompleteDisabled}
+              />
+            </div>
+            {showError(getField('birthLocation')) && (
+              <ErrorMsg msg={errors[getField('birthLocation')]?.message as string} />
+            )}
+          </div>
         </div>
       </div>
     </div>
