@@ -99,21 +99,28 @@ serve(async (req) => {
 
     // Fetch Swiss astro data first (if translator log exists)
     if (hasTranslatorLog) {
+      console.log('[get-guest-report] [DEBUG] Fetching translator log:', guestReport.translator_log_id);
       const { data: translatorLog, error: translatorError } = await supabase
         .from('translator_logs')
         .select('swiss_data')
         .eq('id', guestReport.translator_log_id)
         .single();
 
-      if (!translatorError) {
-        swissData = translatorLog?.swiss_data || null;
-        // [SWISS-DATA-ACCESS] Accessing swiss_data from translator_logs
-        console.log('[get-guest-report] [SWISS-DATA-ACCESS] Accessing swiss_data from translator_logs');
-        console.log('[get-guest-report] [SWISS-DATA-ACCESS] Swiss data keys found:', swissData ? Object.keys(swissData) : 'null');
-        console.log('[get-guest-report] [SWISS-DATA-ACCESS] Swiss data contains report?', !!(swissData?.report));
+      if (translatorError) {
+        console.error('[get-guest-report] [ERROR] Failed to fetch translator log:', translatorError);
+      } else if (!translatorLog) {
+        console.error('[get-guest-report] [ERROR] Translator log not found');
       } else {
-        console.error('[get-guest-report] Error fetching Swiss data:', translatorError);
+        swissData = translatorLog.swiss_data || null;
+        console.log('[get-guest-report] [SUCCESS] Swiss data extracted:', {
+          exists: !!swissData,
+          keys: swissData ? Object.keys(swissData) : 'null',
+          hasReport: !!(swissData?.report),
+          dataLength: swissData ? JSON.stringify(swissData).length : 0
+        });
       }
+    } else {
+      console.log('[get-guest-report] [INFO] No translator_log_id, skipping Swiss data fetch');
     }
 
     // [FIX] Trust database state - don't recalculate based on data existence
@@ -170,6 +177,14 @@ serve(async (req) => {
         content_type: contentType,
       },
     };
+
+    console.log('[get-guest-report] [FINAL] Response summary:', {
+      has_swiss_data: !!swissData,
+      has_report_content: !!reportContent,
+      metadata_is_astro: responseData.metadata.is_astro_report,
+      metadata_is_ai: responseData.metadata.is_ai_report,
+      content_type: contentType
+    });
 
     return new Response(JSON.stringify(responseData), {
       status: 200,
