@@ -86,6 +86,10 @@ async function logToSupabase(
   console.log('[translator] [DEBUG] responsePayload.swiss_data exists:', !!responsePayload?.swiss_data);
   console.log('[translator] [DEBUG] Swiss data keys being saved:', responsePayload?.swiss_data ? Object.keys(responsePayload.swiss_data) : 'null');
   
+  // [CONTAMINATION-ALERT-TRANSLATOR] About to save data to DB
+  console.log(`[translator] [CONTAMINATION-ALERT-TRANSLATOR] guest_id: ${userId || 'unknown'} - Saving contaminated data to DB`);
+  console.log(`[translator] [CONTAMINATION-ALERT-TRANSLATOR] responsePayload structure being saved:`, JSON.stringify(responsePayload, null, 2).substring(0, 500));
+  
   const { error } = await sb.from("translator_logs").insert({
     request_type:        requestType,
     request_payload:     requestPayload,
@@ -258,6 +262,9 @@ export async function translate(
       });
       const txt = await r.text();
 
+      // [CONTAMINATION-SOURCE-SYNC] About to call handleReportGeneration for sync
+      console.log(`[translator][${requestId}] [CONTAMINATION-SOURCE-SYNC] About to call handleReportGeneration for sync route`);
+      
       const reportResult = await handleReportGeneration({
         requestData: raw,
         swissApiResponse: txt,
@@ -302,9 +309,9 @@ export async function translate(
       const r   = await fetch(`${SWISS_API}/moonphases?year=${year}`);
       const txt = await r.text();
 
-      // [REPORT-HANDLER-MOONPHASES] Processing report data in moonphases
-      console.log(`[translator][${requestId}] [REPORT-HANDLER-MOONPHASES] Processing report data in moonphases - Line 314`);
-      console.log(`[translator][${requestId}] [REPORT-HANDLER-MOONPHASES] Raw swiss response preview:`, txt.substring(0, 200));
+      // [CONTAMINATION-SOURCE-MOONPHASES] About to call handleReportGeneration for moonphases
+      console.log(`[translator][${requestId}] [CONTAMINATION-SOURCE-MOONPHASES] About to call handleReportGeneration for moonphases route`);
+      console.log(`[translator][${requestId}] [CONTAMINATION-SOURCE-MOONPHASES] Raw swiss response preview:`, txt.substring(0, 200));
       
       const reportResult = await handleReportGeneration({
         requestData: raw,
@@ -351,9 +358,9 @@ export async function translate(
       const r   = await fetch(`${SWISS_API}/positions?${qs}`);
       const txt = await r.text();
 
-      // [REPORT-HANDLER-POSITIONS] Processing report data in positions
-      console.log(`[translator][${requestId}] [REPORT-HANDLER-POSITIONS] Processing report data in positions - Line 354`);
-      console.log(`[translator][${requestId}] [REPORT-HANDLER-POSITIONS] Raw swiss response preview:`, txt.substring(0, 200));
+      // [CONTAMINATION-SOURCE-POSITIONS] About to call handleReportGeneration for positions
+      console.log(`[translator][${requestId}] [CONTAMINATION-SOURCE-POSITIONS] About to call handleReportGeneration for positions route`);
+      console.log(`[translator][${requestId}] [CONTAMINATION-SOURCE-POSITIONS] Raw swiss response preview:`, txt.substring(0, 200));
       
       const reportResult = await handleReportGeneration({
         requestData: raw,
@@ -407,9 +414,9 @@ export async function translate(
     });
     const txt = await r.text();
 
-    // [REPORT-HANDLER-CHARTS] Processing report data in chart routes
-    console.log(`[translator][${requestId}] [REPORT-HANDLER-CHARTS] Processing report data in chart routes (${path}) - Line 401`);
-    console.log(`[translator][${requestId}] [REPORT-HANDLER-CHARTS] Raw swiss response preview:`, txt.substring(0, 200));
+    // [CONTAMINATION-SOURCE-CHARTS] About to call handleReportGeneration for chart routes
+    console.log(`[translator][${requestId}] [CONTAMINATION-SOURCE-CHARTS] About to call handleReportGeneration for chart routes (${path})`);
+    console.log(`[translator][${requestId}] [CONTAMINATION-SOURCE-CHARTS] Raw swiss response preview:`, txt.substring(0, 200));
     
     const reportResult = await handleReportGeneration({
       requestData: raw,

@@ -207,6 +207,10 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
       console.log(`${logPrefix} [CONTAMINATION-POINT-1] Report keys being added:`, Object.keys(reportResult.report || {}));
       console.log(`${logPrefix} [CONTAMINATION-POINT-1] Swiss data keys before contamination:`, Object.keys(swissData || {}));
       
+      // [CONTAMINATION-ALERT-REPORTHANDLER] Creating contaminated structure
+      console.log(`${logPrefix} [CONTAMINATION-ALERT-REPORTHANDLER] guest_id: ${params.requestData.guest_id || 'unknown'} - Creating contaminated structure`);
+      console.log(`${logPrefix} [CONTAMINATION-ALERT-REPORTHANDLER] About to combine clean swiss_data with report content`);
+      
       // Combine Swiss API data with the report and include engine_used
       const combinedResponse = {
         swiss_data: swissData,  // Keep Swiss data nested and pure
