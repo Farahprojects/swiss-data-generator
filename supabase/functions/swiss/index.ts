@@ -238,6 +238,10 @@ serve(async (req) => {
     }
   }
 
+  // [CONTAMINATION-SOURCE-SWISS] About to call translator.ts from swiss endpoint
+  console.log(`[swiss] [CONTAMINATION-SOURCE-SWISS] guest_id: ${mergedPayload.user_id || 'unknown'} - About to call translator.ts from swiss endpoint`);
+  console.log(`[swiss] [CONTAMINATION-SOURCE-SWISS] mergedPayload structure:`, JSON.stringify(mergedPayload, null, 2).substring(0, 500));
+
   const { status, text } = await translate(mergedPayload);
 
   // Only log non-report requests here, reports are logged by the standard-report function
