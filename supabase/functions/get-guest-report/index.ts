@@ -131,18 +131,37 @@ serve(async (req) => {
     // Extract content based on report type - prioritize AI reports from report_logs
     if (isAiReport) {
       // [CONTAMINATION-FIX] For AI reports, always fetch from report_logs (swiss_data is now pure)
-      console.log('[get-guest-report] [CONTAMINATION-FIX] Fetching AI report from report_logs table');
+      console.log('[get-guest-report] [DEBUG] Fetching AI report from report_logs table, report_log_id:', guestReport.report_log_id);
       const { data: reportLog, error: reportError } = await supabase
         .from('report_logs')
         .select('report_text')
         .eq('id', guestReport.report_log_id)
         .single();
 
-      if (!reportError) {
-        reportContent = reportLog?.report_text || null;
-        console.log('[get-guest-report] [CONTAMINATION-FIX] Successfully fetched AI report from report_logs');
+      console.log('[get-guest-report] [DEBUG] Report log query result:', {
+        error: reportError,
+        data: reportLog,
+        report_text_exists: !!reportLog?.report_text,
+        report_text_length: reportLog?.report_text?.length || 0,
+        first_100_chars: reportLog?.report_text?.substring(0, 100) || 'No content'
+      });
+
+      if (!reportError && reportLog) {
+        reportContent = reportLog.report_text || null;
+        console.log('[get-guest-report] [SUCCESS] AI report extracted from report_logs, length:', reportContent?.length || 0);
       } else {
-        console.error('[get-guest-report] Error fetching AI report:', reportError);
+        console.error('[get-guest-report] [ERROR] Failed to fetch AI report:', reportError);
+        // Try to debug RLS issue by checking if the record exists at all
+        const { data: checkRecord, error: checkError } = await supabase
+          .from('report_logs')
+          .select('id, has_error, status')
+          .eq('id', guestReport.report_log_id)
+          .single();
+        console.log('[get-guest-report] [DEBUG] RLS check - record exists?:', {
+          exists: !!checkRecord,
+          error: checkError,
+          record: checkRecord
+        });
       }
     } else if (isEssenceOrSyncReport && swissData?.report?.content) {
       // [LEGACY] This should not happen anymore since swiss_data is pure
