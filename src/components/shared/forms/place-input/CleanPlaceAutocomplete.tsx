@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, forwardRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, MapPin } from 'lucide-react';
+import { Loader2, MapPin, X, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { PlaceData } from './utils/extractPlaceData';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export interface CleanPlaceAutocompleteProps {
   label?: string;
@@ -48,6 +49,7 @@ export const CleanPlaceAutocomplete = forwardRef<HTMLDivElement, CleanPlaceAutoc
     const inputRef = useRef<HTMLInputElement>(null);
     const debounceRef = useRef<NodeJS.Timeout>();
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const isMobile = useIsMobile();
 
     // Sync with external value changes
     useEffect(() => {
@@ -231,7 +233,8 @@ export const CleanPlaceAutocomplete = forwardRef<HTMLDivElement, CleanPlaceAutoc
             )}
           </div>
 
-          {isOpen && predictions.length > 0 && (
+          {/* Desktop Dropdown */}
+          {!isMobile && isOpen && predictions.length > 0 && (
             <div
               ref={dropdownRef}
               className="absolute z-[10000] w-full mt-1 bg-white border border-border rounded-md shadow-lg max-h-60 overflow-auto"
@@ -263,6 +266,78 @@ export const CleanPlaceAutocomplete = forwardRef<HTMLDivElement, CleanPlaceAutoc
             </div>
           )}
         </div>
+
+        {/* Mobile Full-Page Overlay */}
+        {isMobile && isOpen && (
+          <div className="fixed inset-0 z-[50] bg-white">
+            <div className="flex flex-col h-full">
+              {/* Header */}
+              <div className="flex items-center p-4 border-b bg-white">
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="p-2 -ml-2 mr-3"
+                >
+                  <ArrowLeft className="h-6 w-6" />
+                </button>
+                <h2 className="text-lg font-light flex-1">Select Location</h2>
+              </div>
+              
+              {/* Search Input */}
+              <div className="p-4 border-b bg-white">
+                <div className="relative">
+                  <Input
+                    value={localValue}
+                    onChange={handleInputChange}
+                    placeholder={placeholder}
+                    autoFocus
+                    className="h-12 pl-10 text-base"
+                    style={{ fontSize: '16px' }}
+                  />
+                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  {isLoading && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Results */}
+              <div className="flex-1 overflow-auto">
+                {predictions.length > 0 ? (
+                  predictions.map((prediction, index) => (
+                    <div
+                      key={prediction.place_id}
+                      className="px-4 py-4 border-b border-border cursor-pointer hover:bg-muted transition-colors active:bg-muted"
+                      onClick={() => {
+                        handlePlaceSelect(prediction);
+                        setIsOpen(false);
+                      }}
+                    >
+                      <div className="flex items-start gap-3">
+                        <MapPin className="h-5 w-5 text-muted-foreground mt-1 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-base leading-tight">
+                            {prediction.structured_formatting?.main_text || prediction.description}
+                          </div>
+                          {prediction.structured_formatting?.secondary_text && (
+                            <div className="text-muted-foreground text-sm mt-1 leading-tight">
+                              {prediction.structured_formatting.secondary_text}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : localValue.trim() && !isLoading ? (
+                  <div className="p-4 text-center text-muted-foreground">
+                    No locations found
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        )}
         
         {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
       </div>
