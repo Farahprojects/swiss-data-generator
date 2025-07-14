@@ -22,30 +22,27 @@ export interface ToggleDisplayLogic {
 }
 
 /**
- * Validates if content is meaningful (not empty/error)
- */
-const hasValidContent = (content?: string): boolean => {
-  if (!content) return false;
-  const trimmed = content.trim();
-  return trimmed.length > 50 && !trimmed.toLowerCase().includes('error');
-};
-
-/**
  * Determines the actual content type based on available data
  */
 export const getReportContentType = (data: ReportDetectionData): ReportContentType => {
-  // Use hasReport flag (now properly sourced from is_ai_report) to determine content type
-  if (data.hasReport) return 'hybrid'; // AI + Astro (Astro always assumed present)
-  return 'astro-only'; // Only Astro is shown if no AI content
+  const hasReportContent = !!data.reportContent && data.reportContent.trim().length > 0;
+  const hasSwissData = !!data.swissData;
+  
+  if (hasReportContent && hasSwissData) return 'hybrid';
+  if (hasReportContent) return 'ai-only';
+  if (hasSwissData) return 'astro-only';
+  return 'empty';
 };
 
 /**
- * Returns intelligent toggle display logic based on actual content
+ * Simple toggle display logic - show toggle only if both report and astro data exist
  */
 export const getToggleDisplayLogic = (data: ReportDetectionData): ToggleDisplayLogic => {
-  const contentType = getReportContentType(data);
-
-  if (contentType === 'hybrid') {
+  const hasReportContent = !!data.reportContent && data.reportContent.trim().length > 0;
+  const hasSwissData = !!data.swissData;
+  
+  // Simple rule: show toggle only if we have BOTH types of data
+  if (hasReportContent && hasSwissData) {
     return {
       showToggle: true,
       defaultView: 'report',
@@ -54,7 +51,17 @@ export const getToggleDisplayLogic = (data: ReportDetectionData): ToggleDisplayL
     };
   }
 
-  // If no AI report, just show Astro data
+  // If only report content, show report only
+  if (hasReportContent) {
+    return {
+      showToggle: false,
+      defaultView: 'report',
+      title: 'Your Report',
+      availableViews: ['report']
+    };
+  }
+
+  // If only astro data, show astro only
   return {
     showToggle: false,
     defaultView: 'astro',
