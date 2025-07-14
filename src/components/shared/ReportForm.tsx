@@ -23,13 +23,17 @@ interface ReportFormProps {
   themeColor?: string;
   fontFamily?: string;
   onFormStateChange?: (isValid: boolean, hasSelectedType: boolean) => void;
+  isMobileDrawer?: boolean;
+  onMobileClose?: () => void;
 }
 
 export const ReportForm: React.FC<ReportFormProps> = ({ 
   coachSlug,
   themeColor = '#6366F1',
   fontFamily = 'Inter',
-  onFormStateChange
+  onFormStateChange,
+  isMobileDrawer = false,
+  onMobileClose
 }) => {
   const navigate = useNavigate();
   const { promoValidation, isValidatingPromo, validatePromoManually, resetValidation } = usePromoValidation();
@@ -346,8 +350,13 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     // Reset report submission state
     resetReportState();
     
-    // Navigate back to report page cleanly
-    navigate('/report');
+    if (isMobileDrawer && onMobileClose) {
+      // For mobile drawer, just close the drawer
+      onMobileClose();
+    } else {
+      // Navigate back to report page cleanly
+      navigate('/report');
+    }
   };
 
   const onSubmit = async (data: ReportFormData) => {
@@ -390,7 +399,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           metadata: guestReportData.metadata
         })}
         onBack={handleCloseReportViewer}
-        isMobile={false}
+        isMobile={isMobileDrawer}
       />
     );
   }
