@@ -1,7 +1,7 @@
 import { BaseTemplate } from './BaseTemplate';
 import { PdfGenerationOptions, PdfMetadata } from '../types';
 import { isSynastryData, parseSynastryRich } from '@/lib/synastryFormatter';
-import { parseSwissDataRich } from '@/utils/swissFormatter';
+import { parseSwissDataRich, EnrichedSnapshot } from '@/utils/swissFormatter';
 
 export interface AstroPdfData {
   id: string;
@@ -142,13 +142,37 @@ export class AstroTemplate extends BaseTemplate {
       y += 15;
     }
 
-    // Planetary Positions
-    y += 10;
-    y = this.renderSection("CURRENT PLANETARY POSITIONS", data.planets, y, true, targetDoc);
+    // Chart Angles
+    if (data.angles && data.angles.length > 0) {
+      y += 10;
+      y = this.renderAnglesSection(data.angles, y, targetDoc);
+    }
 
-    // Aspects
+    // House Cusps
+    if (data.houses && data.houses.length > 0) {
+      y += 15;
+      y = this.renderHousesSection(data.houses, y, targetDoc);
+    }
+
+    // Planetary Positions (now includes house placements)
+    y += 10;
+    y = this.renderSection("NATAL PLANETARY POSITIONS", data.planets, y, true, targetDoc);
+
+    // Natal Aspects
     y += 15;
-    y = this.renderSection("ASPECTS TO NATAL", data.aspects, y, false, targetDoc);
+    y = this.renderSection("NATAL ASPECTS", data.aspects, y, false, targetDoc);
+
+    // Current Transit Positions
+    if (data.transits?.planets && data.transits.planets.length > 0) {
+      y += 15;
+      y = this.renderSection("CURRENT TRANSIT POSITIONS", data.transits.planets, y, true, targetDoc);
+    }
+
+    // Transit Aspects to Natal
+    if (data.transits?.aspects && data.transits.aspects.length > 0) {
+      y += 15;
+      y = this.renderSection("TRANSIT ASPECTS TO NATAL", data.transits.aspects, y, false, targetDoc);
+    }
 
     return y;
   }
@@ -202,11 +226,14 @@ export class AstroTemplate extends BaseTemplate {
 
       if (isPlanetTable) {
         doc.text(item.name, this.margins.left, y);
-        const position = `${String(item.deg).padStart(2, "0")}°${String(item.min).padStart(2, "0")}' in ${item.sign}`;
+        let position = `${String(item.deg).padStart(2, "0")}°${String(item.min).padStart(2, "0")}' in ${item.sign}`;
+        if (item.house) {
+          position += ` (House ${item.house})`;
+        }
         doc.text(position, this.margins.left + 80, y);
         if (item.retro) {
           doc.setFont('helvetica', 'italic');
-          doc.text(' Retrograde', this.margins.left + 150, y);
+          doc.text(' R', this.margins.left + 170, y);
           doc.setFont('helvetica', 'normal');
         }
       } else {
@@ -215,6 +242,78 @@ export class AstroTemplate extends BaseTemplate {
         doc.text(item.b, this.margins.left + 100, y);
         doc.text(`${item.orbDeg}°${String(item.orbMin).padStart(2, "0")}'`, this.margins.left + 130, y);
       }
+      y += 10;
+    });
+
+    return y;
+  }
+
+  private renderAnglesSection(angles: any[], startY: number, targetDoc?: any): number {
+    const doc = targetDoc || this.doc;
+    let y = startY;
+    
+    // Section title
+    doc.setFontSize(10).setFont('helvetica', 'bold').setTextColor(120);
+    doc.text('CHART ANGLES', this.margins.left, y);
+    y += 12;
+
+    if (angles.length === 0) {
+      doc.setFontSize(9).setFont('helvetica', 'italic').setTextColor(150);
+      doc.text('No angle data available.', this.margins.left, y);
+      return y + 10;
+    }
+
+    // Headers
+    doc.setFontSize(9).setFont('helvetica', 'bold').setTextColor(120);
+    doc.text('Angle', this.margins.left, y);
+    doc.text('Position', this.margins.left + 80, y);
+    y += 12;
+
+    // Data
+    doc.setFontSize(9).setFont('helvetica', 'normal').setTextColor(40);
+    angles.forEach((angle: any) => {
+      doc.text(angle.name, this.margins.left, y);
+      const position = `${String(angle.deg).padStart(2, "0")}°${String(angle.min).padStart(2, "0")}' in ${angle.sign}`;
+      doc.text(position, this.margins.left + 80, y);
+      y += 10;
+    });
+
+    return y;
+  }
+
+  private renderHousesSection(houses: any[], startY: number, targetDoc?: any): number {
+    const doc = targetDoc || this.doc;
+    const pageHeight = targetDoc ? targetDoc.internal.pageSize.getHeight() : this.pageHeight;
+    let y = startY;
+    
+    // Section title
+    doc.setFontSize(10).setFont('helvetica', 'bold').setTextColor(120);
+    doc.text('HOUSE CUSPS', this.margins.left, y);
+    y += 12;
+
+    if (houses.length === 0) {
+      doc.setFontSize(9).setFont('helvetica', 'italic').setTextColor(150);
+      doc.text('No house data available.', this.margins.left, y);
+      return y + 10;
+    }
+
+    // Headers
+    doc.setFontSize(9).setFont('helvetica', 'bold').setTextColor(120);
+    doc.text('House', this.margins.left, y);
+    doc.text('Cusp Position', this.margins.left + 80, y);
+    y += 12;
+
+    // Data
+    doc.setFontSize(9).setFont('helvetica', 'normal').setTextColor(40);
+    houses.forEach((house: any) => {
+      if (y > pageHeight - 40) {
+        doc.addPage();
+        y = this.margins.top;
+      }
+      
+      doc.text(`House ${house.number}`, this.margins.left, y);
+      const position = `${String(house.deg).padStart(2, "0")}°${String(house.min).padStart(2, "0")}' in ${house.sign}`;
+      doc.text(position, this.margins.left + 80, y);
       y += 10;
     });
 
