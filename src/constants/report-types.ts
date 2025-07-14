@@ -32,7 +32,7 @@ export const reportCategories = [
   {
     value: 'compatibility',
     title: 'Compatibility',
-    description: 'Discover relationship dynamics and unlock deeper connections',
+    description: 'Discover relationship dynamics & unlock deeper connections',
     icon: Heart,
     reportType: 'sync',
   },
