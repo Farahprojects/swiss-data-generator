@@ -438,73 +438,38 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
   
-  // Handle token recovery scenarios
-  if (urlGuestId) {
-    // Still recovering token data
-    if (tokenRecoveryState.isRecovering) {
-      return (
-        <div className="min-h-screen flex items-center justify-center p-8">
-          <div className="text-center space-y-6">
-            <div className="w-12 h-12 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto"></div>
-            <p className="text-xl text-gray-600 font-light">Recovering your session...</p>
-          </div>
+  // Handle token recovery scenarios - if valid token with recovery success, show success screen
+  if (urlGuestId && tokenRecoveryState.recovered && tokenRecoveryState.recoveredName && tokenRecoveryState.recoveredEmail) {
+    return (
+      <SuccessScreen 
+        name={tokenRecoveryState.recoveredName} 
+        email={tokenRecoveryState.recoveredEmail} 
+        onViewReport={handleViewReport}
+        guestReportId={urlGuestId}
+      />
+    );
+  }
+  
+  // Still recovering token data
+  if (urlGuestId && tokenRecoveryState.isRecovering) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8">
+        <div className="text-center space-y-6">
+          <div className="w-12 h-12 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto"></div>
+          <p className="text-xl text-gray-600 font-light">Recovering your session...</p>
         </div>
-      );
-    }
-    
-    // Token recovery failed - show error
-    if (tokenRecoveryState.error) {
-      return (
-        <div className="min-h-screen flex items-center justify-center p-8">
-          <div className="w-full max-w-2xl space-y-8 text-center">
-            <div className="space-y-6">
-              <h1 className="text-5xl font-light tracking-tight text-gray-900">
-                Session <span className="italic">Recovery</span> Failed
-              </h1>
-              <p className="text-xl text-gray-600 font-light max-w-lg mx-auto leading-relaxed">
-                {tokenRecoveryState.error === 'Report not found' && 'Report not found - please start a new report'}
-                {tokenRecoveryState.error === 'Session data corrupted' && 'Session data corrupted - please start a new report'}
-                {!['Report not found', 'Session data corrupted'].includes(tokenRecoveryState.error) && 'Unable to recover session - please try again'}
-              </p>
-            </div>
-            
-            <div className="space-y-4">
-              <button 
-                onClick={() => {
-                  clearGuestReportId();
-                  window.location.replace('/');
-                }}
-                className="w-full bg-gray-900 text-white px-8 py-4 rounded-xl font-light text-lg tracking-wide hover:bg-gray-800 transition-colors"
-              >
-                Start New Report
-              </button>
-              <button 
-                onClick={() => window.location.reload()}
-                className="w-full bg-white text-gray-900 px-8 py-4 rounded-xl font-light text-lg tracking-wide border border-gray-200 hover:bg-gray-50 transition-colors"
-              >
-                Try Again
-              </button>
-            </div>
-            
-            <p className="text-sm text-gray-400 font-light mt-8">
-              Need help? Contact support with ID: <span className="font-mono text-gray-500">{urlGuestId}</span>
-            </p>
-          </div>
-        </div>
-      );
-    }
-    
-    // Token recovery successful - show success screen with recovered data
-    if (tokenRecoveryState.recovered && tokenRecoveryState.recoveredName && tokenRecoveryState.recoveredEmail) {
-      return (
-        <SuccessScreen 
-          name={tokenRecoveryState.recoveredName} 
-          email={tokenRecoveryState.recoveredEmail} 
-          onViewReport={handleViewReport}
-          guestReportId={urlGuestId}
-        />
-      );
-    }
+      </div>
+    );
+  }
+  
+  // If token recovery failed, clear the URL and show normal form
+  if (urlGuestId && tokenRecoveryState.error) {
+    // Clear the bad token and show normal form instead of error page
+    React.useEffect(() => {
+      clearGuestReportId();
+      window.history.replaceState({}, '', '/report');
+    }, []);
+    // Fall through to show normal form
   }
 
   return (

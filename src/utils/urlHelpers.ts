@@ -53,6 +53,37 @@ export const getGuestToken = (): string | null => {
 };
 
 /**
+ * Validate guest token against database
+ */
+export const validateGuestToken = async (token: string): Promise<{ isValid: boolean; hasReport: boolean; email?: string; name?: string }> => {
+  if (!token) return { isValid: false, hasReport: false };
+  
+  try {
+    const { supabase } = await import('@/integrations/supabase/client');
+    const { data, error } = await supabase
+      .from('guest_reports')
+      .select('id, email, has_report, report_data, payment_status')
+      .eq('id', token)
+      .single();
+    
+    if (error || !data) {
+      return { isValid: false, hasReport: false };
+    }
+    
+    const reportData = data.report_data as any;
+    return {
+      isValid: true,
+      hasReport: data.has_report || false,
+      email: data.email,
+      name: reportData?.name
+    };
+  } catch (error) {
+    console.error('Token validation failed:', error);
+    return { isValid: false, hasReport: false };
+  }
+};
+
+/**
  * Get guest report ID from URL or localStorage, with preference for URL
  * @deprecated Use getGuestToken() instead
  */

@@ -102,19 +102,9 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     return guestReportId || getGuestToken();
   }, [guestReportId]);
 
+  // Don't render if no token - let parent components handle this case
   if (!currentGuestReportId) {
-    return (
-      <div className="w-full py-10 px-4 flex justify-center">
-        <Card className="border-2 border-gray-200 shadow-lg">
-          <CardContent className="p-8 text-center">
-            <p className="text-gray-600">Session expired. Please start a new report.</p>
-            <Button onClick={() => navigate('/report')} className="mt-4 bg-gray-900 text-white font-light hover:bg-gray-800">
-              Start New Report
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return null;
   }
 
   const reportType = report?.report_type as ReportType | undefined;

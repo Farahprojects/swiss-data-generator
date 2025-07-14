@@ -60,9 +60,14 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
               email: reportData?.email || '' 
             });
             setCurrentView('success');
+          } else {
+            // Invalid token - clear it and stay on form
+            clearAllSessionData();
           }
         } catch (err) {
           console.error('Failed to fetch guest data:', err);
+          // Clear invalid token
+          clearAllSessionData();
         }
       }
     };
