@@ -1210,6 +1210,33 @@ export type Database = {
         }
         Relationships: []
       }
+      temp_report_data: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          metadata: Json | null
+          report_content: string | null
+          swiss_data: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          metadata?: Json | null
+          report_content?: string | null
+          swiss_data?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          metadata?: Json | null
+          report_content?: string | null
+          swiss_data?: Json | null
+        }
+        Relationships: []
+      }
       token_emails: {
         Row: {
           body_html: string

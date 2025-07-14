@@ -9,6 +9,7 @@ import { PdfGenerator } from '@/services/pdf/PdfGenerator';
 import { getToggleDisplayLogic } from '@/utils/reportTypeUtils';
 import { MappedReport } from '@/types/mappedReport';
 import { extractAstroDataAsText } from '@/utils/astroTextExtractor';
+import { supabase } from '@/integrations/supabase/client';
 import openaiLogo from '@/assets/openai-logo.png';
 
 interface ReportViewerProps {
@@ -201,37 +202,76 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
   };
 
   const handleChatGPTCopyAndGo = async () => {
-    setIsCopping(true);
     try {
-      let textToCopy: string;
+      setIsCopping(true);
       
-      if (activeView === 'astro' && mappedReport.swissData) {
-        textToCopy = `Please analyze this astrological ${activeView === 'astro' ? 'data' : 'report'} and provide additional insights or answer any questions I might have, read it like an energy map not a horoscope:\n\n${extractAstroDataAsText(mappedReport.swissData, mappedReport)}`;
-      } else {
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = mappedReport.reportContent;
-        const reportText = tempDiv.textContent || tempDiv.innerText || '';
-        textToCopy = `Please analyze this astrological ${activeView === 'astro' ? 'data' : 'report'} and provide additional insights or answer any questions I might have, read it like an energy map not a horoscope:\n\n${reportText}`;
-      }
-      
-      await navigator.clipboard.writeText(textToCopy);
       toast({
-        title: "Copied!",
-        description: `${activeView === 'astro' ? 'Astro data' : 'Report'} copied to clipboard`,
+        title: "Preparing ChatGPT...",
+        description: "Storing report data...",
+      });
+
+      // Store the complete report data temporarily
+      const response = await supabase.functions.invoke('store-temp-report', {
+        body: mappedReport
+      });
+
+      if (response.error) {
+        throw new Error('Failed to store report data');
+      }
+
+      const { uuid } = response.data;
+      
+      toast({
+        title: "Opening ChatGPT...",
+        description: "Report data prepared successfully!",
       });
       
       setTimeout(() => {
-        window.open('https://chatgpt.com/g/g-68636dbe19588191b04b0a60bcbf3df3-therai', '_blank');
+        // Open ChatGPT with the UUID parameter
+        window.open(`https://chatgpt.com/g/g-68636dbe19588191b04b0a60bcbf3df3-therai?data=${uuid}`, '_blank');
         setShowChatGPTConfirm(false);
         setIsCopping(false);
-      }, 2000);
+      }, 1500);
+      
     } catch (error) {
-      setIsCopping(false);
+      console.error('Failed to prepare ChatGPT integration:', error);
+      
+      // Fallback to clipboard method
       toast({
-        title: "Copy failed",
-        description: "Unable to copy. Please try manually.",
-        variant: "destructive"
+        title: "Using fallback method",
+        description: "Copying to clipboard instead...",
+        variant: "destructive",
       });
+
+      try {
+        let textToCopy: string;
+        
+        if (activeView === 'astro' && mappedReport.swissData) {
+          textToCopy = `Please analyze this astrological data and provide additional insights or answer any questions I might have, read it like an energy map not a horoscope:\n\n${extractAstroDataAsText(mappedReport.swissData, mappedReport)}`;
+        } else {
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = mappedReport.reportContent;
+          const reportText = tempDiv.textContent || tempDiv.innerText || '';
+          textToCopy = `Please analyze this astrological report and provide additional insights or answer any questions I might have, read it like an energy map not a horoscope:\n\n${reportText}`;
+        }
+        
+        await navigator.clipboard.writeText(textToCopy);
+        
+        setTimeout(() => {
+          window.open('https://chatgpt.com/g/g-68636dbe19588191b04b0a60bcbf3df3-therai', '_blank');
+          setShowChatGPTConfirm(false);
+          setIsCopping(false);
+        }, 1500);
+        
+      } catch (clipboardError) {
+        console.error('Clipboard fallback also failed:', clipboardError);
+        toast({
+          title: "Integration failed",
+          description: "Please try again",
+          variant: "destructive",
+        });
+        setIsCopping(false);
+      }
     }
   };
 
