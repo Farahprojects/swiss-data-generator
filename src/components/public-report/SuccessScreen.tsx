@@ -95,8 +95,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const [entertainmentMode, setEntertainmentMode] = useState<'text' | 'video' | 'image'>('text');
   const [showCountdown, setShowCountdown] = useState(false);
   const [countdownTime, setCountdownTime] = useState(24);
-  const [countdownTimer, setCountdownTimer] = useState<NodeJS.Timeout | null>(null);
-  const [modalReadyListener, setModalReadyListener] = useState<NodeJS.Timeout | null>(null);
 
   const currentGuestReportId = useMemo(() => {
     return guestReportId || getGuestToken();
@@ -236,7 +234,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     checkReportType();
   }, [currentGuestReportId]);
 
-  // Step 1-5: Automated modal display using modal_ready = true
+  // Visual 24-second countdown for AI reports
   useEffect(() => {
     if (!currentGuestReportId || isAiReport !== true) {
       return;
@@ -249,7 +247,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       setShowCountdown(true);
       localStorage.setItem(countdownKey, 'true');
 
-      // Start countdown timer
       const timer = setInterval(() => {
         setCountdownTime((prev) => {
           if (prev <= 1) {
@@ -260,55 +257,10 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
           return prev - 1;
         });
       }, 1000);
-      setCountdownTimer(timer);
 
-      // Step 1: Poll for modal_ready = true
-      const pollForModalReady = async () => {
-        try {
-          const { data, error } = await supabase
-            .from('guest_reports')
-            .select('modal_ready, has_swiss_error')
-            .eq('id', currentGuestReportId)
-            .single();
-
-          if (!error && data?.modal_ready === true && !data?.has_swiss_error) {
-            console.log('🎯 modal_ready = true detected! Auto-opening modal...');
-            
-            // Step 2: Cancel countdown when modal_ready = true
-            if (countdownTimer) {
-              clearInterval(countdownTimer);
-              setCountdownTimer(null);
-            }
-            setShowCountdown(false);
-            
-            // Clear the polling listener
-            if (modalReadyListener) {
-              clearInterval(modalReadyListener);
-              setModalReadyListener(null);
-            }
-
-            // Step 3-4: Fetch latest report data and open modal
-            if (!modalTriggered) {
-              setModalTriggered(true);
-              await handleViewReport();
-            }
-          }
-        } catch (err) {
-          console.error('Error polling for modal_ready:', err);
-        }
-      };
-
-      // Poll every 2 seconds for modal_ready
-      const readyPoller = setInterval(pollForModalReady, 2000);
-      setModalReadyListener(readyPoller);
-
-      // Step 5: Clean up on unmount
-      return () => {
-        clearInterval(timer);
-        clearInterval(readyPoller);
-      };
+      return () => clearInterval(timer);
     }
-  }, [currentGuestReportId, isAiReport, modalTriggered, handleViewReport, countdownTimer, modalReadyListener]);
+  }, [currentGuestReportId, isAiReport]);
 
   useEffect(() => {
     const scrollToProcessing = () => {
