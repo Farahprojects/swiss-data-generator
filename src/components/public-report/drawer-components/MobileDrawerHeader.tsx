@@ -16,16 +16,18 @@ const MobileDrawerHeader = ({ currentStep, totalSteps, onClose }: MobileDrawerHe
       className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100"
       style={{ paddingTop: `${topSafePadding + 16}px` }}
     >
-      <div className="flex items-center space-x-3">
-        <span className="text-sm font-medium text-gray-500">
+      <div className="flex items-center space-x-4">
+        <span className="text-sm font-medium text-[hsl(var(--apple-gray-dark))]">
           Step {currentStep} of {totalSteps}
         </span>
-        <div className="flex space-x-1">
+        <div className="flex space-x-2">
           {Array.from({ length: totalSteps }, (_, i) => (
             <div
               key={i}
-              className={`w-2 h-2 rounded-full transition-colors ${
-                i + 1 <= currentStep ? 'bg-gray-900' : 'bg-gray-200'
+              className={`w-2 h-2 rounded-full transition-all duration-300 ease-out ${
+                i + 1 <= currentStep 
+                  ? 'bg-[hsl(var(--apple-blue))] scale-110' 
+                  : 'bg-[hsl(var(--apple-gray-light))]'
               }`}
             />
           ))}
@@ -33,9 +35,9 @@ const MobileDrawerHeader = ({ currentStep, totalSteps, onClose }: MobileDrawerHe
       </div>
       <button
         onClick={onClose}
-        className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+        className="w-8 h-8 rounded-full bg-[hsl(var(--apple-gray-light))] hover:bg-[hsl(var(--apple-gray))] transition-all duration-300 ease-out active:scale-95 flex items-center justify-center"
       >
-        <X className="h-5 w-5" />
+        <X className="h-4 w-4 text-[hsl(var(--apple-gray-dark))]" />
       </button>
     </div>
   );

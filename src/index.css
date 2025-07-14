@@ -76,6 +76,13 @@
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+    
+    /* Apple Design System Colors */
+    --apple-blue: 212 100% 50%;
+    --apple-blue-light: 216 100% 52%;
+    --apple-gray: 214 6% 56%;
+    --apple-gray-light: 214 6% 68%;
+    --apple-gray-dark: 220 9% 23%;
   }
 
   /* Apply base colours */

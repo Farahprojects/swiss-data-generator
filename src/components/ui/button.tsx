@@ -18,6 +18,8 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        "apple-primary": "bg-[hsl(var(--apple-blue))] text-white hover:bg-[hsl(var(--apple-blue-light))] rounded-full h-12 px-8 font-medium transition-all duration-300 ease-out active:scale-95 shadow-[var(--apple-shadow-md)]",
+        "apple-secondary": "border border-[hsl(var(--apple-gray-light))] bg-white text-[hsl(var(--apple-gray-dark))] hover:bg-gray-50 rounded-full h-12 px-8 font-medium transition-all duration-300 ease-out active:scale-95",
       },
       size: {
         default: "h-10 px-4 py-2",
