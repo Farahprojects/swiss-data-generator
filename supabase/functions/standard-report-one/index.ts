@@ -358,6 +358,13 @@ serve(async (req) => {
       console.error(`${logPrefix} Exception during report_logs insert:`, logError);
     }
     
+    // Check for contamination risk before returning
+    if (reportData?.translator_log_id && reportData?.swiss_data) {
+      console.warn(`${logPrefix} 🚨 Contamination risk: translator_log_id is present alongside swiss_data in payload!`);
+      console.warn(`${logPrefix} translator_log_id: ${reportData.translator_log_id}`);
+      console.warn(`${logPrefix} swiss_data keys: ${Object.keys(reportData.swiss_data)}`);
+    }
+
     // Return the generated report with proper structure
     console.log(`${logPrefix} Successfully processed ${reportType} request in ${Date.now() - startTime}ms`);
     return jsonResponse({
