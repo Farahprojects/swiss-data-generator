@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { CleanPlaceAutocomplete } from '@/components/shared/forms/place-input/CleanPlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import { ReportFormData } from '@/types/public-report';
-import { useSmartScroll } from '@/hooks/useSmartScroll';
+import { useFieldFocusHandler } from '@/hooks/useFieldFocusHandler';
 import FormStep from './FormStep';
 
 interface SecondPersonFormProps {
@@ -18,7 +18,7 @@ interface SecondPersonFormProps {
 }
 
 const SecondPersonForm = ({ register, setValue, watch, errors, onPlaceSelected }: SecondPersonFormProps) => {
-  const { scrollToNextField, debouncedScroll } = useSmartScroll();
+  const { scrollTo } = useFieldFocusHandler();
   const [hasInteracted, setHasInteracted] = useState({
     name: false,
     birthDate: false,
@@ -76,10 +76,9 @@ const SecondPersonForm = ({ register, setValue, watch, errors, onPlaceSelected }
             {...register('secondPersonName')}
             placeholder="Enter second person's name"
             className="h-12"
-            onFocus={(e) => debouncedScroll(e.target, { fieldType: 'text' })}
+            onFocus={(e) => scrollTo(e.target)}
             onBlur={(e) => {
               handleFieldInteraction('name');
-              if (e.target.value.trim()) scrollToNextField('secondPersonName', 2);
             }}
           />
           {shouldShowError('name', errors.secondPersonName) ? (

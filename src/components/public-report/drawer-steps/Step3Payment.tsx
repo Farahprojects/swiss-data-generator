@@ -9,7 +9,7 @@ import { ReportFormData } from '@/types/public-report';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { PromoConfirmationDialog } from '@/components/public-report/PromoConfirmationDialog';
 import { useMobileSafeTopPadding } from '@/hooks/useMobileSafeTopPadding';
-import { useSmartScroll } from '@/hooks/useSmartScroll';
+import { useFieldFocusHandler } from '@/hooks/useFieldFocusHandler';
 
 interface PromoValidationState {
   status: 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid';
@@ -44,7 +44,7 @@ const Step3Payment = ({
   onPromoConfirmationContinue = () => {}
 }: Step3PaymentProps) => {
   const topSafePadding = useMobileSafeTopPadding();
-  const { scrollToElement } = useSmartScroll();
+  const { scrollTo } = useFieldFocusHandler();
   const [showPromoCode, setShowPromoCode] = useState(false);
 
   const { getReportPrice, getReportTitle, calculatePricing } = usePriceFetch();
@@ -64,9 +64,9 @@ const Step3Payment = ({
 
   useEffect(() => {
     if (errors.promoCode) {
-      scrollToElement('#promoCode', { block: 'center', delay: 200 });
+      scrollTo(document.getElementById('promoCode'), { block: 'center' });
     }
-  }, [errors.promoCode]);
+  }, [errors.promoCode, scrollTo]);
 
   const formData = { reportType, essenceType, relationshipType, reportCategory, reportSubCategory, request: requestField };
   const basePrice = getReportPrice(formData);
@@ -134,7 +134,11 @@ const Step3Payment = ({
               open={showPromoCode} 
               onOpenChange={(open) => {
                 setShowPromoCode(open);
-                if (open) scrollToElement('#promoCode', { delay: 300, block: 'center' });
+                if (open) {
+                  setTimeout(() => {
+                    scrollTo(document.getElementById('promoCode'), { block: 'center' });
+                  }, 300);
+                }
               }}
             >
               <CollapsibleTrigger asChild>
@@ -157,10 +161,12 @@ const Step3Payment = ({
                         {...register('promoCode')}
                         placeholder="Enter promo code"
                         className="h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400 pr-12"
-                        onFocus={(e) => scrollToElement(e.target, { block: 'center' })}
+                        onFocus={(e) => scrollTo(e.target, { block: 'center' })}
                         onBlur={(e) => {
                           if (e.target.value.trim()) {
-                            scrollToElement('.pricing-summary', { delay: 300, block: 'center' });
+                            setTimeout(() => {
+                              scrollTo(document.querySelector('.pricing-summary'), { block: 'center' });
+                            }, 300);
                           }
                         }}
                       />

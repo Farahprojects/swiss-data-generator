@@ -12,7 +12,7 @@ import { CleanPlaceAutocomplete } from '@/components/shared/forms/place-input/Cl
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import InlineDateTimeSelector from '@/components/ui/mobile-pickers/InlineDateTimeSelector';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useSmartScroll } from '@/hooks/useSmartScroll';
+import { useFieldFocusHandler } from '@/hooks/useFieldFocusHandler';
 import { ReportFormData } from '@/types/public-report';
 
 interface PersonCardProps {
@@ -43,7 +43,7 @@ const PersonCard = ({
   const isMobile = useIsMobile();
   const isSecondPerson = personNumber === 2;
   const prefix = isSecondPerson ? 'secondPerson' : '';
-  const { scrollToElement, scrollToNextField, debouncedScroll } = useSmartScroll();
+  const { scrollTo } = useFieldFocusHandler();
 
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [activeSelector, setActiveSelector] = useState<'date' | 'time' | null>(null);
@@ -52,17 +52,11 @@ const PersonCard = ({
   const showError = (field: string) => (hasTriedToSubmit || touched[field]) && errors[field];
 
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    const fieldId = e.target.id;
-    const fieldType = fieldId.includes('Date') || fieldId.includes('Time') ? 'picker' : 
-                     fieldId.includes('Location') ? 'location' : 'text';
-    debouncedScroll(e.target, { fieldType, delay: 100 });
+    scrollTo(e.target);
   };
 
-  const handleBlur = (field: string, nextFieldId?: string) => (e: React.FocusEvent<HTMLInputElement>) => {
+  const handleBlur = (field: string) => (e: React.FocusEvent<HTMLInputElement>) => {
     markTouched(field);
-    if (e.target.value.trim() && nextFieldId) {
-      scrollToNextField(nextFieldId, personNumber);
-    }
   };
 
   const getField = (name: string) => isSecondPerson ? `secondPerson${name.charAt(0).toUpperCase() + name.slice(1)}` : name;
@@ -76,12 +70,6 @@ const PersonCard = ({
     if (place.placeId) setValue(getField('birthPlaceId') as keyof ReportFormData, place.placeId);
 
     (document.activeElement as HTMLElement)?.blur?.();
-
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        scrollToNextField(loc, personNumber);
-      }, 400);
-    });
 
     onPlaceSelect?.();
   };
@@ -108,7 +96,7 @@ const PersonCard = ({
             placeholder="Enter full name"
             className={`h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400 ${showError(getField('name')) ? 'border-red-500 ring-1 ring-red-500' : ''}`}
             onFocus={handleFocus}
-            onBlur={handleBlur(getField('name'), getField('email'))}
+            onBlur={handleBlur(getField('name'))}
             inputMode="text"
             style={{ fontSize: '16px' }}
           />
@@ -125,7 +113,7 @@ const PersonCard = ({
               placeholder="your@email.com"
               className={`h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400 ${showError('email') ? 'border-red-500 ring-1 ring-red-500' : ''}`}
               onFocus={handleFocus}
-              onBlur={handleBlur('email', getField('birthDate'))}
+              onBlur={handleBlur('email')}
               inputMode="email"
               style={{ fontSize: '16px' }}
             />
@@ -143,7 +131,6 @@ const PersonCard = ({
               onConfirm={() => {
                 markTouched(getField('birthDate'));
                 setActiveSelector(null);
-                scrollToNextField(getField('birthDate'), personNumber);
               }}
               onCancel={() => setActiveSelector(null)}
               isOpen={activeSelector === 'date'}
@@ -163,7 +150,6 @@ const PersonCard = ({
               onConfirm={() => {
                 markTouched(getField('birthTime'));
                 setActiveSelector(null);
-                scrollToNextField(getField('birthTime'), personNumber);
               }}
               onCancel={() => setActiveSelector(null)}
               isOpen={activeSelector === 'time'}
