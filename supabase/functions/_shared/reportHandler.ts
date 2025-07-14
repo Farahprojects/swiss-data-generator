@@ -207,14 +207,9 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
       console.log(`${logPrefix} [CONTAMINATION-POINT-1] Report keys being added:`, Object.keys(reportResult.report || {}));
       console.log(`${logPrefix} [CONTAMINATION-POINT-1] Swiss data keys before contamination:`, Object.keys(swissData || {}));
       
-      // Combine Swiss API data with the report and include engine_used
-      const combinedResponse = {
-        swiss_data: swissData,  // Keep Swiss data nested and pure
-        report: reportResult.report,
-        engine_used: reportResult.report.engine_used // <- Engine info from report generation
-      };
-      
-      console.log(`${logPrefix} [CONTAMINATION-POINT-1] Combined response keys after contamination:`, Object.keys(combinedResponse || {}));
+      // [CONTAMINATION-FIX] Option 1: Pure Fix - Return only Swiss data
+      console.log(`${logPrefix} [CONTAMINATION-FIX] Returning pure Swiss data only, no contamination`);
+      console.log(`${logPrefix} [CONTAMINATION-FIX] Swiss data keys:`, Object.keys(swissData || {}));
       
       // Create AI-only data for logging (without Swiss data)
       const aiOnlyData = {
@@ -222,12 +217,12 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
         engine_used: reportResult.report.engine_used
       };
       
-      console.log(`${logPrefix} Combined response prepared with report and engine info included`);
+      console.log(`${logPrefix} Pure Swiss data prepared, AI report separated`);
       console.log(`${logPrefix} ========== REPORT GENERATION DEBUG END ==========`);
       
       return {
         success: true,
-        responseData: combinedResponse,
+        responseData: swissData,  // Only pure Swiss data
         aiOnlyData: aiOnlyData,
         errorMessage: undefined
       };
