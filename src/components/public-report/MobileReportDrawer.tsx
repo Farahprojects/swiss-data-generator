@@ -32,7 +32,8 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   const isMobile = useIsMobile();
   const topSafePadding = useMobileSafeTopPadding();
 
-  const [currentView, setCurrentView] = useState<'form' | 'report'>('form');
+  const [currentView, setCurrentView] = useState<'form' | 'success' | 'report'>('form');
+  const [submittedData, setSubmittedData] = useState<{ name: string; email: string } | null>(null);
   const [mappedReport, setMappedReport] = useState<MappedReport | null>(null);
   const [viewingReport, setViewingReport] = useState(false);
 
@@ -53,7 +54,12 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
 
           if (!error && data?.report_data) {
             setGuestReportData({ guest_report: data });
-            // Don't setCurrentView to 'success' - let reportCreated handle this
+            const reportData = data.report_data as any;
+            setSubmittedData({ 
+              name: reportData?.name || 'Guest', 
+              email: reportData?.email || '' 
+            });
+            setCurrentView('success');
           } else {
             // Invalid token - clear it and stay on form
             clearAllSessionData();
@@ -72,7 +78,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   const { form, currentStep, nextStep, prevStep } = useMobileDrawerForm();
   const { register, handleSubmit, setValue, watch, control, formState: { errors } } = form;
 
-  const { isProcessing, reportCreated, submitReport } = useReportSubmission();
+  const { isProcessing, submitReport } = useReportSubmission();
   const { promoValidation, isValidatingPromo, validatePromoManually, resetValidation } = usePromoValidation();
 
   const reportCategory = watch('reportCategory');
@@ -86,9 +92,10 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   }), [promoValidation]);
 
   const onSubmit = async (data: ReportFormData) => {
+    setSubmittedData({ name: data.name, email: data.email });
     localStorage.setItem('autoOpenModal', 'true');
     await submitReport(data, promoValidationState, resetValidation);
-    // Don't setCurrentView - let reportCreated handle the success screen display
+    setCurrentView('success');
   };
 
   const handleMobilePaymentSubmission = async () => {
@@ -166,16 +173,11 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
     onClose();
     form.reset();
     setCurrentView('form');
+    setSubmittedData(null);
     clearAllSessionData();
   };
 
   if (!isMobile) return null;
-
-  // If report is created, close drawer and show desktop success screen
-  if (reportCreated) {
-    onClose();
-    return null;
-  }
 
   return (
     <>
@@ -218,6 +220,17 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                 canGoNext={canGoNext()}
                 isProcessing={isProcessing}
                 isLastStep={currentStep === 4}
+              />
+            </div>
+          )}
+
+          {currentView === 'success' && submittedData && (
+            <div className="flex flex-col h-full pt-12">
+              <SuccessScreen
+                name={submittedData.name}
+                email={submittedData.email}
+                onViewReport={handleViewReport}
+                guestReportId={getGuestReportId() || undefined}
               />
             </div>
           )}
