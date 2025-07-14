@@ -35,23 +35,22 @@ const MobileDrawerFooter = ({
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-4 safe-area-pb">
       <div className="flex items-center justify-between gap-4">
         <Button
-          variant="apple-secondary"
+          variant="outline"
           onClick={onPrevious}
           disabled={currentStep === 1}
-          className="flex items-center space-x-2 min-w-[120px]"
+          className="flex items-center space-x-2 min-w-[120px] border-2 border-black text-black hover:bg-gray-50"
         >
           <ChevronLeft className="h-4 w-4" />
-          <span>Previous</span>
+          <span>Back</span>
         </Button>
 
         <Button
-          variant="apple-primary"
           onClick={handleNextClick}
           disabled={!canGoNext || isProcessing}
-          className="flex items-center space-x-2 flex-1 max-w-[200px] justify-center"
+          className="flex items-center space-x-2 flex-1 max-w-[200px] justify-center bg-black text-white hover:bg-gray-800 disabled:bg-gray-400 disabled:text-gray-200"
         >
           <span>
-            {isProcessing ? 'Processing...' : isLastStep ? 'Submit Order' : 'Continue'}
+            {isProcessing ? 'Processing...' : isLastStep ? 'Submit Order' : 'Next'}
           </span>
           {!isProcessing && <ChevronRight className="h-4 w-4" />}
         </Button>
