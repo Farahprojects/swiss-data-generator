@@ -89,16 +89,8 @@ const Step1_5AstroData = ({ control, setValue, selectedSubCategory, onNext }: St
                   whileTap={{ scale: 0.95 }}
                 >
                   <div className="flex gap-4 items-center">
-                    <div className={`w-14 h-14 flex items-center justify-center rounded-full transition-all duration-300 ${
-                      isSelected 
-                        ? 'bg-[hsl(var(--apple-blue))] shadow-[var(--apple-shadow-md)]' 
-                        : 'bg-white shadow-[var(--apple-shadow-sm)]'
-                    }`}>
-                      <IconComponent className={`h-7 w-7 transition-colors duration-300 ${
-                        isSelected 
-                          ? 'text-white' 
-                          : 'text-[hsl(var(--apple-gray-dark))]'
-                      }`} />
+                    <div className="w-14 h-14 flex items-center justify-center rounded-full bg-white shadow-[var(--apple-shadow-sm)] transition-all duration-300">
+                      <IconComponent className="h-7 w-7 text-[hsl(var(--apple-gray-dark))] transition-colors duration-300" />
                     </div>
                     <div className="flex-1 text-left">
                       <div className="flex justify-between items-start mb-1">
