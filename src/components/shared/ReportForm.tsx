@@ -16,7 +16,7 @@ import { FormValidationStatus } from '@/components/public-report/FormValidationS
 
 import { clearGuestReportId, getGuestReportId } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
-import { useGuestReportData } from '@/hooks/useGuestReportData';
+
 
 interface ReportFormProps {
   coachSlug?: string;
@@ -41,9 +41,11 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const [swissBoolean, setSwissBoolean] = useState<boolean>(false);
   const [currentReportType, setCurrentReportType] = useState<string>('');
 
-  // Get guest report data - hook called unconditionally
+  // Local state for guest report data
   const urlGuestId = getGuestReportId();
-  const { data: guestReportData, isLoading: isLoadingReport, error: reportError } = useGuestReportData(urlGuestId);
+  const [guestReportData, setGuestReportData] = useState<any>(null);
+  const [isLoadingReport, setIsLoadingReport] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
   
   // Token recovery state
   const [tokenRecoveryState, setTokenRecoveryState] = useState<{
@@ -276,15 +278,51 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     setPrevStep2Done(step2Done);
   }, [step2Done, prevStep2Done]);
 
-  const handleViewReport = (mappedReport: MappedReport) => {
-    // These are used by the loading states - though they're not needed since we're using mapReportPayload
-    setReportContent(mappedReport.reportContent);
-    setReportPdfData(mappedReport.pdfData || null);
-    setSwissData(mappedReport.swissData);
-    setHasReport(mappedReport.hasReport);
-    setSwissBoolean(mappedReport.swissBoolean);
-    setCurrentReportType(mappedReport.reportType);
-    setViewingReport(true);
+  const handleViewReport = async () => {
+    if (!urlGuestId) return;
+    
+    setIsLoadingReport(true);
+    setReportError(null);
+    
+    try {
+      const { data, error } = await supabase
+        .from('guest_reports')
+        .select(`
+          *,
+          report_logs!guest_reports_report_log_id_fkey(report_text),
+          translator_logs!guest_reports_translator_log_id_fkey(swiss_data)
+        `)
+        .eq('id', urlGuestId)
+        .single();
+
+      if (error || !data) {
+        throw new Error('Report not found');
+      }
+
+      const reportData = {
+        guest_report: data,
+        report_content: data.report_logs?.report_text || null,
+        swiss_data: data.translator_logs?.swiss_data || null,
+        metadata: { source: 'manual_fetch' }
+      };
+
+      setGuestReportData(reportData);
+      
+      // Map and set legacy states for compatibility
+      const mappedReport = mapReportPayload(reportData);
+      setReportContent(mappedReport.reportContent);
+      setReportPdfData(mappedReport.pdfData || null);
+      setSwissData(mappedReport.swissData);
+      setHasReport(mappedReport.hasReport);
+      setSwissBoolean(mappedReport.swissBoolean);
+      setCurrentReportType(mappedReport.reportType);
+      setViewingReport(true);
+    } catch (error) {
+      console.error('Failed to fetch report:', error);
+      setReportError('Failed to load report');
+    } finally {
+      setIsLoadingReport(false);
+    }
   };
 
   const handleCloseReportViewer = () => {

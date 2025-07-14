@@ -12,7 +12,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useMobileSafeTopPadding } from '@/hooks/useMobileSafeTopPadding';
 import { getGuestReportId, clearAllSessionData } from '@/utils/urlHelpers';
 import { handlePaymentSubmission } from '@/utils/paymentSubmissionHelper';
-import { useGuestReportData } from '@/hooks/useGuestReportData';
+import { supabase } from '@/integrations/supabase/client';
 import Step1ReportType from './drawer-steps/Step1ReportType';
 import Step1_5SubCategory from './drawer-steps/Step1_5SubCategory';
 import Step1_5AstroData from './drawer-steps/Step1_5AstroData';
@@ -38,17 +38,35 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const urlGuestId = getGuestReportId();
-  const { data: guestReportData } = useGuestReportData(urlGuestId);
+  const [guestReportData, setGuestReportData] = useState<any>(null);
 
   useEffect(() => {
-    if (urlGuestId && guestReportData) {
-      const data = guestReportData.guest_report?.report_data;
-      if (data) {
-        setSubmittedData({ name: data.name || 'Guest', email: data.email || '' });
-        setCurrentView('success');
+    const fetchGuestData = async () => {
+      if (urlGuestId) {
+        try {
+          const { data, error } = await supabase
+            .from('guest_reports')
+            .select('*')
+            .eq('id', urlGuestId)
+            .single();
+
+          if (!error && data?.report_data) {
+            setGuestReportData({ guest_report: data });
+            const reportData = data.report_data as any;
+            setSubmittedData({ 
+              name: reportData?.name || 'Guest', 
+              email: reportData?.email || '' 
+            });
+            setCurrentView('success');
+          }
+        } catch (err) {
+          console.error('Failed to fetch guest data:', err);
+        }
       }
-    }
-  }, [urlGuestId, guestReportData]);
+    };
+
+    fetchGuestData();
+  }, [urlGuestId]);
 
   const { form, currentStep, nextStep, prevStep } = useMobileDrawerForm();
   const { register, handleSubmit, setValue, watch, control, formState: { errors } } = form;
@@ -83,10 +101,38 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
     });
   };
 
-  const handleViewReport = (mappedReportData: MappedReport) => {
-    setMappedReport(mappedReportData);
-    setViewingReport(true);
-    setCurrentView('report');
+  const handleViewReport = async () => {
+    if (!urlGuestId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('guest_reports')
+        .select(`
+          *,
+          report_logs!guest_reports_report_log_id_fkey(report_text),
+          translator_logs!guest_reports_translator_log_id_fkey(swiss_data)
+        `)
+        .eq('id', urlGuestId)
+        .single();
+
+      if (error || !data) {
+        throw new Error('Report not found');
+      }
+
+      const reportData = {
+        guest_report: data,
+        report_content: data.report_logs?.report_text || null,
+        swiss_data: data.translator_logs?.swiss_data || null,
+        metadata: { source: 'mobile_fetch' }
+      };
+
+      const mappedReportData = mapReportPayload(reportData);
+      setMappedReport(mappedReportData);
+      setViewingReport(true);
+      setCurrentView('report');
+    } catch (error) {
+      console.error('Failed to fetch report:', error);
+    }
   };
 
   const resetDrawer = () => {
