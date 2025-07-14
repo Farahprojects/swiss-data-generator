@@ -7,12 +7,6 @@ function _mapReportPayload({
   swiss_data,
   metadata
 }: RawReportPayload): MappedReport {
-  console.log('mapReportPayload received payload:', {
-    guest_report: guest_report,
-    has_report_data: !!guest_report?.report_data,
-    report_data_keys: guest_report?.report_data ? Object.keys(guest_report.report_data) : [],
-    report_data_name: guest_report?.report_data?.name
-  });
   
   // Extract person A data from guest_report.report_data (single source of truth)
   const reportData = guest_report?.report_data;
@@ -97,15 +91,8 @@ function _mapReportPayload({
   return Object.freeze(validated);
 }
 
-// Memoized version for performance
-export const mapReportPayload = memoize(_mapReportPayload, {
-  // Custom resolver to handle object keys for memoization
-  normalizer: (args) => JSON.stringify(args[0]),
-  // Cache for 5 minutes
-  maxAge: 5 * 60 * 1000,
-  // Maximum 100 cached results
-  max: 100,
-});
+// Direct export without memoization to prevent caching incomplete data
+export const mapReportPayload = _mapReportPayload;
 
 // Non-memoized version for testing or when fresh data is required
 export const mapReportPayloadFresh = _mapReportPayload;
