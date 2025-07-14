@@ -58,7 +58,7 @@ const Step1ReportType = ({ control, setValue, selectedCategory, onNext }: Step1R
                   className={`w-full p-6 rounded-3xl border transition-all duration-300 ease-out active:scale-95 min-h-[80px] ${
                     isSelected 
                       ? 'border-[hsl(var(--apple-blue))] bg-[hsl(var(--apple-blue))]/5 shadow-[var(--apple-shadow-lg)]' 
-                      : 'border-[hsl(var(--apple-gray-light))] bg-white hover:bg-gray-50 hover:border-[hsl(var(--apple-gray))] shadow-[var(--apple-shadow-sm)]'
+                      : 'border-[hsl(var(--apple-gray-light))] bg-white hover:bg-gray-50 hover:border-[hsl(var(--apple-blue))] shadow-[var(--apple-shadow-sm)]'
                   }`}
                   whileTap={{ scale: 0.95 }}
                 >
