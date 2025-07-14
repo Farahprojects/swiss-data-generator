@@ -62,9 +62,10 @@ interface SuccessScreenProps {
   email: string;
   onViewReport?: (mappedReport: MappedReport) => void;
   guestReportId?: string;
+  isRefreshFlow?: boolean;
 }
 
-const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport, guestReportId }) => {
+const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport, guestReportId, isRefreshFlow = true }) => {
   const {
     report,
     error,

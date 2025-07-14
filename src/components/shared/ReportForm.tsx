@@ -23,13 +23,15 @@ interface ReportFormProps {
   themeColor?: string;
   fontFamily?: string;
   onFormStateChange?: (isValid: boolean, hasSelectedType: boolean) => void;
+  isRefreshFlow?: boolean;
 }
 
 export const ReportForm: React.FC<ReportFormProps> = ({ 
   coachSlug,
   themeColor = '#6366F1',
   fontFamily = 'Inter',
-  onFormStateChange
+  onFormStateChange,
+  isRefreshFlow = false
 }) => {
   const navigate = useNavigate();
   const { promoValidation, isValidatingPromo, validatePromoManually, resetValidation } = usePromoValidation();
@@ -41,9 +43,9 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const [swissBoolean, setSwissBoolean] = useState<boolean>(false);
   const [currentReportType, setCurrentReportType] = useState<string>('');
 
-  // Get guest report data - hook called unconditionally
+  // Get guest report data - only for refresh flows
   const urlGuestId = getGuestReportId();
-  const { data: guestReportData, isLoading: isLoadingReport, error: reportError } = useGuestReportData(urlGuestId);
+  const { data: guestReportData, isLoading: isLoadingReport, error: reportError } = useGuestReportData(isRefreshFlow ? urlGuestId : null);
   
   // 📦 Debug: Track state changes to guestReportData
   React.useEffect(() => {
@@ -408,6 +410,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         email={userEmail} 
         onViewReport={handleViewReport}
         guestReportId={urlGuestId || undefined}
+        isRefreshFlow={isRefreshFlow}
       />
     );
   }
@@ -476,6 +479,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           email={tokenRecoveryState.recoveredEmail} 
           onViewReport={handleViewReport}
           guestReportId={urlGuestId}
+          isRefreshFlow={true}
         />
       );
     }
