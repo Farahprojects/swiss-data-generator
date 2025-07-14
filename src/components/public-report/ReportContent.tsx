@@ -5,7 +5,8 @@ import { ReportRenderer } from '@/components/shared/ReportRenderer';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AstroDataRenderer } from './AstroDataRenderer';
 import { ProcessingIndicator } from '@/components/ui/ProcessingIndicator';
-import { getToggleDisplayLogic, getReportContentType } from '@/utils/reportTypeUtils';
+import { getToggleDisplayLogic, getReportContentType, hasValidContent } from '@/utils/reportTypeUtils';
+import { hasValidAstroData } from '@/utils/swissDataFormatter';
 import { MappedReport } from '@/types/mappedReport';
 
 interface ReportContentProps {
@@ -44,7 +45,7 @@ export const ReportContent = ({
   // Smart toggle visibility
   const showToggle = toggleLogic.showToggle && !externalActiveView;
 
-  // Check if data is still loading/incomplete - enhanced for sync reports
+  // Check if data is still loading/incomplete - fixed to handle string/object swissData
   const isDataLoading = () => {
     const contentType = getReportContentType({
       reportContent: mappedReport.reportContent,
@@ -53,28 +54,18 @@ export const ReportContent = ({
       hasReport: mappedReport.hasReport
     });
 
-    // For hybrid reports (sync reports), we need BOTH pieces of data
-    if (contentType === 'hybrid') {
-      const hasValidReportContent = mappedReport.reportContent && mappedReport.reportContent.trim().length > 0;
-      const hasValidSwissData = mappedReport.swissData && Object.keys(mappedReport.swissData).length > 0;
-      return !hasValidReportContent || !hasValidSwissData;
+    const validReport = hasValidContent(mappedReport.reportContent);
+    const validSwiss = hasValidAstroData(mappedReport.swissData);
+
+    switch (contentType) {
+      case 'hybrid':     return !(validReport && validSwiss);
+      case 'ai-only':    return !validReport;
+      case 'astro-only': return !validSwiss;
+      default:           return !(validReport || validSwiss);
     }
-    
-    // For AI-only reports, only check reportContent
-    if (contentType === 'ai-only') {
-      return !mappedReport.reportContent || mappedReport.reportContent.trim().length === 0;
-    }
-    
-    // For astro-only reports, only check swissData
-    if (contentType === 'astro-only') {
-      return !mappedReport.swissData || Object.keys(mappedReport.swissData).length === 0;
-    }
-    
-    // Default fallback: if we can't determine type, require both to be safe
-    return !mappedReport.reportContent || !mappedReport.swissData;
   };
 
-  // Render loading state with improved messaging
+  // Render loading state with improved messaging using validators
   const renderLoadingState = () => {
     const contentType = getReportContentType({
       reportContent: mappedReport.reportContent,
@@ -83,17 +74,20 @@ export const ReportContent = ({
       hasReport: mappedReport.hasReport
     });
 
+    const validReport = hasValidContent(mappedReport.reportContent);
+    const validSwiss = hasValidAstroData(mappedReport.swissData);
+
     let loadingMessage = "Preparing your report...";
     let subMessage = "Just one moment while we finalize your content";
 
     if (contentType === 'hybrid') {
-      if (!mappedReport.reportContent && !mappedReport.swissData) {
+      if (!validReport && !validSwiss) {
         loadingMessage = "Loading your complete report...";
         subMessage = "Preparing both AI analysis and astrology data";
-      } else if (!mappedReport.reportContent) {
+      } else if (!validReport) {
         loadingMessage = "Loading AI analysis...";
         subMessage = "Astrology data ready, finalizing AI insights";
-      } else if (!mappedReport.swissData) {
+      } else if (!validSwiss) {
         loadingMessage = "Loading astrology data...";
         subMessage = "AI analysis ready, finalizing astrology calculations";
       }
