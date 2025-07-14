@@ -12,7 +12,7 @@ interface ReportData {
     email: string;
     report_type: string | null;
     swiss_boolean: boolean | null; // Kept for legacy/reference but not used in final logic
-    has_report: boolean;
+    is_ai_report: boolean;
     payment_status: string;
     created_at: string;
     promo_code_used: string | null;
@@ -143,7 +143,7 @@ serve(async (req) => {
 
       if (!reportError) {
         reportContent = reportLog?.report_text || null;
-        console.log('[get-guest-report] Extracted AI report content from report_logs');
+        console.log('[get-guest-report] I have the report and i got it from report_text in report_logs table.');
       } else {
         console.error('[get-guest-report] Error fetching AI report:', reportError);
       }
@@ -162,7 +162,7 @@ serve(async (req) => {
         email: guestReport.email,
         report_type: guestReport.report_type,
         swiss_boolean: guestReport.swiss_boolean,
-        has_report: guestReport.has_report,
+        is_ai_report: guestReport.is_ai_report,
         payment_status: guestReport.payment_status,
         created_at: guestReport.created_at,
         promo_code_used: guestReport.promo_code_used,
