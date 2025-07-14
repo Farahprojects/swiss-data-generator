@@ -14,8 +14,17 @@ const SectionTitle: React.FC<{ children: string }> = ({ children }) => (
 );
 
 const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON, reportData }) => {
+  // Add debugging for Swiss data structure
+  console.log('🔍 AstroSnapshot received data:', {
+    hasRawSwissJSON: !!rawSwissJSON,
+    hasReportData: !!reportData,
+    swissDataType: typeof rawSwissJSON,
+    swissDataKeys: rawSwissJSON ? Object.keys(rawSwissJSON) : []
+  });
+
   // Add error handling for null/invalid data
   if (!rawSwissJSON) {
+    console.warn('⚠️ AstroSnapshot: No Swiss data provided');
     return (
       <div className="w-full max-w-md mx-auto font-sans text-[15px] leading-relaxed text-neutral-900">
         <div className="text-center mb-6">
@@ -30,6 +39,7 @@ const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON, reportData }) => {
   try {
     data = parseSwissDataRich(rawSwissJSON);
   } catch (error) {
+    console.error('❌ AstroSnapshot: Failed to parse Swiss data:', error);
     return (
       <div className="w-full max-w-md mx-auto font-sans text-[15px] leading-relaxed text-neutral-900">
         <div className="text-center mb-6">
@@ -47,6 +57,9 @@ const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON, reportData }) => {
   }
 
   // Show parsing errors if any
+  if (data.meta?.error) {
+    console.warn('⚠️ AstroSnapshot: Parser returned error:', data.meta.error);
+  }
   
   // Extract name and birth details from mapped report data
   const personName = reportData?.people?.A?.name || reportData?.customerName || reportData?.name || reportData?.firstName;

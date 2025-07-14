@@ -89,10 +89,26 @@ const enrichAspects = (arr: any[]): EnrichedAspect[] =>
   });
 
 export const parseSynastryRich = (raw: any): EnrichedSynastry => {
+  console.log('🔍 [parseSynastryRich] Full raw data:', raw);
+
   const meta = raw.meta ?? {};
   const transits = raw.transits ?? {};
   const pA = transits.person_a ?? raw.person_a ?? {};
   const pB = transits.person_b ?? raw.person_b ?? {};
+
+  console.log('🔍 [parseSynastryRich] Name fields check:', {
+    'meta.personAName': meta.personAName,
+    'raw.personAName': raw.personAName,
+    'raw.person_a_name': raw.person_a_name,
+    'raw.name': raw.name,
+    'meta.name': meta.name,
+    'meta.personBName': meta.personBName,
+    'raw.personBName': raw.personBName,
+    'raw.person_b_name': raw.person_b_name,
+    'raw.secondPersonName': raw.secondPersonName,
+    'meta.secondPersonName': meta.secondPersonName,
+    'raw.chartData': raw.chartData
+  });
 
   const personAName = raw.chartData?.person_a_name ||
                       meta.personAName ||
@@ -107,6 +123,8 @@ export const parseSynastryRich = (raw: any): EnrichedSynastry => {
                       raw.person_b_name ||
                       raw.secondPersonName ||
                       meta.secondPersonName;
+
+  console.log('🔍 [parseSynastryRich] Extracted names:', { personAName, personBName });
 
   return {
     meta: {

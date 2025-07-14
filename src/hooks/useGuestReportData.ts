@@ -11,10 +11,7 @@ export const useGuestReportData = (reportId: string | null) => {
         body: { id: reportId }
       });
       
-      if (error) {
-        throw error;
-      }
-      
+      if (error) throw error;
       return data;
     },
     enabled: !!reportId,
