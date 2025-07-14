@@ -89,7 +89,6 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   }), [promoValidation]);
 
   const onSubmit = async (data: ReportFormData) => {
-    localStorage.setItem('autoOpenModal', 'true');
     await submitReport(data, promoValidationState, resetValidation);
   };
 
