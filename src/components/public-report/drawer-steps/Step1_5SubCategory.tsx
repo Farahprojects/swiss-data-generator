@@ -105,6 +105,33 @@ const Step1_5SubCategory = ({ control, setValue, selectedCategory, selectedSubCa
     }
   }, []);
 
+  // Mirror desktop handleSubCategoryClick logic
+  const handleSubCategoryClick = (value: string, reportType: string, onChange: (v: any) => void) => {
+    onChange(value);
+    setValue?.('reportType', reportType, { shouldValidate: true });
+    
+    // Auto-advance to next step after selection with a small delay
+    setTimeout(() => {
+      onNext?.();
+    }, 600);
+  };
+
+  // Mirror desktop handleAstroDataClick logic
+  const handleAstroDataClick = (value: string, reportType: string, onChange: (v: any) => void) => {
+    onChange(value);
+
+    // For astro data, the request field IS the report type
+    setValue?.('request', value, { shouldValidate: true });
+    
+    // Clear reportType since astro data uses request field instead
+    setValue?.('reportType', '', { shouldValidate: true });
+    
+    // Auto-advance to next step after selection with a small delay
+    setTimeout(() => {
+      onNext?.();
+    }, 600);
+  };
+
   return (
     <motion.div
       ref={containerRef}
@@ -145,17 +172,25 @@ const Step1_5SubCategory = ({ control, setValue, selectedCategory, selectedSubCa
                   key={option.value}
                   type="button"
                   onClick={() => {
-                    field.onChange(option.value);
-                    
-                    // Use unified reportType setting logic (same as desktop)
+                    // Mirror desktop logic exactly based on category
                     if (selectedCategory === 'the-self' && 'essenceType' in option) {
-                      setValue('reportType', `essence_${option.essenceType}`);
+                      // For essence: set essenceType first, then combined reportType is set by useEffect in desktop
+                      field.onChange(option.value);
                       setValue('essenceType', option.essenceType);
+                      setValue('reportType', `essence_${option.essenceType}`, { shouldValidate: true });
                     } else if (selectedCategory === 'compatibility' && 'relationshipType' in option) {
-                      setValue('reportType', `sync_${option.relationshipType}`);
+                      // For relationships: set relationshipType first, then combined reportType is set by useEffect in desktop
+                      field.onChange(option.value);
                       setValue('relationshipType', option.relationshipType);
+                      setValue('reportType', `sync_${option.relationshipType}`, { shouldValidate: true });
                     } else if (selectedCategory === 'snapshot' && 'reportType' in option) {
-                      setValue('reportType', option.reportType);
+                      // For snapshots: set reportType directly
+                      handleSubCategoryClick(option.value, option.reportType, field.onChange);
+                      return;
+                    } else if (selectedCategory === 'astro-data' && 'reportType' in option) {
+                      // For astro-data: use request field, clear reportType
+                      handleAstroDataClick(option.value, option.reportType, field.onChange);
+                      return;
                     }
                     
                     // Auto-advance to next step after selection with a small delay

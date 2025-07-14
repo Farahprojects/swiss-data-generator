@@ -15,6 +15,27 @@ interface Step1ReportTypeProps {
 
 const Step1ReportType = ({ control, setValue, selectedCategory, onNext }: Step1ReportTypeProps) => {
 
+  // Mirror desktop handleCategoryClick logic
+  const handleCategoryClick = (
+    value: string,
+    reportType: string,
+    onChange: (v: any) => void,
+  ) => {
+    onChange(value);
+    // Mirror desktop logic: Do NOT set reportType for snapshot category here
+    if (value !== 'snapshot' && setValue) {
+      setValue('reportType', reportType, { shouldValidate: true });
+    } else {
+      // Clear reportType for categories that need sub-selection or don't use reportType
+      setValue('reportType', '', { shouldValidate: true });
+    }
+    
+    // Auto-advance to next step after selection with a small delay
+    setTimeout(() => {
+      onNext?.();
+    }, 600);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 50 }}
@@ -40,21 +61,7 @@ const Step1ReportType = ({ control, setValue, selectedCategory, onNext }: Step1R
                 <motion.button
                   key={category.value}
                   type="button"
-                  onClick={() => {
-                    field.onChange(category.value);
-                    // Only set reportType for non-astro-data categories
-                    if (category.value !== 'astro-data') {
-                      setValue('reportType', category.reportType);
-                    } else {
-                      // Clear reportType for astro-data since it uses request field
-                      setValue('reportType', '');
-                    }
-                    
-                    // Auto-advance to next step after selection with a small delay
-                    setTimeout(() => {
-                      onNext?.();
-                    }, 600);
-                  }}
+                  onClick={() => handleCategoryClick(category.value, category.reportType, field.onChange)}
                   className={`w-full p-6 rounded-3xl border transition-all duration-300 ease-out active:scale-95 min-h-[80px] ${
                     isSelected 
                       ? 'border-[hsl(var(--apple-blue))] bg-[hsl(var(--apple-blue))]/5 shadow-[var(--apple-shadow-lg)]' 

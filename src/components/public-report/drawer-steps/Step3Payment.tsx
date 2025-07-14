@@ -49,12 +49,14 @@ const Step3Payment = ({
 
   const { getReportPrice, getReportTitle, calculatePricing } = usePriceFetch();
 
+  // Mirror desktop PaymentStep pricing logic exactly
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');
   const reportType = watch('reportType');
   const essenceType = watch('essenceType');
   const relationshipType = watch('relationshipType');
   const requestField = watch('request');
+  const request = watch('request');
   const name = watch('name');
   const promoCode = watch('promoCode') || '';
 
@@ -68,9 +70,35 @@ const Step3Payment = ({
     }
   }, [errors.promoCode, scrollTo]);
 
-  const formData = { reportType, essenceType, relationshipType, reportCategory, reportSubCategory, request: requestField };
-  const basePrice = getReportPrice(formData);
-  const reportTitle = getReportTitle(formData);
+  // Get price and title using context with global fallback - EXACTLY like desktop
+  let basePrice: number | null = null;
+  let reportTitle = 'Personal Report';
+
+  try {
+    // Check for both reportType OR request field - EXACTLY like desktop
+    if (reportType || request) {
+      const formData = {
+        reportType,
+        essenceType,
+        relationshipType,
+        reportCategory,
+        reportSubCategory,
+        request: requestField
+      };
+      
+      basePrice = getReportPrice(formData);
+      reportTitle = getReportTitle(formData);
+    }
+  } catch (error) {
+    // Silently handle pricing errors - global fallback will handle missing prices
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('Pricing error (silenced for clean UI):', error);
+    }
+    
+    // Log error but don't throw - mirror desktop behavior
+  }
+
+  // Calculate pricing - global fallback will handle missing prices - EXACTLY like desktop
   const pricing = calculatePricing(basePrice || 0, promoValidation);
 
   const getPromoValidationIcon = () => {
@@ -110,20 +138,20 @@ const Step3Payment = ({
               <div className="space-y-4">
                 <div className="flex justify-between text-lg font-light text-gray-700">
                   <span>{reportTitle}</span>
-                  <span>${pricing?.basePrice?.toFixed(2)}</span>
+                  <span>${pricing.basePrice.toFixed(2)}</span>
                 </div>
-                {pricing?.discount > 0 && (
+                {pricing.discount > 0 && (
                   <div className="flex justify-between text-lg font-light text-green-600">
-                    <span>Discount ({pricing?.discountPercent}%)</span>
-                    <span>-${pricing?.discount?.toFixed(2)}</span>
+                    <span>Discount ({pricing.discountPercent}%)</span>
+                    <span>-${pricing.discount.toFixed(2)}</span>
                   </div>
                 )}
               </div>
               <hr className="border-gray-200" />
               <div className="flex justify-between text-2xl font-light">
                 <span>Total</span>
-                <span className={pricing?.isFree ? 'text-green-600' : 'text-gray-900'}>
-                  {pricing?.isFree ? 'FREE' : `$${pricing?.finalPrice?.toFixed(2)}`}
+                <span className={pricing.isFree ? 'text-green-600' : 'text-gray-900'}>
+                  {pricing.isFree ? 'FREE' : `$${pricing.finalPrice.toFixed(2)}`}
                 </span>
               </div>
             </div>
@@ -195,7 +223,7 @@ const Step3Payment = ({
           <div className="px-6 pb-6">
             <p className="text-sm text-gray-500 text-center font-light">
               Your report will be delivered to your email within minutes.
-              {!pricing?.isFree && ' Secure payment processed by Stripe.'}
+              {!pricing.isFree && ' Secure payment processed by Stripe.'}
             </p>
           </div>
         </div>
