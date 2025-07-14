@@ -83,10 +83,19 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
     });
   };
 
-  const handleViewReport = (mappedReportData: MappedReport) => {
-    setMappedReport(mappedReportData);
-    setViewingReport(true);
-    setCurrentView('report');
+  const handleViewReport = () => {
+    if (guestReportData) {
+      const rawPayload = {
+        guest_report: guestReportData,
+        report_content: guestReportData.report_content,
+        swiss_data: guestReportData.swiss_data,
+        metadata: guestReportData.metadata
+      };
+      const mappedReportData = mapReportPayload(rawPayload);
+      setMappedReport(mappedReportData);
+      setViewingReport(true);
+      setCurrentView('report');
+    }
   };
 
   const resetDrawer = () => {
