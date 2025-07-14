@@ -35,11 +35,18 @@ const hasValidContent = (content?: string): boolean => {
  */
 const hasValidAstroData = (swissData?: any): boolean => {
   if (!swissData) return false;
-  if (typeof swissData === 'string' && swissData.length < 100) return false;
+  
+  // For objects, just check if they exist and don't contain errors
   if (typeof swissData === 'object') {
     const dataStr = JSON.stringify(swissData);
-    return dataStr.length > 100 && !dataStr.toLowerCase().includes('error');
+    return dataStr.length > 10 && !dataStr.toLowerCase().includes('error');
   }
+  
+  // For strings, be less restrictive
+  if (typeof swissData === 'string') {
+    return swissData.length > 10 && !swissData.toLowerCase().includes('error');
+  }
+  
   return true;
 };
 
@@ -49,7 +56,16 @@ const hasValidAstroData = (swissData?: any): boolean => {
 export const getReportContentType = (data: ReportDetectionData): ReportContentType => {
   const hasValidReport = hasValidContent(data.reportContent);
   const hasValidAstro = hasValidAstroData(data.swissData);
+  
+  // For essence and sync reports, prioritize astro data if it exists
+  if (data.reportType && ['essence', 'sync'].includes(data.reportType.toLowerCase())) {
+    if (hasValidAstro && hasValidReport) return 'hybrid';
+    if (hasValidAstro) return 'astro-only';
+    if (hasValidReport) return 'ai-only';
+    return 'empty';
+  }
 
+  // Default logic for other report types
   if (hasValidReport && hasValidAstro) return 'hybrid';
   if (hasValidAstro && !hasValidReport) return 'astro-only';
   if (hasValidReport && !hasValidAstro) return 'ai-only';
