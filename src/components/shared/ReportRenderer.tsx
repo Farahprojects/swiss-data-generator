@@ -8,7 +8,13 @@ interface ReportRendererProps {
 }
 
 export const ReportRenderer: React.FC<ReportRendererProps> = ({ content, className = '' }) => {
+  console.log('🔍 ReportRenderer - Raw content received:', content);
+  console.log('🔍 ReportRenderer - Content type:', typeof content);
+  console.log('🔍 ReportRenderer - Content length:', content?.length);
+  
   const blocks = ReportParser.parseReport(content);
+  console.log('🔍 ReportRenderer - Parsed blocks:', blocks);
+  console.log('🔍 ReportRenderer - Number of blocks:', blocks.length);
 
   const renderBlock = (block: ParsedBlock, index: number) => {
     switch (block.type) {

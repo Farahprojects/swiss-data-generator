@@ -6,7 +6,8 @@ export interface ParsedBlock {
 
 export class ReportParser {
   static cleanContent(content: string): string {
-    return content
+    console.log('🔍 ReportParser - Original content:', content);
+    const cleaned = content
       .replace(/<[^>]*>/g, '')
       .replace(/\*\*(.*?)\*\*/g, '$1')
       .replace(/\*(.*?)\*/g, '$1')
@@ -17,10 +18,13 @@ export class ReportParser {
       .replace(/[",]\s*"?reporterror"?\s*:\s*"[^"]*"/gi, '')
       .replace(/Failed to generate \w+ report: [^}]*/gi, '')
       .trim();
+    console.log('🔍 ReportParser - Cleaned content:', cleaned);
+    return cleaned;
   }
 
   static processBlocks(content: string): ParsedBlock[] {
     const lines = content.split(/\r?\n/); // PRESERVE blank lines
+    console.log('🔍 ReportParser - Split lines:', lines);
     const out: ParsedBlock[] = [];
 
     lines.forEach(raw => {

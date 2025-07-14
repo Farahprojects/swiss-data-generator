@@ -43,6 +43,11 @@ export const ReportContent = ({
   // Smart toggle visibility
   const showToggle = toggleLogic.showToggle && !externalActiveView;
 
+  // Debug logs
+  console.log('🔍 ReportContent - mappedReport.reportContent:', mappedReport.reportContent);
+  console.log('🔍 ReportContent - activeView:', activeView);
+  console.log('🔍 ReportContent - mappedReport full:', mappedReport);
+
   // Mobile-first rendering without containers - header handled by parent
   if (isMobile) {
     return (
