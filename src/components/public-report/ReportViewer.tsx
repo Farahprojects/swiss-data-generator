@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Download, Copy, ArrowLeft, X, Paperclip } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -23,26 +23,14 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
   const [showChatGPTConfirm, setShowChatGPTConfirm] = useState(false);
   const [isCopping, setIsCopping] = useState(false);
 
-  // Gate rendering with isReady - ensure both reportContent and swissData are present before rendering
-  const isReady = useMemo(() => {
-    const hasRequiredAiContent = mappedReport.hasReport && mappedReport.reportContent && mappedReport.reportContent.trim().length > 20;
-    const hasRequiredSwissData = mappedReport.swissBoolean && mappedReport.swissData;
-    
-    // Must have at least one of the required data types based on flags
-    return hasRequiredAiContent || hasRequiredSwissData;
-  }, [mappedReport.hasReport, mappedReport.reportContent, mappedReport.swissBoolean, mappedReport.swissData]);
-
-  // Memoize toggleLogic - avoid recalculating on every render
-  const toggleLogic = useMemo(() => {
-    const reportAnalysisData = { 
-      reportContent: mappedReport.reportContent, 
-      swissData: mappedReport.swissData, 
-      swissBoolean: mappedReport.swissBoolean, 
-      hasReport: mappedReport.hasReport 
-    };
-    return getToggleDisplayLogic(reportAnalysisData);
-  }, [mappedReport.reportContent, mappedReport.swissData, mappedReport.swissBoolean, mappedReport.hasReport]);
-
+  // Use intelligent content detection
+  const reportAnalysisData = { 
+    reportContent: mappedReport.reportContent, 
+    swissData: mappedReport.swissData, 
+    swissBoolean: mappedReport.swissBoolean, 
+    hasReport: mappedReport.hasReport 
+  };
+  const toggleLogic = getToggleDisplayLogic(reportAnalysisData);
   const [activeView, setActiveView] = useState<'report' | 'astro'>(toggleLogic.defaultView);
 
   // Enforce content-based view restrictions
@@ -288,22 +276,12 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
           <h1 className="text-xl font-light text-gray-900 mb-4">
             {toggleLogic.title} — Generated for {mappedReport.customerName}
           </h1>
-          {/* Defer ReportContent render - wait until data is ready */}
-          {isReady ? (
-            <ReportContent 
-              mappedReport={mappedReport}
-              activeView={activeView}
-              setActiveView={setActiveView}
-              isMobile
-            />
-          ) : (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-center space-y-3">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-                <p className="text-gray-600 font-light">Preparing your report...</p>
-              </div>
-            </div>
-          )}
+          <ReportContent 
+            mappedReport={mappedReport}
+            activeView={activeView}
+            setActiveView={setActiveView}
+            isMobile
+          />
         </div>
 
         {/* Footer with 2 buttons */}
@@ -480,21 +458,11 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
         </div>
       </div>
 
-      {/* Defer ReportContent render - wait until data is ready */}
-      {isReady ? (
-        <ReportContent 
-          mappedReport={mappedReport}
-          activeView={activeView} 
-          setActiveView={setActiveView}
-        />
-      ) : (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center space-y-3">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-            <p className="text-gray-600 font-light">Preparing your report...</p>
-          </div>
-        </div>
-      )}
+      <ReportContent 
+        mappedReport={mappedReport}
+        activeView={activeView} 
+        setActiveView={setActiveView}
+      />
     </motion.div>
   );
 };
