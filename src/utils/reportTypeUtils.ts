@@ -2,8 +2,6 @@
  * Utility functions for interpreting report types and handling Astro-only views
  */
 
-import { getReportMeta } from '@/constants/report-types';
-
 export interface ReportDetectionData {
   reportContent?: string;
   swissData?: any;
@@ -35,13 +33,12 @@ export const getReportContentType = (data: ReportDetectionData): ReportContentTy
 };
 
 /**
- * Simple toggle display logic - show toggle only if both report and astro data exist
+ * Determines toggle logic and default view based on available data
  */
 export const getToggleDisplayLogic = (data: ReportDetectionData): ToggleDisplayLogic => {
   const hasReportContent = !!data.reportContent && data.reportContent.trim().length > 0;
   const hasSwissData = !!data.swissData;
   
-  // Simple rule: show toggle only if we have BOTH types of data
   if (hasReportContent && hasSwissData) {
     return {
       showToggle: true,
@@ -51,7 +48,6 @@ export const getToggleDisplayLogic = (data: ReportDetectionData): ToggleDisplayL
     };
   }
 
-  // If only report content, show report only
   if (hasReportContent) {
     return {
       showToggle: false,
@@ -61,35 +57,10 @@ export const getToggleDisplayLogic = (data: ReportDetectionData): ToggleDisplayL
     };
   }
 
-  // If only astro data, show astro only
   return {
     showToggle: false,
     defaultView: 'astro',
     title: 'Your Astro Data',
     availableViews: ['astro']
   };
-};
-
-/**
- * Legacy function - determines if this report is Astro-only (Swiss) based on type
- */
-export const isSwissOnlyReport = (data: ReportDetectionData): boolean => {
-  const meta = getReportMeta(data.reportType || '');
-  return meta.isAstroOnly;
-};
-
-/**
- * Smart toggle visibility - uses actual content detection
- */
-export const shouldHideToggle = (data: ReportDetectionData): boolean => {
-  const logic = getToggleDisplayLogic(data);
-  return !logic.showToggle;
-};
-
-/**
- * Smart default view selection - uses actual content detection
- */
-export const getDefaultView = (data: ReportDetectionData): 'report' | 'astro' => {
-  const logic = getToggleDisplayLogic(data);
-  return logic.defaultView;
 };
