@@ -12,6 +12,7 @@ interface Step1_5SubCategoryProps {
   setValue: UseFormSetValue<ReportFormData>;
   selectedCategory: string;
   selectedSubCategory: string;
+  onNext?: () => void;
 }
 
 const subCategoryOptions = {
@@ -92,7 +93,7 @@ const getHeadingText = (category: string) => {
   }
 };
 
-const Step1_5SubCategory = ({ control, setValue, selectedCategory, selectedSubCategory }: Step1_5SubCategoryProps) => {
+const Step1_5SubCategory = ({ control, setValue, selectedCategory, selectedSubCategory, onNext }: Step1_5SubCategoryProps) => {
   const { getReportPrice } = usePriceFetch();
   const options = subCategoryOptions[selectedCategory as keyof typeof subCategoryOptions] || [];
   const containerRef = useRef<HTMLDivElement>(null);
@@ -114,7 +115,7 @@ const Step1_5SubCategory = ({ control, setValue, selectedCategory, selectedSubCa
       className="space-y-6 pt-6"
     >
       <div className="text-center space-y-2">
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground">{getHeadingText(selectedCategory)}</h2>
+        <h2 className="text-2xl font-light tracking-tight text-[hsl(var(--apple-gray-dark))]">{getHeadingText(selectedCategory)}</h2>
       </div>
 
       <Controller
@@ -156,28 +157,49 @@ const Step1_5SubCategory = ({ control, setValue, selectedCategory, selectedSubCa
                     } else if (selectedCategory === 'snapshot' && 'reportType' in option) {
                       setValue('reportType', option.reportType);
                     }
+                    
+                    // Auto-advance to next step after selection with a small delay
+                    setTimeout(() => {
+                      onNext?.();
+                    }, 600);
                   }}
-                  className={`w-full p-6 rounded-2xl border transition-all duration-200 shadow-md bg-background/60 backdrop-blur-sm hover:shadow-lg active:scale-[0.98] ${
+                  className={`w-full p-6 rounded-3xl border transition-all duration-300 ease-out active:scale-95 min-h-[80px] ${
                     isSelected 
-                      ? 'border-primary shadow-lg' 
-                      : 'border-border hover:border-muted-foreground'
+                      ? 'border-[hsl(var(--apple-blue))] bg-[hsl(var(--apple-blue))]/5 shadow-[var(--apple-shadow-lg)]' 
+                      : 'border-[hsl(var(--apple-gray-light))] bg-white hover:bg-gray-50 hover:border-[hsl(var(--apple-gray))] shadow-[var(--apple-shadow-sm)]'
                   }`}
-                  whileTap={{ scale: 0.98 }}
+                  whileTap={{ scale: 0.95 }}
                 >
                   <div className="flex gap-4 items-center">
-                    <div className="bg-background shadow-inner w-12 h-12 flex items-center justify-center rounded-full">
-                      <IconComponent className="h-6 w-6 text-gray-700" />
+                    <div className={`w-14 h-14 flex items-center justify-center rounded-full transition-all duration-300 ${
+                      isSelected 
+                        ? 'bg-[hsl(var(--apple-blue))] shadow-[var(--apple-shadow-md)]' 
+                        : 'bg-white shadow-[var(--apple-shadow-sm)]'
+                    }`}>
+                      <IconComponent className={`h-7 w-7 transition-colors duration-300 ${
+                        isSelected 
+                          ? 'text-white' 
+                          : 'text-[hsl(var(--apple-gray-dark))]'
+                      }`} />
                     </div>
                     <div className="flex-1 text-left">
                       <div className="flex justify-between items-start mb-1">
-                        <h3 className="text-lg font-semibold text-foreground">{option.title}</h3>
+                        <h3 className={`text-lg font-medium transition-colors duration-300 ${
+                          isSelected 
+                            ? 'text-[hsl(var(--apple-blue))]' 
+                            : 'text-[hsl(var(--apple-gray-dark))]'
+                        }`}>{option.title}</h3>
                         {reportType && (
-                          <span className="text-sm font-bold text-primary">
+                          <span className={`text-sm font-semibold transition-colors duration-300 ${
+                            isSelected 
+                              ? 'text-[hsl(var(--apple-blue))]' 
+                              : 'text-[hsl(var(--apple-gray-dark))]'
+                          }`}>
                             {formatPrice(price)}
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground">{option.description}</p>
+                      <p className="text-sm text-[hsl(var(--apple-gray))] font-light leading-relaxed">{option.description}</p>
                     </div>
                   </div>
                 </motion.button>

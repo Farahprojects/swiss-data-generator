@@ -195,8 +195,8 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                       return <Step1ReportType control={control} setValue={setValue} selectedCategory={reportCategory} onNext={handleNext} />;
                     case 2:
                       return reportCategory === 'astro-data'
-                        ? <Step1_5AstroData control={control} setValue={setValue} selectedSubCategory={request} />
-                        : <Step1_5SubCategory control={control} setValue={setValue} selectedCategory={reportCategory} selectedSubCategory={reportSubCategory} />;
+                        ? <Step1_5AstroData control={control} setValue={setValue} selectedSubCategory={request} onNext={handleNext} />
+                        : <Step1_5SubCategory control={control} setValue={setValue} selectedCategory={reportCategory} selectedSubCategory={reportSubCategory} onNext={handleNext} />;
                     case 3:
                       return <Step2BirthDetails register={register} setValue={setValue} watch={watch} errors={errors} />;
                     case 4:
