@@ -121,20 +121,10 @@ serve(async (req) => {
     const isAstroReport = !!swissData;
     const isAiReport = guestReport.is_ai_report && !!guestReport.report_log_id;
 
-    // Extract content based on report type
-    if (isEssenceOrSyncReport && swissData?.report?.content) {
-      // [EXTRACTION-POINT-1] Extracting report from contaminated swiss_data
-      console.log('[get-guest-report] [EXTRACTION-POINT-1] Extracting report from contaminated swiss_data - Line 122');
-      console.log('[get-guest-report] [EXTRACTION-POINT-1] Swiss data structure:', {
-        hasReport: !!swissData.report,
-        reportKeys: swissData.report ? Object.keys(swissData.report) : [],
-        swissDataKeys: Object.keys(swissData)
-      });
-      // For astro reports (essence/sync), extract from swiss_data.report.content
-      reportContent = swissData.report.content;
-      console.log('[get-guest-report] Extracted astro report content from swiss_data');
-    } else if (isAiReport) {
-      // For AI reports, fetch from report_logs
+    // Extract content based on report type - prioritize AI reports from report_logs
+    if (isAiReport) {
+      // [CONTAMINATION-FIX] For AI reports, always fetch from report_logs (swiss_data is now pure)
+      console.log('[get-guest-report] [CONTAMINATION-FIX] Fetching AI report from report_logs table');
       const { data: reportLog, error: reportError } = await supabase
         .from('report_logs')
         .select('report_text')
@@ -143,10 +133,14 @@ serve(async (req) => {
 
       if (!reportError) {
         reportContent = reportLog?.report_text || null;
-        console.log('[get-guest-report] I have the report and i got it from report_text in report_logs table.');
+        console.log('[get-guest-report] [CONTAMINATION-FIX] Successfully fetched AI report from report_logs');
       } else {
         console.error('[get-guest-report] Error fetching AI report:', reportError);
       }
+    } else if (isEssenceOrSyncReport && swissData?.report?.content) {
+      // [LEGACY] This should not happen anymore since swiss_data is pure
+      console.log('[get-guest-report] [LEGACY] Warning: Found report content in swiss_data (should be pure now)');
+      reportContent = swissData.report.content;
     }
 
     const isAstroOnly = isAstroReport && !isAiReport;
