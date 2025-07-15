@@ -26,9 +26,8 @@ serve(async (req) => {
   }
 
   try {
-    const url = new URL(req.url);
-    const uuid = url.searchParams.get('uuid');
-    let token = url.searchParams.get('token'); // MAY be missing
+    const { uuid, token: providedToken } = await req.json();
+    let token = providedToken; // MAY be missing
 
     if (!uuid) {
       return new Response(JSON.stringify({ error: 'UUID is required' }), {
