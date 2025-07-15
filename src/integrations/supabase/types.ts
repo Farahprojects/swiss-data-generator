@@ -14,36 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      admin_logs: {
-        Row: {
-          created_at: string | null
-          event_type: string
-          id: string
-          logs: string | null
-          meta: Json | null
-          page: string
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          event_type: string
-          id?: string
-          logs?: string | null
-          meta?: Json | null
-          page: string
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          event_type?: string
-          id?: string
-          logs?: string | null
-          meta?: Json | null
-          page?: string
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       api_keys: {
         Row: {
           api_key: string
@@ -1789,16 +1759,6 @@ export type Database = {
       rpc_notify_orchestrator: {
         Args: { guest_report_id: string }
         Returns: undefined
-      }
-      rpc_parse_and_update_report: {
-        Args: {
-          raw_data: Json
-          target_table: string
-          target_id: string
-          target_field: string
-          parse_type?: string
-        }
-        Returns: boolean
       }
       send_notification_email: {
         Args: {
