@@ -132,16 +132,37 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
 
   const handleCopyToClipboard = async () => {
     try {
-      let textToCopy: string;
+      const hasPdfData = !!mappedReport.pdfData;
+      const hasSwissData = !!mappedReport.swissData;
+      const hasReportContent = !!mappedReport.reportContent && mappedReport.reportContent.trim().length > 20;
       
-      if (activeView === 'astro' && mappedReport.swissData) {
-        // Copy astro data as formatted text
-        textToCopy = extractAstroDataAsText(mappedReport.swissData, mappedReport);
-      } else {
-        // Copy report content
+      let textToCopy: string;
+      let contentDescription: string;
+      
+      if ((hasPdfData && hasSwissData) || (hasReportContent && hasSwissData)) {
+        // Both exist - copy unified content (same as unified PDF)
+        const reportText = mappedReport.reportContent ? (() => {
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = mappedReport.reportContent;
+          return tempDiv.textContent || tempDiv.innerText || '';
+        })() : '';
+        
+        const astroText = extractAstroDataAsText(mappedReport.swissData, mappedReport);
+        
+        textToCopy = `${reportText}\n\n--- ASTRO DATA ---\n\n${astroText}`;
+        contentDescription = 'report and astro data';
+      } else if (hasReportContent) {
+        // Only report content
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = mappedReport.reportContent;
         textToCopy = tempDiv.textContent || tempDiv.innerText || '';
+        contentDescription = 'report';
+      } else if (hasSwissData) {
+        // Only astro data
+        textToCopy = extractAstroDataAsText(mappedReport.swissData, mappedReport);
+        contentDescription = 'astro data';
+      } else {
+        throw new Error('No content available to copy');
       }
       
       await navigator.clipboard.writeText(textToCopy);
@@ -149,7 +170,7 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
       
       toast({
         title: "Copied to clipboard!",
-        description: `Your ${activeView === 'astro' ? 'astro data' : 'report'} has been copied and is ready to paste anywhere.`,
+        description: `Your ${contentDescription} has been copied and is ready to paste anywhere.`,
         variant: "success"
       });
     } catch (error) {
