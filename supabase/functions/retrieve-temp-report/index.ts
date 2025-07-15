@@ -48,29 +48,41 @@ serve(async req => {
     }
 
     /* -------- TOKEN FLOW -------- */
-    if (!data.token_hash && !token) {
-      // first‑time request → create token
-      const newToken = genToken();
-      await supabase.from("temp_report_data")
-        .update({ token_hash: await sha256(newToken) })
-        .eq("id", uuid);
+if (!token) {
+  // Always generate a fresh token when the caller has none
+  const newToken = genToken();
+  const newHash  = await sha256(newToken);
 
-      return new Response(JSON.stringify({ uuid, token: newToken, first_time: true }), {
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
-    }
+  await supabase.from("temp_report_data")
+    .update({ token_hash: newHash })
+    .eq("id", uuid);
 
-    if (!token) {
-      return new Response(JSON.stringify({ error: "Token required" }), {
-        status: 401, headers: { ...cors, "Content-Type": "application/json" },
-      });
-    }
+  return new Response(
+    JSON.stringify({ uuid, token: newToken, first_time: true }),
+    { headers: { ...cors, "Content-Type": "application/json" } },
+  );
+}
 
-    if (await sha256(token) !== data.token_hash) {
-      return new Response(JSON.stringify({ error: "Invalid token" }), {
-        status: 403, headers: { ...cors, "Content-Type": "application/json" },
-      });
-    }
+/* from here on we have a token, so validate it */
+if (await sha256(token) !== data.token_hash) {
+  return new Response(JSON.stringify({ error: "Invalid token" }), {
+    status: 403, headers: { ...cors, "Content-Type": "application/json" },
+  });
+}
+
+/* -------- SUCCESS -------- */
+return new Response(
+  JSON.stringify({
+    report_content: data.report_content,
+    swiss_data: data.swiss_data,
+    metadata: data.metadata,
+    uuid,
+    token,
+    chat_hash: data.chat_hash,
+    success: true,
+  }),
+  { headers: { ...cors, "Content-Type": "application/json" } },
+);
 
     /* -------- SUCCESS -------- */
     return new Response(JSON.stringify({
