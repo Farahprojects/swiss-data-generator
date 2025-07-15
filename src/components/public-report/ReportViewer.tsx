@@ -165,68 +165,59 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
   const handleChatGPTCopyAndGo = async () => {
     try {
       setIsCopping(true);
-      
+
       toast({
         title: "Preparing ChatGPT...",
-        description: "Fetching secure access token...",
+        description: "Fetching secure access token…",
       });
 
-      // Get the guest report ID from the URL
+      /* 1. look up UUID from temp_report_data */
       const guestReportId = getGuestReportId();
-      if (!guestReportId) {
-        throw new Error('Guest report ID not found');
-      }
+      if (!guestReportId) throw new Error("Guest report ID not found");
 
-      // Query temp_report_data to get existing UUID using guest_report_id
-      const { data: tempData, error: tempError } = await supabase
-        .from('temp_report_data')
-        .select('id')
-        .eq('guest_report_id', guestReportId)
+      const { data: tempRow, error } = await supabase
+        .from("temp_report_data")
+        .select("id")
+        .eq("guest_report_id", guestReportId)
         .single();
 
-      if (tempError || !tempData) {
-        throw new Error('Report data not found in temporary storage');
-      }
+      if (error || !tempRow) throw new Error("Report row not found");
+      const uuid = tempRow.id;
 
-      const uuid = tempData.id;
-
-      // Call retrieve-temp-report to generate/get token using direct fetch
-      const response = await fetch('https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/retrieve-temp-report', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      /* 2. call edge function → get token (or existing token) */
+      const res = await fetch(
+        "https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/retrieve-temp-report",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ uuid }),
         },
-        body: JSON.stringify({ uuid }),
-      });
+      );
+      if (!res.ok) throw new Error("Edge function returned " + res.status);
+      const { token } = await res.json();
 
-      if (!response.ok) {
-        throw new Error('Failed to generate access token');
-      }
-
-      const result = await response.json();
-      const { token } = result;
-      
       toast({
         title: "Opening ChatGPT...",
         description: "Secure access ready!",
       });
-      
+
+      /* 3. build ?message= param */
+      const message = encodeURIComponent(`uuid: ${uuid}\ntoken: ${token}`);
+      const gptUrl =
+        `https://chatgpt.com/g/g-68636dbe19588191b04b0a60bcbf3df3-therai?message=${message}`;
+
       setTimeout(() => {
-        // Open ChatGPT with the correct UUID and token parameters
-        window.open(`https://chatgpt.com/g/g-68636dbe19588191b04b0a60bcbf3df3-therai?uuid=${uuid}&token=${token}`, '_blank');
+        window.open(gptUrl, "_blank");
         setShowChatGPTConfirm(false);
         setIsCopping(false);
-      }, 1500);
-      
-    } catch (error) {
-      console.error('Failed to prepare ChatGPT integration:', error);
-      
+      }, 1200);
+    } catch (err) {
+      console.error("ChatGPT setup failed:", err);
       toast({
         title: "ChatGPT integration failed",
-        description: "Please try again",
+        description: "Please try again.",
         variant: "destructive",
       });
-      
       setIsCopping(false);
       setShowChatGPTConfirm(false);
     }
