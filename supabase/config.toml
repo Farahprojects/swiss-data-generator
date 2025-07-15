@@ -75,8 +75,6 @@ verify_jwt = false
 [functions.verify-guest-payment]
 verify_jwt = false
 
-[functions.store-temp-report]
-verify_jwt = false
 
 [functions.retrieve-temp-report]
 verify_jwt = false
