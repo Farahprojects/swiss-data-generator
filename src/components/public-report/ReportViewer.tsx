@@ -25,6 +25,7 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
   const [showChatGPTConfirm, setShowChatGPTConfirm] = useState(false);
   const [isCopping, setIsCopping] = useState(false);
   const [chatToken, setChatToken] = useState<string | null>(null);
+  const [cachedUuid, setCachedUuid] = useState<string | null>(null);
 
   // Use intelligent content detection
   const reportAnalysisData = { 
@@ -164,6 +165,14 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
   };
 
   const handleChatGPTCopyAndGo = async () => {
+    // Production-grade fix: If token is cached, immediately open ChatGPT
+    if (chatToken && cachedUuid) {
+      const message = encodeURIComponent(`uuid: ${cachedUuid}\ntoken: ${chatToken}`);
+      window.open(`https://chatgpt.com/g/g-68636dbe19588191b04b0a60bcbf3df3-therai?message=${message}`, '_blank');
+      setShowChatGPTConfirm(false);
+      return;
+    }
+
     try {
       setIsCopping(true);
 
@@ -185,30 +194,21 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
       if (error || !tempRow) throw new Error("Report row not found");
       const uuid = tempRow.id;
 
-      /* 2. call edge function → get token (or existing token) */
-      // Log token usage for debugging
-      if (chatToken) {
-        console.log("🔄 Using cached token for ChatGPT request");
-      } else {
-        console.log("🆕 Requesting new token from edge function");
-      }
-
+      /* 2. call edge function → get token */
       const res = await fetch(
         "https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/retrieve-temp-report",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(chatToken ? { uuid, token: chatToken } : { uuid }),
+          body: JSON.stringify({ uuid }),
         },
       );
       if (!res.ok) throw new Error("Edge function returned " + res.status);
       const { token } = await res.json();
       
-      // Cache the token for subsequent calls
-      if (!chatToken) {
-        setChatToken(token);
-        console.log("💾 Token saved to React state:", token.substring(0, 8) + "...");
-      }
+      // Cache both token and uuid for subsequent calls
+      setChatToken(token);
+      setCachedUuid(uuid);
 
       toast({
         title: "Opening ChatGPT...",
@@ -291,9 +291,13 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
           <Button variant="ghost" onClick={handleCopyToClipboard} className="text-gray-700 text-base font-medium hover:text-black transition-colors active:scale-95">
             <Paperclip className="h-5 w-5 mr-1" /> Copy
           </Button>
-          <Button variant="ghost" onClick={handleChatGPT} className="text-gray-700 text-base font-medium hover:text-black transition-colors active:scale-95">
+          <a
+            href="#"
+            onClick={(e) => { e.preventDefault(); handleChatGPT(); }}
+            className="text-gray-700 text-base font-medium hover:text-black transition-colors active:scale-95 flex items-center"
+          >
             <img src={openaiLogo} alt="ChatGPT" className="h-5 w-5 mr-1" /> GPT
-          </Button>
+          </a>
         </div>
       </div>
     );
@@ -387,13 +391,10 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
                   PDF
                 </Button>
               )}
-              <Button
-                size="sm"
-                onClick={handleChatGPT}
-                onMouseDown={handleChatGPT}
-                tabIndex={0}
-                style={{ pointerEvents: 'auto', cursor: 'pointer', position: 'relative', zIndex: 10 }}
-                className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 shadow-sm hover:shadow-md font-inter transition-all duration-200 pointer-events-auto !cursor-pointer"
+              <a
+                href="#"
+                onClick={(e) => { e.preventDefault(); handleChatGPT(); }}
+                className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 shadow-sm hover:shadow-md font-inter transition-all duration-200 px-3 py-2 rounded-md text-sm font-medium"
               >
                 <img 
                   src="/lovable-uploads/a27cf867-e7a3-4d2f-af1e-16aaa70117e4.png" 
@@ -404,7 +405,7 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
                   }}
                 />
                 <span className="font-medium">ChatGPT</span>
-              </Button>
+              </a>
               <Button
                 variant="ghost"
                 size="sm"
