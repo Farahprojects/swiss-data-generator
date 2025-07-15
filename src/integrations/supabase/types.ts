@@ -1212,28 +1212,34 @@ export type Database = {
       }
       temp_report_data: {
         Row: {
+          chat_hash: string | null
           created_at: string | null
           expires_at: string | null
           id: string
           metadata: Json | null
           report_content: string | null
           swiss_data: Json | null
+          token_hash: string | null
         }
         Insert: {
+          chat_hash?: string | null
           created_at?: string | null
           expires_at?: string | null
           id?: string
           metadata?: Json | null
           report_content?: string | null
           swiss_data?: Json | null
+          token_hash?: string | null
         }
         Update: {
+          chat_hash?: string | null
           created_at?: string | null
           expires_at?: string | null
           id?: string
           metadata?: Json | null
           report_content?: string | null
           swiss_data?: Json | null
+          token_hash?: string | null
         }
         Relationships: []
       }
