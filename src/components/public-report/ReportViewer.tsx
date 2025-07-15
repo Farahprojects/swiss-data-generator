@@ -24,6 +24,7 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
   const { toast } = useToast();
   const [isCopyCompleted, setIsCopyCompleted] = useState(false);
   const [showChatGPTConfirm, setShowChatGPTConfirm] = useState(false);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [isCopping, setIsCopping] = useState(false);
   const [chatToken, setChatToken] = useState<string | null>(null);
   const [cachedUuid, setCachedUuid] = useState<string | null>(null);
@@ -165,6 +166,15 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
     setShowChatGPTConfirm(true);
   };
 
+  const handleCloseSession = () => {
+    setShowCloseConfirm(true);
+  };
+
+  const confirmCloseSession = () => {
+    setShowCloseConfirm(false);
+    onBack();
+  };
+
   const handleChatGPTCopyAndGo = async () => {
     try {
       setIsCopping(true);
@@ -253,7 +263,7 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
       <div className="fixed inset-0 bg-white z-50 flex flex-col">
         {/* Unified Header */}
         <div className="flex items-center justify-between px-4 py-4 border-b bg-white shadow-sm">
-          <Button variant="ghost" size="icon" onClick={onBack} className="p-2 hover:bg-gray-100 transition-colors active:scale-95">
+          <Button variant="ghost" size="icon" onClick={handleCloseSession} className="p-2 hover:bg-gray-100 transition-colors active:scale-95">
             <X className="h-6 w-6 text-gray-700" />
           </Button>
           {toggleLogic.showToggle && (
@@ -337,18 +347,6 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onBack}
-                onMouseDown={onBack}
-                tabIndex={0}
-                style={{ pointerEvents: 'auto', cursor: 'pointer', position: 'relative', zIndex: 10 }}
-                className="flex items-center gap-2 cursor-pointer pointer-events-auto !cursor-pointer"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                <span>Back to Form</span>
-              </Button>
               {toggleLogic.showToggle && (
                 <div className="flex bg-gray-100 rounded-lg p-1">
                   <button
@@ -374,15 +372,12 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleCopyToClipboard}
-                onMouseDown={handleCopyToClipboard}
-                tabIndex={0}
-                style={{ pointerEvents: 'auto', cursor: 'pointer', position: 'relative', zIndex: 10 }}
-                className="flex items-center gap-2 pointer-events-auto !cursor-pointer"
+                className="flex items-center gap-2 bg-white border border-gray-200 text-gray-900 hover:bg-gray-50 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 rounded-lg h-9 px-4 font-medium"
               >
                 <Copy className="h-4 w-4" />
                 Copy
@@ -393,18 +388,16 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
                   size="sm"
                   onClick={() => {
                     if (mappedReport.pdfData && mappedReport.swissData) {
-                      handleDownloadUnifiedPdf(); // Combined version
+                      handleDownloadUnifiedPdf();
                     } else if (mappedReport.pdfData) {
                       handleDownloadPdf();
                     } else if (mappedReport.swissData) {
                       handleDownloadUnifiedPdf();
                     } else if (mappedReport.reportContent && mappedReport.reportContent.trim().length > 20) {
-                      handleDownloadUnifiedPdf(); // Use unified PDF for AI content
+                      handleDownloadUnifiedPdf();
                     }
                   }}
-                  tabIndex={0}
-                  style={{ pointerEvents: 'auto', cursor: 'pointer', position: 'relative', zIndex: 10 }}
-                  className="flex items-center gap-2 pointer-events-auto !cursor-pointer"
+                  className="flex items-center gap-2 bg-white border border-gray-200 text-gray-900 hover:bg-gray-50 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 rounded-lg h-9 px-4 font-medium"
                 >
                   <Download className="h-4 w-4" />
                   PDF
@@ -416,7 +409,7 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
                     <a
                       href="#"
                       onClick={(e) => { e.preventDefault(); handleChatGPT(); }}
-                      className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 shadow-sm hover:shadow-md font-inter transition-all duration-200 px-3 py-2 rounded-md text-sm font-medium"
+                      className="flex items-center gap-2 bg-white border border-gray-200 text-gray-900 hover:bg-gray-50 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 rounded-lg h-9 px-4 font-medium"
                     >
                       <img 
                         src="/lovable-uploads/a27cf867-e7a3-4d2f-af1e-16aaa70117e4.png" 
@@ -437,11 +430,8 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={onBack}
-                onMouseDown={onBack}
-                tabIndex={0}
-                style={{ pointerEvents: 'auto', cursor: 'pointer', position: 'relative', zIndex: 10 }}
-                className="p-2 pointer-events-auto !cursor-pointer"
+                onClick={handleCloseSession}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-all duration-200"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -456,7 +446,7 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
         setActiveView={setActiveView}
       />
 
-      {/* Apple-style ChatGPT Confirmation Popup - shared for desktop */}
+      {/* Apple-style ChatGPT Confirmation Popup */}
       {showChatGPTConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div 
@@ -486,6 +476,43 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
                   onClick={() => setShowChatGPTConfirm(false)}
                   disabled={isCopping}
                   className="h-12 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 text-gray-900 text-lg font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Close Session Confirmation Popup */}
+      {showCloseConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 backdrop-blur-sm bg-black/20"
+            onClick={() => setShowCloseConfirm(false)}
+          />
+          <div className="relative bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full animate-scale-in">
+            <div className="text-center space-y-6">
+              <div className="space-y-3">
+                <h2 className="text-2xl font-semibold text-gray-900">
+                  Close Session
+                </h2>
+                <p className="text-base text-gray-600 leading-relaxed">
+                  Closing this will end your session. Any unsaved changes will be lost.
+                </p>
+              </div>
+              
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={confirmCloseSession}
+                  className="h-12 bg-red-600 hover:bg-red-700 text-white text-lg font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
+                >
+                  Close Session
+                </button>
+                <button
+                  onClick={() => setShowCloseConfirm(false)}
+                  className="h-12 bg-gray-100 hover:bg-gray-200 text-gray-900 text-lg font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
                 >
                   Cancel
                 </button>
