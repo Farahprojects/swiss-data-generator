@@ -1,5 +1,5 @@
 
-// deno-lint-ignore-file no-explicit-any
+// deno-lint-ignore-file 
 // ────────────────────────────────────────────────────────────────────────────────
 //  check-email-change.ts   – full verbose version
 // ────────────────────────────────────────────────────────────────────────────────
