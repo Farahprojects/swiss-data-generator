@@ -293,7 +293,7 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
           </Button>
           <a
             href="#"
-            onClick={(e) => { e.preventDefault(); handleChatGPT(); }}
+            onClick={(e) => { e.preventDefault(); handleChatGPTCopyAndGo(); }}
             className="text-gray-700 text-base font-medium hover:text-black transition-colors active:scale-95 flex items-center"
           >
             <img src={openaiLogo} alt="ChatGPT" className="h-5 w-5 mr-1" /> GPT
@@ -393,7 +393,7 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
               )}
               <a
                 href="#"
-                onClick={(e) => { e.preventDefault(); handleChatGPT(); }}
+                onClick={(e) => { e.preventDefault(); handleChatGPTCopyAndGo(); }}
                 className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 shadow-sm hover:shadow-md font-inter transition-all duration-200 px-3 py-2 rounded-md text-sm font-medium"
               >
                 <img 
