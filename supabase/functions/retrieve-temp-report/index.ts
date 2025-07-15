@@ -1,7 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.3';
-import { createHash } from "https://deno.land/std@0.168.0/hash/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,6 +10,14 @@ const corsHeaders = {
 function generateToken(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function hashToken(token: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(token);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 serve(async (req) => {
@@ -56,7 +63,7 @@ serve(async (req) => {
     if (!token && !data.token_hash) {
       console.log('🔐 No token provided and no token_hash exists - generating new token...');
       token = generateToken();
-      const tokenHash = createHash("sha256").update(token).toString();
+      const tokenHash = await hashToken(token);
 
       const { error: updateError } = await supabase
         .from('temp_report_data')
@@ -84,7 +91,7 @@ serve(async (req) => {
     }
 
     // STEP 4: Validate token matches stored hash
-    const tokenHash = createHash("sha256").update(token).toString();
+    const tokenHash = await hashToken(token);
     if (data.token_hash !== tokenHash) {
       console.log('❌ Token validation failed');
       return new Response(JSON.stringify({ error: 'Invalid token' }), {
