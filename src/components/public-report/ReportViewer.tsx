@@ -216,42 +216,14 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
     } catch (error) {
       console.error('Failed to prepare ChatGPT integration:', error);
       
-      // Fallback to clipboard method
       toast({
-        title: "Using fallback method",
-        description: "Copying to clipboard instead...",
+        title: "ChatGPT integration failed",
+        description: "Please try again",
         variant: "destructive",
       });
-
-      try {
-        let textToCopy: string;
-        
-        if (activeView === 'astro' && mappedReport.swissData) {
-          textToCopy = `Please analyze this astrological data and provide additional insights or answer any questions I might have, read it like an energy map not a horoscope:\n\n${extractAstroDataAsText(mappedReport.swissData, mappedReport)}`;
-        } else {
-          const tempDiv = document.createElement('div');
-          tempDiv.innerHTML = mappedReport.reportContent;
-          const reportText = tempDiv.textContent || tempDiv.innerText || '';
-          textToCopy = `Please analyze this astrological report and provide additional insights or answer any questions I might have, read it like an energy map not a horoscope:\n\n${reportText}`;
-        }
-        
-        await navigator.clipboard.writeText(textToCopy);
-        
-        setTimeout(() => {
-          window.open('https://chatgpt.com/g/g-68636dbe19588191b04b0a60bcbf3df3-therai', '_blank');
-          setShowChatGPTConfirm(false);
-          setIsCopping(false);
-        }, 1500);
-        
-      } catch (clipboardError) {
-        console.error('Clipboard fallback also failed:', clipboardError);
-        toast({
-          title: "Integration failed",
-          description: "Please try again",
-          variant: "destructive",
-        });
-        setIsCopping(false);
-      }
+      
+      setIsCopping(false);
+      setShowChatGPTConfirm(false);
     }
   };
 
