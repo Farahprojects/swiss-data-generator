@@ -190,16 +190,21 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
 
       const uuid = tempData.id;
 
-      // Call retrieve-temp-report to generate/get token
-      const response = await supabase.functions.invoke('retrieve-temp-report', {
-        body: { uuid }
+      // Call retrieve-temp-report to generate/get token using direct fetch
+      const response = await fetch('https://wrvqqvqvwqmfdqvqmaar.supabase.co/functions/v1/retrieve-temp-report', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ uuid }),
       });
 
-      if (response.error) {
+      if (!response.ok) {
         throw new Error('Failed to generate access token');
       }
 
-      const { token } = response.data;
+      const result = await response.json();
+      const { token } = result;
       
       toast({
         title: "Opening ChatGPT...",
