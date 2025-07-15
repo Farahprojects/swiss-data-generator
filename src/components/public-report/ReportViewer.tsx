@@ -194,13 +194,13 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
       if (error || !tempRow) throw new Error("Report row not found");
       const uuid = tempRow.id;
 
-      /* 2. call edge function → get token */
+      /* 2. call edge function → get token (send cached token if available) */
       const res = await fetch(
         "https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/retrieve-temp-report",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ uuid }),
+          body: JSON.stringify({ uuid, token: chatToken }),
         },
       );
       if (!res.ok) throw new Error("Edge function returned " + res.status);
