@@ -220,7 +220,25 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Parse the data
+    // Special case: If updating swiss_data on temp_report_data, don't modify it
+    // The swiss_data should remain pure Swiss ephemeris data
+    if (updateTarget.table === 'temp_report_data' && updateTarget.field === 'swiss_data') {
+      console.log('Skipping swiss_data modification - keeping pure Swiss ephemeris data')
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'swiss_data kept pure - no modification needed',
+          skipped: true,
+          updateTarget 
+        }),
+        { 
+          status: 200, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
+    // Parse the data for other cases
     const parsedData = getParseResult(rawData, parseType)
     console.log('Parsed data result:', { parsedData })
 
