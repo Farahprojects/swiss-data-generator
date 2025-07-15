@@ -23,6 +23,8 @@ serve(async req => {
 
   try {
     const { uuid, token } = await req.json();
+    console.log("⇢  incoming", { uuid, tokenPresent: !!token });
+    
     if (!uuid) {
       return new Response(JSON.stringify({ error: "UUID required" }), {
         status: 400, headers: { ...cors, "Content-Type": "application/json" },
@@ -57,6 +59,7 @@ if (!token) {
     .update({ token_hash: newHash })
     .eq("id", uuid);
 
+  console.log("⇠  success", { uuid, firstTime: true });
   return new Response(
     JSON.stringify({ uuid, token: newToken, first_time: true }),
     { headers: { ...cors, "Content-Type": "application/json" } },
@@ -71,6 +74,7 @@ if (await sha256(token) !== data.token_hash) {
 }
 
 /* -------- SUCCESS -------- */
+console.log("⇠  success", { uuid, firstTime: false });
 return new Response(
   JSON.stringify({
     report_content: data.report_content,
@@ -84,18 +88,8 @@ return new Response(
   { headers: { ...cors, "Content-Type": "application/json" } },
 );
 
-    /* -------- SUCCESS -------- */
-    return new Response(JSON.stringify({
-      report_content: data.report_content,
-      swiss_data: data.swiss_data,
-      metadata: data.metadata,
-      uuid,
-      token,
-      chat_hash: data.chat_hash,
-      success: true,
-    }), { headers: { ...cors, "Content-Type": "application/json" } });
-
   } catch (e) {
+    console.error("✖︎  error", e);
     return new Response(JSON.stringify({ error: e.message }), {
       status: 500, headers: { ...cors, "Content-Type": "application/json" },
     });
