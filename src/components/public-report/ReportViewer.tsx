@@ -186,6 +186,13 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
       const uuid = tempRow.id;
 
       /* 2. call edge function → get token (or existing token) */
+      // Log token usage for debugging
+      if (chatToken) {
+        console.log("🔄 Using cached token for ChatGPT request");
+      } else {
+        console.log("🆕 Requesting new token from edge function");
+      }
+
       const res = await fetch(
         "https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/retrieve-temp-report",
         {
@@ -198,7 +205,10 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
       const { token } = await res.json();
       
       // Cache the token for subsequent calls
-      setChatToken(token);
+      if (!chatToken) {
+        setChatToken(token);
+        console.log("💾 Token saved to React state:", token.substring(0, 8) + "...");
+      }
 
       toast({
         title: "Opening ChatGPT...",
