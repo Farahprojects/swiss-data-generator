@@ -158,6 +158,31 @@ function getParseResult(rawData: RawReportPayload, parseType: string = 'full_rep
     
     case 'full_report':
     default:
+      // For full_report, enrich the original swiss_data directly
+      // instead of wrapping it to prevent infinite recursion
+      if (rawData.swiss_data) {
+        return {
+          ...rawData.swiss_data,
+          title: fullReport.title,
+          people: fullReport.people,
+          metadata: {
+            coach_name: rawData.metadata?.coach_name || rawData.guest_report?.coach_name,
+            coach_slug: rawData.metadata?.coach_slug || rawData.guest_report?.coach_slug,
+            has_report: fullReport.hasReport,
+            report_type: fullReport.reportType,
+            customer_email: rawData.guest_report?.email
+          },
+          hasReport: fullReport.hasReport,
+          reportType: fullReport.reportType,
+          customerName: fullReport.customerName,
+          swissBoolean: fullReport.swissBoolean,
+          reportContent: fullReport.reportContent,
+          isRelationship: fullReport.isRelationship,
+          isPureAstroReport: fullReport.isPureAstroReport
+        }
+      }
+      
+      // Fallback if no swiss_data
       return fullReport
   }
 }
