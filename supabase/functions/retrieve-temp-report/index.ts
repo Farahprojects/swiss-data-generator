@@ -68,6 +68,7 @@ if (!token) {
 
 /* from here on we have a token, so validate it */
 if (await sha256(token) !== data.token_hash) {
+  console.warn("token mismatch", { uuid, receivedHash: await sha256(token), storedHash: data.token_hash });
   return new Response(JSON.stringify({ error: "Invalid token" }), {
     status: 403, headers: { ...cors, "Content-Type": "application/json" },
   });

@@ -24,6 +24,7 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
   const [isCopyCompleted, setIsCopyCompleted] = useState(false);
   const [showChatGPTConfirm, setShowChatGPTConfirm] = useState(false);
   const [isCopping, setIsCopping] = useState(false);
+  const [chatToken, setChatToken] = useState<string | null>(null);
 
   // Use intelligent content detection
   const reportAnalysisData = { 
@@ -190,11 +191,14 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ uuid }),
+          body: JSON.stringify(chatToken ? { uuid, token: chatToken } : { uuid }),
         },
       );
       if (!res.ok) throw new Error("Edge function returned " + res.status);
       const { token } = await res.json();
+      
+      // Cache the token for subsequent calls
+      setChatToken(token);
 
       toast({
         title: "Opening ChatGPT...",
