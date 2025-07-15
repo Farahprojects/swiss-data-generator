@@ -49,35 +49,27 @@ serve(async req => {
       });
     }
 
-    /* ---------- TOKEN FLOW (no more overwrites) ---------- */
-if (!data.plain_token) {
-  // first time ever – create token & store both fields
-  const newToken  = genToken();
-  const newHash   = await sha256(newToken);
+    /* -------- TOKEN FLOW -------- */
+if (!token) {
+  // Always generate a fresh token when the caller has none
+  const newToken = genToken();
+  const newHash  = await sha256(newToken);
 
   await supabase.from("temp_report_data")
-    .update({ plain_token: newToken, token_hash: newHash })
+    .update({ token_hash: newHash })
     .eq("id", uuid);
 
   console.log("⇠  success", { uuid, firstTime: true });
   return new Response(
-    JSON.stringify({ uuid, token: newToken, success: true }),
+    JSON.stringify({ uuid, token: newToken, first_time: true }),
     { headers: { ...cors, "Content-Type": "application/json" } },
   );
 }
 
-/* plain_token already exists */
-if (!token) {
-  // frontend forgot to send it
-  console.warn("token missing", { uuid });
-  return new Response(JSON.stringify({ error: "Token required", success: false }), {
-    status: 401, headers: { ...cors, "Content-Type": "application/json" },
-  });
-}
-
-if (token !== data.plain_token) {
-  console.warn("token mismatch", { uuid, receivedToken: token, storedToken: data.plain_token });
-  return new Response(JSON.stringify({ error: "Invalid token", success: false }), {
+/* from here on we have a token, so validate it */
+if (await sha256(token) !== data.token_hash) {
+  console.warn("token mismatch", { uuid, receivedHash: await sha256(token), storedHash: data.token_hash });
+  return new Response(JSON.stringify({ error: "Invalid token" }), {
     status: 403, headers: { ...cors, "Content-Type": "application/json" },
   });
 }

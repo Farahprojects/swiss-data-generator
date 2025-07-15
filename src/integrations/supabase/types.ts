@@ -1218,7 +1218,6 @@ export type Database = {
           guest_report_id: string | null
           id: string
           metadata: Json | null
-          plain_token: string | null
           report_content: string | null
           swiss_data: Json | null
           token_hash: string | null
@@ -1230,7 +1229,6 @@ export type Database = {
           guest_report_id?: string | null
           id?: string
           metadata?: Json | null
-          plain_token?: string | null
           report_content?: string | null
           swiss_data?: Json | null
           token_hash?: string | null
@@ -1242,7 +1240,6 @@ export type Database = {
           guest_report_id?: string | null
           id?: string
           metadata?: Json | null
-          plain_token?: string | null
           report_content?: string | null
           swiss_data?: Json | null
           token_hash?: string | null
