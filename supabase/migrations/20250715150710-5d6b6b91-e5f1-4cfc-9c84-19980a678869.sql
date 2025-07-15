@@ -111,19 +111,19 @@ BEGIN
       )
     );
 
-    -- Call the RPC function to parse the data and update metadata
+    -- Call the RPC function to parse the data and enrich swiss_data with person details
     SELECT rpc_parse_and_update_report(
       raw_data,
       'temp_report_data',
       NEW.id::text,
-      'metadata',
-      'metadata_only'
+      'swiss_data',
+      'full_report'
     ) INTO result;
 
     IF NOT result THEN
-      RAISE NOTICE 'Failed to parse and update temp_report_data.metadata for ID: %', NEW.id;
+      RAISE NOTICE 'Failed to parse and update temp_report_data.swiss_data for ID: %', NEW.id;
     ELSE
-      RAISE NOTICE 'Successfully parsed and updated temp_report_data.metadata for ID: %', NEW.id;
+      RAISE NOTICE 'Successfully parsed and updated temp_report_data.swiss_data for ID: %', NEW.id;
     END IF;
   END IF;
 
