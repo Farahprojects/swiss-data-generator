@@ -431,7 +431,7 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
                   Analyze with ChatGPT
                 </h2>
                 <p className="text-base text-gray-600 leading-relaxed">
-                  We'll copy your report to clipboard and open ChatGPT for you.
+                  We'll open ChatGPT with secure access to your report data.
                 </p>
               </div>
               
@@ -441,7 +441,7 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
                   disabled={isCopping}
                   className="h-12 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-lg font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
                 >
-                  {isCopping ? 'Copied!' : 'Copy & Go'}
+                  {isCopping ? 'Opening...' : 'Go'}
                 </button>
                 <button
                   onClick={() => setShowChatGPTConfirm(false)}
