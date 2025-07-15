@@ -191,7 +191,7 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
       const uuid = tempData.id;
 
       // Call retrieve-temp-report to generate/get token using direct fetch
-      const response = await fetch('https://wrvqqvqvwqmfdqvqmaar.supabase.co/functions/v1/retrieve-temp-report', {
+      const response = await fetch('https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/retrieve-temp-report', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
