@@ -23,6 +23,7 @@ import { ReportViewer } from './ReportViewer';
 import { ReportFormData } from '@/types/public-report';
 import { MappedReport } from '@/types/mappedReport';
 import { mapReportPayload } from '@/utils/mapReportPayload';
+import { saveEnrichedSwissDataToEdge } from '@/utils/saveEnrichedSwissData';
 import MobileDrawerHeader from './drawer-components/MobileDrawerHeader';
 import MobileDrawerFooter from './drawer-components/MobileDrawerFooter';
 
@@ -155,6 +156,25 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
       };
 
       const mappedReportData = mapReportPayload(reportData);
+      
+      // Save enriched Swiss data to temp_report_data
+      if (mappedReportData.swissData && urlGuestId) {
+        const { data: tempRow } = await supabase
+          .from("temp_report_data")
+          .select("id")
+          .eq("guest_report_id", urlGuestId)
+          .single();
+
+        if (tempRow) {
+          await saveEnrichedSwissDataToEdge({ 
+            uuid: tempRow.id,
+            swissData: mappedReportData.swissData,
+            table: 'temp_report_data',
+            field: 'swiss_data'
+          });
+        }
+      }
+      
       setMappedReport(mappedReportData);
       setViewingReport(true);
       setCurrentView('report');

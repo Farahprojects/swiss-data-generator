@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import EntertainmentWindow from './EntertainmentWindow';
 import { mapReportPayload } from '@/utils/mapReportPayload';
 import { MappedReport } from '@/types/mappedReport';
+import { saveEnrichedSwissDataToEdge } from '@/utils/saveEnrichedSwissData';
 
 type ReportType = 'essence' | 'sync';
 const VIDEO_SRC = 'https://auth.theraiastro.com/storage/v1/object/public/therai-assets/loading-video.mp4';
@@ -160,6 +161,24 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
         hasReportContent: !!mappedReport.reportContent,
         hasSwissData: !!mappedReport.swissData
       });
+
+      // Save enriched Swiss data to temp_report_data
+      if (mappedReport.swissData && currentGuestReportId) {
+        const { data: tempRow } = await supabase
+          .from("temp_report_data")
+          .select("id")
+          .eq("guest_report_id", currentGuestReportId)
+          .single();
+
+        if (tempRow) {
+          await saveEnrichedSwissDataToEdge({ 
+            uuid: tempRow.id,
+            swissData: mappedReport.swissData,
+            table: 'temp_report_data',
+            field: 'swiss_data'
+          });
+        }
+      }
 
       setFetchedReportData(data);
 
