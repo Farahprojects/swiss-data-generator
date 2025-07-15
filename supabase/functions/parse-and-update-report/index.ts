@@ -125,7 +125,7 @@ function mapReportPayload({
     reportType,
     hasReport,
     swissBoolean,
-    metadata,
+    // metadata deliberately excluded to prevent recursive bloat
     customerName,
     isPureAstroReport,
     pdfData: guest_report?.report_pdf_base64,
@@ -158,7 +158,28 @@ function getParseResult(rawData: RawReportPayload, parseType: string = 'full_rep
     
     case 'full_report':
     default:
-      return fullReport
+      // Return clean structure without recursive fields for swiss_data updates
+      return {
+        title: fullReport.title,
+        people: fullReport.people,
+        metadata: {
+          title: fullReport.title,
+          hasReport: fullReport.hasReport,
+          reportType: fullReport.reportType,
+          customerName: fullReport.customerName,
+          swissBoolean: fullReport.swissBoolean,
+          isRelationship: fullReport.isRelationship,
+          isPureAstroReport: fullReport.isPureAstroReport
+        },
+        hasReport: fullReport.hasReport,
+        swissData: fullReport.swissData,
+        reportType: fullReport.reportType,
+        customerName: fullReport.customerName,
+        swissBoolean: fullReport.swissBoolean,
+        reportContent: fullReport.reportContent,
+        isRelationship: fullReport.isRelationship,
+        isPureAstroReport: fullReport.isPureAstroReport
+      }
   }
 }
 

@@ -21,7 +21,7 @@ export const MappedReportSchema = z.object({
   reportType: z.string(),
   hasReport: z.boolean(),
   swissBoolean: z.boolean(),
-  metadata: z.any().optional(),
+  // metadata removed to prevent recursive bloat - only used as input for parsing
   // Additional fields for rendering
   customerName: z.string(),
   isPureAstroReport: z.boolean(),
