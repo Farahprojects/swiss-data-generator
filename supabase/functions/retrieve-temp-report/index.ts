@@ -58,9 +58,9 @@ serve(async (req) => {
       });
     }
 
-    // STEP 2: If token is missing but token_hash also missing, create one now
-    if (!token && !data.token_hash) {
-      console.log('🔐 No token provided and no token_hash exists - generating new token...');
+    // STEP 2: If no token is provided, generate a new one and overwrite any existing token_hash
+    if (!token) {
+      console.log('🔐 No token provided - generating new token and overwriting existing token_hash...');
       token = generateToken();
       const tokenHash = await hashToken(token);
 
