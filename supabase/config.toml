@@ -78,3 +78,6 @@ verify_jwt = false
 
 [functions.retrieve-temp-report]
 verify_jwt = false
+
+[functions.parse-and-update-report]
+verify_jwt = false
