@@ -91,7 +91,12 @@ serve(async (req) => {
 
     // STEP 4: Validate token matches stored hash
     const tokenHash = await hashToken(token);
-    if (data.token_hash !== tokenHash) {
+    
+    // If we just generated a new token, use the new hash we stored
+    // Otherwise use the hash from the fetched data
+    const expectedHash = token === providedToken ? data.token_hash : tokenHash;
+    
+    if (expectedHash !== tokenHash) {
       console.log('❌ Token validation failed');
       return new Response(JSON.stringify({ error: 'Invalid token' }), {
         status: 403,
