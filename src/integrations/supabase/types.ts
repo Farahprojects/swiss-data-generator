@@ -1215,6 +1215,7 @@ export type Database = {
           chat_hash: string | null
           created_at: string | null
           expires_at: string | null
+          guest_report_id: string | null
           id: string
           metadata: Json | null
           report_content: string | null
@@ -1225,6 +1226,7 @@ export type Database = {
           chat_hash?: string | null
           created_at?: string | null
           expires_at?: string | null
+          guest_report_id?: string | null
           id?: string
           metadata?: Json | null
           report_content?: string | null
@@ -1235,6 +1237,7 @@ export type Database = {
           chat_hash?: string | null
           created_at?: string | null
           expires_at?: string | null
+          guest_report_id?: string | null
           id?: string
           metadata?: Json | null
           report_content?: string | null
