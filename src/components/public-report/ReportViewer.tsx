@@ -10,6 +10,7 @@ import { getToggleDisplayLogic } from '@/utils/reportTypeUtils';
 import { MappedReport } from '@/types/mappedReport';
 import { extractAstroDataAsText } from '@/utils/astroTextExtractor';
 import { supabase } from '@/integrations/supabase/client';
+import { getGuestReportId } from '@/utils/urlHelpers';
 import openaiLogo from '@/assets/openai-logo.png';
 
 interface ReportViewerProps {
@@ -167,28 +168,47 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
       
       toast({
         title: "Preparing ChatGPT...",
-        description: "Storing report data...",
+        description: "Fetching secure access token...",
       });
 
-      // Store the complete report data temporarily
-      const response = await supabase.functions.invoke('store-temp-report', {
-        body: mappedReport
+      // Get the guest report ID from the URL
+      const guestReportId = getGuestReportId();
+      if (!guestReportId) {
+        throw new Error('Guest report ID not found');
+      }
+
+      // Query temp_report_data to get existing UUID using guest_report_id
+      const { data: tempData, error: tempError } = await supabase
+        .from('temp_report_data')
+        .select('id')
+        .eq('guest_report_id', guestReportId)
+        .single();
+
+      if (tempError || !tempData) {
+        throw new Error('Report data not found in temporary storage');
+      }
+
+      const uuid = tempData.id;
+
+      // Call retrieve-temp-report to generate/get token
+      const response = await supabase.functions.invoke('retrieve-temp-report', {
+        body: { uuid }
       });
 
       if (response.error) {
-        throw new Error('Failed to store report data');
+        throw new Error('Failed to generate access token');
       }
 
-      const { uuid } = response.data;
+      const { token } = response.data;
       
       toast({
         title: "Opening ChatGPT...",
-        description: "Report data prepared successfully!",
+        description: "Secure access ready!",
       });
       
       setTimeout(() => {
-        // Open ChatGPT with the UUID parameter
-        window.open(`https://chatgpt.com/g/g-68636dbe19588191b04b0a60bcbf3df3-therai?data=${uuid}`, '_blank');
+        // Open ChatGPT with the correct UUID and token parameters
+        window.open(`https://chatgpt.com/g/g-68636dbe19588191b04b0a60bcbf3df3-therai?uuid=${uuid}&token=${token}`, '_blank');
         setShowChatGPTConfirm(false);
         setIsCopping(false);
       }, 1500);
