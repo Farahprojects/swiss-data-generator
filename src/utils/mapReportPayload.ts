@@ -73,7 +73,7 @@ function _mapReportPayload({
     reportType,
     hasReport,
     swissBoolean,
-    // metadata deliberately excluded to prevent recursive bloat
+    metadata,
     customerName,
     isPureAstroReport,
     pdfData: guest_report?.report_pdf_base64,
