@@ -157,48 +157,8 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
   };
 
   const handleChatGPT = () => {
-    if (isMobile) {
-      setShowChatGPTConfirm(true);
-    } else {
-      handleChatGPTDesktop();
-    }
-  };
-
-  const handleChatGPTDesktop = async () => {
-    if (isCopyCompleted) {
-      window.open('https://chatgpt.com/g/g-68636dbe19588191b04b0a60bcbf3df3-therai', '_blank');
-    } else {
-      try {
-        let textToCopy: string;
-        
-        if (activeView === 'astro' && mappedReport.swissData) {
-          textToCopy = extractAstroDataAsText(mappedReport.swissData, mappedReport);
-        } else {
-          const tempDiv = document.createElement('div');
-          tempDiv.innerHTML = mappedReport.reportContent;
-          textToCopy = tempDiv.textContent || tempDiv.innerText || '';
-        }
-        
-        await navigator.clipboard.writeText(textToCopy);
-        setIsCopyCompleted(true);
-        
-        toast({
-          title: `${activeView === 'astro' ? 'Astro data' : 'Report'} copied to clipboard!`,
-          description: "Redirecting to ChatGPT..."
-        });
-        
-        setTimeout(() => {
-          window.open('https://chatgpt.com/g/g-68636dbe19588191b04b0a60bcbf3df3-therai', '_blank');
-        }, 2000);
-        
-      } catch (error) {
-        toast({
-          title: "Copy failed",
-          description: "Unable to copy to clipboard. Please try copying manually first.",
-          variant: "destructive"
-        });
-      }
-    }
+    // Always show the confirmation modal for both mobile and desktop
+    setShowChatGPTConfirm(true);
   };
 
   const handleChatGPTCopyAndGo = async () => {
@@ -333,45 +293,6 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
             <img src={openaiLogo} alt="ChatGPT" className="h-5 w-5 mr-1" /> GPT
           </Button>
         </div>
-
-        {/* Apple-style ChatGPT Confirmation Popup */}
-        {showChatGPTConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div 
-              className="absolute inset-0 backdrop-blur-sm bg-black/20"
-              onClick={() => setShowChatGPTConfirm(false)}
-            />
-            <div className="relative bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full animate-scale-in">
-              <div className="text-center space-y-6">
-                <div className="space-y-3">
-                  <h2 className="text-2xl font-semibold text-gray-900">
-                    Analyze with ChatGPT
-                  </h2>
-                  <p className="text-base text-gray-600 leading-relaxed">
-                    We'll copy your report to clipboard and open ChatGPT for you.
-                  </p>
-                </div>
-                
-                <div className="flex flex-col gap-3">
-                  <button
-                    onClick={handleChatGPTCopyAndGo}
-                    disabled={isCopping}
-                    className="h-12 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-lg font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
-                  >
-                    {isCopping ? 'Copied!' : 'Copy & Go'}
-                  </button>
-                  <button
-                    onClick={() => setShowChatGPTConfirm(false)}
-                    disabled={isCopping}
-                    className="h-12 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 text-gray-900 text-lg font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   }
@@ -503,6 +424,45 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
         activeView={activeView} 
         setActiveView={setActiveView}
       />
+
+      {/* Apple-style ChatGPT Confirmation Popup - shared for desktop */}
+      {showChatGPTConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 backdrop-blur-sm bg-black/20"
+            onClick={() => setShowChatGPTConfirm(false)}
+          />
+          <div className="relative bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full animate-scale-in">
+            <div className="text-center space-y-6">
+              <div className="space-y-3">
+                <h2 className="text-2xl font-semibold text-gray-900">
+                  Analyze with ChatGPT
+                </h2>
+                <p className="text-base text-gray-600 leading-relaxed">
+                  We'll copy your report to clipboard and open ChatGPT for you.
+                </p>
+              </div>
+              
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={handleChatGPTCopyAndGo}
+                  disabled={isCopping}
+                  className="h-12 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-lg font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
+                >
+                  {isCopping ? 'Copied!' : 'Copy & Go'}
+                </button>
+                <button
+                  onClick={() => setShowChatGPTConfirm(false)}
+                  disabled={isCopping}
+                  className="h-12 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 text-gray-900 text-lg font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 };
