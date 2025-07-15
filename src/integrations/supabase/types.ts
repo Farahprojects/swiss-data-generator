@@ -1790,16 +1790,6 @@ export type Database = {
         Args: { guest_report_id: string }
         Returns: undefined
       }
-      rpc_parse_and_update_report: {
-        Args: {
-          raw_data: Json
-          target_table: string
-          target_id: string
-          target_field: string
-          parse_type?: string
-        }
-        Returns: boolean
-      }
       send_notification_email: {
         Args: {
           template_type: string
