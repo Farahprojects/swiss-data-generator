@@ -10,6 +10,7 @@ import { PdfGenerator } from '@/services/pdf/PdfGenerator';
 import { getToggleDisplayLogic } from '@/utils/reportTypeUtils';
 import { MappedReport } from '@/types/mappedReport';
 import { extractAstroDataAsText } from '@/utils/astroTextExtractor';
+import { ReportParser } from '@/utils/reportParser';
 import { supabase } from '@/integrations/supabase/client';
 import { getGuestReportId } from '@/utils/urlHelpers';
 import openaiLogo from '@/assets/openai-logo.png';
@@ -140,22 +141,21 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
       let contentDescription: string;
       
       if ((hasPdfData && hasSwissData) || (hasReportContent && hasSwissData)) {
-        // Both exist - copy unified content (same as unified PDF)
+        // Both exist - copy unified content exactly like PDF generation
         const reportText = mappedReport.reportContent ? (() => {
-          const tempDiv = document.createElement('div');
-          tempDiv.innerHTML = mappedReport.reportContent;
-          return tempDiv.textContent || tempDiv.innerText || '';
+          // Use the same ReportParser that PDF generation uses
+          const blocks = ReportParser.parseReport(mappedReport.reportContent);
+          return blocks.map(block => block.text).join('\n');
         })() : '';
         
         const astroText = extractAstroDataAsText(mappedReport.swissData, mappedReport);
         
-        textToCopy = `${reportText}\n\n--- ASTRO DATA ---\n\n${astroText}`;
+        textToCopy = `${reportText}\n\n--- ASTROLOGICAL DATA ---\n\n${astroText}`;
         contentDescription = 'report and astro data';
       } else if (hasReportContent) {
-        // Only report content
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = mappedReport.reportContent;
-        textToCopy = tempDiv.textContent || tempDiv.innerText || '';
+        // Only report content - use same parser as PDF
+        const blocks = ReportParser.parseReport(mappedReport.reportContent);
+        textToCopy = blocks.map(block => block.text).join('\n');
         contentDescription = 'report';
       } else if (hasSwissData) {
         // Only astro data
