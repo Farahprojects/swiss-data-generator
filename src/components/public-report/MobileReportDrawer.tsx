@@ -158,21 +158,40 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
       const mappedReportData = mapReportPayload(reportData);
       
       // Save enriched Swiss data to temp_report_data
+      console.log('🔍 Checking Swiss data save conditions:', {
+        hasSwissData: !!mappedReportData.swissData,
+        urlGuestId,
+        swissDataKeys: mappedReportData.swissData ? Object.keys(mappedReportData.swissData) : []
+      });
+      
       if (mappedReportData.swissData && urlGuestId) {
-        const { data: tempRow } = await supabase
+        console.log('✅ Conditions met, fetching temp_report_data row...');
+        const { data: tempRow, error: tempError } = await supabase
           .from("temp_report_data")
           .select("id")
           .eq("guest_report_id", urlGuestId)
           .single();
 
+        console.log('🔍 Temp row query result:', { tempRow, tempError });
+
         if (tempRow) {
-          await saveEnrichedSwissDataToEdge({ 
-            uuid: tempRow.id,
-            swissData: mappedReportData.swissData,
-            table: 'temp_report_data',
-            field: 'swiss_data'
-          });
+          console.log('📡 Calling save-swiss-data edge function...');
+          try {
+            const result = await saveEnrichedSwissDataToEdge({ 
+              uuid: tempRow.id,
+              swissData: mappedReportData.swissData,
+              table: 'temp_report_data',
+              field: 'swiss_data'
+            });
+            console.log('✅ Swiss data saved successfully:', result);
+          } catch (error) {
+            console.error('❌ Failed to save Swiss data:', error);
+          }
+        } else {
+          console.log('❌ No temp_report_data row found for guest_report_id:', urlGuestId);
         }
+      } else {
+        console.log('❌ Conditions not met for Swiss data save');
       }
       
       setMappedReport(mappedReportData);
