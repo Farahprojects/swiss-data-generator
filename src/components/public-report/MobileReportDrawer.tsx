@@ -23,7 +23,6 @@ import { ReportViewer } from './ReportViewer';
 import { ReportFormData } from '@/types/public-report';
 import { MappedReport } from '@/types/mappedReport';
 import { mapReportPayload } from '@/utils/mapReportPayload';
-import { saveEnrichedSwissDataToEdge } from '@/utils/saveEnrichedSwissData';
 import MobileDrawerHeader from './drawer-components/MobileDrawerHeader';
 import MobileDrawerFooter from './drawer-components/MobileDrawerFooter';
 
@@ -156,51 +155,6 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
       };
 
       const mappedReportData = mapReportPayload(reportData);
-      
-      // Save enriched Swiss data to temp_report_data with retry logic
-      console.log('🔍 Checking Swiss data save conditions:', {
-        hasSwissData: !!mappedReportData.swissData,
-        urlGuestId,
-        swissDataKeys: mappedReportData.swissData ? Object.keys(mappedReportData.swissData) : []
-      });
-      
-      if (mappedReportData.swissData && urlGuestId) {
-        console.log('✅ Conditions met, fetching temp_report_data row...');
-        const { data: tempRow, error: tempError } = await supabase
-          .from("temp_report_data")
-          .select("id, swiss_data_saved, swiss_data_save_pending, swiss_data_save_attempts")
-          .eq("guest_report_id", urlGuestId)
-          .single();
-
-        console.log('🔍 Temp row query result:', { tempRow, tempError });
-
-        if (tempRow) {
-          // Only save if not already saved and not currently pending
-          if (!tempRow.swiss_data_saved && !tempRow.swiss_data_save_pending) {
-            console.log('📡 Calling save-swiss-data edge function...');
-            try {
-              const result = await saveEnrichedSwissDataToEdge({ 
-                uuid: tempRow.id,
-                swissData: mappedReportData.swissData,
-                table: 'temp_report_data',
-                field: 'swiss_data'
-              });
-              console.log('✅ Swiss data saved successfully:', result);
-            } catch (error) {
-              console.error('❌ Failed to save Swiss data:', error);
-            }
-          } else if (tempRow.swiss_data_saved) {
-            console.log('✅ Swiss data already saved');
-          } else if (tempRow.swiss_data_save_pending) {
-            console.log('⏳ Swiss data save already in progress');
-          }
-        } else {
-          console.log('❌ No temp_report_data row found for guest_report_id:', urlGuestId);
-        }
-      } else {
-        console.log('❌ Conditions not met for Swiss data save');
-      }
-      
       setMappedReport(mappedReportData);
       setViewingReport(true);
       setCurrentView('report');

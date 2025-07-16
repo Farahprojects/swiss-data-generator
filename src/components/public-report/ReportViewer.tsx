@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Download, Copy, ArrowLeft, X, Paperclip } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,6 @@ import { extractAstroDataAsText } from '@/utils/astroTextExtractor';
 import { ReportParser } from '@/utils/reportParser';
 import { supabase } from '@/integrations/supabase/client';
 import { getGuestReportId } from '@/utils/urlHelpers';
-import { saveEnrichedSwissDataToEdge } from '@/utils/saveEnrichedSwissData';
 import openaiLogo from '@/assets/openai-logo.png';
 
 interface ReportViewerProps {
@@ -30,8 +29,6 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
   const [isCopping, setIsCopping] = useState(false);
   const [chatToken, setChatToken] = useState<string | null>(null);
   const [cachedUuid, setCachedUuid] = useState<string | null>(null);
-  const [tempRowId, setTempRowId] = useState<string | null>(null);
-  const hasSavedRef = useRef(false);
 
   // Use intelligent content detection
   const reportAnalysisData = { 
@@ -49,64 +46,6 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
       setActiveView(toggleLogic.defaultView);
     }
   }, [toggleLogic.showToggle, toggleLogic.defaultView]);
-
-  // Fetch tempRowId when guestReportId is available
-  useEffect(() => {
-    const guestReportId = getGuestReportId();
-    if (!guestReportId) return;
-
-    console.log('🧠 Fetching tempRowId for guestReportId:', guestReportId);
-
-    supabase
-      .from('temp_report_data')
-      .select('id')
-      .eq('guest_report_id', guestReportId)
-      .single()
-      .then(({ data, error }) => {
-        if (data?.id) {
-          console.log('🧠 Found tempRowId:', data.id);
-          setTempRowId(data.id);
-        } else {
-          console.log('❌ No tempRowId found:', error);
-        }
-      });
-  }, []);
-
-  // Handle Swiss data saving with the cleaner trigger approach
-  useEffect(() => {
-    const guestReportId = getGuestReportId();
-    
-    console.log('🧠 Swiss data saving effect triggered:', {
-      hasSavedRef: hasSavedRef.current,
-      hasSwissData: !!mappedReport?.swissData,
-      hasGuestReportId: !!guestReportId,
-      hasTempRowId: !!tempRowId
-    });
-
-    if (
-      !hasSavedRef.current &&
-      mappedReport?.swissData &&
-      guestReportId &&
-      tempRowId
-    ) {
-      hasSavedRef.current = true;
-
-      console.log('🧠 Triggering saveEnrichedSwissDataToEdge from Report Modal');
-
-      saveEnrichedSwissDataToEdge({
-        uuid: tempRowId,
-        swissData: mappedReport.swissData,
-        table: 'temp_report_data',
-        field: 'swiss_data'
-      }).then((result) => {
-        console.log('✅ Swiss data saved:', result);
-      }).catch((err) => {
-        console.error('❌ Swiss data save failed:', err);
-        // Reset the flag on error to allow retry
-        hasSavedRef.current = false;
-      });
-    }
-  }, [mappedReport?.swissData, tempRowId]);
 
   const handleDownloadPdf = () => {
     if (!mappedReport.pdfData) {

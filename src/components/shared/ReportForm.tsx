@@ -11,7 +11,6 @@ import PaymentStep from '@/components/public-report/PaymentStep';
 import SuccessScreen from '@/components/public-report/SuccessScreen';
 import { ReportViewer } from '@/components/public-report/ReportViewer';
 import { mapReportPayload } from '@/utils/mapReportPayload';
-import { saveEnrichedSwissDataToEdge } from '@/utils/saveEnrichedSwissData';
 import { MappedReport } from '@/types/mappedReport';
 import { FormValidationStatus } from '@/components/public-report/FormValidationStatus';
 
@@ -311,25 +310,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       
       // Map and set legacy states for compatibility
       const mappedReport = mapReportPayload(reportData);
-      
-      // Save enriched Swiss data to temp_report_data
-      if (mappedReport.swissData && urlGuestId) {
-        const { data: tempRow } = await supabase
-          .from("temp_report_data")
-          .select("id")
-          .eq("guest_report_id", urlGuestId)
-          .single();
-
-        if (tempRow) {
-          await saveEnrichedSwissDataToEdge({ 
-            uuid: tempRow.id,
-            swissData: mappedReport.swissData,
-            table: 'temp_report_data',
-            field: 'swiss_data'
-          });
-        }
-      }
-      
       setReportContent(mappedReport.reportContent);
       setReportPdfData(mappedReport.pdfData || null);
       setSwissData(mappedReport.swissData);

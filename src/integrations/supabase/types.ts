@@ -14,36 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      admin_logs: {
-        Row: {
-          created_at: string | null
-          event_type: string
-          id: string
-          logs: string | null
-          meta: Json | null
-          page: string
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          event_type: string
-          id?: string
-          logs?: string | null
-          meta?: Json | null
-          page: string
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          event_type?: string
-          id?: string
-          logs?: string | null
-          meta?: Json | null
-          page?: string
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       api_keys: {
         Row: {
           api_key: string
@@ -1247,14 +1217,10 @@ export type Database = {
           expires_at: string | null
           guest_report_id: string | null
           id: string
-          last_save_attempt_at: string | null
           metadata: Json | null
           plain_token: string | null
           report_content: string | null
           swiss_data: Json | null
-          swiss_data_save_attempts: number | null
-          swiss_data_save_pending: boolean | null
-          swiss_data_saved: boolean | null
           token_hash: string | null
         }
         Insert: {
@@ -1263,14 +1229,10 @@ export type Database = {
           expires_at?: string | null
           guest_report_id?: string | null
           id?: string
-          last_save_attempt_at?: string | null
           metadata?: Json | null
           plain_token?: string | null
           report_content?: string | null
           swiss_data?: Json | null
-          swiss_data_save_attempts?: number | null
-          swiss_data_save_pending?: boolean | null
-          swiss_data_saved?: boolean | null
           token_hash?: string | null
         }
         Update: {
@@ -1279,14 +1241,10 @@ export type Database = {
           expires_at?: string | null
           guest_report_id?: string | null
           id?: string
-          last_save_attempt_at?: string | null
           metadata?: Json | null
           plain_token?: string | null
           report_content?: string | null
           swiss_data?: Json | null
-          swiss_data_save_attempts?: number | null
-          swiss_data_save_pending?: boolean | null
-          swiss_data_saved?: boolean | null
           token_hash?: string | null
         }
         Relationships: []

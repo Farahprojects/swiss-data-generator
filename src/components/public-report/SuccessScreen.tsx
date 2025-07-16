@@ -161,7 +161,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
         hasSwissData: !!mappedReport.swissData
       });
 
-
       setFetchedReportData(data);
 
       // Trigger PDF email in background (non-blocking)
