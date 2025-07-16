@@ -32,12 +32,20 @@ export const useSwissDataRetry = ({ guestReportId, enabled = true }: UseSwissDat
           return;
         }
 
+        console.log('🔍 [DEBUG] temp_row flags:', {
+          swiss_data_saved: tempRow.swiss_data_saved,
+          swiss_data_save_pending: tempRow.swiss_data_save_pending,
+          condition_should_pass: !tempRow.swiss_data_saved && !tempRow.swiss_data_save_pending
+        });
+
         // If already saved or currently pending, no need to retry
         if (tempRow.swiss_data_saved || tempRow.swiss_data_save_pending) {
-          console.log('Swiss data already saved or pending');
+          console.log('Swiss data already saved or pending - EXITING');
           setRetryStatus('completed');
           return;
         }
+
+        console.log('🔍 [DEBUG] Condition passed, proceeding with retry...');
 
         // If too many attempts, stop retrying
         if (tempRow.swiss_data_save_attempts >= 3) {
@@ -79,6 +87,13 @@ export const useSwissDataRetry = ({ guestReportId, enabled = true }: UseSwissDat
         }
 
         // Attempt to save
+        console.log('🔍 [DEBUG] About to call saveEnrichedSwissDataToEdge with payload:', {
+          uuid: guestReportId,
+          swissData: mappedReportData.swissData ? 'EXISTS' : 'NULL',
+          table: 'temp_report_data',
+          field: 'swiss_data'
+        });
+        
         setRetryStatus('retrying');
         setAttempts(tempRow.swiss_data_save_attempts + 1);
 
@@ -88,6 +103,8 @@ export const useSwissDataRetry = ({ guestReportId, enabled = true }: UseSwissDat
           table: 'temp_report_data',
           field: 'swiss_data'
         });
+
+        console.log('🔍 [DEBUG] saveEnrichedSwissDataToEdge completed with result:', result);
 
         console.log('✅ Swiss data retry save successful:', result);
         setRetryStatus('completed');
