@@ -36,10 +36,37 @@ Deno.serve(async (req) => {
 
     console.log('Saving enriched Swiss data for UUID:', uuid);
 
-    // Update the record
+    // First get current attempts count
+    const { data: currentData } = await supabase
+      .from(table)
+      .select('swiss_data_save_attempts')
+      .eq('id', uuid)
+      .single();
+
+    const currentAttempts = currentData?.swiss_data_save_attempts || 0;
+
+    // Set pending flag and increment attempts
+    const { error: updatePendingError } = await supabase
+      .from(table)
+      .update({ 
+        swiss_data_save_pending: true,
+        swiss_data_save_attempts: currentAttempts + 1,
+        last_save_attempt_at: new Date().toISOString()
+      })
+      .eq('id', uuid);
+
+    if (updatePendingError) {
+      console.error('Failed to set pending flag:', updatePendingError);
+    }
+
+    // Update the record with Swiss data and mark as saved
     const { data, error } = await supabase
       .from(table)
-      .update({ [field]: swiss_data })
+      .update({ 
+        [field]: swiss_data,
+        swiss_data_saved: true,
+        swiss_data_save_pending: false
+      })
       .eq('id', uuid)
       .select()
       .single();

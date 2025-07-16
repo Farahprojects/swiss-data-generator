@@ -63,9 +63,11 @@ interface SuccessScreenProps {
   email: string;
   onViewReport?: () => void;
   guestReportId?: string;
+  retryStatus?: 'idle' | 'checking' | 'retrying' | 'completed' | 'failed';
+  isRetrying?: boolean;
 }
 
-const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport, guestReportId }) => {
+const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport, guestReportId, retryStatus, isRetrying }) => {
   const {
     report,
     error,
