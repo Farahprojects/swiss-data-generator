@@ -30,8 +30,8 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
   const [isCopping, setIsCopping] = useState(false);
   const [chatToken, setChatToken] = useState<string | null>(null);
   const [cachedUuid, setCachedUuid] = useState<string | null>(null);
-  const [isSavingSwissData, setIsSavingSwissData] = useState(false);
-  const swissSaveAttemptedRef = useRef(false);
+  const [tempRowId, setTempRowId] = useState<string | null>(null);
+  const hasSavedRef = useRef(false);
 
   // Use intelligent content detection
   const reportAnalysisData = { 
@@ -50,51 +50,63 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
     }
   }, [toggleLogic.showToggle, toggleLogic.defaultView]);
 
-  // Handle Swiss data saving when ReportViewer mounts
+  // Fetch tempRowId when guestReportId is available
   useEffect(() => {
-    const handleSwissDataSaving = async () => {
-      // Only proceed if we have Swiss data and haven't attempted saving yet
-      if (!mappedReport.swissData || swissSaveAttemptedRef.current || isSavingSwissData) {
-        return;
-      }
+    const guestReportId = getGuestReportId();
+    if (!guestReportId) return;
 
-      const guestReportId = getGuestReportId();
-      if (!guestReportId) return;
+    console.log('🧠 Fetching tempRowId for guestReportId:', guestReportId);
 
-      swissSaveAttemptedRef.current = true;
-
-      try {
-        setIsSavingSwissData(true);
-
-        // Check if we already have saved Swiss data to avoid duplicates
-        const { data: tempRow } = await supabase
-          .from('temp_report_data')
-          .select('id, swiss_data_saved, swiss_data_save_pending')
-          .eq('guest_report_id', guestReportId)
-          .maybeSingle();
-
-        // If already saved or currently saving, skip
-        if (!tempRow || tempRow.swiss_data_saved || tempRow.swiss_data_save_pending) {
-          return;
+    supabase
+      .from('temp_report_data')
+      .select('id')
+      .eq('guest_report_id', guestReportId)
+      .single()
+      .then(({ data, error }) => {
+        if (data?.id) {
+          console.log('🧠 Found tempRowId:', data.id);
+          setTempRowId(data.id);
+        } else {
+          console.log('❌ No tempRowId found:', error);
         }
+      });
+  }, []);
 
-        // Save the Swiss data
-        await saveEnrichedSwissDataToEdge({
-          uuid: tempRow.id,
-          swissData: mappedReport.swissData,
-          table: 'temp_report_data',
-          field: 'swiss_data'
-        });
+  // Handle Swiss data saving with the cleaner trigger approach
+  useEffect(() => {
+    const guestReportId = getGuestReportId();
+    
+    console.log('🧠 Swiss data saving effect triggered:', {
+      hasSavedRef: hasSavedRef.current,
+      hasSwissData: !!mappedReport?.swissData,
+      hasGuestReportId: !!guestReportId,
+      hasTempRowId: !!tempRowId
+    });
 
-      } catch (error) {
-        console.error('Failed to save Swiss data:', error);
-      } finally {
-        setIsSavingSwissData(false);
-      }
-    };
+    if (
+      !hasSavedRef.current &&
+      mappedReport?.swissData &&
+      guestReportId &&
+      tempRowId
+    ) {
+      hasSavedRef.current = true;
 
-    handleSwissDataSaving();
-  }, [mappedReport.swissData]);
+      console.log('🧠 Triggering saveEnrichedSwissDataToEdge from Report Modal');
+
+      saveEnrichedSwissDataToEdge({
+        uuid: tempRowId,
+        swissData: mappedReport.swissData,
+        table: 'temp_report_data',
+        field: 'swiss_data'
+      }).then((result) => {
+        console.log('✅ Swiss data saved:', result);
+      }).catch((err) => {
+        console.error('❌ Swiss data save failed:', err);
+        // Reset the flag on error to allow retry
+        hasSavedRef.current = false;
+      });
+    }
+  }, [mappedReport?.swissData, tempRowId]);
 
   const handleDownloadPdf = () => {
     if (!mappedReport.pdfData) {
