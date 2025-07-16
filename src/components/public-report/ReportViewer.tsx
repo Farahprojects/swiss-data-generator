@@ -13,6 +13,7 @@ import { extractAstroDataAsText } from '@/utils/astroTextExtractor';
 import { ReportParser } from '@/utils/reportParser';
 import { supabase } from '@/integrations/supabase/client';
 import { getGuestReportId } from '@/utils/urlHelpers';
+import { saveEnrichedSwissDataToEdge } from '@/utils/saveEnrichedSwissData';
 import openaiLogo from '@/assets/openai-logo.png';
 
 interface ReportViewerProps {
@@ -29,6 +30,7 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
   const [isCopping, setIsCopping] = useState(false);
   const [chatToken, setChatToken] = useState<string | null>(null);
   const [cachedUuid, setCachedUuid] = useState<string | null>(null);
+  const [isSavingSwissData, setIsSavingSwissData] = useState(false);
 
   // Use intelligent content detection
   const reportAnalysisData = { 
@@ -46,6 +48,48 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
       setActiveView(toggleLogic.defaultView);
     }
   }, [toggleLogic.showToggle, toggleLogic.defaultView]);
+
+  // Handle Swiss data saving when ReportViewer mounts
+  useEffect(() => {
+    const handleSwissDataSaving = async () => {
+      // Only proceed if we have Swiss data that needs to be saved
+      if (!mappedReport.swissData || isSavingSwissData) return;
+
+      const guestReportId = getGuestReportId();
+      if (!guestReportId) return;
+
+      try {
+        setIsSavingSwissData(true);
+
+        // Check if we already have saved Swiss data to avoid duplicates
+        const { data: tempRow } = await supabase
+          .from('temp_report_data')
+          .select('id, swiss_data_saved, swiss_data_save_pending')
+          .eq('guest_report_id', guestReportId)
+          .maybeSingle();
+
+        // If already saved or currently saving, skip
+        if (!tempRow || tempRow.swiss_data_saved || tempRow.swiss_data_save_pending) {
+          return;
+        }
+
+        // Save the Swiss data
+        await saveEnrichedSwissDataToEdge({
+          uuid: tempRow.id,
+          swissData: mappedReport.swissData,
+          table: 'temp_report_data',
+          field: 'swiss_data'
+        });
+
+      } catch (error) {
+        console.error('Failed to save Swiss data:', error);
+      } finally {
+        setIsSavingSwissData(false);
+      }
+    };
+
+    handleSwissDataSaving();
+  }, [mappedReport.swissData, isSavingSwissData]);
 
   const handleDownloadPdf = () => {
     if (!mappedReport.pdfData) {

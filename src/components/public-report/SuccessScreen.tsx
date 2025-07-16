@@ -14,8 +14,6 @@ import { supabase } from '@/integrations/supabase/client';
 import EntertainmentWindow from './EntertainmentWindow';
 import { mapReportPayload } from '@/utils/mapReportPayload';
 import { MappedReport } from '@/types/mappedReport';
-import { saveEnrichedSwissDataToEdge } from '@/utils/saveEnrichedSwissData';
-import { useSwissDataRetry } from '@/hooks/useSwissDataRetry';
 
 type ReportType = 'essence' | 'sync';
 const VIDEO_SRC = 'https://auth.theraiastro.com/storage/v1/object/public/therai-assets/loading-video.mp4';
@@ -98,17 +96,11 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const [showCountdown, setShowCountdown] = useState(false);
   const [countdownTime, setCountdownTime] = useState(24);
   const [modalReadyDetected, setModalReadyDetected] = useState(false);
-  const [enableSwissRetry, setEnableSwissRetry] = useState(false);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const currentGuestReportId = useMemo(() => {
     return guestReportId || getGuestToken();
   }, [guestReportId]);
-
-  const { retryStatus, isRetrying } = useSwissDataRetry({
-    guestReportId: currentGuestReportId,
-    shouldCheck: enableSwissRetry
-  });
 
   // Don't render if no token - let parent components handle this case
   if (!currentGuestReportId) {
@@ -169,26 +161,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
         hasSwissData: !!mappedReport.swissData
       });
 
-      // Save enriched Swiss data to temp_report_data
-      if (mappedReport.swissData && currentGuestReportId) {
-        const { data: tempRow } = await supabase
-          .from("temp_report_data")
-          .select("id")
-          .eq("guest_report_id", currentGuestReportId)
-          .single();
-
-        if (tempRow) {
-          await saveEnrichedSwissDataToEdge({ 
-            uuid: tempRow.id,
-            swissData: mappedReport.swissData,
-            table: 'temp_report_data',
-            field: 'swiss_data'
-          });
-        }
-      } else if (!mappedReport.swissData && currentGuestReportId) {
-        // Enable Swiss data retry if Swiss data is missing
-        setEnableSwissRetry(true);
-      }
 
       setFetchedReportData(data);
 
