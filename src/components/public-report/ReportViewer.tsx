@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Download, Copy, ArrowLeft, X, Paperclip } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,7 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
   const [chatToken, setChatToken] = useState<string | null>(null);
   const [cachedUuid, setCachedUuid] = useState<string | null>(null);
   const [isSavingSwissData, setIsSavingSwissData] = useState(false);
+  const swissSaveAttemptedRef = useRef(false);
 
   // Use intelligent content detection
   const reportAnalysisData = { 
@@ -52,11 +53,15 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
   // Handle Swiss data saving when ReportViewer mounts
   useEffect(() => {
     const handleSwissDataSaving = async () => {
-      // Only proceed if we have Swiss data that needs to be saved
-      if (!mappedReport.swissData || isSavingSwissData) return;
+      // Only proceed if we have Swiss data and haven't attempted saving yet
+      if (!mappedReport.swissData || swissSaveAttemptedRef.current || isSavingSwissData) {
+        return;
+      }
 
       const guestReportId = getGuestReportId();
       if (!guestReportId) return;
+
+      swissSaveAttemptedRef.current = true;
 
       try {
         setIsSavingSwissData(true);
@@ -89,7 +94,7 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
     };
 
     handleSwissDataSaving();
-  }, [mappedReport.swissData, isSavingSwissData]);
+  }, [mappedReport.swissData]);
 
   const handleDownloadPdf = () => {
     if (!mappedReport.pdfData) {
