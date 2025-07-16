@@ -103,11 +103,21 @@ async function validateRequest(
       return { ok: false, reason: "user_id missing or not a UUID" };
     }
 
-    const { error } = await supabase.rpc("auth_uid_exists", { uid: p.user_id });
+    const { data: authResult, error } = await supabase.rpc("auth_uid_exists", { uid: p.user_id });
+    
     if (error) {
-      console.error("[orchestrator] ❌ User not found or auth error:", error);
+      console.error("[orchestrator] ❌ RPC error from auth_uid_exists:", error);
       return { ok: false, reason: "User not found" };
     }
+    
+    console.log(`[orchestrator] 🔍 auth_uid_exists returned: ${authResult} for uid: ${p.user_id}`);
+    
+    if (!authResult) {
+      console.warn(`[orchestrator] 🔴 UID not found in auth or guest tables: ${p.user_id}`);
+      return { ok: false, reason: "User not found" };
+    }
+    
+    console.log(`[orchestrator] ✅ UID verified successfully: ${p.user_id}`);
   }
 
   console.log("[orchestrator] ✅ Validation passed");
