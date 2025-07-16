@@ -61,7 +61,40 @@ WHERE gr.created_at > NOW() - INTERVAL '24 hours'
   AND (gr.translator_log_id IS NULL OR gr.translator_log_id != tl.id)
 ORDER BY gr.created_at DESC;
 
--- 5. Manual fix for orphaned translator_logs (run this if needed)
+-- 5. Check specific UUID that's causing issues
+SELECT 
+  'translator_logs' as table_name,
+  id,
+  user_id,
+  is_guest,
+  created_at,
+  request_type
+FROM translator_logs 
+WHERE user_id = 'b1112567-d603-4b0e-9b97-ccaaf8d26e10'
+ORDER BY created_at DESC;
+
+SELECT 
+  'guest_reports' as table_name,
+  id,
+  translator_log_id,
+  has_report,
+  created_at
+FROM guest_reports 
+WHERE id = 'b1112567-d603-4b0e-9b97-ccaaf8d26e10'
+ORDER BY created_at DESC;
+
+-- 6. Check if this UUID exists in api_keys (regular user)
+SELECT 
+  'api_keys' as table_name,
+  id,
+  user_id,
+  email,
+  is_active
+FROM api_keys 
+WHERE user_id = 'b1112567-d603-4b0e-9b97-ccaaf8d26e10'
+ORDER BY created_at DESC;
+
+-- 7. Manual fix for orphaned translator_logs (run this if needed)
 -- UPDATE guest_reports 
 -- SET translator_log_id = (
 --   SELECT tl.id 
