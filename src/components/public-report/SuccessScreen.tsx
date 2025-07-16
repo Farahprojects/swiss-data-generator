@@ -98,21 +98,16 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const [showCountdown, setShowCountdown] = useState(false);
   const [countdownTime, setCountdownTime] = useState(24);
   const [modalReadyDetected, setModalReadyDetected] = useState(false);
+  const [enableSwissRetry, setEnableSwissRetry] = useState(false);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const currentGuestReportId = useMemo(() => {
     return guestReportId || getGuestToken();
   }, [guestReportId]);
 
-  // Add Swiss data retry mechanism with debug logging
-  console.log('🔧 [DEBUG] useSwissDataRetry hook mounting with:', {
-    currentGuestReportId,
-    enabled: !!currentGuestReportId
-  });
-  
   const { retryStatus, isRetrying } = useSwissDataRetry({
     guestReportId: currentGuestReportId,
-    enabled: !!currentGuestReportId
+    shouldCheck: enableSwissRetry
   });
 
   // Don't render if no token - let parent components handle this case
@@ -190,6 +185,9 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
             field: 'swiss_data'
           });
         }
+      } else if (!mappedReport.swissData && currentGuestReportId) {
+        // Enable Swiss data retry if Swiss data is missing
+        setEnableSwissRetry(true);
       }
 
       setFetchedReportData(data);
