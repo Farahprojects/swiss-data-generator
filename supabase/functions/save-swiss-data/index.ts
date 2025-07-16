@@ -1,94 +1,77 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.3'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+// Set CORS headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Content-Type': 'application/json'
 }
 
-interface RequestBody {
-  uuid: string;
-  swiss_data: any;
-  table?: string;
-  field?: string;
-}
-
+// Serve the Edge Function
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    const { uuid, swiss_data, table = 'temp_report_data', field = 'swiss_data' } = await req.json()
 
-    const { uuid, swiss_data, table = 'temp_report_data', field = 'swiss_data' }: RequestBody = await req.json();
-
-    // Validate input
-    if (!uuid || !swiss_data) {
+    if (!uuid || !swiss_data || !table || !field) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: uuid and swiss_data' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+        JSON.stringify({ success: false, error: 'Missing uuid, swiss_data, table, or field' }),
+        { status: 400, headers: corsHeaders }
+      )
     }
 
-    console.log('Saving enriched Swiss data for UUID:', uuid);
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    )
 
-    // First get current attempts count
-    const { data: currentData } = await supabase
-      .from(table)
-      .select('swiss_data_save_attempts')
-      .eq('guest_report_id', uuid)
-      .single();
+    console.log('📝 Attempting to update enriched Swiss data for guest_report_id:', uuid)
 
-    const currentAttempts = currentData?.swiss_data_save_attempts || 0;
-
-    // Set pending flag and increment attempts
-    const { error: updatePendingError } = await supabase
-      .from(table)
-      .update({ 
-        swiss_data_save_pending: true,
-        swiss_data_save_attempts: currentAttempts + 1,
-        last_save_attempt_at: new Date().toISOString()
-      })
-      .eq('guest_report_id', uuid);
-
-    if (updatePendingError) {
-      console.error('Failed to set pending flag:', updatePendingError);
-    }
-
-    // Update the record with Swiss data and mark as saved
     const { data, error } = await supabase
       .from(table)
-      .update({ 
-        [field]: swiss_data,
-        swiss_data_saved: true,
-        swiss_data_save_pending: false
-      })
+      .update({ [field]: swiss_data })
       .eq('guest_report_id', uuid)
       .select()
-      .single();
 
     if (error) {
-      console.error('Database error:', error);
+      console.error('❌ DB update error:', error)
       return new Response(
-        JSON.stringify({ error: 'Failed to save data', details: error.message }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+        JSON.stringify({ success: false, error: error.message }),
+        { status: 500, headers: corsHeaders }
+      )
     }
 
-    return new Response(
-      JSON.stringify({ success: true, data }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    if (!data || data.length === 0) {
+      console.warn('⚠️ No rows matched for guest_report_id:', uuid)
+      return new Response(
+        JSON.stringify({ success: false, error: 'No matching row found' }),
+        { status: 404, headers: corsHeaders }
+      )
+    }
 
-  } catch (error) {
-    console.error('Unexpected error:', error);
+    console.log('✅ Swiss data updated successfully for guest_report_id:', uuid)
+
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+      JSON.stringify({
+        success: true,
+        updated: data[0],
+        guest_report_id: uuid
+      }),
+      { status: 200, headers: corsHeaders }
+    )
+
+  } catch (err) {
+    console.error('💥 Uncaught error in save-swiss-data:', err)
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: err instanceof Error ? err.message : 'Unknown server error'
+      }),
+      { status: 500, headers: corsHeaders }
+    )
   }
-});
+})
