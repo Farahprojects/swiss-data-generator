@@ -315,6 +315,9 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     const checkReportError = async () => {
       if (!currentGuestReportId || errorHandlingTriggered || caseNumber) return;
       
+      // Guard condition: only run query after full report is created
+      if (!report?.has_report || !report?.id) return;
+      
       try {
         const { data: reportLog, error } = await supabase
           .from('report_logs')

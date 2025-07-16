@@ -152,7 +152,17 @@ async function processSwissDataInBackground(guestReportId: string, reportData: R
       user_id: guestReportId,
     };
 
-    console.log("[edge][translator_payload]", JSON.stringify(translatorPayload, null, 2));
+    console.log("[verify][translator_payload]", JSON.stringify({
+      user_id_type: typeof guestReportId,
+      user_id_value: guestReportId,
+      translatorPayload,
+    }, null, 2));
+
+    console.log("[verify][supabase.insert.translator_logs]", {
+      inserting_user_id: guestReportId,
+      is_guest: true,
+      target_table: "translator_logs"
+    });
 
     const translated = await translate(translatorPayload);
     swissData = JSON.parse(translated.text);

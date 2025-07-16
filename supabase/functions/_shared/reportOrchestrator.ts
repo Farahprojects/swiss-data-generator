@@ -16,7 +16,6 @@ const EDGE_ENGINES = [
 const initSupabase = () => {
   const url = Deno.env.get("SUPABASE_URL")!;
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  console.log("[orchestrator] 🔧 Initializing Supabase client");
   return createClient(url, key);
 };
 
@@ -26,7 +25,6 @@ function check<T>(q: any): T {
     console.error("[orchestrator] ❌ Database operation failed:", q.error);
     throw q.error;
   }
-  console.log("[orchestrator] ✅ Database operation successful");
   return q.data;
 }
 
@@ -49,16 +47,13 @@ async function validateRequest(
   supabase: SupabaseClient,
   p: ReportPayload,
 ): Promise<{ ok: true } | { ok: false; reason: string }> {
-  console.log("[orchestrator] 🔍 Starting validation for payload:", {
+  console.log("[orchestrator] 🔍 Validating request:", {
     report_type: p.report_type,
     endpoint: p.endpoint,
-    user_id: p.user_id ? "present" : "missing",
-    is_guest: p.is_guest,
-    has_chartData: !!p.chartData
+    is_guest: p.is_guest
   });
 
   /* 1️⃣  valid report_type? */
-  console.log("[orchestrator] 🔍 Checking if report_type exists in report_prompts:", p.report_type);
   const { data: promptExists, error: promptError } = await supabase
     .from("report_prompts")
     .select("name")
@@ -74,7 +69,6 @@ async function validateRequest(
     console.error("[orchestrator] ❌ Report type not found in report_prompts:", p.report_type);
     return { ok: false, reason: "Invalid report_type" };
   }
-  console.log("[orchestrator] ✅ Report type validated:", p.report_type);
 
   /* 2️⃣  basic field presence */
   if (!p.endpoint) {
@@ -85,11 +79,9 @@ async function validateRequest(
     console.error("[orchestrator] ❌ Missing chartData field");
     return { ok: false, reason: "Missing chartData" };
   }
-  console.log("[orchestrator] ✅ Basic fields validated (endpoint, chartData)");
 
   /* 3️⃣  guest vs user identity */
   if (p.is_guest) {
-    console.log("[orchestrator] 🔍 Validating guest user:", p.user_id);
     const { data: guest, error: guestError } = await supabase
       .from("guest_reports")
       .select("id")
@@ -105,9 +97,7 @@ async function validateRequest(
       console.error("[orchestrator] ❌ Guest ID not found in guest_reports:", p.user_id);
       return { ok: false, reason: "Guest ID not found" };
     }
-    console.log("[orchestrator] ✅ Guest user validated:", p.user_id);
   } else {
-    console.log("[orchestrator] 🔍 Validating regular user:", p.user_id);
     if (!p.user_id || !isUUID(p.user_id)) {
       console.error("[orchestrator] ❌ Invalid user_id format:", p.user_id);
       return { ok: false, reason: "user_id missing or not a UUID" };
@@ -118,10 +108,9 @@ async function validateRequest(
       console.error("[orchestrator] ❌ User not found or auth error:", error);
       return { ok: false, reason: "User not found" };
     }
-    console.log("[orchestrator] ✅ Regular user validated:", p.user_id);
   }
 
-  console.log("[orchestrator] ✅ All validation checks passed");
+  console.log("[orchestrator] ✅ Validation passed");
   return { ok: true };
 }
 
@@ -131,10 +120,7 @@ async function resolveUserId(
   rawId: string | null,
   isGuest: boolean,
 ): Promise<{ user_id: string | null; client_id: string | null; error?: string }> {
-  console.log("[orchestrator] 🔍 Resolving user ID:", { rawId, isGuest });
-  
   if (isGuest) {
-    console.log("[orchestrator] 🔍 Guest mode - checking guest_reports table");
     const { data: guest, error } = await supabase
       .from("guest_reports")
       .select("id")
@@ -146,16 +132,12 @@ async function resolveUserId(
       return { user_id: null, client_id: null, error: "Database error" };
     }
     
-    const result = guest
+    return guest
       ? { user_id: null, client_id: rawId }
       : { user_id: null, client_id: null, error: "Guest not found" };
-    
-    console.log("[orchestrator] 📋 Guest resolution result:", result);
-    return result;
   }
 
   if (rawId && isUUID(rawId)) {
-    console.log("[orchestrator] ✅ Regular user ID resolved:", rawId);
     return { user_id: rawId, client_id: null };
   }
 
@@ -165,8 +147,6 @@ async function resolveUserId(
 
 /*────────────────── DB HELPERS: engine + logging ───────────────────────────*/
 async function getNextEngine(supabase: SupabaseClient) {
-  console.log("[orchestrator] 🔍 Selecting next engine from available engines:", EDGE_ENGINES);
-  
   const { data: last, error } = await supabase
     .from("report_logs")
     .select("engine_used")
@@ -176,18 +156,13 @@ async function getNextEngine(supabase: SupabaseClient) {
     
   if (error) {
     console.error("[orchestrator] ❌ Error fetching last engine:", error);
-    console.log("[orchestrator] 🔄 Defaulting to first engine");
     return EDGE_ENGINES[0];
   }
   
   const idx = last ? EDGE_ENGINES.indexOf(last.engine_used) : -1;
   const nextEngine = EDGE_ENGINES[(idx + 1) % EDGE_ENGINES.length];
   
-  console.log("[orchestrator] 🎯 Engine selection:", {
-    lastEngine: last?.engine_used || "none",
-    nextEngine,
-    availableEngines: EDGE_ENGINES
-  });
+  console.log("[orchestrator] 🎯 Selected engine:", nextEngine);
   
   return nextEngine;
 }
@@ -199,14 +174,6 @@ async function logFailedAttempt(
   errorMessage: string,
   durationMs?: number,
 ) {
-  console.log("[orchestrator] 📝 Logging failed attempt:", {
-    engine,
-    errorMessage,
-    durationMs,
-    user_id: payload.user_id,
-    is_guest: payload.is_guest
-  });
-  
   const ids = await resolveUserId(
     supabase,
     payload.user_id ?? null,
@@ -225,12 +192,9 @@ async function logFailedAttempt(
     duration_ms: durationMs ?? null,
     created_at: new Date().toISOString(),
   };
-  
-  console.log("[orchestrator] 📝 Inserting failed log with data:", logData);
 
   try {
-    const result = await check(supabase.from("report_logs").insert(logData).select());
-    console.log("[orchestrator] ✅ Failed attempt logged successfully:", result);
+    await check(supabase.from("report_logs").insert(logData).select());
   } catch (error) {
     console.error("[orchestrator] ❌ Failed to log failed attempt:", error);
   }
@@ -246,8 +210,11 @@ interface ReportResult {
 export const processReportRequest = async (
   payload: ReportPayload,
 ): Promise<ReportResult> => {
-  console.log("[orchestrator] 🟢 Received request to generate report");
-  console.log("[orchestrator] 📋 Full payload:", JSON.stringify(payload, null, 2));
+  console.log("[orchestrator] 🟢 Processing report request:", {
+    report_type: payload.report_type,
+    endpoint: payload.endpoint,
+    is_guest: payload.is_guest
+  });
   
   const start = Date.now();
   const supabase = initSupabase();
@@ -258,13 +225,10 @@ export const processReportRequest = async (
     console.warn(`[orchestrator] 🔴 Validation failed: ${v.reason}`);
     await logFailedAttempt(supabase, payload, "validator", v.reason, Date.now() - start);
     return { success: false, errorMessage: v.reason };
-  } else {
-    console.log(`[orchestrator] ✅ Validation passed`);
   }
 
   /* Choose edge engine */
   const engine = await getNextEngine(supabase);
-  console.log(`[orchestrator] 🚀 Using engine: ${engine}`);
 
   /* Call the edge function (costly path) */
   let reportContent = "";
@@ -272,11 +236,7 @@ export const processReportRequest = async (
     const edgeUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/${engine}`;
     const requestPayload = { ...payload, reportType: payload.report_type, selectedEngine: engine };
     
-    console.log("[orchestrator] 🌐 Making request to edge function:", {
-      url: edgeUrl,
-      engine,
-      payloadKeys: Object.keys(requestPayload)
-    });
+    console.log("[orchestrator] 🌐 Calling edge function:", engine);
     
     const response = await fetch(edgeUrl, {
       method: "POST",
@@ -284,25 +244,15 @@ export const processReportRequest = async (
       body: JSON.stringify(requestPayload),
     });
 
-    console.log("[orchestrator] 📡 Edge function response:", {
-      status: response.status,
-      statusText: response.statusText,
-      ok: response.ok
-    });
-
     if (!response.ok) {
       const errText = await response.text();
-      console.error("[orchestrator] ❌ Edge function failed with error:", errText);
+      console.error("[orchestrator] ❌ Edge function failed:", errText);
       await logFailedAttempt(supabase, payload, engine, errText, Date.now() - start);
       return { success: false, errorMessage: errText };
     }
 
     const json = await response.json();
-    console.log("[orchestrator] 📄 Edge function JSON response keys:", Object.keys(json));
-    console.log("[orchestrator] 📄 Raw response:", JSON.stringify(json, null, 2));
-    
     reportContent = json.report?.content ?? json.report;
-    console.log("[orchestrator] 📝 Extracted report content length:", reportContent?.length || 0);
     
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -312,8 +262,6 @@ export const processReportRequest = async (
   }
 
   /* Save success row */
-  console.log("[orchestrator] 💾 Preparing to save success log to database");
-  
   const ids = await resolveUserId(
     supabase,
     payload.user_id ?? null,
@@ -332,15 +280,9 @@ export const processReportRequest = async (
     duration_ms: Date.now() - start,
     created_at: new Date().toISOString(),
   };
-  
-  console.log("[orchestrator] 💾 Inserting success log with data:", {
-    ...successLogData,
-    report_text: `[${successLogData.report_text?.length || 0} chars]` // Don't log full content
-  });
 
   try {
-    const result = await check(supabase.from("report_logs").insert(successLogData).select());
-    console.log("[orchestrator] ✅ Success log saved to database:", result);
+    await check(supabase.from("report_logs").insert(successLogData).select());
   } catch (error) {
     console.error("[orchestrator] ❌ Failed to save success log:", error);
   }
@@ -355,7 +297,7 @@ export const processReportRequest = async (
     },
   };
   
-  console.log("[orchestrator] 🎉 Report generation completed successfully:", {
+  console.log("[orchestrator] 🎉 Report generation completed:", {
     title: finalResult.report.title,
     contentLength: finalResult.report.content?.length || 0,
     engine: finalResult.report.engine_used

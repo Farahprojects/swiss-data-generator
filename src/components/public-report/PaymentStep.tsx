@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { Tag, CheckCircle, AlertCircle, Loader2, AlertTriangle } from 'lucide-react';
@@ -13,6 +13,7 @@ import { usePromoValidation } from '@/hooks/usePromoValidation';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { PromoConfirmationDialog } from '@/components/public-report/PromoConfirmationDialog';
 import { handlePaymentSubmission } from '@/utils/paymentSubmissionHelper';
+import { useToast } from '@/hooks/use-toast';
 import FormStep from './FormStep';
 
 interface PromoValidationState {
@@ -51,8 +52,35 @@ const PaymentStep = ({
 }: PaymentStepProps) => {
   const [showPromoCode, setShowPromoCode] = useState(false);
   const [isLocalProcessing, setIsLocalProcessing] = useState(false);
+  const [hasTimedOut, setHasTimedOut] = useState(false);
   const { validatePromoManually } = usePromoValidation();
   const { getReportPrice, getReportTitle, calculatePricing, isLoading: isPricingLoading, error: pricingError } = usePriceFetch();
+  const { toast } = useToast();
+  
+  // Add timeout mechanism to prevent stuck local processing state
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
+    if (isLocalProcessing) {
+      setHasTimedOut(false); // Reset timeout state when starting
+      timeoutId = setTimeout(() => {
+        console.warn('Local processing timeout - resetting processing state');
+        setIsLocalProcessing(false);
+        setHasTimedOut(true);
+        toast({
+          title: "Request Timeout",
+          description: "The request took too long. Please try again.",
+          variant: "destructive",
+        });
+      }, 10000); // 10 second timeout
+    }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [isLocalProcessing, toast]);
   
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');
@@ -118,6 +146,9 @@ const PaymentStep = ({
   const handleButtonClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    // Reset timeout state when retrying
+    setHasTimedOut(false);
     
     await handlePaymentSubmission({
       promoCode,
@@ -273,7 +304,13 @@ const PaymentStep = ({
             className="w-full h-14 text-lg font-light bg-gray-900 hover:bg-gray-800 text-white transition-colors"
             type="button"
           >
-            {isLocalProcessing || isProcessing ? 'Processing...' : isValidatingPromo ? 'Validating...' : 'Generate My Report'}
+            {isLocalProcessing || isProcessing 
+              ? 'Processing...' 
+              : isValidatingPromo 
+                ? 'Validating...' 
+                : hasTimedOut
+                  ? 'Try Again'
+                  : 'Generate My Report'}
           </Button>
 
           {/* Satisfaction Guarantee */}

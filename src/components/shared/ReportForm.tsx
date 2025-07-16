@@ -299,12 +299,20 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         throw new Error('Report not found');
       }
 
+      // Debug: Log the raw data to see what's being returned
+      console.log('🔍 Raw Supabase query result:', data);
+      console.log('🔍 translator_logs data:', data.translator_logs);
+      console.log('🔍 report_logs data:', data.report_logs);
+      console.log('🔍 translator_log_id from guest_report:', data.translator_log_id);
+
       const reportData = {
         guest_report: data,
         report_content: data.report_logs?.report_text || null,
         swiss_data: data.translator_logs?.swiss_data || null,
         metadata: { source: 'manual_fetch' }
       };
+
+      console.log('🔍 Constructed reportData:', reportData);
 
       setGuestReportData(reportData);
       

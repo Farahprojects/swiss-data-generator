@@ -24,7 +24,7 @@ export interface ToggleDisplayLogic {
  */
 export const getReportContentType = (data: ReportDetectionData): ReportContentType => {
   const hasReportContent = !!data.reportContent && data.reportContent.trim().length > 0;
-  const hasSwissData = !!data.swissData;
+  const hasSwissData = data.swissData && Object.keys(data.swissData).length > 0;
   
   if (hasReportContent && hasSwissData) return 'hybrid';
   if (hasReportContent) return 'ai-only';
@@ -37,7 +37,7 @@ export const getReportContentType = (data: ReportDetectionData): ReportContentTy
  */
 export const getToggleDisplayLogic = (data: ReportDetectionData): ToggleDisplayLogic => {
   const hasReportContent = !!data.reportContent && data.reportContent.trim().length > 0;
-  const hasSwissData = !!data.swissData;
+  const hasSwissData = data.swissData && Object.keys(data.swissData).length > 0;
   
   if (hasReportContent && hasSwissData) {
     return {

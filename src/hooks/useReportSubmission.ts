@@ -33,6 +33,29 @@ export const useReportSubmission = () => {
   const { toast } = useToast();
   const { getReportPrice, getReportTitle, isLoading: isPricingLoading } = typeof window !== 'undefined' ? usePriceFetch() : { getReportPrice: () => 0, getReportTitle: () => 'Report', isLoading: false };
 
+  // Add timeout mechanism to prevent stuck processing state
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
+    if (isProcessing) {
+      timeoutId = setTimeout(() => {
+        console.warn('Report submission timeout - resetting processing state');
+        setIsProcessing(false);
+        toast({
+          title: "Request Timeout",
+          description: "The request took too long. Please try again.",
+          variant: "destructive",
+        });
+      }, 10000); // 10 second timeout
+    }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [isProcessing, toast]);
+
   const submitReport = async (
     data: ReportFormData, 
     promoValidation: PromoValidationState,
@@ -202,6 +225,7 @@ export const useReportSubmission = () => {
         });
       }
     } catch (error) {
+      console.error('Error in submitReport:', error);
       toast({
         title: "Error",
         description: "Failed to process your request. Please try again.",
