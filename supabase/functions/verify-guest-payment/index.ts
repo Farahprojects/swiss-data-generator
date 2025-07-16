@@ -152,22 +152,25 @@ async function processSwissDataInBackground(guestReportId: string, reportData: R
       user_id: guestReportId,
     };
 
-    console.log("[verify][translator_payload]", JSON.stringify({
-      user_id_type: typeof guestReportId,
-      user_id_value: guestReportId,
-      translatorPayload,
-    }, null, 2));
-
-    console.log("[verify][supabase.insert.translator_logs]", {
-      inserting_user_id: guestReportId,
+    // ⭐ [VERIFY-GUEST-PAYMENT] Calling translator with guest report ID
+    console.log("⭐ [VERIFY-GUEST-PAYMENT] translator_call", { 
+      guestReportId, 
       is_guest: true,
-      target_table: "translator_logs"
+      file: "verify-guest-payment/index.ts:166",
+      function: "processSwissDataInBackground"
     });
 
     const translated = await translate(translatorPayload);
     swissData = JSON.parse(translated.text);
 
-    console.log("[edge][swiss_result]", JSON.stringify(swissData, null, 2));
+    // ⭐ [VERIFY-GUEST-PAYMENT] Translator completed successfully
+    console.log("⭐ [VERIFY-GUEST-PAYMENT] translator_success", { 
+      guestReportId, 
+      has_swiss_data: !!swissData?.swiss_data,
+      response_status: translated.status,
+      file: "verify-guest-payment/index.ts:172",
+      function: "processSwissDataInBackground"
+    });
 
     await supabase
       .from("guest_reports")
@@ -179,7 +182,14 @@ async function processSwissDataInBackground(guestReportId: string, reportData: R
 
   } catch (err: any) {
     swissError = err.message;
-    console.error("[edge][translator_error]", err.message, JSON.stringify({ guestReportId, payload: reportData }, null, 2));
+    // ⭐ [VERIFY-GUEST-PAYMENT] Translator failed
+    console.error("⭐ [VERIFY-GUEST-PAYMENT] translator_error", { 
+      guestReportId, 
+      error: err.message,
+      request_type: reportData.request || reportData.reportType,
+      file: "verify-guest-payment/index.ts:178",
+      function: "processSwissDataInBackground"
+    });
     
     swissData = {
       error: true,
