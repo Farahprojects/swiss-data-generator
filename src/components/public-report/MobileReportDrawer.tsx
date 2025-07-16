@@ -22,7 +22,6 @@ import SuccessScreen from './SuccessScreen';
 import { ReportViewer } from './ReportViewer';
 import { ReportFormData } from '@/types/public-report';
 import { MappedReport } from '@/types/mappedReport';
-import { useSwissDataRetry } from '@/hooks/useSwissDataRetry';
 import { mapReportPayload } from '@/utils/mapReportPayload';
 import { saveEnrichedSwissDataToEdge } from '@/utils/saveEnrichedSwissData';
 import MobileDrawerHeader from './drawer-components/MobileDrawerHeader';
@@ -79,12 +78,6 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
 
   const { isProcessing, submitReport, reportCreated } = useReportSubmission();
   const { promoValidation, isValidatingPromo, validatePromoManually, resetValidation } = usePromoValidation();
-  
-  // Add Swiss data retry mechanism
-  const { retryStatus, isRetrying } = useSwissDataRetry({
-    guestReportId: urlGuestId,
-    enabled: isOpen && !!urlGuestId
-  });
 
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');
@@ -277,8 +270,6 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                 email={formEmail}
                 onViewReport={handleViewReport}
                 guestReportId={getGuestReportId() || undefined}
-                retryStatus={retryStatus}
-                isRetrying={isRetrying}
               />
             </div>
           )}

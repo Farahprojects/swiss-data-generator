@@ -15,6 +15,7 @@ import EntertainmentWindow from './EntertainmentWindow';
 import { mapReportPayload } from '@/utils/mapReportPayload';
 import { MappedReport } from '@/types/mappedReport';
 import { saveEnrichedSwissDataToEdge } from '@/utils/saveEnrichedSwissData';
+import { useSwissDataRetry } from '@/hooks/useSwissDataRetry';
 
 type ReportType = 'essence' | 'sync';
 const VIDEO_SRC = 'https://auth.theraiastro.com/storage/v1/object/public/therai-assets/loading-video.mp4';
@@ -63,11 +64,9 @@ interface SuccessScreenProps {
   email: string;
   onViewReport?: () => void;
   guestReportId?: string;
-  retryStatus?: 'idle' | 'checking' | 'retrying' | 'completed' | 'failed';
-  isRetrying?: boolean;
 }
 
-const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport, guestReportId, retryStatus, isRetrying }) => {
+const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport, guestReportId }) => {
   const {
     report,
     error,
@@ -104,6 +103,17 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const currentGuestReportId = useMemo(() => {
     return guestReportId || getGuestToken();
   }, [guestReportId]);
+
+  // Add Swiss data retry mechanism with debug logging
+  console.log('🔧 [DEBUG] useSwissDataRetry hook mounting with:', {
+    currentGuestReportId,
+    enabled: !!currentGuestReportId
+  });
+  
+  const { retryStatus, isRetrying } = useSwissDataRetry({
+    guestReportId: currentGuestReportId,
+    enabled: !!currentGuestReportId
+  });
 
   // Don't render if no token - let parent components handle this case
   if (!currentGuestReportId) {
