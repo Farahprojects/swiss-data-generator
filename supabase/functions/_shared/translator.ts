@@ -89,14 +89,17 @@ async function logToSupabase(
   // ⭐ [TRANSLATOR] Inserting into translator_logs
   console.log('⭐ [TRANSLATOR] insert', {
     user_id: userId,
+    user_id_type: typeof userId,
+    user_id_value: userId,
     is_guest: isGuest,
     request_type: requestType,
     has_swiss_data: !!responsePayload?.swiss_data,
     file: "translator.ts:98",
-    function: "logToSupabase"
+    function: "logToSupabase",
+    translator_payload_keys: translatorPayload ? Object.keys(translatorPayload) : null
   });
 
-  const { error } = await sb.from("translator_logs").insert({
+  const insertData = {
     request_type:        requestType,
     request_payload:     requestPayload,
     translator_payload:  translatorPayload ?? null,
@@ -108,14 +111,26 @@ async function logToSupabase(
     report_tier:         reportTier,
     user_id:             userId,
     is_guest:            isGuest,
+  };
+
+  console.log('⭐ [TRANSLATOR] insert_data', {
+    user_id: insertData.user_id,
+    user_id_type: typeof insertData.user_id,
+    is_guest: insertData.is_guest,
+    request_type: insertData.request_type,
+    file: "translator.ts:115",
+    function: "logToSupabase"
   });
+
+  const { error } = await sb.from("translator_logs").insert(insertData);
   
   if (error) {
     console.error("⭐ [TRANSLATOR] insert_failed:", error.message);
   } else {
     console.log('⭐ [TRANSLATOR] insert_success', { 
       user_id: userId,
-      file: "translator.ts:108",
+      user_id_type: typeof userId,
+      file: "translator.ts:125",
       function: "logToSupabase"
     });
   }

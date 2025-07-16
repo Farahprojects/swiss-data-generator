@@ -155,7 +155,11 @@ async function processSwissDataInBackground(guestReportId: string, reportData: R
     // ⭐ [VERIFY-GUEST-PAYMENT] Calling translator with guest report ID
     console.log("⭐ [VERIFY-GUEST-PAYMENT] translator_call", { 
       guestReportId, 
+      guestReportId_type: typeof guestReportId,
       is_guest: true,
+      translatorPayload_keys: Object.keys(translatorPayload),
+      translatorPayload_user_id: translatorPayload.user_id,
+      translatorPayload_user_id_type: typeof translatorPayload.user_id,
       file: "verify-guest-payment/index.ts:166",
       function: "processSwissDataInBackground"
     });
@@ -166,8 +170,10 @@ async function processSwissDataInBackground(guestReportId: string, reportData: R
     // ⭐ [VERIFY-GUEST-PAYMENT] Translator completed successfully
     console.log("⭐ [VERIFY-GUEST-PAYMENT] translator_success", { 
       guestReportId, 
+      guestReportId_type: typeof guestReportId,
       has_swiss_data: !!swissData?.swiss_data,
       response_status: translated.status,
+      swiss_data_keys: swissData ? Object.keys(swissData) : null,
       file: "verify-guest-payment/index.ts:172",
       function: "processSwissDataInBackground"
     });
