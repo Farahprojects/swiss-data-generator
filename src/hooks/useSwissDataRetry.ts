@@ -100,7 +100,7 @@ export const useSwissDataRetry = ({ guestReportId, enabled = true }: UseSwissDat
         setAttempts(tempRow.swiss_data_save_attempts + 1);
 
         const result = await saveEnrichedSwissDataToEdge({
-          uuid: guestReportId,
+          uuid: tempRow.id,
           swissData: mappedReportData.swissData,
           table: 'temp_report_data',
           field: 'swiss_data'
