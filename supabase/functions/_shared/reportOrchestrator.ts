@@ -97,6 +97,8 @@ async function validateRequest(
       console.error("[orchestrator] ❌ Guest ID not found in guest_reports:", p.user_id);
       return { ok: false, reason: "Guest ID not found" };
     }
+    
+    console.log(`[orchestrator] ✅ Guest validation passed for guest ID: ${p.user_id}`);
   } else {
     if (!p.user_id || !isUUID(p.user_id)) {
       console.error("[orchestrator] ❌ Invalid user_id format:", p.user_id);
@@ -118,6 +120,29 @@ async function validateRequest(
     }
     
     console.log(`[orchestrator] ✅ UID verified successfully: ${p.user_id}`);
+  }
+
+  /* 🔍 UNIVERSAL LOGGING: Test auth_uid_exists for ALL requests regardless of is_guest */
+  if (p.user_id) {
+    console.log(`[orchestrator] 🔍 UNIVERSAL: Testing auth_uid_exists for user_id: ${p.user_id} (is_guest: ${p.is_guest})`);
+    
+    try {
+      const { data: universalAuthResult, error: universalAuthError } = await supabase.rpc("auth_uid_exists", { uid: p.user_id });
+      
+      if (universalAuthError) {
+        console.error(`[orchestrator] ❌ UNIVERSAL: RPC error from auth_uid_exists for ${p.user_id}:`, universalAuthError);
+      } else {
+        console.log(`[orchestrator] 🔍 UNIVERSAL: auth_uid_exists returned: ${universalAuthResult} for ${p.user_id} (is_guest: ${p.is_guest})`);
+        
+        if (!universalAuthResult) {
+          console.warn(`[orchestrator] 🔴 UNIVERSAL: UID not found in auth tables: ${p.user_id} (is_guest: ${p.is_guest})`);
+        } else {
+          console.log(`[orchestrator] ✅ UNIVERSAL: UID found in auth tables: ${p.user_id} (is_guest: ${p.is_guest})`);
+        }
+      }
+    } catch (universalAuthTestError) {
+      console.error(`[orchestrator] ❌ UNIVERSAL: Exception testing auth_uid_exists for ${p.user_id}:`, universalAuthTestError);
+    }
   }
 
   console.log("[orchestrator] ✅ Validation passed");
