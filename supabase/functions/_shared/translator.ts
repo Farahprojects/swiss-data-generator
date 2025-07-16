@@ -109,7 +109,7 @@ async function logToSupabase(
     error_message:       errorMessage,
     google_geo:          googleGeoUsed,
     report_tier:         reportTier,
-    user_id:             userId,
+    user_id:             userId?.toString() || null, // <- clean UUID insert with null check
     is_guest:            isGuest,
   };
 

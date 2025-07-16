@@ -214,6 +214,20 @@ serve(async (req) => {
     auth_method: authMethod, 
   };
 
+  // ⭐ [SWISS] Debug logging for user_id type checking
+  console.log('⭐ [SWISS] payload_debug', {
+    database_user_id: row.user_id,
+    database_user_id_type: typeof row.user_id,
+    bodyJson_user_id: bodyJson?.user_id,
+    bodyJson_user_id_type: typeof bodyJson?.user_id,
+    url_params_user_id: urlObj.searchParams.get('user_id'),
+    url_params_user_id_type: typeof urlObj.searchParams.get('user_id'),
+    final_user_id: mergedPayload.user_id,
+    final_user_id_type: typeof mergedPayload.user_id,
+    file: "swiss/index.ts:200",
+    function: "serve"
+  });
+
   // Special handling for email-based requests - FIXED LOGIC
   if (authMethod === "email" && bodyJson?.body) {
     console.log("[swiss] Processing email payload with body:", bodyJson.body);

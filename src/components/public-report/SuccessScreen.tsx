@@ -65,6 +65,12 @@ interface SuccessScreenProps {
 }
 
 const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport, guestReportId }) => {
+  // Early return check - must be before any hooks
+  const currentGuestReportId = guestReportId || getGuestToken();
+  if (!currentGuestReportId) {
+    return null;
+  }
+
   const {
     report,
     error,
@@ -97,15 +103,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   const [countdownTime, setCountdownTime] = useState(24);
   const [modalReadyDetected, setModalReadyDetected] = useState(false);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  const currentGuestReportId = useMemo(() => {
-    return guestReportId || getGuestToken();
-  }, [guestReportId]);
-
-  // Don't render if no token - let parent components handle this case
-  if (!currentGuestReportId) {
-    return null;
-  }
 
   const reportType = report?.report_type as ReportType | undefined;
   const isAstroDataOnly = isAstroOnlyType(reportType);
@@ -199,7 +196,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     } finally {
       setIsLoadingReport(false);
     }
-  }, [currentGuestReportId, onViewReport, fetchCompleteReport, isLoadingReport]);
+  }, [currentGuestReportId, onViewReport, fetchCompleteReport, isLoadingReport, triggerPdfEmail, toast]);
 
   // Fetch is_ai_report flag to determine if we need countdown
   useEffect(() => {
