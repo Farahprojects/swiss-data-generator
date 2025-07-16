@@ -86,6 +86,16 @@ async function logToSupabase(
   console.log('[translator] [DEBUG] responsePayload.swiss_data exists:', !!responsePayload?.swiss_data);
   console.log('[translator] [DEBUG] Swiss data keys being saved:', responsePayload?.swiss_data ? Object.keys(responsePayload.swiss_data) : 'null');
   
+  // [DEBUG] Log the exact data being inserted into translator_logs
+  console.log('[translator] [DEBUG] Inserting into translator_logs:', {
+    user_id: userId,
+    user_id_type: typeof userId,
+    is_guest: isGuest,
+    request_type: requestType,
+    response_status: responseStatus,
+    has_swiss_data: !!responsePayload?.swiss_data
+  });
+
   const { error } = await sb.from("translator_logs").insert({
     request_type:        requestType,
     request_payload:     requestPayload,
@@ -99,7 +109,12 @@ async function logToSupabase(
     user_id:             userId,
     is_guest:            isGuest,
   });
-  if (error) console.error("Failed to log to Supabase:", error.message);
+  
+  if (error) {
+    console.error("Failed to log to Supabase:", error.message);
+  } else {
+    console.log('[translator] [DEBUG] Successfully inserted translator_log with user_id:', userId);
+  }
 }
 
 /*──────────────── helpers */
