@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
     const { data: currentData } = await supabase
       .from(table)
       .select('swiss_data_save_attempts')
-      .eq('id', uuid)
+      .eq('guest_report_id', uuid)
       .single();
 
     const currentAttempts = currentData?.swiss_data_save_attempts || 0;
@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
         swiss_data_save_attempts: currentAttempts + 1,
         last_save_attempt_at: new Date().toISOString()
       })
-      .eq('id', uuid);
+      .eq('guest_report_id', uuid);
 
     if (updatePendingError) {
       console.error('Failed to set pending flag:', updatePendingError);
@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
         swiss_data_saved: true,
         swiss_data_save_pending: false
       })
-      .eq('id', uuid)
+      .eq('guest_report_id', uuid)
       .select()
       .single();
 
