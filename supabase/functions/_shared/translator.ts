@@ -27,6 +27,12 @@ const sb = createClient(SB_URL, SB_KEY);
 // Version identifier for debugging
 const TRANSLATOR_VERSION = "2025-06-16-v2.1-LATEST";
 
+/*──────────────── UUID validation helper ──────────────────────────────────*/
+function isValidUUID(val: string | null | undefined): boolean {
+  if (!val) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val);
+}
+
 /*──────────────── canonical maps ------------------------ */
 const CANON: Record<string, string> = {
   natal:         "natal",
@@ -109,7 +115,7 @@ async function logToSupabase(
     error_message:       errorMessage,
     google_geo:          googleGeoUsed,
     report_tier:         reportTier,
-    user_id:             isGuest ? null : (userId?.toString() || null), // <- mirror report_logs pattern: null for guests
+    user_id:             isValidUUID(userId) ? userId : null,  // Store valid UUID (guest or user)
     is_guest:            isGuest,
   };
 
