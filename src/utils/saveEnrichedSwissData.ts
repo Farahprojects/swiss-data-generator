@@ -12,6 +12,20 @@ export async function saveEnrichedSwissDataToEdge({
   field?: string
 }) {
   try {
+    console.log('🚀 Calling saveEnrichedSwissDataToEdge with:', {
+      uuid,
+      table,
+      field,
+      swissDataExists: !!swissData
+    });
+
+    console.log('📡 Invoking edge function with payload:', {
+      uuid,
+      swiss_data: swissData,
+      table,
+      field
+    });
+
     const response = await supabase.functions.invoke('save-swiss-data', {
       body: JSON.stringify({ uuid, swiss_data: swissData, table, field })
     });
@@ -26,7 +40,7 @@ export async function saveEnrichedSwissDataToEdge({
       return { success: false, error: 'Unexpected response format or missing success=true' };
     }
 
-    console.log('✅ Successfully saved enriched Swiss data via edge:', response.data);
+    console.log('🎉 Swiss data saved successfully:', response.data);
     return response.data;
 
   } catch (error) {
