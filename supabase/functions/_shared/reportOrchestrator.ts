@@ -147,15 +147,9 @@ async function logFailedAttempt(
   errorMessage: string,
   durationMs?: number,
 ) {
-  const ids = {
-    user_id: payload.is_guest ? null : payload.user_id,
-    client_id: payload.is_guest ? payload.user_id : null,
-  };
-
   const logData = {
     api_key: payload.apiKey ?? null,
-    user_id: ids.user_id,
-    client_id: ids.client_id,
+    user_id: payload.user_id, // Use user_id for both guests and authenticated users
     report_type: payload.report_type,
     endpoint: payload.endpoint,
     engine_used: engine,
@@ -167,7 +161,6 @@ async function logFailedAttempt(
 
   console.log("[orchestrator] 📝 ATTEMPTING TO LOG FAILED ATTEMPT:", {
     user_id: logData.user_id,
-    client_id: logData.client_id,
     report_type: logData.report_type,
     engine_used: logData.engine_used,
     status: logData.status,
@@ -248,13 +241,12 @@ export const processReportRequest = async (
 
   const ids = {
     user_id: payload.is_guest ? null : payload.user_id,
-    client_id: payload.is_guest ? payload.user_id : null,
+    client_id: payload.is_guest ? (payload.user_id && isUUID(payload.user_id) ? payload.user_id : null) : null,
   };
 
   const successLogData = {
     api_key: payload.apiKey ?? null,
-    user_id: ids.user_id,
-    client_id: ids.client_id,
+    user_id: payload.user_id, // Use user_id for both guests and authenticated users
     report_type: payload.report_type,
     endpoint: payload.endpoint,
     engine_used: engine,
@@ -266,7 +258,6 @@ export const processReportRequest = async (
 
   console.log("[orchestrator] 📝 ATTEMPTING TO LOG SUCCESS TO report_logs:", {
     user_id: successLogData.user_id,
-    client_id: successLogData.client_id,
     report_type: successLogData.report_type,
     engine_used: successLogData.engine_used,
     status: successLogData.status,
@@ -285,7 +276,6 @@ export const processReportRequest = async (
     console.log("[orchestrator] ✅ SUCCESSFULLY LOGGED TO report_logs:", {
       id: data?.[0]?.id,
       user_id: data?.[0]?.user_id,
-      client_id: data?.[0]?.client_id,
       report_type: data?.[0]?.report_type,
       status: data?.[0]?.status,
       created_at: data?.[0]?.created_at
