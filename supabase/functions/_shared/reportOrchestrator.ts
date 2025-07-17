@@ -150,7 +150,22 @@ export const processReportRequest = async (payload: ReportPayload): Promise<Repo
   };
 
   try {
-    await check(supabase.from("report_logs").insert(successLog).select());
+    console.log("[orchestrator] 📝 Attempting to log to report_logs:", {
+      user_id: successLog.user_id,
+      client_id: successLog.client_id,
+      report_type: successLog.report_type,
+      engine_used: successLog.engine_used,
+      status: successLog.status
+    });
+    
+    const { data, error } = await supabase.from("report_logs").insert(successLog).select();
+    
+    if (error) {
+      console.error("[orchestrator] ❌ Database insert failed:", error);
+      throw error;
+    }
+    
+    console.log("[orchestrator] ✅ Successfully logged to report_logs:", data);
   } catch (e) {
     console.error("[orchestrator] ❌ Failed to log success:", e);
   }
