@@ -260,6 +260,19 @@ export const processReportRequest = async (
     duration_ms: Date.now() - start,
   };
 
+  // 🔍 DEBUG: Log exactly what we're trying to insert
+  console.log("🔍 [orchestrator] SUCCESS LOG INSERT DEBUG:", {
+    user_id: successLogData.user_id,
+    user_id_type: typeof successLogData.user_id,
+    user_id_length: successLogData.user_id ? successLogData.user_id.length : 0,
+    is_guest: payload.is_guest,
+    successLogData_keys: Object.keys(successLogData),
+    successLogData_user_id: successLogData.user_id,
+    successLogData_user_id_type: typeof successLogData.user_id,
+    file: "reportOrchestrator.ts:success_insert",
+    function: "processReportRequest"
+  });
+
   console.log("[orchestrator] 📝 ATTEMPTING TO LOG SUCCESS TO report_logs:", {
     user_id: successLogData.user_id,
     report_type: successLogData.report_type,
@@ -270,6 +283,15 @@ export const processReportRequest = async (
   });
 
   try {
+    // 🔍 DEBUG: Check database constraints first
+    console.log("🔍 [orchestrator] CHECKING DATABASE CONSTRAINTS...");
+    const { data: constraintData, error: constraintError } = await supabase.rpc('check_report_logs_constraints', {});
+    if (constraintError) {
+      console.error("🔍 [orchestrator] ❌ CONSTRAINT CHECK ERROR:", constraintError);
+    } else {
+      console.log("🔍 [orchestrator] ✅ CONSTRAINT CHECK RESULT:", constraintData);
+    }
+
     const { data, error } = await supabase.from("report_logs").insert(successLogData).select();
     
     if (error) {
