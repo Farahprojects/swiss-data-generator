@@ -147,14 +147,12 @@ async function logFailedAttempt(
   errorMessage: string,
   durationMs?: number,
 ) {
-  // Convert guest report ID to proper UUID format if needed
-  const user_id = payload.is_guest ? 
-    (payload.user_id && isUUID(payload.user_id) ? payload.user_id : null) : 
-    payload.user_id;
+  // Store the user_id (guest report ID or auth user ID) as string in report_logs
+  const user_id = payload.user_id;
 
   const logData = {
     api_key: payload.apiKey ?? null,
-    user_id: user_id, // Now expects UUID type
+    user_id: user_id, // Now expects TEXT type
     report_type: payload.report_type,
     endpoint: payload.endpoint,
     engine_used: engine,
@@ -245,17 +243,15 @@ export const processReportRequest = async (
 
   const ids = {
     user_id: payload.is_guest ? null : payload.user_id,
-    client_id: payload.is_guest ? (payload.user_id && isUUID(payload.user_id) ? payload.user_id : null) : null,
+    client_id: payload.is_guest ? payload.user_id : null,
   };
 
-  // Convert guest report ID to proper UUID format if needed
-  const user_id = payload.is_guest ? 
-    (payload.user_id && isUUID(payload.user_id) ? payload.user_id : null) : 
-    payload.user_id;
+  // Store the user_id (guest report ID or auth user ID) as string in report_logs
+  const user_id = payload.user_id;
 
   const successLogData = {
     api_key: payload.apiKey ?? null,
-    user_id: user_id, // Now expects UUID type
+    user_id: user_id, // Now expects TEXT type
     report_type: payload.report_type,
     endpoint: payload.endpoint,
     engine_used: engine,
