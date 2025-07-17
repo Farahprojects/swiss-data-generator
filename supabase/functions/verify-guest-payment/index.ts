@@ -164,24 +164,7 @@ async function processSwissDataInBackground(guestReportId: string, reportData: R
       function: "processSwissDataInBackground"
     });
 
-    // ⭐ [VERIFY-GUEST-PAYMENT] Test auth_uid_exists for guest report ID
-    try {
-      const { data: authResult, error: authError } = await supabase.rpc("auth_uid_exists", { uid: guestReportId });
-      
-      if (authError) {
-        console.error("⭐ [VERIFY-GUEST-PAYMENT] ❌ RPC error from auth_uid_exists:", authError);
-      } else {
-        console.log(`⭐ [VERIFY-GUEST-PAYMENT] 🔍 auth_uid_exists returned: ${authResult} for guest report ID: ${guestReportId}`);
-        
-        if (!authResult) {
-          console.warn(`⭐ [VERIFY-GUEST-PAYMENT] 🔴 Guest report ID not found in auth tables: ${guestReportId}`);
-        } else {
-          console.log(`⭐ [VERIFY-GUEST-PAYMENT] ✅ Guest report ID found in auth tables: ${guestReportId}`);
-        }
-      }
-    } catch (authTestError) {
-      console.error("⭐ [VERIFY-GUEST-PAYMENT] ❌ Exception testing auth_uid_exists:", authTestError);
-    }
+
 
     const translated = await translate(translatorPayload);
     swissData = JSON.parse(translated.text);
