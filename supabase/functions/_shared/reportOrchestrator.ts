@@ -149,37 +149,6 @@ async function validateRequest(
   return { ok: true };
 }
 
-/*──────────────────────── USER-ID RESOLUTION ───────────────────────────────*/
-async function resolveUserId(
-  supabase: SupabaseClient,
-  rawId: string | null,
-  isGuest: boolean,
-): Promise<{ user_id: string | null; client_id: string | null; error?: string }> {
-  if (isGuest) {
-    const { data: guest, error } = await supabase
-      .from("guest_reports")
-      .select("id")
-      .eq("id", rawId)
-      .maybeSingle();
-    
-    if (error) {
-      console.error("[orchestrator] ❌ Error querying guest_reports:", error);
-      return { user_id: null, client_id: null, error: "Database error" };
-    }
-    
-    return guest
-      ? { user_id: null, client_id: rawId }
-      : { user_id: null, client_id: null, error: "Guest not found" };
-  }
-
-  if (rawId && isUUID(rawId)) {
-    return { user_id: rawId, client_id: null };
-  }
-
-  console.error("[orchestrator] ❌ Invalid user_id format:", rawId);
-  return { user_id: null, client_id: null, error: "Invalid user_id" };
-}
-
 /*────────────────── DB HELPERS: engine + logging ───────────────────────────*/
 async function getNextEngine(supabase: SupabaseClient) {
   const { data: last, error } = await supabase
@@ -209,16 +178,14 @@ async function logFailedAttempt(
   errorMessage: string,
   durationMs?: number,
 ) {
-  const ids = await resolveUserId(
-    supabase,
-    payload.user_id ?? null,
-    payload.is_guest ?? false,
-  );
+  // Direct assignment - no resolution needed since validation already confirmed IDs
+  const user_id = payload.is_guest ? null : payload.user_id;
+  const client_id = payload.is_guest ? payload.user_id : null;
 
   const logData = {
     api_key: payload.apiKey ?? null,
-    user_id: ids.user_id,
-    client_id: ids.client_id,
+    user_id: user_id,
+    client_id: client_id,
     report_type: payload.report_type,
     endpoint: payload.endpoint,
     engine_used: engine,
@@ -296,17 +263,14 @@ export const processReportRequest = async (
     return { success: false, errorMessage: msg };
   }
 
-  /* Save success row */
-  const ids = await resolveUserId(
-    supabase,
-    payload.user_id ?? null,
-    payload.is_guest ?? false,
-  );
+  /* Save success row - direct assignment since validation already confirmed IDs */
+  const user_id = payload.is_guest ? null : payload.user_id;
+  const client_id = payload.is_guest ? payload.user_id : null;
 
   const successLogData = {
     api_key: payload.apiKey ?? null,
-    user_id: ids.user_id,          // null for guests
-    client_id: ids.client_id,      // guest UUID or null
+    user_id: user_id,          // null for guests
+    client_id: client_id,      // guest UUID or null
     report_type: payload.report_type,
     endpoint: payload.endpoint,
     engine_used: engine,
