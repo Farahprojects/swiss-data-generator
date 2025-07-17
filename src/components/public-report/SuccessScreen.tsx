@@ -362,7 +362,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       <div className={isMobile ? 'w-full max-w-md' : 'w-full max-w-4xl'}>
         <Card className="border-2 border-gray-200 shadow-lg">
           <CardContent className="p-8 text-center space-y-6">
-            {(hasSwissError || hasProcessingError) ? (
+            {(hasSwissError || hasProcessingError || caseNumber) ? (
               <>
                 <div className="flex items-center justify-center gap-4 py-4">
                   <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
@@ -390,8 +390,8 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
               </>
             ) : (
               <>
-                {/* Countdown timer at the top for AI reports - Hide if has_swiss_error */}
-                {isAiReport && showCountdown && !hasSwissError && (
+                {/* Countdown timer at the top for AI reports - Hide if has errors */}
+                {isAiReport && showCountdown && !hasSwissError && !hasProcessingError && !caseNumber && (
                   <div className="text-center mb-6">
                     <div className="text-3xl font-light text-gray-900 mb-2">{countdownTime}s</div>
                     <p className="text-sm text-gray-600">AI report generating...</p>
@@ -407,7 +407,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                 )}
                 
                 {/* Only show "Report Ready!" when actually ready and not auto-triggered */}
-                {(report?.payment_status === 'paid' && !showCountdown && !hasSwissError && !modalReadyDetected) ? (
+                {(report?.payment_status === 'paid' && !showCountdown && !hasSwissError && !hasProcessingError && !caseNumber && !modalReadyDetected) ? (
                   <div>
                     <h2 className="text-2xl font-light text-gray-900 mb-1 tracking-tight">Report Ready!</h2>
                     <p className="text-gray-600 font-light">Your report is ready</p>
@@ -418,15 +418,15 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                     <span className="font-medium">{email}</span>
                   </div>
                   
-                  {/* Show entertainment window for AI reports only during countdown and no Swiss error */}
-                  {isAiReport && showCountdown && !hasSwissError && (
+                  {/* Show entertainment window for AI reports only during countdown and no errors */}
+                  {isAiReport && showCountdown && !hasSwissError && !hasProcessingError && !caseNumber && (
                     <EntertainmentWindow 
                       mode={entertainmentMode}
                       className="mb-4"
                     />
                   )}
                   
-                   {(showCountdown && !hasSwissError && !modalReadyDetected) ? (
+                   {(showCountdown && !hasSwissError && !hasProcessingError && !caseNumber && !modalReadyDetected) ? (
                      <div className="flex flex-col items-center gap-4">
                        <Button disabled className="bg-gray-400 text-white font-light cursor-not-allowed">
                          View Report ({countdownTime}s)
