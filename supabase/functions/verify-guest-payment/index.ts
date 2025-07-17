@@ -226,7 +226,7 @@ async function processSwissDataInBackground(guestReportId: string, reportData: R
     await supabase
       .from("report_logs")
       .insert({
-        user_id: guestReportId,
+        user_id: guestReportId.toString(), // Ensure it's treated as string for TEXT column
         endpoint: reportData.request || reportData.reportType || 'unknown',
         report_type: reportData.reportType,
         status: 'failed',
