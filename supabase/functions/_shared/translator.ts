@@ -46,7 +46,6 @@ const CANON: Record<string, string> = {
   body:          "body_matrix",
   body_matrix:   "body_matrix",
   sync:          "sync",
-  reports:       "reports",   // tracking-only
   /* ========= NEW ENDPOINTS (user-friendly aliases) ===== */
   essence:       "essence",   // natal + current transits bundle
   flow:          "flow",
@@ -247,22 +246,12 @@ export async function translate(
 
     requestType = canon;
 
-    /*──────────────── REPORTS (tracking-only) ─────────────*/
-    if (canon === "reports") {
-      const msg = "Reports request logged";
-      if (!skipLogging) {
-        await logToSupabase(
-          requestType,
-          raw,
-          200,
-          { message: msg },
-          Date.now() - startTime,
-          undefined,
-          googleGeoUsed,
-          userId,
-        );
-      }
-      return { status: 200, text: JSON.stringify({ message: msg }) };
+    /*──────────────── INVALID REPORT REQUESTS ─────────────*/
+    // Block generic "report" requests that should use specific Swiss endpoints
+    if (requestType === "report" || requestType === "reports") {
+      const err = `Invalid request "${body.request}". Use specific endpoints like 'essence', 'sync', 'natal', etc.`;
+      console.warn(`[translator][${requestId}] ${err}`);
+      return { status: 400, text: JSON.stringify({ error: err }) };
     }
 
     /*──────────────── SYNC ───────────────────────────────*/
