@@ -165,8 +165,25 @@ async function logFailedAttempt(
     created_at: new Date().toISOString(),
   };
 
+  console.log("[orchestrator] 📝 ATTEMPTING TO LOG FAILED ATTEMPT:", {
+    user_id: logData.user_id,
+    client_id: logData.client_id,
+    report_type: logData.report_type,
+    engine_used: logData.engine_used,
+    status: logData.status,
+    error_message: logData.error_message,
+    duration_ms: logData.duration_ms
+  });
+
   try {
-    await check(supabase.from("report_logs").insert(logData).select());
+    const { data, error } = await supabase.from("report_logs").insert(logData).select();
+    
+    if (error) {
+      console.error("[orchestrator] ❌ FAILED ATTEMPT LOG INSERT ERROR:", error);
+      throw error;
+    }
+    
+    console.log("[orchestrator] ✅ SUCCESSFULLY LOGGED FAILED ATTEMPT:", data);
   } catch (error) {
     console.error("[orchestrator] ❌ Failed to log failed attempt:", error);
   }
@@ -247,8 +264,32 @@ export const processReportRequest = async (
     created_at: new Date().toISOString(),
   };
 
+  console.log("[orchestrator] 📝 ATTEMPTING TO LOG SUCCESS TO report_logs:", {
+    user_id: successLogData.user_id,
+    client_id: successLogData.client_id,
+    report_type: successLogData.report_type,
+    engine_used: successLogData.engine_used,
+    status: successLogData.status,
+    duration_ms: successLogData.duration_ms,
+    report_text_length: successLogData.report_text?.length || 0
+  });
+
   try {
-    await check(supabase.from("report_logs").insert(successLogData).select());
+    const { data, error } = await supabase.from("report_logs").insert(successLogData).select();
+    
+    if (error) {
+      console.error("[orchestrator] ❌ SUCCESS LOG INSERT ERROR:", error);
+      throw error;
+    }
+    
+    console.log("[orchestrator] ✅ SUCCESSFULLY LOGGED TO report_logs:", {
+      id: data?.[0]?.id,
+      user_id: data?.[0]?.user_id,
+      client_id: data?.[0]?.client_id,
+      report_type: data?.[0]?.report_type,
+      status: data?.[0]?.status,
+      created_at: data?.[0]?.created_at
+    });
   } catch (error) {
     console.error("[orchestrator] ❌ Failed to save success log:", error);
   }
