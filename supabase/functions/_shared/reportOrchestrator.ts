@@ -156,7 +156,6 @@ async function logFailedAttempt(
     status: "failed",
     error_message: errorMessage,
     duration_ms: durationMs ?? null,
-    created_at: new Date().toISOString(),
   };
 
   console.log("[orchestrator] 📝 ATTEMPTING TO LOG FAILED ATTEMPT:", {
@@ -253,7 +252,6 @@ export const processReportRequest = async (
     report_text: reportContent,
     status: "success",
     duration_ms: Date.now() - start,
-    created_at: new Date().toISOString(),
   };
 
   console.log("[orchestrator] 📝 ATTEMPTING TO LOG SUCCESS TO report_logs:", {
