@@ -342,26 +342,37 @@ export async function translate(
       const r   = await fetch(`${SWISS_API}/moonphases?year=${year}`);
       const txt = await r.text();
 
-      // [REPORT-HANDLER-MOONPHASES] Processing report data in moonphases
-      console.log(`[translator][${requestId}] [REPORT-HANDLER-MOONPHASES] Processing report data in moonphases - Line 314`);
-      console.log(`[translator][${requestId}] [REPORT-HANDLER-MOONPHASES] Raw swiss response preview:`, txt.substring(0, 200));
+      // Only call handleReportGeneration if there's a report field in the request
+      let finalData;
+      let finalError;
       
-      const reportResult = await handleReportGeneration({
-        requestData: raw,
-        swissApiResponse: txt,
-        swissApiStatus: r.status,
-        requestId,
-      });
+      if (raw.report) {
+        // [REPORT-HANDLER-MOONPHASES] Processing report data in moonphases
+        console.log(`[translator][${requestId}] [REPORT-HANDLER-MOONPHASES] Processing report data in moonphases - Line 314`);
+        console.log(`[translator][${requestId}] [REPORT-HANDLER-MOONPHASES] Raw swiss response preview:`, txt.substring(0, 200));
+        
+        const reportResult = await handleReportGeneration({
+          requestData: raw,
+          swissApiResponse: txt,
+          swissApiStatus: r.status,
+          requestId,
+        });
 
-      const finalData  = reportResult.responseData;
-      
-      // [DEBUG] Verify finalData.swiss_data exists after handleReportGeneration
-      console.log(`[translator][${requestId}] [DEBUG] finalData keys after handleReportGeneration:`, Object.keys(finalData || {}));
-      console.log(`[translator][${requestId}] [DEBUG] finalData.swiss_data exists:`, !!finalData?.swiss_data);
-      
-      const finalError = reportResult.errorMessage || (!r.ok
-        ? `Swiss API returned ${r.status}`
-        : undefined);
+        finalData = reportResult.responseData;
+        
+        // [DEBUG] Verify finalData.swiss_data exists after handleReportGeneration
+        console.log(`[translator][${requestId}] [DEBUG] finalData keys after handleReportGeneration:`, Object.keys(finalData || {}));
+        console.log(`[translator][${requestId}] [DEBUG] finalData.swiss_data exists:`, !!finalData?.swiss_data);
+        
+        finalError = reportResult.errorMessage || (!r.ok
+          ? `Swiss API returned ${r.status}`
+          : undefined);
+      } else {
+        // No report field - just return the Swiss API response directly
+        console.log(`[translator][${requestId}] No report field found, returning Swiss API response directly`);
+        finalData = txt;
+        finalError = !r.ok ? `Swiss API returned ${r.status}` : undefined;
+      }
 
       if (!skipLogging) {
         await logToSupabase(
@@ -391,26 +402,37 @@ export async function translate(
       const r   = await fetch(`${SWISS_API}/positions?${qs}`);
       const txt = await r.text();
 
-      // [REPORT-HANDLER-POSITIONS] Processing report data in positions
-      console.log(`[translator][${requestId}] [REPORT-HANDLER-POSITIONS] Processing report data in positions - Line 354`);
-      console.log(`[translator][${requestId}] [REPORT-HANDLER-POSITIONS] Raw swiss response preview:`, txt.substring(0, 200));
+      // Only call handleReportGeneration if there's a report field in the request
+      let finalData;
+      let finalError;
       
-      const reportResult = await handleReportGeneration({
-        requestData: raw,
-        swissApiResponse: txt,
-        swissApiStatus: r.status,
-        requestId,
-      });
+      if (raw.report) {
+        // [REPORT-HANDLER-POSITIONS] Processing report data in positions
+        console.log(`[translator][${requestId}] [REPORT-HANDLER-POSITIONS] Processing report data in positions - Line 354`);
+        console.log(`[translator][${requestId}] [REPORT-HANDLER-POSITIONS] Raw swiss response preview:`, txt.substring(0, 200));
+        
+        const reportResult = await handleReportGeneration({
+          requestData: raw,
+          swissApiResponse: txt,
+          swissApiStatus: r.status,
+          requestId,
+        });
 
-      const finalData  = reportResult.responseData;
-      
-      // [DEBUG] Verify finalData.swiss_data exists after handleReportGeneration
-      console.log(`[translator][${requestId}] [DEBUG] finalData keys after handleReportGeneration:`, Object.keys(finalData || {}));
-      console.log(`[translator][${requestId}] [DEBUG] finalData.swiss_data exists:`, !!finalData?.swiss_data);
-      
-      const finalError = reportResult.errorMessage || (!r.ok
-        ? `Swiss API returned ${r.status}`
-        : undefined);
+        finalData = reportResult.responseData;
+        
+        // [DEBUG] Verify finalData.swiss_data exists after handleReportGeneration
+        console.log(`[translator][${requestId}] [DEBUG] finalData keys after handleReportGeneration:`, Object.keys(finalData || {}));
+        console.log(`[translator][${requestId}] [DEBUG] finalData.swiss_data exists:`, !!finalData?.swiss_data);
+        
+        finalError = reportResult.errorMessage || (!r.ok
+          ? `Swiss API returned ${r.status}`
+          : undefined);
+      } else {
+        // No report field - just return the Swiss API response directly
+        console.log(`[translator][${requestId}] No report field found, returning Swiss API response directly`);
+        finalData = txt;
+        finalError = !r.ok ? `Swiss API returned ${r.status}` : undefined;
+      }
 
       if (!skipLogging) {
         await logToSupabase(
@@ -425,7 +447,6 @@ export async function translate(
           undefined, // no translator payload for simple GET
         );
       }
-
       return {
         status: r.status,
         text: typeof finalData === "string" ? finalData : JSON.stringify(finalData),
@@ -447,26 +468,36 @@ export async function translate(
     });
     const txt = await r.text();
 
-    // [REPORT-HANDLER-CHARTS] Processing report data in chart routes
-    console.log(`[translator][${requestId}] [REPORT-HANDLER-CHARTS] Processing report data in chart routes (${path}) - Line 401`);
-    console.log(`[translator][${requestId}] [REPORT-HANDLER-CHARTS] Raw swiss response preview:`, txt.substring(0, 200));
+    // Only call handleReportGeneration if there's a report field in the request
+    let finalData;
+    let finalError;
     
-    const reportResult = await handleReportGeneration({
-      requestData: raw,
-      swissApiResponse: txt,
-      swissApiStatus: r.status,
-      requestId,
-    });
+    if (raw.report) {
+      // [REPORT-HANDLER-CHARTS] Processing report data in chart routes
+      console.log(`[translator][${requestId}] [REPORT-HANDLER-CHARTS] Processing report data in chart routes (${path}) - Line 401`);
+      console.log(`[translator][${requestId}] [REPORT-HANDLER-CHARTS] Raw swiss response preview:`, txt.substring(0, 200));
+      const reportResult = await handleReportGeneration({
+        requestData: raw,
+        swissApiResponse: txt,
+        swissApiStatus: r.status,
+        requestId,
+      });
 
-    const finalData  = reportResult.responseData;
-    
-    // [DEBUG] Verify finalData.swiss_data exists after handleReportGeneration
-    console.log(`[translator][${requestId}] [DEBUG] finalData keys after handleReportGeneration:`, Object.keys(finalData || {}));
-    console.log(`[translator][${requestId}] [DEBUG] finalData.swiss_data exists:`, !!finalData?.swiss_data);
-    
-    const finalError = reportResult.errorMessage || (!r.ok
-      ? `Swiss API returned ${r.status}`
-      : undefined);
+      finalData = reportResult.responseData;
+      
+      // [DEBUG] Verify finalData.swiss_data exists after handleReportGeneration
+      console.log(`[translator][${requestId}] [DEBUG] finalData keys after handleReportGeneration:`, Object.keys(finalData || {}));
+      console.log(`[translator][${requestId}] [DEBUG] finalData.swiss_data exists:`, !!finalData?.swiss_data);
+      
+      finalError = reportResult.errorMessage || (!r.ok
+        ? `Swiss API returned ${r.status}`
+        : undefined);
+    } else {
+      // No report field - just return the Swiss API response directly
+      console.log(`[translator][${requestId}] No report field found, returning Swiss API response directly`);
+      finalData = txt;
+      finalError = !r.ok ? `Swiss API returned ${r.status}` : undefined;
+    }
 
     if (!skipLogging) {
       await logToSupabase(
