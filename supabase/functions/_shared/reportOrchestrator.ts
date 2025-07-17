@@ -147,9 +147,14 @@ async function logFailedAttempt(
   errorMessage: string,
   durationMs?: number,
 ) {
+  // Convert guest report ID to proper UUID format if needed
+  const user_id = payload.is_guest ? 
+    (payload.user_id && isUUID(payload.user_id) ? payload.user_id : null) : 
+    payload.user_id;
+
   const logData = {
     api_key: payload.apiKey ?? null,
-    user_id: payload.user_id, // Use user_id for both guests and authenticated users
+    user_id: user_id, // Now expects UUID type
     report_type: payload.report_type,
     endpoint: payload.endpoint,
     engine_used: engine,
@@ -243,9 +248,14 @@ export const processReportRequest = async (
     client_id: payload.is_guest ? (payload.user_id && isUUID(payload.user_id) ? payload.user_id : null) : null,
   };
 
+  // Convert guest report ID to proper UUID format if needed
+  const user_id = payload.is_guest ? 
+    (payload.user_id && isUUID(payload.user_id) ? payload.user_id : null) : 
+    payload.user_id;
+
   const successLogData = {
     api_key: payload.apiKey ?? null,
-    user_id: payload.user_id, // Use user_id for both guests and authenticated users
+    user_id: user_id, // Now expects UUID type
     report_type: payload.report_type,
     endpoint: payload.endpoint,
     engine_used: engine,
