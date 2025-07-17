@@ -114,7 +114,7 @@ async function logToSupabase(
     error_message:       errorMessage,
     google_geo:          googleGeoUsed,
     report_tier:         reportTier,
-    user_id: isValidUUID(userId) ? userId.toString().trim() : null, // translator.ts – inside insertData object
+    user_id: isValidUUID(userId) ? (userId ?? '').toString().trim() : null, // translator.ts – inside insertData object
     is_guest:            isGuest,
   };
 
@@ -331,10 +331,22 @@ export async function translate(
       const r   = await fetch(`${SWISS_API}/moonphases?year=${year}`);
       const txt = await r.text();
 
+      // Log Swiss data immediately after Swiss API call
+      if (!skipLogging) {
+        await logToSupabase(
+          requestType,
+          raw,
+          r.status,
+          (() => { try { return JSON.parse(txt); } catch { return { raw_response: txt }; } })(),
+          Date.now() - startTime,
+          !r.ok ? `Swiss API returned ${r.status}` : undefined,
+          googleGeoUsed,
+          userId,
+          undefined, // no translator payload for simple GET
+        );
+      }
+
       // Only call handleReportGeneration if there's a report field in the request
-      let finalData;
-      let finalError;
-      
       if (raw.report) {
         // [REPORT-HANDLER-MOONPHASES] Processing report data in moonphases
         console.log(`[translator][${requestId}] [REPORT-HANDLER-MOONPHASES] Processing report data in moonphases - Line 314`);
@@ -347,39 +359,19 @@ export async function translate(
           requestId,
         });
 
-        finalData = reportResult.responseData;
-        
-        // [DEBUG] Verify finalData.swiss_data exists after handleReportGeneration
-        console.log(`[translator][${requestId}] [DEBUG] finalData keys after handleReportGeneration:`, Object.keys(finalData || {}));
-        console.log(`[translator][${requestId}] [DEBUG] finalData.swiss_data exists:`, !!finalData?.swiss_data);
-        
-        finalError = reportResult.errorMessage || (!r.ok
-          ? `Swiss API returned ${r.status}`
-          : undefined);
+        // Return the report data (Swiss data is already logged above)
+        return {
+          status: r.status,
+          text: typeof reportResult.responseData === "string" ? reportResult.responseData : JSON.stringify(reportResult.responseData),
+        };
       } else {
         // No report field - just return the Swiss API response directly
         console.log(`[translator][${requestId}] No report field found, returning Swiss API response directly`);
-        finalData = txt;
-        finalError = !r.ok ? `Swiss API returned ${r.status}` : undefined;
+        return {
+          status: r.status,
+          text: txt,
+        };
       }
-
-      if (!skipLogging) {
-        await logToSupabase(
-          requestType,
-          raw,
-          r.status,
-          (() => { try { return JSON.parse(typeof finalData === "string" ? finalData : JSON.stringify(finalData)); } catch { return { raw_response: finalData }; } })(),
-          Date.now() - startTime,
-          finalError,
-          googleGeoUsed,
-          userId,
-          undefined, // no translator payload for simple GET
-        );
-      }
-      return {
-        status: r.status,
-        text: typeof finalData === "string" ? finalData : JSON.stringify(finalData),
-      };
     }
 
     if (canon === "positions") {
@@ -391,14 +383,26 @@ export async function translate(
       const r   = await fetch(`${SWISS_API}/positions?${qs}`);
       const txt = await r.text();
 
+      // Log Swiss data immediately after Swiss API call
+      if (!skipLogging) {
+        await logToSupabase(
+          requestType,
+          raw,
+          r.status,
+          (() => { try { return JSON.parse(txt); } catch { return { raw_response: txt }; } })(),
+          Date.now() - startTime,
+          !r.ok ? `Swiss API returned ${r.status}` : undefined,
+          googleGeoUsed,
+          userId,
+          undefined, // no translator payload for simple GET
+        );
+      }
+
       // Only call handleReportGeneration if there's a report field in the request
-      let finalData;
-      let finalError;
-      
       if (raw.report) {
-        // [REPORT-HANDLER-POSITIONS] Processing report data in positions
-        console.log(`[translator][${requestId}] [REPORT-HANDLER-POSITIONS] Processing report data in positions - Line 354`);
-        console.log(`[translator][${requestId}] [REPORT-HANDLER-POSITIONS] Raw swiss response preview:`, txt.substring(0, 200));
+        //REPORT-HANDLER-POSITIONS] Processing report data in positions
+        console.log(`[translator][${requestId}]REPORT-HANDLER-POSITIONS] Processing report data in positions - Line 354`);
+        console.log(`[translator][${requestId}]REPORT-HANDLER-POSITIONS] Raw swiss response preview:`, txt.substring(0, 200));
         
         const reportResult = await handleReportGeneration({
           requestData: raw,
@@ -407,39 +411,19 @@ export async function translate(
           requestId,
         });
 
-        finalData = reportResult.responseData;
-        
-        // [DEBUG] Verify finalData.swiss_data exists after handleReportGeneration
-        console.log(`[translator][${requestId}] [DEBUG] finalData keys after handleReportGeneration:`, Object.keys(finalData || {}));
-        console.log(`[translator][${requestId}] [DEBUG] finalData.swiss_data exists:`, !!finalData?.swiss_data);
-        
-        finalError = reportResult.errorMessage || (!r.ok
-          ? `Swiss API returned ${r.status}`
-          : undefined);
+        // Return the report data (Swiss data is already logged above)
+        return {
+          status: r.status,
+          text: typeof reportResult.responseData === "string" ? reportResult.responseData : JSON.stringify(reportResult.responseData),
+        };
       } else {
         // No report field - just return the Swiss API response directly
         console.log(`[translator][${requestId}] No report field found, returning Swiss API response directly`);
-        finalData = txt;
-        finalError = !r.ok ? `Swiss API returned ${r.status}` : undefined;
+        return {
+          status: r.status,
+          text: txt,
+        };
       }
-
-      if (!skipLogging) {
-        await logToSupabase(
-          requestType,
-          raw,
-          r.status,
-          (() => { try { return JSON.parse(typeof finalData === "string" ? finalData : JSON.stringify(finalData)); } catch { return { raw_response: finalData }; } })(),
-          Date.now() - startTime,
-          finalError,
-          googleGeoUsed,
-          userId,
-          undefined, // no translator payload for simple GET
-        );
-      }
-      return {
-        status: r.status,
-        text: typeof finalData === "string" ? finalData : JSON.stringify(finalData),
-      };
     }
 
     /*──────────────── POST chart routes ──────────────────*/
@@ -457,10 +441,22 @@ export async function translate(
     });
     const txt = await r.text();
 
+    // Log Swiss data immediately after Swiss API call
+    if (!skipLogging) {
+      await logToSupabase(
+        requestType,
+        raw,
+        r.status,
+        (() => { try { return JSON.parse(txt); } catch { return { raw_response: txt }; } })(),
+        Date.now() - startTime,
+        !r.ok ? `Swiss API returned ${r.status}` : undefined,
+        googleGeoUsed,
+        userId,
+        enriched,                // exact payload sent to Swiss
+      );
+    }
+
     // Only call handleReportGeneration if there's a report field in the request
-    let finalData;
-    let finalError;
-    
     if (raw.report) {
       // [REPORT-HANDLER-CHARTS] Processing report data in chart routes
       console.log(`[translator][${requestId}] [REPORT-HANDLER-CHARTS] Processing report data in chart routes (${path}) - Line 401`);
@@ -472,40 +468,19 @@ export async function translate(
         requestId,
       });
 
-      finalData = reportResult.responseData;
-      
-      // [DEBUG] Verify finalData.swiss_data exists after handleReportGeneration
-      console.log(`[translator][${requestId}] [DEBUG] finalData keys after handleReportGeneration:`, Object.keys(finalData || {}));
-      console.log(`[translator][${requestId}] [DEBUG] finalData.swiss_data exists:`, !!finalData?.swiss_data);
-      
-      finalError = reportResult.errorMessage || (!r.ok
-        ? `Swiss API returned ${r.status}`
-        : undefined);
+      // Return the report data (Swiss data is already logged above)
+      return {
+        status: r.status,
+        text: typeof reportResult.responseData === "string" ? reportResult.responseData : JSON.stringify(reportResult.responseData),
+      };
     } else {
       // No report field - just return the Swiss API response directly
       console.log(`[translator][${requestId}] No report field found, returning Swiss API response directly`);
-      finalData = txt;
-      finalError = !r.ok ? `Swiss API returned ${r.status}` : undefined;
+      return {
+        status: r.status,
+        text: txt,
+      };
     }
-
-    if (!skipLogging) {
-      await logToSupabase(
-        requestType,
-        raw,
-        r.status,
-        (() => { try { return JSON.parse(typeof finalData === "string" ? finalData : JSON.stringify(finalData)); } catch { return { raw_response: finalData }; } })(),
-        Date.now() - startTime,
-        finalError,
-        googleGeoUsed,
-        userId,
-        enriched,                // exact payload sent to Swiss
-      );
-    }
-
-    return {
-      status: r.status,
-      text: typeof finalData === "string" ? finalData : JSON.stringify(finalData),
-    };
   } catch (err) {
     const msg = (err as Error).message;
     console.log(`[translator][${requestId}] ❌ ERROR: ${msg}`);
