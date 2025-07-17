@@ -115,7 +115,7 @@ async function logToSupabase(
     error_message:       errorMessage,
     google_geo:          googleGeoUsed,
     report_tier:         reportTier,
-    user_id:             isValidUUID(userId) ? userId : null,  // Store valid UUID (guest or user)
+    user_id: isValidUUID(userId) ? userId.toString().trim() : null, // translator.ts – inside insertData object
     is_guest:            isGuest,
   };
 
