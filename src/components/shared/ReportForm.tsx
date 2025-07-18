@@ -507,6 +507,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
               register={register}
               watch={watch}
               errors={errors}
+              setValue={setValue}
               onSubmit={handleButtonClick}
               isProcessing={isProcessing || isPricingLoading}
               promoValidation={promoValidation ? {

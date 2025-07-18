@@ -5,6 +5,7 @@ interface PaymentSubmissionParams {
   validatePromoManually: (code: string) => Promise<any>;
   onSubmit: () => void;
   setIsLocalProcessing?: (processing: boolean) => void;
+  clearPromoCode?: () => void;
 }
 
 /**
@@ -15,7 +16,8 @@ export const handlePaymentSubmission = async ({
   promoCode,
   validatePromoManually,
   onSubmit,
-  setIsLocalProcessing
+  setIsLocalProcessing,
+  clearPromoCode
 }: PaymentSubmissionParams) => {
   // Show processing immediately
   if (setIsLocalProcessing) {
@@ -28,6 +30,17 @@ export const handlePaymentSubmission = async ({
     
     // Give user time to see the validation result
     await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // If validation failed, reset processing state and clear promo
+    if (!validation?.isValid) {
+      if (setIsLocalProcessing) {
+        setIsLocalProcessing(false);
+      }
+      if (clearPromoCode) {
+        clearPromoCode();
+      }
+      return; // Don't proceed with submission
+    }
   }
   
   // Then proceed with form submission

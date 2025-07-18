@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 
-import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
+import { UseFormRegister, UseFormWatch, FieldErrors, UseFormSetValue } from 'react-hook-form';
 import { Tag, CheckCircle, AlertCircle, Loader2, AlertTriangle } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,7 @@ interface PaymentStepProps {
   register: UseFormRegister<ReportFormData>;
   watch: UseFormWatch<ReportFormData>;
   errors: FieldErrors<ReportFormData>;
+  setValue: UseFormSetValue<ReportFormData>;
   onSubmit: () => void;
   isProcessing: boolean;
   promoValidation: PromoValidationState;
@@ -40,6 +41,7 @@ const PaymentStep = ({
   register, 
   watch, 
   errors, 
+  setValue,
   onSubmit,
   isProcessing,
   promoValidation,
@@ -169,7 +171,8 @@ const PaymentStep = ({
       promoCode,
       validatePromoManually,
       onSubmit,
-      setIsLocalProcessing
+      setIsLocalProcessing,
+      clearPromoCode: () => setValue('promoCode', '')
     });
   };
 
