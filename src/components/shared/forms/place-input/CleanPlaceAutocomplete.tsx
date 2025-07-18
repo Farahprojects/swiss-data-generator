@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, forwardRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, MapPin, X, ArrowLeft } from 'lucide-react';
@@ -22,31 +22,20 @@ export interface CleanPlaceAutocompleteProps {
 interface Prediction {
   place_id: string;
   description: string;
-  structured_formatting?: {
-    main_text: string;
-    secondary_text: string;
-  };
-  geometry?: {
-    location: {
-      lat: number;
-      lng: number;
-    };
-  };
 }
 
-export const CleanPlaceAutocomplete = forwardRef<HTMLDivElement, CleanPlaceAutocompleteProps>(
-  ({ 
-    label = "Location", 
-    value = "", 
-    onChange, 
-    onPlaceSelect, 
-    placeholder = "Enter a location", 
-    required = false, 
-    className = "", 
-    id = "placeAutocomplete",
-    disabled = false,
-    error
-  }, ref) => {
+export const CleanPlaceAutocomplete = ({ 
+  label = "Location", 
+  value = "", 
+  onChange, 
+  onPlaceSelect, 
+  placeholder = "Enter a location", 
+  required = false, 
+  className = "", 
+  id = "placeAutocomplete",
+  disabled = false,
+  error
+}: CleanPlaceAutocompleteProps) => {
     const [localValue, setLocalValue] = useState(value);
     const [predictions, setPredictions] = useState<Prediction[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -85,7 +74,7 @@ export const CleanPlaceAutocomplete = forwardRef<HTMLDivElement, CleanPlaceAutoc
           return;
         }
 
-        const newPredictions = data.predictions || [];
+        const newPredictions = Array.isArray(data) ? data : [];
         setPredictions(newPredictions);
         setIsOpen(newPredictions.length > 0);
         setHighlightedIndex(-1);
@@ -128,7 +117,7 @@ export const CleanPlaceAutocomplete = forwardRef<HTMLDivElement, CleanPlaceAutoc
             body: { placeId: prediction.place_id }
           });
 
-          if (detailsError || !detailsData?.result?.geometry?.location) {
+          if (detailsError || !detailsData?.geometry?.location) {
             console.warn('Could not fetch place details, using basic data:', detailsError);
             // Fallback to basic data without coordinates
             const placeData: PlaceData = {
@@ -143,8 +132,8 @@ export const CleanPlaceAutocomplete = forwardRef<HTMLDivElement, CleanPlaceAutoc
           const placeData: PlaceData = {
             name: fullAddress,
             placeId: prediction.place_id,
-            latitude: detailsData.result.geometry.location.lat,
-            longitude: detailsData.result.geometry.location.lng
+            latitude: detailsData.geometry.location.lat,
+            longitude: detailsData.geometry.location.lng
           };
           onPlaceSelect(placeData);
 
@@ -257,14 +246,9 @@ export const CleanPlaceAutocomplete = forwardRef<HTMLDivElement, CleanPlaceAutoc
                   <div className="flex items-start gap-2">
                     <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <div className="font-medium text-sm truncate">
-                        {prediction.structured_formatting?.main_text || prediction.description}
-                      </div>
-                      {prediction.structured_formatting?.secondary_text && (
-                        <div className="text-muted-foreground text-xs truncate">
-                          {prediction.structured_formatting.secondary_text}
-                        </div>
-                      )}
+                       <div className="font-medium text-sm truncate">
+                         {prediction.description}
+                       </div>
                     </div>
                   </div>
                 </div>
@@ -323,14 +307,9 @@ export const CleanPlaceAutocomplete = forwardRef<HTMLDivElement, CleanPlaceAutoc
                       <div className="flex items-start gap-3">
                         <MapPin className="h-5 w-5 text-muted-foreground mt-1 flex-shrink-0" />
                         <div className="min-w-0 flex-1">
-                          <div className="font-medium text-base leading-tight">
-                            {prediction.structured_formatting?.main_text || prediction.description}
-                          </div>
-                          {prediction.structured_formatting?.secondary_text && (
-                            <div className="text-muted-foreground text-sm mt-1 leading-tight">
-                              {prediction.structured_formatting.secondary_text}
-                            </div>
-                          )}
+                           <div className="font-medium text-base leading-tight">
+                             {prediction.description}
+                           </div>
                         </div>
                       </div>
                     </div>
@@ -348,7 +327,4 @@ export const CleanPlaceAutocomplete = forwardRef<HTMLDivElement, CleanPlaceAutoc
         {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
       </div>
     );
-  }
-);
-
-CleanPlaceAutocomplete.displayName = 'CleanPlaceAutocomplete';
+};
