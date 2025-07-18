@@ -66,7 +66,6 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     
     // Check if we've already logged this error
     if (errorLoggedRef.current.has(errorKey)) {
-      console.log('⚠️ Error already logged, skipping duplicate:', errorKey);
       return null;
     }
 
@@ -92,7 +91,6 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
 
       // Check if this is a duplicate error
       if (data?.is_duplicate) {
-        console.log('ℹ️ Duplicate error detected:', data.message);
         setError(data.message);
         return data.case_number;
       }
@@ -100,7 +98,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
       // Error logged successfully
       return data?.case_number || 'CASE-' + Date.now();
     } catch (err) {
-      console.error('❌ Error logging user error:', err);
+      console.error('Error logging user error:', err);
       // Remove from tracking since it failed
       errorLoggedRef.current.delete(errorKey);
       return null;
@@ -110,14 +108,12 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
   const fetchReport = useCallback(async (guestReportId?: string) => {
     const reportId = guestReportId || getGuestReportId();
     if (!reportId) {
-      console.warn('No guest report ID available');
       return;
     }
 
     // Check if this request is already in flight
     const requestKey = `fetchReport-${reportId}`;
     if (requestsInFlightRef.current.has(requestKey)) {
-      console.log('📡 Request already in flight, skipping duplicate:', requestKey);
       return;
     }
 
@@ -134,8 +130,6 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
 
     setIsLoading(true);
     try {
-      console.log('📡 Fetching report status for:', reportId);
-
       const { data, error } = await supabase
         .from('guest_reports')
         .select('*')
@@ -173,10 +167,9 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     } catch (err) {
       // Don't log aborted requests as errors
       if (err instanceof Error && err.name === 'AbortError') {
-        console.log('📡 Request aborted:', requestKey);
         return;
       }
-      console.error('❌ Error fetching report status:', err);
+      console.error('Error fetching report status:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch report status');
     } finally {
       // Clean up
@@ -335,13 +328,11 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     
     // Check if we already have a case number to prevent duplicates
     if (caseNumber) {
-      console.log('⚠️ Error handling already completed, case number exists:', caseNumber);
       return;
     }
     
     // Handle case where no report ID is available
     if (!reportId) {
-      console.warn('⚠️ Triggering error handling without report ID');
       const case_number = await logUserError(
         '',
         'missing_report_id',
@@ -364,7 +355,6 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
   const triggerPdfEmail = useCallback(async (guestReportId?: string): Promise<boolean> => {
     const reportId = guestReportId || getGuestReportId();
     if (!reportId) {
-      console.warn('No guest report ID available for PDF email');
       return false;
     }
 
@@ -377,30 +367,27 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
         .single();
 
       if (fetchError) {
-        console.error('❌ Error checking email status:', fetchError);
+        console.error('Error checking email status:', fetchError);
         return false;
       }
 
       if (reportData?.email_sent) {
-        console.log('📧 Email already sent, skipping duplicate');
         return true; // Consider this success since email was already sent
       }
 
       // Trigger PDF generation and email
-      console.log('📧 Triggering PDF email generation...');
       const { data, error } = await supabase.functions.invoke('process-guest-report-pdf', {
         body: { guest_report_id: reportId }
       });
 
       if (error) {
-        console.error('❌ Error triggering PDF email:', error);
+        console.error('Error triggering PDF email:', error);
         return false;
       }
 
-      console.log('✅ PDF email triggered successfully');
       return true;
     } catch (err) {
-      console.error('❌ Error in triggerPdfEmail:', err);
+      console.error('Error in triggerPdfEmail:', err);
       return false;
     }
   }, []);
@@ -408,15 +395,11 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
   const setupRealtimeListener = useCallback((guestReportId?: string, onReportReady?: () => void, onModalReady?: () => void) => {
     const reportId = guestReportId || getGuestReportId();
     if (!reportId) {
-      console.warn('No guest report ID available for realtime listener');
       return () => {};
     }
 
-    console.log('📡 Setting up realtime listener for:', reportId);
-
     // Clean up existing channel
     if (channelRef.current) {
-      console.log('📡 Removing existing channel');
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
     }
@@ -433,17 +416,9 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
         },
         async (payload) => {
           const updatedRecord = payload.new as GuestReport;
-          console.log('🔄 Realtime update received:', { 
-            id: updatedRecord.id,
-            modal_ready: updatedRecord.modal_ready,
-            has_report: updatedRecord.has_report,
-            swiss_boolean: updatedRecord.swiss_boolean,
-            has_swiss_error: updatedRecord.has_swiss_error
-          });
 
           // Check for Swiss error first
           if (updatedRecord.has_swiss_error === true) {
-            console.log('❌ Swiss error detected in realtime update');
             setReport(updatedRecord);
             const errorMessage = getSwissErrorMessage(updatedRecord.report_type);
             setError(errorMessage);
@@ -455,7 +430,6 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
 
           // Check if orchestrator set modal_ready flag - this triggers automatic modal
           if (updatedRecord.modal_ready === true) {
-            console.log('🚀 Modal ready detected! Triggering automatic modal...');
             onModalReady?.();
             return;
           }
@@ -466,27 +440,21 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
             (updatedRecord.is_ai_report && updatedRecord.report_log_id);
 
           if (isReportReady) {
-            console.log('📋 Report ready detected');
             onReportReady?.();
           }
         }
       )
       .subscribe((status) => {
-        console.log('📡 Realtime subscription status:', status);
-        
         if (status === 'CHANNEL_ERROR') {
-          console.warn('📡 Realtime channel error, will auto-reconnect');
+          console.warn('Realtime channel error, will auto-reconnect');
         } else if (status === 'CLOSED') {
-          console.warn('📡 Realtime connection closed');
-        } else if (status === 'SUBSCRIBED') {
-          console.log('📡 Realtime successfully subscribed');
+          console.warn('Realtime connection closed');
         }
       });
 
     channelRef.current = channel;
 
     return () => {
-      console.log('📡 Cleaning up realtime listener');
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
