@@ -9,13 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ReportFormData } from '@/types/public-report';
-import { usePromoValidation } from '@/hooks/usePromoValidation';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
-
-import { handlePaymentSubmission } from '@/utils/paymentSubmissionHelper';
 import { useToast } from '@/hooks/use-toast';
 import FormStep from './FormStep';
-import { debounce } from 'lodash';
 
 interface PromoValidationState {
   status: 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid';
@@ -50,38 +46,26 @@ const PaymentStep = ({
   clearInlinePromoError = () => {}
 }: PaymentStepProps) => {
   const [showPromoCode, setShowPromoCode] = useState(false);
-  const [isLocalProcessing, setIsLocalProcessing] = useState(false);
   const [hasTimedOut, setHasTimedOut] = useState(false);
-  const { validatePromoManually } = usePromoValidation();
   
-  // Auto-validate promo code with debounce
-  const debouncedValidatePromo = useCallback(
-    debounce(async (code: string) => {
-      if (code.trim() && validatePromoManually) {
-        await validatePromoManually(code);
-      }
-    }, 500),
-    [validatePromoManually]
-  );
   const { getReportPrice, getReportTitle, calculatePricing, isLoading: isPricingLoading, error: pricingError } = usePriceFetch();
   const { toast } = useToast();
   
-  // Add timeout mechanism to prevent stuck local processing state
+  // Add timeout mechanism to prevent stuck processing state
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
     
-    if (isLocalProcessing) {
+    if (isProcessing) {
       setHasTimedOut(false); // Reset timeout state when starting
       timeoutId = setTimeout(() => {
-        console.warn('Local processing timeout - resetting processing state');
-        setIsLocalProcessing(false);
+        console.warn('Processing timeout - this may indicate a server issue');
         setHasTimedOut(true);
         toast({
           title: "Request Timeout",
           description: "The request took too long. Please try again.",
           variant: "destructive",
         });
-      }, 10000); // 10 second timeout
+      }, 15000); // 15 second timeout
     }
 
     return () => {
@@ -89,7 +73,7 @@ const PaymentStep = ({
         clearTimeout(timeoutId);
       }
     };
-  }, [isLocalProcessing, toast]);
+  }, [isProcessing, toast]);
   
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');
@@ -100,14 +84,6 @@ const PaymentStep = ({
   const request = watch('request'); // NEW: Watch the request field
   const name = watch('name');
   const promoCode = watch('promoCode') || '';
-
-  // Auto-validate when promo code changes and clear inline error when user types
-  useEffect(() => {
-    if (promoCode && clearInlinePromoError) {
-      clearInlinePromoError(); // Clear error when user starts typing
-    }
-    debouncedValidatePromo(promoCode);
-  }, [promoCode, debouncedValidatePromo, clearInlinePromoError]);
 
   // Get price and title using context with global fallback
   let basePrice: number | null = null;
@@ -140,26 +116,6 @@ const PaymentStep = ({
   // Calculate pricing - global fallback will handle missing prices  
   const pricing = calculatePricing(basePrice || 0, promoValidation);
 
-  const getPromoValidationIcon = () => {
-    if (isValidatingPromo) {
-      return <Loader2 className="h-4 w-4 animate-spin text-gray-400" />;
-    }
-    if (promoValidation.status === 'valid-free' || promoValidation.status === 'valid-discount') {
-      return <CheckCircle className="h-4 w-4 text-green-500" />;
-    }
-    if (promoCode && promoValidation.status === 'invalid') {
-      return <AlertCircle className="h-4 w-4 text-red-500" />;
-    }
-    return null;
-  };
-
-  const getPromoValidationMessage = () => {
-    if (isValidatingPromo) {
-      return 'Validating promo code...';
-    }
-    return promoValidation.message || '';
-  };
-
   const handleButtonClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -167,13 +123,8 @@ const PaymentStep = ({
     // Reset timeout state when retrying
     setHasTimedOut(false);
     
-    await handlePaymentSubmission({
-      promoCode,
-      validatePromoManually,
-      onSubmit,
-      setIsLocalProcessing,
-      clearPromoCode: () => setValue('promoCode', '')
-    });
+    // Simply call onSubmit - let server handle all validation
+    onSubmit();
   };
 
   // Always show clean payment UI with global pricing fallback
@@ -292,15 +243,12 @@ const PaymentStep = ({
                         }
                       })}
                       placeholder="Enter promo code"
-                      className="h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400 pr-12"
+                      className="h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400"
                       style={{ 
                         WebkitAppearance: 'none',
                         touchAction: 'manipulation'
                       }}
                     />
-                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                      {getPromoValidationIcon()}
-                    </div>
                   </div>
                   {errors.promoCode && (
                     <p className="text-sm text-red-500 font-light">{errors.promoCode.message}</p>
@@ -310,36 +258,21 @@ const PaymentStep = ({
                     <p className="text-sm text-red-500 font-light">{inlinePromoError}</p>
                   )}
                 </div>
-                
-                {/* Promo validation feedback */}
-                {promoValidation.message && !inlinePromoError && (
-                  <div className={`text-sm font-light p-4 rounded-xl ${
-                    isValidatingPromo 
-                      ? 'bg-gray-50 text-gray-600'
-                      : (promoValidation.status === 'valid-free' || promoValidation.status === 'valid-discount')
-                      ? 'bg-green-50 text-green-700 border border-green-200'
-                      : 'bg-red-50 text-red-700 border border-red-200'
-                  }`}>
-                    {getPromoValidationMessage()}
-                  </div>
-                )}
               </div>
             </CollapsibleContent>
           </Collapsible>
 
           <Button
             onClick={handleButtonClick}
-            disabled={isProcessing || isValidatingPromo || isLocalProcessing}
+            disabled={isProcessing}
             className="w-full h-14 text-lg font-light bg-gray-900 hover:bg-gray-800 text-white transition-colors"
             type="button"
           >
-            {isLocalProcessing || isProcessing 
+            {isProcessing 
               ? 'Processing...' 
-              : isValidatingPromo 
-                ? 'Validating...' 
-                : hasTimedOut
-                  ? 'Try Again'
-                  : 'Submit and View'}
+              : hasTimedOut
+                ? 'Try Again'
+                : 'Submit and View'}
           </Button>
 
           {/* Satisfaction Guarantee */}
