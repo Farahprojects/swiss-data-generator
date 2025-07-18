@@ -17,13 +17,13 @@ interface PromoValidationState {
 export const useReportSubmission = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [reportCreated, setReportCreated] = useState(false);
+  const [inlinePromoError, setInlinePromoError] = useState<string>('');
 
   // Reset reportCreated state on mount to prevent stale success screens
   useEffect(() => {
     setReportCreated(false);
   }, []);
-  // Remove popup dialog state - replaced with inline validation
-  const [inlinePromoError, setInlinePromoError] = useState<string>('');
+
   const { toast } = useToast();
   const { getReportPrice, getReportTitle, isLoading: isPricingLoading } = typeof window !== 'undefined' ? usePriceFetch() : { getReportPrice: () => 0, getReportTitle: () => 'Report', isLoading: false };
 
@@ -104,20 +104,11 @@ export const useReportSubmission = () => {
             error.message?.includes('usage limit') ||
             error.status === 400) {
           
-          // Provide more specific error messages
-          let userFriendlyMessage = errorMessage;
-          if (error.message?.includes('expired promo code')) {
-            userFriendlyMessage = 'This promo code has expired or is no longer valid.';
-          } else if (error.message?.includes('usage limit')) {
-            userFriendlyMessage = 'This promo code has reached its usage limit.';
-          } else if (error.message?.includes('Invalid promo')) {
-            userFriendlyMessage = 'Invalid promo code. Please check and try again.';
-          }
-          
-          setInlinePromoError(userFriendlyMessage);
+          // Always show "Invalid Promo Code" for any promo-related error
+          setInlinePromoError('Invalid Promo Code');
           setPromoValidation({
             status: 'invalid',
-            message: userFriendlyMessage,
+            message: 'Invalid Promo Code',
             discountPercent: 0,
             errorType: 'invalid'
           });
@@ -178,10 +169,10 @@ export const useReportSubmission = () => {
       
       // Check if this is a network or server error related to promo codes
       if (error instanceof Error && error.message.includes('400')) {
-        setInlinePromoError('Invalid promo code. Please check and try again.');
+        setInlinePromoError('Invalid Promo Code');
         setPromoValidation({
           status: 'invalid',
-          message: 'Invalid promo code. Please check and try again.',
+          message: 'Invalid Promo Code',
           discountPercent: 0,
           errorType: 'invalid'
         });
