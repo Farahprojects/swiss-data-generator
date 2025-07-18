@@ -142,6 +142,33 @@ export type Database = {
           },
         ]
       }
+      autocomplete_cache: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          place_data: Json
+          query_hash: string
+          query_text: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          place_data: Json
+          query_hash: string
+          query_text?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          place_data?: Json
+          query_hash?: string
+          query_text?: string | null
+        }
+        Relationships: []
+      }
       blog_posts: {
         Row: {
           author_name: string | null
@@ -410,6 +437,42 @@ export type Database = {
           message?: string | null
           source?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      edge_function_logs: {
+        Row: {
+          created_at: string | null
+          function_name: string
+          id: string
+          ip_address: string
+          is_blocked: boolean | null
+          request_id: string
+          status_code: number
+          token_hash: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          function_name: string
+          id?: string
+          ip_address: string
+          is_blocked?: boolean | null
+          request_id: string
+          status_code: number
+          token_hash?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          function_name?: string
+          id?: string
+          ip_address?: string
+          is_blocked?: boolean | null
+          request_id?: string
+          status_code?: number
+          token_hash?: string | null
+          user_agent?: string | null
         }
         Relationships: []
       }
@@ -779,6 +842,33 @@ export type Database = {
         }
         Relationships: []
       }
+      ip_allowlist: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          expires_at: string | null
+          id: string
+          ip_address: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          ip_address: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          ip_address?: string
+        }
+        Relationships: []
+      }
       journal_entries: {
         Row: {
           client_id: string
@@ -1018,6 +1108,39 @@ export type Database = {
           is_active?: boolean | null
           max_uses?: number | null
           times_used?: number | null
+        }
+        Relationships: []
+      }
+      rate_limit_rules: {
+        Row: {
+          block_duration_seconds: number
+          created_at: string | null
+          function_name: string
+          id: string
+          is_active: boolean | null
+          max_hits: number
+          updated_at: string | null
+          window_seconds: number
+        }
+        Insert: {
+          block_duration_seconds?: number
+          created_at?: string | null
+          function_name: string
+          id?: string
+          is_active?: boolean | null
+          max_hits?: number
+          updated_at?: string | null
+          window_seconds?: number
+        }
+        Update: {
+          block_duration_seconds?: number
+          created_at?: string | null
+          function_name?: string
+          id?: string
+          is_active?: boolean | null
+          max_hits?: number
+          updated_at?: string | null
+          window_seconds?: number
         }
         Relationships: []
       }
@@ -1690,13 +1813,22 @@ export type Database = {
         }
         Returns: undefined
       }
-      auth_uid_exists: {
-        Args: { uid: string }
-        Returns: boolean
-      }
       bytea_to_text: {
         Args: { data: string }
         Returns: string
+      }
+      check_report_logs_constraints: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          constraint_name: string
+          constraint_type: string
+          column_name: string
+          data_type: string
+          udt_name: string
+          is_nullable: string
+          column_default: string
+          constraint_definition: string
+        }[]
       }
       check_user_admin_role: {
         Args: { user_id_param: string }

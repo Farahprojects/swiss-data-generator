@@ -61,34 +61,7 @@ const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
     }
   }, [birthDate, birthTime]);
 
-  // Auto-scroll to step 3 (payment) after Google Maps autocomplete loads
-  React.useEffect(() => {
-    if (person1Location && person1Location.trim().length > 0) {
-      // For compatibility reports, wait for both locations
-      if (isCompatibilityReport) {
-        const person2Location = watch('secondPersonBirthLocation');
-        if (person2Location && person2Location.trim().length > 0) {
-          // Both locations filled - auto-scroll to payment
-          setTimeout(() => {
-            // Trigger next step programmatically
-            const nextButton = document.querySelector('[data-next-step]');
-            if (nextButton) {
-              (nextButton as HTMLElement).click();
-            }
-          }, 800); // Delay to allow user to see the selection
-        }
-      } else {
-        // Single person report - auto-scroll to payment after location
-        setTimeout(() => {
-          // Trigger next step programmatically
-          const nextButton = document.querySelector('[data-next-step]');
-          if (nextButton) {
-            (nextButton as HTMLElement).click();
-          }
-        }, 800); // Delay to allow user to see the selection
-      }
-    }
-  }, [person1Location, watch, isCompatibilityReport]);
+  // Removed problematic auto-scroll logic that was causing step navigation issues
   
   // Callback when person 1 selects a location
   const handlePerson1PlaceSelect = () => {

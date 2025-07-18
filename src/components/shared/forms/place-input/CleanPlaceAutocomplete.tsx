@@ -123,17 +123,31 @@ export const CleanPlaceAutocomplete = forwardRef<HTMLDivElement, CleanPlaceAutoc
 
       if (onPlaceSelect) {
         try {
-          // Since our new API call includes geometry data, we can extract it from the prediction
-          // The prediction should now include geometry data from our optimized API call
+          // Get place details to fetch coordinates
+          const { data: detailsData, error: detailsError } = await supabase.functions.invoke('google-place-details', {
+            body: { placeId: prediction.place_id }
+          });
+
+          if (detailsError || !detailsData?.result?.geometry?.location) {
+            console.warn('Could not fetch place details, using basic data:', detailsError);
+            // Fallback to basic data without coordinates
+            const placeData: PlaceData = {
+              name: fullAddress,
+              placeId: prediction.place_id
+            };
+            onPlaceSelect(placeData);
+            return;
+          }
+
+          // Successfully got coordinates
           const placeData: PlaceData = {
             name: fullAddress,
             placeId: prediction.place_id,
-            // Note: The geometry data should now be available in the prediction object
-            // from our optimized API call that includes all required fields
-            latitude: prediction.geometry?.location?.lat,
-            longitude: prediction.geometry?.location?.lng
+            latitude: detailsData.result.geometry.location.lat,
+            longitude: detailsData.result.geometry.location.lng
           };
           onPlaceSelect(placeData);
+
         } catch (error) {
           console.error('Error processing place selection:', error);
           // Fallback to basic data

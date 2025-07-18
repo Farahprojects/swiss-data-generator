@@ -51,9 +51,8 @@ serve(async (req) => {
 
     // 3. CACHE MISS: FETCH FROM GOOGLE API
     const GOOGLE_API_KEY = Deno.env.get('GOOGLE_MAPS_API_KEY')!;
-    // CRITICAL: We request all the fields we need in this single call.
-    const fields = 'geometry,name,place_id,address_components';
-    const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&key=${GOOGLE_API_KEY}&fields=${fields}`;
+    // Use the correct autocomplete API (without fields parameter)
+    const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&key=${GOOGLE_API_KEY}`;
 
     const response = await fetch(url);
     if (!response.ok) {
@@ -61,6 +60,11 @@ serve(async (req) => {
       throw new Error(`Google API request failed with status ${response.status}: ${errorBody}`);
     }
     const googleData = await response.json();
+
+    // Check for API errors in the response
+    if (googleData.status && googleData.status !== 'OK' && googleData.status !== 'ZERO_RESULTS') {
+      throw new Error(`Google API error: ${googleData.status} - ${googleData.error_message || 'Unknown error'}`);
+    }
 
     // 4. STORE THE NEW RESULT IN CACHE
     // Use our helper to store the fresh data for next time.
