@@ -10,7 +10,24 @@ const corsHeaders = {
 
 type ReportData = Record<string, any>;
 
+// Enhanced logging function with structured format
+function logPaymentEvent(event: string, guestReportId: string, details: any = {}) {
+  console.log(`🔄 [VERIFY-PAYMENT-V2] ${event}`, {
+    timestamp: new Date().toISOString(),
+    guestReportId,
+    ...details
+  });
+}
 
+// Enhanced error logging function
+function logPaymentError(event: string, guestReportId: string, error: any, details: any = {}) {
+  console.error(`❌ [VERIFY-PAYMENT-V2] ${event}`, {
+    timestamp: new Date().toISOString(),
+    guestReportId,
+    error: error.message || error,
+    ...details
+  });
+}
 
 function transformToTranslatorPayload(productRow: any, reportData: ReportData): any {
   const reportType = productRow.report_type;
@@ -139,92 +156,166 @@ async function buildTranslatorPayload(productId: string, reportData: ReportData,
   };
 }
 
-// SWISS PROCESSING
-async function processSwissDataInBackground(guestReportId: string, reportData: ReportData, supabase: any, productId: string) {
+// Enhanced Swiss processing with retry logic and comprehensive error handling
+async function processSwissDataInBackground(guestReportId: string, reportData: ReportData, supabase: any, productId: string, maxRetries: number = 3) {
   let swissData: any;
   let swissError: string | null = null;
+  let attempt = 0;
 
-  try {
-    const { payload } = await buildTranslatorPayload(productId, reportData, supabase);
-    const translatorPayload = {
-      ...payload,
-      is_guest: true,
-      user_id: guestReportId,
-    };
+  logPaymentEvent("swiss_processing_started", guestReportId, { productId, maxRetries });
 
-    // ⭐ [VERIFY-GUEST-PAYMENT] Calling translator with guest report ID
-    console.log("⭐ [VERIFY-GUEST-PAYMENT] translator_call", { 
-      guestReportId, 
-      guestReportId_type: typeof guestReportId,
-      is_guest: true,
-      translatorPayload_keys: Object.keys(translatorPayload),
-      translatorPayload_user_id: translatorPayload.user_id,
-      translatorPayload_user_id_type: typeof translatorPayload.user_id,
-      file: "verify-guest-payment/index.ts:166",
-      function: "processSwissDataInBackground"
-    });
-
-
-
-    const translated = await translate(translatorPayload);
-    swissData = JSON.parse(translated.text);
-
-    // ⭐ [VERIFY-GUEST-PAYMENT] Translator completed successfully
-    console.log("⭐ [VERIFY-GUEST-PAYMENT] translator_success", { 
-      guestReportId, 
-      guestReportId_type: typeof guestReportId,
-      has_swiss_data: !!swissData?.swiss_data,
-      response_status: translated.status,
-      swiss_data_keys: swissData ? Object.keys(swissData) : null,
-      file: "verify-guest-payment/index.ts:172",
-      function: "processSwissDataInBackground"
-    });
-
-    await supabase
-      .from("guest_reports")
-      .update({
-        has_report: true,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", guestReportId);
-
-  } catch (err: any) {
-    swissError = err.message;
-    // ⭐ [VERIFY-GUEST-PAYMENT] Translator failed
-    console.error("⭐ [VERIFY-GUEST-PAYMENT] translator_error", { 
-      guestReportId, 
-      error: err.message,
-      request_type: reportData.request || reportData.reportType,
-      file: "verify-guest-payment/index.ts:178",
-      function: "processSwissDataInBackground"
-    });
+  while (attempt < maxRetries) {
+    attempt++;
     
-    swissData = {
-      error: true,
-      error_message: err.message,
-      timestamp: new Date().toISOString(),
-    };
+    try {
+      logPaymentEvent("swiss_processing_attempt", guestReportId, { attempt, maxRetries });
 
-    // Log error to report_logs table for reliable error detection
-    await supabase
-      .from("report_logs")
-      .insert({
-        user_id: guestReportId.toString(), // Ensure it's treated as string for TEXT column
-        endpoint: reportData.request || reportData.reportType || 'unknown',
-        report_type: reportData.reportType,
-        status: 'failed',
-        error_message: err.message,
-        duration_ms: null,
-        engine_used: 'translator'
+      const { payload } = await buildTranslatorPayload(productId, reportData, supabase);
+      const translatorPayload = {
+        ...payload,
+        is_guest: true,
+        user_id: guestReportId,
+      };
+
+      logPaymentEvent("translator_call_started", guestReportId, { 
+        attempt,
+        translatorPayload_keys: Object.keys(translatorPayload),
+        endpoint: payload.request
       });
 
-    await supabase
-      .from("guest_reports")
-      .update({
-        has_report: false,
-        updated_at: new Date().toISOString(),
+      const translated = await translate(translatorPayload);
+      swissData = JSON.parse(translated.text);
+
+      logPaymentEvent("translator_success", guestReportId, { 
+        attempt,
+        response_status: translated.status,
+        has_swiss_data: !!swissData?.swiss_data,
+        swiss_data_keys: swissData ? Object.keys(swissData) : null
+      });
+
+      // Success - update guest_reports
+      await supabase
+        .from("guest_reports")
+        .update({
+          has_report: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", guestReportId);
+
+      logPaymentEvent("swiss_processing_completed", guestReportId, { attempt });
+      return; // Success, exit retry loop
+
+    } catch (err: any) {
+      swissError = err.message;
+      
+      logPaymentError("translator_attempt_failed", guestReportId, err, { 
+        attempt, 
+        maxRetries,
+        will_retry: attempt < maxRetries
+      });
+
+      // If this is the last attempt, handle the final failure
+      if (attempt >= maxRetries) {
+        logPaymentError("swiss_processing_failed_final", guestReportId, err, { 
+          total_attempts: attempt,
+          final_error: err.message
+        });
+
+        swissData = {
+          error: true,
+          error_message: err.message,
+          timestamp: new Date().toISOString(),
+          attempts: attempt
+        };
+
+        // Log comprehensive error to report_logs table
+        await supabase
+          .from("report_logs")
+          .insert({
+            user_id: guestReportId.toString(),
+            endpoint: reportData.request || reportData.reportType || 'unknown',
+            report_type: reportData.reportType,
+            status: 'failed',
+            error_message: `Final failure after ${attempt} attempts: ${err.message}`,
+            duration_ms: null,
+            engine_used: 'translator'
+          });
+
+        await supabase
+          .from("guest_reports")
+          .update({
+            has_report: false,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", guestReportId);
+
+        return; // Exit after final failure
+      }
+
+      // Wait before retry (exponential backoff)
+      const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 10000); // Max 10 seconds
+      logPaymentEvent("swiss_retry_delay", guestReportId, { attempt, waitTime, nextAttempt: attempt + 1 });
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+  }
+}
+
+// Enhanced atomic promo code management
+async function handlePromoCodeIncrement(supabase: any, promoCode: string, guestReportId: string): Promise<void> {
+  if (!promoCode) return;
+
+  logPaymentEvent("promo_increment_started", guestReportId, { promoCode });
+
+  try {
+    // Use a transaction-like approach with optimistic locking
+    const { data: currentPromo, error: fetchError } = await supabase
+      .from('promo_codes')
+      .select('id, times_used, max_uses, is_active')
+      .eq('code', promoCode.toUpperCase())
+      .single();
+
+    if (fetchError || !currentPromo) {
+      logPaymentError("promo_not_found_for_increment", guestReportId, fetchError, { promoCode });
+      return;
+    }
+
+    // Validate promo code is still valid
+    if (!currentPromo.is_active) {
+      logPaymentError("promo_inactive_during_increment", guestReportId, new Error("Promo code became inactive"), { promoCode });
+      return;
+    }
+
+    if (currentPromo.max_uses && currentPromo.times_used >= currentPromo.max_uses) {
+      logPaymentError("promo_limit_reached_during_increment", guestReportId, new Error("Promo code limit reached"), { 
+        promoCode, 
+        times_used: currentPromo.times_used, 
+        max_uses: currentPromo.max_uses 
+      });
+      return;
+    }
+
+    // Increment usage count
+    const { error: updateError } = await supabase
+      .from('promo_codes')
+      .update({ 
+        times_used: currentPromo.times_used + 1 
       })
-      .eq("id", guestReportId);
+      .eq('id', currentPromo.id)
+      .eq('times_used', currentPromo.times_used); // Optimistic locking
+
+    if (updateError) {
+      logPaymentError("promo_increment_failed", guestReportId, updateError, { promoCode });
+      return;
+    }
+
+    logPaymentEvent("promo_increment_success", guestReportId, { 
+      promoCode, 
+      old_usage: currentPromo.times_used, 
+      new_usage: currentPromo.times_used + 1 
+    });
+
+  } catch (error) {
+    logPaymentError("promo_increment_exception", guestReportId, error, { promoCode });
   }
 }
 
@@ -234,9 +325,14 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+  let guestReportId = "unknown";
+
   try {
     const { sessionId } = await req.json();
     if (!sessionId) throw new Error("Session ID is required");
+
+    logPaymentEvent("verification_started", sessionId, { sessionId });
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -247,22 +343,41 @@ serve(async (req) => {
     const isFree = sessionId.startsWith("free_");
 
     if (isFree) {
+      logPaymentEvent("free_session_processing", sessionId);
+
       const { data: record, error } = await supabase
         .from("guest_reports")
         .select("*")
         .eq("stripe_session_id", sessionId)
         .single();
 
-      if (error || !record) throw new Error("Free session not found");
+      if (error || !record) {
+        logPaymentError("free_session_not_found", sessionId, error);
+        throw new Error("Free session not found");
+      }
 
+      guestReportId = record.id;
+      logPaymentEvent("free_session_found", guestReportId, { 
+        has_translator_log: !!record.translator_log_id,
+        payment_status: record.payment_status 
+      });
+
+      // STAGE 2: Enhanced idempotency check for free sessions
       if (record.translator_log_id) {
+        logPaymentEvent("free_session_already_processed", guestReportId, { 
+          translator_log_id: record.translator_log_id,
+          processing_time_ms: Date.now() - startTime
+        });
+
         return new Response(JSON.stringify({
           success: true,
           verified: true,
           paymentStatus: "free",
           reportData: record.report_data,
           guestReportId: record.id,
-          message: "Free session already processed",
+          message: "Free session already processed (idempotent response)",
+          idempotent: true,
+          processing_time_ms: Date.now() - startTime
         }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
@@ -278,9 +393,16 @@ serve(async (req) => {
         .update({ is_ai_report: isAiReport })
         .eq("id", record.id);
       
+      // Start Swiss processing in background with enhanced retry logic
       EdgeRuntime.waitUntil(
-        processSwissDataInBackground(record.id, record.report_data, supabase, freeProductId)
+        processSwissDataInBackground(record.id, record.report_data, supabase, freeProductId, 3)
       );
+
+      logPaymentEvent("free_session_swiss_started", guestReportId, { 
+        product_id: freeProductId,
+        is_ai_report: isAiReport,
+        processing_time_ms: Date.now() - startTime
+      });
 
       return new Response(JSON.stringify({
         success: true,
@@ -289,9 +411,13 @@ serve(async (req) => {
         reportData: record.report_data,
         guestReportId: record.id,
         swissProcessing: true,
-        message: "Free session verified; Swiss processing started",
+        message: "Free session verified; Swiss processing started with enhanced retry logic",
+        processing_time_ms: Date.now() - startTime
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
+    // PAID FLOW - Enhanced verification with Stripe
+    logPaymentEvent("stripe_verification_started", sessionId);
 
     const stripe = new Stripe(
       Deno.env.get("STRIPE_SECRET_KEY") ?? "",
@@ -299,12 +425,24 @@ serve(async (req) => {
     );
 
     const session = await stripe.checkout.sessions.retrieve(sessionId);
+    
+    logPaymentEvent("stripe_session_retrieved", sessionId, { 
+      payment_status: session.payment_status,
+      amount_total: session.amount_total,
+      currency: session.currency
+    });
+
     if (session.payment_status !== "paid") {
+      logPaymentError("payment_not_completed", sessionId, new Error(`Payment status: ${session.payment_status}`));
       throw new Error(`Payment not completed (status: ${session.payment_status})`);
     }
 
     const md = session.metadata ?? {};
+    
+    // Handle service purchases (unchanged from Stage 1)
     if (md.purchase_type === "service") {
+      logPaymentEvent("service_purchase_detected", sessionId);
+
       const { error: serviceInsertErr } = await supabase
         .from("service_purchases")
         .upsert({
@@ -330,45 +468,19 @@ serve(async (req) => {
         coach_name: md.coach_name || null,
         service_title: md.service_title || null,
         message: "Service purchase verified successfully",
+        processing_time_ms: Date.now() - startTime
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const reportData: ReportData = {
-      email: md.guest_email || session.customer_details?.email,
-      amount: md.amount,
-      description: md.description,
-      reportType: md.reportType,
-      request: md.request,
-      sessionId: session.id,
-      birthDate: md.birthDate,
-      birthTime: md.birthTime,
-      birthLocation: md.birthLocation,
-      birthLatitude: md.birthLatitude,
-      birthLongitude: md.birthLongitude,
-      secondPersonName: md.secondPersonName,
-      secondPersonBirthDate: md.secondPersonBirthDate,
-      secondPersonBirthTime: md.secondPersonBirthTime,
-      secondPersonBirthLocation: md.secondPersonBirthLocation,
-      secondPersonLatitude: md.secondPersonLatitude,
-      secondPersonLongitude: md.secondPersonLongitude,
-      relationshipType: md.relationshipType,
-      essenceType: md.essenceType,
-      returnYear: md.returnYear,
-      notes: md.notes,
-      promoCode: md.promoCode,
-      name: md.guest_name || "Guest",
-      is_guest: true,
-    };
-
     // STAGE 1: Extract guest_report_id from Stripe metadata
-    const stripeMetadata = session.metadata;
-    const guestReportId = stripeMetadata?.guest_report_id;
+    guestReportId = md.guest_report_id;
 
     if (!guestReportId) {
+      logPaymentError("missing_guest_report_id", sessionId, new Error("Missing guest_report_id in Stripe metadata"));
       throw new Error("Missing guest_report_id in Stripe metadata - Stage 1 architecture required");
     }
 
-    console.log("✅ STAGE 1: Found guest_report_id in metadata:", guestReportId);
+    logPaymentEvent("guest_report_id_found", guestReportId, { sessionId });
 
     // STAGE 1: Query database for all necessary data
     const { data: existingReport, error: queryError } = await supabase
@@ -378,28 +490,27 @@ serve(async (req) => {
       .single();
 
     if (queryError || !existingReport) {
+      logPaymentError("guest_report_not_found", guestReportId, queryError);
       throw new Error(`Guest report not found in database: ${guestReportId}`);
     }
 
-    console.log("✅ STAGE 1: Retrieved report data from database:", {
-      id: existingReport.id,
-      email: existingReport.email,
+    logPaymentEvent("guest_report_found", guestReportId, {
       payment_status: existingReport.payment_status,
-      has_product_id: !!(existingReport.report_data?.product_id)
+      has_product_id: !!(existingReport.report_data?.product_id),
+      promo_code_used: existingReport.promo_code_used || 'none'
     });
 
-    // Extract product_id from database (not Stripe metadata)
-    const productId = existingReport.report_data?.product_id;
-
-    if (!productId) {
-      throw new Error("Missing product_id in guest_reports.report_data - database corruption");
-    }
-
-    console.log("✅ STAGE 1: Using product_id from database:", productId);
-
-    // STAGE 1: Check if payment has already been processed
+    // STAGE 2: CRITICAL IDEMPOTENCY CHECK - Enhanced with comprehensive logging
     if (existingReport.payment_status === "paid") {
-      console.log("✅ STAGE 1: Payment already processed for guest_report_id:", guestReportId);
+      logPaymentEvent("payment_already_processed_idempotent", guestReportId, {
+        existing_payment_status: existingReport.payment_status,
+        stripe_session_id: existingReport.stripe_session_id,
+        amount_paid: existingReport.amount_paid,
+        has_report: existingReport.has_report,
+        processing_time_ms: Date.now() - startTime,
+        idempotent_response: true
+      });
+
       return new Response(JSON.stringify({
         success: true,
         verified: true,
@@ -408,12 +519,32 @@ serve(async (req) => {
         currency: session.currency,
         reportData: existingReport.report_data,
         guestReportId: existingReport.id,
-        message: "Payment already verified and processed",
+        message: "Payment already verified and processed (idempotent response)",
+        idempotent: true,
+        processing_time_ms: Date.now() - startTime,
+        stage2_enhanced: true
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // STAGE 1: Update existing record to 'paid' status instead of creating new record
-    console.log("📝 STAGE 1: Updating payment status from pending to paid:", guestReportId);
+    // STAGE 2: Validate payment status transition
+    if (existingReport.payment_status !== "pending") {
+      logPaymentError("invalid_payment_status_transition", guestReportId, 
+        new Error(`Invalid status transition from ${existingReport.payment_status} to paid`));
+      throw new Error(`Invalid payment status: expected 'pending', got '${existingReport.payment_status}'`);
+    }
+
+    // Extract product_id from database (not Stripe metadata)
+    const productId = existingReport.report_data?.product_id;
+
+    if (!productId) {
+      logPaymentError("missing_product_id", guestReportId, new Error("Missing product_id in database"));
+      throw new Error("Missing product_id in guest_reports.report_data - database corruption");
+    }
+
+    logPaymentEvent("payment_processing_started", guestReportId, { 
+      product_id: productId,
+      promo_code: existingReport.promo_code_used || 'none'
+    });
 
     // Determine if this is an AI report based on price_list.endpoint
     const { isAiReport } = await buildTranslatorPayload(productId, existingReport.report_data, supabase);
@@ -438,24 +569,48 @@ serve(async (req) => {
       if (coachData?.coach_id) updateData.coach_id = coachData.coach_id;
     }
 
+    // STAGE 2: Atomic operation - Update payment status first
     const { data: updatedReport, error: updateErr } = await supabase
       .from("guest_reports")
       .update(updateData)
       .eq("id", guestReportId)
+      .eq("payment_status", "pending") // Ensure we only update if still pending (optimistic locking)
       .select()
       .single();
 
     if (updateErr) {
-      console.error("❌ STAGE 1: Failed to update guest report:", updateErr);
+      logPaymentError("payment_status_update_failed", guestReportId, updateErr);
       throw new Error(`DB update failed: ${updateErr.message}`);
     }
 
-    console.log("✅ STAGE 1: Successfully updated payment status to paid");
+    if (!updatedReport) {
+      logPaymentError("concurrent_payment_processing", guestReportId, 
+        new Error("No rows updated - possible concurrent processing"));
+      throw new Error("Payment may have been processed concurrently");
+    }
 
-    // Start Swiss processing in background
+    logPaymentEvent("payment_status_updated", guestReportId, {
+      old_status: "pending",
+      new_status: "paid",
+      is_ai_report: isAiReport
+    });
+
+    // STAGE 2: Atomic promo code increment (only for paid reports)
+    await handlePromoCodeIncrement(supabase, existingReport.promo_code_used, guestReportId);
+
+    // Start Swiss processing in background with enhanced retry logic
     EdgeRuntime.waitUntil(
-      processSwissDataInBackground(updatedReport.id, updatedReport.report_data, supabase, productId)
+      processSwissDataInBackground(updatedReport.id, updatedReport.report_data, supabase, productId, 3)
     );
+
+    const processingTimeMs = Date.now() - startTime;
+
+    logPaymentEvent("payment_verification_completed", guestReportId, {
+      final_status: "paid",
+      swiss_processing_started: true,
+      processing_time_ms: processingTimeMs,
+      stage2_enhanced: true
+    });
 
     return new Response(JSON.stringify({
       success: true,
@@ -466,16 +621,25 @@ serve(async (req) => {
       reportData: updatedReport.report_data,
       guestReportId: updatedReport.id,
       swissProcessing: true,
-      message: "STAGE 1: Payment verified; Swiss processing started",
-      stage1_architecture: true,
+      message: "STAGE 2: Payment verified with enhanced idempotency; Swiss processing started",
+      stage2_enhanced: true,
+      processing_time_ms: processingTimeMs
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (err: any) {
-    console.error("[verify-guest-payment] Error:", err.message);
+    const processingTimeMs = Date.now() - startTime;
+    
+    logPaymentError("verification_failed", guestReportId, err, {
+      processing_time_ms: processingTimeMs,
+      stage: "stage2_enhanced"
+    });
+
     return new Response(JSON.stringify({
       success: false,
       verified: false,
       error: err.message,
+      processing_time_ms: processingTimeMs,
+      stage2_enhanced: true
     }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
