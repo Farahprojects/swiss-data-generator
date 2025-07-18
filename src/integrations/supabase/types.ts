@@ -142,33 +142,6 @@ export type Database = {
           },
         ]
       }
-      autocomplete_cache: {
-        Row: {
-          created_at: string | null
-          expires_at: string | null
-          id: string
-          place_data: Json
-          query_hash: string
-          query_text: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          expires_at?: string | null
-          id?: string
-          place_data: Json
-          query_hash: string
-          query_text?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          expires_at?: string | null
-          id?: string
-          place_data?: Json
-          query_hash?: string
-          query_text?: string | null
-        }
-        Relationships: []
-      }
       blog_posts: {
         Row: {
           author_name: string | null
@@ -655,21 +628,18 @@ export type Database = {
         Row: {
           lat: number
           lon: number
-          place: string
           place_id: string
           updated_at: string | null
         }
         Insert: {
           lat: number
           lon: number
-          place: string
           place_id: string
           updated_at?: string | null
         }
         Update: {
           lat?: number
           lon?: number
-          place?: string
           place_id?: string
           updated_at?: string | null
         }
