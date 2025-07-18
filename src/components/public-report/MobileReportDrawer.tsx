@@ -68,7 +68,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
     fetchGuestData();
   }, [urlGuestId]);
 
-  const { form, currentStep, nextStep, prevStep, resetForm, showValidationErrors, attemptNextStep } = useMobileDrawerForm();
+  const { form, currentStep, nextStep, prevStep, resetForm } = useMobileDrawerForm();
   const { register, handleSubmit, setValue, watch, control, formState: { errors } } = form;
 
   // Reset drawer state when closing to ensure clean state on reopen
@@ -141,8 +141,6 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   const handleNext = () => {
     if (canGoNext()) {
       nextStep();
-    } else {
-      attemptNextStep(); // This will show validation errors
     }
   };
 
@@ -216,8 +214,8 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                       return reportCategory === 'astro-data'
                         ? <Step1_5AstroData control={control} setValue={setValue} selectedSubCategory={request} onNext={handleNext} />
                         : <Step1_5SubCategory control={control} setValue={setValue} selectedCategory={reportCategory} selectedSubCategory={reportSubCategory} onNext={handleNext} />;
-                     case 3:
-                       return <Step2BirthDetails register={register} setValue={setValue} watch={watch} errors={errors} onNext={handleNext} showValidationErrors={showValidationErrors} />;
+                    case 3:
+                      return <Step2BirthDetails register={register} setValue={setValue} watch={watch} errors={errors} onNext={handleNext} />;
                     case 4:
                       return <Step3Payment register={register} watch={watch} errors={errors} isProcessing={isProcessing} promoValidation={promoValidationState} isValidatingPromo={isValidatingPromo} />;
                     default:

@@ -18,7 +18,6 @@ interface Step2BirthDetailsProps {
   watch: UseFormWatch<ReportFormData>;
   errors: FieldErrors<ReportFormData>;
   onNext?: () => void;
-  showValidationErrors?: boolean;
 }
 
 const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
@@ -27,16 +26,27 @@ const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
   watch,
   errors,
   onNext,
-  showValidationErrors = false
 }) => {
   const topSafePadding = useMobileSafeTopPadding();
   const reportCategory = watch('reportCategory');
   const request = watch('request');
   const isCompatibilityReport = reportCategory === 'compatibility' || request === 'sync';
   
-  // Watch birth date and time for auto-scroll to location field
+  // State to manage which autocomplete is enabled (for mobile sequential loading)
+  const [person1LocationSelected, setPerson1LocationSelected] = React.useState(false);
+  
+  // Watch for person 1 location to enable person 2 autocomplete
+  const person1Location = watch('birthLocation');
+  
+  // Watch birth date and time for auto-scroll
   const birthDate = watch('birthDate');
   const birthTime = watch('birthTime');
+  
+  React.useEffect(() => {
+    if (person1Location && person1Location.trim().length > 0) {
+      setPerson1LocationSelected(true);
+    }
+  }, [person1Location]);
   
   // Auto-scroll to birth location when both birth date and time are filled
   React.useEffect(() => {
@@ -52,6 +62,13 @@ const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
       }, 300);
     }
   }, [birthDate, birthTime]);
+
+  // Removed problematic auto-scroll logic that was causing step navigation issues
+  
+  // Callback when person 1 selects a location
+  const handlePerson1PlaceSelect = () => {
+    setPerson1LocationSelected(true);
+  };
 
   return (
     <div className="bg-white">
@@ -77,7 +94,7 @@ const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
           </div>
         </div>
 
-         {/* Person‑1 */}
+        {/* Person‑1 */}
         <div className="px-6">
           <PersonCard
             personNumber={1}
@@ -86,11 +103,12 @@ const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
             setValue={setValue}
             watch={watch}
             errors={errors}
-            hasTriedToSubmit={showValidationErrors}
+            hasTriedToSubmit={false}
+            onPlaceSelect={handlePerson1PlaceSelect}
           />
         </div>
 
-         {/* Person‑2 */}
+        {/* Person‑2 */}
         {isCompatibilityReport && (
           <div className="px-6">
             <PersonCard
@@ -100,7 +118,23 @@ const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
               setValue={setValue}
               watch={watch}
               errors={errors}
-              hasTriedToSubmit={showValidationErrors}
+              hasTriedToSubmit={false}
+              autocompleteDisabled={false}
+              onPlaceSelect={() => {
+                // Auto-advance to payment step when second person location is filled
+                setTimeout(() => {
+                  const formData = watch();
+                  const secondPersonRequiredFields = ['secondPersonName', 'secondPersonBirthDate', 'secondPersonBirthTime', 'secondPersonBirthLocation'];
+                  const isComplete = secondPersonRequiredFields.every(field => {
+                    const value = formData[field as keyof typeof formData];
+                    return value && value.toString().trim().length > 0;
+                  });
+                  
+                  if (isComplete && onNext) {
+                    onNext();
+                  }
+                }, 300); // Increased delay to ensure form values are properly updated
+              }}
             />
           </div>
         )}

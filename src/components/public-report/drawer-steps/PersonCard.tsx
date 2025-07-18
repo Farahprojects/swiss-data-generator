@@ -81,8 +81,7 @@ const PersonCard = ({
 
     (document.activeElement as HTMLElement)?.blur?.();
 
-    // Note: Navigation logic now handled by central form completion watcher
-    // No need for onPlaceSelect callback anymore
+    onPlaceSelect?.();
   };
 
   const ErrorMsg = ({ msg }: { msg: string }) => (
