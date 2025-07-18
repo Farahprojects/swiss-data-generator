@@ -1,6 +1,13 @@
 
 import { useState } from 'react';
-import { validatePromoCode, PromoCodeValidation } from '@/utils/promoCodeValidation';
+
+export interface PromoCodeValidation {
+  isValid: boolean;
+  discountPercent: number;
+  message: string;
+  isFree: boolean;
+  errorType?: string;
+}
 
 export const usePromoValidation = () => {
   const [promoValidation, setPromoValidation] = useState<PromoCodeValidation | null>(null);
@@ -14,7 +21,15 @@ export const usePromoValidation = () => {
 
     setIsValidatingPromo(true);
     try {
-      const validation = await validatePromoCode(promoCode);
+      // Note: Promo validation is now handled server-side in initiate-report-flow
+      // This function is kept for UI state management but actual validation
+      // happens when the report is submitted
+      const validation = {
+        isValid: true, // Assume valid for UI purposes
+        discountPercent: 0, // Will be determined server-side
+        message: 'Promo code will be validated when submitting',
+        isFree: false // Will be determined server-side
+      };
       setPromoValidation(validation);
       return validation;
     } catch (error) {
