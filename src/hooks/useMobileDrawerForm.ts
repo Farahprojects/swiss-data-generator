@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { reportSchema } from '@/schemas/report-form-schema';
@@ -34,13 +34,13 @@ export const useMobileDrawerForm = () => {
     },
   });
 
-  const nextStep = () => {
+  const nextStep = useCallback(() => {
     if (currentStep < 4) {
       setCurrentStep((prev) => (prev + 1) as DrawerStep);
     }
-  };
+  }, [currentStep]);
 
-  const autoAdvanceAfterPlaceSelection = (isSecondPerson = false) => {
+  const autoAdvanceAfterPlaceSelection = useCallback((isSecondPerson = false) => {
     const reportCategory = form.watch('reportCategory');
     const request = form.watch('request');
     const isCompatibilityReport = reportCategory === 'compatibility' || request === 'sync';
@@ -51,32 +51,32 @@ export const useMobileDrawerForm = () => {
     setTimeout(() => {
       setCurrentStep(4);
     }, 100);
-  };
+  }, [form]);
 
-  const prevStep = () => {
+  const prevStep = useCallback(() => {
     if (currentStep > 1) {
       // Clear any potential error states when navigating backwards
       form.clearErrors();
       setCurrentStep((prev) => (prev - 1) as DrawerStep);
     }
-  };
+  }, [currentStep, form]);
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     form.reset();
     setCurrentStep(1);
     // Clear all session data when resetting
     clearAllSessionData();
-  };
+  }, [form]);
 
-  const openDrawer = () => {
+  const openDrawer = useCallback(() => {
     setIsOpen(true);
     setCurrentStep(1);
-  };
+  }, []);
 
-  const closeDrawer = () => {
+  const closeDrawer = useCallback(() => {
     setIsOpen(false);
     resetForm();
-  };
+  }, [resetForm]);
 
   return {
     form,
