@@ -82,32 +82,20 @@ export const useReportSubmission = () => {
       });
 
       if (error) {
-        console.log('Full error object:', error);
-        console.log('Error details:', {
-          message: error.message,
-          error: error.error,
-          details: error.details,
-          status: error.status
-        });
-
         // Check if this is a promo code validation error
-        // Check multiple possible error properties and status codes
-        const isPromoError = 
-          error.status === 400 || 
-          error.message?.toLowerCase().includes('promo') || 
-          error.error?.toLowerCase().includes('promo') || 
-          error.details?.toLowerCase().includes('promo') ||
-          (typeof error === 'string' && error.toLowerCase().includes('promo'));
-        
-        if (isPromoError) {
-          console.log('Detected promo error, setting inline error message');
+        if (error.message?.includes('promo code') || 
+            error.message?.includes('Invalid promo') || 
+            error.message?.includes('expired promo code') ||
+            error.message?.includes('usage limit') ||
+            error.status === 400) {
+          
           setInlinePromoError('Invalid Promo Code');
           setIsProcessing(false);
           return;
         } else {
           toast({
             title: "Error",
-            description: error.message || error.error || 'Failed to process request',
+            description: error.message || 'Failed to process request',
             variant: "destructive",
           });
           setIsProcessing(false);
@@ -156,21 +144,8 @@ export const useReportSubmission = () => {
     } catch (error) {
       console.error('Error in submitReport:', error);
       
-      // Handle any caught errors as potential promo errors if they contain promo-related text
-      if (error instanceof Error) {
-        console.log('Caught error message:', error.message);
-        
-        if (error.message.toLowerCase().includes('promo') || 
-            error.message.includes('400')) {
-          console.log('Setting inline promo error from caught exception');
-          setInlinePromoError('Invalid Promo Code');
-        } else {
-          toast({
-            title: "Error",
-            description: "Failed to process your request. Please try again.",
-            variant: "destructive",
-          });
-        }
+      if (error instanceof Error && error.message.includes('400')) {
+        setInlinePromoError('Invalid Promo Code');
       } else {
         toast({
           title: "Error",
@@ -186,7 +161,6 @@ export const useReportSubmission = () => {
   };
 
   const clearInlinePromoError = () => {
-    console.log('Clearing inline promo error');
     setInlinePromoError('');
   };
 
