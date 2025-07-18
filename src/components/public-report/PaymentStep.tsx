@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { Tag, CheckCircle, AlertCircle, Loader2, AlertTriangle } from 'lucide-react';
@@ -15,6 +15,7 @@ import { PromoConfirmationDialog } from '@/components/public-report/PromoConfirm
 import { handlePaymentSubmission } from '@/utils/paymentSubmissionHelper';
 import { useToast } from '@/hooks/use-toast';
 import FormStep from './FormStep';
+import { debounce } from 'lodash';
 
 interface PromoValidationState {
   status: 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid';
@@ -54,6 +55,16 @@ const PaymentStep = ({
   const [isLocalProcessing, setIsLocalProcessing] = useState(false);
   const [hasTimedOut, setHasTimedOut] = useState(false);
   const { validatePromoManually } = usePromoValidation();
+  
+  // Auto-validate promo code with debounce
+  const debouncedValidatePromo = useCallback(
+    debounce(async (code: string) => {
+      if (code.trim() && validatePromoManually) {
+        await validatePromoManually(code);
+      }
+    }, 500),
+    [validatePromoManually]
+  );
   const { getReportPrice, getReportTitle, calculatePricing, isLoading: isPricingLoading, error: pricingError } = usePriceFetch();
   const { toast } = useToast();
   
@@ -91,6 +102,11 @@ const PaymentStep = ({
   const request = watch('request'); // NEW: Watch the request field
   const name = watch('name');
   const promoCode = watch('promoCode') || '';
+
+  // Auto-validate when promo code changes
+  useEffect(() => {
+    debouncedValidatePromo(promoCode);
+  }, [promoCode, debouncedValidatePromo]);
 
   // Get price and title using context with global fallback
   let basePrice: number | null = null;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { Tag, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
@@ -10,6 +10,8 @@ import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { PromoConfirmationDialog } from '@/components/public-report/PromoConfirmationDialog';
 import { useMobileSafeTopPadding } from '@/hooks/useMobileSafeTopPadding';
 import { useFieldFocusHandler } from '@/hooks/useFieldFocusHandler';
+import { usePromoValidation } from '@/hooks/usePromoValidation';
+import { debounce } from 'lodash';
 
 interface PromoValidationState {
   status: 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid';
@@ -29,6 +31,7 @@ interface Step3PaymentProps {
   pendingSubmissionData?: { basePrice: number } | null;
   onPromoConfirmationTryAgain?: () => void;
   onPromoConfirmationContinue?: () => void;
+  validatePromoManually?: (code: string) => Promise<any>;
 }
 
 const Step3Payment = ({ 
@@ -41,11 +44,22 @@ const Step3Payment = ({
   showPromoConfirmation = false,
   pendingSubmissionData = null,
   onPromoConfirmationTryAgain = () => {},
-  onPromoConfirmationContinue = () => {}
+  onPromoConfirmationContinue = () => {},
+  validatePromoManually
 }: Step3PaymentProps) => {
   const topSafePadding = useMobileSafeTopPadding();
   const { scrollTo } = useFieldFocusHandler();
   const [showPromoCode, setShowPromoCode] = useState(false);
+  
+  // Auto-validate promo code with debounce
+  const debouncedValidatePromo = useCallback(
+    debounce(async (code: string) => {
+      if (code.trim() && validatePromoManually) {
+        await validatePromoManually(code);
+      }
+    }, 500),
+    [validatePromoManually]
+  );
 
   const { getReportPrice, getReportTitle, calculatePricing } = usePriceFetch();
 
@@ -59,6 +73,11 @@ const Step3Payment = ({
   const request = watch('request');
   const name = watch('name');
   const promoCode = watch('promoCode') || '';
+
+  // Auto-validate when promo code changes
+  useEffect(() => {
+    debouncedValidatePromo(promoCode);
+  }, [promoCode, debouncedValidatePromo]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });

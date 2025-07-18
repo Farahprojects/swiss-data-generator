@@ -82,7 +82,15 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   const formName = watch('name') || '';
   const formEmail = watch('email') || '';
 
-  const { isProcessing, submitReport, reportCreated } = useReportSubmission();
+  const { 
+    isProcessing, 
+    submitReport, 
+    reportCreated,
+    showPromoConfirmation,
+    pendingSubmissionData,
+    handlePromoConfirmationTryAgain,
+    handlePromoConfirmationContinue
+  } = useReportSubmission();
   const { promoValidation, isValidatingPromo, validatePromoManually, resetValidation } = usePromoValidation();
 
   const reportCategory = watch('reportCategory');
@@ -96,7 +104,9 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   }), [promoValidation]);
 
   const onSubmit = async (data: ReportFormData) => {
-    await submitReport(data, promoValidationState, resetValidation);
+    await submitReport(data, promoValidationState, () => {
+      resetValidation();
+    });
   };
 
   const handleMobilePaymentSubmission = async () => {
@@ -216,8 +226,20 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                         : <Step1_5SubCategory control={control} setValue={setValue} selectedCategory={reportCategory} selectedSubCategory={reportSubCategory} onNext={handleNext} />;
                      case 3:
                       return <Step2BirthDetails register={register} setValue={setValue} watch={watch} errors={errors} onNext={handleNext} onPlaceSelected={autoAdvanceAfterPlaceSelection} />;
-                    case 4:
-                      return <Step3Payment register={register} watch={watch} errors={errors} isProcessing={isProcessing} promoValidation={promoValidationState} isValidatingPromo={isValidatingPromo} />;
+                     case 4:
+                       return <Step3Payment 
+                         register={register} 
+                         watch={watch} 
+                         errors={errors} 
+                         isProcessing={isProcessing} 
+                         promoValidation={promoValidationState} 
+                         isValidatingPromo={isValidatingPromo}
+                         showPromoConfirmation={showPromoConfirmation}
+                         pendingSubmissionData={pendingSubmissionData}
+                         onPromoConfirmationTryAgain={handlePromoConfirmationTryAgain}
+                         onPromoConfirmationContinue={() => handlePromoConfirmationContinue(() => {})}
+                         validatePromoManually={validatePromoManually}
+                       />;
                     default:
                       return null;
                   }
