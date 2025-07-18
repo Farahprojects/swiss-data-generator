@@ -1,20 +1,19 @@
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=deno&deno-std=0.224.0";
 
-import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
   auth: { persistSession: false }
-})
+});
 
 // Inline CORS utilities to avoid import issues
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-}
+};
 
 // Handle CORS preflight requests
 const handleCors = (req: Request) => {
@@ -22,7 +21,7 @@ const handleCors = (req: Request) => {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
   return null;
-}
+};
 
 interface ReportData {
   reportType: string
@@ -367,14 +366,14 @@ serve(async (req) => {
 
     logFlowEvent("guest_report_created", { guestReportId: guestReport.id });
 
-    // Now create checkout session with minimal data - UPDATED SUCCESS URL
+    // Now create checkout session with minimal data - UPDATED CANCEL URL TOO
     const checkoutData = {
       guest_report_id: guestReport.id,
       amount: finalAmount,
       email: reportData.email,
       description: product.description || `${product.name} Report`,
       successUrl: `${req.headers.get("origin")}/report?guest_id=${guestReport.id}`,
-      cancelUrl: `${req.headers.get("origin")}/payment-return?status=cancelled`,
+      cancelUrl: `${req.headers.get("origin")}/report?status=cancelled`,
     };
 
     logFlowEvent("checkout_creation_started", {
@@ -455,12 +454,12 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
 
-  } catch (error) {
+  } catch (err: any) {
     const processingTimeMs = Date.now() - startTime;
-    logFlowError("flow_exception", error, { processing_time_ms: processingTimeMs });
+    logFlowError("flow_exception", err, { processing_time_ms: processingTimeMs });
     
     return new Response(JSON.stringify({ 
-      error: error.message || 'Internal server error',
+      error: err.message || 'Internal server error',
       processing_time_ms: processingTimeMs,
       stage2_enhanced: true
     }), {

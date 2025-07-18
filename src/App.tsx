@@ -24,7 +24,6 @@ import ResetPassword from './pages/auth/Password';
 import { AuthGuard } from './components/auth/AuthGuard';
 import Index from './pages/Index';
 import PublicReport from './pages/PublicReport';
-import PaymentReturn from './pages/PaymentReturn';
 import Pricing from './pages/Pricing';
 import Contact from './pages/Contact';
 import About from './pages/About';
@@ -84,7 +83,6 @@ function App() {
                       <Route path="/" element={<Index />} />
                       <Route path="/features" element={<Features />} />
                       <Route path="/report" element={<PublicReport />} />
-                      <Route path="/payment-return" element={<PaymentReturn />} />
                       <Route path="/pricing" element={<Pricing />} />
                       <Route path="/contact" element={<Contact />} />
                       <Route path="/about" element={<About />} />

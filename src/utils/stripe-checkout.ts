@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { storeStripeReturnPath } from "./stripe-links";
 
@@ -32,8 +33,8 @@ export const initiateStripeCheckout = async ({
         amount,
         priceId,
         productId,
-        successUrl: successUrl || window.location.origin + '/payment-return?status=success',
-        cancelUrl: cancelUrl || window.location.origin + '/payment-return?status=cancelled',
+        successUrl: successUrl || window.location.origin + '/report?status=success',
+        cancelUrl: cancelUrl || window.location.origin + '/report?status=cancelled',
         returnPath: currentPath,
         isGuest: false, // This is for authenticated users
       },

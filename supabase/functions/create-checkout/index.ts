@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
 /*  pin Stripe & Supabase imports to the same std version  */
@@ -22,7 +21,6 @@ serve(async (req) => {
   });
 
   try {
-    /* -------- Request body - STAGE 1: Check for new minimal format -------- */
     const body = await req.json();
     
     // STAGE 1: Detect new minimal format vs legacy format
@@ -89,7 +87,7 @@ serve(async (req) => {
       
       // Use the successUrl passed from initiate-report-flow (which now points to /report?guest_id=...)
       const finalSuccessUrl = successUrl ?? `${baseOrigin}/report?guest_id=${guest_report_id}`;
-      const finalCancelUrl = cancelUrl ?? `${baseOrigin}/payment-return?status=cancelled`;
+      const finalCancelUrl = cancelUrl ?? `${baseOrigin}/report?status=cancelled`;
       
       console.log("🔗 Success URL:", finalSuccessUrl);
       console.log("🔗 Cancel URL:", finalCancelUrl);
@@ -261,14 +259,14 @@ serve(async (req) => {
     if (isGuest) {
       // For guests, use session_id format for verification
       finalSuccessUrl = successUrl ?? `${baseOrigin}/payment-return?session_id={CHECKOUT_SESSION_ID}`;
-      finalCancelUrl = cancelUrl ?? `${baseOrigin}/payment-return?status=cancelled`;
+      finalCancelUrl = cancelUrl ?? `${baseOrigin}/report?status=cancelled`;
     } else {
       // For signed-in users, use existing format
       finalSuccessUrl =
         successUrl ??
         `${baseOrigin}/payment-return?status=${paymentStatus}` +
           (mode === "payment" && amount ? `&amount=${amount}` : "");
-      finalCancelUrl = cancelUrl ?? `${baseOrigin}/payment-return?status=${cancelStatus}`;
+      finalCancelUrl = cancelUrl ?? `${baseOrigin}/report?status=cancelled`;
     }
 
     /* -------- Prepare metadata with location field mapping -------- */

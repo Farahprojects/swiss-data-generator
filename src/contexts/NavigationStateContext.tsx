@@ -1,8 +1,6 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { isPasswordResetUrl } from '@/utils/urlUtils';
-
 
 type NavigationStateContextType = {
   lastRoute: string;
@@ -31,7 +29,6 @@ interface NavigationStateProviderProps {
 const RESTRICTED_ROUTES = [
   '/login', 
   '/signup', 
-  '/payment-return', 
   '/auth/email',
   '/auth/password',
   '/dashboard',

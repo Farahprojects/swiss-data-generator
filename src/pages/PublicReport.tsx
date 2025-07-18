@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import HeroSection from '@/components/public-report/HeroSection';
 import FeaturesSection from '@/components/public-report/FeaturesSection';
 import TestsSection from '@/components/public-report/TestsSection';
 import TheraiChatGPTSection from '@/components/public-report/TheraiChatGPTSection';
-
 import { ReportForm } from '@/components/shared/ReportForm';
 import MobileReportTrigger from '@/components/public-report/MobileReportTrigger';
 import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
@@ -11,19 +12,25 @@ import Footer from '@/components/Footer';
 import { supabase } from '@/integrations/supabase/client';
 import Logo from '@/components/Logo';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { AlertTriangle } from "lucide-react";
 
 const PublicReport = () => {
-  // Production ready - no debug logs
-
-  // Hard fail test for SSR debugging (uncomment to test error boundary)
-  // if (typeof window === 'undefined') {
-  //   throw new Error('🔥 Force fail on SSR to test error boundary');
-  // }
-
   // ALL HOOKS MUST BE DECLARED FIRST - NEVER INSIDE TRY-CATCH
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [scrollY, setScrollY] = useState(0);
+  const [showCancelledMessage, setShowCancelledMessage] = useState(false);
   const isMobile = useIsMobile();
+  const location = useLocation();
+
+  // Check for cancelled payment status
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('status') === 'cancelled') {
+      setShowCancelledMessage(true);
+    }
+  }, [location.search]);
 
   // Scroll position tracking
   useEffect(() => {
@@ -36,10 +43,6 @@ const PublicReport = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  // Production ready - no error logging to console
-
-  // Removed diagnostic code that was leaking database data to console
 
   const handleGetReportClick = () => {
     if (isMobile) {
@@ -61,12 +64,45 @@ const PublicReport = () => {
     setIsDrawerOpen(true);
   };
 
+  const handleDismissCancelMessage = () => {
+    setShowCancelledMessage(false);
+    // Clear the status from URL
+    const newUrl = new URL(window.location.href);
+    newUrl.searchParams.delete('status');
+    window.history.replaceState({}, '', newUrl.toString());
+  };
+
   // Calculate text opacity based on scroll position
   const textOpacity = Math.max(0, 1 - (scrollY / 100)); // Fade out over 100px scroll
 
   try {
     return (
       <div className="min-h-screen bg-background">
+        {/* Show cancelled payment message */}
+        {showCancelledMessage && (
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md px-4">
+            <Card className="border-amber-200 bg-amber-50">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-amber-800">Payment Cancelled</p>
+                    <p className="text-xs text-amber-700">Your payment was cancelled. You can try again anytime.</p>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleDismissCancelMessage}
+                    className="text-amber-600 hover:text-amber-800 hover:bg-amber-100"
+                  >
+                    ×
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* Animated header with logo */}
         <header className="fixed top-0 left-0 z-50 p-6">
           <div 
