@@ -264,30 +264,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }
   }, [requiresSecondPerson, firstPersonComplete]);
 
-  // Handle second person location selection auto-advancement
-  const handleSecondPersonLocationSelected = () => {
-    // Check if all second person data is now complete
-    const formValues = form.getValues();
-    const isSecondPersonComplete = Boolean(
-      formValues.secondPersonName &&
-      formValues.secondPersonBirthDate &&
-      formValues.secondPersonBirthTime &&
-      formValues.secondPersonBirthLocation &&
-      formValues.secondPersonLatitude &&
-      formValues.secondPersonLongitude
-    );
-
-    // If second person is complete and we have a compatibility report, auto-scroll to payment
-    if (isSecondPersonComplete && requiresSecondPerson) {
-      setTimeout(() => {
-        paymentStepRef.current?.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start' 
-        });
-      }, 300);
-    }
-  };
-
   // Auto-scroll to payment step when step2Done changes from false to true
   React.useEffect(() => {
     const isDesktop = window.innerWidth >= 640; // sm breakpoint
@@ -535,7 +511,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
                     setValue={setValue}
                     watch={watch}
                     errors={errors}
-                    onPlaceSelected={handleSecondPersonLocationSelected}
                   />
                 </div>
               )}
