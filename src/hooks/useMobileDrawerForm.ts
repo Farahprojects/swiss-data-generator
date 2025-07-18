@@ -45,9 +45,15 @@ export const useMobileDrawerForm = () => {
   useFormCompletionWatcher({
     watch: form.watch,
     isCompatibilityReport,
-    onFormComplete: () => {
+    onFirstPersonComplete: () => {
       if (currentStep === 2) {
-        console.log('🚀 Auto-advancing to next step due to form completion');
+        console.log('🚀 Auto-advancing to next step due to first person completion');
+        nextStep();
+      }
+    },
+    onSecondPersonComplete: () => {
+      if (currentStep === 2 && isCompatibilityReport) {
+        console.log('🚀 Auto-advancing to payment due to second person completion');
         nextStep();
       }
     }

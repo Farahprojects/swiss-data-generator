@@ -236,13 +236,36 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const paymentStepRef = React.useRef<HTMLDivElement>(null);
   const secondPersonRef = React.useRef<HTMLDivElement>(null);
 
-  // Unified form completion watcher for auto-scroll behavior
+  // Two-stage form completion watcher for auto-scroll behavior
   useFormCompletionWatcher({
     watch: form.watch,
     isCompatibilityReport: requiresSecondPerson,
-    onFormComplete: () => {
+    onFirstPersonComplete: () => {
       const isDesktop = window.innerWidth >= 640; // sm breakpoint
       if (isDesktop) {
+        if (requiresSecondPerson) {
+          // Scroll to second person form
+          setTimeout(() => {
+            secondPersonRef.current?.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'start' 
+            });
+          }, 100);
+        } else {
+          // Single person flow - scroll to payment
+          setTimeout(() => {
+            paymentStepRef.current?.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'start' 
+            });
+          }, 100);
+        }
+      }
+    },
+    onSecondPersonComplete: () => {
+      const isDesktop = window.innerWidth >= 640; // sm breakpoint
+      if (isDesktop) {
+        // Two person flow complete - scroll to payment
         setTimeout(() => {
           paymentStepRef.current?.scrollIntoView({ 
             behavior: 'smooth', 

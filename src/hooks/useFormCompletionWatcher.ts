@@ -4,19 +4,22 @@ import { ReportFormData } from '@/types/public-report';
 
 interface FormCompletionWatcherProps {
   watch: UseFormWatch<ReportFormData>;
-  onFormComplete?: () => void;
+  onFirstPersonComplete?: () => void;
+  onSecondPersonComplete?: () => void;
   isCompatibilityReport?: boolean;
   debounceMs?: number;
 }
 
 export const useFormCompletionWatcher = ({ 
   watch, 
-  onFormComplete, 
+  onFirstPersonComplete, 
+  onSecondPersonComplete,
   isCompatibilityReport = false,
   debounceMs = 300 
 }: FormCompletionWatcherProps) => {
   const timeoutRef = useRef<NodeJS.Timeout>();
-  const lastCompletionStateRef = useRef<boolean>(false);
+  const firstPersonTriggeredRef = useRef<boolean>(false);
+  const secondPersonTriggeredRef = useRef<boolean>(false);
 
   useEffect(() => {
     const subscription = watch((formData) => {
@@ -27,16 +30,30 @@ export const useFormCompletionWatcher = ({
 
       // Debounce the completion check
       timeoutRef.current = setTimeout(() => {
-        const isComplete = checkFormCompletion(formData, isCompatibilityReport);
+        const firstPersonComplete = checkFirstPersonCompletion(formData);
+        const secondPersonComplete = isCompatibilityReport ? checkSecondPersonCompletion(formData) : false;
         
-        // Only trigger if we've transitioned from incomplete to complete
-        if (isComplete && !lastCompletionStateRef.current && onFormComplete) {
-          console.log('🎯 Form completion detected, triggering action');
-          lastCompletionStateRef.current = true;
-          onFormComplete();
-        } else if (!isComplete) {
-          // Reset the completion state if form becomes incomplete
-          lastCompletionStateRef.current = false;
+        // Stage 1: First person completion
+        if (firstPersonComplete && !firstPersonTriggeredRef.current && onFirstPersonComplete) {
+          console.log('🎯 First person completion detected');
+          firstPersonTriggeredRef.current = true;
+          onFirstPersonComplete();
+        }
+        
+        // Stage 2: Second person completion (only for compatibility reports)
+        if (isCompatibilityReport && firstPersonComplete && secondPersonComplete && 
+            !secondPersonTriggeredRef.current && onSecondPersonComplete) {
+          console.log('🎯 Second person completion detected');
+          secondPersonTriggeredRef.current = true;
+          onSecondPersonComplete();
+        }
+        
+        // Reset triggers if forms become incomplete
+        if (!firstPersonComplete) {
+          firstPersonTriggeredRef.current = false;
+          secondPersonTriggeredRef.current = false;
+        } else if (isCompatibilityReport && !secondPersonComplete) {
+          secondPersonTriggeredRef.current = false;
         }
       }, debounceMs);
     });
@@ -47,7 +64,7 @@ export const useFormCompletionWatcher = ({
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [watch, onFormComplete, isCompatibilityReport, debounceMs]);
+  }, [watch, onFirstPersonComplete, onSecondPersonComplete, isCompatibilityReport, debounceMs]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -59,9 +76,9 @@ export const useFormCompletionWatcher = ({
   }, []);
 };
 
-const checkFormCompletion = (formData: Partial<ReportFormData>, isCompatibilityReport: boolean): boolean => {
-  // Required fields for first person
-  const person1Required = [
+const checkFirstPersonCompletion = (formData: Partial<ReportFormData>): boolean => {
+  // Required fields for first person including coordinates
+  const textFields = [
     formData.name,
     formData.email,
     formData.birthDate,
@@ -69,46 +86,56 @@ const checkFormCompletion = (formData: Partial<ReportFormData>, isCompatibilityR
     formData.birthLocation
   ];
 
-  const person1Complete = person1Required.every(field => 
+  const textFieldsComplete = textFields.every(field => 
     field && typeof field === 'string' && field.trim().length > 0
   );
 
-  console.log('📊 Person 1 completion check:', {
+  // Also require coordinates to ensure proper place selection
+  const coordinatesComplete = typeof formData.birthLatitude === 'number' && typeof formData.birthLongitude === 'number';
+  
+  const firstPersonComplete = textFieldsComplete && coordinatesComplete;
+
+  console.log('📊 First person completion check:', {
     name: !!formData.name?.trim(),
     email: !!formData.email?.trim(),
     birthDate: !!formData.birthDate?.trim(),
     birthTime: !!formData.birthTime?.trim(),
     birthLocation: !!formData.birthLocation?.trim(),
-    complete: person1Complete
+    birthLatitude: !!formData.birthLatitude,
+    birthLongitude: !!formData.birthLongitude,
+    complete: firstPersonComplete
   });
 
-  // If not a compatibility report, only check person 1
-  if (!isCompatibilityReport) {
-    return person1Complete;
-  }
+  return firstPersonComplete;
+};
 
-  // For compatibility reports, also check second person
-  const person2Required = [
+const checkSecondPersonCompletion = (formData: Partial<ReportFormData>): boolean => {
+  // Required fields for second person including coordinates
+  const textFields = [
     formData.secondPersonName,
     formData.secondPersonBirthDate,
     formData.secondPersonBirthTime,
     formData.secondPersonBirthLocation
   ];
 
-  const person2Complete = person2Required.every(field => 
+  const textFieldsComplete = textFields.every(field => 
     field && typeof field === 'string' && field.trim().length > 0
   );
 
-  console.log('📊 Person 2 completion check:', {
+  // Also require coordinates to ensure proper place selection
+  const coordinatesComplete = typeof formData.secondPersonLatitude === 'number' && typeof formData.secondPersonLongitude === 'number';
+  
+  const secondPersonComplete = textFieldsComplete && coordinatesComplete;
+
+  console.log('📊 Second person completion check:', {
     secondPersonName: !!formData.secondPersonName?.trim(),
     secondPersonBirthDate: !!formData.secondPersonBirthDate?.trim(),
     secondPersonBirthTime: !!formData.secondPersonBirthTime?.trim(),
     secondPersonBirthLocation: !!formData.secondPersonBirthLocation?.trim(),
-    complete: person2Complete
+    secondPersonLatitude: !!formData.secondPersonLatitude,
+    secondPersonLongitude: !!formData.secondPersonLongitude,
+    complete: secondPersonComplete
   });
 
-  const bothComplete = person1Complete && person2Complete;
-  console.log('🎯 Overall completion status:', { person1Complete, person2Complete, bothComplete });
-  
-  return bothComplete;
+  return secondPersonComplete;
 };
