@@ -45,14 +45,12 @@ export const useMobileDrawerForm = () => {
     const request = form.watch('request');
     const isCompatibilityReport = reportCategory === 'compatibility' || request === 'sync';
     
-    if (isSecondPerson || !isCompatibilityReport) {
-      // Advance to payment step
+    // Always advance to payment step after place selection
+    // For compatibility reports, this will advance after second person's place is selected
+    // For single person reports, this will advance after first person's place is selected
+    setTimeout(() => {
       setCurrentStep(4);
-    } else if (isCompatibilityReport) {
-      // Advance to second person step (step 3 stays for birth details)
-      // We're currently on step 3, so this would advance within the birth details step
-      // The birth details step will handle showing second person form
-    }
+    }, 100);
   };
 
   const prevStep = () => {

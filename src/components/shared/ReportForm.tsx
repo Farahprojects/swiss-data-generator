@@ -172,17 +172,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const formValues = form.watch();
   const step1Done = Boolean(formValues.reportType || formValues.request);
 
-  // Helper function to check if second person data is complete
-  const isSecondPersonDataComplete = () => {
-    return Boolean(
-      formValues.secondPersonName &&
-      formValues.secondPersonBirthDate &&
-      formValues.secondPersonBirthTime &&
-      formValues.secondPersonBirthLocation &&
-      formValues.secondPersonLatitude &&
-      formValues.secondPersonLongitude
-    );
-  };
 
   const step2Done =
     step1Done &&
@@ -191,12 +180,15 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         formValues.email &&
         formValues.birthDate &&
         formValues.birthTime &&
-        formValues.birthLocation &&
-        formValues.birthLatitude &&
-        formValues.birthLongitude,
+        formValues.birthLocation,
     ) &&
     // For compatibility reports, also require second person data
-    (!requiresSecondPerson || isSecondPersonDataComplete());
+    (!requiresSecondPerson || (
+      formValues.secondPersonName &&
+      formValues.secondPersonBirthDate &&
+      formValues.secondPersonBirthTime &&
+      formValues.secondPersonBirthLocation
+    ));
 
   // Check if form should be unlocked (either reportType or request field filled)
   const shouldUnlockForm = !!(selectedReportType || selectedRequest);

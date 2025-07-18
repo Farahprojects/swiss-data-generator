@@ -126,7 +126,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
           return firstPersonValid;
         }
         
-        // For compatibility reports, also validate second person fields
+        // For compatibility reports, also validate second person fields (coordinates not required for step advancement)
         const secondPersonRequiredFields = ['secondPersonName', 'secondPersonBirthDate', 'secondPersonBirthTime', 'secondPersonBirthLocation'];
         const secondPersonValid = secondPersonRequiredFields.every(field => !!watch(field as keyof ReportFormData));
         
