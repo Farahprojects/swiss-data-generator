@@ -32,6 +32,7 @@ interface ReportData {
   secondPersonPlaceId?: string
   returnYear?: string
   notes?: string
+  priceId?: string
 }
 
 interface InitiateReportFlowRequest {
@@ -56,13 +57,53 @@ serve(async (req) => {
       })
     }
 
-    // --- START OF CONSOLIDATED LOGIC ---
+    // --- PRICE LOOKUP FROM DATABASE ---
     
-    let isFreeReport = false
-    let promoId: string | null = null
-    let amountPaid = 0
+    // Determine priceId based on report type if not explicitly provided
+    let priceId = reportData.priceId
+    if (!priceId) {
+      // Map report types to price IDs based on your price_list table
+      if (reportData.reportType === 'essence' || reportData.essenceType) {
+        priceId = 'essence'
+      } else if (reportData.reportType === 'sync' || reportData.relationshipType) {
+        priceId = 'sync'
+      } else if (reportData.reportType === 'flow') {
+        priceId = 'flow'
+      } else if (reportData.reportType === 'mindset') {
+        priceId = 'mindset'
+      } else if (reportData.reportType === 'monthly') {
+        priceId = 'monthly'
+      } else if (reportData.reportType === 'focus') {
+        priceId = 'focus'
+      } else if (reportData.reportType === 'return') {
+        priceId = 'return'
+      } else {
+        priceId = 'essence' // Default fallback
+      }
+    }
 
-    // 1. VALIDATE PROMO CODE (if provided)
+    // Fetch the base price from the database (SERVER-SIDE)
+    const { data: product, error: productError } = await supabaseAdmin
+      .from('price_list')
+      .select('id, unit_price_usd, name, description')
+      .eq('id', priceId)
+      .single()
+
+    if (productError || !product) {
+      return new Response(JSON.stringify({ 
+        error: 'Product not found or invalid report type' 
+      }), {
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    let finalPrice = product.unit_price_usd
+    let discountPercent = 0
+    let validatedPromoId: string | null = null
+
+    // --- PROMO CODE VALIDATION ---
+    
     if (promoCode && promoCode.trim()) {
       const { data: promo, error: promoError } = await supabaseAdmin
         .from('promo_codes')
@@ -90,93 +131,95 @@ serve(async (req) => {
         })
       }
 
-      // 2. SERVER-SIDE DECISION: Is this a 100% discount?
-      if (promo.discount_percent === 100) {
-        isFreeReport = true
-        promoId = promo.id
-        amountPaid = 0
-      } else {
-        // Partial discount - we'll handle paid reports later
+      validatedPromoId = promo.id
+      discountPercent = promo.discount_percent
+
+      // FREE FLOW (100% discount) - existing tested logic
+      if (discountPercent === 100) {
+        const sessionId = `free_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+
+        const insertPayload = {
+          stripe_session_id: sessionId,
+          email: reportData.email,
+          report_type: reportData.reportType || 'standard',
+          report_data: reportData,
+          amount_paid: 0,
+          payment_status: 'paid',
+          promo_code_used: promoCode,
+          has_report: false,
+          email_sent: false,
+          coach_id: null,
+          translator_log_id: null,
+          report_log_id: null
+        }
+
+        const { data: guestReport, error: insertError } = await supabaseAdmin
+          .from('guest_reports')
+          .insert(insertPayload)
+          .select('id')
+          .single()
+
+        if (insertError) {
+          console.error('Failed to insert guest report:', insertError)
+          return new Response(JSON.stringify({ 
+            error: 'Failed to create report record' 
+          }), {
+            status: 500, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
+        }
+
+        // Increment promo code usage
+        await supabaseAdmin
+          .from('promo_codes')
+          .update({ 
+            times_used: promo.times_used + 1 
+          })
+          .eq('id', validatedPromoId)
+
+        // Trigger background generation
+        const { error: verifyError } = await supabaseAdmin.functions.invoke(
+          'verify-guest-payment',
+          { body: { sessionId } }
+        )
+        
+        if (verifyError) {
+          console.error('Failed to trigger report generation:', verifyError)
+        }
+
         return new Response(JSON.stringify({ 
-          error: 'This promo code requires payment' 
+          status: 'success', 
+          message: 'Your free report is being generated',
+          reportId: guestReport.id,
+          sessionId,
+          isFreeReport: true
         }), {
-          status: 402, // Payment Required
+          status: 200, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
     }
 
-    // 3. INSERT the report record
-    const sessionId = isFreeReport 
-      ? `free_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
-      : `paid_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+    // --- PAID FLOW: CALCULATE FINAL PRICE ---
+    
+    const discountAmount = finalPrice * (discountPercent / 100)
+    finalPrice = finalPrice - discountAmount
 
-    const insertPayload = {
-      stripe_session_id: sessionId,
-      email: reportData.email,
-      report_type: reportData.reportType || 'standard',
-      report_data: reportData,
-      amount_paid: amountPaid,
-      payment_status: isFreeReport ? 'paid' : 'pending',
-      promo_code_used: promoCode || null,
-      has_report: false,
-      email_sent: false,
-      coach_id: null,
-      translator_log_id: null,
-      report_log_id: null
+    // Ensure minimum price (e.g., $1.00)
+    if (finalPrice < 1) {
+      finalPrice = 1
     }
 
-    const { data: guestReport, error: insertError } = await supabaseAdmin
-      .from('guest_reports')
-      .insert(insertPayload)
-      .select('id')
-      .single()
-
-    if (insertError) {
-      console.error('Failed to insert guest report:', insertError)
-      return new Response(JSON.stringify({ 
-        error: 'Failed to create report record' 
-      }), {
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
-
-    // 4. INCREMENT promo code usage (if free report)
-    if (isFreeReport && promoId) {
-      await supabaseAdmin
-        .from('promo_codes')
-        .update({ times_used: (await supabaseAdmin
-          .from('promo_codes')
-          .select('times_used')
-          .eq('id', promoId)
-          .single()).data?.times_used + 1 })
-        .eq('id', promoId)
-    }
-
-    // 5. TRIGGER the background generation process
-    if (isFreeReport) {
-      // For free reports, trigger report generation immediately
-      const { error: verifyError } = await supabaseAdmin.functions.invoke(
-        'verify-guest-payment',
-        { body: { sessionId } }
-      )
-      
-      if (verifyError) {
-        console.error('Failed to trigger report generation:', verifyError)
-        // Don't fail the request - the report can be generated later
-      }
-    }
-
-    // 6. RESPOND to the client with success
-    return new Response(JSON.stringify({ 
-      status: 'success', 
-      message: isFreeReport 
-        ? 'Your free report is being generated' 
-        : 'Redirecting to payment',
-      reportId: guestReport.id,
-      sessionId,
-      isFreeReport
+    // Return pricing data for frontend to process with existing Stripe checkout
+    return new Response(JSON.stringify({
+      status: 'payment_required',
+      finalAmount: finalPrice,
+      description: product.description || `${product.name} Report`,
+      productName: product.name,
+      validatedPromoId,
+      discountPercent,
+      originalPrice: product.unit_price_usd,
+      productId: product.id
     }), {
       status: 200, 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -191,4 +234,4 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
-}) 
+})

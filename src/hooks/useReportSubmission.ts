@@ -33,7 +33,7 @@ export const useReportSubmission = () => {
           description: "The request took too long. Please try again.",
           variant: "destructive",
         });
-      }, 10000); // 10 second timeout
+      }, 15000); // 15 second timeout for potential Stripe redirect
     }
 
     return () => {
@@ -73,8 +73,8 @@ export const useReportSubmission = () => {
         notes: data.notes,
       };
 
-      // Call the server-side function that handles everything
-      const { data: result, error } = await supabase.functions.invoke('initiate-report-flow', {
+      // Step 1: Call the enhanced initiate-report-flow for validation and pricing
+      const { data: validationResponse, error } = await supabase.functions.invoke('initiate-report-flow', {
         body: {
           reportData,
           promoCode: data.promoCode || undefined
@@ -82,33 +82,19 @@ export const useReportSubmission = () => {
       });
 
       if (error) {
-        console.log('Full error object:', error);
-        console.log('Error message:', error.message);
-        console.log('Error context:', error.context);
+        console.log('Validation error:', error);
         
-        // Extract the actual error message from the Response object
+        // Extract error message from response
         let errorMessage = '';
         
         try {
-          // If error.context is a Response object, read its body
           if (error.context && typeof error.context.text === 'function') {
             const responseText = await error.context.text();
-            console.log('Response text:', responseText);
-            
             try {
               const parsedResponse = JSON.parse(responseText);
               errorMessage = parsedResponse.error || responseText;
             } catch (parseError) {
               errorMessage = responseText;
-            }
-          } else if (error.context && error.context.json && error.context.json.error) {
-            errorMessage = error.context.json.error;
-          } else if (error.context && error.context.body && typeof error.context.body === 'string') {
-            try {
-              const parsedBody = JSON.parse(error.context.body);
-              errorMessage = parsedBody.error || error.context.body;
-            } catch (e) {
-              errorMessage = error.context.body;
             }
           } else if (error.message) {
             errorMessage = error.message;
@@ -116,11 +102,8 @@ export const useReportSubmission = () => {
             errorMessage = error;
           }
         } catch (responseError) {
-          console.log('Error reading response:', responseError);
           errorMessage = error.message || 'Failed to process request';
         }
-
-        console.log('Extracted error message:', errorMessage);
 
         // Check if this is a promo code validation error
         const isPromoError = errorMessage.toLowerCase().includes('promo') || 
@@ -129,7 +112,6 @@ export const useReportSubmission = () => {
                            error.status === 400;
         
         if (isPromoError) {
-          console.log('Setting inline promo error');
           setInlinePromoError('Invalid Promo Code');
           setIsProcessing(false);
           return;
@@ -144,34 +126,41 @@ export const useReportSubmission = () => {
         }
       }
 
-      // Handle success response
-      if (result.isFreeReport) {
-        // Free report path
+      // Step 2: Handle the response based on status
+      if (validationResponse.status === 'success') {
+        // FREE FLOW: Report is free and being generated
         setReportCreated(true);
-        storeGuestReportId(result.reportId);
+        storeGuestReportId(validationResponse.reportId);
         toast({
           title: "Free Report Created!",
           description: "Your report has been generated and will be sent to your email shortly.",
         });
-      } else {
-        // Paid report path - redirect to Stripe
-        const formDataForPricing = {
-          reportType: data.reportType,
-          essenceType: data.essenceType,
-          relationshipType: data.relationshipType,
-          reportCategory: data.reportCategory,
-          reportSubCategory: data.reportSubCategory,
-          request: data.request
-        };
+        setIsProcessing(false);
         
-        const amount = getReportPrice(formDataForPricing);
-        const description = getReportTitle(formDataForPricing);
+      } else if (validationResponse.status === 'payment_required') {
+        // PAID FLOW: Use existing guest checkout with server-calculated price
+        
+        // Prepare enhanced report data with validation results
+        const checkoutReportData = {
+          ...reportData,
+          validatedPromoId: validationResponse.validatedPromoId,
+          productId: validationResponse.productId,
+          originalPrice: validationResponse.originalPrice,
+          discountPercent: validationResponse.discountPercent
+        };
 
+        console.log('Initiating paid checkout:', {
+          amount: validationResponse.finalAmount,
+          description: validationResponse.description,
+          hasPromo: !!validationResponse.validatedPromoId
+        });
+
+        // Call existing guest checkout function with server-calculated pricing
         const checkoutResult = await initiateGuestCheckout({
-          amount,
-          email: data.email,
-          description,
-          reportData,
+          amount: validationResponse.finalAmount,
+          email: reportData.email,
+          description: validationResponse.description,
+          reportData: checkoutReportData,
         });
         
         if (!checkoutResult.success) {
@@ -180,11 +169,22 @@ export const useReportSubmission = () => {
             description: checkoutResult.error || "Failed to initiate checkout",
             variant: "destructive",
           });
+          setIsProcessing(false);
         }
+        // Note: isProcessing stays true during Stripe redirect
+        
+      } else {
+        // Unexpected response
+        toast({
+          title: "Error",
+          description: "An unexpected error occurred. Please try again.",
+          variant: "destructive",
+        });
+        setIsProcessing(false);
       }
+
     } catch (error) {
       console.error('Error in submitReport:', error);
-      console.log('Catch block error object:', error);
       
       let errorMessage = '';
       if (error instanceof Error) {
@@ -204,10 +204,7 @@ export const useReportSubmission = () => {
           variant: "destructive",
         });
       }
-    } finally {
-      if (isProcessing) {
-        setIsProcessing(false);
-      }
+      setIsProcessing(false);
     }
   };
 
