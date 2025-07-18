@@ -1,13 +1,10 @@
-// test 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { initiateGuestCheckout } from '@/utils/guest-checkout';
-import { createFreeReport, validatePromoCode } from '@/utils/promoCodeValidation';
-
 import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { ReportFormData } from '@/types/public-report';
-
 import { storeGuestReportId } from '@/utils/urlHelpers';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PromoValidationState {
   status: 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid';
@@ -62,111 +59,10 @@ export const useReportSubmission = () => {
     setIsProcessing(true);
     
     try {
-      // Validate promo code if present and not skipping validation
-      let validatedPromo = null;
-      if (data.promoCode && data.promoCode.trim() !== '' && !skipPromoValidation) {
-        setPromoValidation({
-          status: 'validating',
-          message: 'Validating promo code...',
-          discountPercent: 0
-        });
-
-        validatedPromo = await validatePromoCode(data.promoCode);
-        
-        if (validatedPromo.isValid) {
-          setPromoValidation({
-            status: validatedPromo.isFree ? 'valid-free' : 'valid-discount',
-            message: validatedPromo.message,
-            discountPercent: validatedPromo.discountPercent
-          });
-        } else {
-          // Set inline error and clear promo code
-          setInlinePromoError(validatedPromo.message);
-          setPromoValidation({
-            status: 'invalid',
-            message: validatedPromo.message,
-            discountPercent: 0,
-            errorType: validatedPromo.errorType
-          });
-          setIsProcessing(false);
-          return; // Don't continue with submission
-        }
-      }
-
-      // For astro data, use the request field directly. For regular reports, use reportType
-      const reportTypeToUse = data.request || data.reportType || 'standard';
-
-      // Handle free report with promo code
-      if (data.promoCode && validatedPromo?.isFree && validatedPromo.isValid) {
-        // Processing free report with promo code
-        
-        // FIXED: Use request field for astro data detection
-        const isAstroData = data.request && data.request.trim() !== '';
-        
-        const reportData = {
-          reportType: reportTypeToUse,
-          request: isAstroData ? data.request : '',
-          relationshipType: data.relationshipType,
-          essenceType: data.essenceType,
-          name: data.name,
-          email: data.email,
-          birthDate: data.birthDate,
-          birthTime: data.birthTime,
-          birthLocation: data.birthLocation,
-          birthLatitude: data.birthLatitude,
-          birthLongitude: data.birthLongitude,
-          birthPlaceId: data.birthPlaceId,
-          secondPersonName: data.secondPersonName,
-          secondPersonBirthDate: data.secondPersonBirthDate,
-          secondPersonBirthTime: data.secondPersonBirthTime,
-          secondPersonBirthLocation: data.secondPersonBirthLocation,
-          secondPersonLatitude: data.secondPersonLatitude,
-          secondPersonLongitude: data.secondPersonLongitude,
-          secondPersonPlaceId: data.secondPersonPlaceId,
-          returnYear: data.returnYear,
-          notes: data.notes,
-        };
-
-        const result = await createFreeReport(data.promoCode, reportData);
-        
-        setReportCreated(true);
-        // Store the guest report ID for polling and URL
-        storeGuestReportId(result.reportId);
-        toast({
-          title: "Free Report Created!",
-          description: "Your report has been generated and will be sent to your email shortly.",
-        });
-        
-        return;
-      }
-      
-      // Regular paid flow - FIXED: Get pricing with both reportType AND request field
-      const formDataForPricing = {
-        reportType: data.reportType,
-        essenceType: data.essenceType,
-        relationshipType: data.relationshipType,
-        reportCategory: data.reportCategory,
-        reportSubCategory: data.reportSubCategory,
-        request: data.request
-      };
-      
-      
-      
-      const amount = getReportPrice(formDataForPricing);
-      const description = getReportTitle(formDataForPricing);
-
-      // Apply promo code discount if valid (but not free)
-      let finalAmount = amount;
-      if (data.promoCode && validatedPromo?.isValid && !validatedPromo.isFree) {
-        finalAmount = amount * (1 - validatedPromo.discountPercent / 100);
-      }
-
-      // FIXED: Use request field for astro data detection
-      const isAstroData = data.request && data.request.trim() !== '';
-      
+      // Prepare report data for the server
       const reportData = {
-        reportType: reportTypeToUse,
-        request: isAstroData ? data.request : '',
+        reportType: data.request || data.reportType || 'standard',
+        request: data.request || '',
         relationshipType: data.relationshipType,
         essenceType: data.essenceType,
         name: data.name,
@@ -186,22 +82,75 @@ export const useReportSubmission = () => {
         secondPersonPlaceId: data.secondPersonPlaceId,
         returnYear: data.returnYear,
         notes: data.notes,
-        promoCode: data.promoCode,
       };
-      
-      const result = await initiateGuestCheckout({
-        amount: finalAmount,
-        email: data.email,
-        description,
-        reportData,
+
+      // Call the new consolidated server-side function
+      const { data: result, error } = await supabase.functions.invoke('initiate-report-flow', {
+        body: {
+          reportData,
+          promoCode: data.promoCode || undefined
+        }
       });
-      
-      if (!result.success) {
+
+      if (error) {
+        // Handle server-side validation errors
+        const errorMessage = error.message || 'Failed to process request';
+        
+        if (error.message?.includes('promo code')) {
+          setInlinePromoError(errorMessage);
+          setPromoValidation({
+            status: 'invalid',
+            message: errorMessage,
+            discountPercent: 0,
+            errorType: 'invalid'
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: errorMessage,
+            variant: "destructive",
+          });
+        }
+        return;
+      }
+
+      // Handle success response
+      if (result.isFreeReport) {
+        // Free report path
+        setReportCreated(true);
+        storeGuestReportId(result.reportId);
         toast({
-          title: "Payment Error",
-          description: result.error || "Failed to initiate checkout",
-          variant: "destructive",
+          title: "Free Report Created!",
+          description: "Your report has been generated and will be sent to your email shortly.",
         });
+      } else {
+        // Paid report path - redirect to Stripe
+        const formDataForPricing = {
+          reportType: data.reportType,
+          essenceType: data.essenceType,
+          relationshipType: data.relationshipType,
+          reportCategory: data.reportCategory,
+          reportSubCategory: data.reportSubCategory,
+          request: data.request
+        };
+        
+        const amount = getReportPrice(formDataForPricing);
+        const description = getReportTitle(formDataForPricing);
+
+        const checkoutResult = await initiateGuestCheckout({
+          amount,
+          email: data.email,
+          description,
+          reportData,
+        });
+        
+        if (!checkoutResult.success) {
+          toast({
+            title: "Payment Error",
+            description: checkoutResult.error || "Failed to initiate checkout",
+            variant: "destructive",
+          });
+        }
       }
     } catch (error) {
       console.error('Error in submitReport:', error);
