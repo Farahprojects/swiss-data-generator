@@ -1,9 +1,8 @@
 
 import { useState, useEffect, forwardRef } from 'react';
-import { useGoogleMapsScript } from './hooks/useGoogleMapsScript';
 import { PlaceData } from './utils/extractPlaceData';
 import { Label } from '@/components/ui/label';
-import { AutocompleteContainer } from './components/AutocompleteContainer';
+import { CleanPlaceAutocomplete } from './CleanPlaceAutocomplete';
 
 export interface PlaceAutocompleteProps {
   label?: string;
@@ -64,13 +63,14 @@ export const PlaceAutocomplete = forwardRef<HTMLDivElement, PlaceAutocompletePro
           </Label>
         )}
         
-        <AutocompleteContainer
+        <CleanPlaceAutocomplete
           id={id}
           value={localValue}
           onChange={handleLocalChange}
           onPlaceSelect={onPlaceSelect}
           placeholder={placeholder}
           disabled={disabled}
+          error={error}
         />
         
         {error && <p className="text-sm text-red-500 mt-1">{error}</p>}

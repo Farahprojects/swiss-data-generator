@@ -4,7 +4,7 @@ import { UseFormReturn } from 'react-hook-form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
+import { CleanPlaceAutocomplete } from '@/components/shared/forms/place-input/CleanPlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 
 interface PublicReportFormProps {
@@ -86,7 +86,7 @@ const PublicReportForm = ({ form, reportType }: PublicReportFormProps) => {
             </div>
           </div>
           <div className="space-y-2">
-            <PlaceAutocomplete
+            <CleanPlaceAutocomplete
               label="Birth Location *"
               value={watch('birthLocation') || ''}
               onChange={(value) => setValue('birthLocation', value)}
@@ -143,7 +143,7 @@ const PublicReportForm = ({ form, reportType }: PublicReportFormProps) => {
               </div>
             </div>
             <div className="space-y-2">
-              <PlaceAutocomplete
+              <CleanPlaceAutocomplete
                 label="Partner's Birth Location *"
                 value={watch('birthLocation2') || ''}
                 onChange={(value) => setValue('birthLocation2', value)}
