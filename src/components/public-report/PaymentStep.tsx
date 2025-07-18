@@ -226,11 +226,17 @@ const PaymentStep = ({
               </button>
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-6">
-              <div className="space-y-6">
+                <div className="space-y-6">
                 <div className="space-y-3">
-                  <Label htmlFor="promoCode" className="text-lg font-light text-gray-700">
-                    Promo Code
-                  </Label>
+                  <div className="space-y-1">
+                    <Label htmlFor="promoCode" className="text-lg font-light text-gray-700">
+                      Promo Code
+                    </Label>
+                    {/* Clean inline error message right below the label */}
+                    {inlinePromoError && (
+                      <p className="text-sm text-red-500 font-light">{inlinePromoError}</p>
+                    )}
+                  </div>
                   <div className="relative">
                     <Input
                       id="promoCode"
@@ -252,10 +258,6 @@ const PaymentStep = ({
                   </div>
                   {errors.promoCode && (
                     <p className="text-sm text-red-500 font-light">{errors.promoCode.message}</p>
-                  )}
-                  {/* Inline error message for invalid promo codes */}
-                  {inlinePromoError && (
-                    <p className="text-sm text-red-500 font-light">{inlinePromoError}</p>
                   )}
                 </div>
               </div>

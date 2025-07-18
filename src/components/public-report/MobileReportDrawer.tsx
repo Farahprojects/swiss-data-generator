@@ -11,7 +11,7 @@ import { usePromoValidation } from '@/hooks/usePromoValidation';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useMobileSafeTopPadding } from '@/hooks/useMobileSafeTopPadding';
 import { getGuestReportId, clearAllSessionData } from '@/utils/urlHelpers';
-import { handlePaymentSubmission } from '@/utils/paymentSubmissionHelper';
+
 import { supabase } from '@/integrations/supabase/client';
 import Step1ReportType from './drawer-steps/Step1ReportType';
 import Step1_5SubCategory from './drawer-steps/Step1_5SubCategory';
@@ -107,15 +107,6 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
     });
   };
 
-  const handleMobilePaymentSubmission = async () => {
-    const formData = form.getValues();
-    const promoCode = watch('promoCode') || '';
-    await handlePaymentSubmission({
-      promoCode,
-      validatePromoManually,
-      onSubmit: () => handleSubmit(onSubmit)(),
-    });
-  };
 
   // Validation logic for each step
   const canGoNext = () => {
