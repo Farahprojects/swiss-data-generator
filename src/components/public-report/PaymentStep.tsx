@@ -97,7 +97,7 @@ const PaymentStep = ({
   const essenceType = watch('essenceType');
   const relationshipType = watch('relationshipType');
   const requestField = watch('request');
-  const request = watch('request'); // NEW: Watch the request field
+  const request = watch('request');
   const name = watch('name');
   const promoCode = watch('promoCode') || '';
 
@@ -167,10 +167,12 @@ const PaymentStep = ({
     // Reset timeout state when retrying
     setHasTimedOut(false);
     
+    // Optimized submission with cached validation and price
     await handlePaymentSubmission({
       promoCode,
-      validatePromoManually,
+      promoValidation, // Use cached validation instead of re-validating
       onSubmit,
+      finalPrice: pricing.finalPrice, // Pass calculated price
       setIsLocalProcessing,
       clearPromoCode: () => setValue('promoCode', '')
     });

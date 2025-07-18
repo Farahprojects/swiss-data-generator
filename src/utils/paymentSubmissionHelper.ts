@@ -1,48 +1,56 @@
+
 import { ReportFormData } from '@/types/public-report';
 
 interface PaymentSubmissionParams {
   promoCode: string;
-  validatePromoManually: (code: string) => Promise<any>;
+  promoValidation: any; // Use cached validation instead of re-validating
   onSubmit: () => void;
+  onFreeSubmit?: () => void; // New handler for free orders
   setIsLocalProcessing?: (processing: boolean) => void;
   clearPromoCode?: () => void;
+  finalPrice?: number; // Pass calculated price
 }
 
 /**
- * Shared payment submission logic for both desktop and mobile flows
- * This ensures identical behavior for promo validation, UX delays, and submission
+ * Optimized payment submission logic - no delays, no double validation
+ * Uses cached promo validation and skips Stripe for 100% free orders
  */
 export const handlePaymentSubmission = async ({
   promoCode,
-  validatePromoManually,
+  promoValidation,
   onSubmit,
+  onFreeSubmit,
   setIsLocalProcessing,
-  clearPromoCode
+  clearPromoCode,
+  finalPrice = 0
 }: PaymentSubmissionParams) => {
   // Show processing immediately
   if (setIsLocalProcessing) {
     setIsLocalProcessing(true);
   }
   
-  // First validate promo code if present
-  if (promoCode && promoCode.trim() !== '') {
-    const validation = await validatePromoManually(promoCode);
-    
-    // Give user time to see the validation result
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // If validation failed, reset processing state and clear promo
-    if (!validation?.isValid) {
-      if (setIsLocalProcessing) {
-        setIsLocalProcessing(false);
-      }
-      if (clearPromoCode) {
-        clearPromoCode();
-      }
-      return; // Don't proceed with submission
+  // Check if promo code validation failed (using cached validation)
+  if (promoCode && promoCode.trim() !== '' && !promoValidation?.isValid) {
+    // Reset processing state and clear invalid promo
+    if (setIsLocalProcessing) {
+      setIsLocalProcessing(false);
     }
+    if (clearPromoCode) {
+      clearPromoCode();
+    }
+    return; // Don't proceed with submission
   }
   
-  // Then proceed with form submission
+  // Handle 100% free orders (skip Stripe entirely)
+  if (finalPrice === 0 || (promoValidation?.isFree && promoValidation?.isValid)) {
+    if (onFreeSubmit) {
+      onFreeSubmit(); // Handle free order directly
+    } else {
+      onSubmit(); // Fallback to regular submission
+    }
+    return;
+  }
+  
+  // For paid orders, proceed with regular submission (Stripe)
   onSubmit();
 };

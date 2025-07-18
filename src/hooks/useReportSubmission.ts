@@ -62,41 +62,52 @@ export const useReportSubmission = () => {
     setIsProcessing(true);
     
     try {
-      // Validate promo code if present and not skipping validation
+      // Skip promo validation if already validated (optimization)
       let validatedPromo = null;
       if (data.promoCode && data.promoCode.trim() !== '' && !skipPromoValidation) {
-        setPromoValidation({
-          status: 'validating',
-          message: 'Validating promo code...',
-          discountPercent: 0
-        });
+        // Only validate if we don't have cached valid results
+        if (promoValidation.status === 'none' || promoValidation.status === 'invalid') {
+          setPromoValidation({
+            status: 'validating',
+            message: 'Validating promo code...',
+            discountPercent: 0
+          });
 
-        validatedPromo = await validatePromoCode(data.promoCode);
-        
-        if (validatedPromo.isValid) {
-          setPromoValidation({
-            status: validatedPromo.isFree ? 'valid-free' : 'valid-discount',
-            message: validatedPromo.message,
-            discountPercent: validatedPromo.discountPercent
-          });
+          validatedPromo = await validatePromoCode(data.promoCode);
+          
+          if (validatedPromo.isValid) {
+            setPromoValidation({
+              status: validatedPromo.isFree ? 'valid-free' : 'valid-discount',
+              message: validatedPromo.message,
+              discountPercent: validatedPromo.discountPercent
+            });
+          } else {
+            // Set inline error and clear promo code
+            setInlinePromoError(validatedPromo.message);
+            setPromoValidation({
+              status: 'invalid',
+              message: validatedPromo.message,
+              discountPercent: 0,
+              errorType: validatedPromo.errorType
+            });
+            setIsProcessing(false);
+            return; // Don't continue with submission
+          }
         } else {
-          // Set inline error and clear promo code
-          setInlinePromoError(validatedPromo.message);
-          setPromoValidation({
-            status: 'invalid',
-            message: validatedPromo.message,
-            discountPercent: 0,
-            errorType: validatedPromo.errorType
-          });
-          setIsProcessing(false);
-          return; // Don't continue with submission
+          // Use cached validation result
+          validatedPromo = {
+            isValid: promoValidation.status === 'valid-free' || promoValidation.status === 'valid-discount',
+            isFree: promoValidation.status === 'valid-free',
+            discountPercent: promoValidation.discountPercent,
+            message: promoValidation.message
+          };
         }
       }
 
       // For astro data, use the request field directly. For regular reports, use reportType
       const reportTypeToUse = data.request || data.reportType || 'standard';
 
-      // Handle free report with promo code
+      // Handle free report with promo code - INSTANT processing (no artificial delays)
       if (data.promoCode && validatedPromo?.isFree && validatedPromo.isValid) {
         // Processing free report with promo code
         
@@ -140,7 +151,7 @@ export const useReportSubmission = () => {
         return;
       }
       
-      // Regular paid flow - FIXED: Get pricing with both reportType AND request field
+      // Regular paid flow - use pre-calculated pricing (no re-calculation)
       const formDataForPricing = {
         reportType: data.reportType,
         essenceType: data.essenceType,
@@ -149,8 +160,6 @@ export const useReportSubmission = () => {
         reportSubCategory: data.reportSubCategory,
         request: data.request
       };
-      
-      
       
       const amount = getReportPrice(formDataForPricing);
       const description = getReportTitle(formDataForPricing);
