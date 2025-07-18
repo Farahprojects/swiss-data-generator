@@ -54,7 +54,7 @@ export const CleanPlaceAutocomplete = forwardRef<HTMLDivElement, CleanPlaceAutoc
     const [highlightedIndex, setHighlightedIndex] = useState(-1);
     const inputRef = useRef<HTMLInputElement>(null);
     const debounceRef = useRef<NodeJS.Timeout>();
-    const dropdownRef = useRef<HTMLDivElement>(null);
+    const wrapperRef = useRef<HTMLDivElement>(null);
     const isMobile = useIsMobile();
 
     // Sync with external value changes
@@ -191,10 +191,8 @@ export const CleanPlaceAutocomplete = forwardRef<HTMLDivElement, CleanPlaceAutoc
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
         if (
-          inputRef.current && 
-          !inputRef.current.contains(event.target as Node) &&
-          dropdownRef.current && 
-          !dropdownRef.current.contains(event.target as Node)
+          wrapperRef.current && 
+          !wrapperRef.current.contains(event.target as Node)
         ) {
           setIsOpen(false);
         }
@@ -214,7 +212,7 @@ export const CleanPlaceAutocomplete = forwardRef<HTMLDivElement, CleanPlaceAutoc
     }, []);
 
     return (
-      <div ref={ref} className={`relative space-y-2 ${className}`}>
+      <div ref={wrapperRef} className={`relative space-y-2 ${className}`}>
         {label && (
           <Label htmlFor={id} className="block">
             {label}
@@ -245,7 +243,6 @@ export const CleanPlaceAutocomplete = forwardRef<HTMLDivElement, CleanPlaceAutoc
           {/* Desktop Dropdown */}
           {!isMobile && isOpen && predictions.length > 0 && (
             <div
-              ref={dropdownRef}
               className="absolute z-[10000] w-full mt-1 bg-white border border-border rounded-md shadow-lg max-h-60 overflow-auto"
               style={{ backgroundColor: 'hsl(var(--background))' }}
             >
