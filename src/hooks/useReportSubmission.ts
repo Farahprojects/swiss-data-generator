@@ -82,20 +82,46 @@ export const useReportSubmission = () => {
       });
 
       if (error) {
+        console.log('Full error object:', error);
+        console.log('Error message:', error.message);
+        console.log('Error context:', error.context);
+        
+        // Extract the actual error message from the nested structure
+        let errorMessage = '';
+        
+        // Try multiple possible locations for the custom error message
+        if (error.context && error.context.json && error.context.json.error) {
+          errorMessage = error.context.json.error;
+        } else if (error.context && error.context.body && typeof error.context.body === 'string') {
+          try {
+            const parsedBody = JSON.parse(error.context.body);
+            errorMessage = parsedBody.error || '';
+          } catch (e) {
+            errorMessage = error.context.body;
+          }
+        } else if (error.message) {
+          errorMessage = error.message;
+        } else if (typeof error === 'string') {
+          errorMessage = error;
+        }
+
+        console.log('Extracted error message:', errorMessage);
+
         // Check if this is a promo code validation error
-        if (error.message?.includes('promo code') || 
-            error.message?.includes('Invalid promo') || 
-            error.message?.includes('expired promo code') ||
-            error.message?.includes('usage limit') ||
-            error.status === 400) {
-          
+        const isPromoError = errorMessage.toLowerCase().includes('promo') || 
+                           errorMessage.toLowerCase().includes('invalid or expired') ||
+                           errorMessage.toLowerCase().includes('usage limit') ||
+                           error.status === 400;
+        
+        if (isPromoError) {
+          console.log('Setting inline promo error');
           setInlinePromoError('Invalid Promo Code');
           setIsProcessing(false);
           return;
         } else {
           toast({
             title: "Error",
-            description: error.message || 'Failed to process request',
+            description: errorMessage || 'Failed to process request',
             variant: "destructive",
           });
           setIsProcessing(false);
@@ -143,13 +169,23 @@ export const useReportSubmission = () => {
       }
     } catch (error) {
       console.error('Error in submitReport:', error);
+      console.log('Catch block error object:', error);
       
-      if (error instanceof Error && error.message.includes('400')) {
+      let errorMessage = '';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else {
+        errorMessage = 'Failed to process your request. Please try again.';
+      }
+
+      if (errorMessage.toLowerCase().includes('promo') || errorMessage.includes('400')) {
         setInlinePromoError('Invalid Promo Code');
       } else {
         toast({
           title: "Error",
-          description: "Failed to process your request. Please try again.",
+          description: errorMessage,
           variant: "destructive",
         });
       }
