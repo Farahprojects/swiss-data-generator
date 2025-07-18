@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ReportFormData } from '@/types/public-report';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
-import { PromoConfirmationDialog } from '@/components/public-report/PromoConfirmationDialog';
+
 import { useMobileSafeTopPadding } from '@/hooks/useMobileSafeTopPadding';
 import { useFieldFocusHandler } from '@/hooks/useFieldFocusHandler';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
@@ -27,11 +27,9 @@ interface Step3PaymentProps {
   isProcessing: boolean;
   promoValidation: PromoValidationState;
   isValidatingPromo: boolean;
-  showPromoConfirmation?: boolean;
-  pendingSubmissionData?: { basePrice: number } | null;
-  onPromoConfirmationTryAgain?: () => void;
-  onPromoConfirmationContinue?: () => void;
   validatePromoManually?: (code: string) => Promise<any>;
+  inlinePromoError?: string;
+  clearInlinePromoError?: () => void;
 }
 
 const Step3Payment = ({ 
@@ -41,11 +39,9 @@ const Step3Payment = ({
   isProcessing,
   promoValidation,
   isValidatingPromo,
-  showPromoConfirmation = false,
-  pendingSubmissionData = null,
-  onPromoConfirmationTryAgain = () => {},
-  onPromoConfirmationContinue = () => {},
-  validatePromoManually
+  validatePromoManually,
+  inlinePromoError = '',
+  clearInlinePromoError = () => {}
 }: Step3PaymentProps) => {
   const topSafePadding = useMobileSafeTopPadding();
   const { scrollTo } = useFieldFocusHandler();
@@ -74,10 +70,13 @@ const Step3Payment = ({
   const name = watch('name');
   const promoCode = watch('promoCode') || '';
 
-  // Auto-validate when promo code changes
+  // Auto-validate when promo code changes and clear inline error when user types
   useEffect(() => {
+    if (promoCode && clearInlinePromoError) {
+      clearInlinePromoError(); // Clear error when user starts typing
+    }
     debouncedValidatePromo(promoCode);
-  }, [promoCode, debouncedValidatePromo]);
+  }, [promoCode, debouncedValidatePromo, clearInlinePromoError]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -221,19 +220,23 @@ const Step3Payment = ({
                         {getPromoValidationIcon()}
                       </div>
                     </div>
-                    {errors.promoCode && (
-                      <p className="text-sm text-red-500 font-light">{errors.promoCode.message}</p>
-                    )}
-                  </div>
-                  {promoValidation.message && (
-                    <div className={`text-sm font-light p-4 rounded-xl ${
-                      isValidatingPromo ? 'bg-gray-50 text-gray-600' :
-                      promoValidation.status.includes('valid') ? 'bg-green-50 text-green-700 border border-green-200' :
-                      'bg-red-50 text-red-700 border border-red-200'
-                    }`}>
-                      {getPromoValidationMessage()}
-                    </div>
+                  {errors.promoCode && (
+                    <p className="text-sm text-red-500 font-light">{errors.promoCode.message}</p>
                   )}
+                  {/* Inline error message for invalid promo codes */}
+                  {inlinePromoError && (
+                    <p className="text-sm text-red-500 font-light">{inlinePromoError}</p>
+                  )}
+                </div>
+                {promoValidation.message && !inlinePromoError && (
+                  <div className={`text-sm font-light p-4 rounded-xl ${
+                    isValidatingPromo ? 'bg-gray-50 text-gray-600' :
+                    promoValidation.status.includes('valid') ? 'bg-green-50 text-green-700 border border-green-200' :
+                    'bg-red-50 text-red-700 border border-red-200'
+                  }`}>
+                    {getPromoValidationMessage()}
+                  </div>
+                )}
                 </div>
               </CollapsibleContent>
             </Collapsible>
@@ -247,16 +250,6 @@ const Step3Payment = ({
           </div>
         </div>
       </motion.div>
-
-      <PromoConfirmationDialog
-        isOpen={showPromoConfirmation}
-        onClose={onPromoConfirmationTryAgain}
-        onTryAgain={onPromoConfirmationTryAgain}
-        onContinueWithFullPayment={onPromoConfirmationContinue}
-        errorMessage={promoValidation.message}
-        errorType={promoValidation.errorType || 'invalid'}
-        fullPrice={pendingSubmissionData?.basePrice || basePrice || 0}
-      />
     </>
   );
 };

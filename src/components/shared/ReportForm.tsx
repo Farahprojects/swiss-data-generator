@@ -215,10 +215,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     isPricingLoading, 
     reportCreated, 
     submitReport,
-    showPromoConfirmation,
-    pendingSubmissionData,
-    handlePromoConfirmationTryAgain,
-    handlePromoConfirmationContinue,
+    inlinePromoError,
+    clearInlinePromoError,
     resetReportState
   } = useReportSubmission();
 
@@ -524,10 +522,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
                 discountPercent: 0
               }}
               isValidatingPromo={isValidatingPromo}
-              showPromoConfirmation={showPromoConfirmation}
-              pendingSubmissionData={pendingSubmissionData}
-              onPromoConfirmationTryAgain={handlePromoConfirmationTryAgain}
-              onPromoConfirmationContinue={() => handlePromoConfirmationContinue(resetValidation)}
+              inlinePromoError={inlinePromoError}
+              clearInlinePromoError={clearInlinePromoError}
               />
             </div>
           )}

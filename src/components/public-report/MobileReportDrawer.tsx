@@ -86,10 +86,8 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
     isProcessing, 
     submitReport, 
     reportCreated,
-    showPromoConfirmation,
-    pendingSubmissionData,
-    handlePromoConfirmationTryAgain,
-    handlePromoConfirmationContinue
+    inlinePromoError,
+    clearInlinePromoError
   } = useReportSubmission();
   const { promoValidation, isValidatingPromo, validatePromoManually, resetValidation } = usePromoValidation();
 
@@ -227,19 +225,17 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                      case 3:
                       return <Step2BirthDetails register={register} setValue={setValue} watch={watch} errors={errors} onNext={handleNext} onPlaceSelected={autoAdvanceAfterPlaceSelection} />;
                      case 4:
-                       return <Step3Payment 
-                         register={register} 
-                         watch={watch} 
-                         errors={errors} 
-                         isProcessing={isProcessing} 
-                         promoValidation={promoValidationState} 
-                         isValidatingPromo={isValidatingPromo}
-                         showPromoConfirmation={showPromoConfirmation}
-                         pendingSubmissionData={pendingSubmissionData}
-                         onPromoConfirmationTryAgain={handlePromoConfirmationTryAgain}
-                         onPromoConfirmationContinue={() => handlePromoConfirmationContinue(() => {})}
-                         validatePromoManually={validatePromoManually}
-                       />;
+                        return <Step3Payment 
+                          register={register} 
+                          watch={watch} 
+                          errors={errors} 
+                          isProcessing={isProcessing} 
+                          promoValidation={promoValidationState} 
+                          isValidatingPromo={isValidatingPromo}
+                          validatePromoManually={validatePromoManually}
+                          inlinePromoError={inlinePromoError}
+                          clearInlinePromoError={clearInlinePromoError}
+                        />;
                     default:
                       return null;
                   }

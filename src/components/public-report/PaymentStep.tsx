@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ReportFormData } from '@/types/public-report';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
-import { PromoConfirmationDialog } from '@/components/public-report/PromoConfirmationDialog';
+
 import { handlePaymentSubmission } from '@/utils/paymentSubmissionHelper';
 import { useToast } from '@/hooks/use-toast';
 import FormStep from './FormStep';
@@ -32,10 +32,8 @@ interface PaymentStepProps {
   isProcessing: boolean;
   promoValidation: PromoValidationState;
   isValidatingPromo: boolean;
-  showPromoConfirmation?: boolean;
-  pendingSubmissionData?: { basePrice: number } | null;
-  onPromoConfirmationTryAgain?: () => void;
-  onPromoConfirmationContinue?: () => void;
+  inlinePromoError?: string;
+  clearInlinePromoError?: () => void;
 }
 
 const PaymentStep = ({ 
@@ -46,10 +44,8 @@ const PaymentStep = ({
   isProcessing,
   promoValidation,
   isValidatingPromo,
-  showPromoConfirmation = false,
-  pendingSubmissionData = null,
-  onPromoConfirmationTryAgain = () => {},
-  onPromoConfirmationContinue = () => {}
+  inlinePromoError = '',
+  clearInlinePromoError = () => {}
 }: PaymentStepProps) => {
   const [showPromoCode, setShowPromoCode] = useState(false);
   const [isLocalProcessing, setIsLocalProcessing] = useState(false);
@@ -103,10 +99,13 @@ const PaymentStep = ({
   const name = watch('name');
   const promoCode = watch('promoCode') || '';
 
-  // Auto-validate when promo code changes
+  // Auto-validate when promo code changes and clear inline error when user types
   useEffect(() => {
+    if (promoCode && clearInlinePromoError) {
+      clearInlinePromoError(); // Clear error when user starts typing
+    }
     debouncedValidatePromo(promoCode);
-  }, [promoCode, debouncedValidatePromo]);
+  }, [promoCode, debouncedValidatePromo, clearInlinePromoError]);
 
   // Get price and title using context with global fallback
   let basePrice: number | null = null;
@@ -296,10 +295,14 @@ const PaymentStep = ({
                   {errors.promoCode && (
                     <p className="text-sm text-red-500 font-light">{errors.promoCode.message}</p>
                   )}
+                  {/* Inline error message for invalid promo codes */}
+                  {inlinePromoError && (
+                    <p className="text-sm text-red-500 font-light">{inlinePromoError}</p>
+                  )}
                 </div>
                 
                 {/* Promo validation feedback */}
-                {promoValidation.message && (
+                {promoValidation.message && !inlinePromoError && (
                   <div className={`text-sm font-light p-4 rounded-xl ${
                     isValidatingPromo 
                       ? 'bg-gray-50 text-gray-600'
@@ -356,21 +359,9 @@ const PaymentStep = ({
   );
 
   return (
-    <>
-      <FormStep stepNumber={3} title="Payment" className="bg-background">
-        {content}
-      </FormStep>
-
-      <PromoConfirmationDialog
-        isOpen={showPromoConfirmation}
-        onClose={onPromoConfirmationTryAgain}
-        onTryAgain={onPromoConfirmationTryAgain}
-        onContinueWithFullPayment={onPromoConfirmationContinue}
-        errorMessage={promoValidation.message}
-        errorType={promoValidation.errorType || 'invalid'}
-        fullPrice={pendingSubmissionData?.basePrice || basePrice || 0}
-      />
-    </>
+    <FormStep stepNumber={3} title="Payment" className="bg-background">
+      {content}
+    </FormStep>
   );
 };
 

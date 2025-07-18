@@ -24,12 +24,8 @@ export const useReportSubmission = () => {
   useEffect(() => {
     setReportCreated(false);
   }, []);
-  const [showPromoConfirmation, setShowPromoConfirmation] = useState(false);
-  const [pendingSubmissionData, setPendingSubmissionData] = useState<{
-    data: ReportFormData;
-    basePrice: number;
-    description: string;
-  } | null>(null);
+  // Remove popup dialog state - replaced with inline validation
+  const [inlinePromoError, setInlinePromoError] = useState<string>('');
   const { toast } = useToast();
   const { getReportPrice, getReportTitle, isLoading: isPricingLoading } = typeof window !== 'undefined' ? usePriceFetch() : { getReportPrice: () => 0, getReportTitle: () => 'Report', isLoading: false };
 
@@ -84,31 +80,14 @@ export const useReportSubmission = () => {
             discountPercent: validatedPromo.discountPercent
           });
         } else {
+          // Set inline error and clear promo code
+          setInlinePromoError(validatedPromo.message);
           setPromoValidation({
             status: 'invalid',
             message: validatedPromo.message,
             discountPercent: 0,
             errorType: validatedPromo.errorType
           });
-
-          // FIXED: Get pricing with both reportType AND request field
-          const formDataForPricing = {
-            reportType: data.reportType,
-            essenceType: data.essenceType,
-            relationshipType: data.relationshipType,
-            reportCategory: data.reportCategory,
-            reportSubCategory: data.reportSubCategory,
-            request: data.request
-          };
-          
-          
-          
-          const amount = getReportPrice(formDataForPricing);
-          const description = getReportTitle(formDataForPricing);
-
-          // Store submission data and show confirmation dialog
-          setPendingSubmissionData({ data, basePrice: amount, description });
-          setShowPromoConfirmation(true);
           setIsProcessing(false);
           return; // Don't continue with submission
         }
@@ -236,30 +215,8 @@ export const useReportSubmission = () => {
     }
   };
 
-  const handlePromoConfirmationTryAgain = () => {
-    setShowPromoConfirmation(false);
-    setPendingSubmissionData(null);
-  };
-
-  const handlePromoConfirmationContinue = async (setPromoValidation: (state: PromoValidationState) => void) => {
-    if (!pendingSubmissionData) return;
-    
-    setShowPromoConfirmation(false);
-    
-    // Clear the promo code and continue with full payment
-    const dataWithoutPromo = { ...pendingSubmissionData.data, promoCode: '' };
-    
-    // Reset promo validation state
-    setPromoValidation({
-      status: 'none',
-      message: '',
-      discountPercent: 0
-    });
-    
-    // Submit without promo validation
-    await submitReport(dataWithoutPromo, { status: 'none', message: '', discountPercent: 0 }, setPromoValidation, true);
-    
-    setPendingSubmissionData(null);
+  const clearInlinePromoError = () => {
+    setInlinePromoError('');
   };
 
   const resetReportState = () => {
@@ -271,10 +228,8 @@ export const useReportSubmission = () => {
     isPricingLoading,
     reportCreated,
     submitReport,
-    showPromoConfirmation,
-    pendingSubmissionData,
-    handlePromoConfirmationTryAgain,
-    handlePromoConfirmationContinue,
+    inlinePromoError,
+    clearInlinePromoError,
     resetReportState
   };
 };
