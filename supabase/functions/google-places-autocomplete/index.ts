@@ -1,91 +1,81 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+// File: /supabase/functions/google-places-autocomplete/index.ts
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+// Import our new caching helpers
+import { getFromCache, setInCache } from '../_shared/cache.ts'
+// Import your shared CORS headers
+import { corsHeaders } from '../_shared/utils.ts'
+
+/**
+ * Creates a consistent, URL-safe SHA-256 hash from a string.
+ * This is our cache key.
+ */
+async function createCacheKey(message: string) {
+  const data = new TextEncoder().encode(message.toLowerCase().trim());
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+}
 
 serve(async (req) => {
-  console.log('🌍 Google Places Autocomplete function called');
-  
-  // Handle CORS preflight requests
+  // Standard CORS preflight request handling
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const { input, types = 'geocode', componentRestrictions } = await req.json();
-    
-    if (!input) {
-      return new Response(
-        JSON.stringify({ error: 'Input parameter is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    const { query } = await req.json();
+    if (!query || typeof query !== 'string') {
+      return new Response(JSON.stringify({ error: 'Query string is required.' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    const googleMapsApiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
-    
-    if (!googleMapsApiKey) {
-      console.error('❌ Google Maps API key not found');
-      return new Response(
-        JSON.stringify({ error: 'Google Maps API key not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // 1. INITIALIZE CLIENTS AND GENERATE CACHE KEY
+    const supabaseClient = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!);
+    const query_hash = await createCacheKey(query);
+
+    // 2. CHECK CACHE FIRST
+    // Use our helper to see if we have a fresh, valid result.
+    const cachedData = await getFromCache(query_hash, supabaseClient);
+    if (cachedData) {
+      console.log(`Cache HIT for query: "${query}"`);
+      return new Response(JSON.stringify(cachedData), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    // Build the URL for Google Places Autocomplete API
-    const baseUrl = 'https://maps.googleapis.com/maps/api/place/autocomplete/json';
-    const params = new URLSearchParams({
-      input: input,
-      key: googleMapsApiKey,
-      types: types,
+    console.log(`Cache MISS for query: "${query}". Fetching from Google.`);
+
+    // 3. CACHE MISS: FETCH FROM GOOGLE API
+    const GOOGLE_API_KEY = Deno.env.get('GOOGLE_MAPS_API_KEY')!;
+    // CRITICAL: We request all the fields we need in this single call.
+    const fields = 'geometry,name,place_id,address_components';
+    const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&key=${GOOGLE_API_KEY}&fields=${fields}`;
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Google API request failed with status ${response.status}: ${errorBody}`);
+    }
+    const googleData = await response.json();
+
+    // 4. STORE THE NEW RESULT IN CACHE
+    // Use our helper to store the fresh data for next time.
+    await setInCache(query_hash, googleData, query, supabaseClient);
+
+    // 5. RETURN THE FRESH DATA TO THE CLIENT
+    return new Response(JSON.stringify(googleData), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
-    // Add component restrictions if provided
-    if (componentRestrictions) {
-      const restrictions = Object.entries(componentRestrictions)
-        .map(([key, value]) => `${key}:${value}`)
-        .join('|');
-      params.append('components', restrictions);
-    }
-
-    const url = `${baseUrl}?${params.toString()}`;
-    
-    console.log('🔍 Making request to Google Places API');
-    
-    const response = await fetch(url);
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error('❌ Google Places API error:', data);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Google Places API error', 
-          details: data 
-        }),
-        { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('✅ Successfully retrieved autocomplete suggestions');
-    
-    return new Response(
-      JSON.stringify({
-        predictions: data.predictions || [],
-        status: data.status
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
   } catch (error) {
-    console.error('💥 Error in google-places-autocomplete function:', error);
-    
-    return new Response(
-      JSON.stringify({ 
-        error: 'Internal server error',
-        message: error.message 
-      }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.error(error.message);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
-});
+})
