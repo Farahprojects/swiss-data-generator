@@ -3,8 +3,6 @@ import React, { useState } from 'react';
 import { UseFormRegister, UseFormSetValue, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { CleanPlaceAutocomplete } from '@/components/shared/forms/place-input/CleanPlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import { ReportFormData } from '@/types/public-report';
@@ -16,9 +14,10 @@ interface CombinedPersonalDetailsFormProps {
   watch: UseFormWatch<ReportFormData>;
   errors: FieldErrors<ReportFormData>;
   onPlaceSelected?: () => void;
+  showValidationErrors?: boolean;
 }
 
-const CombinedPersonalDetailsForm = ({ register, setValue, watch, errors, onPlaceSelected }: CombinedPersonalDetailsFormProps) => {
+const CombinedPersonalDetailsForm = ({ register, setValue, watch, errors, onPlaceSelected, showValidationErrors = false }: CombinedPersonalDetailsFormProps) => {
   const [hasInteracted, setHasInteracted] = useState({
     name: false,
     email: false,
@@ -27,68 +26,8 @@ const CombinedPersonalDetailsForm = ({ register, setValue, watch, errors, onPlac
     birthLocation: false
   });
 
-  // Watch all form values for smart validation
-  const name = watch('name') || '';
-  const email = watch('email') || '';
-  const birthDate = watch('birthDate') || '';
-  const birthTime = watch('birthTime') || '';
+  // Watch all form values
   const birthLocation = watch('birthLocation') || '';
-
-  // Helper functions for smart validation
-  const getMissingContactFields = () => {
-    const missing = [];
-    if (!name.trim()) missing.push('name');
-    if (!email.trim()) missing.push('email');
-    return missing;
-  };
-
-  const getMissingBirthFields = () => {
-    const missing = [];
-    if (!birthDate) missing.push('birth date');
-    if (!birthTime) missing.push('birth time');
-    if (!birthLocation.trim()) missing.push('birth location');
-    return missing;
-  };
-
-  const getContactCompletionStatus = () => {
-    const missing = getMissingContactFields();
-    if (missing.length === 0) return 'complete';
-    if (missing.length === 2) return 'empty';
-    return 'partial';
-  };
-
-  const getBirthCompletionStatus = () => {
-    const missing = getMissingBirthFields();
-    if (missing.length === 0) return 'complete';
-    if (missing.length === 3) return 'empty';
-    return 'partial';
-  };
-
-  const getSmartValidationMessage = (section: 'contact' | 'birth') => {
-    if (section === 'contact') {
-      const status = getContactCompletionStatus();
-      const missing = getMissingContactFields();
-      
-      if (status === 'complete') {
-        return { type: 'success', message: 'Contact information complete!' };
-      } else if (status === 'partial') {
-        const remaining = missing.length === 1 ? missing[0] : `${missing.length} fields`;
-        return { type: 'progress', message: `Just ${remaining} needed to complete contact info` };
-      }
-      return null;
-    } else {
-      const status = getBirthCompletionStatus();
-      const missing = getMissingBirthFields();
-      
-      if (status === 'complete') {
-        return { type: 'success', message: 'Birth details complete!' };
-      } else if (status === 'partial') {
-        const remaining = missing.length === 1 ? missing[0] : `${missing.length} fields`;
-        return { type: 'progress', message: `Just ${remaining} needed to complete birth details` };
-      }
-      return null;
-    }
-  };
 
   const handlePlaceSelect = (placeData: PlaceData) => {
     // Use the full formatted address (which is now in placeData.name) or fallback to address field
@@ -115,41 +54,15 @@ const CombinedPersonalDetailsForm = ({ register, setValue, watch, errors, onPlac
   };
 
   const shouldShowError = (fieldName: keyof typeof hasInteracted, error: any) => {
-    return hasInteracted[fieldName] && error;
+    return (hasInteracted[fieldName] || showValidationErrors) && error;
   };
-
-  const contactValidation = getSmartValidationMessage('contact');
-  const birthValidation = getSmartValidationMessage('birth');
 
   return (
     <FormStep stepNumber={2} title="Personal & Birth Details" className="bg-muted/20" data-step="2">
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Contact Information Section */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl font-semibold text-gray-900">Contact Information</h3>
-            {contactValidation && (
-              <div className="flex items-center gap-2 text-sm">
-                {contactValidation.type === 'success' ? (
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                ) : (
-                  <Clock className="h-4 w-4 text-blue-600" />
-                )}
-                <span className={contactValidation.type === 'success' ? 'text-green-600' : 'text-blue-600'}>
-                  {contactValidation.message}
-                </span>
-              </div>
-            )}
-          </div>
-          
-          {contactValidation && contactValidation.type === 'progress' && (
-            <Alert className="border-blue-200 bg-blue-50">
-              <AlertCircle className="h-4 w-4 text-blue-600" />
-              <AlertDescription className="text-blue-800">
-                {contactValidation.message}
-              </AlertDescription>
-            </Alert>
-          )}
+          <h3 className="text-xl font-semibold text-gray-900">Contact Information</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
             <div className="space-y-2">
               <Label htmlFor="name">Full Name *</Label>
@@ -185,30 +98,7 @@ const CombinedPersonalDetailsForm = ({ register, setValue, watch, errors, onPlac
 
         {/* Birth Details Section */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl font-semibold text-gray-900">Birth Details</h3>
-            {birthValidation && (
-              <div className="flex items-center gap-2 text-sm">
-                {birthValidation.type === 'success' ? (
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                ) : (
-                  <Clock className="h-4 w-4 text-blue-600" />
-                )}
-                <span className={birthValidation.type === 'success' ? 'text-green-600' : 'text-blue-600'}>
-                  {birthValidation.message}
-                </span>
-              </div>
-            )}
-          </div>
-          
-          {birthValidation && birthValidation.type === 'progress' && (
-            <Alert className="border-blue-200 bg-blue-50">
-              <AlertCircle className="h-4 w-4 text-blue-600" />
-              <AlertDescription className="text-blue-800">
-                {birthValidation.message}
-              </AlertDescription>
-            </Alert>
-          )}
+          <h3 className="text-xl font-semibold text-gray-900">Birth Details</h3>
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="space-y-2">
               <Label htmlFor="birthDate">Birth Date *</Label>

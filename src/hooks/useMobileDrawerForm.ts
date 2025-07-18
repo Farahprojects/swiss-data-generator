@@ -10,6 +10,7 @@ export type DrawerStep = 1 | 2 | 3 | 4;
 export const useMobileDrawerForm = () => {
   const [currentStep, setCurrentStep] = useState<DrawerStep>(1);
   const [isOpen, setIsOpen] = useState(false);
+  const [showValidationErrors, setShowValidationErrors] = useState(false);
 
   const form = useForm<ReportFormData>({
     resolver: zodResolver(reportSchema),
@@ -37,7 +38,12 @@ export const useMobileDrawerForm = () => {
   const nextStep = () => {
     if (currentStep < 4) {
       setCurrentStep((prev) => (prev + 1) as DrawerStep);
+      setShowValidationErrors(false); // Reset validation errors when successfully advancing
     }
+  };
+
+  const attemptNextStep = () => {
+    setShowValidationErrors(true); // Show validation errors when attempting to advance
   };
 
   const prevStep = () => {
@@ -51,6 +57,7 @@ export const useMobileDrawerForm = () => {
   const resetForm = () => {
     form.reset();
     setCurrentStep(1);
+    setShowValidationErrors(false);
     // Clear all session data when resetting
     clearAllSessionData();
   };
@@ -74,5 +81,7 @@ export const useMobileDrawerForm = () => {
     openDrawer,
     closeDrawer,
     resetForm,
+    showValidationErrors,
+    attemptNextStep,
   };
 };

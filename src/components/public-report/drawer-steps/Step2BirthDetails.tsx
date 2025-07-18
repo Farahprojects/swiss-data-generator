@@ -18,6 +18,7 @@ interface Step2BirthDetailsProps {
   watch: UseFormWatch<ReportFormData>;
   errors: FieldErrors<ReportFormData>;
   onNext?: () => void;
+  showValidationErrors?: boolean;
 }
 
 const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
@@ -26,6 +27,7 @@ const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
   watch,
   errors,
   onNext,
+  showValidationErrors = false
 }) => {
   const topSafePadding = useMobileSafeTopPadding();
   const reportCategory = watch('reportCategory');
@@ -94,7 +96,7 @@ const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
           </div>
         </div>
 
-        {/* Person‑1 */}
+         {/* Person‑1 */}
         <div className="px-6">
           <PersonCard
             personNumber={1}
@@ -103,12 +105,12 @@ const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
             setValue={setValue}
             watch={watch}
             errors={errors}
-            hasTriedToSubmit={false}
+            hasTriedToSubmit={showValidationErrors}
             onPlaceSelect={handlePerson1PlaceSelect}
           />
         </div>
 
-        {/* Person‑2 */}
+         {/* Person‑2 */}
         {isCompatibilityReport && (
           <div className="px-6">
             <PersonCard
@@ -118,7 +120,7 @@ const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
               setValue={setValue}
               watch={watch}
               errors={errors}
-              hasTriedToSubmit={false}
+              hasTriedToSubmit={showValidationErrors}
               autocompleteDisabled={false}
               onPlaceSelect={() => {
                 // Auto-advance to payment step when second person location is filled
