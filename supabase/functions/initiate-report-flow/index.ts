@@ -1,7 +1,8 @@
 
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
+import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/utils.ts'
+import { buildTranslatorPayload, determineProductId } from '../_shared/pricing.ts'
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -57,46 +58,16 @@ serve(async (req) => {
       })
     }
 
-    // --- PRICE LOOKUP FROM DATABASE ---
+    // --- PRICE LOOKUP FROM DATABASE USING SHARED HELPER ---
     
     // Determine priceId based on report type if not explicitly provided
     let priceId = reportData.priceId
     if (!priceId) {
-      // Map report types to price IDs based on your price_list table
-      if (reportData.reportType === 'essence' || reportData.essenceType) {
-        priceId = 'essence'
-      } else if (reportData.reportType === 'sync' || reportData.relationshipType) {
-        priceId = 'sync'
-      } else if (reportData.reportType === 'flow') {
-        priceId = 'flow'
-      } else if (reportData.reportType === 'mindset') {
-        priceId = 'mindset'
-      } else if (reportData.reportType === 'monthly') {
-        priceId = 'monthly'
-      } else if (reportData.reportType === 'focus') {
-        priceId = 'focus'
-      } else if (reportData.reportType === 'return') {
-        priceId = 'return'
-      } else {
-        priceId = 'essence' // Default fallback
-      }
+      priceId = determineProductId(reportData)
     }
 
-    // Fetch the base price from the database (SERVER-SIDE)
-    const { data: product, error: productError } = await supabaseAdmin
-      .from('price_list')
-      .select('id, unit_price_usd, name, description')
-      .eq('id', priceId)
-      .single()
-
-    if (productError || !product) {
-      return new Response(JSON.stringify({ 
-        error: 'Product not found or invalid report type' 
-      }), {
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
+    // Use the shared pricing helper to fetch product data
+    const { product, isAiReport } = await buildTranslatorPayload(priceId, reportData, supabaseAdmin)
 
     let finalPrice = product.unit_price_usd
     let discountPercent = 0
@@ -142,7 +113,7 @@ serve(async (req) => {
           stripe_session_id: sessionId,
           email: reportData.email,
           report_type: reportData.reportType || 'standard',
-          report_data: reportData,
+          report_data: { ...reportData, product_id: priceId },
           amount_paid: 0,
           payment_status: 'paid',
           promo_code_used: promoCode,
@@ -150,7 +121,8 @@ serve(async (req) => {
           email_sent: false,
           coach_id: null,
           translator_log_id: null,
-          report_log_id: null
+          report_log_id: null,
+          is_ai_report: isAiReport
         }
 
         const { data: guestReport, error: insertError } = await supabaseAdmin
