@@ -16,7 +16,7 @@ import { FormValidationStatus } from '@/components/public-report/FormValidationS
 
 import { clearGuestReportId, getGuestReportId } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
-
+import { useGuestReportData } from '@/hooks/useGuestReportData';
 
 interface ReportFormProps {
   coachSlug?: string;
@@ -61,6 +61,28 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     recoveredName: null,
     recoveredEmail: null,
   });
+
+  // NEW: Stripe payment state for handling post-payment flow
+  const [stripePaymentState, setStripePaymentState] = useState<{
+    isVerifying: boolean;
+    isWaiting: boolean;
+    isComplete: boolean;
+    error: string | null;
+    reportData: any | null;
+  }>({
+    isVerifying: false,
+    isWaiting: false,
+    isComplete: false,
+    error: null,
+    reportData: null,
+  });
+
+  // Enhanced guest report data hook with polling capability
+  const shouldPoll = stripePaymentState.isWaiting;
+  const { data: polledGuestReport, error: pollError, isLoading: isPolling } = useGuestReportData(
+    urlGuestId && stripePaymentState.isWaiting ? urlGuestId : null,
+    shouldPoll
+  );
   
   const form = useForm<ReportFormData>({
     mode: 'onBlur',
@@ -91,54 +113,24 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     },
   });
 
-  // Handle URL guest_id parameter for refresh support and token recovery
+  // Handle URL guest_id parameter - distinguish between Stripe redirect and token recovery
   React.useEffect(() => {
     const urlGuestId = getGuestReportId();
     if (urlGuestId) {
-      // Attempt token recovery by fetching guest report data
-      setTokenRecoveryState(prev => ({ ...prev, isRecovering: true, error: null }));
+      // Check if this is a fresh Stripe redirect (no existing session data)
+      const hasExistingSession = localStorage.getItem('pending_report_email');
       
-      const recoverTokenData = async () => {
-        try {
-          const { data: guestReport, error } = await supabase
-            .from('guest_reports')
-            .select('*')
-            .eq('id', urlGuestId)
-            .single();
-
-          if (error || !guestReport) {
-            throw new Error('Report not found');
-          }
-
-          // Extract name and email from report_data
-          const reportData = guestReport.report_data as any;
-          const name = reportData?.name;
-          const email = reportData?.email || guestReport.email;
-
-          if (!name || !email) {
-            throw new Error('Session data corrupted');
-          }
-
-          setTokenRecoveryState({
-            isRecovering: false,
-            recovered: true,
-            error: null,
-            recoveredName: name,
-            recoveredEmail: email,
-          });
-
-        } catch (err: any) {
-          setTokenRecoveryState({
-            isRecovering: false,
-            recovered: false,
-            error: err.message || 'Unable to recover session',
-            recoveredName: null,
-            recoveredEmail: null,
-          });
-        }
-      };
-
-      recoverTokenData();
+      if (!hasExistingSession) {
+        // This is likely a Stripe redirect - start the three-state flow
+        console.log('🔄 Stripe redirect detected, starting payment verification...');
+        setStripePaymentState(prev => ({ ...prev, isVerifying: true }));
+        handleStripePaymentVerification(urlGuestId);
+      } else {
+        // This is token recovery - use existing logic
+        console.log('🔄 Token recovery detected...');
+        setTokenRecoveryState(prev => ({ ...prev, isRecovering: true, error: null }));
+        recoverTokenData(urlGuestId);
+      }
       return;
     }
     
@@ -147,6 +139,136 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     localStorage.removeItem('pending_report_email');
   }, []);
 
+  // Handle polling results for Stripe payment verification
+  React.useEffect(() => {
+    if (polledGuestReport && stripePaymentState.isWaiting) {
+      const guestReport = polledGuestReport.guest_report;
+      console.log('📊 Polling result - payment status:', guestReport?.payment_status);
+      
+      if (guestReport?.payment_status === 'paid') {
+        console.log('✅ Payment confirmed! Transitioning to success state...');
+        setStripePaymentState({
+          isVerifying: false,
+          isWaiting: false,
+          isComplete: true,
+          error: null,
+          reportData: polledGuestReport
+        });
+      }
+      // If still pending, continue polling (hook handles this automatically)
+    }
+    
+    if (pollError && stripePaymentState.isWaiting) {
+      console.error('❌ Polling error:', pollError);
+      setStripePaymentState(prev => ({
+        ...prev,
+        isWaiting: false,
+        error: 'Failed to verify payment status'
+      }));
+    }
+  }, [polledGuestReport, pollError, stripePaymentState.isWaiting]);
+
+  const handleStripePaymentVerification = async (guestId: string) => {
+    try {
+      console.log('🔍 Fetching initial guest report data...');
+      const { data, error } = await supabase
+        .from('guest_reports')
+        .select(`
+          *,
+          report_logs!guest_reports_report_log_id_fkey(report_text),
+          translator_logs!guest_reports_translator_log_id_fkey(swiss_data)
+        `)
+        .eq('id', guestId)
+        .single();
+
+      if (error || !data) {
+        throw new Error('Report not found');
+      }
+
+      console.log('📋 Initial report data - payment status:', data.payment_status);
+
+      if (data.payment_status === 'paid') {
+        // Payment already confirmed - go straight to success
+        console.log('✅ Payment already confirmed, showing success...');
+        const reportData = {
+          guest_report: data,
+          report_content: data.report_logs?.report_text || null,
+          swiss_data: data.translator_logs?.swiss_data || null,
+          metadata: { source: 'stripe_redirect' }
+        };
+        
+        setStripePaymentState({
+          isVerifying: false,
+          isWaiting: false,
+          isComplete: true,
+          error: null,
+          reportData
+        });
+      } else if (data.payment_status === 'pending') {
+        // Start polling for payment confirmation
+        console.log('⏳ Payment pending, starting polling...');
+        setStripePaymentState({
+          isVerifying: false,
+          isWaiting: true,
+          isComplete: false,
+          error: null,
+          reportData: null
+        });
+      } else {
+        // Payment failed or other status
+        throw new Error(`Payment status: ${data.payment_status}`);
+      }
+    } catch (error) {
+      console.error('❌ Payment verification failed:', error);
+      setStripePaymentState({
+        isVerifying: false,
+        isWaiting: false,
+        isComplete: false,
+        error: 'Payment verification failed',
+        reportData: null
+      });
+    }
+  };
+
+  const recoverTokenData = async (guestId: string) => {
+    try {
+      const { data: guestReport, error } = await supabase
+        .from('guest_reports')
+        .select('*')
+        .eq('id', guestId)
+        .single();
+
+      if (error || !guestReport) {
+        throw new Error('Report not found');
+      }
+
+      const reportData = guestReport.report_data as any;
+      const name = reportData?.name;
+      const email = reportData?.email || guestReport.email;
+
+      if (!name || !email) {
+        throw new Error('Session data corrupted');
+      }
+
+      setTokenRecoveryState({
+        isRecovering: false,
+        recovered: true,
+        error: null,
+        recoveredName: name,
+        recoveredEmail: email,
+      });
+
+    } catch (err: any) {
+      setTokenRecoveryState({
+        isRecovering: false,
+        recovered: false,
+        error: err.message || 'Unable to recover session',
+        recoveredName: null,
+        recoveredEmail: null,
+      });
+    }
+  };
+
   const { register, handleSubmit, watch, setValue, control, formState: { errors, isValid }, formState } = form;
   const selectedReportType = watch('reportType');
   const selectedRequest = watch('request');
@@ -154,7 +276,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const userName = watch('name');
   const userEmail = watch('email');
 
-  // Check if this is a compatibility report that needs second person data
   const reportCategory = watch('reportCategory');
   const reportType = watch('reportType');
   const request = watch('request');
@@ -163,15 +284,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
                                reportType?.startsWith('sync_') || 
                                request === 'sync';
 
-  /** ------------------------------------------------------------------
-   *  STEP-PROGRESS FLAGS
-   *  ------------------------------------------------------------------
-   *  step1Done  → user has picked a report-type OR typed a free-form request
-   *  step2Done  → the key personal fields are filled in & geo-coords exist
-   */
   const formValues = form.watch();
   const step1Done = Boolean(formValues.reportType || formValues.request);
-
 
   const step2Done =
     step1Done &&
@@ -182,7 +296,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         formValues.birthTime &&
         formValues.birthLocation,
     ) &&
-    // For compatibility reports, also require second person data
     (!requiresSecondPerson || (
       formValues.secondPersonName &&
       formValues.secondPersonBirthDate &&
@@ -190,10 +303,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       formValues.secondPersonBirthLocation
     ));
 
-  // Check if form should be unlocked (either reportType or request field filled)
   const shouldUnlockForm = !!(selectedReportType || selectedRequest);
 
-  // Check if all key information is filled out
   React.useEffect(() => {
     const checkFormCompletion = async () => {
       const formData = form.getValues();
@@ -220,25 +331,20 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     resetReportState
   } = useReportSubmission();
 
-
-  // Auto-scroll functionality for desktop
   const paymentStepRef = React.useRef<HTMLDivElement>(null);
   const secondPersonRef = React.useRef<HTMLDivElement>(null);
 
-  // Simple auto-scroll callbacks triggered by Google autocomplete selection
   const handleFirstPersonPlaceSelected = () => {
     const isDesktop = window.innerWidth >= 640;
     if (!isDesktop) return;
     
     setTimeout(() => {
       if (requiresSecondPerson) {
-        // Scroll to second person for compatibility reports
         secondPersonRef.current?.scrollIntoView({ 
           behavior: 'smooth', 
           block: 'start' 
         });
       } else {
-        // Scroll to payment for single person reports
         paymentStepRef.current?.scrollIntoView({ 
           behavior: 'smooth', 
           block: 'start' 
@@ -280,7 +386,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         throw new Error('Report not found');
       }
 
-      // Debug: Log the raw data to see what's being returned
       console.log('🔍 Raw Supabase query result:', data);
       console.log('🔍 translator_logs data:', data.translator_logs);
       console.log('🔍 report_logs data:', data.report_logs);
@@ -297,7 +402,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
       setGuestReportData(reportData);
       
-      // Map and set legacy states for compatibility
       const mappedReport = mapReportPayload(reportData);
       setReportContent(mappedReport.reportContent);
       setReportPdfData(mappedReport.pdfData || null);
@@ -315,7 +419,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   };
 
   const handleCloseReportViewer = () => {
-    // Smooth transition back to form - similar to mobile approach
     setViewingReport(false);
     setReportContent('');
     setReportPdfData(null);
@@ -324,18 +427,14 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     setSwissBoolean(false);
     setCurrentReportType('');
     
-    // Reset form to initial state
     form.reset();
     
-    // Clear guest report related storage
     clearGuestReportId();
     localStorage.removeItem('currentGuestReportId');
     localStorage.removeItem('pending_report_email');
     
-    // Reset report submission state
     resetReportState();
     
-    // Navigate back to report page cleanly
     navigate('/report');
   };
 
@@ -349,7 +448,52 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     await onSubmit(formData);
   };
 
-  // Show report viewer if user is viewing a report and data is available
+  if (stripePaymentState.isVerifying) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8">
+        <div className="text-center space-y-6">
+          <div className="w-12 h-12 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto"></div>
+          <p className="text-xl text-gray-600 font-light">Finalizing your report...</p>
+          <p className="text-sm text-gray-500">Please wait while we verify your payment</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (stripePaymentState.isWaiting) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8">
+        <div className="text-center space-y-6">
+          <div className="w-12 h-12 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto"></div>
+          <p className="text-xl text-gray-600 font-light">Processing payment...</p>
+          <p className="text-sm text-gray-500">This usually takes just a few seconds</p>
+          <div className="flex items-center justify-center space-x-1 mt-4">
+            <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
+            <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+            <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (stripePaymentState.error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8">
+        <div className="text-center space-y-6">
+          <p className="text-xl text-destructive">Payment verification failed</p>
+          <p className="text-sm text-gray-500">{stripePaymentState.error}</p>
+          <button 
+            onClick={() => navigate('/report')}
+            className="bg-primary text-primary-foreground px-6 py-2 rounded-lg"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (viewingReport && guestReportData && !isLoadingReport) {
     console.log('🔍 ReportForm - guestReportData:', guestReportData);
     console.log('🔍 ReportForm - guest_report:', guestReportData.guest_report);
@@ -369,7 +513,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
 
-  // Show loading state when viewing report
   if (viewingReport && isLoadingReport) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -381,7 +524,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
 
-  // Show error state when viewing report fails
   if (viewingReport && (reportError || !guestReportData)) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -398,9 +540,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
 
-  // Handle token recovery and success screen logic
-  
-  // Show success screen if report was created with valid form data
   if (reportCreated && userName && userEmail) {
     return (
       <SuccessScreen 
@@ -411,8 +550,24 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       />
     );
   }
+
+  if (stripePaymentState.isComplete && stripePaymentState.reportData) {
+    const reportData = stripePaymentState.reportData.guest_report?.report_data;
+    const name = reportData?.name;
+    const email = reportData?.email || stripePaymentState.reportData.guest_report?.email;
+    
+    if (name && email) {
+      return (
+        <SuccessScreen 
+          name={name} 
+          email={email} 
+          onViewReport={handleViewReport}
+          guestReportId={urlGuestId || undefined}
+        />
+      );
+    }
+  }
   
-  // Handle token recovery scenarios - if valid token with recovery success, show success screen
   if (urlGuestId && tokenRecoveryState.recovered && tokenRecoveryState.recoveredName && tokenRecoveryState.recoveredEmail) {
     return (
       <SuccessScreen 
@@ -424,7 +579,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
   
-  // Still recovering token data
   if (urlGuestId && tokenRecoveryState.isRecovering) {
     return (
       <div className="min-h-screen flex items-center justify-center p-8">
@@ -436,21 +590,17 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
   
-  // If token recovery failed, clear the URL and show normal form
   if (urlGuestId && tokenRecoveryState.error) {
-    // Clear the bad token and show normal form instead of error page
     React.useEffect(() => {
       clearGuestReportId();
       window.history.replaceState({}, '', '/report');
     }, []);
-    // Fall through to show normal form
   }
 
   return (
     <div className="space-y-0" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="space-y-8">
-          {/* ─────────────────────────────  STEP 1  ───────────────────────────── */}
           <ReportTypeSelector
             control={control}
             errors={errors}
@@ -460,7 +610,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
             setValue={setValue}
           />
 
-          {/* ─────────────────────────────  STEP 2  ───────────────────────────── */}
           {step1Done && (
             <>
             <CombinedPersonalDetailsForm
@@ -485,7 +634,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
             </>
           )}
 
-          {/* ─────────────────────────────  STEP 3  ───────────────────────────── */}
           {step2Done && (
             <div ref={paymentStepRef}>
               <PaymentStep
