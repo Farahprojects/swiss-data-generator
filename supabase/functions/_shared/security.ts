@@ -100,4 +100,4 @@ export function withSecurity(handler: EdgeFunctionHandler, functionName: string)
       }).then();
     }
   };
-} 
+}

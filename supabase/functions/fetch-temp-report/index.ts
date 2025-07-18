@@ -1,4 +1,4 @@
-import { withSecurity } from "../../_shared/security.ts";
+import { withSecurity } from "../_shared/security.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.3";
 
 // Define a unique name for this function for logging and rule-matching.
