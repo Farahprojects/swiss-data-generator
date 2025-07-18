@@ -447,9 +447,8 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR') {
           console.warn('Realtime channel error, will auto-reconnect');
-        } else if (status === 'CLOSED') {
-          console.warn('Realtime connection closed');
         }
+        // Removed noisy 'CLOSED' warning as it's normal during reconnections
       });
 
     channelRef.current = channel;
