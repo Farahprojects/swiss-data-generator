@@ -40,6 +40,21 @@ export const useMobileDrawerForm = () => {
     }
   };
 
+  const autoAdvanceAfterPlaceSelection = (isSecondPerson = false) => {
+    const reportCategory = form.watch('reportCategory');
+    const request = form.watch('request');
+    const isCompatibilityReport = reportCategory === 'compatibility' || request === 'sync';
+    
+    if (isSecondPerson || !isCompatibilityReport) {
+      // Advance to payment step
+      setCurrentStep(4);
+    } else if (isCompatibilityReport) {
+      // Advance to second person step (step 3 stays for birth details)
+      // We're currently on step 3, so this would advance within the birth details step
+      // The birth details step will handle showing second person form
+    }
+  };
+
   const prevStep = () => {
     if (currentStep > 1) {
       // Clear any potential error states when navigating backwards
@@ -74,5 +89,6 @@ export const useMobileDrawerForm = () => {
     openDrawer,
     closeDrawer,
     resetForm,
+    autoAdvanceAfterPlaceSelection,
   };
 };

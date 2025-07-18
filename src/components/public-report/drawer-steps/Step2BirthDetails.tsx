@@ -18,6 +18,7 @@ interface Step2BirthDetailsProps {
   watch: UseFormWatch<ReportFormData>;
   errors: FieldErrors<ReportFormData>;
   onNext?: () => void;
+  onPlaceSelected?: (isSecondPerson?: boolean) => void;
 }
 
 const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
@@ -26,6 +27,7 @@ const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
   watch,
   errors,
   onNext,
+  onPlaceSelected,
 }) => {
   const topSafePadding = useMobileSafeTopPadding();
   const reportCategory = watch('reportCategory');
@@ -68,6 +70,8 @@ const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
   // Callback when person 1 selects a location
   const handlePerson1PlaceSelect = () => {
     setPerson1LocationSelected(true);
+    // Trigger auto-advance for first person place selection
+    onPlaceSelected?.(false);
   };
 
   return (
@@ -121,19 +125,8 @@ const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
               hasTriedToSubmit={false}
               autocompleteDisabled={false}
               onPlaceSelect={() => {
-                // Auto-advance to payment step when second person location is filled
-                setTimeout(() => {
-                  const formData = watch();
-                  const secondPersonRequiredFields = ['secondPersonName', 'secondPersonBirthDate', 'secondPersonBirthTime', 'secondPersonBirthLocation'];
-                  const isComplete = secondPersonRequiredFields.every(field => {
-                    const value = formData[field as keyof typeof formData];
-                    return value && value.toString().trim().length > 0;
-                  });
-                  
-                  if (isComplete && onNext) {
-                    onNext();
-                  }
-                }, 300); // Increased delay to ensure form values are properly updated
+                // Trigger auto-advance for second person place selection
+                onPlaceSelected?.(true);
               }}
             />
           </div>

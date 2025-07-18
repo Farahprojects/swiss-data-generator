@@ -234,49 +234,40 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   // Auto-scroll functionality for desktop
   const paymentStepRef = React.useRef<HTMLDivElement>(null);
   const secondPersonRef = React.useRef<HTMLDivElement>(null);
-  const [prevStep2Done, setPrevStep2Done] = React.useState(false);
 
-  // Check if first person form is complete (excluding second person requirements)
-  const firstPersonData = {
-    name: watch('name'),
-    email: watch('email'),
-    birthDate: watch('birthDate'),
-    birthTime: watch('birthTime'),
-    birthLocation: watch('birthLocation'),
-    birthLatitude: watch('birthLatitude'),
-    birthLongitude: watch('birthLongitude')
-  };
-  const firstPersonComplete = firstPersonData.name && firstPersonData.email && 
-                              firstPersonData.birthDate && firstPersonData.birthTime && 
-                              firstPersonData.birthLocation && firstPersonData.birthLatitude && 
-                              firstPersonData.birthLongitude;
-
-  // Auto-scroll to second person when first person is complete and compatibility report
-  React.useEffect(() => {
-    const isDesktop = window.innerWidth >= 640; // sm breakpoint
-    if (requiresSecondPerson && firstPersonComplete && isDesktop) {
-      setTimeout(() => {
+  // Simple auto-scroll callbacks triggered by Google autocomplete selection
+  const handleFirstPersonPlaceSelected = () => {
+    const isDesktop = window.innerWidth >= 640;
+    if (!isDesktop) return;
+    
+    setTimeout(() => {
+      if (requiresSecondPerson) {
+        // Scroll to second person for compatibility reports
         secondPersonRef.current?.scrollIntoView({ 
           behavior: 'smooth', 
           block: 'start' 
         });
-      }, 300);
-    }
-  }, [requiresSecondPerson, firstPersonComplete]);
-
-  // Auto-scroll to payment step when step2Done changes from false to true
-  React.useEffect(() => {
-    const isDesktop = window.innerWidth >= 640; // sm breakpoint
-    if (step2Done && !prevStep2Done && isDesktop) {
-      setTimeout(() => {
+      } else {
+        // Scroll to payment for single person reports
         paymentStepRef.current?.scrollIntoView({ 
           behavior: 'smooth', 
           block: 'start' 
         });
-      }, 300);
-    }
-    setPrevStep2Done(step2Done);
-  }, [step2Done, prevStep2Done]);
+      }
+    }, 300);
+  };
+
+  const handleSecondPersonPlaceSelected = () => {
+    const isDesktop = window.innerWidth >= 640;
+    if (!isDesktop) return;
+    
+    setTimeout(() => {
+      paymentStepRef.current?.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+      });
+    }, 300);
+  };
 
   const handleViewReport = async () => {
     if (!urlGuestId) return;
@@ -497,21 +488,23 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           {/* ─────────────────────────────  STEP 2  ───────────────────────────── */}
           {step1Done && (
             <>
-              <CombinedPersonalDetailsForm
-                register={register}
-                setValue={setValue}
-                watch={watch}
-                errors={errors}
-              />
+            <CombinedPersonalDetailsForm
+              register={register}
+              setValue={setValue}
+              watch={watch}
+              errors={errors}
+              onPlaceSelected={handleFirstPersonPlaceSelected}
+            />
 
               {requiresSecondPerson && (
                 <div ref={secondPersonRef}>
-                  <SecondPersonForm
-                    register={register}
-                    setValue={setValue}
-                    watch={watch}
-                    errors={errors}
-                  />
+            <SecondPersonForm
+              register={register}
+              setValue={setValue}
+              watch={watch}
+              errors={errors}
+              onPlaceSelected={handleSecondPersonPlaceSelected}
+            />
                 </div>
               )}
             </>
