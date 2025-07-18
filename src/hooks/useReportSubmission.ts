@@ -86,23 +86,38 @@ export const useReportSubmission = () => {
         console.log('Error message:', error.message);
         console.log('Error context:', error.context);
         
-        // Extract the actual error message from the nested structure
+        // Extract the actual error message from the Response object
         let errorMessage = '';
         
-        // Try multiple possible locations for the custom error message
-        if (error.context && error.context.json && error.context.json.error) {
-          errorMessage = error.context.json.error;
-        } else if (error.context && error.context.body && typeof error.context.body === 'string') {
-          try {
-            const parsedBody = JSON.parse(error.context.body);
-            errorMessage = parsedBody.error || '';
-          } catch (e) {
-            errorMessage = error.context.body;
+        try {
+          // If error.context is a Response object, read its body
+          if (error.context && typeof error.context.text === 'function') {
+            const responseText = await error.context.text();
+            console.log('Response text:', responseText);
+            
+            try {
+              const parsedResponse = JSON.parse(responseText);
+              errorMessage = parsedResponse.error || responseText;
+            } catch (parseError) {
+              errorMessage = responseText;
+            }
+          } else if (error.context && error.context.json && error.context.json.error) {
+            errorMessage = error.context.json.error;
+          } else if (error.context && error.context.body && typeof error.context.body === 'string') {
+            try {
+              const parsedBody = JSON.parse(error.context.body);
+              errorMessage = parsedBody.error || error.context.body;
+            } catch (e) {
+              errorMessage = error.context.body;
+            }
+          } else if (error.message) {
+            errorMessage = error.message;
+          } else if (typeof error === 'string') {
+            errorMessage = error;
           }
-        } else if (error.message) {
-          errorMessage = error.message;
-        } else if (typeof error === 'string') {
-          errorMessage = error;
+        } catch (responseError) {
+          console.log('Error reading response:', responseError);
+          errorMessage = error.message || 'Failed to process request';
         }
 
         console.log('Extracted error message:', errorMessage);
