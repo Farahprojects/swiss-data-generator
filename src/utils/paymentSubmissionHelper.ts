@@ -1,51 +1,48 @@
+import { ReportFormData } from '@/types/public-report';
 
 interface PaymentSubmissionParams {
   promoCode: string;
-  promoValidation: any;
+  validatePromoManually: (code: string) => Promise<any>;
   onSubmit: () => void;
-  finalPrice: number;
-  setIsLocalProcessing: (processing: boolean) => void;
+  setIsLocalProcessing?: (processing: boolean) => void;
   clearPromoCode?: () => void;
-  onFreeSubmit?: () => void;
 }
 
+/**
+ * Shared payment submission logic for both desktop and mobile flows
+ * This ensures identical behavior for promo validation, UX delays, and submission
+ */
 export const handlePaymentSubmission = async ({
   promoCode,
-  promoValidation,
+  validatePromoManually,
   onSubmit,
-  finalPrice,
   setIsLocalProcessing,
-  clearPromoCode,
-  onFreeSubmit
+  clearPromoCode
 }: PaymentSubmissionParams) => {
-  console.log('Starting payment submission', { promoCode, finalPrice, promoValidation });
-  
-  // Set processing state
+  // Show processing immediately
   if (setIsLocalProcessing) {
     setIsLocalProcessing(true);
   }
   
-  // Check if promo code validation failed
-  if (promoCode && promoCode.trim() !== '' && !promoValidation?.isValid) {
-    console.log('Invalid promo code detected, stopping submission');
-    if (setIsLocalProcessing) {
-      setIsLocalProcessing(false);
+  // First validate promo code if present
+  if (promoCode && promoCode.trim() !== '') {
+    const validation = await validatePromoManually(promoCode);
+    
+    // Give user time to see the validation result
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // If validation failed, reset processing state and clear promo
+    if (!validation?.isValid) {
+      if (setIsLocalProcessing) {
+        setIsLocalProcessing(false);
+      }
+      if (clearPromoCode) {
+        clearPromoCode();
+      }
+      return; // Don't proceed with submission
     }
-    return;
   }
   
-  // Handle 100% free orders (skip Stripe entirely)
-  if (finalPrice === 0 || (promoValidation?.isFree && promoValidation?.isValid)) {
-    console.log('Processing free order');
-    if (onFreeSubmit) {
-      onFreeSubmit();
-    } else {
-      onSubmit();
-    }
-    return;
-  }
-  
-  // For paid orders, proceed with regular submission (Stripe)
-  console.log('Processing paid order');
+  // Then proceed with form submission
   onSubmit();
 };

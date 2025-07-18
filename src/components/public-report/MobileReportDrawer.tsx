@@ -112,7 +112,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
     const promoCode = watch('promoCode') || '';
     await handlePaymentSubmission({
       promoCode,
-      promoValidation: promoValidationState,
+      validatePromoManually,
       onSubmit: () => handleSubmit(onSubmit)(),
     });
   };

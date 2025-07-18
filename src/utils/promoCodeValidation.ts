@@ -21,26 +21,14 @@ export const validatePromoCode = async (code: string): Promise<PromoCodeValidati
   }
 
   try {
-    // Use maybeSingle() instead of single() to handle non-existent codes gracefully
     const { data, error } = await supabase
       .from('promo_codes')
       .select('*')
       .eq('code', code.trim().toUpperCase())
       .eq('is_active', true)
-      .maybeSingle();
+      .single();
 
-    if (error) {
-      console.error('Database error validating promo code:', error);
-      return {
-        isValid: false,
-        discountPercent: 0,
-        message: 'Unable to validate promo code. Please check your connection and try again.',
-        isFree: false,
-        errorType: 'network_error'
-      };
-    }
-
-    if (!data) {
+    if (error || !data) {
       return {
         isValid: false,
         discountPercent: 0,

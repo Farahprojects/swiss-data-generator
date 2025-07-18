@@ -1,10 +1,12 @@
-
+// test 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { initiateGuestCheckout } from '@/utils/guest-checkout';
 import { createFreeReport, validatePromoCode } from '@/utils/promoCodeValidation';
+
 import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { ReportFormData } from '@/types/public-report';
+
 import { storeGuestReportId } from '@/utils/urlHelpers';
 
 interface PromoValidationState {
@@ -17,14 +19,15 @@ interface PromoValidationState {
 export const useReportSubmission = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [reportCreated, setReportCreated] = useState(false);
-  const [inlinePromoError, setInlinePromoError] = useState<string>('');
-  const { toast } = useToast();
-  const { getReportPrice, getReportTitle, isLoading: isPricingLoading } = typeof window !== 'undefined' ? usePriceFetch() : { getReportPrice: () => 0, getReportTitle: () => 'Report', isLoading: false };
 
   // Reset reportCreated state on mount to prevent stale success screens
   useEffect(() => {
     setReportCreated(false);
   }, []);
+  // Remove popup dialog state - replaced with inline validation
+  const [inlinePromoError, setInlinePromoError] = useState<string>('');
+  const { toast } = useToast();
+  const { getReportPrice, getReportTitle, isLoading: isPricingLoading } = typeof window !== 'undefined' ? usePriceFetch() : { getReportPrice: () => 0, getReportTitle: () => 'Report', isLoading: false };
 
   // Add timeout mechanism to prevent stuck processing state
   useEffect(() => {
@@ -39,7 +42,7 @@ export const useReportSubmission = () => {
           description: "The request took too long. Please try again.",
           variant: "destructive",
         });
-      }, 10000);
+      }, 10000); // 10 second timeout
     }
 
     return () => {
@@ -55,54 +58,49 @@ export const useReportSubmission = () => {
     setPromoValidation: (state: PromoValidationState) => void,
     skipPromoValidation: boolean = false
   ) => {
+    
     setIsProcessing(true);
     
     try {
+      // Validate promo code if present and not skipping validation
       let validatedPromo = null;
-      
-      // Only validate promo if there's a code and it hasn't been validated yet
       if (data.promoCode && data.promoCode.trim() !== '' && !skipPromoValidation) {
-        if (promoValidation.status === 'none' || promoValidation.status === 'invalid') {
-          setPromoValidation({
-            status: 'validating',
-            message: 'Validating promo code...',
-            discountPercent: 0
-          });
+        setPromoValidation({
+          status: 'validating',
+          message: 'Validating promo code...',
+          discountPercent: 0
+        });
 
-          validatedPromo = await validatePromoCode(data.promoCode);
-          
-          if (validatedPromo.isValid) {
-            setPromoValidation({
-              status: validatedPromo.isFree ? 'valid-free' : 'valid-discount',
-              message: validatedPromo.message,
-              discountPercent: validatedPromo.discountPercent
-            });
-          } else {
-            setInlinePromoError(validatedPromo.message);
-            setPromoValidation({
-              status: 'invalid',
-              message: validatedPromo.message,
-              discountPercent: 0,
-              errorType: validatedPromo.errorType
-            });
-            setIsProcessing(false);
-            return;
-          }
+        validatedPromo = await validatePromoCode(data.promoCode);
+        
+        if (validatedPromo.isValid) {
+          setPromoValidation({
+            status: validatedPromo.isFree ? 'valid-free' : 'valid-discount',
+            message: validatedPromo.message,
+            discountPercent: validatedPromo.discountPercent
+          });
         } else {
-          // Use cached validation result
-          validatedPromo = {
-            isValid: promoValidation.status === 'valid-free' || promoValidation.status === 'valid-discount',
-            isFree: promoValidation.status === 'valid-free',
-            discountPercent: promoValidation.discountPercent,
-            message: promoValidation.message
-          };
+          // Set inline error and clear promo code
+          setInlinePromoError(validatedPromo.message);
+          setPromoValidation({
+            status: 'invalid',
+            message: validatedPromo.message,
+            discountPercent: 0,
+            errorType: validatedPromo.errorType
+          });
+          setIsProcessing(false);
+          return; // Don't continue with submission
         }
       }
 
+      // For astro data, use the request field directly. For regular reports, use reportType
       const reportTypeToUse = data.request || data.reportType || 'standard';
 
       // Handle free report with promo code
       if (data.promoCode && validatedPromo?.isFree && validatedPromo.isValid) {
+        // Processing free report with promo code
+        
+        // FIXED: Use request field for astro data detection
         const isAstroData = data.request && data.request.trim() !== '';
         
         const reportData = {
@@ -132,6 +130,7 @@ export const useReportSubmission = () => {
         const result = await createFreeReport(data.promoCode, reportData);
         
         setReportCreated(true);
+        // Store the guest report ID for polling and URL
         storeGuestReportId(result.reportId);
         toast({
           title: "Free Report Created!",
@@ -141,7 +140,7 @@ export const useReportSubmission = () => {
         return;
       }
       
-      // Regular paid flow
+      // Regular paid flow - FIXED: Get pricing with both reportType AND request field
       const formDataForPricing = {
         reportType: data.reportType,
         essenceType: data.essenceType,
@@ -151,14 +150,18 @@ export const useReportSubmission = () => {
         request: data.request
       };
       
+      
+      
       const amount = getReportPrice(formDataForPricing);
       const description = getReportTitle(formDataForPricing);
 
+      // Apply promo code discount if valid (but not free)
       let finalAmount = amount;
       if (data.promoCode && validatedPromo?.isValid && !validatedPromo.isFree) {
         finalAmount = amount * (1 - validatedPromo.discountPercent / 100);
       }
 
+      // FIXED: Use request field for astro data detection
       const isAstroData = data.request && data.request.trim() !== '';
       
       const reportData = {

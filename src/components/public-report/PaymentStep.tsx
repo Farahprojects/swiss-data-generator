@@ -1,7 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+
 import { UseFormRegister, UseFormWatch, FieldErrors, UseFormSetValue } from 'react-hook-form';
-import { Tag, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Tag, CheckCircle, AlertCircle, Loader2, AlertTriangle } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,9 +11,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ReportFormData } from '@/types/public-report';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
+
 import { handlePaymentSubmission } from '@/utils/paymentSubmissionHelper';
 import { useToast } from '@/hooks/use-toast';
 import FormStep from './FormStep';
+import { debounce } from 'lodash';
 
 interface PromoValidationState {
   status: 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid';
@@ -51,12 +54,24 @@ const PaymentStep = ({
   const [hasTimedOut, setHasTimedOut] = useState(false);
   const { validatePromoManually } = usePromoValidation();
   
+  // Auto-validate promo code with debounce
+  const debouncedValidatePromo = useCallback(
+    debounce(async (code: string) => {
+      if (code.trim() && validatePromoManually) {
+        await validatePromoManually(code);
+      }
+    }, 500),
+    [validatePromoManually]
+  );
+  const { getReportPrice, getReportTitle, calculatePricing, isLoading: isPricingLoading, error: pricingError } = usePriceFetch();
+  const { toast } = useToast();
+  
   // Add timeout mechanism to prevent stuck local processing state
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
     
     if (isLocalProcessing) {
-      setHasTimedOut(false);
+      setHasTimedOut(false); // Reset timeout state when starting
       timeoutId = setTimeout(() => {
         console.warn('Local processing timeout - resetting processing state');
         setIsLocalProcessing(false);
@@ -66,7 +81,7 @@ const PaymentStep = ({
           description: "The request took too long. Please try again.",
           variant: "destructive",
         });
-      }, 10000);
+      }, 10000); // 10 second timeout
     }
 
     return () => {
@@ -74,10 +89,7 @@ const PaymentStep = ({
         clearTimeout(timeoutId);
       }
     };
-  }, [isLocalProcessing]);
-  
-  const { getReportPrice, getReportTitle, calculatePricing, isLoading: isPricingLoading, error: pricingError } = usePriceFetch();
-  const { toast } = useToast();
+  }, [isLocalProcessing, toast]);
   
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');
@@ -85,22 +97,24 @@ const PaymentStep = ({
   const essenceType = watch('essenceType');
   const relationshipType = watch('relationshipType');
   const requestField = watch('request');
-  const request = watch('request');
+  const request = watch('request'); // NEW: Watch the request field
   const name = watch('name');
   const promoCode = watch('promoCode') || '';
 
-  // Clear inline error when user starts typing
+  // Auto-validate when promo code changes and clear inline error when user types
   useEffect(() => {
     if (promoCode && clearInlinePromoError) {
-      clearInlinePromoError();
+      clearInlinePromoError(); // Clear error when user starts typing
     }
-  }, [promoCode, clearInlinePromoError]);
+    debouncedValidatePromo(promoCode);
+  }, [promoCode, debouncedValidatePromo, clearInlinePromoError]);
 
   // Get price and title using context with global fallback
   let basePrice: number | null = null;
   let reportTitle = 'Personal Report';
 
   try {
+    // Check for both reportType OR request field
     if (reportType || request) {
       const formData = {
         reportType,
@@ -115,9 +129,12 @@ const PaymentStep = ({
       reportTitle = getReportTitle(formData);
     }
   } catch (error) {
+    // Silently handle pricing errors - global fallback will handle missing prices
     if (process.env.NODE_ENV === 'development') {
       console.warn('Pricing error (silenced for clean UI):', error);
     }
+    
+    // Log error but don't set UI error
   }
 
   // Calculate pricing - global fallback will handle missing prices  
@@ -143,38 +160,23 @@ const PaymentStep = ({
     return promoValidation.message || '';
   };
 
-  const handleValidatePromo = async () => {
-    if (!promoCode || promoCode.trim() === '') {
-      return;
-    }
-    
-    await validatePromoManually(promoCode);
-  };
-
   const handleButtonClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
+    // Reset timeout state when retrying
     setHasTimedOut(false);
     
-    // If there's a promo code but it hasn't been validated yet, validate it first
-    if (promoCode && promoCode.trim() !== '' && promoValidation.status === 'none') {
-      await handleValidatePromo();
-      // After validation, the form will re-render and user can click submit again
-      return;
-    }
-    
-    // Proceed with submission using cached validation and price
     await handlePaymentSubmission({
       promoCode,
-      promoValidation,
+      validatePromoManually,
       onSubmit,
-      finalPrice: pricing.finalPrice,
       setIsLocalProcessing,
       clearPromoCode: () => setValue('promoCode', '')
     });
   };
 
+  // Always show clean payment UI with global pricing fallback
   const content = isPricingLoading ? (
     <div className="max-w-4xl mx-auto flex items-center justify-center py-8">
       <div className="flex items-center gap-2">
@@ -278,34 +280,25 @@ const PaymentStep = ({
                   <Label htmlFor="promoCode" className="text-lg font-light text-gray-700">
                     Promo Code
                   </Label>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <Input
-                        id="promoCode"
-                        {...register('promoCode')}
-                        placeholder="Enter promo code"
-                        className="h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400 pr-12"
-                        style={{ 
-                          WebkitAppearance: 'none',
-                          touchAction: 'manipulation'
-                        }}
-                      />
-                      <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                        {getPromoValidationIcon()}
-                      </div>
+                  <div className="relative">
+                    <Input
+                      id="promoCode"
+                      {...register('promoCode')}
+                      placeholder="Enter promo code"
+                      className="h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400 pr-12"
+                      style={{ 
+                        WebkitAppearance: 'none',
+                        touchAction: 'manipulation'
+                      }}
+                    />
+                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                      {getPromoValidationIcon()}
                     </div>
-                    <Button
-                      type="button"
-                      onClick={handleValidatePromo}
-                      disabled={!promoCode || promoCode.trim() === '' || isValidatingPromo}
-                      className="h-14 px-6 bg-gray-900 hover:bg-gray-800 text-white"
-                    >
-                      {isValidatingPromo ? 'Validating...' : 'Validate'}
-                    </Button>
                   </div>
                   {errors.promoCode && (
                     <p className="text-sm text-red-500 font-light">{errors.promoCode.message}</p>
                   )}
+                  {/* Inline error message for invalid promo codes */}
                   {inlinePromoError && (
                     <p className="text-sm text-red-500 font-light">{inlinePromoError}</p>
                   )}
@@ -339,9 +332,7 @@ const PaymentStep = ({
                 ? 'Validating...' 
                 : hasTimedOut
                   ? 'Try Again'
-                  : promoCode && promoCode.trim() !== '' && promoValidation.status === 'none'
-                    ? 'Validate & Generate Report'
-                    : 'Generate My Report'}
+                  : 'Generate My Report'}
           </Button>
 
           {/* Satisfaction Guarantee */}
