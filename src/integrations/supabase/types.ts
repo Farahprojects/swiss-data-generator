@@ -628,18 +628,21 @@ export type Database = {
         Row: {
           lat: number
           lon: number
+          place: string | null
           place_id: string
           updated_at: string | null
         }
         Insert: {
           lat: number
           lon: number
+          place?: string | null
           place_id: string
           updated_at?: string | null
         }
         Update: {
           lat?: number
           lon?: number
+          place?: string | null
           place_id?: string
           updated_at?: string | null
         }

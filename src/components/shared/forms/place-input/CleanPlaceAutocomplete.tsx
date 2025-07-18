@@ -127,12 +127,16 @@ export const CleanPlaceAutocomplete = ({
 
       if (onPlaceSelect) {
         try {
+          console.log('🔍 Fetching place details for:', prediction.place_id);
+          
           // Get place details to fetch coordinates
           const { data: detailsData, error: detailsError } = await supabase.functions.invoke('google-place-details', {
             body: { placeId: prediction.place_id }
           });
 
-          if (detailsError || !detailsData?.geometry?.location) {
+          console.log('📍 Place details response:', detailsData, detailsError);
+
+          if (detailsError || !detailsData) {
             console.warn('Could not fetch place details, using basic data:', detailsError);
             // Fallback to basic data without coordinates
             const placeData: PlaceData = {
@@ -143,13 +147,15 @@ export const CleanPlaceAutocomplete = ({
             return;
           }
 
-          // Successfully got coordinates
+          // Fix: Use the correct response structure from our edge function
           const placeData: PlaceData = {
-            name: fullAddress,
+            name: detailsData.name || fullAddress,
             placeId: prediction.place_id,
-            latitude: detailsData.geometry.location.lat,
-            longitude: detailsData.geometry.location.lng
+            latitude: detailsData.latitude,
+            longitude: detailsData.longitude
           };
+          
+          console.log('✅ Final place data:', placeData);
           onPlaceSelect(placeData);
 
         } catch (error) {
