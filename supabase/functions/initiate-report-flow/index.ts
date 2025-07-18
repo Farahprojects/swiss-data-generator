@@ -367,13 +367,13 @@ serve(async (req) => {
 
     logFlowEvent("guest_report_created", { guestReportId: guestReport.id });
 
-    // Now create checkout session with minimal data
+    // Now create checkout session with minimal data - UPDATED SUCCESS URL
     const checkoutData = {
       guest_report_id: guestReport.id,
       amount: finalAmount,
       email: reportData.email,
       description: product.description || `${product.name} Report`,
-      successUrl: `${req.headers.get("origin")}/payment-return?session_id={CHECKOUT_SESSION_ID}`,
+      successUrl: `${req.headers.get("origin")}/report?guest_id=${guestReport.id}`,
       cancelUrl: `${req.headers.get("origin")}/payment-return?status=cancelled`,
     };
 

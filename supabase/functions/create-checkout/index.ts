@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
 /*  pin Stripe & Supabase imports to the same std version  */
@@ -83,10 +84,11 @@ serve(async (req) => {
         console.log("🆕 Created new Stripe customer:", customerId);
       }
 
-      /* -------- Success & cancel URLs -------- */
+      /* -------- Success & cancel URLs - USE PASSED URLS -------- */
       const baseOrigin = req.headers.get("origin") || Deno.env.get("SUPABASE_URL") || "https://theraiastro.com";
       
-      const finalSuccessUrl = successUrl ?? `${baseOrigin}/payment-return?session_id={CHECKOUT_SESSION_ID}`;
+      // Use the successUrl passed from initiate-report-flow (which now points to /report?guest_id=...)
+      const finalSuccessUrl = successUrl ?? `${baseOrigin}/report?guest_id=${guest_report_id}`;
       const finalCancelUrl = cancelUrl ?? `${baseOrigin}/payment-return?status=cancelled`;
       
       console.log("🔗 Success URL:", finalSuccessUrl);
