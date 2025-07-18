@@ -64,10 +64,20 @@ const PersonCard = ({
   const handlePlaceSelect = (place: PlaceData) => {
     const loc = getField('birthLocation') as keyof ReportFormData;
 
-    setValue(loc, place.address || place.name);
+    console.log(`🗺️ Person ${personNumber} selected place:`, place);
+    
+    // Use the name property from PlaceData interface
+    setValue(loc, place.name);
     if (place.latitude) setValue(getField('birthLatitude') as keyof ReportFormData, place.latitude);
     if (place.longitude) setValue(getField('birthLongitude') as keyof ReportFormData, place.longitude);
     if (place.placeId) setValue(getField('birthPlaceId') as keyof ReportFormData, place.placeId);
+
+    console.log(`✅ Person ${personNumber} location data saved:`, {
+      location: place.name,
+      latitude: place.latitude,
+      longitude: place.longitude,
+      placeId: place.placeId
+    });
 
     (document.activeElement as HTMLElement)?.blur?.();
 

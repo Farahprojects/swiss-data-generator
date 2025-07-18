@@ -104,6 +104,8 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
 
   // Validation logic for each step
   const canGoNext = () => {
+    const isCompatibilityReport = reportCategory === 'compatibility' || request === 'sync';
+    
     switch (currentStep) {
       case 1:
         return !!reportCategory;
@@ -111,7 +113,17 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
         return reportCategory === 'astro-data' ? !!request : !!reportSubCategory;
       case 3:
         const requiredFields = ['name', 'email', 'birthDate', 'birthTime', 'birthLocation'];
-        return requiredFields.every(field => !!watch(field as keyof ReportFormData));
+        const firstPersonValid = requiredFields.every(field => !!watch(field as keyof ReportFormData));
+        
+        if (!isCompatibilityReport) {
+          return firstPersonValid;
+        }
+        
+        // For compatibility reports, also validate second person fields
+        const secondPersonRequiredFields = ['secondPersonName', 'secondPersonBirthDate', 'secondPersonBirthTime', 'secondPersonBirthLocation'];
+        const secondPersonValid = secondPersonRequiredFields.every(field => !!watch(field as keyof ReportFormData));
+        
+        return firstPersonValid && secondPersonValid;
       case 4:
         return true; // Payment step - submit button handles validation
       default:
@@ -196,7 +208,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                         ? <Step1_5AstroData control={control} setValue={setValue} selectedSubCategory={request} onNext={handleNext} />
                         : <Step1_5SubCategory control={control} setValue={setValue} selectedCategory={reportCategory} selectedSubCategory={reportSubCategory} onNext={handleNext} />;
                     case 3:
-                      return <Step2BirthDetails register={register} setValue={setValue} watch={watch} errors={errors} />;
+                      return <Step2BirthDetails register={register} setValue={setValue} watch={watch} errors={errors} onNext={handleNext} />;
                     case 4:
                       return <Step3Payment register={register} watch={watch} errors={errors} isProcessing={isProcessing} promoValidation={promoValidationState} isValidatingPromo={isValidatingPromo} />;
                     default:

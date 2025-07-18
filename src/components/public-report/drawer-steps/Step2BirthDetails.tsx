@@ -17,6 +17,7 @@ interface Step2BirthDetailsProps {
   setValue: UseFormSetValue<ReportFormData>;
   watch: UseFormWatch<ReportFormData>;
   errors: FieldErrors<ReportFormData>;
+  onNext?: () => void;
 }
 
 const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
@@ -24,6 +25,7 @@ const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
   setValue,
   watch,
   errors,
+  onNext,
 }) => {
   const topSafePadding = useMobileSafeTopPadding();
   const reportCategory = watch('reportCategory');
@@ -117,8 +119,31 @@ const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
               watch={watch}
               errors={errors}
               hasTriedToSubmit={false}
-              autocompleteDisabled={!person1LocationSelected}
-              helperText={!person1LocationSelected ? "Please complete your location first" : undefined}
+              autocompleteDisabled={false}
+              onPlaceSelect={() => {
+                // Auto-advance to payment step when second person location is filled
+                setTimeout(() => {
+                  const formData = watch();
+                  const secondPersonRequiredFields = ['secondPersonName', 'secondPersonBirthDate', 'secondPersonBirthTime', 'secondPersonBirthLocation'];
+                  const isComplete = secondPersonRequiredFields.every(field => !!formData[field as keyof typeof formData]);
+                  
+                  console.log('🔍 Second person form check:', {
+                    formData: {
+                      name: formData.secondPersonName,
+                      birthDate: formData.secondPersonBirthDate,
+                      birthTime: formData.secondPersonBirthTime,
+                      birthLocation: formData.secondPersonBirthLocation
+                    },
+                    isComplete,
+                    hasOnNext: !!onNext
+                  });
+                  
+                  if (isComplete && onNext) {
+                    console.log('✅ Second person form complete, advancing to step 4');
+                    onNext();
+                  }
+                }, 200); // Small delay to ensure form values are updated
+              }}
             />
           </div>
         )}
