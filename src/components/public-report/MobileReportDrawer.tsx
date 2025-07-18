@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { useMobileDrawerForm } from '@/hooks/useMobileDrawerForm';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
-import { usePromoValidation } from '@/hooks/usePromoValidation';
+
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useMobileSafeTopPadding } from '@/hooks/useMobileSafeTopPadding';
 import { getGuestReportId, clearAllSessionData } from '@/utils/urlHelpers';
@@ -89,22 +89,12 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
     inlinePromoError,
     clearInlinePromoError
   } = useReportSubmission();
-  const { promoValidation, isValidatingPromo, validatePromoManually, resetValidation } = usePromoValidation();
-
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');
   const request = watch('request');
 
-  const promoValidationState = useMemo(() => ({
-    status: (promoValidation?.isValid ? (promoValidation.isFree ? 'valid-free' : 'valid-discount') : promoValidation ? 'invalid' : 'none') as 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid',
-    message: promoValidation?.message || '',
-    discountPercent: promoValidation?.discountPercent || 0,
-  }), [promoValidation]);
-
   const onSubmit = async (data: ReportFormData) => {
-    await submitReport(data, promoValidationState, () => {
-      resetValidation();
-    });
+    await submitReport(data);
   };
 
 
@@ -216,17 +206,14 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                      case 3:
                       return <Step2BirthDetails register={register} setValue={setValue} watch={watch} errors={errors} onNext={handleNext} onPlaceSelected={autoAdvanceAfterPlaceSelection} />;
                      case 4:
-                        return <Step3Payment 
-                          register={register} 
-                          watch={watch} 
-                          errors={errors} 
-                          isProcessing={isProcessing} 
-                          promoValidation={promoValidationState} 
-                          isValidatingPromo={isValidatingPromo}
-                          validatePromoManually={validatePromoManually}
-                          inlinePromoError={inlinePromoError}
-                          clearInlinePromoError={clearInlinePromoError}
-                        />;
+                         return <Step3Payment 
+                           register={register} 
+                           watch={watch} 
+                           errors={errors} 
+                           isProcessing={isProcessing} 
+                           inlinePromoError={inlinePromoError}
+                           clearInlinePromoError={clearInlinePromoError}
+                         />;
                     default:
                       return null;
                   }

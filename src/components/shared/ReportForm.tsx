@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { ReportFormData } from '@/types/public-report';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
-import { usePromoValidation } from '@/hooks/usePromoValidation';
+
 import ReportTypeSelector from '@/components/public-report/ReportTypeSelector';
 import CombinedPersonalDetailsForm from '@/components/public-report/CombinedPersonalDetailsForm';
 import SecondPersonForm from '@/components/public-report/SecondPersonForm';
@@ -32,7 +32,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   onFormStateChange
 }) => {
   const navigate = useNavigate();
-  const { promoValidation, isValidatingPromo, validatePromoManually, resetValidation } = usePromoValidation();
+  
   const [viewingReport, setViewingReport] = useState(false);
   const [reportContent, setReportContent] = useState<string>('');
   const [reportPdfData, setReportPdfData] = useState<string | null>(null);
@@ -341,22 +341,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
   const onSubmit = async (data: ReportFormData) => {
     const submissionData = coachSlug ? { ...data, coachSlug } : data;
-    
-    // Convert promoValidation to the expected format
-    const promoValidationState = promoValidation ? {
-      status: promoValidation.isValid ? 
-        (promoValidation.isFree ? 'valid-free' as const : 'valid-discount' as const) : 
-        'invalid' as const,
-      message: promoValidation.message,
-      discountPercent: promoValidation.discountPercent,
-      errorType: promoValidation.errorType
-    } : {
-      status: 'none' as const,
-      message: '',
-      discountPercent: 0
-    };
-    
-    await submitReport(submissionData, promoValidationState, resetValidation);
+    await submitReport(submissionData);
   };
 
   const handleButtonClick = async () => {
@@ -510,19 +495,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
               setValue={setValue}
               onSubmit={handleButtonClick}
               isProcessing={isProcessing || isPricingLoading}
-              promoValidation={promoValidation ? {
-                status: promoValidation.isValid ? 
-                  (promoValidation.isFree ? 'valid-free' as const : 'valid-discount' as const) : 
-                  'invalid' as const,
-                message: promoValidation.message,
-                discountPercent: promoValidation.discountPercent,
-                errorType: promoValidation.errorType
-              } : {
-                status: 'none' as const,
-                message: '',
-                discountPercent: 0
-              }}
-              isValidatingPromo={isValidatingPromo}
               inlinePromoError={inlinePromoError}
               clearInlinePromoError={clearInlinePromoError}
               />
