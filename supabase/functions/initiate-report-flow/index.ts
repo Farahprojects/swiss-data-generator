@@ -15,6 +15,7 @@ interface ReportData {
   request?: string
   relationshipType?: string
   essenceType?: string
+  reportCategory?: string
   name: string
   email: string
   birthDate: string
@@ -62,23 +63,29 @@ serve(async (req) => {
     // Determine priceId based on report type if not explicitly provided
     let priceId = reportData.priceId
     if (!priceId) {
-      // Map report types to price IDs based on your price_list table
-      if (reportData.reportType === 'essence' || reportData.essenceType) {
-        priceId = 'essence'
-      } else if (reportData.reportType === 'sync' || reportData.relationshipType) {
-        priceId = 'sync'
-      } else if (reportData.reportType === 'flow') {
-        priceId = 'flow'
-      } else if (reportData.reportType === 'mindset') {
-        priceId = 'mindset'
-      } else if (reportData.reportType === 'monthly') {
-        priceId = 'monthly'
-      } else if (reportData.reportType === 'focus') {
-        priceId = 'focus'
-      } else if (reportData.reportType === 'return') {
-        priceId = 'return'
-      } else {
-        priceId = 'essence' // Default fallback
+      // Use the exact same logic as the frontend's getProductId function
+      // Prioritize direct reportType for unified mobile/desktop behavior
+      if (reportData.reportType) {
+        priceId = reportData.reportType;
+      }
+      
+      // Fallback to request field for astro data
+      if (!priceId && reportData.request) {
+        priceId = reportData.request;
+      }
+      
+      // Legacy fallback for form combinations (desktop compatibility)
+      if (!priceId && reportData.essenceType && reportData.reportCategory === 'the-self') {
+        priceId = `essence_${reportData.essenceType}`;
+      }
+      
+      if (!priceId && reportData.relationshipType && reportData.reportCategory === 'compatibility') {
+        priceId = `sync_${reportData.relationshipType}`;
+      }
+      
+      // If still no priceId, use default fallback
+      if (!priceId) {
+        priceId = 'essence_personal'; // Default fallback
       }
     }
 
