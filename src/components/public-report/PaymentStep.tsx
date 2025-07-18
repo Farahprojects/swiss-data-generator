@@ -332,7 +332,7 @@ const PaymentStep = ({
                 ? 'Validating...' 
                 : hasTimedOut
                   ? 'Try Again'
-                  : 'Generate My Report'}
+                  : 'Submit and View'}
           </Button>
 
           {/* Satisfaction Guarantee */}
