@@ -1,3 +1,4 @@
+
 // test 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -82,7 +83,7 @@ export const useReportSubmission = () => {
               discountPercent: validatedPromo.discountPercent
             });
           } else {
-            // Set inline error and clear promo code
+            // Set inline error and reset processing state
             setInlinePromoError(validatedPromo.message);
             setPromoValidation({
               status: 'invalid',
@@ -90,7 +91,7 @@ export const useReportSubmission = () => {
               discountPercent: 0,
               errorType: validatedPromo.errorType
             });
-            setIsProcessing(false);
+            setIsProcessing(false); // Reset processing state immediately
             return; // Don't continue with submission
           }
         } else {

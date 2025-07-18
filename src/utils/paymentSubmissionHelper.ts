@@ -31,18 +31,18 @@ export const handlePaymentSubmission = async ({
   
   // Check if promo code validation failed (using cached validation)
   if (promoCode && promoCode.trim() !== '' && !promoValidation?.isValid) {
-    // Reset processing state and clear invalid promo
+    console.log('Invalid promo code detected, stopping submission');
+    // Reset processing state immediately
     if (setIsLocalProcessing) {
       setIsLocalProcessing(false);
     }
-    if (clearPromoCode) {
-      clearPromoCode();
-    }
+    // Don't clear promo code - let user see the error and fix it
     return; // Don't proceed with submission
   }
   
   // Handle 100% free orders (skip Stripe entirely)
   if (finalPrice === 0 || (promoValidation?.isFree && promoValidation?.isValid)) {
+    console.log('Processing free order');
     if (onFreeSubmit) {
       onFreeSubmit(); // Handle free order directly
     } else {
@@ -52,5 +52,6 @@ export const handlePaymentSubmission = async ({
   }
   
   // For paid orders, proceed with regular submission (Stripe)
+  console.log('Processing paid order');
   onSubmit();
 };
