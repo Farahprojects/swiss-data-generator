@@ -320,15 +320,16 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
           .from('report_logs')
           .select('has_error, error_message')
           .eq('user_id', currentGuestReportId)
-          .maybeSingle();
+          .single();
           
-        if (!error && reportLog?.has_error) {
+        if (reportLog?.has_error) {
           console.warn('🚨 Error detected in report_logs:', reportLog.error_message);
           setErrorHandlingTriggered(true);
           triggerErrorHandling(currentGuestReportId);
         }
       } catch (err) {
-        console.error('Error checking report_logs:', err);
+        // Simple error handling - if no record found, that's fine
+        console.log('No report_logs record found for guest report:', currentGuestReportId);
       }
     };
 
