@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { reportSchema } from '@/schemas/report-form-schema';
 import { ReportFormData } from '@/types/public-report';
 import { clearAllSessionData } from '@/utils/urlHelpers';
+import { useFormCompletionWatcher } from './useFormCompletionWatcher';
 
 export type DrawerStep = 1 | 2 | 3 | 4;
 export const useMobileDrawerForm = () => {
@@ -33,6 +34,23 @@ export const useMobileDrawerForm = () => {
       promoCode: '',
       notes: '',
     },
+  });
+
+  // Determine if this is a compatibility report
+  const reportCategory = form.watch('reportCategory');
+  const request = form.watch('request');
+  const isCompatibilityReport = reportCategory === 'compatibility' || request === 'sync';
+
+  // Set up form completion watcher for auto-navigation
+  useFormCompletionWatcher({
+    watch: form.watch,
+    isCompatibilityReport,
+    onFormComplete: () => {
+      if (currentStep === 2) {
+        console.log('🚀 Auto-advancing to next step due to form completion');
+        nextStep();
+      }
+    }
   });
 
   const nextStep = () => {
