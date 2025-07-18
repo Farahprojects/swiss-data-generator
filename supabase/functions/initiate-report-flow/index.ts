@@ -227,7 +227,7 @@ serve(async (req) => {
       }
     }
 
-    // --- PAID FLOW: CALCULATE FINAL PRICE ---
+    // --- PAID FLOW: CALCULATE FINAL PRICE AND INVOKE CREATE-CHECKOUT ---
     
     const discountAmount = finalPrice * (discountPercent / 100)
     finalPrice = finalPrice - discountAmount
@@ -237,16 +237,65 @@ serve(async (req) => {
       finalPrice = 1
     }
 
-    // Return pricing data for frontend to process with existing Stripe checkout
+    // Prepare enhanced report data with validation results
+    const checkoutReportData = {
+      ...reportData,
+      validatedPromoId,
+      productId: product.id,
+      originalPrice: product.unit_price_usd,
+      discountPercent
+    };
+
+    console.log('Server-to-server: Invoking create-checkout with secure pricing:', {
+      amount: finalPrice,
+      description: product.description,
+      productId: product.id,
+      hasPromo: !!validatedPromoId
+    });
+
+    // SERVER-TO-SERVER: Call create-checkout directly with all secure data
+    const { data: checkoutData, error: checkoutError } = await supabaseAdmin.functions.invoke(
+      'create-checkout',
+      {
+        body: {
+          mode: "payment",
+          amount: finalPrice,
+          email: reportData.email,
+          isGuest: true,
+          description: product.description || `${product.name} Report`,
+          reportData: checkoutReportData,
+          successUrl: `${req.headers.get("origin")}/payment-return?session_id={CHECKOUT_SESSION_ID}`,
+          cancelUrl: `${req.headers.get("origin")}/payment-return?status=cancelled`,
+        }
+      }
+    );
+
+    if (checkoutError) {
+      console.error('Failed to create checkout session:', checkoutError);
+      return new Response(JSON.stringify({ 
+        error: checkoutError.message || 'Failed to create checkout session' 
+      }), {
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    if (!checkoutData?.url) {
+      return new Response(JSON.stringify({ 
+        error: 'No checkout URL returned from create-checkout' 
+      }), {
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // Return the Stripe checkout URL to frontend
     return new Response(JSON.stringify({
       status: 'payment_required',
+      stripeUrl: checkoutData.url,
+      sessionId: checkoutData.sessionId,
       finalAmount: finalPrice,
-      description: product.description || `${product.name} Report`,
-      productName: product.name,
-      validatedPromoId,
-      discountPercent,
-      originalPrice: product.unit_price_usd,
-      productId: product.id
+      description: product.description || `${product.name} Report`
     }), {
       status: 200, 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

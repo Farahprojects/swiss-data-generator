@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { initiateGuestCheckout } from '@/utils/guest-checkout';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { ReportFormData } from '@/types/public-report';
 import { storeGuestReportId } from '@/utils/urlHelpers';
@@ -73,8 +72,8 @@ export const useReportSubmission = () => {
         notes: data.notes,
       };
 
-      // Step 1: Call the enhanced initiate-report-flow for validation and pricing
-      const { data: validationResponse, error } = await supabase.functions.invoke('initiate-report-flow', {
+      // Single call to initiate-report-flow - it handles everything server-side
+      const { data: flowResponse, error } = await supabase.functions.invoke('initiate-report-flow', {
         body: {
           reportData,
           promoCode: data.promoCode || undefined
@@ -82,7 +81,7 @@ export const useReportSubmission = () => {
       });
 
       if (error) {
-        console.log('Validation error:', error);
+        console.log('Flow error:', error);
         
         // Extract error message from response
         let errorMessage = '';
@@ -126,51 +125,42 @@ export const useReportSubmission = () => {
         }
       }
 
-      // Step 2: Handle the response based on status
-      if (validationResponse.status === 'success') {
+      // Handle the simplified response from the new "no-hop" architecture
+      if (flowResponse.status === 'success') {
         // FREE FLOW: Report is free and being generated
         setReportCreated(true);
-        storeGuestReportId(validationResponse.reportId);
+        storeGuestReportId(flowResponse.reportId);
         toast({
           title: "Free Report Created!",
           description: "Your report has been generated and will be sent to your email shortly.",
         });
         setIsProcessing(false);
         
-      } else if (validationResponse.status === 'payment_required') {
-        // PAID FLOW: Use existing guest checkout with server-calculated price
-        
-        // Prepare enhanced report data with validation results
-        const checkoutReportData = {
-          ...reportData,
-          validatedPromoId: validationResponse.validatedPromoId,
-          productId: validationResponse.productId,
-          originalPrice: validationResponse.originalPrice,
-          discountPercent: validationResponse.discountPercent
-        };
-
-        console.log('Initiating paid checkout:', {
-          amount: validationResponse.finalAmount,
-          description: validationResponse.description,
-          hasPromo: !!validationResponse.validatedPromoId
+      } else if (flowResponse.status === 'payment_required') {
+        // PAID FLOW: Server calculated secure price and created Stripe checkout
+        console.log('Redirecting to secure Stripe checkout:', {
+          stripeUrl: flowResponse.stripeUrl ? 'URL_PROVIDED' : 'NO_URL',
+          finalAmount: flowResponse.finalAmount
         });
 
-        // Call existing guest checkout function with server-calculated pricing
-        const checkoutResult = await initiateGuestCheckout({
-          amount: validationResponse.finalAmount,
-          email: reportData.email,
-          description: validationResponse.description,
-          reportData: checkoutReportData,
-        });
-        
-        if (!checkoutResult.success) {
+        if (!flowResponse.stripeUrl) {
           toast({
             title: "Payment Error",
-            description: checkoutResult.error || "Failed to initiate checkout",
+            description: "Failed to create secure checkout session",
             variant: "destructive",
           });
           setIsProcessing(false);
+          return;
         }
+
+        // Redirect to Stripe checkout (created with secure server-side pricing)
+        try {
+          window.open(flowResponse.stripeUrl, '_self');
+        } catch (redirectError) {
+          console.warn("Failed to redirect with window.open, falling back to location.href");
+          window.location.href = flowResponse.stripeUrl;
+        }
+        
         // Note: isProcessing stays true during Stripe redirect
         
       } else {
