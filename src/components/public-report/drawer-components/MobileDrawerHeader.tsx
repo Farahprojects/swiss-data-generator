@@ -13,31 +13,37 @@ const MobileDrawerHeader = ({ currentStep, totalSteps, onClose }: MobileDrawerHe
 
   return (
     <div 
-      className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100"
+      className="flex items-center justify-between px-6 py-5 bg-white/95 backdrop-blur-xl border-b border-gray-100/50"
       style={{ paddingTop: `${topSafePadding + 16}px` }}
     >
-      <div className="flex items-center space-x-4">
-        <span className="text-sm font-medium text-[hsl(var(--apple-gray-dark))]">
-          Step {currentStep} of {totalSteps}
-        </span>
-        <div className="flex space-x-2">
-          {Array.from({ length: totalSteps }, (_, i) => (
-            <div
-              key={i}
-              className={`w-2 h-2 rounded-full transition-all duration-300 ease-out ${
-                i + 1 <= currentStep 
-                  ? 'bg-[hsl(var(--apple-blue))] scale-110' 
-                  : 'bg-[hsl(var(--apple-gray-light))]'
-              }`}
-            />
-          ))}
+      <div className="flex items-center space-x-6">
+        {/* Elegant step indicator */}
+        <div className="flex items-center space-x-3">
+          <div className="flex space-x-1.5">
+            {Array.from({ length: totalSteps }, (_, i) => (
+              <div
+                key={i}
+                className={`w-1.5 h-1.5 rounded-full transition-all duration-500 ease-out ${
+                  i + 1 <= currentStep 
+                    ? 'bg-[hsl(var(--apple-blue))] scale-125 shadow-sm' 
+                    : 'bg-[hsl(var(--apple-gray-light))] scale-100'
+                }`}
+              />
+            ))}
+          </div>
+          <span className="text-xs font-light text-[hsl(var(--apple-gray-dark))] tracking-wide">
+            {currentStep} of {totalSteps}
+          </span>
         </div>
       </div>
+      
+      {/* Elegant close button */}
       <button
         onClick={onClose}
-        className="w-8 h-8 rounded-full bg-[hsl(var(--apple-gray-light))] hover:bg-[hsl(var(--apple-gray))] transition-all duration-300 ease-out active:scale-95 flex items-center justify-center"
+        className="w-8 h-8 rounded-full bg-[hsl(var(--apple-gray-light))]/50 hover:bg-[hsl(var(--apple-gray-light))] transition-all duration-300 ease-out active:scale-95 flex items-center justify-center backdrop-blur-sm"
+        aria-label="Close"
       >
-        <X className="h-4 w-4 text-[hsl(var(--apple-gray-dark))]" />
+        <X className="h-3.5 w-3.5 text-[hsl(var(--apple-gray-dark))]" />
       </button>
     </div>
   );
