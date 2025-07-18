@@ -125,24 +125,15 @@ const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
                 setTimeout(() => {
                   const formData = watch();
                   const secondPersonRequiredFields = ['secondPersonName', 'secondPersonBirthDate', 'secondPersonBirthTime', 'secondPersonBirthLocation'];
-                  const isComplete = secondPersonRequiredFields.every(field => !!formData[field as keyof typeof formData]);
-                  
-                  console.log('🔍 Second person form check:', {
-                    formData: {
-                      name: formData.secondPersonName,
-                      birthDate: formData.secondPersonBirthDate,
-                      birthTime: formData.secondPersonBirthTime,
-                      birthLocation: formData.secondPersonBirthLocation
-                    },
-                    isComplete,
-                    hasOnNext: !!onNext
+                  const isComplete = secondPersonRequiredFields.every(field => {
+                    const value = formData[field as keyof typeof formData];
+                    return value && value.toString().trim().length > 0;
                   });
                   
                   if (isComplete && onNext) {
-                    console.log('✅ Second person form complete, advancing to step 4');
                     onNext();
                   }
-                }, 200); // Small delay to ensure form values are updated
+                }, 300); // Increased delay to ensure form values are properly updated
               }}
             />
           </div>
