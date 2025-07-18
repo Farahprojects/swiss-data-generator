@@ -48,6 +48,7 @@ const MobileDrawerFooter = ({
           onClick={handleNextClick}
           disabled={!canGoNext || isProcessing}
           className="flex items-center gap-2 px-8 py-3 rounded-full bg-black text-white hover:bg-gray-800 disabled:bg-gray-400 disabled:text-gray-200"
+          data-next-step
         >
           <span>
             {isProcessing ? 'Processing...' : isLastStep ? 'Submit Order' : 'Next'}
