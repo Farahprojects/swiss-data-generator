@@ -1,13 +1,10 @@
 
-// test 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { initiateGuestCheckout } from '@/utils/guest-checkout';
 import { createFreeReport, validatePromoCode } from '@/utils/promoCodeValidation';
-
 import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { ReportFormData } from '@/types/public-report';
-
 import { storeGuestReportId } from '@/utils/urlHelpers';
 
 interface PromoValidationState {
@@ -20,15 +17,14 @@ interface PromoValidationState {
 export const useReportSubmission = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [reportCreated, setReportCreated] = useState(false);
+  const [inlinePromoError, setInlinePromoError] = useState<string>('');
+  const { toast } = useToast();
+  const { getReportPrice, getReportTitle, isLoading: isPricingLoading } = typeof window !== 'undefined' ? usePriceFetch() : { getReportPrice: () => 0, getReportTitle: () => 'Report', isLoading: false };
 
   // Reset reportCreated state on mount to prevent stale success screens
   useEffect(() => {
     setReportCreated(false);
   }, []);
-  // Remove popup dialog state - replaced with inline validation
-  const [inlinePromoError, setInlinePromoError] = useState<string>('');
-  const { toast } = useToast();
-  const { getReportPrice, getReportTitle, isLoading: isPricingLoading } = typeof window !== 'undefined' ? usePriceFetch() : { getReportPrice: () => 0, getReportTitle: () => 'Report', isLoading: false };
 
   // Add timeout mechanism to prevent stuck processing state
   useEffect(() => {
@@ -43,7 +39,7 @@ export const useReportSubmission = () => {
           description: "The request took too long. Please try again.",
           variant: "destructive",
         });
-      }, 10000); // 10 second timeout
+      }, 10000);
     }
 
     return () => {
@@ -59,14 +55,13 @@ export const useReportSubmission = () => {
     setPromoValidation: (state: PromoValidationState) => void,
     skipPromoValidation: boolean = false
   ) => {
-    
     setIsProcessing(true);
     
     try {
-      // Skip promo validation if already validated (optimization)
       let validatedPromo = null;
+      
+      // Only validate promo if there's a code and it hasn't been validated yet
       if (data.promoCode && data.promoCode.trim() !== '' && !skipPromoValidation) {
-        // Only validate if we don't have cached valid results
         if (promoValidation.status === 'none' || promoValidation.status === 'invalid') {
           setPromoValidation({
             status: 'validating',
@@ -83,7 +78,6 @@ export const useReportSubmission = () => {
               discountPercent: validatedPromo.discountPercent
             });
           } else {
-            // Set inline error and reset processing state
             setInlinePromoError(validatedPromo.message);
             setPromoValidation({
               status: 'invalid',
@@ -91,8 +85,8 @@ export const useReportSubmission = () => {
               discountPercent: 0,
               errorType: validatedPromo.errorType
             });
-            setIsProcessing(false); // Reset processing state immediately
-            return; // Don't continue with submission
+            setIsProcessing(false);
+            return;
           }
         } else {
           // Use cached validation result
@@ -105,14 +99,10 @@ export const useReportSubmission = () => {
         }
       }
 
-      // For astro data, use the request field directly. For regular reports, use reportType
       const reportTypeToUse = data.request || data.reportType || 'standard';
 
-      // Handle free report with promo code - INSTANT processing (no artificial delays)
+      // Handle free report with promo code
       if (data.promoCode && validatedPromo?.isFree && validatedPromo.isValid) {
-        // Processing free report with promo code
-        
-        // FIXED: Use request field for astro data detection
         const isAstroData = data.request && data.request.trim() !== '';
         
         const reportData = {
@@ -142,7 +132,6 @@ export const useReportSubmission = () => {
         const result = await createFreeReport(data.promoCode, reportData);
         
         setReportCreated(true);
-        // Store the guest report ID for polling and URL
         storeGuestReportId(result.reportId);
         toast({
           title: "Free Report Created!",
@@ -152,7 +141,7 @@ export const useReportSubmission = () => {
         return;
       }
       
-      // Regular paid flow - use pre-calculated pricing (no re-calculation)
+      // Regular paid flow
       const formDataForPricing = {
         reportType: data.reportType,
         essenceType: data.essenceType,
@@ -165,13 +154,11 @@ export const useReportSubmission = () => {
       const amount = getReportPrice(formDataForPricing);
       const description = getReportTitle(formDataForPricing);
 
-      // Apply promo code discount if valid (but not free)
       let finalAmount = amount;
       if (data.promoCode && validatedPromo?.isValid && !validatedPromo.isFree) {
         finalAmount = amount * (1 - validatedPromo.discountPercent / 100);
       }
 
-      // FIXED: Use request field for astro data detection
       const isAstroData = data.request && data.request.trim() !== '';
       
       const reportData = {
