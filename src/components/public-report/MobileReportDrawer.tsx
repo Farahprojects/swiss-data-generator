@@ -68,8 +68,15 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
     fetchGuestData();
   }, [urlGuestId]);
 
-  const { form, currentStep, nextStep, prevStep } = useMobileDrawerForm();
+  const { form, currentStep, nextStep, prevStep, resetForm } = useMobileDrawerForm();
   const { register, handleSubmit, setValue, watch, control, formState: { errors } } = form;
+
+  // Reset drawer state when closing to ensure clean state on reopen
+  useEffect(() => {
+    if (!isOpen) {
+      resetForm();
+    }
+  }, [isOpen, resetForm]);
   
   // Get form data for success screen
   const formName = watch('name') || '';
