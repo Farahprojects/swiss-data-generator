@@ -41,11 +41,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const [swissBoolean, setSwissBoolean] = useState<boolean>(false);
   const [currentReportType, setCurrentReportType] = useState<string>('');
 
-  // Local state for guest report data
+  // URL guest ID state
   const urlGuestId = getGuestReportId();
-  const [guestReportData, setGuestReportData] = useState<any>(null);
-  const [isLoadingReport, setIsLoadingReport] = useState(false);
-  const [reportError, setReportError] = useState<string | null>(null);
   
   // Token recovery state
   const [tokenRecoveryState, setTokenRecoveryState] = useState<{
@@ -62,56 +59,29 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     recoveredEmail: null,
   });
 
-  // NEW: Stripe payment state for handling post-payment flow
+  // Stripe payment state for handling post-payment flow
   const [stripePaymentState, setStripePaymentState] = useState<{
     isVerifying: boolean;
     isWaiting: boolean;
     isComplete: boolean;
     error: string | null;
     reportData: any | null;
+    isStripeRedirect: boolean;
   }>({
     isVerifying: false,
     isWaiting: false,
     isComplete: false,
     error: null,
     reportData: null,
+    isStripeRedirect: false,
   });
 
-  // Enhanced guest report data hook with polling capability
+  // Unified data fetching: determine polling state based on Stripe redirect status
   const shouldPoll = stripePaymentState.isWaiting;
-  const { data: polledGuestReport, error: pollError, isLoading: isPolling } = useGuestReportData(
-    urlGuestId && stripePaymentState.isWaiting ? urlGuestId : null,
+  const { data: guestReportData, error: guestReportError, isLoading: isPolling } = useGuestReportData(
+    urlGuestId,
     shouldPoll
   );
-  
-  const form = useForm<ReportFormData>({
-    mode: 'onBlur',
-    defaultValues: {
-      reportType: '',
-      reportSubCategory: '',
-      relationshipType: '',
-      essenceType: '',
-      name: '',
-      email: '',
-      birthDate: '',
-      birthTime: '',
-      birthLocation: '',
-      birthLatitude: undefined,
-      birthLongitude: undefined,
-      birthPlaceId: '',
-      secondPersonName: '',
-      secondPersonBirthDate: '',
-      secondPersonBirthTime: '',
-      secondPersonBirthLocation: '',
-      secondPersonLatitude: undefined,
-      secondPersonLongitude: undefined,
-      secondPersonPlaceId: '',
-      returnYear: '',
-      notes: '',
-      promoCode: '',
-      request: '',
-    },
-  });
 
   // Handle URL guest_id parameter - distinguish between Stripe redirect and token recovery
   React.useEffect(() => {
@@ -121,10 +91,13 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       const hasExistingSession = localStorage.getItem('pending_report_email');
       
       if (!hasExistingSession) {
-        // This is likely a Stripe redirect - start the three-state flow
-        console.log('🔄 Stripe redirect detected, starting payment verification...');
-        setStripePaymentState(prev => ({ ...prev, isVerifying: true }));
-        handleStripePaymentVerification(urlGuestId);
+        // This is likely a Stripe redirect - start the unified fetching flow
+        console.log('🔄 Stripe redirect detected, starting unified data fetching...');
+        setStripePaymentState(prev => ({ 
+          ...prev, 
+          isVerifying: true,
+          isStripeRedirect: true 
+        }));
       } else {
         // This is token recovery - use existing logic
         console.log('🔄 Token recovery detected...');
@@ -139,96 +112,74 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     localStorage.removeItem('pending_report_email');
   }, []);
 
-  // Handle polling results for Stripe payment verification
+  // Unified data handling: Process guest report data from the single source of truth
   React.useEffect(() => {
-    if (polledGuestReport && stripePaymentState.isWaiting) {
-      const guestReport = polledGuestReport.guest_report;
+    if (!guestReportData || !stripePaymentState.isStripeRedirect) return;
+
+    const guestReport = guestReportData.guest_report;
+    console.log('📊 Unified data fetch result - payment status:', guestReport?.payment_status);
+    
+    if (guestReport?.payment_status === 'paid') {
+      console.log('✅ Payment confirmed via unified fetch! Transitioning to success state...');
+      setStripePaymentState({
+        isVerifying: false,
+        isWaiting: false,
+        isComplete: true,
+        error: null,
+        reportData: guestReportData,
+        isStripeRedirect: true,
+      });
+    } else if (guestReport?.payment_status === 'pending') {
+      // Start polling since payment is still pending
+      console.log('⏳ Payment pending via unified fetch, starting polling...');
+      setStripePaymentState(prev => ({
+        ...prev,
+        isVerifying: false,
+        isWaiting: true,
+      }));
+    } else {
+      // Payment failed or other status
+      console.error('❌ Unexpected payment status:', guestReport?.payment_status);
+      setStripePaymentState({
+        isVerifying: false,
+        isWaiting: false,
+        isComplete: false,
+        error: `Payment status: ${guestReport?.payment_status}`,
+        reportData: null,
+        isStripeRedirect: false,
+      });
+    }
+  }, [guestReportData, stripePaymentState.isStripeRedirect]);
+
+  // Handle polling results for payment verification
+  React.useEffect(() => {
+    if (guestReportData && stripePaymentState.isWaiting) {
+      const guestReport = guestReportData.guest_report;
       console.log('📊 Polling result - payment status:', guestReport?.payment_status);
       
       if (guestReport?.payment_status === 'paid') {
-        console.log('✅ Payment confirmed! Transitioning to success state...');
+        console.log('✅ Payment confirmed via polling! Transitioning to success state...');
         setStripePaymentState({
           isVerifying: false,
           isWaiting: false,
           isComplete: true,
           error: null,
-          reportData: polledGuestReport
+          reportData: guestReportData,
+          isStripeRedirect: true,
         });
       }
       // If still pending, continue polling (hook handles this automatically)
     }
     
-    if (pollError && stripePaymentState.isWaiting) {
-      console.error('❌ Polling error:', pollError);
+    if (guestReportError && stripePaymentState.isWaiting) {
+      console.error('❌ Polling error:', guestReportError);
       setStripePaymentState(prev => ({
         ...prev,
         isWaiting: false,
-        error: 'Failed to verify payment status'
+        error: 'Failed to verify payment status',
       }));
     }
-  }, [polledGuestReport, pollError, stripePaymentState.isWaiting]);
-
-  const handleStripePaymentVerification = async (guestId: string) => {
-    try {
-      console.log('🔍 Fetching initial guest report data...');
-      const { data, error } = await supabase
-        .from('guest_reports')
-        .select(`
-          *,
-          report_logs!guest_reports_report_log_id_fkey(report_text),
-          translator_logs!guest_reports_translator_log_id_fkey(swiss_data)
-        `)
-        .eq('id', guestId)
-        .single();
-
-      if (error || !data) {
-        throw new Error('Report not found');
-      }
-
-      console.log('📋 Initial report data - payment status:', data.payment_status);
-
-      if (data.payment_status === 'paid') {
-        // Payment already confirmed - go straight to success
-        console.log('✅ Payment already confirmed, showing success...');
-        const reportData = {
-          guest_report: data,
-          report_content: data.report_logs?.report_text || null,
-          swiss_data: data.translator_logs?.swiss_data || null,
-          metadata: { source: 'stripe_redirect' }
-        };
-        
-        setStripePaymentState({
-          isVerifying: false,
-          isWaiting: false,
-          isComplete: true,
-          error: null,
-          reportData
-        });
-      } else if (data.payment_status === 'pending') {
-        // Start polling for payment confirmation
-        console.log('⏳ Payment pending, starting polling...');
-        setStripePaymentState({
-          isVerifying: false,
-          isWaiting: true,
-          isComplete: false,
-          error: null,
-          reportData: null
-        });
-      } else {
-        // Payment failed or other status
-        throw new Error(`Payment status: ${data.payment_status}`);
-      }
-    } catch (error) {
-      console.error('❌ Payment verification failed:', error);
-      setStripePaymentState({
-        isVerifying: false,
-        isWaiting: false,
-        isComplete: false,
-        error: 'Payment verification failed',
-        reportData: null
-      });
-    }
-  };
+  }, [guestReportData, guestReportError, stripePaymentState.isWaiting]);
 
   const recoverTokenData = async (guestId: string) => {
     try {
@@ -268,6 +219,35 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       });
     }
   };
+
+  const form = useForm<ReportFormData>({
+    mode: 'onBlur',
+    defaultValues: {
+      reportType: '',
+      reportSubCategory: '',
+      relationshipType: '',
+      essenceType: '',
+      name: '',
+      email: '',
+      birthDate: '',
+      birthTime: '',
+      birthLocation: '',
+      birthLatitude: undefined,
+      birthLongitude: undefined,
+      birthPlaceId: '',
+      secondPersonName: '',
+      secondPersonBirthDate: '',
+      secondPersonBirthTime: '',
+      secondPersonBirthLocation: '',
+      secondPersonLatitude: undefined,
+      secondPersonLongitude: undefined,
+      secondPersonPlaceId: '',
+      returnYear: '',
+      notes: '',
+      promoCode: '',
+      request: '',
+    },
+  });
 
   const { register, handleSubmit, watch, setValue, control, formState: { errors, isValid }, formState } = form;
   const selectedReportType = watch('reportType');
@@ -372,46 +352,23 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     setReportError(null);
     
     try {
-      const { data, error } = await supabase
-        .from('guest_reports')
-        .select(`
-          *,
-          report_logs!guest_reports_report_log_id_fkey(report_text),
-          translator_logs!guest_reports_translator_log_id_fkey(swiss_data)
-        `)
-        .eq('id', urlGuestId)
-        .single();
-
-      if (error || !data) {
-        throw new Error('Report not found');
+      // Use the unified data fetching approach
+      if (guestReportData) {
+        console.log('🔍 Using unified guest report data for viewing');
+        
+        const mappedReport = mapReportPayload(guestReportData);
+        setReportContent(mappedReport.reportContent);
+        setReportPdfData(mappedReport.pdfData || null);
+        setSwissData(mappedReport.swissData);
+        setHasReport(mappedReport.hasReport);
+        setSwissBoolean(mappedReport.swissBoolean);
+        setCurrentReportType(mappedReport.reportType);
+        setViewingReport(true);
+      } else {
+        throw new Error('Report data not available');
       }
-
-      console.log('🔍 Raw Supabase query result:', data);
-      console.log('🔍 translator_logs data:', data.translator_logs);
-      console.log('🔍 report_logs data:', data.report_logs);
-      console.log('🔍 translator_log_id from guest_report:', data.translator_log_id);
-
-      const reportData = {
-        guest_report: data,
-        report_content: data.report_logs?.report_text || null,
-        swiss_data: data.translator_logs?.swiss_data || null,
-        metadata: { source: 'manual_fetch' }
-      };
-
-      console.log('🔍 Constructed reportData:', reportData);
-
-      setGuestReportData(reportData);
-      
-      const mappedReport = mapReportPayload(reportData);
-      setReportContent(mappedReport.reportContent);
-      setReportPdfData(mappedReport.pdfData || null);
-      setSwissData(mappedReport.swissData);
-      setHasReport(mappedReport.hasReport);
-      setSwissBoolean(mappedReport.swissBoolean);
-      setCurrentReportType(mappedReport.reportType);
-      setViewingReport(true);
     } catch (error) {
-      console.error('Failed to fetch report:', error);
+      console.error('Failed to load report:', error);
       setReportError('Failed to load report');
     } finally {
       setIsLoadingReport(false);
@@ -448,7 +405,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     await onSubmit(formData);
   };
 
-  if (stripePaymentState.isVerifying) {
+  // Unified loading states for Stripe flow
+  if (stripePaymentState.isVerifying || (stripePaymentState.isStripeRedirect && isPolling && !guestReportData)) {
     return (
       <div className="min-h-screen flex items-center justify-center p-8">
         <div className="text-center space-y-6">
