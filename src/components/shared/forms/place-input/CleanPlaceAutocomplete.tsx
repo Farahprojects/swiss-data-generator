@@ -128,7 +128,7 @@ export const CleanPlaceAutocomplete = ({
       if (onPlaceSelect) {
         try {
           // Get place details to fetch coordinates
-          const { data: detailsData, error: detailsError } = await supabase.functions.invoke('get-place-details', {
+          const { data: detailsData, error: detailsError } = await supabase.functions.invoke('google-place-details', {
             body: { placeId: prediction.place_id }
           });
 
