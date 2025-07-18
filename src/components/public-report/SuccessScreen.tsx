@@ -273,6 +273,19 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     await handleViewReport();
   }, [modalReadyDetected, handleViewReport]);
 
+  // Stable refs for callbacks to prevent dependency loops
+  const stableFetchReport = useCallback((reportId: string) => {
+    fetchReport(reportId);
+  }, [fetchReport]);
+
+  const stableSetupListener = useCallback((reportId: string) => {
+    return setupRealtimeListener(
+      reportId,
+      undefined, // onReportReady - not needed for current flow
+      handleModalReady // onModalReady - triggers automatic modal
+    );
+  }, [setupRealtimeListener, handleModalReady]);
+
   useEffect(() => {
     const scrollToProcessing = () => {
       const element = document.querySelector('[data-success-screen]');
@@ -281,18 +294,15 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     scrollToProcessing();
 
     if (currentGuestReportId) {
-      fetchReport(currentGuestReportId);
+      // Only fetch once per report ID
+      stableFetchReport(currentGuestReportId);
       
       // Set up realtime listener with modal ready callback
-      const cleanup = setupRealtimeListener(
-        currentGuestReportId,
-        undefined, // onReportReady - not needed for current flow
-        handleModalReady // onModalReady - triggers automatic modal
-      );
+      const cleanup = stableSetupListener(currentGuestReportId);
       
       return cleanup;
     }
-  }, [currentGuestReportId, fetchReport, setupRealtimeListener, handleModalReady]);
+  }, [currentGuestReportId, stableFetchReport, stableSetupListener]);
 
   // Auto-reopen modal after refresh if user was previously viewing it
   useEffect(() => {
@@ -307,34 +317,18 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     }
   }, [report, hasSwissError, modalTriggered, handleViewReport]);
 
-  // 🔥 Check report_logs for reliable error detection
+  // Enhanced error detection through guest_reports data
   useEffect(() => {
-    const checkReportError = async () => {
-      if (!currentGuestReportId || errorHandlingTriggered || caseNumber) return;
-      
-      // Guard condition: only run query after full report is created
-      if (!report?.has_report || !report?.id) return;
-      
-      try {
-        const { data: reportLog, error } = await supabase
-          .from('report_logs')
-          .select('has_error, error_message')
-          .eq('user_id', currentGuestReportId)
-          .single();
-          
-        if (reportLog?.has_error) {
-          console.warn('🚨 Error detected in report_logs:', reportLog.error_message);
-          setErrorHandlingTriggered(true);
-          triggerErrorHandling(currentGuestReportId);
-        }
-      } catch (err) {
-        // Simple error handling - if no record found, that's fine
-        console.log('No report_logs record found for guest report:', currentGuestReportId);
-      }
-    };
-
-    if (report?.payment_status === 'paid') {
-      checkReportError();
+    // Only run if we have a report and no error has been handled yet
+    if (!report || errorHandlingTriggered || caseNumber) return;
+    
+    // Check for errors in the report itself
+    const hasAnyError = report.has_swiss_error === true;
+    
+    if (hasAnyError && !errorHandlingTriggered) {
+      console.warn('🚨 Error detected in guest report');
+      setErrorHandlingTriggered(true);
+      triggerErrorHandling(currentGuestReportId);
     }
   }, [report, currentGuestReportId, errorHandlingTriggered, caseNumber, triggerErrorHandling]);
 

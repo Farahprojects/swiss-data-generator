@@ -50,6 +50,8 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
   const [caseNumber, setCaseNumber] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const errorLoggedRef = useRef<Set<string>>(new Set());
+  const requestsInFlightRef = useRef<Set<string>>(new Set());
+  const abortControllersRef = useRef<Map<string, AbortController>>(new Map());
 
   const getSwissErrorMessage = useCallback((reportType: string | null) => {
     if (reportType === 'essence') {
@@ -112,14 +114,33 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
       return;
     }
 
+    // Check if this request is already in flight
+    const requestKey = `fetchReport-${reportId}`;
+    if (requestsInFlightRef.current.has(requestKey)) {
+      console.log('📡 Request already in flight, skipping duplicate:', requestKey);
+      return;
+    }
+
+    // Cancel any existing request for this report
+    const existingController = abortControllersRef.current.get(requestKey);
+    if (existingController) {
+      existingController.abort();
+    }
+
+    // Create new abort controller
+    const abortController = new AbortController();
+    abortControllersRef.current.set(requestKey, abortController);
+    requestsInFlightRef.current.add(requestKey);
+
     setIsLoading(true);
     try {
-      // Fetching report status
+      console.log('📡 Fetching report status for:', reportId);
 
       const { data, error } = await supabase
         .from('guest_reports')
         .select('*')
         .eq('id', reportId)
+        .abortSignal(abortController.signal)
         .single();
 
       if (error && error.code !== 'PGRST116') {
@@ -150,12 +171,20 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
         setReport(null);
       }
     } catch (err) {
+      // Don't log aborted requests as errors
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.log('📡 Request aborted:', requestKey);
+        return;
+      }
       console.error('❌ Error fetching report status:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch report status');
     } finally {
+      // Clean up
+      requestsInFlightRef.current.delete(requestKey);
+      abortControllersRef.current.delete(requestKey);
       setIsLoading(false);
     }
-  }, []);
+  }, [getSwissErrorMessage, logUserError, caseNumber]);
 
   const fetchReportContent = useCallback(async (guestReportId?: string) => {
     const reportId = guestReportId || getGuestReportId();
@@ -383,10 +412,13 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
       return () => {};
     }
 
-    // Setting up realtime listener
+    console.log('📡 Setting up realtime listener for:', reportId);
 
+    // Clean up existing channel
     if (channelRef.current) {
+      console.log('📡 Removing existing channel');
       supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
     }
 
     const channel = supabase
@@ -402,13 +434,16 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
         async (payload) => {
           const updatedRecord = payload.new as GuestReport;
           console.log('🔄 Realtime update received:', { 
+            id: updatedRecord.id,
             modal_ready: updatedRecord.modal_ready,
             has_report: updatedRecord.has_report,
-            swiss_boolean: updatedRecord.swiss_boolean 
+            swiss_boolean: updatedRecord.swiss_boolean,
+            has_swiss_error: updatedRecord.has_swiss_error
           });
 
           // Check for Swiss error first
           if (updatedRecord.has_swiss_error === true) {
+            console.log('❌ Swiss error detected in realtime update');
             setReport(updatedRecord);
             const errorMessage = getSwissErrorMessage(updatedRecord.report_type);
             setError(errorMessage);
@@ -438,11 +473,20 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
       )
       .subscribe((status) => {
         console.log('📡 Realtime subscription status:', status);
+        
+        if (status === 'CHANNEL_ERROR') {
+          console.warn('📡 Realtime channel error, will auto-reconnect');
+        } else if (status === 'CLOSED') {
+          console.warn('📡 Realtime connection closed');
+        } else if (status === 'SUBSCRIBED') {
+          console.log('📡 Realtime successfully subscribed');
+        }
       });
 
     channelRef.current = channel;
 
     return () => {
+      console.log('📡 Cleaning up realtime listener');
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
