@@ -67,6 +67,9 @@ export const CleanPlaceAutocomplete = ({
           body: { query: input }
         });
 
+        // Debug logging to understand the response structure
+        console.log('Raw response:', { data, error });
+
         if (error) {
           console.error('Places search error:', error);
           setPredictions([]);
@@ -74,7 +77,27 @@ export const CleanPlaceAutocomplete = ({
           return;
         }
 
-        const newPredictions = Array.isArray(data) ? data : [];
+        // Handle the response structure correctly
+        // The edge function returns JSON.stringify(cleanData), so data should be the array
+        // But let's check both direct array and nested structure
+        let newPredictions: Prediction[] = [];
+        
+        if (Array.isArray(data)) {
+          newPredictions = data;
+        } else if (data && Array.isArray(data.predictions)) {
+          newPredictions = data.predictions;
+        } else if (data && typeof data === 'string') {
+          // In case the response is a stringified JSON
+          try {
+            const parsed = JSON.parse(data);
+            newPredictions = Array.isArray(parsed) ? parsed : [];
+          } catch (parseError) {
+            console.error('Error parsing string response:', parseError);
+            newPredictions = [];
+          }
+        }
+
+        console.log('Processed predictions:', newPredictions);
         setPredictions(newPredictions);
         setIsOpen(newPredictions.length > 0);
         setHighlightedIndex(-1);
