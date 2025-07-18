@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { ReportFormData } from '@/types/public-report';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
 import { usePromoValidation } from '@/hooks/usePromoValidation';
+import { useFormCompletionWatcher } from '@/hooks/useFormCompletionWatcher';
 import ReportTypeSelector from '@/components/public-report/ReportTypeSelector';
 import CombinedPersonalDetailsForm from '@/components/public-report/CombinedPersonalDetailsForm';
 import SecondPersonForm from '@/components/public-report/SecondPersonForm';
@@ -234,49 +235,24 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   // Auto-scroll functionality for desktop
   const paymentStepRef = React.useRef<HTMLDivElement>(null);
   const secondPersonRef = React.useRef<HTMLDivElement>(null);
-  const [prevStep2Done, setPrevStep2Done] = React.useState(false);
 
-  // Check if first person form is complete (excluding second person requirements)
-  const firstPersonData = {
-    name: watch('name'),
-    email: watch('email'),
-    birthDate: watch('birthDate'),
-    birthTime: watch('birthTime'),
-    birthLocation: watch('birthLocation'),
-    birthLatitude: watch('birthLatitude'),
-    birthLongitude: watch('birthLongitude')
-  };
-  const firstPersonComplete = firstPersonData.name && firstPersonData.email && 
-                              firstPersonData.birthDate && firstPersonData.birthTime && 
-                              firstPersonData.birthLocation && firstPersonData.birthLatitude && 
-                              firstPersonData.birthLongitude;
-
-  // Auto-scroll to second person when first person is complete and compatibility report
-  React.useEffect(() => {
-    const isDesktop = window.innerWidth >= 640; // sm breakpoint
-    if (requiresSecondPerson && firstPersonComplete && isDesktop) {
-      setTimeout(() => {
-        secondPersonRef.current?.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start' 
-        });
-      }, 300);
-    }
-  }, [requiresSecondPerson, firstPersonComplete]);
-
-  // Auto-scroll to payment step when step2Done changes from false to true
-  React.useEffect(() => {
-    const isDesktop = window.innerWidth >= 640; // sm breakpoint
-    if (step2Done && !prevStep2Done && isDesktop) {
-      setTimeout(() => {
-        paymentStepRef.current?.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start' 
-        });
-      }, 300);
-    }
-    setPrevStep2Done(step2Done);
-  }, [step2Done, prevStep2Done]);
+  // Unified form completion watcher for auto-scroll behavior
+  useFormCompletionWatcher({
+    watch: form.watch,
+    isCompatibilityReport: requiresSecondPerson,
+    onFormComplete: () => {
+      const isDesktop = window.innerWidth >= 640; // sm breakpoint
+      if (isDesktop) {
+        setTimeout(() => {
+          paymentStepRef.current?.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        }, 100);
+      }
+    },
+    debounceMs: 300
+  });
 
   const handleViewReport = async () => {
     if (!urlGuestId) return;
