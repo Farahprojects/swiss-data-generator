@@ -97,22 +97,42 @@ export const useReportSubmission = () => {
         // Handle server-side validation errors
         const errorMessage = error.message || 'Failed to process request';
         
-        if (error.message?.includes('promo code')) {
-          setInlinePromoError(errorMessage);
+        // Check if this is a promo code validation error
+        if (error.message?.includes('promo code') || 
+            error.message?.includes('Invalid promo') || 
+            error.message?.includes('expired promo code') ||
+            error.message?.includes('usage limit') ||
+            error.status === 400) {
+          
+          // Provide more specific error messages
+          let userFriendlyMessage = errorMessage;
+          if (error.message?.includes('expired promo code')) {
+            userFriendlyMessage = 'This promo code has expired or is no longer valid.';
+          } else if (error.message?.includes('usage limit')) {
+            userFriendlyMessage = 'This promo code has reached its usage limit.';
+          } else if (error.message?.includes('Invalid promo')) {
+            userFriendlyMessage = 'Invalid promo code. Please check and try again.';
+          }
+          
+          setInlinePromoError(userFriendlyMessage);
           setPromoValidation({
             status: 'invalid',
-            message: errorMessage,
+            message: userFriendlyMessage,
             discountPercent: 0,
             errorType: 'invalid'
           });
+          // Reset processing state for promo code errors so user can retry
+          setIsProcessing(false);
+          return; // Exit early to prevent further processing
         } else {
           toast({
             title: "Error",
             description: errorMessage,
             variant: "destructive",
           });
+          setIsProcessing(false);
+          return;
         }
-        return;
       }
 
       // Handle success response
@@ -155,18 +175,38 @@ export const useReportSubmission = () => {
       }
     } catch (error) {
       console.error('Error in submitReport:', error);
-      toast({
-        title: "Error",
-        description: "Failed to process your request. Please try again.",
-        variant: "destructive",
-      });
+      
+      // Check if this is a network or server error related to promo codes
+      if (error instanceof Error && error.message.includes('400')) {
+        setInlinePromoError('Invalid promo code. Please check and try again.');
+        setPromoValidation({
+          status: 'invalid',
+          message: 'Invalid promo code. Please check and try again.',
+          discountPercent: 0,
+          errorType: 'invalid'
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to process your request. Please try again.",
+          variant: "destructive",
+        });
+      }
     } finally {
-      setIsProcessing(false);
+      // Only reset processing state if we haven't already done so for promo errors
+      if (isProcessing) {
+        setIsProcessing(false);
+      }
     }
   };
 
   const clearInlinePromoError = () => {
     setInlinePromoError('');
+  };
+
+  const clearPromoValidation = () => {
+    setInlinePromoError('');
+    // This function can be passed to components to reset promo validation state
   };
 
   const resetReportState = () => {
@@ -180,6 +220,7 @@ export const useReportSubmission = () => {
     submitReport,
     inlinePromoError,
     clearInlinePromoError,
+    clearPromoValidation,
     resetReportState
   };
 };

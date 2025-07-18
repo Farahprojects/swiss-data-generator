@@ -283,7 +283,14 @@ const PaymentStep = ({
                   <div className="relative">
                     <Input
                       id="promoCode"
-                      {...register('promoCode')}
+                      {...register('promoCode', {
+                        onChange: () => {
+                          // Clear promo error when user starts typing
+                          if (inlinePromoError) {
+                            clearInlinePromoError();
+                          }
+                        }
+                      })}
                       placeholder="Enter promo code"
                       className="h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400 pr-12"
                       style={{ 
