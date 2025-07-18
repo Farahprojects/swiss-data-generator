@@ -656,18 +656,21 @@ export type Database = {
           lat: number
           lon: number
           place: string
+          place_id: string
           updated_at: string | null
         }
         Insert: {
           lat: number
           lon: number
           place: string
+          place_id: string
           updated_at?: string | null
         }
         Update: {
           lat?: number
           lon?: number
           place?: string
+          place_id?: string
           updated_at?: string | null
         }
         Relationships: []
