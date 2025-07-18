@@ -348,9 +348,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const handleViewReport = async () => {
     if (!urlGuestId) return;
     
-    setIsLoadingReport(true);
-    setReportError(null);
-    
     try {
       // Use the unified data fetching approach
       if (guestReportData) {
@@ -369,9 +366,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       }
     } catch (error) {
       console.error('Failed to load report:', error);
-      setReportError('Failed to load report');
-    } finally {
-      setIsLoadingReport(false);
     }
   };
 
@@ -452,7 +446,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
 
-  if (viewingReport && guestReportData && !isLoadingReport) {
+  if (viewingReport && guestReportData && !isPolling) {
     console.log('🔍 ReportForm - guestReportData:', guestReportData);
     console.log('🔍 ReportForm - guest_report:', guestReportData.guest_report);
     console.log('🔍 ReportForm - guest_report.report_data:', guestReportData.guest_report?.report_data);
@@ -471,7 +465,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
 
-  if (viewingReport && isLoadingReport) {
+  if (viewingReport && isPolling) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
@@ -482,7 +476,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
 
-  if (viewingReport && (reportError || !guestReportData)) {
+  if (viewingReport && (guestReportError || !guestReportData)) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
