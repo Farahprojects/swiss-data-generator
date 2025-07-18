@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14?target=denonext";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=deno&deno-std=0.224.0";
@@ -12,7 +13,7 @@ type ReportData = Record<string, any>;
 
 // Enhanced logging function with structured format
 function logPaymentEvent(event: string, guestReportId: string, details: any = {}) {
-  console.log(`🔄 [VERIFY-PAYMENT-V2] ${event}`, {
+  console.log(`🔄 [VERIFY-PAYMENT-V3] ${event}`, {
     timestamp: new Date().toISOString(),
     guestReportId,
     ...details
@@ -21,7 +22,7 @@ function logPaymentEvent(event: string, guestReportId: string, details: any = {}
 
 // Enhanced error logging function
 function logPaymentError(event: string, guestReportId: string, error: any, details: any = {}) {
-  console.error(`❌ [VERIFY-PAYMENT-V2] ${event}`, {
+  console.error(`❌ [VERIFY-PAYMENT-V3] ${event}`, {
     timestamp: new Date().toISOString(),
     guestReportId,
     error: error.message || error,
@@ -286,7 +287,8 @@ async function handlePromoCodeIncrement(supabase: any, promoCode: string, guestR
     }
 
     if (currentPromo.max_uses && currentPromo.times_used >= currentPromo.max_uses) {
-      logPaymentError("promo_limit_reached_during_increment", guestReportId, new Error("Promo code limit reached"), { 
+      logPaymentError("promo_limit_reached_during_increment", guestReportId, 
+        new Error("Promo code limit reached"), { 
         promoCode, 
         times_used: currentPromo.times_used, 
         max_uses: currentPromo.max_uses 
@@ -317,6 +319,89 @@ async function handlePromoCodeIncrement(supabase: any, promoCode: string, guestR
   } catch (error) {
     logPaymentError("promo_increment_exception", guestReportId, error, { promoCode });
   }
+}
+
+// LEGACY: Create guest_reports record from Stripe metadata (backward compatibility)
+async function createGuestReportFromLegacyMetadata(sessionId: string, session: any, supabase: any): Promise<string> {
+  const md = session.metadata ?? {};
+  
+  logPaymentEvent("legacy_guest_report_creation", sessionId, {
+    metadata_keys: Object.keys(md),
+    customer_email: session.customer_details?.email
+  });
+
+  // Extract report data from Stripe metadata (legacy format)
+  const reportData = {
+    name: md.name || '',
+    birthDate: md.birthDate || '',
+    birthTime: md.birthTime || '',
+    birthLocation: md.birthLocation || '',
+    birthLatitude: md.birthLatitude || '',
+    birthLongitude: md.birthLongitude || '',
+    reportType: md.reportType || md.priceId || 'essence',
+    product_id: md.priceId || md.reportType || 'essence',
+    essenceType: md.essenceType || '',
+    // Add any other fields that might be in legacy metadata
+    secondPersonName: md.secondPersonName || '',
+    secondPersonBirthDate: md.secondPersonBirthDate || '',
+    secondPersonBirthTime: md.secondPersonBirthTime || '',
+    secondPersonBirthLocation: md.secondPersonBirthLocation || '',
+    secondPersonLatitude: md.secondPersonLatitude || '',
+    secondPersonLongitude: md.secondPersonLongitude || '',
+    relationshipType: md.relationshipType || '',
+    returnYear: md.returnYear || ''
+  };
+
+  // Create guest_reports record
+  const { data: guestReport, error: insertError } = await supabase
+    .from("guest_reports")
+    .insert({
+      stripe_session_id: sessionId,
+      email: session.customer_details?.email || 'legacy@unknown.com',
+      payment_status: 'paid', // Already verified from Stripe
+      amount_paid: (session.amount_total ?? 0) / 100,
+      report_type: reportData.reportType,
+      report_data: reportData,
+      promo_code_used: md.promo_code_used || null,
+      coach_slug: md.coach_slug || null,
+      coach_name: md.coach_name || null,
+      is_ai_report: true, // Default for legacy reports
+      has_report: false,
+      swiss_boolean: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .select()
+    .single();
+
+  if (insertError) {
+    // Check if it's a unique constraint violation (already exists)
+    if (insertError.message?.includes('duplicate') || insertError.message?.includes('unique')) {
+      logPaymentEvent("legacy_guest_report_already_exists", sessionId);
+      
+      // Fetch existing record
+      const { data: existingReport, error: fetchError } = await supabase
+        .from("guest_reports")
+        .select("*")
+        .eq("stripe_session_id", sessionId)
+        .single();
+
+      if (fetchError || !existingReport) {
+        throw new Error(`Failed to fetch existing guest report: ${fetchError?.message}`);
+      }
+
+      return existingReport.id;
+    }
+    
+    throw new Error(`Failed to create legacy guest report: ${insertError.message}`);
+  }
+
+  logPaymentEvent("legacy_guest_report_created", guestReport.id, {
+    sessionId,
+    reportType: reportData.reportType
+  });
+
+  return guestReport.id;
 }
 
 // MAIN HANDLER
@@ -472,15 +557,83 @@ serve(async (req) => {
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // STAGE 1: Extract guest_report_id from Stripe metadata
+    // **CRITICAL: BACKWARD COMPATIBILITY CHECK**
+    // Check if this is a legacy session (no guest_report_id in metadata)
     guestReportId = md.guest_report_id;
 
     if (!guestReportId) {
-      logPaymentError("missing_guest_report_id", sessionId, new Error("Missing guest_report_id in Stripe metadata"));
-      throw new Error("Missing guest_report_id in Stripe metadata - Stage 1 architecture required");
+      logPaymentEvent("legacy_session_detected", sessionId, {
+        metadata_keys: Object.keys(md),
+        legacy_compatibility_mode: true
+      });
+
+      // LEGACY FLOW: Create guest_reports record from Stripe metadata
+      try {
+        guestReportId = await createGuestReportFromLegacyMetadata(sessionId, session, supabase);
+        
+        logPaymentEvent("legacy_guest_report_ready", guestReportId, {
+          sessionId,
+          legacy_mode: true
+        });
+
+        // Extract product_id and report_data for legacy session
+        const legacyReportData = {
+          product_id: md.priceId || md.reportType || 'essence',
+          reportType: md.reportType || md.priceId || 'essence',
+          name: md.name || '',
+          birthDate: md.birthDate || '',
+          birthTime: md.birthTime || '',
+          birthLocation: md.birthLocation || '',
+          birthLatitude: md.birthLatitude || '',
+          birthLongitude: md.birthLongitude || '',
+          essenceType: md.essenceType || '',
+          secondPersonName: md.secondPersonName || '',
+          secondPersonBirthDate: md.secondPersonBirthDate || '',
+          secondPersonBirthTime: md.secondPersonBirthTime || '',
+          secondPersonBirthLocation: md.secondPersonBirthLocation || '',
+          secondPersonLatitude: md.secondPersonLatitude || '',
+          secondPersonLongitude: md.secondPersonLongitude || '',
+          relationshipType: md.relationshipType || '',
+          returnYear: md.returnYear || ''
+        };
+
+        // Handle promo code increment for legacy paid reports
+        await handlePromoCodeIncrement(supabase, md.promo_code_used, guestReportId);
+
+        // Start Swiss processing for legacy session
+        EdgeRuntime.waitUntil(
+          processSwissDataInBackground(guestReportId, legacyReportData, supabase, legacyReportData.product_id, 3)
+        );
+
+        logPaymentEvent("legacy_payment_verification_completed", guestReportId, {
+          sessionId,
+          legacy_mode: true,
+          swiss_processing_started: true,
+          processing_time_ms: Date.now() - startTime
+        });
+
+        return new Response(JSON.stringify({
+          success: true,
+          verified: true,
+          paymentStatus: session.payment_status,
+          amountPaid: session.amount_total,
+          currency: session.currency,
+          reportData: legacyReportData,
+          guestReportId: guestReportId,
+          swissProcessing: true,
+          legacy: true,
+          message: "LEGACY: Payment verified with backward compatibility; Swiss processing started",
+          processing_time_ms: Date.now() - startTime
+        }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      } catch (legacyError: any) {
+        logPaymentError("legacy_session_failed", sessionId, legacyError);
+        throw new Error(`Legacy session processing failed: ${legacyError.message}`);
+      }
     }
 
-    logPaymentEvent("guest_report_id_found", guestReportId, { sessionId });
+    // NEW STAGE 1 FLOW: guest_report_id exists in metadata
+    logPaymentEvent("stage1_session_detected", guestReportId, { sessionId });
 
     // STAGE 1: Query database for all necessary data
     const { data: existingReport, error: queryError } = await supabase
@@ -631,7 +784,7 @@ serve(async (req) => {
     
     logPaymentError("verification_failed", guestReportId, err, {
       processing_time_ms: processingTimeMs,
-      stage: "stage2_enhanced"
+      stage: "stage2_enhanced_with_legacy"
     });
 
     return new Response(JSON.stringify({
@@ -639,7 +792,8 @@ serve(async (req) => {
       verified: false,
       error: err.message,
       processing_time_ms: processingTimeMs,
-      stage2_enhanced: true
+      stage2_enhanced: true,
+      legacy_compatible: true
     }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
