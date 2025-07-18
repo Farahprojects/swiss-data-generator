@@ -1,7 +1,8 @@
 
+
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { corsHeaders } from '../_shared/utils.ts'
+import { corsHeaders, handleCors } from '../_shared/utils.ts'
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -41,9 +42,36 @@ interface InitiateReportFlowRequest {
   promoCode?: string
 }
 
+// Extract the exact getProductId logic from frontend usePriceFetch.ts
+const getProductId = (data: ReportData): string => {
+  // Prioritize direct reportType for unified mobile/desktop behavior
+  if (data.reportType) {
+    return data.reportType;
+  }
+  
+  // Fallback to request field for astro data
+  if (data.request) {
+    return data.request;
+  }
+  
+  // Legacy fallback for form combinations (desktop compatibility)
+  if (data.essenceType && data.reportCategory === 'the-self') {
+    return `essence_${data.essenceType}`;
+  }
+  
+  if (data.relationshipType && data.reportCategory === 'compatibility') {
+    return `sync_${data.relationshipType}`;
+  }
+  
+  // If still no priceId, use default fallback
+  return 'essence_personal'; // Default fallback
+};
+
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+  // Handle CORS preflight requests
+  const corsResponse = handleCors(req);
+  if (corsResponse) {
+    return corsResponse;
   }
 
   try {
@@ -60,33 +88,10 @@ serve(async (req) => {
 
     // --- PRICE LOOKUP FROM DATABASE ---
     
-    // Determine priceId based on report type if not explicitly provided
+    // Determine priceId using the exact same logic as frontend
     let priceId = reportData.priceId
     if (!priceId) {
-      // Use the exact same logic as the frontend's getProductId function
-      // Prioritize direct reportType for unified mobile/desktop behavior
-      if (reportData.reportType) {
-        priceId = reportData.reportType;
-      }
-      
-      // Fallback to request field for astro data
-      if (!priceId && reportData.request) {
-        priceId = reportData.request;
-      }
-      
-      // Legacy fallback for form combinations (desktop compatibility)
-      if (!priceId && reportData.essenceType && reportData.reportCategory === 'the-self') {
-        priceId = `essence_${reportData.essenceType}`;
-      }
-      
-      if (!priceId && reportData.relationshipType && reportData.reportCategory === 'compatibility') {
-        priceId = `sync_${reportData.relationshipType}`;
-      }
-      
-      // If still no priceId, use default fallback
-      if (!priceId) {
-        priceId = 'essence_personal'; // Default fallback
-      }
+      priceId = getProductId(reportData);
     }
 
     // Fetch the base price from the database (SERVER-SIDE)
@@ -97,8 +102,10 @@ serve(async (req) => {
       .single()
 
     if (productError || !product) {
+      console.error('Product lookup failed:', { priceId, productError });
       return new Response(JSON.stringify({ 
-        error: 'Product not found or invalid report type' 
+        error: 'Product not found or invalid report type',
+        debug: { priceId, productError: productError?.message }
       }), {
         status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -242,3 +249,4 @@ serve(async (req) => {
     })
   }
 })
+
