@@ -26,6 +26,12 @@ interface Prediction {
     main_text: string;
     secondary_text: string;
   };
+  geometry?: {
+    location: {
+      lat: number;
+      lng: number;
+    };
+  };
 }
 
 export const CleanPlaceAutocomplete = forwardRef<HTMLDivElement, CleanPlaceAutocompleteProps>(
@@ -69,7 +75,7 @@ export const CleanPlaceAutocomplete = forwardRef<HTMLDivElement, CleanPlaceAutoc
       setIsLoading(true);
       try {
         const { data, error } = await supabase.functions.invoke('google-places-autocomplete', {
-          body: { input, types: 'geocode' }
+          body: { query: input }
         });
 
         if (error) {
@@ -117,36 +123,25 @@ export const CleanPlaceAutocomplete = forwardRef<HTMLDivElement, CleanPlaceAutoc
 
       if (onPlaceSelect) {
         try {
-          setIsLoading(true);
-          const { data, error } = await supabase.functions.invoke('google-place-details', {
-            body: { 
-              placeId: prediction.place_id,
-              fields: 'geometry,formatted_address,name'
-            }
-          });
-
-          if (error) throw error;
-
-          const result = data.result;
-          if (result && result.geometry) {
-            const placeData: PlaceData = {
-              name: result.formatted_address || fullAddress,
-              latitude: result.geometry.location.lat,
-              longitude: result.geometry.location.lng,
-              placeId: prediction.place_id
-            };
-            onPlaceSelect(placeData);
-          }
+          // Since our new API call includes geometry data, we can extract it from the prediction
+          // The prediction should now include geometry data from our optimized API call
+          const placeData: PlaceData = {
+            name: fullAddress,
+            placeId: prediction.place_id,
+            // Note: The geometry data should now be available in the prediction object
+            // from our optimized API call that includes all required fields
+            latitude: prediction.geometry?.location?.lat,
+            longitude: prediction.geometry?.location?.lng
+          };
+          onPlaceSelect(placeData);
         } catch (error) {
-          console.error('Error getting place details:', error);
+          console.error('Error processing place selection:', error);
           // Fallback to basic data
           const placeData: PlaceData = {
             name: fullAddress,
             placeId: prediction.place_id
           };
           onPlaceSelect(placeData);
-        } finally {
-          setIsLoading(false);
         }
       }
     };
