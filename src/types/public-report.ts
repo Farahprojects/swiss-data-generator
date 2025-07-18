@@ -8,13 +8,6 @@ export interface PlaceData {
   placeId?: string;
 }
 
-export interface PromoCodeValidation {
-  isValid: boolean;
-  discountPercent: number;
-  message: string;
-  isFree: boolean;
-}
-
 export interface ReportFormData {
   reportType: string;
   relationshipType?: string;

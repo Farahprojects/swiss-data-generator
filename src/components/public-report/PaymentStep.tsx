@@ -1,8 +1,6 @@
-
-import React, { useState, useEffect, useCallback } from 'react';
-
+import React, { useState, useEffect } from 'react';
 import { UseFormRegister, UseFormWatch, FieldErrors, UseFormSetValue } from 'react-hook-form';
-import { Tag, CheckCircle, AlertCircle, Loader2, AlertTriangle } from 'lucide-react';
+import { Tag, Loader2 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,13 +11,6 @@ import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { useToast } from '@/hooks/use-toast';
 import FormStep from './FormStep';
 
-interface PromoValidationState {
-  status: 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid';
-  message: string;
-  discountPercent: number;
-  errorType?: string;
-}
-
 interface PaymentStepProps {
   register: UseFormRegister<ReportFormData>;
   watch: UseFormWatch<ReportFormData>;
@@ -27,8 +18,6 @@ interface PaymentStepProps {
   setValue: UseFormSetValue<ReportFormData>;
   onSubmit: () => void;
   isProcessing: boolean;
-  promoValidation: PromoValidationState;
-  isValidatingPromo: boolean;
   inlinePromoError?: string;
   clearInlinePromoError?: () => void;
 }
@@ -40,15 +29,13 @@ const PaymentStep = ({
   setValue,
   onSubmit,
   isProcessing,
-  promoValidation,
-  isValidatingPromo,
   inlinePromoError = '',
   clearInlinePromoError = () => {}
 }: PaymentStepProps) => {
   const [showPromoCode, setShowPromoCode] = useState(false);
   const [hasTimedOut, setHasTimedOut] = useState(false);
   
-  const { getReportPrice, getReportTitle, calculatePricing, isLoading: isPricingLoading, error: pricingError } = usePriceFetch();
+  const { getReportPrice, getReportTitle, isLoading: isPricingLoading, error: pricingError } = usePriceFetch();
   const { toast } = useToast();
   
   // Add timeout mechanism to prevent stuck processing state
@@ -56,7 +43,7 @@ const PaymentStep = ({
     let timeoutId: NodeJS.Timeout;
     
     if (isProcessing) {
-      setHasTimedOut(false); // Reset timeout state when starting
+      setHasTimedOut(false);
       timeoutId = setTimeout(() => {
         console.warn('Processing timeout - this may indicate a server issue');
         setHasTimedOut(true);
@@ -65,7 +52,7 @@ const PaymentStep = ({
           description: "The request took too long. Please try again.",
           variant: "destructive",
         });
-      }, 15000); // 15 second timeout
+      }, 15000);
     }
 
     return () => {
@@ -81,7 +68,7 @@ const PaymentStep = ({
   const essenceType = watch('essenceType');
   const relationshipType = watch('relationshipType');
   const requestField = watch('request');
-  const request = watch('request'); // NEW: Watch the request field
+  const request = watch('request');
   const name = watch('name');
   const promoCode = watch('promoCode') || '';
 
@@ -90,7 +77,6 @@ const PaymentStep = ({
   let reportTitle = 'Personal Report';
 
   try {
-    // Check for both reportType OR request field
     if (reportType || request) {
       const formData = {
         reportType,
@@ -105,29 +91,22 @@ const PaymentStep = ({
       reportTitle = getReportTitle(formData);
     }
   } catch (error) {
-    // Silently handle pricing errors - global fallback will handle missing prices
     if (process.env.NODE_ENV === 'development') {
       console.warn('Pricing error (silenced for clean UI):', error);
     }
-    
-    // Log error but don't set UI error
   }
 
-  // Calculate pricing - global fallback will handle missing prices  
-  const pricing = calculatePricing(basePrice || 0, promoValidation);
+  // Simple pricing calculation without complex promo validation
+  const finalPrice = basePrice || 0;
 
   const handleButtonClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
-    // Reset timeout state when retrying
     setHasTimedOut(false);
-    
-    // Simply call onSubmit - let server handle all validation
     onSubmit();
   };
 
-  // Always show clean payment UI with global pricing fallback
   const content = isPricingLoading ? (
     <div className="max-w-4xl mx-auto flex items-center justify-center py-8">
       <div className="flex items-center gap-2">
@@ -148,20 +127,12 @@ const PaymentStep = ({
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600 font-light">{reportTitle}</span>
-                  <span className="font-normal text-gray-900">${pricing.basePrice.toFixed(2)}</span>
+                  <span className="font-normal text-gray-900">${finalPrice.toFixed(2)}</span>
                 </div>
-                {pricing.discount > 0 && (
-                  <div className="flex justify-between items-center text-green-600">
-                    <span>Discount ({pricing.discountPercent}%)</span>
-                    <span>-${pricing.discount.toFixed(2)}</span>
-                  </div>
-                )}
                 <div className="border-t pt-3">
                   <div className="flex justify-between items-center font-light text-xl text-gray-900">
                     <span>Total</span>
-                    <span className={pricing.isFree ? 'text-green-600' : 'text-gray-900'}>
-                      {pricing.isFree ? 'FREE' : `$${pricing.finalPrice.toFixed(2)}`}
-                    </span>
+                    <span>${finalPrice.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -226,13 +197,12 @@ const PaymentStep = ({
               </button>
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-6">
-                <div className="space-y-6">
+              <div className="space-y-6">
                 <div className="space-y-3">
                   <div className="space-y-1">
                     <Label htmlFor="promoCode" className="text-lg font-light text-gray-700">
                       Promo Code
                     </Label>
-                    {/* Clean inline error message right below the label */}
                     {inlinePromoError && (
                       <p className="text-sm text-red-500 font-light">{inlinePromoError}</p>
                     )}
@@ -242,7 +212,6 @@ const PaymentStep = ({
                       id="promoCode"
                       {...register('promoCode', {
                         onChange: () => {
-                          // Clear promo error when user starts typing
                           if (inlinePromoError) {
                             clearInlinePromoError();
                           }

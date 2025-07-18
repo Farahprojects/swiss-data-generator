@@ -1,33 +1,20 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { motion } from 'framer-motion';
-import { Tag, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Tag } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ReportFormData } from '@/types/public-report';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
-
 import { useMobileSafeTopPadding } from '@/hooks/useMobileSafeTopPadding';
 import { useFieldFocusHandler } from '@/hooks/useFieldFocusHandler';
-import { usePromoValidation } from '@/hooks/usePromoValidation';
-import { debounce } from 'lodash';
-
-interface PromoValidationState {
-  status: 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid';
-  message: string;
-  discountPercent: number;
-  errorType?: string;
-}
 
 interface Step3PaymentProps {
   register: UseFormRegister<ReportFormData>;
   watch: UseFormWatch<ReportFormData>;
   errors: FieldErrors<ReportFormData>;
   isProcessing: boolean;
-  promoValidation: PromoValidationState;
-  isValidatingPromo: boolean;
-  validatePromoManually?: (code: string) => Promise<any>;
   inlinePromoError?: string;
   clearInlinePromoError?: () => void;
 }
@@ -37,29 +24,15 @@ const Step3Payment = ({
   watch, 
   errors, 
   isProcessing,
-  promoValidation,
-  isValidatingPromo,
-  validatePromoManually,
   inlinePromoError = '',
   clearInlinePromoError = () => {}
 }: Step3PaymentProps) => {
   const topSafePadding = useMobileSafeTopPadding();
   const { scrollTo } = useFieldFocusHandler();
   const [showPromoCode, setShowPromoCode] = useState(false);
-  
-  // Auto-validate promo code with debounce
-  const debouncedValidatePromo = useCallback(
-    debounce(async (code: string) => {
-      if (code.trim() && validatePromoManually) {
-        await validatePromoManually(code);
-      }
-    }, 500),
-    [validatePromoManually]
-  );
 
-  const { getReportPrice, getReportTitle, calculatePricing } = usePriceFetch();
+  const { getReportPrice, getReportTitle } = usePriceFetch();
 
-  // Mirror desktop PaymentStep pricing logic exactly
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');
   const reportType = watch('reportType');
@@ -70,13 +43,12 @@ const Step3Payment = ({
   const name = watch('name');
   const promoCode = watch('promoCode') || '';
 
-  // Auto-validate when promo code changes and clear inline error when user types
+  // Clear inline error when user types
   useEffect(() => {
     if (promoCode && clearInlinePromoError) {
-      clearInlinePromoError(); // Clear error when user starts typing
+      clearInlinePromoError();
     }
-    debouncedValidatePromo(promoCode);
-  }, [promoCode, debouncedValidatePromo, clearInlinePromoError]);
+  }, [promoCode, clearInlinePromoError]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -88,12 +60,11 @@ const Step3Payment = ({
     }
   }, [errors.promoCode, scrollTo]);
 
-  // Get price and title using context with global fallback - EXACTLY like desktop
+  // Get price and title using context with global fallback
   let basePrice: number | null = null;
   let reportTitle = 'Personal Report';
 
   try {
-    // Check for both reportType OR request field - EXACTLY like desktop
     if (reportType || request) {
       const formData = {
         reportType,
@@ -108,28 +79,13 @@ const Step3Payment = ({
       reportTitle = getReportTitle(formData);
     }
   } catch (error) {
-    // Silently handle pricing errors - global fallback will handle missing prices
     if (process.env.NODE_ENV === 'development') {
       console.warn('Pricing error (silenced for clean UI):', error);
     }
-    
-    // Log error but don't throw - mirror desktop behavior
   }
 
-  // Calculate pricing - global fallback will handle missing prices - EXACTLY like desktop
-  const pricing = calculatePricing(basePrice || 0, promoValidation);
-
-  const getPromoValidationIcon = () => {
-    if (isValidatingPromo) return <Loader2 className="h-4 w-4 animate-spin text-gray-400" />;
-    if (promoValidation.status === 'valid-free' || promoValidation.status === 'valid-discount') return <CheckCircle className="h-4 w-4 text-green-500" />;
-    if (promoCode && promoValidation.status === 'invalid') return <AlertCircle className="h-4 w-4 text-red-500" />;
-    return null;
-  };
-
-  const getPromoValidationMessage = () => {
-    if (isValidatingPromo) return 'Validating promo code...';
-    return promoValidation.message || '';
-  };
+  // Simple pricing calculation
+  const finalPrice = basePrice || 0;
 
   return (
     <>
@@ -156,21 +112,13 @@ const Step3Payment = ({
               <div className="space-y-4">
                 <div className="flex justify-between text-lg font-light text-gray-700">
                   <span>{reportTitle}</span>
-                  <span>${pricing.basePrice.toFixed(2)}</span>
+                  <span>${finalPrice.toFixed(2)}</span>
                 </div>
-                {pricing.discount > 0 && (
-                  <div className="flex justify-between text-lg font-light text-green-600">
-                    <span>Discount ({pricing.discountPercent}%)</span>
-                    <span>-${pricing.discount.toFixed(2)}</span>
-                  </div>
-                )}
               </div>
               <hr className="border-gray-200" />
               <div className="flex justify-between text-2xl font-light">
                 <span>Total</span>
-                <span className={pricing.isFree ? 'text-green-600' : 'text-gray-900'}>
-                  {pricing.isFree ? 'FREE' : `$${pricing.finalPrice.toFixed(2)}`}
-                </span>
+                <span className="text-gray-900">${finalPrice.toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -206,7 +154,7 @@ const Step3Payment = ({
                         id="promoCode"
                         {...register('promoCode')}
                         placeholder="Enter promo code"
-                        className="h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400 pr-12"
+                        className="h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400"
                         onFocus={(e) => scrollTo(e.target, { block: 'center' })}
                         onBlur={(e) => {
                           if (e.target.value.trim()) {
@@ -216,27 +164,14 @@ const Step3Payment = ({
                           }
                         }}
                       />
-                      <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                        {getPromoValidationIcon()}
-                      </div>
                     </div>
-                  {errors.promoCode && (
-                    <p className="text-sm text-red-500 font-light">{errors.promoCode.message}</p>
-                  )}
-                  {/* Inline error message for invalid promo codes */}
-                  {inlinePromoError && (
-                    <p className="text-sm text-red-500 font-light">{inlinePromoError}</p>
-                  )}
-                </div>
-                {promoValidation.message && !inlinePromoError && (
-                  <div className={`text-sm font-light p-4 rounded-xl ${
-                    isValidatingPromo ? 'bg-gray-50 text-gray-600' :
-                    promoValidation.status.includes('valid') ? 'bg-green-50 text-green-700 border border-green-200' :
-                    'bg-red-50 text-red-700 border border-red-200'
-                  }`}>
-                    {getPromoValidationMessage()}
+                    {errors.promoCode && (
+                      <p className="text-sm text-red-500 font-light">{errors.promoCode.message}</p>
+                    )}
+                    {inlinePromoError && (
+                      <p className="text-sm text-red-500 font-light">{inlinePromoError}</p>
+                    )}
                   </div>
-                )}
                 </div>
               </CollapsibleContent>
             </Collapsible>
@@ -245,7 +180,7 @@ const Step3Payment = ({
           <div className="px-6 pb-6">
             <p className="text-sm text-gray-500 text-center font-light">
               Your report will be delivered to your email within minutes.
-              {!pricing.isFree && ' Secure payment processed by Stripe.'}
+              Secure payment processed by Stripe.
             </p>
           </div>
         </div>

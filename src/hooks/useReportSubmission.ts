@@ -7,13 +7,6 @@ import { ReportFormData } from '@/types/public-report';
 import { storeGuestReportId } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
 
-interface PromoValidationState {
-  status: 'none' | 'validating' | 'valid-free' | 'valid-discount' | 'invalid';
-  message: string;
-  discountPercent: number;
-  errorType?: string;
-}
-
 export const useReportSubmission = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [reportCreated, setReportCreated] = useState(false);
@@ -50,14 +43,9 @@ export const useReportSubmission = () => {
     };
   }, [isProcessing, toast]);
 
-  const submitReport = async (
-    data: ReportFormData, 
-    promoValidation: PromoValidationState,
-    setPromoValidation: (state: PromoValidationState) => void,
-    skipPromoValidation: boolean = false
-  ) => {
-    
+  const submitReport = async (data: ReportFormData) => {
     setIsProcessing(true);
+    setInlinePromoError(''); // Clear any previous errors
     
     try {
       // Prepare report data for the server
@@ -85,7 +73,7 @@ export const useReportSubmission = () => {
         notes: data.notes,
       };
 
-      // Call the new consolidated server-side function
+      // Call the server-side function that handles everything
       const { data: result, error } = await supabase.functions.invoke('initiate-report-flow', {
         body: {
           reportData,
@@ -94,9 +82,6 @@ export const useReportSubmission = () => {
       });
 
       if (error) {
-        // Handle server-side validation errors
-        const errorMessage = error.message || 'Failed to process request';
-        
         // Check if this is a promo code validation error
         if (error.message?.includes('promo code') || 
             error.message?.includes('Invalid promo') || 
@@ -104,21 +89,13 @@ export const useReportSubmission = () => {
             error.message?.includes('usage limit') ||
             error.status === 400) {
           
-          // Always show "Invalid Promo Code" for any promo-related error
           setInlinePromoError('Invalid Promo Code');
-          setPromoValidation({
-            status: 'invalid',
-            message: 'Invalid Promo Code',
-            discountPercent: 0,
-            errorType: 'invalid'
-          });
-          // Reset processing state for promo code errors so user can retry
           setIsProcessing(false);
-          return; // Exit early to prevent further processing
+          return;
         } else {
           toast({
             title: "Error",
-            description: errorMessage,
+            description: error.message || 'Failed to process request',
             variant: "destructive",
           });
           setIsProcessing(false);
@@ -167,15 +144,8 @@ export const useReportSubmission = () => {
     } catch (error) {
       console.error('Error in submitReport:', error);
       
-      // Check if this is a network or server error related to promo codes
       if (error instanceof Error && error.message.includes('400')) {
         setInlinePromoError('Invalid Promo Code');
-        setPromoValidation({
-          status: 'invalid',
-          message: 'Invalid Promo Code',
-          discountPercent: 0,
-          errorType: 'invalid'
-        });
       } else {
         toast({
           title: "Error",
@@ -184,7 +154,6 @@ export const useReportSubmission = () => {
         });
       }
     } finally {
-      // Only reset processing state if we haven't already done so for promo errors
       if (isProcessing) {
         setIsProcessing(false);
       }
@@ -193,11 +162,6 @@ export const useReportSubmission = () => {
 
   const clearInlinePromoError = () => {
     setInlinePromoError('');
-  };
-
-  const clearPromoValidation = () => {
-    setInlinePromoError('');
-    // This function can be passed to components to reset promo validation state
   };
 
   const resetReportState = () => {
@@ -211,7 +175,6 @@ export const useReportSubmission = () => {
     submitReport,
     inlinePromoError,
     clearInlinePromoError,
-    clearPromoValidation,
     resetReportState
   };
 };
