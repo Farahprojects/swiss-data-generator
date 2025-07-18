@@ -360,30 +360,74 @@ serve(async (req) => {
       is_guest: true,
     };
 
+    // STAGE 1: Extract guest_report_id from Stripe metadata
     const stripeMetadata = session.metadata;
-    const productId = stripeMetadata?.product_id;
+    const guestReportId = stripeMetadata?.guest_report_id;
 
-    if (!productId) {
-      throw new Error("Missing product_id in Stripe metadata");
+    if (!guestReportId) {
+      throw new Error("Missing guest_report_id in Stripe metadata - Stage 1 architecture required");
     }
 
-    // Determine if this is an AI report based on price_list.endpoint
-    const { isAiReport } = await buildTranslatorPayload(productId, reportData, supabase);
+    console.log("✅ STAGE 1: Found guest_report_id in metadata:", guestReportId);
 
-    const insertData: any = {
-      stripe_session_id: session.id,
-      email: reportData.email,
-      report_type: reportData.reportType || null,
-      amount_paid: (session.amount_total ?? 0) / 100,
-      report_data: reportData,
+    // STAGE 1: Query database for all necessary data
+    const { data: existingReport, error: queryError } = await supabase
+      .from("guest_reports")
+      .select("*")
+      .eq("id", guestReportId)
+      .single();
+
+    if (queryError || !existingReport) {
+      throw new Error(`Guest report not found in database: ${guestReportId}`);
+    }
+
+    console.log("✅ STAGE 1: Retrieved report data from database:", {
+      id: existingReport.id,
+      email: existingReport.email,
+      payment_status: existingReport.payment_status,
+      has_product_id: !!(existingReport.report_data?.product_id)
+    });
+
+    // Extract product_id from database (not Stripe metadata)
+    const productId = existingReport.report_data?.product_id;
+
+    if (!productId) {
+      throw new Error("Missing product_id in guest_reports.report_data - database corruption");
+    }
+
+    console.log("✅ STAGE 1: Using product_id from database:", productId);
+
+    // STAGE 1: Check if payment has already been processed
+    if (existingReport.payment_status === "paid") {
+      console.log("✅ STAGE 1: Payment already processed for guest_report_id:", guestReportId);
+      return new Response(JSON.stringify({
+        success: true,
+        verified: true,
+        paymentStatus: "paid",
+        amountPaid: session.amount_total,
+        currency: session.currency,
+        reportData: existingReport.report_data,
+        guestReportId: existingReport.id,
+        message: "Payment already verified and processed",
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // STAGE 1: Update existing record to 'paid' status instead of creating new record
+    console.log("📝 STAGE 1: Updating payment status from pending to paid:", guestReportId);
+
+    // Determine if this is an AI report based on price_list.endpoint
+    const { isAiReport } = await buildTranslatorPayload(productId, existingReport.report_data, supabase);
+
+    const updateData: any = {
       payment_status: "paid",
-      purchase_type: md.purchase_type || "report",
       is_ai_report: isAiReport,
+      updated_at: new Date().toISOString(),
     };
 
+    // Update coach information if present in metadata (for backwards compatibility)
     if (md.coach_slug) {
-      insertData.coach_slug = md.coach_slug;
-      insertData.coach_name = md.coach_name || null;
+      updateData.coach_slug = md.coach_slug;
+      updateData.coach_name = md.coach_name || null;
 
       const { data: coachData } = await supabase
         .from("coach_websites")
@@ -391,19 +435,26 @@ serve(async (req) => {
         .eq("site_slug", md.coach_slug)
         .single();
 
-      if (coachData?.coach_id) insertData.coach_id = coachData.coach_id;
+      if (coachData?.coach_id) updateData.coach_id = coachData.coach_id;
     }
 
-    const { data: guestRec, error: insertErr } = await supabase
+    const { data: updatedReport, error: updateErr } = await supabase
       .from("guest_reports")
-      .insert(insertData)
+      .update(updateData)
+      .eq("id", guestReportId)
       .select()
       .single();
 
-    if (insertErr) throw new Error(`DB insert failed: ${insertErr.message}`);
+    if (updateErr) {
+      console.error("❌ STAGE 1: Failed to update guest report:", updateErr);
+      throw new Error(`DB update failed: ${updateErr.message}`);
+    }
 
+    console.log("✅ STAGE 1: Successfully updated payment status to paid");
+
+    // Start Swiss processing in background
     EdgeRuntime.waitUntil(
-      processSwissDataInBackground(guestRec.id, reportData, supabase, productId)
+      processSwissDataInBackground(updatedReport.id, updatedReport.report_data, supabase, productId)
     );
 
     return new Response(JSON.stringify({
@@ -412,10 +463,11 @@ serve(async (req) => {
       paymentStatus: session.payment_status,
       amountPaid: session.amount_total,
       currency: session.currency,
-      reportData: guestRec.report_data,
-      guestReportId: guestRec.id,
-      swissProcessing: !!(reportData.reportType || reportData.request),
-      message: "Payment verified; Swiss processing started",
+      reportData: updatedReport.report_data,
+      guestReportId: updatedReport.id,
+      swissProcessing: true,
+      message: "STAGE 1: Payment verified; Swiss processing started",
+      stage1_architecture: true,
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (err: any) {

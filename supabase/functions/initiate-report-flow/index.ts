@@ -227,75 +227,136 @@ serve(async (req) => {
       }
     }
 
-    // --- PAID FLOW: CALCULATE FINAL PRICE AND INVOKE CREATE-CHECKOUT ---
+    // --- PAID FLOW: STAGE 1 SERVER STATE ARCHITECTURE ---
     
-    const discountAmount = finalPrice * (discountPercent / 100)
-    finalPrice = finalPrice - discountAmount
+    const originalAmount = product.unit_price_usd
+    const discountAmount = originalAmount * (discountPercent / 100)
+    const finalAmount = Math.max(originalAmount - discountAmount, 1) // Ensure minimum $1
 
-    // Ensure minimum price (e.g., $1.00)
-    if (finalPrice < 1) {
-      finalPrice = 1
-    }
-
-    // Prepare enhanced report data with validation results
-    const checkoutReportData = {
-      ...reportData,
-      validatedPromoId,
-      productId: product.id,
-      originalPrice: product.unit_price_usd,
-      discountPercent
-    };
-
-    console.log('Server-to-server: Invoking create-checkout with secure pricing:', {
-      amount: finalPrice,
-      description: product.description,
-      productId: product.id,
-      hasPromo: !!validatedPromoId
+    console.log('💰 Pricing calculation:', {
+      original: originalAmount,
+      discount: discountPercent,
+      final: finalAmount,
+      priceId,
+      promoCode: promoCode || 'none'
     });
 
-    // SERVER-TO-SERVER: Call create-checkout directly with all secure data
-    const { data: checkoutData, error: checkoutError } = await supabaseAdmin.functions.invoke(
-      'create-checkout',
-      {
-        body: {
-          mode: "payment",
-          amount: finalPrice,
-          email: reportData.email,
-          isGuest: true,
-          description: product.description || `${product.name} Report`,
-          reportData: checkoutReportData,
-          successUrl: `${req.headers.get("origin")}/payment-return?session_id={CHECKOUT_SESSION_ID}`,
-          cancelUrl: `${req.headers.get("origin")}/payment-return?status=cancelled`,
-        }
-      }
-    );
+    // STAGE 1: Create guest_reports row IMMEDIATELY with pending status
+    const guestReportData = {
+      stripe_session_id: `temp_${Date.now()}`, // Temporary ID, will be updated after Stripe session creation
+      email: reportData.email,
+      report_type: reportData.reportType || null,
+      amount_paid: finalAmount,
+      report_data: {
+        ...reportData,
+        product_id: priceId, // Store product_id in database
+      },
+      payment_status: "pending",
+      purchase_type: 'report',
+      promo_code_used: promoCode || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
 
-    if (checkoutError) {
-      console.error('Failed to create checkout session:', checkoutError);
+    console.log("📝 Creating guest_reports row with pending status:", {
+      email: reportData.email,
+      amount: finalAmount,
+      product_id: priceId,
+      promoCode: promoCode || 'none'
+    });
+
+    // Create the guest_reports row first
+    const { data: guestReport, error: insertError } = await supabaseAdmin
+      .from("guest_reports")
+      .insert(guestReportData)
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error("❌ Failed to create guest_reports row:", insertError);
       return new Response(JSON.stringify({ 
-        error: checkoutError.message || 'Failed to create checkout session' 
+        error: `Database error: ${insertError.message}` 
       }), {
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
+      });
     }
 
-    if (!checkoutData?.url) {
+    console.log("✅ Created guest_reports row:", guestReport.id);
+
+    // Now create checkout session with minimal data
+    const checkoutData = {
+      guest_report_id: guestReport.id,
+      amount: finalAmount,
+      email: reportData.email,
+      description: product.description || `${product.name} Report`,
+      successUrl: `${req.headers.get("origin")}/payment-return?session_id={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${req.headers.get("origin")}/payment-return?status=cancelled`,
+    };
+
+    console.log("💳 Creating checkout session with minimal data:", {
+      guest_report_id: guestReport.id,
+      amount: finalAmount,
+      email: reportData.email,
+      description: checkoutData.description
+    });
+
+    const { data: stripeResult, error: checkoutError } = await supabaseAdmin.functions.invoke(
+      'create-checkout',
+      { body: checkoutData }
+    );
+
+    if (checkoutError) {
+      console.error("❌ Checkout error:", checkoutError);
+      // Clean up the guest_reports row if checkout fails
+      await supabaseAdmin
+        .from("guest_reports")
+        .delete()
+        .eq("id", guestReport.id);
+      return new Response(JSON.stringify({ 
+        error: `Failed to create checkout: ${checkoutError.message}` 
+      }), {
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (!stripeResult?.url) {
+      await supabaseAdmin
+        .from("guest_reports")
+        .delete()
+        .eq("id", guestReport.id);
       return new Response(JSON.stringify({ 
         error: 'No checkout URL returned from create-checkout' 
       }), {
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
+      });
     }
 
-    // Return the Stripe checkout URL to frontend
+    // Update the guest_reports row with the real Stripe session ID
+    await supabaseAdmin
+      .from("guest_reports")
+      .update({ stripe_session_id: stripeResult.sessionId })
+      .eq("id", guestReport.id);
+
+    console.log("✅ Updated guest_reports with Stripe session ID:", stripeResult.sessionId);
+
+    // Return the checkout URL and guest_report_id for tracking
     return new Response(JSON.stringify({
       status: 'payment_required',
-      stripeUrl: checkoutData.url,
-      sessionId: checkoutData.sessionId,
-      finalAmount: finalPrice,
-      description: product.description || `${product.name} Report`
+      stripeUrl: stripeResult.url,
+      sessionId: stripeResult.sessionId,
+      guest_report_id: guestReport.id,
+      finalAmount: finalAmount,
+      description: checkoutData.description,
+      debug: {
+        originalPrice: originalAmount,
+        discountApplied: discountPercent,
+        product_id: priceId,
+        guest_reports_created: true,
+        promoCodeUsed: promoCode || 'none'
+      }
     }), {
       status: 200, 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
