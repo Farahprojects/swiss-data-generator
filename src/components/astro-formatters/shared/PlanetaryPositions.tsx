@@ -60,7 +60,7 @@ export const PlanetaryPositions: React.FC<PlanetaryPositionsProps> = ({
                 <tr key={planet.name} className="border-b border-gray-100 hover:bg-gray-50/30">
                   <td className="py-3 px-4 font-medium text-gray-900 text-left">
                     {planet.name}
-                    {planet.retro && <span className="ml-2 text-xs italic text-gray-600">R</span>}
+                    {planet.retro && <span className="ml-2 text-xs italic text-gray-600">Retrograde</span>}
                   </td>
                   <td className="py-3 px-4 text-gray-700 text-right">{position}</td>
                 </tr>
