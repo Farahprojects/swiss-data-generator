@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { ReportFormData } from '@/types/public-report';
@@ -36,9 +36,22 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const navigate = useNavigate();
   const { setupOrchestratorListener } = useReportOrchestrator();
   
+  const { 
+    isProcessing, 
+    isPricingLoading, 
+    reportCreated, 
+    submitReport,
+    inlinePromoError,
+    clearInlinePromoError,
+    resetReportState
+  } = useReportSubmission();
+
   const [viewingReport, setViewingReport] = useState(false);
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [isResetting, setIsResetting] = useState(false);
+
+  // Use a ref to store the callback that SuccessScreen will register
+  const reportReadyCallbackRef = useRef<((reportData: ReportData) => void) | null>(null);
 
   // Token recovery state
   const [tokenRecoveryState, setTokenRecoveryState] = useState<{
@@ -97,10 +110,15 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
     if (inSuccessState) {
       console.log('🔄 [ReportForm] Setting up orchestrator listener for:', guestId);
-      const cleanup = setupOrchestratorListener(guestId, handleReportReady);
+      const cleanup = setupOrchestratorListener(guestId, (reportData: ReportData) => {
+        // Call the callback that SuccessScreen registered
+        if (reportReadyCallbackRef.current) {
+          reportReadyCallbackRef.current(reportData);
+        }
+      });
       return cleanup;
     }
-  }, [guestId, setupOrchestratorListener, handleReportReady, reportCreated, stripePaymentState.isComplete, tokenRecoveryState.recovered]);
+  }, [guestId, setupOrchestratorListener, reportCreated, stripePaymentState.isComplete, tokenRecoveryState.recovered]);
 
   // Handle guest data when guestId is provided
   React.useEffect(() => {
@@ -207,16 +225,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     checkFormCompletion();
   }, [form.watch(), isValid, shouldUnlockForm, onFormStateChange]);
 
-  const { 
-    isProcessing, 
-    isPricingLoading, 
-    reportCreated, 
-    submitReport,
-    inlinePromoError,
-    clearInlinePromoError,
-    resetReportState
-  } = useReportSubmission();
-
   const recoverTokenData = async (guestIdParam: string) => {
     try {
       const { data: guestReport, error } = await supabase
@@ -256,7 +264,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }
   };
 
-  // Comprehensive state reset function
   const resetAllStates = useCallback(() => {
     console.log('🧹 Starting comprehensive state reset...');
     
@@ -314,7 +321,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     console.log('✅ State reset completed');
   }, [form, resetReportState]);
 
-  // Unified data handling: Process guest report data from the single source of truth
   React.useEffect(() => {
     if (!guestReportData || !stripePaymentState.isStripeRedirect) return;
 
@@ -353,7 +359,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }
   }, [guestReportData, stripePaymentState.isStripeRedirect]);
 
-  // Handle polling results for payment verification
   React.useEffect(() => {
     if (guestReportData && stripePaymentState.isWaiting) {
       const guestReport = guestReportData.guest_report;
@@ -471,7 +476,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     await onSubmit(formData);
   };
 
-  // Show resetting state
   if (isResetting) {
     return (
       <div className="min-h-screen flex items-center justify-center p-8">
@@ -483,7 +487,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
 
-  // Unified loading states for Stripe flow
   if (stripePaymentState.isVerifying || (stripePaymentState.isStripeRedirect && isPolling && !guestReportData)) {
     return (
       <div className="min-h-screen flex items-center justify-center p-8">
@@ -574,8 +577,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         email={userEmail} 
         onViewReport={handleViewReport}
         onReportReady={(callback) => {
-          // Store the callback for orchestrator to use
-          handleReportReady.current = callback;
+          reportReadyCallbackRef.current = callback;
         }}
         guestReportId={guestId || undefined}
       />
@@ -594,8 +596,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           email={email} 
           onViewReport={handleViewReport}
           onReportReady={(callback) => {
-            // Store the callback for orchestrator to use
-            handleReportReady.current = callback;
+            reportReadyCallbackRef.current = callback;
           }}
           guestReportId={guestId || undefined}
         />
@@ -610,8 +611,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         email={tokenRecoveryState.recoveredEmail} 
         onViewReport={handleViewReport}
         onReportReady={(callback) => {
-          // Store the callback for orchestrator to use
-          handleReportReady.current = callback;
+          reportReadyCallbackRef.current = callback;
         }}
         guestReportId={guestId}
       />
