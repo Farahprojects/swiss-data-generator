@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Download, Copy, ArrowLeft, X, Paperclip } from 'lucide-react';
@@ -174,11 +173,14 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
   };
 
   const handleChatGPT = () => {
-    // Always show the confirmation modal for both mobile and desktop
+    // Close any open close confirmation dialog and show ChatGPT confirmation
+    setShowCloseConfirm(false);
     setShowChatGPTConfirm(true);
   };
 
   const handleCloseSession = () => {
+    // Close any open ChatGPT confirmation dialog and show close confirmation
+    setShowChatGPTConfirm(false);
     setShowCloseConfirm(true);
   };
 
@@ -462,7 +464,7 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
       >
         {/* Desktop Header */}
         <div className="sticky top-0 z-[100] bg-background border-b shadow-sm" style={{ position: 'relative' }}>
-          <div className="max-w-6xl mx-auto px-4 py-4 relative z-0">
+          <div className={`px-4 py-4 ${showChatGPTConfirm || showCloseConfirm ? 'w-full' : 'max-w-6xl mx-auto'}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 {showToggle && (
