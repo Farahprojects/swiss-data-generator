@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Download, Copy, X, Paperclip } from 'lucide-react';
+import { Download, Copy, X, Paperclip, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -16,14 +15,24 @@ import { ReportData, extractReportContent, getPersonName, getReportTitle } from 
 import { renderAstroDataAsText, renderUnifiedContentAsText } from '@/utils/componentToTextRenderer';
 
 interface ReportViewerProps {
-  reportData: ReportData;
+  reportData: ReportData | null;
   onBack: () => void;
   isMobile?: boolean;
+  isLoading?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
 }
 
 type ModalType = 'chatgpt' | 'close' | null;
 
-export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportViewerProps) => {
+export const ReportViewer = ({ 
+  reportData, 
+  onBack, 
+  isMobile = false, 
+  isLoading = false, 
+  error = null, 
+  onRetry 
+}: ReportViewerProps) => {
   const { toast } = useToast();
   const [isCopyCompleted, setIsCopyCompleted] = useState(false);
   const [activeModal, setActiveModal] = useState<ModalType>(null);
@@ -31,18 +40,18 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
   const [chatToken, setChatToken] = useState<string | null>(null);
   const [cachedUuid, setCachedUuid] = useState<string | null>(null);
 
-  // Determine view logic based on content type
-  const contentType = reportData.metadata.content_type;
+  // Determine view logic based on content type - only if we have reportData
+  const contentType = reportData?.metadata.content_type;
   const showToggle = contentType === 'both';
   const defaultView = contentType === 'ai' ? 'report' : contentType === 'astro' ? 'astro' : 'report';
   const [activeView, setActiveView] = useState<'report' | 'astro'>(defaultView);
 
   // Enforce content-based view restrictions
   useEffect(() => {
-    if (!showToggle) {
+    if (!showToggle && reportData) {
       setActiveView(defaultView);
     }
-  }, [showToggle, defaultView]);
+  }, [showToggle, defaultView, reportData]);
 
   // Lock body scroll when component mounts
   useEffect(() => {
@@ -53,6 +62,8 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
   }, []);
 
   const handleDownloadPdf = () => {
+    if (!reportData) return;
+    
     // Check if there's PDF data in the report
     const pdfData = reportData.guest_report?.report_data?.report_pdf_base64;
     if (!pdfData) {
@@ -85,6 +96,8 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
   };
 
   const handleDownloadUnifiedPdf = async () => {
+    if (!reportData) return;
+    
     const hasReportContent = !!reportData.report_content && reportData.report_content.trim().length > 20;
     const hasSwissData = !!reportData.swiss_data;
 
@@ -125,6 +138,8 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
 
   // Smart PDF download logic
   const handleSmartPdfDownload = () => {
+    if (!reportData) return;
+    
     const hasPdfData = !!reportData.guest_report?.report_data?.report_pdf_base64;
     const hasSwissData = !!reportData.swiss_data;
     const hasReportContent = !!reportData.report_content && reportData.report_content.trim().length > 20;
@@ -142,6 +157,8 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
   };
 
   const handleCopyToClipboard = async () => {
+    if (!reportData) return;
+    
     try {
       let textToCopy: string;
       let contentDescription: string;
@@ -205,8 +222,10 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
     });
     
     // Reset component state completely
-    setActiveView(reportData.metadata.content_type === 'ai' ? 'report' : 
-                 reportData.metadata.content_type === 'astro' ? 'astro' : 'report');
+    if (reportData) {
+      setActiveView(reportData.metadata.content_type === 'ai' ? 'report' : 
+                   reportData.metadata.content_type === 'astro' ? 'astro' : 'report');
+    }
     
     // Go back to form for fresh session
     onBack();
@@ -311,7 +330,7 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
                 <X className="h-6 w-6 text-gray-700" />
               </Button>
             )}
-            {showToggle && (
+            {showToggle && reportData && (
               <div className="flex space-x-2 bg-gray-100 rounded-full p-1">
                 <button
                   onClick={() => setActiveView('report')}
@@ -346,7 +365,7 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
               </Button>
             )}
             
-            {!isMobile && (
+            {!isMobile && reportData && (
               <>
                 <Button
                   variant="outline"
@@ -403,22 +422,53 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
         {/* Content Area */}
         <ScrollArea className="flex-1">
           <div className="px-6 py-6">
-            {!isMobile && (
-            <h1 className="text-xl font-light text-gray-900 mb-4">
-              Generated for {getPersonName(reportData)}
-            </h1>
+            {/* Loading State */}
+            {isLoading && (
+              <div className="flex items-center justify-center min-h-[400px]">
+                <div className="text-center space-y-4">
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto text-gray-600" />
+                  <p className="text-lg text-gray-600 font-light">Loading your report...</p>
+                </div>
+              </div>
             )}
-            <ReportContent 
-              reportData={reportData}
-              activeView={activeView}
-              setActiveView={setActiveView}
-              isMobile={isMobile}
-            />
+
+            {/* Error State */}
+            {error && !isLoading && (
+              <div className="flex items-center justify-center min-h-[400px]">
+                <div className="text-center space-y-4 max-w-md">
+                  <AlertCircle className="h-8 w-8 mx-auto text-red-500" />
+                  <p className="text-lg text-red-600 font-medium">Failed to load report</p>
+                  <p className="text-sm text-gray-600">{error}</p>
+                  {onRetry && (
+                    <Button onClick={onRetry} className="bg-black hover:bg-gray-900 text-white">
+                      Try Again
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Report Content */}
+            {reportData && !isLoading && !error && (
+              <>
+                {!isMobile && (
+                  <h1 className="text-xl font-light text-gray-900 mb-4">
+                    Generated for {getPersonName(reportData)}
+                  </h1>
+                )}
+                <ReportContent 
+                  reportData={reportData}
+                  activeView={activeView}
+                  setActiveView={setActiveView}
+                  isMobile={isMobile}
+                />
+              </>
+            )}
           </div>
         </ScrollArea>
 
         {/* Mobile Footer */}
-        {isMobile && (
+        {isMobile && reportData && !isLoading && !error && (
           <div className="px-6 py-4 border-t bg-white shadow-md flex justify-center gap-6">
             <Button variant="ghost" onClick={handleCopyToClipboard} className="text-gray-700 text-base font-medium hover:text-black transition-colors active:scale-95">
               <Paperclip className="h-5 w-5 mr-1" /> Copy

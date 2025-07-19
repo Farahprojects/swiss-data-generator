@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { CheckCircle, Clock, Volume2, VolumeX, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,8 +13,6 @@ import { useNavigate } from 'react-router-dom';
 import { getGuestToken, clearAllSessionData } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
 import EntertainmentWindow from './EntertainmentWindow';
-import { mapReportPayload } from '@/utils/mapReportPayload';
-import { MappedReport } from '@/types/mappedReport';
 
 type ReportType = 'essence' | 'sync';
 const VIDEO_SRC = 'https://auth.theraiastro.com/storage/v1/object/public/therai-assets/loading-video.mp4';
@@ -77,11 +76,9 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     caseNumber,
     fetchReport,
     triggerErrorHandling,
-    fetchCompleteReport,
     setupRealtimeListener,
     setError,
     setCaseNumber,
-    triggerPdfEmail,
   } = useGuestReportStatus();
 
   const { toast } = useToast();
@@ -93,10 +90,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
 
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [modalTriggered, setModalTriggered] = useState(false);
-  const [fetchedReportData, setFetchedReportData] = useState<any>(null);
   const [errorHandlingTriggered, setErrorHandlingTriggered] = useState(false);
-  const [isLoadingReport, setIsLoadingReport] = useState(false);
-  const [reportError, setReportError] = useState<string | null>(null);
   const [isAiReport, setIsAiReport] = useState<boolean | null>(null);
   const [entertainmentMode, setEntertainmentMode] = useState<'text' | 'video' | 'image'>('text');
   const [showCountdown, setShowCountdown] = useState(false);
@@ -113,111 +107,15 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     setIsVideoReady(true);
   }, []);
 
-  // Background PDF email function - non-blocking
-  const triggerPdfEmailBackground = useCallback(async (reportId: string) => {
-    try {
-      console.log('📧 Starting background PDF email trigger...');
-      const success = await triggerPdfEmail(reportId);
-      if (success) {
-        toast({
-          title: "📧 Report PDF sent to your email",
-          description: "Check your inbox for the PDF version of your report",
-        });
-        console.log('✅ PDF email sent successfully');
-      } else {
-        console.warn('⚠️ PDF email failed (non-critical)');
-        toast({
-          title: "PDF Email Status",
-          description: "PDF will be sent shortly - please check your email in a few minutes",
-          variant: "default"
-        });
-      }
-    } catch (error) {
-      console.warn('⚠️ PDF email error (non-critical):', error);
-      // Don't show error toast to user - this is background operation
-    }
-  }, [triggerPdfEmail, toast]);
-
-  const handleViewReport = useCallback(async () => {
-    console.log('🚀 View Report button clicked!', { currentGuestReportId, onViewReport });
-    
-    if (isLoadingReport) {
-      console.log('⏳ Already loading, ignoring click');
-      return;
-    }
-
-    if (!onViewReport) {
-      console.error('❌ onViewReport callback is missing');
-      setReportError('Modal callback not available');
-      return;
-    }
-
-    setIsLoadingReport(true);
-    setReportError(null);
-    
-    try {
-      console.log('📡 Fetching fresh report data...');
-      
-      // Add timeout to prevent indefinite loading
-      const timeoutPromise = new Promise<any>((_, reject) => 
-        setTimeout(() => reject(new Error('Request timeout')), 30000)
-      );
-      
-      const data = await Promise.race([
-        fetchCompleteReport(currentGuestReportId),
-        timeoutPromise
-      ]);
-      
-      console.log('📋 Fetched data:', data);
-      
-      if (!data) {
-        console.log('❌ No data returned from edge function');
-        throw new Error('No data returned from server');
-      }
-
-      // Use mapReportPayload to get consistent data structure
-      const mappedReport = mapReportPayload(data);
-
-      console.log('📊 Mapped report data:', {
-        hasReport: mappedReport.hasReport,
-        swissBoolean: mappedReport.swissBoolean,
-        reportType: mappedReport.reportType,
-        hasReportContent: !!mappedReport.reportContent,
-        hasSwissData: !!mappedReport.swissData
-      });
-
-      setFetchedReportData(data);
-
-      // OPEN MODAL IMMEDIATELY - Don't wait for PDF email
-      console.log('🎯 Opening modal with fetched data...');
+  // SIMPLIFIED: Just call the parent callback - no data fetching here
+  const handleViewReportClick = useCallback(() => {
+    console.log('🚀 View Report button clicked - notifying parent');
+    if (onViewReport) {
       onViewReport();
-      
-      // Track modal view state for auto-reopen on refresh
-      localStorage.setItem('autoOpenModal', 'true');
-
-      // Trigger PDF email in background (completely non-blocking)
-      setTimeout(() => {
-        triggerPdfEmailBackground(currentGuestReportId);
-      }, 100); // Small delay to ensure modal opens first
-
-    } catch (error) {
-      console.error('❌ Error in handleViewReport:', error);
-      
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      setReportError(errorMessage);
-      
-      // Don't open modal on critical error
-      if (errorMessage.includes('timeout')) {
-        setReportError('Request timed out. Please try again.');
-      } else if (errorMessage.includes('No data')) {
-        setReportError('Report data not ready yet. Please wait a moment and try again.');
-      } else {
-        setReportError('Failed to load report. Please try again.');
-      }
-    } finally {
-      setIsLoadingReport(false);
+    } else {
+      console.error('❌ onViewReport callback is missing');
     }
-  }, [currentGuestReportId, onViewReport, fetchCompleteReport, isLoadingReport, triggerPdfEmailBackground]);
+  }, [onViewReport]);
 
   // Fetch is_ai_report flag to determine if we need countdown
   useEffect(() => {
@@ -290,9 +188,11 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     }
     setShowCountdown(false);
     
-    // Trigger modal automatically
-    await handleViewReport();
-  }, [modalReadyDetected, handleViewReport]);
+    // Trigger modal automatically by calling parent callback
+    if (onViewReport) {
+      onViewReport();
+    }
+  }, [modalReadyDetected, onViewReport]);
 
   // Stable refs for callbacks to prevent dependency loops
   const stableFetchReport = useCallback((reportId: string) => {
@@ -330,18 +230,11 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     const shouldAutoOpen = localStorage.getItem('autoOpenModal') === 'true';
     const reportReady = report?.payment_status === 'paid' && !hasSwissError && !hasProcessingError;
 
-    if (shouldAutoOpen && reportReady && !modalTriggered) {
+    if (shouldAutoOpen && reportReady && !modalTriggered && onViewReport) {
       console.log('🔁 Auto-opening report modal after refresh');
-      
-      // Clear any existing error states
-      setReportError(null);
-      
-      // Open modal directly without re-fetching data
-      if (onViewReport) {
-        onViewReport();
-        setModalTriggered(true);
-        localStorage.removeItem('autoOpenModal');
-      }
+      onViewReport();
+      setModalTriggered(true);
+      localStorage.removeItem('autoOpenModal');
     }
   }, [report, hasSwissError, hasProcessingError, modalTriggered, onViewReport]);
 
@@ -420,7 +313,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                     <p className="text-sm text-gray-600">AI report generating...</p>
                     <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
                       <motion.div
-                        className="h-2 rounded-full"
+                        className="h-2 rounded-full bg-gray-400"
                         initial={{ width: "100%" }}
                         animate={{ width: `${(countdownTime / 24) * 100}%` }}
                         transition={{ duration: 1, ease: "linear" }}
@@ -465,48 +358,14 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {/* Error display */}
-                    {reportError && (
-                      <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700">
-                        <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                        <p className="text-sm">{reportError}</p>
-                      </div>
-                    )}
-                    
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
                       <Button 
-                        onClick={handleViewReport} 
-                        disabled={isLoadingReport}
-                        className="bg-black hover:bg-gray-900 text-white font-medium h-12 px-8 rounded-full shadow-sm transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={handleViewReportClick}
+                        className="bg-black hover:bg-gray-900 text-white font-medium h-12 px-8 rounded-full shadow-sm transition-all duration-200 active:scale-95"
                       >
-                        {isLoadingReport ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Loading...
-                          </>
-                        ) : (
-                          'Open'
-                        )}
+                        Open
                       </Button>
                     </div>
-                    
-                    {/* Retry button for errors */}
-                    {reportError && (
-                      <div className="text-center">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => {
-                            setReportError(null);
-                            handleViewReport();
-                          }}
-                          disabled={isLoadingReport}
-                          className="border-gray-400 text-gray-600 font-light hover:bg-gray-50"
-                        >
-                          Try Again
-                        </Button>
-                      </div>
-                    )}
                   </div>
                 )}
               </>

@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
@@ -16,6 +17,8 @@ import { clearGuestReportId } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
 import { useGuestReportData } from '@/hooks/useGuestReportData';
 import { ReportData } from '@/utils/reportContentExtraction';
+import { useGuestReportStatus } from '@/hooks/useGuestReportStatus';
+import { useToast } from '@/hooks/use-toast';
 
 interface ReportFormProps {
   coachSlug?: string;
@@ -33,10 +36,18 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   onFormStateChange
 }) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   
   const [viewingReport, setViewingReport] = useState(false);
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [isResetting, setIsResetting] = useState(false);
+
+  // NEW: Modal loading and error states (Single Source of Truth)
+  const [isLoadingReport, setIsLoadingReport] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
+
+  // Import the fetchCompleteReport function from the hook
+  const { fetchCompleteReport, triggerPdfEmail } = useGuestReportStatus();
 
   // Token recovery state
   const [tokenRecoveryState, setTokenRecoveryState] = useState<{
@@ -300,6 +311,105 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     resetReportState
   } = useReportSubmission();
 
+  // Background PDF email function - non-blocking
+  const triggerPdfEmailBackground = useCallback(async (reportId: string) => {
+    try {
+      console.log('📧 Starting background PDF email trigger...');
+      const success = await triggerPdfEmail(reportId);
+      if (success) {
+        toast({
+          title: "📧 Report PDF sent to your email",
+          description: "Check your inbox for the PDF version of your report",
+        });
+        console.log('✅ PDF email sent successfully');
+      } else {
+        console.warn('⚠️ PDF email failed (non-critical)');
+        toast({
+          title: "PDF Email Status",
+          description: "PDF will be sent shortly - please check your email in a few minutes",
+          variant: "default"
+        });
+      }
+    } catch (error) {
+      console.warn('⚠️ PDF email error (non-critical):', error);
+      // Don't show error toast to user - this is background operation
+    }
+  }, [triggerPdfEmail, toast]);
+
+  // NEW: Single Source of Truth - ReportForm now controls the entire modal flow
+  const handleViewReport = useCallback(async () => {
+    console.log('🚀 ReportForm taking control of View Report flow');
+    
+    if (isLoadingReport) {
+      console.log('⏳ Already loading, ignoring click');
+      return;
+    }
+
+    if (!guestId) {
+      console.error('❌ Guest ID is missing');
+      setReportError('Report ID not available');
+      return;
+    }
+
+    // Step 1: Open modal immediately with loading state
+    console.log('🎯 Opening modal with loading state...');
+    setViewingReport(true);
+    setIsLoadingReport(true);
+    setReportError(null);
+    
+    // Track modal view state for auto-reopen on refresh
+    localStorage.setItem('autoOpenModal', 'true');
+
+    try {
+      // Step 2: Fetch fresh report data
+      console.log('📡 Fetching fresh report data...');
+      
+      // Add timeout to prevent indefinite loading
+      const timeoutPromise = new Promise<any>((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 30000)
+      );
+      
+      const freshReportData = await Promise.race([
+        fetchCompleteReport(guestId),
+        timeoutPromise
+      ]);
+      
+      console.log('📋 Fetched fresh data:', freshReportData);
+      
+      if (!freshReportData) {
+        console.log('❌ No data returned from edge function');
+        throw new Error('No data returned from server');
+      }
+
+      // Step 3: Update state with fresh data
+      console.log('✅ Setting fresh report data in modal');
+      setReportData(freshReportData);
+
+      // Step 4: Trigger PDF email in background (completely non-blocking)
+      setTimeout(() => {
+        triggerPdfEmailBackground(guestId);
+      }, 100); // Small delay to ensure modal opens smoothly
+
+    } catch (error) {
+      console.error('❌ Error in ReportForm handleViewReport:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setReportError(errorMessage);
+      
+      // Handle specific error types
+      if (errorMessage.includes('timeout')) {
+        setReportError('Request timed out. Please try again.');
+      } else if (errorMessage.includes('No data')) {
+        setReportError('Report data not ready yet. Please wait a moment and try again.');
+      } else {
+        setReportError('Failed to load report. Please try again.');
+      }
+    } finally {
+      // Step 5: Stop loading state regardless of success/failure
+      setIsLoadingReport(false);
+    }
+  }, [guestId, fetchCompleteReport, isLoadingReport, triggerPdfEmailBackground]);
+
   // Comprehensive state reset function
   const resetAllStates = useCallback(() => {
     console.log('🧹 Starting comprehensive state reset...');
@@ -310,6 +420,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     // Reset component states
     setViewingReport(false);
     setReportData(null);
+    setIsLoadingReport(false);
+    setReportError(null);
     
     // Reset token recovery state to initial values
     setTokenRecoveryState({
@@ -390,23 +502,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         block: 'start' 
       });
     }, 300);
-  };
-
-  const handleViewReport = async () => {
-    if (!guestId) return;
-    
-    try {
-      // Use the unified data fetching approach - directly set the raw data
-      if (guestReportData) {
-        console.log('🔍 Using unified guest report data for viewing');
-        setReportData(guestReportData as ReportData);
-        setViewingReport(true);
-      } else {
-        throw new Error('Report data not available');
-      }
-    } catch (error) {
-      console.error('Failed to load report:', error);
-    }
   };
 
   const handleCloseReportViewer = useCallback(async () => {
@@ -505,40 +600,19 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
 
-  if (viewingReport && reportData) {
+  if (viewingReport) {
     return (
       <ReportViewer
         reportData={reportData}
         onBack={handleCloseReportViewer}
         isMobile={false}
+        isLoading={isLoadingReport}
+        error={reportError}
+        onRetry={() => {
+          setReportError(null);
+          handleViewReport();
+        }}
       />
-    );
-  }
-
-  if (viewingReport && isPolling) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading report...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (viewingReport && (guestReportError || !guestReportData)) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <p className="text-destructive mb-4">Failed to load report</p>
-          <button 
-            onClick={handleCloseReportViewer}
-            className="bg-primary text-primary-foreground px-4 py-2 rounded"
-          >
-            Go Back
-          </button>
-        </div>
-      </div>
     );
   }
 
