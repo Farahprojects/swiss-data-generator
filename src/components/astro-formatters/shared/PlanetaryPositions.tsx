@@ -1,8 +1,17 @@
 
 import React from 'react';
 
+interface Planet {
+  name: string;
+  sign: string;
+  deg: number;
+  min: number;
+  house?: number;
+  retro?: boolean;
+}
+
 interface PlanetaryPositionsProps {
-  planets: Record<string, any>;
+  planets: Planet[] | Record<string, any>;
   title?: string;
 }
 
@@ -11,6 +20,20 @@ export const PlanetaryPositions: React.FC<PlanetaryPositionsProps> = ({
   title = "PLANETARY POSITIONS"
 }) => {
   if (!planets) return null;
+
+  // Convert object format to array format if needed
+  const planetArray: Planet[] = Array.isArray(planets) 
+    ? planets 
+    : Object.entries(planets).map(([name, data]: [string, any]) => ({
+        name,
+        sign: data.sign || '',
+        deg: Math.floor(data.degree || data.deg || 0),
+        min: Math.round(((data.degree || data.deg || 0) - Math.floor(data.degree || data.deg || 0)) * 60),
+        house: data.house,
+        retro: data.retrograde || data.retro
+      }));
+
+  if (planetArray.length === 0) return null;
 
   return (
     <div className="mb-12">
@@ -27,15 +50,18 @@ export const PlanetaryPositions: React.FC<PlanetaryPositionsProps> = ({
             </tr>
           </thead>
           <tbody>
-            {Object.entries(planets).map(([planet, data]: [string, any]) => {
-              const sign = data.sign || '';
-              const degree = data.degree ? Math.round(data.degree * 100) / 100 : '';
-              const house = data.house ? ` (House ${data.house})` : '';
-              const position = `${degree}° ${sign}${house}`;
+            {planetArray.map((planet) => {
+              let position = `${String(planet.deg).padStart(2, "0")}°${String(planet.min).padStart(2, "0")}' in ${planet.sign}`;
+              if (planet.house) {
+                position += ` (House ${planet.house})`;
+              }
               
               return (
-                <tr key={planet} className="border-b border-gray-100 hover:bg-gray-50/30">
-                  <td className="py-3 px-4 font-medium text-gray-900">{planet}</td>
+                <tr key={planet.name} className="border-b border-gray-100 hover:bg-gray-50/30">
+                  <td className="py-3 px-4 font-medium text-gray-900">
+                    {planet.name}
+                    {planet.retro && <span className="ml-2 text-xs italic text-gray-600">R</span>}
+                  </td>
                   <td className="py-3 px-4 text-gray-700 text-right">{position}</td>
                 </tr>
               );

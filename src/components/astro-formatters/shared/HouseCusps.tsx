@@ -1,8 +1,15 @@
 
 import React from 'react';
 
+interface House {
+  number: number;
+  sign: string;
+  deg: number;
+  min: number;
+}
+
 interface HouseCuspsProps {
-  houses: Record<string, any>;
+  houses: House[] | Record<string, any>;
   title?: string;
 }
 
@@ -11,6 +18,18 @@ export const HouseCusps: React.FC<HouseCuspsProps> = ({
   title = "HOUSE CUSPS"
 }) => {
   if (!houses) return null;
+
+  // Convert object format to array format if needed
+  const houseArray: House[] = Array.isArray(houses) 
+    ? houses 
+    : Object.entries(houses).map(([houseNum, data]: [string, any]) => ({
+        number: parseInt(houseNum),
+        sign: data.sign || '',
+        deg: Math.floor(data.degree || data.deg || 0),
+        min: Math.round(((data.degree || data.deg || 0) - Math.floor(data.degree || data.deg || 0)) * 60)
+      })).sort((a, b) => a.number - b.number);
+
+  if (houseArray.length === 0) return null;
 
   return (
     <div className="mb-12">
@@ -27,14 +46,12 @@ export const HouseCusps: React.FC<HouseCuspsProps> = ({
             </tr>
           </thead>
           <tbody>
-            {Object.entries(houses).map(([house, data]: [string, any]) => {
-              const degree = data.degree ? Math.round(data.degree * 100) / 100 : '';
-              const sign = data.sign || '';
-              const cusp = `${degree}° ${sign}`;
+            {houseArray.map((house) => {
+              const cusp = `${String(house.deg).padStart(2, "0")}°${String(house.min).padStart(2, "0")}' in ${house.sign}`;
               
               return (
-                <tr key={house} className="border-b border-gray-100 hover:bg-gray-50/30">
-                  <td className="py-3 px-4 font-medium text-gray-900">House {house}</td>
+                <tr key={house.number} className="border-b border-gray-100 hover:bg-gray-50/30">
+                  <td className="py-3 px-4 font-medium text-gray-900">House {house.number}</td>
                   <td className="py-3 px-4 text-gray-700 text-right">{cusp}</td>
                 </tr>
               );

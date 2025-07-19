@@ -4,6 +4,8 @@ import { ChartHeader } from './shared/ChartHeader';
 import { PlanetaryPositions } from './shared/PlanetaryPositions';
 import { AspectTable } from './shared/AspectTable';
 import { HouseCusps } from './shared/HouseCusps';
+import { ChartAngles } from './shared/ChartAngles';
+import { parseSwissDataRich } from '@/utils/swissFormatter';
 
 interface IndividualAstroFormatterProps {
   swissData: any;
@@ -31,6 +33,9 @@ export const IndividualAstroFormatter: React.FC<IndividualAstroFormatterProps> =
     );
   }
 
+  // Use the rich parser to get complete, formatted data
+  const enrichedData = parseSwissDataRich(swissData);
+
   return (
     <div className={`font-inter max-w-4xl mx-auto py-8 ${className}`}>
       <ChartHeader
@@ -41,55 +46,59 @@ export const IndividualAstroFormatter: React.FC<IndividualAstroFormatterProps> =
         longitude={longitude}
       />
 
-      {swissData.natal?.planets && (
-        <PlanetaryPositions planets={swissData.natal.planets} />
-      )}
-
-      {swissData.natal?.aspects && (
-        <AspectTable aspects={swissData.natal.aspects} title="MAJOR ASPECTS" />
-      )}
-
-      {swissData.natal?.houses && (
-        <HouseCusps houses={swissData.natal.houses} />
-      )}
-
-      {swissData.natal?.angles && (
-        <div className="mb-12">
-          <h2 className="text-xl font-light text-gray-900 mb-8 text-center tracking-wide uppercase">
-            CHART ANGLES
-          </h2>
-          
-          <div className="max-w-2xl mx-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-medium text-gray-900 text-sm">Angle</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-900 text-sm">Position</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(swissData.natal.angles).map(([angle, data]: [string, any]) => {
-                  const degree = data.degree ? Math.round(data.degree * 100) / 100 : '';
-                  const sign = data.sign || '';
-                  const position = `${degree}° ${sign}`;
-                  
-                  return (
-                    <tr key={angle} className="border-b border-gray-100 hover:bg-gray-50/30">
-                      <td className="py-3 px-4 font-medium text-gray-900">{angle}</td>
-                      <td className="py-3 px-4 text-gray-700 text-right">{position}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+      {/* Birth Information */}
+      {enrichedData.name && (
+        <div className="text-center mb-8 text-gray-700">
+          <div className="text-lg font-medium">{enrichedData.name}</div>
+          <div className="text-sm">
+            {enrichedData.dateISO} — {enrichedData.timeISO} ({enrichedData.tz})
           </div>
+          {enrichedData.meta?.location && (
+            <div className="text-sm">
+              {enrichedData.meta.location}
+              {enrichedData.meta.lat && enrichedData.meta.lon && (
+                <span className="text-xs text-gray-500 ml-2">
+                  ({enrichedData.meta.lat.toFixed(2)}°, {enrichedData.meta.lon.toFixed(2)}°)
+                </span>
+              )}
+            </div>
+          )}
         </div>
       )}
 
-      {swissData.transits?.planets && (
+      {/* Chart Angles */}
+      {enrichedData.angles && enrichedData.angles.length > 0 && (
+        <ChartAngles angles={enrichedData.angles} />
+      )}
+
+      {/* House Cusps */}
+      {enrichedData.houses && enrichedData.houses.length > 0 && (
+        <HouseCusps houses={enrichedData.houses} title="HOUSE CUSPS" />
+      )}
+
+      {/* Natal Planetary Positions */}
+      {enrichedData.planets && enrichedData.planets.length > 0 && (
+        <PlanetaryPositions planets={enrichedData.planets} title="NATAL PLANETARY POSITIONS" />
+      )}
+
+      {/* Natal Aspects */}
+      {enrichedData.aspects && enrichedData.aspects.length > 0 && (
+        <AspectTable aspects={enrichedData.aspects} title="NATAL ASPECTS" />
+      )}
+
+      {/* Current Transit Positions */}
+      {enrichedData.transits?.planets && enrichedData.transits.planets.length > 0 && (
         <PlanetaryPositions 
-          planets={swissData.transits.planets} 
-          title="CURRENT TRANSITS"
+          planets={enrichedData.transits.planets} 
+          title="CURRENT TRANSIT POSITIONS"
+        />
+      )}
+
+      {/* Transit Aspects to Natal */}
+      {enrichedData.transits?.aspects && enrichedData.transits.aspects.length > 0 && (
+        <AspectTable 
+          aspects={enrichedData.transits.aspects} 
+          title="TRANSIT ASPECTS TO NATAL"
         />
       )}
     </div>

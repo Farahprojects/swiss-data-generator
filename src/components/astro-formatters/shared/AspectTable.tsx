@@ -1,16 +1,51 @@
 
 import React from 'react';
 
+interface Aspect {
+  a?: string;
+  b?: string;
+  type: string;
+  orb?: number;
+  orbDeg?: number;
+  orbMin?: number;
+  transitPlanet?: string;
+  natalPlanet?: string;
+  planet1?: string;
+  planet2?: string;
+  aspect?: string;
+}
+
 interface AspectTableProps {
-  aspects: Record<string, any>;
+  aspects: Aspect[] | Record<string, any>;
   title?: string;
 }
 
 export const AspectTable: React.FC<AspectTableProps> = ({
   aspects,
-  title = "CURRENT PLANETARY POSITIONS"
+  title = "ASPECTS"
 }) => {
   if (!aspects) return null;
+
+  // Convert object format to array format if needed
+  const aspectArray: Aspect[] = Array.isArray(aspects) 
+    ? aspects 
+    : Object.entries(aspects).map(([key, data]: [string, any]) => ({
+        ...data,
+        key
+      }));
+
+  if (aspectArray.length === 0) {
+    return (
+      <div className="mb-12">
+        <h2 className="text-xl font-light text-gray-900 mb-8 text-center tracking-wide uppercase">
+          {title}
+        </h2>
+        <div className="text-center text-gray-500 italic text-sm">
+          No significant aspects detected.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mb-12">
@@ -29,18 +64,28 @@ export const AspectTable: React.FC<AspectTableProps> = ({
             </tr>
           </thead>
           <tbody>
-            {Object.entries(aspects).map(([aspectKey, data]: [string, any]) => {
-              const orb = data.orb ? `${Math.round(data.orb * 100) / 100}°` : '';
-              const aspect = data.aspect || '';
-              const planet1 = data.planet1 || '';
-              const planet2 = data.planet2 || '';
+            {aspectArray.map((aspect, index) => {
+              // Handle different aspect data formats
+              const planetA = aspect.transitPlanet || aspect.a || aspect.planet1 || 'Unknown';
+              const planetB = aspect.natalPlanet || aspect.b || aspect.planet2 || 'Unknown';
+              const aspectType = aspect.type || aspect.aspect || 'Unknown';
+              
+              // Calculate orb display
+              let orbDisplay = '';
+              if (aspect.orbDeg !== undefined && aspect.orbMin !== undefined) {
+                orbDisplay = `${aspect.orbDeg}°${String(aspect.orbMin).padStart(2, "0")}'`;
+              } else if (aspect.orb !== undefined) {
+                const orbDeg = Math.floor(aspect.orb);
+                const orbMin = Math.round((aspect.orb - orbDeg) * 60);
+                orbDisplay = `${orbDeg}°${String(orbMin).padStart(2, "0")}'`;
+              }
               
               return (
-                <tr key={aspectKey} className="border-b border-gray-100 hover:bg-gray-50/30">
-                  <td className="py-3 px-4 text-gray-900">{planet1}</td>
-                  <td className="py-3 px-4 text-gray-700">{aspect}</td>
-                  <td className="py-3 px-4 text-gray-700">{planet2}</td>
-                  <td className="py-3 px-4 text-gray-600 text-right text-sm">{orb}</td>
+                <tr key={`${planetA}-${aspectType}-${planetB}-${index}`} className="border-b border-gray-100 hover:bg-gray-50/30">
+                  <td className="py-3 px-4 text-gray-900">{planetA}</td>
+                  <td className="py-3 px-4 text-gray-700">{aspectType}</td>
+                  <td className="py-3 px-4 text-gray-700">{planetB}</td>
+                  <td className="py-3 px-4 text-gray-600 text-right text-sm">{orbDisplay}</td>
                 </tr>
               );
             })}

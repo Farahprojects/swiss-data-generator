@@ -1,8 +1,8 @@
+
 import jsPDF from 'jspdf';
 import { PdfTemplate, PdfGenerationOptions } from '../types';
 import { AIReportTemplate } from './AIReportTemplate';
 import { AstroTemplate } from './AstroTemplate';
-import { renderAstroDataAsText } from '@/utils/componentToTextRenderer';
 
 export interface UnifiedPdfData {
   reportContent?: string;
@@ -54,9 +54,22 @@ export class UnifiedTemplate implements PdfTemplate {
       currentY = this.aiTemplate.renderAIReportSection(data.reportContent, currentY, doc);
     }
 
-    // Astro Data Section - Use component system
+    // Astro Data Section - Use unified component system
     if (data.swissData) {
-      currentY = this.renderAstroSection(doc, data.swissData, currentY, data.reportData);
+      // Determine if it's synastry or individual report
+      const isSynastry = !!(
+        data.swissData.synastry_aspects ||
+        data.swissData.composite_chart ||
+        data.swissData.person_a ||
+        data.swissData.person_b ||
+        data.reportData?.guest_report?.report_data?.secondPersonName
+      );
+
+      if (isSynastry) {
+        currentY = this.astroTemplate.renderSynastryData(data.swissData, currentY, doc);
+      } else {
+        currentY = this.astroTemplate.renderEssenceData(data.swissData, currentY, doc);
+      }
     }
 
     // Footer
@@ -80,62 +93,6 @@ export class UnifiedTemplate implements PdfTemplate {
     doc.text(`Date: ${new Date().toLocaleDateString()}`, margins.left, startY + 55);
     
     return startY + 70;
-  }
-
-  private renderAstroSection(doc: jsPDF, swissData: any, startY: number, reportData?: any): number {
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margins = this.options.margins!;
-    
-    if (startY > pageHeight - 100) {
-      doc.addPage();
-      startY = margins.top;
-    }
-
-    // Section Header
-    doc.setFontSize(18).setFont("helvetica", "bold").setTextColor(75, 63, 114);
-    doc.text("Astrological Data", margins.left, startY);
-    startY += 15;
-
-    try {
-      // Use component-to-text renderer for consistency
-      const mockReportData = {
-        swiss_data: swissData,
-        guest_report: { report_data: reportData },
-        // ... other required fields with defaults
-      };
-      
-      const astroText = renderAstroDataAsText(mockReportData as any);
-      
-      // Render the text content
-      doc.setFontSize(10).setFont("helvetica", "normal").setTextColor(33);
-      const lines = astroText.split('\n');
-      
-      lines.forEach(line => {
-        if (startY > pageHeight - 30) {
-          doc.addPage();
-          startY = margins.top;
-        }
-        
-        if (line.includes('=') || line.includes('-')) {
-          // Headers
-          doc.setFont("helvetica", "bold");
-        } else {
-          doc.setFont("helvetica", "normal");
-        }
-        
-        doc.text(line, margins.left, startY);
-        startY += 5;
-      });
-      
-      return startY + 10;
-      
-    } catch (error) {
-      console.error('Error rendering astro data:', error);
-      
-      doc.setFontSize(11).setFont("helvetica", "normal").setTextColor(33);
-      doc.text("Astrological data is available but could not be properly formatted.", margins.left, startY);
-      return startY + 20;
-    }
   }
 
   private addFooter(doc: jsPDF, pageWidth: number, pageHeight: number): void {
