@@ -405,7 +405,7 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
           <div className="px-6 py-6">
             {!isMobile && (
               <h1 className="text-xl font-light text-gray-900 mb-4">
-                {getReportTitle(reportData)} {getPersonName(reportData)}
+                {getReportTitle(reportData)} — Generated for {getPersonName(reportData)}
               </h1>
             )}
             <ReportContent 
