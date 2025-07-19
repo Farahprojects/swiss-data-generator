@@ -50,6 +50,9 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [isResetting, setIsResetting] = useState(false);
 
+  // Store the guest report ID from successful submissions
+  const [createdGuestReportId, setCreatedGuestReportId] = useState<string | null>(null);
+
   // Use a ref to store the callback that SuccessScreen will register
   const reportReadyCallbackRef = useRef<((reportData: ReportData) => void) | null>(null);
 
@@ -85,7 +88,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     isStripeRedirect: false,
   });
 
-  // Unified data fetching: determine polling state based on Stripe redirect status
   const shouldPoll = stripePaymentState.isWaiting;
   const { data: guestReportData, error: guestReportError, isLoading: isPolling } = useGuestReportData(
     guestId,
@@ -99,18 +101,21 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     setViewingReport(true);
   }, []);
 
+  // Determine the effective guest ID - either from new creation or existing
+  const effectiveGuestId = createdGuestReportId || guestId;
+
   // Set up orchestrator listener when we have a guestId and are in success states
   React.useEffect(() => {
-    if (!guestId) return;
+    if (!effectiveGuestId) return;
 
     // Check if we're in any success state that should trigger the listener
-    const inSuccessState = reportCreated || 
+    const inSuccessState = (reportCreated && createdGuestReportId) || 
                           stripePaymentState.isComplete || 
                           tokenRecoveryState.recovered;
 
     if (inSuccessState) {
-      console.log('🔄 [ReportForm] Setting up orchestrator listener for:', guestId);
-      const cleanup = setupOrchestratorListener(guestId, (reportData: ReportData) => {
+      console.log('🔄 [ReportForm] Setting up orchestrator listener for:', effectiveGuestId);
+      const cleanup = setupOrchestratorListener(effectiveGuestId, (reportData: ReportData) => {
         // Call the callback that SuccessScreen registered
         if (reportReadyCallbackRef.current) {
           reportReadyCallbackRef.current(reportData);
@@ -118,7 +123,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       });
       return cleanup;
     }
-  }, [guestId, setupOrchestratorListener, reportCreated, stripePaymentState.isComplete, tokenRecoveryState.recovered]);
+  }, [effectiveGuestId, setupOrchestratorListener, reportCreated, createdGuestReportId, stripePaymentState.isComplete, tokenRecoveryState.recovered]);
 
   // Handle guest data when guestId is provided
   React.useEffect(() => {
@@ -273,6 +278,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     // Reset component states
     setViewingReport(false);
     setReportData(null);
+    setCreatedGuestReportId(null); // Reset the new state
     
     // Reset token recovery state to initial values
     setTokenRecoveryState({
@@ -375,7 +381,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           isStripeRedirect: true,
         });
       }
-      // If still pending, continue polling (hook handles this automatically)
     }
     
     if (guestReportError && stripePaymentState.isWaiting) {
@@ -423,10 +428,9 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   };
 
   const handleViewReport = async () => {
-    if (!guestId) return;
+    if (!effectiveGuestId) return;
     
     try {
-      // Use the unified data fetching approach - directly set the raw data
       if (guestReportData) {
         console.log('🔍 Using unified guest report data for viewing');
         setReportData(guestReportData as ReportData);
@@ -442,24 +446,19 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const handleCloseReportViewer = useCallback(async () => {
     console.log('🔄 Starting session close and reset...');
     
-    // Prevent multiple simultaneous resets
     if (isResetting) return;
     
     setIsResetting(true);
     
     try {
-      // Reset all component states
       resetAllStates();
       
-      // Small delay to ensure all React state updates complete
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Navigate back to report page
       navigate('/report', { replace: true });
       
     } catch (error) {
       console.error('Error during session reset:', error);
-      // Fallback: still navigate even if there's an error
       navigate('/report', { replace: true });
     } finally {
       setIsResetting(false);
@@ -468,7 +467,13 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
   const onSubmit = async (data: ReportFormData) => {
     const submissionData = coachSlug ? { ...data, coachSlug } : data;
-    await submitReport(submissionData);
+    const result = await submitReport(submissionData);
+    
+    // Capture the guest report ID if returned
+    if (result.success && result.guestReportId) {
+      console.log('🎯 [ReportForm] Captured guest report ID from submission:', result.guestReportId);
+      setCreatedGuestReportId(result.guestReportId);
+    }
   };
 
   const handleButtonClick = async () => {
@@ -570,7 +575,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
 
-  if (reportCreated && userName && userEmail) {
+  if (reportCreated && createdGuestReportId && userName && userEmail) {
+    console.log('🎯 [ReportForm] Rendering SuccessScreen with guaranteed guest ID:', createdGuestReportId);
     return (
       <SuccessScreen 
         name={userName} 
@@ -579,7 +585,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         onReportReady={(callback) => {
           reportReadyCallbackRef.current = callback;
         }}
-        guestReportId={guestId || undefined}
+        guestReportId={createdGuestReportId} // Guaranteed to exist
       />
     );
   }

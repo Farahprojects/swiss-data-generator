@@ -42,7 +42,7 @@ export const useReportSubmission = () => {
     };
   }, [isProcessing, toast]);
 
-  const submitReport = async (data: ReportFormData) => {
+  const submitReport = async (data: ReportFormData): Promise<{ success: boolean; guestReportId?: string }> => {
     setIsProcessing(true);
     setInlinePromoError(''); // Clear any previous errors
     
@@ -113,7 +113,7 @@ export const useReportSubmission = () => {
         if (isPromoError) {
           setInlinePromoError('Invalid Promo Code');
           setIsProcessing(false);
-          return;
+          return { success: false };
         } else {
           toast({
             title: "Error",
@@ -121,20 +121,25 @@ export const useReportSubmission = () => {
             variant: "destructive",
           });
           setIsProcessing(false);
-          return;
+          return { success: false };
         }
       }
 
       // Handle the simplified response from the new "no-hop" architecture
       if (flowResponse.status === 'success') {
         // FREE FLOW: Report is free and being generated
-        setReportCreated(true);
+        console.log('🎯 FREE FLOW: Storing guest report ID before setting success state:', flowResponse.reportId);
         storeGuestReportId(flowResponse.reportId);
+        
+        setReportCreated(true);
         toast({
           title: "Free Report Created!",
           description: "Your report has been generated and will be sent to your email shortly.",
         });
         setIsProcessing(false);
+        
+        // Return the guest report ID so parent can use it
+        return { success: true, guestReportId: flowResponse.reportId };
         
       } else if (flowResponse.status === 'payment_required') {
         // PAID FLOW: Server calculated secure price and created Stripe checkout
@@ -150,7 +155,7 @@ export const useReportSubmission = () => {
             variant: "destructive",
           });
           setIsProcessing(false);
-          return;
+          return { success: false };
         }
 
         // Redirect to Stripe checkout (created with secure server-side pricing)
@@ -162,6 +167,7 @@ export const useReportSubmission = () => {
         }
         
         // Note: isProcessing stays true during Stripe redirect
+        return { success: true }; // No guestReportId for paid flow here
         
       } else {
         // Unexpected response
@@ -171,6 +177,7 @@ export const useReportSubmission = () => {
           variant: "destructive",
         });
         setIsProcessing(false);
+        return { success: false };
       }
 
     } catch (error) {
@@ -195,6 +202,7 @@ export const useReportSubmission = () => {
         });
       }
       setIsProcessing(false);
+      return { success: false };
     }
   };
 
