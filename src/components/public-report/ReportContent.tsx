@@ -25,14 +25,14 @@ export const ReportContent: React.FC<ReportContentProps> = ({
     switch (contentType) {
       case 'ai':
         return (
-          <div className="max-w-4xl mx-auto px-4 py-8">
+          <div className="max-w-4xl mx-auto px-0 md:px-4 py-8">
             <ReportRenderer reportData={reportData} />
           </div>
         );
       
       case 'astro':
         return (
-          <div className="max-w-4xl mx-auto px-4 py-8">
+          <div className="max-w-4xl mx-auto px-0 md:px-4 py-8">
             {isSynastryReport(reportData) ? (
               <SynastryAstroFormatter 
                 swissData={reportData.swiss_data} 
@@ -49,7 +49,7 @@ export const ReportContent: React.FC<ReportContentProps> = ({
       
       case 'both':
         return (
-          <div className="max-w-4xl mx-auto px-4 py-8">
+          <div className="max-w-4xl mx-auto px-0 md:px-4 py-8">
             {activeView === 'astro' ? (
               isSynastryReport(reportData) ? (
                 <SynastryAstroFormatter 
@@ -70,7 +70,7 @@ export const ReportContent: React.FC<ReportContentProps> = ({
       
       default:
         return (
-          <div className="max-w-4xl mx-auto px-4 py-8">
+          <div className="max-w-4xl mx-auto px-0 md:px-4 py-8">
             <div className="text-center text-gray-500">
               <p>No content available for this report.</p>
             </div>

@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Download, Copy, ArrowLeft, X, Paperclip } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { ReportContent } from './ReportContent';
 import { PdfGenerator } from '@/services/pdf/PdfGenerator';
@@ -181,11 +183,33 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
   };
 
   const confirmCloseSession = () => {
-    // Clear memory for new purchase
+    // Comprehensive reset - clear all memory and localStorage
     setChatToken(null);
     setCachedUuid(null);
     setIsCopyCompleted(false);
     setShowCloseConfirm(false);
+    
+    // Clear all guest report related localStorage items
+    const currentGuestId = localStorage.getItem('currentGuestReportId');
+    if (currentGuestId) {
+      localStorage.removeItem(`guest_report_${currentGuestId}`);
+      localStorage.removeItem(`guest_report_data_${currentGuestId}`);
+    }
+    localStorage.removeItem('currentGuestReportId');
+    localStorage.removeItem('pending_report_email');
+    
+    // Clear any other report-related items
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('guest_report_') || key.startsWith('report_')) {
+        localStorage.removeItem(key);
+      }
+    });
+    
+    // Reset component state completely
+    setActiveView(reportData.metadata.content_type === 'ai' ? 'report' : 
+                 reportData.metadata.content_type === 'astro' ? 'astro' : 'report');
+    
+    // Go back to form for fresh session
     onBack();
   };
 
@@ -308,18 +332,20 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
             )}
           </div>
 
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto px-6 py-6">
-            <h1 className="text-xl font-light text-gray-900 mb-4">
-              {getReportTitle(reportData)} — Generated for {getPersonName(reportData)}
-            </h1>
-            <ReportContent 
-              reportData={reportData}
-              activeView={activeView}
-              setActiveView={setActiveView}
-              isMobile
-            />
-          </div>
+          {/* Content with ScrollArea */}
+          <ScrollArea className="flex-1">
+            <div className="px-6 py-6">
+              <h1 className="text-xl font-light text-gray-900 mb-4">
+                {getReportTitle(reportData)} — Generated for {getPersonName(reportData)}
+              </h1>
+              <ReportContent 
+                reportData={reportData}
+                activeView={activeView}
+                setActiveView={setActiveView}
+                isMobile
+              />
+            </div>
+          </ScrollArea>
 
           {/* Footer with 2 buttons */}
           <div className="px-6 py-4 border-t bg-white shadow-md flex justify-center gap-6">
@@ -518,11 +544,14 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
           </div>
         </div>
 
-        <ReportContent 
-          reportData={reportData}
-          activeView={activeView} 
-          setActiveView={setActiveView}
-        />
+        {/* Content with ScrollArea */}
+        <ScrollArea className="h-[calc(100vh-80px)]">
+          <ReportContent 
+            reportData={reportData}
+            activeView={activeView} 
+            setActiveView={setActiveView}
+          />
+        </ScrollArea>
       </motion.div>
 
       {/* Shared Popups for Desktop */}
