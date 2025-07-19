@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
@@ -14,7 +15,7 @@ import { mapReportPayload } from '@/utils/mapReportPayload';
 import { MappedReport } from '@/types/mappedReport';
 import { FormValidationStatus } from '@/components/public-report/FormValidationStatus';
 
-import { clearGuestReportId, getGuestReportId } from '@/utils/urlHelpers';
+import { clearGuestReportId } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
 import { useGuestReportData } from '@/hooks/useGuestReportData';
 
@@ -22,6 +23,7 @@ interface ReportFormProps {
   coachSlug?: string;
   themeColor?: string;
   fontFamily?: string;
+  guestId?: string | null;
   onFormStateChange?: (isValid: boolean, hasSelectedType: boolean) => void;
 }
 
@@ -29,6 +31,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   coachSlug,
   themeColor = '#6366F1',
   fontFamily = 'Inter',
+  guestId = null,
   onFormStateChange
 }) => {
   const navigate = useNavigate();
@@ -41,9 +44,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const [swissBoolean, setSwissBoolean] = useState<boolean>(false);
   const [currentReportType, setCurrentReportType] = useState<string>('');
 
-  // URL guest ID state
-  const urlGuestId = getGuestReportId();
-  
   // Token recovery state
   const [tokenRecoveryState, setTokenRecoveryState] = useState<{
     isRecovering: boolean;
@@ -79,14 +79,13 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   // Unified data fetching: determine polling state based on Stripe redirect status
   const shouldPoll = stripePaymentState.isWaiting;
   const { data: guestReportData, error: guestReportError, isLoading: isPolling } = useGuestReportData(
-    urlGuestId,
+    guestId,
     shouldPoll
   );
 
-  // Handle URL guest_id parameter - distinguish between Stripe redirect and token recovery
+  // Handle guest data when guestId is provided
   React.useEffect(() => {
-    const urlGuestId = getGuestReportId();
-    if (urlGuestId) {
+    if (guestId) {
       // Check if this is a fresh Stripe redirect (no existing session data)
       const hasExistingSession = localStorage.getItem('pending_report_email');
       
@@ -102,15 +101,10 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         // This is token recovery - use existing logic
         console.log('🔄 Token recovery detected...');
         setTokenRecoveryState(prev => ({ ...prev, isRecovering: true, error: null }));
-        recoverTokenData(urlGuestId);
+        recoverTokenData(guestId);
       }
-      return;
     }
-    
-    // Only clear if no URL guest ID (fresh start)
-    clearGuestReportId();
-    localStorage.removeItem('pending_report_email');
-  }, []);
+  }, [guestId]);
 
   // Unified data handling: Process guest report data from the single source of truth
   React.useEffect(() => {
@@ -181,12 +175,12 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }
   }, [guestReportData, guestReportError, stripePaymentState.isWaiting]);
 
-  const recoverTokenData = async (guestId: string) => {
+  const recoverTokenData = async (guestIdParam: string) => {
     try {
       const { data: guestReport, error } = await supabase
         .from('guest_reports')
         .select('*')
-        .eq('id', guestId)
+        .eq('id', guestIdParam)
         .single();
 
       if (error || !guestReport) {
@@ -346,7 +340,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   };
 
   const handleViewReport = async () => {
-    if (!urlGuestId) return;
+    if (!guestId) return;
     
     try {
       // Use the unified data fetching approach
@@ -498,7 +492,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         name={userName} 
         email={userEmail} 
         onViewReport={handleViewReport}
-        guestReportId={urlGuestId || undefined}
+        guestReportId={guestId || undefined}
       />
     );
   }
@@ -514,24 +508,24 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           name={name} 
           email={email} 
           onViewReport={handleViewReport}
-          guestReportId={urlGuestId || undefined}
+          guestReportId={guestId || undefined}
         />
       );
     }
   }
   
-  if (urlGuestId && tokenRecoveryState.recovered && tokenRecoveryState.recoveredName && tokenRecoveryState.recoveredEmail) {
+  if (guestId && tokenRecoveryState.recovered && tokenRecoveryState.recoveredName && tokenRecoveryState.recoveredEmail) {
     return (
       <SuccessScreen 
         name={tokenRecoveryState.recoveredName} 
         email={tokenRecoveryState.recoveredEmail} 
         onViewReport={handleViewReport}
-        guestReportId={urlGuestId}
+        guestReportId={guestId}
       />
     );
   }
   
-  if (urlGuestId && tokenRecoveryState.isRecovering) {
+  if (guestId && tokenRecoveryState.isRecovering) {
     return (
       <div className="min-h-screen flex items-center justify-center p-8">
         <div className="text-center space-y-6">
@@ -542,7 +536,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
   
-  if (urlGuestId && tokenRecoveryState.error) {
+  if (guestId && tokenRecoveryState.error) {
     React.useEffect(() => {
       clearGuestReportId();
       window.history.replaceState({}, '', '/report');

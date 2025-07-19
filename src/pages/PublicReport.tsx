@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import HeroSection from '@/components/public-report/HeroSection';
@@ -15,14 +14,55 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
+import { getGuestReportIdFromUrl, storeGuestReportId } from '@/utils/urlHelpers';
 
 const PublicReport = () => {
   // ALL HOOKS MUST BE DECLARED FIRST - NEVER INSIDE TRY-CATCH
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [scrollY, setScrollY] = useState(0);
   const [showCancelledMessage, setShowCancelledMessage] = useState(false);
+  const [activeGuestId, setActiveGuestId] = useState<string | null>(null);
+  const [isGuestIdLoading, setIsGuestIdLoading] = useState(true);
   const isMobile = useIsMobile();
   const location = useLocation();
+
+  // Guest ID determination logic - runs once on mount
+  useEffect(() => {
+    const determineGuestId = () => {
+      console.log('🔍 PublicReport: Determining guest ID...');
+      
+      // Check URL for guest_id parameter (Stripe return case)
+      const urlGuestId = getGuestReportIdFromUrl();
+      console.log('📍 URL guest_id:', urlGuestId);
+      
+      // Check localStorage for existing ID
+      const storedGuestId = localStorage.getItem('currentGuestReportId');
+      console.log('💾 Stored guest_id:', storedGuestId);
+      
+      let finalGuestId = null;
+      
+      if (urlGuestId) {
+        // Stripe return case - URL has ID
+        console.log('✅ Stripe return detected - persisting URL guest_id');
+        storeGuestReportId(urlGuestId);
+        finalGuestId = urlGuestId;
+      } else if (storedGuestId) {
+        // Existing session case - use stored ID
+        console.log('📦 Using existing stored guest_id');
+        finalGuestId = storedGuestId;
+      } else {
+        // Fresh start case - no ID needed yet
+        console.log('🆕 Fresh start - no guest_id needed');
+        finalGuestId = null;
+      }
+      
+      console.log('🎯 Final determined guest_id:', finalGuestId);
+      setActiveGuestId(finalGuestId);
+      setIsGuestIdLoading(false);
+    };
+    
+    determineGuestId();
+  }, []);
 
   // Check for cancelled payment status
   useEffect(() => {
@@ -74,6 +114,18 @@ const PublicReport = () => {
 
   // Calculate text opacity based on scroll position
   const textOpacity = Math.max(0, 1 - (scrollY / 100)); // Fade out over 100px scroll
+
+  // Show loading spinner while determining guest ID
+  if (isGuestIdLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8">
+        <div className="text-center space-y-6">
+          <div className="w-12 h-12 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto"></div>
+          <p className="text-xl text-gray-600 font-light">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   try {
     return (
@@ -312,7 +364,7 @@ const PublicReport = () => {
         <TestsSection />
         {!isMobile && (
           <div id="report-form">
-            <ReportForm />
+            <ReportForm guestId={activeGuestId} />
           </div>
         )}
         <MobileReportTrigger 
@@ -321,7 +373,8 @@ const PublicReport = () => {
         />
         <MobileReportDrawer 
           isOpen={isDrawerOpen} 
-          onClose={handleCloseDrawer} 
+          onClose={handleCloseDrawer}
+          guestId={activeGuestId}
         />
         <TheraiChatGPTSection />
         <FeaturesSection onGetReportClick={handleGetReportClick} />

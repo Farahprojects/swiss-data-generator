@@ -1,7 +1,9 @@
+
 // ✅ CLEANED & PATCHED VERSION: MobileReportDrawer.tsx
 // - Scroll interference fixed
 // - Bloat removed
 // - Google Autocomplete bug resolved
+// - Guest ID now received as prop (no internal discovery)
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
@@ -10,7 +12,7 @@ import { useReportSubmission } from '@/hooks/useReportSubmission';
 
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useMobileSafeTopPadding } from '@/hooks/useMobileSafeTopPadding';
-import { getGuestReportId, clearAllSessionData } from '@/utils/urlHelpers';
+import { clearAllSessionData } from '@/utils/urlHelpers';
 
 import { supabase } from '@/integrations/supabase/client';
 import Step1ReportType from './drawer-steps/Step1ReportType';
@@ -28,7 +30,13 @@ import MobileDrawerFooter from './drawer-components/MobileDrawerFooter';
 
 const isBrowser = typeof window !== 'undefined';
 
-const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+interface MobileReportDrawerProps {
+  isOpen: boolean;
+  onClose: () => void;
+  guestId?: string | null;
+}
+
+const MobileReportDrawer = ({ isOpen, onClose, guestId = null }: MobileReportDrawerProps) => {
   const isMobile = useIsMobile();
   const topSafePadding = useMobileSafeTopPadding();
 
@@ -38,17 +46,16 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const urlGuestId = getGuestReportId();
   const [guestReportData, setGuestReportData] = useState<any>(null);
 
   useEffect(() => {
     const fetchGuestData = async () => {
-      if (urlGuestId) {
+      if (guestId) {
         try {
           const { data, error } = await supabase
             .from('guest_reports')
             .select('*')
-            .eq('id', urlGuestId)
+            .eq('id', guestId)
             .single();
 
           if (!error && data?.report_data) {
@@ -66,7 +73,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
     };
 
     fetchGuestData();
-  }, [urlGuestId]);
+  }, [guestId]);
 
   const { form, currentStep, nextStep, prevStep, resetForm, autoAdvanceAfterPlaceSelection } = useMobileDrawerForm();
   const { register, handleSubmit, setValue, watch, control, formState: { errors } } = form;
@@ -96,7 +103,6 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   const onSubmit = async (data: ReportFormData) => {
     await submitReport(data);
   };
-
 
   // Validation logic for each step
   const canGoNext = () => {
@@ -138,7 +144,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   };
 
   const handleViewReport = async () => {
-    if (!urlGuestId) return;
+    if (!guestId) return;
     
     try {
       const { data, error } = await supabase
@@ -148,7 +154,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
           report_logs!guest_reports_report_log_id_fkey(report_text),
           translator_logs!guest_reports_translator_log_id_fkey(swiss_data)
         `)
-        .eq('id', urlGuestId)
+        .eq('id', guestId)
         .single();
 
       if (error || !data) {
@@ -238,7 +244,7 @@ const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                 name={formName}
                 email={formEmail}
                 onViewReport={handleViewReport}
-                guestReportId={getGuestReportId() || undefined}
+                guestReportId={guestId || undefined}
               />
             </div>
           )}
