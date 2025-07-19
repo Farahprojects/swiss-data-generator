@@ -1,3 +1,4 @@
+
 // ✅ CLEANED & PATCHED VERSION: MobileReportDrawer.tsx
 // - Scroll interference fixed
 // - Bloat removed
@@ -187,14 +188,7 @@ const MobileReportDrawer = ({ isOpen, onClose, guestId = null }: MobileReportDra
     onClose();
     form.reset();
     setCurrentView('form');
-    setViewingReport(false);
-    setReportData(null);
     clearAllSessionData();
-  };
-
-  // Full reset function to pass to ReportViewer
-  const handleFullReset = () => {
-    resetDrawer();
   };
 
   if (!isMobile) return null;
@@ -277,7 +271,6 @@ const MobileReportDrawer = ({ isOpen, onClose, guestId = null }: MobileReportDra
             setViewingReport(false);
             setTimeout(() => resetDrawer(), 50);
           }}
-          onFullReset={handleFullReset}
           isMobile={true}
         />
       )}

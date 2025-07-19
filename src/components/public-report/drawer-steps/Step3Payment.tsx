@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { motion } from 'framer-motion';
@@ -46,13 +45,6 @@ const Step3Payment = ({
   const request = watch('request');
   const name = watch('name');
   const promoCode = watch('promoCode') || '';
-
-  // Auto-expand promo section when there's an error
-  useEffect(() => {
-    if (inlinePromoError && !showPromoCode) {
-      setShowPromoCode(true);
-    }
-  }, [inlinePromoError, showPromoCode]);
 
   // Clear inline error when user types
   useEffect(() => {
@@ -156,13 +148,6 @@ const Step3Payment = ({
           </div>
 
           <div className="px-6">
-            {/* Show promo error outside the collapsible if it exists and section is closed */}
-            {inlinePromoError && !showPromoCode && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-600 font-light">{inlinePromoError}</p>
-              </div>
-            )}
-
             <Collapsible 
               open={showPromoCode} 
               onOpenChange={(open) => {
@@ -177,11 +162,7 @@ const Step3Payment = ({
               <CollapsibleTrigger asChild>
                 <button
                   type="button"
-                  className={`w-full px-6 py-3 rounded-xl text-base font-light transition-all duration-300 flex items-center justify-center ${
-                    inlinePromoError 
-                      ? 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100' 
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                  className="w-full bg-gray-100 text-gray-700 px-6 py-3 rounded-xl text-base font-light hover:bg-gray-200 transition-all duration-300 flex items-center justify-center"
                 >
                   <Tag className="h-4 w-4 mr-2" />
                   <span>Have a promo code?</span>
@@ -191,13 +172,6 @@ const Step3Payment = ({
               <CollapsibleContent className="mt-6">
                 <div className="space-y-6">
                   <div className="space-y-3">
-                    {/* Show error message above input field when section is open */}
-                    {inlinePromoError && (
-                      <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                        <p className="text-sm text-red-600 font-light">{inlinePromoError}</p>
-                      </div>
-                    )}
-                    
                     <Label htmlFor="promoCode" className="text-lg font-light text-gray-700">Promo Code</Label>
                     <div className="relative">
                       <Input
@@ -210,11 +184,7 @@ const Step3Payment = ({
                           }
                         })}
                         placeholder="Enter promo code"
-                        className={`h-14 rounded-xl text-lg font-light focus:border-gray-400 ${
-                          inlinePromoError 
-                            ? 'border-red-300 focus:border-red-400' 
-                            : 'border-gray-200'
-                        }`}
+                        className="h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400"
                         onFocus={(e) => scrollTo(e.target, { block: 'center' })}
                         onBlur={(e) => {
                           if (e.target.value.trim()) {
@@ -227,6 +197,9 @@ const Step3Payment = ({
                     </div>
                     {errors.promoCode && (
                       <p className="text-sm text-red-500 font-light">{errors.promoCode.message}</p>
+                    )}
+                    {inlinePromoError && (
+                      <p className="text-sm text-red-500 font-light">{inlinePromoError}</p>
                     )}
                   </div>
                 </div>
