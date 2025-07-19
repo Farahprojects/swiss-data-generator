@@ -15,13 +15,15 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
-import { storeGuestReportId } from '@/utils/urlHelpers';
+import { storeGuestReportId, getGuestReportId } from '@/utils/urlHelpers';
 
 const PublicReport = () => {
   // ALL HOOKS MUST BE DECLARED FIRST - NEVER INSIDE TRY-CATCH
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [scrollY, setScrollY] = useState(0);
   const [showCancelledMessage, setShowCancelledMessage] = useState(false);
+  const [activeGuestId, setActiveGuestId] = useState<string | null>(null);
+  const [isLoadingGuestId, setIsLoadingGuestId] = useState(true);
   const isMobile = useIsMobile();
   const location = useLocation();
 
@@ -33,18 +35,48 @@ const PublicReport = () => {
     }
   }, [location.search]);
 
-  // NEW: Detect Stripe return and persist guest_id
+  // SINGLE SOURCE OF TRUTH: Determine the final guest ID
   useEffect(() => {
-    // This effect runs once when the page loads to detect Stripe returns
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlGuestId = urlParams.get('guest_id');
-    const storedGuestId = localStorage.getItem('currentGuestReportId');
+    const determineGuestId = () => {
+      console.log('🔍 [PublicReport] Determining guest ID...');
+      
+      // Step 1: Check URL for guest_id parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlGuestId = urlParams.get('guest_id');
+      
+      // Step 2: Check localStorage for existing ID
+      const storedGuestId = localStorage.getItem('currentGuestReportId');
+      
+      console.log('🔍 [PublicReport] URL guest_id:', urlGuestId);
+      console.log('🔍 [PublicReport] Stored guest_id:', storedGuestId);
+      
+      // Step 3: If URL has ID but localStorage doesn't match, this is a Stripe return
+      if (urlGuestId && urlGuestId !== storedGuestId) {
+        console.log('🔄 [PublicReport] Detected Stripe return. Persisting guest ID:', urlGuestId);
+        storeGuestReportId(urlGuestId);
+        setActiveGuestId(urlGuestId);
+      } 
+      // Step 4: Use stored ID if available
+      else if (storedGuestId) {
+        console.log('✅ [PublicReport] Using stored guest ID:', storedGuestId);
+        setActiveGuestId(storedGuestId);
+      }
+      // Step 5: Use URL ID if no stored ID
+      else if (urlGuestId) {
+        console.log('✅ [PublicReport] Using URL guest ID:', urlGuestId);
+        storeGuestReportId(urlGuestId);
+        setActiveGuestId(urlGuestId);
+      }
+      // Step 6: No guest ID found (new session)
+      else {
+        console.log('ℹ️ [PublicReport] No guest ID found - new session');
+        setActiveGuestId(null);
+      }
+      
+      setIsLoadingGuestId(false);
+    };
 
-    // If URL has guest_id but localStorage doesn't match, this is likely a Stripe return
-    if (urlGuestId && urlGuestId !== storedGuestId) {
-      console.log('🔄 Detected return from Stripe. Persisting guest ID:', urlGuestId);
-      storeGuestReportId(urlGuestId);
-    }
+    determineGuestId();
   }, []); // Empty dependency array ensures this runs only once on mount
 
   // Scroll position tracking
@@ -89,6 +121,18 @@ const PublicReport = () => {
 
   // Calculate text opacity based on scroll position
   const textOpacity = Math.max(0, 1 - (scrollY / 100)); // Fade out over 100px scroll
+
+  // Loading state while determining guest ID
+  if (isLoadingGuestId) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-6">
+          <div className="w-12 h-12 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto"></div>
+          <p className="text-xl text-gray-600 font-light">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   try {
     return (
@@ -327,7 +371,7 @@ const PublicReport = () => {
         <TestsSection />
         {!isMobile && (
           <div id="report-form">
-            <ReportForm />
+            <ReportForm guestId={activeGuestId} />
           </div>
         )}
         <MobileReportTrigger 
@@ -336,7 +380,8 @@ const PublicReport = () => {
         />
         <MobileReportDrawer 
           isOpen={isDrawerOpen} 
-          onClose={handleCloseDrawer} 
+          onClose={handleCloseDrawer}
+          activeGuestId={activeGuestId}
         />
         <TheraiChatGPTSection />
         <FeaturesSection onGetReportClick={handleGetReportClick} />
