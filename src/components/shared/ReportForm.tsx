@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { ReportFormData } from '@/types/public-report';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
+import { useReportOrchestrator } from '@/hooks/useReportOrchestrator';
 
 import ReportTypeSelector from '@/components/public-report/ReportTypeSelector';
 import CombinedPersonalDetailsForm from '@/components/public-report/CombinedPersonalDetailsForm';
@@ -33,6 +34,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   onFormStateChange
 }) => {
   const navigate = useNavigate();
+  const { setupOrchestratorListener } = useReportOrchestrator();
   
   const [viewingReport, setViewingReport] = useState(false);
   const [reportData, setReportData] = useState<ReportData | null>(null);
@@ -77,6 +79,29 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     shouldPoll
   );
 
+  // Memoized callback for handling orchestrator report ready events
+  const handleReportReady = useCallback((reportData: ReportData) => {
+    console.log('🎯 [ReportForm] Orchestrator report ready callback triggered');
+    setReportData(reportData);
+    setViewingReport(true);
+  }, []);
+
+  // Set up orchestrator listener when we have a guestId and are in success states
+  React.useEffect(() => {
+    if (!guestId) return;
+
+    // Check if we're in any success state that should trigger the listener
+    const inSuccessState = reportCreated || 
+                          stripePaymentState.isComplete || 
+                          tokenRecoveryState.recovered;
+
+    if (inSuccessState) {
+      console.log('🔄 [ReportForm] Setting up orchestrator listener for:', guestId);
+      const cleanup = setupOrchestratorListener(guestId, handleReportReady);
+      return cleanup;
+    }
+  }, [guestId, setupOrchestratorListener, handleReportReady, reportCreated, stripePaymentState.isComplete, tokenRecoveryState.recovered]);
+
   // Handle guest data when guestId is provided
   React.useEffect(() => {
     if (guestId) {
@@ -99,114 +124,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       }
     }
   }, [guestId]);
-
-  // Unified data handling: Process guest report data from the single source of truth
-  React.useEffect(() => {
-    if (!guestReportData || !stripePaymentState.isStripeRedirect) return;
-
-    const guestReport = guestReportData.guest_report;
-    console.log('📊 Unified data fetch result - payment status:', guestReport?.payment_status);
-    
-    if (guestReport?.payment_status === 'paid') {
-      console.log('✅ Payment confirmed via unified fetch! Transitioning to success state...');
-      setStripePaymentState({
-        isVerifying: false,
-        isWaiting: false,
-        isComplete: true,
-        error: null,
-        reportData: guestReportData,
-        isStripeRedirect: true,
-      });
-    } else if (guestReport?.payment_status === 'pending') {
-      // Start polling since payment is still pending
-      console.log('⏳ Payment pending via unified fetch, starting polling...');
-      setStripePaymentState(prev => ({
-        ...prev,
-        isVerifying: false,
-        isWaiting: true,
-      }));
-    } else {
-      // Payment failed or other status
-      console.error('❌ Unexpected payment status:', guestReport?.payment_status);
-      setStripePaymentState({
-        isVerifying: false,
-        isWaiting: false,
-        isComplete: false,
-        error: `Payment status: ${guestReport?.payment_status}`,
-        reportData: null,
-        isStripeRedirect: false,
-      });
-    }
-  }, [guestReportData, stripePaymentState.isStripeRedirect]);
-
-  // Handle polling results for payment verification
-  React.useEffect(() => {
-    if (guestReportData && stripePaymentState.isWaiting) {
-      const guestReport = guestReportData.guest_report;
-      console.log('📊 Polling result - payment status:', guestReport?.payment_status);
-      
-      if (guestReport?.payment_status === 'paid') {
-        console.log('✅ Payment confirmed via polling! Transitioning to success state...');
-        setStripePaymentState({
-          isVerifying: false,
-          isWaiting: false,
-          isComplete: true,
-          error: null,
-          reportData: guestReportData,
-          isStripeRedirect: true,
-        });
-      }
-      // If still pending, continue polling (hook handles this automatically)
-    }
-    
-    if (guestReportError && stripePaymentState.isWaiting) {
-      console.error('❌ Polling error:', guestReportError);
-      setStripePaymentState(prev => ({
-        ...prev,
-        isWaiting: false,
-        error: 'Failed to verify payment status',
-      }));
-    }
-  }, [guestReportData, guestReportError, stripePaymentState.isWaiting]);
-
-  const recoverTokenData = async (guestIdParam: string) => {
-    try {
-      const { data: guestReport, error } = await supabase
-        .from('guest_reports')
-        .select('*')
-        .eq('id', guestIdParam)
-        .single();
-
-      if (error || !guestReport) {
-        throw new Error('Report not found');
-      }
-
-      const reportData = guestReport.report_data as any;
-      const name = reportData?.name;
-      const email = reportData?.email || guestReport.email;
-
-      if (!name || !email) {
-        throw new Error('Session data corrupted');
-      }
-
-      setTokenRecoveryState({
-        isRecovering: false,
-        recovered: true,
-        error: null,
-        recoveredName: name,
-        recoveredEmail: email,
-      });
-
-    } catch (err: any) {
-      setTokenRecoveryState({
-        isRecovering: false,
-        recovered: false,
-        error: err.message || 'Unable to recover session',
-        recoveredName: null,
-        recoveredEmail: null,
-      });
-    }
-  };
 
   const form = useForm<ReportFormData>({
     mode: 'onBlur',
@@ -300,6 +217,45 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     resetReportState
   } = useReportSubmission();
 
+  const recoverTokenData = async (guestIdParam: string) => {
+    try {
+      const { data: guestReport, error } = await supabase
+        .from('guest_reports')
+        .select('*')
+        .eq('id', guestIdParam)
+        .single();
+
+      if (error || !guestReport) {
+        throw new Error('Report not found');
+      }
+
+      const reportData = guestReport.report_data as any;
+      const name = reportData?.name;
+      const email = reportData?.email || guestReport.email;
+
+      if (!name || !email) {
+        throw new Error('Session data corrupted');
+      }
+
+      setTokenRecoveryState({
+        isRecovering: false,
+        recovered: true,
+        error: null,
+        recoveredName: name,
+        recoveredEmail: email,
+      });
+
+    } catch (err: any) {
+      setTokenRecoveryState({
+        isRecovering: false,
+        recovered: false,
+        error: err.message || 'Unable to recover session',
+        recoveredName: null,
+        recoveredEmail: null,
+      });
+    }
+  };
+
   // Comprehensive state reset function
   const resetAllStates = useCallback(() => {
     console.log('🧹 Starting comprehensive state reset...');
@@ -357,6 +313,75 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     
     console.log('✅ State reset completed');
   }, [form, resetReportState]);
+
+  // Unified data handling: Process guest report data from the single source of truth
+  React.useEffect(() => {
+    if (!guestReportData || !stripePaymentState.isStripeRedirect) return;
+
+    const guestReport = guestReportData.guest_report;
+    console.log('📊 Unified data fetch result - payment status:', guestReport?.payment_status);
+    
+    if (guestReport?.payment_status === 'paid') {
+      console.log('✅ Payment confirmed via unified fetch! Transitioning to success state...');
+      setStripePaymentState({
+        isVerifying: false,
+        isWaiting: false,
+        isComplete: true,
+        error: null,
+        reportData: guestReportData,
+        isStripeRedirect: true,
+      });
+    } else if (guestReport?.payment_status === 'pending') {
+      // Start polling since payment is still pending
+      console.log('⏳ Payment pending via unified fetch, starting polling...');
+      setStripePaymentState(prev => ({
+        ...prev,
+        isVerifying: false,
+        isWaiting: true,
+      }));
+    } else {
+      // Payment failed or other status
+      console.error('❌ Unexpected payment status:', guestReport?.payment_status);
+      setStripePaymentState({
+        isVerifying: false,
+        isWaiting: false,
+        isComplete: false,
+        error: `Payment status: ${guestReport?.payment_status}`,
+        reportData: null,
+        isStripeRedirect: false,
+      });
+    }
+  }, [guestReportData, stripePaymentState.isStripeRedirect]);
+
+  // Handle polling results for payment verification
+  React.useEffect(() => {
+    if (guestReportData && stripePaymentState.isWaiting) {
+      const guestReport = guestReportData.guest_report;
+      console.log('📊 Polling result - payment status:', guestReport?.payment_status);
+      
+      if (guestReport?.payment_status === 'paid') {
+        console.log('✅ Payment confirmed via polling! Transitioning to success state...');
+        setStripePaymentState({
+          isVerifying: false,
+          isWaiting: false,
+          isComplete: true,
+          error: null,
+          reportData: guestReportData,
+          isStripeRedirect: true,
+        });
+      }
+      // If still pending, continue polling (hook handles this automatically)
+    }
+    
+    if (guestReportError && stripePaymentState.isWaiting) {
+      console.error('❌ Polling error:', guestReportError);
+      setStripePaymentState(prev => ({
+        ...prev,
+        isWaiting: false,
+        error: 'Failed to verify payment status',
+      }));
+    }
+  }, [guestReportData, guestReportError, stripePaymentState.isWaiting]);
 
   const paymentStepRef = React.useRef<HTMLDivElement>(null);
   const secondPersonRef = React.useRef<HTMLDivElement>(null);
@@ -548,6 +573,10 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         name={userName} 
         email={userEmail} 
         onViewReport={handleViewReport}
+        onReportReady={(callback) => {
+          // Store the callback for orchestrator to use
+          handleReportReady.current = callback;
+        }}
         guestReportId={guestId || undefined}
       />
     );
@@ -564,6 +593,10 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           name={name} 
           email={email} 
           onViewReport={handleViewReport}
+          onReportReady={(callback) => {
+            // Store the callback for orchestrator to use
+            handleReportReady.current = callback;
+          }}
           guestReportId={guestId || undefined}
         />
       );
@@ -576,6 +609,10 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         name={tokenRecoveryState.recoveredName} 
         email={tokenRecoveryState.recoveredEmail} 
         onViewReport={handleViewReport}
+        onReportReady={(callback) => {
+          // Store the callback for orchestrator to use
+          handleReportReady.current = callback;
+        }}
         guestReportId={guestId}
       />
     );

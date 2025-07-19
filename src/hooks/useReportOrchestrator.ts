@@ -20,7 +20,7 @@ export const useReportOrchestrator = (): UseReportOrchestratorReturn => {
 
     // Clean up existing channel
     if (channelRef.current) {
-      supabase.removeChannel(channelRef.current);
+      channelRef.current.unsubscribe();
       channelRef.current = null;
     }
 
@@ -36,13 +36,32 @@ export const useReportOrchestrator = (): UseReportOrchestratorReturn => {
       })
       .subscribe((status) => {
         console.log(`[orchestrator-listener] Channel status: ${status}`);
+        
+        // Handle reconnection - check if report is already ready
+        if (status === 'SUBSCRIBED' && channelRef.current) {
+          // Small delay to allow any pending broadcasts to come through first
+          setTimeout(async () => {
+            try {
+              const { data, error } = await supabase.functions.invoke('get-guest-report', {
+                body: { guest_report_id: reportId }
+              });
+              
+              if (!error && data) {
+                console.log('[orchestrator-listener] Found ready report on reconnect');
+                onReportReady?.(data);
+              }
+            } catch (err) {
+              console.log('[orchestrator-listener] Reconnect check failed:', err);
+            }
+          }, 500);
+        }
       });
 
     channelRef.current = channel;
 
     return () => {
       if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
+        channelRef.current.unsubscribe();
         channelRef.current = null;
       }
     };

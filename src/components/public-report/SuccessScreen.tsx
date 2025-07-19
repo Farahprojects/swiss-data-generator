@@ -4,7 +4,6 @@ import { CheckCircle, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getGuestToken } from '@/utils/urlHelpers';
-import { useReportOrchestrator } from '@/hooks/useReportOrchestrator';
 import { useGuestReportData } from '@/hooks/useGuestReportData';
 import { ReportData } from '@/utils/reportContentExtraction';
 import EntertainmentWindow from './EntertainmentWindow';
@@ -13,10 +12,17 @@ interface SuccessScreenProps {
   name: string;
   email: string;
   onViewReport?: (reportData: ReportData) => void;
+  onReportReady?: (reportData: ReportData) => void;
   guestReportId?: string;
 }
 
-const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport, guestReportId }) => {
+const SuccessScreen: React.FC<SuccessScreenProps> = ({ 
+  name, 
+  email, 
+  onViewReport, 
+  onReportReady,
+  guestReportId 
+}) => {
   const currentGuestReportId = guestReportId || getGuestToken();
   if (!currentGuestReportId) {
     return null;
@@ -24,7 +30,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
 
   const firstName = name?.split(' ')[0] || 'there';
   const isMobile = useIsMobile();
-  const { setupOrchestratorListener } = useReportOrchestrator();
 
   // Simple visual countdown (24 seconds for UX)
   const [countdownTime, setCountdownTime] = useState(24);
@@ -35,7 +40,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
   // Fail-safe ping function
   const { refetch: pingGuestReport } = useGuestReportData(currentGuestReportId, false);
 
-  // Handle report ready from orchestrator
+  // Handle report ready from orchestrator (via parent component)
   const handleReportReady = useCallback((reportData: ReportData) => {
     console.log('🎯 Report ready signal received from orchestrator');
     setReportReady(true);
@@ -46,6 +51,13 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       onViewReport(reportData);
     }
   }, [onViewReport]);
+
+  // Set up the callback for parent component
+  useEffect(() => {
+    if (onReportReady) {
+      onReportReady(handleReportReady);
+    }
+  }, [onReportReady, handleReportReady]);
 
   // Fail-safe function to check report status
   const triggerFailSafe = useCallback(async () => {
@@ -72,14 +84,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       setErrorState('Unable to check report status. Please refresh the page or contact support.');
     }
   }, [failSafeTriggered, reportReady, pingGuestReport, onViewReport]);
-
-  // Set up orchestrator listener on mount
-  useEffect(() => {
-    if (currentGuestReportId) {
-      const cleanup = setupOrchestratorListener(currentGuestReportId, handleReportReady);
-      return cleanup;
-    }
-  }, [currentGuestReportId, setupOrchestratorListener, handleReportReady]);
 
   // Visual countdown timer with fail-safe trigger
   useEffect(() => {
