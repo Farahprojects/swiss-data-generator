@@ -82,9 +82,9 @@ export const AspectTable: React.FC<AspectTableProps> = ({
               
               return (
                 <tr key={`${planetA}-${aspectType}-${planetB}-${index}`} className="border-b border-gray-100 hover:bg-gray-50/30">
-                  <td className="py-3 px-4 text-gray-900">{planetA}</td>
-                  <td className="py-3 px-4 text-gray-700">{aspectType}</td>
-                  <td className="py-3 px-4 text-gray-700">{planetB}</td>
+                  <td className="py-3 px-4 text-gray-900 text-left">{planetA}</td>
+                  <td className="py-3 px-4 text-gray-700 text-left">{aspectType}</td>
+                  <td className="py-3 px-4 text-gray-700 text-left">{planetB}</td>
                   <td className="py-3 px-4 text-gray-600 text-right text-sm">{orbDisplay}</td>
                 </tr>
               );
