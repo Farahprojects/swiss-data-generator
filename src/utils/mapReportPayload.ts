@@ -1,3 +1,4 @@
+
 import memoize from 'memoizee';
 import { MappedReport, MappedReportSchema, RawReportPayload } from '@/types/mappedReport';
 
@@ -58,7 +59,7 @@ function _mapReportPayload({
 
   // Do not fallback — trust DB flags as single source of truth
   const isPureAstroReport = (reportType === 'essence' || reportType === 'sync') && !report_content;
-  const hasReport = guest_report?.is_ai_report ?? false;
+  const hasReport = guest_report?.is_ai_report ?? guest_report?.swiss_boolean ?? !!swiss_data;
   const swissBoolean = guest_report?.swiss_boolean ?? metadata?.is_astro_report ?? !!swiss_data;
 
   const mappedReport: MappedReport = {
