@@ -1,18 +1,35 @@
+
 import React from 'react';
-import AstroSnapshot from './AstroSnapshot';
-import SynastrySnapshot from './SynastrySnapshot';
-import { isSynastryData } from '@/lib/synastryFormatter';
+import { IndividualAstroFormatter } from '@/components/astro-formatters/IndividualAstroFormatter';
+import { SynastryAstroFormatter } from '@/components/astro-formatters/SynastryAstroFormatter';
+import { ReportData } from '@/utils/reportContentExtraction';
 
 interface AstroDataRendererProps {
   swissData: any;
-  reportData?: any; // Form data containing names, birth details, etc.
+  reportData: ReportData;
 }
 
+// Helper function to detect synastry reports - centralized logic
+const isSynastryReport = (reportData: ReportData): boolean => {
+  if (!reportData.swiss_data) return false;
+  
+  return !!(
+    reportData.swiss_data.synastry_aspects ||
+    reportData.swiss_data.composite_chart ||
+    reportData.swiss_data.person_a ||
+    reportData.swiss_data.person_b ||
+    reportData.guest_report?.report_data?.secondPersonName
+  );
+};
+
 export const AstroDataRenderer = ({ swissData, reportData }: AstroDataRendererProps) => {
-  // Route to appropriate component based on data type
-  if (isSynastryData(swissData)) {
-    return <SynastrySnapshot rawSyncJSON={swissData} reportData={reportData} />;
+  // Single source of truth for synastry detection
+  if (isSynastryReport(reportData)) {
+    return <SynastryAstroFormatter swissData={swissData} reportData={reportData} />;
   }
   
-  return <AstroSnapshot rawSwissJSON={swissData} reportData={reportData} />;
+  return <IndividualAstroFormatter swissData={swissData} reportData={reportData} />;
 };
+
+// Export the detection function for use elsewhere
+export { isSynastryReport };

@@ -4,6 +4,7 @@ import { ReportRenderer } from '@/components/shared/ReportRenderer';
 import { IndividualAstroFormatter } from '@/components/astro-formatters/IndividualAstroFormatter';
 import { SynastryAstroFormatter } from '@/components/astro-formatters/SynastryAstroFormatter';
 import { ReportData } from '@/utils/reportContentExtraction';
+import { isSynastryReport } from './AstroDataRenderer';
 
 interface ReportContentProps {
   reportData: ReportData;
@@ -11,20 +12,6 @@ interface ReportContentProps {
   setActiveView: (view: 'report' | 'astro') => void;
   isMobile?: boolean;
 }
-
-// Helper function to detect synastry reports
-const isSynastryReport = (reportData: ReportData): boolean => {
-  if (!reportData.swiss_data) return false;
-  
-  // Check for synastry-specific data structures
-  return !!(
-    reportData.swiss_data.synastry_aspects ||
-    reportData.swiss_data.composite_chart ||
-    reportData.swiss_data.person_a ||
-    reportData.swiss_data.person_b ||
-    reportData.guest_report?.report_data?.secondPersonName
-  );
-};
 
 export const ReportContent: React.FC<ReportContentProps> = ({
   reportData,

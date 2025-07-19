@@ -11,7 +11,8 @@ import { ReportParser } from '@/utils/reportParser';
 import { supabase } from '@/integrations/supabase/client';
 import { getGuestReportId } from '@/utils/urlHelpers';
 import openaiLogo from '@/assets/openai-logo.png';
-import { ReportData, extractReportContent, extractAstroContent, extractUnifiedContent, getPersonName, getReportTitle } from '@/utils/reportContentExtraction';
+import { ReportData, extractReportContent, getPersonName, getReportTitle } from '@/utils/reportContentExtraction';
+import { renderAstroDataAsText, renderUnifiedContentAsText } from '@/utils/componentToTextRenderer';
 
 interface ReportViewerProps {
   reportData: ReportData;
@@ -137,26 +138,16 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
       
       switch (contentType) {
         case 'both':
-          // Both exist - copy unified content exactly like PDF generation
-          const reportText = extractReportContent(reportData) ? (() => {
-            const blocks = ReportParser.parseReport(extractReportContent(reportData));
-            return blocks.map(block => block.text).join('\n');
-          })() : '';
-          
-          const astroText = extractAstroContent(reportData);
-          
-          textToCopy = `${reportText}\n\n--- ASTROLOGICAL DATA ---\n\n${astroText}`;
+          textToCopy = renderUnifiedContentAsText(reportData);
           contentDescription = 'report and astro data';
           break;
         case 'ai':
-          // Only report content
           const blocks = ReportParser.parseReport(extractReportContent(reportData));
           textToCopy = blocks.map(block => block.text).join('\n');
           contentDescription = 'report';
           break;
         case 'astro':
-          // Only astro data
-          textToCopy = extractAstroContent(reportData);
+          textToCopy = renderAstroDataAsText(reportData);
           contentDescription = 'astro data';
           break;
         default:

@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import { PdfTemplate, PdfGenerationOptions } from '../types';
 import { AIReportTemplate } from './AIReportTemplate';
 import { AstroTemplate } from './AstroTemplate';
-import { isSynastryData } from '@/lib/synastryFormatter';
+import { renderAstroDataAsText } from '@/utils/componentToTextRenderer';
 
 export interface UnifiedPdfData {
   reportContent?: string;
@@ -10,6 +10,7 @@ export interface UnifiedPdfData {
   customerName: string;
   reportPdfData?: string;
   reportType?: string;
+  reportData?: any; // Full report data for component rendering
 }
 
 export class UnifiedTemplate implements PdfTemplate {
@@ -53,9 +54,9 @@ export class UnifiedTemplate implements PdfTemplate {
       currentY = this.aiTemplate.renderAIReportSection(data.reportContent, currentY, doc);
     }
 
-    // Astro Data Section - Use the proper AstroTemplate methods
+    // Astro Data Section - Use component system
     if (data.swissData) {
-      currentY = this.renderAstroSection(doc, data.swissData, currentY);
+      currentY = this.renderAstroSection(doc, data.swissData, currentY, data.reportData);
     }
 
     // Footer
@@ -71,7 +72,6 @@ export class UnifiedTemplate implements PdfTemplate {
   private addHeader(doc: jsPDF, customerName: string, startY: number, pageWidth: number, margins: any, reportType?: string): number {
     doc.setFontSize(26).setFont("times", "bold").text("Therai.", pageWidth/2, startY + 12, { align: "center" });
     
-    // Use report type for title if available, otherwise fallback to generic
     const reportTitle = this.getReportTitle(reportType);
     doc.setFontSize(20).setFont("helvetica", "bold").text(reportTitle, pageWidth/2, startY + 28, { align: "center" });
     
@@ -82,8 +82,7 @@ export class UnifiedTemplate implements PdfTemplate {
     return startY + 70;
   }
 
-  private renderAstroSection(doc: jsPDF, swissData: any, startY: number): number {
-    // Check if we need a new page
+  private renderAstroSection(doc: jsPDF, swissData: any, startY: number, reportData?: any): number {
     const pageHeight = doc.internal.pageSize.getHeight();
     const margins = this.options.margins!;
     
@@ -97,17 +96,42 @@ export class UnifiedTemplate implements PdfTemplate {
     doc.text("Astrological Data", margins.left, startY);
     startY += 15;
 
-    // Use the proper AstroTemplate rendering methods
     try {
-      if (isSynastryData(swissData)) {
-        return this.astroTemplate.renderSynastryData(swissData, startY, doc);
-      } else {
-        return this.astroTemplate.renderEssenceData(swissData, startY, doc);
-      }
+      // Use component-to-text renderer for consistency
+      const mockReportData = {
+        swiss_data: swissData,
+        guest_report: { report_data: reportData },
+        // ... other required fields with defaults
+      };
+      
+      const astroText = renderAstroDataAsText(mockReportData as any);
+      
+      // Render the text content
+      doc.setFontSize(10).setFont("helvetica", "normal").setTextColor(33);
+      const lines = astroText.split('\n');
+      
+      lines.forEach(line => {
+        if (startY > pageHeight - 30) {
+          doc.addPage();
+          startY = margins.top;
+        }
+        
+        if (line.includes('=') || line.includes('-')) {
+          // Headers
+          doc.setFont("helvetica", "bold");
+        } else {
+          doc.setFont("helvetica", "normal");
+        }
+        
+        doc.text(line, margins.left, startY);
+        startY += 5;
+      });
+      
+      return startY + 10;
+      
     } catch (error) {
       console.error('Error rendering astro data:', error);
       
-      // Fallback: show basic info
       doc.setFontSize(11).setFont("helvetica", "normal").setTextColor(33);
       doc.text("Astrological data is available but could not be properly formatted.", margins.left, startY);
       return startY + 20;
