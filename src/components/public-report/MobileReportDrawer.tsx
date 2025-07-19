@@ -1,30 +1,261 @@
+// ✅ CLEANED & PATCHED VERSION: MobileReportDrawer.tsx
+// - Scroll interference fixed
+// - Bloat removed
+// - Google Autocomplete bug resolved
 
-import React from 'react';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
-import { ReportForm } from '@/components/shared/ReportForm';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Drawer, DrawerContent } from '@/components/ui/drawer';
+import { useMobileDrawerForm } from '@/hooks/useMobileDrawerForm';
+import { useReportSubmission } from '@/hooks/useReportSubmission';
 
-interface MobileReportDrawerProps {
-  isOpen: boolean;
-  onClose: () => void;
-  activeGuestId: string | null;
-}
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useMobileSafeTopPadding } from '@/hooks/useMobileSafeTopPadding';
+import { getGuestReportId, clearAllSessionData } from '@/utils/urlHelpers';
 
-const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({ 
-  isOpen, 
-  onClose,
-  activeGuestId 
-}) => {
+import { supabase } from '@/integrations/supabase/client';
+import Step1ReportType from './drawer-steps/Step1ReportType';
+import Step1_5SubCategory from './drawer-steps/Step1_5SubCategory';
+import Step1_5AstroData from './drawer-steps/Step1_5AstroData';
+import Step2BirthDetails from './drawer-steps/Step2BirthDetails';
+import Step3Payment from './drawer-steps/Step3Payment';
+import SuccessScreen from './SuccessScreen';
+import { ReportViewer } from './ReportViewer';
+import { ReportFormData } from '@/types/public-report';
+import { MappedReport } from '@/types/mappedReport';
+import { mapReportPayload } from '@/utils/mapReportPayload';
+import MobileDrawerHeader from './drawer-components/MobileDrawerHeader';
+import MobileDrawerFooter from './drawer-components/MobileDrawerFooter';
+
+const isBrowser = typeof window !== 'undefined';
+
+const MobileReportDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+  const isMobile = useIsMobile();
+  const topSafePadding = useMobileSafeTopPadding();
+
+  const [currentView, setCurrentView] = useState<'form' | 'report'>('form');
+  const [mappedReport, setMappedReport] = useState<MappedReport | null>(null);
+  const [viewingReport, setViewingReport] = useState(false);
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const urlGuestId = getGuestReportId();
+  const [guestReportData, setGuestReportData] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchGuestData = async () => {
+      if (urlGuestId) {
+        try {
+          const { data, error } = await supabase
+            .from('guest_reports')
+            .select('*')
+            .eq('id', urlGuestId)
+            .single();
+
+          if (!error && data?.report_data) {
+            setGuestReportData({ guest_report: data });
+          } else {
+            // Invalid token - clear it and stay on form
+            clearAllSessionData();
+          }
+        } catch (err) {
+          console.error('Failed to fetch guest data:', err);
+          // Clear invalid token
+          clearAllSessionData();
+        }
+      }
+    };
+
+    fetchGuestData();
+  }, [urlGuestId]);
+
+  const { form, currentStep, nextStep, prevStep, resetForm, autoAdvanceAfterPlaceSelection } = useMobileDrawerForm();
+  const { register, handleSubmit, setValue, watch, control, formState: { errors } } = form;
+
+  // Reset drawer state when closing to ensure clean state on reopen
+  useEffect(() => {
+    if (!isOpen) {
+      resetForm();
+    }
+  }, [isOpen, resetForm]);
+  
+  // Get form data for success screen
+  const formName = watch('name') || '';
+  const formEmail = watch('email') || '';
+
+  const { 
+    isProcessing, 
+    submitReport, 
+    reportCreated,
+    inlinePromoError,
+    clearInlinePromoError
+  } = useReportSubmission();
+  const reportCategory = watch('reportCategory');
+  const reportSubCategory = watch('reportSubCategory');
+  const request = watch('request');
+
+  const onSubmit = async (data: ReportFormData) => {
+    await submitReport(data);
+  };
+
+
+  // Validation logic for each step
+  const canGoNext = () => {
+    const isCompatibilityReport = reportCategory === 'compatibility' || request === 'sync';
+    
+    switch (currentStep) {
+      case 1:
+        return !!reportCategory;
+      case 2:
+        return reportCategory === 'astro-data' ? !!request : !!reportSubCategory;
+      case 3:
+        const requiredFields = ['name', 'email', 'birthDate', 'birthTime', 'birthLocation'];
+        const firstPersonValid = requiredFields.every(field => !!watch(field as keyof ReportFormData));
+        
+        if (!isCompatibilityReport) {
+          return firstPersonValid;
+        }
+        
+        // For compatibility reports, also validate second person fields (coordinates not required for step advancement)
+        const secondPersonRequiredFields = ['secondPersonName', 'secondPersonBirthDate', 'secondPersonBirthTime', 'secondPersonBirthLocation'];
+        const secondPersonValid = secondPersonRequiredFields.every(field => !!watch(field as keyof ReportFormData));
+        
+        return firstPersonValid && secondPersonValid;
+      case 4:
+        return true; // Payment step - submit button handles validation
+      default:
+        return false;
+    }
+  };
+
+  const handleNext = () => {
+    if (canGoNext()) {
+      nextStep();
+    }
+  };
+
+  const handleSubmitForm = () => {
+    handleSubmit(onSubmit)();
+  };
+
+  const handleViewReport = async () => {
+    if (!urlGuestId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('guest_reports')
+        .select(`
+          *,
+          report_logs!guest_reports_report_log_id_fkey(report_text),
+          translator_logs!guest_reports_translator_log_id_fkey(swiss_data)
+        `)
+        .eq('id', urlGuestId)
+        .single();
+
+      if (error || !data) {
+        throw new Error('Report not found');
+      }
+
+      const reportData = {
+        guest_report: data,
+        report_content: data.report_logs?.report_text || null,
+        swiss_data: data.translator_logs?.swiss_data || null,
+        metadata: { source: 'mobile_fetch' }
+      };
+
+      const mappedReportData = mapReportPayload(reportData);
+      setMappedReport(mappedReportData);
+      setViewingReport(true);
+      setCurrentView('report');
+    } catch (error) {
+      console.error('Failed to fetch report:', error);
+    }
+  };
+
+  const resetDrawer = () => {
+    onClose();
+    form.reset();
+    setCurrentView('form');
+    clearAllSessionData();
+  };
+
+  if (!isMobile) return null;
+
   return (
-    <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DrawerContent className="max-h-[90vh]">
-        <DrawerHeader>
-          <DrawerTitle>Get Your Report</DrawerTitle>
-        </DrawerHeader>
-        <div className="px-4 pb-4 overflow-y-auto">
-          <ReportForm guestId={activeGuestId} />
-        </div>
-      </DrawerContent>
-    </Drawer>
+    <>
+      <Drawer open={isOpen && currentView !== 'report'} onOpenChange={resetDrawer} dismissible={false}>
+        <DrawerContent className="flex flex-col rounded-none h-screen max-h-screen">
+          {currentView === 'form' && !reportCreated && (
+            <div className="flex flex-col h-full">
+              <MobileDrawerHeader 
+                currentStep={currentStep}
+                totalSteps={4}
+                onClose={resetDrawer}
+              />
+              <div
+                ref={scrollContainerRef}
+                className="flex-1 px-6 overflow-y-auto scrollbar-hide pb-20"
+              >
+                {(() => {
+                  switch (currentStep) {
+                    case 1:
+                      return <Step1ReportType control={control} setValue={setValue} selectedCategory={reportCategory} onNext={handleNext} />;
+                    case 2:
+                      return reportCategory === 'astro-data'
+                        ? <Step1_5AstroData control={control} setValue={setValue} selectedSubCategory={request} onNext={handleNext} />
+                        : <Step1_5SubCategory control={control} setValue={setValue} selectedCategory={reportCategory} selectedSubCategory={reportSubCategory} onNext={handleNext} />;
+                     case 3:
+                      return <Step2BirthDetails register={register} setValue={setValue} watch={watch} errors={errors} onNext={handleNext} onPlaceSelected={autoAdvanceAfterPlaceSelection} />;
+                     case 4:
+                         return <Step3Payment 
+                           register={register} 
+                           watch={watch} 
+                           errors={errors} 
+                           isProcessing={isProcessing} 
+                           inlinePromoError={inlinePromoError}
+                           clearInlinePromoError={clearInlinePromoError}
+                         />;
+                    default:
+                      return null;
+                  }
+                })()}
+              </div>
+              <MobileDrawerFooter
+                currentStep={currentStep}
+                totalSteps={4}
+                onPrevious={prevStep}
+                onNext={handleNext}
+                onSubmit={handleSubmitForm}
+                canGoNext={canGoNext()}
+                isProcessing={isProcessing}
+                isLastStep={currentStep === 4}
+              />
+            </div>
+          )}
+
+          {reportCreated && (
+            <div className="flex flex-col h-full">
+              <SuccessScreen
+                name={formName}
+                email={formEmail}
+                onViewReport={handleViewReport}
+                guestReportId={getGuestReportId() || undefined}
+              />
+            </div>
+          )}
+        </DrawerContent>
+      </Drawer>
+
+      {currentView === 'report' && viewingReport && mappedReport && (
+        <ReportViewer
+          mappedReport={mappedReport}
+          onBack={() => {
+            setViewingReport(false);
+            setTimeout(() => resetDrawer(), 50);
+          }}
+          isMobile={true}
+        />
+      )}
+    </>
   );
 };
 
