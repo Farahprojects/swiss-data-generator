@@ -4,7 +4,6 @@ import { CheckCircle, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getGuestToken } from '@/utils/urlHelpers';
-import { useReportOrchestrator } from '@/hooks/useReportOrchestrator';
 import { useGuestReportData } from '@/hooks/useGuestReportData';
 import { ReportData } from '@/utils/reportContentExtraction';
 import EntertainmentWindow from './EntertainmentWindow';
@@ -24,35 +23,79 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
 
   const firstName = name?.split(' ')[0] || 'there';
   const isMobile = useIsMobile();
-  const { setupOrchestratorListener } = useReportOrchestrator();
 
   // Simple visual countdown (24 seconds for UX)
   const [countdownTime, setCountdownTime] = useState(24);
   const [reportReady, setReportReady] = useState(false);
   const [errorState, setErrorState] = useState<string | null>(null);
-  const [failSafeTriggered, setFailSafeTriggered] = useState(false);
+  const [isPingingForData, setIsPingingForData] = useState(false);
 
-  // Fail-safe ping function
+  // Hook for fetching guest report data
   const { refetch: pingGuestReport } = useGuestReportData(currentGuestReportId, false);
 
-  // Handle report ready from orchestrator
-  const handleReportReady = useCallback((reportData: ReportData) => {
-    console.log('🎯 Report ready signal received from orchestrator');
-    setReportReady(true);
-    setCountdownTime(0);
+  // Modal ping-back function - proactively fetch data when ready
+  const startModalPingBack = useCallback(async () => {
+    if (isPingingForData || reportReady || errorState) return;
     
-    // Open modal with orchestrator-provided data
-    if (onViewReport) {
-      onViewReport(reportData);
-    }
-  }, [onViewReport]);
+    console.log('🎯 Report Ready! Starting modal ping-back to fetch data...');
+    setIsPingingForData(true);
 
-  // Fail-safe function to check report status
+    let attempts = 0;
+    const maxAttempts = 15; // 30 seconds total (2s interval)
+    
+    const checkForData = async () => {
+      attempts++;
+      console.log(`🔄 Modal ping-back attempt ${attempts}/${maxAttempts}`);
+      
+      try {
+        const result = await pingGuestReport();
+        
+        if (result.error) {
+          console.log('❌ Modal ping-back detected error:', result.error);
+          if (attempts >= maxAttempts) {
+            setErrorState('There was an issue generating your report. Please try again or contact support.');
+            setIsPingingForData(false);
+          } else {
+            // Retry with exponential backoff
+            const delay = Math.min(2000 * Math.pow(1.5, attempts - 1), 8000);
+            setTimeout(checkForData, delay);
+          }
+        } else if (result.data) {
+          console.log('✅ Modal ping-back: Report data found, opening modal');
+          setReportReady(true);
+          setIsPingingForData(false);
+          if (onViewReport) {
+            onViewReport(result.data);
+          }
+        } else if (attempts < maxAttempts) {
+          // Data not ready yet, continue checking
+          setTimeout(checkForData, 2000);
+        } else {
+          console.log('⚠️ Modal ping-back: Max attempts reached, no data available');
+          setErrorState('Report is taking longer than expected. Please refresh the page or contact support.');
+          setIsPingingForData(false);
+        }
+      } catch (error) {
+        console.error('❌ Modal ping-back failed:', error);
+        if (attempts >= maxAttempts) {
+          setErrorState('Unable to check report status. Please refresh the page or contact support.');
+          setIsPingingForData(false);
+        } else {
+          // Retry after delay
+          setTimeout(checkForData, 2000);
+        }
+      }
+    };
+
+    // Start checking immediately
+    checkForData();
+  }, [isPingingForData, reportReady, errorState, pingGuestReport, onViewReport]);
+
+  // Fail-safe function to check report status (original logic)
   const triggerFailSafe = useCallback(async () => {
-    if (failSafeTriggered || reportReady) return;
+    if (reportReady || errorState || isPingingForData) return;
     
     console.log('🚨 Fail-safe triggered: Pinging get-guest-report edge function');
-    setFailSafeTriggered(true);
 
     try {
       const result = await pingGuestReport();
@@ -66,20 +109,17 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
         if (onViewReport) {
           onViewReport(result.data);
         }
+      } else {
+        // No data yet, show "Report Ready!" and start ping-back
+        console.log('🎯 Fail-safe: No data yet, showing Report Ready and starting ping-back');
+        setReportReady(true);
+        startModalPingBack();
       }
     } catch (error) {
       console.error('❌ Fail-safe ping failed:', error);
       setErrorState('Unable to check report status. Please refresh the page or contact support.');
     }
-  }, [failSafeTriggered, reportReady, pingGuestReport, onViewReport]);
-
-  // Set up orchestrator listener on mount
-  useEffect(() => {
-    if (currentGuestReportId) {
-      const cleanup = setupOrchestratorListener(currentGuestReportId, handleReportReady);
-      return cleanup;
-    }
-  }, [currentGuestReportId, setupOrchestratorListener, handleReportReady]);
+  }, [reportReady, errorState, isPingingForData, pingGuestReport, onViewReport, startModalPingBack]);
 
   // Visual countdown timer with fail-safe trigger
   useEffect(() => {
@@ -99,6 +139,13 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
 
     return () => clearInterval(timer);
   }, [reportReady, errorState, triggerFailSafe]);
+
+  // Auto-start ping-back if we're already in "Report Ready!" state
+  useEffect(() => {
+    if (reportReady && !isPingingForData && !errorState && onViewReport) {
+      startModalPingBack();
+    }
+  }, [reportReady, isPingingForData, errorState, onViewReport, startModalPingBack]);
 
   return (
     <div className={isMobile ? 'min-h-[calc(var(--vh,1vh)*100)] flex items-start justify-center pt-8 px-4 bg-gradient-to-b from-background to-muted/20 overflow-y-auto' : 'w-full py-10 px-4 flex justify-center'}>
@@ -126,7 +173,9 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                 </div>
                 <div>
                   <h2 className="text-2xl font-light text-gray-900 mb-1 tracking-tight">Report Ready!</h2>
-                  <p className="text-gray-600 font-light">Opening your report...</p>
+                  <p className="text-gray-600 font-light">
+                    {isPingingForData ? 'Fetching your report...' : 'Opening your report...'}
+                  </p>
                 </div>
               </>
             ) : (
