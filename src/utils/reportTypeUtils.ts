@@ -1,4 +1,3 @@
-
 /**
  * Utility functions for interpreting report types and handling Astro-only views
  */
@@ -19,22 +18,6 @@ export interface ToggleDisplayLogic {
   title: string;
   availableViews: ('report' | 'astro')[];
 }
-
-/**
- * Determines if a report is astro-only based on request or report type
- */
-export const isAstroOnlyReport = (reportCategory?: string, request?: string, reportType?: string): boolean => {
-  // Check if it's from astro-data category
-  if (reportCategory === 'astro-data') return true;
-  
-  // Check if request indicates astro-only (essence or sync requests for raw data)
-  if (request === 'essence' || request === 'sync') return true;
-  
-  // Check if report type indicates astro-only
-  if (reportType === 'essence' || reportType === 'sync') return true;
-  
-  return false;
-};
 
 /**
  * Determines the actual content type based on available data
