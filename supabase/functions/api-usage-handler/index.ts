@@ -162,22 +162,22 @@ serve(async (req) => {
     if (!is_guest) {
       // Only deduct credits for authenticated users, not guests
       const { data: creditResult, error: creditError } = await sb.rpc("record_api_usage", {
-        _user_id: user_id,
-        _endpoint: request_type,
-        _cost_usd: total,
-        _response_status: response_status,
-        _processing_time_ms: processing_time_ms,
-      });
+      _user_id: user_id,
+      _endpoint: request_type,
+      _cost_usd: total,
+      _response_status: response_status,
+      _processing_time_ms: processing_time_ms,
+    });
       
       creditData = creditResult;
       creditErr = creditError;
-      
-      if (creditErr) {
-        console.error("Error updating user credits:", creditErr.message);
-        return json({ error: "Error updating credits: " + creditErr.message }, 500);
-      }
-      
-      console.log(`Successfully debited user credits: ${creditData || 'unknown reference'}`);
+    
+    if (creditErr) {
+      console.error("Error updating user credits:", creditErr.message);
+      return json({ error: "Error updating credits: " + creditErr.message }, 500);
+    }
+    
+    console.log(`Successfully debited user credits: ${creditData || 'unknown reference'}`);
     } else {
       console.log(`Skipping credit deduction for guest user: ${user_id}`);
     }

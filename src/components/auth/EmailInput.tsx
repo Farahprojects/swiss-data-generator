@@ -32,7 +32,15 @@ const EmailInput: React.FC<Props> = ({
       id="email"
       type="email"
       value={email}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(e) => {
+        onChange(e.target.value);
+        // Dismiss autocomplete dialog when user selects an email
+        if (e.target.value && document.activeElement === e.target) {
+          setTimeout(() => {
+            (document.activeElement as HTMLElement)?.blur?.();
+          }, 100);
+        }
+      }}
       onFocus={onFocus}
       disabled={disabled}
       placeholder={placeholder}

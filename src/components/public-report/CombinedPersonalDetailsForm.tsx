@@ -88,7 +88,16 @@ const CombinedPersonalDetailsForm = ({ register, setValue, watch, errors, onPlac
               <Input
                 id="email"
                 type="email"
-                {...register('email')}
+                {...register('email', {
+                  onChange: (e) => {
+                    // Dismiss autocomplete dialog when user selects an email
+                    if (e.target.value && document.activeElement === e.target) {
+                      setTimeout(() => {
+                        (document.activeElement as HTMLElement)?.blur?.();
+                      }, 100);
+                    }
+                  }
+                })}
                 placeholder="your@email.com"
                 className="h-12"
                 onFocus={() => handleFieldInteraction('email')}
@@ -138,20 +147,20 @@ const CombinedPersonalDetailsForm = ({ register, setValue, watch, errors, onPlac
             </div>
           </div>
           <div className="space-y-2">
-            <CleanPlaceAutocomplete
-              label="Birth Location *"
-              value={birthLocation}
-              onChange={(value) => {
-                setValue('birthLocation', value);
-                if (!hasInteracted.birthLocation && value) {
-                  handleFieldInteraction('birthLocation');
-                }
-              }}
-              onPlaceSelect={handlePlaceSelect}
-              placeholder="Enter birth city, state, country"
-              id="birthLocation"
-              error={shouldShowError('birthLocation', errors.birthLocation) ? errors.birthLocation?.message : undefined}
-            />
+              <CleanPlaceAutocomplete
+                label="Birth Location *"
+                value={birthLocation}
+                onChange={(value) => {
+                  setValue('birthLocation', value);
+                  if (!hasInteracted.birthLocation && value) {
+                    handleFieldInteraction('birthLocation');
+                  }
+                }}
+                onPlaceSelect={handlePlaceSelect}
+                placeholder="Enter birth city, state, country"
+                id="birthLocation"
+                error={shouldShowError('birthLocation', errors.birthLocation) ? errors.birthLocation?.message : undefined}
+              />
           </div>
         </div>
       </div>

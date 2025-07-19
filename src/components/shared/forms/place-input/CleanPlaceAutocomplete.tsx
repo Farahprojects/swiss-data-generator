@@ -240,6 +240,7 @@ export const CleanPlaceAutocomplete = ({
               onKeyDown={handleKeyDown}
               placeholder={placeholder}
               disabled={disabled}
+              autoComplete="off"
               className="h-12 pl-10"
             />
             <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -301,6 +302,7 @@ export const CleanPlaceAutocomplete = ({
                     onChange={handleInputChange}
                     placeholder={placeholder}
                     autoFocus
+                    autoComplete="off"
                     className="h-12 pl-10 text-base"
                     style={{ fontSize: '16px' }}
                   />

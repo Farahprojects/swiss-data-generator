@@ -108,6 +108,7 @@ const PersonCard = ({
             onFocus={handleFocus}
             onBlur={handleBlur(getField('name'))}
             inputMode="text"
+            autoComplete="off"
             style={{ fontSize: '16px' }}
           />
           {showError(getField('name')) && <ErrorMsg msg={errors[getField('name')]?.message as string} />}
@@ -119,12 +120,22 @@ const PersonCard = ({
             <Input
               id="email"
               type="email"
-              {...register('email')}
+              {...register('email', {
+                onChange: (e) => {
+                  // Dismiss autocomplete dialog when user selects an email
+                  if (e.target.value && document.activeElement === e.target) {
+                    setTimeout(() => {
+                      (document.activeElement as HTMLElement)?.blur?.();
+                    }, 100);
+                  }
+                }
+              })}
               placeholder="your@email.com"
               className={`h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400 ${showError('email') ? 'border-red-500 ring-1 ring-red-500' : ''}`}
               onFocus={handleFocus}
               onBlur={handleBlur('email')}
               inputMode="email"
+              autoComplete="off"
               style={{ fontSize: '16px' }}
             />
             {showError('email') && <ErrorMsg msg={errors.email?.message as string} />}

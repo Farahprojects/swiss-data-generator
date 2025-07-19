@@ -17,6 +17,7 @@ interface Step3PaymentProps {
   isProcessing: boolean;
   inlinePromoError?: string;
   clearInlinePromoError?: () => void;
+  onTimeoutChange?: (hasTimedOut: boolean) => void;
 }
 
 const Step3Payment = ({ 
@@ -25,11 +26,13 @@ const Step3Payment = ({
   errors, 
   isProcessing,
   inlinePromoError = '',
-  clearInlinePromoError = () => {}
+  clearInlinePromoError = () => {},
+  onTimeoutChange = () => {}
 }: Step3PaymentProps) => {
   const topSafePadding = useMobileSafeTopPadding();
   const { scrollTo } = useFieldFocusHandler();
   const [showPromoCode, setShowPromoCode] = useState(false);
+  const [hasTimedOut, setHasTimedOut] = useState(false);
 
   const { getReportPrice, getReportTitle } = usePriceFetch();
 
@@ -49,6 +52,27 @@ const Step3Payment = ({
       clearInlinePromoError();
     }
   }, [promoCode, clearInlinePromoError]);
+
+  // Add timeout mechanism to prevent stuck processing state
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
+    if (isProcessing) {
+      setHasTimedOut(false);
+      onTimeoutChange(false);
+      timeoutId = setTimeout(() => {
+        console.warn('Processing timeout - this may indicate a server issue');
+        setHasTimedOut(true);
+        onTimeoutChange(true);
+      }, 15000);
+    }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [isProcessing, onTimeoutChange]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -152,7 +176,13 @@ const Step3Payment = ({
                     <div className="relative">
                       <Input
                         id="promoCode"
-                        {...register('promoCode')}
+                        {...register('promoCode', {
+                          onChange: () => {
+                            if (inlinePromoError) {
+                              clearInlinePromoError();
+                            }
+                          }
+                        })}
                         placeholder="Enter promo code"
                         className="h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400"
                         onFocus={(e) => scrollTo(e.target, { block: 'center' })}

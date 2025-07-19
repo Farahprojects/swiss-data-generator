@@ -1,5 +1,5 @@
 /*─────────────────────── orchestrator.ts (cleaned) ────────────────────────
-  Central workflow handler for astrology-report generation
+   Central workflow handler for astrology-report generation
 ──────────────────────────────────────────────────────────────────────────*/
 
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -54,12 +54,12 @@ async function validateRequest(
     .select("name")
     .eq("name", p.report_type)
     .maybeSingle();
-
+  
   if (promptError) {
     console.error("[orchestrator] ❌ Error checking report_prompts:", promptError);
     return { ok: false, reason: `Database error: ${promptError.message}` };
   }
-
+  
   if (!promptExists) {
     console.error("[orchestrator] ❌ Report type not found in report_prompts:", p.report_type);
     return { ok: false, reason: "Invalid report_type" };
@@ -80,12 +80,12 @@ async function validateRequest(
       .select("id")
       .eq("id", p.user_id)
       .maybeSingle();
-
+    
     if (guestError) {
       console.error("[orchestrator] ❌ Error checking guest_reports:", guestError);
       return { ok: false, reason: `Guest validation error: ${guestError.message}` };
     }
-
+    
     if (!guest) {
       console.error("[orchestrator] ❌ Guest ID not found in guest_reports:", p.user_id);
       return { ok: false, reason: "Guest ID not found" };
@@ -113,17 +113,17 @@ async function getNextEngine(supabase: SupabaseClient) {
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-
+    
   if (error) {
     console.error("[orchestrator] ❌ Error fetching last engine:", error);
     return EDGE_ENGINES[0];
   }
-
+  
   const idx = last ? EDGE_ENGINES.indexOf(last.engine_used) : -1;
   const nextEngine = EDGE_ENGINES[(idx + 1) % EDGE_ENGINES.length];
-
+  
   console.log("[orchestrator] 🎯 Selected engine:", nextEngine);
-
+  
   return nextEngine;
 }
 
@@ -147,7 +147,7 @@ async function logFailedAttempt(
     error_message: errorMessage,
     duration_ms: durationMs ?? null,
   };
-
+  
   console.log("[orchestrator] 📝 ATTEMPTING TO LOG FAILED ATTEMPT:", {
     user_id: logData.user_id,
     report_type: logData.report_type,
@@ -187,7 +187,7 @@ export const processReportRequest = async (
     endpoint: payload.endpoint,
     is_guest: payload.is_guest,
   });
-
+  
   const start = Date.now();
   const supabase = initSupabase();
 
@@ -204,9 +204,9 @@ export const processReportRequest = async (
   try {
     const edgeUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/${engine}`;
     const requestPayload = { ...payload, reportType: payload.report_type, selectedEngine: engine };
-
+    
     console.log("[orchestrator] 🌐 Calling edge function:", engine);
-
+    
     const response = await fetch(edgeUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -260,7 +260,7 @@ export const processReportRequest = async (
     file: "reportOrchestrator.ts:success_insert",
     function: "processReportRequest"
   });
-
+  
   console.log("[orchestrator] 📝 ATTEMPTING TO LOG SUCCESS TO report_logs:", {
     user_id: successLogData.user_id,
     report_type: successLogData.report_type,
@@ -307,7 +307,7 @@ export const processReportRequest = async (
       engine_used: engine,
     },
   };
-
+  
   console.log("[orchestrator] 🎉 Report generation completed:", {
     title: finalResult.report.title,
     contentLength: finalResult.report.content?.length || 0,

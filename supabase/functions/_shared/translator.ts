@@ -348,16 +348,16 @@ export async function translate(
 
       // Only call handleReportGeneration if there's a report field in the request
       if (raw.report) {
-        // [REPORT-HANDLER-MOONPHASES] Processing report data in moonphases
-        console.log(`[translator][${requestId}] [REPORT-HANDLER-MOONPHASES] Processing report data in moonphases - Line 314`);
-        console.log(`[translator][${requestId}] [REPORT-HANDLER-MOONPHASES] Raw swiss response preview:`, txt.substring(0, 200));
-        
-        const reportResult = await handleReportGeneration({
-          requestData: raw,
-          swissApiResponse: txt,
-          swissApiStatus: r.status,
-          requestId,
-        });
+      // [REPORT-HANDLER-MOONPHASES] Processing report data in moonphases
+      console.log(`[translator][${requestId}] [REPORT-HANDLER-MOONPHASES] Processing report data in moonphases - Line 314`);
+      console.log(`[translator][${requestId}] [REPORT-HANDLER-MOONPHASES] Raw swiss response preview:`, txt.substring(0, 200));
+      
+      const reportResult = await handleReportGeneration({
+        requestData: raw,
+        swissApiResponse: txt,
+        swissApiStatus: r.status,
+        requestId,
+      });
 
         // Return the report data (Swiss data is already logged above)
         return {
@@ -367,10 +367,10 @@ export async function translate(
       } else {
         // No report field - just return the Swiss API response directly
         console.log(`[translator][${requestId}] No report field found, returning Swiss API response directly`);
-        return {
-          status: r.status,
+      return {
+        status: r.status,
           text: txt,
-        };
+      };
       }
     }
 
@@ -419,10 +419,10 @@ export async function translate(
       } else {
         // No report field - just return the Swiss API response directly
         console.log(`[translator][${requestId}] No report field found, returning Swiss API response directly`);
-        return {
-          status: r.status,
+      return {
+        status: r.status,
           text: txt,
-        };
+      };
       }
     }
 
@@ -476,10 +476,10 @@ export async function translate(
     } else {
       // No report field - just return the Swiss API response directly
       console.log(`[translator][${requestId}] No report field found, returning Swiss API response directly`);
-      return {
-        status: r.status,
+    return {
+      status: r.status,
         text: txt,
-      };
+    };
     }
   } catch (err) {
     const msg = (err as Error).message;

@@ -11,6 +11,7 @@ interface MobileDrawerFooterProps {
   canGoNext: boolean;
   isProcessing: boolean;
   isLastStep: boolean;
+  hasTimedOut?: boolean;
 }
 
 const MobileDrawerFooter = ({ 
@@ -21,7 +22,8 @@ const MobileDrawerFooter = ({
   onSubmit,
   canGoNext, 
   isProcessing,
-  isLastStep 
+  isLastStep,
+  hasTimedOut = false
 }: MobileDrawerFooterProps) => {
   const handleNextClick = () => {
     if (isLastStep) {
@@ -32,7 +34,7 @@ const MobileDrawerFooter = ({
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-4 safe-area-pb">
+    <div className="bg-white border-t border-gray-100 px-6 py-4 safe-area-pb">
       <div className="flex items-center justify-between gap-4">
         <Button
           variant="outline"
@@ -50,7 +52,13 @@ const MobileDrawerFooter = ({
           className="flex items-center gap-2 px-8 py-3 rounded-full bg-black text-white hover:bg-gray-800 disabled:bg-gray-400 disabled:text-gray-200"
         >
           <span>
-            {isProcessing ? 'Processing...' : isLastStep ? 'Submit Order' : 'Next'}
+            {isProcessing 
+              ? 'Processing...' 
+              : hasTimedOut
+                ? 'Try Again'
+                : isLastStep 
+                  ? 'Submit and View' 
+                  : 'Next'}
           </span>
           {!isProcessing && <ChevronRight className="h-4 w-4" />}
         </Button>
