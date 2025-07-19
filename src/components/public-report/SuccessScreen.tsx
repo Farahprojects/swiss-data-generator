@@ -113,6 +113,31 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     setIsVideoReady(true);
   }, []);
 
+  // Background PDF email function - non-blocking
+  const triggerPdfEmailBackground = useCallback(async (reportId: string) => {
+    try {
+      console.log('📧 Starting background PDF email trigger...');
+      const success = await triggerPdfEmail(reportId);
+      if (success) {
+        toast({
+          title: "📧 Report PDF sent to your email",
+          description: "Check your inbox for the PDF version of your report",
+        });
+        console.log('✅ PDF email sent successfully');
+      } else {
+        console.warn('⚠️ PDF email failed (non-critical)');
+        toast({
+          title: "PDF Email Status",
+          description: "PDF will be sent shortly - please check your email in a few minutes",
+          variant: "default"
+        });
+      }
+    } catch (error) {
+      console.warn('⚠️ PDF email error (non-critical):', error);
+      // Don't show error toast to user - this is background operation
+    }
+  }, [triggerPdfEmail, toast]);
+
   const handleViewReport = useCallback(async () => {
     console.log('🚀 View Report button clicked!', { currentGuestReportId, onViewReport });
     
@@ -121,17 +146,20 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
       return;
     }
 
+    if (!onViewReport) {
+      console.error('❌ onViewReport callback is missing');
+      setReportError('Modal callback not available');
+      return;
+    }
+
     setIsLoadingReport(true);
     setReportError(null);
-    
-    // Track modal view state for auto-reopen on refresh
-    localStorage.setItem('autoOpenModal', 'true');
     
     try {
       console.log('📡 Fetching fresh report data...');
       
       // Add timeout to prevent indefinite loading
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise<any>((_, reject) => 
         setTimeout(() => reject(new Error('Request timeout')), 30000)
       );
       
@@ -160,32 +188,25 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
 
       setFetchedReportData(data);
 
-      // Trigger PDF email in background (non-blocking)
-      triggerPdfEmail(currentGuestReportId).then((success) => {
-        if (success) {
-          toast({
-            title: "📧 Report PDF sent to your email",
-            description: "Check your inbox for the PDF version of your report",
-          });
-        }
-      }).catch((err) => {
-        console.warn('PDF email failed (non-critical):', err);
-      });
+      // OPEN MODAL IMMEDIATELY - Don't wait for PDF email
+      console.log('🎯 Opening modal with fetched data...');
+      onViewReport();
+      
+      // Track modal view state for auto-reopen on refresh
+      localStorage.setItem('autoOpenModal', 'true');
 
-      // Only open modal after successful data fetch
-      if (onViewReport) {
-        onViewReport();
-      } else {
-        console.warn('⚠️ onViewReport callback is missing');
-        throw new Error('Modal callback not available');
-      }
+      // Trigger PDF email in background (completely non-blocking)
+      setTimeout(() => {
+        triggerPdfEmailBackground(currentGuestReportId);
+      }, 100); // Small delay to ensure modal opens first
+
     } catch (error) {
       console.error('❌ Error in handleViewReport:', error);
       
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       setReportError(errorMessage);
       
-      // Don't open modal on error, just show error state
+      // Don't open modal on critical error
       if (errorMessage.includes('timeout')) {
         setReportError('Request timed out. Please try again.');
       } else if (errorMessage.includes('No data')) {
@@ -196,7 +217,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     } finally {
       setIsLoadingReport(false);
     }
-  }, [currentGuestReportId, onViewReport, fetchCompleteReport, isLoadingReport, triggerPdfEmail, toast]);
+  }, [currentGuestReportId, onViewReport, fetchCompleteReport, isLoadingReport, triggerPdfEmailBackground]);
 
   // Fetch is_ai_report flag to determine if we need countdown
   useEffect(() => {
@@ -304,18 +325,25 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     }
   }, [currentGuestReportId, stableFetchReport, stableSetupListener]);
 
-  // Auto-reopen modal after refresh if user was previously viewing it
+  // Simplified auto-reopen modal after refresh
   useEffect(() => {
     const shouldAutoOpen = localStorage.getItem('autoOpenModal') === 'true';
-    const reportReady = report?.payment_status === 'paid' && !hasSwissError;
+    const reportReady = report?.payment_status === 'paid' && !hasSwissError && !hasProcessingError;
 
     if (shouldAutoOpen && reportReady && !modalTriggered) {
       console.log('🔁 Auto-opening report modal after refresh');
-      handleViewReport();
-      setModalTriggered(true);
-      localStorage.removeItem('autoOpenModal');
+      
+      // Clear any existing error states
+      setReportError(null);
+      
+      // Open modal directly without re-fetching data
+      if (onViewReport) {
+        onViewReport();
+        setModalTriggered(true);
+        localStorage.removeItem('autoOpenModal');
+      }
     }
-  }, [report, hasSwissError, modalTriggered, handleViewReport]);
+  }, [report, hasSwissError, hasProcessingError, modalTriggered, onViewReport]);
 
   // Enhanced error detection through guest_reports data
   useEffect(() => {
@@ -408,81 +436,82 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                     <p className="text-gray-600 font-light">Your report is ready</p>
                   </div>
                 ) : null}
-                   <div className="bg-muted/50 rounded-lg p-4 text-sm">
-                    Hi {firstName}! Your report.<br />
-                    <span className="font-medium">{email}</span>
+                
+                <div className="bg-muted/50 rounded-lg p-4 text-sm">
+                  Hi {firstName}! Your report.<br />
+                  <span className="font-medium">{email}</span>
+                </div>
+                
+                {/* Show entertainment window for AI reports only during countdown and no errors */}
+                {isAiReport && showCountdown && !hasSwissError && !hasProcessingError && !caseNumber && (
+                  <EntertainmentWindow 
+                    mode={entertainmentMode}
+                    className="mb-4"
+                  />
+                )}
+                
+                {(showCountdown && !hasSwissError && !hasProcessingError && !caseNumber && !modalReadyDetected) ? (
+                  <div className="flex flex-col items-center gap-4">
+                    <Button disabled className="bg-gray-400 text-white font-light cursor-not-allowed">
+                      View Report ({countdownTime}s)
+                    </Button>
                   </div>
-                  
-                  {/* Show entertainment window for AI reports only during countdown and no errors */}
-                  {isAiReport && showCountdown && !hasSwissError && !hasProcessingError && !caseNumber && (
-                    <EntertainmentWindow 
-                      mode={entertainmentMode}
-                      className="mb-4"
-                    />
-                  )}
-                  
-                   {(showCountdown && !hasSwissError && !hasProcessingError && !caseNumber && !modalReadyDetected) ? (
-                     <div className="flex flex-col items-center gap-4">
-                       <Button disabled className="bg-gray-400 text-white font-light cursor-not-allowed">
-                         View Report ({countdownTime}s)
-                       </Button>
-                     </div>
-                  ) : modalReadyDetected ? (
-                     <div className="flex flex-col items-center gap-4">
-                       <div className="flex items-center gap-2 text-gray-600">
-                         <Loader2 className="h-4 w-4 animate-spin" />
-                         <span>Opening report...</span>
-                       </div>
-                     </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {/* Error display */}
-                      {reportError && (
-                        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700">
-                          <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                          <p className="text-sm">{reportError}</p>
-                        </div>
-                      )}
-                      
-                      <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                ) : modalReadyDetected ? (
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Opening report...</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Error display */}
+                    {reportError && (
+                      <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                        <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                        <p className="text-sm">{reportError}</p>
+                      </div>
+                    )}
+                    
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                      <Button 
+                        onClick={handleViewReport} 
+                        disabled={isLoadingReport}
+                        className="bg-black hover:bg-gray-900 text-white font-medium h-12 px-8 rounded-full shadow-sm transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isLoadingReport ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Loading...
+                          </>
+                        ) : (
+                          'Open'
+                        )}
+                      </Button>
+                      <Button variant="outline" onClick={handleBackToForm} className="border-2 border-gray-300 text-gray-700 hover:bg-gray-50 font-medium h-12 px-8 rounded-full transition-all duration-200 active:scale-95">
+                        Return Home
+                      </Button>
+                    </div>
+                    
+                    {/* Retry button for errors */}
+                    {reportError && (
+                      <div className="text-center">
                         <Button 
-                          onClick={handleViewReport} 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            setReportError(null);
+                            handleViewReport();
+                          }}
                           disabled={isLoadingReport}
-                          className="bg-black hover:bg-gray-900 text-white font-medium h-12 px-8 rounded-full shadow-sm transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="border-gray-400 text-gray-600 font-light hover:bg-gray-50"
                         >
-                          {isLoadingReport ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Loading...
-                            </>
-                          ) : (
-                            'Open'
-                          )}
-                        </Button>
-                        <Button variant="outline" onClick={handleBackToForm} className="border-2 border-gray-300 text-gray-700 hover:bg-gray-50 font-medium h-12 px-8 rounded-full transition-all duration-200 active:scale-95">
-                          Return Home
+                          Try Again
                         </Button>
                       </div>
-                      
-                      {/* Retry button for errors */}
-                      {reportError && (
-                        <div className="text-center">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => {
-                              setReportError(null);
-                              handleViewReport();
-                            }}
-                            disabled={isLoadingReport}
-                            className="border-gray-400 text-gray-600 font-light hover:bg-gray-50"
-                          >
-                            Try Again
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    )}
+                  </div>
+                )}
               </>
             )}
           </CardContent>
