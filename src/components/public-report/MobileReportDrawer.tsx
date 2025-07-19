@@ -20,20 +20,10 @@ import Step3Payment from './drawer-steps/Step3Payment';
 import SuccessScreen from './SuccessScreen';
 import { ReportViewer } from './ReportViewer';
 import { ReportFormData } from '@/types/public-report';
+import { ReportData } from '@/utils/reportContentExtraction';
 import MobileDrawerHeader from './drawer-components/MobileDrawerHeader';
 import MobileDrawerFooter from './drawer-components/MobileDrawerFooter';
 import MobileFormProtector from './MobileFormProtector';
-
-interface ReportData {
-  guest_report: any;
-  report_content: string | null;
-  swiss_data: any;
-  metadata: {
-    is_astro_report: boolean;
-    is_ai_report: boolean;
-    content_type: string;
-  };
-}
 
 interface MobileReportDrawerProps {
   isOpen: boolean;
