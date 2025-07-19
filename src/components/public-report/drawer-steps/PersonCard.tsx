@@ -51,8 +51,11 @@ const PersonCard = ({
   const markTouched = (field: string) => setTouched(prev => ({ ...prev, [field]: true }));
   const showError = (field: string) => (hasTriedToSubmit || touched[field]) && errors[field];
 
+  // Only enable focus scrolling for the first person to avoid unwanted second scroll
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    scrollTo(e.target);
+    if (personNumber === 1) {
+      scrollTo(e.target);
+    }
   };
 
   const handleBlur = (field: string) => (e: React.FocusEvent<HTMLInputElement>) => {
