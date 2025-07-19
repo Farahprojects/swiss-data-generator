@@ -32,7 +32,7 @@ export const ChartHeader: React.FC<ChartHeaderProps> = ({
         {birthLocation && <div className="text-sm">{birthLocation}</div>}
         {coordinates && <div className="text-xs text-gray-500">{coordinates}</div>}
         <div className="text-xs text-gray-500 pt-2 border-t border-gray-100">
-          Generated: {new Date().toLocaleDateString()}
+          Analysis: July 19, 2025
         </div>
       </div>
     </div>
