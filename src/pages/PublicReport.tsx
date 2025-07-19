@@ -15,6 +15,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
+import { storeGuestReportId } from '@/utils/urlHelpers';
 
 const PublicReport = () => {
   // ALL HOOKS MUST BE DECLARED FIRST - NEVER INSIDE TRY-CATCH
@@ -31,6 +32,20 @@ const PublicReport = () => {
       setShowCancelledMessage(true);
     }
   }, [location.search]);
+
+  // NEW: Detect Stripe return and persist guest_id
+  useEffect(() => {
+    // This effect runs once when the page loads to detect Stripe returns
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlGuestId = urlParams.get('guest_id');
+    const storedGuestId = localStorage.getItem('currentGuestReportId');
+
+    // If URL has guest_id but localStorage doesn't match, this is likely a Stripe return
+    if (urlGuestId && urlGuestId !== storedGuestId) {
+      console.log('🔄 Detected return from Stripe. Persisting guest ID:', urlGuestId);
+      storeGuestReportId(urlGuestId);
+    }
+  }, []); // Empty dependency array ensures this runs only once on mount
 
   // Scroll position tracking
   useEffect(() => {
