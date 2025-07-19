@@ -420,7 +420,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                     <p className="text-sm text-gray-600">AI report generating...</p>
                     <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
                       <motion.div
-                        className="bg-gradient-to-r from-primary to-secondary h-2 rounded-full"
+                        className="h-2 rounded-full"
                         initial={{ width: "100%" }}
                         animate={{ width: `${(countdownTime / 24) * 100}%` }}
                         transition={{ duration: 1, ease: "linear" }}
