@@ -1,21 +1,17 @@
-
 // ✅ CLEANED & PATCHED VERSION: MobileReportDrawer.tsx
 // - Scroll interference fixed
 // - Bloat removed
 // - Google Autocomplete bug resolved
 // - Guest ID now received as prop (no internal discovery)
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { useMobileDrawerForm } from '@/hooks/useMobileDrawerForm';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
-
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useMobileSafeTopPadding } from '@/hooks/useMobileSafeTopPadding';
-import { useViewportHeight } from '@/hooks/useViewportHeight';
 import { clearAllSessionData } from '@/utils/urlHelpers';
-
 import { supabase } from '@/integrations/supabase/client';
+
 import Step1ReportType from './drawer-steps/Step1ReportType';
 import Step1_5SubCategory from './drawer-steps/Step1_5SubCategory';
 import Step1_5AstroData from './drawer-steps/Step1_5AstroData';
@@ -24,12 +20,20 @@ import Step3Payment from './drawer-steps/Step3Payment';
 import SuccessScreen from './SuccessScreen';
 import { ReportViewer } from './ReportViewer';
 import { ReportFormData } from '@/types/public-report';
-import { ReportData } from '@/utils/reportContentExtraction';
 import MobileDrawerHeader from './drawer-components/MobileDrawerHeader';
 import MobileDrawerFooter from './drawer-components/MobileDrawerFooter';
 import MobileFormProtector from './MobileFormProtector';
 
-const isBrowser = typeof window !== 'undefined';
+interface ReportData {
+  guest_report: any;
+  report_content: string | null;
+  swiss_data: any;
+  metadata: {
+    is_astro_report: boolean;
+    is_ai_report: boolean;
+    content_type: string;
+  };
+}
 
 interface MobileReportDrawerProps {
   isOpen: boolean;
@@ -39,50 +43,17 @@ interface MobileReportDrawerProps {
 
 const MobileReportDrawer = ({ isOpen, onClose, guestId = null }: MobileReportDrawerProps) => {
   const isMobile = useIsMobile();
-  const topSafePadding = useMobileSafeTopPadding();
-  // Disable dynamic viewport height for mobile drawer to prevent footer movement
-  // useViewportHeight();
 
   const [currentView, setCurrentView] = useState<'form' | 'report'>('form');
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [viewingReport, setViewingReport] = useState(false);
-  const [hasTimedOut, setHasTimedOut] = useState(false);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const [guestReportData, setGuestReportData] = useState<any>(null);
-
-  useEffect(() => {
-    const fetchGuestData = async () => {
-      if (guestId) {
-        try {
-          const { data, error } = await supabase
-            .from('guest_reports')
-            .select('*')
-            .eq('id', guestId)
-            .single();
-
-          if (!error && data?.report_data) {
-            setGuestReportData({ guest_report: data });
-          } else {
-            // Invalid token - clear it and stay on form
-            clearAllSessionData();
-          }
-        } catch (err) {
-          console.error('Failed to fetch guest data:', err);
-          // Clear invalid token
-          clearAllSessionData();
-        }
-      }
-    };
-
-    fetchGuestData();
-  }, [guestId]);
-
-  const { form, currentStep, nextStep, prevStep, resetForm, autoAdvanceAfterPlaceSelection } = useMobileDrawerForm();
+  const { form, currentStep, nextStep, prevStep, resetForm } = useMobileDrawerForm();
   const { register, handleSubmit, setValue, watch, control, formState: { errors } } = form;
 
-  // Reset drawer state when closing to ensure clean state on reopen
+  // Reset drawer state when closing
   useEffect(() => {
     if (!isOpen) {
       resetForm();
@@ -100,6 +71,7 @@ const MobileReportDrawer = ({ isOpen, onClose, guestId = null }: MobileReportDra
     inlinePromoError,
     clearInlinePromoError
   } = useReportSubmission();
+
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');
   const request = watch('request');
@@ -108,7 +80,14 @@ const MobileReportDrawer = ({ isOpen, onClose, guestId = null }: MobileReportDra
     await submitReport(data);
   };
 
-  // Validation logic for each step
+  // Handle report ready from orchestrator
+  const handleViewReport = (reportData: ReportData) => {
+    console.log('📋 Report data received from orchestrator:', reportData);
+    setReportData(reportData);
+    setViewingReport(true);
+    setCurrentView('report');
+  };
+
   const canGoNext = () => {
     const isCompatibilityReport = reportCategory === 'compatibility' || request === 'sync';
     
@@ -125,13 +104,12 @@ const MobileReportDrawer = ({ isOpen, onClose, guestId = null }: MobileReportDra
           return firstPersonValid;
         }
         
-        // For compatibility reports, also validate second person fields (coordinates not required for step advancement)
         const secondPersonRequiredFields = ['secondPersonName', 'secondPersonBirthDate', 'secondPersonBirthTime', 'secondPersonBirthLocation'];
         const secondPersonValid = secondPersonRequiredFields.every(field => !!watch(field as keyof ReportFormData));
         
         return firstPersonValid && secondPersonValid;
       case 4:
-        return true; // Payment step - submit button handles validation
+        return true;
       default:
         return false;
     }
@@ -145,45 +123,6 @@ const MobileReportDrawer = ({ isOpen, onClose, guestId = null }: MobileReportDra
 
   const handleSubmitForm = () => {
     handleSubmit(onSubmit)();
-  };
-
-  const handleViewReport = async () => {
-    if (!guestId) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('guest_reports')
-        .select(`
-          *,
-          report_logs!guest_reports_report_log_id_fkey(report_text),
-          translator_logs!guest_reports_translator_log_id_fkey(swiss_data)
-        `)
-        .eq('id', guestId)
-        .single();
-
-      if (error || !data) {
-        throw new Error('Report not found');
-      }
-
-      const fetchedReportData: ReportData = {
-        guest_report: data,
-        report_content: data.report_logs?.report_text || null,
-        swiss_data: data.translator_logs?.swiss_data || null,
-        metadata: {
-          is_astro_report: !!data.swiss_boolean,
-          is_ai_report: !!data.is_ai_report,
-          content_type: data.swiss_boolean && data.is_ai_report ? 'both' : 
-                       data.swiss_boolean ? 'astro' : 
-                       data.is_ai_report ? 'ai' : 'none'
-        }
-      };
-
-      setReportData(fetchedReportData);
-      setViewingReport(true);
-      setCurrentView('report');
-    } catch (error) {
-      console.error('Failed to fetch report:', error);
-    }
   };
 
   const resetDrawer = () => {
@@ -230,7 +169,6 @@ const MobileReportDrawer = ({ isOpen, onClose, guestId = null }: MobileReportDra
                                  isProcessing={isProcessing} 
                                  inlinePromoError={inlinePromoError}
                                  clearInlinePromoError={clearInlinePromoError}
-                                 onTimeoutChange={setHasTimedOut}
                                />;
                           default:
                             return null;
@@ -248,7 +186,6 @@ const MobileReportDrawer = ({ isOpen, onClose, guestId = null }: MobileReportDra
                       canGoNext={canGoNext()}
                       isProcessing={isProcessing}
                       isLastStep={currentStep === 4}
-                      hasTimedOut={hasTimedOut}
                     />
                   </div>
                 </div>
