@@ -488,9 +488,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                           'Open'
                         )}
                       </Button>
-                      <Button variant="outline" onClick={handleBackToForm} className="border-2 border-gray-300 text-gray-700 hover:bg-gray-50 font-medium h-12 px-8 rounded-full transition-all duration-200 active:scale-95">
-                        Return Home
-                      </Button>
                     </div>
                     
                     {/* Retry button for errors */}
