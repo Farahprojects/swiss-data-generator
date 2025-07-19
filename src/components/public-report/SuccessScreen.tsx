@@ -86,6 +86,12 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
               </>
             ) : (
               <>
+                {/* Simple countdown at top */}
+                <div className="text-center mb-6">
+                  <div className="text-3xl font-light text-gray-900 mb-2">{countdownTime}s</div>
+                  <p className="text-sm text-gray-600">Generating your report...</p>
+                </div>
+
                 <div className="bg-muted/50 rounded-lg p-4 text-sm">
                   Hi {firstName}! Your report is being prepared.<br />
                   <span className="font-medium">{email}</span>
