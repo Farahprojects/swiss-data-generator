@@ -65,12 +65,6 @@ export const SynastryAstroFormatter: React.FC<SynastryAstroFormatterProps> = ({
             </div>
           ) : null}
           
-          <div className="text-sm pt-2">
-            Analysis: {new Date(enrichedData.meta.dateISO).toLocaleDateString("en-US", {
-              month: "long", day: "numeric", year: "numeric"
-            })}
-            {enrichedData.meta.tz && <span className="text-xs text-gray-500 ml-2">({enrichedData.meta.tz})</span>}
-          </div>
         </div>
       </div>
 
