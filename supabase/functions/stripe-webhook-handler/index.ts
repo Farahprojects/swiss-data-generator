@@ -189,6 +189,28 @@ async function logServicePurchase(pi: Stripe.PaymentIntent, success = true) {
   if (error) throw error;
 }
 
+/* ───────── Guest Report Payment Status Update ───────── */
+
+async function updateGuestReportPaymentStatus(guestReportId: string) {
+  console.log(`[WEBHOOK] Updating guest_report ${guestReportId} to 'paid'`);
+  
+  const { error: updateError } = await supabase
+    .from('guest_reports')
+    .update({
+      payment_status: 'paid',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', guestReportId)
+    .eq('payment_status', 'pending'); // Idempotency check
+
+  if (updateError) {
+    console.error(`[WEBHOOK] Error updating guest_report ${guestReportId} to paid:`, updateError);
+    throw updateError;
+  }
+
+  console.log(`[WEBHOOK] Successfully updated guest_report ${guestReportId} to 'paid'`);
+}
+
 /* ───────── Top-up helpers (unchanged but with try/catch) ───────── */
 
 async function logTopup(userId: string, pi: Stripe.PaymentIntent, status: "completed" | "failed") {
@@ -262,6 +284,32 @@ serve(async (req) => {
 
   try {
     switch (evt.type) {
+
+      /* ——— NEW: Checkout session completed ——— */
+      case "checkout.session.completed": {
+        const session = evt.data.object as Stripe.Checkout.Session;
+        const metadata = session.metadata;
+
+        console.log(`[WEBHOOK] Processing checkout.session.completed: ${session.id}`);
+        console.log(`[WEBHOOK] Session metadata:`, metadata);
+        console.log(`[WEBHOOK] Session payment_status:`, session.payment_status);
+
+        // Check if this is a guest report purchase
+        if (metadata?.purchase_type === 'report' && metadata?.guest_report_id) {
+          console.log(`[WEBHOOK] Handling checkout session for guest report: ${metadata.guest_report_id}`);
+
+          // Only proceed if payment was successful
+          if (session.payment_status === 'paid') {
+            const guestReportId = metadata.guest_report_id;
+            await updateGuestReportPaymentStatus(guestReportId);
+          } else {
+            console.log(`[WEBHOOK] Session payment_status is '${session.payment_status}', not 'paid'. Skipping update.`);
+          }
+        } else {
+          console.log(`[WEBHOOK] Not a guest report purchase - purchase_type: ${metadata?.purchase_type}, guest_report_id: ${metadata?.guest_report_id}`);
+        }
+        break;
+      }
 
       /* ——— Payment succeeded ——— */
       case "payment_intent.succeeded":
