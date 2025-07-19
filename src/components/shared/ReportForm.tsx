@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
@@ -88,11 +89,45 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     isStripeRedirect: false,
   });
 
+  // State restoration for page refresh scenarios
+  const [sessionRestored, setSessionRestored] = useState(false);
+
   const shouldPoll = stripePaymentState.isWaiting;
   const { data: guestReportData, error: guestReportError, isLoading: isPolling } = useGuestReportData(
     guestId,
     shouldPoll
   );
+
+  // State restoration effect - handles page refresh scenarios
+  React.useEffect(() => {
+    if (!guestId || sessionRestored) return;
+
+    console.log('🔄 [ReportForm] Restoring session state for guest ID:', guestId);
+    
+    // Immediately set the session as restored to prevent multiple triggers
+    setSessionRestored(true);
+    
+    // Set the created guest report ID to the existing guestId
+    setCreatedGuestReportId(guestId);
+    
+    // Check if this is a fresh Stripe redirect (no existing session data)
+    const hasExistingSession = localStorage.getItem('pending_report_email');
+    
+    if (!hasExistingSession) {
+      // This is likely a Stripe redirect - start the unified fetching flow
+      console.log('🔄 Stripe redirect detected, starting unified data fetching...');
+      setStripePaymentState(prev => ({ 
+        ...prev, 
+        isVerifying: true,
+        isStripeRedirect: true 
+      }));
+    } else {
+      // This is token recovery - use existing logic
+      console.log('🔄 Token recovery detected...');
+      setTokenRecoveryState(prev => ({ ...prev, isRecovering: true, error: null }));
+      recoverTokenData(guestId);
+    }
+  }, [guestId, sessionRestored]);
 
   // Memoized callback for handling orchestrator report ready events
   const handleReportReady = useCallback((reportData: ReportData) => {
@@ -279,6 +314,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     setViewingReport(false);
     setReportData(null);
     setCreatedGuestReportId(null); // Reset the new state
+    setSessionRestored(false); // Reset session restored state
     
     // Reset token recovery state to initial values
     setTokenRecoveryState({
