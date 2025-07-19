@@ -42,8 +42,8 @@ const PublicReport = () => {
       let finalGuestId = null;
       
       if (urlGuestId) {
-        // Stripe return case - URL has ID
-        console.log('✅ Stripe return detected - persisting URL guest_id');
+        // URL has guest_id - store it (could be Stripe return or direct link)
+        console.log('✅ URL guest_id detected - persisting to localStorage');
         storeGuestReportId(urlGuestId);
         finalGuestId = urlGuestId;
       } else if (storedGuestId) {
