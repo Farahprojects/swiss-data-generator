@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
@@ -11,13 +10,12 @@ import SecondPersonForm from '@/components/public-report/SecondPersonForm';
 import PaymentStep from '@/components/public-report/PaymentStep';
 import SuccessScreen from '@/components/public-report/SuccessScreen';
 import { ReportViewer } from '@/components/public-report/ReportViewer';
-import { mapReportPayload } from '@/utils/mapReportPayload';
-import { MappedReport } from '@/types/mappedReport';
 import { FormValidationStatus } from '@/components/public-report/FormValidationStatus';
 
 import { clearGuestReportId } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
 import { useGuestReportData } from '@/hooks/useGuestReportData';
+import { ReportData } from '@/utils/reportContentExtraction';
 
 interface ReportFormProps {
   coachSlug?: string;
@@ -37,12 +35,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const navigate = useNavigate();
   
   const [viewingReport, setViewingReport] = useState(false);
-  const [reportContent, setReportContent] = useState<string>('');
-  const [reportPdfData, setReportPdfData] = useState<string | null>(null);
-  const [swissData, setSwissData] = useState<any>(null);
-  const [hasReport, setHasReport] = useState<boolean>(false);
-  const [swissBoolean, setSwissBoolean] = useState<boolean>(false);
-  const [currentReportType, setCurrentReportType] = useState<string>('');
+  const [reportData, setReportData] = useState<ReportData | null>(null);
 
   // Token recovery state
   const [tokenRecoveryState, setTokenRecoveryState] = useState<{
@@ -343,17 +336,10 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     if (!guestId) return;
     
     try {
-      // Use the unified data fetching approach
+      // Use the unified data fetching approach - directly set the raw data
       if (guestReportData) {
         console.log('🔍 Using unified guest report data for viewing');
-        
-        const mappedReport = mapReportPayload(guestReportData);
-        setReportContent(mappedReport.reportContent);
-        setReportPdfData(mappedReport.pdfData || null);
-        setSwissData(mappedReport.swissData);
-        setHasReport(mappedReport.hasReport);
-        setSwissBoolean(mappedReport.swissBoolean);
-        setCurrentReportType(mappedReport.reportType);
+        setReportData(guestReportData as ReportData);
         setViewingReport(true);
       } else {
         throw new Error('Report data not available');
@@ -365,12 +351,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
   const handleCloseReportViewer = () => {
     setViewingReport(false);
-    setReportContent('');
-    setReportPdfData(null);
-    setSwissData(null);
-    setHasReport(false);
-    setSwissBoolean(false);
-    setCurrentReportType('');
+    setReportData(null);
     
     form.reset();
     
@@ -440,19 +421,10 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
 
-  if (viewingReport && guestReportData && !isPolling) {
-    console.log('🔍 ReportForm - guestReportData:', guestReportData);
-    console.log('🔍 ReportForm - guest_report:', guestReportData.guest_report);
-    console.log('🔍 ReportForm - guest_report.report_data:', guestReportData.guest_report?.report_data);
-    
+  if (viewingReport && reportData) {
     return (
       <ReportViewer
-        mappedReport={mapReportPayload({
-          guest_report: guestReportData.guest_report,
-          report_content: guestReportData.report_content,
-          swiss_data: guestReportData.swiss_data,
-          metadata: guestReportData.metadata
-        })}
+        reportData={reportData}
         onBack={handleCloseReportViewer}
         isMobile={false}
       />

@@ -7,21 +7,19 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useToast } from '@/hooks/use-toast';
 import { ReportContent } from './ReportContent';
 import { PdfGenerator } from '@/services/pdf/PdfGenerator';
-import { getToggleDisplayLogic } from '@/utils/reportTypeUtils';
-import { MappedReport } from '@/types/mappedReport';
-import { extractAstroDataAsText } from '@/utils/astroTextExtractor';
 import { ReportParser } from '@/utils/reportParser';
 import { supabase } from '@/integrations/supabase/client';
 import { getGuestReportId } from '@/utils/urlHelpers';
 import openaiLogo from '@/assets/openai-logo.png';
+import { ReportData, extractReportContent, extractAstroContent, extractUnifiedContent, getPersonName, getReportTitle } from '@/utils/reportContentExtraction';
 
 interface ReportViewerProps {
-  mappedReport: MappedReport;
+  reportData: ReportData;
   onBack: () => void;
   isMobile?: boolean;
 }
 
-export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportViewerProps) => {
+export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportViewerProps) => {
   const { toast } = useToast();
   const [isCopyCompleted, setIsCopyCompleted] = useState(false);
   const [showChatGPTConfirm, setShowChatGPTConfirm] = useState(false);
@@ -30,30 +28,28 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
   const [chatToken, setChatToken] = useState<string | null>(null);
   const [cachedUuid, setCachedUuid] = useState<string | null>(null);
 
-  // Use intelligent content detection
-  const reportAnalysisData = { 
-    reportContent: mappedReport.reportContent, 
-    swissData: mappedReport.swissData, 
-    swissBoolean: mappedReport.swissBoolean, 
-    hasReport: mappedReport.hasReport 
-  };
-  const toggleLogic = getToggleDisplayLogic(reportAnalysisData);
-  const [activeView, setActiveView] = useState<'report' | 'astro'>(toggleLogic.defaultView);
+  // Determine view logic based on content type
+  const contentType = reportData.metadata.content_type;
+  const showToggle = contentType === 'both';
+  const defaultView = contentType === 'ai' ? 'report' : contentType === 'astro' ? 'astro' : 'report';
+  const [activeView, setActiveView] = useState<'report' | 'astro'>(defaultView);
 
   // Enforce content-based view restrictions
   useEffect(() => {
-    if (!toggleLogic.showToggle) {
-      setActiveView(toggleLogic.defaultView);
+    if (!showToggle) {
+      setActiveView(defaultView);
     }
-  }, [toggleLogic.showToggle, toggleLogic.defaultView]);
+  }, [showToggle, defaultView]);
 
   const handleDownloadPdf = () => {
-    if (!mappedReport.pdfData) {
+    // Check if there's PDF data in the report
+    const pdfData = reportData.guest_report?.report_data?.report_pdf_base64;
+    if (!pdfData) {
       return;
     }
 
     try {
-      const byteCharacters = atob(mappedReport.pdfData);
+      const byteCharacters = atob(pdfData);
       const byteNumbers = new Array(byteCharacters.length);
       for (let i = 0; i < byteCharacters.length; i++) {
         byteNumbers[i] = byteCharacters.charCodeAt(i);
@@ -63,7 +59,7 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${mappedReport.customerName.replace(/\s+/g, '_')}_Report.pdf`;
+      link.download = `${getPersonName(reportData).replace(/\s+/g, '_')}_Report.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -77,26 +73,11 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
     }
   };
 
-  // Smart PDF download logic that matches desktop behavior
-  const handleSmartPdfDownload = () => {
-    const hasPdfData = !!mappedReport.pdfData;
-    const hasSwissData = !!mappedReport.swissData;
-    const hasReportContent = !!mappedReport.reportContent && mappedReport.reportContent.trim().length > 20;
-
-    if (hasPdfData && hasSwissData) {
-      // Both exist - generate unified PDF
-      handleDownloadUnifiedPdf();
-    } else if (hasPdfData) {
-      // Only PDF exists - use simple download
-      handleDownloadPdf();
-    } else if (hasSwissData || hasReportContent) {
-      // Only Swiss data or report content exists - generate unified PDF
-      handleDownloadUnifiedPdf();
-    }
-  };
-
   const handleDownloadUnifiedPdf = async () => {
-    if (!mappedReport.reportContent && !mappedReport.swissData) {
+    const hasReportContent = !!reportData.report_content && reportData.report_content.trim().length > 20;
+    const hasSwissData = !!reportData.swiss_data;
+
+    if (!hasReportContent && !hasSwissData) {
       toast({
         title: "No data available",
         description: "Unable to generate PDF without report or astro data.",
@@ -107,16 +88,16 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
 
     try {
       await PdfGenerator.generateUnifiedPdf({
-        reportContent: mappedReport.reportContent,
-        swissData: mappedReport.swissData,
-        customerName: mappedReport.customerName,
-        reportPdfData: mappedReport.pdfData,
-        reportType: mappedReport.reportType
+        reportContent: reportData.report_content,
+        swissData: reportData.swiss_data,
+        customerName: getPersonName(reportData),
+        reportPdfData: reportData.guest_report?.report_data?.report_pdf_base64,
+        reportType: reportData.guest_report.report_type || ''
       });
 
       const sections = [];
-      if (mappedReport.reportContent) sections.push("AI Report");
-      if (mappedReport.swissData) sections.push("Astro Data");
+      if (reportData.report_content) sections.push("AI Report");
+      if (reportData.swiss_data) sections.push("Astro Data");
       
       toast({
         title: "PDF Generated!",
@@ -131,38 +112,55 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
     }
   };
 
+  // Smart PDF download logic
+  const handleSmartPdfDownload = () => {
+    const hasPdfData = !!reportData.guest_report?.report_data?.report_pdf_base64;
+    const hasSwissData = !!reportData.swiss_data;
+    const hasReportContent = !!reportData.report_content && reportData.report_content.trim().length > 20;
+
+    if (hasPdfData && hasSwissData) {
+      // Both exist - generate unified PDF
+      handleDownloadUnifiedPdf();
+    } else if (hasPdfData) {
+      // Only PDF exists - use simple download
+      handleDownloadPdf();
+    } else if (hasSwissData || hasReportContent) {
+      // Only Swiss data or report content exists - generate unified PDF
+      handleDownloadUnifiedPdf();
+    }
+  };
+
   const handleCopyToClipboard = async () => {
     try {
-      const hasPdfData = !!mappedReport.pdfData;
-      const hasSwissData = !!mappedReport.swissData;
-      const hasReportContent = !!mappedReport.reportContent && mappedReport.reportContent.trim().length > 20;
-      
       let textToCopy: string;
       let contentDescription: string;
       
-      if ((hasPdfData && hasSwissData) || (hasReportContent && hasSwissData)) {
-        // Both exist - copy unified content exactly like PDF generation
-        const reportText = mappedReport.reportContent ? (() => {
-          // Use the same ReportParser that PDF generation uses
-          const blocks = ReportParser.parseReport(mappedReport.reportContent);
-          return blocks.map(block => block.text).join('\n');
-        })() : '';
-        
-        const astroText = extractAstroDataAsText(mappedReport.swissData, mappedReport);
-        
-        textToCopy = `${reportText}\n\n--- ASTROLOGICAL DATA ---\n\n${astroText}`;
-        contentDescription = 'report and astro data';
-      } else if (hasReportContent) {
-        // Only report content - use same parser as PDF
-        const blocks = ReportParser.parseReport(mappedReport.reportContent);
-        textToCopy = blocks.map(block => block.text).join('\n');
-        contentDescription = 'report';
-      } else if (hasSwissData) {
-        // Only astro data
-        textToCopy = extractAstroDataAsText(mappedReport.swissData, mappedReport);
-        contentDescription = 'astro data';
-      } else {
-        throw new Error('No content available to copy');
+      switch (contentType) {
+        case 'both':
+          // Both exist - copy unified content exactly like PDF generation
+          const reportText = extractReportContent(reportData) ? (() => {
+            const blocks = ReportParser.parseReport(extractReportContent(reportData));
+            return blocks.map(block => block.text).join('\n');
+          })() : '';
+          
+          const astroText = extractAstroContent(reportData);
+          
+          textToCopy = `${reportText}\n\n--- ASTROLOGICAL DATA ---\n\n${astroText}`;
+          contentDescription = 'report and astro data';
+          break;
+        case 'ai':
+          // Only report content
+          const blocks = ReportParser.parseReport(extractReportContent(reportData));
+          textToCopy = blocks.map(block => block.text).join('\n');
+          contentDescription = 'report';
+          break;
+        case 'astro':
+          // Only astro data
+          textToCopy = extractAstroContent(reportData);
+          contentDescription = 'astro data';
+          break;
+        default:
+          throw new Error('No content available to copy');
       }
       
       await navigator.clipboard.writeText(textToCopy);
@@ -292,7 +290,7 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
             <Button variant="ghost" size="icon" onClick={handleCloseSession} className="p-2 hover:bg-gray-100 transition-colors active:scale-95">
               <X className="h-6 w-6 text-gray-700" />
             </Button>
-            {toggleLogic.showToggle && (
+            {showToggle && (
               <div className="flex space-x-2 bg-gray-100 rounded-full p-1">
                 <button
                   onClick={() => setActiveView('report')}
@@ -312,7 +310,7 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
                 </button>
               </div>
             )}
-            {(mappedReport.pdfData || mappedReport.swissData || (mappedReport.reportContent && mappedReport.reportContent.trim().length > 20)) && (
+            {(reportData.guest_report?.report_data?.report_pdf_base64 || reportData.swiss_data || (reportData.report_content && reportData.report_content.trim().length > 20)) && (
               <Button variant="ghost" size="icon" onClick={handleSmartPdfDownload} className="p-2 hover:bg-gray-100 transition-colors active:scale-95">
                 <Download className="h-5 w-5 text-gray-700" />
               </Button>
@@ -322,10 +320,10 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
           {/* Content */}
           <div className="flex-1 overflow-y-auto px-6 py-6">
             <h1 className="text-xl font-light text-gray-900 mb-4">
-              {toggleLogic.title} — Generated for {mappedReport.customerName}
+              {getReportTitle(reportData)} — Generated for {getPersonName(reportData)}
             </h1>
             <ReportContent 
-              mappedReport={mappedReport}
+              reportData={reportData}
               activeView={activeView}
               setActiveView={setActiveView}
               isMobile
@@ -450,7 +448,7 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
           <div className="max-w-6xl mx-auto px-4 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                {toggleLogic.showToggle && (
+                {showToggle && (
                   <div className="flex space-x-2 bg-gray-100 rounded-full p-1">
                     <button
                       onClick={() => setActiveView('report')}
@@ -481,21 +479,11 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
                   <Copy className="h-4 w-4 mr-1" />
                   Copy
                 </Button>
-                {(mappedReport.pdfData || mappedReport.swissData || (mappedReport.reportContent && mappedReport.reportContent.trim().length > 20)) && (
+                {(reportData.guest_report?.report_data?.report_pdf_base64 || reportData.swiss_data || (reportData.report_content && reportData.report_content.trim().length > 20)) && (
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => {
-                      if (mappedReport.pdfData && mappedReport.swissData) {
-                        handleDownloadUnifiedPdf();
-                      } else if (mappedReport.pdfData) {
-                        handleDownloadPdf();
-                      } else if (mappedReport.swissData) {
-                        handleDownloadUnifiedPdf();
-                      } else if (mappedReport.reportContent && mappedReport.reportContent.trim().length > 20) {
-                        handleDownloadUnifiedPdf();
-                      }
-                    }}
+                    onClick={handleSmartPdfDownload}
                     className="text-gray-700 text-base font-medium hover:text-black hover:bg-gray-100 transition-colors active:scale-95 border-gray-200"
                   >
                     <Download className="h-4 w-4 mr-1" />
@@ -540,7 +528,7 @@ export const ReportViewer = ({ mappedReport, onBack, isMobile = false }: ReportV
         </div>
 
         <ReportContent 
-          mappedReport={mappedReport}
+          reportData={reportData}
           activeView={activeView} 
           setActiveView={setActiveView}
         />
