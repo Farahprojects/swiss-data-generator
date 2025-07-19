@@ -200,5 +200,101 @@ gmp-place-autocomplete::part(result-item) {
 }
 
 /* -------------------------------------------------------------------------- */
+/*  MOBILE FORM PROTECTOR                                                    */
+/* -------------------------------------------------------------------------- */
+.mobile-form-protector {
+  /* Prevent all browser interference */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  
+  /* Prevent text selection */
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  
+  /* Allow scrolling but prevent zoom */
+  touch-action: pan-y;
+  
+  /* Prevent pull-to-refresh */
+  overscroll-behavior: contain;
+  
+  /* Smooth scrolling */
+  -webkit-overflow-scrolling: touch;
+  
+  /* Prevent context menu */
+  -webkit-touch-callout: none;
+  
+  /* Ensure proper stacking */
+  position: relative;
+  isolation: isolate;
+  z-index: 1000;
+}
+
+/* Allow text selection in inputs and textareas */
+.mobile-form-protector input,
+.mobile-form-protector textarea,
+.mobile-form-protector [contenteditable] {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
+/* Keep footer at bottom of drawer, not fixed to viewport */
+.mobile-form-protector .mobile-footer-fixed {
+  position: relative !important;
+  bottom: auto !important;
+  left: auto !important;
+  right: auto !important;
+  z-index: 10 !important;
+  background: white !important;
+  border-top: 1px solid #f3f4f6 !important;
+  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+}
+
+/* Remove extra padding since footer is not fixed */
+.mobile-form-protector .flex-1 {
+  padding-bottom: 0 !important;
+}
+
+/* Ensure promo code error messages are visible */
+.mobile-form-protector .CollapsibleContent {
+  overflow: visible !important;
+}
+
+.mobile-form-protector .CollapsibleContent .space-y-3 {
+  overflow: visible !important;
+}
+
+/* Elegant promo code error styling */
+.promo-error-message {
+  animation: fadeInUp 0.3s ease-out;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Smooth error state transitions */
+.promo-input-error {
+  transition: all 0.2s ease-in-out;
+}
+
+.promo-input-error:focus {
+  border-color: rgb(248 113 113) !important;
+  ring-color: rgb(248 113 113) !important;
+}
+
+/* -------------------------------------------------------------------------- */
 /*  END                                                                      */
 /* -------------------------------------------------------------------------- */

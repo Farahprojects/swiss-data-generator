@@ -30,10 +30,7 @@ const Step1ReportType = ({ control, setValue, selectedCategory, onNext }: Step1R
       setValue('reportType', '', { shouldValidate: true });
     }
     
-    // Auto-advance to next step after selection with a small delay
-    setTimeout(() => {
-      onNext?.();
-    }, 600);
+    // Removed auto-advance - let user manually proceed
   };
 
   return (

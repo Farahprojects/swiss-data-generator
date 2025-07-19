@@ -34,7 +34,7 @@ const MobileDrawerFooter = ({
   };
 
   return (
-    <div className="bg-white border-t border-gray-100 px-6 py-4 safe-area-pb">
+    <div className="bg-white border-t border-gray-100 px-6 py-4 safe-area-pb mobile-footer-fixed">
       <div className="flex items-center justify-between gap-4">
         <Button
           variant="outline"

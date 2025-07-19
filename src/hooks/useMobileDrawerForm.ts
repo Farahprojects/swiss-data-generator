@@ -40,19 +40,9 @@ export const useMobileDrawerForm = () => {
     }
   }, [currentStep]);
 
+  // Removed auto-advance to prevent unwanted step progression
   const autoAdvanceAfterPlaceSelection = useCallback((isSecondPerson = false) => {
-    const reportCategory = form.watch('reportCategory');
-    const request = form.watch('request');
-    const isCompatibilityReport = reportCategory === 'compatibility' || request === 'sync';
-    
-    // For single person reports, advance after first person's location
-    // For compatibility reports, only advance after second person's location
-    if (!isCompatibilityReport || isSecondPerson) {
-      setTimeout(() => {
-        setCurrentStep(4);
-      }, 100);
-    }
-    // If it's a compatibility report and first person, do nothing (stay on step 3)
+    // Removed auto-advance - let user control progression manually
   }, [form]);
 
   const prevStep = useCallback(() => {

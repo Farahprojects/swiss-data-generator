@@ -98,22 +98,14 @@ const Step1_5SubCategory = ({ control, setValue, selectedCategory, selectedSubCa
   const options = subCategoryOptions[selectedCategory as keyof typeof subCategoryOptions] || [];
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to top when this step is rendered (mobile UX)
-  useEffect(() => {
-    if (containerRef.current) {
-      containerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, []);
+  // Removed auto-scroll to top - let user control scrolling
 
   // Mirror desktop handleSubCategoryClick logic
   const handleSubCategoryClick = (value: string, reportType: string, onChange: (v: any) => void) => {
     onChange(value);
     setValue?.('reportType', reportType, { shouldValidate: true });
     
-    // Auto-advance to next step after selection with a small delay
-    setTimeout(() => {
-      onNext?.();
-    }, 600);
+    // Removed auto-advance - let user manually proceed
   };
 
   // Mirror desktop handleAstroDataClick logic
@@ -126,10 +118,7 @@ const Step1_5SubCategory = ({ control, setValue, selectedCategory, selectedSubCa
     // Clear reportType since astro data uses request field instead
     setValue?.('reportType', '', { shouldValidate: true });
     
-    // Auto-advance to next step after selection with a small delay
-    setTimeout(() => {
-      onNext?.();
-    }, 600);
+    // Removed auto-advance - let user manually proceed
   };
 
   return (
@@ -193,10 +182,7 @@ const Step1_5SubCategory = ({ control, setValue, selectedCategory, selectedSubCa
                       return;
                     }
                     
-                    // Auto-advance to next step after selection with a small delay
-                    setTimeout(() => {
-                      onNext?.();
-                    }, 600);
+                    // Removed auto-advance - let user manually proceed
                   }}
                   className={`w-full p-6 rounded-3xl border transition-all duration-300 ease-out active:scale-95 min-h-[80px] ${
                     isSelected 

@@ -70,10 +70,7 @@ const Step1_5AstroData = ({ control, setValue, selectedSubCategory, onNext }: St
                 setValue('request', subCategory.value);
                 setValue('reportType', ''); // Clear reportType since astro data uses request field
                 
-                // Auto-advance to next step after selection with a small delay
-                setTimeout(() => {
-                  onNext?.();
-                }, 600);
+                // Removed auto-advance - let user manually proceed
               };
               
               return (

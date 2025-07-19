@@ -13,10 +13,9 @@ interface CombinedPersonalDetailsFormProps {
   setValue: UseFormSetValue<ReportFormData>;
   watch: UseFormWatch<ReportFormData>;
   errors: FieldErrors<ReportFormData>;
-  onPlaceSelected?: () => void;
 }
 
-const CombinedPersonalDetailsForm = ({ register, setValue, watch, errors, onPlaceSelected }: CombinedPersonalDetailsFormProps) => {
+const CombinedPersonalDetailsForm = ({ register, setValue, watch, errors }: CombinedPersonalDetailsFormProps) => {
   const [hasInteracted, setHasInteracted] = useState({
     name: false,
     email: false,
@@ -49,8 +48,7 @@ const CombinedPersonalDetailsForm = ({ register, setValue, watch, errors, onPlac
       setValue('birthPlaceId', placeData.placeId);
     }
     
-    // Trigger auto-scroll callback
-    onPlaceSelected?.();
+    // Removed auto-scroll callback to prevent unwanted scrolling
   };
 
   const handleFieldInteraction = (fieldName: string) => {
@@ -88,16 +86,7 @@ const CombinedPersonalDetailsForm = ({ register, setValue, watch, errors, onPlac
               <Input
                 id="email"
                 type="email"
-                {...register('email', {
-                  onChange: (e) => {
-                    // Dismiss autocomplete dialog when user selects an email
-                    if (e.target.value && document.activeElement === e.target) {
-                      setTimeout(() => {
-                        (document.activeElement as HTMLElement)?.blur?.();
-                      }, 100);
-                    }
-                  }
-                })}
+                {...register('email')}
                 placeholder="your@email.com"
                 className="h-12"
                 onFocus={() => handleFieldInteraction('email')}

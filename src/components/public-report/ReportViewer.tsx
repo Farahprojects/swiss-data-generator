@@ -19,11 +19,12 @@ interface ReportViewerProps {
   reportData: ReportData;
   onBack: () => void;
   isMobile?: boolean;
+  onResetMobileState?: () => void;
 }
 
 type ModalType = 'chatgpt' | 'close' | null;
 
-export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportViewerProps) => {
+export const ReportViewer = ({ reportData, onBack, isMobile = false, onResetMobileState }: ReportViewerProps) => {
   const { toast } = useToast();
   const [isCopyCompleted, setIsCopyCompleted] = useState(false);
   const [activeModal, setActiveModal] = useState<ModalType>(null);
@@ -204,12 +205,32 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
       }
     });
     
+    // Clear mobile-specific state
+    if (isMobile) {
+      // Clear mobile drawer state
+      localStorage.removeItem('mobile_drawer_state');
+      localStorage.removeItem('mobile_form_data');
+      
+      // Clear any mobile-specific session data
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('mobile_') || key.startsWith('drawer_')) {
+          localStorage.removeItem(key);
+        }
+      });
+    }
+    
     // Reset component state completely
     setActiveView(reportData.metadata.content_type === 'ai' ? 'report' : 
                  reportData.metadata.content_type === 'astro' ? 'astro' : 'report');
     
     // Go back to form for fresh session
-    onBack();
+    if (isMobile && onResetMobileState) {
+      // For mobile, trigger the mobile state reset
+      onResetMobileState();
+    } else {
+      // For desktop, just go back
+      onBack();
+    }
   };
 
   const handleChatGPTCopyAndGo = async () => {
@@ -445,20 +466,20 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
 
       {/* ChatGPT Confirmation Modal */}
       <Dialog open={activeModal === 'chatgpt'} onOpenChange={() => setActiveModal(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-semibold text-gray-900">
+        <DialogContent className={`${isMobile ? 'w-[90vw] max-w-none mx-4 rounded-2xl' : 'sm:max-w-md'} bg-white border-0 shadow-2xl`}>
+          <DialogHeader className="text-center">
+            <DialogTitle className={`${isMobile ? 'text-xl' : 'text-2xl'} font-semibold text-gray-900`}>
               Analyze with ChatGPT
             </DialogTitle>
-            <DialogDescription className="text-base text-gray-600 leading-relaxed">
+            <DialogDescription className={`${isMobile ? 'text-sm' : 'text-base'} text-gray-600 leading-relaxed mt-2`}>
               We'll copy your access token to clipboard and open ChatGPT. Simply paste the token in the chat to load your report.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-3 mt-6">
+          <div className={`flex flex-col gap-3 ${isMobile ? 'mt-4' : 'mt-6'}`}>
             <Button
               onClick={handleChatGPTCopyAndGo}
               disabled={isCopping}
-              className="h-12 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-lg font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
+              className={`${isMobile ? 'h-11 text-base' : 'h-12 text-lg'} bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]`}
             >
               {isCopping ? 'Opening...' : 'Go'}
             </Button>
@@ -466,7 +487,7 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
               onClick={() => setActiveModal(null)}
               disabled={isCopping}
               variant="outline"
-              className="h-12 text-gray-900 text-lg font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
+              className={`${isMobile ? 'h-11 text-base' : 'h-12 text-lg'} text-gray-900 font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98] border-gray-200`}
             >
               Cancel
             </Button>
@@ -476,26 +497,26 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
 
       {/* Close Session Confirmation Modal */}
       <Dialog open={activeModal === 'close'} onOpenChange={() => setActiveModal(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-semibold text-gray-900">
+        <DialogContent className={`${isMobile ? 'w-[90vw] max-w-none mx-4 rounded-2xl' : 'sm:max-w-md'} bg-white border-0 shadow-2xl`}>
+          <DialogHeader className="text-center">
+            <DialogTitle className={`${isMobile ? 'text-xl' : 'text-2xl'} font-semibold text-gray-900`}>
               Close Session
             </DialogTitle>
-            <DialogDescription className="text-base text-gray-600 leading-relaxed">
+            <DialogDescription className={`${isMobile ? 'text-sm' : 'text-base'} text-gray-600 leading-relaxed mt-2`}>
               Closing this will end your session. Any unsaved changes will be lost.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-3 mt-6">
+          <div className={`flex flex-col gap-3 ${isMobile ? 'mt-4' : 'mt-6'}`}>
             <Button
               onClick={handleCloseSession}
-              className="h-12 bg-red-600 hover:bg-red-700 text-white text-lg font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
+              className={`${isMobile ? 'h-11 text-base' : 'h-12 text-lg'} bg-red-600 hover:bg-red-700 text-white font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]`}
             >
               Close Session
             </Button>
             <Button
               onClick={() => setActiveModal(null)}
               variant="outline"
-              className="h-12 text-gray-900 text-lg font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
+              className={`${isMobile ? 'h-11 text-base' : 'h-12 text-lg'} text-gray-900 font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98] border-gray-200`}
             >
               Cancel
             </Button>

@@ -50,28 +50,14 @@ const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
     }
   }, [person1Location]);
   
-  // Auto-scroll to birth location when both birth date and time are filled
-  React.useEffect(() => {
-    if (birthDate && birthTime) {
-      setTimeout(() => {
-        const locationField = document.querySelector('[data-birth-location]');
-        if (locationField) {
-          locationField.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center' 
-          });
-        }
-      }, 300);
-    }
-  }, [birthDate, birthTime]);
+  // Removed auto-scroll to birth location - let user control scrolling
 
   // Removed problematic auto-scroll logic that was causing step navigation issues
   
   // Callback when person 1 selects a location
   const handlePerson1PlaceSelect = () => {
     setPerson1LocationSelected(true);
-    // Trigger auto-advance for first person place selection
-    onPlaceSelected?.(false);
+    // Removed auto-advance - let user control progression
   };
 
   return (
@@ -125,8 +111,7 @@ const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
               hasTriedToSubmit={false}
               autocompleteDisabled={false}
               onPlaceSelect={() => {
-                // Trigger auto-advance for second person place selection
-                onPlaceSelected?.(true);
+                // Removed auto-advance - let user control progression
               }}
             />
           </div>

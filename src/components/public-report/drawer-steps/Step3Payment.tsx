@@ -8,7 +8,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { ReportFormData } from '@/types/public-report';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { useMobileSafeTopPadding } from '@/hooks/useMobileSafeTopPadding';
-import { useFieldFocusHandler } from '@/hooks/useFieldFocusHandler';
 
 interface Step3PaymentProps {
   register: UseFormRegister<ReportFormData>;
@@ -30,7 +29,6 @@ const Step3Payment = ({
   onTimeoutChange = () => {}
 }: Step3PaymentProps) => {
   const topSafePadding = useMobileSafeTopPadding();
-  const { scrollTo } = useFieldFocusHandler();
   const [showPromoCode, setShowPromoCode] = useState(false);
   const [hasTimedOut, setHasTimedOut] = useState(false);
 
@@ -46,12 +44,7 @@ const Step3Payment = ({
   const name = watch('name');
   const promoCode = watch('promoCode') || '';
 
-  // Clear inline error when user types
-  useEffect(() => {
-    if (promoCode && clearInlinePromoError) {
-      clearInlinePromoError();
-    }
-  }, [promoCode, clearInlinePromoError]);
+  // Removed overly aggressive error clearing - handled in onChange
 
   // Add timeout mechanism to prevent stuck processing state
   useEffect(() => {
@@ -74,15 +67,7 @@ const Step3Payment = ({
     };
   }, [isProcessing, onTimeoutChange]);
 
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' });
-  }, []);
-
-  useEffect(() => {
-    if (errors.promoCode) {
-      scrollTo(document.getElementById('promoCode'), { block: 'center' });
-    }
-  }, [errors.promoCode, scrollTo]);
+  // Removed dead scroll logic - can be re-added later if needed
 
   // Get price and title using context with global fallback
   let basePrice: number | null = null;
@@ -121,26 +106,26 @@ const Step3Payment = ({
         className="space-y-6 pt-6"
       >
         <div className="bg-white">
-          <div className="flex items-center justify-center px-6 py-8">
+          <div className="flex items-center justify-center px-6 py-6">
             <div className="text-center">
-              <h1 className="text-4xl md:text-5xl font-light text-gray-900 mb-4 tracking-tight">
+              <h1 className="text-3xl md:text-4xl font-light text-gray-900 mb-3 tracking-tight">
                 Review & <em className="italic font-light">Payment</em>
               </h1>
-              <p className="text-lg text-gray-500 font-light">Almost there, {name}!</p>
+              <p className="text-base text-gray-500 font-light">Almost there, {name}!</p>
             </div>
           </div>
 
           <div className="px-6 pricing-summary">
-            <div className="bg-gray-50/50 rounded-xl p-8 space-y-6">
-              <h2 className="text-2xl font-light text-gray-900">Order Summary</h2>
-              <div className="space-y-4">
-                <div className="flex justify-between text-lg font-light text-gray-700">
+            <div className="bg-gray-50/50 rounded-xl p-6 space-y-4">
+              <h2 className="text-xl font-light text-gray-900">Order Summary</h2>
+              <div className="space-y-3">
+                <div className="flex justify-between text-base font-light text-gray-700">
                   <span>{reportTitle}</span>
                   <span>${finalPrice.toFixed(2)}</span>
                 </div>
               </div>
               <hr className="border-gray-200" />
-              <div className="flex justify-between text-2xl font-light">
+              <div className="flex justify-between text-lg font-light">
                 <span>Total</span>
                 <span className="text-gray-900">${finalPrice.toFixed(2)}</span>
               </div>
@@ -152,27 +137,23 @@ const Step3Payment = ({
               open={showPromoCode} 
               onOpenChange={(open) => {
                 setShowPromoCode(open);
-                if (open) {
-                  setTimeout(() => {
-                    scrollTo(document.getElementById('promoCode'), { block: 'center' });
-                  }, 300);
-                }
               }}
             >
               <CollapsibleTrigger asChild>
                 <button
                   type="button"
-                  className="w-full bg-gray-100 text-gray-700 px-6 py-3 rounded-xl text-base font-light hover:bg-gray-200 transition-all duration-300 flex items-center justify-center"
+                  className="w-full bg-gray-100 text-gray-700 px-6 py-2.5 rounded-xl text-sm font-light hover:bg-gray-200 transition-all duration-300 flex items-center justify-center"
                 >
                   <Tag className="h-4 w-4 mr-2" />
                   <span>Have a promo code?</span>
                 </button>
               </CollapsibleTrigger>
 
-              <CollapsibleContent className="mt-6">
-                <div className="space-y-6">
+              <CollapsibleContent className="mt-4">
+                <div className="space-y-4">
                   <div className="space-y-3">
-                    <Label htmlFor="promoCode" className="text-lg font-light text-gray-700">Promo Code</Label>
+                    <Label htmlFor="promoCode" className="text-base font-light text-gray-700">Promo Code</Label>
+                    
                     <div className="relative">
                       <Input
                         id="promoCode"
@@ -184,31 +165,26 @@ const Step3Payment = ({
                           }
                         })}
                         placeholder="Enter promo code"
-                        className="h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400"
-                        onFocus={(e) => scrollTo(e.target, { block: 'center' })}
-                        onBlur={(e) => {
-                          if (e.target.value.trim()) {
-                            setTimeout(() => {
-                              scrollTo(document.querySelector('.pricing-summary'), { block: 'center' });
-                            }, 300);
-                          }
-                        }}
+                        className={`h-12 rounded-xl text-base font-light border-gray-200 focus:border-gray-400 transition-all duration-200 ${
+                          (errors.promoCode || inlinePromoError) ? 'border-red-400 ring-1 ring-red-400 promo-input-error' : ''
+                        }`}
                       />
+                      
+                      {/* Clean text error message */}
+                      {(errors.promoCode || inlinePromoError) && (
+                        <p className="mt-2 text-sm text-red-600 font-light leading-relaxed promo-error-message">
+                          {errors.promoCode?.message || inlinePromoError}
+                        </p>
+                      )}
                     </div>
-                    {errors.promoCode && (
-                      <p className="text-sm text-red-500 font-light">{errors.promoCode.message}</p>
-                    )}
-                    {inlinePromoError && (
-                      <p className="text-sm text-red-500 font-light">{inlinePromoError}</p>
-                    )}
                   </div>
                 </div>
               </CollapsibleContent>
             </Collapsible>
           </div>
 
-          <div className="px-6 pb-6">
-            <p className="text-sm text-gray-500 text-center font-light">
+          <div className="px-6 pb-4">
+            <p className="text-xs text-gray-500 text-center font-light">
               Your report will be delivered to your email within minutes.
               Secure payment processed by Stripe.
             </p>

@@ -72,7 +72,8 @@ const SecondPersonForm = ({ register, setValue, watch, errors, onPlaceSelected }
             {...register('secondPersonName')}
             placeholder="Enter second person's name"
             className="h-12"
-            onFocus={(e) => scrollTo(e.target)}
+            // Removed auto-scroll behavior
+            // onFocus={(e) => scrollTo(e.target)}
             onBlur={(e) => {
               handleFieldInteraction('name');
             }}
