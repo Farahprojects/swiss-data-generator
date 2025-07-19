@@ -1,7 +1,9 @@
 
 import React from 'react';
 import { ReportRenderer } from '@/components/shared/ReportRenderer';
-import { ReportData, extractAstroContent } from '@/utils/reportContentExtraction';
+import { IndividualAstroFormatter } from '@/components/astro-formatters/IndividualAstroFormatter';
+import { SynastryAstroFormatter } from '@/components/astro-formatters/SynastryAstroFormatter';
+import { ReportData } from '@/utils/reportContentExtraction';
 
 interface ReportContentProps {
   reportData: ReportData;
@@ -9,6 +11,20 @@ interface ReportContentProps {
   setActiveView: (view: 'report' | 'astro') => void;
   isMobile?: boolean;
 }
+
+// Helper function to detect synastry reports
+const isSynastryReport = (reportData: ReportData): boolean => {
+  if (!reportData.swiss_data) return false;
+  
+  // Check for synastry-specific data structures
+  return !!(
+    reportData.swiss_data.synastry_aspects ||
+    reportData.swiss_data.composite_chart ||
+    reportData.swiss_data.person_a ||
+    reportData.swiss_data.person_b ||
+    reportData.guest_report?.report_data?.secondPersonName
+  );
+};
 
 export const ReportContent: React.FC<ReportContentProps> = ({
   reportData,
@@ -30,17 +46,38 @@ export const ReportContent: React.FC<ReportContentProps> = ({
       case 'astro':
         return (
           <div className="max-w-4xl mx-auto px-4 py-8">
-            <ReportRenderer reportData={reportData} />
+            {isSynastryReport(reportData) ? (
+              <SynastryAstroFormatter 
+                swissData={reportData.swiss_data} 
+                reportData={reportData}
+              />
+            ) : (
+              <IndividualAstroFormatter 
+                swissData={reportData.swiss_data} 
+                reportData={reportData}
+              />
+            )}
           </div>
         );
       
       case 'both':
         return (
           <div className="max-w-4xl mx-auto px-4 py-8">
-            <ReportRenderer 
-              reportData={reportData} 
-              activeView={activeView}
-            />
+            {activeView === 'astro' ? (
+              isSynastryReport(reportData) ? (
+                <SynastryAstroFormatter 
+                  swissData={reportData.swiss_data} 
+                  reportData={reportData}
+                />
+              ) : (
+                <IndividualAstroFormatter 
+                  swissData={reportData.swiss_data} 
+                  reportData={reportData}
+                />
+              )
+            ) : (
+              <ReportRenderer reportData={reportData} />
+            )}
           </div>
         );
       
