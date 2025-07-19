@@ -25,14 +25,14 @@ export const IndividualAstroFormatter: React.FC<IndividualAstroFormatterProps> =
 
   if (!swissData) {
     return (
-      <div className={`text-center text-gray-500 ${className}`}>
-        <p>No astrological data available for this report.</p>
+      <div className={`text-center text-gray-500 py-16 ${className}`}>
+        <p className="text-lg font-light">No astrological data available for this report.</p>
       </div>
     );
   }
 
   return (
-    <div className={`font-light ${className}`} style={{ fontFamily: 'Inter, sans-serif' }}>
+    <div className={`font-inter max-w-4xl mx-auto py-8 ${className}`}>
       <ChartHeader
         name={name}
         birthDate={birthDate}
@@ -46,7 +46,7 @@ export const IndividualAstroFormatter: React.FC<IndividualAstroFormatterProps> =
       )}
 
       {swissData.natal?.aspects && (
-        <AspectTable aspects={swissData.natal.aspects} />
+        <AspectTable aspects={swissData.natal.aspects} title="MAJOR ASPECTS" />
       )}
 
       {swissData.natal?.houses && (
@@ -54,22 +54,34 @@ export const IndividualAstroFormatter: React.FC<IndividualAstroFormatterProps> =
       )}
 
       {swissData.natal?.angles && (
-        <div className="mb-8">
-          <h3 className="text-lg font-medium text-gray-900 mb-4 tracking-wide uppercase text-sm">
+        <div className="mb-12">
+          <h2 className="text-xl font-light text-gray-900 mb-8 text-center tracking-wide uppercase">
             CHART ANGLES
-          </h3>
-          <div className="space-y-2">
-            {Object.entries(swissData.natal.angles).map(([angle, data]: [string, any]) => {
-              const degree = data.degree ? Math.round(data.degree * 100) / 100 : '';
-              const sign = data.sign || '';
-              
-              return (
-                <div key={angle} className="flex justify-between items-center py-1 border-b border-gray-100">
-                  <span className="font-medium text-gray-900">{angle}</span>
-                  <span className="text-gray-700">{degree}° {sign}</span>
-                </div>
-              );
-            })}
+          </h2>
+          
+          <div className="max-w-2xl mx-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 px-4 font-medium text-gray-900 text-sm">Angle</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-900 text-sm">Position</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(swissData.natal.angles).map(([angle, data]: [string, any]) => {
+                  const degree = data.degree ? Math.round(data.degree * 100) / 100 : '';
+                  const sign = data.sign || '';
+                  const position = `${degree}° ${sign}`;
+                  
+                  return (
+                    <tr key={angle} className="border-b border-gray-100 hover:bg-gray-50/30">
+                      <td className="py-3 px-4 font-medium text-gray-900">{angle}</td>
+                      <td className="py-3 px-4 text-gray-700 text-right">{position}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
