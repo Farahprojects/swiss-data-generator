@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { ReportFormData } from '@/types/public-report';
@@ -36,6 +36,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   
   const [viewingReport, setViewingReport] = useState(false);
   const [reportData, setReportData] = useState<ReportData | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
 
   // Token recovery state
   const [tokenRecoveryState, setTokenRecoveryState] = useState<{
@@ -237,6 +238,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   });
 
   const { register, handleSubmit, watch, setValue, control, formState: { errors, isValid }, formState } = form;
+
   const selectedReportType = watch('reportType');
   const selectedRequest = watch('request');
   const selectedReportCategory = watch('reportCategory');
@@ -298,6 +300,64 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     resetReportState
   } = useReportSubmission();
 
+  // Comprehensive state reset function
+  const resetAllStates = useCallback(() => {
+    console.log('🧹 Starting comprehensive state reset...');
+    
+    // Reset form state
+    form.reset();
+    
+    // Reset component states
+    setViewingReport(false);
+    setReportData(null);
+    
+    // Reset token recovery state to initial values
+    setTokenRecoveryState({
+      isRecovering: false,
+      recovered: false,
+      error: null,
+      recoveredName: null,
+      recoveredEmail: null,
+    });
+    
+    // Reset stripe payment state to initial values
+    setStripePaymentState({
+      isVerifying: false,
+      isWaiting: false,
+      isComplete: false,
+      error: null,
+      reportData: null,
+      isStripeRedirect: false,
+    });
+    
+    // Reset report submission state
+    resetReportState();
+    
+    // Comprehensive localStorage cleanup
+    const currentGuestId = localStorage.getItem('currentGuestReportId');
+    if (currentGuestId) {
+      localStorage.removeItem(`guest_report_${currentGuestId}`);
+      localStorage.removeItem(`guest_report_data_${currentGuestId}`);
+    }
+    localStorage.removeItem('currentGuestReportId');
+    localStorage.removeItem('pending_report_email');
+    
+    // Clear any other report-related localStorage items
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('guest_report_') || 
+          key.startsWith('report_') || 
+          key.includes('temp_report') ||
+          key.includes('chat_token')) {
+        localStorage.removeItem(key);
+      }
+    });
+    
+    // Clear URL guest report ID
+    clearGuestReportId();
+    
+    console.log('✅ State reset completed');
+  }, [form, resetReportState]);
+
   const paymentStepRef = React.useRef<HTMLDivElement>(null);
   const secondPersonRef = React.useRef<HTMLDivElement>(null);
 
@@ -349,20 +409,32 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }
   };
 
-  const handleCloseReportViewer = () => {
-    setViewingReport(false);
-    setReportData(null);
+  const handleCloseReportViewer = useCallback(async () => {
+    console.log('🔄 Starting session close and reset...');
     
-    form.reset();
+    // Prevent multiple simultaneous resets
+    if (isResetting) return;
     
-    clearGuestReportId();
-    localStorage.removeItem('currentGuestReportId');
-    localStorage.removeItem('pending_report_email');
+    setIsResetting(true);
     
-    resetReportState();
-    
-    navigate('/report');
-  };
+    try {
+      // Reset all component states
+      resetAllStates();
+      
+      // Small delay to ensure all React state updates complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Navigate back to report page
+      navigate('/report', { replace: true });
+      
+    } catch (error) {
+      console.error('Error during session reset:', error);
+      // Fallback: still navigate even if there's an error
+      navigate('/report', { replace: true });
+    } finally {
+      setIsResetting(false);
+    }
+  }, [isResetting, resetAllStates, navigate]);
 
   const onSubmit = async (data: ReportFormData) => {
     const submissionData = coachSlug ? { ...data, coachSlug } : data;
@@ -373,6 +445,18 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     const formData = form.getValues();
     await onSubmit(formData);
   };
+
+  // Show resetting state
+  if (isResetting) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8">
+        <div className="text-center space-y-6">
+          <div className="w-12 h-12 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto"></div>
+          <p className="text-xl text-gray-600 font-light">Closing session...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Unified loading states for Stripe flow
   if (stripePaymentState.isVerifying || (stripePaymentState.isStripeRedirect && isPolling && !guestReportData)) {
