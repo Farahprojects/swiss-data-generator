@@ -32,25 +32,53 @@ export const extractAstroContent = (reportData: ReportData): string => {
   const swissData = reportData.swiss_data;
   let astroText = '';
   
-  // Add basic astro data extraction logic
-  if (swissData.chart_data) {
+  // Add astro data extraction logic based on actual database structure
+  if (swissData.natal) {
     astroText += 'ASTROLOGICAL CHART DATA\n\n';
     
-    if (swissData.chart_data.planets) {
+    if (swissData.natal.planets) {
       astroText += 'PLANETARY POSITIONS:\n';
-      Object.entries(swissData.chart_data.planets).forEach(([planet, data]: [string, any]) => {
-        astroText += `${planet}: ${data.sign || ''} ${data.degree || ''}°\n`;
+      Object.entries(swissData.natal.planets).forEach(([planet, data]: [string, any]) => {
+        const sign = data.sign || '';
+        const degree = data.degree || '';
+        const house = data.house ? ` (House ${data.house})` : '';
+        astroText += `${planet}: ${degree}° ${sign}${house}\n`;
       });
       astroText += '\n';
     }
     
-    if (swissData.chart_data.houses) {
+    if (swissData.natal.houses) {
       astroText += 'HOUSE CUSPS:\n';
-      Object.entries(swissData.chart_data.houses).forEach(([house, data]: [string, any]) => {
-        astroText += `House ${house}: ${data.sign || ''} ${data.degree || ''}°\n`;
+      Object.entries(swissData.natal.houses).forEach(([house, data]: [string, any]) => {
+        astroText += `House ${house}: ${data.degree || ''}° ${data.sign || ''}\n`;
       });
       astroText += '\n';
     }
+    
+    if (swissData.natal.angles) {
+      astroText += 'CHART ANGLES:\n';
+      Object.entries(swissData.natal.angles).forEach(([angle, data]: [string, any]) => {
+        astroText += `${angle}: ${data.degree || ''}° ${data.sign || ''}\n`;
+      });
+      astroText += '\n';
+    }
+    
+    if (swissData.natal.aspects) {
+      astroText += 'MAJOR ASPECTS:\n';
+      Object.entries(swissData.natal.aspects).forEach(([aspect, data]: [string, any]) => {
+        astroText += `${aspect}: ${data.orb || ''}° orb\n`;
+      });
+      astroText += '\n';
+    }
+  }
+  
+  // Add transit data if available
+  if (swissData.transits && swissData.transits.planets) {
+    astroText += 'CURRENT TRANSITS:\n';
+    Object.entries(swissData.transits.planets).forEach(([planet, data]: [string, any]) => {
+      astroText += `${planet}: ${data.degree || ''}° ${data.sign || ''}\n`;
+    });
+    astroText += '\n';
   }
   
   return astroText;
