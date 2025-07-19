@@ -28,55 +28,89 @@ export const extractReportContent = (reportData: ReportData): string => {
 export const extractAstroContent = (reportData: ReportData): string => {
   if (!reportData.swiss_data) return '';
   
-  // Extract text representation of astro data
   const swissData = reportData.swiss_data;
+  const reportInfo = reportData.guest_report?.report_data;
   let astroText = '';
   
-  // Add astro data extraction logic based on actual database structure
-  if (swissData.natal) {
-    astroText += 'ASTROLOGICAL CHART DATA\n\n';
+  // Header with birth information
+  if (reportInfo) {
+    const name = reportInfo.name || 'Unknown';
+    const birthDate = reportInfo.birthDate || 'Unknown';
+    const birthLocation = reportInfo.birthLocation || 'Unknown';
+    const latitude = reportInfo.latitude ? `${reportInfo.latitude}°` : '';
+    const longitude = reportInfo.longitude ? `${reportInfo.longitude}°` : '';
+    const coordinates = latitude && longitude ? `${latitude}, ${longitude}` : '';
     
-    if (swissData.natal.planets) {
-      astroText += 'PLANETARY POSITIONS:\n';
-      Object.entries(swissData.natal.planets).forEach(([planet, data]: [string, any]) => {
-        const sign = data.sign || '';
-        const degree = data.degree || '';
-        const house = data.house ? ` (House ${data.house})` : '';
-        astroText += `${planet}: ${degree}° ${sign}${house}\n`;
-      });
-      astroText += '\n';
+    astroText += `ASTROLOGICAL CHART\n\n`;
+    astroText += `Name: ${name}\n`;
+    astroText += `Birth Date: ${birthDate}\n`;
+    astroText += `Birth Location: ${birthLocation}\n`;
+    if (coordinates) {
+      astroText += `Coordinates: ${coordinates}\n`;
     }
-    
-    if (swissData.natal.houses) {
-      astroText += 'HOUSE CUSPS:\n';
-      Object.entries(swissData.natal.houses).forEach(([house, data]: [string, any]) => {
-        astroText += `House ${house}: ${data.degree || ''}° ${data.sign || ''}\n`;
-      });
-      astroText += '\n';
-    }
-    
-    if (swissData.natal.angles) {
-      astroText += 'CHART ANGLES:\n';
-      Object.entries(swissData.natal.angles).forEach(([angle, data]: [string, any]) => {
-        astroText += `${angle}: ${data.degree || ''}° ${data.sign || ''}\n`;
-      });
-      astroText += '\n';
-    }
-    
-    if (swissData.natal.aspects) {
-      astroText += 'MAJOR ASPECTS:\n';
-      Object.entries(swissData.natal.aspects).forEach(([aspect, data]: [string, any]) => {
-        astroText += `${aspect}: ${data.orb || ''}° orb\n`;
-      });
-      astroText += '\n';
-    }
+    astroText += `Analysis Date: ${new Date().toLocaleDateString()}\n\n`;
+    astroText += '─'.repeat(50) + '\n\n';
   }
   
-  // Add transit data if available
-  if (swissData.transits && swissData.transits.planets) {
-    astroText += 'CURRENT TRANSITS:\n';
+  // Planetary Positions
+  if (swissData.natal?.planets) {
+    astroText += 'PLANETARY POSITIONS\n\n';
+    Object.entries(swissData.natal.planets).forEach(([planet, data]: [string, any]) => {
+      const sign = data.sign || '';
+      const degree = data.degree ? Math.round(data.degree * 100) / 100 : '';
+      const house = data.house ? ` (House ${data.house})` : '';
+      astroText += `${planet.padEnd(12)} ${degree}° ${sign}${house}\n`;
+    });
+    astroText += '\n';
+  }
+  
+  // Major Aspects
+  if (swissData.natal?.aspects) {
+    astroText += 'MAJOR ASPECTS\n\n';
+    Object.entries(swissData.natal.aspects).forEach(([aspectKey, data]: [string, any]) => {
+      const orb = data.orb ? Math.round(data.orb * 100) / 100 : '';
+      const aspect = data.aspect || aspectKey;
+      const planet1 = data.planet1 || '';
+      const planet2 = data.planet2 || '';
+      
+      if (planet1 && planet2 && aspect) {
+        astroText += `${planet1.padEnd(10)} ${aspect.padEnd(12)} ${planet2.padEnd(10)} ${orb}°\n`;
+      } else {
+        astroText += `${aspectKey}: ${orb}° orb\n`;
+      }
+    });
+    astroText += '\n';
+  }
+  
+  // House Cusps
+  if (swissData.natal?.houses) {
+    astroText += 'HOUSE CUSPS\n\n';
+    Object.entries(swissData.natal.houses).forEach(([house, data]: [string, any]) => {
+      const degree = data.degree ? Math.round(data.degree * 100) / 100 : '';
+      const sign = data.sign || '';
+      astroText += `House ${house.padEnd(2)}     ${degree}° ${sign}\n`;
+    });
+    astroText += '\n';
+  }
+  
+  // Chart Angles
+  if (swissData.natal?.angles) {
+    astroText += 'CHART ANGLES\n\n';
+    Object.entries(swissData.natal.angles).forEach(([angle, data]: [string, any]) => {
+      const degree = data.degree ? Math.round(data.degree * 100) / 100 : '';
+      const sign = data.sign || '';
+      astroText += `${angle.padEnd(12)} ${degree}° ${sign}\n`;
+    });
+    astroText += '\n';
+  }
+  
+  // Current Transits
+  if (swissData.transits?.planets) {
+    astroText += 'CURRENT TRANSITS\n\n';
     Object.entries(swissData.transits.planets).forEach(([planet, data]: [string, any]) => {
-      astroText += `${planet}: ${data.degree || ''}° ${data.sign || ''}\n`;
+      const degree = data.degree ? Math.round(data.degree * 100) / 100 : '';
+      const sign = data.sign || '';
+      astroText += `${planet.padEnd(12)} ${degree}° ${sign}\n`;
     });
     astroText += '\n';
   }
