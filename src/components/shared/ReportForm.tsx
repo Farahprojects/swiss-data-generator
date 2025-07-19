@@ -37,8 +37,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const [viewingReport, setViewingReport] = useState(false);
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [isResetting, setIsResetting] = useState(false);
-  const [isLoadingReportModal, setIsLoadingReportModal] = useState(false);
-  const [reportModalError, setReportModalError] = useState<string | null>(null);
 
   // Token recovery state
   const [tokenRecoveryState, setTokenRecoveryState] = useState<{
@@ -397,46 +395,17 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const handleViewReport = async () => {
     if (!guestId) return;
     
-    // Step 1: Open modal immediately 
-    setViewingReport(true);
-    setIsLoadingReportModal(true);
-    setReportModalError(null);
-    
     try {
-      // Step 2: Fetch fresh data
-      const { data: freshReportData, error } = await supabase
-        .from('guest_reports')
-        .select(`
-          *,
-          temp_report_data (
-            report_content,
-            swiss_data,
-            metadata
-          )
-        `)
-        .eq('id', guestId)
-        .single();
-      
-      if (error) throw error;
-      
-      // Step 3: Transform data to correct format
-      const tempData = Array.isArray(freshReportData.temp_report_data) 
-        ? freshReportData.temp_report_data[0] 
-        : freshReportData.temp_report_data;
-      
-      const transformedData: ReportData = {
-        guest_report: freshReportData,
-        report_content: tempData?.report_content || null,
-        swiss_data: tempData?.swiss_data || null,
-        metadata: tempData?.metadata || { content_type: 'ai' }
-      };
-      setReportData(transformedData);
+      // Use the unified data fetching approach - directly set the raw data
+      if (guestReportData) {
+        console.log('🔍 Using unified guest report data for viewing');
+        setReportData(guestReportData as ReportData);
+        setViewingReport(true);
+      } else {
+        throw new Error('Report data not available');
+      }
     } catch (error) {
-      console.error("Failed to fetch report:", error);
-      setReportModalError(error instanceof Error ? error.message : 'Failed to load report');
-    } finally {
-      // Step 4: Stop loading
-      setIsLoadingReportModal(false);
+      console.error('Failed to load report:', error);
     }
   };
 
@@ -536,15 +505,40 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
 
-  if (viewingReport) {
+  if (viewingReport && reportData) {
     return (
       <ReportViewer
         reportData={reportData}
         onBack={handleCloseReportViewer}
         isMobile={false}
-        isLoading={isLoadingReportModal}
-        error={reportModalError}
       />
+    );
+  }
+
+  if (viewingReport && isPolling) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading report...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (viewingReport && (guestReportError || !guestReportData)) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <p className="text-destructive mb-4">Failed to load report</p>
+          <button 
+            onClick={handleCloseReportViewer}
+            className="bg-primary text-primary-foreground px-4 py-2 rounded"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
     );
   }
 

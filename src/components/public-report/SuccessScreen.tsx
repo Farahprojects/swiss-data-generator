@@ -138,17 +138,86 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
     }
   }, [triggerPdfEmail, toast]);
 
-  const handleViewReport = useCallback(() => {
+  const handleViewReport = useCallback(async () => {
     console.log('🚀 View Report button clicked!', { currentGuestReportId, onViewReport });
     
-    if (!onViewReport) {
-      console.error('❌ onViewReport callback is missing');
+    if (isLoadingReport) {
+      console.log('⏳ Already loading, ignoring click');
       return;
     }
 
-    // Just notify parent - that's it
-    onViewReport();
-  }, [currentGuestReportId, onViewReport]);
+    if (!onViewReport) {
+      console.error('❌ onViewReport callback is missing');
+      setReportError('Modal callback not available');
+      return;
+    }
+
+    setIsLoadingReport(true);
+    setReportError(null);
+    
+    try {
+      console.log('📡 Fetching fresh report data...');
+      
+      // Add timeout to prevent indefinite loading
+      const timeoutPromise = new Promise<any>((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 30000)
+      );
+      
+      const data = await Promise.race([
+        fetchCompleteReport(currentGuestReportId),
+        timeoutPromise
+      ]);
+      
+      console.log('📋 Fetched data:', data);
+      
+      if (!data) {
+        console.log('❌ No data returned from edge function');
+        throw new Error('No data returned from server');
+      }
+
+      // Use mapReportPayload to get consistent data structure
+      const mappedReport = mapReportPayload(data);
+
+      console.log('📊 Mapped report data:', {
+        hasReport: mappedReport.hasReport,
+        swissBoolean: mappedReport.swissBoolean,
+        reportType: mappedReport.reportType,
+        hasReportContent: !!mappedReport.reportContent,
+        hasSwissData: !!mappedReport.swissData
+      });
+
+      setFetchedReportData(data);
+
+      // OPEN MODAL IMMEDIATELY - Don't wait for PDF email
+      console.log('🎯 Opening modal with fetched data...');
+      onViewReport();
+      
+      // Track modal view state for auto-reopen on refresh
+      localStorage.setItem('autoOpenModal', 'true');
+
+      // Trigger PDF email in background (completely non-blocking)
+      setTimeout(() => {
+        triggerPdfEmailBackground(currentGuestReportId);
+      }, 100); // Small delay to ensure modal opens first
+
+    } catch (error) {
+      console.error('❌ Error in handleViewReport:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setReportError(errorMessage);
+      
+      // Don't open modal on critical error
+      if (errorMessage.includes('timeout')) {
+        setReportError('Request timed out. Please try again.');
+      } else if (errorMessage.includes('No data')) {
+        setReportError('Report data not ready yet. Please wait a moment and try again.');
+      } else {
+        setReportError('Failed to load report. Please try again.');
+      }
+    } finally {
+      setIsLoadingReport(false);
+    }
+  }, [currentGuestReportId, onViewReport, fetchCompleteReport, isLoadingReport, triggerPdfEmailBackground]);
 
   // Fetch is_ai_report flag to determine if we need countdown
   useEffect(() => {
@@ -351,7 +420,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, onViewReport
                     <p className="text-sm text-gray-600">AI report generating...</p>
                     <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
                       <motion.div
-                        className="h-2 rounded-full"
+                        className="bg-gradient-to-r from-primary to-secondary h-2 rounded-full"
                         initial={{ width: "100%" }}
                         animate={{ width: `${(countdownTime / 24) * 100}%` }}
                         transition={{ duration: 1, ease: "linear" }}

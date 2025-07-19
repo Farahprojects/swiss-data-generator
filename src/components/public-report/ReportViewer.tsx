@@ -16,16 +16,14 @@ import { ReportData, extractReportContent, getPersonName, getReportTitle } from 
 import { renderAstroDataAsText, renderUnifiedContentAsText } from '@/utils/componentToTextRenderer';
 
 interface ReportViewerProps {
-  reportData: ReportData | null;
+  reportData: ReportData;
   onBack: () => void;
   isMobile?: boolean;
-  isLoading?: boolean;
-  error?: string | null;
 }
 
 type ModalType = 'chatgpt' | 'close' | null;
 
-export const ReportViewer = ({ reportData, onBack, isMobile = false, isLoading = false, error = null }: ReportViewerProps) => {
+export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportViewerProps) => {
   const { toast } = useToast();
   const [isCopyCompleted, setIsCopyCompleted] = useState(false);
   const [activeModal, setActiveModal] = useState<ModalType>(null);
@@ -33,45 +31,8 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false, isLoading =
   const [chatToken, setChatToken] = useState<string | null>(null);
   const [cachedUuid, setCachedUuid] = useState<string | null>(null);
 
-  // Handle loading state
-  if (isLoading) {
-    return (
-      <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-12 h-12 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto"></div>
-          <p className="text-xl text-gray-600 font-light">Loading your report...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Handle error state
-  if (error) {
-    return (
-      <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <p className="text-xl text-red-600">Error loading report</p>
-          <p className="text-gray-600">{error}</p>
-          <Button onClick={onBack} variant="outline">Try Again</Button>
-        </div>
-      </div>
-    );
-  }
-
-  // Handle no data state
-  if (!reportData) {
-    return (
-      <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <p className="text-xl text-gray-600">No report data available</p>
-          <Button onClick={onBack} variant="outline">Go Back</Button>
-        </div>
-      </div>
-    );
-  }
-
   // Determine view logic based on content type
-  const contentType = reportData.metadata?.content_type || 'ai';
+  const contentType = reportData.metadata.content_type;
   const showToggle = contentType === 'both';
   const defaultView = contentType === 'ai' ? 'report' : contentType === 'astro' ? 'astro' : 'report';
   const [activeView, setActiveView] = useState<'report' | 'astro'>(defaultView);
