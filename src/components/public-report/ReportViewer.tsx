@@ -462,7 +462,7 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
       >
         {/* Desktop Header */}
         <div className="sticky top-0 z-[100] bg-background border-b shadow-sm" style={{ position: 'relative' }}>
-          <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="max-w-6xl mx-auto px-4 py-4 relative z-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 {showToggle && (
