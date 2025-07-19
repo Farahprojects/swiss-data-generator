@@ -1,6 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Download, Copy, ArrowLeft, X, Paperclip } from 'lucide-react';
+import { Download, Copy, X, Paperclip } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -21,11 +21,12 @@ interface ReportViewerProps {
   isMobile?: boolean;
 }
 
+type ModalType = 'chatgpt' | 'close' | null;
+
 export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportViewerProps) => {
   const { toast } = useToast();
   const [isCopyCompleted, setIsCopyCompleted] = useState(false);
-  const [showChatGPTConfirm, setShowChatGPTConfirm] = useState(false);
-  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [isCopping, setIsCopping] = useState(false);
   const [chatToken, setChatToken] = useState<string | null>(null);
   const [cachedUuid, setCachedUuid] = useState<string | null>(null);
@@ -42,6 +43,14 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
       setActiveView(defaultView);
     }
   }, [showToggle, defaultView]);
+
+  // Lock body scroll when component mounts
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
 
   const handleDownloadPdf = () => {
     // Check if there's PDF data in the report
@@ -172,24 +181,12 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
     }
   };
 
-  const handleChatGPT = () => {
-    // Close any open close confirmation dialog and show ChatGPT confirmation
-    setShowCloseConfirm(false);
-    setShowChatGPTConfirm(true);
-  };
-
   const handleCloseSession = () => {
-    // Close any open ChatGPT confirmation dialog and show close confirmation
-    setShowChatGPTConfirm(false);
-    setShowCloseConfirm(true);
-  };
-
-  const confirmCloseSession = () => {
     // Comprehensive reset - clear all memory and localStorage
     setChatToken(null);
     setCachedUuid(null);
     setIsCopyCompleted(false);
-    setShowCloseConfirm(false);
+    setActiveModal(null);
     
     // Clear all guest report related localStorage items
     const currentGuestId = localStorage.getItem('currentGuestReportId');
@@ -282,7 +279,7 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
 
       setTimeout(() => {
         window.open(gptUrl, "_blank");
-        setShowChatGPTConfirm(false);
+        setActiveModal(null);
         setIsCopping(false);
       }, 800);
     } catch (err) {
@@ -293,20 +290,27 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
         variant: "destructive",
       });
       setIsCopping(false);
-      setShowChatGPTConfirm(false);
+      setActiveModal(null);
     }
   };
 
-  // Apple-polished Mobile Layout
-  if (isMobile) {
-    return (
-      <>
-        <div className="fixed inset-0 bg-white z-50 flex flex-col">
-          {/* Unified Header */}
-          <div className="flex items-center justify-between px-4 py-4 border-b bg-white shadow-sm">
-            <Button variant="ghost" size="icon" onClick={handleCloseSession} className="p-2 hover:bg-gray-100 transition-colors active:scale-95">
-              <X className="h-6 w-6 text-gray-700" />
-            </Button>
+  return (
+    <>
+      {/* Full-screen overlay */}
+      <div className="fixed inset-0 bg-white z-50 flex flex-col">
+        {/* Header - Full width, consistent across mobile/desktop */}
+        <div className="flex items-center justify-between px-4 py-4 border-b bg-white shadow-sm">
+          <div className="flex items-center gap-4">
+            {!isMobile && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setActiveModal('close')} 
+                className="p-2 hover:bg-gray-100 transition-colors active:scale-95"
+              >
+                <X className="h-6 w-6 text-gray-700" />
+              </Button>
+            )}
             {showToggle && (
               <div className="flex space-x-2 bg-gray-100 rounded-full p-1">
                 <button
@@ -327,168 +331,23 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
                 </button>
               </div>
             )}
-            {(reportData.guest_report?.report_data?.report_pdf_base64 || reportData.swiss_data || (reportData.report_content && reportData.report_content.trim().length > 20)) && (
-              <Button variant="ghost" size="icon" onClick={handleSmartPdfDownload} className="p-2 hover:bg-gray-100 transition-colors active:scale-95">
-                <Download className="h-5 w-5 text-gray-700" />
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Mobile close button */}
+            {isMobile && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setActiveModal('close')} 
+                className="p-2 hover:bg-gray-100 transition-colors active:scale-95"
+              >
+                <X className="h-6 w-6 text-gray-700" />
               </Button>
             )}
-          </div>
-
-          {/* Content with ScrollArea */}
-          <ScrollArea className="flex-1">
-            <div className="px-6 py-6">
-              <h1 className="text-xl font-light text-gray-900 mb-4">
-                {getReportTitle(reportData)} — Generated for {getPersonName(reportData)}
-              </h1>
-              <ReportContent 
-                reportData={reportData}
-                activeView={activeView}
-                setActiveView={setActiveView}
-                isMobile
-              />
-            </div>
-          </ScrollArea>
-
-          {/* Footer with 2 buttons */}
-          <div className="px-6 py-4 border-t bg-white shadow-md flex justify-center gap-6">
-            <Button variant="ghost" onClick={handleCopyToClipboard} className="text-gray-700 text-base font-medium hover:text-black transition-colors active:scale-95">
-              <Paperclip className="h-5 w-5 mr-1" /> Copy
-            </Button>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <a
-                    href="#"
-                    onClick={(e) => { e.preventDefault(); handleChatGPT(); }}
-                    className="text-gray-700 text-base font-medium hover:text-black transition-colors active:scale-95 flex items-center"
-                  >
-                    <img src={openaiLogo} alt="ChatGPT" className="h-5 w-5 mr-1" /> GPT
-                  </a>
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <p>Opens ChatGPT and copies your access token - paste it in the chat to load your report</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </div>
-
-        {/* Shared Popups for Mobile */}
-        {showChatGPTConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div 
-              className="absolute inset-0 backdrop-blur-sm bg-black/20"
-              onClick={() => setShowChatGPTConfirm(false)}
-            />
-            <div className="relative bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full animate-scale-in">
-              <div className="text-center space-y-6">
-                <div className="space-y-3">
-                  <h2 className="text-2xl font-semibold text-gray-900">
-                    Analyze with ChatGPT
-                  </h2>
-                  <p className="text-base text-gray-600 leading-relaxed">
-                    We'll copy your access token to clipboard and open ChatGPT. Simply paste the token in the chat to load your report.
-                  </p>
-                </div>
-                
-                <div className="flex flex-col gap-3">
-                  <button
-                    onClick={handleChatGPTCopyAndGo}
-                    disabled={isCopping}
-                    className="h-12 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-lg font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
-                  >
-                    {isCopping ? 'Opening...' : 'Go'}
-                  </button>
-                  <button
-                    onClick={() => setShowChatGPTConfirm(false)}
-                    disabled={isCopping}
-                    className="h-12 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 text-gray-900 text-lg font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showCloseConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div 
-              className="absolute inset-0 backdrop-blur-sm bg-black/20"
-              onClick={() => setShowCloseConfirm(false)}
-            />
-            <div className="relative bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full animate-scale-in">
-              <div className="text-center space-y-6">
-                <div className="space-y-3">
-                  <h2 className="text-2xl font-semibold text-gray-900">
-                    Close Session
-                  </h2>
-                  <p className="text-base text-gray-600 leading-relaxed">
-                    Closing this will end your session. Any unsaved changes will be lost.
-                  </p>
-                </div>
-                
-                <div className="flex flex-col gap-3">
-                  <button
-                    onClick={confirmCloseSession}
-                    className="h-12 bg-red-600 hover:bg-red-700 text-white text-lg font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
-                  >
-                    Close Session
-                  </button>
-                  <button
-                    onClick={() => setShowCloseConfirm(false)}
-                    className="h-12 bg-gray-100 hover:bg-gray-200 text-gray-900 text-lg font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </>
-    );
-  }
-
-  // Desktop layout
-  return (
-    <>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        transition={{ duration: 0.3 }}
-        style={{ pointerEvents: 'auto' }}
-        className="min-h-screen bg-background"
-      >
-        {/* Desktop Header */}
-        <div className="sticky top-0 z-[100] bg-background border-b shadow-sm" style={{ position: 'relative' }}>
-          <div className={`px-4 py-4 ${showChatGPTConfirm || showCloseConfirm ? 'w-full' : 'max-w-6xl mx-auto'}`}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                {showToggle && (
-                  <div className="flex space-x-2 bg-gray-100 rounded-full p-1">
-                    <button
-                      onClick={() => setActiveView('report')}
-                      className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
-                        activeView === 'report' ? 'bg-white text-black shadow' : 'text-gray-600 hover:text-black'
-                      }`}
-                    >
-                      Report
-                    </button>
-                    <button
-                      onClick={() => setActiveView('astro')}
-                      className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
-                        activeView === 'astro' ? 'bg-white text-black shadow' : 'text-gray-600 hover:text-black'
-                      }`}
-                    >
-                      Astro
-                    </button>
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center gap-3">
+            
+            {!isMobile && (
+              <>
                 <Button
                   variant="outline"
                   size="sm"
@@ -498,6 +357,7 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
                   <Copy className="h-4 w-4 mr-1" />
                   Copy
                 </Button>
+                
                 {(reportData.guest_report?.report_data?.report_pdf_base64 || reportData.swiss_data || (reportData.report_content && reportData.report_content.trim().length > 20)) && (
                   <Button
                     variant="outline"
@@ -509,13 +369,15 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
                     PDF
                   </Button>
                 )}
+                
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <a
-                        href="#"
-                        onClick={(e) => { e.preventDefault(); handleChatGPT(); }}
-                        className="text-gray-700 text-base font-medium hover:text-black transition-colors active:scale-95 flex items-center border border-gray-200 rounded-md px-3 py-2 hover:bg-gray-100"
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setActiveModal('chatgpt')}
+                        className="text-gray-700 text-base font-medium hover:text-black hover:bg-gray-100 transition-colors active:scale-95 border-gray-200"
                       >
                         <img 
                           src="/lovable-uploads/a27cf867-e7a3-4d2f-af1e-16aaa70117e4.png" 
@@ -526,110 +388,120 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false }: ReportVie
                           }}
                         />
                         <span className="font-medium">ChatGPT</span>
-                      </a>
+                      </Button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom">
                       <p>Opens ChatGPT and copies your access token - paste it in the chat to load your report</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleCloseSession}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-all duration-200"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Content with ScrollArea */}
-        <ScrollArea className="h-[calc(100vh-80px)]">
-          <ReportContent 
-            reportData={reportData}
-            activeView={activeView} 
-            setActiveView={setActiveView}
-          />
+        {/* Content Area */}
+        <ScrollArea className="flex-1">
+          <div className="px-6 py-6">
+            {!isMobile && (
+              <h1 className="text-xl font-light text-gray-900 mb-4">
+                {getReportTitle(reportData)} — Generated for {getPersonName(reportData)}
+              </h1>
+            )}
+            <ReportContent 
+              reportData={reportData}
+              activeView={activeView}
+              setActiveView={setActiveView}
+              isMobile={isMobile}
+            />
+          </div>
         </ScrollArea>
-      </motion.div>
 
-      {/* Shared Popups for Desktop */}
-      {showChatGPTConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div 
-            className="absolute inset-0 backdrop-blur-sm bg-black/20"
-            onClick={() => setShowChatGPTConfirm(false)}
-          />
-          <div className="relative bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full animate-scale-in">
-            <div className="text-center space-y-6">
-              <div className="space-y-3">
-                <h2 className="text-2xl font-semibold text-gray-900">
-                  Analyze with ChatGPT
-                </h2>
-                <p className="text-base text-gray-600 leading-relaxed">
-                  We'll copy your access token to clipboard and open ChatGPT. Simply paste the token in the chat to load your report.
-                </p>
-              </div>
-              
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={handleChatGPTCopyAndGo}
-                  disabled={isCopping}
-                  className="h-12 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-lg font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
-                >
-                  {isCopping ? 'Opening...' : 'Go'}
-                </button>
-                <button
-                  onClick={() => setShowChatGPTConfirm(false)}
-                  disabled={isCopping}
-                  className="h-12 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 text-gray-900 text-lg font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
+        {/* Mobile Footer */}
+        {isMobile && (
+          <div className="px-6 py-4 border-t bg-white shadow-md flex justify-center gap-6">
+            <Button variant="ghost" onClick={handleCopyToClipboard} className="text-gray-700 text-base font-medium hover:text-black transition-colors active:scale-95">
+              <Paperclip className="h-5 w-5 mr-1" /> Copy
+            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setActiveModal('chatgpt')}
+                    className="text-gray-700 text-base font-medium hover:text-black transition-colors active:scale-95 flex items-center"
+                  >
+                    <img src={openaiLogo} alt="ChatGPT" className="h-5 w-5 mr-1" /> GPT
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Opens ChatGPT and copies your access token - paste it in the chat to load your report</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {showCloseConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div 
-            className="absolute inset-0 backdrop-blur-sm bg-black/20"
-            onClick={() => setShowCloseConfirm(false)}
-          />
-          <div className="relative bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full animate-scale-in">
-            <div className="text-center space-y-6">
-              <div className="space-y-3">
-                <h2 className="text-2xl font-semibold text-gray-900">
-                  Close Session
-                </h2>
-                <p className="text-base text-gray-600 leading-relaxed">
-                  Closing this will end your session. Any unsaved changes will be lost.
-                </p>
-              </div>
-              
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={confirmCloseSession}
-                  className="h-12 bg-red-600 hover:bg-red-700 text-white text-lg font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
-                >
-                  Close Session
-                </button>
-                <button
-                  onClick={() => setShowCloseConfirm(false)}
-                  className="h-12 bg-gray-100 hover:bg-gray-200 text-gray-900 text-lg font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
+      {/* ChatGPT Confirmation Modal */}
+      <Dialog open={activeModal === 'chatgpt'} onOpenChange={() => setActiveModal(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-semibold text-gray-900">
+              Analyze with ChatGPT
+            </DialogTitle>
+            <DialogDescription className="text-base text-gray-600 leading-relaxed">
+              We'll copy your access token to clipboard and open ChatGPT. Simply paste the token in the chat to load your report.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 mt-6">
+            <Button
+              onClick={handleChatGPTCopyAndGo}
+              disabled={isCopping}
+              className="h-12 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-lg font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
+            >
+              {isCopping ? 'Opening...' : 'Go'}
+            </Button>
+            <Button
+              onClick={() => setActiveModal(null)}
+              disabled={isCopping}
+              variant="outline"
+              className="h-12 text-gray-900 text-lg font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
+            >
+              Cancel
+            </Button>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Close Session Confirmation Modal */}
+      <Dialog open={activeModal === 'close'} onOpenChange={() => setActiveModal(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-semibold text-gray-900">
+              Close Session
+            </DialogTitle>
+            <DialogDescription className="text-base text-gray-600 leading-relaxed">
+              Closing this will end your session. Any unsaved changes will be lost.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 mt-6">
+            <Button
+              onClick={handleCloseSession}
+              className="h-12 bg-red-600 hover:bg-red-700 text-white text-lg font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
+            >
+              Close Session
+            </Button>
+            <Button
+              onClick={() => setActiveModal(null)}
+              variant="outline"
+              className="h-12 text-gray-900 text-lg font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
+            >
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
