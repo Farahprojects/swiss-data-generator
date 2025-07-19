@@ -23,8 +23,7 @@ import Step3Payment from './drawer-steps/Step3Payment';
 import SuccessScreen from './SuccessScreen';
 import { ReportViewer } from './ReportViewer';
 import { ReportFormData } from '@/types/public-report';
-import { MappedReport } from '@/types/mappedReport';
-import { mapReportPayload } from '@/utils/mapReportPayload';
+import { ReportData } from '@/utils/reportContentExtraction';
 import MobileDrawerHeader from './drawer-components/MobileDrawerHeader';
 import MobileDrawerFooter from './drawer-components/MobileDrawerFooter';
 
@@ -41,7 +40,7 @@ const MobileReportDrawer = ({ isOpen, onClose, guestId = null }: MobileReportDra
   const topSafePadding = useMobileSafeTopPadding();
 
   const [currentView, setCurrentView] = useState<'form' | 'report'>('form');
-  const [mappedReport, setMappedReport] = useState<MappedReport | null>(null);
+  const [reportData, setReportData] = useState<ReportData | null>(null);
   const [viewingReport, setViewingReport] = useState(false);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -161,15 +160,20 @@ const MobileReportDrawer = ({ isOpen, onClose, guestId = null }: MobileReportDra
         throw new Error('Report not found');
       }
 
-      const reportData = {
+      const fetchedReportData: ReportData = {
         guest_report: data,
         report_content: data.report_logs?.report_text || null,
         swiss_data: data.translator_logs?.swiss_data || null,
-        metadata: { source: 'mobile_fetch' }
+        metadata: {
+          is_astro_report: !!data.swiss_boolean,
+          is_ai_report: !!data.is_ai_report,
+          content_type: data.swiss_boolean && data.is_ai_report ? 'both' : 
+                       data.swiss_boolean ? 'astro' : 
+                       data.is_ai_report ? 'ai' : 'none'
+        }
       };
 
-      const mappedReportData = mapReportPayload(reportData);
-      setMappedReport(mappedReportData);
+      setReportData(fetchedReportData);
       setViewingReport(true);
       setCurrentView('report');
     } catch (error) {
@@ -251,9 +255,9 @@ const MobileReportDrawer = ({ isOpen, onClose, guestId = null }: MobileReportDra
         </DrawerContent>
       </Drawer>
 
-      {currentView === 'report' && viewingReport && mappedReport && (
+      {currentView === 'report' && viewingReport && reportData && (
         <ReportViewer
-          mappedReport={mappedReport}
+          reportData={reportData}
           onBack={() => {
             setViewingReport(false);
             setTimeout(() => resetDrawer(), 50);

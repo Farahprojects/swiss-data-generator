@@ -7,6 +7,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Plus, FileText, Trash2, User, Calendar } from 'lucide-react';
 import { ActionConfirmDialog } from './ActionConfirmDialog';
 import { ReportRenderer } from '@/components/shared/ReportRenderer';
+import { ReportData } from '@/utils/reportContentExtraction';
 import { formatDate } from '@/utils/dateFormatters';
 
 interface ClientReport {
@@ -25,6 +26,30 @@ interface ClientReportsTabProps {
   onDeleteReport: (report: ClientReport) => void;
   client?: { id: string; full_name: string } | null;
 }
+
+// Helper function to convert legacy string content to ReportData format
+const createLegacyReportData = (content: string): ReportData => {
+  return {
+    guest_report: {
+      id: 'legacy',
+      email: '',
+      report_type: null,
+      swiss_boolean: null,
+      is_ai_report: true,
+      payment_status: 'completed',
+      created_at: new Date().toISOString(),
+      promo_code_used: null,
+      report_data: { report: content }
+    },
+    report_content: content,
+    swiss_data: null,
+    metadata: {
+      is_astro_report: false,
+      is_ai_report: true,
+      content_type: 'ai'
+    }
+  };
+};
 
 const getDisplayName = (report: ClientReport): string => {
   return `#${report.id.substring(0, 8)}`;
@@ -184,7 +209,7 @@ export const ClientReportsTab: React.FC<ClientReportsTabProps> = ({
                             </AccordionTrigger>
                             <AccordionContent className="pt-2">
                               <ReportRenderer 
-                                content={report.swiss_data.report}
+                                reportData={createLegacyReportData(report.swiss_data.report)}
                                 className="text-gray-700"
                               />
                             </AccordionContent>

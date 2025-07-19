@@ -19,6 +19,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { PdfGenerator } from '@/services/pdf/PdfGenerator';
 import { transformLogDataToPdfData } from '@/services/pdf/utils/reportDataTransformer';
 import { ReportRenderer } from '@/components/shared/ReportRenderer';
+import { ReportData } from '@/utils/reportContentExtraction';
 
 type ActivityLogItem = {
   id: string;
@@ -40,6 +41,30 @@ interface ActivityLogDrawerProps {
   onClose: () => void;
   logData: ActivityLogItem | null;
 }
+
+// Helper function to convert legacy string content to ReportData format
+const createLegacyReportData = (content: string): ReportData => {
+  return {
+    guest_report: {
+      id: 'legacy',
+      email: '',
+      report_type: null,
+      swiss_boolean: null,
+      is_ai_report: true,
+      payment_status: 'completed',
+      created_at: new Date().toISOString(),
+      promo_code_used: null,
+      report_data: { report: content }
+    },
+    report_content: content,
+    swiss_data: null,
+    metadata: {
+      is_astro_report: false,
+      is_ai_report: true,
+      content_type: 'ai'
+    }
+  };
+};
 
 const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps) => {
   const [viewMode, setViewMode] = useState<'report' | 'payload'>('report');
@@ -101,9 +126,10 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
 
   // Helper function to safely render a report using ReportRenderer
   const renderReport = (report: any) => {
-    // If report is a string, use ReportRenderer
+    // If report is a string, use ReportRenderer with adapter
     if (typeof report === 'string') {
-      return <ReportRenderer content={report} className="text-gray-700" />;
+      const reportData = createLegacyReportData(report);
+      return <ReportRenderer reportData={reportData} className="text-gray-700" />;
     }
     
     // If report is an object with specific structure, render its content
@@ -114,7 +140,7 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
           <div>
             <h4 className="font-medium mb-2">{report.title}</h4>
             {typeof report.content === 'string' ? (
-              <ReportRenderer content={report.content} className="text-gray-700" />
+              <ReportRenderer reportData={createLegacyReportData(report.content)} className="text-gray-700" />
             ) : (
               <div className="whitespace-pre-wrap">{JSON.stringify(report.content, null, 2)}</div>
             )}
