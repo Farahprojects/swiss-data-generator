@@ -45,12 +45,14 @@ export const useMobileDrawerForm = () => {
     const request = form.watch('request');
     const isCompatibilityReport = reportCategory === 'compatibility' || request === 'sync';
     
-    // Always advance to payment step after place selection
-    // For compatibility reports, this will advance after second person's place is selected
-    // For single person reports, this will advance after first person's place is selected
-    setTimeout(() => {
-      setCurrentStep(4);
-    }, 100);
+    // For single person reports, advance after first person's location
+    // For compatibility reports, only advance after second person's location
+    if (!isCompatibilityReport || isSecondPerson) {
+      setTimeout(() => {
+        setCurrentStep(4);
+      }, 100);
+    }
+    // If it's a compatibility report and first person, do nothing (stay on step 3)
   }, [form]);
 
   const prevStep = useCallback(() => {
