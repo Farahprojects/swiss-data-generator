@@ -3,17 +3,7 @@ import { useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { getGuestReportId } from '@/utils/urlHelpers';
-
-interface ReportData {
-  guest_report: any;
-  report_content: string | null;
-  swiss_data: any;
-  metadata: {
-    is_astro_report: boolean;
-    is_ai_report: boolean;
-    content_type: string;
-  };
-}
+import { ReportData } from '@/utils/reportContentExtraction';
 
 interface UseReportOrchestratorReturn {
   setupOrchestratorListener: (guestReportId?: string, onReportReady?: (reportData: ReportData) => void) => () => void;
