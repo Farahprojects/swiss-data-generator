@@ -4,6 +4,7 @@ import { CheckCircle, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ReportData } from '@/utils/reportContentExtraction';
+import { supabase } from '@/integrations/supabase/client';
 import EntertainmentWindow from './EntertainmentWindow';
 
 interface SuccessScreenProps {
@@ -46,6 +47,34 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
       onReportReady(handleReportReady);
     }
   }, [onReportReady, handleReportReady]);
+
+  // Simple orchestrator fallback for post-refresh scenarios
+  useEffect(() => {
+    if (!guestReportId || reportReady) return;
+
+    const checkOrchestratorReady = async () => {
+      try {
+        console.log('🔄 Post-refresh orchestrator check for:', guestReportId);
+        
+        const { data, error } = await supabase.functions.invoke('orchestrate-report-ready', {
+          body: { guest_report_id: guestReportId }
+        });
+
+        if (!error && data?.success && data?.report_data) {
+          console.log('✅ Post-refresh report found ready - opening modal');
+          handleReportReady(data.report_data);
+        } else {
+          console.log('⏳ Post-refresh check: report not ready yet, continuing countdown');
+        }
+      } catch (error) {
+        console.log('🔍 Post-refresh orchestrator check failed, continuing countdown:', error);
+      }
+    };
+
+    // Small delay to let normal orchestrator listener attempt first
+    const timeout = setTimeout(checkOrchestratorReady, 1000);
+    return () => clearTimeout(timeout);
+  }, [guestReportId, reportReady, handleReportReady]);
 
   // Pure visual countdown timer (no fail-safe trigger)
   useEffect(() => {
