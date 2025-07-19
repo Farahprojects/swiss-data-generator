@@ -43,7 +43,7 @@ export const SynastryAstroFormatter: React.FC<SynastryAstroFormatterProps> = ({
     <div className={`font-inter max-w-4xl mx-auto py-8 ${className}`}>
       <ChartHeader
         name={`${personADisplay} × ${personBDisplay}`}
-        title="Synastry Chart Analysis"
+        title="Compatibility Chart Analysis"
       />
 
       {/* Analysis Information */}
