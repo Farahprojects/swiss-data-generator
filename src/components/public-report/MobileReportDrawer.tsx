@@ -3,13 +3,16 @@
 // - Bloat removed
 // - Google Autocomplete bug resolved
 // - Guest ID now received as prop (no internal discovery)
+// - Astro-only fast-track flow implemented
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { useMobileDrawerForm } from '@/hooks/useMobileDrawerForm';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { clearAllSessionData } from '@/utils/urlHelpers';
+import { useAstroDataFetch } from '@/hooks/useAstroDataFetch';
+import { clearAllSessionData, storeGuestReportId } from '@/utils/urlHelpers';
+import { isAstroOnlyReport } from '@/utils/reportTypeUtils';
 import { supabase } from '@/integrations/supabase/client';
 
 import Step1ReportType from './drawer-steps/Step1ReportType';
@@ -42,6 +45,7 @@ const MobileReportDrawer = ({ isOpen, onClose, guestId = null }: MobileReportDra
 
   const { form, currentStep, nextStep, prevStep, resetForm } = useMobileDrawerForm();
   const { register, handleSubmit, setValue, watch, control, formState: { errors } } = form;
+  const { fetchAstroData, isLoading: isAstroLoading } = useAstroDataFetch();
 
   // Reset drawer state when closing
   useEffect(() => {
@@ -66,13 +70,38 @@ const MobileReportDrawer = ({ isOpen, onClose, guestId = null }: MobileReportDra
   const reportSubCategory = watch('reportSubCategory');
   const request = watch('request');
 
+  // Check if current form data indicates astro-only report
+  const isCurrentlyAstroOnly = isAstroOnlyReport(reportCategory, request);
+
   const onSubmit = async (data: ReportFormData) => {
-    await submitReport(data);
+    const isAstroOnly = isAstroOnlyReport(data.reportCategory, data.request, data.reportType);
+    
+    if (isAstroOnly) {
+      console.log('🚀 Astro-only report detected - implementing fast-track flow');
+      
+      // Submit the report first
+      await submitReport(data);
+      
+      // If report was created successfully, immediately fetch and show astro data
+      if (reportCreated) {
+        const guestReportId = guestId || localStorage.getItem('currentGuestReportId');
+        if (guestReportId) {
+          console.log('⚡ Fast-track: Fetching astro data immediately');
+          const astroData = await fetchAstroData(guestReportId);
+          if (astroData) {
+            handleViewReport(astroData);
+          }
+        }
+      }
+    } else {
+      // Regular AI-enhanced report flow
+      await submitReport(data);
+    }
   };
 
-  // Handle report ready from orchestrator
+  // Handle report ready from orchestrator or fast-track fetch
   const handleViewReport = (reportData: ReportData) => {
-    console.log('📋 Report data received from orchestrator:', reportData);
+    console.log('📋 Report data received:', reportData);
     setReportData(reportData);
     setViewingReport(true);
     setCurrentView('report');
@@ -156,7 +185,7 @@ const MobileReportDrawer = ({ isOpen, onClose, guestId = null }: MobileReportDra
                                  register={register} 
                                  watch={watch} 
                                  errors={errors} 
-                                 isProcessing={isProcessing} 
+                                 isProcessing={isProcessing || isAstroLoading} 
                                  inlinePromoError={inlinePromoError}
                                  clearInlinePromoError={clearInlinePromoError}
                                />;
@@ -174,7 +203,7 @@ const MobileReportDrawer = ({ isOpen, onClose, guestId = null }: MobileReportDra
                       onNext={handleNext}
                       onSubmit={handleSubmitForm}
                       canGoNext={canGoNext()}
-                      isProcessing={isProcessing}
+                      isProcessing={isProcessing || isAstroLoading}
                       isLastStep={currentStep === 4}
                     />
                   </div>
@@ -182,7 +211,7 @@ const MobileReportDrawer = ({ isOpen, onClose, guestId = null }: MobileReportDra
               </div>
           )}
 
-          {reportCreated && (
+          {reportCreated && !isCurrentlyAstroOnly && (
             <div className="flex flex-col h-full">
               <MobileFormProtector isOpen={isOpen}>
                 <SuccessScreen

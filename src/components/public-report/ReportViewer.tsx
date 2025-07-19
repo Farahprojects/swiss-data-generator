@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Download, Copy, X, Paperclip } from 'lucide-react';
+import { Download, Copy, X, Paperclip, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -20,17 +19,25 @@ interface ReportViewerProps {
   onBack: () => void;
   isMobile?: boolean;
   onResetMobileState?: () => void;
+  isDirectOpen?: boolean; // New prop to indicate if opened directly (fast-track)
 }
 
 type ModalType = 'chatgpt' | 'close' | null;
 
-export const ReportViewer = ({ reportData, onBack, isMobile = false, onResetMobileState }: ReportViewerProps) => {
+export const ReportViewer = ({ 
+  reportData, 
+  onBack, 
+  isMobile = false, 
+  onResetMobileState, 
+  isDirectOpen = false 
+}: ReportViewerProps) => {
   const { toast } = useToast();
   const [isCopyCompleted, setIsCopyCompleted] = useState(false);
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [isCopping, setIsCopping] = useState(false);
   const [chatToken, setChatToken] = useState<string | null>(null);
   const [cachedUuid, setCachedUuid] = useState<string | null>(null);
+  const [isDataLoading, setIsDataLoading] = useState(isDirectOpen); // Show loading for direct opens
 
   // Determine view logic based on content type
   const contentType = reportData.metadata.content_type;
@@ -44,6 +51,21 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false, onResetMobi
       setActiveView(defaultView);
     }
   }, [showToggle, defaultView]);
+
+  // Handle direct open loading simulation (astro data should be ready quickly)
+  useEffect(() => {
+    if (isDirectOpen) {
+      console.log('🚀 ReportViewer opened directly for astro data');
+      
+      // Simulate the brief loading period for astro data (2-3 seconds)
+      const loadingTimer = setTimeout(() => {
+        setIsDataLoading(false);
+        console.log('✅ Astro data loading complete');
+      }, 2000);
+
+      return () => clearTimeout(loadingTimer);
+    }
+  }, [isDirectOpen]);
 
   // Lock body scroll when component mounts
   useEffect(() => {
@@ -332,7 +354,7 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false, onResetMobi
                 <X className="h-6 w-6 text-gray-700" />
               </Button>
             )}
-            {showToggle && (
+            {showToggle && !isDataLoading && (
               <div className="flex space-x-2 bg-gray-100 rounded-full p-1">
                 <button
                   onClick={() => setActiveView('report')}
@@ -367,7 +389,7 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false, onResetMobi
               </Button>
             )}
             
-            {!isMobile && (
+            {!isMobile && !isDataLoading && (
               <>
                 <Button
                   variant="outline"
@@ -424,22 +446,37 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false, onResetMobi
         {/* Content Area */}
         <ScrollArea className="flex-1">
           <div className="px-6 py-6">
-            {!isMobile && (
+            {!isMobile && !isDataLoading && (
             <h1 className="text-xl font-light text-gray-900 mb-4">
               Generated for {getPersonName(reportData)}
             </h1>
             )}
-            <ReportContent 
-              reportData={reportData}
-              activeView={activeView}
-              setActiveView={setActiveView}
-              isMobile={isMobile}
-            />
+            
+            {isDataLoading ? (
+              <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-600" />
+                <div className="text-center">
+                  <h2 className="text-xl font-light text-gray-900 mb-2">
+                    Preparing Your Astro Data
+                  </h2>
+                  <p className="text-gray-600">
+                    Your astrological calculations are being finalized...
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <ReportContent 
+                reportData={reportData}
+                activeView={activeView}
+                setActiveView={setActiveView}
+                isMobile={isMobile}
+              />
+            )}
           </div>
         </ScrollArea>
 
         {/* Mobile Footer */}
-        {isMobile && (
+        {isMobile && !isDataLoading && (
           <div className="px-6 py-4 border-t bg-white shadow-md flex justify-center gap-6">
             <Button variant="ghost" onClick={handleCopyToClipboard} className="text-gray-700 text-base font-medium hover:text-black transition-colors active:scale-95">
               <Paperclip className="h-5 w-5 mr-1" /> Copy
@@ -516,7 +553,7 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false, onResetMobi
             <Button
               onClick={() => setActiveModal(null)}
               variant="outline"
-              className={`${isMobile ? 'h-11 text-base' : 'h-12 text-lg'} text-gray-900 font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98] border-gray-200`}
+              className={`${isMobile ? 'h-11 text-base' : 'h-12 text-lg'} text-gray-900 font-semibold rounded-full transition-all duration-200 ease-out active:scale-95 border-gray-200`}
             >
               Cancel
             </Button>

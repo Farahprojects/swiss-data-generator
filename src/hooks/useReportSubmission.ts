@@ -4,12 +4,14 @@ import { useToast } from '@/hooks/use-toast';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { ReportFormData } from '@/types/public-report';
 import { storeGuestReportId } from '@/utils/urlHelpers';
+import { isAstroOnlyReport } from '@/utils/reportTypeUtils';
 import { supabase } from '@/integrations/supabase/client';
 
 export const useReportSubmission = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [reportCreated, setReportCreated] = useState(false);
   const [inlinePromoError, setInlinePromoError] = useState<string>('');
+  const [lastSubmittedReportId, setLastSubmittedReportId] = useState<string | null>(null);
 
   // Reset reportCreated state on mount to prevent stale success screens
   useEffect(() => {
@@ -46,6 +48,8 @@ export const useReportSubmission = () => {
     setIsProcessing(true);
     setInlinePromoError(''); // Clear any previous errors
     
+    const isAstroOnly = isAstroOnlyReport(data.reportCategory, data.request, data.reportType);
+    
     try {
       // Prepare report data for the server
       const reportData = {
@@ -71,6 +75,8 @@ export const useReportSubmission = () => {
         returnYear: data.returnYear,
         notes: data.notes,
       };
+
+      console.log(isAstroOnly ? '🚀 Submitting astro-only report' : '🤖 Submitting AI-enhanced report');
 
       // Single call to initiate-report-flow - it handles everything server-side
       const { data: flowResponse, error } = await supabase.functions.invoke('initiate-report-flow', {
@@ -129,11 +135,20 @@ export const useReportSubmission = () => {
       if (flowResponse.status === 'success') {
         // FREE FLOW: Report is free and being generated
         setReportCreated(true);
+        setLastSubmittedReportId(flowResponse.reportId);
         storeGuestReportId(flowResponse.reportId);
-        toast({
-          title: "Free Report Created!",
-          description: "Your report has been generated and will be sent to your email shortly.",
-        });
+        
+        if (isAstroOnly) {
+          toast({
+            title: "Astro Data Generating!",
+            description: "Your astro data is being prepared - it will be ready in just a few seconds.",
+          });
+        } else {
+          toast({
+            title: "Free Report Created!",
+            description: "Your report has been generated and will be sent to your email shortly.",
+          });
+        }
         setIsProcessing(false);
         
       } else if (flowResponse.status === 'payment_required') {
@@ -204,12 +219,14 @@ export const useReportSubmission = () => {
 
   const resetReportState = () => {
     setReportCreated(false);
+    setLastSubmittedReportId(null);
   };
 
   return {
     isProcessing,
     isPricingLoading,
     reportCreated,
+    lastSubmittedReportId,
     submitReport,
     inlinePromoError,
     clearInlinePromoError,
