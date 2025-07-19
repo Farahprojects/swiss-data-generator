@@ -13,9 +13,10 @@ interface CombinedPersonalDetailsFormProps {
   setValue: UseFormSetValue<ReportFormData>;
   watch: UseFormWatch<ReportFormData>;
   errors: FieldErrors<ReportFormData>;
+  onPlaceSelected?: () => void;
 }
 
-const CombinedPersonalDetailsForm = ({ register, setValue, watch, errors }: CombinedPersonalDetailsFormProps) => {
+const CombinedPersonalDetailsForm = ({ register, setValue, watch, errors, onPlaceSelected }: CombinedPersonalDetailsFormProps) => {
   const [hasInteracted, setHasInteracted] = useState({
     name: false,
     email: false,
@@ -48,7 +49,10 @@ const CombinedPersonalDetailsForm = ({ register, setValue, watch, errors }: Comb
       setValue('birthPlaceId', placeData.placeId);
     }
     
-    // Removed auto-scroll callback to prevent unwanted scrolling
+    // Call the auto-scroll callback for desktop only
+    if (onPlaceSelected) {
+      onPlaceSelected();
+    }
   };
 
   const handleFieldInteraction = (fieldName: string) => {
