@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14?target=denonext";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=deno&deno-std=0.224.0";
@@ -194,11 +193,12 @@ async function processSwissDataInBackground(guestReportId: string, reportData: R
         swiss_data_keys: swissData ? Object.keys(swissData) : null
       });
 
-      // Success - update guest_reports
+      // Success - update guest_reports with both has_report and is_report_set_at
       await supabase
         .from("guest_reports")
         .update({
           has_report: true,
+          is_report_set_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
         .eq("id", guestReportId);
