@@ -1,6 +1,6 @@
 // ──────────────────────────────────────────────────────────────────────────────
 //  send-email  —  forwards a JSON payload to your Zoho-SMTP micro-service
-// ──────────────────────────────────────────────────────────────────────────────
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
 const cors = {
