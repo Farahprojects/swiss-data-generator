@@ -13,7 +13,7 @@ import SuccessScreen from '@/components/public-report/SuccessScreen';
 import { ReportViewer } from '@/components/public-report/ReportViewer';
 import { FormValidationStatus } from '@/components/public-report/FormValidationStatus';
 
-import { clearGuestReportId } from '@/utils/urlHelpers';
+import { clearGuestReportId, clearAllSessionData } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
 import { useGuestReportData } from '@/hooks/useGuestReportData';
 import { ReportData } from '@/utils/reportContentExtraction';
@@ -47,7 +47,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     inlinePromoError,
     clearInlinePromoError,
     resetReportState
-  } = useReportSubmission(setCreatedGuestReportId); // Pass the setter to fix micro-race
+  } = useReportSubmission(setCreatedGuestReportId);
 
   const [viewingReport, setViewingReport] = useState(false);
   const [reportData, setReportData] = useState<ReportData | null>(null);
@@ -299,11 +299,13 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }
   };
 
-  const resetAllStates = useCallback(() => {
+  const resetAllStates = useCallback(async () => {
     console.log('🧹 Starting comprehensive state reset...');
     
+    // Reset form state
     form.reset();
     
+    // Reset component states
     setViewingReport(false);
     setReportData(null);
     setCreatedGuestReportId(null);
@@ -326,28 +328,13 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       isStripeRedirect: false,
     });
     
+    // Reset report submission state
     resetReportState();
     
-    const currentGuestId = localStorage.getItem('currentGuestReportId');
-    if (currentGuestId) {
-      localStorage.removeItem(`guest_report_${currentGuestId}`);
-      localStorage.removeItem(`guest_report_data_${currentGuestId}`);
-    }
-    localStorage.removeItem('currentGuestReportId');
-    localStorage.removeItem('pending_report_email');
+    // Use comprehensive clearing utility
+    await clearAllSessionData();
     
-    Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('guest_report_') || 
-          key.startsWith('report_') || 
-          key.includes('temp_report') ||
-          key.includes('chat_token')) {
-        localStorage.removeItem(key);
-      }
-    });
-    
-    clearGuestReportId();
-    
-    console.log('✅ State reset completed');
+    console.log('✅ Comprehensive state reset completed');
   }, [form, resetReportState]);
 
   React.useEffect(() => {
@@ -504,7 +491,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     setIsResetting(true);
     
     try {
-      resetAllStates();
+      await resetAllStates();
       
       await new Promise(resolve => setTimeout(resolve, 100));
       

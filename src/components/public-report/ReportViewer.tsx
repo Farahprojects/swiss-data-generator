@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Download, Copy, X, Paperclip } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,7 +9,7 @@ import { ReportContent } from './ReportContent';
 import { PdfGenerator } from '@/services/pdf/PdfGenerator';
 import { ReportParser } from '@/utils/reportParser';
 import { supabase } from '@/integrations/supabase/client';
-import { getGuestReportId } from '@/utils/urlHelpers';
+import { getGuestReportId, clearAllSessionData } from '@/utils/urlHelpers';
 import openaiLogo from '@/assets/openai-logo.png';
 import { ReportData, extractReportContent, getPersonName, getReportTitle } from '@/utils/reportContentExtraction';
 import { renderAstroDataAsText, renderUnifiedContentAsText } from '@/utils/componentToTextRenderer';
@@ -182,54 +181,46 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false, onResetMobi
     }
   };
 
-  const handleCloseSession = () => {
-    // Comprehensive reset - clear all memory and localStorage
+  const handleCloseSession = async () => {
+    console.log('🧹 Starting comprehensive session close...');
+    
+    // Reset component state immediately
     setChatToken(null);
     setCachedUuid(null);
     setIsCopyCompleted(false);
     setActiveModal(null);
     
-    // Clear all guest report related localStorage items
-    const currentGuestId = localStorage.getItem('currentGuestReportId');
-    if (currentGuestId) {
-      localStorage.removeItem(`guest_report_${currentGuestId}`);
-      localStorage.removeItem(`guest_report_data_${currentGuestId}`);
-    }
-    localStorage.removeItem('currentGuestReportId');
-    localStorage.removeItem('pending_report_email');
-    
-    // Clear any other report-related items
-    Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('guest_report_') || key.startsWith('report_')) {
-        localStorage.removeItem(key);
-      }
-    });
-    
-    // Clear mobile-specific state
-    if (isMobile) {
-      // Clear mobile drawer state
-      localStorage.removeItem('mobile_drawer_state');
-      localStorage.removeItem('mobile_form_data');
-      
-      // Clear any mobile-specific session data
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('mobile_') || key.startsWith('drawer_')) {
-          localStorage.removeItem(key);
-        }
-      });
-    }
-    
-    // Reset component state completely
+    // Reset view state
     setActiveView(reportData.metadata.content_type === 'ai' ? 'report' : 
                  reportData.metadata.content_type === 'astro' ? 'astro' : 'report');
     
-    // Go back to form for fresh session
-    if (isMobile && onResetMobileState) {
-      // For mobile, trigger the mobile state reset
-      onResetMobileState();
-    } else {
-      // For desktop, just go back
-      onBack();
+    try {
+      // Use comprehensive clearing utility
+      await clearAllSessionData();
+      
+      // Small delay to ensure clearing completes
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Handle mobile vs desktop reset
+      if (isMobile && onResetMobileState) {
+        console.log('📱 Triggering mobile state reset');
+        onResetMobileState();
+      } else {
+        console.log('🖥️ Triggering desktop back navigation');
+        onBack();
+      }
+      
+    } catch (error) {
+      console.error('❌ Error during session close:', error);
+      
+      // Fail-safe: Force navigation to clean state
+      try {
+        window.location.href = '/';
+      } catch (navError) {
+        console.error('❌ Navigation fallback also failed:', navError);
+        // Last resort - just call onBack
+        onBack();
+      }
     }
   };
 
@@ -503,7 +494,7 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false, onResetMobi
               Close Session
             </DialogTitle>
             <DialogDescription className={`${isMobile ? 'text-sm' : 'text-base'} text-gray-600 leading-relaxed mt-2`}>
-              Closing this will end your session. Any unsaved changes will be lost.
+              Closing this will end your session and clear all data. You'll return to a fresh form.
             </DialogDescription>
           </DialogHeader>
           <div className={`flex flex-col gap-3 ${isMobile ? 'mt-4' : 'mt-6'}`}>

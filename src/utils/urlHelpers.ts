@@ -1,3 +1,4 @@
+
 /**
  * URL helper utilities for managing guest report IDs in URLs
  */
@@ -108,20 +109,63 @@ export const clearGuestReportId = (): void => {
 };
 
 /**
- * Clear all session data without navigation
+ * Enhanced comprehensive session clearing with React Query cache
  */
-export const clearAllSessionData = (): void => {
-  // Clear all localStorage items
-  localStorage.removeItem('currentGuestReportId');
-  localStorage.removeItem('reportFormData');
-  localStorage.removeItem('guestReportData');
-  localStorage.removeItem('formStep');
-  localStorage.removeItem('paymentSession');
-  localStorage.removeItem('reportProgress');
+export const clearAllSessionData = async (): Promise<void> => {
+  try {
+    // Clear React Query cache if available
+    const { useQueryClient } = await import('@tanstack/react-query');
+    try {
+      const queryClient = useQueryClient();
+      queryClient.clear();
+      console.log('✅ React Query cache cleared');
+    } catch (error) {
+      // QueryClient not available in current context, continue
+      console.log('⚠️ QueryClient not available for clearing');
+    }
+  } catch (error) {
+    // React Query not available, continue
+  }
+
+  // Clear all localStorage items (comprehensive)
+  const localStorageKeysToRemove = [
+    'currentGuestReportId',
+    'reportFormData', 
+    'guestReportData',
+    'formStep',
+    'paymentSession',
+    'reportProgress',
+    'pending_report_email',
+    'mobile_drawer_state',
+    'mobile_form_data'
+  ];
   
-  // Clear sessionStorage
+  localStorageKeysToRemove.forEach(key => {
+    localStorage.removeItem(key);
+  });
+  
+  // Clear pattern-based localStorage items
+  Object.keys(localStorage).forEach((key) => {
+    if (key.startsWith('guest_report_') || 
+        key.startsWith('report_') || 
+        key.startsWith('mobile_') ||
+        key.startsWith('drawer_') ||
+        key.includes('temp_report') ||
+        key.includes('chat_token')) {
+      localStorage.removeItem(key);
+    }
+  });
+  
+  // Clear all sessionStorage
   sessionStorage.clear();
   
-  // Clear URL state
-  window.history.replaceState({}, '', '/');
+  // Clear URL state - force clean URL
+  try {
+    window.history.replaceState({}, '', '/');
+  } catch (error) {
+    // Fallback to location reset
+    window.location.href = '/';
+  }
+  
+  console.log('✅ Comprehensive session data cleared');
 };
