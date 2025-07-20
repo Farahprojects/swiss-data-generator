@@ -13,7 +13,7 @@ import SuccessScreen from '@/components/public-report/SuccessScreen';
 import { ReportViewer } from '@/components/public-report/ReportViewer';
 import { FormValidationStatus } from '@/components/public-report/FormValidationStatus';
 
-import { clearGuestReportId, clearAllSessionData } from '@/utils/urlHelpers';
+import { clearGuestReportId, forceNavigationReset } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
 import { useGuestReportData } from '@/hooks/useGuestReportData';
 import { ReportData } from '@/utils/reportContentExtraction';
@@ -299,8 +299,9 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }
   };
 
-  const resetAllStates = useCallback(async () => {
-    console.log('🧹 Starting comprehensive state reset...');
+  // Enhanced state reset function that resets all component states
+  const resetAllComponentStates = useCallback(() => {
+    console.log('🔄 Resetting all component states...');
     
     // Reset form state
     form.reset();
@@ -331,11 +332,20 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     // Reset report submission state
     resetReportState();
     
-    // Use comprehensive clearing utility
-    await clearAllSessionData();
+    console.log('✅ All component states reset');
+  }, [form, resetReportState]);
+
+  const resetAllStates = useCallback(async () => {
+    console.log('🧹 Starting comprehensive state reset...');
+    
+    // Create state reset callback
+    const stateResetCallbacks = [resetAllComponentStates];
+    
+    // Use enhanced clearing utility with state callbacks
+    await forceNavigationReset(stateResetCallbacks);
     
     console.log('✅ Comprehensive state reset completed');
-  }, [form, resetReportState]);
+  }, [resetAllComponentStates]);
 
   React.useEffect(() => {
     if (!guestReportData || !stripePaymentState.isStripeRedirect) return;
@@ -581,6 +591,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         reportData={reportData}
         onBack={handleCloseReportViewer}
         isMobile={false}
+        onStateReset={resetAllComponentStates}
       />
     );
   }

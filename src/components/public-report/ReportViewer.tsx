@@ -9,7 +9,7 @@ import { ReportContent } from './ReportContent';
 import { PdfGenerator } from '@/services/pdf/PdfGenerator';
 import { ReportParser } from '@/utils/reportParser';
 import { supabase } from '@/integrations/supabase/client';
-import { getGuestReportId, clearAllSessionData } from '@/utils/urlHelpers';
+import { getGuestReportId, forceNavigationReset } from '@/utils/urlHelpers';
 import openaiLogo from '@/assets/openai-logo.png';
 import { ReportData, extractReportContent, getPersonName, getReportTitle } from '@/utils/reportContentExtraction';
 import { renderAstroDataAsText, renderUnifiedContentAsText } from '@/utils/componentToTextRenderer';
@@ -19,11 +19,18 @@ interface ReportViewerProps {
   onBack: () => void;
   isMobile?: boolean;
   onResetMobileState?: () => void;
+  onStateReset?: () => void;
 }
 
 type ModalType = 'chatgpt' | 'close' | null;
 
-export const ReportViewer = ({ reportData, onBack, isMobile = false, onResetMobileState }: ReportViewerProps) => {
+export const ReportViewer = ({ 
+  reportData, 
+  onBack, 
+  isMobile = false, 
+  onResetMobileState,
+  onStateReset 
+}: ReportViewerProps) => {
   const { toast } = useToast();
   const [isCopyCompleted, setIsCopyCompleted] = useState(false);
   const [activeModal, setActiveModal] = useState<ModalType>(null);
@@ -195,25 +202,26 @@ export const ReportViewer = ({ reportData, onBack, isMobile = false, onResetMobi
                  reportData.metadata.content_type === 'astro' ? 'astro' : 'report');
     
     try {
-      // Use comprehensive clearing utility
-      await clearAllSessionData();
+      // Prepare state reset callbacks
+      const stateResetCallbacks: (() => void)[] = [];
       
-      // Small delay to ensure clearing completes
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Handle mobile vs desktop reset
-      if (isMobile && onResetMobileState) {
-        console.log('📱 Triggering mobile state reset');
-        onResetMobileState();
-      } else {
-        console.log('🖥️ Triggering desktop back navigation');
-        onBack();
+      // Add parent state reset callback if provided
+      if (onStateReset) {
+        stateResetCallbacks.push(onStateReset);
       }
       
-    } catch (error) {
-      console.error('❌ Error during session close:', error);
+      // Add mobile state reset callback if provided
+      if (isMobile && onResetMobileState) {
+        stateResetCallbacks.push(onResetMobileState);
+      }
       
-      // Fail-safe: Force navigation to clean state
+      // Use enhanced force navigation reset with state callbacks
+      await forceNavigationReset(stateResetCallbacks);
+      
+    } catch (error) {
+      console.error('❌ Error during comprehensive session close:', error);
+      
+      // Ultimate fallback - force page reload
       try {
         window.location.href = '/';
       } catch (navError) {
