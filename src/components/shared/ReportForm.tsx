@@ -36,6 +36,9 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const navigate = useNavigate();
   const { setupOrchestratorListener } = useReportOrchestrator();
   
+  // Store the guest report ID from successful submissions
+  const [createdGuestReportId, setCreatedGuestReportId] = useState<string | null>(null);
+  
   const { 
     isProcessing, 
     isPricingLoading, 
@@ -44,14 +47,11 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     inlinePromoError,
     clearInlinePromoError,
     resetReportState
-  } = useReportSubmission();
+  } = useReportSubmission(setCreatedGuestReportId); // Pass the setter to fix micro-race
 
   const [viewingReport, setViewingReport] = useState(false);
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [isResetting, setIsResetting] = useState(false);
-
-  // Store the guest report ID from successful submissions
-  const [createdGuestReportId, setCreatedGuestReportId] = useState<string | null>(null);
 
   // Use a ref to store the callback that SuccessScreen will register
   const reportReadyCallbackRef = useRef<((reportData: ReportData) => void) | null>(null);
@@ -139,7 +139,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   React.useEffect(() => {
     if (!effectiveGuestId) return;
 
-    // Check if we're in any success state that should trigger the listener
     const inSuccessState = (reportCreated && createdGuestReportId) || 
                           stripePaymentState.isComplete || 
                           tokenRecoveryState.recovered;
@@ -149,12 +148,11 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       const cleanup = setupOrchestratorListener(
         effectiveGuestId, 
         (reportData: ReportData) => {
-          // Call the callback that SuccessScreen registered
           if (reportReadyCallbackRef.current) {
             reportReadyCallbackRef.current(reportData);
           }
         },
-        refetchGuestData // Pass refetch function to orchestrator
+        refetchGuestData
       );
       return cleanup;
     }
@@ -163,11 +161,9 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   // Handle guest data when guestId is provided
   React.useEffect(() => {
     if (guestId) {
-      // Check if this is a fresh Stripe redirect (no existing session data)
       const hasExistingSession = localStorage.getItem('pending_report_email');
       
       if (!hasExistingSession) {
-        // This is likely a Stripe redirect - start the unified fetching flow
         console.log('🔄 Stripe redirect detected, starting unified data fetching...');
         setStripePaymentState(prev => ({ 
           ...prev, 
@@ -175,7 +171,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           isStripeRedirect: true 
         }));
       } else {
-        // This is token recovery - use existing logic
         console.log('🔄 Token recovery detected...');
         setTokenRecoveryState(prev => ({ ...prev, isRecovering: true, error: null }));
         recoverTokenData(guestId);
@@ -307,16 +302,13 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const resetAllStates = useCallback(() => {
     console.log('🧹 Starting comprehensive state reset...');
     
-    // Reset form state
     form.reset();
     
-    // Reset component states
     setViewingReport(false);
     setReportData(null);
-    setCreatedGuestReportId(null); // Reset the new state
-    setSessionRestored(false); // Reset session restored state
+    setCreatedGuestReportId(null);
+    setSessionRestored(false);
     
-    // Reset token recovery state to initial values
     setTokenRecoveryState({
       isRecovering: false,
       recovered: false,
@@ -325,7 +317,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       recoveredEmail: null,
     });
     
-    // Reset stripe payment state to initial values
     setStripePaymentState({
       isVerifying: false,
       isWaiting: false,
@@ -335,10 +326,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       isStripeRedirect: false,
     });
     
-    // Reset report submission state
     resetReportState();
     
-    // Comprehensive localStorage cleanup
     const currentGuestId = localStorage.getItem('currentGuestReportId');
     if (currentGuestId) {
       localStorage.removeItem(`guest_report_${currentGuestId}`);
@@ -347,7 +336,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     localStorage.removeItem('currentGuestReportId');
     localStorage.removeItem('pending_report_email');
     
-    // Clear any other report-related localStorage items
     Object.keys(localStorage).forEach(key => {
       if (key.startsWith('guest_report_') || 
           key.startsWith('report_') || 
@@ -357,7 +345,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       }
     });
     
-    // Clear URL guest report ID
     clearGuestReportId();
     
     console.log('✅ State reset completed');
@@ -380,7 +367,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         isStripeRedirect: true,
       });
     } else if (guestReport?.payment_status === 'pending') {
-      // Start polling since payment is still pending
       console.log('⏳ Payment pending via unified fetch, starting polling...');
       setStripePaymentState(prev => ({
         ...prev,
@@ -388,7 +374,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         isWaiting: true,
       }));
     } else {
-      // Payment failed or other status
       console.error('❌ Unexpected payment status:', guestReport?.payment_status);
       setStripePaymentState({
         isVerifying: false,
@@ -459,17 +444,15 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       paymentStepRef.current?.scrollIntoView({ 
         behavior: 'smooth', 
         block: 'start' 
-      });
+        });
     }, 300);
   };
 
-  // Refactored handleViewReport with retry logic
   const handleViewReport = async () => {
     if (!effectiveGuestId) return;
     
     console.log('🔍 [handleViewReport] Attempting to view report for:', effectiveGuestId);
     
-    // Retry logic: attempt to get data up to 3 times with delays
     const maxRetries = 3;
     let attempt = 0;
     
@@ -477,7 +460,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       attempt++;
       console.log(`🔄 [handleViewReport] Attempt ${attempt}/${maxRetries}`);
       
-      // Try to use existing data first
       if (guestReportData) {
         console.log('✅ [handleViewReport] Using existing guest report data');
         setReportData(guestReportData as ReportData);
@@ -485,12 +467,10 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         return;
       }
       
-      // If no data, trigger a refetch and wait
       if (attempt < maxRetries) {
         console.log('⏳ [handleViewReport] No data found, triggering refetch...');
         try {
           await refetchGuestData();
-          // Wait a bit for the data to update
           await new Promise(resolve => setTimeout(resolve, 500));
         } catch (error) {
           console.error(`❌ [handleViewReport] Refetch attempt ${attempt} failed:`, error);
@@ -498,10 +478,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       }
     }
     
-    // Final fallback: if all retries failed, show error
     console.error('❌ [handleViewReport] All retry attempts failed');
-    // Instead of throwing, we could show a user-friendly error state
-    // For now, let's try one more direct fetch
     try {
       const { data, error } = await supabase.functions.invoke('get-guest-report', {
         body: { id: effectiveGuestId }
@@ -545,11 +522,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     const submissionData = coachSlug ? { ...data, coachSlug } : data;
     const result = await submitReport(submissionData);
     
-    // Capture the guest report ID if returned
-    if (result.success && result.guestReportId) {
-      console.log('🎯 [ReportForm] Captured guest report ID from submission:', result.guestReportId);
-      setCreatedGuestReportId(result.guestReportId);
-    }
+    // Note: createdGuestReportId is now set automatically in useReportSubmission hook
+    // No need to set it here anymore - this eliminates the micro-race
   };
 
   const handleButtonClick = async () => {
@@ -650,6 +624,15 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       </div>
     );
   }
+
+  // ADD DEBUG LOGGING: Check all success condition values right before the checks
+  console.log('[GateCheck]', {
+    reportCreated,
+    createdGuestReportId,
+    userName,
+    userEmail,
+    guestId
+  });
 
   // Success state checks (these should come before the binary gate)
   if (reportCreated && createdGuestReportId && userName && userEmail) {

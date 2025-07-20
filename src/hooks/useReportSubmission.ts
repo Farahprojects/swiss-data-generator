@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
@@ -6,7 +5,7 @@ import { ReportFormData } from '@/types/public-report';
 import { storeGuestReportId } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
 
-export const useReportSubmission = () => {
+export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => void) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [reportCreated, setReportCreated] = useState(false);
   const [inlinePromoError, setInlinePromoError] = useState<string>('');
@@ -131,7 +130,12 @@ export const useReportSubmission = () => {
         console.log('🎯 FREE FLOW: Storing guest report ID before setting success state:', flowResponse.reportId);
         storeGuestReportId(flowResponse.reportId);
         
+        // FIX: Set both states in the same React tick to eliminate micro-race
+        if (setCreatedGuestReportId) {
+          setCreatedGuestReportId(flowResponse.reportId);
+        }
         setReportCreated(true);
+        
         toast({
           title: "Free Report Created!",
           description: "Your report has been generated and will be sent to your email shortly.",
