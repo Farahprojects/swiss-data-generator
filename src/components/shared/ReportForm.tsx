@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
@@ -92,11 +91,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   // State restoration for page refresh scenarios
   const [sessionRestored, setSessionRestored] = useState(false);
 
-  const shouldPoll = stripePaymentState.isWaiting;
-  const { data: guestReportData, error: guestReportError, isLoading: isPolling } = useGuestReportData(
-    guestId,
-    shouldPoll
-  );
+  // Remove polling - useGuestReportData now only fetches on demand
+  const { data: guestReportData, error: guestReportError, refetch: refetchGuestData } = useGuestReportData(guestId);
 
   // State restoration effect - handles page refresh scenarios
   React.useEffect(() => {
@@ -150,15 +146,19 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
     if (inSuccessState) {
       console.log('🔄 [ReportForm] Setting up orchestrator listener for:', effectiveGuestId);
-      const cleanup = setupOrchestratorListener(effectiveGuestId, (reportData: ReportData) => {
-        // Call the callback that SuccessScreen registered
-        if (reportReadyCallbackRef.current) {
-          reportReadyCallbackRef.current(reportData);
-        }
-      });
+      const cleanup = setupOrchestratorListener(
+        effectiveGuestId, 
+        (reportData: ReportData) => {
+          // Call the callback that SuccessScreen registered
+          if (reportReadyCallbackRef.current) {
+            reportReadyCallbackRef.current(reportData);
+          }
+        },
+        refetchGuestData // Pass refetch function to orchestrator
+      );
       return cleanup;
     }
-  }, [effectiveGuestId, setupOrchestratorListener, reportCreated, createdGuestReportId, stripePaymentState.isComplete, tokenRecoveryState.recovered]);
+  }, [effectiveGuestId, setupOrchestratorListener, reportCreated, createdGuestReportId, stripePaymentState.isComplete, tokenRecoveryState.recovered, refetchGuestData]);
 
   // Handle guest data when guestId is provided
   React.useEffect(() => {
@@ -463,19 +463,59 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }, 300);
   };
 
+  // Refactored handleViewReport with retry logic
   const handleViewReport = async () => {
     if (!effectiveGuestId) return;
     
-    try {
+    console.log('🔍 [handleViewReport] Attempting to view report for:', effectiveGuestId);
+    
+    // Retry logic: attempt to get data up to 3 times with delays
+    const maxRetries = 3;
+    let attempt = 0;
+    
+    while (attempt < maxRetries) {
+      attempt++;
+      console.log(`🔄 [handleViewReport] Attempt ${attempt}/${maxRetries}`);
+      
+      // Try to use existing data first
       if (guestReportData) {
-        console.log('🔍 Using unified guest report data for viewing');
+        console.log('✅ [handleViewReport] Using existing guest report data');
         setReportData(guestReportData as ReportData);
         setViewingReport(true);
+        return;
+      }
+      
+      // If no data, trigger a refetch and wait
+      if (attempt < maxRetries) {
+        console.log('⏳ [handleViewReport] No data found, triggering refetch...');
+        try {
+          await refetchGuestData();
+          // Wait a bit for the data to update
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (error) {
+          console.error(`❌ [handleViewReport] Refetch attempt ${attempt} failed:`, error);
+        }
+      }
+    }
+    
+    // Final fallback: if all retries failed, show error
+    console.error('❌ [handleViewReport] All retry attempts failed');
+    // Instead of throwing, we could show a user-friendly error state
+    // For now, let's try one more direct fetch
+    try {
+      const { data, error } = await supabase.functions.invoke('get-guest-report', {
+        body: { id: effectiveGuestId }
+      });
+      
+      if (!error && data) {
+        console.log('✅ [handleViewReport] Direct fetch succeeded');
+        setReportData(data as ReportData);
+        setViewingReport(true);
       } else {
-        throw new Error('Report data not available');
+        console.error('❌ [handleViewReport] Direct fetch also failed:', error);
       }
     } catch (error) {
-      console.error('Failed to load report:', error);
+      console.error('❌ [handleViewReport] Direct fetch exception:', error);
     }
   };
 
@@ -528,7 +568,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
 
-  if (stripePaymentState.isVerifying || (stripePaymentState.isStripeRedirect && isPolling && !guestReportData)) {
+  if (stripePaymentState.isVerifying || (stripePaymentState.isStripeRedirect && !guestReportData)) {
     return (
       <div className="min-h-screen flex items-center justify-center p-8">
         <div className="text-center space-y-6">
@@ -584,7 +624,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
 
-  if (viewingReport && isPolling) {
+  if (viewingReport && isProcessing) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
@@ -611,6 +651,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
 
+  // Success state checks (these should come before the binary gate)
   if (reportCreated && createdGuestReportId && userName && userEmail) {
     console.log('🎯 [ReportForm] Rendering SuccessScreen with guaranteed guest ID:', createdGuestReportId);
     return (
@@ -621,7 +662,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         onReportReady={(callback) => {
           reportReadyCallbackRef.current = callback;
         }}
-        guestReportId={createdGuestReportId} // Guaranteed to exist
+        guestReportId={createdGuestReportId}
       />
     );
   }
@@ -678,7 +719,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }, []);
   }
 
-  // Binary gate: if no guestId AND no success states, show fresh form immediately
+  // MOVED: Binary gate now comes after all success state checks
   if (!guestId && !reportCreated) {
     console.log('🔄 [ReportForm] No guest ID found - showing fresh form');
     
@@ -739,6 +780,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
 
+  // Default form rendering
   return (
     <div className="space-y-0" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
       <form onSubmit={handleSubmit(onSubmit)}>

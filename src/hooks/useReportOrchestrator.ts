@@ -6,13 +6,13 @@ import { getGuestReportId } from '@/utils/urlHelpers';
 import { ReportData } from '@/utils/reportContentExtraction';
 
 interface UseReportOrchestratorReturn {
-  setupOrchestratorListener: (guestReportId?: string, onReportReady?: (reportData: ReportData) => void) => () => void;
+  setupOrchestratorListener: (guestReportId?: string, onReportReady?: (reportData: ReportData) => void, refetchGuestData?: () => void) => () => void;
 }
 
 export const useReportOrchestrator = (): UseReportOrchestratorReturn => {
   const channelRef = useRef<RealtimeChannel | null>(null);
 
-  const setupOrchestratorListener = useCallback((guestReportId?: string, onReportReady?: (reportData: ReportData) => void) => {
+  const setupOrchestratorListener = useCallback((guestReportId?: string, onReportReady?: (reportData: ReportData) => void, refetchGuestData?: () => void) => {
     const reportId = guestReportId || getGuestReportId();
     if (!reportId) {
       return () => {};
@@ -27,11 +27,21 @@ export const useReportOrchestrator = (): UseReportOrchestratorReturn => {
     // Listen for orchestrator broadcast
     const channel = supabase
       .channel(`report-ready-${reportId}`)
-      .on('broadcast', { event: 'report_ready' }, (payload) => {
-        console.log('[orchestrator-listener] Report data received from orchestrator:', payload);
+      .on('broadcast', { event: 'report_ready' }, async (payload) => {
+        console.log('[orchestrator-listener] Report ready broadcast received for:', reportId);
         
-        if (payload.payload?.guest_report_id === reportId && payload.payload?.report_data) {
-          onReportReady?.(payload.payload.report_data);
+        if (payload.payload?.guest_report_id === reportId) {
+          // Trigger refetch to update React Query cache
+          if (refetchGuestData) {
+            console.log('[orchestrator-listener] Triggering data refetch...');
+            await refetchGuestData();
+          }
+          
+          // Then notify components that report is ready
+          if (payload.payload?.report_data && onReportReady) {
+            console.log('[orchestrator-listener] Calling onReportReady callback');
+            onReportReady(payload.payload.report_data);
+          }
         }
       })
       .subscribe((status) => {
@@ -48,7 +58,16 @@ export const useReportOrchestrator = (): UseReportOrchestratorReturn => {
               
               if (!error && data) {
                 console.log('[orchestrator-listener] Found ready report on reconnect');
-                onReportReady?.(data);
+                
+                // Trigger refetch to update cache
+                if (refetchGuestData) {
+                  await refetchGuestData();
+                }
+                
+                // Then call the callback
+                if (onReportReady) {
+                  onReportReady(data);
+                }
               }
             } catch (err) {
               console.log('[orchestrator-listener] Reconnect check failed:', err);

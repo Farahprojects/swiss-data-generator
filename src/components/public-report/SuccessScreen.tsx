@@ -48,7 +48,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     }
   }, [onReportReady, handleReportReady]);
 
-  // Simple orchestrator fallback for post-refresh scenarios
+  // Simple orchestrator fallback for post-refresh scenarios (no polling)
   useEffect(() => {
     if (!guestReportId || reportReady) return;
 
@@ -76,7 +76,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     return () => clearTimeout(timeout);
   }, [guestReportId, reportReady, handleReportReady]);
 
-  // Pure visual countdown timer (no fail-safe trigger)
+  // Pure visual countdown timer (no polling trigger)
   useEffect(() => {
     if (reportReady) return;
 
