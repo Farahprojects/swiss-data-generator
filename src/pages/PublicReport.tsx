@@ -14,7 +14,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
-import { getGuestReportIdFromUrl, storeGuestReportId } from '@/utils/urlHelpers';
+import { storeGuestReportId } from '@/utils/urlHelpers';
 
 const PublicReport = () => {
   // ALL HOOKS MUST BE DECLARED FIRST - NEVER INSIDE TRY-CATCH
@@ -26,48 +26,30 @@ const PublicReport = () => {
   const isMobile = useIsMobile();
   const location = useLocation();
 
-  // URL debugging test - add this first to test URL parsing
+  // Direct URL parsing fix for hydration issue - reliable guest_id detection
   useEffect(() => {
-    console.log("🔍 window.location.search =", window.location.search);
-    console.log("🔍 URL param guest_id =", new URLSearchParams(window.location.search).get("guest_id"));
-  }, []);
-
-  // Guest ID determination logic - runs once on mount
-  useEffect(() => {
-    const determineGuestId = () => {
-      console.log('🔍 PublicReport: Determining guest ID...');
-      
-      // Check URL for guest_id parameter (Stripe return case)
-      const urlGuestId = getGuestReportIdFromUrl();
-      console.log('📍 URL guest_id:', urlGuestId);
-      
-      // Check localStorage for existing ID
-      const storedGuestId = localStorage.getItem('currentGuestReportId');
-      console.log('💾 Stored guest_id:', storedGuestId);
-      
-      let finalGuestId = null;
-      
-      if (urlGuestId) {
-        // URL has guest_id - store it (could be Stripe return or direct link)
-        console.log('✅ URL guest_id detected - persisting to localStorage');
-        storeGuestReportId(urlGuestId);
-        finalGuestId = urlGuestId;
-      } else if (storedGuestId) {
-        // Existing session case - use stored ID
-        console.log('📦 Using existing stored guest_id');
-        finalGuestId = storedGuestId;
-      } else {
-        // Fresh start case - no ID needed yet
-        console.log('🆕 Fresh start - no guest_id needed');
-        finalGuestId = null;
-      }
-      
-      console.log('🎯 Final determined guest_id:', finalGuestId);
-      setActiveGuestId(finalGuestId);
-      setIsGuestIdLoading(false);
-    };
+    console.log("🔍 [FIXED] window.location.search =", window.location.search);
     
-    determineGuestId();
+    const search = new URLSearchParams(window.location.search);
+    const id = search.get("guest_id");
+    
+    console.log("🔍 [FIXED] URL param guest_id =", id);
+    
+    if (id) {
+      console.log("✅ [FIXED] Guest ID found, storing and setting state:", id);
+      storeGuestReportId(id);
+      setActiveGuestId(id);
+    } else {
+      // Check localStorage for existing session
+      const storedGuestId = localStorage.getItem('currentGuestReportId');
+      console.log("📦 [FIXED] Stored guest_id from localStorage:", storedGuestId);
+      if (storedGuestId) {
+        setActiveGuestId(storedGuestId);
+      }
+    }
+    
+    setIsGuestIdLoading(false);
+    console.log("🎯 [FIXED] Final activeGuestId will be:", id || localStorage.getItem('currentGuestReportId'));
   }, []);
 
   // Check for cancelled payment status
