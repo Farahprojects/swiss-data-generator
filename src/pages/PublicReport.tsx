@@ -26,6 +26,12 @@ const PublicReport = () => {
   const isMobile = useIsMobile();
   const location = useLocation();
 
+  // URL debugging test - add this first to test URL parsing
+  useEffect(() => {
+    console.log("🔍 window.location.search =", window.location.search);
+    console.log("🔍 URL param guest_id =", new URLSearchParams(window.location.search).get("guest_id"));
+  }, []);
+
   // Guest ID determination logic - runs once on mount
   useEffect(() => {
     const determineGuestId = () => {
