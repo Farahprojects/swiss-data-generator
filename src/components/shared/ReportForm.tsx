@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
@@ -46,6 +45,195 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     clearInlinePromoError,
     resetReportState
   } = useReportSubmission();
+
+  // Binary gate: if no guestId, show fresh form immediately
+  if (!guestId) {
+    console.log('🔄 [ReportForm] No guest ID found - showing fresh form');
+    
+    // Fresh form setup
+    const form = useForm<ReportFormData>({
+      mode: 'onBlur',
+      defaultValues: {
+        reportType: '',
+        reportSubCategory: '',
+        relationshipType: '',
+        essenceType: '',
+        name: '',
+        email: '',
+        birthDate: '',
+        birthTime: '',
+        birthLocation: '',
+        birthLatitude: undefined,
+        birthLongitude: undefined,
+        birthPlaceId: '',
+        secondPersonName: '',
+        secondPersonBirthDate: '',
+        secondPersonBirthTime: '',
+        secondPersonBirthLocation: '',
+        secondPersonLatitude: undefined,
+        secondPersonLongitude: undefined,
+        secondPersonPlaceId: '',
+        returnYear: '',
+        notes: '',
+        promoCode: '',
+        request: '',
+      },
+    });
+
+    const { register, handleSubmit, watch, setValue, control, formState: { errors, isValid }, formState } = form;
+
+    const selectedReportType = watch('reportType');
+    const selectedRequest = watch('request');
+    const selectedReportCategory = watch('reportCategory');
+
+    const reportCategory = watch('reportCategory');
+    const reportType = watch('reportType');
+    const request = watch('request');
+    
+    const requiresSecondPerson = reportCategory === 'compatibility' || 
+                                 reportType?.startsWith('sync_') || 
+                                 request === 'sync';
+
+    const formValues = form.watch();
+    const step1Done = Boolean(formValues.reportType || formValues.request);
+
+    const step2Done =
+      step1Done &&
+      Boolean(
+        formValues.name &&
+          formValues.email &&
+          formValues.birthDate &&
+          formValues.birthTime &&
+          formValues.birthLocation,
+      ) &&
+      (!requiresSecondPerson || (
+        formValues.secondPersonName &&
+        formValues.secondPersonBirthDate &&
+        formValues.secondPersonBirthTime &&
+        formValues.secondPersonBirthLocation
+      ));
+
+    const shouldUnlockForm = !!(selectedReportType || selectedRequest);
+
+    React.useEffect(() => {
+      const checkFormCompletion = async () => {
+        const formData = form.getValues();
+        const hasReportTypeOrRequest = !!(formData.reportType || formData.request);
+        const hasPersonalInfo = !!(formData.name && formData.email && formData.birthDate && formData.birthTime);
+        const hasLocationWithCoords = !!(formData.birthLocation && formData.birthLatitude && formData.birthLongitude);
+        
+        if (hasReportTypeOrRequest && hasPersonalInfo && hasLocationWithCoords) {
+        }
+        
+        onFormStateChange?.(isValid, shouldUnlockForm);
+      };
+      
+      checkFormCompletion();
+    }, [form.watch(), isValid, shouldUnlockForm, onFormStateChange]);
+
+    const paymentStepRef = React.useRef<HTMLDivElement>(null);
+    const secondPersonRef = React.useRef<HTMLDivElement>(null);
+
+    const handleFirstPersonPlaceSelected = () => {
+      const isDesktop = window.innerWidth >= 640;
+      if (!isDesktop) return;
+      
+      setTimeout(() => {
+        if (requiresSecondPerson) {
+          secondPersonRef.current?.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        } else {
+          paymentStepRef.current?.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        }
+      }, 300);
+    };
+
+    const handleSecondPersonPlaceSelected = () => {
+      const isDesktop = window.innerWidth >= 640;
+      if (!isDesktop) return;
+      
+      setTimeout(() => {
+        paymentStepRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }, 300);
+    };
+
+    const onSubmit = async (data: ReportFormData) => {
+      const submissionData = coachSlug ? { ...data, coachSlug } : data;
+      await submitReport(submissionData);
+    };
+
+    const handleButtonClick = async () => {
+      const formData = form.getValues();
+      await onSubmit(formData);
+    };
+
+    return (
+      <div className="space-y-0" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div className="space-y-8">
+            <ReportTypeSelector
+              control={control}
+              errors={errors}
+              selectedReportType={selectedReportType}
+              showReportGuide={false}
+              setShowReportGuide={() => {}}
+              setValue={setValue}
+            />
+
+            {step1Done && (
+              <>
+              <CombinedPersonalDetailsForm
+                register={register}
+                setValue={setValue}
+                watch={watch}
+                errors={errors}
+                onPlaceSelected={handleFirstPersonPlaceSelected}
+              />
+
+                {requiresSecondPerson && (
+                  <div ref={secondPersonRef}>
+              <SecondPersonForm
+                register={register}
+                setValue={setValue}
+                watch={watch}
+                errors={errors}
+                onPlaceSelected={handleSecondPersonPlaceSelected}
+              />
+                </div>
+              )}
+            </>
+            )}
+
+            {step2Done && (
+              <div ref={paymentStepRef}>
+                <PaymentStep
+                register={register}
+                watch={watch}
+                errors={errors}
+                setValue={setValue}
+                onSubmit={handleButtonClick}
+                isProcessing={isProcessing || isPricingLoading}
+                inlinePromoError={inlinePromoError}
+                clearInlinePromoError={clearInlinePromoError}
+                />
+              </div>
+            )}
+          </div>
+        </form>
+      </div>
+    );
+  }
+
+  // Guest ID exists - proceed with existing recovery logic
+  console.log('🔄 [ReportForm] Guest ID found - proceeding with recovery logic:', guestId);
 
   const [viewingReport, setViewingReport] = useState(false);
   const [reportData, setReportData] = useState<ReportData | null>(null);
