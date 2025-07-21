@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import HeroSection from '@/components/public-report/HeroSection';
@@ -8,13 +9,14 @@ import { ReportForm } from '@/components/shared/ReportForm';
 import MobileReportTrigger from '@/components/public-report/MobileReportTrigger';
 import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
 import Footer from '@/components/Footer';
-import { supabase } from '@/integrations/supabase/client';
 import Logo from '@/components/Logo';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
 import { storeGuestReportId } from '@/utils/urlHelpers';
+import { useGuestReportData } from '@/hooks/useGuestReportData';
+import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
 
 const PublicReport = () => {
   // ALL HOOKS MUST BE DECLARED FIRST - NEVER INSIDE TRY-CATCH
@@ -25,6 +27,9 @@ const PublicReport = () => {
   const [isGuestIdLoading, setIsGuestIdLoading] = useState(true);
   const isMobile = useIsMobile();
   const location = useLocation();
+
+  // Use the enhanced guest report data hook
+  const { data: reportData, error: reportError, isLoading: reportLoading, refetch } = useGuestReportData(activeGuestId);
 
   // Direct URL parsing fix for hydration issue - reliable guest_id detection
   useEffect(() => {
@@ -111,6 +116,47 @@ const PublicReport = () => {
           <div className="w-12 h-12 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto"></div>
           <p className="text-xl text-gray-600 font-light">Loading...</p>
         </div>
+      </div>
+    );
+  }
+
+  // Show enhanced error display if there's a report error
+  if (reportError && activeGuestId) {
+    return <ErrorDisplay error={reportError} onRetry={() => refetch()} />;
+  }
+
+  // If we have an active guest ID but report is still loading, show processing message
+  if (activeGuestId && reportLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8">
+        <div className="text-center space-y-6">
+          <div className="w-12 h-12 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto"></div>
+          <p className="text-xl text-gray-600 font-light">Loading your report...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If we have report data and it indicates the report is still processing
+  if (reportData?.metadata?.status === 'processing') {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-8 text-center space-y-6">
+            <div className="w-12 h-12 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto"></div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-semibold text-gray-900">
+                Generating Your Report
+              </h2>
+              <p className="text-gray-600">
+                Your personalized report is being created. This typically takes 2-5 minutes.
+              </p>
+            </div>
+            <Button onClick={() => window.location.reload()} variant="outline">
+              Check Again
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -370,7 +416,7 @@ const PublicReport = () => {
       </div>
     );
   } catch (err: any) {
-    return <div>Sorry, something went wrong.</div>;
+    return <ErrorDisplay error={err} onRetry={() => window.location.reload()} />;
   }
 };
 
