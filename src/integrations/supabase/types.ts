@@ -667,7 +667,6 @@ export type Database = {
           payment_status: string
           promo_code_used: string | null
           purchase_type: string | null
-          rcp_at: string | null
           report_data: Json
           report_log_id: string | null
           report_pdf_data: string | null
@@ -696,7 +695,6 @@ export type Database = {
           payment_status?: string
           promo_code_used?: string | null
           purchase_type?: string | null
-          rcp_at?: string | null
           report_data?: Json
           report_log_id?: string | null
           report_pdf_data?: string | null
@@ -725,7 +723,6 @@ export type Database = {
           payment_status?: string
           promo_code_used?: string | null
           purchase_type?: string | null
-          rcp_at?: string | null
           report_data?: Json
           report_log_id?: string | null
           report_pdf_data?: string | null
