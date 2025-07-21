@@ -49,6 +49,34 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     }
   }, [onReportReady, handleReportReady]);
 
+  // Listen for realtime messages from orchestrator
+  useEffect(() => {
+    if (!guestReportId) return;
+
+    console.log('🔄 Setting up realtime listener for guest report:', guestReportId);
+    
+    const channel = supabase
+      .channel(`guest_report:${guestReportId}`)
+      .on('broadcast', { event: 'report_ready' }, (payload) => {
+        console.log('📡 Realtime message received from orchestrator:', payload);
+        
+        if (payload.payload && payload.payload.data) {
+          console.log('✅ Orchestrator sent report data, opening modal...');
+          handleReportReady(payload.payload.data);
+        } else {
+          console.warn('❌ Orchestrator message missing data:', payload);
+        }
+      })
+      .subscribe((status) => {
+        console.log('📡 Realtime subscription status:', status);
+      });
+
+    return () => {
+      console.log('🧹 Cleaning up realtime subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [guestReportId, handleReportReady]);
+
   // Check if report is already ready immediately on mount
   useEffect(() => {
     const checkReportStatus = async () => {
@@ -75,7 +103,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
           console.log('✅ Report is already ready! Opening immediately...');
           handleReportReady(data.data);
         } else {
-          console.log('⏳ Report not ready yet, starting countdown...');
+          console.log('⏳ Report not ready yet, waiting for orchestrator...');
         }
       } catch (err) {
         console.error('❌ Failed to check report status:', err);

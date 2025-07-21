@@ -151,6 +151,22 @@ serve(async (req) => {
 
     console.log(`[orchestrate-report-ready] Report orchestration completed for: ${guest_report_id}`);
     
+    // Send realtime message to SuccessScreen
+    console.log(`[orchestrate-report-ready] Broadcasting report data to realtime channel: guest_report:${guest_report_id}`);
+    
+    const channel = supabase.channel(`guest_report:${guest_report_id}`);
+    await channel.send({
+      type: 'broadcast',
+      event: 'report_ready',
+      payload: {
+        ok: true,
+        ready: true,
+        data: reportData
+      }
+    });
+
+    console.log(`[orchestrate-report-ready] Realtime broadcast sent successfully`);
+    
     const processingTime = Date.now() - startTime;
 
     // Return EXACT SAME FORMAT as check-report-status
