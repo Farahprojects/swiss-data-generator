@@ -273,16 +273,22 @@ serve(async (req) => {
           // Continue anyway - report creation succeeded
         }
 
-        // Trigger background generation
+        // Trigger background generation - FIXED: Pass guest_report_id instead of sessionId
         const { error: verifyError } = await supabaseAdmin.functions.invoke(
           'verify-guest-payment',
-          { body: { sessionId } }
+          { body: { guest_report_id: guestReport.id } }
         )
         
         if (verifyError) {
-          logFlowError("free_verification_trigger_failed", verifyError, { sessionId });
+          logFlowError("free_verification_trigger_failed", verifyError, { 
+            sessionId, 
+            guestReportId: guestReport.id 
+          });
         } else {
-          logFlowEvent("free_verification_triggered", { sessionId, guestReportId: guestReport.id });
+          logFlowEvent("free_verification_triggered", { 
+            sessionId, 
+            guestReportId: guestReport.id 
+          });
         }
 
         const processingTimeMs = Date.now() - startTime;
