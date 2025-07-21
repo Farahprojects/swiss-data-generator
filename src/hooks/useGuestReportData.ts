@@ -12,10 +12,15 @@ export const useGuestReportData = (reportId: string | null) => {
         body: { id: reportId }
       });
       
-      if (error) throw error;
+      if (error) {
+        // Ensure the error gets properly thrown so React Query catches it
+        throw new Error(error.message || 'Failed to fetch report data');
+      }
+      
       return data;
     },
     enabled: !!reportId,
+    retry: false, // Don't retry on 404 errors
     // No polling - data will be fetched on demand via orchestrator signals
   });
 };

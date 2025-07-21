@@ -1,3 +1,4 @@
+
 project_id = "e658f804-66d4-43ba-9cca-5e3b8e536f52"
 
 [functions.contact-form-handler]
@@ -75,6 +76,8 @@ verify_jwt = false
 [functions.verify-guest-payment]
 verify_jwt = false
 
-
 [functions.retrieve-temp-report]
+verify_jwt = false
+
+[functions.check-report-status]
 verify_jwt = false

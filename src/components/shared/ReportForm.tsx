@@ -1,9 +1,9 @@
+
 import React, { useState, useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { ReportFormData } from '@/types/public-report';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
-import { useReportOrchestrator } from '@/hooks/useReportOrchestrator';
 
 import ReportTypeSelector from '@/components/public-report/ReportTypeSelector';
 import CombinedPersonalDetailsForm from '@/components/public-report/CombinedPersonalDetailsForm';
@@ -13,7 +13,7 @@ import SuccessScreen from '@/components/public-report/SuccessScreen';
 import { ReportViewer } from '@/components/public-report/ReportViewer';
 import { FormValidationStatus } from '@/components/public-report/FormValidationStatus';
 
-import { clearGuestReportId, clearAllSessionData } from '@/utils/urlHelpers';
+import { clearGuestReportId, forceNavigationReset } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
 import { useGuestReportData } from '@/hooks/useGuestReportData';
 import { ReportData } from '@/utils/reportContentExtraction';
@@ -34,7 +34,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   onFormStateChange
 }) => {
   const navigate = useNavigate();
-  const { setupOrchestratorListener } = useReportOrchestrator();
   
   // Store the guest report ID from successful submissions
   const [createdGuestReportId, setCreatedGuestReportId] = useState<string | null>(null);
@@ -125,38 +124,15 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }
   }, [guestId, sessionRestored]);
 
-  // Memoized callback for handling orchestrator report ready events
+  // Memoized callback for handling report ready events
   const handleReportReady = useCallback((reportData: ReportData) => {
-    console.log('🎯 [ReportForm] Orchestrator report ready callback triggered');
+    console.log('🎯 [ReportForm] Report ready callback triggered');
     setReportData(reportData);
     setViewingReport(true);
   }, []);
 
   // Determine the effective guest ID - either from new creation or existing
   const effectiveGuestId = createdGuestReportId || guestId;
-
-  // Set up orchestrator listener when we have a guestId and are in success states
-  React.useEffect(() => {
-    if (!effectiveGuestId) return;
-
-    const inSuccessState = (reportCreated && createdGuestReportId) || 
-                          stripePaymentState.isComplete || 
-                          tokenRecoveryState.recovered;
-
-    if (inSuccessState) {
-      console.log('🔄 [ReportForm] Setting up orchestrator listener for:', effectiveGuestId);
-      const cleanup = setupOrchestratorListener(
-        effectiveGuestId, 
-        (reportData: ReportData) => {
-          if (reportReadyCallbackRef.current) {
-            reportReadyCallbackRef.current(reportData);
-          }
-        },
-        refetchGuestData
-      );
-      return cleanup;
-    }
-  }, [effectiveGuestId, setupOrchestratorListener, reportCreated, createdGuestReportId, stripePaymentState.isComplete, tokenRecoveryState.recovered, refetchGuestData]);
 
   // Handle guest data when guestId is provided
   React.useEffect(() => {
@@ -299,8 +275,9 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }
   };
 
-  const resetAllStates = useCallback(async () => {
-    console.log('🧹 Starting comprehensive state reset...');
+  // Enhanced state reset function that resets all component states
+  const resetAllComponentStates = useCallback(() => {
+    console.log('🔄 Resetting all component states...');
     
     // Reset form state
     form.reset();
@@ -331,11 +308,20 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     // Reset report submission state
     resetReportState();
     
-    // Use comprehensive clearing utility
-    await clearAllSessionData();
+    console.log('✅ All component states reset');
+  }, [form, resetReportState]);
+
+  const resetAllStates = useCallback(async () => {
+    console.log('🧹 Starting comprehensive state reset...');
+    
+    // Create state reset callback
+    const stateResetCallbacks = [resetAllComponentStates];
+    
+    // Use enhanced clearing utility with state callbacks
+    await forceNavigationReset(stateResetCallbacks);
     
     console.log('✅ Comprehensive state reset completed');
-  }, [form, resetReportState]);
+  }, [resetAllComponentStates]);
 
   React.useEffect(() => {
     if (!guestReportData || !stripePaymentState.isStripeRedirect) return;
@@ -581,6 +567,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         reportData={reportData}
         onBack={handleCloseReportViewer}
         isMobile={false}
+        onStateReset={resetAllComponentStates}
       />
     );
   }

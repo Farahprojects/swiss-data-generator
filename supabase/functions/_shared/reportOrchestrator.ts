@@ -107,10 +107,20 @@ async function validateRequest(
 
 /*────────────────── DB HELPERS: engine + logging ───────────────────────────*/
 async function getNextEngine(supabase: SupabaseClient) {
-  // Use a simple round-robin approach without database queries
-  const timestamp = Date.now();
-  const engineIndex = Math.floor(timestamp / 1000) % EDGE_ENGINES.length;
-  const nextEngine = EDGE_ENGINES[engineIndex];
+  const { data: last, error } = await supabase
+    .from("report_logs")
+    .select("engine_used")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+    
+  if (error) {
+    console.error("[orchestrator] ❌ Error fetching last engine:", error);
+    return EDGE_ENGINES[0];
+  }
+  
+  const idx = last ? EDGE_ENGINES.indexOf(last.engine_used) : -1;
+  const nextEngine = EDGE_ENGINES[(idx + 1) % EDGE_ENGINES.length];
   
   console.log("[orchestrator] 🎯 Selected engine:", nextEngine);
   
@@ -124,15 +134,42 @@ async function logFailedAttempt(
   errorMessage: string,
   durationMs?: number,
 ) {
-  // Log failed attempt to console only
-  console.log("[orchestrator] 📝 FAILED ATTEMPT:", {
-    user_id: payload.user_id,
+  // Store the user_id (guest report ID or auth user ID) as string in report_logs
+  const user_id = payload.user_id;
+
+  const logData = {
+    api_key: payload.apiKey ?? null,
+    user_id: user_id, // Now expects TEXT type
     report_type: payload.report_type,
+    endpoint: payload.endpoint,
     engine_used: engine,
     status: "failed",
     error_message: errorMessage,
-    duration_ms: durationMs ?? null
+    duration_ms: durationMs ?? null,
+  };
+  
+  console.log("[orchestrator] 📝 ATTEMPTING TO LOG FAILED ATTEMPT:", {
+    user_id: logData.user_id,
+    report_type: logData.report_type,
+    engine_used: logData.engine_used,
+    status: logData.status,
+    error_message: logData.error_message,
+    duration_ms: logData.duration_ms
   });
+
+  try {
+    // Remove .select() and only check for an error
+    const { error } = await supabase.from("report_logs").insert(logData);
+    
+    if (error) {
+      console.error("[orchestrator] ❌ FAILED ATTEMPT LOG INSERT ERROR:", error);
+      throw error;
+    }
+    
+    console.log("[orchestrator] ✅ SUCCESSFULLY LOGGED FAILED ATTEMPT.");
+  } catch (error) {
+    console.error("[orchestrator] ❌ Failed to log failed attempt:", error);
+  }
 }
 
 /*───────────────── MAIN EXPORT: processReportRequest ───────────────────────*/
@@ -192,15 +229,74 @@ export const processReportRequest = async (
     return { success: false, errorMessage: msg };
   }
 
-  // Log success to console only
-  console.log("[orchestrator] 📝 SUCCESS:", {
-    user_id: payload.user_id,
+  const ids = {
+    user_id: payload.is_guest ? null : payload.user_id,
+    client_id: payload.is_guest ? payload.user_id : null,
+  };
+
+  // Store the user_id (guest report ID or auth user ID) as string in report_logs
+  const user_id = payload.user_id;
+
+  const successLogData = {
+    api_key: payload.apiKey ?? null,
+    user_id: user_id, // Now expects TEXT type
     report_type: payload.report_type,
+    endpoint: payload.endpoint,
     engine_used: engine,
+    report_text: reportContent,
     status: "success",
     duration_ms: Date.now() - start,
-    report_text_length: reportContent?.length || 0
+  };
+
+  // 🔍 DEBUG: Log exactly what we're trying to insert
+  console.log("🔍 [orchestrator] SUCCESS LOG INSERT DEBUG:", {
+    user_id: successLogData.user_id,
+    user_id_type: typeof successLogData.user_id,
+    user_id_length: successLogData.user_id ? successLogData.user_id.length : 0,
+    is_guest: payload.is_guest,
+    successLogData_keys: Object.keys(successLogData),
+    successLogData_user_id: successLogData.user_id,
+    successLogData_user_id_type: typeof successLogData.user_id,
+    file: "reportOrchestrator.ts:success_insert",
+    function: "processReportRequest"
   });
+  
+  console.log("[orchestrator] 📝 ATTEMPTING TO LOG SUCCESS TO report_logs:", {
+    user_id: successLogData.user_id,
+    report_type: successLogData.report_type,
+    engine_used: successLogData.engine_used,
+    status: successLogData.status,
+    duration_ms: successLogData.duration_ms,
+    report_text_length: successLogData.report_text?.length || 0
+  });
+
+  try {
+    // 🔍 DEBUG: Check database constraints first
+    console.log("🔍 [orchestrator] CHECKING DATABASE CONSTRAINTS...");
+    const { data: constraintData, error: constraintError } = await supabase.rpc('check_report_logs_constraints', {});
+    if (constraintError) {
+      console.error("🔍 [orchestrator] ❌ CONSTRAINT CHECK ERROR:", constraintError);
+    } else {
+      console.log("🔍 [orchestrator] ✅ CONSTRAINT CHECK RESULT:", constraintData);
+    }
+
+    // Remove .select() and only check for an error
+    const { error } = await supabase.from("report_logs").insert(successLogData);
+    
+    if (error) {
+      console.error("[orchestrator] ❌ SUCCESS LOG INSERT ERROR:", error);
+      throw error;
+    }
+    
+    // Update the success log to use the data we already have, since we are no longer fetching it back
+    console.log("[orchestrator] ✅ SUCCESSFULLY LOGGED TO report_logs:", {
+      user_id: successLogData.user_id,
+      report_type: successLogData.report_type,
+      status: successLogData.status,
+    });
+  } catch (error) {
+    console.error("[orchestrator] ❌ Failed to save success log:", error);
+  }
 
   const finalResult = {
     success: true,
