@@ -4,8 +4,8 @@ import { CheckCircle, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ReportData } from '@/utils/reportContentExtraction';
-import { supabase } from '@/integrations/supabase/client';
 import EntertainmentWindow from './EntertainmentWindow';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SuccessScreenProps {
   name: string;
@@ -28,57 +28,68 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   // Simple visual countdown (24 seconds for UX)
   const [countdownTime, setCountdownTime] = useState(24);
   const [reportReady, setReportReady] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(true);
 
-  // Handle report ready from orchestrator (via parent component)
+  // Handle report ready from parent component
   const handleReportReady = useCallback((reportData: ReportData) => {
-    console.log('🎯 Report ready signal received from orchestrator');
+    console.log('🎯 Report ready signal received');
     setReportReady(true);
     setCountdownTime(0);
     
-    // Open modal with orchestrator-provided data
+    // Open modal with provided data
     if (onViewReport) {
       onViewReport(reportData);
     }
   }, [onViewReport]);
 
-  // Register callback with parent component for orchestrator to use
+  // Register callback with parent component
   useEffect(() => {
     if (onReportReady) {
       onReportReady(handleReportReady);
     }
   }, [onReportReady, handleReportReady]);
 
-  // Simple orchestrator fallback for post-refresh scenarios (no polling)
+  // Check if report is already ready immediately on mount
   useEffect(() => {
-    if (!guestReportId || reportReady) return;
+    const checkReportStatus = async () => {
+      if (!guestReportId) {
+        console.log('❌ No guest report ID available for status check');
+        setCheckingStatus(false);
+        return;
+      }
 
-    const checkOrchestratorReady = async () => {
       try {
-        console.log('🔄 Post-refresh orchestrator check for:', guestReportId);
+        console.log('🔍 Checking if report is already ready...');
         
-        const { data, error } = await supabase.functions.invoke('orchestrate-report-ready', {
+        const { data, error } = await supabase.functions.invoke('check-report-status', {
           body: { guest_report_id: guestReportId }
         });
 
-        if (!error && data?.success && data?.report_data) {
-          console.log('✅ Post-refresh report found ready - opening modal');
-          handleReportReady(data.report_data);
-        } else {
-          console.log('⏳ Post-refresh check: report not ready yet, continuing countdown');
+        if (error) {
+          console.error('❌ Error checking report status:', error);
+          setCheckingStatus(false);
+          return;
         }
-      } catch (error) {
-        console.log('🔍 Post-refresh orchestrator check failed, continuing countdown:', error);
+
+        if (data?.ready && data?.data) {
+          console.log('✅ Report is already ready! Opening immediately...');
+          handleReportReady(data.data);
+        } else {
+          console.log('⏳ Report not ready yet, starting countdown...');
+        }
+      } catch (err) {
+        console.error('❌ Failed to check report status:', err);
+      } finally {
+        setCheckingStatus(false);
       }
     };
 
-    // Small delay to let normal orchestrator listener attempt first
-    const timeout = setTimeout(checkOrchestratorReady, 1000);
-    return () => clearTimeout(timeout);
-  }, [guestReportId, reportReady, handleReportReady]);
+    checkReportStatus();
+  }, [guestReportId, handleReportReady]);
 
-  // Pure visual countdown timer (no polling trigger)
+  // Pure visual countdown timer - only starts after status check is complete
   useEffect(() => {
-    if (reportReady) return;
+    if (reportReady || checkingStatus) return;
 
     const timer = setInterval(() => {
       setCountdownTime((prev) => {
@@ -91,7 +102,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [reportReady]);
+  }, [reportReady, checkingStatus]);
 
   return (
     <div className={isMobile ? 'min-h-[calc(var(--vh,1vh)*100)] flex items-start justify-center pt-8 px-4 bg-gradient-to-b from-background to-muted/20 overflow-y-auto' : 'w-full py-10 px-4 flex justify-center'}>
@@ -112,10 +123,19 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
               </>
             ) : (
               <>
-                {/* Simple countdown at top */}
+                {/* Show checking status or countdown */}
                 <div className="text-center mb-6">
-                  <div className="text-3xl font-light text-gray-900 mb-2">{countdownTime}s</div>
-                  <p className="text-sm text-gray-600">Generating your report...</p>
+                  {checkingStatus ? (
+                    <>
+                      <div className="text-3xl font-light text-gray-900 mb-2">...</div>
+                      <p className="text-sm text-gray-600">Checking report status...</p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-3xl font-light text-gray-900 mb-2">{countdownTime}s</div>
+                      <p className="text-sm text-gray-600">Generating your report...</p>
+                    </>
+                  )}
                 </div>
 
                 <div className="bg-muted/50 rounded-lg p-4 text-sm">
@@ -123,11 +143,13 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
                   <span className="font-medium">{email}</span>
                 </div>
 
-                {/* Entertainment window during wait */}
-                <EntertainmentWindow 
-                  mode="text"
-                  className="mb-4"
-                />
+                {/* Entertainment window during wait - only show after status check */}
+                {!checkingStatus && (
+                  <EntertainmentWindow 
+                    mode="text"
+                    className="mb-4"
+                  />
+                )}
               </>
             )}
           </CardContent>

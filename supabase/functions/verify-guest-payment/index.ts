@@ -1,3 +1,4 @@
+// update
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14?target=denonext";
@@ -140,7 +141,7 @@ function transformToTranslatorPayload(productRow: any, reportData: ReportData): 
   return basePayload;
 }
 
-async function buildTranslatorPayload(productId: string, reportData: ReportData, supabase: any) {
+async function buildTranslatorPayload(productId: string, reportData: ReportData, supabase: any): Promise<any> {
   const { data: priceRow, error } = await supabase
     .from("price_list")
     .select("*")
@@ -194,15 +195,6 @@ async function processSwissDataInBackground(guestReportId: string, reportData: R
         swiss_data_keys: swissData ? Object.keys(swissData) : null
       });
 
-      // Success - update guest_reports
-      await supabase
-        .from("guest_reports")
-        .update({
-          has_report: true,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", guestReportId);
-
       logPaymentEvent("swiss_processing_completed", guestReportId, { attempt });
       return; // Success, exit retry loop
 
@@ -241,14 +233,6 @@ async function processSwissDataInBackground(guestReportId: string, reportData: R
             duration_ms: null,
             engine_used: 'translator'
           });
-
-        await supabase
-          .from("guest_reports")
-          .update({
-            has_report: false,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", guestReportId);
 
         return; // Exit after final failure
       }
@@ -366,10 +350,6 @@ async function createGuestReportFromLegacyMetadata(sessionId: string, session: a
       coach_slug: md.coach_slug || null,
       coach_name: md.coach_name || null,
       is_ai_report: true, // Default for legacy reports
-      has_report: false,
-      swiss_boolean: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
     })
     .select()
     .single();
@@ -704,8 +684,7 @@ serve(async (req) => {
 
     const updateData: any = {
       payment_status: "paid",
-      is_ai_report: isAiReport,
-      updated_at: new Date().toISOString(),
+      is_ai_report: isAiReport
     };
 
     // Update coach information if present in metadata (for backwards compatibility)

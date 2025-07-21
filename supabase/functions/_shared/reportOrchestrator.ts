@@ -107,10 +107,20 @@ async function validateRequest(
 
 /*────────────────── DB HELPERS: engine + logging ───────────────────────────*/
 async function getNextEngine(supabase: SupabaseClient) {
-  // Use a simple round-robin approach without database queries
-  const timestamp = Date.now();
-  const engineIndex = Math.floor(timestamp / 1000) % EDGE_ENGINES.length;
-  const nextEngine = EDGE_ENGINES[engineIndex];
+  const { data: last, error } = await supabase
+    .from("report_logs")
+    .select("engine_used")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+    
+  if (error) {
+    console.error("[orchestrator] ❌ Error fetching last engine:", error);
+    return EDGE_ENGINES[0];
+  }
+  
+  const idx = last ? EDGE_ENGINES.indexOf(last.engine_used) : -1;
+  const nextEngine = EDGE_ENGINES[(idx + 1) % EDGE_ENGINES.length];
   
   console.log("[orchestrator] 🎯 Selected engine:", nextEngine);
   
@@ -124,15 +134,42 @@ async function logFailedAttempt(
   errorMessage: string,
   durationMs?: number,
 ) {
-  // Log failed attempt to console only
-  console.log("[orchestrator] 📝 FAILED ATTEMPT:", {
-    user_id: payload.user_id,
+  // Store the user_id (guest report ID or auth user ID) as string in report_logs
+  const user_id = payload.user_id;
+
+  const logData = {
+    api_key: payload.apiKey ?? null,
+    user_id: user_id, // Now expects TEXT type
     report_type: payload.report_type,
+    endpoint: payload.endpoint,
     engine_used: engine,
     status: "failed",
     error_message: errorMessage,
-    duration_ms: durationMs ?? null
+    duration_ms: durationMs ?? null,
+  };
+  
+  console.log("[orchestrator] 📝 ATTEMPTING TO LOG FAILED ATTEMPT:", {
+    user_id: logData.user_id,
+    report_type: logData.report_type,
+    engine_used: logData.engine_used,
+    status: logData.status,
+    error_message: logData.error_message,
+    duration_ms: logData.duration_ms
   });
+
+  try {
+    // Remove .select() and only check for an error
+    const { error } = await supabase.from("report_logs").insert(logData);
+    
+    if (error) {
+      console.error("[orchestrator] ❌ FAILED ATTEMPT LOG INSERT ERROR:", error);
+      throw error;
+    }
+    
+    console.log("[orchestrator] ✅ SUCCESSFULLY LOGGED FAILED ATTEMPT.");
+  } catch (error) {
+    console.error("[orchestrator] ❌ Failed to log failed attempt:", error);
+  }
 }
 
 /*───────────────── MAIN EXPORT: processReportRequest ───────────────────────*/

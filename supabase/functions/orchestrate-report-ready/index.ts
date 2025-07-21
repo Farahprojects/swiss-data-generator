@@ -134,19 +134,6 @@ serve(async (req) => {
       );
     }
 
-    // Set modal_ready flag
-    const { error: updateError } = await supabase
-      .from("guest_reports")
-      .update({ 
-        modal_ready: true,
-        updated_at: new Date().toISOString()
-      })
-      .eq("id", guest_report_id);
-
-    if (updateError) {
-      console.error("[orchestrate-report-ready] Failed to set modal_ready flag:", updateError);
-    }
-
     // Prepare complete report data for frontend
     const reportData = {
       guest_report: guestReport,
@@ -161,20 +148,6 @@ serve(async (req) => {
       }
     };
 
-    // Broadcast to frontend via realtime channel
-    console.log(`[orchestrate-report-ready] Broadcasting report data to frontend...`);
-    const channel = supabase.channel(`report-ready-${guest_report_id}`);
-    
-    // Send the report data directly to the frontend
-    await channel.send({
-      type: 'broadcast',
-      event: 'report_ready',
-      payload: {
-        guest_report_id,
-        report_data: reportData
-      }
-    });
-
     console.log(`[orchestrate-report-ready] Report orchestration completed for: ${guest_report_id}`);
     
     const processingTime = Date.now() - startTime;
@@ -183,7 +156,8 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         guest_report_id,
-        message: "Report orchestration completed and broadcast to frontend",
+        report_data: reportData,
+        message: "Report orchestration completed",
         processing_time_ms: processingTime,
         timestamp: new Date().toISOString()
       }),
