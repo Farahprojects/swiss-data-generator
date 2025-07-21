@@ -134,19 +134,6 @@ serve(async (req) => {
       );
     }
 
-    // Set modal_ready flag
-    const { error: updateError } = await supabase
-      .from("guest_reports")
-      .update({ 
-        modal_ready: true,
-        updated_at: new Date().toISOString()
-      })
-      .eq("id", guest_report_id);
-
-    if (updateError) {
-      console.error("[orchestrate-report-ready] Failed to set modal_ready flag:", updateError);
-    }
-
     // Prepare complete report data for frontend
     const reportData = {
       guest_report: guestReport,
