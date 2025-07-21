@@ -229,24 +229,41 @@ export const processReportRequest = async (
     return { success: false, errorMessage: msg };
   }
 
-  // Update the existing row created by the AI engine with orchestrator-specific data
+  // Link the report_logs row to guest_reports table
   try {
-    const { error } = await supabase
+    // Find the report_logs row that the AI engine just created
+    const { data: reportLog, error: reportLogError } = await supabase
       .from("report_logs")
-      .update({
-        api_key: payload.apiKey ?? null,
-        updated_at: new Date().toISOString()
-      })
+      .select("id")
       .eq("user_id", payload.user_id)
-      .eq("status", "success");
+      .eq("status", "success")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
     
-    if (error) {
-      console.error("[orchestrator] ❌ Failed to update report_logs:", error);
+    if (reportLogError) {
+      console.error("[orchestrator] ❌ Failed to find report_logs row:", reportLogError);
+    } else if (reportLog) {
+      // Update guest_reports with the report_log_id and set has_report_log to true
+      const { error: guestUpdateError } = await supabase
+        .from("guest_reports")
+        .update({
+          report_log_id: reportLog.id,
+          has_report_log: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", payload.user_id);
+      
+      if (guestUpdateError) {
+        console.error("[orchestrator] ❌ Failed to update guest_reports:", guestUpdateError);
+      } else {
+        console.log("[orchestrator] ✅ Successfully linked report_logs to guest_reports");
+      }
     } else {
-      console.log("[orchestrator] ✅ Successfully updated report_logs with orchestrator data");
+      console.error("[orchestrator] ❌ No report_logs row found for user_id:", payload.user_id);
     }
   } catch (error) {
-    console.error("[orchestrator] ❌ Exception updating report_logs:", error);
+    console.error("[orchestrator] ❌ Exception linking report_logs to guest_reports:", error);
   }
 
   // Log success to console
