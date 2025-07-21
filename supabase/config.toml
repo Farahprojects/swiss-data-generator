@@ -1,83 +1,172 @@
 
-project_id = "e658f804-66d4-43ba-9cca-5e3b8e536f52"
+project_id = "wrvqqvqvwqmfdqvqmaar"
 
-[functions.contact-form-handler]
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[auth]
+enabled = true
+port = 54324
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://lovable.dev"]
+jwt_expiry = 3600
+enable_signup = true
+double_confirm_changes = true
+enable_manual_linking = false
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+template = {}
+
+[auth.sms]
+enable_signup = false
+enable_confirmations = false
+template = {}
+
+[auth.external.apple]
+enabled = false
+client_id = ""
+secret = ""
+redirect_uri = ""
+
+[auth.external.azure]
+enabled = false
+client_id = ""
+secret = ""
+redirect_uri = ""
+
+[auth.external.bitbucket]
+enabled = false
+client_id = ""
+secret = ""
+redirect_uri = ""
+
+[auth.external.discord]
+enabled = false
+client_id = ""
+secret = ""
+redirect_uri = ""
+
+[auth.external.facebook]
+enabled = false
+client_id = ""
+secret = ""
+redirect_uri = ""
+
+[auth.external.github]
+enabled = false
+client_id = ""
+secret = ""
+redirect_uri = ""
+
+[auth.external.gitlab]
+enabled = false
+client_id = ""
+secret = ""
+redirect_uri = ""
+
+[auth.external.google]
+enabled = false
+client_id = ""
+secret = ""
+redirect_uri = ""
+
+[auth.external.keycloak]
+enabled = false
+client_id = ""
+secret = ""
+redirect_uri = ""
+
+[auth.external.linkedin]
+enabled = false
+client_id = ""
+secret = ""
+redirect_uri = ""
+
+[auth.external.notion]
+enabled = false
+client_id = ""
+secret = ""
+redirect_uri = ""
+
+[auth.external.twitch]
+enabled = false
+client_id = ""
+secret = ""
+redirect_uri = ""
+
+[auth.external.twitter]
+enabled = false
+client_id = ""
+secret = ""
+redirect_uri = ""
+
+[auth.external.slack]
+enabled = false
+client_id = ""
+secret = ""
+redirect_uri = ""
+
+[auth.external.spotify]
+enabled = false
+client_id = ""
+secret = ""
+redirect_uri = ""
+
+[auth.external.workos]
+enabled = false
+client_id = ""
+secret = ""
+redirect_uri = ""
+
+[auth.external.zoom]
+enabled = false
+client_id = ""
+secret = ""
+redirect_uri = ""
+
+[db]
+port = 54322
+
+[db.pooler]
+enabled = false
+port = 54329
+pool_mode = "transaction"
+default_pool_size = 20
+max_client_conn = 100
+
+[realtime]
+enabled = true
+port = 54323
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://localhost"
+
+[inbucket]
+enabled = true
+port = 54324
+smtp_port = 54325
+pop3_port = 54326
+
+[storage]
+enabled = true
+port = 54321
+file_size_limit = "50MiB"
+
+[edge_runtime]
+enabled = true
+port = 54321
+
+[functions.translate-request]
 verify_jwt = false
 
-[functions.create-guest-checkout]
-verify_jwt = false
-
-[functions.create-report]
-verify_jwt = false
-
-[functions.email-check]
-verify_jwt = false
-
-[functions.email-verification]
-verify_jwt = false
-
-[functions.outbound-messenger]
-verify_jwt = false
-
-[functions.password_token]
-verify_jwt = false
-
-[functions.process-credits]
-verify_jwt = false
-
-[functions.process-guest-report-pdf]
-verify_jwt = false
-
-[functions.process-topup-queue]
-verify_jwt = false
-
-[functions.send-email]
-verify_jwt = false
-
-[functions.send-notification-email]
-verify_jwt = false
-
-[functions.signup_token]
-verify_jwt = false
-
-[functions.standard-report-one]
-verify_jwt = false
-
-[functions.standard-report-two]
-verify_jwt = false
-
-[functions.standard-report-three]
-verify_jwt = false
-
-[functions.standard-report]
-verify_jwt = false
-
-[functions.stripe-webhook-handler]
-verify_jwt = false
-
-[functions.swiss]
-verify_jwt = false
-
-[functions.update-service-purchase-metadata]
-verify_jwt = false
-
-[functions.verification-emailer]
-verify_jwt = false
-
-[functions.get-guest-report]
-verify_jwt = false
-
-[functions.log-user-error]
-verify_jwt = false
-
-[functions.orchestrate-report-ready]
-verify_jwt = false
-
-[functions.verify-guest-payment]
-verify_jwt = false
-
-[functions.retrieve-temp-report]
-verify_jwt = false
-
-[functions.check-report-status]
+[functions.orchestrate-report]
 verify_jwt = false
