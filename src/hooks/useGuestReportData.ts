@@ -25,6 +25,28 @@ export const useGuestReportData = (reportId: string | null) => {
       
       if (error) {
         console.error('❌ [useGuestReportData] Supabase function error:', error);
+        
+        // Try to extract the actual error response from the edge function
+        let errorResponse = null;
+        try {
+          // The actual error response might be in error.context or a nested structure
+          if (error.context && typeof error.context === 'object') {
+            errorResponse = error.context;
+          }
+        } catch (e) {
+          console.warn('Could not parse error context:', e);
+        }
+        
+        // If we have a structured error response, use it
+        if (errorResponse && errorResponse.code) {
+          const detailedError = new Error(errorResponse.user_message || errorResponse.error || error.message);
+          (detailedError as any).code = errorResponse.code;
+          (detailedError as any).suggestions = errorResponse.suggestions;
+          (detailedError as any).context = errorResponse.context;
+          throw detailedError;
+        }
+        
+        // Fallback to generic error
         throw new Error(error.message || 'Failed to fetch report data');
       }
       
