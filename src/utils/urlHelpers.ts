@@ -63,7 +63,7 @@ export const validateGuestToken = async (token: string): Promise<{ isValid: bool
     const { supabase } = await import('@/integrations/supabase/client');
     const { data, error } = await supabase
       .from('guest_reports')
-      .select('id, email, has_report, report_data, payment_status')
+      .select('id, email, has_report_log, report_data, payment_status')
       .eq('id', token)
       .single();
     
@@ -74,7 +74,7 @@ export const validateGuestToken = async (token: string): Promise<{ isValid: bool
     const reportData = data.report_data as any;
     return {
       isValid: true,
-      hasReport: data.has_report || false,
+      hasReport: data.has_report_log || false,
       email: data.email,
       name: reportData?.name
     };

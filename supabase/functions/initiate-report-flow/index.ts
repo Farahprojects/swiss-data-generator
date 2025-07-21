@@ -219,7 +219,6 @@ serve(async (req) => {
           amount_paid: 0,
           payment_status: 'paid', // Free reports are immediately "paid"
           promo_code_used: promoCode,
-          has_report: false,
           email_sent: false,
           coach_id: null,
           translator_log_id: null,
@@ -336,8 +335,6 @@ serve(async (req) => {
       payment_status: "pending", // STAGE 2: Explicit pending status for paid reports
       purchase_type: 'report',
       promo_code_used: promoCode || null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
     };
 
     logFlowEvent("guest_report_creation_started", {

@@ -6,7 +6,7 @@ import { getGuestReportId } from '@/utils/urlHelpers';
 interface GuestReport {
   id: string;
   email: string;
-  has_report: boolean;
+  has_report_log?: boolean | null;
   is_ai_report?: boolean | null;
   translator_log_id?: string | null;
   report_log_id?: string | null;
