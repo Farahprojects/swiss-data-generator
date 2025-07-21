@@ -192,7 +192,27 @@ export const processReportRequest = async (
     return { success: false, errorMessage: msg };
   }
 
-  // Log success to console only
+  // Update the existing row created by the AI engine with orchestrator-specific data
+  try {
+    const { error } = await supabase
+      .from("report_logs")
+      .update({
+        api_key: payload.apiKey ?? null,
+        updated_at: new Date().toISOString()
+      })
+      .eq("user_id", payload.user_id)
+      .eq("status", "success");
+    
+    if (error) {
+      console.error("[orchestrator] ❌ Failed to update report_logs:", error);
+    } else {
+      console.log("[orchestrator] ✅ Successfully updated report_logs with orchestrator data");
+    }
+  } catch (error) {
+    console.error("[orchestrator] ❌ Exception updating report_logs:", error);
+  }
+
+  // Log success to console
   console.log("[orchestrator] 📝 SUCCESS:", {
     user_id: payload.user_id,
     report_type: payload.report_type,
