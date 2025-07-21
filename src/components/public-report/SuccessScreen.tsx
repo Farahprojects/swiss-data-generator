@@ -4,7 +4,6 @@ import { CheckCircle, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ReportData } from '@/utils/reportContentExtraction';
-import { supabase } from '@/integrations/supabase/client';
 import EntertainmentWindow from './EntertainmentWindow';
 
 interface SuccessScreenProps {
@@ -48,35 +47,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     }
   }, [onReportReady, handleReportReady]);
 
-  // Simple polling fallback for post-refresh scenarios
-  useEffect(() => {
-    if (!guestReportId || reportReady) return;
-
-    const checkReportReady = async () => {
-      try {
-        console.log('🔄 Polling orchestrator for:', guestReportId);
-        
-        const { data, error } = await supabase.functions.invoke('orchestrate-report-ready', {
-          body: { guest_report_id: guestReportId }
-        });
-
-        if (!error && data?.success && data?.report_data) {
-          console.log('✅ Report found ready - opening modal');
-          handleReportReady(data.report_data);
-        } else {
-          console.log('⏳ Report not ready yet, continuing countdown');
-        }
-      } catch (error) {
-        console.log('🔍 Orchestrator check failed, continuing countdown:', error);
-      }
-    };
-
-    // Small delay to let normal flow attempt first
-    const timeout = setTimeout(checkReportReady, 1000);
-    return () => clearTimeout(timeout);
-  }, [guestReportId, reportReady, handleReportReady]);
-
-  // Pure visual countdown timer (no polling trigger)
+  // Pure visual countdown timer
   useEffect(() => {
     if (reportReady) return;
 
