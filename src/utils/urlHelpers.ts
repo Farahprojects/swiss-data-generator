@@ -63,7 +63,7 @@ export const validateGuestToken = async (token: string): Promise<{ isValid: bool
     const { supabase } = await import('@/integrations/supabase/client');
     const { data, error } = await supabase
       .from('guest_reports')
-      .select('id, email, has_report_log, report_data, payment_status')
+      .select('id, email, has_report, report_data, payment_status')
       .eq('id', token)
       .single();
     
@@ -74,7 +74,7 @@ export const validateGuestToken = async (token: string): Promise<{ isValid: bool
     const reportData = data.report_data as any;
     return {
       isValid: true,
-      hasReport: data.has_report_log || false,
+      hasReport: data.has_report || false,
       email: data.email,
       name: reportData?.name
     };
@@ -109,101 +109,63 @@ export const clearGuestReportId = (): void => {
 };
 
 /**
- * Enhanced comprehensive session clearing with React Query cache and state reset callbacks
+ * Enhanced comprehensive session clearing with React Query cache
  */
-export const clearAllSessionData = async (stateResetCallbacks?: (() => void)[]): Promise<void> => {
-  console.log('🧹 Starting comprehensive session clearing...');
-  
+export const clearAllSessionData = async (): Promise<void> => {
   try {
-    // Execute state reset callbacks first (before clearing storage)
-    if (stateResetCallbacks && stateResetCallbacks.length > 0) {
-      console.log('🔄 Executing state reset callbacks...');
-      stateResetCallbacks.forEach((callback, index) => {
-        try {
-          callback();
-          console.log(`✅ State reset callback ${index + 1} executed successfully`);
-        } catch (error) {
-          console.error(`❌ State reset callback ${index + 1} failed:`, error);
-        }
-      });
-    }
-
     // Clear React Query cache if available
+    const { useQueryClient } = await import('@tanstack/react-query');
     try {
-      const { useQueryClient } = await import('@tanstack/react-query');
-      try {
-        const queryClient = useQueryClient();
-        queryClient.clear();
-        console.log('✅ React Query cache cleared');
-      } catch (error) {
-        // QueryClient not available in current context, continue
-        console.log('⚠️ QueryClient not available for clearing');
-      }
+      const queryClient = useQueryClient();
+      queryClient.clear();
+      console.log('✅ React Query cache cleared');
     } catch (error) {
-      // React Query not available, continue
-      console.log('⚠️ React Query not available');
+      // QueryClient not available in current context, continue
+      console.log('⚠️ QueryClient not available for clearing');
     }
-
-    // Clear all localStorage items (comprehensive)
-    const localStorageKeysToRemove = [
-      'currentGuestReportId',
-      'reportFormData', 
-      'guestReportData',
-      'formStep',
-      'paymentSession',
-      'reportProgress',
-      'pending_report_email',
-      'mobile_drawer_state',
-      'mobile_form_data'
-    ];
-    
-    localStorageKeysToRemove.forEach(key => {
-      localStorage.removeItem(key);
-    });
-    
-    // Clear pattern-based localStorage items
-    Object.keys(localStorage).forEach((key) => {
-      if (key.startsWith('guest_report_') || 
-          key.startsWith('report_') || 
-          key.startsWith('mobile_') ||
-          key.startsWith('drawer_') ||
-          key.includes('temp_report') ||
-          key.includes('chat_token')) {
-        localStorage.removeItem(key);
-      }
-    });
-    
-    // Clear all sessionStorage
-    sessionStorage.clear();
-    
-    console.log('✅ Comprehensive session data cleared');
-    
   } catch (error) {
-    console.error('❌ Error during session clearing:', error);
-    throw error;
+    // React Query not available, continue
   }
-};
 
-/**
- * Force navigation reset with comprehensive state clearing
- */
-export const forceNavigationReset = async (stateResetCallbacks?: (() => void)[]): Promise<void> => {
-  console.log('🔄 Starting forced navigation reset...');
+  // Clear all localStorage items (comprehensive)
+  const localStorageKeysToRemove = [
+    'currentGuestReportId',
+    'reportFormData', 
+    'guestReportData',
+    'formStep',
+    'paymentSession',
+    'reportProgress',
+    'pending_report_email',
+    'mobile_drawer_state',
+    'mobile_form_data'
+  ];
   
+  localStorageKeysToRemove.forEach(key => {
+    localStorage.removeItem(key);
+  });
+  
+  // Clear pattern-based localStorage items
+  Object.keys(localStorage).forEach((key) => {
+    if (key.startsWith('guest_report_') || 
+        key.startsWith('report_') || 
+        key.startsWith('mobile_') ||
+        key.startsWith('drawer_') ||
+        key.includes('temp_report') ||
+        key.includes('chat_token')) {
+      localStorage.removeItem(key);
+    }
+  });
+  
+  // Clear all sessionStorage
+  sessionStorage.clear();
+  
+  // Clear URL state - force clean URL
   try {
-    // Clear all session data with state callbacks
-    await clearAllSessionData(stateResetCallbacks);
-    
-    // Small delay to ensure clearing completes
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    // Force clean URL and reload - most reliable for production
-    console.log('🚀 Forcing navigation to clean state...');
-    window.location.href = '/';
-    
+    window.history.replaceState({}, '', '/');
   } catch (error) {
-    console.error('❌ Force navigation reset failed:', error);
-    // Ultimate fallback - just navigate
+    // Fallback to location reset
     window.location.href = '/';
   }
+  
+  console.log('✅ Comprehensive session data cleared');
 };

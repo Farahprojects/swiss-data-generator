@@ -1,12 +1,12 @@
-
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { getGuestReportId } from '@/utils/urlHelpers';
 
 interface GuestReport {
   id: string;
   email: string;
-  has_report_log?: boolean | null;
+  has_report: boolean;
   is_ai_report?: boolean | null;
   translator_log_id?: string | null;
   report_log_id?: string | null;
@@ -37,6 +37,7 @@ interface UseGuestReportStatusReturn {
   fetchBothReportData: (guestReportId?: string) => Promise<ReportData>;
   fetchCompleteReport: (guestReportId?: string) => Promise<any>;
   isAstroReport: (reportType: string | null) => boolean;
+  setupRealtimeListener: (guestReportId?: string, onReportReady?: () => void, onModalReady?: () => void) => () => void;
   setError: (error: string | null) => void;
   setCaseNumber: (caseNumber: string | null) => void;
   triggerPdfEmail: (guestReportId?: string) => Promise<boolean>;
@@ -47,6 +48,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [caseNumber, setCaseNumber] = useState<string | null>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
   const errorLoggedRef = useRef<Set<string>>(new Set());
   const requestsInFlightRef = useRef<Set<string>>(new Set());
   const abortControllersRef = useRef<Map<string, AbortController>>(new Map());
@@ -390,6 +392,75 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     }
   }, []);
 
+  const setupRealtimeListener = useCallback((guestReportId?: string, onReportReady?: () => void, onModalReady?: () => void) => {
+    const reportId = guestReportId || getGuestReportId();
+    if (!reportId) {
+      return () => {};
+    }
+
+    // Clean up existing channel
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
+    const channel = supabase
+      .channel(`guest-report-${reportId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'guest_reports',
+          filter: `id=eq.${reportId}`
+        },
+        async (payload) => {
+          const updatedRecord = payload.new as GuestReport;
+
+          // Check for Swiss error first
+          if (updatedRecord.has_swiss_error === true) {
+            setReport(updatedRecord);
+            const errorMessage = getSwissErrorMessage(updatedRecord.report_type);
+            setError(errorMessage);
+            return; // Don't trigger modal for errors
+          }
+
+          // Update report state
+          setReport(updatedRecord);
+
+          // Check if orchestrator set modal_ready flag - this triggers automatic modal
+          if (updatedRecord.modal_ready === true) {
+            onModalReady?.();
+            return;
+          }
+
+          // Check readiness based on correct flags for manual trigger
+          const isReportReady =
+            updatedRecord.swiss_boolean === true ||
+            (updatedRecord.is_ai_report && updatedRecord.report_log_id);
+
+          if (isReportReady) {
+            onReportReady?.();
+          }
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') {
+          console.warn('Realtime channel error, will auto-reconnect');
+        }
+        // Removed noisy 'CLOSED' warning as it's normal during reconnections
+      });
+
+    channelRef.current = channel;
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [getSwissErrorMessage]);
+
   return {
     report,
     isLoading,
@@ -402,6 +473,7 @@ export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
     fetchBothReportData,
     fetchCompleteReport,
     isAstroReport,
+    setupRealtimeListener,
     setError,
     setCaseNumber,
     triggerPdfEmail,

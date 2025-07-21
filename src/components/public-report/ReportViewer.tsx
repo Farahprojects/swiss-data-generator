@@ -9,7 +9,7 @@ import { ReportContent } from './ReportContent';
 import { PdfGenerator } from '@/services/pdf/PdfGenerator';
 import { ReportParser } from '@/utils/reportParser';
 import { supabase } from '@/integrations/supabase/client';
-import { getGuestReportId, forceNavigationReset } from '@/utils/urlHelpers';
+import { getGuestReportId, clearAllSessionData } from '@/utils/urlHelpers';
 import openaiLogo from '@/assets/openai-logo.png';
 import { ReportData, extractReportContent, getPersonName, getReportTitle } from '@/utils/reportContentExtraction';
 import { renderAstroDataAsText, renderUnifiedContentAsText } from '@/utils/componentToTextRenderer';
@@ -19,18 +19,11 @@ interface ReportViewerProps {
   onBack: () => void;
   isMobile?: boolean;
   onResetMobileState?: () => void;
-  onStateReset?: () => void;
 }
 
 type ModalType = 'chatgpt' | 'close' | null;
 
-export const ReportViewer = ({ 
-  reportData, 
-  onBack, 
-  isMobile = false, 
-  onResetMobileState,
-  onStateReset 
-}: ReportViewerProps) => {
+export const ReportViewer = ({ reportData, onBack, isMobile = false, onResetMobileState }: ReportViewerProps) => {
   const { toast } = useToast();
   const [isCopyCompleted, setIsCopyCompleted] = useState(false);
   const [activeModal, setActiveModal] = useState<ModalType>(null);
@@ -202,26 +195,25 @@ export const ReportViewer = ({
                  reportData.metadata.content_type === 'astro' ? 'astro' : 'report');
     
     try {
-      // Prepare state reset callbacks
-      const stateResetCallbacks: (() => void)[] = [];
+      // Use comprehensive clearing utility
+      await clearAllSessionData();
       
-      // Add parent state reset callback if provided
-      if (onStateReset) {
-        stateResetCallbacks.push(onStateReset);
-      }
+      // Small delay to ensure clearing completes
+      await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Add mobile state reset callback if provided
+      // Handle mobile vs desktop reset
       if (isMobile && onResetMobileState) {
-        stateResetCallbacks.push(onResetMobileState);
+        console.log('📱 Triggering mobile state reset');
+        onResetMobileState();
+      } else {
+        console.log('🖥️ Triggering desktop back navigation');
+        onBack();
       }
-      
-      // Use enhanced force navigation reset with state callbacks
-      await forceNavigationReset(stateResetCallbacks);
       
     } catch (error) {
-      console.error('❌ Error during comprehensive session close:', error);
+      console.error('❌ Error during session close:', error);
       
-      // Ultimate fallback - force page reload
+      // Fail-safe: Force navigation to clean state
       try {
         window.location.href = '/';
       } catch (navError) {
