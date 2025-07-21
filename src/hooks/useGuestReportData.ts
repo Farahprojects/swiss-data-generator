@@ -1,86 +1,65 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-
-interface EnhancedError {
-  ok: false;
-  error: string;
-  code: string;
-  context?: string;
-  user_message?: string;
-  suggestions?: string[];
-}
+import { GuestReportResponse, GuestReportData } from '@/types/api-responses';
+import { GuestReportError } from '@/utils/errors';
 
 export const useGuestReportData = (reportId: string | null) => {
   return useQuery({
     queryKey: ['guest-report-data', reportId],
-    queryFn: async () => {
-      if (!reportId) return null;
-      
-      console.log(`🔍 [useGuestReportData] Fetching report for ID: ${reportId}`);
-      
-      const { data, error } = await supabase.functions.invoke('get-guest-report', {
-        body: { id: reportId }
-      });
-      
-      if (error) {
-        console.error('❌ [useGuestReportData] Supabase function error:', error);
-        
-        // Try to extract the actual error response from the edge function
-        let errorResponse = null;
-        try {
-          // The actual error response might be in error.context or a nested structure
-          if (error.context && typeof error.context === 'object') {
-            errorResponse = error.context;
-          }
-        } catch (e) {
-          console.warn('Could not parse error context:', e);
-        }
-        
-        // If we have a structured error response, use it
-        if (errorResponse && errorResponse.code) {
-          const detailedError = new Error(errorResponse.user_message || errorResponse.error || error.message);
-          (detailedError as any).code = errorResponse.code;
-          (detailedError as any).suggestions = errorResponse.suggestions;
-          (detailedError as any).context = errorResponse.context;
-          throw detailedError;
-        }
-        
-        // Fallback to generic error
-        throw new Error(error.message || 'Failed to fetch report data');
-      }
-      
-      // Check if the response indicates an error (enhanced error handling)
-      if (data && typeof data === 'object' && 'ok' in data && data.ok === false) {
-        const enhancedError = data as EnhancedError;
-        console.error('❌ [useGuestReportData] Enhanced error response:', enhancedError);
-        
-        // Create a more detailed error object that the UI can use
-        const detailedError = new Error(enhancedError.user_message || enhancedError.error);
-        (detailedError as any).code = enhancedError.code;
-        (detailedError as any).suggestions = enhancedError.suggestions;
-        (detailedError as any).context = enhancedError.context;
-        
-        throw detailedError;
-      }
-      
-      console.log('✅ [useGuestReportData] Successfully fetched report data');
-      return data;
-    },
     enabled: !!reportId,
-    retry: (failureCount, error: any) => {
-      // Don't retry on 4xx errors (client errors)
-      if (error?.code === 'GUEST_REPORT_NOT_FOUND' || 
-          error?.code === 'MISSING_ID' || 
-          error?.code === 'INVALID_ID' ||
-          error?.code === 'PAYMENT_REQUIRED') {
-        return false;
+    retry: (failureCount, error) => {
+      // Only retry if it's a retryable error and we haven't exceeded max attempts
+      if (error instanceof GuestReportError) {
+        return error.isRetryable() && failureCount < 3;
       }
-      
-      // Retry up to 3 times for server errors or processing status
+      // Retry network/platform errors up to 3 times
       return failureCount < 3;
     },
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
-    // No polling - data will be fetched on demand via orchestrator signals
+    queryFn: async (): Promise<GuestReportData> => {
+      if (!reportId) {
+        throw new GuestReportError(
+          'MISSING_ID',
+          'No report ID provided',
+          ['Please provide a valid report ID']
+        );
+      }
+      
+      console.log(`🔍 [useGuestReportData] Fetching report for ID: ${reportId}`);
+      
+      // Call the edge function
+      const { data, error } = await supabase.functions.invoke<GuestReportResponse>(
+        'get-guest-report',
+        { body: { id: reportId } }
+      );
+      
+      // Check for network/platform errors (Supabase couldn't run the function)
+      if (error) {
+        console.error('❌ [useGuestReportData] Platform error:', error);
+        throw new GuestReportError(
+          'PLATFORM_ERROR', 
+          `Platform error: ${error.message}`,
+          ['Try refreshing the page', 'Check your internet connection']
+        );
+      }
+      
+      // Check for business logic errors (function ran but returned failure)
+      if (!data || !data.success) {
+        console.error('❌ [useGuestReportData] Business logic error:', data);
+        
+        const errorData = data as any; // Type assertion since we know it's an error response
+        throw new GuestReportError(
+          errorData.code || 'UNKNOWN_ERROR',
+          errorData.message || 'An unknown error occurred',
+          errorData.suggestions,
+          errorData.context
+        );
+      }
+      
+      // Success case
+      console.log('✅ [useGuestReportData] Successfully fetched report data');
+      return data.data;
+    }
   });
 };

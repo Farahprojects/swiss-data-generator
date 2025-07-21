@@ -122,7 +122,7 @@ const PublicReport = () => {
 
   // Show enhanced error display if there's a report error
   if (reportError && activeGuestId) {
-    return <ErrorDisplay error={reportError} onRetry={() => refetch()} />;
+    return <ErrorDisplay error={reportError} onRetry={() => refetch()} guestReportId={activeGuestId} />;
   }
 
   // If we have an active guest ID but report is still loading, show processing message
@@ -416,7 +416,8 @@ const PublicReport = () => {
       </div>
     );
   } catch (err: any) {
-    return <ErrorDisplay error={err} onRetry={() => window.location.reload()} />;
+    // This catch block should rarely be reached now, but provides a final safety net
+    return <ErrorDisplay error={err} onRetry={() => window.location.reload()} guestReportId={activeGuestId} />;
   }
 };
 
