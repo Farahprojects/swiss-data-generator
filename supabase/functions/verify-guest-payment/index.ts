@@ -58,8 +58,8 @@ serve(async (req) => {
       );
     }
 
-    // Check if payment is completed
-    if (guestReport.payment_status !== 'completed') {
+    // Check if payment is completed - FIXED: Changed from 'completed' to 'paid'
+    if (guestReport.payment_status !== 'paid') {
       console.log('[verify-guest-payment] Payment not completed:', guestReport.payment_status);
       return new Response(
         JSON.stringify({ 
