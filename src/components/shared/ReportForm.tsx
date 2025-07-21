@@ -1,796 +1,338 @@
 
-import React, { useState, useCallback, useRef } from 'react';
-import { useForm } from 'react-hook-form';
-import { useNavigate } from 'react-router-dom';
-import { ReportFormData } from '@/types/public-report';
-import { useReportSubmission } from '@/hooks/useReportSubmission';
-
-import ReportTypeSelector from '@/components/public-report/ReportTypeSelector';
-import CombinedPersonalDetailsForm from '@/components/public-report/CombinedPersonalDetailsForm';
-import SecondPersonForm from '@/components/public-report/SecondPersonForm';
-import PaymentStep from '@/components/public-report/PaymentStep';
-import SuccessScreen from '@/components/public-report/SuccessScreen';
-import { ReportViewer } from '@/components/public-report/ReportViewer';
-import { FormValidationStatus } from '@/components/public-report/FormValidationStatus';
-
-import { clearGuestReportId, forceNavigationReset } from '@/utils/urlHelpers';
+import React, { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { MapPin, Calendar, Clock, User, Mail, CreditCard, CheckCircle2, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useGuestReportData } from '@/hooks/useGuestReportData';
-import { ReportData } from '@/utils/reportContentExtraction';
+import { toast } from 'sonner';
+import LocationInput from './LocationInput';
+import { storeGuestReportId } from '@/utils/urlHelpers';
 
 interface ReportFormProps {
-  coachSlug?: string;
-  themeColor?: string;
-  fontFamily?: string;
   guestId?: string | null;
-  onFormStateChange?: (isValid: boolean, hasSelectedType: boolean) => void;
 }
 
-export const ReportForm: React.FC<ReportFormProps> = ({ 
-  coachSlug,
-  themeColor = '#6366F1',
-  fontFamily = 'Inter',
-  guestId = null,
-  onFormStateChange
-}) => {
-  const navigate = useNavigate();
-  
-  // Store the guest report ID from successful submissions
-  const [createdGuestReportId, setCreatedGuestReportId] = useState<string | null>(null);
-  
-  const { 
-    isProcessing, 
-    isPricingLoading, 
-    reportCreated, 
-    submitReport,
-    inlinePromoError,
-    clearInlinePromoError,
-    resetReportState
-  } = useReportSubmission(setCreatedGuestReportId);
+interface FormData {
+  name: string;
+  email: string;
+  birthDate: string;
+  birthTime: string;
+  birthLocation: string;
+  reportType: string;
+}
 
-  const [viewingReport, setViewingReport] = useState(false);
-  const [reportData, setReportData] = useState<ReportData | null>(null);
-  const [isResetting, setIsResetting] = useState(false);
+interface LocationData {
+  lat: number;
+  lng: number;
+  place: string;
+}
 
-  // Use a ref to store the callback that SuccessScreen will register
-  const reportReadyCallbackRef = useRef<((reportData: ReportData) => void) | null>(null);
+interface StripePaymentState {
+  loading: boolean;
+  success: boolean;
+}
 
-  // Token recovery state
-  const [tokenRecoveryState, setTokenRecoveryState] = useState<{
-    isRecovering: boolean;
-    recovered: boolean;
-    error: string | null;
-    recoveredName: string | null;
-    recoveredEmail: string | null;
-  }>({
-    isRecovering: false,
-    recovered: false,
-    error: null,
-    recoveredName: null,
-    recoveredEmail: null,
+export const ReportForm: React.FC<ReportFormProps> = ({ guestId }) => {
+  const [formData, setFormData] = useState<FormData>({
+    name: '',
+    email: '',
+    birthDate: '',
+    birthTime: '',
+    birthLocation: '',
+    reportType: 'personal_essence'
   });
 
-  // Stripe payment state for handling post-payment flow
-  const [stripePaymentState, setStripePaymentState] = useState<{
-    isVerifying: boolean;
-    isWaiting: boolean;
-    isComplete: boolean;
-    error: string | null;
-    reportData: any | null;
-    isStripeRedirect: boolean;
-  }>({
-    isVerifying: false,
-    isWaiting: false,
-    isComplete: false,
-    error: null,
-    reportData: null,
-    isStripeRedirect: false,
+  const [locationData, setLocationData] = useState<LocationData | null>(null);
+  const [stripePaymentState, setStripePaymentState] = useState<StripePaymentState>({
+    loading: false,
+    success: false
   });
 
-  // State restoration for page refresh scenarios
-  const [sessionRestored, setSessionRestored] = useState(false);
-
-  // Remove polling - useGuestReportData now only fetches on demand
-  const { data: guestReportData, error: guestReportError, refetch: refetchGuestData } = useGuestReportData(guestId);
-
-  // State restoration effect - handles page refresh scenarios
-  React.useEffect(() => {
-    if (!guestId || sessionRestored) return;
-
-    console.log('🔄 [ReportForm] Restoring session state for guest ID:', guestId);
-    
-    // Immediately set the session as restored to prevent multiple triggers
-    setSessionRestored(true);
-    
-    // Set the created guest report ID to the existing guestId
-    setCreatedGuestReportId(guestId);
-    
-    // Check if this is a fresh Stripe redirect (no existing session data)
-    const hasExistingSession = localStorage.getItem('pending_report_email');
-    
-    if (!hasExistingSession) {
-      // This is likely a Stripe redirect - start the unified fetching flow
-      console.log('🔄 Stripe redirect detected, starting unified data fetching...');
-      setStripePaymentState(prev => ({ 
-        ...prev, 
-        isVerifying: true,
-        isStripeRedirect: true 
-      }));
-    } else {
-      // This is token recovery - use existing logic
-      console.log('🔄 Token recovery detected...');
-      setTokenRecoveryState(prev => ({ ...prev, isRecovering: true, error: null }));
-      recoverTokenData(guestId);
-    }
-  }, [guestId, sessionRestored]);
-
-  // Memoized callback for handling report ready events
-  const handleReportReady = useCallback((reportData: ReportData) => {
-    console.log('🎯 [ReportForm] Report ready callback triggered');
-    setReportData(reportData);
-    setViewingReport(true);
-  }, []);
-
-  // Determine the effective guest ID - either from new creation or existing
-  const effectiveGuestId = createdGuestReportId || guestId;
-
-  // Handle guest data when guestId is provided
-  React.useEffect(() => {
+  // Check if we already have a guest ID and redirect if report exists
+  useEffect(() => {
     if (guestId) {
-      const hasExistingSession = localStorage.getItem('pending_report_email');
-      
-      if (!hasExistingSession) {
-        console.log('🔄 Stripe redirect detected, starting unified data fetching...');
-        setStripePaymentState(prev => ({ 
-          ...prev, 
-          isVerifying: true,
-          isStripeRedirect: true 
-        }));
-      } else {
-        console.log('🔄 Token recovery detected...');
-        setTokenRecoveryState(prev => ({ ...prev, isRecovering: true, error: null }));
-        recoverTokenData(guestId);
-      }
+      // Guest ID exists, the parent component will handle showing the report
+      return;
     }
   }, [guestId]);
 
-  const form = useForm<ReportFormData>({
-    mode: 'onBlur',
-    defaultValues: {
-      reportType: '',
-      reportSubCategory: '',
-      relationshipType: '',
-      essenceType: '',
-      name: '',
-      email: '',
-      birthDate: '',
-      birthTime: '',
-      birthLocation: '',
-      birthLatitude: undefined,
-      birthLongitude: undefined,
-      birthPlaceId: '',
-      secondPersonName: '',
-      secondPersonBirthDate: '',
-      secondPersonBirthTime: '',
-      secondPersonBirthLocation: '',
-      secondPersonLatitude: undefined,
-      secondPersonLongitude: undefined,
-      secondPersonPlaceId: '',
-      returnYear: '',
-      notes: '',
-      promoCode: '',
-      request: '',
-    },
-  });
+  const handleInputChange = (field: keyof FormData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
 
-  const { register, handleSubmit, watch, setValue, control, formState: { errors, isValid }, formState } = form;
+  const handleLocationSelect = (location: LocationData) => {
+    setLocationData(location);
+    setFormData(prev => ({ ...prev, birthLocation: location.place }));
+  };
 
-  const selectedReportType = watch('reportType');
-  const selectedRequest = watch('request');
-  const selectedReportCategory = watch('reportCategory');
-  const userName = watch('name');
-  const userEmail = watch('email');
-
-  const reportCategory = watch('reportCategory');
-  const reportType = watch('reportType');
-  const request = watch('request');
-  
-  const requiresSecondPerson = reportCategory === 'compatibility' || 
-                               reportType?.startsWith('sync_') || 
-                               request === 'sync';
-
-  const formValues = form.watch();
-  const step1Done = Boolean(formValues.reportType || formValues.request);
-
-  const step2Done =
-    step1Done &&
-    Boolean(
-      formValues.name &&
-        formValues.email &&
-        formValues.birthDate &&
-        formValues.birthTime &&
-        formValues.birthLocation,
-    ) &&
-    (!requiresSecondPerson || (
-      formValues.secondPersonName &&
-      formValues.secondPersonBirthDate &&
-      formValues.secondPersonBirthTime &&
-      formValues.secondPersonBirthLocation
-    ));
-
-  const shouldUnlockForm = !!(selectedReportType || selectedRequest);
-
-  React.useEffect(() => {
-    const checkFormCompletion = async () => {
-      const formData = form.getValues();
-      const hasReportTypeOrRequest = !!(formData.reportType || formData.request);
-      const hasPersonalInfo = !!(formData.name && formData.email && formData.birthDate && formData.birthTime);
-      const hasLocationWithCoords = !!(formData.birthLocation && formData.birthLatitude && formData.birthLongitude);
-      
-      if (hasReportTypeOrRequest && hasPersonalInfo && hasLocationWithCoords) {
-      }
-      
-      onFormStateChange?.(isValid, shouldUnlockForm);
-    };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    checkFormCompletion();
-  }, [form.watch(), isValid, shouldUnlockForm, onFormStateChange]);
+    if (!locationData) {
+      toast.error("Please select a birth location");
+      return;
+    }
 
-  const recoverTokenData = async (guestIdParam: string) => {
+    setStripePaymentState({ loading: true, success: false });
+
     try {
-      const { data: guestReport, error } = await supabase
-        .from('guest_reports')
-        .select('*')
-        .eq('id', guestIdParam)
-        .single();
+      const reportData = {
+        name: formData.name,
+        email: formData.email,
+        birth_date: formData.birthDate,
+        birth_time: formData.birthTime,
+        birth_location: formData.birthLocation,
+        latitude: locationData.lat,
+        longitude: locationData.lng,
+        report_type: formData.reportType
+      };
 
-      if (error || !guestReport) {
-        throw new Error('Report not found');
-      }
+      console.log('🚀 Submitting form data:', reportData);
 
-      const reportData = guestReport.report_data as any;
-      const name = reportData?.name;
-      const email = reportData?.email || guestReport.email;
-
-      if (!name || !email) {
-        throw new Error('Session data corrupted');
-      }
-
-      setTokenRecoveryState({
-        isRecovering: false,
-        recovered: true,
-        error: null,
-        recoveredName: name,
-        recoveredEmail: email,
+      const { data, error } = await supabase.functions.invoke('create-guest-checkout', {
+        body: reportData
       });
 
-    } catch (err: any) {
-      setTokenRecoveryState({
-        isRecovering: false,
-        recovered: false,
-        error: err.message || 'Unable to recover session',
-        recoveredName: null,
-        recoveredEmail: null,
-      });
-    }
-  };
-
-  // Enhanced state reset function that resets all component states
-  const resetAllComponentStates = useCallback(() => {
-    console.log('🔄 Resetting all component states...');
-    
-    // Reset form state
-    form.reset();
-    
-    // Reset component states
-    setViewingReport(false);
-    setReportData(null);
-    setCreatedGuestReportId(null);
-    setSessionRestored(false);
-    
-    setTokenRecoveryState({
-      isRecovering: false,
-      recovered: false,
-      error: null,
-      recoveredName: null,
-      recoveredEmail: null,
-    });
-    
-    setStripePaymentState({
-      isVerifying: false,
-      isWaiting: false,
-      isComplete: false,
-      error: null,
-      reportData: null,
-      isStripeRedirect: false,
-    });
-    
-    // Reset report submission state
-    resetReportState();
-    
-    console.log('✅ All component states reset');
-  }, [form, resetReportState]);
-
-  const resetAllStates = useCallback(async () => {
-    console.log('🧹 Starting comprehensive state reset...');
-    
-    // Create state reset callback
-    const stateResetCallbacks = [resetAllComponentStates];
-    
-    // Use enhanced clearing utility with state callbacks
-    await forceNavigationReset(stateResetCallbacks);
-    
-    console.log('✅ Comprehensive state reset completed');
-  }, [resetAllComponentStates]);
-
-  React.useEffect(() => {
-    if (!guestReportData || !stripePaymentState.isStripeRedirect) return;
-
-    const guestReport = guestReportData.guest_report;
-    console.log('📊 Unified data fetch result - payment status:', guestReport?.payment_status);
-    
-    if (guestReport?.payment_status === 'paid') {
-      console.log('✅ Payment confirmed via unified fetch! Transitioning to success state...');
-      setStripePaymentState({
-        isVerifying: false,
-        isWaiting: false,
-        isComplete: true,
-        error: null,
-        reportData: guestReportData,
-        isStripeRedirect: true,
-      });
-    } else if (guestReport?.payment_status === 'pending') {
-      console.log('⏳ Payment pending via unified fetch, starting polling...');
-      setStripePaymentState(prev => ({
-        ...prev,
-        isVerifying: false,
-        isWaiting: true,
-      }));
-    } else {
-      console.error('❌ Unexpected payment status:', guestReport?.payment_status);
-      setStripePaymentState({
-        isVerifying: false,
-        isWaiting: false,
-        isComplete: false,
-        error: `Payment status: ${guestReport?.payment_status}`,
-        reportData: null,
-        isStripeRedirect: false,
-      });
-    }
-  }, [guestReportData, stripePaymentState.isStripeRedirect]);
-
-  React.useEffect(() => {
-    if (guestReportData && stripePaymentState.isWaiting) {
-      const guestReport = guestReportData.guest_report;
-      console.log('📊 Polling result - payment status:', guestReport?.payment_status);
-      
-      if (guestReport?.payment_status === 'paid') {
-        console.log('✅ Payment confirmed via polling! Transitioning to success state...');
-        setStripePaymentState({
-          isVerifying: false,
-          isWaiting: false,
-          isComplete: true,
-          error: null,
-          reportData: guestReportData,
-          isStripeRedirect: true,
-        });
+      if (error) {
+        console.error('❌ Supabase function error:', error);
+        throw new Error(`Payment setup failed: ${error.message}`);
       }
-    }
-    
-    if (guestReportError && stripePaymentState.isWaiting) {
-      console.error('❌ Polling error:', guestReportError);
-      setStripePaymentState(prev => ({
-        ...prev,
-        isWaiting: false,
-        error: 'Failed to verify payment status',
-      }));
-    }
-  }, [guestReportData, guestReportError, stripePaymentState.isWaiting]);
 
-  const paymentStepRef = React.useRef<HTMLDivElement>(null);
-  const secondPersonRef = React.useRef<HTMLDivElement>(null);
+      if (!data?.checkout_url) {
+        console.error('❌ No checkout URL in response:', data);
+        throw new Error('Payment setup failed - no checkout URL received');
+      }
 
-  const handleFirstPersonPlaceSelected = () => {
-    const isDesktop = window.innerWidth >= 640;
-    if (!isDesktop) return;
-    
-    setTimeout(() => {
-      if (requiresSecondPerson) {
-        secondPersonRef.current?.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start' 
-        });
-      } else {
-        paymentStepRef.current?.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start' 
-        });
-      }
-    }, 300);
-  };
+      console.log('✅ Checkout created successfully:', data);
 
-  const handleSecondPersonPlaceSelected = () => {
-    const isDesktop = window.innerWidth >= 640;
-    if (!isDesktop) return;
-    
-    setTimeout(() => {
-      paymentStepRef.current?.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'start' 
-        });
-    }, 300);
-  };
+      // Store the guest ID if provided
+      if (data.guest_report_id) {
+        storeGuestReportId(data.guest_report_id);
+        console.log('📦 Stored guest report ID:', data.guest_report_id);
+      }
 
-  const handleViewReport = async () => {
-    if (!effectiveGuestId) return;
-    
-    console.log('🔍 [handleViewReport] Attempting to view report for:', effectiveGuestId);
-    
-    const maxRetries = 3;
-    let attempt = 0;
-    
-    while (attempt < maxRetries) {
-      attempt++;
-      console.log(`🔄 [handleViewReport] Attempt ${attempt}/${maxRetries}`);
-      
-      if (guestReportData) {
-        console.log('✅ [handleViewReport] Using existing guest report data');
-        setReportData(guestReportData as ReportData);
-        setViewingReport(true);
-        return;
-      }
-      
-      if (attempt < maxRetries) {
-        console.log('⏳ [handleViewReport] No data found, triggering refetch...');
-        try {
-          await refetchGuestData();
-          await new Promise(resolve => setTimeout(resolve, 500));
-        } catch (error) {
-          console.error(`❌ [handleViewReport] Refetch attempt ${attempt} failed:`, error);
-        }
-      }
-    }
-    
-    console.error('❌ [handleViewReport] All retry attempts failed');
-    try {
-      const { data, error } = await supabase.functions.invoke('get-guest-report', {
-        body: { id: effectiveGuestId }
-      });
-      
-      if (!error && data) {
-        console.log('✅ [handleViewReport] Direct fetch succeeded');
-        setReportData(data as ReportData);
-        setViewingReport(true);
-      } else {
-        console.error('❌ [handleViewReport] Direct fetch also failed:', error);
-      }
+      // Redirect to Stripe checkout
+      window.location.href = data.checkout_url;
+
     } catch (error) {
-      console.error('❌ [handleViewReport] Direct fetch exception:', error);
+      console.error('❌ Form submission error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      toast.error(errorMessage);
+      setStripePaymentState({ loading: false, success: false });
     }
   };
 
-  const handleCloseReportViewer = useCallback(async () => {
-    console.log('🔄 Starting session close and reset...');
-    
-    if (isResetting) return;
-    
-    setIsResetting(true);
-    
-    try {
-      await resetAllStates();
-      
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      navigate('/report', { replace: true });
-      
-    } catch (error) {
-      console.error('Error during session reset:', error);
-      navigate('/report', { replace: true });
-    } finally {
-      setIsResetting(false);
-    }
-  }, [isResetting, resetAllStates, navigate]);
+  const reportTypes = [
+    { value: 'personal_essence', label: 'Personal Essence', price: '$9.95', description: 'Deep insights into your core personality' },
+    { value: 'sync_analysis', label: 'Sync Analysis', price: '$19.95', description: 'Relationship compatibility analysis' },
+    { value: 'life_path', label: 'Life Path', price: '$14.95', description: 'Your life purpose and direction' }
+  ];
 
-  const onSubmit = async (data: ReportFormData) => {
-    const submissionData = coachSlug ? { ...data, coachSlug } : data;
-    const result = await submitReport(submissionData);
-    
-    // Note: createdGuestReportId is now set automatically in useReportSubmission hook
-    // No need to set it here anymore - this eliminates the micro-race
-  };
+  const selectedReport = reportTypes.find(r => r.value === formData.reportType);
 
-  const handleButtonClick = async () => {
-    const formData = form.getValues();
-    await onSubmit(formData);
-  };
-
-  if (isResetting) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-8">
-        <div className="text-center space-y-6">
-          <div className="w-12 h-12 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto"></div>
-          <p className="text-xl text-gray-600 font-light">Closing session...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (stripePaymentState.isVerifying || (stripePaymentState.isStripeRedirect && !guestReportData)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-8">
-        <div className="text-center space-y-6">
-          <div className="w-12 h-12 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto"></div>
-          <p className="text-xl text-gray-600 font-light">Finalizing your report...</p>
-          <p className="text-sm text-gray-500">Please wait while we verify your payment</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (stripePaymentState.isWaiting) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-8">
-        <div className="text-center space-y-6">
-          <div className="w-12 h-12 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto"></div>
-          <p className="text-xl text-gray-600 font-light">Processing payment...</p>
-          <p className="text-sm text-gray-500">This usually takes just a few seconds</p>
-          <div className="flex items-center justify-center space-x-1 mt-4">
-            <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
-            <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-            <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (stripePaymentState.error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-8">
-        <div className="text-center space-y-6">
-          <p className="text-xl text-destructive">Payment verification failed</p>
-          <p className="text-sm text-gray-500">{stripePaymentState.error}</p>
-          <button 
-            onClick={() => navigate('/report')}
-            className="bg-primary text-primary-foreground px-6 py-2 rounded-lg"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (viewingReport && reportData) {
-    return (
-      <ReportViewer
-        reportData={reportData}
-        onBack={handleCloseReportViewer}
-        isMobile={false}
-        onStateReset={resetAllComponentStates}
-      />
-    );
-  }
-
-  if (viewingReport && isProcessing) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading report...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (viewingReport && (guestReportError || !guestReportData)) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <p className="text-destructive mb-4">Failed to load report</p>
-          <button 
-            onClick={handleCloseReportViewer}
-            className="bg-primary text-primary-foreground px-4 py-2 rounded"
-          >
-            Go Back
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // ADD DEBUG LOGGING: Check all success condition values right before the checks
-  console.log('[GateCheck]', {
-    reportCreated,
-    createdGuestReportId,
-    userName,
-    userEmail,
-    guestId
-  });
-
-  // Success state checks (these should come before the binary gate)
-  if (reportCreated && createdGuestReportId && userName && userEmail) {
-    console.log('🎯 [ReportForm] Rendering SuccessScreen with guaranteed guest ID:', createdGuestReportId);
-    return (
-      <SuccessScreen 
-        name={userName} 
-        email={userEmail} 
-        onViewReport={handleViewReport}
-        onReportReady={(callback) => {
-          reportReadyCallbackRef.current = callback;
-        }}
-        guestReportId={createdGuestReportId}
-      />
-    );
-  }
-
-  if (stripePaymentState.isComplete && stripePaymentState.reportData) {
-    const reportData = stripePaymentState.reportData.guest_report?.report_data;
-    const name = reportData?.name;
-    const email = reportData?.email || stripePaymentState.reportData.guest_report?.email;
-    
-    if (name && email) {
-      return (
-        <SuccessScreen 
-          name={name} 
-          email={email} 
-          onViewReport={handleViewReport}
-          onReportReady={(callback) => {
-            reportReadyCallbackRef.current = callback;
-          }}
-          guestReportId={guestId || undefined}
-        />
-      );
-    }
-  }
-  
-  if (guestId && tokenRecoveryState.recovered && tokenRecoveryState.recoveredName && tokenRecoveryState.recoveredEmail) {
-    return (
-      <SuccessScreen 
-        name={tokenRecoveryState.recoveredName} 
-        email={tokenRecoveryState.recoveredEmail} 
-        onViewReport={handleViewReport}
-        onReportReady={(callback) => {
-          reportReadyCallbackRef.current = callback;
-        }}
-        guestReportId={guestId}
-      />
-    );
-  }
-  
-  if (guestId && tokenRecoveryState.isRecovering) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-8">
-        <div className="text-center space-y-6">
-          <div className="w-12 h-12 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto"></div>
-          <p className="text-xl text-gray-600 font-light">Recovering your session...</p>
-        </div>
-      </div>
-    );
-  }
-  
-  if (guestId && tokenRecoveryState.error) {
-    React.useEffect(() => {
-      clearGuestReportId();
-      window.history.replaceState({}, '', '/report');
-    }, []);
-  }
-
-  // MOVED: Binary gate now comes after all success state checks
-  if (!guestId && !reportCreated) {
-    console.log('🔄 [ReportForm] No guest ID found - showing fresh form');
-    
-    return (
-      <div className="space-y-0" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="space-y-8">
-            <ReportTypeSelector
-              control={control}
-              errors={errors}
-              selectedReportType={selectedReportType}
-              showReportGuide={false}
-              setShowReportGuide={() => {}}
-              setValue={setValue}
-            />
-
-            {step1Done && (
-              <>
-              <CombinedPersonalDetailsForm
-                register={register}
-                setValue={setValue}
-                watch={watch}
-                errors={errors}
-                onPlaceSelected={handleFirstPersonPlaceSelected}
-              />
-
-                {requiresSecondPerson && (
-                  <div ref={secondPersonRef}>
-              <SecondPersonForm
-                register={register}
-                setValue={setValue}
-                watch={watch}
-                errors={errors}
-                onPlaceSelected={handleSecondPersonPlaceSelected}
-              />
-                </div>
-                )}
-              </>
-            )}
-
-            {step2Done && (
-              <div ref={paymentStepRef}>
-                <PaymentStep
-                register={register}
-                watch={watch}
-                errors={errors}
-                setValue={setValue}
-                onSubmit={handleButtonClick}
-                isProcessing={isProcessing || isPricingLoading}
-                inlinePromoError={inlinePromoError}
-                clearInlinePromoError={clearInlinePromoError}
-                />
-              </div>
-            )}
-          </div>
-        </form>
-      </div>
-    );
-  }
-
-  // Default form rendering
   return (
-    <div className="space-y-0" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="space-y-8">
-          <ReportTypeSelector
-            control={control}
-            errors={errors}
-            selectedReportType={selectedReportType}
-            showReportGuide={false}
-            setShowReportGuide={() => {}}
-            setValue={setValue}
-          />
+    <div className="w-full bg-gradient-to-b from-white to-gray-50/30">
+      <div className="w-full md:px-4 md:container md:mx-auto">
+        <div className="max-w-4xl mx-auto py-16 md:py-24">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl md:text-5xl font-light text-gray-900 mb-6 tracking-tight">
+              Get Your <em className="font-light italic">Personal</em> Report
+            </h2>
+            <p className="text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed">
+              Discover deep insights about yourself with our AI-powered astrological analysis.
+            </p>
+          </div>
 
-          {step1Done && (
-            <>
-            <CombinedPersonalDetailsForm
-              register={register}
-              setValue={setValue}
-              watch={watch}
-              errors={errors}
-              onPlaceSelected={handleFirstPersonPlaceSelected}
-            />
+          <div className="flex flex-col md:grid md:grid-cols-2 gap-0 md:gap-12">
+            {/* Form Section */}
+            <Card className="bg-white/80 backdrop-blur-sm rounded-none md:rounded-2xl border-0 md:border border-gray-200/50">
+              <CardHeader className="p-6 md:p-8">
+                <CardTitle className="text-2xl font-light text-gray-900 tracking-tight flex items-center gap-2">
+                  <User className="h-5 w-5 text-gray-600" />
+                  Your Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 md:p-8 pt-0">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Personal Info */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name" className="text-sm font-medium text-gray-700">Full Name</Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => handleInputChange('name', e.target.value)}
+                        placeholder="Enter your name"
+                        required
+                        className="rounded-xl border-gray-300/60 focus:border-gray-400 focus:ring-gray-400/20"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-sm font-medium text-gray-700">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        placeholder="Enter your email"
+                        required
+                        className="rounded-xl border-gray-300/60 focus:border-gray-400 focus:ring-gray-400/20"
+                      />
+                    </div>
+                  </div>
 
-              {requiresSecondPerson && (
-                <div ref={secondPersonRef}>
-            <SecondPersonForm
-              register={register}
-              setValue={setValue}
-              watch={watch}
-              errors={errors}
-              onPlaceSelected={handleSecondPersonPlaceSelected}
-            />
+                  {/* Birth Info */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Calendar className="h-4 w-4 text-gray-600" />
+                      <Label className="text-sm font-medium text-gray-700">Birth Details</Label>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="birthDate" className="text-xs text-gray-600">Birth Date</Label>
+                        <Input
+                          id="birthDate"
+                          type="date"
+                          value={formData.birthDate}
+                          onChange={(e) => handleInputChange('birthDate', e.target.value)}
+                          required
+                          className="rounded-xl border-gray-300/60 focus:border-gray-400 focus:ring-gray-400/20"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="birthTime" className="text-xs text-gray-600 flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          Birth Time
+                        </Label>
+                        <Input
+                          id="birthTime"
+                          type="time"
+                          value={formData.birthTime}
+                          onChange={(e) => handleInputChange('birthTime', e.target.value)}
+                          required
+                          className="rounded-xl border-gray-300/60 focus:border-gray-400 focus:ring-gray-400/20"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs text-gray-600 flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        Birth Location
+                      </Label>
+                      <LocationInput
+                        onLocationSelect={handleLocationSelect}
+                        placeholder="Enter your birth city"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Report Type Selection */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Sparkles className="h-4 w-4 text-gray-600" />
+                      <Label className="text-sm font-medium text-gray-700">Report Type</Label>
+                    </div>
+                    
+                    <Select value={formData.reportType} onValueChange={(value) => handleInputChange('reportType', value)}>
+                      <SelectTrigger className="rounded-xl border-gray-300/60 focus:border-gray-400 focus:ring-gray-400/20">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {reportTypes.map((report) => (
+                          <SelectItem key={report.value} value={report.value}>
+                            <div className="flex items-center justify-between w-full">
+                              <div>
+                                <div className="font-medium">{report.label}</div>
+                                <div className="text-xs text-gray-500">{report.description}</div>
+                              </div>
+                              <Badge variant="outline" className="ml-2">{report.price}</Badge>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={stripePaymentState.loading}
+                    className="w-full bg-gray-900 text-white px-8 py-3 rounded-xl text-lg font-normal hover:bg-gray-800 transition-all duration-300 hover:scale-105 border border-gray-800/20 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                  >
+                    {stripePaymentState.loading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="h-5 w-5" />
+                        Continue to Payment {selectedReport && `• ${selectedReport.price}`}
+                      </>
+                    )}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+
+            {/* Preview Section */}
+            <div className="bg-white/60 backdrop-blur-sm rounded-none md:rounded-2xl p-6 md:p-8 border-0 md:border border-gray-200/50">
+              <div className="space-y-6">
+                <div className="text-center">
+                  <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">What You'll Get</h3>
+                  <p className="text-gray-600 text-sm">Professional insights delivered instantly</p>
                 </div>
-              )}
-            </>
-          )}
 
-          {step2Done && (
-            <div ref={paymentStepRef}>
-              <PaymentStep
-              register={register}
-              watch={watch}
-              errors={errors}
-              setValue={setValue}
-              onSubmit={handleButtonClick}
-              isProcessing={isProcessing || isPricingLoading}
-              inlinePromoError={inlinePromoError}
-              clearInlinePromoError={clearInlinePromoError}
-              />
+                {selectedReport && (
+                  <div className="bg-gray-50/60 rounded-xl p-6 border border-gray-200/30">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-lg font-medium text-gray-900">{selectedReport.label}</h4>
+                      <Badge className="bg-gray-900 text-white">{selectedReport.price}</Badge>
+                    </div>
+                    <p className="text-gray-600 text-sm mb-4">{selectedReport.description}</p>
+                    
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm text-gray-700">
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        Instant PDF delivery
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-700">
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        Personalized insights
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-700">
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        AI-powered analysis
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-700">
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        Professional formatting
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <Separator className="bg-gray-200/50" />
+
+                <div className="text-center space-y-2">
+                  <p className="text-xs text-gray-500">Secure payment processing</p>
+                  <div className="flex justify-center items-center gap-4 opacity-60">
+                    <div className="text-xs font-medium text-gray-400">STRIPE</div>
+                    <div className="w-px h-4 bg-gray-300"></div>
+                    <div className="text-xs font-medium text-gray-400">256-BIT SSL</div>
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
+          </div>
         </div>
-      </form>
+      </div>
     </div>
   );
 };
