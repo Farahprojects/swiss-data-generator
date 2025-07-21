@@ -22,14 +22,27 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     );
 
+    // Helper function to log errors to debug_logs
+    const logError = async (context: string, message: string, details: any = {}) => {
+      try {
+        await supabaseClient.from('debug_logs').insert({
+          source: 'check-report-status',
+          message: `[${context}] ${message}`,
+          details: { ...details }
+        });
+      } catch (logErr) {
+        console.error('Failed to log to debug_logs:', logErr);
+      }
+    };
+
     const { guest_report_id }: RequestBody = await req.json();
 
     if (!guest_report_id) {
-      console.log('❌ No guest_report_id provided');
+      await logError('VALIDATION_ERROR', 'No guest_report_id provided', { request_body: await req.text() });
       return new Response(
-        JSON.stringify({ error: 'guest_report_id is required' }),
+        JSON.stringify({ ok: false, ready: false, reason: 'guest_report_id is required' }),
         { 
-          status: 400, 
+          status: 200, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
@@ -37,21 +50,29 @@ Deno.serve(async (req) => {
 
     console.log(`🔍 Checking report status for guest_report_id: ${guest_report_id}`);
 
-    // Query guest_reports with all necessary joins
+    // Query guest_reports with optional joins to handle missing logs gracefully
     const { data: guestReport, error: guestError } = await supabaseClient
       .from('guest_reports')
       .select(`
         *,
-        report_logs!inner(report_text),
-        translator_logs!inner(swiss_data)
+        report_logs(report_text),
+        translator_logs(swiss_data)
       `)
       .eq('id', guest_report_id)
-      .single();
+      .maybeSingle();
 
     if (guestError) {
-      console.log(`❌ Error fetching guest report: ${guestError.message}`);
+      await logError('DATABASE_QUERY_ERROR', `Error fetching guest report: ${guestError.message}`, { 
+        guest_report_id, 
+        error_code: guestError.code,
+        error_details: guestError.details 
+      });
       return new Response(
-        JSON.stringify({ ready: false, data: null }),
+        JSON.stringify({ 
+          ok: false, 
+          ready: false, 
+          reason: 'Database error occurred while checking report status' 
+        }),
         { 
           status: 200, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -60,9 +81,13 @@ Deno.serve(async (req) => {
     }
 
     if (!guestReport) {
-      console.log('❌ Guest report not found');
+      await logError('REPORT_NOT_FOUND', 'Guest report not found in database', { guest_report_id });
       return new Response(
-        JSON.stringify({ ready: false, data: null }),
+        JSON.stringify({ 
+          ok: false, 
+          ready: false, 
+          reason: 'Report not found' 
+        }),
         { 
           status: 200, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -86,8 +111,9 @@ Deno.serve(async (req) => {
         console.log('🧹 Existing error found, triggering cleanup');
         return new Response(
           JSON.stringify({ 
+            ok: false,
             ready: false, 
-            data: null,
+            reason: 'Report processing error detected - cleanup required',
             error_state: {
               type: 'existing_error',
               requires_cleanup: true,
@@ -132,8 +158,9 @@ Deno.serve(async (req) => {
 
         return new Response(
           JSON.stringify({ 
+            ok: false,
             ready: false, 
-            data: null,
+            reason: 'Swiss data processing error detected and logged',
             error_state: {
               type: 'new_error',
               requires_cleanup: false,
@@ -165,7 +192,7 @@ Deno.serve(async (req) => {
       };
 
       return new Response(
-        JSON.stringify({ ready: true, data: reportData }),
+        JSON.stringify({ ok: true, ready: true, data: reportData }),
         { 
           status: 200, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -175,7 +202,7 @@ Deno.serve(async (req) => {
 
     console.log('⏳ Report not ready yet');
     return new Response(
-      JSON.stringify({ ready: false, data: null }),
+      JSON.stringify({ ok: true, ready: false, reason: 'Report is still processing' }),
       { 
         status: 200, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -183,11 +210,34 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
+    // Log the error to debug_logs if supabaseClient is available
+    try {
+      const supabaseClient = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      );
+      await supabaseClient.from('debug_logs').insert({
+        source: 'check-report-status',
+        message: '[UNHANDLED_ERROR] Unexpected error in check-report-status',
+        details: { 
+          error_message: error.message,
+          error_stack: error.stack,
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (logError) {
+      console.error('Failed to log critical error:', logError);
+    }
+
     console.error('❌ Error in check-report-status:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error', ready: false, data: null }),
+      JSON.stringify({ 
+        ok: false, 
+        ready: false, 
+        reason: 'An unexpected error occurred while checking report status' 
+      }),
       { 
-        status: 500, 
+        status: 200, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
