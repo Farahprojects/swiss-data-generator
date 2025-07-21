@@ -1,3 +1,4 @@
+
 /*─────────────────────── orchestrator.ts (cleaned) ────────────────────────
    Central workflow handler for astrology-report generation
 ──────────────────────────────────────────────────────────────────────────*/
@@ -229,11 +230,6 @@ export const processReportRequest = async (
     return { success: false, errorMessage: msg };
   }
 
-  const ids = {
-    user_id: payload.is_guest ? null : payload.user_id,
-    client_id: payload.is_guest ? payload.user_id : null,
-  };
-
   // Store the user_id (guest report ID or auth user ID) as string in report_logs
   const user_id = payload.user_id;
 
@@ -248,19 +244,6 @@ export const processReportRequest = async (
     duration_ms: Date.now() - start,
   };
 
-  // 🔍 DEBUG: Log exactly what we're trying to insert
-  console.log("🔍 [orchestrator] SUCCESS LOG INSERT DEBUG:", {
-    user_id: successLogData.user_id,
-    user_id_type: typeof successLogData.user_id,
-    user_id_length: successLogData.user_id ? successLogData.user_id.length : 0,
-    is_guest: payload.is_guest,
-    successLogData_keys: Object.keys(successLogData),
-    successLogData_user_id: successLogData.user_id,
-    successLogData_user_id_type: typeof successLogData.user_id,
-    file: "reportOrchestrator.ts:success_insert",
-    function: "processReportRequest"
-  });
-  
   console.log("[orchestrator] 📝 ATTEMPTING TO LOG SUCCESS TO report_logs:", {
     user_id: successLogData.user_id,
     report_type: successLogData.report_type,
@@ -271,31 +254,54 @@ export const processReportRequest = async (
   });
 
   try {
-    // 🔍 DEBUG: Check database constraints first
-    console.log("🔍 [orchestrator] CHECKING DATABASE CONSTRAINTS...");
-    const { data: constraintData, error: constraintError } = await supabase.rpc('check_report_logs_constraints', {});
-    if (constraintError) {
-      console.error("🔍 [orchestrator] ❌ CONSTRAINT CHECK ERROR:", constraintError);
-    } else {
-      console.log("🔍 [orchestrator] ✅ CONSTRAINT CHECK RESULT:", constraintData);
+    // Insert into report_logs and get the ID back
+    const { data: reportLogData, error: reportLogError } = await supabase
+      .from("report_logs")
+      .insert(successLogData)
+      .select("id")
+      .single();
+    
+    if (reportLogError) {
+      console.error("[orchestrator] ❌ SUCCESS LOG INSERT ERROR:", reportLogError);
+      throw reportLogError;
+    }
+    
+    const reportLogId = reportLogData.id;
+    console.log("[orchestrator] ✅ SUCCESSFULLY LOGGED TO report_logs with ID:", reportLogId);
+
+    // If this is a guest report, update the guest_reports table directly
+    if (payload.is_guest && payload.user_id) {
+      console.log("[orchestrator] 📝 UPDATING guest_reports with report_log_id:", {
+        guest_id: payload.user_id,
+        report_log_id: reportLogId
+      });
+
+      try {
+        const { error: guestUpdateError } = await supabase
+          .from("guest_reports")
+          .update({
+            report_log_id: reportLogId,
+            is_report_set_at: new Date().toISOString(),
+            has_report_log: true,
+            is_ai_report: true
+          })
+          .eq("id", payload.user_id);
+
+        if (guestUpdateError) {
+          console.error("[orchestrator] ❌ Failed to update guest_reports:", guestUpdateError);
+          // Don't fail the entire operation, just log the error
+        } else {
+          console.log("[orchestrator] ✅ Successfully updated guest_reports with report_log_id");
+        }
+      } catch (guestError) {
+        console.error("[orchestrator] ❌ Exception updating guest_reports:", guestError);
+        // Don't fail the entire operation, just log the error
+      }
     }
 
-    // Remove .select() and only check for an error
-    const { error } = await supabase.from("report_logs").insert(successLogData);
-    
-    if (error) {
-      console.error("[orchestrator] ❌ SUCCESS LOG INSERT ERROR:", error);
-      throw error;
-    }
-    
-    // Update the success log to use the data we already have, since we are no longer fetching it back
-    console.log("[orchestrator] ✅ SUCCESSFULLY LOGGED TO report_logs:", {
-      user_id: successLogData.user_id,
-      report_type: successLogData.report_type,
-      status: successLogData.status,
-    });
   } catch (error) {
     console.error("[orchestrator] ❌ Failed to save success log:", error);
+    return { success: false, errorMessage: "Failed to save report log" };
   }
 
   const finalResult = {
