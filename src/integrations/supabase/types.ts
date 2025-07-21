@@ -658,14 +658,16 @@ export type Database = {
           edge_function_confirmed: boolean | null
           email: string
           email_sent: boolean
-          has_report: boolean
+          has_report_log: boolean | null
           has_swiss_error: boolean | null
           id: string
           is_ai_report: boolean | null
+          is_report_set_at: string | null
           modal_ready: boolean | null
           payment_status: string
           promo_code_used: string | null
           purchase_type: string | null
+          rcp_at: string | null
           report_data: Json
           report_log_id: string | null
           report_pdf_data: string | null
@@ -684,14 +686,16 @@ export type Database = {
           edge_function_confirmed?: boolean | null
           email: string
           email_sent?: boolean
-          has_report?: boolean
+          has_report_log?: boolean | null
           has_swiss_error?: boolean | null
           id?: string
           is_ai_report?: boolean | null
+          is_report_set_at?: string | null
           modal_ready?: boolean | null
           payment_status?: string
           promo_code_used?: string | null
           purchase_type?: string | null
+          rcp_at?: string | null
           report_data?: Json
           report_log_id?: string | null
           report_pdf_data?: string | null
@@ -710,14 +714,16 @@ export type Database = {
           edge_function_confirmed?: boolean | null
           email?: string
           email_sent?: boolean
-          has_report?: boolean
+          has_report_log?: boolean | null
           has_swiss_error?: boolean | null
           id?: string
           is_ai_report?: boolean | null
+          is_report_set_at?: string | null
           modal_ready?: boolean | null
           payment_status?: string
           promo_code_used?: string | null
           purchase_type?: string | null
+          rcp_at?: string | null
           report_data?: Json
           report_log_id?: string | null
           report_pdf_data?: string | null
