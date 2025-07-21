@@ -29,50 +29,50 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   const [countdownTime, setCountdownTime] = useState(24);
   const [reportReady, setReportReady] = useState(false);
 
-  // Handle report ready from orchestrator (via parent component)
+  // Handle report ready from parent component
   const handleReportReady = useCallback((reportData: ReportData) => {
-    console.log('🎯 Report ready signal received from orchestrator');
+    console.log('🎯 Report ready signal received');
     setReportReady(true);
     setCountdownTime(0);
     
-    // Open modal with orchestrator-provided data
+    // Open modal with provided data
     if (onViewReport) {
       onViewReport(reportData);
     }
   }, [onViewReport]);
 
-  // Register callback with parent component for orchestrator to use
+  // Register callback with parent component
   useEffect(() => {
     if (onReportReady) {
       onReportReady(handleReportReady);
     }
   }, [onReportReady, handleReportReady]);
 
-  // Simple orchestrator fallback for post-refresh scenarios (no polling)
+  // Simple polling fallback for post-refresh scenarios
   useEffect(() => {
     if (!guestReportId || reportReady) return;
 
-    const checkOrchestratorReady = async () => {
+    const checkReportReady = async () => {
       try {
-        console.log('🔄 Post-refresh orchestrator check for:', guestReportId);
+        console.log('🔄 Polling orchestrator for:', guestReportId);
         
         const { data, error } = await supabase.functions.invoke('orchestrate-report-ready', {
           body: { guest_report_id: guestReportId }
         });
 
         if (!error && data?.success && data?.report_data) {
-          console.log('✅ Post-refresh report found ready - opening modal');
+          console.log('✅ Report found ready - opening modal');
           handleReportReady(data.report_data);
         } else {
-          console.log('⏳ Post-refresh check: report not ready yet, continuing countdown');
+          console.log('⏳ Report not ready yet, continuing countdown');
         }
       } catch (error) {
-        console.log('🔍 Post-refresh orchestrator check failed, continuing countdown:', error);
+        console.log('🔍 Orchestrator check failed, continuing countdown:', error);
       }
     };
 
-    // Small delay to let normal orchestrator listener attempt first
-    const timeout = setTimeout(checkOrchestratorReady, 1000);
+    // Small delay to let normal flow attempt first
+    const timeout = setTimeout(checkReportReady, 1000);
     return () => clearTimeout(timeout);
   }, [guestReportId, reportReady, handleReportReady]);
 

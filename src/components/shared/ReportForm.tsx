@@ -1,9 +1,9 @@
+
 import React, { useState, useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { ReportFormData } from '@/types/public-report';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
-import { useReportOrchestrator } from '@/hooks/useReportOrchestrator';
 
 import ReportTypeSelector from '@/components/public-report/ReportTypeSelector';
 import CombinedPersonalDetailsForm from '@/components/public-report/CombinedPersonalDetailsForm';
@@ -34,7 +34,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   onFormStateChange
 }) => {
   const navigate = useNavigate();
-  const { setupOrchestratorListener } = useReportOrchestrator();
   
   // Store the guest report ID from successful submissions
   const [createdGuestReportId, setCreatedGuestReportId] = useState<string | null>(null);
@@ -125,38 +124,15 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }
   }, [guestId, sessionRestored]);
 
-  // Memoized callback for handling orchestrator report ready events
+  // Memoized callback for handling report ready events
   const handleReportReady = useCallback((reportData: ReportData) => {
-    console.log('🎯 [ReportForm] Orchestrator report ready callback triggered');
+    console.log('🎯 [ReportForm] Report ready callback triggered');
     setReportData(reportData);
     setViewingReport(true);
   }, []);
 
   // Determine the effective guest ID - either from new creation or existing
   const effectiveGuestId = createdGuestReportId || guestId;
-
-  // Set up orchestrator listener when we have a guestId and are in success states
-  React.useEffect(() => {
-    if (!effectiveGuestId) return;
-
-    const inSuccessState = (reportCreated && createdGuestReportId) || 
-                          stripePaymentState.isComplete || 
-                          tokenRecoveryState.recovered;
-
-    if (inSuccessState) {
-      console.log('🔄 [ReportForm] Setting up orchestrator listener for:', effectiveGuestId);
-      const cleanup = setupOrchestratorListener(
-        effectiveGuestId, 
-        (reportData: ReportData) => {
-          if (reportReadyCallbackRef.current) {
-            reportReadyCallbackRef.current(reportData);
-          }
-        },
-        refetchGuestData
-      );
-      return cleanup;
-    }
-  }, [effectiveGuestId, setupOrchestratorListener, reportCreated, createdGuestReportId, stripePaymentState.isComplete, tokenRecoveryState.recovered, refetchGuestData]);
 
   // Handle guest data when guestId is provided
   React.useEffect(() => {

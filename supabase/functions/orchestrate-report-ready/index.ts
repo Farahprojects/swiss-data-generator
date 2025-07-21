@@ -148,20 +148,6 @@ serve(async (req) => {
       }
     };
 
-    // Broadcast to frontend via realtime channel
-    console.log(`[orchestrate-report-ready] Broadcasting report data to frontend...`);
-    const channel = supabase.channel(`report-ready-${guest_report_id}`);
-    
-    // Send the report data directly to the frontend
-    await channel.send({
-      type: 'broadcast',
-      event: 'report_ready',
-      payload: {
-        guest_report_id,
-        report_data: reportData
-      }
-    });
-
     console.log(`[orchestrate-report-ready] Report orchestration completed for: ${guest_report_id}`);
     
     const processingTime = Date.now() - startTime;
@@ -170,7 +156,8 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         guest_report_id,
-        message: "Report orchestration completed and broadcast to frontend",
+        report_data: reportData,
+        message: "Report orchestration completed",
         processing_time_ms: processingTime,
         timestamp: new Date().toISOString()
       }),
