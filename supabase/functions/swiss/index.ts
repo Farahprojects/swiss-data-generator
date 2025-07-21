@@ -1,6 +1,6 @@
-
 import { serve } from "https://deno.land/std/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { translate } from "../_shared/translator.ts";
 
 // Initialize Supabase client
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -246,63 +246,16 @@ serve(async (req) => {
     }
   }
 
-  try {
-    console.log("[swiss] 🔄 Calling translate-request edge function");
-    
-    // Call the new translate-request edge function
-    const { data: translateResult, error: translateError } = await sb.functions.invoke(
-      'translate-request',
-      {
-        body: mergedPayload
-      }
-    );
+  const { status, text } = await translate(mergedPayload);
 
-    if (translateError) {
-      console.error("[swiss] ❌ translate-request error:", translateError);
-      // Log ALL Swiss API requests to swissdebuglogs (simplified logic)
-      await logSwissDebug({
-        apiKey,
-        userId: row.user_id,
-        balance,
-        requestType: mergedPayload.request || "unknown",
-        payload: mergedPayload
-      }, 500, JSON.stringify(translateError));
+  // Log ALL Swiss API requests to swissdebuglogs (simplified logic)
+  await logSwissDebug({
+    apiKey,
+    userId: row.user_id,
+    balance,
+    requestType: mergedPayload.request || "unknown",
+    payload: mergedPayload
+  }, status, text);
 
-      return json({ 
-        success: false, 
-        message: `Translation failed: ${translateError.message}` 
-      }, 500);
-    }
-
-    // Extract status and response text from the edge function result
-    const status = translateResult?.status || 200;
-    const text = translateResult?.text || JSON.stringify(translateResult);
-
-    // Log ALL Swiss API requests to swissdebuglogs (simplified logic)
-    await logSwissDebug({
-      apiKey,
-      userId: row.user_id,
-      balance,
-      requestType: mergedPayload.request || "unknown",
-      payload: mergedPayload
-    }, status, text);
-
-    return new Response(text, { status, headers: corsHeaders });
-  } catch (error) {
-    console.error("[swiss] ❌ Unexpected error:", error);
-    
-    // Log the error
-    await logSwissDebug({
-      apiKey,
-      userId: row.user_id,
-      balance,
-      requestType: mergedPayload.request || "unknown",
-      payload: mergedPayload
-    }, 500, String(error));
-
-    return json({ 
-      success: false, 
-      message: `Unexpected error: ${error}` 
-    }, 500);
-  }
+  return new Response(text, { status, headers: corsHeaders });
 });

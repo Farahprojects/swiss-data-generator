@@ -96,11 +96,11 @@ Deno.serve(async (req) => {
     }
 
     // Check conditions for report readiness
-    const hasAiReport = guestReport.is_ai_report === true && guestReport.report_log_id !== null;
+    const hasReportLog = guestReport.has_report_log === true;
     const isSwissOnly = guestReport.is_ai_report === false && guestReport.swiss_boolean === true;
     const hasSwissError = guestReport.has_swiss_error === true;
     
-    console.log(`📊 Report status - has_ai_report: ${hasAiReport}, is_ai_report: ${guestReport.is_ai_report}, swiss_boolean: ${guestReport.swiss_boolean}, has_swiss_error: ${hasSwissError}, report_log_id: ${guestReport.report_log_id}`);
+    console.log(`📊 Report status - has_report_log: ${hasReportLog}, is_ai_report: ${guestReport.is_ai_report}, swiss_boolean: ${guestReport.swiss_boolean}, has_swiss_error: ${hasSwissError}`);
 
     // Handle Swiss processing errors
     if (hasSwissError) {
@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (hasAiReport || isSwissOnly) {
+    if (hasReportLog || isSwissOnly) {
       console.log('✅ Report is ready, preparing data');
       
       // Prepare the complete report data structure
@@ -184,8 +184,8 @@ Deno.serve(async (req) => {
         report_content: guestReport.report_logs?.report_text || null,
         swiss_data: guestReport.translator_logs?.swiss_data || null,
         metadata: {
-          content_type: hasAiReport ? 'both' : 'astro',
-          has_ai_report: hasAiReport,
+          content_type: hasReportLog ? 'both' : 'astro',
+          has_ai_report: hasReportLog,
           has_swiss_data: !!guestReport.translator_logs?.swiss_data,
           is_ready: true
         }

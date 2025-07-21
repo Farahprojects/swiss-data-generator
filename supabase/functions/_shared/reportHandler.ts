@@ -2,6 +2,7 @@
 // Shared report generation handler
 // Ensures consistent report generation across all endpoints
 
+import { processReportRequest } from "./reportOrchestrator.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 interface ReportHandlerParams {
@@ -183,57 +184,27 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
       };
     }
 
-    console.log(`${logPrefix} Calling orchestrate-report edge function for "${reportPayload.report_type}" report...`);
+    console.log(`${logPrefix} Calling report orchestrator for "${reportPayload.report_type}" report...`);
     
     // Add this to flush payload before it goes in:
     console.log(`${logPrefix} Payload being sent to orchestrator:`, JSON.stringify(reportPayload, null, 2));
     
-    // Call the new orchestrate-report edge function
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } }
-    );
-
-    const { data: orchestrateResult, error: orchestrateError } = await supabase.functions.invoke(
-      'orchestrate-report',
-      {
-        body: reportPayload,
-        headers: {
-          'X-Internal-Call': 'true'
-        }
-      }
-    );
-
-    if (orchestrateError) {
-      console.error(`${logPrefix} orchestrate-report error:`, orchestrateError);
-      console.log(`${logPrefix} ========== REPORT GENERATION DEBUG END ==========`);
-      
-      // Return Swiss API data with detailed error message about report
-      const responseWithError = {
-        ...swissData,
-        report_error: `Failed to generate ${reportPayload.report_type} report: ${orchestrateError.message}`
-      };
-      
-      return {
-        success: true,
-        responseData: responseWithError,
-        errorMessage: `Report generation failed for ${reportPayload.report_type}: ${orchestrateError.message}`
-      };
-    }
+    // Generate the report
+    const reportResult = await processReportRequest(reportPayload);
     
-    console.log(`${logPrefix} orchestrate-report response:`, {
-      success: orchestrateResult?.success,
-      hasReport: !!orchestrateResult?.report,
-      errorMessage: orchestrateResult?.errorMessage
+    console.log(`${logPrefix} Report orchestrator response:`, {
+      success: reportResult.success,
+      hasReport: !!reportResult.report,
+      errorMessage: reportResult.errorMessage,
+      reportPreview: reportResult.report ? 'Report generated successfully' : 'No report in response'
     });
     
-    if (orchestrateResult?.success && orchestrateResult?.report) {
+    if (reportResult.success && reportResult.report) {
       console.log(`${logPrefix} Report generated successfully for "${reportPayload.report_type}"`);
       
       // [CONTAMINATION-POINT-1] Adding report to swiss_data in reportHandler
       console.log(`${logPrefix} [CONTAMINATION-POINT-1] Adding report to swiss_data in reportHandler - Line 208`);
-      console.log(`${logPrefix} [CONTAMINATION-POINT-1] Report keys being added:`, Object.keys(orchestrateResult.report || {}));
+      console.log(`${logPrefix} [CONTAMINATION-POINT-1] Report keys being added:`, Object.keys(reportResult.report || {}));
       console.log(`${logPrefix} [CONTAMINATION-POINT-1] Swiss data keys before contamination:`, Object.keys(swissData || {}));
       
       // [CONTAMINATION-FIX] Option 1: Pure Fix - Return only Swiss data
@@ -242,8 +213,8 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
       
       // Create AI-only data for logging (without Swiss data)
       const aiOnlyData = {
-        report: orchestrateResult.report,
-        engine_used: orchestrateResult.report.engine_used
+        report: reportResult.report,
+        engine_used: reportResult.report.engine_used
       };
       
       console.log(`${logPrefix} Pure Swiss data prepared, AI report separated`);
@@ -256,9 +227,9 @@ export async function handleReportGeneration(params: ReportHandlerParams): Promi
         errorMessage: undefined
       };
     } else {
-      const errorMsg = orchestrateResult?.errorMessage || "Report generation failed without specific error";
+      const errorMsg = reportResult.errorMessage || "Report generation failed without specific error";
       console.error(`${logPrefix} Report generation failed:`, {
-        orchestratorSuccess: orchestrateResult?.success,
+        orchestratorSuccess: reportResult.success,
         errorMessage: errorMsg,
         reportType: reportPayload.report_type
       });

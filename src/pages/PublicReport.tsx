@@ -8,14 +8,13 @@ import { ReportForm } from '@/components/shared/ReportForm';
 import MobileReportTrigger from '@/components/public-report/MobileReportTrigger';
 import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
 import Footer from '@/components/Footer';
+import { supabase } from '@/integrations/supabase/client';
 import Logo from '@/components/Logo';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
 import { storeGuestReportId } from '@/utils/urlHelpers';
-import { useGuestReportData } from '@/hooks/useGuestReportData';
-import { ErrorDisplay } from '@/components/shared/ErrorDisplay';
 
 const PublicReport = () => {
   // ALL HOOKS MUST BE DECLARED FIRST - NEVER INSIDE TRY-CATCH
@@ -26,9 +25,6 @@ const PublicReport = () => {
   const [isGuestIdLoading, setIsGuestIdLoading] = useState(true);
   const isMobile = useIsMobile();
   const location = useLocation();
-
-  // Use the enhanced guest report data hook
-  const { data: reportData, error: reportError, isLoading: reportLoading, refetch } = useGuestReportData(activeGuestId);
 
   // Direct URL parsing fix for hydration issue - reliable guest_id detection
   useEffect(() => {
@@ -119,209 +115,156 @@ const PublicReport = () => {
     );
   }
 
-  // Show enhanced error display if there's a report error
-  if (reportError && activeGuestId) {
-    return <ErrorDisplay error={reportError} onRetry={() => refetch()} guestReportId={activeGuestId} />;
-  }
-
-  // If we have an active guest ID but report is still loading, show processing message
-  if (activeGuestId && reportLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-8">
-        <div className="text-center space-y-6">
-          <div className="w-12 h-12 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto"></div>
-          <p className="text-xl text-gray-600 font-light">Loading your report...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // If we have report data, show the report content
-  if (reportData) {
+  try {
     return (
       <div className="min-h-screen bg-background">
-        {/* Show the actual report content here */}
-        <div className="container mx-auto p-8">
-          <div className="max-w-4xl mx-auto">
-            <h1 className="text-3xl font-bold mb-6">Your Report</h1>
-            <div className="bg-white rounded-lg shadow-lg p-8">
-              <h2 className="text-2xl font-semibold mb-4">{reportData.guest_report.email}</h2>
-              <p className="text-gray-600 mb-4">Report Type: {reportData.guest_report.report_type}</p>
-              <p className="text-gray-600 mb-4">Status: {reportData.metadata.status}</p>
-              
-              {reportData.report_content && (
-                <div className="mt-6">
-                  <h3 className="text-xl font-semibold mb-4">Report Content</h3>
-                  <div className="whitespace-pre-wrap text-gray-800">
-                    {reportData.report_content}
+        {/* Show cancelled payment message */}
+        {showCancelledMessage && (
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md px-4">
+            <Card className="border-amber-200 bg-amber-50">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-amber-800">Payment Cancelled</p>
+                    <p className="text-xs text-amber-700">Your payment was cancelled. You can try again anytime.</p>
                   </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleDismissCancelMessage}
+                    className="text-amber-600 hover:text-amber-800 hover:bg-amber-100"
+                  >
+                    ×
+                  </Button>
                 </div>
-              )}
-              
-              {reportData.swiss_data && (
-                <div className="mt-6">
-                  <h3 className="text-xl font-semibold mb-4">Astrological Data</h3>
-                  <pre className="bg-gray-50 p-4 rounded text-sm overflow-auto">
-                    {JSON.stringify(reportData.swiss_data, null, 2)}
-                  </pre>
-                </div>
-              )}
-            </div>
+              </CardContent>
+            </Card>
           </div>
-        </div>
-      </div>
-    );
-  }
+        )}
 
-  // Default: Show the landing page with form
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Show cancelled payment message */}
-      {showCancelledMessage && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md px-4">
-          <Card className="border-amber-200 bg-amber-50">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-amber-800">Payment Cancelled</p>
-                  <p className="text-xs text-amber-700">Your payment was cancelled. You can try again anytime.</p>
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={handleDismissCancelMessage}
-                  className="text-amber-600 hover:text-amber-800 hover:bg-amber-100"
-                >
-                  ×
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Animated header with logo */}
-      <header className="fixed top-0 left-0 z-50 p-6">
-        <div 
-          className="transition-opacity duration-300 ease-out"
-          style={{ opacity: textOpacity }}
-        >
-          <Logo size="md" asLink={false} />
-        </div>
-      </header>
-      
-      <HeroSection onGetReportClick={handleGetReportClick} />
-      
-      {/* Sample Report Section */}
-      <section className="py-24 bg-gradient-to-b from-white to-gray-50/30">
-        <div className="w-full md:px-4 md:container md:mx-auto">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-20">
-              <h2 className="text-4xl md:text-5xl font-light text-gray-900 mb-6 tracking-tight">
-                See What You'll Get
-              </h2>
-              <p className="text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed">
-                Real psychological profiles with actionable insights - see the depth and precision you'll receive.
-              </p>
-            </div>
-
-            {/* Sync Pro Compatibility Preview */}
-            <div className="mb-24">
-              <div className="flex flex-col md:grid md:grid-cols-2 gap-0 md:gap-12 mb-16">
-                {/* Peter's Profile */}
-                <div className="bg-white/80 backdrop-blur-sm rounded-none md:rounded-2xl p-0 md:p-8 border-0 md:border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group mb-4 md:mb-0">
-                  <div className="p-3 md:p-0">
-                    <div className="text-center mb-8">
-                      <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Peter Farah</h3>
-                      <p className="text-gray-600 font-normal">Creative Visionary • Structured Strategist</p>
-                    </div>
-                    
-                    <div className="space-y-6">
-                    <div className="transform group-hover:translate-x-1 transition-transform duration-300">
-                      <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Communication Style</h4>
-                      <p className="text-gray-600 text-sm leading-relaxed">Expressive and conceptual, prefers big-picture discussions with room for structured planning.</p>
-                    </div>
-                    
-                    <div className="transform group-hover:translate-x-1 transition-transform duration-500">
-                      <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Decision Making</h4>
-                      <p className="text-gray-600 text-sm leading-relaxed">Balances intuitive insights with methodical analysis, values both innovation and process.</p>
-                    </div>
-                    
-                    <div className="transform group-hover:translate-x-1 transition-transform duration-700">
-                      <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Relationship Needs</h4>
-                      <p className="text-gray-600 text-sm leading-relaxed">Thrives with partners who appreciate both creative freedom and collaborative planning.</p>
-                    </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Olivia's Profile */}
-                <div className="bg-white/80 backdrop-blur-sm rounded-none md:rounded-2xl p-0 md:p-8 border-0 md:border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group">
-                  <div className="p-3 md:p-0">
-                    <div className="text-center mb-8">
-                      <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Olivia Patten</h3>
-                      <p className="text-gray-600 font-normal">Intuitive Connector • Detail Orchestrator</p>
-                    </div>
-                    
-                    <div className="space-y-6">
-                    <div className="transform group-hover:translate-x-1 transition-transform duration-300">
-                      <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Communication Style</h4>
-                      <p className="text-gray-600 text-sm leading-relaxed">Empathetic and thorough, excels at reading between the lines and organizing details.</p>
-                    </div>
-                    
-                    <div className="transform group-hover:translate-x-1 transition-transform duration-500">
-                      <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Decision Making</h4>
-                      <p className="text-gray-600 text-sm leading-relaxed">Combines emotional intelligence with systematic execution, values harmony and efficiency.</p>
-                    </div>
-                    
-                    <div className="transform group-hover:translate-x-1 transition-transform duration-700">
-                      <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Relationship Needs</h4>
-                      <p className="text-gray-600 text-sm leading-relaxed">Values partners who bring vision while appreciating her attention to emotional nuances.</p>
-                    </div>
-                    </div>
-                  </div>
-                </div>
+        {/* Animated header with logo */}
+        <header className="fixed top-0 left-0 z-50 p-6">
+          <div 
+            className="transition-opacity duration-300 ease-out"
+            style={{ opacity: textOpacity }}
+          >
+            <Logo size="md" asLink={false} />
+          </div>
+        </header>
+        
+        <HeroSection onGetReportClick={handleGetReportClick} />
+        
+        {/* Sample Report Section */}
+        <section className="py-24 bg-gradient-to-b from-white to-gray-50/30">
+          <div className="w-full md:px-4 md:container md:mx-auto">
+            <div className="max-w-6xl mx-auto">
+              <div className="text-center mb-20">
+                <h2 className="text-4xl md:text-5xl font-light text-gray-900 mb-6 tracking-tight">
+                  See What You'll Get
+                </h2>
+                <p className="text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed">
+                  Real psychological profiles with actionable insights - see the depth and precision you'll receive.
+                </p>
               </div>
 
-              {/* Their Sync Dynamic */}
-              <div className="relative overflow-hidden bg-white/60 backdrop-blur-sm rounded-none md:rounded-2xl p-4 md:p-12 border-0 md:border border-gray-200/50">
-                {/* Subtle background elements */}
-                <div className="absolute inset-0 opacity-20">
-                  <div className="absolute top-6 left-12 w-1 h-1 bg-gray-400 rounded-full animate-pulse"></div>
-                  <div className="absolute top-12 right-16 w-0.5 h-0.5 bg-gray-500 rounded-full animate-ping" style={{animationDelay: '1s'}}></div>
-                  <div className="absolute bottom-8 left-1/4 w-1 h-1 bg-gray-400 rounded-full animate-pulse" style={{animationDelay: '2s'}}></div>
-                  <div className="absolute bottom-12 right-1/3 w-0.5 h-0.5 bg-gray-500 rounded-full animate-ping" style={{animationDelay: '0.5s'}}></div>
+              {/* Sync Pro Compatibility Preview */}
+              <div className="mb-24">
+                <div className="flex flex-col md:grid md:grid-cols-2 gap-0 md:gap-12 mb-16">
+                  {/* Peter's Profile */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-none md:rounded-2xl p-0 md:p-8 border-0 md:border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group mb-4 md:mb-0">
+                    <div className="p-3 md:p-0">
+                      <div className="text-center mb-8">
+                        <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Peter Farah</h3>
+                        <p className="text-gray-600 font-normal">Creative Visionary • Structured Strategist</p>
+                      </div>
+                      
+                      <div className="space-y-6">
+                      <div className="transform group-hover:translate-x-1 transition-transform duration-300">
+                        <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Communication Style</h4>
+                        <p className="text-gray-600 text-sm leading-relaxed">Expressive and conceptual, prefers big-picture discussions with room for structured planning.</p>
+                      </div>
+                      
+                      <div className="transform group-hover:translate-x-1 transition-transform duration-500">
+                        <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Decision Making</h4>
+                        <p className="text-gray-600 text-sm leading-relaxed">Balances intuitive insights with methodical analysis, values both innovation and process.</p>
+                      </div>
+                      
+                      <div className="transform group-hover:translate-x-1 transition-transform duration-700">
+                        <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Relationship Needs</h4>
+                        <p className="text-gray-600 text-sm leading-relaxed">Thrives with partners who appreciate both creative freedom and collaborative planning.</p>
+                      </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Olivia's Profile */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-none md:rounded-2xl p-0 md:p-8 border-0 md:border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group">
+                    <div className="p-3 md:p-0">
+                      <div className="text-center mb-8">
+                        <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Olivia Patten</h3>
+                        <p className="text-gray-600 font-normal">Intuitive Connector • Detail Orchestrator</p>
+                      </div>
+                      
+                      <div className="space-y-6">
+                      <div className="transform group-hover:translate-x-1 transition-transform duration-300">
+                        <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Communication Style</h4>
+                        <p className="text-gray-600 text-sm leading-relaxed">Empathetic and thorough, excels at reading between the lines and organizing details.</p>
+                      </div>
+                      
+                      <div className="transform group-hover:translate-x-1 transition-transform duration-500">
+                        <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Decision Making</h4>
+                        <p className="text-gray-600 text-sm leading-relaxed">Combines emotional intelligence with systematic execution, values harmony and efficiency.</p>
+                      </div>
+                      
+                      <div className="transform group-hover:translate-x-1 transition-transform duration-700">
+                        <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Relationship Needs</h4>
+                        <p className="text-gray-600 text-sm leading-relaxed">Values partners who bring vision while appreciating her attention to emotional nuances.</p>
+                      </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <h3 className="text-3xl md:text-4xl font-light text-gray-900 mb-12 text-center relative z-10 tracking-tight">
-                  Their Sync Dynamic
-                  <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 w-16 h-px bg-gradient-to-r from-transparent via-gray-400 to-transparent"></div>
-                </h3>
-                
-                <div className="grid md:grid-cols-3 gap-12 relative z-10">
-                  <div className="text-center group">
-                    <div className="w-24 h-24 bg-gray-50 border border-gray-200/50 rounded-full flex items-center justify-center mx-auto mb-6 hover:scale-105 transition-all duration-500 hover:border-gray-300/60">
-                      <span className="text-3xl font-light text-gray-700 group-hover:scale-110 transition-transform duration-300">92%</span>
-                    </div>
-                    <h4 className="font-medium text-gray-900 mb-3 text-sm tracking-wide uppercase group-hover:text-gray-700 transition-colors duration-300">Vision Alignment</h4>
-                    <p className="text-gray-600 text-sm leading-relaxed">Both value growth and structured progress toward shared goals.</p>
+                {/* Their Sync Dynamic */}
+                <div className="relative overflow-hidden bg-white/60 backdrop-blur-sm rounded-none md:rounded-2xl p-4 md:p-12 border-0 md:border border-gray-200/50">
+                  {/* Subtle background elements */}
+                  <div className="absolute inset-0 opacity-20">
+                    <div className="absolute top-6 left-12 w-1 h-1 bg-gray-400 rounded-full animate-pulse"></div>
+                    <div className="absolute top-12 right-16 w-0.5 h-0.5 bg-gray-500 rounded-full animate-ping" style={{animationDelay: '1s'}}></div>
+                    <div className="absolute bottom-8 left-1/4 w-1 h-1 bg-gray-400 rounded-full animate-pulse" style={{animationDelay: '2s'}}></div>
+                    <div className="absolute bottom-12 right-1/3 w-0.5 h-0.5 bg-gray-500 rounded-full animate-ping" style={{animationDelay: '0.5s'}}></div>
                   </div>
+
+                  <h3 className="text-3xl md:text-4xl font-light text-gray-900 mb-12 text-center relative z-10 tracking-tight">
+                    Their Sync Dynamic
+                    <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 w-16 h-px bg-gradient-to-r from-transparent via-gray-400 to-transparent"></div>
+                  </h3>
                   
-                  <div className="text-center group">
-                    <div className="w-24 h-24 bg-gray-50 border border-gray-200/50 rounded-full flex items-center justify-center mx-auto mb-6 hover:scale-105 transition-all duration-500 hover:border-gray-300/60" style={{animationDelay: '0.2s'}}>
-                      <span className="text-3xl font-light text-gray-700 group-hover:scale-110 transition-transform duration-300">88%</span>
+                  <div className="grid md:grid-cols-3 gap-12 relative z-10">
+                    <div className="text-center group">
+                      <div className="w-24 h-24 bg-gray-50 border border-gray-200/50 rounded-full flex items-center justify-center mx-auto mb-6 hover:scale-105 transition-all duration-500 hover:border-gray-300/60">
+                        <span className="text-3xl font-light text-gray-700 group-hover:scale-110 transition-transform duration-300">92%</span>
+                      </div>
+                      <h4 className="font-medium text-gray-900 mb-3 text-sm tracking-wide uppercase group-hover:text-gray-700 transition-colors duration-300">Vision Alignment</h4>
+                      <p className="text-gray-600 text-sm leading-relaxed">Both value growth and structured progress toward shared goals.</p>
                     </div>
-                    <h4 className="font-medium text-gray-900 mb-3 text-sm tracking-wide uppercase group-hover:text-gray-700 transition-colors duration-300">Communication Flow</h4>
-                    <p className="text-gray-600 text-sm leading-relaxed">Peter's big picture thinking complements Olivia's detail orientation perfectly.</p>
-                  </div>
-                  
-                  <div className="text-center group">
-                    <div className="w-24 h-24 bg-gray-50 border border-gray-200/50 rounded-full flex items-center justify-center mx-auto mb-6 hover:scale-105 transition-all duration-500 hover:border-gray-300/60" style={{animationDelay: '0.4s'}}>
-                      <span className="text-3xl font-light text-gray-700 group-hover:scale-110 transition-transform duration-300">95%</span>
+                    
+                    <div className="text-center group">
+                      <div className="w-24 h-24 bg-gray-50 border border-gray-200/50 rounded-full flex items-center justify-center mx-auto mb-6 hover:scale-105 transition-all duration-500 hover:border-gray-300/60" style={{animationDelay: '0.2s'}}>
+                        <span className="text-3xl font-light text-gray-700 group-hover:scale-110 transition-transform duration-300">88%</span>
+                      </div>
+                      <h4 className="font-medium text-gray-900 mb-3 text-sm tracking-wide uppercase group-hover:text-gray-700 transition-colors duration-300">Communication Flow</h4>
+                      <p className="text-gray-600 text-sm leading-relaxed">Peter's big picture thinking complements Olivia's detail orientation perfectly.</p>
                     </div>
-                    <h4 className="font-medium text-gray-900 mb-3 text-sm tracking-wide uppercase group-hover:text-gray-700 transition-colors duration-300">Growth Potential</h4>
-                    <p className="text-gray-600 text-sm leading-relaxed">Their different strengths create a powerful dynamic for mutual development.</p>
+                    
+                    <div className="text-center group">
+                      <div className="w-24 h-24 bg-gray-50 border border-gray-200/50 rounded-full flex items-center justify-center mx-auto mb-6 hover:scale-105 transition-all duration-500 hover:border-gray-300/60" style={{animationDelay: '0.4s'}}>
+                        <span className="text-3xl font-light text-gray-700 group-hover:scale-110 transition-transform duration-300">95%</span>
+                      </div>
+                      <h4 className="font-medium text-gray-900 mb-3 text-sm tracking-wide uppercase group-hover:text-gray-700 transition-colors duration-300">Growth Potential</h4>
+                      <p className="text-gray-600 text-sm leading-relaxed">Their different strengths create a powerful dynamic for mutual development.</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -426,6 +369,8 @@ const PublicReport = () => {
         <Footer />
       </div>
     );
+  } catch (err: any) {
+    return <div>Sorry, something went wrong.</div>;
   }
 };
 
