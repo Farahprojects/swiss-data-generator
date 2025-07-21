@@ -676,6 +676,7 @@ export type Database = {
           swiss_boolean: boolean | null
           translator_log_id: string | null
           updated_at: string
+          user_error_id: string | null
         }
         Insert: {
           amount_paid: number
@@ -704,6 +705,7 @@ export type Database = {
           swiss_boolean?: boolean | null
           translator_log_id?: string | null
           updated_at?: string
+          user_error_id?: string | null
         }
         Update: {
           amount_paid?: number
@@ -732,6 +734,7 @@ export type Database = {
           swiss_boolean?: boolean | null
           translator_log_id?: string | null
           updated_at?: string
+          user_error_id?: string | null
         }
         Relationships: [
           {
@@ -746,6 +749,13 @@ export type Database = {
             columns: ["translator_log_id"]
             isOneToOne: false
             referencedRelation: "translator_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guest_reports_user_error_id_fkey"
+            columns: ["user_error_id"]
+            isOneToOne: false
+            referencedRelation: "user_errors"
             referencedColumns: ["id"]
           },
         ]

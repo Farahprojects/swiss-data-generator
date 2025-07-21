@@ -73,8 +73,80 @@ Deno.serve(async (req) => {
     // Check conditions for report readiness
     const hasReportLog = guestReport.has_report_log === true;
     const isSwissOnly = guestReport.is_ai_report === false && guestReport.swiss_boolean === true;
+    const hasSwissError = guestReport.has_swiss_error === true;
     
-    console.log(`📊 Report status - has_report_log: ${hasReportLog}, is_ai_report: ${guestReport.is_ai_report}, swiss_boolean: ${guestReport.swiss_boolean}`);
+    console.log(`📊 Report status - has_report_log: ${hasReportLog}, is_ai_report: ${guestReport.is_ai_report}, swiss_boolean: ${guestReport.swiss_boolean}, has_swiss_error: ${hasSwissError}`);
+
+    // Handle Swiss processing errors
+    if (hasSwissError) {
+      console.log('❌ Swiss error detected, handling error case');
+      
+      if (guestReport.user_error_id) {
+        // Error already logged, trigger session cleanup
+        console.log('🧹 Existing error found, triggering cleanup');
+        return new Response(
+          JSON.stringify({ 
+            ready: false, 
+            data: null,
+            error_state: {
+              type: 'existing_error',
+              requires_cleanup: true,
+              user_error_id: guestReport.user_error_id
+            }
+          }),
+          { 
+            status: 200, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      } else {
+        // Log new error
+        console.log('🚨 New Swiss error, calling error handler');
+        try {
+          const errorResponse = await supabaseClient.functions.invoke('log-user-error', {
+            body: {
+              guestReportId: guest_report_id,
+              errorType: 'swiss_processing_error',
+              errorMessage: 'Swiss data processing failed due to stack depth limit or malformed data',
+              email: guestReport.email
+            }
+          });
+
+          if (errorResponse.error) {
+            console.log('❌ Error logging failed:', errorResponse.error);
+          } else {
+            // Update guest_reports with the error ID
+            const { data: errorData } = errorResponse;
+            if (errorData?.caseNumber) {
+              await supabaseClient
+                .from('guest_reports')
+                .update({ user_error_id: errorData.errorId })
+                .eq('id', guest_report_id);
+              
+              console.log(`✅ Error logged with case: ${errorData.caseNumber}`);
+            }
+          }
+        } catch (error) {
+          console.log('❌ Failed to call log-user-error:', error);
+        }
+
+        return new Response(
+          JSON.stringify({ 
+            ready: false, 
+            data: null,
+            error_state: {
+              type: 'new_error',
+              requires_cleanup: false,
+              message: 'Swiss data processing error detected and logged'
+            }
+          }),
+          { 
+            status: 200, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+    }
 
     if (hasReportLog || isSwissOnly) {
       console.log('✅ Report is ready, preparing data');
