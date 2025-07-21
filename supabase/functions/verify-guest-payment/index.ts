@@ -348,7 +348,6 @@ async function createGuestReportFromLegacyMetadata(sessionId: string, session: a
       coach_slug: md.coach_slug || null,
       coach_name: md.coach_name || null,
       is_ai_report: true, // Default for legacy reports
-      swiss_boolean: false
     })
     .select()
     .single();
