@@ -134,17 +134,18 @@ serve(async (req) => {
       );
     }
 
-    // Prepare complete report data for frontend
+    // Prepare complete report data for frontend - EXACT SAME FORMAT AS check-report-status
     const reportData = {
       guest_report: guestReport,
       report_content: guestReport.report_logs?.report_text || null,
       swiss_data: guestReport.translator_logs?.swiss_data || null,
       metadata: {
-        is_astro_report: !!guestReport.swiss_boolean,
-        is_ai_report: !!guestReport.is_ai_report,
         content_type: guestReport.swiss_boolean && guestReport.is_ai_report ? 'both' : 
                      guestReport.swiss_boolean ? 'astro' : 
-                     guestReport.is_ai_report ? 'ai' : 'none'
+                     guestReport.is_ai_report ? 'ai' : 'none',
+        has_ai_report: !!guestReport.is_ai_report,
+        has_swiss_data: !!guestReport.translator_logs?.swiss_data,
+        is_ready: true
       }
     };
 
@@ -152,14 +153,12 @@ serve(async (req) => {
     
     const processingTime = Date.now() - startTime;
 
+    // Return EXACT SAME FORMAT as check-report-status
     return new Response(
       JSON.stringify({ 
-        success: true, 
-        guest_report_id,
-        report_data: reportData,
-        message: "Report orchestration completed",
-        processing_time_ms: processingTime,
-        timestamp: new Date().toISOString()
+        ok: true, 
+        ready: true, 
+        data: reportData
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
