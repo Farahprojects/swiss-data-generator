@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { CheckCircle, AlertCircle } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ReportData } from '@/utils/reportContentExtraction';
@@ -8,7 +8,6 @@ import EntertainmentWindow from './EntertainmentWindow';
 import ErrorStateHandler from './ErrorStateHandler';
 import { supabase } from '@/integrations/supabase/client';
 import { logSuccessScreen } from '@/utils/logUtils';
-import { clearAllSessionData } from '@/utils/urlHelpers';
 
 interface SuccessScreenProps {
   name: string;
@@ -40,13 +39,11 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   const isMobile = useIsMobile();
   const successCardRef = useRef<HTMLDivElement>(null);
 
-  // Simple visual countdown (24 seconds for UX)
+  // Simple states
   const [countdownTime, setCountdownTime] = useState(24);
   const [reportReady, setReportReady] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [errorState, setErrorState] = useState<ErrorState | null>(null);
-  const [errorLogging, setErrorLogging] = useState(false);
-  const [caseNumber, setCaseNumber] = useState<string | null>(null);
 
   // Auto-scroll to success message once on mount
   useEffect(() => {
@@ -59,7 +56,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
       }
     };
 
-    // Use requestAnimationFrame to ensure DOM is fully rendered
     requestAnimationFrame(() => {
       setTimeout(scrollToSuccess, 100);
     });
@@ -71,7 +67,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     setReportReady(true);
     setCountdownTime(0);
     
-    // Immediately trigger the modal opening
     if (onViewReport) {
       logSuccessScreen('info', 'Calling onViewReport with report data');
       onViewReport(reportData);
@@ -80,7 +75,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     }
   }, [onViewReport]);
 
-  // Register callback with parent component immediately
+  // Register callback with parent component
   useEffect(() => {
     if (onReportReady) {
       logSuccessScreen('info', 'Registering handleReportReady callback with parent');
@@ -118,11 +113,8 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     };
   }, [guestReportId, handleReportReady, errorState]);
 
-  // Error logging handler
+  // Simple error logging for new errors detected by edge function
   const handleTriggerErrorLogging = useCallback(async (guestReportId: string, email: string) => {
-    if (errorLogging || caseNumber) return; // Prevent duplicate logging
-    
-    setErrorLogging(true);
     logSuccessScreen('info', 'Triggering error logging for Swiss processing error');
     
     try {
@@ -138,10 +130,8 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
       if (error) {
         logSuccessScreen('error', 'Error logging failed', { error });
       } else if (data?.case_number) {
-        setCaseNumber(data.case_number);
         logSuccessScreen('info', 'Error logged successfully', { caseNumber: data.case_number });
         
-        // Update error state with case number
         setErrorState(prev => prev ? {
           ...prev,
           case_number: data.case_number,
@@ -150,18 +140,16 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
       }
     } catch (err) {
       logSuccessScreen('error', 'Failed to log error', { err });
-    } finally {
-      setErrorLogging(false);
     }
-  }, [errorLogging, caseNumber]);
-
-  // Session cleanup handler
-  const handleCleanupSession = useCallback(() => {
-    logSuccessScreen('info', 'Cleaning up session due to error');
-    clearAllSessionData();
   }, []);
 
-  // Check if report is already ready immediately on mount
+  // Session cleanup - let the edge function handle this
+  const handleCleanupSession = useCallback(() => {
+    logSuccessScreen('info', 'Cleaning up session due to error');
+    // The edge function will handle any necessary cleanup
+  }, []);
+
+  // Check if report is ready using the smart edge function
   useEffect(() => {
     const checkReportStatus = async () => {
       if (!guestReportId) {
@@ -183,7 +171,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
           return;
         }
 
-        // Handle error state responses
+        // Handle error state responses from the smart edge function
         if (data?.error_state) {
           logSuccessScreen('info', 'Error state detected from check-report-status', { errorState: data.error_state });
           setErrorState(data.error_state);
@@ -207,7 +195,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     checkReportStatus();
   }, [guestReportId, handleReportReady]);
 
-  // Pure visual countdown timer - only starts after status check is complete
+  // Simple visual countdown timer
   useEffect(() => {
     if (reportReady || checkingStatus || errorState) return;
 
@@ -224,7 +212,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     return () => clearInterval(timer);
   }, [reportReady, checkingStatus, errorState]);
 
-  // Show error state if detected
+  // Show error state if detected by the edge function
   if (errorState) {
     return (
       <ErrorStateHandler
@@ -254,7 +242,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
               </>
             ) : (
               <>
-                {/* Show checking status or countdown */}
                 <div className="text-center mb-6">
                   {checkingStatus ? (
                     <>
@@ -274,7 +261,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
                   <span className="font-medium">{email}</span>
                 </div>
 
-                {/* Entertainment window during wait - only show after status check */}
                 {!checkingStatus && (
                   <EntertainmentWindow 
                     mode="text"
