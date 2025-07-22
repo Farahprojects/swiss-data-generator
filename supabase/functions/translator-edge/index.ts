@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -236,7 +235,6 @@ function normalise(p: any) {
   return out;
 }
 
-/*──────────────── geo helper (unchanged) ----------------------------------*/
 async function ensureLatLon(obj: any): Promise<{ data: any; googleGeoUsed: boolean }> {
   if ((obj.latitude !== undefined && obj.longitude !== undefined) || !obj.location) {
     return { data: obj, googleGeoUsed: false };
@@ -271,7 +269,6 @@ async function inferTimezone(obj: any): Promise<string | null> {
   return null; // give up
 }
 
-/*──────────────── handleReportGeneration helper ---------------------------*/
 async function handleReportGeneration(params: {
   requestData: any;
   swissApiResponse: any;
@@ -370,7 +367,6 @@ async function handleReportGeneration(params: {
   }
 }
 
-/*──────────────── logging --------------------------------------------------*/
 async function logTranslator(run: {
   request_type: string,
   request_payload: any,
@@ -449,22 +445,16 @@ serve(async (req) => {
       
       googleGeo = geoUsedA || geoUsedB;
       
-      // Create sync payload with normalized person data
+      // Create sync payload with normalized person data - FIXED: Removed the delete/re-add bug
       payload = {
+        ...parsed, // Keep other top-level fields like report, user_id, etc.
         person_a: normalizedPersonA,
-        person_b: normalizedPersonB,
-        ...parsed // Keep other top-level fields like report, user_id, etc.
+        person_b: normalizedPersonB
       };
       
-      // Remove the person objects from top level to avoid duplication
-      delete payload.person_a;
-      delete payload.person_b;
-      
-      // Re-add the normalized persons
-      payload.person_a = normalizedPersonA;
-      payload.person_b = normalizedPersonB;
-      
       console.log(`[translator-edge-${reqId}] Sync payload prepared with normalized persons`);
+      console.log(`[translator-edge-${reqId}] Person A has birth_time:`, !!normalizedPersonA.birth_time);
+      console.log(`[translator-edge-${reqId}] Person B has birth_time:`, !!normalizedPersonB.birth_time);
       
     } else {
       /*────────────────── Regular processing for non-sync requests ----------*/
