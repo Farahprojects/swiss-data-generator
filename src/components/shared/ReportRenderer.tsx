@@ -61,7 +61,7 @@ export const ReportRenderer: React.FC<ReportRendererProps> = ({
   };
 
   return (
-    <div className={`prose prose-sm max-w-none font-light ${className}`} style={{ fontFamily: 'Inter, sans-serif' }}>
+    <div className={`prose prose-sm max-w-none font-light text-left ${className}`} style={{ fontFamily: 'Inter, sans-serif' }}>
       {blocks.map(renderBlock)}
     </div>
   );
