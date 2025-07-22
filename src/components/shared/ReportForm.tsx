@@ -124,6 +124,13 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }
   }, [guestId, sessionRestored]);
 
+  // Log fresh form state only once on mount
+  React.useEffect(() => {
+    if (!guestId && !reportCreated) {
+      logReportForm('debug', 'No guest ID found - showing fresh form');
+    }
+  }, []); // Empty dependency array - only runs once on mount
+
   // Memoized callback for handling report ready events
   const handleReportReady = useCallback((reportData: ReportData) => {
     logReportForm('info', 'Report ready callback triggered');
@@ -633,8 +640,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
   // MOVED: Binary gate now comes after all success state checks
   if (!guestId && !reportCreated) {
-    console.log('🔄 [ReportForm] No guest ID found - showing fresh form');
-    
     return (
       <div className="space-y-0" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
         <form onSubmit={handleSubmit(onSubmit)}>

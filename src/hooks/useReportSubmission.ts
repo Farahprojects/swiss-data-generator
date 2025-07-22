@@ -127,7 +127,7 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
       // Handle the simplified response from the new "no-hop" architecture
       if (flowResponse.status === 'success') {
         // FREE FLOW: Report is free and being generated
-        console.log('🎯 FREE FLOW: Storing guest report ID before setting success state:', flowResponse.reportId);
+        // console.log('🎯 FREE FLOW: Storing guest report ID before setting success state:', flowResponse.reportId);
         storeGuestReportId(flowResponse.reportId);
         
         // FIX: Set both states in the same React tick to eliminate micro-race
