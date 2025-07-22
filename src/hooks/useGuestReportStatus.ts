@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useGuestReport } from './useGuestReport';
@@ -24,13 +23,13 @@ export const useGuestReportStatus = () => {
   const errorHandling = useErrorHandling();
   const pdfEmailMutation = usePdfEmail();
 
-  // Handle Swiss errors
+  // Handle Swiss errors - enhanced to work with new error flow
   const report = guestQuery.data;
-  if (report?.has_swiss_error && !error) {
+  if (report?.has_swiss_error && !error && !errorHandling.caseNumber) {
     const errorMessage = getSwissErrorMessage(report.report_type);
     setError(errorMessage);
     
-    if (!errorHandling.caseNumber && activeGuestId) {
+    if (activeGuestId) {
       errorHandling.handleError({
         guestReportId: activeGuestId,
         errorType: 'swiss_data_generation_failed',
@@ -75,7 +74,7 @@ export const useGuestReportStatus = () => {
     return data;
   }, [activeGuestId]);
 
-  const triggerErrorHandling = useCallback(async (guestReportId?: string) => {
+  const triggerErrorHandling = useCallback(async (guestReportId?: string, errorType?: string, errorMessage?: string) => {
     const reportId = guestReportId || activeGuestId;
     
     if (errorHandling.caseNumber) return; // Already handled
@@ -83,8 +82,8 @@ export const useGuestReportStatus = () => {
     if (!reportId) {
       await errorHandling.handleError({
         guestReportId: '',
-        errorType: 'missing_report_id',
-        errorMessage: 'No guest report ID available for error handling'
+        errorType: errorType || 'missing_report_id',
+        errorMessage: errorMessage || 'No guest report ID available for error handling'
       });
       setError('We are looking into this issue. Please reference your case number if you contact support.');
       return;
@@ -92,8 +91,8 @@ export const useGuestReportStatus = () => {
 
     await errorHandling.handleError({
       guestReportId: reportId,
-      errorType: 'timeout_no_report',
-      errorMessage: 'Report not found after timeout'
+      errorType: errorType || 'timeout_no_report',
+      errorMessage: errorMessage || 'Report not found after timeout'
     });
     setError('We are looking into this issue. Please reference your case number if you contact support.');
   }, [activeGuestId, errorHandling]);
