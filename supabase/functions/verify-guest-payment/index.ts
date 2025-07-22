@@ -11,34 +11,23 @@ const corsHeaders = {
 
 type ReportData = Record<string, any>;
 
-// Helper function to call the new translator-edge function
-async function translateViaEdge(payload: any, supabase: any): Promise<{ status: number; text: string }> {
+// Helper function to kick translator-edge for Swiss processing
+async function kickTranslator(guestReportId: string, reportData: ReportData, supabase: any): Promise<void> {
   try {
-    console.log("[verify-guest-payment] Calling translator-edge with payload:", JSON.stringify(payload, null, 2));
+    console.log(`🔄 [verify-guest-payment] Starting translator-edge for guest: ${guestReportId}`);
     
-    const { data, error } = await supabase.functions.invoke('translator-edge', {
-      body: payload
+    await supabase.functions.invoke('translator-edge', {
+      body: {
+        ...reportData,
+        is_guest: true,
+        user_id: guestReportId
+      }
     });
 
-    if (error) {
-      console.error("[verify-guest-payment] translator-edge error:", error);
-      return {
-        status: 500,
-        text: JSON.stringify({ error: error.message || 'Translation failed' })
-      };
-    }
-
-    console.log("[verify-guest-payment] translator-edge success");
-    return {
-      status: 200,
-      text: typeof data === 'string' ? data : JSON.stringify(data)
-    };
+    console.log(`✅ [verify-guest-payment] translator-edge invoked for guest: ${guestReportId}`);
   } catch (err) {
-    console.error("[verify-guest-payment] translator-edge exception:", err);
-    return {
-      status: 500,
-      text: JSON.stringify({ error: 'Translation service unavailable' })
-    };
+    console.error(`❌ [verify-guest-payment] translator-edge failed for guest: ${guestReportId}`, err);
+    // Don't throw - this is fire-and-forget
   }
 }
 
@@ -61,219 +50,15 @@ function logPaymentError(event: string, guestReportId: string, error: any, detai
   });
 }
 
-function transformToTranslatorPayload(productRow: any, reportData: ReportData): any {
-  const reportType = productRow.report_type;
-  const endpoint = productRow.endpoint;
-
-  // Map endpoint for AI reports - translator expects base endpoint, not generic "report"
-  let requestEndpoint = endpoint;
-  if (endpoint === 'report' && reportType) {
-    // Map report types to their base endpoints
-    if (reportType.startsWith('essence')) requestEndpoint = 'essence';
-    else if (reportType.startsWith('sync')) requestEndpoint = 'sync';
-    else if (reportType === 'flow') requestEndpoint = 'flow';
-    else if (reportType === 'mindset') requestEndpoint = 'mindset';
-    else if (reportType === 'monthly') requestEndpoint = 'monthly';
-    else if (reportType === 'focus') requestEndpoint = 'focus';
-    else if (reportType === 'return') requestEndpoint = 'return';
-  }
-
-  const basePayload: any = {
-    request: requestEndpoint,
-    source: 'guest'
-  };
-
-  // Handle moonphases report
-  if (endpoint === 'moonphases') {
-    if (reportData.returnYear) {
-      basePayload.year = parseInt(reportData.returnYear);
-    }
-    return basePayload;
-  }
-
-  // Handle positions report
-  if (endpoint === 'positions') {
-    basePayload.location = reportData.birthLocation;
-    basePayload.date = reportData.birthDate;
-    return basePayload;
-  }
-
-  // Person-based reports - Map field names to Swiss API format
-  if (reportData.name && reportData.birthDate && reportData.birthTime && reportData.birthLocation) {
-    basePayload.name = reportData.name;
-    basePayload.birth_date = reportData.birthDate;
-    basePayload.time = reportData.birthTime;
-    basePayload.location = reportData.birthLocation;
-  }
-
-  // Add timing fields if present
-  if (reportData.birthLatitude) basePayload.latitude = parseFloat(reportData.birthLatitude);
-  if (reportData.birthLongitude) basePayload.longitude = parseFloat(reportData.birthLongitude);
-  if (reportData.returnYear) basePayload.return_date = reportData.returnYear;
-
-  // Handle two-person reports (sync, compatibility)
-  if ((requestEndpoint === 'sync' || requestEndpoint === 'compatibility') && reportData.secondPersonName) {
-    basePayload.person_a = {
-      name: reportData.name,
-      birth_date: reportData.birthDate,
-      time: reportData.birthTime,
-      location: reportData.birthLocation
-    };
-    basePayload.person_b = {
-      name: reportData.secondPersonName,
-      birth_date: reportData.secondPersonBirthDate,
-      time: reportData.secondPersonBirthTime,
-      location: reportData.secondPersonBirthLocation
-    };
-
-    // Add coordinates if available
-    if (reportData.birthLatitude) basePayload.person_a.latitude = parseFloat(reportData.birthLatitude);
-    if (reportData.birthLongitude) basePayload.person_a.longitude = parseFloat(reportData.birthLongitude);
-    if (reportData.secondPersonLatitude) basePayload.person_b.latitude = parseFloat(reportData.secondPersonLatitude);
-    if (reportData.secondPersonLongitude) basePayload.person_b.longitude = parseFloat(reportData.secondPersonLongitude);
-
-    // Remove individual fields for two-person reports
-    delete basePayload.name;
-    delete basePayload.birth_date;
-    delete basePayload.time;
-    delete basePayload.location;
-    delete basePayload.latitude;
-    delete basePayload.longitude;
-  }
-
-  // Raw chart requests (astro-only endpoints) - no report type
-  if (!reportType) {
-    return basePayload;
-  }
-
-  // AI report-generating payloads - add report field based on type
-  if (reportType === 'essence' && reportData.essenceType) {
-    // Map essence types correctly
-    if (reportData.essenceType === 'personal-identity') {
-      basePayload.report = 'essence_personal';
-    } else if (reportData.essenceType === 'professional') {
-      basePayload.report = 'essence_professional';
-    } else if (reportData.essenceType === 'relational') {
-      basePayload.report = 'essence_relational';
-    } else {
-      basePayload.report = `essence_${reportData.essenceType}`;
-    }
-  } else if (reportType.startsWith('sync') && reportData.relationshipType) {
-    basePayload.report = `sync_${reportData.relationshipType}`;
-  } else {
-    // For other report types, use the report type directly
-    const reportGeneratingTypes = ['return', 'essence', 'flow', 'mindset', 'monthly', 'focus'];
-    if (reportGeneratingTypes.includes(reportType)) {
-      basePayload.report = reportType;
-    }
-  }
-
-  return basePayload;
-}
-
-async function buildTranslatorPayload(productId: string, reportData: ReportData, supabase: any): Promise<any> {
-  const { data: priceRow, error } = await supabase
+// Helper to determine if this is an AI report (needed for UI flags)
+async function isAiReport(productId: string, supabase: any): Promise<boolean> {
+  const { data: priceRow } = await supabase
     .from("price_list")
-    .select("*")
+    .select("endpoint")
     .eq("id", productId)
     .single();
-
-  if (error || !priceRow) {
-    throw new Error(`Unable to find product in price_list for id: ${productId}`);
-  }
-
-  return { 
-    payload: transformToTranslatorPayload(priceRow, reportData),
-    isAiReport: priceRow.endpoint === "report"
-  };
-}
-
-// Enhanced Swiss processing with retry logic and comprehensive error handling
-async function processSwissDataInBackground(guestReportId: string, reportData: ReportData, supabase: any, productId: string, maxRetries: number = 3) {
-  let swissData: any;
-  let swissError: string | null = null;
-  let attempt = 0;
-
-  logPaymentEvent("swiss_processing_started", guestReportId, { productId, maxRetries });
-
-  while (attempt < maxRetries) {
-    attempt++;
     
-    try {
-      logPaymentEvent("swiss_processing_attempt", guestReportId, { attempt, maxRetries });
-
-      const { payload } = await buildTranslatorPayload(productId, reportData, supabase);
-      const translatorPayload = {
-        ...payload,
-        is_guest: true,
-        user_id: guestReportId,
-      };
-
-      logPaymentEvent("translator_call_started", guestReportId, { 
-        attempt,
-        translatorPayload_keys: Object.keys(translatorPayload),
-        endpoint: payload.request
-      });
-
-      // Use the new translator-edge function
-      const translated = await translateViaEdge(translatorPayload, supabase);
-      swissData = JSON.parse(translated.text);
-
-      logPaymentEvent("translator_success", guestReportId, { 
-        attempt,
-        response_status: translated.status,
-        has_swiss_data: !!swissData?.swiss_data,
-        swiss_data_keys: swissData ? Object.keys(swissData) : null
-      });
-
-      logPaymentEvent("swiss_processing_completed", guestReportId, { attempt });
-      return; // Success, exit retry loop
-
-    } catch (err: any) {
-      swissError = err.message;
-      
-      logPaymentError("translator_attempt_failed", guestReportId, err, { 
-        attempt, 
-        maxRetries,
-        will_retry: attempt < maxRetries
-      });
-
-      // If this is the last attempt, handle the final failure
-      if (attempt >= maxRetries) {
-        logPaymentError("swiss_processing_failed_final", guestReportId, err, { 
-          total_attempts: attempt,
-          final_error: err.message
-        });
-
-        swissData = {
-          error: true,
-          error_message: err.message,
-          timestamp: new Date().toISOString(),
-          attempts: attempt
-        };
-
-        // Log comprehensive error to report_logs table
-        await supabase
-          .from("report_logs")
-          .insert({
-            user_id: guestReportId.toString(),
-            endpoint: reportData.request || reportData.reportType || 'unknown',
-            report_type: reportData.reportType,
-            status: 'failed',
-            error_message: `Final failure after ${attempt} attempts: ${err.message}`,
-            duration_ms: null,
-            engine_used: 'translator'
-          });
-
-        return; // Exit after final failure
-      }
-
-      // Wait before retry (exponential backoff)
-      const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 10000); // Max 10 seconds
-      logPaymentEvent("swiss_retry_delay", guestReportId, { attempt, waitTime, nextAttempt: attempt + 1 });
-      await new Promise(resolve => setTimeout(resolve, waitTime));
-    }
-  }
+  return priceRow?.endpoint === "report";
 }
 
 // Enhanced atomic promo code management
@@ -481,22 +266,22 @@ serve(async (req) => {
       const freeProductId = record.report_data?.product_id || record.report_data?.reportType || record.report_data?.request || "essence";
       
       // Determine if this is an AI report for free sessions
-      const { isAiReport } = await buildTranslatorPayload(freeProductId, record.report_data, supabase);
+      const isAiReportFlag = await isAiReport(freeProductId, supabase);
       
       // Update the guest report with is_ai_report flag
       await supabase
         .from("guest_reports")
-        .update({ is_ai_report: isAiReport })
+        .update({ is_ai_report: isAiReportFlag })
         .eq("id", record.id);
       
-      // Start Swiss processing in background with enhanced retry logic
+      // Start translator-edge processing (fire-and-forget)
       EdgeRuntime.waitUntil(
-        processSwissDataInBackground(record.id, record.report_data, supabase, freeProductId, 3)
+        kickTranslator(record.id, record.report_data, supabase)
       );
 
       logPaymentEvent("free_session_swiss_started", guestReportId, { 
         product_id: freeProductId,
-        is_ai_report: isAiReport,
+        is_ai_report: isAiReportFlag,
         processing_time_ms: Date.now() - startTime
       });
 
@@ -611,9 +396,9 @@ serve(async (req) => {
         // Handle promo code increment for legacy paid reports
         await handlePromoCodeIncrement(supabase, md.promo_code_used, guestReportId);
 
-        // Start Swiss processing for legacy session
+        // Start translator-edge processing for legacy session
         EdgeRuntime.waitUntil(
-          processSwissDataInBackground(guestReportId, legacyReportData, supabase, legacyReportData.product_id, 3)
+          kickTranslator(guestReportId, legacyReportData, supabase)
         );
 
         logPaymentEvent("legacy_payment_verification_completed", guestReportId, {
@@ -711,11 +496,11 @@ serve(async (req) => {
     });
 
     // Determine if this is an AI report based on price_list.endpoint
-    const { isAiReport } = await buildTranslatorPayload(productId, existingReport.report_data, supabase);
+    const isAiReportFlag = await isAiReport(productId, supabase);
 
     const updateData: any = {
       payment_status: "paid",
-      is_ai_report: isAiReport
+      is_ai_report: isAiReportFlag
     };
 
     // Update coach information if present in metadata (for backwards compatibility)
@@ -755,15 +540,15 @@ serve(async (req) => {
     logPaymentEvent("payment_status_updated", guestReportId, {
       old_status: "pending",
       new_status: "paid",
-      is_ai_report: isAiReport
+      is_ai_report: isAiReportFlag
     });
 
     // STAGE 2: Atomic promo code increment (only for paid reports)
     await handlePromoCodeIncrement(supabase, existingReport.promo_code_used, guestReportId);
 
-    // Start Swiss processing in background with enhanced retry logic
+    // Start translator-edge processing (fire-and-forget)
     EdgeRuntime.waitUntil(
-      processSwissDataInBackground(updatedReport.id, updatedReport.report_data, supabase, productId, 3)
+      kickTranslator(updatedReport.id, updatedReport.report_data, supabase)
     );
 
     const processingTimeMs = Date.now() - startTime;
