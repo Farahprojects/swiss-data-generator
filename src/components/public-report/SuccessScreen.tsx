@@ -33,20 +33,26 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
   // Handle report ready from parent component
   const handleReportReady = useCallback((reportData: ReportData) => {
-    logSuccessScreen('info', 'Report ready signal received');
+    logSuccessScreen('info', 'Report ready signal received, opening modal');
     setReportReady(true);
     setCountdownTime(0);
     
-    // Open modal with provided data
+    // Immediately trigger the modal opening
     if (onViewReport) {
+      logSuccessScreen('info', 'Calling onViewReport with report data');
       onViewReport(reportData);
+    } else {
+      logSuccessScreen('warn', 'onViewReport callback not available');
     }
   }, [onViewReport]);
 
-  // Register callback with parent component
+  // Register callback with parent component immediately
   useEffect(() => {
     if (onReportReady) {
+      logSuccessScreen('info', 'Registering handleReportReady callback with parent');
       onReportReady(handleReportReady);
+    } else {
+      logSuccessScreen('warn', 'onReportReady prop not provided');
     }
   }, [onReportReady, handleReportReady]);
 
@@ -62,7 +68,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
         logSuccessScreen('debug', 'Realtime message received from orchestrator', { payload });
         
         if (payload.payload && payload.payload.data) {
-          logSuccessScreen('info', 'Orchestrator sent report data, opening modal');
+          logSuccessScreen('info', 'Orchestrator sent report data, triggering handleReportReady');
           handleReportReady(payload.payload.data);
         } else {
           console.warn('❌ Orchestrator message missing data:', payload);
@@ -101,7 +107,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
         }
 
         if (data?.ready && data?.data) {
-          logSuccessScreen('info', 'Report is already ready, opening immediately');
+          logSuccessScreen('info', 'Report is already ready, triggering handleReportReady immediately');
           handleReportReady(data.data);
         } else {
           logSuccessScreen('debug', 'Report not ready yet, waiting for orchestrator');

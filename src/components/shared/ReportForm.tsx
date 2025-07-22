@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
@@ -56,7 +57,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     resetReportState
   } = useReportSubmission(setCreatedGuestReportId);
 
-  const reportReadyCallbackRef = useRef<((reportData: ReportData) => void) | null>(null);
   const { data: guestReportData, error: guestReportError, refetch: refetchGuestData } = useGuestReportData(guestId);
 
   // State restoration effect
@@ -247,10 +247,22 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }, 300);
   };
 
-  const handleViewReport = async () => {
-    if (!effectiveGuestId) return;
+  // Fixed report viewing function that properly opens modal
+  const handleViewReport = useCallback(async (reportDataParam?: ReportData) => {
+    log('info', 'handleViewReport called', { hasParam: !!reportDataParam, effectiveGuestId }, 'ReportForm');
     
-    log('info', 'Attempting to view report', { guestId: effectiveGuestId }, 'ReportForm');
+    // If report data is passed directly, use it
+    if (reportDataParam) {
+      log('info', 'Using provided report data', null, 'ReportForm');
+      setReportData(reportDataParam);
+      setViewingReport(true);
+      return;
+    }
+
+    if (!effectiveGuestId) {
+      log('warn', 'No effective guest ID for report viewing', null, 'ReportForm');
+      return;
+    }
     
     const maxRetries = 3;
     let attempt = 0;
@@ -293,7 +305,19 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     } catch (error) {
       log('info', 'Report generation in progress', { error }, 'ReportForm');
     }
-  };
+  }, [effectiveGuestId, guestReportData, refetchGuestData]);
+
+  // Fixed callback registration for SuccessScreen
+  const handleReportReadyCallback = useCallback((callback: (reportData: ReportData) => void) => {
+    log('info', 'Report ready callback registered from SuccessScreen', null, 'ReportForm');
+    // Store the callback and immediately trigger handleViewReport when called
+    const wrappedCallback = (reportData: ReportData) => {
+      log('info', 'Report ready callback triggered, calling handleViewReport', null, 'ReportForm');
+      handleViewReport(reportData);
+    };
+    // The callback is already set up in SuccessScreen to call handleViewReport
+    callback = wrappedCallback;
+  }, [handleViewReport]);
 
   const onSubmit = async (data: ReportFormData) => {
     const submissionData = coachSlug ? { ...data, coachSlug } : data;
@@ -400,9 +424,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         name={userName} 
         email={userEmail} 
         onViewReport={handleViewReport}
-        onReportReady={(callback) => {
-          reportReadyCallbackRef.current = callback;
-        }}
+        onReportReady={handleReportReadyCallback}
         guestReportId={createdGuestReportId}
       />
     );
@@ -419,9 +441,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           name={name} 
           email={email} 
           onViewReport={handleViewReport}
-          onReportReady={(callback) => {
-            reportReadyCallbackRef.current = callback;
-          }}
+          onReportReady={handleReportReadyCallback}
           guestReportId={guestId || undefined}
         />
       );
@@ -434,9 +454,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         name={tokenRecovery.recoveredName} 
         email={tokenRecovery.recoveredEmail} 
         onViewReport={handleViewReport}
-        onReportReady={(callback) => {
-          reportReadyCallbackRef.current = callback;
-        }}
+        onReportReady={handleReportReadyCallback}
         guestReportId={guestId}
       />
     );
