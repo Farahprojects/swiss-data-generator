@@ -1,4 +1,5 @@
 
+
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14?target=denonext";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=deno&deno-std=0.224.0";
@@ -10,32 +11,25 @@ const corsHeaders = {
 
 type ReportData = Record<string, any>;
 
-// Map reportType to translator-edge request format
-function mapReportTypeToRequest(reportType: string): string {
-  if (!reportType) return 'essence';
-  if (reportType.includes('essence')) return 'essence';
-  if (reportType.includes('sync')) return 'sync';
-  if (reportType.includes('flow')) return 'flow';
-  if (reportType.includes('mindset')) return 'mindset';
-  if (reportType.includes('monthly')) return 'monthly';
-  if (reportType.includes('focus')) return 'focus';
-  return reportType.toLowerCase();
-}
-
 // Helper function to kick translator-edge for Swiss processing
 async function kickTranslator(guestReportId: string, reportData: ReportData, supabase: any): Promise<void> {
   try {
     console.log(`🔄 [verify-guest-payment] Starting translator-edge for guest: ${guestReportId}`);
     
-    // Map reportType to request field that translator-edge expects
+    // Pass the report data directly to translator-edge - no transformation needed
+    // The data is already in the correct person_a/person_b structure from useReportSubmission
     const translatorPayload = {
       ...reportData,
-      request: reportData.request || mapReportTypeToRequest(reportData.reportType || reportData.product_id),
       is_guest: true,
       user_id: guestReportId
     };
     
-    console.log(`🔄 [verify-guest-payment] Translator payload:`, JSON.stringify(translatorPayload));
+    console.log(`🔄 [verify-guest-payment] Translator payload (structured):`, {
+      request: translatorPayload.request,
+      person_a: translatorPayload.person_a ? `name: ${translatorPayload.person_a.name}, birth_date: ${translatorPayload.person_a.birth_date}` : 'missing',
+      person_b: translatorPayload.person_b ? `name: ${translatorPayload.person_b.name}, birth_date: ${translatorPayload.person_b.birth_date}` : 'not provided',
+      user_id: translatorPayload.user_id
+    });
     
     await supabase.functions.invoke('translator-edge', {
       body: translatorPayload
@@ -201,6 +195,7 @@ serve(async (req) => {
         .eq("id", record.id);
       
       // Start translator-edge processing (fire-and-forget)
+      // Data is already in correct structure from useReportSubmission
       EdgeRuntime.waitUntil(
         kickTranslator(record.id, record.report_data, supabase)
       );
@@ -427,6 +422,7 @@ serve(async (req) => {
     console.log(`✅ [verify-guest-payment] Payment status updated to paid: ${guestReportId}`);
 
     // Start translator-edge processing (fire-and-forget)
+    // Data is already in correct structure from useReportSubmission
     EdgeRuntime.waitUntil(
       kickTranslator(updatedReport.id, updatedReport.report_data, supabase)
     );

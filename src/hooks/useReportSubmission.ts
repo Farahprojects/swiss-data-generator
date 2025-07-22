@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
@@ -46,14 +47,49 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
     setInlinePromoError(''); // Clear any previous errors
     
     try {
-      // Prepare report data for the server
+      // Transform flat form data into nested person_a/person_b structure for translator-edge
+      const person_a = {
+        name: data.name,
+        birth_date: data.birthDate,
+        birth_time: data.birthTime,
+        location: data.birthLocation,
+        latitude: data.birthLatitude,
+        longitude: data.birthLongitude,
+        place_id: data.birthPlaceId,
+        tz: '', // Will be inferred by translator-edge
+        house_system: ''
+      };
+
+      // Only include person_b if second person data exists
+      const person_b = data.secondPersonName ? {
+        name: data.secondPersonName,
+        birth_date: data.secondPersonBirthDate,
+        birth_time: data.secondPersonBirthTime,
+        location: data.secondPersonBirthLocation,
+        latitude: data.secondPersonLatitude,
+        longitude: data.secondPersonLongitude,
+        place_id: data.secondPersonPlaceId,
+        tz: '', // Will be inferred by translator-edge
+        house_system: ''
+      } : undefined;
+
+      // Prepare report data in the structure translator-edge expects
       const reportData = {
+        request: data.request || data.reportType || 'essence',
         reportType: data.request || data.reportType || 'standard',
-        request: data.request || '',
         relationshipType: data.relationshipType,
         essenceType: data.essenceType,
-        name: data.name,
         email: data.email,
+        returnYear: data.returnYear,
+        notes: data.notes,
+        product_id: data.request || data.reportType || 'essence',
+        
+        // Nested person structure for translator-edge
+        person_a,
+        person_b,
+        
+        // Legacy flat fields for backward compatibility (if needed by other systems)
+        name: data.name,
         birthDate: data.birthDate,
         birthTime: data.birthTime,
         birthLocation: data.birthLocation,
@@ -67,9 +103,13 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
         secondPersonLatitude: data.secondPersonLatitude,
         secondPersonLongitude: data.secondPersonLongitude,
         secondPersonPlaceId: data.secondPersonPlaceId,
-        returnYear: data.returnYear,
-        notes: data.notes,
       };
+
+      console.log('🔄 [useReportSubmission] Structured report data:', {
+        request: reportData.request,
+        person_a: reportData.person_a,
+        person_b: reportData.person_b
+      });
 
       // Single call to initiate-report-flow - it handles everything server-side
       const { data: flowResponse, error } = await supabase.functions.invoke('initiate-report-flow', {
