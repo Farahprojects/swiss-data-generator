@@ -82,33 +82,14 @@ export function toUtcISO(parts: { date?: string; time?: string; tz?: string; loc
   const actualTime = parts.birth_time || parts.time;
 
   if (actualDate) {
-    if (actualTime && parts.location) {
+    if (actualTime) {
       const birthDate = new Date(actualDate);
       if (isNaN(birthDate.getTime())) throw new Error("Invalid date");
       const year = birthDate.getUTCFullYear();
       const month = birthDate.getUTCMonth();
       const day = birthDate.getUTCDate();
       const [H, M] = actualTime.split(":" as const).map(Number);
-      let tz = parts.tz || "UTC";
-      const loc = (parts.location || "").toLowerCase();
-      const quick: Record<string,string> = {
-        melbourne: "Australia/Melbourne",
-        victoria:  "Australia/Melbourne",
-        sydney:    "Australia/Sydney",
-        brisbane:  "Australia/Brisbane",
-        perth:     "Australia/Perth",
-        adelaide:  "Australia/Adelaide",
-        darwin:    "Australia/Darwin",
-        hobart:    "Australia/Hobart",
-        "new york": "America/New_York",
-        nyc:        "America/New_York",
-        chicago:   "America/Chicago",
-        "los angeles": "America/Los_Angeles",
-        london:    "Europe/London",
-        paris:     "Europe/Paris",
-        tokyo:     "Asia/Tokyo",
-      };
-      for (const k in quick) if (loc.includes(k)) { tz = quick[k]; break; }
+      const tz = parts.tz || "UTC";
       const provisional = new Date(Date.UTC(year, month, day, H, M));
       try {
         const fmt = new Intl.DateTimeFormat("en-US", {
@@ -237,7 +218,7 @@ serve(async (req)=>{
         longitude:  src.longitude??src.lon??null,
         tz:         src.tz||src.timezone||"",
         name:       src.name||"",
-        house_system: src.house_system||src.hsys||"P",
+        house_system: src.house_system||src.hsys||"",
       };
     }
     function normaliseBody(input:any){
@@ -306,7 +287,7 @@ serve(async (req)=>{
   }catch(err){
     const msg = (err as Error).message;
     console.error(`[translator-edge-${reqId}]`, msg);
-    await logTranslator({ request_type:requestType, request_payload:"n/a", swiss_data:{error:msg}, swiss_status:500, processing_ms:Date.now()-t0, error:msg, google_geo, translator_payload:null, user_id:undefined, skip:skipLogging });
+    await logTranslator({ request_type:requestType, request_payload:"n/a", swiss_data:{error:msg}, swiss_status:500, processing_ms:Date.now()-t0, error:msg, google_geo:googleGeo, translator_payload:null, user_id:undefined, skip:skipLogging });
     return new Response(JSON.stringify({ error:msg }),{status:500,headers:corsHeaders});
   }
 });
