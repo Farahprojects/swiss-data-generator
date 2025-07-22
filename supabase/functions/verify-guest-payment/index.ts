@@ -1,4 +1,3 @@
-// update
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14?target=denonext";
@@ -31,25 +30,6 @@ async function kickTranslator(guestReportId: string, reportData: ReportData, sup
   }
 }
 
-// Enhanced logging function with structured format
-function logPaymentEvent(event: string, guestReportId: string, details: any = {}) {
-  console.log(`🔄 [VERIFY-PAYMENT-V3] ${event}`, {
-    timestamp: new Date().toISOString(),
-    guestReportId,
-    ...details
-  });
-}
-
-// Enhanced error logging function
-function logPaymentError(event: string, guestReportId: string, error: any, details: any = {}) {
-  console.error(`❌ [VERIFY-PAYMENT-V3] ${event}`, {
-    timestamp: new Date().toISOString(),
-    guestReportId,
-    error: error.message || error,
-    ...details
-  });
-}
-
 // Helper to determine if this is an AI report (needed for UI flags)
 async function isAiReport(productId: string, supabase: any): Promise<boolean> {
   const { data: priceRow } = await supabase
@@ -61,74 +41,11 @@ async function isAiReport(productId: string, supabase: any): Promise<boolean> {
   return priceRow?.endpoint === "report";
 }
 
-// Enhanced atomic promo code management
-async function handlePromoCodeIncrement(supabase: any, promoCode: string, guestReportId: string): Promise<void> {
-  if (!promoCode) return;
-
-  logPaymentEvent("promo_increment_started", guestReportId, { promoCode });
-
-  try {
-    // Use a transaction-like approach with optimistic locking
-    const { data: currentPromo, error: fetchError } = await supabase
-      .from('promo_codes')
-      .select('id, times_used, max_uses, is_active')
-      .eq('code', promoCode.toUpperCase())
-      .single();
-
-    if (fetchError || !currentPromo) {
-      logPaymentError("promo_not_found_for_increment", guestReportId, fetchError, { promoCode });
-      return;
-    }
-
-    // Validate promo code is still valid
-    if (!currentPromo.is_active) {
-      logPaymentError("promo_inactive_during_increment", guestReportId, new Error("Promo code became inactive"), { promoCode });
-      return;
-    }
-
-    if (currentPromo.max_uses && currentPromo.times_used >= currentPromo.max_uses) {
-      logPaymentError("promo_limit_reached_during_increment", guestReportId, 
-        new Error("Promo code limit reached"), { 
-        promoCode, 
-        times_used: currentPromo.times_used, 
-        max_uses: currentPromo.max_uses 
-      });
-      return;
-    }
-
-    // Increment usage count
-    const { error: updateError } = await supabase
-      .from('promo_codes')
-      .update({ 
-        times_used: currentPromo.times_used + 1 
-      })
-      .eq('id', currentPromo.id)
-      .eq('times_used', currentPromo.times_used); // Optimistic locking
-
-    if (updateError) {
-      logPaymentError("promo_increment_failed", guestReportId, updateError, { promoCode });
-      return;
-    }
-
-    logPaymentEvent("promo_increment_success", guestReportId, { 
-      promoCode, 
-      old_usage: currentPromo.times_used, 
-      new_usage: currentPromo.times_used + 1 
-    });
-
-  } catch (error) {
-    logPaymentError("promo_increment_exception", guestReportId, error, { promoCode });
-  }
-}
-
 // LEGACY: Create guest_reports record from Stripe metadata (backward compatibility)
 async function createGuestReportFromLegacyMetadata(sessionId: string, session: any, supabase: any): Promise<string> {
   const md = session.metadata ?? {};
   
-  logPaymentEvent("legacy_guest_report_creation", sessionId, {
-    metadata_keys: Object.keys(md),
-    customer_email: session.customer_details?.email
-  });
+  console.log(`🔄 [verify-guest-payment] Creating legacy guest report for session: ${sessionId}`);
 
   // Extract report data from Stripe metadata (legacy format)
   const reportData = {
@@ -173,7 +90,7 @@ async function createGuestReportFromLegacyMetadata(sessionId: string, session: a
   if (insertError) {
     // Check if it's a unique constraint violation (already exists)
     if (insertError.message?.includes('duplicate') || insertError.message?.includes('unique')) {
-      logPaymentEvent("legacy_guest_report_already_exists", sessionId);
+      console.log(`🔄 [verify-guest-payment] Legacy guest report already exists for session: ${sessionId}`);
       
       // Fetch existing record
       const { data: existingReport, error: fetchError } = await supabase
@@ -192,10 +109,7 @@ async function createGuestReportFromLegacyMetadata(sessionId: string, session: a
     throw new Error(`Failed to create legacy guest report: ${insertError.message}`);
   }
 
-  logPaymentEvent("legacy_guest_report_created", guestReport.id, {
-    sessionId,
-    reportType: reportData.reportType
-  });
+  console.log(`✅ [verify-guest-payment] Legacy guest report created: ${guestReport.id}`);
 
   return guestReport.id;
 }
@@ -213,7 +127,7 @@ serve(async (req) => {
     const { sessionId } = await req.json();
     if (!sessionId) throw new Error("Session ID is required");
 
-    logPaymentEvent("verification_started", sessionId, { sessionId });
+    console.log(`🔄 [verify-guest-payment] Starting verification for session: ${sessionId}`);
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -224,7 +138,7 @@ serve(async (req) => {
     const isFree = sessionId.startsWith("free_");
 
     if (isFree) {
-      logPaymentEvent("free_session_processing", sessionId);
+      console.log(`🔄 [verify-guest-payment] Processing free session: ${sessionId}`);
 
       const { data: record, error } = await supabase
         .from("guest_reports")
@@ -233,22 +147,16 @@ serve(async (req) => {
         .single();
 
       if (error || !record) {
-        logPaymentError("free_session_not_found", sessionId, error);
+        console.error(`❌ [verify-guest-payment] Free session not found: ${sessionId}`, error);
         throw new Error("Free session not found");
       }
 
       guestReportId = record.id;
-      logPaymentEvent("free_session_found", guestReportId, { 
-        has_translator_log: !!record.translator_log_id,
-        payment_status: record.payment_status 
-      });
+      console.log(`✅ [verify-guest-payment] Free session found: ${guestReportId}`);
 
-      // STAGE 2: Enhanced idempotency check for free sessions
+      // Enhanced idempotency check for free sessions
       if (record.translator_log_id) {
-        logPaymentEvent("free_session_already_processed", guestReportId, { 
-          translator_log_id: record.translator_log_id,
-          processing_time_ms: Date.now() - startTime
-        });
+        console.log(`🔄 [verify-guest-payment] Free session already processed: ${guestReportId}`);
 
         return new Response(JSON.stringify({
           success: true,
@@ -279,11 +187,7 @@ serve(async (req) => {
         kickTranslator(record.id, record.report_data, supabase)
       );
 
-      logPaymentEvent("free_session_swiss_started", guestReportId, { 
-        product_id: freeProductId,
-        is_ai_report: isAiReportFlag,
-        processing_time_ms: Date.now() - startTime
-      });
+      console.log(`✅ [verify-guest-payment] Free session Swiss processing started: ${guestReportId}`);
 
       return new Response(JSON.stringify({
         success: true,
@@ -292,13 +196,13 @@ serve(async (req) => {
         reportData: record.report_data,
         guestReportId: record.id,
         swissProcessing: true,
-        message: "Free session verified; Swiss processing started with enhanced retry logic",
+        message: "Free session verified; Swiss processing started",
         processing_time_ms: Date.now() - startTime
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // PAID FLOW - Enhanced verification with Stripe
-    logPaymentEvent("stripe_verification_started", sessionId);
+    console.log(`🔄 [verify-guest-payment] Starting Stripe verification for: ${sessionId}`);
 
     const stripe = new Stripe(
       Deno.env.get("STRIPE_SECRET_KEY") ?? "",
@@ -307,22 +211,18 @@ serve(async (req) => {
 
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     
-    logPaymentEvent("stripe_session_retrieved", sessionId, { 
-      payment_status: session.payment_status,
-      amount_total: session.amount_total,
-      currency: session.currency
-    });
+    console.log(`✅ [verify-guest-payment] Stripe session retrieved: ${sessionId}, status: ${session.payment_status}`);
 
     if (session.payment_status !== "paid") {
-      logPaymentError("payment_not_completed", sessionId, new Error(`Payment status: ${session.payment_status}`));
+      console.error(`❌ [verify-guest-payment] Payment not completed: ${session.payment_status}`);
       throw new Error(`Payment not completed (status: ${session.payment_status})`);
     }
 
     const md = session.metadata ?? {};
     
-    // Handle service purchases (unchanged from Stage 1)
+    // Handle service purchases
     if (md.purchase_type === "service") {
-      logPaymentEvent("service_purchase_detected", sessionId);
+      console.log(`🔄 [verify-guest-payment] Service purchase detected: ${sessionId}`);
 
       const { error: serviceInsertErr } = await supabase
         .from("service_purchases")
@@ -358,19 +258,13 @@ serve(async (req) => {
     guestReportId = md.guest_report_id;
 
     if (!guestReportId) {
-      logPaymentEvent("legacy_session_detected", sessionId, {
-        metadata_keys: Object.keys(md),
-        legacy_compatibility_mode: true
-      });
+      console.log(`🔄 [verify-guest-payment] Legacy session detected: ${sessionId}`);
 
       // LEGACY FLOW: Create guest_reports record from Stripe metadata
       try {
         guestReportId = await createGuestReportFromLegacyMetadata(sessionId, session, supabase);
         
-        logPaymentEvent("legacy_guest_report_ready", guestReportId, {
-          sessionId,
-          legacy_mode: true
-        });
+        console.log(`✅ [verify-guest-payment] Legacy guest report ready: ${guestReportId}`);
 
         // Extract product_id and report_data for legacy session
         const legacyReportData = {
@@ -393,20 +287,12 @@ serve(async (req) => {
           returnYear: md.returnYear || ''
         };
 
-        // Handle promo code increment for legacy paid reports
-        await handlePromoCodeIncrement(supabase, md.promo_code_used, guestReportId);
-
         // Start translator-edge processing for legacy session
         EdgeRuntime.waitUntil(
           kickTranslator(guestReportId, legacyReportData, supabase)
         );
 
-        logPaymentEvent("legacy_payment_verification_completed", guestReportId, {
-          sessionId,
-          legacy_mode: true,
-          swiss_processing_started: true,
-          processing_time_ms: Date.now() - startTime
-        });
+        console.log(`✅ [verify-guest-payment] Legacy payment verification completed: ${guestReportId}`);
 
         return new Response(JSON.stringify({
           success: true,
@@ -418,18 +304,18 @@ serve(async (req) => {
           guestReportId: guestReportId,
           swissProcessing: true,
           legacy: true,
-          message: "LEGACY: Payment verified with backward compatibility; Swiss processing started",
+          message: "LEGACY: Payment verified; Swiss processing started",
           processing_time_ms: Date.now() - startTime
         }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
       } catch (legacyError: any) {
-        logPaymentError("legacy_session_failed", sessionId, legacyError);
+        console.error(`❌ [verify-guest-payment] Legacy session failed: ${sessionId}`, legacyError);
         throw new Error(`Legacy session processing failed: ${legacyError.message}`);
       }
     }
 
     // NEW STAGE 1 FLOW: guest_report_id exists in metadata
-    logPaymentEvent("stage1_session_detected", guestReportId, { sessionId });
+    console.log(`🔄 [verify-guest-payment] Stage 1 session detected: ${guestReportId}`);
 
     // STAGE 1: Query database for all necessary data
     const { data: existingReport, error: queryError } = await supabase
@@ -439,26 +325,15 @@ serve(async (req) => {
       .single();
 
     if (queryError || !existingReport) {
-      logPaymentError("guest_report_not_found", guestReportId, queryError);
+      console.error(`❌ [verify-guest-payment] Guest report not found: ${guestReportId}`, queryError);
       throw new Error(`Guest report not found in database: ${guestReportId}`);
     }
 
-    logPaymentEvent("guest_report_found", guestReportId, {
-      payment_status: existingReport.payment_status,
-      has_product_id: !!(existingReport.report_data?.product_id),
-      promo_code_used: existingReport.promo_code_used || 'none'
-    });
+    console.log(`✅ [verify-guest-payment] Guest report found: ${guestReportId}, payment_status: ${existingReport.payment_status}`);
 
-    // STAGE 2: CRITICAL IDEMPOTENCY CHECK - Enhanced with comprehensive logging
+    // CRITICAL IDEMPOTENCY CHECK
     if (existingReport.payment_status === "paid") {
-      logPaymentEvent("payment_already_processed_idempotent", guestReportId, {
-        existing_payment_status: existingReport.payment_status,
-        stripe_session_id: existingReport.stripe_session_id,
-        amount_paid: existingReport.amount_paid,
-        has_report: existingReport.has_report,
-        processing_time_ms: Date.now() - startTime,
-        idempotent_response: true
-      });
+      console.log(`🔄 [verify-guest-payment] Payment already processed (idempotent): ${guestReportId}`);
 
       return new Response(JSON.stringify({
         success: true,
@@ -470,15 +345,13 @@ serve(async (req) => {
         guestReportId: existingReport.id,
         message: "Payment already verified and processed (idempotent response)",
         idempotent: true,
-        processing_time_ms: Date.now() - startTime,
-        stage2_enhanced: true
+        processing_time_ms: Date.now() - startTime
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // STAGE 2: Validate payment status transition
+    // Validate payment status transition
     if (existingReport.payment_status !== "pending") {
-      logPaymentError("invalid_payment_status_transition", guestReportId, 
-        new Error(`Invalid status transition from ${existingReport.payment_status} to paid`));
+      console.error(`❌ [verify-guest-payment] Invalid payment status transition: ${existingReport.payment_status}`);
       throw new Error(`Invalid payment status: expected 'pending', got '${existingReport.payment_status}'`);
     }
 
@@ -486,14 +359,11 @@ serve(async (req) => {
     const productId = existingReport.report_data?.product_id;
 
     if (!productId) {
-      logPaymentError("missing_product_id", guestReportId, new Error("Missing product_id in database"));
+      console.error(`❌ [verify-guest-payment] Missing product_id: ${guestReportId}`);
       throw new Error("Missing product_id in guest_reports.report_data - database corruption");
     }
 
-    logPaymentEvent("payment_processing_started", guestReportId, { 
-      product_id: productId,
-      promo_code: existingReport.promo_code_used || 'none'
-    });
+    console.log(`🔄 [verify-guest-payment] Processing payment for product: ${productId}`);
 
     // Determine if this is an AI report based on price_list.endpoint
     const isAiReportFlag = await isAiReport(productId, supabase);
@@ -517,7 +387,7 @@ serve(async (req) => {
       if (coachData?.coach_id) updateData.coach_id = coachData.coach_id;
     }
 
-    // STAGE 2: Atomic operation - Update payment status first
+    // Atomic operation - Update payment status
     const { data: updatedReport, error: updateErr } = await supabase
       .from("guest_reports")
       .update(updateData)
@@ -527,24 +397,16 @@ serve(async (req) => {
       .single();
 
     if (updateErr) {
-      logPaymentError("payment_status_update_failed", guestReportId, updateErr);
+      console.error(`❌ [verify-guest-payment] Payment status update failed: ${guestReportId}`, updateErr);
       throw new Error(`DB update failed: ${updateErr.message}`);
     }
 
     if (!updatedReport) {
-      logPaymentError("concurrent_payment_processing", guestReportId, 
-        new Error("No rows updated - possible concurrent processing"));
+      console.error(`❌ [verify-guest-payment] Concurrent payment processing: ${guestReportId}`);
       throw new Error("Payment may have been processed concurrently");
     }
 
-    logPaymentEvent("payment_status_updated", guestReportId, {
-      old_status: "pending",
-      new_status: "paid",
-      is_ai_report: isAiReportFlag
-    });
-
-    // STAGE 2: Atomic promo code increment (only for paid reports)
-    await handlePromoCodeIncrement(supabase, existingReport.promo_code_used, guestReportId);
+    console.log(`✅ [verify-guest-payment] Payment status updated to paid: ${guestReportId}`);
 
     // Start translator-edge processing (fire-and-forget)
     EdgeRuntime.waitUntil(
@@ -553,12 +415,7 @@ serve(async (req) => {
 
     const processingTimeMs = Date.now() - startTime;
 
-    logPaymentEvent("payment_verification_completed", guestReportId, {
-      final_status: "paid",
-      swiss_processing_started: true,
-      processing_time_ms: processingTimeMs,
-      stage2_enhanced: true
-    });
+    console.log(`✅ [verify-guest-payment] Payment verification completed: ${guestReportId}, processing_time: ${processingTimeMs}ms`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -569,26 +426,20 @@ serve(async (req) => {
       reportData: updatedReport.report_data,
       guestReportId: updatedReport.id,
       swissProcessing: true,
-      message: "STAGE 2: Payment verified with enhanced idempotency; Swiss processing started",
-      stage2_enhanced: true,
+      message: "Payment verified; Swiss processing started",
       processing_time_ms: processingTimeMs
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (err: any) {
     const processingTimeMs = Date.now() - startTime;
     
-    logPaymentError("verification_failed", guestReportId, err, {
-      processing_time_ms: processingTimeMs,
-      stage: "stage2_enhanced_with_legacy"
-    });
+    console.error(`❌ [verify-guest-payment] Verification failed: ${guestReportId}`, err);
 
     return new Response(JSON.stringify({
       success: false,
       verified: false,
       error: err.message,
-      processing_time_ms: processingTimeMs,
-      stage2_enhanced: true,
-      legacy_compatible: true
+      processing_time_ms: processingTimeMs
     }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
