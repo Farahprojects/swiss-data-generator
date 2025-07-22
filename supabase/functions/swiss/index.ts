@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { translate } from "../_shared/translator.ts";
 
 // Initialize Supabase client
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -16,6 +15,37 @@ const corsHeaders = {
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: corsHeaders });
+
+// Helper function to call the new translator-edge function
+async function translateViaEdge(payload: any): Promise<{ status: number; text: string }> {
+  try {
+    console.log("[swiss] Calling translator-edge with payload:", JSON.stringify(payload, null, 2));
+    
+    const { data, error } = await sb.functions.invoke('translator-edge', {
+      body: payload
+    });
+
+    if (error) {
+      console.error("[swiss] translator-edge error:", error);
+      return {
+        status: 500,
+        text: JSON.stringify({ error: error.message || 'Translation failed' })
+      };
+    }
+
+    console.log("[swiss] translator-edge success:", data);
+    return {
+      status: 200,
+      text: typeof data === 'string' ? data : JSON.stringify(data)
+    };
+  } catch (err) {
+    console.error("[swiss] translator-edge exception:", err);
+    return {
+      status: 500,
+      text: JSON.stringify({ error: 'Translation service unavailable' })
+    };
+  }
+}
 
 // Log helper function that writes to swissdebuglogs table (lowercase)
 async function logSwissDebug(request: any, responseStatus: number, responseText: string) {
@@ -246,7 +276,8 @@ serve(async (req) => {
     }
   }
 
-  const { status, text } = await translate(mergedPayload);
+  // Use the new translator-edge function instead of the old translate function
+  const { status, text } = await translateViaEdge(mergedPayload);
 
   // Log ALL Swiss API requests to swissdebuglogs (simplified logic)
   await logSwissDebug({

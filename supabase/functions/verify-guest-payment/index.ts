@@ -3,7 +3,6 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14?target=denonext";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=deno&deno-std=0.224.0";
-import { translate } from "../_shared/translator.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,6 +10,37 @@ const corsHeaders = {
 };
 
 type ReportData = Record<string, any>;
+
+// Helper function to call the new translator-edge function
+async function translateViaEdge(payload: any, supabase: any): Promise<{ status: number; text: string }> {
+  try {
+    console.log("[verify-guest-payment] Calling translator-edge with payload:", JSON.stringify(payload, null, 2));
+    
+    const { data, error } = await supabase.functions.invoke('translator-edge', {
+      body: payload
+    });
+
+    if (error) {
+      console.error("[verify-guest-payment] translator-edge error:", error);
+      return {
+        status: 500,
+        text: JSON.stringify({ error: error.message || 'Translation failed' })
+      };
+    }
+
+    console.log("[verify-guest-payment] translator-edge success");
+    return {
+      status: 200,
+      text: typeof data === 'string' ? data : JSON.stringify(data)
+    };
+  } catch (err) {
+    console.error("[verify-guest-payment] translator-edge exception:", err);
+    return {
+      status: 500,
+      text: JSON.stringify({ error: 'Translation service unavailable' })
+    };
+  }
+}
 
 // Enhanced logging function with structured format
 function logPaymentEvent(event: string, guestReportId: string, details: any = {}) {
@@ -185,7 +215,8 @@ async function processSwissDataInBackground(guestReportId: string, reportData: R
         endpoint: payload.request
       });
 
-      const translated = await translate(translatorPayload);
+      // Use the new translator-edge function
+      const translated = await translateViaEdge(translatorPayload, supabase);
       swissData = JSON.parse(translated.text);
 
       logPaymentEvent("translator_success", guestReportId, { 
