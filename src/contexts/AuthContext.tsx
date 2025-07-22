@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
 import { useNavigationState } from '@/contexts/NavigationStateContext';
 import { getAbsoluteUrl } from '@/utils/urlUtils';
+import { log } from '@/utils/logUtils';
 
 import { authService } from '@/services/authService';
 import { SUPABASE_CONFIG } from '@/config/supabase-config';
@@ -82,13 +83,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (initializedRef.current) return;
     initializedRef.current = true;
 
-    console.log('🔐 Initializing AuthContext with enhanced session management');
+    log('debug', 'Initializing AuthContext with enhanced session management', null, 'auth');
 
     // Set up auth state listener
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, supaSession) => {
-      console.log('🔄 Auth state change:', event, !!supaSession);
+      log('debug', 'Auth state change', { event, hasSession: !!supaSession }, 'auth');
       
       // Set user and session state immediately to avoid race conditions
       setUser(supaSession?.user ?? null);
@@ -139,7 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
      * Bootstrap existing session ONLY ONCE
      * ────────────────────────────*/
     supabase.auth.getSession().then(({ data: { session: supaSession } }) => {
-      console.log('📋 Initial session check:', !!supaSession);
+      log('debug', 'Initial session check', { hasSession: !!supaSession }, 'auth');
       
       setUser(supaSession?.user ?? null);
       setSession(supaSession);
@@ -150,7 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => {
-      console.log('🧹 Cleaning up auth subscription');
+      log('debug', 'Cleaning up auth subscription', null, 'auth');
       subscription.unsubscribe();
     };
   }, []);

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { log } from '@/utils/logUtils';
 
 interface PriceData {
   id: string;
@@ -41,7 +42,7 @@ export const PricingProvider: React.FC<PricingProviderProps> = ({ children }) =>
         setIsLoading(true);
         setError(null);
         
-        console.log('🏷️ Fetch prices');
+        log('debug', 'Fetch prices', null, 'pricing');
         
         const { data, error: fetchError } = await supabase
           .from('price_list')

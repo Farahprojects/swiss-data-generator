@@ -27,6 +27,8 @@ const defaultConfig: LogConfig = {
     SuccessScreen: false, // Disable verbose SuccessScreen logs
     orchestrator: true, // Keep orchestrator logs for debugging
     swissFormatter: false, // Disable verbose Swiss formatter logs
+    pricing: false, // Disable verbose pricing logs
+    auth: false, // Disable verbose auth logs
   }
 };
 
@@ -116,6 +118,8 @@ export const enableVerboseLogging = () => {
       SuccessScreen: true,
       orchestrator: true,
       swissFormatter: true,
+      pricing: true,
+      auth: true,
     }
   });
   console.log('🔊 Verbose logging enabled');
@@ -129,6 +133,8 @@ export const disableVerboseLogging = () => {
       SuccessScreen: false,
       orchestrator: true,
       swissFormatter: false,
+      pricing: false,
+      auth: false,
     }
   });
   console.log('🔇 Verbose logging disabled');
