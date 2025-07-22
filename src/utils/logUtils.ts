@@ -167,8 +167,10 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
     }
   };
   
-  // Show current status on load
-  console.log('📝 Log utils loaded. Run toggleLogs() to toggle verbose logging.');
+  // Show current status on load (only in development)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('📝 Log utils loaded. Run toggleLogs() to toggle verbose logging.');
+  }
 }
 
 /**

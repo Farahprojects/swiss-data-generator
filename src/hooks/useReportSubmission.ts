@@ -80,7 +80,12 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
       });
 
       if (error) {
-        console.log('Flow error:', error);
+        // Log error details for debugging but don't expose sensitive info
+        console.error('Report submission failed:', {
+          status: error.status,
+          message: error.message,
+          hasContext: !!error.context
+        });
         
         // Extract error message from response
         let errorMessage = '';
@@ -147,10 +152,7 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
         
       } else if (flowResponse.status === 'payment_required') {
         // PAID FLOW: Server calculated secure price and created Stripe checkout
-        console.log('Redirecting to secure Stripe checkout:', {
-          stripeUrl: flowResponse.stripeUrl ? 'URL_PROVIDED' : 'NO_URL',
-          finalAmount: flowResponse.finalAmount
-        });
+        console.log('Redirecting to secure Stripe checkout');
 
         if (!flowResponse.stripeUrl) {
           toast({
