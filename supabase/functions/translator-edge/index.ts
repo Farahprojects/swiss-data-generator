@@ -61,6 +61,9 @@ const baseSchema = z.object({
   // Accept if `local` is present (complete timestamp)
   if (v.local) return true;
   
+  // If person_a exists, skip the date/time requirement
+  if (v.person_a) return true;
+  
   // Accept if we have proper birth date + time combination
   const hasDate = v.date || v.birth_date;
   const hasTime = v.time || v.birth_time;
@@ -475,13 +478,27 @@ serve(async (req) => {
     if (canon === "sync" && parsed.person_a && parsed.person_b) {
       console.log(`[translator-edge-${reqId}] Processing sync request with person_a and person_b`);
       
-      // Process person_a
-      const { data: personAWithLatLon, googleGeoUsed: geoUsedA } = await ensureLatLon(parsed.person_a);
-      const normalizedPersonA = normalise(personAWithLatLon);
-      
-      // Process person_b  
-      const { data: personBWithLatLon, googleGeoUsed: geoUsedB } = await ensureLatLon(parsed.person_b);
-      const normalizedPersonB = normalise(personBWithLatLon);
+      // ── Person A ──────────────────────────────────────────────
+      const { data: personAWithLatLon, googleGeoUsed: geoUsedA } =
+        await ensureLatLon(parsed.person_a);
+      const tzA  = await inferTimezone(personAWithLatLon);
+      const utcA = toUtcISO({ ...personAWithLatLon, tz: tzA });
+      const normalizedPersonA = {
+        ...normalise(personAWithLatLon),
+        utc: utcA,
+        tz : tzA || 'UTC'
+      };
+
+      // ── Person B ──────────────────────────────────────────────
+      const { data: personBWithLatLon, googleGeoUsed: geoUsedB } =
+        await ensureLatLon(parsed.person_b);
+      const tzB  = await inferTimezone(personBWithLatLon);
+      const utcB = toUtcISO({ ...personBWithLatLon, tz: tzB });
+      const normalizedPersonB = {
+        ...normalise(personBWithLatLon),
+        utc: utcB,
+        tz : tzB || 'UTC'
+      };
       
       googleGeo = geoUsedA || geoUsedB;
       
