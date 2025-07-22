@@ -10,7 +10,7 @@ const SB_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const GEO_KEY = Deno.env.get("GOOGLE_API_KEY")!;
 const GEO_TTL_MIN = +(Deno.env.get("GEOCODE_TTL_MIN") ?? "1440");
 const GEO_TABLE = Deno.env.get("GEOCODE_CACHE_TABLE") ?? "geo_cache";
-const VERSION = "translator-edge v3.0 (2025‑07‑22)";
+const VERSION = "translator-edge v3.1 (2025‑07‑22)";
 
 const sb = createClient(SB_URL, SB_KEY);
 
@@ -22,17 +22,25 @@ const corsHeaders = {
 };
 
 /*──────────────────── schema & utils --------------------------------------*/
-// Accepted request keys for a single‑person chart request
+// Updated schema to handle both time and birth_time for backward compatibility
 const baseSchema = z.object({
   request: z.string().nonempty(),
 
-  // Any of the following triads is acceptable (Zod `refine` below enforces):
+  // Date fields
   date: z.string().optional(), // YYYY‑MM‑DD
-  time: z.string().optional(), // HH:MM (24‑h)
+  birth_date: z.string().optional(), // YYYY‑MM‑DD
+
+  // Time fields - accept both for backward compatibility
+  time: z.string().optional(), // HH:MM (24‑h) - legacy
+  birth_time: z.string().optional(), // HH:MM (24‑h) - preferred
+
+  // Timezone
   tz: z.string().optional(), // IANA tz name e.g. "Australia/Melbourne"
 
+  // Complete timestamp
   local: z.string().optional(), // ISO‑8601 with offset e.g. 1981‑07‑20T06:36:00+10:00
 
+  // Location fields
   latitude: z.number().optional(),
   longitude: z.number().optional(),
   location: z.string().optional(), // free‑form place name
@@ -45,23 +53,29 @@ const baseSchema = z.object({
 
   // Add support for all existing fields that might be passed
   name: z.string().optional(),
-  birth_date: z.string().optional(),
   person_a: z.any().optional(),
   person_b: z.any().optional(),
   year: z.number().optional(),
   return_date: z.string().optional(),
 }).refine((v) => {
-  // Accept if `local` is present OR (date+time) present OR birth_date present
+  // Accept if `local` is present (complete timestamp)
   if (v.local) return true;
-  if (v.date && v.time) return true;
-  if (v.birth_date) return true;
+  
+  // Accept if we have proper birth date + time combination
+  const hasDate = v.date || v.birth_date;
+  const hasTime = v.time || v.birth_time;
+  if (hasDate && hasTime) return true;
+  
   // For some requests like moonphases, positions, we don't need birth time
   if (['moonphases', 'positions'].includes(v.request?.toLowerCase() || '')) return true;
+  
   return false;
-}, { message: "Provide either 'local', 'date' + 'time', or 'birth_date'." });
+}, { 
+  message: "You must provide either 'local', or ('date'/'birth_date' + 'time'/'birth_time') combination." 
+});
 
 /** Parse a resp ISO‑8601 or (date, time, tz?) combo → ISO‑UTC string. */
-export function toUtcISO(parts: { date?: string; time?: string; tz?: string; local?: string; birth_date?: string; location?: string }): string {
+export function toUtcISO(parts: { date?: string; time?: string; tz?: string; local?: string; birth_date?: string; birth_time?: string; location?: string }): string {
   if (parts.local) {
     // Already ISO with offset – just convert to UTC
     const d = new Date(parts.local);
@@ -70,12 +84,15 @@ export function toUtcISO(parts: { date?: string; time?: string; tz?: string; loc
   }
 
   // Handle birth_date format - now check if we also have time and location
-  if (parts.birth_date) {
+  const actualDate = parts.birth_date || parts.date;
+  const actualTime = parts.birth_time || parts.time;
+
+  if (actualDate) {
     // If we have both birth_date and time, combine them with timezone
-    if (parts.time && parts.location) {
+    if (actualTime && parts.location) {
       // Extract date from birth_date
-      const birthDate = new Date(parts.birth_date);
-      if (isNaN(birthDate.getTime())) throw new Error("Invalid 'birth_date' timestamp");
+      const birthDate = new Date(actualDate);
+      if (isNaN(birthDate.getTime())) throw new Error("Invalid date timestamp");
       
       // Get date components
       const year = birthDate.getFullYear();
@@ -83,39 +100,42 @@ export function toUtcISO(parts: { date?: string; time?: string; tz?: string; loc
       const day = birthDate.getDate();
       
       // Parse time
-      const [H, M] = parts.time.split(":").map(Number);
+      const [H, M] = actualTime.split(":").map(Number);
       
       // Determine timezone - try to map location to IANA timezone
-      let tz = "UTC";
-      const location = parts.location.toLowerCase();
+      let tz = parts.tz || "UTC";
       
-      // Common location to timezone mappings
-      if (location.includes('melbourne') || location.includes('victoria')) {
-        tz = "Australia/Melbourne";
-      } else if (location.includes('sydney') || location.includes('nsw')) {
-        tz = "Australia/Sydney";
-      } else if (location.includes('brisbane') || location.includes('queensland')) {
-        tz = "Australia/Brisbane";
-      } else if (location.includes('perth') || location.includes('western australia')) {
-        tz = "Australia/Perth";
-      } else if (location.includes('adelaide') || location.includes('south australia')) {
-        tz = "Australia/Adelaide";
-      } else if (location.includes('darwin') || location.includes('northern territory')) {
-        tz = "Australia/Darwin";
-      } else if (location.includes('hobart') || location.includes('tasmania')) {
-        tz = "Australia/Hobart";
-      } else if (location.includes('new york') || location.includes('nyc')) {
-        tz = "America/New_York";
-      } else if (location.includes('los angeles') || location.includes('california')) {
-        tz = "America/Los_Angeles";
-      } else if (location.includes('chicago') || location.includes('illinois')) {
-        tz = "America/Chicago";
-      } else if (location.includes('london') || location.includes('uk') || location.includes('england')) {
-        tz = "Europe/London";
-      } else if (location.includes('paris') || location.includes('france')) {
-        tz = "Europe/Paris";
-      } else if (location.includes('tokyo') || location.includes('japan')) {
-        tz = "Asia/Tokyo";
+      if (!parts.tz) {
+        const location = parts.location.toLowerCase();
+        
+        // Common location to timezone mappings
+        if (location.includes('melbourne') || location.includes('victoria')) {
+          tz = "Australia/Melbourne";
+        } else if (location.includes('sydney') || location.includes('nsw')) {
+          tz = "Australia/Sydney";
+        } else if (location.includes('brisbane') || location.includes('queensland')) {
+          tz = "Australia/Brisbane";
+        } else if (location.includes('perth') || location.includes('western australia')) {
+          tz = "Australia/Perth";
+        } else if (location.includes('adelaide') || location.includes('south australia')) {
+          tz = "Australia/Adelaide";
+        } else if (location.includes('darwin') || location.includes('northern territory')) {
+          tz = "Australia/Darwin";
+        } else if (location.includes('hobart') || location.includes('tasmania')) {
+          tz = "Australia/Hobart";
+        } else if (location.includes('new york') || location.includes('nyc')) {
+          tz = "America/New_York";
+        } else if (location.includes('los angeles') || location.includes('california')) {
+          tz = "America/Los_Angeles";
+        } else if (location.includes('chicago') || location.includes('illinois')) {
+          tz = "America/Chicago";
+        } else if (location.includes('london') || location.includes('uk') || location.includes('england')) {
+          tz = "Europe/London";
+        } else if (location.includes('paris') || location.includes('france')) {
+          tz = "Europe/Paris";
+        } else if (location.includes('tokyo') || location.includes('japan')) {
+          tz = "Asia/Tokyo";
+        }
       }
       
       // Build a UTC date from the components first
@@ -145,26 +165,25 @@ export function toUtcISO(parts: { date?: string; time?: string; tz?: string; loc
         const utcMillis = provisional.getTime() - totalMinutes * 60 * 1000;
         return new Date(utcMillis).toISOString();
       } catch (tzError) {
-        console.warn(`Could not resolve timezone for ${location}, falling back to UTC`);
+        console.warn(`Could not resolve timezone for ${parts.location}, falling back to UTC`);
         // Fall back to treating the time as UTC
         return provisional.toISOString();
       }
     } else {
       // Just birth_date without time - treat as-is (this is the old behavior)
-      const d = new Date(parts.birth_date);
-      if (isNaN(d.getTime())) throw new Error("Invalid 'birth_date' timestamp");
+      const d = new Date(actualDate);
+      if (isNaN(d.getTime())) throw new Error("Invalid date timestamp");
       return d.toISOString();
     }
   }
 
   // Need date + time combo (original logic)
-  const { date, time } = parts;
-  if (!date || !time) throw new Error("Both 'date' and 'time' are required");
+  if (!actualDate || !actualTime) throw new Error("Both date and time are required");
   const tz = parts.tz ?? "UTC"; // default but we'll warn later
 
   // Build a UTC date from the components first
-  const [y, m, d] = date.split("-").map(Number);
-  const [H, M] = time.split(":").map(Number);
+  const [y, m, d] = actualDate.split("-").map(Number);
+  const [H, M] = actualTime.split(":").map(Number);
   const provisional = new Date(Date.UTC(y, m - 1, d, H, M)); // treat as UTC initially
 
   // Use Intl to obtain the offset *at that instant* for the given zone
@@ -195,11 +214,25 @@ const HOUSE_ALIASES: Record<string, string> = { placidus: "P", koch: "K", "whole
 
 function normalise(p: any) {
   const out: { [k: string]: any } = { ...p };
-  // convert house aliases → Swiss letter
+  
+  // Convert house aliases → Swiss letter
   if (out.house && !out.settings?.house_system) {
     const letter = HOUSE_ALIASES[out.house.toLowerCase()];
     if (letter) out.settings = { ...(out.settings ?? {}), house_system: letter };
   }
+
+  // Convert field names for Swiss API compatibility
+  // Swiss expects birth_date and birth_time, not date and time
+  if (out.date && !out.birth_date) {
+    out.birth_date = out.date;
+    delete out.date;
+  }
+  
+  if (out.time && !out.birth_time) {
+    out.birth_time = out.time;
+    delete out.time;
+  }
+
   return out;
 }
 
@@ -410,7 +443,18 @@ serve(async (req) => {
         const tzGuess = await inferTimezone(withLatLon);
         const utcISO = toUtcISO({ ...withLatLon, tz: tzGuess ?? withLatLon.tz });
         withLatLon.utc = utcISO; // Swiss wrapper recognises 'utc'
+        
+        // CRITICAL: Force Swiss to use ONLY the calculated UTC timestamp
+        // Remove all conflicting fields that might override our calculated UTC
+        delete withLatLon.date;
+        delete withLatLon.birth_date;
+        delete withLatLon.time;
+        delete withLatLon.birth_time;
+        delete withLatLon.local;
+        delete withLatLon.tz;
+        
         console.log(`[translator-edge-${reqId}] UTC timestamp generated: ${utcISO}`);
+        console.log(`[translator-edge-${reqId}] Cleaned payload - removed conflicting time fields`);
       } catch (timeError) {
         console.warn(`[translator-edge-${reqId}] Could not generate UTC timestamp:`, timeError);
         // Don't fail the request, let Swiss handle it as before
