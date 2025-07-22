@@ -1,15 +1,14 @@
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ReportData } from '@/utils/reportContentExtraction';
 import EntertainmentWindow from './EntertainmentWindow';
+import ErrorStateHandler from './ErrorStateHandler';
 import { supabase } from '@/integrations/supabase/client';
 import { logSuccessScreen } from '@/utils/logUtils';
 import { clearAllSessionData } from '@/utils/urlHelpers';
-import { useGuestReportStatus } from '@/hooks/useGuestReportStatus';
-import { useToast } from '@/hooks/use-toast';
 
 interface SuccessScreenProps {
   name: string;
@@ -17,6 +16,17 @@ interface SuccessScreenProps {
   onViewReport?: (reportData: ReportData) => void;
   onReportReady?: (callback: (reportData: ReportData) => void) => void;
   guestReportId?: string;
+}
+
+interface ErrorState {
+  type: string;
+  case_number?: string;
+  message: string;
+  logged_at?: string;
+  requires_cleanup?: boolean;
+  requires_error_logging?: boolean;
+  guest_report_id?: string;
+  email?: string;
 }
 
 const SuccessScreen: React.FC<SuccessScreenProps> = ({ 
@@ -29,21 +39,14 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   const firstName = name?.split(' ')[0] || 'there';
   const isMobile = useIsMobile();
   const successCardRef = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
 
   // Simple visual countdown (24 seconds for UX)
   const [countdownTime, setCountdownTime] = useState(24);
   const [reportReady, setReportReady] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
-
-  // Use the existing error handling system
-  const { 
-    error, 
-    caseNumber, 
-    triggerErrorHandling,
-    setError,
-    setCaseNumber 
-  } = useGuestReportStatus();
+  const [errorState, setErrorState] = useState<ErrorState | null>(null);
+  const [errorLogging, setErrorLogging] = useState(false);
+  const [caseNumber, setCaseNumber] = useState<string | null>(null);
 
   // Auto-scroll to success message once on mount
   useEffect(() => {
@@ -56,47 +59,11 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
       }
     };
 
+    // Use requestAnimationFrame to ensure DOM is fully rendered
     requestAnimationFrame(() => {
       setTimeout(scrollToSuccess, 100);
     });
   }, []);
-
-  // Handle smart error display via toast notifications - with ref to prevent infinite loops
-  const errorHandledRef = useRef<string | null>(null);
-  
-  useEffect(() => {
-    if (error && !reportReady && error !== errorHandledRef.current) {
-      errorHandledRef.current = error;
-      
-      let errorTitle = "Processing Error";
-      let errorDescription = error;
-      
-      // Smart error detection based on error message content
-      if (error.includes('Swiss') || error.includes('swiss')) {
-        errorTitle = "Swiss Data Processing Error";
-        errorDescription = caseNumber 
-          ? `Swiss processing failed. Reference case #${caseNumber} if contacting support.`
-          : "Swiss data processing encountered an issue. Logging error for investigation.";
-      } else if (error.includes('timeout') || error.includes('not found')) {
-        errorTitle = "Report Generation Timeout";
-        errorDescription = caseNumber
-          ? `Report generation timed out. Reference case #${caseNumber} if contacting support.`
-          : "Report generation is taking longer than expected.";
-      }
-
-      toast({
-        variant: "destructive",
-        title: errorTitle,
-        description: errorDescription
-      });
-
-      // Clear session data for error states that require cleanup
-      if (error.includes('Swiss') || error.includes('swiss')) {
-        logSuccessScreen('info', 'Cleaning up session due to Swiss error');
-        clearAllSessionData();
-      }
-    }
-  }, [error, caseNumber, reportReady]);
 
   // Handle report ready from parent component
   const handleReportReady = useCallback((reportData: ReportData) => {
@@ -104,6 +71,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     setReportReady(true);
     setCountdownTime(0);
     
+    // Immediately trigger the modal opening
     if (onViewReport) {
       logSuccessScreen('info', 'Calling onViewReport with report data');
       onViewReport(reportData);
@@ -124,7 +92,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
   // Listen for realtime messages from orchestrator
   useEffect(() => {
-    if (!guestReportId || error) return;
+    if (!guestReportId || errorState) return;
 
     logSuccessScreen('info', 'Setting up realtime listener for guest report', { guestReportId });
     
@@ -148,7 +116,50 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
       logSuccessScreen('debug', 'Cleaning up realtime subscription');
       supabase.removeChannel(channel);
     };
-  }, [guestReportId, handleReportReady, error]);
+  }, [guestReportId, handleReportReady, errorState]);
+
+  // Error logging handler
+  const handleTriggerErrorLogging = useCallback(async (guestReportId: string, email: string) => {
+    if (errorLogging || caseNumber) return; // Prevent duplicate logging
+    
+    setErrorLogging(true);
+    logSuccessScreen('info', 'Triggering error logging for Swiss processing error');
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('log-user-error', {
+        body: {
+          guestReportId,
+          errorType: 'swiss_processing_error',
+          errorMessage: 'Swiss data processing failed due to stack depth limit or malformed data',
+          email
+        }
+      });
+
+      if (error) {
+        logSuccessScreen('error', 'Error logging failed', { error });
+      } else if (data?.case_number) {
+        setCaseNumber(data.case_number);
+        logSuccessScreen('info', 'Error logged successfully', { caseNumber: data.case_number });
+        
+        // Update error state with case number
+        setErrorState(prev => prev ? {
+          ...prev,
+          case_number: data.case_number,
+          logged_at: new Date().toISOString()
+        } : null);
+      }
+    } catch (err) {
+      logSuccessScreen('error', 'Failed to log error', { err });
+    } finally {
+      setErrorLogging(false);
+    }
+  }, [errorLogging, caseNumber]);
+
+  // Session cleanup handler
+  const handleCleanupSession = useCallback(() => {
+    logSuccessScreen('info', 'Cleaning up session due to error');
+    clearAllSessionData();
+  }, []);
 
   // Check if report is already ready immediately on mount
   useEffect(() => {
@@ -162,46 +173,20 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
       try {
         logSuccessScreen('debug', 'Checking if report is already ready');
         
-        const { data, error: checkError } = await supabase.functions.invoke('check-report-status', {
+        const { data, error } = await supabase.functions.invoke('check-report-status', {
           body: { guest_report_id: guestReportId }
         });
 
-        if (checkError) {
-          console.error('❌ Error checking report status:', checkError);
+        if (error) {
+          console.error('❌ Error checking report status:', error);
           setCheckingStatus(false);
           return;
         }
 
-        // Handle error state responses from check-report-status
+        // Handle error state responses
         if (data?.error_state) {
           logSuccessScreen('info', 'Error state detected from check-report-status', { errorState: data.error_state });
-          
-          // Smart error handling based on error type
-          if (data.error_state.type === 'swiss_processing_error') {
-            if (data.error_state.case_number) {
-              // Error already logged with case number
-              setCaseNumber(data.error_state.case_number);
-              setError('Swiss data processing failed. Your case has been logged for investigation.');
-            } else if (data.error_state.requires_error_logging) {
-              // New error that needs logging
-              setError('Swiss data processing failed. Logging your case for investigation.');
-              await triggerErrorHandling(
-                data.error_state.guest_report_id,
-                'swiss_processing_error',
-                'Swiss data processing failed due to stack depth limit or malformed data'
-              );
-            }
-          } else {
-            setError(data.error_state.message || 'An error occurred during report processing.');
-            if (data.error_state.guest_report_id) {
-              await triggerErrorHandling(
-                data.error_state.guest_report_id,
-                data.error_state.type || 'unknown_error',
-                data.error_state.message
-              );
-            }
-          }
-          
+          setErrorState(data.error_state);
           setCheckingStatus(false);
           return;
         }
@@ -220,11 +205,11 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     };
 
     checkReportStatus();
-  }, [guestReportId, handleReportReady, triggerErrorHandling, setError, setCaseNumber]);
+  }, [guestReportId, handleReportReady]);
 
   // Pure visual countdown timer - only starts after status check is complete
   useEffect(() => {
-    if (reportReady || checkingStatus || error) return;
+    if (reportReady || checkingStatus || errorState) return;
 
     const timer = setInterval(() => {
       setCountdownTime((prev) => {
@@ -237,11 +222,17 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [reportReady, checkingStatus, error]);
+  }, [reportReady, checkingStatus, errorState]);
 
-  // Don't render anything if there's an error - let toast handle it
-  if (error) {
-    return null;
+  // Show error state if detected
+  if (errorState) {
+    return (
+      <ErrorStateHandler
+        errorState={errorState}
+        onTriggerErrorLogging={handleTriggerErrorLogging}
+        onCleanupSession={handleCleanupSession}
+      />
+    );
   }
 
   return (
