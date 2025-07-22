@@ -26,6 +26,16 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   const firstName = name?.split(' ')[0] || 'there';
   const isMobile = useIsMobile();
 
+  // Auto-scroll to top when SuccessScreen mounts
+  useEffect(() => {
+    // Small delay to ensure component is fully rendered
+    const timer = setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
   // Simple visual countdown (24 seconds for UX)
   const [countdownTime, setCountdownTime] = useState(24);
   const [reportReady, setReportReady] = useState(false);

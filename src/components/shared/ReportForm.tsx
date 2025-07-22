@@ -419,6 +419,12 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   // Success state checks
   if (reportCreated && createdGuestReportId && userName && userEmail) {
     log('debug', 'Rendering SuccessScreen with guaranteed guest ID', { createdGuestReportId }, 'ReportForm');
+    
+    // Auto-scroll to top when transitioning to success screen
+    useEffect(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, []);
+    
     return (
       <SuccessScreen 
         name={userName} 
@@ -436,6 +442,11 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     const email = reportData?.email || statusReportData.guest_report?.email;
     
     if (name && email) {
+      // Auto-scroll to top when transitioning to success screen
+      useEffect(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, []);
+      
       return (
         <SuccessScreen 
           name={name} 
@@ -449,6 +460,11 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   }
   
   if (guestId && tokenRecovery.recovered && tokenRecovery.recoveredName && tokenRecovery.recoveredEmail) {
+    // Auto-scroll to top when transitioning to success screen
+    useEffect(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, []);
+    
     return (
       <SuccessScreen 
         name={tokenRecovery.recoveredName} 
