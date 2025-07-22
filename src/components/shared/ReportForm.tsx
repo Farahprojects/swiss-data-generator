@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
@@ -42,6 +41,9 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const [viewingReport, setViewingReport] = useState(false);
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [sessionRestored, setSessionRestored] = useState(false);
+
+  // Auto-scroll tracking
+  const hasScrolledToSuccess = useRef(false);
 
   // Hooks
   const { status, error: statusError, reportData: statusReportData, setStatus, reset: resetStatus } = useReportStatus();
@@ -162,16 +164,21 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const formValues = form.watch();
   const step1Done = Boolean(formValues.reportType || formValues.request);
 
-  // Auto-scroll to success screen when transitioning to success state
+  // Optimized auto-scroll - only trigger on actual success state transitions
   useEffect(() => {
-    const isSuccessState = 
+    // Create a single derived success state
+    const isInSuccessState = Boolean(
       (reportCreated && createdGuestReportId && userName && userEmail) ||
       (status === 'success' && statusReportData) ||
-      (guestId && tokenRecovery.recovered && tokenRecovery.recoveredName && tokenRecovery.recoveredEmail);
+      (guestId && tokenRecovery.recovered && tokenRecovery.recoveredName && tokenRecovery.recoveredEmail)
+    );
     
-    if (isSuccessState) {
-      // Small delay to ensure SuccessScreen has rendered
-      const timer = setTimeout(() => {
+    // Only scroll once when entering success state
+    if (isInSuccessState && !hasScrolledToSuccess.current) {
+      hasScrolledToSuccess.current = true;
+      
+      // Use requestAnimationFrame for better performance
+      requestAnimationFrame(() => {
         const successCard = document.querySelector('[data-success-card]');
         if (successCard) {
           successCard.scrollIntoView({ 
@@ -179,11 +186,14 @@ export const ReportForm: React.FC<ReportFormProps> = ({
             block: 'center' 
           });
         }
-      }, 200);
-      
-      return () => clearTimeout(timer);
+      });
     }
-  }, [reportCreated, createdGuestReportId, userName, userEmail, status, statusReportData, guestId, tokenRecovery.recovered, tokenRecovery.recoveredName, tokenRecovery.recoveredEmail]);
+    
+    // Reset scroll flag when leaving success state
+    if (!isInSuccessState && hasScrolledToSuccess.current) {
+      hasScrolledToSuccess.current = false;
+    }
+  }, [reportCreated && createdGuestReportId, status === 'success', tokenRecovery.recovered]);
 
   const step2Done =
     step1Done &&
@@ -227,6 +237,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     setReportData(null);
     setCreatedGuestReportId(null);
     setSessionRestored(false);
+    hasScrolledToSuccess.current = false; // Reset scroll flag
     
     tokenRecovery.reset();
     resetStatus();
