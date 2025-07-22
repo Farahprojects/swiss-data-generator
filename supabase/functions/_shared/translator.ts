@@ -9,7 +9,12 @@
 //   • small typographical tidy-ups (no functional change elsewhere)
 //   • added version debug logging
 // ---------------------------------------------------------------------------
+// 
+// *** COMMENTED OUT FOR TESTING translator-edge MIGRATION ***
+// *** DO NOT USE - USE translator-edge EDGE FUNCTION INSTEAD ***
+//
 
+/*
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { handleReportGeneration } from "./reportHandler.ts";
@@ -209,6 +214,7 @@ function normalise(p: any) {
 }
 
 /*──────────────── translate */
+/*
 export async function translate(
   raw: any,
 ): Promise<{ status: number; text: string }> {
@@ -499,3 +505,4 @@ export async function translate(
     return { status: 500, text: JSON.stringify({ error: msg }) };
   }
 }
+*/
