@@ -166,6 +166,26 @@ serve(async (req) => {
     });
 
     console.log(`[orchestrate-report-ready] Realtime broadcast sent successfully`);
+
+    // NEW: Call create-temp-report-data function to create temp data for ChatGPT button
+    console.log(`[orchestrate-report-ready] Creating temp report data for ChatGPT functionality...`);
+    try {
+      const { data: tempResult, error: tempError } = await supabase.functions.invoke('create-temp-report-data', {
+        body: { guest_report_id: guest_report_id }
+      });
+
+      if (tempError) {
+        console.warn(`[orchestrate-report-ready] Temp data creation failed (non-blocking):`, tempError);
+      } else {
+        console.log(`[orchestrate-report-ready] Temp data created successfully:`, {
+          temp_data_id: tempResult?.temp_data_id,
+          chat_hash: tempResult?.chat_hash,
+          expires_at: tempResult?.expires_at
+        });
+      }
+    } catch (tempCreateError) {
+      console.warn(`[orchestrate-report-ready] Temp data creation error (non-blocking):`, tempCreateError);
+    }
     
     const processingTime = Date.now() - startTime;
 
