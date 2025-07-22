@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=deno&deno-std=0.224.0";
 
@@ -35,16 +36,16 @@ serve(async (req) => {
       guestReport = data;
     }
 
-    // Check if there's already an existing error record for this guest report
-    if (guestReportId) {
+    // Check if guest_reports already has a user_error_id (meaning error already logged)
+    if (guestReportId && guestReport?.user_error_id) {
       const { data: existingError } = await supabase
         .from('user_errors')
         .select('case_number')
-        .eq('guest_report_id', guestReportId)
+        .eq('id', guestReport.user_error_id)
         .single();
 
       if (existingError) {
-        console.log("[log-user-error] Found existing error record:", existingError.case_number);
+        console.log("[log-user-error] Found existing error via user_error_id:", existingError.case_number);
         return new Response(JSON.stringify({
           success: true,
           case_number: existingError.case_number,
@@ -58,7 +59,7 @@ serve(async (req) => {
     }
 
     // Insert error log with service role permissions
-    const { data: errorLog, error } = await supabase
+    const { data: errorLog, error: insertError } = await supabase
       .from('user_errors')
       .insert({
         guest_report_id: guestReportId,
@@ -73,12 +74,27 @@ serve(async (req) => {
           report_type: guestReport?.report_type
         }
       })
-      .select('case_number')
+      .select('id, case_number')
       .single();
 
-    if (error) {
-      console.error("[log-user-error] Database error:", error);
-      throw new Error(`Failed to log error: ${error.message}`);
+    if (insertError) {
+      console.error("[log-user-error] Database error:", insertError);
+      throw new Error(`Failed to log error: ${insertError.message}`);
+    }
+
+    // Update guest_reports with the user_error_id to link the tables
+    if (guestReportId && errorLog?.id) {
+      const { error: updateError } = await supabase
+        .from('guest_reports')
+        .update({ user_error_id: errorLog.id })
+        .eq('id', guestReportId);
+
+      if (updateError) {
+        console.error("[log-user-error] Failed to update guest_reports.user_error_id:", updateError);
+        // Don't fail the whole operation, just log the warning
+      } else {
+        console.log("[log-user-error] Successfully linked error to guest_reports via user_error_id");
+      }
     }
 
     console.log("[log-user-error] Successfully logged error with case number:", errorLog?.case_number);

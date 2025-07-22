@@ -95,35 +95,26 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check conditions for report readiness
-    const hasAiReport = guestReport.is_ai_report === true && guestReport.report_log_id !== null;
-    const isSwissOnly = guestReport.is_ai_report === false && guestReport.swiss_boolean === true;
-    const hasSwissError = guestReport.has_swiss_error === true;
-    
-    console.log(`📊 Report status - has_ai_report: ${hasAiReport}, is_ai_report: ${guestReport.is_ai_report}, swiss_boolean: ${guestReport.swiss_boolean}, has_swiss_error: ${hasSwissError}, report_log_id: ${guestReport.report_log_id}`);
-
-    // Handle Swiss processing errors with enhanced error response
-    if (hasSwissError) {
-      console.log('❌ Swiss error detected, handling error case');
+    // PRIORITY CHECK: If user_error_id exists, fetch existing error details
+    if (guestReport.user_error_id) {
+      console.log('🔍 Found existing user_error_id, fetching error details');
       
-      // Check if error already exists in user_errors table
       const { data: existingError } = await supabaseClient
         .from('user_errors')
-        .select('case_number, created_at')
-        .eq('guest_report_id', guest_report_id)
+        .select('case_number, created_at, error_type, error_message')
+        .eq('id', guestReport.user_error_id)
         .maybeSingle();
 
       if (existingError) {
-        // Error already logged, return structured error response
-        console.log('🔍 Existing error found, returning error state with case number');
+        console.log('❌ Returning existing error state with case number:', existingError.case_number);
         return new Response(
           JSON.stringify({ 
             ok: false,
             ready: false, 
             error_state: {
-              type: 'swiss_processing_error',
+              type: existingError.error_type || 'swiss_processing_error',
               case_number: existingError.case_number,
-              message: 'Swiss data processing failed. Your case has been logged for investigation.',
+              message: existingError.error_message || 'An error occurred while processing your report.',
               logged_at: existingError.created_at,
               requires_cleanup: true
             }
@@ -133,28 +124,38 @@ Deno.serve(async (req) => {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
           }
         );
-      } else {
-        // New error detected, trigger error logging
-        console.log('🚨 New Swiss error detected, triggering error handler');
-        return new Response(
-          JSON.stringify({ 
-            ok: false,
-            ready: false, 
-            error_state: {
-              type: 'swiss_processing_error',
-              message: 'Swiss data processing failed. Logging your case for investigation.',
-              requires_error_logging: true,
-              guest_report_id: guest_report_id,
-              email: guestReport.email
-            }
-          }),
-          { 
-            status: 200, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        );
       }
     }
+
+    // Check for NEW Swiss processing errors (only if no user_error_id exists)
+    const hasSwissError = guestReport.has_swiss_error === true;
+    
+    if (hasSwissError) {
+      console.log('🚨 New Swiss error detected, triggering error handler');
+      return new Response(
+        JSON.stringify({ 
+          ok: false,
+          ready: false, 
+          error_state: {
+            type: 'swiss_processing_error',
+            message: 'Swiss data processing failed. Logging your case for investigation.',
+            requires_error_logging: true,
+            guest_report_id: guest_report_id,
+            email: guestReport.email
+          }
+        }),
+        { 
+          status: 200, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // Check conditions for report readiness
+    const hasAiReport = guestReport.is_ai_report === true && guestReport.report_log_id !== null;
+    const isSwissOnly = guestReport.is_ai_report === false && guestReport.swiss_boolean === true;
+    
+    console.log(`📊 Report status - has_ai_report: ${hasAiReport}, is_ai_report: ${guestReport.is_ai_report}, swiss_boolean: ${guestReport.swiss_boolean}, report_log_id: ${guestReport.report_log_id}`);
 
     if (hasAiReport || isSwissOnly) {
       console.log('✅ Report is ready, preparing data');

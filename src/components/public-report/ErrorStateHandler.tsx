@@ -4,6 +4,7 @@ import { AlertTriangle, Home, Mail } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { clearAllSessionData } from '@/utils/urlHelpers';
 
 interface ErrorState {
   type: string;
@@ -36,11 +37,42 @@ const ErrorStateHandler: React.FC<ErrorStateHandlerProps> = ({
     }
   }, [errorState, onTriggerErrorLogging]);
 
-  const handleReturnHome = () => {
-    if (errorState.requires_cleanup) {
-      onCleanupSession?.();
+  const handleReturnHome = async () => {
+    console.log('🧹 Starting comprehensive session cleanup...');
+    
+    try {
+      // Enhanced session cleanup
+      if (errorState.requires_cleanup || onCleanupSession) {
+        await clearAllSessionData();
+        
+        // Additional cleanup for error states
+        const errorKeys = [
+          'guest_report_error',
+          'report_error_state',
+          'error_case_number',
+          'swiss_processing_error'
+        ];
+        
+        errorKeys.forEach(key => {
+          localStorage.removeItem(key);
+          sessionStorage.removeItem(key);
+        });
+        
+        // Clear URL completely - remove all parameters
+        const cleanUrl = new URL(window.location.origin + '/');
+        window.history.replaceState(null, '', cleanUrl.toString());
+        
+        console.log('✅ Enhanced session cleanup completed');
+      }
+      
+      // Navigate to home
+      navigate('/', { replace: true });
+      
+    } catch (error) {
+      console.error('❌ Error during session cleanup:', error);
+      // Fallback: Force navigation anyway
+      window.location.href = '/';
     }
-    navigate('/report', { replace: true });
   };
 
   const handleContactSupport = () => {
