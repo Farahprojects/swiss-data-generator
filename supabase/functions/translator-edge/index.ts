@@ -9,7 +9,7 @@ const SB_KEY    = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const GEO_KEY   = Deno.env.get("GOOGLE_API_KEY")!;
 const GEO_TTL_MIN = +(Deno.env.get("GEOCODE_TTL_MIN") ?? "1440");
 const GEO_TABLE   = Deno.env.get("GEOCODE_CACHE_TABLE") ?? "geo_cache";
-const VERSION = "translator-edge v3.5 (2025‑07‑22)";
+const VERSION = "translator-edge v3.3 (2025‑07‑22)";
 
 const sb = createClient(SB_URL, SB_KEY);
 
@@ -58,11 +58,15 @@ const baseSchema = z.object({
   year:          z.number().optional(),
   return_date:   z.string().optional(),
 }).refine((v) => {
-  if (v.utc || v.local) return true;                       // already timestamped
-  if (v.person_a) return true;                             // defer validation for sync
-  const hasDate = v.date || v.birth_date;                  // need date+time otherwise
+  // If utc or local supplied we can proceed
+  if (v.utc || v.local) return true;
+  // If person_a exists we defer validation further down
+  if (v.person_a) return true;
+  // Otherwise need date+time pair for chart routes
+  const hasDate = v.date || v.birth_date;
   const hasTime = v.time || v.birth_time;
   if (hasDate && hasTime) return true;
+  // For endpoints that don't require birth data
   if (["moonphases", "positions"].includes(v.request?.toLowerCase() || "")) return true;
   return false;
 }, { message: "Provide 'utc' or 'local', or a birth_date + birth_time pair." });
@@ -74,50 +78,69 @@ export function toUtcISO(parts: { date?: string; time?: string; tz?: string; loc
     if (isNaN(d.getTime())) throw new Error("Invalid 'local' timestamp");
     return d.toISOString();
   }
-
   const actualDate = parts.birth_date || parts.date;
   const actualTime = parts.birth_time || parts.time;
 
-  // When full birth data supplied (date + time + tz) use that
-  if (actualDate && actualTime) {
-    const tz = parts.tz || "UTC"; // caller/inference should supply tz; fallback UTC
-    const [y, m, d] = actualDate.split("-").map(Number);
-    const [H, M]    = actualTime.split(":" as const).map(Number);
-    const provisional = new Date(Date.UTC(y, m - 1, d, H, M));
-    try {
-      const fmt = new Intl.DateTimeFormat("en-US", {
-        timeZone: tz,
-        timeZoneName: "shortOffset",
-        year: "numeric", month: "2-digit", day: "2-digit",
-        hour: "2-digit", minute: "2-digit", hourCycle: "h23",
-      });
-      const off = fmt.formatToParts(provisional).find(p => p.type === "timeZoneName")?.value ?? "GMT+0";
-      const mOff = off.match(/GMT([+-])(\d{1,2})(?::?(\d{2}))?/);
-      if (!mOff) throw new Error("offset parse");
-      const sign = mOff[1] === "-" ? -1 : 1;
-      const hOff = +mOff[2];
-      const minOff = +(mOff[3] || 0);
-      const total = sign * (hOff * 60 + minOff);
-      return new Date(provisional.getTime() - total * 60000).toISOString();
-    } catch {
-      return provisional.toISOString(); // last‑ditch: treat as UTC
-    }
-  }
-
-  // If only date (no time) treat 00:00 as UTC boundary (positions/moonphases etc.)
   if (actualDate) {
+    if (actualTime && parts.location) {
+      const birthDate = new Date(actualDate);
+      if (isNaN(birthDate.getTime())) throw new Error("Invalid date");
+      const year = birthDate.getUTCFullYear();
+      const month = birthDate.getUTCMonth();
+      const day = birthDate.getUTCDate();
+      const [H, M] = actualTime.split(":" as const).map(Number);
+      let tz = parts.tz || "UTC";
+      const loc = (parts.location || "").toLowerCase();
+      const quick: Record<string,string> = {
+        melbourne: "Australia/Melbourne",
+        victoria:  "Australia/Melbourne",
+        sydney:    "Australia/Sydney",
+        brisbane:  "Australia/Brisbane",
+        perth:     "Australia/Perth",
+        adelaide:  "Australia/Adelaide",
+        darwin:    "Australia/Darwin",
+        hobart:    "Australia/Hobart",
+        "new york": "America/New_York",
+        nyc:        "America/New_York",
+        chicago:   "America/Chicago",
+        "los angeles": "America/Los_Angeles",
+        london:    "Europe/London",
+        paris:     "Europe/Paris",
+        tokyo:     "Asia/Tokyo",
+      };
+      for (const k in quick) if (loc.includes(k)) { tz = quick[k]; break; }
+      const provisional = new Date(Date.UTC(year, month, day, H, M));
+      try {
+        const fmt = new Intl.DateTimeFormat("en-US", {
+          timeZone: tz,
+          timeZoneName: "shortOffset",
+          year: "numeric", month: "2-digit", day: "2-digit",
+          hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+        });
+        const off = fmt.formatToParts(provisional).find(p => p.type === "timeZoneName")?.value ?? "GMT+0";
+        const m = off.match(/GMT([+-])(\d{1,2})(?::?(\d{2}))?/);
+        if (!m) throw new Error("bad offset");
+        const sign = m[1] === "-" ? -1 : 1;
+        const hOff = +m[2], minOff = +(m[3]||0);
+        const total = sign * (hOff * 60 + minOff);
+        return new Date(provisional.getTime() - total * 60000).toISOString();
+      } catch {
+        return provisional.toISOString();
+      }
+    }
     const d = new Date(actualDate);
     if (isNaN(d.getTime())) throw new Error("Invalid date");
     return d.toISOString();
   }
 
-  throw new Error("Both date and time are required");
+  if (!actualDate || !actualTime) throw new Error("Both date and time are required");
+  const [y,m,d] = actualDate.split("-").map(Number);
+  const [H,M]   = actualTime.split(":" as const).map(Number);
+  return new Date(Date.UTC(y, m-1, d, H, M)).toISOString();
 }
 
 /** Map user house aliases → Swiss codes. */
-const HOUSE_ALIASES: Record<string,string> = {
-  placidus:"P", koch:"K", "whole-sign":"W", equal:"A", vedic:"V", v:"V", ved:"V"
-};
+const HOUSE_ALIASES: Record<string,string> = { placidus:"P", koch:"K", "whole-sign":"W", equal:"A" };
 function normalise(obj: any) {
   const out = { ...obj };
   if (out.house && !out.settings?.house_system) {
@@ -159,9 +182,10 @@ async function inferTimezone(obj:any){
 async function handleReportGeneration(params:{requestData:any;swissApiResponse:any;swissApiStatus:number;requestId?:string}){
   const { requestData,swissApiResponse,swissApiStatus,requestId } = params;
   const tag = requestId ? `[reportHandler][${requestId}]` : "[reportHandler]";
+  console.log(`${tag} Swiss status ${swissApiStatus}`);
   if (swissApiStatus!==200 || !requestData?.report) return;
   let swissData: any;
-  try{ swissData = typeof swissApiResponse==="string"?JSON.parse(swissApiResponse):swissApiResponse; }catch{return; }
+  try{ swissData = typeof swissApiResponse==="string"?JSON.parse(swissApiResponse):swissApiResponse; }catch{ console.error(`${tag} parse fail`); return; }
   try{
     const { processReportRequest } = await import("../_shared/reportOrchestrator.ts");
     await processReportRequest({
@@ -173,13 +197,13 @@ async function handleReportGeneration(params:{requestData:any;swissApiResponse:a
       chartData: { ...swissData, person_a_name: requestData.person_a?.name, person_b_name: requestData.person_b?.name },
       ...requestData
     });
-  }catch{}
+  }catch(e){ console.error(`${tag} orchestrator error`, e); }
 }
 
 /*──────────────── logging --------------------------------------------------*/
 async function logTranslator(run:{request_type:string;request_payload:any;swiss_data:any;swiss_status:number;processing_ms:number;error?:string;google_geo:boolean;translator_payload:any;user_id?:string;skip:boolean;is_guest?:boolean}){
   if(run.skip) return;
-  await sb.from("translator_logs").insert({
+  const { error } = await sb.from("translator_logs").insert({
     request_type: run.request_type,
     request_payload: run.request_payload,
     translator_payload: run.translator_payload,
@@ -191,77 +215,98 @@ async function logTranslator(run:{request_type:string;request_payload:any;swiss_
     user_id: run.user_id ?? null,
     is_guest: run.is_guest ?? false,
   });
+  if(error) console.error("[translator] log fail", error.message);
 }
 
-/*──────────────── CANON ----------------------------------------------------*/
-const CANON:Record<string,string>={
-  natal:"natal", transits:"transits", progressions:"progressions", return:"return",
-  synastry:"synastry", compatibility:"synastry", positions:"positions", moonphases:"moonphases",
-  body:"body_matrix", body_matrix:"body_matrix", sync:"sync", essence:"essence", flow:"flow",
-  mindset:"mindset", monthly:"monthly", focus:"focus"
-};
+/*──────────────── Canon ----------------------------------------------------*/
+const CANON:Record<string,string>={ natal:"natal",transits:"transits",progressions:"progressions",return:"return",synastry:"synastry",compatibility:"synastry",positions:"positions",moonphases:"moonphases",body:"body_matrix",body_matrix:"body_matrix",sync:"sync",essence:"essence",flow:"flow",mindset:"mindset",monthly:"monthly",focus:"focus" };
 
-/*──────────────── Edge Function handler -----------------------------------*/
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  const t0 = Date.now();
-  const reqId = crypto.randomUUID().slice(0, 8);
-  let skipLogging = false;
-  let requestType = "unknown";
-  let googleGeo = false;
-
-  try {
-    const raw = await req.json();
-    skipLogging = raw.skip_logging === true;
-    const parsed = baseSchema.parse(raw);
+/*──────────────── Edge Function -------------------------------------------*/
+serve(async (req)=>{
+  if(req.method==="OPTIONS") return new Response(null,{status:204,headers:corsHeaders});
+  const t0=Date.now();
+  const reqId = crypto.randomUUID().slice(0,8);
+  let skipLogging=false, requestType="unknown", googleGeo=false;
+  try{
+    function normalisePerson(src:any={}):any{
+      return {
+        birth_date: src.birth_date||src.date||null,
+        birth_time: src.birth_time||src.time||null,
+        location:   src.location||src.city||"",
+        latitude:   src.latitude??src.lat??null,
+        longitude:  src.longitude??src.lon??null,
+        tz:         src.tz||src.timezone||"",
+        name:       src.name||"",
+        house_system: src.house_system||src.hsys||"P",
+      };
+    }
+    function normaliseBody(input:any){
+      if(input.person_a||input.person_b){
+        input.person_a = normalisePerson(input.person_a||{});
+        if(input.person_b) input.person_b = normalisePerson(input.person_b);
+      }else{
+        input.person_a = normalisePerson(input);
+      }
+      return input;
+    }
+    const rawBody = await req.json();
+    const body = normaliseBody(rawBody);
+    console.log(`[translator-edge-${reqId}]`, JSON.stringify(body));
+    skipLogging = body.skip_logging===true;
+    const parsed = baseSchema.parse(body);
     requestType = parsed.request.trim().toLowerCase();
     const canon = CANON[requestType];
-    if (!canon) throw new Error(`Unknown request '${parsed.request}'`);
+    if(!canon) throw new Error(`Unknown request '${parsed.request}'`);
 
-    /*────────────────── augment lat/lon & timestamp ----------------------*/
-    const { data: withLatLon, googleGeoUsed } = await ensureLatLon(parsed);
-    googleGeo = googleGeoUsed;
+    let payload:any;
+    if(canon==="sync" && parsed.person_a && parsed.person_b){
+      const {data:pa,googleGeoUsed:g1}=await ensureLatLon(parsed.person_a);
+      const tzA=await inferTimezone(pa);
+      const utcA=toUtcISO({...pa,tz:tzA,location:pa.location||""});
+      const normA={...normalise(pa),utc:utcA,tz:tzA||"UTC"};
 
-    // Attach accurate UTC stamp if this is a chart‑type request (not positions/moonphases)
-    if (["natal", "essence", "sync", "flow", "mindset", "monthly", "focus", "progressions", "return", "transits"].includes(canon)) {
-      const utcISO = toUtcISO(withLatLon);
-      withLatLon.utc = utcISO; // Swiss wrapper recognises 'utc'
+      const {data:pb,googleGeoUsed:g2}=await ensureLatLon(parsed.person_b);
+      const tzB=await inferTimezone(pb);
+      const utcB=toUtcISO({...pb,tz:tzB,location:pb.location||""});
+      const normB={...normalise(pb),utc:utcB,tz:tzB||"UTC"};
+
+      googleGeo = g1||g2;
+      payload = { person_a: normA, person_b: normB, ...parsed };
+    }else{
+      const {data:withLatLon,googleGeoUsed} = await ensureLatLon(parsed);
+      googleGeo = googleGeoUsed;
+      if(["natal","essence","sync","flow","mindset","monthly","focus","progressions","return","transits"].includes(canon)){
+        try{
+          const tzGuess = await inferTimezone(withLatLon);
+          const utcISO = toUtcISO({...withLatLon,tz:tzGuess??withLatLon.tz});
+          withLatLon.utc = parsed.utc || utcISO;
+          const haveDate = parsed.birth_date || parsed.date || parsed.person_a?.birth_date || parsed.person_a?.date;
+          const haveTime = parsed.birth_time || parsed.time || parsed.person_a?.birth_time || parsed.person_a?.time;
+          if(!haveDate) throw new Error("Missing birth_date");
+          if(!haveTime) throw new Error("Missing birth_time");
+          withLatLon.birth_date = haveDate;
+          withLatLon.birth_time = haveTime;
+          withLatLon.tz = parsed.tz || tzGuess || "UTC";
+        }catch(e){ console.warn(`[translator-edge-${reqId}] UTC gen fail`, e); }
+      }
+      payload = normalise(withLatLon);
+    }
+    console.log(`[translator-edge-${reqId}] payload`, JSON.stringify(payload));
+    const url = `${SWISS_API}/${canon}`;
+    const swiss = await fetch(url,{ method:["moonphases","positions"].includes(canon)?"GET":"POST", headers:{"Content-Type":"application/json"}, body:["moonphases","positions"].includes(canon)?undefined:JSON.stringify(payload) });
+    const txt = await swiss.text();
+    const swissData = (()=>{ try{return JSON.parse(txt);}catch{return { raw:txt }; }})();
+
+    if(body.report && swiss.ok){
+      try{ await handleReportGeneration({requestData:body,swissApiResponse:swissData,swissApiStatus:swiss.status,requestId:reqId}); }catch(e){ console.error(`[translator-edge-${reqId}] report err`, e); }
     }
 
-    const payload = normalise(withLatLon);
-
-    /*────────────────── dispatch to Swiss API ----------------------------*/
-    const url = `${SWISS_API}/${canon}`;
-    const swiss = await fetch(url, {
-      method: canon === "moonphases" || canon === "positions" ? "GET" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: canon === "moonphases" || canon === "positions" ? undefined : JSON.stringify(payload)
-    });
-    const txt = await swiss.text();
-    const tryJson = () => { try { return JSON.parse(txt); } catch { return { raw: txt }; } };
-
-    /*────────────────── logging ------------------------------------------*/
-    await logTranslator({
-      request_type: canon, request_payload: raw, swiss_data: tryJson(),
-      swiss_status: swiss.status, processing_ms: Date.now() - t0,
-      error: swiss.ok ? undefined : `Swiss API ${swiss.status}`,
-      google_geo: googleGeo, translator_payload: payload,
-      user_id: raw.user_id, skip: skipLogging, is_guest: raw.is_guest
-    });
-
-    /*────────────────── response to caller -------------------------------*/
-    return new Response(txt, { status: swiss.status, headers: { "Content-Type": "application/json" } });
-
-  } catch (err) {
+    await logTranslator({ request_type:canon, request_payload:body, swiss_data:swissData, swiss_status:swiss.status, processing_ms:Date.now()-t0, error: swiss.ok?undefined:`Swiss ${swiss.status}`, google_geo:googleGeo, translator_payload:payload, user_id:body.user_id, skip:skipLogging, is_guest:body.is_guest });
+    return new Response(txt,{status:swiss.status,headers:corsHeaders});
+  }catch(err){
     const msg = (err as Error).message;
-    await logTranslator({
-      request_type: requestType, request_payload: "n/a", swiss_data: { error: msg }, swiss_status: 500,
-      processing_ms: Date.now() - t0, error: msg, google_geo: googleGeo, translator_payload: null,
-      user_id: undefined, skip: skipLogging, is_guest: false
-    });
-    return new Response(JSON.stringify({ error: msg }), { status: 500, headers: { "Content-Type": "application/json" } });
+    console.error(`[translator-edge-${reqId}]`, msg);
+    await logTranslator({ request_type:requestType, request_payload:"n/a", swiss_data:{error:msg}, swiss_status:500, processing_ms:Date.now()-t0, error:msg, google_geo, translator_payload:null, user_id:undefined, skip:skipLogging });
+    return new Response(JSON.stringify({ error:msg }),{status:500,headers:corsHeaders});
   }
 });
