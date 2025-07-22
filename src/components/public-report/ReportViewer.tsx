@@ -23,6 +23,7 @@ interface ReportViewerProps {
 }
 
 type ModalType = 'chatgpt' | 'close' | null;
+type TransitionPhase = 'idle' | 'fading' | 'clearing' | 'transitioning' | 'complete';
 
 export const ReportViewer = ({ 
   reportData, 
@@ -31,19 +32,22 @@ export const ReportViewer = ({
   onResetMobileState,
   onStateReset 
 }: ReportViewerProps) => {
-  const { toast } = useToast();
-  const [isCopyCompleted, setIsCopyCompleted] = useState(false);
   const [activeModal, setActiveModal] = useState<ModalType>(null);
-  const [isCopping, setIsCopping] = useState(false);
+  const [activeView, setActiveView] = useState<'report' | 'astro'>(
+    reportData.metadata.content_type === 'ai' ? 'report' : 'astro'
+  );
   const [chatToken, setChatToken] = useState<string | null>(null);
   const [cachedUuid, setCachedUuid] = useState<string | null>(null);
+  const [isCopping, setIsCopping] = useState(false);
+  const [isCopyCompleted, setIsCopyCompleted] = useState(false);
+  const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>('idle');
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const { toast } = useToast();
 
   // Determine view logic based on content type
   const contentType = reportData.metadata.content_type;
   const showToggle = contentType === 'both';
   const defaultView = contentType === 'ai' ? 'report' : contentType === 'astro' ? 'astro' : 'report';
-  const [activeView, setActiveView] = useState<'report' | 'astro'>(defaultView);
-
   // Enforce content-based view restrictions
   useEffect(() => {
     if (!showToggle) {
@@ -189,46 +193,67 @@ export const ReportViewer = ({
   };
 
   const handleCloseSession = async () => {
-    console.log('🧹 Starting comprehensive session close...');
+    if (isTransitioning) return;
     
-    // Reset component state immediately
-    setChatToken(null);
-    setCachedUuid(null);
-    setIsCopyCompleted(false);
-    setActiveModal(null);
-    
-    // Reset view state
-    setActiveView(reportData.metadata.content_type === 'ai' ? 'report' : 
-                 reportData.metadata.content_type === 'astro' ? 'astro' : 'report');
+    console.log('🎭 Starting elegant session close transition...');
+    setIsTransitioning(true);
     
     try {
+      // Phase 1: Fade out current content
+      setTransitionPhase('fading');
+      setActiveModal(null);
+      
+      // Wait for fade animation
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Phase 2: Show clearing state with visual feedback
+      setTransitionPhase('clearing');
+      
+      // Reset component state gracefully
+      setChatToken(null);
+      setCachedUuid(null);
+      setIsCopyCompleted(false);
+      
+      // Reset view state
+      setActiveView(reportData.metadata.content_type === 'ai' ? 'report' : 
+                   reportData.metadata.content_type === 'astro' ? 'astro' : 'report');
+      
+      // Phase 3: Background cleanup with visual progress
+      setTransitionPhase('transitioning');
+      
       // Prepare state reset callbacks
       const stateResetCallbacks: (() => void)[] = [];
       
-      // Add parent state reset callback if provided
       if (onStateReset) {
         stateResetCallbacks.push(onStateReset);
       }
       
-      // Add mobile state reset callback if provided
       if (isMobile && onResetMobileState) {
         stateResetCallbacks.push(onResetMobileState);
       }
+      
+      // Execute cleanup in background with visual feedback
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Phase 4: Smooth navigation transition
+      setTransitionPhase('complete');
       
       // Use enhanced force navigation reset with state callbacks
       await forceNavigationReset(stateResetCallbacks);
       
     } catch (error) {
-      console.error('❌ Error during comprehensive session close:', error);
+      console.error('❌ Error during elegant session close:', error);
       
-      // Ultimate fallback - force page reload
+      // Graceful fallback
       try {
         window.location.href = '/';
       } catch (navError) {
         console.error('❌ Navigation fallback also failed:', navError);
-        // Last resort - just call onBack
         onBack();
       }
+    } finally {
+      setIsTransitioning(false);
+      setTransitionPhase('idle');
     }
   };
 
@@ -316,8 +341,34 @@ export const ReportViewer = ({
 
   return (
     <>
+      {/* Transition Overlay */}
+      {isTransitioning && (
+        <div className="fixed inset-0 z-[60] bg-white/95 backdrop-blur-sm flex items-center justify-center transition-all duration-500">
+          <div className="text-center space-y-6 max-w-sm mx-auto px-6">
+            <div className="relative">
+              <div className="w-16 h-16 border-4 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto"></div>
+              <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-blue-600 rounded-full animate-spin mx-auto" style={{ animationDelay: '-0.5s' }}></div>
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-semibold text-gray-900">
+                {transitionPhase === 'fading' && 'Closing Session'}
+                {transitionPhase === 'clearing' && 'Clearing Data'}
+                {transitionPhase === 'transitioning' && 'Resetting Form'}
+                {transitionPhase === 'complete' && 'Redirecting'}
+              </h3>
+              <p className="text-gray-600 font-light">
+                {transitionPhase === 'fading' && 'Preparing to clear your session...'}
+                {transitionPhase === 'clearing' && 'Removing all session data...'}
+                {transitionPhase === 'transitioning' && 'Setting up fresh form...'}
+                {transitionPhase === 'complete' && 'Taking you to the new form...'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Full-screen overlay */}
-      <div className="fixed inset-0 bg-white z-50 flex flex-col">
+      <div className={`fixed inset-0 bg-white z-50 flex flex-col transition-opacity duration-300 ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}>
         {/* Header - Full width, consistent across mobile/desktop */}
         <div className="flex items-center justify-between px-4 py-4 border-b bg-white shadow-sm">
           <div className="flex items-center gap-4">
@@ -508,14 +559,26 @@ export const ReportViewer = ({
           <div className={`flex flex-col gap-3 ${isMobile ? 'mt-4' : 'mt-6'}`}>
             <Button
               onClick={handleCloseSession}
-              className={`${isMobile ? 'h-11 text-base' : 'h-12 text-lg'} bg-red-600 hover:bg-red-700 text-white font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]`}
+              disabled={isTransitioning}
+              className={`${isMobile ? 'h-11 text-base' : 'h-12 text-lg'} bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]`}
             >
-              Close Session
+              {isTransitioning ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  {transitionPhase === 'fading' && 'Closing...'}
+                  {transitionPhase === 'clearing' && 'Clearing...'}
+                  {transitionPhase === 'transitioning' && 'Resetting...'}
+                  {transitionPhase === 'complete' && 'Redirecting...'}
+                </div>
+              ) : (
+                'Close Session'
+              )}
             </Button>
             <Button
               onClick={() => setActiveModal(null)}
+              disabled={isTransitioning}
               variant="outline"
-              className={`${isMobile ? 'h-11 text-base' : 'h-12 text-lg'} text-gray-900 font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98] border-gray-200`}
+              className={`${isMobile ? 'h-11 text-base' : 'h-12 text-lg'} text-gray-900 font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98] border-gray-200 disabled:opacity-50`}
             >
               Cancel
             </Button>
