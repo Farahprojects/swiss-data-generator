@@ -1580,6 +1580,7 @@ export type Database = {
           request_type: string | null
           response_status: number | null
           swiss_data: Json | null
+          swiss_error: boolean | null
           translator_payload: Json | null
           user_id: string | null
         }
@@ -1597,6 +1598,7 @@ export type Database = {
           request_type?: string | null
           response_status?: number | null
           swiss_data?: Json | null
+          swiss_error?: boolean | null
           translator_payload?: Json | null
           user_id?: string | null
         }
@@ -1614,6 +1616,7 @@ export type Database = {
           request_type?: string | null
           response_status?: number | null
           swiss_data?: Json | null
+          swiss_error?: boolean | null
           translator_payload?: Json | null
           user_id?: string | null
         }

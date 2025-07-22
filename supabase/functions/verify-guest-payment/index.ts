@@ -10,17 +10,35 @@ const corsHeaders = {
 
 type ReportData = Record<string, any>;
 
+// Map reportType to translator-edge request format
+function mapReportTypeToRequest(reportType: string): string {
+  if (!reportType) return 'essence';
+  if (reportType.includes('essence')) return 'essence';
+  if (reportType.includes('sync')) return 'sync';
+  if (reportType.includes('flow')) return 'flow';
+  if (reportType.includes('mindset')) return 'mindset';
+  if (reportType.includes('monthly')) return 'monthly';
+  if (reportType.includes('focus')) return 'focus';
+  return reportType.toLowerCase();
+}
+
 // Helper function to kick translator-edge for Swiss processing
 async function kickTranslator(guestReportId: string, reportData: ReportData, supabase: any): Promise<void> {
   try {
     console.log(`🔄 [verify-guest-payment] Starting translator-edge for guest: ${guestReportId}`);
     
+    // Map reportType to request field that translator-edge expects
+    const translatorPayload = {
+      ...reportData,
+      request: reportData.request || mapReportTypeToRequest(reportData.reportType || reportData.product_id),
+      is_guest: true,
+      user_id: guestReportId
+    };
+    
+    console.log(`🔄 [verify-guest-payment] Translator payload:`, JSON.stringify(translatorPayload));
+    
     await supabase.functions.invoke('translator-edge', {
-      body: {
-        ...reportData,
-        is_guest: true,
-        user_id: guestReportId
-      }
+      body: translatorPayload
     });
 
     console.log(`✅ [verify-guest-payment] translator-edge invoked for guest: ${guestReportId}`);

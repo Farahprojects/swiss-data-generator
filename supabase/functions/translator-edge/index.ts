@@ -234,6 +234,7 @@ async function logTranslator(run:{request_type:string;request_payload:any;swiss_
     google_geo: run.google_geo,
     user_id: run.user_id ?? null,
     is_guest: run.is_guest ?? false,
+    swiss_error: run.swiss_status !== 200, // Set swiss_error based on status
   });
   if(error) console.error("[translator] log fail", error.message);
 }
@@ -246,8 +247,19 @@ serve(async (req)=>{
   if(req.method==="OPTIONS") return new Response(null,{status:204,headers:corsHeaders});
   const t0=Date.now();
   const reqId = crypto.randomUUID().slice(0,8);
-  let skipLogging=false, requestType="unknown", googleGeo=false;
+  let skipLogging=false, requestType="unknown", googleGeo=false, userId:string|undefined, isGuest=false;
   try{
+    // Extract user_id and is_guest before validation for proper error logging
+    const rawBodyText = await req.text();
+    let rawBody: any;
+    try {
+      rawBody = JSON.parse(rawBodyText);
+      userId = rawBody.user_id;
+      isGuest = !!rawBody.is_guest;
+    } catch (parseErr) {
+      console.error(`[translator-edge-${reqId}] JSON parse failed:`, parseErr);
+      throw new Error("Invalid JSON in request body");
+    }
     function normalisePerson(src:any={}):any{
       return {
         birth_date: src.birth_date||src.date||null,
@@ -269,7 +281,6 @@ serve(async (req)=>{
       }
       return input;
     }
-    const rawBody = await req.json();
     const body = normaliseBody(rawBody);
     console.log(`[translator-edge-${reqId}]`, JSON.stringify(body));
     skipLogging = body.skip_logging===true;
@@ -339,7 +350,7 @@ serve(async (req)=>{
   }catch(err){
     const msg = (err as Error).message;
     console.error(`[translator-edge-${reqId}]`, msg);
-    await logTranslator({ request_type:requestType, request_payload:"n/a", swiss_data:{error:msg}, swiss_status:500, processing_ms:Date.now()-t0, error:msg, google_geo:googleGeo, translator_payload:null, user_id:undefined, skip:skipLogging });
+    await logTranslator({ request_type:requestType, request_payload:"n/a", swiss_data:{error:msg}, swiss_status:500, processing_ms:Date.now()-t0, error:msg, google_geo:googleGeo, translator_payload:null, user_id:userId, skip:skipLogging, is_guest:isGuest });
     return new Response(JSON.stringify({ error:msg }),{status:500,headers:corsHeaders});
   }
 });
