@@ -224,6 +224,20 @@ async function ensureLatLon(obj: any): Promise<{ data: any; googleGeoUsed: boole
   return { data: { ...obj, latitude: lat, longitude: lng }, googleGeoUsed: true };
 }
 
+// Infer timezone from coordinates using Google Timezone API
+async function inferTimezone(obj: any): Promise<string | null> {
+  if (obj.tz) return obj.tz;         // already provided
+
+  // prefer the resolved lat/lon we just put on the object
+  if (obj.latitude !== undefined && obj.longitude !== undefined) {
+    const tfUrl = `https://maps.googleapis.com/maps/api/timezone/json?location=${obj.latitude},${obj.longitude}&timestamp=0&key=${GEO_KEY}`;
+    const tf = await fetch(tfUrl).then(r => r.json());
+    if (tf.status === "OK" && tf.timeZoneId) return tf.timeZoneId;
+  }
+
+  return null; // give up
+}
+
 /*──────────────── handleReportGeneration helper ---------------------------*/
 async function handleReportGeneration(params: {
   requestData: any;
@@ -393,7 +407,8 @@ serve(async (req) => {
     // Attach accurate UTC stamp if this is a chart‑type request (not positions/moonphases)
     if (["natal", "essence", "sync", "flow", "mindset", "monthly", "focus", "progressions", "return", "transits"].includes(canon)) {
       try {
-        const utcISO = toUtcISO(withLatLon);
+        const tzGuess = await inferTimezone(withLatLon);
+        const utcISO = toUtcISO({ ...withLatLon, tz: tzGuess ?? withLatLon.tz });
         withLatLon.utc = utcISO; // Swiss wrapper recognises 'utc'
         console.log(`[translator-edge-${reqId}] UTC timestamp generated: ${utcISO}`);
       } catch (timeError) {
