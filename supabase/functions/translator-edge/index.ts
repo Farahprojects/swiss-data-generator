@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -142,11 +143,110 @@ async function ensureLatLon(obj: any): Promise<{ data: any; googleGeoUsed: boole
   return { data: { ...obj, latitude: lat, longitude: lng }, googleGeoUsed: true };
 }
 
+/*──────────────── handleReportGeneration helper ---------------------------*/
+async function handleReportGeneration(params: {
+  requestData: any;
+  swissApiResponse: any;
+  swissApiStatus: number;
+  requestId?: string;
+}): Promise<void> {
+  const { requestData, swissApiResponse, swissApiStatus, requestId } = params;
+  const logPrefix = requestId ? `[reportHandler][${requestId}]` : "[reportHandler]";
+  
+  console.log(`${logPrefix} ========== REPORT GENERATION DEBUG START ==========`);
+  console.log(`${logPrefix} Swiss API Status: ${swissApiStatus}`);
+  console.log(`${logPrefix} Request Data Keys: ${Object.keys(requestData || {}).join(', ')}`);
+  console.log(`${logPrefix} Report field in request: ${JSON.stringify(requestData?.report)}`);
+  
+  // Only proceed if Swiss API call was successful and report is requested
+  if (swissApiStatus !== 200) {
+    console.log(`${logPrefix} Swiss API failed (${swissApiStatus}), skipping report generation`);
+    return;
+  }
+
+  if (!requestData?.report) {
+    console.log(`${logPrefix} No report requested, skipping report generation`);
+    return;
+  }
+
+  try {
+    // Parse Swiss API response
+    let swissData;
+    try {
+      swissData = typeof swissApiResponse === 'string' ? JSON.parse(swissApiResponse) : swissApiResponse;
+    } catch (parseError) {
+      console.error(`${logPrefix} Failed to parse Swiss API response:`, parseError);
+      return;
+    }
+
+    // Resolve API key for guest reports
+    let resolvedApiKey = requestData.api_key;
+    
+    if (!resolvedApiKey && requestData.user_id) {
+      console.log(`${logPrefix} Guest report detected, checking for valid Stripe session...`);
+      
+      try {
+        const { data: guestReport, error } = await sb
+          .from("guest_reports")
+          .select("stripe_session_id")
+          .eq("id", requestData.user_id)
+          .single();
+        
+        if (error) {
+          console.error(`${logPrefix} Failed to query guest_reports:`, error);
+          resolvedApiKey = null;
+        } else if (guestReport?.stripe_session_id) {
+          console.log(`${logPrefix} Valid Stripe session found for guest report`);
+          resolvedApiKey = "GUEST-STRIPE";
+        } else {
+          console.log(`${logPrefix} No valid Stripe session found for guest report`);
+          resolvedApiKey = null;
+        }
+      } catch (error) {
+        console.error(`${logPrefix} Error resolving guest API key:`, error);
+        resolvedApiKey = null;
+      }
+    }
+
+    // Determine if this is a guest user
+    const isGuest = !!(requestData.stripe_session_id || resolvedApiKey === "GUEST-STRIPE");
+
+    // Prepare report payload
+    const reportPayload = {
+      endpoint: requestData.request || "unknown",
+      report_type: requestData.report,
+      user_id: requestData.user_id,
+      apiKey: resolvedApiKey,
+      is_guest: isGuest,
+      chartData: {
+        ...swissData,
+        person_a_name: requestData.person_a?.name,
+        person_b_name: requestData.person_b?.name
+      },
+      ...requestData
+    };
+
+    console.log(`${logPrefix} Calling report orchestrator for "${reportPayload.report_type}" report...`);
+    
+    // Call the report orchestrator (don't save the result - let orchestrator handle it)
+    const { processReportRequest } = await import("../_shared/reportOrchestrator.ts");
+    await processReportRequest(reportPayload);
+    
+    console.log(`${logPrefix} Report orchestrator call completed`);
+    console.log(`${logPrefix} ========== REPORT GENERATION DEBUG END ==========`);
+    
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error(`${logPrefix} Unexpected error in report generation:`, errorMsg);
+    console.log(`${logPrefix} ========== REPORT GENERATION DEBUG END ==========`);
+  }
+}
+
 /*──────────────── logging --------------------------------------------------*/
 async function logTranslator(run: {
   request_type: string,
   request_payload: any,
-  swiss_response: any,
+  swiss_data: any, // FIXED: Changed from swiss_response to swiss_data
   swiss_status: number,
   processing_ms: number,
   error?: string,
@@ -162,7 +262,7 @@ async function logTranslator(run: {
     request_payload: run.request_payload,
     translator_payload: run.translator_payload,
     response_status: run.swiss_status,
-    swiss_data: run.swiss_response,
+    swiss_data: run.swiss_data, // FIXED: Using swiss_data for compatibility
     processing_time_ms: run.processing_ms,
     error_message: run.error,
     google_geo: run.google_geo,
@@ -234,12 +334,32 @@ serve(async (req) => {
     
     const txt = await swiss.text();
     const tryJson = () => { try { return JSON.parse(txt); } catch { return { raw: txt }; } };
+    const swissData = tryJson();
 
     console.log(`[translator-edge-${reqId}] Swiss response status: ${swiss.status}`);
 
+    /*────────────────── AI report generation (if requested) --------------*/
+    if (raw.report && swiss.ok) {
+      console.log(`[translator-edge-${reqId}] Report requested: "${raw.report}", triggering AI generation`);
+      
+      // Call handleReportGeneration but don't save its result
+      // The orchestrator will handle everything
+      try {
+        await handleReportGeneration({
+          requestData: raw,
+          swissApiResponse: swissData,
+          swissApiStatus: swiss.status,
+          requestId: reqId
+        });
+      } catch (reportError) {
+        console.error(`[translator-edge-${reqId}] Report generation error:`, reportError);
+        // Don't fail the main request - Swiss data is still valid
+      }
+    }
+
     /*────────────────── logging ------------------------------------------*/
     await logTranslator({
-      request_type: canon, request_payload: raw, swiss_response: tryJson(),
+      request_type: canon, request_payload: raw, swiss_data: swissData, // FIXED: Using swiss_data
       swiss_status: swiss.status, processing_ms: Date.now() - t0,
       error: swiss.ok ? undefined : `Swiss API ${swiss.status}`,
       google_geo: googleGeo, translator_payload: payload,
@@ -254,7 +374,7 @@ serve(async (req) => {
     console.error(`[translator-edge-${reqId}] Error:`, msg);
     
     await logTranslator({
-      request_type: requestType, request_payload: "n/a", swiss_response: { error: msg }, swiss_status: 500,
+      request_type: requestType, request_payload: "n/a", swiss_data: { error: msg }, swiss_status: 500, // FIXED: Using swiss_data
       processing_ms: Date.now() - t0, error: msg, google_geo: googleGeo, translator_payload: null,
       user_id: undefined, skip: skipLogging
     });
