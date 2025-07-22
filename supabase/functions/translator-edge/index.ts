@@ -319,15 +319,28 @@ serve(async (req)=>{
       if(["natal","essence","sync","flow","mindset","monthly","focus","progressions","return","transits"].includes(canon)){
         try{
           const tzGuess = await inferTimezone(withLatLon);
-          const utcISO = toUtcISO({...withLatLon,tz:tzGuess??withLatLon.tz});
+
+          // 🔒 Pull from person_a if exists
+          const source = parsed.person_a ?? parsed;
+
+          const date = source.birth_date ?? source.date;
+          const time = source.birth_time ?? source.time;
+
+          if (!date) throw new Error("Missing birth_date");
+          if (!time) throw new Error("Missing birth_time");
+
+          withLatLon.birth_date = date;
+          withLatLon.birth_time = time;
+          withLatLon.tz = parsed.tz || tzGuess || source.tz || "UTC";
+
+          const utcISO = toUtcISO({
+            birth_date: date,
+            birth_time: time,
+            tz: withLatLon.tz,
+            location: source.location ?? parsed.location ?? ""
+          });
+
           withLatLon.utc = parsed.utc || utcISO;
-          const haveDate = parsed.birth_date || parsed.date || parsed.person_a?.birth_date || parsed.person_a?.date;
-          const haveTime = parsed.birth_time || parsed.time || parsed.person_a?.birth_time || parsed.person_a?.time;
-          if(!haveDate) throw new Error("Missing birth_date");
-          if(!haveTime) throw new Error("Missing birth_time");
-          withLatLon.birth_date = haveDate;
-          withLatLon.birth_time = haveTime;
-          withLatLon.tz = parsed.tz || tzGuess || "UTC";
         }catch(e){ console.warn(`[translator-edge-${reqId}] UTC gen fail`, e); }
       }
       payload = normalise(withLatLon);
