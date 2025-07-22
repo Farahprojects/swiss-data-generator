@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback } from 'react';
 import { CheckCircle, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -30,15 +31,9 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   const [reportReady, setReportReady] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
 
-  // Auto-scroll to top when component mounts
-  useEffect(() => {
-    logSuccessScreen('info', 'SuccessScreen mounted, scrolling to top');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
-
   // Handle report ready from parent component
   const handleReportReady = useCallback((reportData: ReportData) => {
-    logSuccessScreen('info', 'Report ready signal received, calling onViewReport immediately');
+    logSuccessScreen('info', 'Report ready signal received, opening modal');
     setReportReady(true);
     setCountdownTime(0);
     

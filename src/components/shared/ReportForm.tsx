@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
@@ -57,21 +58,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   } = useReportSubmission(setCreatedGuestReportId);
 
   const { data: guestReportData, error: guestReportError, refetch: refetchGuestData } = useGuestReportData(guestId);
-
-  // Auto-scroll to top when success screen shows
-  useEffect(() => {
-    const shouldScrollToSuccess = 
-      (reportCreated && createdGuestReportId && userName && userEmail) ||
-      (status === 'success' && statusReportData) ||
-      (guestId && tokenRecovery.recovered && tokenRecovery.recoveredName && tokenRecovery.recoveredEmail);
-
-    if (shouldScrollToSuccess) {
-      log('info', 'Success screen showing, scrolling to top', null, 'ReportForm');
-      setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }, 100); // Small delay to ensure DOM has updated
-    }
-  }, [reportCreated, createdGuestReportId, status, statusReportData, guestId, tokenRecovery.recovered, userName, userEmail]);
 
   // State restoration effect
   useEffect(() => {
