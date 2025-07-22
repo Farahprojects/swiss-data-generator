@@ -13,7 +13,7 @@ import SuccessScreen from '@/components/public-report/SuccessScreen';
 import { ReportViewer } from '@/components/public-report/ReportViewer';
 import { FormValidationStatus } from '@/components/public-report/FormValidationStatus';
 
-import { clearGuestReportId, forceNavigationReset } from '@/utils/urlHelpers';
+import { clearGuestReportId } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
 import { useGuestReportData } from '@/hooks/useGuestReportData';
 import { ReportData } from '@/utils/reportContentExtraction';
@@ -50,7 +50,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
   const [viewingReport, setViewingReport] = useState(false);
   const [reportData, setReportData] = useState<ReportData | null>(null);
-  const [isResetting, setIsResetting] = useState(false);
 
   // Use a ref to store the callback that SuccessScreen will register
   const reportReadyCallbackRef = useRef<((reportData: ReportData) => void) | null>(null);
@@ -275,9 +274,9 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }
   };
 
-  // Enhanced state reset function that resets all component states
-  const resetAllComponentStates = useCallback(() => {
-    console.log('🔄 Resetting all component states...');
+  // Simple component state reset function
+  const resetComponentStates = useCallback(() => {
+    console.log('🔄 Resetting component states...');
     
     // Reset form state
     form.reset();
@@ -308,20 +307,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     // Reset report submission state
     resetReportState();
     
-    console.log('✅ All component states reset');
+    console.log('✅ Component states reset');
   }, [form, resetReportState]);
-
-  const resetAllStates = useCallback(async () => {
-    console.log('🧹 Starting comprehensive state reset...');
-    
-    // Create state reset callback
-    const stateResetCallbacks = [resetAllComponentStates];
-    
-    // Use enhanced clearing utility with state callbacks
-    await forceNavigationReset(stateResetCallbacks);
-    
-    console.log('✅ Comprehensive state reset completed');
-  }, [resetAllComponentStates]);
 
   React.useEffect(() => {
     if (!guestReportData || !stripePaymentState.isStripeRedirect) return;
@@ -469,28 +456,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }
   };
 
-  const handleCloseReportViewer = useCallback(async () => {
-    console.log('🔄 Starting session close and reset...');
-    
-    if (isResetting) return;
-    
-    setIsResetting(true);
-    
-    try {
-      await resetAllStates();
-      
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      navigate('/report', { replace: true });
-      
-    } catch (error) {
-      console.error('Error during session reset:', error);
-      navigate('/report', { replace: true });
-    } finally {
-      setIsResetting(false);
-    }
-  }, [isResetting, resetAllStates, navigate]);
-
   const onSubmit = async (data: ReportFormData) => {
     const submissionData = coachSlug ? { ...data, coachSlug } : data;
     const result = await submitReport(submissionData);
@@ -503,17 +468,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     const formData = form.getValues();
     await onSubmit(formData);
   };
-
-  if (isResetting) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-8">
-        <div className="text-center space-y-6">
-          <div className="w-12 h-12 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto"></div>
-          <p className="text-xl text-gray-600 font-light">Closing session...</p>
-        </div>
-      </div>
-    );
-  }
 
   if (stripePaymentState.isVerifying || (stripePaymentState.isStripeRedirect && !guestReportData)) {
     return (
@@ -565,9 +519,9 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     return (
       <ReportViewer
         reportData={reportData}
-        onBack={handleCloseReportViewer}
+        onBack={() => navigate('/report', { replace: true })}
         isMobile={false}
-        onStateReset={resetAllComponentStates}
+        onStateReset={resetComponentStates}
       />
     );
   }
@@ -589,7 +543,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         <div className="text-center">
           <p className="text-destructive mb-4">Failed to load report</p>
           <button 
-            onClick={handleCloseReportViewer}
+            onClick={() => navigate('/report', { replace: true })}
             className="bg-primary text-primary-foreground px-4 py-2 rounded"
           >
             Go Back
