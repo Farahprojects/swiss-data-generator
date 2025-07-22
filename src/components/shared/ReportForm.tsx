@@ -1,9 +1,11 @@
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { ReportFormData } from '@/types/public-report';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
+import { useTokenRecovery } from '@/hooks/useTokenRecovery';
+import { useReportStatus, ReportStatus } from '@/hooks/useReportStatus';
 
 import ReportTypeSelector from '@/components/public-report/ReportTypeSelector';
 import CombinedPersonalDetailsForm from '@/components/public-report/CombinedPersonalDetailsForm';
@@ -11,7 +13,6 @@ import SecondPersonForm from '@/components/public-report/SecondPersonForm';
 import PaymentStep from '@/components/public-report/PaymentStep';
 import SuccessScreen from '@/components/public-report/SuccessScreen';
 import { ReportViewer } from '@/components/public-report/ReportViewer';
-import { FormValidationStatus } from '@/components/public-report/FormValidationStatus';
 
 import { clearGuestReportId } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
@@ -38,6 +39,13 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   
   // Store the guest report ID from successful submissions
   const [createdGuestReportId, setCreatedGuestReportId] = useState<string | null>(null);
+  const [viewingReport, setViewingReport] = useState(false);
+  const [reportData, setReportData] = useState<ReportData | null>(null);
+  const [sessionRestored, setSessionRestored] = useState(false);
+
+  // Use custom hooks for state management
+  const { status, error: statusError, reportData: statusReportData, setStatus, reset: resetStatus } = useReportStatus();
+  const tokenRecovery = useTokenRecovery(guestId);
   
   const { 
     isProcessing, 
@@ -49,118 +57,67 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     resetReportState
   } = useReportSubmission(setCreatedGuestReportId);
 
-  const [viewingReport, setViewingReport] = useState(false);
-  const [reportData, setReportData] = useState<ReportData | null>(null);
-
   // Use a ref to store the callback that SuccessScreen will register
   const reportReadyCallbackRef = useRef<((reportData: ReportData) => void) | null>(null);
-
-  // Token recovery state
-  const [tokenRecoveryState, setTokenRecoveryState] = useState<{
-    isRecovering: boolean;
-    recovered: boolean;
-    error: string | null;
-    recoveredName: string | null;
-    recoveredEmail: string | null;
-  }>({
-    isRecovering: false,
-    recovered: false,
-    error: null,
-    recoveredName: null,
-    recoveredEmail: null,
-  });
-
-  // Stripe payment state for handling post-payment flow
-  const [stripePaymentState, setStripePaymentState] = useState<{
-    isVerifying: boolean;
-    isWaiting: boolean;
-    isComplete: boolean;
-    error: string | null;
-    reportData: any | null;
-    isStripeRedirect: boolean;
-  }>({
-    isVerifying: false,
-    isWaiting: false,
-    isComplete: false,
-    error: null,
-    reportData: null,
-    isStripeRedirect: false,
-  });
-
-  // State restoration for page refresh scenarios
-  const [sessionRestored, setSessionRestored] = useState(false);
 
   // Remove polling - useGuestReportData now only fetches on demand
   const { data: guestReportData, error: guestReportError, refetch: refetchGuestData } = useGuestReportData(guestId);
 
   // State restoration effect - handles page refresh scenarios
-  React.useEffect(() => {
+  useEffect(() => {
     if (!guestId || sessionRestored) return;
 
     log('info', 'Restoring session state for guest ID', { guestId }, 'ReportForm');
     
-    // Immediately set the session as restored to prevent multiple triggers
     setSessionRestored(true);
-    
-    // Set the created guest report ID to the existing guestId
     setCreatedGuestReportId(guestId);
     
-    // Check if this is a fresh Stripe redirect (no existing session data)
     const hasExistingSession = localStorage.getItem('pending_report_email');
     
     if (!hasExistingSession) {
-      // This is likely a Stripe redirect - start the unified fetching flow
       log('info', 'Stripe redirect detected, starting unified data fetching', null, 'ReportForm');
-      setStripePaymentState(prev => ({ 
-        ...prev, 
-        isVerifying: true,
-        isStripeRedirect: true 
-      }));
-    } else {
-      // This is token recovery - use existing logic
-      log('info', 'Token recovery detected', null, 'ReportForm');
-      setTokenRecoveryState(prev => ({ ...prev, isRecovering: true, error: null }));
-      recoverTokenData(guestId);
+      setStatus('verifying');
     }
-  }, [guestId, sessionRestored]);
-
-  // Log fresh form state only once on mount
-  React.useEffect(() => {
-    if (!guestId && !reportCreated) {
-      log('debug', 'No guest ID found - showing fresh form', null, 'ReportForm');
-    }
-  }, []); // Empty dependency array - only runs once on mount
-
-  // Memoized callback for handling report ready events
-  const handleReportReady = useCallback((reportData: ReportData) => {
-    log('info', 'Report ready callback triggered', null, 'ReportForm');
-    setReportData(reportData);
-    setViewingReport(true);
-  }, []);
-
-  // Determine the effective guest ID - either from new creation or existing
-  const effectiveGuestId = createdGuestReportId || guestId;
+  }, [guestId, sessionRestored, setStatus]);
 
   // Handle guest data when guestId is provided
-  React.useEffect(() => {
-    if (guestId) {
-      const hasExistingSession = localStorage.getItem('pending_report_email');
+  useEffect(() => {
+    if (!guestReportData || status !== 'verifying') return;
+
+    const guestReport = guestReportData.guest_report;
+    log('debug', 'Unified data fetch result', { paymentStatus: guestReport?.payment_status }, 'ReportForm');
+    
+    if (guestReport?.payment_status === 'paid') {
+      log('info', 'Payment confirmed via unified fetch, transitioning to success state', null, 'ReportForm');
+      setStatus('success', undefined, guestReportData);
+    } else if (guestReport?.payment_status === 'pending') {
+      log('info', 'Payment pending via unified fetch, starting polling', null, 'ReportForm');
+      setStatus('waiting');
+    } else {
+      log('error', 'Unexpected payment status', { paymentStatus: guestReport?.payment_status }, 'ReportForm');
+      setStatus('error', `Payment status: ${guestReport?.payment_status}`);
+    }
+  }, [guestReportData, status, setStatus]);
+
+  // Handle polling for waiting payments
+  useEffect(() => {
+    if (guestReportData && status === 'waiting') {
+      const guestReport = guestReportData.guest_report;
+      log('debug', 'Polling result', { paymentStatus: guestReport?.payment_status }, 'ReportForm');
       
-      if (!hasExistingSession) {
-        log('info', 'Stripe redirect detected, starting unified data fetching', null, 'ReportForm');
-        setStripePaymentState(prev => ({ 
-          ...prev, 
-          isVerifying: true,
-          isStripeRedirect: true 
-        }));
-      } else {
-        log('info', 'Token recovery detected', null, 'ReportForm');
-        setTokenRecoveryState(prev => ({ ...prev, isRecovering: true, error: null }));
-        recoverTokenData(guestId);
+      if (guestReport?.payment_status === 'paid') {
+        log('info', 'Payment confirmed via polling, transitioning to success state', null, 'ReportForm');
+        setStatus('success', undefined, guestReportData);
       }
     }
-  }, [guestId]);
+    
+    if (guestReportError && status === 'waiting') {
+      log('error', 'Polling error', guestReportError, 'ReportForm');
+      setStatus('error', 'Failed to verify payment status');
+    }
+  }, [guestReportData, guestReportError, status, setStatus]);
 
+  // Form setup
   const form = useForm<ReportFormData>({
     mode: 'onBlur',
     defaultValues: {
@@ -190,7 +147,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     },
   });
 
-  const { register, handleSubmit, watch, setValue, control, formState: { errors, isValid }, formState } = form;
+  const { register, handleSubmit, watch, setValue, control, formState: { errors, isValid } } = form;
 
   const selectedReportType = watch('reportType');
   const selectedRequest = watch('request');
@@ -227,15 +184,13 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
   const shouldUnlockForm = !!(selectedReportType || selectedRequest);
 
-  React.useEffect(() => {
+  // Form state change effect
+  useEffect(() => {
     const checkFormCompletion = async () => {
       const formData = form.getValues();
       const hasReportTypeOrRequest = !!(formData.reportType || formData.request);
       const hasPersonalInfo = !!(formData.name && formData.email && formData.birthDate && formData.birthTime);
       const hasLocationWithCoords = !!(formData.birthLocation && formData.birthLatitude && formData.birthLongitude);
-      
-      if (hasReportTypeOrRequest && hasPersonalInfo && hasLocationWithCoords) {
-      }
       
       onFormStateChange?.(isValid, shouldUnlockForm);
     };
@@ -243,147 +198,29 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     checkFormCompletion();
   }, [form.watch(), isValid, shouldUnlockForm, onFormStateChange]);
 
-  const recoverTokenData = async (guestIdParam: string) => {
-    try {
-      const { data: guestReport, error } = await supabase
-        .from('guest_reports')
-        .select('*')
-        .eq('id', guestIdParam)
-        .single();
-
-      if (error || !guestReport) {
-        throw new Error('Report not found');
-      }
-
-      const reportData = guestReport.report_data as any;
-      const name = reportData?.name;
-      const email = reportData?.email || guestReport.email;
-
-      if (!name || !email) {
-        throw new Error('Session data corrupted');
-      }
-
-      setTokenRecoveryState({
-        isRecovering: false,
-        recovered: true,
-        error: null,
-        recoveredName: name,
-        recoveredEmail: email,
-      });
-
-    } catch (err: any) {
-      setTokenRecoveryState({
-        isRecovering: false,
-        recovered: false,
-        error: err.message || 'Unable to recover session',
-        recoveredName: null,
-        recoveredEmail: null,
-      });
-    }
-  };
+  // Determine the effective guest ID - either from new creation or existing
+  const effectiveGuestId = createdGuestReportId || guestId;
 
   // Simple component state reset function
   const resetComponentStates = useCallback(() => {
     log('debug', 'Resetting component states', null, 'ReportForm');
     
-    // Reset form state
     form.reset();
-    
-    // Reset component states
     setViewingReport(false);
     setReportData(null);
     setCreatedGuestReportId(null);
     setSessionRestored(false);
     
-    setTokenRecoveryState({
-      isRecovering: false,
-      recovered: false,
-      error: null,
-      recoveredName: null,
-      recoveredEmail: null,
-    });
-    
-    setStripePaymentState({
-      isVerifying: false,
-      isWaiting: false,
-      isComplete: false,
-      error: null,
-      reportData: null,
-      isStripeRedirect: false,
-    });
-    
-    // Reset report submission state
+    tokenRecovery.reset();
+    resetStatus();
     resetReportState();
     
     log('debug', 'Component states reset', null, 'ReportForm');
-  }, [form, resetReportState]);
+  }, [form, tokenRecovery, resetStatus, resetReportState]);
 
-  React.useEffect(() => {
-    if (!guestReportData || !stripePaymentState.isStripeRedirect) return;
-
-    const guestReport = guestReportData.guest_report;
-    log('debug', 'Unified data fetch result', { paymentStatus: guestReport?.payment_status }, 'ReportForm');
-    
-    if (guestReport?.payment_status === 'paid') {
-      log('info', 'Payment confirmed via unified fetch, transitioning to success state', null, 'ReportForm');
-      setStripePaymentState({
-        isVerifying: false,
-        isWaiting: false,
-        isComplete: true,
-        error: null,
-        reportData: guestReportData,
-        isStripeRedirect: true,
-      });
-    } else if (guestReport?.payment_status === 'pending') {
-      log('info', 'Payment pending via unified fetch, starting polling', null, 'ReportForm');
-      setStripePaymentState(prev => ({
-        ...prev,
-        isVerifying: false,
-        isWaiting: true,
-      }));
-    } else {
-      log('error', 'Unexpected payment status', { paymentStatus: guestReport?.payment_status }, 'ReportForm');
-      setStripePaymentState({
-        isVerifying: false,
-        isWaiting: false,
-        isComplete: false,
-        error: `Payment status: ${guestReport?.payment_status}`,
-        reportData: null,
-        isStripeRedirect: false,
-      });
-    }
-  }, [guestReportData, stripePaymentState.isStripeRedirect]);
-
-  React.useEffect(() => {
-    if (guestReportData && stripePaymentState.isWaiting) {
-      const guestReport = guestReportData.guest_report;
-      log('debug', 'Polling result', { paymentStatus: guestReport?.payment_status }, 'ReportForm');
-      
-      if (guestReport?.payment_status === 'paid') {
-        log('info', 'Payment confirmed via polling, transitioning to success state', null, 'ReportForm');
-        setStripePaymentState({
-          isVerifying: false,
-          isWaiting: false,
-          isComplete: true,
-          error: null,
-          reportData: guestReportData,
-          isStripeRedirect: true,
-        });
-      }
-    }
-    
-    if (guestReportError && stripePaymentState.isWaiting) {
-      log('error', 'Polling error', guestReportError, 'ReportForm');
-      setStripePaymentState(prev => ({
-        ...prev,
-        isWaiting: false,
-        error: 'Failed to verify payment status',
-      }));
-    }
-  }, [guestReportData, guestReportError, stripePaymentState.isWaiting]);
-
-  const paymentStepRef = React.useRef<HTMLDivElement>(null);
-  const secondPersonRef = React.useRef<HTMLDivElement>(null);
+  // Scroll handling refs
+  const paymentStepRef = useRef<HTMLDivElement>(null);
+  const secondPersonRef = useRef<HTMLDivElement>(null);
 
   const handleFirstPersonPlaceSelected = () => {
     const isDesktop = window.innerWidth >= 640;
@@ -457,19 +294,16 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         setReportData(data as ReportData);
         setViewingReport(true);
       } else {
-        log('warn', 'Report is still being generated in background', null, 'ReportForm');
+        log('info', 'Report is still being generated in background', null, 'ReportForm');
       }
     } catch (error) {
-      log('warn', 'Report generation in progress', { error }, 'ReportForm');
+      log('info', 'Report generation in progress', { error }, 'ReportForm');
     }
   };
 
   const onSubmit = async (data: ReportFormData) => {
     const submissionData = coachSlug ? { ...data, coachSlug } : data;
-    const result = await submitReport(submissionData);
-    
-    // Note: createdGuestReportId is now set automatically in useReportSubmission hook
-    // No need to set it here anymore - this eliminates the micro-race
+    await submitReport(submissionData);
   };
 
   const handleButtonClick = async () => {
@@ -477,7 +311,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     await onSubmit(formData);
   };
 
-  if (stripePaymentState.isVerifying || (stripePaymentState.isStripeRedirect && !guestReportData)) {
+  // Status-based rendering
+  if (status === 'verifying') {
     return (
       <div className="min-h-screen flex items-center justify-center p-8">
         <div className="text-center space-y-6">
@@ -489,7 +324,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
 
-  if (stripePaymentState.isWaiting) {
+  if (status === 'waiting') {
     return (
       <div className="min-h-screen flex items-center justify-center p-8">
         <div className="text-center space-y-6">
@@ -506,12 +341,12 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
 
-  if (stripePaymentState.error) {
+  if (status === 'error') {
     return (
       <div className="min-h-screen flex items-center justify-center p-8">
         <div className="text-center space-y-6">
           <p className="text-xl text-destructive">Payment verification failed</p>
-          <p className="text-sm text-gray-500">{stripePaymentState.error}</p>
+          <p className="text-sm text-gray-500">{statusError}</p>
           <button 
             onClick={() => navigate('/report')}
             className="bg-primary text-primary-foreground px-6 py-2 rounded-lg"
@@ -561,16 +396,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
 
-  // ADD DEBUG LOGGING: Check all success condition values right before the checks
-      log('debug', 'GateCheck', {
-      reportCreated,
-      createdGuestReportId,
-      userName,
-      userEmail,
-      guestId
-    }, 'ReportForm');
-
-  // Success state checks (these should come before the binary gate)
+  // Success state checks
   if (reportCreated && createdGuestReportId && userName && userEmail) {
     log('debug', 'Rendering SuccessScreen with guaranteed guest ID', { createdGuestReportId }, 'ReportForm');
     return (
@@ -586,10 +412,10 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
 
-  if (stripePaymentState.isComplete && stripePaymentState.reportData) {
-    const reportData = stripePaymentState.reportData.guest_report?.report_data;
+  if (status === 'success' && statusReportData) {
+    const reportData = statusReportData.guest_report?.report_data;
     const name = reportData?.name;
-    const email = reportData?.email || stripePaymentState.reportData.guest_report?.email;
+    const email = reportData?.email || statusReportData.guest_report?.email;
     
     if (name && email) {
       return (
@@ -606,11 +432,11 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }
   }
   
-  if (guestId && tokenRecoveryState.recovered && tokenRecoveryState.recoveredName && tokenRecoveryState.recoveredEmail) {
+  if (guestId && tokenRecovery.recovered && tokenRecovery.recoveredName && tokenRecovery.recoveredEmail) {
     return (
       <SuccessScreen 
-        name={tokenRecoveryState.recoveredName} 
-        email={tokenRecoveryState.recoveredEmail} 
+        name={tokenRecovery.recoveredName} 
+        email={tokenRecovery.recoveredEmail} 
         onViewReport={handleViewReport}
         onReportReady={(callback) => {
           reportReadyCallbackRef.current = callback;
@@ -620,7 +446,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
   
-  if (guestId && tokenRecoveryState.isRecovering) {
+  if (guestId && tokenRecovery.isRecovering) {
     return (
       <div className="min-h-screen flex items-center justify-center p-8">
         <div className="text-center space-y-6">
@@ -631,15 +457,15 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
   
-  if (guestId && tokenRecoveryState.error) {
+  if (guestId && tokenRecovery.error) {
     React.useEffect(() => {
       clearGuestReportId();
       window.history.replaceState({}, '', '/report');
     }, []);
   }
 
-  // MOVED: Binary gate now comes after all success state checks
-  if (!guestId && !reportCreated) {
+  // Main form rendering - single JSX block guarded by status
+  if (status === 'collecting' || (!guestId && !reportCreated)) {
     return (
       <div className="space-y-0" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -697,60 +523,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
 
-  // Default form rendering
-  return (
-    <div className="space-y-0" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="space-y-8">
-          <ReportTypeSelector
-            control={control}
-            errors={errors}
-            selectedReportType={selectedReportType}
-            showReportGuide={false}
-            setShowReportGuide={() => {}}
-            setValue={setValue}
-          />
-
-          {step1Done && (
-            <>
-            <CombinedPersonalDetailsForm
-              register={register}
-              setValue={setValue}
-              watch={watch}
-              errors={errors}
-              onPlaceSelected={handleFirstPersonPlaceSelected}
-            />
-
-              {requiresSecondPerson && (
-                <div ref={secondPersonRef}>
-            <SecondPersonForm
-              register={register}
-              setValue={setValue}
-              watch={watch}
-              errors={errors}
-              onPlaceSelected={handleSecondPersonPlaceSelected}
-            />
-                </div>
-              )}
-            </>
-          )}
-
-          {step2Done && (
-            <div ref={paymentStepRef}>
-              <PaymentStep
-              register={register}
-              watch={watch}
-              errors={errors}
-              setValue={setValue}
-              onSubmit={handleButtonClick}
-              isProcessing={isProcessing || isPricingLoading}
-              inlinePromoError={inlinePromoError}
-              clearInlinePromoError={clearInlinePromoError}
-              />
-            </div>
-          )}
-        </div>
-      </form>
-    </div>
-  );
+  // Fallback to empty state
+  return null;
 };
