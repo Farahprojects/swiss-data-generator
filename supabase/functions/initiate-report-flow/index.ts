@@ -202,7 +202,7 @@ serve(async (req) => {
         max_uses: promo.max_uses 
       });
 
-      // FREE FLOW (100% discount) - STAGE 2: Enhanced free flow with immediate promo increment
+      // FREE FLOW (100% discount) - SIMPLIFIED: Just create record and return success
       if (discountPercent === 100) {
         const sessionId = `free_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
 
@@ -214,7 +214,7 @@ serve(async (req) => {
           report_type: reportData.reportType || 'standard',
           report_data: {
             ...reportData,
-            product_id: priceId, // STAGE 1: Store product_id in database
+            product_id: priceId,
           },
           amount_paid: 0,
           payment_status: 'paid', // Free reports are immediately "paid"
@@ -241,7 +241,7 @@ serve(async (req) => {
           })
         }
 
-        // STAGE 2: For free reports, increment promo code immediately (atomic operation)
+        // Increment promo code usage immediately (atomic operation)
         try {
           const { error: promoUpdateError } = await supabaseAdmin
             .from('promo_codes')
@@ -256,7 +256,6 @@ serve(async (req) => {
               promoCode, 
               guestReportId: guestReport.id 
             });
-            // Continue anyway - report creation succeeded
           } else {
             logFlowEvent("free_promo_incremented", { 
               promoCode, 
@@ -270,20 +269,10 @@ serve(async (req) => {
             promoCode, 
             guestReportId: guestReport.id 
           });
-          // Continue anyway - report creation succeeded
         }
 
-        // Trigger background generation
-        const { error: verifyError } = await supabaseAdmin.functions.invoke(
-          'verify-guest-payment',
-          { body: { sessionId } }
-        )
-        
-        if (verifyError) {
-          logFlowError("free_verification_trigger_failed", verifyError, { sessionId });
-        } else {
-          logFlowEvent("free_verification_triggered", { sessionId, guestReportId: guestReport.id });
-        }
+        // REMOVED: No longer calling verify-guest-payment synchronously
+        // Database triggers will handle report generation in the background
 
         const processingTimeMs = Date.now() - startTime;
 
@@ -299,8 +288,7 @@ serve(async (req) => {
           reportId: guestReport.id,
           sessionId,
           isFreeReport: true,
-          processing_time_ms: processingTimeMs,
-          stage2_enhanced: true
+          processing_time_ms: processingTimeMs
         }), {
           status: 200, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -308,7 +296,7 @@ serve(async (req) => {
       }
     }
 
-    // --- PAID FLOW: STAGE 1 SERVER STATE ARCHITECTURE (Enhanced for Stage 2) ---
+    // --- PAID FLOW: Create guest_reports row IMMEDIATELY with pending status ---
     
     const originalAmount = product.unit_price_usd
     const discountAmount = originalAmount * (discountPercent / 100)
@@ -322,7 +310,7 @@ serve(async (req) => {
       promoCode: promoCode || 'none'
     });
 
-    // STAGE 1: Create guest_reports row IMMEDIATELY with pending status
+    // Create guest_reports row IMMEDIATELY with pending status
     const guestReportData = {
       stripe_session_id: `temp_${Date.now()}`, // Temporary ID, will be updated after Stripe session creation
       email: reportData.email,
@@ -330,9 +318,9 @@ serve(async (req) => {
       amount_paid: finalAmount,
       report_data: {
         ...reportData,
-        product_id: priceId, // Store product_id in database
+        product_id: priceId,
       },
-      payment_status: "pending", // STAGE 2: Explicit pending status for paid reports
+      payment_status: "pending",
       purchase_type: 'report',
       promo_code_used: promoCode || null,
     };
@@ -363,7 +351,7 @@ serve(async (req) => {
 
     logFlowEvent("guest_report_created", { guestReportId: guestReport.id });
 
-    // Now create checkout session with minimal data - UPDATED CANCEL URL TOO
+    // Now create checkout session with minimal data
     const checkoutData = {
       guest_report_id: guestReport.id,
       amount: finalAmount,
@@ -428,7 +416,6 @@ serve(async (req) => {
       processing_time_ms: processingTimeMs
     });
 
-    // STAGE 2: Enhanced response with comprehensive data
     return new Response(JSON.stringify({
       status: 'payment_required',
       stripeUrl: stripeResult.url,
@@ -437,7 +424,6 @@ serve(async (req) => {
       finalAmount: finalAmount,
       description: checkoutData.description,
       processing_time_ms: processingTimeMs,
-      stage2_enhanced: true,
       debug: {
         originalPrice: originalAmount,
         discountApplied: discountPercent,
@@ -457,8 +443,7 @@ serve(async (req) => {
     
     return new Response(JSON.stringify({ 
       error: err.message || 'Internal server error',
-      processing_time_ms: processingTimeMs,
-      stage2_enhanced: true
+      processing_time_ms: processingTimeMs
     }), {
       status: 500, 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
