@@ -433,39 +433,74 @@ serve(async (req) => {
 
     console.log(`[translator-edge-${reqId}] Canon endpoint: ${canon}`);
 
-    /*────────────────── augment lat/lon & timestamp ----------------------*/
-    const { data: withLatLon, googleGeoUsed } = await ensureLatLon(parsed);
-    googleGeo = googleGeoUsed;
+    /*────────────────── Handle sync requests with person_a and person_b --*/
+    let payload;
+    
+    if (canon === "sync" && parsed.person_a && parsed.person_b) {
+      console.log(`[translator-edge-${reqId}] Processing sync request with person_a and person_b`);
+      
+      // Process person_a
+      const { data: personAWithLatLon, googleGeoUsed: geoUsedA } = await ensureLatLon(parsed.person_a);
+      const normalizedPersonA = normalise(personAWithLatLon);
+      
+      // Process person_b  
+      const { data: personBWithLatLon, googleGeoUsed: geoUsedB } = await ensureLatLon(parsed.person_b);
+      const normalizedPersonB = normalise(personBWithLatLon);
+      
+      googleGeo = geoUsedA || geoUsedB;
+      
+      // Create sync payload with normalized person data
+      payload = {
+        person_a: normalizedPersonA,
+        person_b: normalizedPersonB,
+        ...parsed // Keep other top-level fields like report, user_id, etc.
+      };
+      
+      // Remove the person objects from top level to avoid duplication
+      delete payload.person_a;
+      delete payload.person_b;
+      
+      // Re-add the normalized persons
+      payload.person_a = normalizedPersonA;
+      payload.person_b = normalizedPersonB;
+      
+      console.log(`[translator-edge-${reqId}] Sync payload prepared with normalized persons`);
+      
+    } else {
+      /*────────────────── Regular processing for non-sync requests ----------*/
+      const { data: withLatLon, googleGeoUsed } = await ensureLatLon(parsed);
+      googleGeo = googleGeoUsed;
 
-    // Attach accurate UTC stamp if this is a chart‑type request (not positions/moonphases)
-    if (["natal", "essence", "sync", "flow", "mindset", "monthly", "focus", "progressions", "return", "transits"].includes(canon)) {
-      try {
-        const tzGuess = await inferTimezone(withLatLon);
-        const utcISO = toUtcISO({ ...withLatLon, tz: tzGuess ?? withLatLon.tz });
-        withLatLon.utc = utcISO; // Swiss wrapper recognises 'utc'
-        
-        console.log(`[translator-edge-${reqId}] UTC timestamp generated: ${utcISO}`);
+      // Attach accurate UTC stamp if this is a chart‑type request (not positions/moonphases)
+      if (["natal", "essence", "sync", "flow", "mindset", "monthly", "focus", "progressions", "return", "transits"].includes(canon)) {
+        try {
+          const tzGuess = await inferTimezone(withLatLon);
+          const utcISO = toUtcISO({ ...withLatLon, tz: tzGuess ?? withLatLon.tz });
+          withLatLon.utc = utcISO; // Swiss wrapper recognises 'utc'
+          
+          console.log(`[translator-edge-${reqId}] UTC timestamp generated: ${utcISO}`);
 
-        // Swiss Ephemeris requires both birth_date and birth_time
-        if (!parsed.birth_date && !parsed.date) {
-          throw new Error("Missing birth_date or date for Swiss Ephemeris");
+          // Swiss Ephemeris requires both birth_date and birth_time
+          if (!parsed.birth_date && !parsed.date) {
+            throw new Error("Missing birth_date or date for Swiss Ephemeris");
+          }
+          if (!parsed.birth_time && !parsed.time) {
+            throw new Error("Missing birth_time or time for Swiss Ephemeris");
+          }
+
+          // Re-attach cleaned fields in correct format
+          withLatLon.birth_date = parsed.birth_date || parsed.date;
+          withLatLon.birth_time = parsed.birth_time || parsed.time;
+          withLatLon.tz = parsed.tz || tzGuess || 'UTC'; // fallback safe default
+          
+        } catch (timeError) {
+          console.warn(`[translator-edge-${reqId}] Could not generate UTC timestamp:`, timeError);
+          // Don't fail the request, let Swiss handle it as before
         }
-        if (!parsed.birth_time && !parsed.time) {
-          throw new Error("Missing birth_time or time for Swiss Ephemeris");
-        }
-
-        // Re-attach cleaned fields in correct format
-        withLatLon.birth_date = parsed.birth_date || parsed.date;
-        withLatLon.birth_time = parsed.birth_time || parsed.time;
-        withLatLon.tz = parsed.tz || tzGuess || 'UTC'; // fallback safe default
-        
-      } catch (timeError) {
-        console.warn(`[translator-edge-${reqId}] Could not generate UTC timestamp:`, timeError);
-        // Don't fail the request, let Swiss handle it as before
       }
-    }
 
-    const payload = normalise(withLatLon);
+      payload = normalise(withLatLon);
+    }
     console.log(`[translator-edge-${reqId}] Final payload:`, JSON.stringify(payload, null, 2));
 
     /*────────────────── dispatch to Swiss API ----------------------------*/
