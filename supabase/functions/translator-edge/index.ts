@@ -482,7 +482,11 @@ serve(async (req) => {
       const { data: personAWithLatLon, googleGeoUsed: geoUsedA } =
         await ensureLatLon(parsed.person_a);
       const tzA  = await inferTimezone(personAWithLatLon);
-      const utcA = toUtcISO({ ...personAWithLatLon, tz: tzA });
+      const utcA = toUtcISO({
+        ...personAWithLatLon,
+        tz: tzA,
+        location: personAWithLatLon.location || ''
+      });
       const normalizedPersonA = {
         ...normalise(personAWithLatLon),
         utc: utcA,
@@ -493,7 +497,11 @@ serve(async (req) => {
       const { data: personBWithLatLon, googleGeoUsed: geoUsedB } =
         await ensureLatLon(parsed.person_b);
       const tzB  = await inferTimezone(personBWithLatLon);
-      const utcB = toUtcISO({ ...personBWithLatLon, tz: tzB });
+      const utcB = toUtcISO({
+        ...personBWithLatLon,
+        tz: tzB,
+        location: personBWithLatLon.location || ''
+      });
       const normalizedPersonB = {
         ...normalise(personBWithLatLon),
         utc: utcB,
