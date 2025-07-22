@@ -202,7 +202,7 @@ serve(async (req) => {
         max_uses: promo.max_uses 
       });
 
-      // FREE FLOW (100% discount) - SIMPLIFIED: Just create record and return success
+      // FREE FLOW (100% discount) - Return success immediately, trigger processing in background
       if (discountPercent === 100) {
         const sessionId = `free_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
 
@@ -271,15 +271,47 @@ serve(async (req) => {
           });
         }
 
-        // REMOVED: No longer calling verify-guest-payment synchronously
-        // Database triggers will handle report generation in the background
+        // BACKGROUND PROCESSING: Trigger verify-guest-payment asynchronously
+        EdgeRuntime.waitUntil(
+          (async () => {
+            try {
+              logFlowEvent("background_processing_started", { 
+                sessionId, 
+                guestReportId: guestReport.id 
+              });
+
+              const { error: verifyError } = await supabaseAdmin.functions.invoke(
+                'verify-guest-payment',
+                { body: { sessionId } }
+              );
+              
+              if (verifyError) {
+                logFlowError("background_verification_failed", verifyError, { 
+                  sessionId, 
+                  guestReportId: guestReport.id 
+                });
+              } else {
+                logFlowEvent("background_verification_completed", { 
+                  sessionId, 
+                  guestReportId: guestReport.id 
+                });
+              }
+            } catch (bgError) {
+              logFlowError("background_processing_exception", bgError, { 
+                sessionId, 
+                guestReportId: guestReport.id 
+              });
+            }
+          })()
+        );
 
         const processingTimeMs = Date.now() - startTime;
 
         logFlowEvent("free_flow_completed", { 
           sessionId, 
           guestReportId: guestReport.id,
-          processing_time_ms: processingTimeMs
+          processing_time_ms: processingTimeMs,
+          background_processing_triggered: true
         });
 
         return new Response(JSON.stringify({ 
