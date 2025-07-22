@@ -162,7 +162,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const formValues = form.watch();
   const step1Done = Boolean(formValues.reportType || formValues.request);
 
-  // Auto-scroll to top when transitioning to success screen
+  // Auto-scroll to success screen when transitioning to success state
   useEffect(() => {
     const isSuccessState = 
       (reportCreated && createdGuestReportId && userName && userEmail) ||
@@ -170,7 +170,18 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       (guestId && tokenRecovery.recovered && tokenRecovery.recoveredName && tokenRecovery.recoveredEmail);
     
     if (isSuccessState) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      // Small delay to ensure SuccessScreen has rendered
+      const timer = setTimeout(() => {
+        const successCard = document.querySelector('[data-success-card]');
+        if (successCard) {
+          successCard.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
+        }
+      }, 200);
+      
+      return () => clearTimeout(timer);
     }
   }, [reportCreated, createdGuestReportId, userName, userEmail, status, statusReportData, guestId, tokenRecovery.recovered, tokenRecovery.recoveredName, tokenRecovery.recoveredEmail]);
 
