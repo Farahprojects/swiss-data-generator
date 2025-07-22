@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
@@ -37,13 +36,13 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 }) => {
   const navigate = useNavigate();
   
-  // Store the guest report ID from successful submissions
+  // State management
   const [createdGuestReportId, setCreatedGuestReportId] = useState<string | null>(null);
   const [viewingReport, setViewingReport] = useState(false);
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [sessionRestored, setSessionRestored] = useState(false);
 
-  // Use custom hooks for state management
+  // Hooks
   const { status, error: statusError, reportData: statusReportData, setStatus, reset: resetStatus } = useReportStatus();
   const tokenRecovery = useTokenRecovery(guestId);
   
@@ -57,13 +56,10 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     resetReportState
   } = useReportSubmission(setCreatedGuestReportId);
 
-  // Use a ref to store the callback that SuccessScreen will register
   const reportReadyCallbackRef = useRef<((reportData: ReportData) => void) | null>(null);
-
-  // Remove polling - useGuestReportData now only fetches on demand
   const { data: guestReportData, error: guestReportError, refetch: refetchGuestData } = useGuestReportData(guestId);
 
-  // State restoration effect - handles page refresh scenarios
+  // State restoration effect
   useEffect(() => {
     if (!guestId || sessionRestored) return;
 
@@ -198,10 +194,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     checkFormCompletion();
   }, [form.watch(), isValid, shouldUnlockForm, onFormStateChange]);
 
-  // Determine the effective guest ID - either from new creation or existing
   const effectiveGuestId = createdGuestReportId || guestId;
 
-  // Simple component state reset function
   const resetComponentStates = useCallback(() => {
     log('debug', 'Resetting component states', null, 'ReportForm');
     
@@ -311,51 +305,53 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     await onSubmit(formData);
   };
 
-  // Status-based rendering
-  if (status === 'verifying') {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-8">
-        <div className="text-center space-y-6">
-          <div className="w-12 h-12 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto"></div>
-          <p className="text-xl text-gray-600 font-light">Finalizing your report...</p>
-          <p className="text-sm text-gray-500">Please wait while we verify your payment</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (status === 'waiting') {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-8">
-        <div className="text-center space-y-6">
-          <div className="w-12 h-12 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto"></div>
-          <p className="text-xl text-gray-600 font-light">Processing payment...</p>
-          <p className="text-sm text-gray-500">This usually takes just a few seconds</p>
-          <div className="flex items-center justify-center space-x-1 mt-4">
-            <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
-            <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-            <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+  // Status-based rendering with single switch statement
+  switch (status) {
+    case 'verifying':
+      return (
+        <div className="min-h-screen flex items-center justify-center p-8">
+          <div className="text-center space-y-6">
+            <div className="w-12 h-12 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto"></div>
+            <p className="text-xl text-gray-600 font-light">Finalizing your report...</p>
+            <p className="text-sm text-gray-500">Please wait while we verify your payment</p>
           </div>
         </div>
-      </div>
-    );
-  }
+      );
 
-  if (status === 'error') {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-8">
-        <div className="text-center space-y-6">
-          <p className="text-xl text-destructive">Payment verification failed</p>
-          <p className="text-sm text-gray-500">{statusError}</p>
-          <button 
-            onClick={() => navigate('/report')}
-            className="bg-primary text-primary-foreground px-6 py-2 rounded-lg"
-          >
-            Try Again
-          </button>
+    case 'waiting':
+      return (
+        <div className="min-h-screen flex items-center justify-center p-8">
+          <div className="text-center space-y-6">
+            <div className="w-12 h-12 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto"></div>
+            <p className="text-xl text-gray-600 font-light">Processing payment...</p>
+            <p className="text-sm text-gray-500">This usually takes just a few seconds</p>
+            <div className="flex items-center justify-center space-x-1 mt-4">
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+            </div>
+          </div>
         </div>
-      </div>
-    );
+      );
+
+    case 'error':
+      return (
+        <div className="min-h-screen flex items-center justify-center p-8">
+          <div className="text-center space-y-6">
+            <p className="text-xl text-destructive">Payment verification failed</p>
+            <p className="text-sm text-gray-500">{statusError}</p>
+            <button 
+              onClick={() => navigate('/report')}
+              className="bg-primary text-primary-foreground px-6 py-2 rounded-lg"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      );
+
+    default:
+      break;
   }
 
   if (viewingReport && reportData) {
@@ -523,6 +519,5 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
 
-  // Fallback to empty state
   return null;
 };

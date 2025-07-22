@@ -1,409 +1,146 @@
 
-import { useState, useCallback, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { getGuestReportId } from '@/utils/urlHelpers';
-
-interface GuestReport {
-  id: string;
-  email: string;
-  has_report_log?: boolean | null;
-  is_ai_report?: boolean | null;
-  translator_log_id?: string | null;
-  report_log_id?: string | null;
-  payment_status: string;
-  created_at: string;
-  stripe_session_id: string;
-  report_type?: string | null;
-  swiss_boolean?: boolean | null;
-  has_swiss_error?: boolean | null;
-  email_sent?: boolean;
-  modal_ready?: boolean | null;
-}
+import { useState, useCallback } from 'react';
+import { useGuestReport } from './useGuestReport';
+import { useReportLogs } from './useReportLogs';
+import { useSwissData } from './useSwissData';
+import { useErrorHandling } from './useErrorHandling';
+import { usePdfEmail } from './usePdfEmail';
+import { getGuestReportId, getSwissErrorMessage, isAstroReport } from '@/utils/reportHelpers';
 
 interface ReportData {
   reportContent: string | null;
-  swissData: any;
+  swissData: unknown;
 }
 
-interface UseGuestReportStatusReturn {
-  report: GuestReport | null;
-  isLoading: boolean;
-  error: string | null;
-  caseNumber: string | null;
-  fetchReport: (guestReportId?: string) => Promise<void>;
-  triggerErrorHandling: (guestReportId?: string) => Promise<void>;
-  fetchReportContent: (guestReportId?: string) => Promise<string | null>;
-  fetchAstroData: (guestReportId?: string) => Promise<string | null>;
-  fetchBothReportData: (guestReportId?: string) => Promise<ReportData>;
-  fetchCompleteReport: (guestReportId?: string) => Promise<any>;
-  isAstroReport: (reportType: string | null) => boolean;
-  setError: (error: string | null) => void;
-  setCaseNumber: (caseNumber: string | null) => void;
-  triggerPdfEmail: (guestReportId?: string) => Promise<boolean>;
-}
-
-export const useGuestReportStatus = (): UseGuestReportStatusReturn => {
-  const [report, setReport] = useState<GuestReport | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+export const useGuestReportStatus = () => {
+  const [activeGuestId, setActiveGuestId] = useState<string | null>(() => getGuestReportId());
   const [error, setError] = useState<string | null>(null);
-  const [caseNumber, setCaseNumber] = useState<string | null>(null);
-  const errorLoggedRef = useRef<Set<string>>(new Set());
-  const requestsInFlightRef = useRef<Set<string>>(new Set());
-  const abortControllersRef = useRef<Map<string, AbortController>>(new Map());
 
-  const getSwissErrorMessage = useCallback((reportType: string | null) => {
-    if (reportType === 'essence') {
-      return 'Unable to generate your astrological essence data. This can happen due to incomplete birth information or system issues.';
-    }
-    return 'Astrological calculation failed. Please ensure your birth details are accurate and try again.';
-  }, []);
+  // Use focused hooks
+  const guestQuery = useGuestReport(activeGuestId);
+  const reportLogsQuery = useReportLogs(activeGuestId);
+  const swissDataQuery = useSwissData(activeGuestId);
+  const errorHandling = useErrorHandling();
+  const pdfEmailMutation = usePdfEmail();
 
-  const logUserError = useCallback(async (guestReportId: string, errorType: string, errorMessage?: string) => {
-    // Create a unique key for this error to prevent duplicates
-    const errorKey = `${guestReportId}-${errorType}`;
+  // Handle Swiss errors
+  const report = guestQuery.data;
+  if (report?.has_swiss_error && !error) {
+    const errorMessage = getSwissErrorMessage(report.report_type);
+    setError(errorMessage);
     
-    // Check if we've already logged this error
-    if (errorLoggedRef.current.has(errorKey)) {
-      return null;
-    }
-
-    try {
-      // Mark as being processed
-      errorLoggedRef.current.add(errorKey);
-
-      const { data, error } = await supabase.functions.invoke('log-user-error', {
-        body: {
-          guestReportId: guestReportId || null,
-          errorType,
-          errorMessage,
-          timestamp: new Date().toISOString()
-        }
+    if (!errorHandling.caseNumber && activeGuestId) {
+      errorHandling.handleError({
+        guestReportId: activeGuestId,
+        errorType: 'swiss_data_generation_failed',
+        errorMessage: `Swiss data generation failed for report type: ${report.report_type || 'unknown'}`
       });
-
-      if (error) {
-        console.warn('Failed to log user error:', error.message);
-        // Remove from tracking since it failed
-        errorLoggedRef.current.delete(errorKey);
-        return null;
-      }
-
-      // Check if this is a duplicate error
-      if (data?.is_duplicate) {
-        setError(data.message);
-        return data.case_number;
-      }
-
-      // Error logged successfully
-      return data?.case_number || 'CASE-' + Date.now();
-    } catch (err) {
-      console.error('Error logging user error:', err);
-      // Remove from tracking since it failed
-      errorLoggedRef.current.delete(errorKey);
-      return null;
     }
-  }, []);
+  }
 
   const fetchReport = useCallback(async (guestReportId?: string) => {
     const reportId = guestReportId || getGuestReportId();
-    if (!reportId) {
-      return;
+    if (reportId && reportId !== activeGuestId) {
+      setActiveGuestId(reportId);
+      setError(null);
     }
-
-    // Check if this request is already in flight
-    const requestKey = `fetchReport-${reportId}`;
-    if (requestsInFlightRef.current.has(requestKey)) {
-      return;
-    }
-
-    // Cancel any existing request for this report
-    const existingController = abortControllersRef.current.get(requestKey);
-    if (existingController) {
-      existingController.abort();
-    }
-
-    // Create new abort controller
-    const abortController = new AbortController();
-    abortControllersRef.current.set(requestKey, abortController);
-    requestsInFlightRef.current.add(requestKey);
-
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('guest_reports')
-        .select('*')
-        .eq('id', reportId)
-        .abortSignal(abortController.signal)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
-
-      if (data) {
-        setReport(data);
-        
-        // Check for Swiss error immediately
-        if (data.has_swiss_error === true) {
-          const errorMessage = getSwissErrorMessage(data.report_type);
-          setError(errorMessage);
-          
-          // Log the Swiss error and get case number (only if not already logged)
-          if (!caseNumber) {
-            const case_number = await logUserError(
-              reportId,
-              'swiss_data_generation_failed',
-              `Swiss data generation failed for report type: ${data.report_type || 'unknown'}`
-            );
-            if (case_number) setCaseNumber(case_number);
-          }
-        } else {
-          setError(null);
-        }
-      } else {
-        setReport(null);
-      }
-    } catch (err) {
-      // Don't log aborted requests as errors
-      if (err instanceof Error && err.name === 'AbortError') {
-        return;
-      }
-      console.error('Error fetching report status:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch report status');
-    } finally {
-      // Clean up
-      requestsInFlightRef.current.delete(requestKey);
-      abortControllersRef.current.delete(requestKey);
-      setIsLoading(false);
-    }
-  }, [getSwissErrorMessage, logUserError, caseNumber]);
-
-  const fetchReportContent = useCallback(async (guestReportId?: string) => {
-    const reportId = guestReportId || getGuestReportId();
-    if (!reportId) return null;
-
-    try {
-      const { data, error } = await supabase
-        .from('guest_reports')
-        .select(`report_log_id, report_logs!inner(report_text)`)
-        .eq('id', reportId)
-        .single();
-
-      if (error) {
-        console.error('❌ Error fetching report content:', error);
-        return null;
-      }
-
-      return data?.report_logs?.report_text || null;
-    } catch (err) {
-      console.error('❌ Error fetching report content:', err);
-      return null;
-    }
-  }, []);
-
-  const fetchAstroData = useCallback(async (guestReportId?: string) => {
-    const reportId = guestReportId || getGuestReportId();
-    if (!reportId) return null;
-
-    try {
-      const { data: guestData, error: guestError } = await supabase
-        .from('guest_reports')
-        .select('translator_log_id')
-        .eq('id', reportId)
-        .single();
-
-      if (guestError) {
-        console.error('❌ Error fetching guest report:', guestError);
-        return null;
-      }
-
-      if (!guestData?.translator_log_id) return null;
-
-      const { data: translatorData, error: translatorError } = await supabase
-        .from('translator_logs')
-        .select('swiss_data')
-        .eq('id', guestData.translator_log_id)
-        .single();
-
-      if (translatorError) {
-        console.error('❌ Error fetching translator data:', translatorError);
-        return null;
-      }
-
-      const swissData = translatorData?.swiss_data as any;
-      if (!swissData) return null;
-
-      if (swissData.report_error) {
-        return `Report generation failed: ${swissData.report_error}`;
-      }
-
-      if (swissData.report?.content) {
-        return swissData.report.content;
-      }
-
-      if (typeof swissData.report === 'string') {
-        return swissData.report;
-      }
-
-      return JSON.stringify(swissData, null, 2);
-    } catch (err) {
-      console.error('❌ Error fetching astro data:', err);
-      return null;
-    }
-  }, []);
+  }, [activeGuestId]);
 
   const fetchBothReportData = useCallback(async (guestReportId?: string): Promise<ReportData> => {
-    const reportId = guestReportId || getGuestReportId();
+    const reportId = guestReportId || activeGuestId;
     if (!reportId) return { reportContent: null, swissData: null };
 
-    try {
-      // Fetch both report content and Swiss data in parallel
-      const [reportContent, astroDataRaw] = await Promise.all([
-        fetchReportContent(reportId),
-        fetchAstroData(reportId)
-      ]);
-
-      // Get raw Swiss data for formatting
-      const { data: guestData } = await supabase
-        .from('guest_reports')
-        .select('translator_log_id')
-        .eq('id', reportId)
-        .single();
-
-      let swissData = null;
-      if (guestData?.translator_log_id) {
-        const { data: translatorData } = await supabase
-          .from('translator_logs')
-          .select('swiss_data')
-          .eq('id', guestData.translator_log_id)
-          .single();
-        swissData = translatorData?.swiss_data;
-      }
-
-      return {
-        reportContent,
-        swissData
-      };
-    } catch (err) {
-      console.error('❌ Error fetching both report data:', err);
-      return { reportContent: null, swissData: null };
-    }
-  }, [fetchReportContent, fetchAstroData]);
+    // Use the query data if available, otherwise return nulls
+    return {
+      reportContent: reportLogsQuery.data || null,
+      swissData: swissDataQuery.data || null
+    };
+  }, [activeGuestId, reportLogsQuery.data, swissDataQuery.data]);
 
   const fetchCompleteReport = useCallback(async (guestReportId?: string) => {
-    const reportId = guestReportId || getGuestReportId();
+    const reportId = guestReportId || activeGuestId;
     if (!reportId) {
       throw new Error('No guest report ID available');
     }
 
-    try {
-      // Fetching complete report data
-      
-      const { data, error } = await supabase.functions.invoke('get-guest-report', {
-        body: { guest_id: reportId }
-      });
+    const { data, error } = await supabase.functions.invoke('get-guest-report', {
+      body: { guest_id: reportId }
+    });
 
-      if (error) {
-        console.error('❌ Error fetching complete report:', error);
-        throw new Error(`Failed to fetch report: ${error.message}`);
-      }
-
-      // Complete report data fetched
-      return data;
-    } catch (err) {
-      console.error('❌ Error in fetchCompleteReport:', err);
-      throw err;
+    if (error) {
+      throw new Error(`Failed to fetch report: ${error.message}`);
     }
-  }, []);
 
-  const isAstroReport = useCallback((reportType: string | null) => {
-    if (!reportType) return false;
-    const type = reportType.toLowerCase();
-    return type === 'sync' || type === 'essence';
-  }, []);
+    return data;
+  }, [activeGuestId]);
 
   const triggerErrorHandling = useCallback(async (guestReportId?: string) => {
-    const reportId = guestReportId || getGuestReportId();
+    const reportId = guestReportId || activeGuestId;
     
-    // Check if we already have a case number to prevent duplicates
-    if (caseNumber) {
-      return;
-    }
+    if (errorHandling.caseNumber) return; // Already handled
     
-    // Handle case where no report ID is available
     if (!reportId) {
-      const case_number = await logUserError(
-        '',
-        'missing_report_id',
-        'No guest report ID available for error handling'
-      );
-      if (case_number) setCaseNumber(case_number);
+      await errorHandling.handleError({
+        guestReportId: '',
+        errorType: 'missing_report_id',
+        errorMessage: 'No guest report ID available for error handling'
+      });
       setError('We are looking into this issue. Please reference your case number if you contact support.');
       return;
     }
 
-    const case_number = await logUserError(
-      reportId,
-      'timeout_no_report',
-      'Report not found after timeout'
-    );
-    if (case_number) setCaseNumber(case_number);
+    await errorHandling.handleError({
+      guestReportId: reportId,
+      errorType: 'timeout_no_report',
+      errorMessage: 'Report not found after timeout'
+    });
     setError('We are looking into this issue. Please reference your case number if you contact support.');
-  }, [logUserError, caseNumber]);
+  }, [activeGuestId, errorHandling]);
 
   const triggerPdfEmail = useCallback(async (guestReportId?: string): Promise<boolean> => {
-    const reportId = guestReportId || getGuestReportId();
-    if (!reportId) {
-      return false;
-    }
+    const reportId = guestReportId || activeGuestId;
+    if (!reportId) return false;
 
     try {
-      // Check if email was already sent
-      const { data: reportData, error: fetchError } = await supabase
-        .from('guest_reports')
-        .select('email_sent')
-        .eq('id', reportId)
-        .single();
-
-      if (fetchError) {
-        console.error('Error checking email status:', fetchError);
-        return false;
-      }
-
-      if (reportData?.email_sent) {
-        return true; // Consider this success since email was already sent
-      }
-
-      // Trigger PDF generation and email
-      const { data, error } = await supabase.functions.invoke('process-guest-report-pdf', {
-        body: { guest_report_id: reportId }
-      });
-
-      if (error) {
-        console.error('Error triggering PDF email:', error);
-        return false;
-      }
-
+      await pdfEmailMutation.mutateAsync(reportId);
       return true;
     } catch (err) {
       console.error('Error in triggerPdfEmail:', err);
       return false;
     }
-  }, []);
+  }, [activeGuestId, pdfEmailMutation]);
 
   return {
-    report,
-    isLoading,
-    error,
-    caseNumber,
+    report: guestQuery.data || null,
+    isLoading: guestQuery.isLoading || reportLogsQuery.isLoading || swissDataQuery.isLoading,
+    error: error || guestQuery.error?.message || reportLogsQuery.error?.message || swissDataQuery.error?.message || null,
+    caseNumber: errorHandling.caseNumber,
     fetchReport,
     triggerErrorHandling,
-    fetchReportContent,
-    fetchAstroData,
+    fetchReportContent: () => reportLogsQuery.data || null,
+    fetchAstroData: () => {
+      const swissData = swissDataQuery.data as any;
+      if (!swissData) return null;
+      
+      if (swissData.report_error) {
+        return `Report generation failed: ${swissData.report_error}`;
+      }
+      
+      if (swissData.report?.content) {
+        return swissData.report.content;
+      }
+      
+      if (typeof swissData.report === 'string') {
+        return swissData.report;
+      }
+      
+      return JSON.stringify(swissData, null, 2);
+    },
     fetchBothReportData,
     fetchCompleteReport,
     isAstroReport,
     setError,
-    setCaseNumber,
+    setCaseNumber: errorHandling.setCaseNumber,
     triggerPdfEmail,
   };
 };
