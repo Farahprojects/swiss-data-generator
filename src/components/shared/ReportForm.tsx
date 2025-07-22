@@ -17,6 +17,7 @@ import { clearGuestReportId } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
 import { useGuestReportData } from '@/hooks/useGuestReportData';
 import { ReportData } from '@/utils/reportContentExtraction';
+import { logReportForm } from '@/utils/logUtils';
 
 interface ReportFormProps {
   coachSlug?: string;
@@ -96,7 +97,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   React.useEffect(() => {
     if (!guestId || sessionRestored) return;
 
-    console.log('🔄 [ReportForm] Restoring session state for guest ID:', guestId);
+    logReportForm('info', 'Restoring session state for guest ID', { guestId });
     
     // Immediately set the session as restored to prevent multiple triggers
     setSessionRestored(true);
@@ -109,7 +110,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     
     if (!hasExistingSession) {
       // This is likely a Stripe redirect - start the unified fetching flow
-      console.log('🔄 Stripe redirect detected, starting unified data fetching...');
+      logReportForm('info', 'Stripe redirect detected, starting unified data fetching');
       setStripePaymentState(prev => ({ 
         ...prev, 
         isVerifying: true,
@@ -117,7 +118,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       }));
     } else {
       // This is token recovery - use existing logic
-      console.log('🔄 Token recovery detected...');
+      logReportForm('info', 'Token recovery detected');
       setTokenRecoveryState(prev => ({ ...prev, isRecovering: true, error: null }));
       recoverTokenData(guestId);
     }
@@ -125,7 +126,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
   // Memoized callback for handling report ready events
   const handleReportReady = useCallback((reportData: ReportData) => {
-    console.log('🎯 [ReportForm] Report ready callback triggered');
+    logReportForm('info', 'Report ready callback triggered');
     setReportData(reportData);
     setViewingReport(true);
   }, []);
@@ -139,14 +140,14 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       const hasExistingSession = localStorage.getItem('pending_report_email');
       
       if (!hasExistingSession) {
-        console.log('🔄 Stripe redirect detected, starting unified data fetching...');
+        logReportForm('info', 'Stripe redirect detected, starting unified data fetching');
         setStripePaymentState(prev => ({ 
           ...prev, 
           isVerifying: true,
           isStripeRedirect: true 
         }));
       } else {
-        console.log('🔄 Token recovery detected...');
+        logReportForm('info', 'Token recovery detected');
         setTokenRecoveryState(prev => ({ ...prev, isRecovering: true, error: null }));
         recoverTokenData(guestId);
       }
@@ -276,7 +277,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
   // Simple component state reset function
   const resetComponentStates = useCallback(() => {
-    console.log('🔄 Resetting component states...');
+    logReportForm('debug', 'Resetting component states');
     
     // Reset form state
     form.reset();
@@ -307,17 +308,17 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     // Reset report submission state
     resetReportState();
     
-    console.log('✅ Component states reset');
+    logReportForm('debug', 'Component states reset');
   }, [form, resetReportState]);
 
   React.useEffect(() => {
     if (!guestReportData || !stripePaymentState.isStripeRedirect) return;
 
     const guestReport = guestReportData.guest_report;
-    console.log('📊 Unified data fetch result - payment status:', guestReport?.payment_status);
+    logReportForm('debug', 'Unified data fetch result', { paymentStatus: guestReport?.payment_status });
     
     if (guestReport?.payment_status === 'paid') {
-      console.log('✅ Payment confirmed via unified fetch! Transitioning to success state...');
+      logReportForm('info', 'Payment confirmed via unified fetch, transitioning to success state');
       setStripePaymentState({
         isVerifying: false,
         isWaiting: false,
@@ -327,7 +328,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         isStripeRedirect: true,
       });
     } else if (guestReport?.payment_status === 'pending') {
-      console.log('⏳ Payment pending via unified fetch, starting polling...');
+      logReportForm('info', 'Payment pending via unified fetch, starting polling');
       setStripePaymentState(prev => ({
         ...prev,
         isVerifying: false,
@@ -349,10 +350,10 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   React.useEffect(() => {
     if (guestReportData && stripePaymentState.isWaiting) {
       const guestReport = guestReportData.guest_report;
-      console.log('📊 Polling result - payment status:', guestReport?.payment_status);
+      logReportForm('debug', 'Polling result', { paymentStatus: guestReport?.payment_status });
       
       if (guestReport?.payment_status === 'paid') {
-        console.log('✅ Payment confirmed via polling! Transitioning to success state...');
+        logReportForm('info', 'Payment confirmed via polling, transitioning to success state');
         setStripePaymentState({
           isVerifying: false,
           isWaiting: false,
@@ -554,17 +555,17 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   }
 
   // ADD DEBUG LOGGING: Check all success condition values right before the checks
-  console.log('[GateCheck]', {
-    reportCreated,
-    createdGuestReportId,
-    userName,
-    userEmail,
-    guestId
-  });
+      logReportForm('debug', 'GateCheck', {
+      reportCreated,
+      createdGuestReportId,
+      userName,
+      userEmail,
+      guestId
+    });
 
   // Success state checks (these should come before the binary gate)
   if (reportCreated && createdGuestReportId && userName && userEmail) {
-    console.log('🎯 [ReportForm] Rendering SuccessScreen with guaranteed guest ID:', createdGuestReportId);
+    logReportForm('debug', 'Rendering SuccessScreen with guaranteed guest ID', { createdGuestReportId });
     return (
       <SuccessScreen 
         name={userName} 

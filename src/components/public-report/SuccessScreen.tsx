@@ -6,6 +6,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { ReportData } from '@/utils/reportContentExtraction';
 import EntertainmentWindow from './EntertainmentWindow';
 import { supabase } from '@/integrations/supabase/client';
+import { logSuccessScreen } from '@/utils/logUtils';
 
 interface SuccessScreenProps {
   name: string;
@@ -32,7 +33,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
   // Handle report ready from parent component
   const handleReportReady = useCallback((reportData: ReportData) => {
-    console.log('🎯 Report ready signal received');
+    logSuccessScreen('info', 'Report ready signal received');
     setReportReady(true);
     setCountdownTime(0);
     
@@ -53,26 +54,26 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   useEffect(() => {
     if (!guestReportId) return;
 
-    console.log('🔄 Setting up realtime listener for guest report:', guestReportId);
+    logSuccessScreen('info', 'Setting up realtime listener for guest report', { guestReportId });
     
     const channel = supabase
       .channel(`guest_report:${guestReportId}`)
       .on('broadcast', { event: 'report_ready' }, (payload) => {
-        console.log('📡 Realtime message received from orchestrator:', payload);
+        logSuccessScreen('debug', 'Realtime message received from orchestrator', { payload });
         
         if (payload.payload && payload.payload.data) {
-          console.log('✅ Orchestrator sent report data, opening modal...');
+          logSuccessScreen('info', 'Orchestrator sent report data, opening modal');
           handleReportReady(payload.payload.data);
         } else {
           console.warn('❌ Orchestrator message missing data:', payload);
         }
       })
       .subscribe((status) => {
-        console.log('📡 Realtime subscription status:', status);
+        logSuccessScreen('debug', 'Realtime subscription status', { status });
       });
 
     return () => {
-      console.log('🧹 Cleaning up realtime subscription');
+      logSuccessScreen('debug', 'Cleaning up realtime subscription');
       supabase.removeChannel(channel);
     };
   }, [guestReportId, handleReportReady]);
@@ -81,13 +82,13 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   useEffect(() => {
     const checkReportStatus = async () => {
       if (!guestReportId) {
-        console.log('❌ No guest report ID available for status check');
+        logSuccessScreen('warn', 'No guest report ID available for status check');
         setCheckingStatus(false);
         return;
       }
 
       try {
-        console.log('🔍 Checking if report is already ready...');
+        logSuccessScreen('debug', 'Checking if report is already ready');
         
         const { data, error } = await supabase.functions.invoke('check-report-status', {
           body: { guest_report_id: guestReportId }
@@ -100,10 +101,10 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
         }
 
         if (data?.ready && data?.data) {
-          console.log('✅ Report is already ready! Opening immediately...');
+          logSuccessScreen('info', 'Report is already ready, opening immediately');
           handleReportReady(data.data);
         } else {
-          console.log('⏳ Report not ready yet, waiting for orchestrator...');
+          logSuccessScreen('debug', 'Report not ready yet, waiting for orchestrator');
         }
       } catch (err) {
         console.error('❌ Failed to check report status:', err);
