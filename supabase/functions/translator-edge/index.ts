@@ -343,7 +343,17 @@ serve(async (req)=>{
           withLatLon.utc = parsed.utc || utcISO;
         }catch(e){ console.warn(`[translator-edge-${reqId}] UTC gen fail`, e); }
       }
-      payload = normalise(withLatLon);
+      // Flatten payload if it's just person_a
+      payload = {
+        ...(parsed.person_a ?? withLatLon),
+        utc: withLatLon.utc,
+        tz: withLatLon.tz,
+        report: parsed.report,
+        request: parsed.request,
+        user_id: parsed.user_id,
+        is_guest: parsed.is_guest,
+        house_system: parsed.person_a?.house_system ?? withLatLon.house_system ?? "P",
+      };
     }
     console.log(`[translator-edge-${reqId}] Final payload being sent to Swiss API:`, JSON.stringify(payload));
     const url = `${SWISS_API}/${canon}`;
