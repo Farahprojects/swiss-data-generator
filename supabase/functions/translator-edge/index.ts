@@ -73,13 +73,27 @@ const baseSchema = z.object({
 
 /** Parse various timestamp combos into an ISO‑UTC string. */
 export function toUtcISO(parts: { date?: string; time?: string; tz?: string; local?: string; birth_date?: string; birth_time?: string; location?: string }): string {
+  console.log(`[toUtcISO] Input parts:`, {
+    date: parts.date,
+    birth_date: parts.birth_date,
+    time: parts.time,
+    birth_time: parts.birth_time,
+    tz: parts.tz,
+    local: parts.local,
+    location: parts.location
+  });
+
   if (parts.local) {
     const d = new Date(parts.local);
     if (isNaN(d.getTime())) throw new Error("Invalid 'local' timestamp");
+    console.log(`[toUtcISO] Using local timestamp: ${parts.local} -> ${d.toISOString()}`);
     return d.toISOString();
   }
+  
   const actualDate = parts.birth_date || parts.date;
   const actualTime = parts.birth_time || parts.time;
+  
+  console.log(`[toUtcISO] Extracted date: ${actualDate}, time: ${actualTime}, tz: ${parts.tz}`);
 
   if (actualDate) {
     if (actualTime) {
@@ -90,7 +104,12 @@ export function toUtcISO(parts: { date?: string; time?: string; tz?: string; loc
       const day = birthDate.getUTCDate();
       const [H, M] = actualTime.split(":" as const).map(Number);
       const tz = parts.tz || "UTC";
+      
+      console.log(`[toUtcISO] Parsed components: year=${year}, month=${month}, day=${day}, hour=${H}, minute=${M}, tz=${tz}`);
+      
       const provisional = new Date(Date.UTC(year, month, day, H, M));
+      console.log(`[toUtcISO] Provisional UTC date (before timezone adjustment): ${provisional.toISOString()}`);
+      
       try {
         const fmt = new Intl.DateTimeFormat("en-US", {
           timeZone: tz,
@@ -99,25 +118,31 @@ export function toUtcISO(parts: { date?: string; time?: string; tz?: string; loc
           hour: "2-digit", minute: "2-digit", hourCycle: "h23"
         });
         const off = fmt.formatToParts(provisional).find(p => p.type === "timeZoneName")?.value ?? "GMT+0";
+        console.log(`[toUtcISO] Timezone offset string: ${off}`);
+        
         const m = off.match(/GMT([+-])(\d{1,2})(?::?(\d{2}))?/);
         if (!m) throw new Error("bad offset");
         const sign = m[1] === "-" ? -1 : 1;
         const hOff = +m[2], minOff = +(m[3]||0);
         const total = sign * (hOff * 60 + minOff);
-        return new Date(provisional.getTime() - total * 60000).toISOString();
-      } catch {
+        
+        console.log(`[toUtcISO] Offset calculation: sign=${sign}, hours=${hOff}, minutes=${minOff}, total_minutes=${total}`);
+        
+        const finalUtc = new Date(provisional.getTime() - total * 60000);
+        console.log(`[toUtcISO] Final UTC timestamp: ${finalUtc.toISOString()}`);
+        return finalUtc.toISOString();
+      } catch(e) {
+        console.log(`[toUtcISO] Timezone conversion failed, using provisional: ${provisional.toISOString()}, error:`, e);
         return provisional.toISOString();
       }
     }
     const d = new Date(actualDate);
     if (isNaN(d.getTime())) throw new Error("Invalid date");
+    console.log(`[toUtcISO] Date only, returning: ${d.toISOString()}`);
     return d.toISOString();
   }
 
-  if (!actualDate || !actualTime) throw new Error("Both date and time are required");
-  const [y,m,d] = actualDate.split("-").map(Number);
-  const [H,M]   = actualTime.split(":" as const).map(Number);
-  return new Date(Date.UTC(y, m-1, d, H, M)).toISOString();
+  throw new Error("Both date and time are required");
 }
 
 /** Map user house aliases → Swiss codes. */
@@ -261,7 +286,9 @@ serve(async (req)=>{
       // Assign timezone back to the person object
       pa.tz = tzA || pa.tz || "UTC";
       const utcA=toUtcISO({...pa,tz:pa.tz,location:pa.location||""});
+      console.log(`[translator-edge-${reqId}] Person A UTC generated: ${utcA}`);
       const normA={...normalise(pa),utc:utcA,tz:pa.tz};
+      console.log(`[translator-edge-${reqId}] Person A final payload:`, JSON.stringify(normA));
 
       const {data:pb,googleGeoUsed:g2}=await ensureLatLon(parsed.person_b);
       const tzB=await inferTimezone(pb);
@@ -269,7 +296,9 @@ serve(async (req)=>{
       // Assign timezone back to the person object
       pb.tz = tzB || pb.tz || "UTC";
       const utcB=toUtcISO({...pb,tz:pb.tz,location:pb.location||""});
+      console.log(`[translator-edge-${reqId}] Person B UTC generated: ${utcB}`);
       const normB={...normalise(pb),utc:utcB,tz:pb.tz};
+      console.log(`[translator-edge-${reqId}] Person B final payload:`, JSON.stringify(normB));
 
       googleGeo = g1||g2;
       payload = { person_a: normA, person_b: normB, ...parsed };
@@ -292,10 +321,13 @@ serve(async (req)=>{
       }
       payload = normalise(withLatLon);
     }
-    console.log(`[translator-edge-${reqId}] payload`, JSON.stringify(payload));
+    console.log(`[translator-edge-${reqId}] Final payload being sent to Swiss API:`, JSON.stringify(payload));
     const url = `${SWISS_API}/${canon}`;
+    console.log(`[translator-edge-${reqId}] Calling Swiss API at: ${url}`);
     const swiss = await fetch(url,{ method:["moonphases","positions"].includes(canon)?"GET":"POST", headers:{"Content-Type":"application/json"}, body:["moonphases","positions"].includes(canon)?undefined:JSON.stringify(payload) });
     const txt = await swiss.text();
+    console.log(`[translator-edge-${reqId}] Swiss API response status: ${swiss.status}`);
+    console.log(`[translator-edge-${reqId}] Swiss API raw response: ${txt.substring(0, 500)}...`);
     const swissData = (()=>{ try{return JSON.parse(txt);}catch{return { raw:txt }; }})();
 
     if(body.report && swiss.ok){
