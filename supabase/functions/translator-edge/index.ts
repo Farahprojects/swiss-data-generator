@@ -61,7 +61,7 @@ const baseSchema = z.object({
 }, { message: "Provide either 'local', 'date' + 'time', or 'birth_date'." });
 
 /** Parse a resp ISO‑8601 or (date, time, tz?) combo → ISO‑UTC string. */
-export function toUtcISO(parts: { date?: string; time?: string; tz?: string; local?: string; birth_date?: string }): string {
+export function toUtcISO(parts: { date?: string; time?: string; tz?: string; local?: string; birth_date?: string; location?: string }): string {
   if (parts.local) {
     // Already ISO with offset – just convert to UTC
     const d = new Date(parts.local);
@@ -69,14 +69,95 @@ export function toUtcISO(parts: { date?: string; time?: string; tz?: string; loc
     return d.toISOString();
   }
 
-  // Handle birth_date format (used by existing payloads)
+  // Handle birth_date format - now check if we also have time and location
   if (parts.birth_date) {
-    const d = new Date(parts.birth_date);
-    if (isNaN(d.getTime())) throw new Error("Invalid 'birth_date' timestamp");
-    return d.toISOString();
+    // If we have both birth_date and time, combine them with timezone
+    if (parts.time && parts.location) {
+      // Extract date from birth_date
+      const birthDate = new Date(parts.birth_date);
+      if (isNaN(birthDate.getTime())) throw new Error("Invalid 'birth_date' timestamp");
+      
+      // Get date components
+      const year = birthDate.getFullYear();
+      const month = birthDate.getMonth(); // 0-based
+      const day = birthDate.getDate();
+      
+      // Parse time
+      const [H, M] = parts.time.split(":").map(Number);
+      
+      // Determine timezone - try to map location to IANA timezone
+      let tz = "UTC";
+      const location = parts.location.toLowerCase();
+      
+      // Common location to timezone mappings
+      if (location.includes('melbourne') || location.includes('victoria')) {
+        tz = "Australia/Melbourne";
+      } else if (location.includes('sydney') || location.includes('nsw')) {
+        tz = "Australia/Sydney";
+      } else if (location.includes('brisbane') || location.includes('queensland')) {
+        tz = "Australia/Brisbane";
+      } else if (location.includes('perth') || location.includes('western australia')) {
+        tz = "Australia/Perth";
+      } else if (location.includes('adelaide') || location.includes('south australia')) {
+        tz = "Australia/Adelaide";
+      } else if (location.includes('darwin') || location.includes('northern territory')) {
+        tz = "Australia/Darwin";
+      } else if (location.includes('hobart') || location.includes('tasmania')) {
+        tz = "Australia/Hobart";
+      } else if (location.includes('new york') || location.includes('nyc')) {
+        tz = "America/New_York";
+      } else if (location.includes('los angeles') || location.includes('california')) {
+        tz = "America/Los_Angeles";
+      } else if (location.includes('chicago') || location.includes('illinois')) {
+        tz = "America/Chicago";
+      } else if (location.includes('london') || location.includes('uk') || location.includes('england')) {
+        tz = "Europe/London";
+      } else if (location.includes('paris') || location.includes('france')) {
+        tz = "Europe/Paris";
+      } else if (location.includes('tokyo') || location.includes('japan')) {
+        tz = "Asia/Tokyo";
+      }
+      
+      // Build a UTC date from the components first
+      const provisional = new Date(Date.UTC(year, month, day, H, M));
+
+      try {
+        // Use Intl to obtain the offset *at that instant* for the given zone
+        const fmt = new Intl.DateTimeFormat("en-US", {
+          timeZone: tz,
+          timeZoneName: "shortOffset",
+          year: "numeric", month: "2-digit", day: "2-digit",
+          hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+        });
+        const partsArr = fmt.formatToParts(provisional);
+        const offPart = partsArr.find(p => p.type === "timeZoneName");
+        if (!offPart) throw new Error(`Could not resolve timezone offset for ${tz}`);
+        
+        // offPart.value looks like "GMT+10" or "GMT-05:30"
+        const mOffset = offPart.value.match(/GMT([+-])(\d{1,2})(?::?(\d{2}))?/);
+        if (!mOffset) throw new Error(`Unexpected offset string ${offPart.value}`);
+
+        const sign = mOffset[1] === "-" ? -1 : 1;
+        const hOff = Number(mOffset[2]);
+        const minOff = Number(mOffset[3] ?? "0");
+        const totalMinutes = sign * (hOff * 60 + minOff);
+
+        const utcMillis = provisional.getTime() - totalMinutes * 60 * 1000;
+        return new Date(utcMillis).toISOString();
+      } catch (tzError) {
+        console.warn(`Could not resolve timezone for ${location}, falling back to UTC`);
+        // Fall back to treating the time as UTC
+        return provisional.toISOString();
+      }
+    } else {
+      // Just birth_date without time - treat as-is (this is the old behavior)
+      const d = new Date(parts.birth_date);
+      if (isNaN(d.getTime())) throw new Error("Invalid 'birth_date' timestamp");
+      return d.toISOString();
+    }
   }
 
-  // Need date + time combo
+  // Need date + time combo (original logic)
   const { date, time } = parts;
   if (!date || !time) throw new Error("Both 'date' and 'time' are required");
   const tz = parts.tz ?? "UTC"; // default but we'll warn later
@@ -359,7 +440,7 @@ serve(async (req) => {
 
     /*────────────────── logging ------------------------------------------*/
     await logTranslator({
-      request_type: canon, request_payload: raw, swiss_data: swissData, // FIXED: Using swiss_data
+      request_type: canon, request_payload: raw, swiss_data: swissData,
       swiss_status: swiss.status, processing_ms: Date.now() - t0,
       error: swiss.ok ? undefined : `Swiss API ${swiss.status}`,
       google_geo: googleGeo, translator_payload: payload,
@@ -374,7 +455,7 @@ serve(async (req) => {
     console.error(`[translator-edge-${reqId}] Error:`, msg);
     
     await logTranslator({
-      request_type: requestType, request_payload: "n/a", swiss_data: { error: msg }, swiss_status: 500, // FIXED: Using swiss_data
+      request_type: requestType, request_payload: "n/a", swiss_data: { error: msg }, swiss_status: 500,
       processing_ms: Date.now() - t0, error: msg, google_geo: googleGeo, translator_payload: null,
       user_id: undefined, skip: skipLogging
     });
