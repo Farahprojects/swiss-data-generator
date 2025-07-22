@@ -26,6 +26,7 @@ const defaultConfig: LogConfig = {
     ReportForm: false, // Disable verbose ReportForm logs
     SuccessScreen: false, // Disable verbose SuccessScreen logs
     orchestrator: true, // Keep orchestrator logs for debugging
+    swissFormatter: false, // Disable verbose Swiss formatter logs
   }
 };
 
@@ -114,6 +115,7 @@ export const enableVerboseLogging = () => {
       ReportForm: true,
       SuccessScreen: true,
       orchestrator: true,
+      swissFormatter: true,
     }
   });
   console.log('🔊 Verbose logging enabled');
@@ -126,6 +128,7 @@ export const disableVerboseLogging = () => {
       ReportForm: false,
       SuccessScreen: false,
       orchestrator: true,
+      swissFormatter: false,
     }
   });
   console.log('🔇 Verbose logging disabled');

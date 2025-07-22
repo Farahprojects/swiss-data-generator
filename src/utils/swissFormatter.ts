@@ -1,6 +1,7 @@
 // swissFormatter.ts  – Data-only formatter
 // -------------------------------------------------
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { log } from './logUtils';
 export interface EnrichedPlanet {
   name: string;           // "Sun"
   sign: string;           // "Cancer"
@@ -254,7 +255,7 @@ const extractAspectsFromSwiss = (swissData: any): EnrichedAspect[] => {
 
 // Helper function to debug Swiss data structure
 const debugSwissStructure = (raw: any): void => {
-  console.log('🔍 Swiss Data Debug:', {
+  log('debug', 'Swiss Data Debug', {
     hasRaw: !!raw,
     hasNatal: !!raw?.natal,
     hasTransits: !!raw?.transits,
@@ -262,7 +263,7 @@ const debugSwissStructure = (raw: any): void => {
     transitKeys: raw?.transits ? Object.keys(raw.transits) : [],
     planetCount: raw?.natal?.planets ? Object.keys(raw.natal.planets).length : 0,
     aspectCount: raw?.natal?.aspects ? raw.natal.aspects.length : 0
-  });
+  }, 'swissFormatter');
 };
 
 export const parseSwissDataRich = (raw: any): EnrichedSnapshot => {
@@ -336,7 +337,7 @@ export const parseSwissDataRich = (raw: any): EnrichedSnapshot => {
       datetime: transitDateTime
     } : undefined;
 
-    console.log('✅ parseSwissDataRich: Successfully parsed', {
+    log('debug', 'parseSwissDataRich: Successfully parsed', {
       planetCount: planets.length,
       aspectCount: aspects.length,
       houseCount: houses.length,
@@ -344,7 +345,7 @@ export const parseSwissDataRich = (raw: any): EnrichedSnapshot => {
       transitPlanetCount: transitPlanets.length,
       transitAspectCount: transitAspects.length,
       hasLocation: !!metaInfo.location
-    });
+    }, 'swissFormatter');
 
     return { 
       dateISO, 
