@@ -23,7 +23,7 @@ const defaultConfig: LogConfig = {
   enabled: process.env.NODE_ENV === 'development',
   level: 'info',
   components: {
-    ReportForm: false, // Disable verbose ReportForm logs
+    ReportForm: process.env.NODE_ENV === 'development', // Enable ReportForm logs only in development
     SuccessScreen: false, // Disable verbose SuccessScreen logs
     orchestrator: true, // Keep orchestrator logs for debugging
     swissFormatter: false, // Disable verbose Swiss formatter logs

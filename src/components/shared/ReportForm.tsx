@@ -17,7 +17,7 @@ import { clearGuestReportId } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
 import { useGuestReportData } from '@/hooks/useGuestReportData';
 import { ReportData } from '@/utils/reportContentExtraction';
-import { logReportForm } from '@/utils/logUtils';
+import { log } from '@/utils/logUtils';
 
 interface ReportFormProps {
   coachSlug?: string;
@@ -97,7 +97,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   React.useEffect(() => {
     if (!guestId || sessionRestored) return;
 
-    logReportForm('info', 'Restoring session state for guest ID', { guestId });
+    log('info', 'Restoring session state for guest ID', { guestId }, 'ReportForm');
     
     // Immediately set the session as restored to prevent multiple triggers
     setSessionRestored(true);
@@ -110,7 +110,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     
     if (!hasExistingSession) {
       // This is likely a Stripe redirect - start the unified fetching flow
-      logReportForm('info', 'Stripe redirect detected, starting unified data fetching');
+      log('info', 'Stripe redirect detected, starting unified data fetching', null, 'ReportForm');
       setStripePaymentState(prev => ({ 
         ...prev, 
         isVerifying: true,
@@ -118,7 +118,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       }));
     } else {
       // This is token recovery - use existing logic
-      logReportForm('info', 'Token recovery detected');
+      log('info', 'Token recovery detected', null, 'ReportForm');
       setTokenRecoveryState(prev => ({ ...prev, isRecovering: true, error: null }));
       recoverTokenData(guestId);
     }
@@ -127,13 +127,13 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   // Log fresh form state only once on mount
   React.useEffect(() => {
     if (!guestId && !reportCreated) {
-      logReportForm('debug', 'No guest ID found - showing fresh form');
+      log('debug', 'No guest ID found - showing fresh form', null, 'ReportForm');
     }
   }, []); // Empty dependency array - only runs once on mount
 
   // Memoized callback for handling report ready events
   const handleReportReady = useCallback((reportData: ReportData) => {
-    logReportForm('info', 'Report ready callback triggered');
+    log('info', 'Report ready callback triggered', null, 'ReportForm');
     setReportData(reportData);
     setViewingReport(true);
   }, []);
@@ -147,14 +147,14 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       const hasExistingSession = localStorage.getItem('pending_report_email');
       
       if (!hasExistingSession) {
-        logReportForm('info', 'Stripe redirect detected, starting unified data fetching');
+        log('info', 'Stripe redirect detected, starting unified data fetching', null, 'ReportForm');
         setStripePaymentState(prev => ({ 
           ...prev, 
           isVerifying: true,
           isStripeRedirect: true 
         }));
       } else {
-        logReportForm('info', 'Token recovery detected');
+        log('info', 'Token recovery detected', null, 'ReportForm');
         setTokenRecoveryState(prev => ({ ...prev, isRecovering: true, error: null }));
         recoverTokenData(guestId);
       }
@@ -284,7 +284,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
   // Simple component state reset function
   const resetComponentStates = useCallback(() => {
-    logReportForm('debug', 'Resetting component states');
+    log('debug', 'Resetting component states', null, 'ReportForm');
     
     // Reset form state
     form.reset();
@@ -315,17 +315,17 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     // Reset report submission state
     resetReportState();
     
-    logReportForm('debug', 'Component states reset');
+    log('debug', 'Component states reset', null, 'ReportForm');
   }, [form, resetReportState]);
 
   React.useEffect(() => {
     if (!guestReportData || !stripePaymentState.isStripeRedirect) return;
 
     const guestReport = guestReportData.guest_report;
-    logReportForm('debug', 'Unified data fetch result', { paymentStatus: guestReport?.payment_status });
+    log('debug', 'Unified data fetch result', { paymentStatus: guestReport?.payment_status }, 'ReportForm');
     
     if (guestReport?.payment_status === 'paid') {
-      logReportForm('info', 'Payment confirmed via unified fetch, transitioning to success state');
+      log('info', 'Payment confirmed via unified fetch, transitioning to success state', null, 'ReportForm');
       setStripePaymentState({
         isVerifying: false,
         isWaiting: false,
@@ -335,14 +335,14 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         isStripeRedirect: true,
       });
     } else if (guestReport?.payment_status === 'pending') {
-      logReportForm('info', 'Payment pending via unified fetch, starting polling');
+      log('info', 'Payment pending via unified fetch, starting polling', null, 'ReportForm');
       setStripePaymentState(prev => ({
         ...prev,
         isVerifying: false,
         isWaiting: true,
       }));
     } else {
-      console.error('❌ Unexpected payment status:', guestReport?.payment_status);
+      log('error', 'Unexpected payment status', { paymentStatus: guestReport?.payment_status }, 'ReportForm');
       setStripePaymentState({
         isVerifying: false,
         isWaiting: false,
@@ -357,10 +357,10 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   React.useEffect(() => {
     if (guestReportData && stripePaymentState.isWaiting) {
       const guestReport = guestReportData.guest_report;
-      logReportForm('debug', 'Polling result', { paymentStatus: guestReport?.payment_status });
+      log('debug', 'Polling result', { paymentStatus: guestReport?.payment_status }, 'ReportForm');
       
       if (guestReport?.payment_status === 'paid') {
-        logReportForm('info', 'Payment confirmed via polling, transitioning to success state');
+        log('info', 'Payment confirmed via polling, transitioning to success state', null, 'ReportForm');
         setStripePaymentState({
           isVerifying: false,
           isWaiting: false,
@@ -373,7 +373,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }
     
     if (guestReportError && stripePaymentState.isWaiting) {
-      console.error('❌ Polling error:', guestReportError);
+      log('error', 'Polling error', guestReportError, 'ReportForm');
       setStripePaymentState(prev => ({
         ...prev,
         isWaiting: false,
@@ -419,48 +419,48 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const handleViewReport = async () => {
     if (!effectiveGuestId) return;
     
-    console.log('🔍 [handleViewReport] Attempting to view report for:', effectiveGuestId);
+    log('info', 'Attempting to view report', { guestId: effectiveGuestId }, 'ReportForm');
     
     const maxRetries = 3;
     let attempt = 0;
     
     while (attempt < maxRetries) {
       attempt++;
-      console.log(`🔄 [handleViewReport] Attempt ${attempt}/${maxRetries}`);
+      log('debug', `Report fetch attempt ${attempt}/${maxRetries}`, null, 'ReportForm');
       
       if (guestReportData) {
-        console.log('✅ [handleViewReport] Using existing guest report data');
+        log('info', 'Using existing guest report data', null, 'ReportForm');
         setReportData(guestReportData as ReportData);
         setViewingReport(true);
         return;
       }
       
       if (attempt < maxRetries) {
-        console.log('⏳ [handleViewReport] No data found, triggering refetch...');
+        log('debug', 'Report not ready yet, waiting...', null, 'ReportForm');
         try {
           await refetchGuestData();
           await new Promise(resolve => setTimeout(resolve, 500));
         } catch (error) {
-          console.error(`❌ [handleViewReport] Refetch attempt ${attempt} failed:`, error);
+          log('debug', `Refetch attempt ${attempt} had no data`, null, 'ReportForm');
         }
       }
     }
     
-    console.error('❌ [handleViewReport] All retry attempts failed');
+    log('info', 'Report still generating, trying direct fetch...', null, 'ReportForm');
     try {
       const { data, error } = await supabase.functions.invoke('get-guest-report', {
         body: { id: effectiveGuestId }
       });
       
       if (!error && data) {
-        console.log('✅ [handleViewReport] Direct fetch succeeded');
+        log('info', 'Direct fetch succeeded', null, 'ReportForm');
         setReportData(data as ReportData);
         setViewingReport(true);
       } else {
-        console.error('❌ [handleViewReport] Direct fetch also failed:', error);
+        log('warn', 'Report is still being generated in background', null, 'ReportForm');
       }
     } catch (error) {
-      console.error('❌ [handleViewReport] Direct fetch exception:', error);
+      log('warn', 'Report generation in progress', { error }, 'ReportForm');
     }
   };
 
@@ -562,17 +562,17 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   }
 
   // ADD DEBUG LOGGING: Check all success condition values right before the checks
-      logReportForm('debug', 'GateCheck', {
+      log('debug', 'GateCheck', {
       reportCreated,
       createdGuestReportId,
       userName,
       userEmail,
       guestId
-    });
+    }, 'ReportForm');
 
   // Success state checks (these should come before the binary gate)
   if (reportCreated && createdGuestReportId && userName && userEmail) {
-    logReportForm('debug', 'Rendering SuccessScreen with guaranteed guest ID', { createdGuestReportId });
+    log('debug', 'Rendering SuccessScreen with guaranteed guest ID', { createdGuestReportId }, 'ReportForm');
     return (
       <SuccessScreen 
         name={userName} 
