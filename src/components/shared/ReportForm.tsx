@@ -162,6 +162,18 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const formValues = form.watch();
   const step1Done = Boolean(formValues.reportType || formValues.request);
 
+  // Auto-scroll to top when transitioning to success screen
+  useEffect(() => {
+    const isSuccessState = 
+      (reportCreated && createdGuestReportId && userName && userEmail) ||
+      (status === 'success' && statusReportData) ||
+      (guestId && tokenRecovery.recovered && tokenRecovery.recoveredName && tokenRecovery.recoveredEmail);
+    
+    if (isSuccessState) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [reportCreated, createdGuestReportId, userName, userEmail, status, statusReportData, guestId, tokenRecovery.recovered, tokenRecovery.recoveredName, tokenRecovery.recoveredEmail]);
+
   const step2Done =
     step1Done &&
     Boolean(
@@ -420,11 +432,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   if (reportCreated && createdGuestReportId && userName && userEmail) {
     log('debug', 'Rendering SuccessScreen with guaranteed guest ID', { createdGuestReportId }, 'ReportForm');
     
-    // Auto-scroll to top when transitioning to success screen
-    useEffect(() => {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, []);
-    
     return (
       <SuccessScreen 
         name={userName} 
@@ -442,11 +449,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     const email = reportData?.email || statusReportData.guest_report?.email;
     
     if (name && email) {
-      // Auto-scroll to top when transitioning to success screen
-      useEffect(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }, []);
-      
       return (
         <SuccessScreen 
           name={name} 
@@ -460,11 +462,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   }
   
   if (guestId && tokenRecovery.recovered && tokenRecovery.recoveredName && tokenRecovery.recoveredEmail) {
-    // Auto-scroll to top when transitioning to success screen
-    useEffect(() => {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, []);
-    
     return (
       <SuccessScreen 
         name={tokenRecovery.recoveredName} 
