@@ -1,5 +1,6 @@
 
 import { useState, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { useGuestReport } from './useGuestReport';
 import { useReportLogs } from './useReportLogs';
 import { useSwissData } from './useSwissData';
