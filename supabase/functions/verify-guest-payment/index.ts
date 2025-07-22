@@ -1,5 +1,3 @@
-
-
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14?target=denonext";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=deno&deno-std=0.224.0";
@@ -16,16 +14,33 @@ async function kickTranslator(guestReportId: string, reportData: ReportData, sup
   try {
     console.log(`🔄 [verify-guest-payment] Starting translator-edge for guest: ${guestReportId}`);
     
-    // Pass the report data directly to translator-edge - no transformation needed
-    // The data is already in the correct person_a/person_b structure from useReportSubmission
+    // SMART REQUEST EXTRACTION: Extract base type from compound reportType
+    let smartRequest = reportData.request;
+    
+    // If no request field exists or it's empty/null, extract from reportType
+    if (!smartRequest && reportData.reportType) {
+      smartRequest = reportData.reportType.split('_')[0]; // Take first word before underscore
+      console.log(`🧠 [verify-guest-payment] Smart extraction: "${reportData.reportType}" → request: "${smartRequest}"`);
+    }
+    
+    // If request exists but contains underscores (compound format), extract base type
+    if (smartRequest && smartRequest.includes('_')) {
+      const originalRequest = smartRequest;
+      smartRequest = smartRequest.split('_')[0];
+      console.log(`🧠 [verify-guest-payment] Smart extraction from request: "${originalRequest}" → "${smartRequest}"`);
+    }
+    
+    // Prepare payload with smart request field
     const translatorPayload = {
       ...reportData,
+      request: smartRequest, // Use the intelligently extracted request
       is_guest: true,
       user_id: guestReportId
     };
     
     console.log(`🔄 [verify-guest-payment] Translator payload (structured):`, {
       request: translatorPayload.request,
+      reportType: translatorPayload.reportType,
       person_a: translatorPayload.person_a ? `name: ${translatorPayload.person_a.name}, birth_date: ${translatorPayload.person_a.birth_date}` : 'missing',
       person_b: translatorPayload.person_b ? `name: ${translatorPayload.person_b.name}, birth_date: ${translatorPayload.person_b.birth_date}` : 'not provided',
       user_id: translatorPayload.user_id
