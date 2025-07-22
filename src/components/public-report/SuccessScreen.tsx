@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { CheckCircle, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -25,22 +25,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 }) => {
   const firstName = name?.split(' ')[0] || 'there';
   const isMobile = useIsMobile();
-  const successCardRef = useRef<HTMLDivElement>(null);
-
-  // Auto-scroll to success card when SuccessScreen mounts
-  useEffect(() => {
-    // Small delay to ensure component is fully rendered
-    const timer = setTimeout(() => {
-      if (successCardRef.current) {
-        successCardRef.current.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center' 
-        });
-      }
-    }, 100);
-    
-    return () => clearTimeout(timer);
-  }, []);
 
   // Simple visual countdown (24 seconds for UX)
   const [countdownTime, setCountdownTime] = useState(24);
@@ -158,7 +142,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   return (
     <div className={isMobile ? 'min-h-[calc(var(--vh,1vh)*100)] flex items-start justify-center pt-8 px-4 bg-gradient-to-b from-background to-muted/20 overflow-y-auto' : 'w-full py-10 px-4 flex justify-center'}>
       <div className={isMobile ? 'w-full max-w-md' : 'w-full max-w-4xl'}>
-        <Card ref={successCardRef} data-success-card className="border-2 border-gray-200 shadow-lg">
+        <Card className="border-2 border-gray-200 shadow-lg">
           <CardContent className="p-8 text-center space-y-6">
             {reportReady ? (
               <>
