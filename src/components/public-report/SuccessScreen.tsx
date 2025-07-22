@@ -61,9 +61,13 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     });
   }, []);
 
-  // Handle smart error display via toast notifications
+  // Handle smart error display via toast notifications - with ref to prevent infinite loops
+  const errorHandledRef = useRef<string | null>(null);
+  
   useEffect(() => {
-    if (error && !reportReady) {
+    if (error && !reportReady && error !== errorHandledRef.current) {
+      errorHandledRef.current = error;
+      
       let errorTitle = "Processing Error";
       let errorDescription = error;
       
@@ -92,7 +96,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
         clearAllSessionData();
       }
     }
-  }, [error, caseNumber, reportReady, toast]);
+  }, [error, caseNumber, reportReady]);
 
   // Handle report ready from parent component
   const handleReportReady = useCallback((reportData: ReportData) => {
