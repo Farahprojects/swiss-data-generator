@@ -14,14 +14,14 @@ function isValidUUID(uuid: string): boolean {
 }
 
 // Generate secure tokens
-function generateSecureTokens() {
+async function generateSecureTokens() {
   const plainToken = crypto.randomUUID();
   const chatHash = crypto.randomUUID().replace(/-/g, '').substring(0, 16);
   
   // Create SHA-256 hash of the plain token
   const encoder = new TextEncoder();
   const data = encoder.encode(plainToken);
-  const hashBuffer = crypto.subtle.digestSync('SHA-256', data);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const tokenHash = Array.from(new Uint8Array(hashBuffer))
     .map(b => b.toString(16).padStart(2, '0'))
     .join('');
@@ -165,7 +165,7 @@ serve(async (req) => {
     }
 
     // Generate secure tokens
-    const { plainToken, tokenHash, chatHash } = generateSecureTokens();
+    const { plainToken, tokenHash, chatHash } = await generateSecureTokens();
 
     // Prepare data for temp_report_data
     const reportContent = guestReport.report_logs?.report_text || null;
