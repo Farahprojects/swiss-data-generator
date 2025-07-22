@@ -151,11 +151,25 @@ async function ensureLatLon(obj:any){
   return { data:{...obj,latitude:lat,longitude:lng}, googleGeoUsed:true };
 }
 async function inferTimezone(obj:any){
-  if (obj.tz) return obj.tz;
-  if (obj.latitude!==undefined&&obj.longitude!==undefined){
-    const tf = await fetch(`https://maps.googleapis.com/maps/api/timezone/json?location=${obj.latitude},${obj.longitude}&timestamp=0&key=${GEO_KEY}`).then(r=>r.json());
-    if (tf.status==="OK"&&tf.timeZoneId) return tf.timeZoneId;
+  console.log(`[inferTimezone] Called with obj:`, { lat: obj.latitude, lng: obj.longitude, tz: obj.tz });
+  if (obj.tz) {
+    console.log(`[inferTimezone] Using existing tz: ${obj.tz}`);
+    return obj.tz;
   }
+  if (obj.latitude!==undefined&&obj.longitude!==undefined){
+    const url = `https://maps.googleapis.com/maps/api/timezone/json?location=${obj.latitude},${obj.longitude}&timestamp=0&key=${GEO_KEY}`;
+    console.log(`[inferTimezone] Calling Google Timezone API: ${url.replace(GEO_KEY, 'REDACTED')}`);
+    const tf = await fetch(url).then(r=>r.json());
+    console.log(`[inferTimezone] API response:`, tf);
+    if (tf.status==="OK"&&tf.timeZoneId) {
+      console.log(`[inferTimezone] Returning timezone: ${tf.timeZoneId}`);
+      return tf.timeZoneId;
+    }
+    console.log(`[inferTimezone] API failed or no timeZoneId`);
+  } else {
+    console.log(`[inferTimezone] Missing lat/lng coordinates`);
+  }
+  console.log(`[inferTimezone] Returning null (fallback)`);
   return null;
 }
 
@@ -243,13 +257,19 @@ serve(async (req)=>{
     if(canon==="sync" && parsed.person_a && parsed.person_b){
       const {data:pa,googleGeoUsed:g1}=await ensureLatLon(parsed.person_a);
       const tzA=await inferTimezone(pa);
-      const utcA=toUtcISO({...pa,tz:tzA,location:pa.location||""});
-      const normA={...normalise(pa),utc:utcA,tz:tzA||"UTC"};
+      console.log(`[translator-edge-${reqId}] Person A timezone inferred: ${tzA}`);
+      // Assign timezone back to the person object
+      pa.tz = tzA || pa.tz || "UTC";
+      const utcA=toUtcISO({...pa,tz:pa.tz,location:pa.location||""});
+      const normA={...normalise(pa),utc:utcA,tz:pa.tz};
 
       const {data:pb,googleGeoUsed:g2}=await ensureLatLon(parsed.person_b);
       const tzB=await inferTimezone(pb);
-      const utcB=toUtcISO({...pb,tz:tzB,location:pb.location||""});
-      const normB={...normalise(pb),utc:utcB,tz:tzB||"UTC"};
+      console.log(`[translator-edge-${reqId}] Person B timezone inferred: ${tzB}`);
+      // Assign timezone back to the person object
+      pb.tz = tzB || pb.tz || "UTC";
+      const utcB=toUtcISO({...pb,tz:pb.tz,location:pb.location||""});
+      const normB={...normalise(pb),utc:utcB,tz:pb.tz};
 
       googleGeo = g1||g2;
       payload = { person_a: normA, person_b: normB, ...parsed };
