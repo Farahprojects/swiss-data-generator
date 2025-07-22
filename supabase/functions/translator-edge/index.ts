@@ -444,17 +444,21 @@ serve(async (req) => {
         const utcISO = toUtcISO({ ...withLatLon, tz: tzGuess ?? withLatLon.tz });
         withLatLon.utc = utcISO; // Swiss wrapper recognises 'utc'
         
-        // CRITICAL: Force Swiss to use ONLY the calculated UTC timestamp
-        // Remove all conflicting fields that might override our calculated UTC
-        delete withLatLon.date;
-        delete withLatLon.birth_date;
-        delete withLatLon.time;
-        delete withLatLon.birth_time;
-        delete withLatLon.local;
-        delete withLatLon.tz;
-        
         console.log(`[translator-edge-${reqId}] UTC timestamp generated: ${utcISO}`);
-        console.log(`[translator-edge-${reqId}] Cleaned payload - removed conflicting time fields`);
+
+        // Swiss Ephemeris requires both birth_date and birth_time
+        if (!parsed.birth_date && !parsed.date) {
+          throw new Error("Missing birth_date or date for Swiss Ephemeris");
+        }
+        if (!parsed.birth_time && !parsed.time) {
+          throw new Error("Missing birth_time or time for Swiss Ephemeris");
+        }
+
+        // Re-attach cleaned fields in correct format
+        withLatLon.birth_date = parsed.birth_date || parsed.date;
+        withLatLon.birth_time = parsed.birth_time || parsed.time;
+        withLatLon.tz = parsed.tz || tzGuess || 'UTC'; // fallback safe default
+        
       } catch (timeError) {
         console.warn(`[translator-edge-${reqId}] Could not generate UTC timestamp:`, timeError);
         // Don't fail the request, let Swiss handle it as before
