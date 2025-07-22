@@ -422,11 +422,47 @@ serve(async (req) => {
   let googleGeo = false;
 
   try {
-    const raw = await req.json();
-    console.log(`[translator-edge-${reqId}] Request received:`, JSON.stringify(raw, null, 2));
+    /*──────────────── NORMALISE FLEXIBLE INPUT ────────────────*/
+    // 1. Helper: shape any person object into Swiss‑ready form
+    function normalisePerson(src: Record<string, any> = {}) {
+      return {
+        // required by Swiss
+        birth_date:  src.birth_date  || src.date  || null,
+        birth_time:  src.birth_time  || src.time  || null,
+        location:    src.location    || src.city || '',
+        latitude:    src.latitude    ?? src.lat ?? null,
+        longitude:   src.longitude   ?? src.lon ?? null,
+        tz:          src.tz          || src.timezone || '',
+
+        // optional extras left untouched
+        name:        src.name        || '',
+        house_system: src.house_system || src.hsys || 'P',
+      };
+    }
+
+    // 2. Normalise the *whole* incoming body
+    function normaliseBody(input: any) {
+      // Two‑person payload (sync / compatibility)
+      if (input.person_a || input.person_b) {
+        input.person_a = normalisePerson(input.person_a || {});
+        input.person_b = input.person_b ? normalisePerson(input.person_b) : undefined;
+      } else {
+        // Legacy single‑person payload (flat fields at top level)
+        input.person_a = normalisePerson(input);
+      }
+
+      return input;
+    }
+
+    /* ------ APPLY IT RIGHT HERE ------ */
+    const rawBody = await req.json();     // ← the body you just read
+    const body    = normaliseBody(rawBody);  // now Swiss‑ready
+    /* ----------------------------------------------------------- */
     
-    skipLogging = raw.skip_logging === true;
-    const parsed = baseSchema.parse(raw);
+    console.log(`[translator-edge-${reqId}] Request received:`, JSON.stringify(body, null, 2));
+    
+    skipLogging = body.skip_logging === true;
+    const parsed = baseSchema.parse(body);
     requestType = parsed.request.trim().toLowerCase();
     const canon = CANON[requestType];
     if (!canon) throw new Error(`Unknown request '${parsed.request}'`);
@@ -518,14 +554,14 @@ serve(async (req) => {
     console.log(`[translator-edge-${reqId}] Swiss response status: ${swiss.status}`);
 
     /*────────────────── AI report generation (if requested) --------------*/
-    if (raw.report && swiss.ok) {
-      console.log(`[translator-edge-${reqId}] Report requested: "${raw.report}", triggering AI generation`);
+    if (body.report && swiss.ok) {
+      console.log(`[translator-edge-${reqId}] Report requested: "${body.report}", triggering AI generation`);
       
       // Call handleReportGeneration but don't save its result
       // The orchestrator will handle everything
       try {
         await handleReportGeneration({
-          requestData: raw,
+          requestData: body,
           swissApiResponse: swissData,
           swissApiStatus: swiss.status,
           requestId: reqId
@@ -538,11 +574,11 @@ serve(async (req) => {
 
     /*────────────────── logging ------------------------------------------*/
     await logTranslator({
-      request_type: canon, request_payload: raw, swiss_data: swissData,
+      request_type: canon, request_payload: body, swiss_data: swissData,
       swiss_status: swiss.status, processing_ms: Date.now() - t0,
       error: swiss.ok ? undefined : `Swiss API ${swiss.status}`,
       google_geo: googleGeo, translator_payload: payload,
-      user_id: raw.user_id, skip: skipLogging, is_guest: raw.is_guest
+      user_id: body.user_id, skip: skipLogging, is_guest: body.is_guest
     });
 
     /*────────────────── response to caller -------------------------------*/
