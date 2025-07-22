@@ -2,6 +2,7 @@
 /**
  * URL helper utilities for managing guest report IDs in URLs
  */
+import { log } from './logUtils';
 
 export const URL_PARAMS = {
   GUEST_REPORT_ID: 'guest_id'
@@ -112,7 +113,7 @@ export const clearGuestReportId = (): void => {
  * Enhanced comprehensive session clearing with React Query cache and state reset callbacks
  */
 export const clearAllSessionData = async (stateResetCallbacks?: (() => void)[]): Promise<void> => {
-  console.log('🧹 Starting comprehensive session clearing...');
+  log('debug', 'Starting comprehensive session clearing', null, 'urlHelpers');
   
   try {
     // Execute state reset callbacks first (before clearing storage)
@@ -137,7 +138,7 @@ export const clearAllSessionData = async (stateResetCallbacks?: (() => void)[]):
         console.log('✅ React Query cache cleared');
       } catch (error) {
         // QueryClient not available in current context, continue
-        console.log('⚠️ QueryClient not available for clearing');
+        log('warn', 'QueryClient not available for clearing', null, 'urlHelpers');
       }
     } catch (error) {
       // React Query not available, continue
@@ -176,7 +177,7 @@ export const clearAllSessionData = async (stateResetCallbacks?: (() => void)[]):
     // Clear all sessionStorage
     sessionStorage.clear();
     
-    console.log('✅ Comprehensive session data cleared');
+    log('info', 'Comprehensive session data cleared', null, 'urlHelpers');
     
   } catch (error) {
     console.error('❌ Error during session clearing:', error);

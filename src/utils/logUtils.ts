@@ -29,6 +29,8 @@ const defaultConfig: LogConfig = {
     swissFormatter: false, // Disable verbose Swiss formatter logs
     pricing: false, // Disable verbose pricing logs
     auth: false, // Disable verbose auth logs
+    publicReport: false, // Disable verbose public report logs
+    urlHelpers: false, // Disable verbose URL helper logs
   }
 };
 
@@ -120,6 +122,8 @@ export const enableVerboseLogging = () => {
       swissFormatter: true,
       pricing: true,
       auth: true,
+      publicReport: true,
+      urlHelpers: true,
     }
   });
   console.log('🔊 Verbose logging enabled');
@@ -135,6 +139,8 @@ export const disableVerboseLogging = () => {
       swissFormatter: false,
       pricing: false,
       auth: false,
+      publicReport: false,
+      urlHelpers: false,
     }
   });
   console.log('🔇 Verbose logging disabled');

@@ -15,6 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
 import { storeGuestReportId } from '@/utils/urlHelpers';
+import { log } from '@/utils/logUtils';
 
 const PublicReport = () => {
   // ALL HOOKS MUST BE DECLARED FIRST - NEVER INSIDE TRY-CATCH
@@ -28,28 +29,28 @@ const PublicReport = () => {
 
   // Direct URL parsing fix for hydration issue - reliable guest_id detection
   useEffect(() => {
-    console.log("🔍 [FIXED] window.location.search =", window.location.search);
+    log('debug', 'window.location.search', { search: window.location.search }, 'publicReport');
     
     const search = new URLSearchParams(window.location.search);
     const id = search.get("guest_id");
     
-    console.log("🔍 [FIXED] URL param guest_id =", id);
+    log('debug', 'URL param guest_id', { id }, 'publicReport');
     
     if (id) {
-      console.log("✅ [FIXED] Guest ID found, storing and setting state:", id);
+      log('info', 'Guest ID found, storing and setting state', { id }, 'publicReport');
       storeGuestReportId(id);
       setActiveGuestId(id);
     } else {
       // Check localStorage for existing session
       const storedGuestId = localStorage.getItem('currentGuestReportId');
-      console.log("📦 [FIXED] Stored guest_id from localStorage:", storedGuestId);
+      log('debug', 'Stored guest_id from localStorage', { storedGuestId }, 'publicReport');
       if (storedGuestId) {
         setActiveGuestId(storedGuestId);
       }
     }
     
     setIsGuestIdLoading(false);
-    console.log("🎯 [FIXED] Final activeGuestId will be:", id || localStorage.getItem('currentGuestReportId'));
+    log('debug', 'Final activeGuestId will be', { finalId: id || localStorage.getItem('currentGuestReportId') }, 'publicReport');
   }, []);
 
   // Check for cancelled payment status
