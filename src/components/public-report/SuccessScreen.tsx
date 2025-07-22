@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { CheckCircle, AlertCircle } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ReportData } from '@/utils/reportContentExtraction';
@@ -9,6 +9,7 @@ import ErrorStateHandler from './ErrorStateHandler';
 import { supabase } from '@/integrations/supabase/client';
 import { logSuccessScreen } from '@/utils/logUtils';
 import { clearAllSessionData } from '@/utils/urlHelpers';
+import { useErrorHandling } from '@/hooks/useErrorHandling';
 
 interface SuccessScreenProps {
   name: string;
@@ -39,14 +40,16 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   const firstName = name?.split(' ')[0] || 'there';
   const isMobile = useIsMobile();
   const successCardRef = useRef<HTMLDivElement>(null);
+  const statusCheckAttempted = useRef(false);
 
   // Simple visual countdown (24 seconds for UX)
   const [countdownTime, setCountdownTime] = useState(24);
   const [reportReady, setReportReady] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [errorState, setErrorState] = useState<ErrorState | null>(null);
-  const [errorLogging, setErrorLogging] = useState(false);
-  const [caseNumber, setCaseNumber] = useState<string | null>(null);
+
+  // Use the existing error handling hook for database logging
+  const { handleError, caseNumber } = useErrorHandling();
 
   // Auto-scroll to success message once on mount
   useEffect(() => {
@@ -59,7 +62,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
       }
     };
 
-    // Use requestAnimationFrame to ensure DOM is fully rendered
     requestAnimationFrame(() => {
       setTimeout(scrollToSuccess, 100);
     });
@@ -71,7 +73,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     setReportReady(true);
     setCountdownTime(0);
     
-    // Immediately trigger the modal opening
     if (onViewReport) {
       logSuccessScreen('info', 'Calling onViewReport with report data');
       onViewReport(reportData);
@@ -120,40 +121,14 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
   // Error logging handler
   const handleTriggerErrorLogging = useCallback(async (guestReportId: string, email: string) => {
-    if (errorLogging || caseNumber) return; // Prevent duplicate logging
-    
-    setErrorLogging(true);
     logSuccessScreen('info', 'Triggering error logging for Swiss processing error');
     
-    try {
-      const { data, error } = await supabase.functions.invoke('log-user-error', {
-        body: {
-          guestReportId,
-          errorType: 'swiss_processing_error',
-          errorMessage: 'Swiss data processing failed due to stack depth limit or malformed data',
-          email
-        }
-      });
-
-      if (error) {
-        logSuccessScreen('error', 'Error logging failed', { error });
-      } else if (data?.case_number) {
-        setCaseNumber(data.case_number);
-        logSuccessScreen('info', 'Error logged successfully', { caseNumber: data.case_number });
-        
-        // Update error state with case number
-        setErrorState(prev => prev ? {
-          ...prev,
-          case_number: data.case_number,
-          logged_at: new Date().toISOString()
-        } : null);
-      }
-    } catch (err) {
-      logSuccessScreen('error', 'Failed to log error', { err });
-    } finally {
-      setErrorLogging(false);
-    }
-  }, [errorLogging, caseNumber]);
+    await handleError({
+      guestReportId,
+      errorType: 'swiss_processing_error',
+      errorMessage: 'Swiss data processing failed due to stack depth limit or malformed data'
+    });
+  }, [handleError]);
 
   // Session cleanup handler
   const handleCleanupSession = useCallback(() => {
@@ -164,11 +139,12 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   // Check if report is already ready immediately on mount
   useEffect(() => {
     const checkReportStatus = async () => {
-      if (!guestReportId) {
-        logSuccessScreen('warn', 'No guest report ID available for status check');
+      if (!guestReportId || statusCheckAttempted.current) {
         setCheckingStatus(false);
         return;
       }
+
+      statusCheckAttempted.current = true;
 
       try {
         logSuccessScreen('debug', 'Checking if report is already ready');
@@ -186,7 +162,18 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
         // Handle error state responses
         if (data?.error_state) {
           logSuccessScreen('info', 'Error state detected from check-report-status', { errorState: data.error_state });
-          setErrorState(data.error_state);
+          
+          // Update error state with case number if available
+          if (caseNumber) {
+            setErrorState({
+              ...data.error_state,
+              case_number: caseNumber,
+              logged_at: new Date().toISOString()
+            });
+          } else {
+            setErrorState(data.error_state);
+          }
+          
           setCheckingStatus(false);
           return;
         }
@@ -205,7 +192,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     };
 
     checkReportStatus();
-  }, [guestReportId, handleReportReady]);
+  }, [guestReportId, handleReportReady, caseNumber]);
 
   // Pure visual countdown timer - only starts after status check is complete
   useEffect(() => {
