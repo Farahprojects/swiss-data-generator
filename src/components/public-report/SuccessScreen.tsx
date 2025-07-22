@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { CheckCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -37,29 +37,12 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 }) => {
   const firstName = name?.split(' ')[0] || 'there';
   const isMobile = useIsMobile();
-  const successCardRef = useRef<HTMLDivElement>(null);
 
   // Simple states
   const [countdownTime, setCountdownTime] = useState(24);
   const [reportReady, setReportReady] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [errorState, setErrorState] = useState<ErrorState | null>(null);
-
-  // Auto-scroll to success message once on mount
-  useEffect(() => {
-    const scrollToSuccess = () => {
-      if (successCardRef.current) {
-        successCardRef.current.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center' 
-        });
-      }
-    };
-
-    requestAnimationFrame(() => {
-      setTimeout(scrollToSuccess, 100);
-    });
-  }, []);
 
   // Handle report ready from parent component
   const handleReportReady = useCallback((reportData: ReportData) => {
@@ -224,9 +207,9 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   }
 
   return (
-    <div className={isMobile ? 'min-h-[calc(var(--vh,1vh)*100)] flex items-start justify-center pt-8 px-4 bg-gradient-to-b from-background to-muted/20 overflow-y-auto' : 'w-full py-10 px-4 flex justify-center'}>
+    <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-b from-background to-muted/20">
       <div className={isMobile ? 'w-full max-w-md' : 'w-full max-w-4xl'}>
-        <Card ref={successCardRef} className="border-2 border-gray-200 shadow-lg">
+        <Card className="border-2 border-gray-200 shadow-lg">
           <CardContent className="p-8 text-center space-y-6">
             {reportReady ? (
               <>
