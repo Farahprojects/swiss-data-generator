@@ -46,7 +46,7 @@ const baseSchema = z.object({
   location:  z.string().optional(),
 
   // Misc routing / flags
-  report:        z.string().optional(),
+  reportType:    z.string().optional(),  // Changed from 'report' to 'reportType'
   is_guest:      z.boolean().optional(),
   user_id:       z.string().optional(),
   skip_logging:  z.boolean().optional(),
@@ -203,14 +203,17 @@ async function handleReportGeneration(params:{requestData:any;swissApiResponse:a
   const { requestData,swissApiResponse,swissApiStatus,requestId } = params;
   const tag = requestId ? `[reportHandler][${requestId}]` : "[reportHandler]";
   console.log(`${tag} Swiss status ${swissApiStatus}`);
-  if (swissApiStatus!==200 || !requestData?.report) return;
+  
+  // Changed: Check for reportType instead of report
+  if (swissApiStatus!==200 || !requestData?.reportType) return;
+  
   let swissData: any;
   try{ swissData = typeof swissApiResponse==="string"?JSON.parse(swissApiResponse):swissApiResponse; }catch{ console.error(`${tag} parse fail`); return; }
   try{
     const { processReportRequest } = await import("../_shared/reportOrchestrator.ts");
     await processReportRequest({
       endpoint: requestData.request,
-      report_type: requestData.report,
+      report_type: requestData.reportType,  // Changed from report to reportType
       user_id: requestData.user_id,
       apiKey: requestData.api_key,
       is_guest: !!requestData.is_guest,
@@ -348,7 +351,7 @@ serve(async (req)=>{
         ...(parsed.person_a ?? withLatLon),
         utc: withLatLon.utc,
         tz: withLatLon.tz,
-        report: parsed.report,
+        reportType: parsed.reportType,  // Changed from 'report' to 'reportType'
         request: parsed.request,
         user_id: parsed.user_id,
         is_guest: parsed.is_guest,
@@ -364,7 +367,8 @@ serve(async (req)=>{
     console.log(`[translator-edge-${reqId}] Swiss API raw response: ${txt.substring(0, 500)}...`);
     const swissData = (()=>{ try{return JSON.parse(txt);}catch{return { raw:txt }; }})();
 
-    if(body.report && swiss.ok){
+    // Changed: Check for reportType instead of report
+    if(body.reportType && swiss.ok){
       try{ await handleReportGeneration({requestData:body,swissApiResponse:swissData,swissApiStatus:swiss.status,requestId:reqId}); }catch(e){ console.error(`[translator-edge-${reqId}] report err`, e); }
     }
 
