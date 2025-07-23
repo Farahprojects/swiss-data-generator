@@ -1,15 +1,16 @@
-
-// ✅ UNIFIED VERSION: MobileReportDrawer.tsx
-// - Now uses desktop form logic via useMobileFormWrapper
-// - Maintains exact same UI/UX
-// - Includes performance timing integration
-// - Single source of truth with desktop
+// ✅ CLEANED & PATCHED VERSION: MobileReportDrawer.tsx
+// - Scroll interference fixed
+// - Bloat removed
+// - Google Autocomplete bug resolved
+// - Guest ID now received as prop (no internal discovery)
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
-import { useMobileFormWrapper } from '@/hooks/useMobileFormWrapper';
+import { useMobileDrawerForm } from '@/hooks/useMobileDrawerForm';
+import { useReportSubmission } from '@/hooks/useReportSubmission';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { clearAllSessionData } from '@/utils/urlHelpers';
+import { supabase } from '@/integrations/supabase/client';
 
 import Step1ReportType from './drawer-steps/Step1ReportType';
 import Step1_5SubCategory from './drawer-steps/Step1_5SubCategory';
@@ -39,21 +40,8 @@ const MobileReportDrawer = ({ isOpen, onClose, guestId = null }: MobileReportDra
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Use the unified mobile form wrapper (wraps desktop logic)
-  const { 
-    form, 
-    currentStep, 
-    nextStep, 
-    prevStep, 
-    resetForm,
-    handleSubmit,
-    isProcessing,
-    reportCreated,
-    inlinePromoError,
-    clearInlinePromoError
-  } = useMobileFormWrapper();
-
-  const { register, setValue, watch, control, formState: { errors } } = form;
+  const { form, currentStep, nextStep, prevStep, resetForm } = useMobileDrawerForm();
+  const { register, handleSubmit, setValue, watch, control, formState: { errors } } = form;
 
   // Reset drawer state when closing
   useEffect(() => {
@@ -66,13 +54,20 @@ const MobileReportDrawer = ({ isOpen, onClose, guestId = null }: MobileReportDra
   const formName = watch('name') || '';
   const formEmail = watch('email') || '';
 
+  const { 
+    isProcessing, 
+    submitReport, 
+    reportCreated,
+    inlinePromoError,
+    clearInlinePromoError
+  } = useReportSubmission();
+
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');
   const request = watch('request');
 
-  // Desktop-compatible submission handler
   const onSubmit = async (data: ReportFormData) => {
-    await handleSubmit(data);
+    await submitReport(data);
   };
 
   // Handle report ready from orchestrator
@@ -116,9 +111,8 @@ const MobileReportDrawer = ({ isOpen, onClose, guestId = null }: MobileReportDra
     }
   };
 
-  // Use desktop submission logic (wrapped in mobile handler)
   const handleSubmitForm = () => {
-    form.handleSubmit(onSubmit)();
+    handleSubmit(onSubmit)();
   };
 
   const resetDrawer = () => {
