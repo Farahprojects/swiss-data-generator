@@ -1037,6 +1037,42 @@ export type Database = {
         }
         Relationships: []
       }
+      performance_timings: {
+        Row: {
+          created_at: string
+          duration_ms: number
+          end_time: string
+          guest_report_id: string | null
+          id: string
+          metadata: Json | null
+          request_id: string
+          stage: string
+          start_time: string
+        }
+        Insert: {
+          created_at?: string
+          duration_ms: number
+          end_time: string
+          guest_report_id?: string | null
+          id?: string
+          metadata?: Json | null
+          request_id: string
+          stage: string
+          start_time: string
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number
+          end_time?: string
+          guest_report_id?: string | null
+          id?: string
+          metadata?: Json | null
+          request_id?: string
+          stage?: string
+          start_time?: string
+        }
+        Relationships: []
+      }
       price_list: {
         Row: {
           created_at: string | null

@@ -10,7 +10,7 @@ const corsHeaders = {
 type ReportData = Record<string, any>;
 
 // Helper function to kick translator-edge for Swiss processing
-async function kickTranslator(guestReportId: string, reportData: ReportData, supabase: any): Promise<void> {
+async function kickTranslator(guestReportId: string, reportData: ReportData, requestId: string, supabase: any): Promise<void> {
   try {
     console.log(`🔄 [verify-guest-payment] Starting translator-edge for guest: ${guestReportId}`);
     
@@ -35,7 +35,8 @@ async function kickTranslator(guestReportId: string, reportData: ReportData, sup
       ...reportData,
       request: smartRequest, // Use the intelligently extracted request
       is_guest: true,
-      user_id: guestReportId
+      user_id: guestReportId,
+      request_id: requestId // Pass the request_id for correlation
     };
     
     console.log(`🔄 [verify-guest-payment] Translator payload (structured):`, {
@@ -43,7 +44,8 @@ async function kickTranslator(guestReportId: string, reportData: ReportData, sup
       reportType: translatorPayload.reportType,
       person_a: translatorPayload.person_a ? `name: ${translatorPayload.person_a.name}, birth_date: ${translatorPayload.person_a.birth_date}` : 'missing',
       person_b: translatorPayload.person_b ? `name: ${translatorPayload.person_b.name}, birth_date: ${translatorPayload.person_b.birth_date}` : 'not provided',
-      user_id: translatorPayload.user_id
+      user_id: translatorPayload.user_id,
+      request_id: translatorPayload.request_id
     });
     
     await supabase.functions.invoke('translator-edge', {
@@ -141,13 +143,41 @@ async function createGuestReportFromLegacyMetadata(sessionId: string, session: a
   return guestReport.id;
 }
 
+// Helper function to log performance timing
+async function logPerformanceTiming(
+  requestId: string,
+  stage: string,
+  guestReportId: string,
+  startTime: number,
+  endTime: number,
+  metadata: any,
+  supabase: any
+) {
+  try {
+    const duration = endTime - startTime;
+    await supabase.from("performance_timings").insert({
+      request_id: requestId,
+      stage,
+      guest_report_id: guestReportId,
+      start_time: new Date(startTime).toISOString(),
+      end_time: new Date(endTime).toISOString(),
+      duration_ms: duration,
+      metadata
+    });
+    console.log(`📊 [verify-guest-payment] Performance logged - ${stage}: ${duration}ms`);
+  } catch (error) {
+    console.error(`❌ [verify-guest-payment] Performance logging failed:`, error);
+  }
+}
+
 // MAIN HANDLER
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const startTime = Date.now();
+  const requestId = crypto.randomUUID().slice(0, 8);
+  const stageStartTime = Date.now();
   let guestReportId = "unknown";
 
   try {
@@ -193,7 +223,7 @@ serve(async (req) => {
           guestReportId: record.id,
           message: "Free session already processed (idempotent response)",
           idempotent: true,
-          processing_time_ms: Date.now() - startTime
+          processing_time_ms: Date.now() - stageStartTime
         }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
@@ -209,10 +239,29 @@ serve(async (req) => {
         .update({ is_ai_report: isAiReportFlag })
         .eq("id", record.id);
       
+      // Log performance timing before handing over to translator
+      const stageEndTime = Date.now();
+      EdgeRuntime.waitUntil(
+        logPerformanceTiming(
+          requestId,
+          'verify_guest_payment',
+          record.id,
+          stageStartTime,
+          stageEndTime,
+          {
+            session_id: sessionId,
+            product_id: freeProductId,
+            payment_type: 'free',
+            is_ai_report: isAiReportFlag
+          },
+          supabase
+        )
+      );
+
       // Start translator-edge processing (fire-and-forget)
       // Data is already in correct structure from useReportSubmission
       EdgeRuntime.waitUntil(
-        kickTranslator(record.id, record.report_data, supabase)
+        kickTranslator(record.id, record.report_data, requestId, supabase)
       );
 
       console.log(`✅ [verify-guest-payment] Free session Swiss processing started: ${guestReportId}`);
@@ -315,9 +364,28 @@ serve(async (req) => {
           returnYear: md.returnYear || ''
         };
 
+        // Log performance timing for legacy session
+        const legacyStageEndTime = Date.now();
+        EdgeRuntime.waitUntil(
+          logPerformanceTiming(
+            requestId,
+            'verify_guest_payment',
+            guestReportId,
+            stageStartTime,
+            legacyStageEndTime,
+            {
+              session_id: sessionId,
+              product_id: md.priceId || md.reportType || 'essence',
+              payment_type: 'legacy_paid',
+              stripe_amount: session.amount_total
+            },
+            supabase
+          )
+        );
+
         // Start translator-edge processing for legacy session
         EdgeRuntime.waitUntil(
-          kickTranslator(guestReportId, legacyReportData, supabase)
+          kickTranslator(guestReportId, legacyReportData, requestId, supabase)
         );
 
         console.log(`✅ [verify-guest-payment] Legacy payment verification completed: ${guestReportId}`);
@@ -436,13 +504,33 @@ serve(async (req) => {
 
     console.log(`✅ [verify-guest-payment] Payment status updated to paid: ${guestReportId}`);
 
+    // Log performance timing before handing over to translator
+    const paidStageEndTime = Date.now();
+    EdgeRuntime.waitUntil(
+      logPerformanceTiming(
+        requestId,
+        'verify_guest_payment',
+        guestReportId,
+        stageStartTime,
+        paidStageEndTime,
+        {
+          session_id: sessionId,
+          product_id: productId,
+          payment_type: 'paid',
+          stripe_amount: session.amount_total,
+          is_ai_report: isAiReportFlag
+        },
+        supabase
+      )
+    );
+
     // Start translator-edge processing (fire-and-forget)
     // Data is already in correct structure from useReportSubmission
     EdgeRuntime.waitUntil(
-      kickTranslator(updatedReport.id, updatedReport.report_data, supabase)
+      kickTranslator(updatedReport.id, updatedReport.report_data, requestId, supabase)
     );
 
-    const processingTimeMs = Date.now() - startTime;
+    const processingTimeMs = Date.now() - stageStartTime;
 
     console.log(`✅ [verify-guest-payment] Payment verification completed: ${guestReportId}, processing_time: ${processingTimeMs}ms`);
 

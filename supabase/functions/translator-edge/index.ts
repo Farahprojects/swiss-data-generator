@@ -50,6 +50,7 @@ const baseSchema = z.object({
   is_guest:      z.boolean().optional(),
   user_id:       z.string().optional(),
   skip_logging:  z.boolean().optional(),
+  request_id:    z.string().optional(),  // Added for performance correlation
 
   // Flexible payload support
   name:          z.string().optional(),
@@ -250,6 +251,32 @@ async function handleReportGenerationParallel(params:{requestData:any;swissApiRe
   }
 }
 
+/*──────────────── performance timing helper -------------------------------*/
+async function logPerformanceTiming(
+  requestId: string,
+  stage: string,
+  guestReportId: string,
+  startTime: number,
+  endTime: number,
+  metadata: any
+) {
+  try {
+    const duration = endTime - startTime;
+    await sb.from("performance_timings").insert({
+      request_id: requestId,
+      stage,
+      guest_report_id: guestReportId,
+      start_time: new Date(startTime).toISOString(),
+      end_time: new Date(endTime).toISOString(),
+      duration_ms: duration,
+      metadata
+    });
+    console.log(`📊 [translator-edge] Performance logged - ${stage}: ${duration}ms`);
+  } catch (error) {
+    console.error(`❌ [translator-edge] Performance logging failed:`, error);
+  }
+}
+
 /*──────────────── logging (OPTIMIZED) -------------------------------------*/
 async function logTranslatorAsync(run:{request_type:string;request_payload:any;swiss_data:any;swiss_status:number;processing_ms:number;swiss_api_ms:number;error?:string;google_geo:boolean;translator_payload:any;user_id?:string;skip:boolean;is_guest?:boolean}){
   if(run.skip) return;
@@ -416,6 +443,27 @@ serve(async (req)=>{
     console.log(`[translator-edge-${reqId}] Swiss API duration: ${swissApiDuration}ms`);
     console.log(`[translator-edge-${reqId}] Swiss API raw response: ${txt.substring(0, 500)}...`);
     const swissData = (()=>{ try{return JSON.parse(txt);}catch{return { raw:txt }; }})();
+
+    // Log performance timing before handing over to report generation
+    const translatorEndTime = Date.now();
+    const correlationRequestId = parsed.request_id || reqId;
+    
+    if (isGuest && userId) {
+      logPerformanceTiming(
+        correlationRequestId,
+        'translator_edge',
+        userId,
+        t0,
+        translatorEndTime,
+        {
+          request_type: canon,
+          swiss_api_ms: swissApiDuration,
+          geocoding_used: googleGeo,
+          report_type: parsed.reportType,
+          total_processing_ms: translatorEndTime - t0
+        }
+      ).catch(e => console.error(`[translator-edge-${reqId}] Performance logging failed:`, e));
+    }
 
     // PARALLEL PROCESSING: Start both report generation and logging simultaneously
     const processingPromises = [];
