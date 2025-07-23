@@ -60,16 +60,6 @@ async function kickTranslator(guestReportId: string, reportData: ReportData, req
   }
 }
 
-// Helper to determine if this is an AI report (needed for UI flags)
-async function isAiReport(productId: string, supabase: any): Promise<boolean> {
-  const { data: priceRow } = await supabase
-    .from("price_list")
-    .select("endpoint")
-    .eq("id", productId)
-    .single();
-    
-  return priceRow?.endpoint === "report";
-}
 
 // LEGACY: Create guest_reports record from Stripe metadata (backward compatibility)
 async function createGuestReportFromLegacyMetadata(sessionId: string, session: any, supabase: any): Promise<string> {
@@ -112,7 +102,7 @@ async function createGuestReportFromLegacyMetadata(sessionId: string, session: a
       promo_code_used: md.promo_code_used || null,
       coach_slug: md.coach_slug || null,
       coach_name: md.coach_name || null,
-      is_ai_report: true, // Default for legacy reports
+      is_ai_report: false, // Will be set by translator-edge
     })
     .select()
     .single();
@@ -228,34 +218,22 @@ serve(async (req) => {
         }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // For free sessions, extract product_id from report_data
-      const freeProductId = record.report_data?.product_id || record.report_data?.reportType || record.report_data?.request || "essence";
-      
-      // Determine if this is an AI report for free sessions
-      const isAiReportFlag = await isAiReport(freeProductId, supabase);
-      
-      // Update the guest report with is_ai_report flag
-      await supabase
-        .from("guest_reports")
-        .update({ is_ai_report: isAiReportFlag })
-        .eq("id", record.id);
+      // No need to set is_ai_report here - translator-edge will handle it
       
       // Log performance timing before handing over to translator
       const stageEndTime = Date.now();
-      logPerformanceTiming(
-        requestId,
-        'verify_guest_payment',
-        record.id,
-        stageStartTime,
-        stageEndTime,
-        {
-          session_id: sessionId,
-          product_id: freeProductId,
-          payment_type: 'free',
-          is_ai_report: isAiReportFlag
-        },
-        supabase
-      ).catch(err => console.error('Performance logging failed:', err));
+        logPerformanceTiming(
+          requestId,
+          'verify_guest_payment',
+          record.id,
+          stageStartTime,
+          stageEndTime,
+          {
+            session_id: sessionId,
+            payment_type: 'free'
+          },
+          supabase
+        ).catch(err => console.error('Performance logging failed:', err));
 
       // Start translator-edge processing (fire-and-forget)
       // Data is already in correct structure from useReportSubmission
@@ -454,12 +432,9 @@ serve(async (req) => {
 
     console.log(`🔄 [verify-guest-payment] Processing payment for product: ${productId}`);
 
-    // Determine if this is an AI report based on price_list.endpoint
-    const isAiReportFlag = await isAiReport(productId, supabase);
-
     const updateData: any = {
-      payment_status: "paid",
-      is_ai_report: isAiReportFlag
+      payment_status: "paid"
+      // is_ai_report will be set by translator-edge
     };
 
     // Update coach information if present in metadata (for backwards compatibility)
@@ -509,8 +484,7 @@ serve(async (req) => {
         session_id: sessionId,
         product_id: productId,
         payment_type: 'paid',
-        stripe_amount: session.amount_total,
-        is_ai_report: isAiReportFlag
+        stripe_amount: session.amount_total
       },
       supabase
     ).catch(err => console.error('Performance logging failed:', err));

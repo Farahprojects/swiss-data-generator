@@ -498,6 +498,25 @@ serve(async (req)=>{
       is_guest:body.is_guest 
     });
 
+    // Update guest_reports with is_ai_report flag for guest users
+    if (isGuest && userId && body.reportType) {
+      const isAiReportFlag = body.reportType.includes('_personal') || body.reportType.includes('_professional') || body.reportType.includes('_business');
+      console.log(`[translator-edge-${reqId}] Setting is_ai_report=${isAiReportFlag} for reportType: ${body.reportType}`);
+      
+      // Update guest_reports table asynchronously
+      sb.from("guest_reports")
+        .update({ is_ai_report: isAiReportFlag })
+        .eq("id", userId)
+        .then(({ error }) => {
+          if (error) {
+            console.error(`[translator-edge-${reqId}] Failed to update is_ai_report:`, error);
+          } else {
+            console.log(`[translator-edge-${reqId}] Updated is_ai_report=${isAiReportFlag} for guest: ${userId}`);
+          }
+        })
+        .catch(e => console.error(`[translator-edge-${reqId}] is_ai_report update exception:`, e));
+    }
+
     // Return Swiss response immediately - don't wait for report generation or logging
     console.log(`[translator-edge-${reqId}] Returning Swiss response immediately (${Date.now()-t0}ms)`);
     return new Response(txt,{status:swiss.status,headers:corsHeaders});
