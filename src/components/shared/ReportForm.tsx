@@ -6,6 +6,7 @@ import { ReportFormData } from '@/types/public-report';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
 import { useTokenRecovery } from '@/hooks/useTokenRecovery';
 import { useReportStatus, ReportStatus } from '@/hooks/useReportStatus';
+import { useScrollTarget } from '@/hooks/useScrollTarget';
 
 import ReportTypeSelector from '@/components/public-report/ReportTypeSelector';
 import CombinedPersonalDetailsForm from '@/components/public-report/CombinedPersonalDetailsForm';
@@ -46,6 +47,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   // Hooks
   const { status, error: statusError, reportData: statusReportData, setStatus, reset: resetStatus } = useReportStatus();
   const tokenRecovery = useTokenRecovery(guestId);
+  const { captureScrollTarget, restoreScrollTarget, clearScrollTarget } = useScrollTarget();
   
   const { 
     isProcessing, 
@@ -58,6 +60,16 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   } = useReportSubmission(setCreatedGuestReportId);
 
   const { data: guestReportData, error: guestReportError, refetch: refetchGuestData } = useGuestReportData(guestId);
+
+  // Scroll target capture listener
+  useEffect(() => {
+    const handleCtaClick = () => {
+      captureScrollTarget();
+    };
+    
+    window.addEventListener('cta-clicked', handleCtaClick);
+    return () => window.removeEventListener('cta-clicked', handleCtaClick);
+  }, [captureScrollTarget]);
 
   // State restoration effect
   useEffect(() => {
@@ -208,9 +220,10 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     tokenRecovery.reset();
     resetStatus();
     resetReportState();
+    clearScrollTarget();
     
     log('debug', 'Component states reset', null, 'ReportForm');
-  }, [form, tokenRecovery, resetStatus, resetReportState]);
+  }, [form, tokenRecovery, resetStatus, resetReportState, clearScrollTarget]);
 
   // Scroll handling refs
   const paymentStepRef = useRef<HTMLDivElement>(null);
@@ -419,6 +432,15 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   // Success state checks
   if (reportCreated && createdGuestReportId && userName && userEmail) {
     log('debug', 'Rendering SuccessScreen with guaranteed guest ID', { createdGuestReportId }, 'ReportForm');
+    
+    // Restore scroll position after brief delay to allow component to render
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        restoreScrollTarget();
+      }, 100);
+      return () => clearTimeout(timer);
+    }, []);
+    
     return (
       <SuccessScreen 
         name={userName} 
@@ -436,6 +458,14 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     const email = reportData?.email || statusReportData.guest_report?.email;
     
     if (name && email) {
+      // Restore scroll position after brief delay to allow component to render
+      useEffect(() => {
+        const timer = setTimeout(() => {
+          restoreScrollTarget();
+        }, 100);
+        return () => clearTimeout(timer);
+      }, []);
+      
       return (
         <SuccessScreen 
           name={name} 
@@ -449,6 +479,14 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   }
   
   if (guestId && tokenRecovery.recovered && tokenRecovery.recoveredName && tokenRecovery.recoveredEmail) {
+    // Restore scroll position after brief delay to allow component to render
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        restoreScrollTarget();
+      }, 100);
+      return () => clearTimeout(timer);
+    }, []);
+    
     return (
       <SuccessScreen 
         name={tokenRecovery.recoveredName} 
