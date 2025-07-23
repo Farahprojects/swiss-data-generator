@@ -43,10 +43,6 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
     if (onGetReportClick) {
       onGetReportClick();
     } else if (typeof window !== 'undefined') {
-      // Capture scroll position for post-payment restoration
-      const scrollEvent = new CustomEvent('cta-clicked');
-      window.dispatchEvent(scrollEvent);
-      
       // Fallback: scroll to Step 1 if no click handler provided
       const step1 = document.querySelector('[data-step="1"]');
       if (step1) {
