@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14?target=denonext";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=deno&deno-std=0.224.0";
@@ -274,7 +275,7 @@ serve(async (req) => {
         guestReportId: record.id,
         swissProcessing: true,
         message: "Free session verified; Swiss processing started",
-        processing_time_ms: Date.now() - startTime
+        processing_time_ms: Date.now() - stageStartTime
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -326,7 +327,7 @@ serve(async (req) => {
         coach_name: md.coach_name || null,
         service_title: md.service_title || null,
         message: "Service purchase verified successfully",
-        processing_time_ms: Date.now() - startTime
+        processing_time_ms: Date.now() - stageStartTime
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -401,7 +402,7 @@ serve(async (req) => {
           swissProcessing: true,
           legacy: true,
           message: "LEGACY: Payment verified; Swiss processing started",
-          processing_time_ms: Date.now() - startTime
+          processing_time_ms: Date.now() - stageStartTime
         }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
       } catch (legacyError: any) {
@@ -441,7 +442,7 @@ serve(async (req) => {
         guestReportId: existingReport.id,
         message: "Payment already verified and processed (idempotent response)",
         idempotent: true,
-        processing_time_ms: Date.now() - startTime
+        processing_time_ms: Date.now() - stageStartTime
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -548,7 +549,7 @@ serve(async (req) => {
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (err: any) {
-    const processingTimeMs = Date.now() - startTime;
+    const processingTimeMs = Date.now() - stageStartTime;
     
     console.error(`❌ [verify-guest-payment] Verification failed: ${guestReportId}`, err);
 
