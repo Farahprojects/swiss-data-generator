@@ -242,28 +242,24 @@ serve(async (req) => {
       
       // Log performance timing before handing over to translator
       const stageEndTime = Date.now();
-      EdgeRuntime.waitUntil(
-        logPerformanceTiming(
-          requestId,
-          'verify_guest_payment',
-          record.id,
-          stageStartTime,
-          stageEndTime,
-          {
-            session_id: sessionId,
-            product_id: freeProductId,
-            payment_type: 'free',
-            is_ai_report: isAiReportFlag
-          },
-          supabase
-        )
-      );
+      logPerformanceTiming(
+        requestId,
+        'verify_guest_payment',
+        record.id,
+        stageStartTime,
+        stageEndTime,
+        {
+          session_id: sessionId,
+          product_id: freeProductId,
+          payment_type: 'free',
+          is_ai_report: isAiReportFlag
+        },
+        supabase
+      ).catch(err => console.error('Performance logging failed:', err));
 
       // Start translator-edge processing (fire-and-forget)
       // Data is already in correct structure from useReportSubmission
-      EdgeRuntime.waitUntil(
-        kickTranslator(record.id, record.report_data, requestId, supabase)
-      );
+      kickTranslator(record.id, record.report_data, requestId, supabase);
 
       console.log(`✅ [verify-guest-payment] Free session Swiss processing started: ${guestReportId}`);
 
@@ -367,27 +363,23 @@ serve(async (req) => {
 
         // Log performance timing for legacy session
         const legacyStageEndTime = Date.now();
-        EdgeRuntime.waitUntil(
-          logPerformanceTiming(
-            requestId,
-            'verify_guest_payment',
-            guestReportId,
-            stageStartTime,
-            legacyStageEndTime,
-            {
-              session_id: sessionId,
-              product_id: md.priceId || md.reportType || 'essence',
-              payment_type: 'legacy_paid',
-              stripe_amount: session.amount_total
-            },
-            supabase
-          )
-        );
+        logPerformanceTiming(
+          requestId,
+          'verify_guest_payment',
+          guestReportId,
+          stageStartTime,
+          legacyStageEndTime,
+          {
+            session_id: sessionId,
+            product_id: md.priceId || md.reportType || 'essence',
+            payment_type: 'legacy_paid',
+            stripe_amount: session.amount_total
+          },
+          supabase
+        ).catch(err => console.error('Performance logging failed:', err));
 
         // Start translator-edge processing for legacy session
-        EdgeRuntime.waitUntil(
-          kickTranslator(guestReportId, legacyReportData, requestId, supabase)
-        );
+        kickTranslator(guestReportId, legacyReportData, requestId, supabase);
 
         console.log(`✅ [verify-guest-payment] Legacy payment verification completed: ${guestReportId}`);
 
@@ -507,29 +499,25 @@ serve(async (req) => {
 
     // Log performance timing before handing over to translator
     const paidStageEndTime = Date.now();
-    EdgeRuntime.waitUntil(
-      logPerformanceTiming(
-        requestId,
-        'verify_guest_payment',
-        guestReportId,
-        stageStartTime,
-        paidStageEndTime,
-        {
-          session_id: sessionId,
-          product_id: productId,
-          payment_type: 'paid',
-          stripe_amount: session.amount_total,
-          is_ai_report: isAiReportFlag
-        },
-        supabase
-      )
-    );
+    logPerformanceTiming(
+      requestId,
+      'verify_guest_payment',
+      guestReportId,
+      stageStartTime,
+      paidStageEndTime,
+      {
+        session_id: sessionId,
+        product_id: productId,
+        payment_type: 'paid',
+        stripe_amount: session.amount_total,
+        is_ai_report: isAiReportFlag
+      },
+      supabase
+    ).catch(err => console.error('Performance logging failed:', err));
 
     // Start translator-edge processing (fire-and-forget)
     // Data is already in correct structure from useReportSubmission
-    EdgeRuntime.waitUntil(
-      kickTranslator(updatedReport.id, updatedReport.report_data, requestId, supabase)
-    );
+    kickTranslator(updatedReport.id, updatedReport.report_data, requestId, supabase);
 
     const processingTimeMs = Date.now() - stageStartTime;
 
