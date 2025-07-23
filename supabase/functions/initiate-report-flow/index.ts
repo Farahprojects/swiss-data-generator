@@ -51,6 +51,7 @@ interface ReportData {
 
 interface InitiateReportFlowRequest {
   reportData: ReportData
+  basePrice?: number
   promoCode?: string
 }
 
@@ -105,11 +106,12 @@ serve(async (req) => {
   const startTime = Date.now();
 
   try {
-    const { reportData, promoCode }: InitiateReportFlowRequest = await req.json()
+    const { reportData, basePrice: frontendPrice, promoCode }: InitiateReportFlowRequest = await req.json()
     
     logFlowEvent("flow_started", {
       email: reportData?.email,
       reportType: reportData?.reportType,
+      frontendPrice,
       promoCode: promoCode || 'none'
     });
 
@@ -123,35 +125,64 @@ serve(async (req) => {
       })
     }
 
-    // --- PRICE LOOKUP FROM DATABASE ---
+    // --- OPTIMIZED PRICING: Use frontend price instead of database lookup ---
     
-    // Determine priceId using the exact same logic as frontend
-    let priceId = reportData.priceId
-    if (!priceId) {
-      priceId = getProductId(reportData);
+    let priceId: string;
+    let basePrice: number;
+    let productName = "Report";
+    let productDescription = "Astrology Report";
+
+    if (frontendPrice && frontendPrice > 0) {
+      // Basic validation that the price is reasonable (between $1 and $500)
+      if (frontendPrice < 1 || frontendPrice > 500) {
+        logFlowError("invalid_frontend_price", new Error("Price outside acceptable range"), { frontendPrice });
+        return new Response(JSON.stringify({ 
+          error: 'Invalid pricing data' 
+        }), {
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+      
+      basePrice = frontendPrice;
+      priceId = reportData.priceId || getProductId(reportData);
+      
+      logFlowEvent("price_from_frontend", { 
+        basePrice, 
+        priceId,
+        optimization: "database_lookup_skipped"
+      });
+    } else {
+      // Fallback to database lookup if no frontend price provided (shouldn't happen in normal flow)
+      priceId = reportData.priceId || getProductId(reportData);
+      
+      logFlowEvent("price_fallback_lookup", { priceId, reportType: reportData.reportType });
+
+      const { data: product, error: productError } = await supabaseAdmin
+        .from('price_list')
+        .select('id, unit_price_usd, name, description')
+        .eq('id', priceId)
+        .single()
+
+      if (productError || !product) {
+        logFlowError("product_lookup_failed", productError, { priceId });
+        return new Response(JSON.stringify({ 
+          error: 'Product not found or invalid report type',
+          debug: { priceId, productError: productError?.message }
+        }), {
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+
+      basePrice = product.unit_price_usd;
+      productName = product.name;
+      productDescription = product.description;
+      
+      logFlowEvent("price_from_database_fallback", { basePrice, priceId });
     }
 
-    logFlowEvent("price_lookup_started", { priceId, reportType: reportData.reportType });
-
-    // Fetch the base price from the database (SERVER-SIDE)
-    const { data: product, error: productError } = await supabaseAdmin
-      .from('price_list')
-      .select('id, unit_price_usd, name, description')
-      .eq('id', priceId)
-      .single()
-
-    if (productError || !product) {
-      logFlowError("product_lookup_failed", productError, { priceId });
-      return new Response(JSON.stringify({ 
-        error: 'Product not found or invalid report type',
-        debug: { priceId, productError: productError?.message }
-      }), {
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
-
-    let finalPrice = product.unit_price_usd
+    let finalPrice = basePrice
     let discountPercent = 0
     let validatedPromoId: string | null = null
 
@@ -330,7 +361,7 @@ serve(async (req) => {
 
     // --- PAID FLOW: Create guest_reports row IMMEDIATELY with pending status ---
     
-    const originalAmount = product.unit_price_usd
+    const originalAmount = basePrice
     const discountAmount = originalAmount * (discountPercent / 100)
     const finalAmount = Math.max(originalAmount - discountAmount, 1) // Ensure minimum $1
 
@@ -339,7 +370,8 @@ serve(async (req) => {
       discount: discountPercent,
       final: finalAmount,
       priceId,
-      promoCode: promoCode || 'none'
+      promoCode: promoCode || 'none',
+      optimization: frontendPrice ? "used_frontend_price" : "used_database_fallback"
     });
 
     // Create guest_reports row IMMEDIATELY with pending status
@@ -388,7 +420,7 @@ serve(async (req) => {
       guest_report_id: guestReport.id,
       amount: finalAmount,
       email: reportData.email,
-      description: product.description || `${product.name} Report`,
+      description: productDescription || `${productName} Report`,
       successUrl: `${req.headers.get("origin")}/report?guest_id=${guestReport.id}`,
       cancelUrl: `${req.headers.get("origin")}/report?status=cancelled`,
     };

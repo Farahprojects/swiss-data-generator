@@ -105,16 +105,21 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
         secondPersonPlaceId: data.secondPersonPlaceId,
       };
 
+      // Calculate the base price using frontend pricing (already cached)
+      const basePrice = getReportPrice(data);
+
       console.log('🔄 [useReportSubmission] Structured report data:', {
         request: reportData.request,
         person_a: reportData.person_a,
-        person_b: reportData.person_b
+        person_b: reportData.person_b,
+        basePrice
       });
 
       // Single call to initiate-report-flow - it handles everything server-side
       const { data: flowResponse, error } = await supabase.functions.invoke('initiate-report-flow', {
         body: {
           reportData,
+          basePrice, // Pass calculated price to avoid redundant database lookup
           promoCode: data.promoCode || undefined
         }
       });
