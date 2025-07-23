@@ -198,54 +198,97 @@ async function inferTimezone(obj:any){
   return null;
 }
 
-/*──────────────── report helper -------------------------------------------*/
-async function handleReportGeneration(params:{requestData:any;swissApiResponse:any;swissApiStatus:number;requestId?:string}){
+/*──────────────── report helper (OPTIMIZED) -------------------------------*/
+async function handleReportGenerationParallel(params:{requestData:any;swissApiResponse:any;swissApiStatus:number;requestId?:string}){
   const { requestData,swissApiResponse,swissApiStatus,requestId } = params;
   const tag = requestId ? `[reportHandler][${requestId}]` : "[reportHandler]";
-  console.log(`${tag} Swiss status ${swissApiStatus}`);
+  console.log(`${tag} Swiss status ${swissApiStatus} - Starting PARALLEL processing`);
   
-  // Changed: Check for reportType instead of report
-  if (swissApiStatus!==200 || !requestData?.reportType) return;
+  // Check for reportType instead of report
+  if (swissApiStatus!==200 || !requestData?.reportType) {
+    console.log(`${tag} Skipping report generation - status: ${swissApiStatus}, reportType: ${requestData?.reportType}`);
+    return;
+  }
   
   let swissData: any;
-  try{ swissData = typeof swissApiResponse==="string"?JSON.parse(swissApiResponse):swissApiResponse; }catch{ console.error(`${tag} parse fail`); return; }
+  try{ 
+    swissData = typeof swissApiResponse==="string"?JSON.parse(swissApiResponse):swissApiResponse; 
+  } catch(e) { 
+    console.error(`${tag} Swiss data parse failed:`, e); 
+    return; 
+  }
+
+  // Start report generation immediately without waiting for database logging
+  console.log(`${tag} Starting report generation immediately with Swiss data`);
+  
   try{
     const { processReportRequest } = await import("../_shared/reportOrchestrator.ts");
-    await processReportRequest({
+    
+    // Fire off report generation - don't await it
+    const reportPromise = processReportRequest({
       endpoint: requestData.request,
-      report_type: requestData.reportType,  // Changed from report to reportType
+      report_type: requestData.reportType,
       user_id: requestData.user_id,
       apiKey: requestData.api_key,
       is_guest: !!requestData.is_guest,
       chartData: { ...swissData, person_a_name: requestData.person_a?.name, person_b_name: requestData.person_b?.name },
       ...requestData
     });
-  }catch(e){ console.error(`${tag} orchestrator error`, e); }
+
+    console.log(`${tag} Report generation initiated in parallel`);
+    
+    // Use EdgeRuntime.waitUntil to ensure the report generation completes even if the main response finishes
+    if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
+      EdgeRuntime.waitUntil(reportPromise.catch(e => console.error(`${tag} Report generation failed:`, e)));
+    } else {
+      // Fallback: fire and forget
+      reportPromise.catch(e => console.error(`${tag} Report generation failed:`, e));
+    }
+    
+  } catch(e) { 
+    console.error(`${tag} Report orchestrator error:`, e); 
+  }
 }
 
-/*──────────────── logging --------------------------------------------------*/
-async function logTranslator(run:{request_type:string;request_payload:any;swiss_data:any;swiss_status:number;processing_ms:number;error?:string;google_geo:boolean;translator_payload:any;user_id?:string;skip:boolean;is_guest?:boolean}){
+/*──────────────── logging (OPTIMIZED) -------------------------------------*/
+async function logTranslatorAsync(run:{request_type:string;request_payload:any;swiss_data:any;swiss_status:number;processing_ms:number;error?:string;google_geo:boolean;translator_payload:any;user_id?:string;skip:boolean;is_guest?:boolean}){
   if(run.skip) return;
-  const { error } = await sb.from("translator_logs").insert({
-    request_type: run.request_type,
-    request_payload: run.request_payload,
-    translator_payload: run.translator_payload,
-    response_status: run.swiss_status,
-    swiss_data: run.swiss_data,
-    processing_time_ms: run.processing_ms,
-    error_message: run.error,
-    google_geo: run.google_geo,
-    user_id: run.user_id ?? null,
-    is_guest: run.is_guest ?? false,
-    swiss_error: run.swiss_status !== 200, // Set swiss_error based on status
-  });
-  if(error) console.error("[translator] log fail", error.message);
+  
+  // Use background processing for logging to avoid blocking
+  const logPromise = (async () => {
+    try {
+      const { error } = await sb.from("translator_logs").insert({
+        request_type: run.request_type,
+        request_payload: run.request_payload,
+        translator_payload: run.translator_payload,
+        response_status: run.swiss_status,
+        swiss_data: run.swiss_data,
+        processing_time_ms: run.processing_ms,
+        error_message: run.error,
+        google_geo: run.google_geo,
+        user_id: run.user_id ?? null,
+        is_guest: run.is_guest ?? false,
+        swiss_error: run.swiss_status !== 200,
+      });
+      if(error) console.error("[translator] log fail", error.message);
+    } catch(e) {
+      console.error("[translator] async log exception:", e);
+    }
+  })();
+
+  // Use EdgeRuntime.waitUntil if available, otherwise fire and forget
+  if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
+    EdgeRuntime.waitUntil(logPromise);
+  } else {
+    // Fire and forget - don't await
+    logPromise.catch(e => console.error("[translator] background log error:", e));
+  }
 }
 
 /*──────────────── Canon ----------------------------------------------------*/
 const CANON:Record<string,string>={ natal:"natal",transits:"transits",progressions:"progressions",return:"return",synastry:"synastry",compatibility:"synastry",positions:"positions",moonphases:"moonphases",body:"body_matrix",body_matrix:"body_matrix",sync:"sync",essence:"essence",flow:"flow",mindset:"mindset",monthly:"monthly",focus:"focus" };
 
-/*──────────────── Edge Function -------------------------------------------*/
+/*──────────────── Edge Function (OPTIMIZED) -------------------------------*/
 serve(async (req)=>{
   if(req.method==="OPTIONS") return new Response(null,{status:204,headers:corsHeaders});
   const t0=Date.now();
@@ -367,17 +410,61 @@ serve(async (req)=>{
     console.log(`[translator-edge-${reqId}] Swiss API raw response: ${txt.substring(0, 500)}...`);
     const swissData = (()=>{ try{return JSON.parse(txt);}catch{return { raw:txt }; }})();
 
-    // Changed: Check for reportType instead of report
+    // PARALLEL PROCESSING: Start both report generation and logging simultaneously
+    const processingPromises = [];
+    
+    // 1. Start report generation immediately if conditions are met
     if(body.reportType && swiss.ok){
-      try{ await handleReportGeneration({requestData:body,swissApiResponse:swissData,swissApiStatus:swiss.status,requestId:reqId}); }catch(e){ console.error(`[translator-edge-${reqId}] report err`, e); }
+      console.log(`[translator-edge-${reqId}] Starting parallel report generation`);
+      processingPromises.push(
+        handleReportGenerationParallel({
+          requestData:body,
+          swissApiResponse:swissData,
+          swissApiStatus:swiss.status,
+          requestId:reqId
+        }).catch(e => console.error(`[translator-edge-${reqId}] Report generation failed:`, e))
+      );
     }
+    
+    // 2. Start logging asynchronously
+    console.log(`[translator-edge-${reqId}] Starting async logging`);
+    logTranslatorAsync({ 
+      request_type:canon, 
+      request_payload:body, 
+      swiss_data:swissData, 
+      swiss_status:swiss.status, 
+      processing_ms:Date.now()-t0, 
+      error: swiss.ok?undefined:`Swiss ${swiss.status}`, 
+      google_geo:googleGeo, 
+      translator_payload:payload, 
+      user_id:body.user_id, 
+      skip:skipLogging, 
+      is_guest:body.is_guest 
+    });
 
-    await logTranslator({ request_type:canon, request_payload:body, swiss_data:swissData, swiss_status:swiss.status, processing_ms:Date.now()-t0, error: swiss.ok?undefined:`Swiss ${swiss.status}`, google_geo:googleGeo, translator_payload:payload, user_id:body.user_id, skip:skipLogging, is_guest:body.is_guest });
+    // Return Swiss response immediately - don't wait for report generation or logging
+    console.log(`[translator-edge-${reqId}] Returning Swiss response immediately (${Date.now()-t0}ms)`);
     return new Response(txt,{status:swiss.status,headers:corsHeaders});
+    
   }catch(err){
     const msg = (err as Error).message;
     console.error(`[translator-edge-${reqId}]`, msg);
-    await logTranslator({ request_type:requestType, request_payload:"n/a", swiss_data:{error:msg}, swiss_status:500, processing_ms:Date.now()-t0, error:msg, google_geo:googleGeo, translator_payload:null, user_id:userId, skip:skipLogging, is_guest:isGuest });
+    
+    // Log error asynchronously
+    logTranslatorAsync({ 
+      request_type:requestType, 
+      request_payload:"n/a", 
+      swiss_data:{error:msg}, 
+      swiss_status:500, 
+      processing_ms:Date.now()-t0, 
+      error:msg, 
+      google_geo:googleGeo, 
+      translator_payload:null, 
+      user_id:userId, 
+      skip:skipLogging, 
+      is_guest:isGuest 
+    });
+    
     return new Response(JSON.stringify({ error:msg }),{status:500,headers:corsHeaders});
   }
 });
