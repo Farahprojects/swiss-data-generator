@@ -362,6 +362,26 @@ serve(async (req)=>{
     const canon = CANON[requestType];
     if(!canon) throw new Error(`Unknown request '${parsed.request}'`);
 
+    // 🔒 EARLY UPDATE: Set is_ai_report flag synchronously before any processing
+    if (isGuest && userId && body.reportType) {
+      const isAiReportFlag = body.reportType.includes('_personal') || body.reportType.includes('_professional') || body.reportType.includes('_business');
+      console.log(`[translator-edge-${reqId}] Setting is_ai_report=${isAiReportFlag} for reportType: ${body.reportType} (EARLY UPDATE)`);
+      
+      try {
+        const { error } = await sb.from("guest_reports")
+          .update({ is_ai_report: isAiReportFlag })
+          .eq("id", userId);
+        
+        if (error) {
+          console.error(`[translator-edge-${reqId}] Failed to update is_ai_report:`, error);
+        } else {
+          console.log(`[translator-edge-${reqId}] Updated is_ai_report=${isAiReportFlag} for guest: ${userId} (EARLY UPDATE)`);
+        }
+      } catch(e) {
+        console.error(`[translator-edge-${reqId}] is_ai_report update exception:`, e);
+      }
+    }
+
     let payload:any;
     if(canon==="sync" && parsed.person_a && parsed.person_b){
       const {data:pa,googleGeoUsed:g1}=await ensureLatLon(parsed.person_a);
@@ -498,24 +518,7 @@ serve(async (req)=>{
       is_guest:body.is_guest 
     });
 
-    // Update guest_reports with is_ai_report flag for guest users
-    if (isGuest && userId && body.reportType) {
-      const isAiReportFlag = body.reportType.includes('_personal') || body.reportType.includes('_professional') || body.reportType.includes('_business');
-      console.log(`[translator-edge-${reqId}] Setting is_ai_report=${isAiReportFlag} for reportType: ${body.reportType}`);
-      
-      // Update guest_reports table asynchronously
-      sb.from("guest_reports")
-        .update({ is_ai_report: isAiReportFlag })
-        .eq("id", userId)
-        .then(({ error }) => {
-          if (error) {
-            console.error(`[translator-edge-${reqId}] Failed to update is_ai_report:`, error);
-          } else {
-            console.log(`[translator-edge-${reqId}] Updated is_ai_report=${isAiReportFlag} for guest: ${userId}`);
-          }
-        })
-        .catch(e => console.error(`[translator-edge-${reqId}] is_ai_report update exception:`, e));
-    }
+
 
     // Return Swiss response immediately - don't wait for report generation or logging
     console.log(`[translator-edge-${reqId}] Returning Swiss response immediately (${Date.now()-t0}ms)`);
