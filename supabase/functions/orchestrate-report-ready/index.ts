@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -149,20 +150,6 @@ serve(async (req) => {
     };
 
     console.log(`[orchestrate-report-ready] Report orchestration completed for: ${guest_report_id}`);
-    
-    // NEW: Update modal_ready to TRUE to trigger instant modal opening
-    console.log(`[orchestrate-report-ready] Setting modal_ready = TRUE for guest_report_id: ${guest_report_id}`);
-    const { error: modalUpdateError } = await supabase
-      .from("guest_reports")
-      .update({ modal_ready: true })
-      .eq("id", guest_report_id);
-
-    if (modalUpdateError) {
-      console.error(`[orchestrate-report-ready] Failed to update modal_ready flag:`, modalUpdateError);
-      // Don't fail the entire process, just log the error
-    } else {
-      console.log(`[orchestrate-report-ready] Successfully set modal_ready = TRUE`);
-    }
     
     // Send realtime message to SuccessScreen
     console.log(`[orchestrate-report-ready] Broadcasting report data to realtime channel: guest_report:${guest_report_id}`);
