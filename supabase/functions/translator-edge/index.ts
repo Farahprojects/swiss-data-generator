@@ -251,7 +251,7 @@ async function handleReportGenerationParallel(params:{requestData:any;swissApiRe
 }
 
 /*──────────────── logging (OPTIMIZED) -------------------------------------*/
-async function logTranslatorAsync(run:{request_type:string;request_payload:any;swiss_data:any;swiss_status:number;processing_ms:number;error?:string;google_geo:boolean;translator_payload:any;user_id?:string;skip:boolean;is_guest?:boolean}){
+async function logTranslatorAsync(run:{request_type:string;request_payload:any;swiss_data:any;swiss_status:number;processing_ms:number;swiss_api_ms:number;error?:string;google_geo:boolean;translator_payload:any;user_id?:string;skip:boolean;is_guest?:boolean}){
   if(run.skip) return;
   
   // Use background processing for logging to avoid blocking
@@ -263,7 +263,7 @@ async function logTranslatorAsync(run:{request_type:string;request_payload:any;s
         translator_payload: run.translator_payload,
         response_status: run.swiss_status,
         swiss_data: run.swiss_data,
-        processing_time_ms: run.processing_ms,
+        processing_time_ms: run.swiss_api_ms, // Now logging actual Swiss API time
         error_message: run.error,
         google_geo: run.google_geo,
         user_id: run.user_id ?? null,
@@ -404,9 +404,16 @@ serve(async (req)=>{
     console.log(`[translator-edge-${reqId}] Final payload being sent to Swiss API:`, JSON.stringify(payload));
     const url = `${SWISS_API}/${canon}`;
     console.log(`[translator-edge-${reqId}] Calling Swiss API at: ${url}`);
+    
+    // Measure Swiss API timing specifically
+    const swissApiStart = Date.now();
     const swiss = await fetch(url,{ method:["moonphases","positions"].includes(canon)?"GET":"POST", headers:{"Content-Type":"application/json"}, body:["moonphases","positions"].includes(canon)?undefined:JSON.stringify(payload) });
     const txt = await swiss.text();
+    const swissApiEnd = Date.now();
+    const swissApiDuration = swissApiEnd - swissApiStart;
+    
     console.log(`[translator-edge-${reqId}] Swiss API response status: ${swiss.status}`);
+    console.log(`[translator-edge-${reqId}] Swiss API duration: ${swissApiDuration}ms`);
     console.log(`[translator-edge-${reqId}] Swiss API raw response: ${txt.substring(0, 500)}...`);
     const swissData = (()=>{ try{return JSON.parse(txt);}catch{return { raw:txt }; }})();
 
@@ -434,6 +441,7 @@ serve(async (req)=>{
       swiss_data:swissData, 
       swiss_status:swiss.status, 
       processing_ms:Date.now()-t0, 
+      swiss_api_ms:swissApiDuration,
       error: swiss.ok?undefined:`Swiss ${swiss.status}`, 
       google_geo:googleGeo, 
       translator_payload:payload, 
@@ -457,6 +465,7 @@ serve(async (req)=>{
       swiss_data:{error:msg}, 
       swiss_status:500, 
       processing_ms:Date.now()-t0, 
+      swiss_api_ms:0, // No Swiss API call in error case
       error:msg, 
       google_geo:googleGeo, 
       translator_payload:null, 
