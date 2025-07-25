@@ -22,10 +22,16 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     );
 
-    // Helper function to log errors to debug_logs
+    // Create service role client for debug logging
+    const serviceClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    // Helper function to log errors to debug_logs using service role
     const logError = async (context: string, message: string, details: any = {}) => {
       try {
-        await supabaseClient.from('debug_logs').insert({
+        await serviceClient.from('debug_logs').insert({
           source: 'check-report-status',
           message: `[${context}] ${message}`,
           details: { ...details }
@@ -192,13 +198,13 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    // Log the error to debug_logs if supabaseClient is available
+    // Log the error to debug_logs using service role
     try {
-      const supabaseClient = createClient(
+      const serviceClient = createClient(
         Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
       );
-      await supabaseClient.from('debug_logs').insert({
+      await serviceClient.from('debug_logs').insert({
         source: 'check-report-status',
         message: '[UNHANDLED_ERROR] Unexpected error in check-report-status',
         details: { 
