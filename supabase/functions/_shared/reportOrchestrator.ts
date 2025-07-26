@@ -183,16 +183,16 @@ export const processReportRequest = async (
   payload: ReportPayload,
 ): Promise<ReportResult> => {
   const requestId = crypto.randomUUID().slice(0, 8);
-  console.log(`[reportOrchestrator] START processReportRequest for ${payload.report_type} | requestId=${requestId} | user_id=${payload.user_id} | timestamp=${new Date().toISOString()}`);
+  const start = Date.now();
+  const supabase = initSupabase();
+  
+  console.log(`[orchestrator] Starting processReportRequest | guest=${payload.user_id} | report=${payload.report_type} | reqId=${requestId}`);
   
   console.log("[orchestrator] 🟢 Processing report request:", {
     report_type: payload.report_type,
     endpoint: payload.endpoint,
     is_guest: payload.is_guest,
   });
-  
-  const start = Date.now();
-  const supabase = initSupabase();
 
   // Log performance timing for orchestrator start
   try {
