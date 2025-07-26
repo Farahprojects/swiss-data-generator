@@ -167,12 +167,28 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const entryTimestamp = Date.now();
   const requestId = crypto.randomUUID().slice(0, 8);
   const stageStartTime = Date.now();
   let guestReportId = "unknown";
+  let backgroundRequestId = "unknown";
+
+  console.log(`🔄 [verify-guest-payment] ENTRY POINT - Function invoked at: ${new Date().toISOString()}`);
+  console.log(`🔄 [verify-guest-payment] Request ID: ${requestId} | Entry timestamp: ${entryTimestamp}`);
 
   try {
-    const { sessionId } = await req.json();
+    const requestBody = await req.json();
+    const { sessionId } = requestBody;
+    backgroundRequestId = requestBody.backgroundRequestId || "not_provided";
+    const fallbackSync = requestBody.fallback_sync || false;
+    
+    console.log(`🔄 [verify-guest-payment] Request details:`, {
+      sessionId,
+      backgroundRequestId,
+      fallbackSync,
+      requestId,
+      body_parse_duration_ms: Date.now() - entryTimestamp
+    });
     if (!sessionId) throw new Error("Session ID is required");
 
     console.log(`🔄 [verify-guest-payment] Starting verification for session: ${sessionId}`);

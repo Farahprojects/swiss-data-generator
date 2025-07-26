@@ -303,38 +303,115 @@ serve(async (req) => {
         }
 
         // BACKGROUND PROCESSING: Trigger verify-guest-payment asynchronously
-        EdgeRuntime.waitUntil(
-          (async () => {
-            try {
-              logFlowEvent("background_processing_started", { 
-                sessionId, 
-                guestReportId: guestReport.id 
-              });
+        const backgroundProcessingStart = Date.now();
+        const backgroundRequestId = crypto.randomUUID().slice(0, 8);
+        
+        logFlowEvent("edgeruntime_waituntil_check", {
+          sessionId,
+          guestReportId: guestReport.id,
+          backgroundRequestId,
+          EdgeRuntime_available: typeof EdgeRuntime !== 'undefined',
+          waitUntil_available: typeof EdgeRuntime?.waitUntil === 'function'
+        });
 
-              const { error: verifyError } = await supabaseAdmin.functions.invoke(
-                'verify-guest-payment',
-                { body: { sessionId } }
-              );
+        if (typeof EdgeRuntime?.waitUntil === 'function') {
+          logFlowEvent("edgeruntime_waituntil_starting", {
+            sessionId,
+            guestReportId: guestReport.id,
+            backgroundRequestId,
+            timestamp: new Date().toISOString()
+          });
+
+          EdgeRuntime.waitUntil(
+            (async () => {
+              const asyncStartTime = Date.now();
+              const delayFromTrigger = asyncStartTime - backgroundProcessingStart;
               
-              if (verifyError) {
-                logFlowError("background_verification_failed", verifyError, { 
+              try {
+                logFlowEvent("background_processing_started", { 
                   sessionId, 
-                  guestReportId: guestReport.id 
+                  guestReportId: guestReport.id,
+                  backgroundRequestId,
+                  delay_from_trigger_ms: delayFromTrigger,
+                  async_start_timestamp: new Date().toISOString()
                 });
-              } else {
-                logFlowEvent("background_verification_completed", { 
+
+                const invokeStartTime = Date.now();
+                const { error: verifyError } = await supabaseAdmin.functions.invoke(
+                  'verify-guest-payment',
+                  { body: { sessionId, backgroundRequestId } }
+                );
+                const invokeDuration = Date.now() - invokeStartTime;
+                
+                if (verifyError) {
+                  logFlowError("background_verification_failed", verifyError, { 
+                    sessionId, 
+                    guestReportId: guestReport.id,
+                    backgroundRequestId,
+                    invoke_duration_ms: invokeDuration
+                  });
+                } else {
+                  logFlowEvent("background_verification_completed", { 
+                    sessionId, 
+                    guestReportId: guestReport.id,
+                    backgroundRequestId,
+                    invoke_duration_ms: invokeDuration,
+                    total_async_duration_ms: Date.now() - asyncStartTime
+                  });
+                }
+              } catch (bgError) {
+                logFlowError("background_processing_exception", bgError, { 
                   sessionId, 
-                  guestReportId: guestReport.id 
+                  guestReportId: guestReport.id,
+                  backgroundRequestId,
+                  delay_from_trigger_ms: delayFromTrigger
                 });
               }
-            } catch (bgError) {
-              logFlowError("background_processing_exception", bgError, { 
+            })()
+          );
+
+          logFlowEvent("edgeruntime_waituntil_registered", {
+            sessionId,
+            guestReportId: guestReport.id,
+            backgroundRequestId,
+            registration_duration_ms: Date.now() - backgroundProcessingStart
+          });
+        } else {
+          logFlowError("edgeruntime_waituntil_unavailable", new Error("EdgeRuntime.waitUntil not available"), {
+            sessionId,
+            guestReportId: guestReport.id,
+            backgroundRequestId,
+            fallback_to_sync: true
+          });
+          
+          // Fallback: Direct invocation (for debugging)
+          try {
+            const { error: verifyError } = await supabaseAdmin.functions.invoke(
+              'verify-guest-payment',
+              { body: { sessionId, backgroundRequestId, fallback_sync: true } }
+            );
+            
+            if (verifyError) {
+              logFlowError("sync_fallback_verification_failed", verifyError, { 
                 sessionId, 
-                guestReportId: guestReport.id 
+                guestReportId: guestReport.id,
+                backgroundRequestId
+              });
+            } else {
+              logFlowEvent("sync_fallback_verification_completed", { 
+                sessionId, 
+                guestReportId: guestReport.id,
+                backgroundRequestId
               });
             }
-          })()
-        );
+          } catch (fallbackError) {
+            logFlowError("sync_fallback_exception", fallbackError, { 
+              sessionId, 
+              guestReportId: guestReport.id,
+              backgroundRequestId
+            });
+          }
+        }
 
         const processingTimeMs = Date.now() - startTime;
 
