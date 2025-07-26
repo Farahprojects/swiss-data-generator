@@ -225,6 +225,9 @@ async function handleReportGenerationParallel(params:{requestData:any;swissApiRe
   try{
     const { processReportRequest } = await import("../_shared/reportOrchestrator.ts");
     
+    // Log the exact handoff timing
+    console.log(`${tag} waitUntil handoff to orchestrator registered at: ${new Date().toISOString()}`);
+    
     // Fire off report generation - don't await it
     const reportPromise = processReportRequest({
       endpoint: requestData.request,
@@ -240,8 +243,10 @@ async function handleReportGenerationParallel(params:{requestData:any;swissApiRe
     
     // Use EdgeRuntime.waitUntil to ensure the report generation completes even if the main response finishes
     if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
+      console.log(`${tag} EdgeRuntime.waitUntil is available - using it for async processing`);
       EdgeRuntime.waitUntil(reportPromise.catch(e => console.error(`${tag} Report generation failed:`, e)));
     } else {
+      console.warn(`${tag} EdgeRuntime.waitUntil NOT available - using fallback fire-and-forget`);
       // Fallback: fire and forget
       reportPromise.catch(e => console.error(`${tag} Report generation failed:`, e));
     }

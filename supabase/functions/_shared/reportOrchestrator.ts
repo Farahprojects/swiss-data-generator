@@ -182,6 +182,9 @@ interface ReportResult {
 export const processReportRequest = async (
   payload: ReportPayload,
 ): Promise<ReportResult> => {
+  const requestId = crypto.randomUUID().slice(0, 8);
+  console.log(`[reportOrchestrator] START processReportRequest for ${payload.report_type} | requestId=${requestId} | user_id=${payload.user_id} | timestamp=${new Date().toISOString()}`);
+  
   console.log("[orchestrator] 🟢 Processing report request:", {
     report_type: payload.report_type,
     endpoint: payload.endpoint,
@@ -190,6 +193,26 @@ export const processReportRequest = async (
   
   const start = Date.now();
   const supabase = initSupabase();
+
+  // Log performance timing for orchestrator start
+  try {
+    await supabase.from('performance_timings').insert({
+      request_id: requestId,
+      stage: 'report_orchestrator_start',
+      user_id: payload.user_id,
+      start_time: start,
+      end_time: start,
+      duration_ms: 0,
+      details: {
+        endpoint: payload.endpoint,
+        report_type: payload.report_type,
+        source: 'translator_edge',
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (e) {
+    console.error("[orchestrator] Failed to log performance timing:", e);
+  }
 
   const v = await validateRequest(supabase, payload);
   if (!v.ok) {
