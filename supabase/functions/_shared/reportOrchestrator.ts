@@ -194,24 +194,24 @@ export const processReportRequest = async (
     is_guest: payload.is_guest,
   });
 
-  // Log performance timing for orchestrator start
+  // Log orchestrator_start timing 
   try {
     await supabase.from('performance_timings').insert({
       request_id: requestId,
-      stage: 'report_orchestrator_start',
-      user_id: payload.user_id,
-      start_time: start,
-      end_time: start,
+      stage: 'orchestrator_start',
+      guest_report_id: payload.user_id,
+      start_time: new Date(start).toISOString(),
+      end_time: new Date(start).toISOString(),
       duration_ms: 0,
-      details: {
+      metadata: {
+        function: 'reportOrchestrator',
         endpoint: payload.endpoint,
         report_type: payload.report_type,
-        source: 'translator_edge',
-        timestamp: new Date().toISOString()
+        source: 'translator_edge'
       }
     });
   } catch (e) {
-    console.error("[orchestrator] Failed to log performance timing:", e);
+    console.error("[orchestrator] Failed to log orchestrator_start timing:", e);
   }
 
   const v = await validateRequest(supabase, payload);

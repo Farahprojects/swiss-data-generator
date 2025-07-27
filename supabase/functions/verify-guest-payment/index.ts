@@ -15,6 +15,24 @@ async function kickTranslator(guestReportId: string, reportData: ReportData, req
   try {
     console.log(`🔄 [verify-guest-payment] Starting translator-edge for guest: ${guestReportId}`);
     
+    // Log translator_edge_invoked timing
+    try {
+      await supabase.from("performance_timings").insert({
+        request_id: requestId,
+        stage: 'translator_edge_invoked',
+        guest_report_id: guestReportId,
+        start_time: new Date().toISOString(),
+        end_time: new Date().toISOString(),
+        duration_ms: 0,
+        metadata: { 
+          function: 'verify-guest-payment',
+          location: 'kickTranslator'
+        }
+      });
+    } catch (err) {
+      console.error('Failed to log translator_edge_invoked:', err);
+    }
+    
     // SMART REQUEST EXTRACTION: Extract base type from compound reportType
     let smartRequest = reportData.request;
     
@@ -176,6 +194,13 @@ serve(async (req) => {
   console.log(`🔄 [verify-guest-payment] ENTRY POINT - Function invoked at: ${new Date().toISOString()}`);
   console.log(`🔄 [verify-guest-payment] Request ID: ${requestId} | Entry timestamp: ${entryTimestamp}`);
 
+  // Initialize supabase early for logging
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    { auth: { persistSession: false } }
+  );
+
   try {
     const requestBody = await req.json();
     const { sessionId } = requestBody;
@@ -193,11 +218,24 @@ serve(async (req) => {
 
     console.log(`🔄 [verify-guest-payment] Starting verification for session: ${sessionId}`);
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } }
-    );
+    // Log verify_payment_start timing
+    try {
+      await supabase.from("performance_timings").insert({
+        request_id: requestId,
+        stage: 'verify_payment_start',
+        guest_report_id: null, // Will be updated once we know the guest report ID
+        start_time: new Date().toISOString(),
+        end_time: new Date().toISOString(),
+        duration_ms: 0,
+        metadata: { 
+          function: 'verify-guest-payment',
+          session_id: sessionId,
+          background_request_id: backgroundRequestId
+        }
+      });
+    } catch (err) {
+      console.error('Failed to log verify_payment_start:', err);
+    }
 
     const isFree = sessionId.startsWith("free_");
 

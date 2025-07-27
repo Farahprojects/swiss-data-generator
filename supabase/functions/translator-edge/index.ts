@@ -207,6 +207,26 @@ async function handleReportGenerationParallel(params:{requestData:any;swissApiRe
   const tag = requestId ? `[reportHandler][${requestId}]` : "[reportHandler]";
   console.log(`${tag} Swiss status ${swissApiStatus} - Starting PARALLEL processing`);
   
+  // Log report_generation_dispatched timing
+  try {
+    await sb.from("performance_timings").insert({
+      request_id: requestId || crypto.randomUUID().slice(0,8),
+      stage: 'report_generation_dispatched',
+      guest_report_id: requestData?.user_id || null,
+      start_time: new Date().toISOString(),
+      end_time: new Date().toISOString(),
+      duration_ms: 0,
+      metadata: { 
+        function: 'translator-edge',
+        location: 'handleReportGenerationParallel',
+        swiss_status: swissApiStatus,
+        report_type: requestData?.reportType
+      }
+    });
+  } catch (err) {
+    console.error('Failed to log report_generation_dispatched:', err);
+  }
+  
   // Check for reportType instead of report
   if (swissApiStatus!==200 || !requestData?.reportType) {
     console.log(`${tag} Skipping report generation - status: ${swissApiStatus}, reportType: ${requestData?.reportType}`);
@@ -328,6 +348,24 @@ serve(async (req)=>{
   const t0=Date.now();
   const reqId = crypto.randomUUID().slice(0,8);
   let skipLogging=false, requestType="unknown", googleGeo=false, userId:string|undefined, isGuest=false;
+  
+  // Log translator_edge_start timing immediately
+  try {
+    await sb.from("performance_timings").insert({
+      request_id: reqId,
+      stage: 'translator_edge_start',
+      guest_report_id: null, // Will be updated once we parse the body
+      start_time: new Date().toISOString(),
+      end_time: new Date().toISOString(),
+      duration_ms: 0,
+      metadata: { 
+        function: 'translator-edge',
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (err) {
+    console.error('Failed to log translator_edge_start:', err);
+  }
   try{
     // Extract user_id and is_guest before validation for proper error logging
     const rawBodyText = await req.text();

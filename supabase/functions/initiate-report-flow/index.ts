@@ -314,6 +314,25 @@ serve(async (req) => {
           waitUntil_available: typeof EdgeRuntime?.waitUntil === 'function'
         });
 
+        // Log to performance_timings: waituntil_registered
+        try {
+          await supabaseAdmin.from("performance_timings").insert({
+            request_id: backgroundRequestId,
+            stage: 'waituntil_registered',
+            guest_report_id: guestReport.id,
+            start_time: new Date().toISOString(),
+            end_time: new Date().toISOString(),
+            duration_ms: 0,
+            metadata: { 
+              function: 'initiate-report-flow',
+              session_id: sessionId,
+              timestamp: new Date().toISOString()
+            }
+          });
+        } catch (err) {
+          console.error('Failed to log waituntil_registered:', err);
+        }
+
         if (typeof EdgeRuntime?.waitUntil === 'function') {
           logFlowEvent("edgeruntime_waituntil_starting", {
             sessionId,
@@ -326,6 +345,25 @@ serve(async (req) => {
             (async () => {
               const asyncStartTime = Date.now();
               const delayFromTrigger = asyncStartTime - backgroundProcessingStart;
+              
+              // Log background wrapper start
+              try {
+                await supabaseAdmin.from("performance_timings").insert({
+                  request_id: backgroundRequestId,
+                  stage: 'background_wrapper_start',
+                  guest_report_id: guestReport.id,
+                  start_time: new Date().toISOString(),
+                  end_time: new Date().toISOString(),
+                  duration_ms: delayFromTrigger,
+                  metadata: { 
+                    function: 'initiate-report-flow',
+                    session_id: sessionId,
+                    delay_from_trigger_ms: delayFromTrigger
+                  }
+                });
+              } catch (err) {
+                console.error('Failed to log background_wrapper_start:', err);
+              }
               
               try {
                 logFlowEvent("background_processing_started", { 
