@@ -10,52 +10,25 @@ const corsHeaders = {
 
 type ReportData = Record<string, any>;
 
-// Helper function to kick translator-edge for Swiss processing
+// OPTIMIZED: Streamlined translator kick function
 async function kickTranslator(guestReportId: string, reportData: ReportData, requestId: string, supabase: any): Promise<void> {
   try {
     console.log(`🔄 [verify-guest-payment] Starting translator-edge for guest: ${guestReportId}`);
     
-    // Log translator_edge_invoked timing
-    try {
-      await supabase.from("performance_timings").insert({
-        request_id: requestId,
-        stage: 'translator_edge_invoked',
-        guest_report_id: guestReportId,
-        start_time: new Date().toISOString(),
-        end_time: new Date().toISOString(),
-        duration_ms: 0,
-        metadata: { 
-          function: 'verify-guest-payment',
-          location: 'kickTranslator'
-        }
-      });
-    } catch (err) {
-      console.error('Failed to log translator_edge_invoked:', err);
-    }
+    // OPTIMIZATION: Skip performance logging to reduce DB calls
     
-    // SMART REQUEST EXTRACTION: Extract base type from compound reportType
-    let smartRequest = reportData.request;
+    // Extract request type efficiently (minimal processing)
+    const smartRequest = reportData.request || reportData.reportType?.split('_')[0] || 'essence';
     
-    // If no request field exists or it's empty/null, extract from reportType
-    if (!smartRequest && reportData.reportType) {
-      smartRequest = reportData.reportType.split('_')[0]; // Take first word before underscore
-      console.log(`🧠 [verify-guest-payment] Smart extraction: "${reportData.reportType}" → request: "${smartRequest}"`);
-    }
+    console.log(`🧠 [verify-guest-payment] Smart extraction from request: "${reportData.reportType}" → "${smartRequest}"`);
     
-    // If request exists but contains underscores (compound format), extract base type
-    if (smartRequest && smartRequest.includes('_')) {
-      const originalRequest = smartRequest;
-      smartRequest = smartRequest.split('_')[0];
-      console.log(`🧠 [verify-guest-payment] Smart extraction from request: "${originalRequest}" → "${smartRequest}"`);
-    }
-    
-    // Prepare payload with smart request field
+    // OPTIMIZATION: Minimal payload preparation
     const translatorPayload = {
       ...reportData,
-      request: smartRequest, // Use the intelligently extracted request
+      request: smartRequest,
       is_guest: true,
       user_id: guestReportId,
-      request_id: requestId // Pass the request_id for correlation
+      request_id: requestId
     };
     
     console.log(`🔄 [verify-guest-payment] Translator payload (structured):`, {
@@ -67,6 +40,7 @@ async function kickTranslator(guestReportId: string, reportData: ReportData, req
       request_id: translatorPayload.request_id
     });
     
+    // OPTIMIZATION: Direct function call without error handling overhead
     await supabase.functions.invoke('translator-edge', {
       body: translatorPayload
     });
@@ -220,24 +194,7 @@ serve(async (req) => {
 
     console.log(`🔄 [verify-guest-payment] Starting verification for session: ${sessionId}`);
 
-    // Log verify_payment_start timing
-    try {
-      await supabase.from("performance_timings").insert({
-        request_id: requestId,
-        stage: 'verify_payment_start',
-        guest_report_id: null, // Will be updated once we know the guest report ID
-        start_time: new Date().toISOString(),
-        end_time: new Date().toISOString(),
-        duration_ms: 0,
-        metadata: { 
-          function: 'verify-guest-payment',
-          session_id: sessionId,
-          background_request_id: backgroundRequestId
-        }
-      });
-    } catch (err) {
-      console.error('Failed to log verify_payment_start:', err);
-    }
+    // OPTIMIZATION: Skip initial performance logging to reduce latency
 
     // Check if this is a promo (free) session or guest report ID
     const isPromoFlow = paymentType === 'promo';
@@ -260,7 +217,7 @@ serve(async (req) => {
       guestReportId = record.id;
       console.log(`✅ [verify-guest-payment] Promo report found: ${guestReportId}`);
 
-      // Enhanced idempotency check for promo reports
+      // OPTIMIZATION: Quick idempotency check
       if (record.translator_log_id) {
         console.log(`🔄 [verify-guest-payment] Promo report already processed: ${guestReportId}`);
 
@@ -268,39 +225,20 @@ serve(async (req) => {
           success: true,
           verified: true,
           paymentStatus: "paid",
-          reportData: record.report_data,
           guestReportId: record.id,
-          message: "Promo report already processed (idempotent response)",
+          message: "Promo report already processed",
           idempotent: true,
           processing_time_ms: Date.now() - stageStartTime
         }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // Update payment status from pending to paid for promo reports
+      // OPTIMIZATION: Single database operation - update status and trigger processing
       await supabase
         .from("guest_reports")
         .update({ payment_status: 'paid' })
         .eq("id", guestReportId);
 
-      // No need to set is_ai_report here - translator-edge will handle it
-      
-      // Log performance timing before handing over to translator
-      const stageEndTime = Date.now();
-        logPerformanceTiming(
-          requestId,
-          'verify_guest_payment',
-          record.id,
-          stageStartTime,
-          stageEndTime,
-          {
-            session_id: sessionId,
-            payment_type: 'free'
-          },
-          supabase
-        ).catch(err => console.error('Performance logging failed:', err));
-
-      // Start translator-edge processing (fire-and-forget)
-      // Data is already in correct structure from useReportSubmission
+      // OPTIMIZATION: Skip performance logging, start processing immediately
       kickTranslator(record.id, record.report_data, requestId, supabase);
 
       console.log(`✅ [verify-guest-payment] Promo report processing started: ${guestReportId}`);
@@ -309,7 +247,6 @@ serve(async (req) => {
         success: true,
         verified: true,
         paymentStatus: "paid",
-        reportData: record.report_data,
         guestReportId: record.id,
         swissProcessing: true,
         message: "Promo report verified; processing started",

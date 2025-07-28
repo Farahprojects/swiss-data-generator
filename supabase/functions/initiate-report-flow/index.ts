@@ -60,6 +60,7 @@ interface ValidatedPromo {
 
 interface InitiateReportFlowRequest {
   reportData: ReportData
+  basePrice: number
   promoCode?: string
 }
 
@@ -91,43 +92,26 @@ serve(async (req) => {
   const startTime = Date.now();
 
   try {
-    const { reportData, promoCode }: InitiateReportFlowRequest = await req.json()
+    const { reportData, basePrice, promoCode }: InitiateReportFlowRequest = await req.json()
     
     logFlowEvent("flow_started", {
       email: reportData?.email,
       reportType: reportData?.reportType,
+      basePrice,
       promoCode: promoCode ? promoCode.substring(0, 3) + "***" : 'none'
     });
 
-    if (!reportData || !reportData.email) {
-      logFlowError("missing_required_data", new Error("Missing report data or email"));
+    if (!reportData?.email || !basePrice) {
+      logFlowError("missing_required_data", new Error("Missing email or basePrice"));
       return new Response(JSON.stringify({ 
-        error: 'Missing required report data or email' 
+        error: 'Missing required report data, email, or basePrice' 
       }), {
         status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    // Get base price from price_list table
-    const priceId = reportData.reportType || 'essence_personal';
-    const { data: priceData, error: priceError } = await supabaseAdmin
-      .from('price_list')
-      .select('unit_price_usd')
-      .eq('id', priceId)
-      .single();
-
-    if (priceError || !priceData) {
-      logFlowError("price_lookup_failed", priceError || new Error("Price not found"), { priceId });
-      return new Response(JSON.stringify({ 
-        error: 'Invalid report type or pricing unavailable' 
-      }), {
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    let basePrice = Number(priceData.unit_price_usd);
+    // OPTIMIZATION: Trust frontend basePrice calculation (no DB lookup)
     let finalPrice = basePrice;
     let discountPercent = 0;
     let isFreeReport = false;
@@ -187,16 +171,16 @@ serve(async (req) => {
       });
     }
 
-    // Single database operation: insert guest_reports with pending status
+    // OPTIMIZATION: Single database operation with UUID as both id and stripe_session_id
+    const guestReportId = crypto.randomUUID();
+    
     const guestReportData = {
-      stripe_session_id: '', // Will be set later
+      id: guestReportId,
+      stripe_session_id: guestReportId, // Use same UUID for both
       email: reportData.email,
       report_type: reportData.reportType || 'essence_personal',
       amount_paid: finalPrice,
-      report_data: {
-        ...reportData,
-        product_id: priceId,
-      },
+      report_data: reportData,
       payment_status: "pending",
       purchase_type: 'report',
       promo_code_used: promoCode || null,
@@ -206,11 +190,9 @@ serve(async (req) => {
       report_log_id: null
     };
 
-    const { data: guestReport, error: insertError } = await supabaseAdmin
+    const { error: insertError } = await supabaseAdmin
       .from("guest_reports")
-      .insert(guestReportData)
-      .select('id')
-      .single();
+      .insert(guestReportData);
 
     if (insertError) {
       logFlowError("guest_report_creation_failed", insertError, { email: reportData.email });
@@ -222,24 +204,18 @@ serve(async (req) => {
       });
     }
 
-    // Update stripe_session_id to guestReportId for consistency
-    await supabaseAdmin
-      .from('guest_reports')
-      .update({ stripe_session_id: guestReport.id })
-      .eq('id', guestReport.id);
-
     const processingTimeMs = Date.now() - startTime;
 
     logFlowEvent("flow_completed", { 
-      guestReportId: guestReport.id,
+      guestReportId,
       isFreeReport,
       finalPrice,
       processing_time_ms: processingTimeMs
     });
 
-    // Return response for frontend orchestration
+    // Return minimal response for frontend orchestration
     return new Response(JSON.stringify({ 
-      guestReportId: guestReport.id,
+      guestReportId,
       basePrice,
       finalPrice,
       isFreeReport,

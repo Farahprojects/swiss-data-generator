@@ -47,10 +47,10 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
     setInlinePromoError(''); // Clear any previous errors
     
     try {
-      // 1. CALCULATE BASE PRICING using already-loaded PricingContext
+      // 1. TRUST FRONTEND PRICING - Pass calculated basePrice to backend
       const basePrice = getReportPrice(data);
 
-      // 2. PREPARE CLEAN REPORT DATA (only person_a/person_b structure)
+      // 2. PREPARE MINIMAL REPORT DATA (optimized payload)
       const person_a = {
         name: data.name,
         birth_date: data.birthDate,
@@ -77,31 +77,29 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
       } : undefined;
 
       const reportData = {
-        request: data.request || data.reportType || 'essence',
-        reportType: data.request || data.reportType || 'standard',
-        relationshipType: data.relationshipType,
-        essenceType: data.essenceType,
         email: data.email,
+        reportType: data.request || data.reportType || 'essence_personal',
+        request: data.request || data.reportType?.split('_')[0] || 'essence',
+        essenceType: data.essenceType,
+        relationshipType: data.relationshipType,
         returnYear: data.returnYear,
         notes: data.notes,
-        product_id: data.request || data.reportType || 'essence',
-        
-        // Clean person structure for translator-edge
         person_a,
         person_b
       };
 
-      console.log('🚀 [useReportSubmission] Streamlined submission:', {
+      console.log('🚀 [useReportSubmission] Optimized submission:', {
         request: reportData.request,
         basePrice,
-        promoCode: data.promoCode || null
+        promoCode: data.promoCode || 'none'
       });
 
-      // 3. CALL LEAN INITIATE-REPORT-FLOW (just validate + insert)
+      // 3. CALL OPTIMIZED INITIATE-REPORT-FLOW (trust frontend pricing)
       const { data: flowResponse, error } = await supabase.functions.invoke('initiate-report-flow', {
         body: {
           reportData,
-          promoCode: data.promoCode || null // Pass raw promo code string
+          basePrice,
+          promoCode: data.promoCode || null
         }
       });
 
