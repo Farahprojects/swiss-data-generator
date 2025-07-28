@@ -193,25 +193,13 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
           errorMessage = error.message || 'Failed to process request';
         }
 
-        // Check if this is a promo code validation error
-        const isPromoError = errorMessage.toLowerCase().includes('promo') || 
-                           errorMessage.toLowerCase().includes('invalid or expired') ||
-                           errorMessage.toLowerCase().includes('usage limit') ||
-                           error.status === 400;
-        
-        if (isPromoError) {
-          setInlinePromoError('Invalid Promo Code');
-          setIsProcessing(false);
-          return { success: false };
-        } else {
-          toast({
-            title: "Error",
-            description: errorMessage || 'Failed to process request',
-            variant: "destructive",
-          });
-          setIsProcessing(false);
-          return { success: false };
-        }
+        toast({
+          title: "Error",
+          description: errorMessage || 'Failed to process request',
+          variant: "destructive",
+        });
+        setIsProcessing(false);
+        return { success: false };
       }
 
       // Handle the simplified response from the new "no-hop" architecture
@@ -283,15 +271,11 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
         errorMessage = 'Failed to process your request. Please try again.';
       }
 
-      if (errorMessage.toLowerCase().includes('promo') || errorMessage.includes('400')) {
-        setInlinePromoError('Invalid Promo Code');
-      } else {
-        toast({
-          title: "Error",
-          description: errorMessage,
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
       setIsProcessing(false);
       return { success: false };
     }
