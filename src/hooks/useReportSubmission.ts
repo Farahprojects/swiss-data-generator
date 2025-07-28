@@ -94,11 +94,13 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
         promoCode: data.promoCode || 'none'
       });
 
-      // 3. CALL OPTIMIZED INITIATE-REPORT-FLOW (pre-calculated pricing)
-      const promoValidation = data.promoCode ? { status: 'valid', discountPercent: 100 } : { status: 'none', discountPercent: 0 };
-      const pricingResult = calculatePricing(basePrice, promoValidation);
-      const finalPrice = pricingResult.finalPrice;
-      const isFreeReport = pricingResult.isFree;
+      // 3. CALL OPTIMIZED INITIATE-REPORT-FLOW (NO FAKE PROMO VALIDATION)
+      // REMOVED: Fake promo validation that accepted any string as 100% discount
+      // const promoValidation = data.promoCode ? { status: 'valid', discountPercent: 100 } : { status: 'none', discountPercent: 0 };
+      
+      // Use base price until proper promo validation is implemented
+      const finalPrice = basePrice;
+      const isFreeReport = false;
       
       const { data: flowResponse, error } = await supabase.functions.invoke('initiate-report-flow', {
         body: {
