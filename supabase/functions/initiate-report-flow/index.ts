@@ -61,7 +61,8 @@ interface ValidatedPromo {
 interface InitiateReportFlowRequest {
   reportData: ReportData
   basePrice?: number
-  validatedPromo?: ValidatedPromo
+  promoCode?: string
+  validatedPromo?: ValidatedPromo // Legacy support
 }
 
 // Removed duplicate getProductId logic - trusting frontend pricing
@@ -92,13 +93,14 @@ serve(async (req) => {
   const startTime = Date.now();
 
   try {
-    const { reportData, basePrice: frontendPrice, validatedPromo }: InitiateReportFlowRequest = await req.json()
+    const { reportData, basePrice: frontendPrice, promoCode: rawPromoCode, validatedPromo }: InitiateReportFlowRequest = await req.json()
     
     logFlowEvent("flow_started", {
       email: reportData?.email,
       reportType: reportData?.reportType,
       frontendPrice,
-      validatedPromo: validatedPromo ? { discount_type: validatedPromo.discount_type, discount_value: validatedPromo.discount_value } : 'none'
+      promoCode: rawPromoCode ? rawPromoCode.substring(0, 3) + "***" : 'none',
+      legacy_validatedPromo: validatedPromo ? { discount_type: validatedPromo.discount_type, discount_value: validatedPromo.discount_value } : 'none'
     });
 
     if (!reportData || !reportData.email) {
@@ -111,59 +113,97 @@ serve(async (req) => {
       })
     }
 
-    // --- SIMPLIFIED PRICING: Trust frontend calculation ---
+    // --- NEW APPROACH: Validate promo code directly if provided ---
     
-    // Validate frontend price: allow 0 for free reports but require promo authorization
-    if (frontendPrice === null || frontendPrice === undefined || frontendPrice < 0) {
-      logFlowError("invalid_frontend_price", new Error("Price must be provided and non-negative"));
-      return new Response(JSON.stringify({ 
-        error: 'Invalid pricing data - price must be non-negative' 
-      }), {
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
-
-    // If price is 0, ensure it's authorized by a free promo
-    if (frontendPrice === 0 && !validatedPromo?.isFreeReport) {
-      logFlowError("unauthorized_free_report", new Error("Free reports require valid promo authorization"));
-      return new Response(JSON.stringify({ 
-        error: 'Free reports require valid promotional code authorization' 
-      }), {
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
-
-    // Frontend already calculated final price including promo discount
-    const finalPrice = frontendPrice;
-    const priceId = reportData.priceId || reportData.reportType || 'standard';
-    
-    logFlowEvent("price_trusted_from_frontend", { 
-      finalPrice, 
-      priceId,
-      validatedPromo: validatedPromo ? { discount_type: validatedPromo.discount_type, discount_value: validatedPromo.discount_value } : null,
-      optimization: "promo_validation_eliminated"
-    });
-
-    // Extract promo information from pre-validated data
+    let finalPrice = frontendPrice || 0;
+    let promoCode: string | null = rawPromoCode || null;
     let discountPercent = 0;
-    let validatedPromoId: string | null = null;
-    let promoCode: string | null = null;
+    let isFreeReport = false;
 
-    if (validatedPromo?.valid) {
-      validatedPromoId = validatedPromo.promo_id || null;
-      discountPercent = validatedPromo.discount_value || 0;
-      promoCode = validatedPromo.code || null;
-
-      logFlowEvent("promo_data_extracted", { 
-        promoCode: promoCode?.substring(0, 3) + "***", 
-        discount_percent: discountPercent,
-        discount_type: validatedPromo.discount_type
+    // If promo code provided, validate it
+    if (promoCode && promoCode.trim()) {
+      logFlowEvent("promo_validation_started", { 
+        promoCode: promoCode.substring(0, 3) + "***",
+        basePrice: frontendPrice 
       });
 
-        // FREE FLOW - If promo explicitly authorizes free report
-        if (validatedPromo.isFreeReport) {
+      try {
+        const { data: promoResponse, error: promoError } = await supabaseAdmin.functions.invoke(
+          'validate-promo-code', 
+          {
+            body: {
+              promo_code: promoCode,
+              email: reportData.email
+            }
+          }
+        );
+
+        if (promoError) {
+          logFlowError("promo_validation_failed", promoError, { promoCode: promoCode.substring(0, 3) + "***" });
+          return new Response(JSON.stringify({ 
+            error: 'Promo code validation failed' 
+          }), {
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        if (!promoResponse.valid) {
+          logFlowError("promo_invalid", new Error(promoResponse.reason || "Invalid promo code"), { 
+            promoCode: promoCode.substring(0, 3) + "***" 
+          });
+          return new Response(JSON.stringify({ 
+            error: promoResponse.reason || 'Invalid promo code' 
+          }), {
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        // Apply discount
+        discountPercent = promoResponse.discount_value || 0;
+        isFreeReport = promoResponse.isFreeReport || false;
+        
+        if (isFreeReport) {
+          finalPrice = 0;
+        } else {
+          const discountAmount = frontendPrice * (discountPercent / 100);
+          finalPrice = Math.max(frontendPrice - discountAmount, 0);
+        }
+
+        logFlowEvent("promo_validated", { 
+          promoCode: promoCode.substring(0, 3) + "***",
+          discount_percent: discountPercent,
+          discount_type: promoResponse.discount_type,
+          isFreeReport,
+          finalPrice
+        });
+
+      } catch (promoException) {
+        logFlowError("promo_validation_exception", promoException, { 
+          promoCode: promoCode.substring(0, 3) + "***" 
+        });
+        return new Response(JSON.stringify({ 
+          error: 'Promo validation error' 
+        }), {
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
+    const priceId = reportData.priceId || reportData.reportType || 'standard';
+    
+    logFlowEvent("pricing_determined", { 
+      finalPrice, 
+      priceId,
+      promoCode: promoCode ? promoCode.substring(0, 3) + "***" : 'none',
+      isFreeReport,
+      discountPercent
+    });
+
+    // FREE FLOW - If promo code makes report free
+    if (isFreeReport) {
           const sessionId = `free_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
 
           logFlowEvent("free_flow_started", { sessionId, promoCode });
@@ -201,8 +241,41 @@ serve(async (req) => {
             })
           }
 
-          // Note: Promo increment is handled by validate-promo-code function
-          // initiate-report-flow only trusts the validated promo data
+          // Trigger orchestration by calling validate-promo-code with guestReportId
+          // This will invoke verify-guest-payment to start the report generation process
+          try {
+            logFlowEvent("orchestration_trigger_started", { guestReportId: guestReport.id, promoCode: promoCode?.substring(0, 3) + "***" });
+            
+            const { data: orchestrationResult, error: orchestrationError } = await supabaseAdmin.functions.invoke(
+              'validate-promo-code', 
+              {
+                body: {
+                  promo_code: promoCode,
+                  email: reportData.email,
+                  guestReportId: guestReport.id
+                }
+              }
+            );
+
+            if (orchestrationError) {
+              logFlowError("orchestration_trigger_failed", orchestrationError, { 
+                guestReportId: guestReport.id, 
+                promoCode: promoCode?.substring(0, 3) + "***" 
+              });
+              // Continue anyway - the report record exists, user can still access it
+            } else {
+              logFlowEvent("orchestration_trigger_success", { 
+                guestReportId: guestReport.id, 
+                orchestrationResult: orchestrationResult ? "triggered" : "no_result" 
+              });
+            }
+          } catch (orchestrationException) {
+            logFlowError("orchestration_trigger_exception", orchestrationException, { 
+              guestReportId: guestReport.id, 
+              promoCode: promoCode?.substring(0, 3) + "***" 
+            });
+            // Continue anyway - the report record exists, user can still access it
+          }
 
           const processingTimeMs = Date.now() - startTime;
 
@@ -210,11 +283,11 @@ serve(async (req) => {
             sessionId, 
             guestReportId: guestReport.id,
             processing_time_ms: processingTimeMs,
-            background_processing_removed: true,
-            note: "Processing will be triggered by validate-promo-code"
+            orchestration_triggered: true,
+            note: "verify-guest-payment triggered via validate-promo-code orchestration"
           });
 
-          return new Response(JSON.stringify({ 
+           return new Response(JSON.stringify({ 
             success: true,
             status: 'success', 
             message: 'Your free report is being generated',
@@ -227,7 +300,6 @@ serve(async (req) => {
             status: 200, 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           })
-        }
     }
 
     // --- PAID FLOW: Create guest_reports row IMMEDIATELY with pending status ---

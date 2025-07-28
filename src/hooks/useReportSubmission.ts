@@ -47,47 +47,22 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
     setInlinePromoError(''); // Clear any previous errors
     
     try {
-      // 1. VALIDATE PROMO CODE FIRST (if provided)
+      // 1. PREPARE VALIDATED PROMO (validation moved to initiate-report-flow)
       let validatedPromo: any = null;
       
       if (data.promoCode && data.promoCode.trim()) {
-        console.log('🎯 [useReportSubmission] Validating promo code:', data.promoCode);
-        
-        const { data: promoResponse, error: promoError } = await supabase.functions.invoke('validate-promo-code', {
-          body: {
-            promo_code: data.promoCode,
-            email: data.email
-          }
-        });
-
-        if (promoError) {
-          console.error('Promo validation failed:', promoError);
-          setInlinePromoError('Promo validation error');
-          setIsProcessing(false);
-          return { success: false };
-        }
-
-        if (!promoResponse.valid) {
-          console.log('Invalid promo code:', promoResponse.reason);
-          setInlinePromoError('Invalid Promo Code');
-          setIsProcessing(false);
-          return { success: false };
-        }
-
-        validatedPromo = promoResponse;
-        console.log('✅ Promo code validated:', validatedPromo);
+        // Pass promo code to initiate-report-flow for validation and processing
+        // This eliminates double validation and centralizes promo logic
+        validatedPromo = {
+          code: data.promoCode,
+          requiresValidation: true
+        };
+        console.log('🎯 [useReportSubmission] Promo code will be validated by initiate-report-flow:', data.promoCode);
       }
 
-      // 2. CALCULATE PRICING with validated promo
+      // 2. CALCULATE BASE PRICING (discounts handled by initiate-report-flow)
       let basePrice = getReportPrice(data);
-      let finalPrice = basePrice;
-      let discountPercent = 0;
-
-      if (validatedPromo) {
-        discountPercent = validatedPromo.discount_value || 0;
-        const discountAmount = basePrice * (discountPercent / 100);
-        finalPrice = Math.max(basePrice - discountAmount, 0);
-      }
+      // Pass base price to initiate-report-flow for secure discount calculation
 
       // 3. PREPARE REPORT DATA
       const person_a = {
@@ -151,16 +126,15 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
         person_a: reportData.person_a,
         person_b: reportData.person_b,
         basePrice,
-        finalPrice,
-        validatedPromo: validatedPromo ? { discount_type: validatedPromo.discount_type, discount_value: validatedPromo.discount_value } : null
+        promoCode: validatedPromo?.code || null
       });
 
-      // 4. CALL INITIATE-REPORT-FLOW with pre-validated data
+      // 4. CALL INITIATE-REPORT-FLOW with base price and promo code
       const { data: flowResponse, error } = await supabase.functions.invoke('initiate-report-flow', {
         body: {
           reportData,
-          basePrice: finalPrice, // Pass final calculated price
-          validatedPromo // Pass validated promo data instead of raw promo code
+          basePrice, // Pass base price for secure calculation
+          promoCode: validatedPromo?.code || null // Pass raw promo code for validation
         }
       });
 
