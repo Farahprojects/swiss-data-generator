@@ -247,65 +247,19 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }, 300);
   };
 
-  // Fixed report viewing function that properly opens modal
-  const handleViewReport = useCallback(async (reportDataParam?: ReportData) => {
-    log('info', 'handleViewReport called', { hasParam: !!reportDataParam, effectiveGuestId }, 'ReportForm');
+  // Simplified report viewing function - only displays provided data
+  const handleViewReport = useCallback((reportDataParam?: ReportData) => {
+    log('info', 'handleViewReport called', { hasParam: !!reportDataParam }, 'ReportForm');
     
-    // If report data is passed directly, use it
+    // Only use provided report data - no redundant fetching
     if (reportDataParam) {
-      log('info', 'Using provided report data', null, 'ReportForm');
+      log('info', 'Displaying provided report data', null, 'ReportForm');
       setReportData(reportDataParam);
       setViewingReport(true);
-      return;
+    } else {
+      log('warn', 'No report data provided to handleViewReport', null, 'ReportForm');
     }
-
-    if (!effectiveGuestId) {
-      log('warn', 'No effective guest ID for report viewing', null, 'ReportForm');
-      return;
-    }
-    
-    const maxRetries = 3;
-    let attempt = 0;
-    
-    while (attempt < maxRetries) {
-      attempt++;
-      log('debug', `Report fetch attempt ${attempt}/${maxRetries}`, null, 'ReportForm');
-      
-      if (guestReportData) {
-        log('info', 'Using existing guest report data', null, 'ReportForm');
-        setReportData(guestReportData as ReportData);
-        setViewingReport(true);
-        return;
-      }
-      
-      if (attempt < maxRetries) {
-        log('debug', 'Report not ready yet, waiting...', null, 'ReportForm');
-        try {
-          await refetchGuestData();
-          await new Promise(resolve => setTimeout(resolve, 500));
-        } catch (error) {
-          log('debug', `Refetch attempt ${attempt} had no data`, null, 'ReportForm');
-        }
-      }
-    }
-    
-    log('info', 'Report still generating, trying direct fetch...', null, 'ReportForm');
-    try {
-      const { data, error } = await supabase.functions.invoke('get-guest-report', {
-        body: { id: effectiveGuestId }
-      });
-      
-      if (!error && data) {
-        log('info', 'Direct fetch succeeded', null, 'ReportForm');
-        setReportData(data as ReportData);
-        setViewingReport(true);
-      } else {
-        log('info', 'Report is still being generated in background', null, 'ReportForm');
-      }
-    } catch (error) {
-      log('info', 'Report generation in progress', { error }, 'ReportForm');
-    }
-  }, [effectiveGuestId, guestReportData, refetchGuestData]);
+  }, []);
 
   // Fixed callback registration for SuccessScreen
   const handleReportReadyCallback = useCallback((callback: (reportData: ReportData) => void) => {
