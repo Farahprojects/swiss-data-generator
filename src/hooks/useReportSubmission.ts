@@ -1,28 +1,25 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { ReportFormData } from '@/types/public-report';
 import { storeGuestReportId } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
 
-export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => void, preCalculatedPrice?: number) => {
+export const useReportSubmission = (
+  setCreatedGuestReportId?: (id: string) => void,
+  preCalculatedPrice?: number
+) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [reportCreated, setReportCreated] = useState(false);
   const [inlinePromoError, setInlinePromoError] = useState<string>('');
+  const { toast } = useToast();
 
-  // Reset reportCreated state on mount to prevent stale success screens
   useEffect(() => {
     setReportCreated(false);
   }, []);
 
-  const { toast } = useToast();
-  const { getReportPrice, getReportTitle, calculatePricing, isLoading: isPricingLoading } = typeof window !== 'undefined' ? usePriceFetch() : { getReportPrice: () => 0, getReportTitle: () => 'Report', calculatePricing: () => ({ finalPrice: 0, isFree: false }), isLoading: false };
-
-  // Add timeout mechanism to prevent stuck processing state
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
-    
+
     if (isProcessing) {
       timeoutId = setTimeout(() => {
         console.warn('Report submission timeout - resetting processing state');
@@ -32,35 +29,26 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
           description: "The request took too long. Please try again.",
           variant: "destructive",
         });
-      }, 15000); // 15 second timeout for potential Stripe redirect
+      }, 15000);
     }
 
-    return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    };
+    return () => clearTimeout(timeoutId);
   }, [isProcessing, toast]);
 
-  const submitReport = async (data: ReportFormData): Promise<{ success: boolean; guestReportId?: string }> => {
+  const submitReport = async (
+    data: ReportFormData
+  ): Promise<{ success: boolean; guestReportId?: string }> => {
     setIsProcessing(true);
-    setInlinePromoError(''); // Clear any previous errors
-    
+    setInlinePromoError('');
+
     try {
-      // 1. Use pre-calculated price if provided, otherwise fetch from context
-      let finalPrice: number;
-      
-      if (preCalculatedPrice !== undefined) {
-        console.log('🎯 Using pre-calculated price from PaymentStep:', preCalculatedPrice);
-        finalPrice = preCalculatedPrice;
-      } else {
-        // Fallback to context calculation
-        const basePrice = getReportPrice(data);
-        finalPrice = basePrice;
-        console.log('📊 Using context-calculated price:', basePrice);
+      if (preCalculatedPrice === undefined || isNaN(preCalculatedPrice)) {
+        throw new Error('❌ Missing or invalid preCalculatedPrice in useReportSubmission');
       }
 
-      // 2. PREPARE MINIMAL REPORT DATA (optimized payload)
+      const finalPrice = preCalculatedPrice;
+      console.log('💰 Final price used:', finalPrice);
+
       const person_a = {
         name: data.name,
         birth_date: data.birthDate,
@@ -69,11 +57,10 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
         latitude: data.birthLatitude,
         longitude: data.birthLongitude,
         place_id: data.birthPlaceId,
-        tz: '', // Will be inferred by translator-edge
+        tz: '',
         house_system: ''
       };
 
-      // Only include person_b if second person data exists
       const person_b = data.secondPersonName ? {
         name: data.secondPersonName,
         birth_date: data.secondPersonBirthDate,
@@ -82,7 +69,7 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
         latitude: data.secondPersonLatitude,
         longitude: data.secondPersonLongitude,
         place_id: data.secondPersonPlaceId,
-        tz: '', // Will be inferred by translator-edge
+        tz: '',
         house_system: ''
       } : undefined;
 
@@ -98,154 +85,56 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
         person_b
       };
 
-      console.log('🚀 [useReportSubmission] Optimized submission:', {
-        request: reportData.request,
-        finalPrice,
-        promoCode: data.promoCode || 'none'
-      });
-
-      // 2. Validate promo codes (if any) - REMOVED FAKE VALIDATION
-      // Note: Proper promo validation should happen here via edge function
-      console.log('⏭️ Skipping promo validation until edge function integration', {
-        promoCode: data.promoCode || 'none'
-      });
-
-      // 3. CALL OPTIMIZED INITIATE-REPORT-FLOW (NO FAKE PROMO VALIDATION)
-      const isFreeReport = false;
-      
       const { data: flowResponse, error } = await supabase.functions.invoke('initiate-report-flow', {
         body: {
           reportData,
           finalPrice,
-          isFreeReport,
+          isFreeReport: false,
           promoCode: data.promoCode || null
         }
       });
 
-      if (error) {
-        // Log error details for debugging but don't expose sensitive info
-        console.error('Report submission failed:', {
-          status: error.status,
-          message: error.message,
-          hasContext: !!error.context
-        });
-        
-        // Extract error message from response
-        let errorMessage = '';
-        
-        try {
-          if (error.context && typeof error.context.text === 'function') {
-            const responseText = await error.context.text();
-            try {
-              const parsedResponse = JSON.parse(responseText);
-              errorMessage = parsedResponse.error || responseText;
-            } catch (parseError) {
-              errorMessage = responseText;
-            }
-          } else if (error.message) {
-            errorMessage = error.message;
-          } else if (typeof error === 'string') {
-            errorMessage = error;
-          }
-        } catch (responseError) {
-          errorMessage = error.message || 'Failed to process request';
-        }
-
-        toast({
-          title: "Error",
-          description: errorMessage || 'Failed to process request',
-          variant: "destructive",
-        });
-        setIsProcessing(false);
-        return { success: false };
-      }
-
-      // 4. FRONTEND ORCHESTRATION - Handle response based on flow type
-      if (!flowResponse.guestReportId) {
-        toast({
-          title: "Error", 
-          description: "Failed to create report record",
-          variant: "destructive",
-        });
-        setIsProcessing(false);
-        return { success: false };
+      if (error || !flowResponse?.guestReportId) {
+        throw new Error('❌ Failed to create report: ' + (error?.message || 'Unknown error'));
       }
 
       const guestReportId = flowResponse.guestReportId;
-      
-      // Free reports are automatically triggered by initiate-report-flow
+      storeGuestReportId(guestReportId);
+      setCreatedGuestReportId?.(guestReportId);
+
       if (flowResponse.isFreeReport) {
-        console.log('🎉 [useReportSubmission] Free report created and processing started automatically');
-        
         toast({
           title: "Report Created!",
           description: "Your free report is being generated and will be sent to your email shortly.",
         });
-        
-        storeGuestReportId(guestReportId);
-        
-        if (setCreatedGuestReportId) {
-          setCreatedGuestReportId(guestReportId);
-        }
         setReportCreated(true);
         setIsProcessing(false);
-        
         return { success: true, guestReportId };
-        
-      } else {
-        console.log('💳 [useReportSubmission] Paid report - creating checkout');
-        
-        // Calculate final price with applied discount (use the price we already calculated)
-        const checkoutPrice = flowResponse.finalPrice || finalPrice;
-        
-        // Call create-checkout
-        const { data: checkoutResponse, error: checkoutError } = await supabase.functions.invoke('create-checkout', {
-          body: {
-            guest_report_id: guestReportId,
-            amount: checkoutPrice,
-            email: data.email,
-            description: "Astrology Report",
-            successUrl: `${window.location.origin}/report?guest_id=${guestReportId}`,
-            cancelUrl: `${window.location.origin}/checkout/${guestReportId}?status=cancelled`
-          }
-        });
-
-        if (checkoutError || !checkoutResponse?.url) {
-          toast({
-            title: "Error",
-            description: "Failed to create checkout session. Please try again.",
-            variant: "destructive",
-          });
-          setIsProcessing(false);
-          return { success: false };
-        }
-
-        // Redirect to Stripe checkout
-        try {
-          window.open(checkoutResponse.url, '_self');
-        } catch (redirectError) {
-          console.warn("Failed to redirect with window.open, falling back to location.href");
-          window.location.href = checkoutResponse.url;
-        }
-        
-        return { success: true };
       }
 
-    } catch (error) {
-      console.error('Error in submitReport:', error);
-      
-      let errorMessage = '';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (typeof error === 'string') {
-        errorMessage = error;
-      } else {
-        errorMessage = 'Failed to process your request. Please try again.';
+      const { data: checkoutResponse, error: checkoutError } = await supabase.functions.invoke('create-checkout', {
+        body: {
+          guest_report_id: guestReportId,
+          amount: flowResponse.finalPrice || finalPrice,
+          email: data.email,
+          description: "Astrology Report",
+          successUrl: `${window.location.origin}/report?guest_id=${guestReportId}`,
+          cancelUrl: `${window.location.origin}/checkout/${guestReportId}?status=cancelled`
+        }
+      });
+
+      if (checkoutError || !checkoutResponse?.url) {
+        throw new Error('❌ Failed to create checkout session');
       }
 
+      window.open(checkoutResponse.url, '_self');
+      return { success: true };
+
+    } catch (err: any) {
+      console.error(err);
       toast({
         title: "Error",
-        description: errorMessage,
+        description: err?.message || 'Something went wrong.',
         variant: "destructive",
       });
       setIsProcessing(false);
@@ -253,21 +142,12 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
     }
   };
 
-  const clearInlinePromoError = () => {
-    setInlinePromoError('');
-  };
-
-  const resetReportState = () => {
-    setReportCreated(false);
-  };
-
   return {
     isProcessing,
-    isPricingLoading,
     reportCreated,
     submitReport,
     inlinePromoError,
-    clearInlinePromoError,
-    resetReportState
+    clearInlinePromoError: () => setInlinePromoError(''),
+    resetReportState: () => setReportCreated(false)
   };
 };
