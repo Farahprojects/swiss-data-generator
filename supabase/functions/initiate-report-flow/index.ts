@@ -201,34 +201,8 @@ serve(async (req) => {
             })
           }
 
-          // Increment promo code usage immediately (atomic operation)
-          if (validatedPromoId) {
-            try {
-              const { error: promoUpdateError } = await supabaseAdmin
-                .from('promo_codes')
-                .update({ 
-                  times_used: supabaseAdmin.raw('times_used + 1')
-                })
-                .eq('id', validatedPromoId);
-
-              if (promoUpdateError) {
-                logFlowError("free_promo_increment_failed", promoUpdateError, { 
-                  promoCode: promoCode?.substring(0, 3) + "***", 
-                  guestReportId: guestReport.id 
-                });
-              } else {
-                logFlowEvent("free_promo_incremented", { 
-                  promoCode: promoCode?.substring(0, 3) + "***",
-                  guestReportId: guestReport.id
-                });
-              }
-            } catch (promoError) {
-              logFlowError("free_promo_increment_exception", promoError, { 
-                promoCode: promoCode?.substring(0, 3) + "***", 
-                guestReportId: guestReport.id 
-              });
-            }
-          }
+          // Note: Promo increment is handled by validate-promo-code function
+          // initiate-report-flow only trusts the validated promo data
 
           const processingTimeMs = Date.now() - startTime;
 
