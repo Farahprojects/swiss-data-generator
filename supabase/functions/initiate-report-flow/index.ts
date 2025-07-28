@@ -60,9 +60,7 @@ interface ValidatedPromo {
 
 interface InitiateReportFlowRequest {
   reportData: ReportData
-  basePrice?: number
   promoCode?: string
-  validatedPromo?: ValidatedPromo // Legacy support
 }
 
 // Removed duplicate getProductId logic - trusting frontend pricing
@@ -93,14 +91,12 @@ serve(async (req) => {
   const startTime = Date.now();
 
   try {
-    const { reportData, basePrice: frontendPrice, promoCode: rawPromoCode, validatedPromo }: InitiateReportFlowRequest = await req.json()
+    const { reportData, promoCode }: InitiateReportFlowRequest = await req.json()
     
     logFlowEvent("flow_started", {
       email: reportData?.email,
       reportType: reportData?.reportType,
-      frontendPrice,
-      promoCode: rawPromoCode ? rawPromoCode.substring(0, 3) + "***" : 'none',
-      legacy_validatedPromo: validatedPromo ? { discount_type: validatedPromo.discount_type, discount_value: validatedPromo.discount_value } : 'none'
+      promoCode: promoCode ? promoCode.substring(0, 3) + "***" : 'none'
     });
 
     if (!reportData || !reportData.email) {
@@ -113,319 +109,146 @@ serve(async (req) => {
       })
     }
 
-    // --- NEW APPROACH: Validate promo code directly if provided ---
-    
-    let finalPrice = frontendPrice || 0;
-    let promoCode: string | null = rawPromoCode || null;
+    // Get base price from price_list table
+    const priceId = reportData.reportType || 'essence_personal';
+    const { data: priceData, error: priceError } = await supabaseAdmin
+      .from('price_list')
+      .select('unit_price_usd')
+      .eq('id', priceId)
+      .single();
+
+    if (priceError || !priceData) {
+      logFlowError("price_lookup_failed", priceError || new Error("Price not found"), { priceId });
+      return new Response(JSON.stringify({ 
+        error: 'Invalid report type or pricing unavailable' 
+      }), {
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    let basePrice = Number(priceData.unit_price_usd);
+    let finalPrice = basePrice;
     let discountPercent = 0;
     let isFreeReport = false;
 
-    // If promo code provided, validate it
+    // Inline promo validation (if provided)
     if (promoCode && promoCode.trim()) {
       logFlowEvent("promo_validation_started", { 
         promoCode: promoCode.substring(0, 3) + "***",
-        basePrice: frontendPrice 
+        basePrice 
       });
 
-      try {
-        const { data: promoResponse, error: promoError } = await supabaseAdmin.functions.invoke(
-          'validate-promo-code', 
-          {
-            body: {
-              promo_code: promoCode,
-              email: reportData.email
-            }
-          }
-        );
+      const { data: promoData, error: promoError } = await supabaseAdmin
+        .from('promo_codes')
+        .select('*')
+        .eq('code', promoCode.toUpperCase())
+        .eq('is_active', true)
+        .single();
 
-        if (promoError) {
-          logFlowError("promo_validation_failed", promoError, { promoCode: promoCode.substring(0, 3) + "***" });
-          return new Response(JSON.stringify({ 
-            error: 'Promo code validation failed' 
-          }), {
-            status: 400, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          });
-        }
-
-        if (!promoResponse.valid) {
-          logFlowError("promo_invalid", new Error(promoResponse.reason || "Invalid promo code"), { 
-            promoCode: promoCode.substring(0, 3) + "***" 
-          });
-          return new Response(JSON.stringify({ 
-            error: promoResponse.reason || 'Invalid promo code' 
-          }), {
-            status: 400, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          });
-        }
-
-        // Apply discount
-        discountPercent = promoResponse.discount_value || 0;
-        isFreeReport = promoResponse.isFreeReport || false;
-        
-        if (isFreeReport) {
-          finalPrice = 0;
-        } else {
-          const discountAmount = frontendPrice * (discountPercent / 100);
-          finalPrice = Math.max(frontendPrice - discountAmount, 0);
-        }
-
-        logFlowEvent("promo_validated", { 
-          promoCode: promoCode.substring(0, 3) + "***",
-          discount_percent: discountPercent,
-          discount_type: promoResponse.discount_type,
-          isFreeReport,
-          finalPrice
-        });
-
-      } catch (promoException) {
-        logFlowError("promo_validation_exception", promoException, { 
+      if (promoError || !promoData) {
+        logFlowError("promo_invalid", new Error("Invalid promo code"), { 
           promoCode: promoCode.substring(0, 3) + "***" 
         });
         return new Response(JSON.stringify({ 
-          error: 'Promo validation error' 
+          error: 'Invalid or expired promo code' 
         }), {
-          status: 500, 
+          status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
+
+      // Check usage limits
+      if (promoData.max_uses && promoData.times_used >= promoData.max_uses) {
+        return new Response(JSON.stringify({ 
+          error: 'Promo code has reached maximum usage limit' 
+        }), {
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Apply discount
+      discountPercent = promoData.discount_percent;
+      isFreeReport = discountPercent === 100;
+      
+      if (isFreeReport) {
+        finalPrice = 0;
+      } else {
+        const discountAmount = basePrice * (discountPercent / 100);
+        finalPrice = Math.max(basePrice - discountAmount, 0);
+      }
+
+      logFlowEvent("promo_validated", { 
+        promoCode: promoCode.substring(0, 3) + "***",
+        discount_percent: discountPercent,
+        isFreeReport,
+        finalPrice
+      });
     }
 
-    const priceId = reportData.priceId || reportData.reportType || 'standard';
-    
-    logFlowEvent("pricing_determined", { 
-      finalPrice, 
-      priceId,
-      promoCode: promoCode ? promoCode.substring(0, 3) + "***" : 'none',
-      isFreeReport,
-      discountPercent
-    });
-
-    // FREE FLOW - If promo code makes report free
-    if (isFreeReport) {
-          logFlowEvent("free_flow_started", { promoCode });
-
-          const insertPayload = {
-            stripe_session_id: '',  // Will be set to guestReportId after creation
-            email: reportData.email,
-            report_type: reportData.reportType || 'standard',
-            report_data: {
-              ...reportData,
-              product_id: priceId,
-            },
-            amount_paid: 0,
-            payment_status: 'pending', // Always start as pending
-            promo_code_used: promoCode,
-            email_sent: false,
-            coach_id: null,
-            translator_log_id: null,
-            report_log_id: null
-          }
-
-          const { data: guestReport, error: insertError } = await supabaseAdmin
-            .from('guest_reports')
-            .insert(insertPayload)
-            .select('id')
-            .single()
-
-          if (insertError) {
-            logFlowError("free_report_insert_failed", insertError);
-            return new Response(JSON.stringify({ 
-              error: 'Failed to create report record' 
-            }), {
-              status: 500, 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            })
-          }
-
-          // Update stripe_session_id to use guestReportId (single source of truth)
-          await supabaseAdmin
-            .from('guest_reports')
-            .update({ stripe_session_id: guestReport.id })
-            .eq('id', guestReport.id);
-
-          // Trigger report generation directly via verify-guest-payment
-          try {
-            logFlowEvent("orchestration_trigger_started", { guestReportId: guestReport.id, promoCode: promoCode?.substring(0, 3) + "***" });
-            
-            const { error: verifyError } = await supabaseAdmin.functions.invoke(
-              'verify-guest-payment',
-              { 
-                body: { 
-                  sessionId: guestReport.id, // Use guestReportId as sessionId for free reports
-                  type: 'promo',
-                  backgroundRequestId: crypto.randomUUID().slice(0, 8),
-                  orchestrated_by: 'initiate-report-flow'
-                } 
-              }
-            );
-
-            if (verifyError) {
-              logFlowError("orchestration_trigger_failed", verifyError, { 
-                guestReportId: guestReport.id, 
-                promoCode: promoCode?.substring(0, 3) + "***" 
-              });
-              // Continue anyway - the report record exists, user can still access it
-            } else {
-              logFlowEvent("orchestration_trigger_success", { 
-                guestReportId: guestReport.id, 
-                orchestrationResult: "triggered" 
-              });
-            }
-          } catch (orchestrationException) {
-            logFlowError("orchestration_trigger_exception", orchestrationException, { 
-              guestReportId: guestReport.id, 
-              promoCode: promoCode?.substring(0, 3) + "***" 
-            });
-            // Continue anyway - the report record exists, user can still access it
-          }
-
-          const processingTimeMs = Date.now() - startTime;
-
-          logFlowEvent("free_flow_completed", { 
-            guestReportId: guestReport.id,
-            processing_time_ms: processingTimeMs,
-            orchestration_triggered: true,
-            note: "verify-guest-payment triggered directly for free report"
-          });
-
-           return new Response(JSON.stringify({ 
-            success: true,
-            guestReportId: guestReport.id,
-            processing_time_ms: processingTimeMs
-          }), {
-            status: 200, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          })
-    }
-
-    // --- PAID FLOW: Create guest_reports row IMMEDIATELY with pending status ---
-    
-    // Frontend already calculated the final amount including discount
-    const finalAmount = Math.max(finalPrice, 1); // Ensure minimum $1
-
-    logFlowEvent("pricing_calculated", {
-      final: finalAmount,
-      priceId,
-      promoCode: promoCode?.substring(0, 3) + "***" || 'none',
-      optimization: "frontend_calculated_with_validated_promo"
-    });
-
-    // Create guest_reports row IMMEDIATELY with pending status
+    // Single database operation: insert guest_reports with pending status
     const guestReportData = {
-      stripe_session_id: '', // Will be set to Stripe session ID after creation
+      stripe_session_id: '', // Will be set later
       email: reportData.email,
-      report_type: reportData.reportType || null,
-      amount_paid: finalAmount,
+      report_type: reportData.reportType || 'essence_personal',
+      amount_paid: finalPrice,
       report_data: {
         ...reportData,
         product_id: priceId,
       },
-      payment_status: "pending", // Always start as pending
+      payment_status: "pending",
       purchase_type: 'report',
       promo_code_used: promoCode || null,
+      email_sent: false,
+      coach_id: null,
+      translator_log_id: null,
+      report_log_id: null
     };
 
-    logFlowEvent("guest_report_creation_started", {
-      email: reportData.email,
-      amount: finalAmount,
-      product_id: priceId,
-      promoCode: promoCode || 'none'
-    });
-
-    // Create the guest_reports row first
     const { data: guestReport, error: insertError } = await supabaseAdmin
       .from("guest_reports")
       .insert(guestReportData)
-      .select()
+      .select('id')
       .single();
 
     if (insertError) {
       logFlowError("guest_report_creation_failed", insertError, { email: reportData.email });
       return new Response(JSON.stringify({ 
-        error: `Database error: ${insertError.message}` 
+        error: 'Failed to create report record' 
       }), {
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    logFlowEvent("guest_report_created", { guestReportId: guestReport.id });
-
-    // Now create checkout session with minimal data
-    const checkoutData = {
-      guest_report_id: guestReport.id,
-      amount: finalAmount,
-      email: reportData.email,
-      description: "Astrology Report",
-      successUrl: `${req.headers.get("origin")}/report?guest_id=${guestReport.id}`,
-      cancelUrl: `${req.headers.get("origin")}/checkout/${guestReport.id}?status=cancelled`,
-    };
-
-    logFlowEvent("checkout_creation_started", {
-      guest_report_id: guestReport.id,
-      amount: finalAmount,
-      email: reportData.email
-    });
-
-    const { data: stripeResult, error: checkoutError } = await supabaseAdmin.functions.invoke(
-      'create-checkout',
-      { body: checkoutData }
-    );
-
-    if (checkoutError) {
-      logFlowError("checkout_creation_failed", checkoutError, { guestReportId: guestReport.id });
-      // Clean up the guest_reports row if checkout fails
-      await supabaseAdmin
-        .from("guest_reports")
-        .delete()
-        .eq("id", guestReport.id);
-      return new Response(JSON.stringify({ 
-        error: `Failed to create checkout: ${checkoutError.message}` 
-      }), {
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    if (!stripeResult?.url) {
-      logFlowError("no_checkout_url", new Error("No URL returned"), { guestReportId: guestReport.id });
-      await supabaseAdmin
-        .from("guest_reports")
-        .delete()
-        .eq("id", guestReport.id);
-      return new Response(JSON.stringify({ 
-        error: 'No checkout URL returned from create-checkout' 
-      }), {
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Update the guest_reports row with the real Stripe session ID
+    // Update stripe_session_id to guestReportId for consistency
     await supabaseAdmin
-      .from("guest_reports")
-      .update({ stripe_session_id: stripeResult.sessionId })
-      .eq("id", guestReport.id);
+      .from('guest_reports')
+      .update({ stripe_session_id: guestReport.id })
+      .eq('id', guestReport.id);
 
     const processingTimeMs = Date.now() - startTime;
 
-    logFlowEvent("paid_flow_completed", {
+    logFlowEvent("flow_completed", { 
       guestReportId: guestReport.id,
-      sessionId: stripeResult.sessionId,
-      finalAmount,
+      isFreeReport,
+      finalPrice,
       processing_time_ms: processingTimeMs
     });
 
-    return new Response(JSON.stringify({
-      stripeUrl: stripeResult.url,
+    // Return response for frontend orchestration
+    return new Response(JSON.stringify({ 
       guestReportId: guestReport.id,
+      basePrice,
+      finalPrice,
+      isFreeReport,
+      discountPercent,
       processing_time_ms: processingTimeMs
     }), {
       status: 200, 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
+    });
 
   } catch (err: any) {
     const processingTimeMs = Date.now() - startTime;

@@ -47,24 +47,10 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
     setInlinePromoError(''); // Clear any previous errors
     
     try {
-      // 1. PREPARE VALIDATED PROMO (validation moved to initiate-report-flow)
-      let validatedPromo: any = null;
-      
-      if (data.promoCode && data.promoCode.trim()) {
-        // Pass promo code to initiate-report-flow for validation and processing
-        // This eliminates double validation and centralizes promo logic
-        validatedPromo = {
-          code: data.promoCode,
-          requiresValidation: true
-        };
-        console.log('🎯 [useReportSubmission] Promo code will be validated by initiate-report-flow:', data.promoCode);
-      }
+      // 1. CALCULATE BASE PRICING using already-loaded PricingContext
+      const basePrice = getReportPrice(data);
 
-      // 2. CALCULATE BASE PRICING (discounts handled by initiate-report-flow)
-      let basePrice = getReportPrice(data);
-      // Pass base price to initiate-report-flow for secure discount calculation
-
-      // 3. PREPARE REPORT DATA
+      // 2. PREPARE CLEAN REPORT DATA (only person_a/person_b structure)
       const person_a = {
         name: data.name,
         birth_date: data.birthDate,
@@ -100,41 +86,22 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
         notes: data.notes,
         product_id: data.request || data.reportType || 'essence',
         
-        // Nested person structure for translator-edge
+        // Clean person structure for translator-edge
         person_a,
-        person_b,
-        
-        // Legacy flat fields for backward compatibility (if needed by other systems)
-        name: data.name,
-        birthDate: data.birthDate,
-        birthTime: data.birthTime,
-        birthLocation: data.birthLocation,
-        birthLatitude: data.birthLatitude,
-        birthLongitude: data.birthLongitude,
-        birthPlaceId: data.birthPlaceId,
-        secondPersonName: data.secondPersonName,
-        secondPersonBirthDate: data.secondPersonBirthDate,
-        secondPersonBirthTime: data.secondPersonBirthTime,
-        secondPersonBirthLocation: data.secondPersonBirthLocation,
-        secondPersonLatitude: data.secondPersonLatitude,
-        secondPersonLongitude: data.secondPersonLongitude,
-        secondPersonPlaceId: data.secondPersonPlaceId,
+        person_b
       };
 
-      console.log('🔄 [useReportSubmission] Structured report data:', {
+      console.log('🚀 [useReportSubmission] Streamlined submission:', {
         request: reportData.request,
-        person_a: reportData.person_a,
-        person_b: reportData.person_b,
         basePrice,
-        promoCode: validatedPromo?.code || null
+        promoCode: data.promoCode || null
       });
 
-      // 4. CALL INITIATE-REPORT-FLOW with base price and promo code
+      // 3. CALL LEAN INITIATE-REPORT-FLOW (just validate + insert)
       const { data: flowResponse, error } = await supabase.functions.invoke('initiate-report-flow', {
         body: {
           reportData,
-          basePrice, // Pass base price for secure calculation
-          promoCode: validatedPromo?.code || null // Pass raw promo code for validation
+          promoCode: data.promoCode || null // Pass raw promo code string
         }
       });
 
@@ -176,62 +143,88 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
         return { success: false };
       }
 
-      // Handle the simplified professional e-commerce response
-      if (flowResponse.success || flowResponse.guestReportId) {
-        // FREE FLOW: Report was authorized and created as free (processed by promo)
-        const guestReportId = flowResponse.guestReportId;
+      // 4. FRONTEND ORCHESTRATION - Handle response based on flow type
+      if (!flowResponse.guestReportId) {
+        toast({
+          title: "Error", 
+          description: "Failed to create report record",
+          variant: "destructive",
+        });
+        setIsProcessing(false);
+        return { success: false };
+      }
+
+      const guestReportId = flowResponse.guestReportId;
+      
+      // Check if it's a free report
+      if (flowResponse.isFreeReport) {
+        console.log('🎉 [useReportSubmission] Free report - triggering processing');
         
-        if (!guestReportId) {
-          toast({
-            title: "Error", 
-            description: "Failed to create report record",
-            variant: "destructive",
-          });
-          setIsProcessing(false);
-          return { success: false };
+        // Call verify-guest-payment to trigger report generation
+        const { error: verifyError } = await supabase.functions.invoke('verify-guest-payment', {
+          body: {
+            sessionId: guestReportId,
+            type: 'promo'
+          }
+        });
+
+        if (verifyError) {
+          console.warn('Failed to trigger report processing:', verifyError);
+          // Don't fail - the report record exists and can be processed later
         }
         
         toast({
           title: "Report Created!",
-          description: "Your report is being generated and will be sent to your email shortly.",
+          description: "Your free report is being generated and will be sent to your email shortly.",
         });
         
         storeGuestReportId(guestReportId);
         
-        // Set both states in the same React tick to eliminate micro-race
         if (setCreatedGuestReportId) {
           setCreatedGuestReportId(guestReportId);
         }
         setReportCreated(true);
         setIsProcessing(false);
         
-        // Return the guest report ID so parent can use it
         return { success: true, guestReportId };
         
-      } else if (flowResponse.stripeUrl) {
-        // PAID FLOW: Server calculated secure price and created Stripe checkout
-        console.log('Redirecting to secure Stripe checkout');
+      } else {
+        console.log('💳 [useReportSubmission] Paid report - creating checkout');
+        
+        // Calculate final price with applied discount
+        const finalPrice = flowResponse.finalPrice || basePrice;
+        
+        // Call create-checkout
+        const { data: checkoutResponse, error: checkoutError } = await supabase.functions.invoke('create-checkout', {
+          body: {
+            guest_report_id: guestReportId,
+            amount: finalPrice,
+            email: data.email,
+            description: "Astrology Report",
+            successUrl: `${window.location.origin}/report?guest_id=${guestReportId}`,
+            cancelUrl: `${window.location.origin}/checkout/${guestReportId}?status=cancelled`
+          }
+        });
 
-        // Redirect to Stripe checkout (created with secure server-side pricing)
+        if (checkoutError || !checkoutResponse?.url) {
+          toast({
+            title: "Error",
+            description: "Failed to create checkout session. Please try again.",
+            variant: "destructive",
+          });
+          setIsProcessing(false);
+          return { success: false };
+        }
+
+        // Redirect to Stripe checkout
         try {
-          window.open(flowResponse.stripeUrl, '_self');
+          window.open(checkoutResponse.url, '_self');
         } catch (redirectError) {
           console.warn("Failed to redirect with window.open, falling back to location.href");
-          window.location.href = flowResponse.stripeUrl;
+          window.location.href = checkoutResponse.url;
         }
         
-        // Note: isProcessing stays true during Stripe redirect
-        return { success: true }; // No guestReportId for paid flow here
-        
-      } else {
-        // Unexpected response
-        toast({
-          title: "Error",
-          description: "An unexpected error occurred. Please try again.",
-          variant: "destructive",
-        });
-        setIsProcessing(false);
-        return { success: false };
+        return { success: true };
       }
 
     } catch (error) {
