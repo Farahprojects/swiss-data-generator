@@ -81,11 +81,11 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
         console.log('🔥 Received broadcast:', payload);
         logSuccessScreen('debug', 'Realtime message received from orchestrator', { payload });
         
-        if (payload?.data) {
+        if (payload?.payload?.data) {
           logSuccessScreen('info', 'Orchestrator sent report data, triggering handleReportReady');
-          handleReportReady(payload.data);
+          handleReportReady(payload.payload.data);
         } else {
-          console.warn('⚠️ Broadcast payload missing `data` field:', payload);
+          console.warn('⚠️ Broadcast payload missing nested data field:', payload);
         }
       })
       .subscribe((status) => {
