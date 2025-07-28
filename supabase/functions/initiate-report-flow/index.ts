@@ -241,24 +241,23 @@ serve(async (req) => {
             })
           }
 
-          // Trigger orchestration by calling validate-promo-code with guestReportId
-          // This will invoke verify-guest-payment to start the report generation process
+          // Trigger report generation directly via verify-guest-payment
           try {
             logFlowEvent("orchestration_trigger_started", { guestReportId: guestReport.id, promoCode: promoCode?.substring(0, 3) + "***" });
             
-            const { data: orchestrationResult, error: orchestrationError } = await supabaseAdmin.functions.invoke(
-              'validate-promo-code', 
-              {
-                body: {
-                  promo_code: promoCode,
-                  email: reportData.email,
-                  guestReportId: guestReport.id
-                }
+            const { error: verifyError } = await supabaseAdmin.functions.invoke(
+              'verify-guest-payment',
+              { 
+                body: { 
+                  sessionId: guestReport.id, // Use guestReportId as sessionId for free reports
+                  backgroundRequestId: crypto.randomUUID().slice(0, 8),
+                  orchestrated_by: 'initiate-report-flow'
+                } 
               }
             );
 
-            if (orchestrationError) {
-              logFlowError("orchestration_trigger_failed", orchestrationError, { 
+            if (verifyError) {
+              logFlowError("orchestration_trigger_failed", verifyError, { 
                 guestReportId: guestReport.id, 
                 promoCode: promoCode?.substring(0, 3) + "***" 
               });
@@ -266,7 +265,7 @@ serve(async (req) => {
             } else {
               logFlowEvent("orchestration_trigger_success", { 
                 guestReportId: guestReport.id, 
-                orchestrationResult: orchestrationResult ? "triggered" : "no_result" 
+                orchestrationResult: "triggered" 
               });
             }
           } catch (orchestrationException) {
@@ -284,7 +283,7 @@ serve(async (req) => {
             guestReportId: guestReport.id,
             processing_time_ms: processingTimeMs,
             orchestration_triggered: true,
-            note: "verify-guest-payment triggered via validate-promo-code orchestration"
+            note: "verify-guest-payment triggered directly for free report"
           });
 
            return new Response(JSON.stringify({ 

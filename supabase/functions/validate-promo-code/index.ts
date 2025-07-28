@@ -17,9 +17,6 @@ const corsHeaders = {
 interface ValidatePromoRequest {
   promo_code: string;
   email?: string; // Optional for future user-level restrictions
-  // For free report orchestration
-  reportData?: any;
-  guestReportId?: string;
 }
 
 interface ValidatePromoResponse {
@@ -57,7 +54,7 @@ serve(async (req) => {
   const startTime = Date.now();
 
   try {
-    const { promo_code, email, reportData, guestReportId }: ValidatePromoRequest = await req.json();
+    const { promo_code, email }: ValidatePromoRequest = await req.json();
     
     logValidation("validation_started", {
       promo_code: promo_code?.substring(0, 3) + "***", // Partially mask for logs
@@ -141,90 +138,7 @@ serve(async (req) => {
       processing_time_ms: processingTimeMs
     });
 
-    // FREE REPORT ORCHESTRATION: If this is a free promo and we have a guestReportId, trigger processing
-    if (discount_type === "free" && guestReportId) {
-      logValidation("free_report_orchestration_started", {
-        normalized_code: normalizedCode.substring(0, 3) + "***",
-        guestReportId
-      });
-
-      try {
-        const { error: verifyError } = await supabaseAdmin.functions.invoke(
-          'verify-guest-payment',
-          { 
-            body: { 
-              sessionId: guestReportId, // Use guestReportId as sessionId for free reports
-              backgroundRequestId: crypto.randomUUID().slice(0, 8),
-              orchestrated_by: 'validate-promo-code'
-            } 
-          }
-        );
-
-        if (verifyError) {
-          logValidationError("free_report_processing_failed", verifyError, {
-            normalized_code: normalizedCode.substring(0, 3) + "***",
-            guestReportId
-          });
-          
-        // Still return successful validation but note the processing failure
-        return new Response(JSON.stringify({ 
-          valid: true,
-          discount_type,
-          discount_value: promo.discount_percent,
-          isFreeReport: discount_type === "free",
-          code: normalizedCode,
-          promo_id: promo.id,
-          processing_triggered: false,
-          processing_error: "Failed to trigger report generation"
-        } as ValidatePromoResponse), {
-          status: 200, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-        }
-
-        logValidation("free_report_processing_triggered", {
-          normalized_code: normalizedCode.substring(0, 3) + "***",
-          guestReportId
-        });
-
-        // Return successful validation with processing triggered
-        return new Response(JSON.stringify({ 
-          valid: true,
-          discount_type,
-          discount_value: promo.discount_percent,
-          isFreeReport: discount_type === "free",
-          code: normalizedCode,
-          promo_id: promo.id,
-          processing_triggered: true
-        } as ValidatePromoResponse), {
-          status: 200, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-
-      } catch (orchestrationError) {
-        logValidationError("free_report_orchestration_exception", orchestrationError, {
-          normalized_code: normalizedCode.substring(0, 3) + "***",
-          guestReportId
-        });
-
-        // Still return successful validation but note the orchestration failure
-        return new Response(JSON.stringify({ 
-          valid: true,
-          discount_type,
-          discount_value: promo.discount_percent,
-          isFreeReport: discount_type === "free",
-          code: normalizedCode,
-          promo_id: promo.id,
-          processing_triggered: false,
-          processing_error: "Exception during report generation"
-        } as ValidatePromoResponse), {
-          status: 200, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-    }
-
-    // Return successful validation (standard flow - no orchestration needed)
+    // Return successful validation - pure validation only, no orchestration
     return new Response(JSON.stringify({ 
       valid: true,
       discount_type,
