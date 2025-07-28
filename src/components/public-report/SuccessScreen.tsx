@@ -68,26 +68,47 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     }
   }, [onReportReady, handleReportReady]);
 
-  // Listen for realtime messages from orchestrator
+  // Listen for realtime messages from orchestrator with proper subscription handling
   useEffect(() => {
     if (!guestReportId || errorState) return;
 
     logSuccessScreen('info', 'Setting up realtime listener for guest report', { guestReportId });
+    const subscriptionStartTime = Date.now();
     
     const channel = supabase
       .channel(`guest_report:${guestReportId}`)
       .on('broadcast', { event: 'report_ready' }, (payload) => {
-        logSuccessScreen('debug', 'Realtime message received from orchestrator', { payload });
+        const messageReceivedTime = Date.now();
+        logSuccessScreen('info', 'Realtime message received from orchestrator', { 
+          payload, 
+          subscriptionTime: messageReceivedTime - subscriptionStartTime 
+        });
         
-        if (payload.payload && payload.payload.data) {
+        // Fix payload structure: orchestrator sends payload.data, not payload.payload.data
+        if (payload.data) {
           logSuccessScreen('info', 'Orchestrator sent report data, triggering handleReportReady');
+          handleReportReady(payload.data);
+        } else if (payload.payload && payload.payload.data) {
+          // Fallback for old structure
+          logSuccessScreen('info', 'Using fallback payload structure');
           handleReportReady(payload.payload.data);
         } else {
-          console.warn('❌ Orchestrator message missing data:', payload);
+          logSuccessScreen('error', 'Orchestrator message missing data', { payload });
         }
       })
       .subscribe((status) => {
-        logSuccessScreen('debug', 'Realtime subscription status', { status });
+        const subscriptionTime = Date.now() - subscriptionStartTime;
+        logSuccessScreen('info', 'Realtime subscription status changed', { 
+          status, 
+          subscriptionTime,
+          timestamp: new Date().toISOString()
+        });
+        
+        if (status === 'SUBSCRIBED') {
+          logSuccessScreen('info', 'Realtime subscription is now active and ready to receive broadcasts');
+        } else if (status === 'CHANNEL_ERROR') {
+          logSuccessScreen('error', 'Realtime subscription failed');
+        }
       });
 
     return () => {

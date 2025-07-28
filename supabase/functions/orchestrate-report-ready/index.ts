@@ -151,21 +151,55 @@ serve(async (req) => {
 
     console.log(`[orchestrate-report-ready] Report orchestration completed for: ${guest_report_id}`);
     
-    // Send realtime message to SuccessScreen
+    // Send realtime message to SuccessScreen with retry logic
     console.log(`[orchestrate-report-ready] Broadcasting report data to realtime channel: guest_report:${guest_report_id}`);
     
     const channel = supabase.channel(`guest_report:${guest_report_id}`);
-    await channel.send({
+    
+    // Wait for channel to be ready before broadcasting
+    let subscriptionReady = false;
+    const maxWaitTime = 5000; // 5 seconds max wait
+    const startWait = Date.now();
+    
+    const subscriptionPromise = new Promise((resolve) => {
+      channel.subscribe((status) => {
+        console.log(`[orchestrate-report-ready] Channel subscription status: ${status}`);
+        if (status === 'SUBSCRIBED') {
+          subscriptionReady = true;
+          resolve(status);
+        }
+      });
+    });
+    
+    // Wait for subscription or timeout
+    try {
+      await Promise.race([
+        subscriptionPromise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Subscription timeout')), maxWaitTime))
+      ]);
+      
+      const waitTime = Date.now() - startWait;
+      console.log(`[orchestrate-report-ready] Channel ready after ${waitTime}ms, sending broadcast`);
+    } catch (error) {
+      console.warn(`[orchestrate-report-ready] Subscription not confirmed, proceeding anyway:`, error.message);
+    }
+    
+    // Send broadcast with fixed payload structure
+    const broadcastResult = await channel.send({
       type: 'broadcast',
       event: 'report_ready',
       payload: {
         ok: true,
         ready: true,
-        data: reportData
+        data: reportData  // Direct data property, not nested in payload.data
       }
     });
 
-    console.log(`[orchestrate-report-ready] Realtime broadcast sent successfully`);
+    console.log(`[orchestrate-report-ready] Realtime broadcast sent:`, {
+      success: broadcastResult === 'ok',
+      result: broadcastResult,
+      timestamp: new Date().toISOString()
+    });
 
     // NEW: Call create-temp-report-data function to create temp data for ChatGPT button
     console.log(`[orchestrate-report-ready] Creating temp report data for ChatGPT functionality...`);
