@@ -204,12 +204,10 @@ serve(async (req) => {
 
     // FREE FLOW - If promo code makes report free
     if (isFreeReport) {
-          const sessionId = `free_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
-
-          logFlowEvent("free_flow_started", { sessionId, promoCode });
+          logFlowEvent("free_flow_started", { promoCode });
 
           const insertPayload = {
-            stripe_session_id: sessionId,
+            stripe_session_id: '',  // Will be set to guestReportId after creation
             email: reportData.email,
             report_type: reportData.reportType || 'standard',
             report_data: {
@@ -217,7 +215,7 @@ serve(async (req) => {
               product_id: priceId,
             },
             amount_paid: 0,
-            payment_status: 'paid', // Free reports are immediately "paid"
+            payment_status: 'pending', // Always start as pending
             promo_code_used: promoCode,
             email_sent: false,
             coach_id: null,
@@ -232,7 +230,7 @@ serve(async (req) => {
             .single()
 
           if (insertError) {
-            logFlowError("free_report_insert_failed", insertError, { sessionId });
+            logFlowError("free_report_insert_failed", insertError);
             return new Response(JSON.stringify({ 
               error: 'Failed to create report record' 
             }), {
@@ -240,6 +238,12 @@ serve(async (req) => {
               headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             })
           }
+
+          // Update stripe_session_id to use guestReportId (single source of truth)
+          await supabaseAdmin
+            .from('guest_reports')
+            .update({ stripe_session_id: guestReport.id })
+            .eq('id', guestReport.id);
 
           // Trigger report generation directly via verify-guest-payment
           try {
@@ -250,6 +254,7 @@ serve(async (req) => {
               { 
                 body: { 
                   sessionId: guestReport.id, // Use guestReportId as sessionId for free reports
+                  type: 'promo',
                   backgroundRequestId: crypto.randomUUID().slice(0, 8),
                   orchestrated_by: 'initiate-report-flow'
                 } 
@@ -279,7 +284,6 @@ serve(async (req) => {
           const processingTimeMs = Date.now() - startTime;
 
           logFlowEvent("free_flow_completed", { 
-            sessionId, 
             guestReportId: guestReport.id,
             processing_time_ms: processingTimeMs,
             orchestration_triggered: true,
@@ -288,12 +292,7 @@ serve(async (req) => {
 
            return new Response(JSON.stringify({ 
             success: true,
-            status: 'success', 
-            message: 'Your free report is being generated',
             guestReportId: guestReport.id,
-            reportId: guestReport.id,
-            sessionId,
-            isFreeReport: true,
             processing_time_ms: processingTimeMs
           }), {
             status: 200, 
@@ -315,7 +314,7 @@ serve(async (req) => {
 
     // Create guest_reports row IMMEDIATELY with pending status
     const guestReportData = {
-      stripe_session_id: `temp_${Date.now()}`, // Temporary ID, will be updated after Stripe session creation
+      stripe_session_id: '', // Will be set to Stripe session ID after creation
       email: reportData.email,
       report_type: reportData.reportType || null,
       amount_paid: finalAmount,
@@ -323,7 +322,7 @@ serve(async (req) => {
         ...reportData,
         product_id: priceId,
       },
-      payment_status: "pending",
+      payment_status: "pending", // Always start as pending
       purchase_type: 'report',
       promo_code_used: promoCode || null,
     };
@@ -361,7 +360,7 @@ serve(async (req) => {
       email: reportData.email,
       description: "Astrology Report",
       successUrl: `${req.headers.get("origin")}/report?guest_id=${guestReport.id}`,
-      cancelUrl: `${req.headers.get("origin")}/report?status=cancelled`,
+      cancelUrl: `${req.headers.get("origin")}/checkout/${guestReport.id}?status=cancelled`,
     };
 
     logFlowEvent("checkout_creation_started", {
@@ -420,21 +419,9 @@ serve(async (req) => {
     });
 
     return new Response(JSON.stringify({
-      status: 'payment_required',
       stripeUrl: stripeResult.url,
-      sessionId: stripeResult.sessionId,
-      guest_report_id: guestReport.id,
-      finalAmount: finalAmount,
-      description: checkoutData.description,
-      processing_time_ms: processingTimeMs,
-      debug: {
-        finalAmount: finalAmount,
-        discountApplied: discountPercent,
-        product_id: priceId,
-        guest_reports_created: true,
-        promoCodeUsed: promoCode || 'none',
-        promo_will_increment_after_payment: !!promoCode && discountPercent < 100
-      }
+      guestReportId: guestReport.id,
+      processing_time_ms: processingTimeMs
     }), {
       status: 200, 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

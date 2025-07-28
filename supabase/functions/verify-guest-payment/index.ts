@@ -203,12 +203,14 @@ serve(async (req) => {
 
   try {
     const requestBody = await req.json();
-    const { sessionId } = requestBody;
+    const { sessionId, type } = requestBody;
     backgroundRequestId = requestBody.backgroundRequestId || "not_provided";
     const fallbackSync = requestBody.fallback_sync || false;
+    const paymentType = type || 'stripe'; // Default to stripe
     
     console.log(`🔄 [verify-guest-payment] Request details:`, {
       sessionId,
+      type: paymentType,
       backgroundRequestId,
       fallbackSync,
       requestId,
@@ -237,40 +239,48 @@ serve(async (req) => {
       console.error('Failed to log verify_payment_start:', err);
     }
 
-    const isFree = sessionId.startsWith("free_");
+    // Check if this is a promo (free) session or guest report ID
+    const isPromoFlow = paymentType === 'promo';
+    
+    if (isPromoFlow) {
+      console.log(`🔄 [verify-guest-payment] Processing promo session: ${sessionId}`);
 
-    if (isFree) {
-      console.log(`🔄 [verify-guest-payment] Processing free session: ${sessionId}`);
-
+      // For promo flow, sessionId is actually the guestReportId
       const { data: record, error } = await supabase
         .from("guest_reports")
         .select("*")
-        .eq("stripe_session_id", sessionId)
+        .eq("id", sessionId)
         .single();
 
       if (error || !record) {
-        console.error(`❌ [verify-guest-payment] Free session not found: ${sessionId}`, error);
-        throw new Error("Free session not found");
+        console.error(`❌ [verify-guest-payment] Promo report not found: ${sessionId}`, error);
+        throw new Error("Promo report not found");
       }
 
       guestReportId = record.id;
-      console.log(`✅ [verify-guest-payment] Free session found: ${guestReportId}`);
+      console.log(`✅ [verify-guest-payment] Promo report found: ${guestReportId}`);
 
-      // Enhanced idempotency check for free sessions
+      // Enhanced idempotency check for promo reports
       if (record.translator_log_id) {
-        console.log(`🔄 [verify-guest-payment] Free session already processed: ${guestReportId}`);
+        console.log(`🔄 [verify-guest-payment] Promo report already processed: ${guestReportId}`);
 
         return new Response(JSON.stringify({
           success: true,
           verified: true,
-          paymentStatus: "free",
+          paymentStatus: "paid",
           reportData: record.report_data,
           guestReportId: record.id,
-          message: "Free session already processed (idempotent response)",
+          message: "Promo report already processed (idempotent response)",
           idempotent: true,
           processing_time_ms: Date.now() - stageStartTime
         }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
+
+      // Update payment status from pending to paid for promo reports
+      await supabase
+        .from("guest_reports")
+        .update({ payment_status: 'paid' })
+        .eq("id", guestReportId);
 
       // No need to set is_ai_report here - translator-edge will handle it
       
@@ -293,16 +303,16 @@ serve(async (req) => {
       // Data is already in correct structure from useReportSubmission
       kickTranslator(record.id, record.report_data, requestId, supabase);
 
-      console.log(`✅ [verify-guest-payment] Free session Swiss processing started: ${guestReportId}`);
+      console.log(`✅ [verify-guest-payment] Promo report processing started: ${guestReportId}`);
 
       return new Response(JSON.stringify({
         success: true,
         verified: true,
-        paymentStatus: "free",
+        paymentStatus: "paid",
         reportData: record.report_data,
         guestReportId: record.id,
         swissProcessing: true,
-        message: "Free session verified; Swiss processing started",
+        message: "Promo report verified; processing started",
         processing_time_ms: Date.now() - stageStartTime
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -359,9 +369,10 @@ serve(async (req) => {
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // **CRITICAL: BACKWARD COMPATIBILITY CHECK**
-    // Check if this is a legacy session (no guest_report_id in metadata)
-    guestReportId = md.guest_report_id;
+    // **CRITICAL: ENHANCED LOOKUP STRATEGY**
+    // 1. Try guest_report_id from metadata first
+    // 2. Try client_reference_id (new architecture)
+    guestReportId = md.guest_report_id || session.client_reference_id;
 
     if (!guestReportId) {
       console.log(`🔄 [verify-guest-payment] Legacy session detected: ${sessionId}`);
@@ -435,7 +446,7 @@ serve(async (req) => {
       }
     }
 
-    // NEW STAGE 1 FLOW: guest_report_id exists in metadata
+    // NEW STAGE 1 FLOW: guest_report_id exists (from metadata or client_reference_id)
     console.log(`🔄 [verify-guest-payment] Stage 1 session detected: ${guestReportId}`);
 
     // STAGE 1: Query database for all necessary data
@@ -469,6 +480,12 @@ serve(async (req) => {
         processing_time_ms: Date.now() - stageStartTime
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
+    // Update payment status from pending to paid
+    await supabase
+      .from("guest_reports")
+      .update({ payment_status: 'paid' })
+      .eq("id", guestReportId);
 
     // Validate payment status transition
     if (existingReport.payment_status !== "pending") {

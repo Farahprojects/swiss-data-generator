@@ -176,15 +176,23 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
         return { success: false };
       }
 
-      // Handle the simplified response from the new "no-hop" architecture
-      if (flowResponse.success && (flowResponse.status === 'success' || flowResponse.isFreeReport)) {
-        // FREE FLOW: Report was authorized and created as free
-        const guestReportId = flowResponse.guestReportId || flowResponse.reportId;
+      // Handle the simplified professional e-commerce response
+      if (flowResponse.success || flowResponse.guestReportId) {
+        // FREE FLOW: Report was authorized and created as free (processed by promo)
+        const guestReportId = flowResponse.guestReportId;
         
-        // For free reports, orchestration is already handled by validate-promo-code
-        // No need for additional calls
+        if (!guestReportId) {
+          toast({
+            title: "Error", 
+            description: "Failed to create report record",
+            variant: "destructive",
+          });
+          setIsProcessing(false);
+          return { success: false };
+        }
+        
         toast({
-          title: "Free Report Created!",
+          title: "Report Created!",
           description: "Your report is being generated and will be sent to your email shortly.",
         });
         
@@ -200,19 +208,9 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
         // Return the guest report ID so parent can use it
         return { success: true, guestReportId };
         
-      } else if (flowResponse.status === 'payment_required') {
+      } else if (flowResponse.stripeUrl) {
         // PAID FLOW: Server calculated secure price and created Stripe checkout
         console.log('Redirecting to secure Stripe checkout');
-
-        if (!flowResponse.stripeUrl) {
-          toast({
-            title: "Payment Error",
-            description: "Failed to create secure checkout session",
-            variant: "destructive",
-          });
-          setIsProcessing(false);
-          return { success: false };
-        }
 
         // Redirect to Stripe checkout (created with secure server-side pricing)
         try {

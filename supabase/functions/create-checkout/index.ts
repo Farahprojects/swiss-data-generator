@@ -120,7 +120,9 @@ serve(async (req) => {
         metadata: {
           guest_report_id: guest_report_id,
           purchase_type: "report",
-        }
+        },
+        // Use guest_report_id as client_reference_id for webhook lookup
+        client_reference_id: guest_report_id
       });
 
       console.log("✅ STAGE 1: Stripe session created with minimal metadata:", {
