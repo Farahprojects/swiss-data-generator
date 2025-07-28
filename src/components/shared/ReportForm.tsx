@@ -49,6 +49,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   
   const { 
     isProcessing, 
+    isPricingLoading, 
     reportCreated, 
     submitReport,
     inlinePromoError,
@@ -524,7 +525,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
                 errors={errors}
                 setValue={setValue}
                 onSubmit={handleButtonClick}
-                isProcessing={isProcessing}
+                isProcessing={isProcessing || isPricingLoading}
                 inlinePromoError={inlinePromoError}
                 clearInlinePromoError={clearInlinePromoError}
                 />

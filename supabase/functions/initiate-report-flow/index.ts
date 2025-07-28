@@ -60,7 +60,9 @@ interface ValidatedPromo {
 
 interface InitiateReportFlowRequest {
   reportData: ReportData
-  promoCode?: string | null
+  basePrice?: number
+  promoCode?: string
+  validatedPromo?: ValidatedPromo // Legacy support
 }
 
 // Removed duplicate getProductId logic - trusting frontend pricing
@@ -91,12 +93,14 @@ serve(async (req) => {
   const startTime = Date.now();
 
   try {
-    const { reportData, promoCode }: InitiateReportFlowRequest = await req.json()
+    const { reportData, basePrice: frontendPrice, promoCode: rawPromoCode, validatedPromo }: InitiateReportFlowRequest = await req.json()
     
     logFlowEvent("flow_started", {
       email: reportData?.email,
       reportType: reportData?.reportType,
-      promoCode: promoCode ? promoCode.substring(0, 3) + "***" : 'none'
+      frontendPrice,
+      promoCode: rawPromoCode ? rawPromoCode.substring(0, 3) + "***" : 'none',
+      legacy_validatedPromo: validatedPromo ? { discount_type: validatedPromo.discount_type, discount_value: validatedPromo.discount_value } : 'none'
     });
 
     if (!reportData || !reportData.email) {
@@ -109,27 +113,10 @@ serve(async (req) => {
       })
     }
 
-    // Get base price from price_list table (secure backend pricing)
-    const priceId = reportData.reportType || reportData.request || 'essence';
+    // --- NEW APPROACH: Validate promo code directly if provided ---
     
-    const { data: priceData, error: priceError } = await supabaseAdmin
-      .from('price_list')
-      .select('unit_price_usd')
-      .eq('id', priceId)
-      .single();
-    
-    if (priceError || !priceData) {
-      logFlowError("price_lookup_failed", priceError || new Error("Price not found"), { priceId });
-      return new Response(JSON.stringify({ 
-        error: 'Unable to determine pricing for this report type' 
-      }), {
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-    
-    let basePrice = Number(priceData.unit_price_usd);
-    let finalPrice = basePrice;
+    let finalPrice = frontendPrice || 0;
+    let promoCode: string | null = rawPromoCode || null;
     let discountPercent = 0;
     let isFreeReport = false;
 
@@ -137,7 +124,7 @@ serve(async (req) => {
     if (promoCode && promoCode.trim()) {
       logFlowEvent("promo_validation_started", { 
         promoCode: promoCode.substring(0, 3) + "***",
-        basePrice: basePrice 
+        basePrice: frontendPrice 
       });
 
       try {
@@ -180,8 +167,8 @@ serve(async (req) => {
         if (isFreeReport) {
           finalPrice = 0;
         } else {
-          const discountAmount = basePrice * (discountPercent / 100);
-          finalPrice = Math.max(basePrice - discountAmount, 0);
+          const discountAmount = frontendPrice * (discountPercent / 100);
+          finalPrice = Math.max(frontendPrice - discountAmount, 0);
         }
 
         logFlowEvent("promo_validated", { 
@@ -205,6 +192,8 @@ serve(async (req) => {
       }
     }
 
+    const priceId = reportData.priceId || reportData.reportType || 'standard';
+    
     logFlowEvent("pricing_determined", { 
       finalPrice, 
       priceId,
