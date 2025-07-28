@@ -35,7 +35,7 @@ const PaymentStep = ({
   const [showPromoCode, setShowPromoCode] = useState(false);
   const [hasTimedOut, setHasTimedOut] = useState(false);
   
-  const { getReportPrice, getReportTitle, isLoading: isPricingLoading, error: pricingError } = usePriceFetch();
+  const { getReportPrice, getReportTitle, error: pricingError } = usePriceFetch();
   const { toast } = useToast();
   
   // Add timeout mechanism to prevent stuck processing state
@@ -107,14 +107,7 @@ const PaymentStep = ({
     onSubmit();
   };
 
-  const content = isPricingLoading ? (
-    <div className="max-w-4xl mx-auto flex items-center justify-center py-8">
-      <div className="flex items-center gap-2">
-        <Loader2 className="h-5 w-5 animate-spin" />
-        <span>Loading pricing information...</span>
-      </div>
-    </div>
-  ) : (
+  const content = (
     <div className="max-w-6xl mx-auto">
       <div className="flex flex-wrap lg:flex-nowrap gap-8 w-full">
         {/* Left side - Order Summary */}

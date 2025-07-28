@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { ReportFormData } from '@/types/public-report';
 import { storeGuestReportId } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,7 +16,6 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
   }, []);
 
   const { toast } = useToast();
-  const { getReportPrice, getReportTitle, isLoading: isPricingLoading } = typeof window !== 'undefined' ? usePriceFetch() : { getReportPrice: () => 0, getReportTitle: () => 'Report', isLoading: false };
 
   // Add timeout mechanism to prevent stuck processing state
   useEffect(() => {
@@ -47,24 +45,9 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
     setInlinePromoError(''); // Clear any previous errors
     
     try {
-      // 1. PREPARE VALIDATED PROMO (validation moved to initiate-report-flow)
-      let validatedPromo: any = null;
-      
-      if (data.promoCode && data.promoCode.trim()) {
-        // Pass promo code to initiate-report-flow for validation and processing
-        // This eliminates double validation and centralizes promo logic
-        validatedPromo = {
-          code: data.promoCode,
-          requiresValidation: true
-        };
-        console.log('🎯 [useReportSubmission] Promo code will be validated by initiate-report-flow:', data.promoCode);
-      }
+      console.log('🚀 Starting streamlined report submission');
 
-      // 2. CALCULATE BASE PRICING (discounts handled by initiate-report-flow)
-      let basePrice = getReportPrice(data);
-      // Pass base price to initiate-report-flow for secure discount calculation
-
-      // 3. PREPARE REPORT DATA
+      // Prepare clean report data structure (no duplicated legacy fields)
       const person_a = {
         name: data.name,
         birth_date: data.birthDate,
@@ -77,7 +60,6 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
         house_system: ''
       };
 
-      // Only include person_b if second person data exists
       const person_b = data.secondPersonName ? {
         name: data.secondPersonName,
         birth_date: data.secondPersonBirthDate,
@@ -99,42 +81,22 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
         returnYear: data.returnYear,
         notes: data.notes,
         product_id: data.request || data.reportType || 'essence',
-        
-        // Nested person structure for translator-edge
         person_a,
         person_b,
-        
-        // Legacy flat fields for backward compatibility (if needed by other systems)
-        name: data.name,
-        birthDate: data.birthDate,
-        birthTime: data.birthTime,
-        birthLocation: data.birthLocation,
-        birthLatitude: data.birthLatitude,
-        birthLongitude: data.birthLongitude,
-        birthPlaceId: data.birthPlaceId,
-        secondPersonName: data.secondPersonName,
-        secondPersonBirthDate: data.secondPersonBirthDate,
-        secondPersonBirthTime: data.secondPersonBirthTime,
-        secondPersonBirthLocation: data.secondPersonBirthLocation,
-        secondPersonLatitude: data.secondPersonLatitude,
-        secondPersonLongitude: data.secondPersonLongitude,
-        secondPersonPlaceId: data.secondPersonPlaceId,
       };
 
-      console.log('🔄 [useReportSubmission] Structured report data:', {
+      console.log('📦 Clean report data prepared:', {
         request: reportData.request,
-        person_a: reportData.person_a,
-        person_b: reportData.person_b,
-        basePrice,
-        promoCode: validatedPromo?.code || null
+        email: reportData.email,
+        hasPersonB: !!reportData.person_b,
+        promoCode: data.promoCode || null
       });
 
-      // 4. CALL INITIATE-REPORT-FLOW with base price and promo code
+      // Single call to initiate-report-flow (backend handles pricing and promo validation)
       const { data: flowResponse, error } = await supabase.functions.invoke('initiate-report-flow', {
         body: {
           reportData,
-          basePrice, // Pass base price for secure calculation
-          promoCode: validatedPromo?.code || null // Pass raw promo code for validation
+          promoCode: data.promoCode || null // Let backend handle all validation and pricing
         }
       });
 
@@ -266,7 +228,6 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
 
   return {
     isProcessing,
-    isPricingLoading,
     reportCreated,
     submitReport,
     inlinePromoError,
