@@ -149,244 +149,96 @@ serve(async (req) => {
         discount_type: validatedPromo.discount_type
       });
 
-      // FREE FLOW (100% discount) - Return success immediately, trigger processing in background
-      if (discountPercent === 100) {
-        const sessionId = `free_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+        // FREE FLOW (100% discount) - Return success immediately, NO background processing
+        if (discountPercent === 100) {
+          const sessionId = `free_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
 
-        logFlowEvent("free_flow_started", { sessionId, promoCode });
+          logFlowEvent("free_flow_started", { sessionId, promoCode });
 
-        const insertPayload = {
-          stripe_session_id: sessionId,
-          email: reportData.email,
-          report_type: reportData.reportType || 'standard',
-          report_data: {
-            ...reportData,
-            product_id: priceId,
-          },
-          amount_paid: 0,
-          payment_status: 'paid', // Free reports are immediately "paid"
-          promo_code_used: promoCode,
-          email_sent: false,
-          coach_id: null,
-          translator_log_id: null,
-          report_log_id: null
-        }
+          const insertPayload = {
+            stripe_session_id: sessionId,
+            email: reportData.email,
+            report_type: reportData.reportType || 'standard',
+            report_data: {
+              ...reportData,
+              product_id: priceId,
+            },
+            amount_paid: 0,
+            payment_status: 'paid', // Free reports are immediately "paid"
+            promo_code_used: promoCode,
+            email_sent: false,
+            coach_id: null,
+            translator_log_id: null,
+            report_log_id: null
+          }
 
-        const { data: guestReport, error: insertError } = await supabaseAdmin
-          .from('guest_reports')
-          .insert(insertPayload)
-          .select('id')
-          .single()
+          const { data: guestReport, error: insertError } = await supabaseAdmin
+            .from('guest_reports')
+            .insert(insertPayload)
+            .select('id')
+            .single()
 
-        if (insertError) {
-          logFlowError("free_report_insert_failed", insertError, { sessionId });
-          return new Response(JSON.stringify({ 
-            error: 'Failed to create report record' 
-          }), {
-            status: 500, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          })
-        }
+          if (insertError) {
+            logFlowError("free_report_insert_failed", insertError, { sessionId });
+            return new Response(JSON.stringify({ 
+              error: 'Failed to create report record' 
+            }), {
+              status: 500, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            })
+          }
 
-        // Increment promo code usage immediately (atomic operation)
-        if (validatedPromoId) {
-          try {
-            const { error: promoUpdateError } = await supabaseAdmin
-              .from('promo_codes')
-              .update({ 
-                times_used: supabaseAdmin.raw('times_used + 1')
-              })
-              .eq('id', validatedPromoId);
+          // Increment promo code usage immediately (atomic operation)
+          if (validatedPromoId) {
+            try {
+              const { error: promoUpdateError } = await supabaseAdmin
+                .from('promo_codes')
+                .update({ 
+                  times_used: supabaseAdmin.raw('times_used + 1')
+                })
+                .eq('id', validatedPromoId);
 
-            if (promoUpdateError) {
-              logFlowError("free_promo_increment_failed", promoUpdateError, { 
+              if (promoUpdateError) {
+                logFlowError("free_promo_increment_failed", promoUpdateError, { 
+                  promoCode: promoCode?.substring(0, 3) + "***", 
+                  guestReportId: guestReport.id 
+                });
+              } else {
+                logFlowEvent("free_promo_incremented", { 
+                  promoCode: promoCode?.substring(0, 3) + "***",
+                  guestReportId: guestReport.id
+                });
+              }
+            } catch (promoError) {
+              logFlowError("free_promo_increment_exception", promoError, { 
                 promoCode: promoCode?.substring(0, 3) + "***", 
                 guestReportId: guestReport.id 
               });
-            } else {
-              logFlowEvent("free_promo_incremented", { 
-                promoCode: promoCode?.substring(0, 3) + "***",
-                guestReportId: guestReport.id
-              });
             }
-          } catch (promoError) {
-            logFlowError("free_promo_increment_exception", promoError, { 
-              promoCode: promoCode?.substring(0, 3) + "***", 
-              guestReportId: guestReport.id 
-            });
           }
-        }
 
-        // BACKGROUND PROCESSING: Trigger verify-guest-payment asynchronously
-        const backgroundProcessingStart = Date.now();
-        const backgroundRequestId = crypto.randomUUID().slice(0, 8);
-        
-        logFlowEvent("edgeruntime_waituntil_check", {
-          sessionId,
-          guestReportId: guestReport.id,
-          backgroundRequestId,
-          EdgeRuntime_available: typeof EdgeRuntime !== 'undefined',
-          waitUntil_available: typeof EdgeRuntime?.waitUntil === 'function'
-        });
+          const processingTimeMs = Date.now() - startTime;
 
-        // Log to performance_timings: waituntil_registered
-        try {
-          await supabaseAdmin.from("performance_timings").insert({
-            request_id: backgroundRequestId,
-            stage: 'waituntil_registered',
-            guest_report_id: guestReport.id,
-            start_time: new Date().toISOString(),
-            end_time: new Date().toISOString(),
-            duration_ms: 0,
-            metadata: { 
-              function: 'initiate-report-flow',
-              session_id: sessionId,
-              timestamp: new Date().toISOString()
-            }
-          });
-        } catch (err) {
-          console.error('Failed to log waituntil_registered:', err);
-        }
-
-        if (typeof EdgeRuntime?.waitUntil === 'function') {
-          logFlowEvent("edgeruntime_waituntil_starting", {
-            sessionId,
+          logFlowEvent("free_flow_completed", { 
+            sessionId, 
             guestReportId: guestReport.id,
-            backgroundRequestId,
-            timestamp: new Date().toISOString()
+            processing_time_ms: processingTimeMs,
+            background_processing_removed: true,
+            note: "Processing will be triggered by validate-promo-code"
           });
 
-          EdgeRuntime.waitUntil(
-            (async () => {
-              const asyncStartTime = Date.now();
-              const delayFromTrigger = asyncStartTime - backgroundProcessingStart;
-              
-              // Log background wrapper start
-              try {
-                await supabaseAdmin.from("performance_timings").insert({
-                  request_id: backgroundRequestId,
-                  stage: 'background_wrapper_start',
-                  guest_report_id: guestReport.id,
-                  start_time: new Date().toISOString(),
-                  end_time: new Date().toISOString(),
-                  duration_ms: delayFromTrigger,
-                  metadata: { 
-                    function: 'initiate-report-flow',
-                    session_id: sessionId,
-                    delay_from_trigger_ms: delayFromTrigger
-                  }
-                });
-              } catch (err) {
-                console.error('Failed to log background_wrapper_start:', err);
-              }
-              
-              try {
-                logFlowEvent("background_processing_started", { 
-                  sessionId, 
-                  guestReportId: guestReport.id,
-                  backgroundRequestId,
-                  delay_from_trigger_ms: delayFromTrigger,
-                  async_start_timestamp: new Date().toISOString()
-                });
-
-                const invokeStartTime = Date.now();
-                const { error: verifyError } = await supabaseAdmin.functions.invoke(
-                  'verify-guest-payment',
-                  { body: { sessionId, backgroundRequestId } }
-                );
-                const invokeDuration = Date.now() - invokeStartTime;
-                
-                if (verifyError) {
-                  logFlowError("background_verification_failed", verifyError, { 
-                    sessionId, 
-                    guestReportId: guestReport.id,
-                    backgroundRequestId,
-                    invoke_duration_ms: invokeDuration
-                  });
-                } else {
-                  logFlowEvent("background_verification_completed", { 
-                    sessionId, 
-                    guestReportId: guestReport.id,
-                    backgroundRequestId,
-                    invoke_duration_ms: invokeDuration,
-                    total_async_duration_ms: Date.now() - asyncStartTime
-                  });
-                }
-              } catch (bgError) {
-                logFlowError("background_processing_exception", bgError, { 
-                  sessionId, 
-                  guestReportId: guestReport.id,
-                  backgroundRequestId,
-                  delay_from_trigger_ms: delayFromTrigger
-                });
-              }
-            })()
-          );
-
-          logFlowEvent("edgeruntime_waituntil_registered", {
+          return new Response(JSON.stringify({ 
+            status: 'success', 
+            message: 'Your free report is being generated',
+            reportId: guestReport.id,
             sessionId,
-            guestReportId: guestReport.id,
-            backgroundRequestId,
-            registration_duration_ms: Date.now() - backgroundProcessingStart
-          });
-        } else {
-          logFlowError("edgeruntime_waituntil_unavailable", new Error("EdgeRuntime.waitUntil not available"), {
-            sessionId,
-            guestReportId: guestReport.id,
-            backgroundRequestId,
-            fallback_to_sync: true
-          });
-          
-          // Fallback: Direct invocation (for debugging)
-          try {
-            const { error: verifyError } = await supabaseAdmin.functions.invoke(
-              'verify-guest-payment',
-              { body: { sessionId, backgroundRequestId, fallback_sync: true } }
-            );
-            
-            if (verifyError) {
-              logFlowError("sync_fallback_verification_failed", verifyError, { 
-                sessionId, 
-                guestReportId: guestReport.id,
-                backgroundRequestId
-              });
-            } else {
-              logFlowEvent("sync_fallback_verification_completed", { 
-                sessionId, 
-                guestReportId: guestReport.id,
-                backgroundRequestId
-              });
-            }
-          } catch (fallbackError) {
-            logFlowError("sync_fallback_exception", fallbackError, { 
-              sessionId, 
-              guestReportId: guestReport.id,
-              backgroundRequestId
-            });
-          }
+            isFreeReport: true,
+            processing_time_ms: processingTimeMs
+          }), {
+            status: 200, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
         }
-
-        const processingTimeMs = Date.now() - startTime;
-
-        logFlowEvent("free_flow_completed", { 
-          sessionId, 
-          guestReportId: guestReport.id,
-          processing_time_ms: processingTimeMs,
-          background_processing_triggered: true
-        });
-
-        return new Response(JSON.stringify({ 
-          status: 'success', 
-          message: 'Your free report is being generated',
-          reportId: guestReport.id,
-          sessionId,
-          isFreeReport: true,
-          processing_time_ms: processingTimeMs
-        }), {
-          status: 200, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
-      }
     }
 
     // --- PAID FLOW: Create guest_reports row IMMEDIATELY with pending status ---
@@ -516,7 +368,7 @@ serve(async (req) => {
       description: checkoutData.description,
       processing_time_ms: processingTimeMs,
       debug: {
-        originalPrice: originalAmount,
+        finalAmount: finalAmount,
         discountApplied: discountPercent,
         product_id: priceId,
         guest_reports_created: true,

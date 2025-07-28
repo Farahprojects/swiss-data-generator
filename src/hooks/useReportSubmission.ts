@@ -204,24 +204,52 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
 
       // Handle the simplified response from the new "no-hop" architecture
       if (flowResponse.status === 'success') {
-        // FREE FLOW: Report is free and being generated
-        // console.log('🎯 FREE FLOW: Storing guest report ID before setting success state:', flowResponse.reportId);
-        storeGuestReportId(flowResponse.reportId);
+        // FREE FLOW: Report is free, now trigger processing via validate-promo-code orchestration
+        const guestReportId = flowResponse.reportId;
         
-        // FIX: Set both states in the same React tick to eliminate micro-race
+        if (validatedPromo && validatedPromo.discount_type === 'free') {
+          console.log('🎯 FREE FLOW: Orchestrating processing via validate-promo-code');
+          
+          // Call validate-promo-code again with guestReportId to trigger processing
+          const { data: orchestrationResponse, error: orchestrationError } = await supabase.functions.invoke('validate-promo-code', {
+            body: {
+              promo_code: data.promoCode,
+              email: data.email,
+              guestReportId: guestReportId
+            }
+          });
+
+          if (orchestrationError || !orchestrationResponse.processing_triggered) {
+            console.warn('Orchestration failed, but report was created:', orchestrationError);
+            toast({
+              title: "Report Created",
+              description: "Your free report was created but processing may be delayed. Check your email shortly.",
+              variant: "default",
+            });
+          } else {
+            toast({
+              title: "Free Report Created!",
+              description: "Your report is being generated and will be sent to your email shortly.",
+            });
+          }
+        } else {
+          toast({
+            title: "Free Report Created!",
+            description: "Your report has been generated and will be sent to your email shortly.",
+          });
+        }
+        
+        storeGuestReportId(guestReportId);
+        
+        // Set both states in the same React tick to eliminate micro-race
         if (setCreatedGuestReportId) {
-          setCreatedGuestReportId(flowResponse.reportId);
+          setCreatedGuestReportId(guestReportId);
         }
         setReportCreated(true);
-        
-        toast({
-          title: "Free Report Created!",
-          description: "Your report has been generated and will be sent to your email shortly.",
-        });
         setIsProcessing(false);
         
         // Return the guest report ID so parent can use it
-        return { success: true, guestReportId: flowResponse.reportId };
+        return { success: true, guestReportId };
         
       } else if (flowResponse.status === 'payment_required') {
         // PAID FLOW: Server calculated secure price and created Stripe checkout
