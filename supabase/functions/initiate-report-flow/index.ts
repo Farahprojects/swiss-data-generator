@@ -49,10 +49,18 @@ interface ReportData {
   priceId?: string
 }
 
+interface ValidatedPromo {
+  valid: boolean
+  discount_type?: "percentage" | "fixed" | "free"
+  discount_value?: number
+  code?: string
+  promo_id?: string
+}
+
 interface InitiateReportFlowRequest {
   reportData: ReportData
   basePrice?: number
-  promoCode?: string
+  validatedPromo?: ValidatedPromo
 }
 
 // Removed duplicate getProductId logic - trusting frontend pricing
@@ -83,13 +91,13 @@ serve(async (req) => {
   const startTime = Date.now();
 
   try {
-    const { reportData, basePrice: frontendPrice, promoCode }: InitiateReportFlowRequest = await req.json()
+    const { reportData, basePrice: frontendPrice, validatedPromo }: InitiateReportFlowRequest = await req.json()
     
     logFlowEvent("flow_started", {
       email: reportData?.email,
       reportType: reportData?.reportType,
       frontendPrice,
-      promoCode: promoCode || 'none'
+      validatedPromo: validatedPromo ? { discount_type: validatedPromo.discount_type, discount_value: validatedPromo.discount_value } : 'none'
     });
 
     if (!reportData || !reportData.email) {
@@ -114,64 +122,31 @@ serve(async (req) => {
       })
     }
 
-    const basePrice = frontendPrice;
+    // Frontend already calculated final price including promo discount
+    const finalPrice = frontendPrice;
     const priceId = reportData.priceId || reportData.reportType || 'standard';
     
     logFlowEvent("price_trusted_from_frontend", { 
-      basePrice, 
+      finalPrice, 
       priceId,
-      optimization: "database_lookup_eliminated"
+      validatedPromo: validatedPromo ? { discount_type: validatedPromo.discount_type, discount_value: validatedPromo.discount_value } : null,
+      optimization: "promo_validation_eliminated"
     });
 
-    let finalPrice = basePrice
-    let discountPercent = 0
-    let validatedPromoId: string | null = null
+    // Extract promo information from pre-validated data
+    let discountPercent = 0;
+    let validatedPromoId: string | null = null;
+    let promoCode: string | null = null;
 
-    // --- PROMO CODE VALIDATION ---
-    
-    if (promoCode && promoCode.trim()) {
-      logFlowEvent("promo_validation_started", { promoCode });
+    if (validatedPromo?.valid) {
+      validatedPromoId = validatedPromo.promo_id || null;
+      discountPercent = validatedPromo.discount_value || 0;
+      promoCode = validatedPromo.code || null;
 
-      const { data: promo, error: promoError } = await supabaseAdmin
-        .from('promo_codes')
-        .select('*')
-        .eq('code', promoCode.trim().toUpperCase())
-        .eq('is_active', true)
-        .single()
-
-      if (promoError || !promo) {
-        logFlowError("promo_validation_failed", promoError, { promoCode });
-        return new Response(JSON.stringify({ 
-          error: 'Invalid or expired promo code' 
-        }), {
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
-      }
-
-      // Check usage limits
-      if (promo.max_uses && promo.times_used >= promo.max_uses) {
-        logFlowError("promo_limit_reached", new Error("Usage limit reached"), { 
-          promoCode, 
-          times_used: promo.times_used, 
-          max_uses: promo.max_uses 
-        });
-        return new Response(JSON.stringify({ 
-          error: 'This promo code has reached its usage limit' 
-        }), {
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
-      }
-
-      validatedPromoId = promo.id
-      discountPercent = promo.discount_percent
-
-      logFlowEvent("promo_validated", { 
-        promoCode, 
-        discount_percent: discountPercent, 
-        times_used: promo.times_used,
-        max_uses: promo.max_uses 
+      logFlowEvent("promo_data_extracted", { 
+        promoCode: promoCode?.substring(0, 3) + "***", 
+        discount_percent: discountPercent,
+        discount_type: validatedPromo.discount_type
       });
 
       // FREE FLOW (100% discount) - Return success immediately, trigger processing in background
@@ -214,33 +189,32 @@ serve(async (req) => {
         }
 
         // Increment promo code usage immediately (atomic operation)
-        try {
-          const { error: promoUpdateError } = await supabaseAdmin
-            .from('promo_codes')
-            .update({ 
-              times_used: promo.times_used + 1 
-            })
-            .eq('id', validatedPromoId)
-            .eq('times_used', promo.times_used) // Optimistic locking
+        if (validatedPromoId) {
+          try {
+            const { error: promoUpdateError } = await supabaseAdmin
+              .from('promo_codes')
+              .update({ 
+                times_used: supabaseAdmin.raw('times_used + 1')
+              })
+              .eq('id', validatedPromoId);
 
-          if (promoUpdateError) {
-            logFlowError("free_promo_increment_failed", promoUpdateError, { 
-              promoCode, 
+            if (promoUpdateError) {
+              logFlowError("free_promo_increment_failed", promoUpdateError, { 
+                promoCode: promoCode?.substring(0, 3) + "***", 
+                guestReportId: guestReport.id 
+              });
+            } else {
+              logFlowEvent("free_promo_incremented", { 
+                promoCode: promoCode?.substring(0, 3) + "***",
+                guestReportId: guestReport.id
+              });
+            }
+          } catch (promoError) {
+            logFlowError("free_promo_increment_exception", promoError, { 
+              promoCode: promoCode?.substring(0, 3) + "***", 
               guestReportId: guestReport.id 
             });
-          } else {
-            logFlowEvent("free_promo_incremented", { 
-              promoCode, 
-              old_usage: promo.times_used, 
-              new_usage: promo.times_used + 1,
-              guestReportId: guestReport.id
-            });
           }
-        } catch (promoError) {
-          logFlowError("free_promo_increment_exception", promoError, { 
-            promoCode, 
-            guestReportId: guestReport.id 
-          });
         }
 
         // BACKGROUND PROCESSING: Trigger verify-guest-payment asynchronously
@@ -417,17 +391,14 @@ serve(async (req) => {
 
     // --- PAID FLOW: Create guest_reports row IMMEDIATELY with pending status ---
     
-    const originalAmount = basePrice
-    const discountAmount = originalAmount * (discountPercent / 100)
-    const finalAmount = Math.max(originalAmount - discountAmount, 1) // Ensure minimum $1
+    // Frontend already calculated the final amount including discount
+    const finalAmount = Math.max(finalPrice, 1); // Ensure minimum $1
 
     logFlowEvent("pricing_calculated", {
-      original: originalAmount,
-      discount: discountPercent,
       final: finalAmount,
       priceId,
-      promoCode: promoCode || 'none',
-      optimization: frontendPrice ? "used_frontend_price" : "used_database_fallback"
+      promoCode: promoCode?.substring(0, 3) + "***" || 'none',
+      optimization: "frontend_calculated_with_validated_promo"
     });
 
     // Create guest_reports row IMMEDIATELY with pending status

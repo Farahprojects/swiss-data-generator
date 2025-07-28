@@ -47,7 +47,49 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
     setInlinePromoError(''); // Clear any previous errors
     
     try {
-      // Transform flat form data into nested person_a/person_b structure for translator-edge
+      // 1. VALIDATE PROMO CODE FIRST (if provided)
+      let validatedPromo: any = null;
+      
+      if (data.promoCode && data.promoCode.trim()) {
+        console.log('🎯 [useReportSubmission] Validating promo code:', data.promoCode);
+        
+        const { data: promoResponse, error: promoError } = await supabase.functions.invoke('validate-promo-code', {
+          body: {
+            promo_code: data.promoCode,
+            email: data.email
+          }
+        });
+
+        if (promoError) {
+          console.error('Promo validation failed:', promoError);
+          setInlinePromoError('Promo validation error');
+          setIsProcessing(false);
+          return { success: false };
+        }
+
+        if (!promoResponse.valid) {
+          console.log('Invalid promo code:', promoResponse.reason);
+          setInlinePromoError('Invalid Promo Code');
+          setIsProcessing(false);
+          return { success: false };
+        }
+
+        validatedPromo = promoResponse;
+        console.log('✅ Promo code validated:', validatedPromo);
+      }
+
+      // 2. CALCULATE PRICING with validated promo
+      let basePrice = getReportPrice(data);
+      let finalPrice = basePrice;
+      let discountPercent = 0;
+
+      if (validatedPromo) {
+        discountPercent = validatedPromo.discount_value || 0;
+        const discountAmount = basePrice * (discountPercent / 100);
+        finalPrice = Math.max(basePrice - discountAmount, 0);
+      }
+
+      // 3. PREPARE REPORT DATA
       const person_a = {
         name: data.name,
         birth_date: data.birthDate,
@@ -73,7 +115,6 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
         house_system: ''
       } : undefined;
 
-      // Prepare report data in the structure translator-edge expects
       const reportData = {
         request: data.request || data.reportType || 'essence',
         reportType: data.request || data.reportType || 'standard',
@@ -105,22 +146,21 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
         secondPersonPlaceId: data.secondPersonPlaceId,
       };
 
-      // Calculate the base price using frontend pricing (already cached)
-      const basePrice = getReportPrice(data);
-
       console.log('🔄 [useReportSubmission] Structured report data:', {
         request: reportData.request,
         person_a: reportData.person_a,
         person_b: reportData.person_b,
-        basePrice
+        basePrice,
+        finalPrice,
+        validatedPromo: validatedPromo ? { discount_type: validatedPromo.discount_type, discount_value: validatedPromo.discount_value } : null
       });
 
-      // Single call to initiate-report-flow - it handles everything server-side
+      // 4. CALL INITIATE-REPORT-FLOW with pre-validated data
       const { data: flowResponse, error } = await supabase.functions.invoke('initiate-report-flow', {
         body: {
           reportData,
-          basePrice, // Pass calculated price to avoid redundant database lookup
-          promoCode: data.promoCode || undefined
+          basePrice: finalPrice, // Pass final calculated price
+          validatedPromo // Pass validated promo data instead of raw promo code
         }
       });
 
