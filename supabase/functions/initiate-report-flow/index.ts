@@ -55,30 +55,7 @@ interface InitiateReportFlowRequest {
   promoCode?: string
 }
 
-// Extract the exact getProductId logic from frontend usePriceFetch.ts
-const getProductId = (data: ReportData): string => {
-  // Prioritize direct reportType for unified mobile/desktop behavior
-  if (data.reportType) {
-    return data.reportType;
-  }
-  
-  // Fallback to request field for astro data
-  if (data.request) {
-    return data.request;
-  }
-  
-  // Legacy fallback for form combinations (desktop compatibility)
-  if (data.essenceType && data.reportCategory === 'the-self') {
-    return `essence_${data.essenceType}`;
-  }
-  
-  if (data.relationshipType && data.reportCategory === 'compatibility') {
-    return `sync_${data.relationshipType}`;
-  }
-  
-  // If still no priceId, use default fallback
-  return 'essence_personal'; // Default fallback
-};
+// Removed duplicate getProductId logic - trusting frontend pricing
 
 // Enhanced logging function for Stage 2
 function logFlowEvent(event: string, details: any = {}) {
@@ -125,62 +102,26 @@ serve(async (req) => {
       })
     }
 
-    // --- OPTIMIZED PRICING: Use frontend price instead of database lookup ---
+    // --- SIMPLIFIED PRICING: Trust frontend calculation ---
     
-    let priceId: string;
-    let basePrice: number;
-    let productName = "Report";
-    let productDescription = "Astrology Report";
-
-    if (frontendPrice && frontendPrice > 0) {
-      // Basic validation that the price is reasonable (between $1 and $500)
-      if (frontendPrice < 1 || frontendPrice > 500) {
-        logFlowError("invalid_frontend_price", new Error("Price outside acceptable range"), { frontendPrice });
-        return new Response(JSON.stringify({ 
-          error: 'Invalid pricing data' 
-        }), {
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
-      }
-      
-      basePrice = frontendPrice;
-      priceId = reportData.priceId || getProductId(reportData);
-      
-      logFlowEvent("price_from_frontend", { 
-        basePrice, 
-        priceId,
-        optimization: "database_lookup_skipped"
-      });
-    } else {
-      // Fallback to database lookup if no frontend price provided (shouldn't happen in normal flow)
-      priceId = reportData.priceId || getProductId(reportData);
-      
-      logFlowEvent("price_fallback_lookup", { priceId, reportType: reportData.reportType });
-
-      const { data: product, error: productError } = await supabaseAdmin
-        .from('price_list')
-        .select('id, unit_price_usd, name, description')
-        .eq('id', priceId)
-        .single()
-
-      if (productError || !product) {
-        logFlowError("product_lookup_failed", productError, { priceId });
-        return new Response(JSON.stringify({ 
-          error: 'Product not found or invalid report type',
-          debug: { priceId, productError: productError?.message }
-        }), {
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
-      }
-
-      basePrice = product.unit_price_usd;
-      productName = product.name;
-      productDescription = product.description;
-      
-      logFlowEvent("price_from_database_fallback", { basePrice, priceId });
+    if (!frontendPrice || frontendPrice <= 0) {
+      logFlowError("missing_frontend_price", new Error("No price provided by frontend"));
+      return new Response(JSON.stringify({ 
+        error: 'Invalid pricing data - price must be provided' 
+      }), {
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
+
+    const basePrice = frontendPrice;
+    const priceId = reportData.priceId || reportData.reportType || 'standard';
+    
+    logFlowEvent("price_trusted_from_frontend", { 
+      basePrice, 
+      priceId,
+      optimization: "database_lookup_eliminated"
+    });
 
     let finalPrice = basePrice
     let discountPercent = 0
@@ -535,7 +476,7 @@ serve(async (req) => {
       guest_report_id: guestReport.id,
       amount: finalAmount,
       email: reportData.email,
-      description: productDescription || `${productName} Report`,
+      description: "Astrology Report",
       successUrl: `${req.headers.get("origin")}/report?guest_id=${guestReport.id}`,
       cancelUrl: `${req.headers.get("origin")}/report?status=cancelled`,
     };
