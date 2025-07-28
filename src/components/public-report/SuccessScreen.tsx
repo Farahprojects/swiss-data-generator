@@ -78,11 +78,19 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
       .channel(`guest_report:${guestReportId}`)
       .on('broadcast', { event: 'report_ready' }, (payload) => {
         logSuccessScreen('debug', 'Realtime message received from orchestrator', { payload });
+        console.log('📡 Full realtime payload received:', payload);
         
-        if (payload.payload && payload.payload.data) {
+        if (payload && payload.data) {
           logSuccessScreen('info', 'Orchestrator sent report data, triggering handleReportReady');
-          handleReportReady(payload.payload.data);
+          console.log('🎯 Report ready broadcast received:', payload.data);
+          handleReportReady(payload.data);
         } else {
+          console.log('⚠️ Payload structure unexpected:', {
+            hasPayload: !!payload,
+            hasData: !!(payload && payload.data),
+            hasNestedPayload: !!(payload && payload.payload),
+            payloadKeys: payload ? Object.keys(payload) : 'no payload'
+          });
           console.warn('❌ Orchestrator message missing data:', payload);
         }
       })
