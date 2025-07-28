@@ -273,6 +273,7 @@ export const processReportRequest = async (
         .update({
           report_log_id: reportLog.id,
           has_report_log: true,
+          modal_ready: true, // ✅ Set the modal ready here
           updated_at: new Date().toISOString()
         })
         .eq("id", payload.user_id);
