@@ -17,7 +17,7 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
   }, []);
 
   const { toast } = useToast();
-  const { getReportPrice, getReportTitle, isLoading: isPricingLoading } = typeof window !== 'undefined' ? usePriceFetch() : { getReportPrice: () => 0, getReportTitle: () => 'Report', isLoading: false };
+  const { getReportPrice, getReportTitle, calculatePricing, isLoading: isPricingLoading } = typeof window !== 'undefined' ? usePriceFetch() : { getReportPrice: () => 0, getReportTitle: () => 'Report', calculatePricing: () => ({ finalPrice: 0, isFree: false }), isLoading: false };
 
   // Add timeout mechanism to prevent stuck processing state
   useEffect(() => {
@@ -95,10 +95,10 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
       });
 
       // 3. CALL OPTIMIZED INITIATE-REPORT-FLOW (pre-calculated pricing)
-      const { calculatePricing } = usePriceFetch();
-      const promoValidation = data.promoCode ? { valid: true, discount_percent: 100, isFreeReport: true } : { valid: false };
-      const finalPrice = calculatePricing(basePrice, promoValidation).finalPrice;
-      const isFreeReport = finalPrice === 0;
+      const promoValidation = data.promoCode ? { status: 'valid', discountPercent: 100 } : { status: 'none', discountPercent: 0 };
+      const pricingResult = calculatePricing(basePrice, promoValidation);
+      const finalPrice = pricingResult.finalPrice;
+      const isFreeReport = pricingResult.isFree;
       
       const { data: flowResponse, error } = await supabase.functions.invoke('initiate-report-flow', {
         body: {
