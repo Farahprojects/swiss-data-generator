@@ -46,6 +46,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
   // Handle report ready from parent component
   const handleReportReady = useCallback((reportData: ReportData) => {
+    console.log('✅ handleReportReady called with:', reportData);
     logSuccessScreen('info', 'Report ready signal received, opening modal');
     setReportReady(true);
     setCountdownTime(0);
@@ -77,21 +78,14 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     const channel = supabase
       .channel(`guest_report:${guestReportId}`)
       .on('broadcast', { event: 'report_ready' }, (payload) => {
+        console.log('🔥 Received broadcast:', payload);
         logSuccessScreen('debug', 'Realtime message received from orchestrator', { payload });
-        console.log('📡 Full realtime payload received:', payload);
         
-        if (payload && payload.data) {
+        if (payload?.data) {
           logSuccessScreen('info', 'Orchestrator sent report data, triggering handleReportReady');
-          console.log('🎯 Report ready broadcast received:', payload.data);
           handleReportReady(payload.data);
         } else {
-          console.log('⚠️ Payload structure unexpected:', {
-            hasPayload: !!payload,
-            hasData: !!(payload && payload.data),
-            hasNestedPayload: !!(payload && payload.payload),
-            payloadKeys: payload ? Object.keys(payload) : 'no payload'
-          });
-          console.warn('❌ Orchestrator message missing data:', payload);
+          console.warn('⚠️ Broadcast payload missing `data` field:', payload);
         }
       })
       .subscribe((status) => {
@@ -186,7 +180,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     checkReportStatus();
   }, [guestReportId, handleReportReady]);
 
-  // Simple visual countdown timer
+  // Simple visual countdown timer with timeout fallback
   useEffect(() => {
     if (reportReady || checkingStatus || errorState) return;
 
@@ -200,7 +194,18 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
       });
     }, 1000);
 
-    return () => clearInterval(timer);
+    // Fallback timeout after 24 seconds
+    const fallbackTimeout = setTimeout(() => {
+      if (!reportReady) {
+        console.warn('⏱️ Timeout reached. Report modal never appeared.');
+        // For now just log - could add fallback fetch logic here
+      }
+    }, 24000);
+
+    return () => {
+      clearInterval(timer);
+      clearTimeout(fallbackTimeout);
+    };
   }, [reportReady, checkingStatus, errorState]);
 
   // Show error state if detected by the edge function

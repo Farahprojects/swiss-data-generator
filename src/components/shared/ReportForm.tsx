@@ -249,6 +249,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
   // Simplified report viewing function - only displays provided data
   const handleViewReport = useCallback((reportDataParam?: ReportData) => {
+    console.log('🧩 handleViewReport got data:', reportDataParam);
     log('info', 'handleViewReport called', { hasParam: !!reportDataParam }, 'ReportForm');
     
     // Only use provided report data - no redundant fetching
