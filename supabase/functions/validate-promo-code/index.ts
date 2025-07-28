@@ -26,6 +26,7 @@ interface ValidatePromoResponse {
   valid: boolean;
   discount_type?: "percentage" | "fixed" | "free";
   discount_value?: number;
+  isFreeReport?: boolean;
   code?: string;
   promo_id?: string;
   reason?: string;
@@ -165,19 +166,20 @@ serve(async (req) => {
             guestReportId
           });
           
-          // Still return successful validation but note the processing failure
-          return new Response(JSON.stringify({ 
-            valid: true,
-            discount_type,
-            discount_value: promo.discount_percent,
-            code: normalizedCode,
-            promo_id: promo.id,
-            processing_triggered: false,
-            processing_error: "Failed to trigger report generation"
-          } as ValidatePromoResponse), {
-            status: 200, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          });
+        // Still return successful validation but note the processing failure
+        return new Response(JSON.stringify({ 
+          valid: true,
+          discount_type,
+          discount_value: promo.discount_percent,
+          isFreeReport: discount_type === "free",
+          code: normalizedCode,
+          promo_id: promo.id,
+          processing_triggered: false,
+          processing_error: "Failed to trigger report generation"
+        } as ValidatePromoResponse), {
+          status: 200, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
         }
 
         logValidation("free_report_processing_triggered", {
@@ -190,6 +192,7 @@ serve(async (req) => {
           valid: true,
           discount_type,
           discount_value: promo.discount_percent,
+          isFreeReport: discount_type === "free",
           code: normalizedCode,
           promo_id: promo.id,
           processing_triggered: true
@@ -209,6 +212,7 @@ serve(async (req) => {
           valid: true,
           discount_type,
           discount_value: promo.discount_percent,
+          isFreeReport: discount_type === "free",
           code: normalizedCode,
           promo_id: promo.id,
           processing_triggered: false,
@@ -225,6 +229,7 @@ serve(async (req) => {
       valid: true,
       discount_type,
       discount_value: promo.discount_percent,
+      isFreeReport: discount_type === "free",
       code: normalizedCode,
       promo_id: promo.id
     } as ValidatePromoResponse), {

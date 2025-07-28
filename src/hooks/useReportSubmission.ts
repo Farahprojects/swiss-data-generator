@@ -203,41 +203,16 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
       }
 
       // Handle the simplified response from the new "no-hop" architecture
-      if (flowResponse.status === 'success') {
-        // FREE FLOW: Report is free, now trigger processing via validate-promo-code orchestration
-        const guestReportId = flowResponse.reportId;
+      if (flowResponse.success && (flowResponse.status === 'success' || flowResponse.isFreeReport)) {
+        // FREE FLOW: Report was authorized and created as free
+        const guestReportId = flowResponse.guestReportId || flowResponse.reportId;
         
-        if (validatedPromo && validatedPromo.discount_type === 'free') {
-          console.log('🎯 FREE FLOW: Orchestrating processing via validate-promo-code');
-          
-          // Call validate-promo-code again with guestReportId to trigger processing
-          const { data: orchestrationResponse, error: orchestrationError } = await supabase.functions.invoke('validate-promo-code', {
-            body: {
-              promo_code: data.promoCode,
-              email: data.email,
-              guestReportId: guestReportId
-            }
-          });
-
-          if (orchestrationError || !orchestrationResponse.processing_triggered) {
-            console.warn('Orchestration failed, but report was created:', orchestrationError);
-            toast({
-              title: "Report Created",
-              description: "Your free report was created but processing may be delayed. Check your email shortly.",
-              variant: "default",
-            });
-          } else {
-            toast({
-              title: "Free Report Created!",
-              description: "Your report is being generated and will be sent to your email shortly.",
-            });
-          }
-        } else {
-          toast({
-            title: "Free Report Created!",
-            description: "Your report has been generated and will be sent to your email shortly.",
-          });
-        }
+        // For free reports, orchestration is already handled by validate-promo-code
+        // No need for additional calls
+        toast({
+          title: "Free Report Created!",
+          description: "Your report is being generated and will be sent to your email shortly.",
+        });
         
         storeGuestReportId(guestReportId);
         

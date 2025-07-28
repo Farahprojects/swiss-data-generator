@@ -53,6 +53,7 @@ interface ValidatedPromo {
   valid: boolean
   discount_type?: "percentage" | "fixed" | "free"
   discount_value?: number
+  isFreeReport?: boolean
   code?: string
   promo_id?: string
 }
@@ -112,10 +113,22 @@ serve(async (req) => {
 
     // --- SIMPLIFIED PRICING: Trust frontend calculation ---
     
-    if (!frontendPrice || frontendPrice <= 0) {
-      logFlowError("missing_frontend_price", new Error("No price provided by frontend"));
+    // Validate frontend price: allow 0 for free reports but require promo authorization
+    if (frontendPrice === null || frontendPrice === undefined || frontendPrice < 0) {
+      logFlowError("invalid_frontend_price", new Error("Price must be provided and non-negative"));
       return new Response(JSON.stringify({ 
-        error: 'Invalid pricing data - price must be provided' 
+        error: 'Invalid pricing data - price must be non-negative' 
+      }), {
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // If price is 0, ensure it's authorized by a free promo
+    if (frontendPrice === 0 && !validatedPromo?.isFreeReport) {
+      logFlowError("unauthorized_free_report", new Error("Free reports require valid promo authorization"));
+      return new Response(JSON.stringify({ 
+        error: 'Free reports require valid promotional code authorization' 
       }), {
         status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -149,8 +162,8 @@ serve(async (req) => {
         discount_type: validatedPromo.discount_type
       });
 
-        // FREE FLOW (100% discount) - Return success immediately, NO background processing
-        if (discountPercent === 100) {
+        // FREE FLOW - If promo explicitly authorizes free report
+        if (validatedPromo.isFreeReport) {
           const sessionId = `free_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
 
           logFlowEvent("free_flow_started", { sessionId, promoCode });
@@ -228,8 +241,10 @@ serve(async (req) => {
           });
 
           return new Response(JSON.stringify({ 
+            success: true,
             status: 'success', 
             message: 'Your free report is being generated',
+            guestReportId: guestReport.id,
             reportId: guestReport.id,
             sessionId,
             isFreeReport: true,
