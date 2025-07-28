@@ -60,7 +60,8 @@ interface ValidatedPromo {
 
 interface InitiateReportFlowRequest {
   reportData: ReportData
-  basePrice: number
+  finalPrice: number
+  isFreeReport: boolean
   promoCode?: string
 }
 
@@ -92,83 +93,24 @@ serve(async (req) => {
   const startTime = Date.now();
 
   try {
-    const { reportData, basePrice, promoCode }: InitiateReportFlowRequest = await req.json()
+    const { reportData, finalPrice, isFreeReport, promoCode }: InitiateReportFlowRequest = await req.json()
     
     logFlowEvent("flow_started", {
       email: reportData?.email,
       reportType: reportData?.reportType,
-      basePrice,
+      finalPrice,
+      isFreeReport,
       promoCode: promoCode ? promoCode.substring(0, 3) + "***" : 'none'
     });
 
-    if (!reportData?.email || !basePrice) {
-      logFlowError("missing_required_data", new Error("Missing email or basePrice"));
+    if (!reportData?.email || finalPrice === undefined) {
+      logFlowError("missing_required_data", new Error("Missing email or finalPrice"));
       return new Response(JSON.stringify({ 
-        error: 'Missing required report data, email, or basePrice' 
+        error: 'Missing required report data or finalPrice' 
       }), {
         status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
-    }
-
-    // OPTIMIZATION: Trust frontend basePrice calculation (no DB lookup)
-    let finalPrice = basePrice;
-    let discountPercent = 0;
-    let isFreeReport = false;
-
-    // Inline promo validation (if provided)
-    if (promoCode && promoCode.trim()) {
-      logFlowEvent("promo_validation_started", { 
-        promoCode: promoCode.substring(0, 3) + "***",
-        basePrice 
-      });
-
-      const { data: promoData, error: promoError } = await supabaseAdmin
-        .from('promo_codes')
-        .select('*')
-        .eq('code', promoCode.toUpperCase())
-        .eq('is_active', true)
-        .single();
-
-      if (promoError || !promoData) {
-        logFlowError("promo_invalid", new Error("Invalid promo code"), { 
-          promoCode: promoCode.substring(0, 3) + "***" 
-        });
-        return new Response(JSON.stringify({ 
-          error: 'Invalid or expired promo code' 
-        }), {
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-
-      // Check usage limits
-      if (promoData.max_uses && promoData.times_used >= promoData.max_uses) {
-        return new Response(JSON.stringify({ 
-          error: 'Promo code has reached maximum usage limit' 
-        }), {
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-
-      // Apply discount
-      discountPercent = promoData.discount_percent;
-      isFreeReport = discountPercent === 100;
-      
-      if (isFreeReport) {
-        finalPrice = 0;
-      } else {
-        const discountAmount = basePrice * (discountPercent / 100);
-        finalPrice = Math.max(basePrice - discountAmount, 0);
-      }
-
-      logFlowEvent("promo_validated", { 
-        promoCode: promoCode.substring(0, 3) + "***",
-        discount_percent: discountPercent,
-        isFreeReport,
-        finalPrice
-      });
     }
 
     // OPTIMIZATION: Single database operation with UUID as both id and stripe_session_id
@@ -176,12 +118,12 @@ serve(async (req) => {
     
     const guestReportData = {
       id: guestReportId,
-      stripe_session_id: guestReportId, // Use same UUID for both
+      stripe_session_id: guestReportId,
       email: reportData.email,
       report_type: reportData.reportType || 'essence_personal',
       amount_paid: finalPrice,
       report_data: reportData,
-      payment_status: "pending",
+      payment_status: isFreeReport ? "paid" : "pending", // Free reports are immediately paid
       purchase_type: 'report',
       promo_code_used: promoCode || null,
       email_sent: false,
@@ -213,13 +155,24 @@ serve(async (req) => {
       processing_time_ms: processingTimeMs
     });
 
-    // Return minimal response for frontend orchestration
+    // For free reports, trigger verify-guest-payment immediately to start processing
+    if (isFreeReport) {
+      // Fire and forget - don't wait for completion
+      supabaseAdmin.functions.invoke('verify-guest-payment', {
+        body: {
+          sessionId: guestReportId,
+          type: 'promo',
+          requestId: crypto.randomUUID().substring(0, 8)
+        }
+      }).catch(error => {
+        console.log(`⚠️ Failed to trigger verify-guest-payment: ${error.message}`);
+      });
+    }
+
     return new Response(JSON.stringify({ 
       guestReportId,
-      basePrice,
       finalPrice,
       isFreeReport,
-      discountPercent,
       processing_time_ms: processingTimeMs
     }), {
       status: 200, 

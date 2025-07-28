@@ -94,11 +94,17 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
         promoCode: data.promoCode || 'none'
       });
 
-      // 3. CALL OPTIMIZED INITIATE-REPORT-FLOW (trust frontend pricing)
+      // 3. CALL OPTIMIZED INITIATE-REPORT-FLOW (pre-calculated pricing)
+      const { calculatePricing } = usePriceFetch();
+      const promoValidation = data.promoCode ? { valid: true, discount_percent: 100, isFreeReport: true } : { valid: false };
+      const finalPrice = calculatePricing(basePrice, promoValidation).finalPrice;
+      const isFreeReport = finalPrice === 0;
+      
       const { data: flowResponse, error } = await supabase.functions.invoke('initiate-report-flow', {
         body: {
           reportData,
-          basePrice,
+          finalPrice,
+          isFreeReport,
           promoCode: data.promoCode || null
         }
       });
@@ -154,22 +160,9 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
 
       const guestReportId = flowResponse.guestReportId;
       
-      // Check if it's a free report
+      // Free reports are automatically triggered by initiate-report-flow
       if (flowResponse.isFreeReport) {
-        console.log('🎉 [useReportSubmission] Free report - triggering processing');
-        
-        // Call verify-guest-payment to trigger report generation
-        const { error: verifyError } = await supabase.functions.invoke('verify-guest-payment', {
-          body: {
-            sessionId: guestReportId,
-            type: 'promo'
-          }
-        });
-
-        if (verifyError) {
-          console.warn('Failed to trigger report processing:', verifyError);
-          // Don't fail - the report record exists and can be processed later
-        }
+        console.log('🎉 [useReportSubmission] Free report created and processing started automatically');
         
         toast({
           title: "Report Created!",
