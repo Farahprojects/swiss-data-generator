@@ -42,6 +42,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const [viewingReport, setViewingReport] = useState(false);
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [sessionRestored, setSessionRestored] = useState(false);
+  const [calculatedPrice, setCalculatedPrice] = useState<number | undefined>(undefined);
 
   // Hooks
   const { status, error: statusError, reportData: statusReportData, setStatus, reset: resetStatus } = useReportStatus();
@@ -55,7 +56,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     inlinePromoError,
     clearInlinePromoError,
     resetReportState
-  } = useReportSubmission(setCreatedGuestReportId);
+  } = useReportSubmission(setCreatedGuestReportId, calculatedPrice);
 
   const { data: guestReportData, error: guestReportError, refetch: refetchGuestData } = useGuestReportData(guestId);
 
@@ -284,6 +285,12 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     await onSubmit(formData);
   };
 
+  const handleSubmitWithPrice = async (price: number) => {
+    setCalculatedPrice(price);
+    const formData = form.getValues();
+    await onSubmit(formData);
+  };
+
   // Status-based rendering with single switch statement
   switch (status) {
     case 'verifying':
@@ -480,6 +487,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
                 errors={errors}
                 setValue={setValue}
                 onSubmit={handleButtonClick}
+                onSubmitWithPrice={handleSubmitWithPrice}
                 isProcessing={isProcessing || isPricingLoading}
                 inlinePromoError={inlinePromoError}
                 clearInlinePromoError={clearInlinePromoError}

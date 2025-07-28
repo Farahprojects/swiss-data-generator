@@ -6,7 +6,7 @@ import { ReportFormData } from '@/types/public-report';
 import { storeGuestReportId } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
 
-export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => void) => {
+export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => void, preCalculatedPrice?: number) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [reportCreated, setReportCreated] = useState(false);
   const [inlinePromoError, setInlinePromoError] = useState<string>('');
@@ -47,8 +47,18 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
     setInlinePromoError(''); // Clear any previous errors
     
     try {
-      // 1. TRUST FRONTEND PRICING - Pass calculated basePrice to backend
-      const basePrice = getReportPrice(data);
+      // 1. Use pre-calculated price if provided, otherwise fetch from context
+      let finalPrice: number;
+      
+      if (preCalculatedPrice !== undefined) {
+        console.log('🎯 Using pre-calculated price from PaymentStep:', preCalculatedPrice);
+        finalPrice = preCalculatedPrice;
+      } else {
+        // Fallback to context calculation
+        const basePrice = getReportPrice(data);
+        finalPrice = basePrice;
+        console.log('📊 Using context-calculated price:', basePrice);
+      }
 
       // 2. PREPARE MINIMAL REPORT DATA (optimized payload)
       const person_a = {
@@ -90,16 +100,17 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
 
       console.log('🚀 [useReportSubmission] Optimized submission:', {
         request: reportData.request,
-        basePrice,
+        finalPrice,
+        promoCode: data.promoCode || 'none'
+      });
+
+      // 2. Validate promo codes (if any) - REMOVED FAKE VALIDATION
+      // Note: Proper promo validation should happen here via edge function
+      console.log('⏭️ Skipping promo validation until edge function integration', {
         promoCode: data.promoCode || 'none'
       });
 
       // 3. CALL OPTIMIZED INITIATE-REPORT-FLOW (NO FAKE PROMO VALIDATION)
-      // REMOVED: Fake promo validation that accepted any string as 100% discount
-      // const promoValidation = data.promoCode ? { status: 'valid', discountPercent: 100 } : { status: 'none', discountPercent: 0 };
-      
-      // Use base price until proper promo validation is implemented
-      const finalPrice = basePrice;
       const isFreeReport = false;
       
       const { data: flowResponse, error } = await supabase.functions.invoke('initiate-report-flow', {
@@ -184,14 +195,14 @@ export const useReportSubmission = (setCreatedGuestReportId?: (id: string) => vo
       } else {
         console.log('💳 [useReportSubmission] Paid report - creating checkout');
         
-        // Calculate final price with applied discount
-        const finalPrice = flowResponse.finalPrice || basePrice;
+        // Calculate final price with applied discount (use the price we already calculated)
+        const checkoutPrice = flowResponse.finalPrice || finalPrice;
         
         // Call create-checkout
         const { data: checkoutResponse, error: checkoutError } = await supabase.functions.invoke('create-checkout', {
           body: {
             guest_report_id: guestReportId,
-            amount: finalPrice,
+            amount: checkoutPrice,
             email: data.email,
             description: "Astrology Report",
             successUrl: `${window.location.origin}/report?guest_id=${guestReportId}`,

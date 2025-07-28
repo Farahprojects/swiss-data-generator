@@ -17,6 +17,7 @@ interface PaymentStepProps {
   errors: FieldErrors<ReportFormData>;
   setValue: UseFormSetValue<ReportFormData>;
   onSubmit: () => void;
+  onSubmitWithPrice?: (price: number) => void;
   isProcessing: boolean;
   inlinePromoError?: string;
   clearInlinePromoError?: () => void;
@@ -28,6 +29,7 @@ const PaymentStep = ({
   errors, 
   setValue,
   onSubmit,
+  onSubmitWithPrice,
   isProcessing,
   inlinePromoError = '',
   clearInlinePromoError = () => {}
@@ -104,7 +106,13 @@ const PaymentStep = ({
     e.stopPropagation();
     
     setHasTimedOut(false);
-    onSubmit();
+    
+    // Use the new onSubmitWithPrice if available, otherwise fallback to onSubmit
+    if (onSubmitWithPrice) {
+      onSubmitWithPrice(finalPrice);
+    } else {
+      onSubmit();
+    }
   };
 
   const content = isPricingLoading ? (
