@@ -116,7 +116,7 @@ const PaymentStep = ({
       }
 
       if (!data?.valid) {
-        return { isValid: false, error: data?.reason || 'Invalid promo code' };
+        return { isValid: false, error: 'Invalid Promo Code' };
       }
 
       return { 
