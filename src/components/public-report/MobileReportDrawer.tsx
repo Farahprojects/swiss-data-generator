@@ -57,9 +57,7 @@ const MobileReportDrawer = ({ isOpen, onClose, guestId = null }: MobileReportDra
   const { 
     isProcessing, 
     submitReport, 
-    reportCreated,
-    inlinePromoError,
-    clearInlinePromoError
+    reportCreated
   } = useReportSubmission();
 
   const reportCategory = watch('reportCategory');
@@ -67,7 +65,8 @@ const MobileReportDrawer = ({ isOpen, onClose, guestId = null }: MobileReportDra
   const request = watch('request');
 
   const onSubmit = async (data: ReportFormData) => {
-    await submitReport(data);
+    // TODO: This will be replaced with desktop PaymentStep logic
+    console.log('Mobile submission - will be replaced with desktop logic');
   };
 
   // Handle report ready from orchestrator
@@ -157,8 +156,6 @@ const MobileReportDrawer = ({ isOpen, onClose, guestId = null }: MobileReportDra
                                  watch={watch} 
                                  errors={errors} 
                                  isProcessing={isProcessing} 
-                                 inlinePromoError={inlinePromoError}
-                                 clearInlinePromoError={clearInlinePromoError}
                                />;
                           default:
                             return null;
