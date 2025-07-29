@@ -57,34 +57,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     }
   }, [onViewReport]);
 
-  // Direct modal trigger when data is ready (same as ReportForm)
-  useEffect(() => {
-    if (!guestReportId || errorState) return;
 
-    logSuccessScreen('info', 'Setting up realtime listener for guest report', { guestReportId });
-    
-    const channel = supabase
-      .channel(`guest_report:${guestReportId}`)
-      .on('broadcast', { event: 'report_ready' }, (payload) => {
-        console.log('🔥 Received broadcast:', payload);
-        logSuccessScreen('debug', 'Realtime message received from orchestrator', { payload });
-        
-        if (payload?.payload?.data) {
-          logSuccessScreen('info', 'Orchestrator sent report data, triggering handleReportReady');
-          handleReportReady(payload.payload.data);
-        } else {
-          console.warn('⚠️ Broadcast payload missing nested data field:', payload);
-        }
-      })
-      .subscribe((status) => {
-        logSuccessScreen('debug', 'Realtime subscription status', { status });
-      });
-
-    return () => {
-      logSuccessScreen('debug', 'Cleaning up realtime subscription');
-      supabase.removeChannel(channel);
-    };
-  }, [guestReportId, handleReportReady, errorState]);
 
   // Simple error logging for new errors detected by edge function
   const handleTriggerErrorLogging = useCallback(async (guestReportId: string, email: string) => {
