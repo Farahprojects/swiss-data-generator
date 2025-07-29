@@ -280,6 +280,7 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
 serve(async (req) => {
   const requestId = crypto.randomUUID().substring(0, 8); // Short unique ID for this request
   const logPrefix = `[standard-report-three][${requestId}]`;
+  const startTime = Date.now();
 
   console.log(`${logPrefix} Received ${req.method} request for ${req.url}`);
 
