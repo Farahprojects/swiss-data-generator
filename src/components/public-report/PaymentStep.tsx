@@ -108,20 +108,20 @@ const PaymentStep = ({
 
     try {
       const { data, error } = await supabase.functions.invoke('validate-promo-code', {
-        body: { promoCode: promoCode.trim() }
+        body: { promo_code: promoCode.trim() }
       });
 
       if (error) {
         throw new Error(error.message || 'Failed to validate promo code');
       }
 
-      if (!data?.isValid) {
-        return { isValid: false, error: data?.error || 'Invalid promo code' };
+      if (!data?.valid) {
+        return { isValid: false, error: data?.reason || 'Invalid promo code' };
       }
 
       return { 
         isValid: true, 
-        discountAmount: data?.discountAmount || 0 
+        discountAmount: data?.discount_value || 0 
       };
     } catch (err: any) {
       return { 
