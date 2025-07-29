@@ -110,6 +110,21 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }
   }, [guestReportData, guestReportError, status, setStatus]);
 
+  // Simple modal trigger when data is ready
+  useEffect(() => {
+    if (guestReportData && guestId) {
+      const guestReport = guestReportData.guest_report;
+      const hasReportContent = guestReportData.report_content;
+      const hasSwissData = guestReportData.swiss_data;
+      
+      if (hasReportContent || hasSwissData) {
+        log('info', 'Report data ready, triggering modal', null, 'ReportForm');
+        setReportData(guestReportData);
+        setViewingReport(true);
+      }
+    }
+  }, [guestReportData, guestId]);
+
   // Form setup
   const form = useForm<ReportFormData>({
     mode: 'onBlur',
@@ -244,32 +259,12 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }, 300);
   };
 
-  // Simplified report viewing function - only displays provided data
-  const handleViewReport = useCallback((reportDataParam?: ReportData) => {
-    console.log('🧩 handleViewReport got data:', reportDataParam);
-    log('info', 'handleViewReport called', { hasParam: !!reportDataParam }, 'ReportForm');
-    
-    // Only use provided report data - no redundant fetching
-    if (reportDataParam) {
-      log('info', 'Displaying provided report data', null, 'ReportForm');
-      setReportData(reportDataParam);
-      setViewingReport(true);
-    } else {
-      log('warn', 'No report data provided to handleViewReport', null, 'ReportForm');
-    }
+  // Simple modal trigger - no conditions
+  const handleViewReport = useCallback(() => {
+    setViewingReport(true);
   }, []);
 
-  // Fixed callback registration for SuccessScreen
-  const handleReportReadyCallback = useCallback((callback: (reportData: ReportData) => void) => {
-    log('info', 'Report ready callback registered from SuccessScreen', null, 'ReportForm');
-    // Store the callback and immediately trigger handleViewReport when called
-    const wrappedCallback = (reportData: ReportData) => {
-      log('info', 'Report ready callback triggered, calling handleViewReport', null, 'ReportForm');
-      handleViewReport(reportData);
-    };
-    // The callback is already set up in SuccessScreen to call handleViewReport
-    callback = wrappedCallback;
-  }, [handleViewReport]);
+
 
   const onSubmit = async (data: ReportFormData) => {
     const submissionData = coachSlug ? { ...data, coachSlug } : data;
@@ -383,7 +378,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         name={userName} 
         email={userEmail} 
         onViewReport={handleViewReport}
-        onReportReady={handleReportReadyCallback}
         guestReportId={createdGuestReportId}
       />
     );
@@ -400,7 +394,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           name={name} 
           email={email} 
           onViewReport={handleViewReport}
-          onReportReady={handleReportReadyCallback}
           guestReportId={guestId || undefined}
         />
       );
@@ -413,7 +406,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         name={tokenRecovery.recoveredName} 
         email={tokenRecovery.recoveredEmail} 
         onViewReport={handleViewReport}
-        onReportReady={handleReportReadyCallback}
         guestReportId={guestId}
       />
     );
