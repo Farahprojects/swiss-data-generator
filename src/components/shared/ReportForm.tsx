@@ -42,6 +42,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const [viewingReport, setViewingReport] = useState(false);
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [sessionRestored, setSessionRestored] = useState(false);
+  const [waitingForReport, setWaitingForReport] = useState(false);
 
   // Hooks
   const { status, error: statusError, reportData: statusReportData, setStatus, reset: resetStatus } = useReportStatus();
@@ -125,35 +126,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }
   }, [guestReportData, guestId]);
 
-  // Realtime listener for orchestrate-report-ready broadcasts
-  useEffect(() => {
-    if (!guestId) return;
 
-    log('info', 'Setting up realtime listener for orchestrate-report-ready', { guestId }, 'ReportForm');
-    
-    const channel = supabase
-      .channel(`guest_report:${guestId}`)
-      .on('broadcast', { event: 'report_ready' }, (payload) => {
-        console.log('🔥 Received orchestrate-report-ready broadcast:', payload);
-        log('debug', 'Realtime message received from orchestrator', { payload }, 'ReportForm');
-        
-        if (payload?.payload?.data) {
-          log('info', 'Orchestrator sent report data, triggering modal', null, 'ReportForm');
-          setReportData(payload.payload.data);
-          setViewingReport(true);
-        } else {
-          console.warn('⚠️ Broadcast payload missing nested data field:', payload);
-        }
-      })
-      .subscribe((status) => {
-        log('debug', 'Realtime subscription status', { status }, 'ReportForm');
-      });
-
-    return () => {
-      log('debug', 'Cleaning up realtime subscription', null, 'ReportForm');
-      supabase.removeChannel(channel);
-    };
-  }, [guestId]);
 
   // Form setup
   const form = useForm<ReportFormData>({
@@ -409,6 +382,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         email={userEmail} 
         onViewReport={handleViewReport}
         guestReportId={createdGuestReportId}
+        onStartWaiting={() => setWaitingForReport(true)}
       />
     );
   }
@@ -425,6 +399,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           email={email} 
           onViewReport={handleViewReport}
           guestReportId={guestId || undefined}
+          onStartWaiting={() => setWaitingForReport(true)}
         />
       );
     }
@@ -437,6 +412,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         email={tokenRecovery.recoveredEmail} 
         onViewReport={handleViewReport}
         guestReportId={guestId}
+        onStartWaiting={() => setWaitingForReport(true)}
       />
     );
   }

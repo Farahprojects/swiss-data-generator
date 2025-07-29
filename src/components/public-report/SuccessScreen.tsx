@@ -14,6 +14,7 @@ interface SuccessScreenProps {
   email: string;
   onViewReport?: (reportData: ReportData) => void;
   guestReportId?: string;
+  onStartWaiting?: () => void;
 }
 
 interface ErrorState {
@@ -31,7 +32,8 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   name, 
   email, 
   onViewReport, 
-  guestReportId 
+  guestReportId,
+  onStartWaiting
 }) => {
   const firstName = name?.split(' ')[0] || 'there';
   const isMobile = useIsMobile();
@@ -41,6 +43,16 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   const [reportReady, setReportReady] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [errorState, setErrorState] = useState<ErrorState | null>(null);
+  const [waitForReport, setWaitForReport] = useState(false);
+
+  // Start waiting for report when component mounts
+  useEffect(() => {
+    if (onStartWaiting) {
+      logSuccessScreen('info', 'Starting to wait for report');
+      onStartWaiting();
+      setWaitForReport(true);
+    }
+  }, [onStartWaiting]);
 
   // Simple modal trigger - no callbacks
   const handleReportReady = useCallback((reportData: ReportData) => {
@@ -57,6 +69,35 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     }
   }, [onViewReport]);
 
+  // Conditional realtime listener - only listens when waitForReport is true
+  useEffect(() => {
+    if (!waitForReport || !guestReportId) return;
+
+    logSuccessScreen('info', 'Setting up conditional realtime listener for report ready', { guestReportId });
+    
+    const channel = supabase
+      .channel(`guest_report:${guestReportId}`)
+      .on('broadcast', { event: 'report_ready' }, (payload) => {
+        console.log('🔥 Received report_ready broadcast:', payload);
+        logSuccessScreen('debug', 'Realtime message received from orchestrator', { payload });
+        
+        if (payload?.payload?.data) {
+          logSuccessScreen('info', 'Orchestrator sent report data, triggering modal');
+          setWaitForReport(false); // Clear the flag to prevent duplicate listeners
+          handleReportReady(payload.payload.data);
+        } else {
+          console.warn('⚠️ Broadcast payload missing nested data field:', payload);
+        }
+      })
+      .subscribe((status) => {
+        logSuccessScreen('debug', 'Realtime subscription status', { status });
+      });
+
+    return () => {
+      logSuccessScreen('debug', 'Cleaning up conditional realtime subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [waitForReport, guestReportId, handleReportReady]);
 
 
   // Simple error logging for new errors detected by edge function
