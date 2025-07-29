@@ -160,7 +160,7 @@ async function getSystemPrompt(reportType: string, requestId: string): Promise<s
 }
 
 // Generate report using Gemini API
-async function generateReport(systemPrompt: string, reportData: any, requestId: string): Promise<string> {
+async function generateReport(systemPrompt: string, reportData: any, requestId: string): Promise<{ report: string; metadata: any }> {
   const logPrefix = `[standard-report-three][${requestId}]`;
   console.log(`${logPrefix} Generating report with Gemini`);
 
@@ -327,7 +327,7 @@ serve(async (req) => {
     const systemPrompt = await getSystemPrompt(reportType, requestId);
 
     // Generate the report
-    const report = await generateReport(systemPrompt, reportData, requestId);
+    const { report, metadata } = await generateReport(systemPrompt, reportData, requestId);
     
     // Log successful report generation
     const durationMs = Date.now() - startTime;
