@@ -249,7 +249,17 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
 
     const generatedText = data.candidates[0].content.parts[0].text;
     console.log(`${logPrefix} Successfully generated report from Gemini`);
-    return generatedText;
+    
+    // Collect AI metadata only
+    const metadata = {
+      token_count: data.usage?.total_tokens || 0,
+      prompt_tokens: data.usage?.prompt_tokens || 0,
+      completion_tokens: data.usage?.completion_tokens || 0,
+      model: "gemini-pro"
+    };
+    
+    console.log(`${logPrefix} AI Generation Metadata:`, metadata);
+    return { report: generatedText, metadata };
   };
 
   try {
@@ -341,6 +351,7 @@ serve(async (req) => {
         duration_ms: durationMs,
         client_id: reportData.client_id || null,
         engine_used: reportData.selectedEngine || "standard-report-three",
+        metadata: metadata,
         created_at: new Date().toISOString(),
       });
 

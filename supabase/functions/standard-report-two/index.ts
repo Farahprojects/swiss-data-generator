@@ -193,8 +193,6 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
         content: userMessage
       }
     ],
-    
-    ,
     top_p: 0.95,
     frequency_penalty: 0,
     presence_penalty: 0
@@ -255,19 +253,14 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
     
     // Collect AI metadata only
     const metadata = {
-      
       token_count: data.usage?.total_tokens || 0,
       prompt_tokens: data.usage?.prompt_tokens || 0,
       completion_tokens: data.usage?.completion_tokens || 0,
-      model: OPENAI_MODEL,
-      
-      
+      model: OPENAI_MODEL
     };
     
     console.log(`${logPrefix} AI Generation Metadata:`, metadata);
     return { report: generatedText, metadata };
-    console.log(`${logPrefix} Successfully generated report from OpenAI`);
-    return generatedText;
   };
 
   try {
