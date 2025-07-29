@@ -295,7 +295,7 @@ const PaymentStep = ({
                     Processing...
                   </div>
                 ) : (
-                  `Get Your Report - $${trustedPricing?.final_price_usd?.toFixed(2) || '0.00'}`
+                  "Get Your Report"
                 )}
               </Button>
 
