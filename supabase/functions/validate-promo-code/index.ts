@@ -15,17 +15,19 @@ const corsHeaders = {
 };
 
 interface ValidatePromoRequest {
-  promo_code: string;
-  email?: string; // Optional for future user-level restrictions
+  promoCode: string;
+  email?: string;
+  reportType?: string;
+  request?: string;
 }
 
-interface ValidatePromoResponse {
+interface TrustedPricingResponse {
   valid: boolean;
-  discount_type?: "percentage" | "fixed" | "free";
-  discount_value?: number;
-  isFreeReport?: boolean;
-  code?: string;
-  promo_id?: string;
+  promo_code_id?: string;
+  discount_usd: number;
+  trusted_base_price_usd: number;
+  final_price_usd: number;
+  report_type: string;
   reason?: string;
 }
 
@@ -54,29 +56,87 @@ serve(async (req) => {
   const startTime = Date.now();
 
   try {
-    const { promo_code, email }: ValidatePromoRequest = await req.json();
+    const { promoCode, email, reportType, request }: ValidatePromoRequest = await req.json();
     
     logValidation("validation_started", {
-      promo_code: promo_code?.substring(0, 3) + "***", // Partially mask for logs
-      email: email || "not_provided"
+      promoCode: promoCode?.substring(0, 3) + "***", // Partially mask for logs
+      email: email || "not_provided",
+      reportType,
+      request
     });
 
-    if (!promo_code || typeof promo_code !== 'string' || !promo_code.trim()) {
+    if (!promoCode || typeof promoCode !== 'string' || !promoCode.trim()) {
       logValidationError("missing_promo_code", new Error("No promo code provided"));
       return new Response(JSON.stringify({ 
         valid: false,
+        discount_usd: 0,
+        trusted_base_price_usd: 0,
+        final_price_usd: 0,
+        report_type: "",
         reason: "Promo code is required"
-      } as ValidatePromoResponse), {
+      } as TrustedPricingResponse), {
         status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    const normalizedCode = promo_code.trim().toUpperCase();
-    
-    logValidation("database_lookup_started", { normalized_code: normalizedCode.substring(0, 3) + "***" });
+    // Determine the price identifier (reportType or request)
+    const priceIdentifier = reportType || request;
+    if (!priceIdentifier) {
+      logValidationError("missing_price_identifier", new Error("No reportType or request provided"));
+      return new Response(JSON.stringify({ 
+        valid: false,
+        discount_usd: 0,
+        trusted_base_price_usd: 0,
+        final_price_usd: 0,
+        report_type: "",
+        reason: "Report type is required"
+      } as TrustedPricingResponse), {
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
 
-    // Query the promo_codes table
+    const normalizedCode = promoCode.trim().toUpperCase();
+    
+    logValidation("database_lookup_started", { 
+      normalized_code: normalizedCode.substring(0, 3) + "***",
+      price_identifier: priceIdentifier
+    });
+
+    // Step 1: Fetch base price from price_list
+    const { data: priceData, error: priceError } = await supabaseAdmin
+      .from('price_list')
+      .select('id, unit_price_usd')
+      .eq('id', priceIdentifier)
+      .single();
+
+    if (priceError || !priceData) {
+      logValidationError("price_lookup_failed", priceError, { 
+        price_identifier: priceIdentifier,
+        error_code: priceError?.code 
+      });
+      
+      return new Response(JSON.stringify({ 
+        valid: false,
+        discount_usd: 0,
+        trusted_base_price_usd: 0,
+        final_price_usd: 0,
+        report_type: "",
+        reason: "Report type not found"
+      } as TrustedPricingResponse), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const basePrice = Number(priceData.unit_price_usd);
+    logValidation("base_price_found", { 
+      price_identifier: priceIdentifier,
+      base_price: basePrice
+    });
+
+    // Step 2: Query the promo_codes table
     const { data: promo, error: promoError } = await supabaseAdmin
       .from('promo_codes')
       .select('*')
@@ -92,9 +152,13 @@ serve(async (req) => {
       
       return new Response(JSON.stringify({ 
         valid: false,
-        reason: "Code not found or inactive"
-      } as ValidatePromoResponse), {
-        status: 200, // Return 200 with valid: false for client handling
+        discount_usd: 0,
+        trusted_base_price_usd: basePrice,
+        final_price_usd: basePrice,
+        report_type: priceIdentifier,
+        reason: "Invalid Promo Code"
+      } as TrustedPricingResponse), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
@@ -109,44 +173,47 @@ serve(async (req) => {
       
       return new Response(JSON.stringify({ 
         valid: false,
+        discount_usd: 0,
+        trusted_base_price_usd: basePrice,
+        final_price_usd: basePrice,
+        report_type: priceIdentifier,
         reason: "Usage limit exceeded"
-      } as ValidatePromoResponse), {
+      } as TrustedPricingResponse), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    // Determine discount type based on discount_percent
-    let discount_type: "percentage" | "fixed" | "free";
-    if (promo.discount_percent === 100) {
-      discount_type = "free";
-    } else if (promo.discount_percent > 0) {
-      discount_type = "percentage";
-    } else {
-      // Future: could support fixed amount discounts
-      discount_type = "percentage";
-    }
+    // Step 3: Calculate discount and final price
+    const discountPercent = promo.discount_percent || 0;
+    const discountAmount = (basePrice * discountPercent) / 100;
+    const finalPrice = Math.max(0, basePrice - discountAmount);
+
+    // Round to 2 decimal places
+    const roundedDiscount = Math.round(discountAmount * 100) / 100;
+    const roundedFinalPrice = Math.round(finalPrice * 100) / 100;
 
     const processingTimeMs = Date.now() - startTime;
 
     logValidation("validation_successful", { 
       normalized_code: normalizedCode.substring(0, 3) + "***",
-      discount_type,
-      discount_value: promo.discount_percent,
-      times_used: promo.times_used,
-      max_uses: promo.max_uses,
+      discount_percent: discountPercent,
+      discount_amount: roundedDiscount,
+      base_price: basePrice,
+      final_price: roundedFinalPrice,
+      promo_id: promo.id,
       processing_time_ms: processingTimeMs
     });
 
-    // Return successful validation - pure validation only, no orchestration
+    // Return complete trusted pricing object
     return new Response(JSON.stringify({ 
       valid: true,
-      discount_type,
-      discount_value: promo.discount_percent,
-      isFreeReport: discount_type === "free",
-      code: normalizedCode,
-      promo_id: promo.id
-    } as ValidatePromoResponse), {
+      promo_code_id: promo.id,
+      discount_usd: roundedDiscount,
+      trusted_base_price_usd: basePrice,
+      final_price_usd: roundedFinalPrice,
+      report_type: priceIdentifier
+    } as TrustedPricingResponse), {
       status: 200, 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
@@ -157,8 +224,12 @@ serve(async (req) => {
     
     return new Response(JSON.stringify({ 
       valid: false,
+      discount_usd: 0,
+      trusted_base_price_usd: 0,
+      final_price_usd: 0,
+      report_type: "",
       reason: "Internal validation error"
-    } as ValidatePromoResponse), {
+    } as TrustedPricingResponse), {
       status: 500, 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });

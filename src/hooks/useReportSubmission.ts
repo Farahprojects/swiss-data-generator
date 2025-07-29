@@ -4,6 +4,16 @@ import { ReportFormData } from '@/types/public-report';
 import { storeGuestReportId } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
 
+interface TrustedPricingObject {
+  valid: boolean;
+  promo_code_id?: string;
+  discount_usd: number;
+  trusted_base_price_usd: number;
+  final_price_usd: number;
+  report_type: string;
+  reason?: string;
+}
+
 export const useReportSubmission = (
   setCreatedGuestReportId?: (id: string) => void
 ) => {
@@ -35,8 +45,7 @@ export const useReportSubmission = (
 
   const submitReport = async (
     data: ReportFormData,
-    finalPrice: number,
-    promoCode?: string
+    trustedPricing: TrustedPricingObject
   ): Promise<{ success: boolean; guestReportId?: string }> => {
     setIsProcessing(true);
 
@@ -80,8 +89,7 @@ export const useReportSubmission = (
       const { data: flowResponse, error } = await supabase.functions.invoke('initiate-report-flow', {
         body: {
           reportData,
-          finalPrice,
-          promoCode: promoCode || null
+          trustedPricing
         }
       });
 
@@ -113,7 +121,7 @@ export const useReportSubmission = (
       const { data: checkoutResponse, error: checkoutError } = await supabase.functions.invoke('create-checkout', {
         body: {
           guest_report_id: guestReportId,
-          amount: finalPrice,
+          amount: trustedPricing.final_price_usd,
           email: data.email,
           description: "Astrology Report",
           successUrl: `${window.location.origin}/report?guest_id=${guestReportId}`,

@@ -282,10 +282,10 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     await onSubmit(formData);
   };
 
-  const handleSubmitWithPrice = async (price: number, promoCode?: string) => {
+  const handleSubmitWithTrustedPricing = async (trustedPricing: any) => {
     const formData = form.getValues();
     const submissionData = coachSlug ? { ...formData, coachSlug } : formData;
-    await submitReport(submissionData, price, promoCode);
+    await submitReport(submissionData, trustedPricing);
   };
 
   // Status-based rendering with single switch statement
@@ -484,7 +484,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
                 errors={errors}
                 setValue={setValue}
                 onSubmit={handleButtonClick}
-                onSubmitWithPrice={handleSubmitWithPrice}
+                onSubmitWithTrustedPricing={handleSubmitWithTrustedPricing}
                 isProcessing={isProcessing}
                 />
               </div>

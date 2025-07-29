@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ReportFormData } from '@/types/public-report';
-import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import FormStep from './FormStep';
@@ -18,8 +17,18 @@ interface PaymentStepProps {
   errors: FieldErrors<ReportFormData>;
   setValue: UseFormSetValue<ReportFormData>;
   onSubmit: () => void;
-  onSubmitWithPrice?: (price: number, promoCode?: string) => void;
+  onSubmitWithTrustedPricing?: (trustedPricing: TrustedPricingObject) => void;
   isProcessing: boolean;
+}
+
+interface TrustedPricingObject {
+  valid: boolean;
+  promo_code_id?: string;
+  discount_usd: number;
+  trusted_base_price_usd: number;
+  final_price_usd: number;
+  report_type: string;
+  reason?: string;
 }
 
 const PaymentStep = ({ 
@@ -28,15 +37,15 @@ const PaymentStep = ({
   errors, 
   setValue,
   onSubmit,
-  onSubmitWithPrice,
+  onSubmitWithTrustedPricing,
   isProcessing
 }: PaymentStepProps) => {
   const [showPromoCode, setShowPromoCode] = useState(false);
   const [hasTimedOut, setHasTimedOut] = useState(false);
   const [promoError, setPromoError] = useState<string>('');
   const [isValidatingPromo, setIsValidatingPromo] = useState(false);
+  const [trustedPricing, setTrustedPricing] = useState<TrustedPricingObject | null>(null);
   
-  const { getReportPrice, getReportTitle, isLoading: isPricingLoading, error: pricingError } = usePriceFetch();
   const { toast } = useToast();
   
   // Add timeout mechanism to prevent stuck processing state
@@ -73,12 +82,12 @@ const PaymentStep = ({
   const name = watch('name');
   const promoCode = watch('promoCode') || '';
 
-  // Get price and title using context with global fallback
-  let basePrice: number | null = null;
-  let reportTitle = 'Personal Report';
+  // Validate promo code and get trusted pricing
+  const validatePromoCode = async (promoCode: string): Promise<TrustedPricingObject> => {
+    setIsValidatingPromo(true);
+    setPromoError('');
 
-  try {
-    if (reportType || request) {
+    try {
       const formData = {
         reportType,
         essenceType,
@@ -87,58 +96,29 @@ const PaymentStep = ({
         reportSubCategory,
         request: requestField
       };
-      
-      basePrice = getReportPrice(formData);
-      reportTitle = getReportTitle(formData);
-    }
-  } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('Pricing error (silenced for clean UI):', error);
-    }
-  }
 
-  // Validate promo code and calculate final price
-  const validatePromoCode = async (promoCode: string): Promise<{ isValid: boolean; discountAmount?: number; error?: string }> => {
-    if (!promoCode.trim()) {
-      return { isValid: true };
-    }
-
-    setIsValidatingPromo(true);
-    setPromoError('');
-
-    try {
       const { data, error } = await supabase.functions.invoke('validate-promo-code', {
-        body: { promo_code: promoCode.trim() }
+        body: { 
+          promoCode: promoCode.trim(),
+          email: watch('email'),
+          reportType: formData.reportType,
+          request: formData.request
+        }
       });
 
       if (error) {
-        throw new Error(error.message || 'Failed to validate promo code');
+        console.error('❌ Promo validation error:', error);
+        throw new Error('Failed to validate promo code');
       }
 
-      if (!data?.valid) {
-        return { isValid: false, error: 'Invalid Promo Code' };
-      }
+      return data as TrustedPricingObject;
 
-      return { 
-        isValid: true, 
-        discountAmount: data?.discount_value || 0 
-      };
-    } catch (err: any) {
-      return { 
-        isValid: false, 
-        error: err.message || 'Failed to validate promo code' 
-      };
+    } catch (error) {
+      console.error('❌ Promo validation exception:', error);
+      throw new Error('Failed to validate promo code');
     } finally {
       setIsValidatingPromo(false);
     }
-  };
-
-  // Calculate final price with promo discount
-  const calculateFinalPrice = (basePrice: number, promoCode: string, discountAmount: number = 0): number => {
-    if (!promoCode.trim()) {
-      return basePrice;
-    }
-    return Math.max(0, basePrice - discountAmount);
   };
 
   const handleButtonClick = async (e: React.MouseEvent) => {
@@ -147,41 +127,36 @@ const PaymentStep = ({
     
     setHasTimedOut(false);
     setPromoError('');
+    setTrustedPricing(null);
     
     const currentPromoCode = promoCode.trim();
-    let finalPrice = basePrice || 0;
-    let validatedPromoCode: string | undefined;
+    let pricingResult: TrustedPricingObject;
 
-    // Validate promo code if provided
-    if (currentPromoCode) {
-      const validation = await validatePromoCode(currentPromoCode);
+    try {
+      // Always validate promo code (even if empty) to get trusted pricing
+      pricingResult = await validatePromoCode(currentPromoCode || '');
       
-      if (!validation.isValid) {
-        setPromoError(validation.error || 'Invalid promo code');
+      if (!pricingResult.valid) {
+        setPromoError(pricingResult.reason || 'Invalid Promo Code');
         return;
       }
 
-      // Calculate final price with discount
-      finalPrice = calculateFinalPrice(basePrice || 0, currentPromoCode, validation.discountAmount || 0);
-      validatedPromoCode = currentPromoCode;
-    }
+      setTrustedPricing(pricingResult);
 
-    // Use the new onSubmitWithPrice if available, otherwise fallback to onSubmit
-    if (onSubmitWithPrice) {
-      onSubmitWithPrice(finalPrice, validatedPromoCode);
-    } else {
-      onSubmit();
+      // Use the new onSubmitWithTrustedPricing if available, otherwise fallback to onSubmit
+      if (onSubmitWithTrustedPricing) {
+        onSubmitWithTrustedPricing(pricingResult);
+      } else {
+        onSubmit();
+      }
+
+    } catch (error) {
+      console.error('❌ Pricing validation failed:', error);
+      setPromoError('Failed to validate pricing. Please try again.');
     }
   };
 
-  const content = isPricingLoading ? (
-    <div className="max-w-4xl mx-auto flex items-center justify-center py-8">
-      <div className="flex items-center gap-2">
-        <Loader2 className="h-5 w-5 animate-spin" />
-        <span>Loading pricing information...</span>
-      </div>
-    </div>
-  ) : (
+  const content = (
     <div className="max-w-6xl mx-auto">
       <div className="flex flex-wrap lg:flex-nowrap gap-8 w-full">
         {/* Left side - Order Summary */}
@@ -193,19 +168,25 @@ const PaymentStep = ({
             <CardContent className="space-y-6">
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600 font-light">{reportTitle}</span>
-                  <span className="font-normal text-gray-900">${(basePrice || 0).toFixed(2)}</span>
+                  <span className="text-gray-600 font-light">
+                    {reportType || request || 'Personal Report'}
+                  </span>
+                  <span className="font-normal text-gray-900">
+                    ${trustedPricing?.trusted_base_price_usd?.toFixed(2) || '0.00'}
+                  </span>
                 </div>
-                {promoCode.trim() && (
+                {trustedPricing?.discount_usd > 0 && (
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-500 font-light">Promo discount</span>
-                    <span className="text-green-600 font-light">-${((basePrice || 0) - (basePrice || 0)).toFixed(2)}</span>
+                    <span className="text-green-600 font-light">
+                      -${trustedPricing.discount_usd.toFixed(2)}
+                    </span>
                   </div>
                 )}
                 <div className="border-t pt-3">
                   <div className="flex justify-between items-center font-light text-xl text-gray-900">
                     <span>Total</span>
-                    <span>${(basePrice || 0).toFixed(2)}</span>
+                    <span>${trustedPricing?.final_price_usd?.toFixed(2) || '0.00'}</span>
                   </div>
                 </div>
               </div>
@@ -238,14 +219,6 @@ const PaymentStep = ({
                     </div>
                     <span className="text-gray-600 font-light">Professional astrology insights</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
-                      <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <span className="text-gray-600 font-light">Personalized recommendations</span>
-                  </div>
                 </div>
               </div>
             </CardContent>
@@ -253,100 +226,95 @@ const PaymentStep = ({
         </div>
 
         {/* Right side - Payment Form */}
-        <div className="flex-1 min-w-[280px] flex flex-col gap-4 justify-start">
-          <Collapsible open={showPromoCode} onOpenChange={setShowPromoCode}>
-            <CollapsibleTrigger asChild>
-              <button
-                className="w-full bg-gray-100 text-gray-700 px-8 py-4 rounded-xl text-lg font-light hover:bg-gray-200 transition-all duration-300 flex items-center justify-center"
+        <div className="flex-1 min-w-[280px]">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl font-light text-gray-900 tracking-tight">Payment Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Promo Code Section */}
+              <div className="space-y-4">
+                <Collapsible open={showPromoCode} onOpenChange={setShowPromoCode}>
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full justify-between text-left font-normal"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Tag className="h-4 w-4" />
+                        Have a promo code?
+                      </span>
+                      <svg
+                        className={`h-4 w-4 transition-transform ${showPromoCode ? 'rotate-180' : ''}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="promoCode" className="text-sm font-medium text-gray-700">
+                        Promo Code
+                      </Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="promoCode"
+                          {...register('promoCode')}
+                          placeholder="Enter promo code"
+                          className="flex-1"
+                          disabled={isValidatingPromo}
+                        />
+                        {isValidatingPromo && (
+                          <div className="flex items-center justify-center w-10">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          </div>
+                        )}
+                      </div>
+                      {promoError && (
+                        <p className="text-sm text-red-600">{promoError}</p>
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+
+              {/* Submit Button */}
+              <Button
                 type="button"
-                style={{ 
-                  touchAction: 'manipulation',
-                  WebkitTapHighlightColor: 'transparent',
-                  WebkitAppearance: 'none'
-                }}
+                onClick={handleButtonClick}
+                disabled={isProcessing || isValidatingPromo}
+                className="w-full bg-gray-900 hover:bg-gray-800 text-white font-light py-3 px-6 rounded-xl"
               >
-                <Tag className="h-5 w-5 mr-3" />
-                Have a promo code?
-              </button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="mt-6">
-              <div className="space-y-6">
-                <div className="space-y-3">
-                  <div className="space-y-1">
-                    <Label htmlFor="promoCode" className="text-lg font-light text-gray-700">
-                      Promo Code
-                    </Label>
-                                    {promoError && (
-                  <p className="text-sm text-red-500 font-light">{promoError}</p>
+                {isProcessing ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Processing...
+                  </div>
+                ) : (
+                  `Get Your Report - $${trustedPricing?.final_price_usd?.toFixed(2) || '0.00'}`
                 )}
-                  </div>
-                  <div className="relative">
-                    <Input
-                      id="promoCode"
-                      {...register('promoCode', {
-                        onChange: () => {
-                                          if (promoError) {
-                  setPromoError('');
-                }
-                        }
-                      })}
-                      placeholder="Enter promo code"
-                      className="h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400"
-                      style={{ 
-                        WebkitAppearance: 'none',
-                        touchAction: 'manipulation'
-                      }}
-                    />
-                  </div>
-                  {errors.promoCode && (
-                    <p className="text-sm text-red-500 font-light">{errors.promoCode.message}</p>
-                  )}
+              </Button>
+
+              {hasTimedOut && (
+                <div className="text-center">
+                  <p className="text-sm text-amber-600">
+                    The request is taking longer than expected. You can safely try again.
+                  </p>
                 </div>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-
-          <Button
-            onClick={handleButtonClick}
-            disabled={isProcessing}
-            className="w-full h-14 text-lg font-light bg-gray-900 hover:bg-gray-800 text-white transition-colors"
-            type="button"
-          >
-            {isProcessing 
-              ? 'Processing...' 
-              : hasTimedOut
-                ? 'Try Again'
-                : 'Submit and View'}
-          </Button>
-
-          {/* Satisfaction Guarantee */}
-          <div className="bg-muted/30 rounded-lg p-6 text-center space-y-3">
-            <div className="flex items-center justify-center gap-2">
-              <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
-                <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <h3 className="font-light text-gray-900 tracking-tight">100% Satisfaction Guarantee</h3>
-            </div>
-            <p className="text-sm text-gray-600 font-light leading-relaxed">
-              You're covered by our 100% Satisfaction Guarantee. Not happy with your report? We'll refund you within 7 days — no questions asked.
-            </p>
-          </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
-      </div>
-
-      {/* Security Info - Centered below the section */}
-      <div className="text-center space-y-2 text-sm text-gray-500 font-light mt-8">
-        <p>Your payment is secure and encrypted.</p>
-        <p>Secure checkout powered by Stripe</p>
-        <p>Your report will be delivered to your email within minutes</p>
       </div>
     </div>
   );
 
   return (
-    <FormStep stepNumber={3} title="Payment" className="bg-background">
+    <FormStep stepNumber={3} title="Payment">
       {content}
     </FormStep>
   );

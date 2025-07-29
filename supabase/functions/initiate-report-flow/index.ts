@@ -49,22 +49,20 @@ interface ReportData {
   priceId?: string
 }
 
-interface ValidatedPromo {
+interface TrustedPricing {
   valid: boolean
-  discount_type?: "percentage" | "fixed" | "free"
-  discount_value?: number
-  isFreeReport?: boolean
-  code?: string
-  promo_id?: string
+  promo_code_id?: string
+  discount_usd: number
+  trusted_base_price_usd: number
+  final_price_usd: number
+  report_type: string
+  reason?: string
 }
 
 interface InitiateReportFlowRequest {
   reportData: ReportData
-  finalPrice: number
-  promoCode?: string
+  trustedPricing: TrustedPricing
 }
-
-// Removed duplicate getProductId logic - trusting frontend pricing
 
 // Enhanced logging function for Stage 2
 function logFlowEvent(event: string, details: any = {}) {
@@ -92,28 +90,109 @@ serve(async (req) => {
   const startTime = Date.now();
 
   try {
-    const { reportData, finalPrice, promoCode }: InitiateReportFlowRequest = await req.json()
-    
-    // Derive isFreeReport from finalPrice
-    const isFreeReport = finalPrice === 0;
+    const { reportData, trustedPricing }: InitiateReportFlowRequest = await req.json()
     
     logFlowEvent("flow_started", {
       email: reportData?.email,
       reportType: reportData?.reportType,
-      finalPrice,
-      isFreeReport,
-      promoCode: promoCode ? promoCode.substring(0, 3) + "***" : 'none'
+      trustedPricing: {
+        valid: trustedPricing?.valid,
+        final_price: trustedPricing?.final_price_usd,
+        base_price: trustedPricing?.trusted_base_price_usd,
+        discount: trustedPricing?.discount_usd,
+        report_type: trustedPricing?.report_type
+      }
     });
 
-    if (!reportData?.email || finalPrice === undefined) {
-      logFlowError("missing_required_data", new Error("Missing email or finalPrice"));
+    if (!reportData?.email || !trustedPricing) {
+      logFlowError("missing_required_data", new Error("Missing email or trustedPricing"));
       return new Response(JSON.stringify({ 
-        error: 'Missing required report data or finalPrice' 
+        error: 'Missing required report data or trusted pricing' 
       }), {
         status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
+
+    // Step 1: Re-validate base price from price_list
+    const priceIdentifier = trustedPricing.report_type;
+    const { data: priceData, error: priceError } = await supabaseAdmin
+      .from('price_list')
+      .select('id, unit_price_usd')
+      .eq('id', priceIdentifier)
+      .single();
+
+    if (priceError || !priceData) {
+      logFlowError("price_validation_failed", priceError, { 
+        price_identifier: priceIdentifier,
+        error_code: priceError?.code 
+      });
+      return new Response(JSON.stringify({ 
+        error: 'Price validation failed' 
+      }), {
+        status: 403, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const validatedBasePrice = Number(priceData.unit_price_usd);
+    
+    // Step 2: Re-validate promo code if present
+    let validatedDiscount = 0;
+    if (trustedPricing.promo_code_id) {
+      const { data: promoData, error: promoError } = await supabaseAdmin
+        .from('promo_codes')
+        .select('discount_percent')
+        .eq('id', trustedPricing.promo_code_id)
+        .eq('is_active', true)
+        .single();
+
+      if (promoError || !promoData) {
+        logFlowError("promo_validation_failed", promoError, { 
+          promo_code_id: trustedPricing.promo_code_id 
+        });
+        return new Response(JSON.stringify({ 
+          error: 'Promo code validation failed' 
+        }), {
+          status: 403, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      const discountPercent = promoData.discount_percent || 0;
+      validatedDiscount = (validatedBasePrice * discountPercent) / 100;
+      validatedDiscount = Math.round(validatedDiscount * 100) / 100; // Round to 2 decimal places
+    }
+
+    // Step 3: Calculate expected final price and validate against trusted pricing
+    const expectedFinalPrice = Math.max(0, validatedBasePrice - validatedDiscount);
+    const expectedFinalPriceRounded = Math.round(expectedFinalPrice * 100) / 100;
+
+    if (expectedFinalPriceRounded !== trustedPricing.final_price_usd) {
+      logFlowError("pricing_mismatch_detected", new Error("Final price mismatch"), {
+        expected: expectedFinalPriceRounded,
+        received: trustedPricing.final_price_usd,
+        base_price: validatedBasePrice,
+        discount: validatedDiscount
+      });
+      return new Response(JSON.stringify({ 
+        error: 'Pricing mismatch detected' 
+      }), {
+        status: 403, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Step 4: Determine if this is a free report
+    const isFreeReport = expectedFinalPriceRounded === 0;
+    
+    logFlowEvent("pricing_validated", {
+      base_price: validatedBasePrice,
+      discount: validatedDiscount,
+      final_price: expectedFinalPriceRounded,
+      is_free: isFreeReport,
+      promo_code_id: trustedPricing.promo_code_id
+    });
 
     // OPTIMIZATION: Single database operation with UUID as both id and stripe_session_id
     const guestReportId = crypto.randomUUID();
@@ -123,11 +202,11 @@ serve(async (req) => {
       stripe_session_id: guestReportId,
       email: reportData.email,
       report_type: reportData.reportType || 'essence_personal',
-      amount_paid: finalPrice,
+      amount_paid: expectedFinalPriceRounded,
       report_data: reportData,
       payment_status: isFreeReport ? "paid" : "pending", // Free reports are immediately paid
       purchase_type: 'report',
-      promo_code_used: promoCode || null,
+      promo_code_used: trustedPricing.promo_code_id || null,
       email_sent: false,
       coach_id: null,
       translator_log_id: null,
@@ -153,7 +232,7 @@ serve(async (req) => {
     logFlowEvent("flow_completed", { 
       guestReportId,
       isFreeReport,
-      finalPrice,
+      finalPrice: expectedFinalPriceRounded,
       processing_time_ms: processingTimeMs
     });
 
@@ -172,7 +251,7 @@ serve(async (req) => {
 
       return new Response(JSON.stringify({ 
         guestReportId,
-        finalPrice,
+        finalPrice: expectedFinalPriceRounded,
         isFreeReport: true,
         processing_time_ms: processingTimeMs
       }), {
@@ -186,7 +265,7 @@ serve(async (req) => {
       const { data: checkoutData, error: checkoutError } = await supabaseAdmin.functions.invoke('create-checkout', {
         body: {
           guest_report_id: guestReportId,
-          amount: finalPrice,
+          amount: expectedFinalPriceRounded,
           email: reportData.email,
           description: "Astrology Report",
           successUrl: `${Deno.env.get('SITE_URL') || 'https://therai.com'}/report?guest_id=${guestReportId}`,
@@ -195,7 +274,7 @@ serve(async (req) => {
       });
 
       if (checkoutError || !checkoutData?.url) {
-        logFlowError("checkout_creation_failed", checkoutError, { guestReportId, finalPrice });
+        logFlowError("checkout_creation_failed", checkoutError, { guestReportId, finalPrice: expectedFinalPriceRounded });
         return new Response(JSON.stringify({ 
           error: 'Failed to create checkout session' 
         }), {
@@ -206,7 +285,7 @@ serve(async (req) => {
 
       return new Response(JSON.stringify({ 
         guestReportId,
-        finalPrice,
+        finalPrice: expectedFinalPriceRounded,
         isFreeReport: false,
         checkoutUrl: checkoutData.url,
         processing_time_ms: processingTimeMs
@@ -216,7 +295,7 @@ serve(async (req) => {
       });
 
     } catch (checkoutErr: any) {
-      logFlowError("checkout_exception", checkoutErr, { guestReportId, finalPrice });
+      logFlowError("checkout_exception", checkoutErr, { guestReportId, finalPrice: expectedFinalPriceRounded });
       return new Response(JSON.stringify({ 
         error: 'Failed to create checkout session' 
       }), {
