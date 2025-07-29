@@ -192,8 +192,6 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
         content: userMessage
       }
     ],
-    
-    ,
     top_p: 0.95,
     frequency_penalty: 0,
     presence_penalty: 0
