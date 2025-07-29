@@ -126,6 +126,12 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }
   }, [guestReportData, guestId]);
 
+  // Debug log to confirm modal opening
+  useEffect(() => {
+    if (viewingReport && reportData) {
+      console.log("✅ Opening modal with reportData:", reportData);
+    }
+  }, [viewingReport, reportData]);
 
 
   // Form setup
@@ -263,8 +269,9 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   };
 
   // Simple modal trigger - no conditions
-  const handleViewReport = useCallback(() => {
-    setViewingReport(true);
+  const handleViewReport = useCallback((data: ReportData) => {
+    setReportData(data);          // ✅ Actually store the report
+    setViewingReport(true);       // ✅ Now this means something
   }, []);
 
 
