@@ -13,7 +13,6 @@ interface SuccessScreenProps {
   name: string;
   email: string;
   onViewReport?: (reportData: ReportData) => void;
-  onReportReady?: (callback: (reportData: ReportData) => void) => void;
   guestReportId?: string;
 }
 
@@ -32,7 +31,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   name, 
   email, 
   onViewReport, 
-  onReportReady,
   guestReportId 
 }) => {
   const firstName = name?.split(' ')[0] || 'there';
@@ -44,7 +42,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [errorState, setErrorState] = useState<ErrorState | null>(null);
 
-  // Handle report ready from parent component
+  // Simple modal trigger - no callbacks
   const handleReportReady = useCallback((reportData: ReportData) => {
     console.log('✅ handleReportReady called with:', reportData);
     logSuccessScreen('info', 'Report ready signal received, opening modal');
@@ -59,17 +57,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     }
   }, [onViewReport]);
 
-  // Register callback with parent component
-  useEffect(() => {
-    if (onReportReady) {
-      logSuccessScreen('info', 'Registering handleReportReady callback with parent');
-      onReportReady(handleReportReady);
-    } else {
-      logSuccessScreen('warn', 'onReportReady prop not provided');
-    }
-  }, [onReportReady, handleReportReady]);
-
-  // Listen for realtime messages from orchestrator
+  // Direct modal trigger when data is ready (same as ReportForm)
   useEffect(() => {
     if (!guestReportId || errorState) return;
 
