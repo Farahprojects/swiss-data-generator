@@ -123,7 +123,6 @@ async function retryWithBackoff<T>(
 // Fetch the system prompt from the reports_prompts table - now accepts reportType parameter
 async function getSystemPrompt(reportType: string, requestId: string): Promise<string> {
   const logPrefix = `[standard-report][${requestId}]`;
-  const startTime = Date.now();
   console.log(`${logPrefix} Fetching system prompt for report type: ${reportType}`);
 
   const fetchPrompt = async () => {
@@ -164,7 +163,6 @@ async function getSystemPrompt(reportType: string, requestId: string): Promise<s
 // Generate report using OpenAI API
 async function generateReport(systemPrompt: string, reportData: any, requestId: string): Promise<{ report: string; metadata: any }> {
   const logPrefix = `[standard-report][${requestId}]`;
-  const startTime = Date.now();
   console.log(`${logPrefix} Generating report with OpenAI GPT-4o`);
 
   // Enhanced logging of the incoming payload
@@ -195,8 +193,8 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
         content: userMessage
       }
     ],
-    temperature: 0.2,
-    max_tokens: 8192,
+    
+    ,
     top_p: 0.95,
     frequency_penalty: 0,
     presence_penalty: 0
@@ -255,15 +253,15 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
 
     const generatedText = data.choices[0].message.content;
     
-    // Collect metadata
+    // Collect AI metadata only
     const metadata = {
-      duration_ms: Date.now() - startTime,
+      
       token_count: data.usage?.total_tokens || 0,
       prompt_tokens: data.usage?.prompt_tokens || 0,
       completion_tokens: data.usage?.completion_tokens || 0,
       model: OPENAI_MODEL,
-      temperature: 0.2,
-      max_tokens: 8192
+      
+      
     };
     
     console.log(`${logPrefix} AI Generation Metadata:`, metadata);
@@ -290,8 +288,6 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
 serve(async (req) => {
   const requestId = crypto.randomUUID().substring(0, 8); // Short unique ID for this request
   const logPrefix = `[standard-report][${requestId}]`;
-  const startTime = Date.now();
-  const startTime = Date.now();
 
   console.log(`${logPrefix} Received ${req.method} request for ${req.url}`);
 
