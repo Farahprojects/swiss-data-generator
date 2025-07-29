@@ -171,6 +171,42 @@ serve(async (req) => {
       },
     };
 
+    // Check if report is complete and trigger modal display flow
+    const isReportComplete = (isAiReport && reportContent) || (isAstroReport && swissData);
+    
+    if (isReportComplete) {
+      console.log(`[get-guest-report] Report is complete, triggering modal display flow for: ${guestReportId}`);
+      
+      // Prepare complete report data for frontend (same format as orchestrate-report-ready)
+      const completeReportData = {
+        guest_report: guestReport,
+        report_content: reportContent,
+        swiss_data: swissData,
+        metadata: {
+          content_type: contentType,
+          has_ai_report: isAiReport,
+          has_swiss_data: isAstroReport,
+          is_ready: true
+        }
+      };
+
+      // Send realtime message to trigger modal display (same as orchestrate-report-ready)
+      console.log(`[get-guest-report] Broadcasting report data to realtime channel: guest_report:${guestReportId}`);
+      
+      const channel = supabase.channel(`guest_report:${guestReportId}`);
+      await channel.send({
+        type: 'broadcast',
+        event: 'report_ready',
+        payload: {
+          ok: true,
+          ready: true,
+          data: completeReportData
+        }
+      });
+
+      console.log(`[get-guest-report] Realtime broadcast sent successfully for completed report`);
+    }
+
     return new Response(JSON.stringify(responseData), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
