@@ -5,12 +5,10 @@ import { storeGuestReportId } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
 
 export const useReportSubmission = (
-  setCreatedGuestReportId?: (id: string) => void,
-  preCalculatedPrice?: number
+  setCreatedGuestReportId?: (id: string) => void
 ) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [reportCreated, setReportCreated] = useState(false);
-  const [inlinePromoError, setInlinePromoError] = useState<string>('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -36,19 +34,13 @@ export const useReportSubmission = (
   }, [isProcessing, toast]);
 
   const submitReport = async (
-    data: ReportFormData
+    data: ReportFormData,
+    finalPrice: number,
+    promoCode?: string
   ): Promise<{ success: boolean; guestReportId?: string }> => {
     setIsProcessing(true);
-    setInlinePromoError('');
 
     try {
-      if (preCalculatedPrice === undefined || isNaN(preCalculatedPrice)) {
-        throw new Error('❌ Missing or invalid preCalculatedPrice in useReportSubmission');
-      }
-
-      const finalPrice = preCalculatedPrice;
-      console.log('💰 Final price used:', finalPrice);
-
       const person_a = {
         name: data.name,
         birth_date: data.birthDate,
@@ -89,8 +81,7 @@ export const useReportSubmission = (
         body: {
           reportData,
           finalPrice,
-          isFreeReport: false,
-          promoCode: data.promoCode || null
+          promoCode: promoCode || null
         }
       });
 
@@ -112,10 +103,17 @@ export const useReportSubmission = (
         return { success: true, guestReportId };
       }
 
+      // For paid reports, redirect to checkout
+      if (flowResponse.checkoutUrl) {
+        window.open(flowResponse.checkoutUrl, '_self');
+        return { success: true };
+      }
+
+      // Fallback for paid reports without checkout URL
       const { data: checkoutResponse, error: checkoutError } = await supabase.functions.invoke('create-checkout', {
         body: {
           guest_report_id: guestReportId,
-          amount: flowResponse.finalPrice || finalPrice,
+          amount: finalPrice,
           email: data.email,
           description: "Astrology Report",
           successUrl: `${window.location.origin}/report?guest_id=${guestReportId}`,
@@ -146,8 +144,6 @@ export const useReportSubmission = (
     isProcessing,
     reportCreated,
     submitReport,
-    inlinePromoError,
-    clearInlinePromoError: () => setInlinePromoError(''),
     resetReportState: () => setReportCreated(false)
   };
 };

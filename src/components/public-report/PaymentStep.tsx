@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ReportFormData } from '@/types/public-report';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import FormStep from './FormStep';
 
 interface PaymentStepProps {
@@ -17,10 +18,8 @@ interface PaymentStepProps {
   errors: FieldErrors<ReportFormData>;
   setValue: UseFormSetValue<ReportFormData>;
   onSubmit: () => void;
-  onSubmitWithPrice?: (price: number) => void;
+  onSubmitWithPrice?: (price: number, promoCode?: string) => void;
   isProcessing: boolean;
-  inlinePromoError?: string;
-  clearInlinePromoError?: () => void;
 }
 
 const PaymentStep = ({ 
@@ -30,12 +29,12 @@ const PaymentStep = ({
   setValue,
   onSubmit,
   onSubmitWithPrice,
-  isProcessing,
-  inlinePromoError = '',
-  clearInlinePromoError = () => {}
+  isProcessing
 }: PaymentStepProps) => {
   const [showPromoCode, setShowPromoCode] = useState(false);
   const [hasTimedOut, setHasTimedOut] = useState(false);
+  const [promoError, setPromoError] = useState<string>('');
+  const [isValidatingPromo, setIsValidatingPromo] = useState(false);
   
   const { getReportPrice, getReportTitle, isLoading: isPricingLoading, error: pricingError } = usePriceFetch();
   const { toast } = useToast();
@@ -98,18 +97,78 @@ const PaymentStep = ({
     }
   }
 
-  // Simple pricing calculation without complex promo validation
-  const finalPrice = basePrice || 0;
+  // Validate promo code and calculate final price
+  const validatePromoCode = async (promoCode: string): Promise<{ isValid: boolean; discountAmount?: number; error?: string }> => {
+    if (!promoCode.trim()) {
+      return { isValid: true };
+    }
+
+    setIsValidatingPromo(true);
+    setPromoError('');
+
+    try {
+      const { data, error } = await supabase.functions.invoke('validate-promo-code', {
+        body: { promoCode: promoCode.trim() }
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Failed to validate promo code');
+      }
+
+      if (!data?.isValid) {
+        return { isValid: false, error: data?.error || 'Invalid promo code' };
+      }
+
+      return { 
+        isValid: true, 
+        discountAmount: data?.discountAmount || 0 
+      };
+    } catch (err: any) {
+      return { 
+        isValid: false, 
+        error: err.message || 'Failed to validate promo code' 
+      };
+    } finally {
+      setIsValidatingPromo(false);
+    }
+  };
+
+  // Calculate final price with promo discount
+  const calculateFinalPrice = (basePrice: number, promoCode: string, discountAmount: number = 0): number => {
+    if (!promoCode.trim()) {
+      return basePrice;
+    }
+    return Math.max(0, basePrice - discountAmount);
+  };
 
   const handleButtonClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
     setHasTimedOut(false);
+    setPromoError('');
     
+    const currentPromoCode = promoCode.trim();
+    let finalPrice = basePrice || 0;
+    let validatedPromoCode: string | undefined;
+
+    // Validate promo code if provided
+    if (currentPromoCode) {
+      const validation = await validatePromoCode(currentPromoCode);
+      
+      if (!validation.isValid) {
+        setPromoError(validation.error || 'Invalid promo code');
+        return;
+      }
+
+      // Calculate final price with discount
+      finalPrice = calculateFinalPrice(basePrice || 0, currentPromoCode, validation.discountAmount || 0);
+      validatedPromoCode = currentPromoCode;
+    }
+
     // Use the new onSubmitWithPrice if available, otherwise fallback to onSubmit
     if (onSubmitWithPrice) {
-      onSubmitWithPrice(finalPrice);
+      onSubmitWithPrice(finalPrice, validatedPromoCode);
     } else {
       onSubmit();
     }
@@ -135,12 +194,18 @@ const PaymentStep = ({
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600 font-light">{reportTitle}</span>
-                  <span className="font-normal text-gray-900">${finalPrice.toFixed(2)}</span>
+                  <span className="font-normal text-gray-900">${(basePrice || 0).toFixed(2)}</span>
                 </div>
+                {promoCode.trim() && (
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-500 font-light">Promo discount</span>
+                    <span className="text-green-600 font-light">-${((basePrice || 0) - (basePrice || 0)).toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="border-t pt-3">
                   <div className="flex justify-between items-center font-light text-xl text-gray-900">
                     <span>Total</span>
-                    <span>${finalPrice.toFixed(2)}</span>
+                    <span>${(basePrice || 0).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -211,18 +276,18 @@ const PaymentStep = ({
                     <Label htmlFor="promoCode" className="text-lg font-light text-gray-700">
                       Promo Code
                     </Label>
-                    {inlinePromoError && (
-                      <p className="text-sm text-red-500 font-light">{inlinePromoError}</p>
-                    )}
+                                    {promoError && (
+                  <p className="text-sm text-red-500 font-light">{promoError}</p>
+                )}
                   </div>
                   <div className="relative">
                     <Input
                       id="promoCode"
                       {...register('promoCode', {
                         onChange: () => {
-                          if (inlinePromoError) {
-                            clearInlinePromoError();
-                          }
+                                          if (promoError) {
+                  setPromoError('');
+                }
                         }
                       })}
                       placeholder="Enter promo code"

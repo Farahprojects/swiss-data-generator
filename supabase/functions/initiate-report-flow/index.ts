@@ -61,7 +61,6 @@ interface ValidatedPromo {
 interface InitiateReportFlowRequest {
   reportData: ReportData
   finalPrice: number
-  isFreeReport: boolean
   promoCode?: string
 }
 
@@ -93,7 +92,10 @@ serve(async (req) => {
   const startTime = Date.now();
 
   try {
-    const { reportData, finalPrice, isFreeReport, promoCode }: InitiateReportFlowRequest = await req.json()
+    const { reportData, finalPrice, promoCode }: InitiateReportFlowRequest = await req.json()
+    
+    // Derive isFreeReport from finalPrice
+    const isFreeReport = finalPrice === 0;
     
     logFlowEvent("flow_started", {
       email: reportData?.email,
@@ -155,7 +157,7 @@ serve(async (req) => {
       processing_time_ms: processingTimeMs
     });
 
-    // For free reports, trigger verify-guest-payment immediately to start processing
+    // Handle free reports - process immediately
     if (isFreeReport) {
       // Fire and forget - don't wait for completion
       supabaseAdmin.functions.invoke('verify-guest-payment', {
@@ -167,17 +169,61 @@ serve(async (req) => {
       }).catch(error => {
         console.log(`⚠️ Failed to trigger verify-guest-payment: ${error.message}`);
       });
+
+      return new Response(JSON.stringify({ 
+        guestReportId,
+        finalPrice,
+        isFreeReport: true,
+        processing_time_ms: processingTimeMs
+      }), {
+        status: 200, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
-    return new Response(JSON.stringify({ 
-      guestReportId,
-      finalPrice,
-      isFreeReport,
-      processing_time_ms: processingTimeMs
-    }), {
-      status: 200, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    // Handle paid reports - create checkout session
+    try {
+      const { data: checkoutData, error: checkoutError } = await supabaseAdmin.functions.invoke('create-checkout', {
+        body: {
+          guest_report_id: guestReportId,
+          amount: finalPrice,
+          email: reportData.email,
+          description: "Astrology Report",
+          successUrl: `${Deno.env.get('SITE_URL') || 'https://therai.com'}/report?guest_id=${guestReportId}`,
+          cancelUrl: `${Deno.env.get('SITE_URL') || 'https://therai.com'}/checkout/${guestReportId}?status=cancelled`
+        }
+      });
+
+      if (checkoutError || !checkoutData?.url) {
+        logFlowError("checkout_creation_failed", checkoutError, { guestReportId, finalPrice });
+        return new Response(JSON.stringify({ 
+          error: 'Failed to create checkout session' 
+        }), {
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      return new Response(JSON.stringify({ 
+        guestReportId,
+        finalPrice,
+        isFreeReport: false,
+        checkoutUrl: checkoutData.url,
+        processing_time_ms: processingTimeMs
+      }), {
+        status: 200, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+
+    } catch (checkoutErr: any) {
+      logFlowError("checkout_exception", checkoutErr, { guestReportId, finalPrice });
+      return new Response(JSON.stringify({ 
+        error: 'Failed to create checkout session' 
+      }), {
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
 
   } catch (err: any) {
     const processingTimeMs = Date.now() - startTime;

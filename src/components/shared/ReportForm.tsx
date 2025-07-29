@@ -42,7 +42,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const [viewingReport, setViewingReport] = useState(false);
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [sessionRestored, setSessionRestored] = useState(false);
-  const [calculatedPrice, setCalculatedPrice] = useState<number | undefined>(undefined);
 
   // Hooks
   const { status, error: statusError, reportData: statusReportData, setStatus, reset: resetStatus } = useReportStatus();
@@ -50,13 +49,10 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   
   const { 
     isProcessing, 
-    isPricingLoading, 
     reportCreated, 
     submitReport,
-    inlinePromoError,
-    clearInlinePromoError,
     resetReportState
-  } = useReportSubmission(setCreatedGuestReportId, calculatedPrice);
+  } = useReportSubmission(setCreatedGuestReportId);
 
   const { data: guestReportData, error: guestReportError, refetch: refetchGuestData } = useGuestReportData(guestId);
 
@@ -277,7 +273,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
   const onSubmit = async (data: ReportFormData) => {
     const submissionData = coachSlug ? { ...data, coachSlug } : data;
-    await submitReport(submissionData);
+    // This will be called by PaymentStep with the final price and promo code
+    console.log('ReportForm onSubmit called - this should be handled by PaymentStep');
   };
 
   const handleButtonClick = async () => {
@@ -285,10 +282,10 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     await onSubmit(formData);
   };
 
-  const handleSubmitWithPrice = async (price: number) => {
-    setCalculatedPrice(price);
+  const handleSubmitWithPrice = async (price: number, promoCode?: string) => {
     const formData = form.getValues();
-    await onSubmit(formData);
+    const submissionData = coachSlug ? { ...formData, coachSlug } : formData;
+    await submitReport(submissionData, price, promoCode);
   };
 
   // Status-based rendering with single switch statement
@@ -488,9 +485,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
                 setValue={setValue}
                 onSubmit={handleButtonClick}
                 onSubmitWithPrice={handleSubmitWithPrice}
-                isProcessing={isProcessing || isPricingLoading}
-                inlinePromoError={inlinePromoError}
-                clearInlinePromoError={clearInlinePromoError}
+                isProcessing={isProcessing}
                 />
               </div>
             )}
