@@ -62,6 +62,30 @@ function jsonResponse(body: unknown, init: ResponseInit = {}, requestId?: string
   });
 }
 
+// Structured logging for AI engine traceability
+async function logEngineEvent(
+  supabase: SupabaseClient,
+  event: string,
+  requestId: string,
+  data: any,
+  status: 'success' | 'error' = 'success'
+) {
+  try {
+    await supabase.from("ai_engine_logs").insert({
+      event,
+      request_id: requestId,
+      engine_used: "standard-report-two",
+      user_id: data.user_id || null,
+      report_type: data.report_type || data.reportType || null,
+      status,
+      data: data,
+      created_at: new Date().toISOString(),
+    });
+  } catch (error) {
+    // Silent failure - don't let logging break the main flow
+  }
+}
+
 async function retryWithBackoff<T>(
   fn: () => Promise<T>,
   logPrefix: string,
