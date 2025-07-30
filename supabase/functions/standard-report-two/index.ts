@@ -306,7 +306,7 @@ serve(async (req) => {
     // Log successful report generation
     const durationMs = Date.now() - startTime;
     try {
-      const insertLog = await supabase.from("report_logs").insert({
+      await supabase.from("report_logs").insert({
         api_key: reportData.api_key || null,
         user_id: reportData.user_id || null,
         report_type: reportType,
@@ -317,63 +317,11 @@ serve(async (req) => {
         client_id: reportData.client_id || null,
         engine_used: selectedEngine,
         metadata: metadata,
+        is_guest: reportData.is_guest || false,
         created_at: new Date().toISOString(),
-      }, { returning: 'representation' });
+      });
 
-      if (insertLog.error) {
-        // ✅ LOGGING: Report log insert failed
-        console.error(`[standard-report-two][${requestId}] Report log insert failed:`, insertLog.error);
-      } else {
-        // ✅ LOGGING: Report log insert successful
-        console.log(`[standard-report-two][${requestId}] Report log insert successful:`, {
-          report_type: reportType,
-          user_id: reportData.user_id,
-          report_log_id: insertLog.data?.[0]?.id
-        });
-        
-        // ✅ NEW: Update guest_reports with report_log_id and modal_ready
-        if (reportData.user_id && reportData.is_guest && insertLog.data?.[0]?.id) {
-          try {
-            const { error: guestUpdateError } = await supabase
-              .from("guest_reports")
-              .update({
-                report_log_id: insertLog.data[0].id,
-                has_report_log: true,
-                modal_ready: true,
-                updated_at: new Date().toISOString()
-              })
-              .eq("id", reportData.user_id);
-            
-            if (guestUpdateError) {
-              // ✅ LOGGING: Guest report linking failed
-              console.error(`[standard-report-two][${requestId}] Guest report linking failed:`, {
-                report_type: reportType,
-                user_id: reportData.user_id,
-                report_log_id: insertLog.data[0].id,
-                error: guestUpdateError
-              });
-              console.error(`[standard-report-two] Guest report update failed:`, guestUpdateError);
-            } else {
-              // ✅ LOGGING: Guest report linking successful
-              console.log(`[standard-report-two][${requestId}] Guest report linking successful:`, {
-                report_type: reportType,
-                user_id: reportData.user_id,
-                report_log_id: insertLog.data[0].id
-              });
-              console.log(`[standard-report-two] Guest report updated successfully: ${reportData.user_id}`);
-            }
-          } catch (guestError) {
-            // ✅ LOGGING: Guest report linking exception
-            console.error(`[standard-report-two][${requestId}] Guest report linking exception:`, {
-              report_type: reportType,
-              user_id: reportData.user_id,
-              report_log_id: insertLog.data[0].id,
-              error: guestError
-            });
-            console.error(`[standard-report-two] Guest report update exception:`, guestError);
-          }
-        }
-      }
+      console.log(`[standard-report-two][${requestId}] Report log inserted successfully for ${reportData.is_guest ? 'guest' : 'user'} report`);
     } catch (logError) {
       // ✅ LOGGING: Report log insert exception
       console.error(`[standard-report-two][${requestId}] Report log insert exception:`, {

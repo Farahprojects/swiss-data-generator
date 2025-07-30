@@ -1180,6 +1180,8 @@ export type Database = {
           error_message: string | null
           has_error: boolean
           id: string
+          is_guest: boolean | null
+          metadata: Json | null
           report_text: string | null
           report_type: string | null
           status: string | null
@@ -1195,6 +1197,8 @@ export type Database = {
           error_message?: string | null
           has_error?: boolean
           id?: string
+          is_guest?: boolean | null
+          metadata?: Json | null
           report_text?: string | null
           report_type?: string | null
           status?: string | null
@@ -1210,6 +1214,8 @@ export type Database = {
           error_message?: string | null
           has_error?: boolean
           id?: string
+          is_guest?: boolean | null
+          metadata?: Json | null
           report_text?: string | null
           report_type?: string | null
           status?: string | null
