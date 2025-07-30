@@ -1,4 +1,7 @@
 
+
+/* eslint-disable no-console */
+
 /*─────────────────────Made──────────────────────────────────────────────────────────
   standard-report.ts
   Edge Function: Generates standard reports using OpenAI's GPT-4o model
@@ -14,7 +17,7 @@ import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-
 ────────────────────────────────────────────────────────────────────────────────*/
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY_TWO") ?? "";
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") ?? "";
 
 // Production Readiness Configuration
 const MAX_API_RETRIES = parseInt(Deno.env.get("MAX_API_RETRIES") || "3");
@@ -23,36 +26,14 @@ const RETRY_BACKOFF_FACTOR = parseFloat(Deno.env.get("RETRY_BACKOFF_FACTOR") || 
 const API_TIMEOUT_MS = parseInt(Deno.env.get("API_TIMEOUT_MS") || "90000"); 
 const MAX_DB_RETRIES = parseInt(Deno.env.get("MAX_DB_RETRIES") || "2");
 
-// Enhanced debugging for initialization
-const LOG_PREFIX_INIT = "[standard-report][init]";
-console.log(`${LOG_PREFIX_INIT} Edge function initializing with config:
-- SUPABASE_URL: ${SUPABASE_URL ? "Exists (first 10 chars): " + SUPABASE_URL.substring(0, 10) + "..." : "MISSING"}
-- SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY ? "Exists (length: " + SUPABASE_SERVICE_KEY.length + ")" : "MISSING"}
-- OPENAI_API_KEY: ${OPENAI_API_KEY ? "Exists (length: " + OPENAI_API_KEY.length + ", starts with: " + OPENAI_API_KEY.substring(0, 4) + "...)" : "MISSING"}
-- MAX_API_RETRIES: ${MAX_API_RETRIES}
-- INITIAL_RETRY_DELAY_MS: ${INITIAL_RETRY_DELAY_MS}
-- RETRY_BACKOFF_FACTOR: ${RETRY_BACKOFF_FACTOR}
-- API_TIMEOUT_MS: ${API_TIMEOUT_MS}
-- MAX_DB_RETRIES: ${MAX_DB_RETRIES}`);
-
-if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-  console.error(`${LOG_PREFIX_INIT} Missing required Supabase environment variables`);
-  throw new Error("Missing required Supabase environment variables");
-}
-
-if (!OPENAI_API_KEY) {
-  console.error(`${LOG_PREFIX_INIT} Missing OpenAI API key`);
-  throw new Error("Missing OpenAI API key");
-}
+if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) throw new Error("Missing Supabase env vars");
+if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
 
 // Initialize Supabase client
 let supabase: SupabaseClient;
 try {
-  console.log(`${LOG_PREFIX_INIT} Creating Supabase client...`);
   supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-  console.log(`${LOG_PREFIX_INIT} Supabase client created successfully`);
 } catch (err) {
-  console.error(`${LOG_PREFIX_INIT} Failed to create Supabase client:`, err);
   throw err;
 }
 
@@ -71,10 +52,6 @@ const CORS_HEADERS = {
   UTILS
 ────────────────────────────────────────────────────────────────────────────────*/
 function jsonResponse(body: unknown, init: ResponseInit = {}, requestId?: string): Response {
-  const logPrefix = requestId ? `[standard-report][${requestId}]` : "[standard-report]";
-  if (init.status && init.status >= 400) {
-    console.error(`${logPrefix} Sending error response: ${init.status}`, body);
-  }
   return new Response(JSON.stringify(body), {
     ...init,
     headers: {
@@ -98,19 +75,18 @@ async function retryWithBackoff<T>(
   while (attempts < maxAttempts) {
     attempts++;
     try {
-      console.log(`${logPrefix} Attempt ${attempts}/${maxAttempts} for ${operationName}...`);
       return await fn();
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.warn(`${logPrefix} Attempt ${attempts}/${maxAttempts} for ${operationName} failed: ${errorMessage}.`);
+      // Return early on non-retryable errors
+      if ((error as any).skipRetry) {
+        throw error;
+      }
       if (attempts >= maxAttempts) {
-        console.error(`${logPrefix} All ${maxAttempts} attempts for ${operationName} failed. Last error:`, error);
         throw error; // Re-throw the last error
       }
       // Add jitter: delay +/- 20% of delay
       const jitter = delay * 0.2 * (Math.random() > 0.5 ? 1 : -1);
       const actualDelay = Math.max(0, delay + jitter); // Ensure delay is not negative
-      console.log(`${logPrefix} Retrying ${operationName} in ${actualDelay.toFixed(0)}ms...`);
       await new Promise(resolve => setTimeout(resolve, actualDelay));
       delay *= backoffFactor;
     }
@@ -122,7 +98,6 @@ async function retryWithBackoff<T>(
 // Fetch the system prompt from the reports_prompts table - now accepts reportType parameter
 async function getSystemPrompt(reportType: string, requestId: string): Promise<string> {
   const logPrefix = `[standard-report][${requestId}]`;
-  console.log(`${logPrefix} Fetching system prompt for report type: ${reportType}`);
 
   const fetchPrompt = async () => {
     const { data, error, status } = await supabase
@@ -132,7 +107,6 @@ async function getSystemPrompt(reportType: string, requestId: string): Promise<s
       .maybeSingle();
 
     if (error) {
-      console.error(`${logPrefix} Error fetching system prompt (status ${status}):`, error.message);
       // Let retry mechanism handle transient errors, throw for others or if retries exhausted
       if (status === 401 || status === 403 || status === 404) { // Non-retryable DB errors
          throw new Error(`Non-retryable DB error fetching system prompt (${status}): ${error.message}`);
@@ -141,20 +115,16 @@ async function getSystemPrompt(reportType: string, requestId: string): Promise<s
     }
 
     if (!data || !data.system_prompt) {
-      console.error(`${logPrefix} No system prompt found for '${reportType}'`);
       throw new Error(`System prompt not found for ${reportType} report`);
     }
     
-    console.log(`${logPrefix} Retrieved system prompt for '${reportType}' report type`);
     return data.system_prompt;
   };
 
   try {
     const systemPrompt = await retryWithBackoff(fetchPrompt, logPrefix, MAX_DB_RETRIES, 500, 2, "database system prompt fetch");
-    console.log(`${logPrefix} Successfully retrieved system prompt for ${reportType}`);
     return systemPrompt;
   } catch (err) {
-    console.error(`${logPrefix} Unexpected error after retries fetching system prompt:`, err);
     throw err; // Propagate the error to be handled by the main handler
   }
 }
@@ -162,23 +132,13 @@ async function getSystemPrompt(reportType: string, requestId: string): Promise<s
 // Generate report using OpenAI API
 async function generateReport(systemPrompt: string, reportData: any, requestId: string): Promise<{ report: string; metadata: any }> {
   const logPrefix = `[standard-report][${requestId}]`;
-  console.log(`${logPrefix} Generating report with OpenAI GPT-4o`);
 
-  // Enhanced logging of the incoming payload
-  console.log(`${logPrefix} Report data endpoint: ${reportData.endpoint}`);
-  console.log(`${logPrefix} Report data contains chartData: ${reportData.chartData ? "Yes" : "No"}`);
-  
   // Structure data for the prompt
   const userMessage = JSON.stringify({
     chartData: reportData.chartData,
     endpoint: reportData.endpoint,
     ...reportData // Include any other relevant data
   });
-
-  console.log(`${logPrefix} Calling OpenAI API with model: ${OPENAI_MODEL}`);
-  console.log(`${logPrefix} API Key format check: ${OPENAI_API_KEY.length > 20 ? "Valid length" : "Invalid length"}`);
-
-  console.log(`${logPrefix} Target API URL: ${OPENAI_ENDPOINT}`);
 
   const requestBody = {
     model: OPENAI_MODEL,
@@ -201,7 +161,6 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
         controller.abort();
-        console.warn(`${logPrefix} OpenAI API call timed out after ${API_TIMEOUT_MS}ms`);
     }, API_TIMEOUT_MS);
 
     let response;
@@ -226,11 +185,8 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
     
     clearTimeout(timeoutId); // Clear timeout if fetch completed
 
-    console.log(`${logPrefix} OpenAI API response status: ${response.status}`);
-
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`${logPrefix} OpenAI API error response: ${response.status} - ${errorText}`);
       const error = new Error(`OpenAI API error: ${response.status} - ${errorText}`);
       // Add status to error object for potential specific handling in retry logic if needed
       (error as any).status = response.status;
@@ -244,7 +200,6 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
     const data = await response.json();
 
     if (!data.choices || data.choices.length === 0 || !data.choices[0].message || !data.choices[0].message.content) {
-      console.error(`${logPrefix} No content returned from OpenAI API in response:`, JSON.stringify(data));
       throw new Error("Malformed response from OpenAI API: No content in message");
     }
 
@@ -258,14 +213,12 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
       model: OPENAI_MODEL
     };
     
-    console.log(`${logPrefix} AI Generation Metadata:`, metadata);
     return { report: generatedText, metadata };
   };
 
   try {
     return await retryWithBackoff(callOpenAIApi, logPrefix, MAX_API_RETRIES, INITIAL_RETRY_DELAY_MS, RETRY_BACKOFF_FACTOR, "OpenAI API call");
   } catch (err) {
-    console.error(`${logPrefix} Failed to generate report with OpenAI after retries:`, err);
     // If error has skipRetry, it means it's a non-retryable client error
     if ((err as any).skipRetry) {
         throw new Error(`Permanent OpenAI API error: ${err.message}`);
@@ -282,17 +235,13 @@ serve(async (req) => {
   const logPrefix = `[standard-report][${requestId}]`;
   const startTime = Date.now();
 
-  console.log(`${logPrefix} Received ${req.method} request for ${req.url}`);
-
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
-    console.log(`${logPrefix} Handling OPTIONS request (CORS preflight)`);
-    return new Response(null, { status: 204, headers: CORS_HEADERS });
+    return new Response("", { status: 204, headers: CORS_HEADERS });
   }
 
   // Only accept POST requests
   if (req.method !== "POST") {
-    console.warn(`${logPrefix} Method not allowed: ${req.method}`);
     return jsonResponse(
       { error: "Method not allowed", requestId },
       { status: 405 },
@@ -305,9 +254,7 @@ serve(async (req) => {
     let reportData;
     try {
       reportData = await req.json();
-      console.log(`${logPrefix} Successfully parsed request payload`);
     } catch (parseError) {
-      console.error(`${logPrefix} Invalid JSON payload:`, parseError);
       return jsonResponse(
         { error: "Invalid JSON payload", details: parseError.message, requestId },
         { status: 400 },
@@ -318,15 +265,9 @@ serve(async (req) => {
     // Extract the report type and selected engine from the payload
     const reportType = reportData.reportType || reportData.report_type || "standard";
     const selectedEngine = reportData.selectedEngine || "standard-report"; // Fall back to default if not provided
-    console.log(`${logPrefix} Processing ${reportType} report for endpoint: ${reportData?.endpoint} using engine: ${selectedEngine}`);
-    console.log(`${logPrefix} Payload structure check - keys: ${Object.keys(reportData || {}).join(', ')}`);
 
     // Validate required fields
     if (!reportData || !reportData.chartData || !reportData.endpoint) {
-      console.error(`${logPrefix} Missing required fields in request payload. Received:`, reportData);
-      
-      // Field validation failed - let orchestrator handle logging
-      
       return jsonResponse(
         { error: "Missing required fields: chartData and endpoint are required", requestId },
         { status: 400 },
@@ -355,19 +296,37 @@ serve(async (req) => {
         engine_used: selectedEngine,
         metadata: metadata,
         created_at: new Date().toISOString(),
-      });
+      }, { returning: 'representation' });
 
       if (insertLog.error) {
-        console.error(`${logPrefix} Failed to log success to report_logs:`, insertLog.error.message);
+        // Silent failure - errors will surface in Supabase logs
       } else {
-        console.log(`${logPrefix} Successfully logged report generation to report_logs.`);
+        // ✅ NEW: Update guest_reports with report_log_id and modal_ready
+        if (reportData.user_id && insertLog.data?.[0]?.id) {
+          try {
+            const { error: guestUpdateError } = await supabase
+              .from("guest_reports")
+              .update({
+                report_log_id: insertLog.data[0].id,
+                has_report_log: true,
+                modal_ready: true,
+                updated_at: new Date().toISOString()
+              })
+              .eq("id", reportData.user_id);
+            
+            if (guestUpdateError) {
+              // Silent failure - errors will surface in Supabase logs
+            }
+          } catch (guestError) {
+            // Silent failure - errors will surface in Supabase logs
+          }
+        }
       }
     } catch (logError) {
-      console.error(`${logPrefix} Exception during report_logs insert:`, logError);
+      // Silent failure - errors will surface in Supabase logs
     }
     
     // Return the generated report with proper structure
-    console.log(`${logPrefix} Successfully processed ${reportType} request in ${Date.now() - startTime}ms`);
     return jsonResponse({
       success: true,
       report: {
@@ -381,7 +340,6 @@ serve(async (req) => {
 
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
-    console.error(`${logPrefix} Error processing request: ${errorMessage}`, err instanceof Error ? err.stack : err);
     
     // Log error to report_logs
     const durationMs = Date.now() - startTime;
@@ -396,16 +354,14 @@ serve(async (req) => {
         error_message: errorMessage,
         duration_ms: durationMs,
         client_id: reportData?.client_id || null,
-        engine_used: reportData?.selectedEngine || "standard-report-one",
+        engine_used: reportData?.selectedEngine || "standard-report",
         created_at: new Date().toISOString(),
       });
       if (insertLog.error) {
-        console.error(`${logPrefix} Failed to log error to report_logs:`, insertLog.error.message);
-      } else {
-        console.log(`${logPrefix} Logged error to report_logs.`);
+        // Silent failure - errors will surface in Supabase logs
       }
     } catch (logErr) {
-      console.error(`${logPrefix} Exception during report_logs error insert:`, logErr);
+      // Silent failure - errors will surface in Supabase logs
     }
     
     return jsonResponse({
@@ -416,5 +372,3 @@ serve(async (req) => {
     }, { status: 500 }, requestId);
   }
 });
-
-console.log(`${LOG_PREFIX_INIT} Function initialized and ready to process requests`);
