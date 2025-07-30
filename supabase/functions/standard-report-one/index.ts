@@ -17,7 +17,7 @@ import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-
 ────────────────────────────────────────────────────────────────────────────────*/
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY") ?? "";
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY_TWO") ?? "";
 
 // Production Readiness Configuration
 const MAX_API_RETRIES = parseInt(Deno.env.get("MAX_API_RETRIES") || "3");
@@ -27,7 +27,7 @@ const API_TIMEOUT_MS = parseInt(Deno.env.get("API_TIMEOUT_MS") || "90000");
 const MAX_DB_RETRIES = parseInt(Deno.env.get("MAX_DB_RETRIES") || "2");
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) throw new Error("Missing Supabase env vars");
-if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
+if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY_TWO");
 
 // Initialize Supabase client
 let supabase: SupabaseClient;
