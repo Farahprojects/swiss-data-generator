@@ -39,7 +39,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   
   // State management
   const [createdGuestReportId, setCreatedGuestReportId] = useState<string | null>(null);
-  const [viewingReport, setViewingReport] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [sessionRestored, setSessionRestored] = useState(false);
   const [waitingForReport, setWaitingForReport] = useState(false);
@@ -111,27 +111,12 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }
   }, [guestReportData, guestReportError, status, setStatus]);
 
-  // Simple modal trigger when data is ready
+  // Debug log to confirm modal opening (SuccessScreen controlled)
   useEffect(() => {
-    if (guestReportData && guestId) {
-      const guestReport = guestReportData.guest_report;
-      const hasReportContent = guestReportData.report_content;
-      const hasSwissData = guestReportData.swiss_data;
-      
-      if (hasReportContent || hasSwissData) {
-        log('info', 'Report data ready, triggering modal', null, 'ReportForm');
-        setReportData(guestReportData);
-        setViewingReport(true);
-      }
-    }
-  }, [guestReportData, guestId]);
-
-  // Debug log to confirm modal opening
-  useEffect(() => {
-    if (viewingReport && reportData) {
+    if (isReportModalOpen && reportData) {
       console.log("✅ Opening modal with reportData:", reportData);
     }
-  }, [viewingReport, reportData]);
+  }, [isReportModalOpen, reportData]);
 
 
   // Form setup
@@ -221,7 +206,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     log('debug', 'Resetting component states', null, 'ReportForm');
     
     form.reset();
-    setViewingReport(false);
+    setIsReportModalOpen(false);
     setReportData(null);
     setCreatedGuestReportId(null);
     setSessionRestored(false);
@@ -268,10 +253,10 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }, 300);
   };
 
-  // Simple modal trigger - no conditions
-  const handleViewReport = useCallback((data: ReportData) => {
-    setReportData(data);          // ✅ Actually store the report
-    setViewingReport(true);       // ✅ Now this means something
+  // SuccessScreen controlled modal trigger
+  const openReportModal = useCallback((data: ReportData) => {
+    setReportData(data);          // ✅ Store the report data
+    setIsReportModalOpen(true);   // ✅ Open the modal
   }, []);
 
 
@@ -342,7 +327,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       break;
   }
 
-  if (viewingReport && reportData) {
+  if (isReportModalOpen && reportData) {
     return (
       <ReportViewer
         reportData={reportData}
@@ -353,7 +338,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
 
-  if (viewingReport && isProcessing) {
+  if (isReportModalOpen && isProcessing) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
@@ -364,7 +349,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
 
-  if (viewingReport && (guestReportError || !guestReportData)) {
+  if (isReportModalOpen && (guestReportError || !guestReportData)) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
@@ -387,7 +372,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       <SuccessScreen 
         name={userName} 
         email={userEmail} 
-        onViewReport={handleViewReport}
+        onViewReport={openReportModal}
         guestReportId={createdGuestReportId}
         onStartWaiting={() => setWaitingForReport(true)}
       />
@@ -404,7 +389,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         <SuccessScreen 
           name={name} 
           email={email} 
-          onViewReport={handleViewReport}
+          onViewReport={openReportModal}
           guestReportId={guestId || undefined}
           onStartWaiting={() => setWaitingForReport(true)}
         />
@@ -417,7 +402,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       <SuccessScreen 
         name={tokenRecovery.recoveredName} 
         email={tokenRecovery.recoveredEmail} 
-        onViewReport={handleViewReport}
+        onViewReport={openReportModal}
         guestReportId={guestId}
         onStartWaiting={() => setWaitingForReport(true)}
       />
