@@ -70,7 +70,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[orchestrate-report-ready] Processing report: ${guest_report_id}`);
+    console.log(`[orchestrate-report-ready] Processing report orchestration (called by link-report-guest): ${guest_report_id}`);
 
     // Initialize Supabase client with service role
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -112,22 +112,29 @@ serve(async (req) => {
       );
     }
 
-    // Validate report is ready for orchestration
-    const isReportReady = guestReport.swiss_boolean === true || 
-                         (guestReport.has_report && (guestReport.translator_log_id || guestReport.report_log_id));
+    // ✅ UPDATED: Validate report is ready for orchestration
+    // Now that link-report-guest is the new boss, we expect:
+    // - has_report_log = true (set by link-report-guest)
+    // - modal_ready = true (set by link-report-guest)
+    // - report_log_id exists (set by link-report-guest)
+    const isReportReady = guestReport.has_report_log === true && 
+                         guestReport.modal_ready === true && 
+                         guestReport.report_log_id;
 
     if (!isReportReady) {
       console.warn(`[orchestrate-report-ready] Report not ready for orchestration:`, {
+        has_report_log: guestReport.has_report_log,
+        modal_ready: guestReport.modal_ready,
+        report_log_id: guestReport.report_log_id,
         swiss_boolean: guestReport.swiss_boolean,
         has_report: guestReport.has_report,
-        translator_log_id: guestReport.translator_log_id,
-        report_log_id: guestReport.report_log_id
+        translator_log_id: guestReport.translator_log_id
       });
       
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: "Report not ready for orchestration",
+          error: "Report not ready for orchestration - link-report-guest must complete first",
           timestamp: new Date().toISOString()
         }),
         { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -149,7 +156,7 @@ serve(async (req) => {
       }
     };
 
-    console.log(`[orchestrate-report-ready] Report orchestration completed for: ${guest_report_id}`);
+    console.log(`[orchestrate-report-ready] Report orchestration completed (triggered by link-report-guest): ${guest_report_id}`);
     
     // Send realtime message to SuccessScreen
     console.log(`[orchestrate-report-ready] Broadcasting report data to realtime channel: guest_report:${guest_report_id}`);
