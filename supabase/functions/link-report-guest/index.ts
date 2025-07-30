@@ -62,12 +62,17 @@ function jsonResponse(body: unknown, init: ResponseInit = {}, requestId?: string
   });
 }
 
-// Call orchestrate-report-ready function
+// Call orchestrate-report-ready function with detailed timing diagnostics
 async function callOrchestrateReportReady(guestReportId: string, requestId: string): Promise<void> {
   const logPrefix = `[link-report-guest][${requestId}]`;
+  const overallStart = Date.now();
+  
+  console.log(`${logPrefix} 🚀 Starting orchestrate-report-ready call for guest_report_id: ${guestReportId}`);
   
   try {
-    console.log(`${logPrefix} Calling orchestrate-report-ready for guest_report_id: ${guestReportId}`);
+    // === METHOD 1: HTTP Fetch with detailed timing ===
+    console.log(`${logPrefix} ⏱️  Testing HTTP fetch method...`);
+    const fetchStart = Date.now();
     
     const response = await fetch(`${SUPABASE_URL}/functions/v1/orchestrate-report-ready`, {
       method: 'POST',
@@ -79,19 +84,79 @@ async function callOrchestrateReportReady(guestReportId: string, requestId: stri
         guest_report_id: guestReportId
       })
     });
+    
+    const fetchEnd = Date.now();
+    console.log(`${logPrefix} 📡 HTTP fetch completed in ${fetchEnd - fetchStart}ms`);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`${logPrefix} orchestrate-report-ready call failed:`, {
+      console.error(`${logPrefix} ❌ orchestrate-report-ready HTTP failed:`, {
         status: response.status,
-        error: errorText
+        error: errorText,
+        duration_ms: fetchEnd - fetchStart
       });
       throw new Error(`orchestrate-report-ready failed: ${response.status} - ${errorText}`);
     }
 
-    console.log(`${logPrefix} orchestrate-report-ready called successfully`);
+    const parseStart = Date.now();
+    const result = await response.text(); // Get text first to measure parsing time
+    const parseEnd = Date.now();
+    
+    const overallEnd = Date.now();
+    console.log(`${logPrefix} ✅ orchestrate-report-ready HTTP completed:`, {
+      response_length: result.length,
+      timings: {
+        fetch_ms: fetchEnd - fetchStart,
+        parse_ms: parseEnd - parseStart,
+        total_ms: overallEnd - overallStart
+      }
+    });
+
   } catch (error) {
-    console.error(`${logPrefix} Error calling orchestrate-report-ready:`, error);
+    const overallEnd = Date.now();
+    console.error(`${logPrefix} 💥 HTTP method failed:`, {
+      error: error.message,
+      duration_ms: overallEnd - overallStart
+    });
+    
+    // === METHOD 2: Fallback to Supabase client ===
+    console.log(`${logPrefix} 🔄 Trying Supabase client as fallback...`);
+    await callOrchestrateWithSupabaseClient(guestReportId, requestId);
+  }
+}
+
+// Alternative method using Supabase client for comparison
+async function callOrchestrateWithSupabaseClient(guestReportId: string, requestId: string): Promise<void> {
+  const logPrefix = `[link-report-guest][${requestId}]`;
+  const clientStart = Date.now();
+  
+  console.log(`${logPrefix} 🔧 Supabase client method starting...`);
+  
+  try {
+    const { data, error } = await supabase.functions.invoke('orchestrate-report-ready', {
+      body: { guest_report_id: guestReportId }
+    });
+    
+    const clientEnd = Date.now();
+    
+    if (error) {
+      console.error(`${logPrefix} ❌ Supabase client method failed:`, {
+        error,
+        duration_ms: clientEnd - clientStart
+      });
+      throw error;
+    }
+    
+    console.log(`${logPrefix} ✅ Supabase client method completed:`, {
+      data,
+      duration_ms: clientEnd - clientStart
+    });
+  } catch (error) {
+    const clientEnd = Date.now();
+    console.error(`${logPrefix} 💥 Supabase client method error:`, {
+      error: error.message,
+      duration_ms: clientEnd - clientStart
+    });
     throw error;
   }
 }
