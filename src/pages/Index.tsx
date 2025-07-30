@@ -15,14 +15,7 @@ import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLandingPageImages } from "@/hooks/useLandingPageImages";
 
-/**
- * Landing / Index page – 2025‑04‑26 refresh
- * ------------------------------------------------------------------
- * ✦  Animated hero with clean background
- * ✦  Lucide icons (no more random emojis)
- * ✦  Framer‑motion fade‑ups for sections
- * ✦  Updated stats & logo strip for Therai
- */
+ 
 
 interface AppFeature {
   title: string;
