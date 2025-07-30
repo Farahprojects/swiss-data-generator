@@ -302,7 +302,7 @@ serve(async (req) => {
         // Silent failure - errors will surface in Supabase logs
       } else {
         // ✅ NEW: Update guest_reports with report_log_id and modal_ready
-        if (reportData.user_id && insertLog.data?.[0]?.id) {
+        if (reportData.user_id && reportData.is_guest && insertLog.data?.[0]?.id) {
           try {
             const { error: guestUpdateError } = await supabase
               .from("guest_reports")
@@ -315,10 +315,12 @@ serve(async (req) => {
               .eq("id", reportData.user_id);
             
             if (guestUpdateError) {
-              // Silent failure - errors will surface in Supabase logs
+              console.error(`[standard-report] Guest report update failed:`, guestUpdateError);
+            } else {
+              console.log(`[standard-report] Guest report updated successfully: ${reportData.user_id}`);
             }
           } catch (guestError) {
-            // Silent failure - errors will surface in Supabase logs
+            console.error(`[standard-report] Guest report update exception:`, guestError);
           }
         }
       }
