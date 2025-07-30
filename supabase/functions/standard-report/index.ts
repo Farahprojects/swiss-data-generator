@@ -1,7 +1,3 @@
-
-
-/* eslint-disable no-console */
-
 /*─────────────────────Made──────────────────────────────────────────────────────────
   standard-report.ts
   Edge Function: Generates standard reports using OpenAI's GPT-4o model
