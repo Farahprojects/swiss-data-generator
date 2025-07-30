@@ -363,6 +363,29 @@ serve(async (req) => {
         console.error(`${logPrefix} Failed to log success to report_logs:`, insertLog.error.message);
       } else {
         console.log(`${logPrefix} Successfully logged report generation to report_logs.`);
+        
+        // ✅ NEW: Update guest_reports with report_log_id and modal_ready
+        if (reportData.user_id) {
+          try {
+            const { error: guestUpdateError } = await supabase
+              .from("guest_reports")
+              .update({
+                report_log_id: insertLog.data[0].id,
+                has_report_log: true,
+                modal_ready: true,
+                updated_at: new Date().toISOString()
+              })
+              .eq("id", reportData.user_id);
+            
+            if (guestUpdateError) {
+              console.error(`${logPrefix} Failed to update guest_reports:`, guestUpdateError);
+            } else {
+              console.log(`${logPrefix} Successfully linked report_logs to guest_reports`);
+            }
+          } catch (guestError) {
+            console.error(`${logPrefix} Exception updating guest_reports:`, guestError);
+          }
+        }
       }
     } catch (logError) {
       console.error(`${logPrefix} Exception during report_logs insert:`, logError);

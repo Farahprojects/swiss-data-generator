@@ -105,7 +105,7 @@ async function validateRequest(
   return { ok: true };
 }
 
-/*────────────────── DB HELPERS: engine + logging ───────────────────────────*/
+/*────────────────── DB HELPERS: engine selection ───────────────────────────*/
 async function getNextEngine(supabase: SupabaseClient) {
   const { data: last, error } = await supabase
     .from("report_logs")
@@ -125,51 +125,6 @@ async function getNextEngine(supabase: SupabaseClient) {
   console.log("[orchestrator] 🎯 Selected engine:", nextEngine);
   
   return nextEngine;
-}
-
-async function logFailedAttempt(
-  supabase: SupabaseClient,
-  payload: ReportPayload,
-  engine: string,
-  errorMessage: string,
-  durationMs?: number,
-) {
-  // Store the user_id (guest report ID or auth user ID) as string in report_logs
-  const user_id = payload.user_id;
-
-  const logData = {
-    api_key: payload.apiKey ?? null,
-    user_id: user_id, // Now expects TEXT type
-    report_type: payload.report_type,
-    endpoint: payload.endpoint,
-    engine_used: engine,
-    status: "failed",
-    error_message: errorMessage,
-    duration_ms: durationMs ?? null,
-  };
-  
-  console.log("[orchestrator] 📝 ATTEMPTING TO LOG FAILED ATTEMPT:", {
-    user_id: logData.user_id,
-    report_type: logData.report_type,
-    engine_used: logData.engine_used,
-    status: logData.status,
-    error_message: logData.error_message,
-    duration_ms: logData.duration_ms
-  });
-
-  try {
-    // Remove .select() and only check for an error
-    const { error } = await supabase.from("report_logs").insert(logData);
-    
-    if (error) {
-      console.error("[orchestrator] ❌ FAILED ATTEMPT LOG INSERT ERROR:", error);
-      throw error;
-    }
-    
-    console.log("[orchestrator] ✅ SUCCESSFULLY LOGGED FAILED ATTEMPT.");
-  } catch (error) {
-    console.error("[orchestrator] ❌ Failed to log failed attempt:", error);
-  }
 }
 
 /*───────────────── MAIN EXPORT: processReportRequest ───────────────────────*/
@@ -194,30 +149,9 @@ export const processReportRequest = async (
     is_guest: payload.is_guest,
   });
 
-  // Log orchestrator_start timing 
-  try {
-    await supabase.from('performance_timings').insert({
-      request_id: requestId,
-      stage: 'orchestrator_start',
-      guest_report_id: payload.user_id,
-      start_time: new Date(start).toISOString(),
-      end_time: new Date(start).toISOString(),
-      duration_ms: 0,
-      metadata: {
-        function: 'reportOrchestrator',
-        endpoint: payload.endpoint,
-        report_type: payload.report_type,
-        source: 'translator_edge'
-      }
-    });
-  } catch (e) {
-    console.error("[orchestrator] Failed to log orchestrator_start timing:", e);
-  }
-
   const v = await validateRequest(supabase, payload);
   if (!v.ok) {
     console.warn(`[orchestrator] 🔴 Validation failed: ${v.reason}`);
-    await logFailedAttempt(supabase, payload, "validator", v.reason, Date.now() - start);
     return { success: false, errorMessage: v.reason };
   }
 
@@ -239,7 +173,6 @@ export const processReportRequest = async (
     if (!response.ok) {
       const errText = await response.text();
       console.error("[orchestrator] ❌ Edge function failed:", errText);
-      await logFailedAttempt(supabase, payload, engine, errText, Date.now() - start);
       return { success: false, errorMessage: errText };
     }
 
@@ -248,57 +181,10 @@ export const processReportRequest = async (
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("[orchestrator] ❌ Exception during edge function call:", msg);
-    await logFailedAttempt(supabase, payload, engine, msg, Date.now() - start);
     return { success: false, errorMessage: msg };
   }
 
-  // Link the report_logs row to guest_reports table
-  try {
-    // Find the report_logs row that the AI engine just created
-    const { data: reportLog, error: reportLogError } = await supabase
-      .from("report_logs")
-      .select("id")
-      .eq("user_id", payload.user_id)
-      .eq("status", "success")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
-    
-    if (reportLogError) {
-      console.error("[orchestrator] ❌ Failed to find report_logs row:", reportLogError);
-    } else if (reportLog) {
-      // Update guest_reports with the report_log_id and set has_report_log to true
-      const { error: guestUpdateError } = await supabase
-        .from("guest_reports")
-        .update({
-          report_log_id: reportLog.id,
-          has_report_log: true,
-          modal_ready: true, // ✅ Set the modal ready here
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", payload.user_id);
-      
-      if (guestUpdateError) {
-        console.error("[orchestrator] ❌ Failed to update guest_reports:", guestUpdateError);
-      } else {
-        console.log("[orchestrator] ✅ Successfully linked report_logs to guest_reports");
-      }
-    } else {
-      console.error("[orchestrator] ❌ No report_logs row found for user_id:", payload.user_id);
-    }
-  } catch (error) {
-    console.error("[orchestrator] ❌ Exception linking report_logs to guest_reports:", error);
-  }
-
-  // Log success to console
-  console.log("[orchestrator] 📝 SUCCESS:", {
-    user_id: payload.user_id,
-    report_type: payload.report_type,
-    engine_used: engine,
-    status: "success",
-    duration_ms: Date.now() - start,
-    report_text_length: reportContent?.length || 0
-  });
+  console.log("[orchestrator] ✅ Report generation completed successfully");
 
   const finalResult = {
     success: true,
