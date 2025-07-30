@@ -322,6 +322,52 @@ serve(async (req) => {
       });
 
       console.log(`[standard-report-one][${requestId}] Report log inserted successfully for ${reportData.is_guest ? 'guest' : 'user'} report`);
+      
+      // ✅ NEW: Call link-report-guest function for guest reports (non-blocking)
+      if (reportData.user_id && reportData.is_guest) {
+        try {
+          // Get the report_log_id from the insert result
+          const { data: insertData } = await supabase
+            .from("report_logs")
+            .select("id")
+            .eq("user_id", reportData.user_id)
+            .eq("report_type", reportType)
+            .eq("status", "success")
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .single();
+          
+          if (insertData?.id) {
+            console.log(`[standard-report-one][${requestId}] Calling link-report-guest for guest report:`, {
+              guest_report_id: reportData.user_id,
+              report_log_id: insertData.id
+            });
+            
+            // Use EdgeRuntime.waitUntil for non-blocking execution
+            EdgeRuntime.waitUntil(
+              fetch(`${SUPABASE_URL}/functions/v1/link-report-guest`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+                },
+                body: JSON.stringify({
+                  guest_report_id: reportData.user_id,
+                  report_log_id: insertData.id
+                })
+              }).catch(error => {
+                console.error(`[standard-report-one][${requestId}] link-report-guest call failed:`, error);
+              })
+            );
+            
+            console.log(`[standard-report-one][${requestId}] link-report-guest called asynchronously`);
+          } else {
+            console.error(`[standard-report-one][${requestId}] Could not find report_log_id for guest report`);
+          }
+        } catch (guestError) {
+          console.error(`[standard-report-one][${requestId}] Error calling link-report-guest:`, guestError);
+        }
+      }
     } catch (logError) {
       // ✅ LOGGING: Report log insert exception
       console.error(`[standard-report-one][${requestId}] Report log insert exception:`, {
