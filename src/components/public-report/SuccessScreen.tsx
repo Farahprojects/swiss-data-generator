@@ -39,11 +39,11 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   const isMobile = useIsMobile();
 
   // Simple states
-  const [countdownTime, setCountdownTime] = useState(24);
   const [reportReady, setReportReady] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [errorState, setErrorState] = useState<ErrorState | null>(null);
   const [waitForReport, setWaitForReport] = useState(false);
+  const [pollingActive, setPollingActive] = useState(false);
 
   // Start waiting for report when component mounts
   useEffect(() => {
@@ -51,6 +51,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
       logSuccessScreen('info', 'Starting to wait for report');
       onStartWaiting();
       setWaitForReport(true);
+      setPollingActive(true);
     }
   }, [onStartWaiting]);
 
@@ -59,7 +60,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     console.log('✅ handleReportReady called with:', reportData);
     logSuccessScreen('info', 'Report ready signal received, opening modal');
     setReportReady(true);
-    setCountdownTime(0);
+    setPollingActive(false); // Stop polling when report is ready
     
     if (onViewReport) {
       logSuccessScreen('info', 'Calling onViewReport with report data');
@@ -84,6 +85,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
         if (payload?.payload?.data) {
           logSuccessScreen('info', 'Orchestrator sent report data, triggering modal');
           setWaitForReport(false); // Clear the flag to prevent duplicate listeners
+          setPollingActive(false); // Stop polling
           handleReportReady(payload.payload.data);
         } else {
           console.warn('⚠️ Broadcast payload missing nested data field:', payload);
@@ -99,6 +101,39 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     };
   }, [waitForReport, guestReportId, handleReportReady]);
 
+  // Database polling for modal_ready flag - immediate report display
+  useEffect(() => {
+    if (!pollingActive || !guestReportId || reportReady) return;
+
+    logSuccessScreen('info', 'Starting database polling for modal_ready flag');
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const { data, error } = await supabase
+          .from('guest_reports')
+          .select('modal_ready, report_data')
+          .eq('id', guestReportId)
+          .single();
+
+        if (error) {
+          console.error('❌ Error polling modal_ready:', error);
+          return;
+        }
+
+        if (data?.modal_ready && data?.report_data) {
+          logSuccessScreen('info', 'modal_ready detected! Showing report immediately');
+          setPollingActive(false);
+          handleReportReady(data.report_data as unknown as ReportData);
+        }
+      } catch (err) {
+        console.error('❌ Polling error:', err);
+      }
+    }, 1500); // Poll every 1.5 seconds
+
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, [pollingActive, guestReportId, reportReady, handleReportReady]);
 
   // Simple error logging for new errors detected by edge function
   const handleTriggerErrorLogging = useCallback(async (guestReportId: string, email: string) => {
@@ -182,33 +217,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     checkReportStatus();
   }, [guestReportId, handleReportReady]);
 
-  // Simple visual countdown timer with timeout fallback
-  useEffect(() => {
-    if (reportReady || checkingStatus || errorState) return;
-
-    const timer = setInterval(() => {
-      setCountdownTime((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    // Fallback timeout after 24 seconds
-    const fallbackTimeout = setTimeout(() => {
-      if (!reportReady) {
-        console.warn('⏱️ Timeout reached. Report modal never appeared.');
-        // For now just log - could add fallback fetch logic here
-      }
-    }, 24000);
-
-    return () => {
-      clearInterval(timer);
-      clearTimeout(fallbackTimeout);
-    };
-  }, [reportReady, checkingStatus, errorState]);
+  // No countdown needed - using direct database polling
 
   // Show error state if detected by the edge function
   if (errorState) {
@@ -248,7 +257,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
                     </>
                   ) : (
                     <>
-                      <div className="text-3xl font-light text-gray-900 mb-2">{countdownTime}s</div>
+                      <div className="text-3xl font-light text-gray-900 mb-2">⏳</div>
                       <p className="text-sm text-gray-600">Generating your report...</p>
                     </>
                   )}
