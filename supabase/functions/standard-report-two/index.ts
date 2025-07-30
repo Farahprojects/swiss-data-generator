@@ -62,29 +62,7 @@ function jsonResponse(body: unknown, init: ResponseInit = {}, requestId?: string
   });
 }
 
-// Structured logging for AI engine traceability
-async function logEngineEvent(
-  supabase: SupabaseClient,
-  event: string,
-  requestId: string,
-  data: any,
-  status: 'success' | 'error' = 'success'
-) {
-  try {
-    await supabase.from("ai_engine_logs").insert({
-      event,
-      request_id: requestId,
-      engine_used: "standard-report-two",
-      user_id: data.user_id || null,
-      report_type: data.report_type || data.reportType || null,
-      status,
-      data: data,
-      created_at: new Date().toISOString(),
-    });
-  } catch (error) {
-    // Silent failure - don't let logging break the main flow
-  }
-}
+
 
 async function retryWithBackoff<T>(
   fn: () => Promise<T>,
@@ -290,8 +268,17 @@ serve(async (req) => {
     const reportType = reportData.reportType || reportData.report_type || "standard";
     const selectedEngine = reportData.selectedEngine || "standard-report"; // Fall back to default if not provided
 
+    // ✅ LOGGING: Initial request received
+    console.log(`[standard-report-two][${requestId}] Request received:`, {
+      report_type: reportType,
+      user_id: reportData.user_id,
+      endpoint: reportData.endpoint,
+      is_guest: reportData.is_guest
+    });
+
     // Validate required fields
     if (!reportData || !reportData.chartData || !reportData.endpoint) {
+      console.error(`[standard-report-two][${requestId}] Validation failed: Missing required fields`);
       return jsonResponse(
         { error: "Missing required fields: chartData and endpoint are required", requestId },
         { status: 400 },
@@ -301,9 +288,20 @@ serve(async (req) => {
 
     // Fetch the system prompt using the dynamic report type
     const systemPrompt = await getSystemPrompt(reportType, requestId);
+    
+    // ✅ LOGGING: System prompt fetched successfully
+    console.log(`[standard-report-two][${requestId}] System prompt fetched for report type: ${reportType}`);
 
     // Generate the report
     const { report, metadata } = await generateReport(systemPrompt, reportData, requestId);
+    
+    // ✅ LOGGING: OpenAI API call completed
+    console.log(`[standard-report-two][${requestId}] OpenAI API completed:`, {
+      report_type: reportType,
+      user_id: reportData.user_id,
+      metadata: metadata,
+      duration_ms: Date.now() - startTime
+    });
     
     // Log successful report generation
     const durationMs = Date.now() - startTime;
@@ -323,8 +321,16 @@ serve(async (req) => {
       }, { returning: 'representation' });
 
       if (insertLog.error) {
-        // Silent failure - errors will surface in Supabase logs
+        // ✅ LOGGING: Report log insert failed
+        console.error(`[standard-report-two][${requestId}] Report log insert failed:`, insertLog.error);
       } else {
+        // ✅ LOGGING: Report log insert successful
+        console.log(`[standard-report-two][${requestId}] Report log insert successful:`, {
+          report_type: reportType,
+          user_id: reportData.user_id,
+          report_log_id: insertLog.data?.[0]?.id
+        });
+        
         // ✅ NEW: Update guest_reports with report_log_id and modal_ready
         if (reportData.user_id && reportData.is_guest && insertLog.data?.[0]?.id) {
           try {
@@ -339,17 +345,42 @@ serve(async (req) => {
               .eq("id", reportData.user_id);
             
             if (guestUpdateError) {
+              // ✅ LOGGING: Guest report linking failed
+              console.error(`[standard-report-two][${requestId}] Guest report linking failed:`, {
+                report_type: reportType,
+                user_id: reportData.user_id,
+                report_log_id: insertLog.data[0].id,
+                error: guestUpdateError
+              });
               console.error(`[standard-report-two] Guest report update failed:`, guestUpdateError);
             } else {
+              // ✅ LOGGING: Guest report linking successful
+              console.log(`[standard-report-two][${requestId}] Guest report linking successful:`, {
+                report_type: reportType,
+                user_id: reportData.user_id,
+                report_log_id: insertLog.data[0].id
+              });
               console.log(`[standard-report-two] Guest report updated successfully: ${reportData.user_id}`);
             }
           } catch (guestError) {
+            // ✅ LOGGING: Guest report linking exception
+            console.error(`[standard-report-two][${requestId}] Guest report linking exception:`, {
+              report_type: reportType,
+              user_id: reportData.user_id,
+              report_log_id: insertLog.data[0].id,
+              error: guestError
+            });
             console.error(`[standard-report-two] Guest report update exception:`, guestError);
           }
         }
       }
     } catch (logError) {
-      // Silent failure - errors will surface in Supabase logs
+      // ✅ LOGGING: Report log insert exception
+      console.error(`[standard-report-two][${requestId}] Report log insert exception:`, {
+        report_type: reportType,
+        user_id: reportData.user_id,
+        error: logError
+      });
     }
     
     // Return the generated report with proper structure
@@ -366,6 +397,14 @@ serve(async (req) => {
 
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
+    
+    // ✅ LOGGING: Main handler error
+    console.error(`[standard-report-two][${requestId}] Main handler error:`, {
+      report_type: reportData?.reportType || reportData?.report_type,
+      user_id: reportData?.user_id,
+      error: errorMessage,
+      duration_ms: Date.now() - startTime
+    });
     
     // Log error to report_logs
     const durationMs = Date.now() - startTime;
@@ -384,10 +423,20 @@ serve(async (req) => {
         created_at: new Date().toISOString(),
       });
       if (insertLog.error) {
-        // Silent failure - errors will surface in Supabase logs
+        // ✅ LOGGING: Error report log insert failed
+        console.error(`[standard-report-two][${requestId}] Error report log insert failed:`, {
+          report_type: reportData?.reportType || reportData?.report_type,
+          user_id: reportData?.user_id,
+          error: insertLog.error
+        });
       }
     } catch (logErr) {
-      // Silent failure - errors will surface in Supabase logs
+      // ✅ LOGGING: Error report log insert exception
+      console.error(`[standard-report-two][${requestId}] Error report log insert exception:`, {
+        report_type: reportData?.reportType || reportData?.report_type,
+        user_id: reportData?.user_id,
+        error: logErr
+      });
     }
     
     return jsonResponse({
