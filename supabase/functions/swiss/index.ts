@@ -281,14 +281,14 @@ serve(async (req) => {
   // Use the new translator-edge function instead of the old translate function
   const { status, text } = await translateViaEdge(mergedPayload);
 
-  // Log ALL Swiss API requests to swissdebuglogs (simplified logic)
-  await logSwissDebug({
+  // Log ALL Swiss API requests to swissdebuglogs (fire-and-forget)
+  logSwissDebug({
     apiKey,
     userId: row.user_id,
     balance,
     requestType: mergedPayload.request || "unknown",
     payload: mergedPayload
-  }, status, text);
+  }, status, text).catch(err => console.error("[swiss] Logging failed:", err));
 
   return new Response(text, { status, headers: corsHeaders });
 });

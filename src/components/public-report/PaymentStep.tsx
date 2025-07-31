@@ -149,13 +149,14 @@ const PaymentStep = ({
         };
       }
 
-      // Validate promo code with edge function (only for promo validation, not price lookup)
+      // Validate promo code with edge function (pass cached base price)
       const { data, error } = await supabase.functions.invoke('validate-promo-code', {
         body: { 
           promoCode: promoCode.trim(),
           email: watch('email'),
           reportType: priceIdentifier,
-          request: requestField
+          request: requestField,
+          basePrice: basePrice // Pass cached price to avoid DB query
         }
       });
 
