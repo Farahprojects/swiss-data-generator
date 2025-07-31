@@ -38,7 +38,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
   // Simple states
   const [countdownTime, setCountdownTime] = useState(24);
-  const [reportReady, setReportReady] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [errorState, setErrorState] = useState<ErrorState | null>(null);
   const [waitForReport, setWaitForReport] = useState(false);
@@ -54,15 +53,9 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
   // Single call opens modal
   const handleReportReady = useCallback((reportData: ReportData) => {
-    console.log(`🎯 SuccessScreen: handleReportReady called at ${new Date().toISOString()} with:`, reportData);
     logSuccessScreen('info', 'Report ready signal received, opening modal');
-    setReportReady(true);
     setCountdownTime(0);
-    
-    console.log(`🚀 SuccessScreen: Calling open(reportData) to trigger modal at ${new Date().toISOString()}`);
-    console.log(`📦 SuccessScreen: reportData being passed:`, reportData);
     open(reportData); // <- single call opens modal
-    console.log(`✅ SuccessScreen: open(reportData) call completed at ${new Date().toISOString()}`);
   }, [open]);
 
   // Conditional realtime listener - only listens when waitForReport is true
@@ -70,16 +63,13 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     if (!waitForReport || !guestReportId) return;
 
     logSuccessScreen('info', 'Setting up conditional realtime listener for report ready', { guestReportId });
-    console.log(`📡 SuccessScreen: Setting up realtime listener for guest_report:${guestReportId} at ${new Date().toISOString()}`);
     
     const channel = supabase
       .channel(`guest_report:${guestReportId}`)
       .on('broadcast', { event: 'report_ready' }, (payload) => {
-        console.log(`🔥 SuccessScreen: Received report_ready broadcast at ${new Date().toISOString()}:`, payload);
         logSuccessScreen('debug', 'Realtime message received from orchestrator', { payload });
         
         if (payload?.payload?.data) {
-          console.log(`✅ SuccessScreen: Orchestrator sent report data, triggering modal at ${new Date().toISOString()}`);
           logSuccessScreen('info', 'Orchestrator sent report data, triggering modal');
           setWaitForReport(false); // Clear the flag to prevent duplicate listeners
           handleReportReady(payload.payload.data);
@@ -88,12 +78,10 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
         }
       })
       .subscribe((status) => {
-        console.log(`📡 SuccessScreen: Realtime subscription status: ${status} at ${new Date().toISOString()}`);
         logSuccessScreen('debug', 'Realtime subscription status', { status });
       });
 
     return () => {
-      console.log(`🧹 SuccessScreen: Cleaning up realtime subscription at ${new Date().toISOString()}`);
       logSuccessScreen('debug', 'Cleaning up conditional realtime subscription');
       supabase.removeChannel(channel);
     };
@@ -184,7 +172,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
   // Simple visual countdown timer with timeout fallback
   useEffect(() => {
-    if (reportReady || checkingStatus || errorState) return;
+    if (checkingStatus || errorState) return;
 
     const timer = setInterval(() => {
       setCountdownTime((prev) => {
@@ -198,17 +186,15 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
     // Fallback timeout after 24 seconds
     const fallbackTimeout = setTimeout(() => {
-      if (!reportReady) {
-        console.warn('⏱️ Timeout reached. Report modal never appeared.');
-        // For now just log - could add fallback fetch logic here
-      }
+      console.warn('⏱️ Timeout reached. Report modal never appeared.');
+      // For now just log - could add fallback fetch logic here
     }, 24000);
 
     return () => {
       clearInterval(timer);
       clearTimeout(fallbackTimeout);
     };
-  }, [reportReady, checkingStatus, errorState]);
+  }, [checkingStatus, errorState]);
 
   // Show error state if detected by the edge function
   if (errorState) {
@@ -226,7 +212,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
               <div className="w-full max-w-4xl">
         <Card className="border-2 border-gray-200 shadow-lg">
           <CardContent className="p-8 text-center space-y-6">
-            {reportReady ? (
+            {countdownTime === 0 ? (
               <>
                 <div className="flex items-center justify-center gap-4 py-4">
                   <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">

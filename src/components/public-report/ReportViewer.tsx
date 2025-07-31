@@ -191,7 +191,7 @@ export const ReportViewer = ({
   const handleCloseSession = async () => {
     if (isTransitioning) return;
     
-    console.log('🎭 Starting elegant session close transition...');
+
     setIsTransitioning(true);
     
     try {
@@ -457,7 +457,6 @@ export const ReportViewer = ({
               reportData={reportData}
               activeView={activeView}
               setActiveView={setActiveView}
-              isMobile={false}
             />
           </div>
         </ScrollArea>
