@@ -286,73 +286,6 @@ async function handleReportGenerationParallel(params:{requestData:any;swissApiRe
   }
 }
 
-/*──────────────── Astro data only handler ───────────────────────────────*/
-async function handleAstroDataOnly(params:{requestData:any;swissApiResponse:any;requestId?:string}){
-  const { requestData, swissApiResponse, requestId } = params;
-  const tag = requestId ? `[astroData][${requestId}]` : "[astroData]";
-  console.log(`${tag} Processing Astro data only request`);
-  
-  try {
-    // Parse Swiss data
-    let swissData: any;
-    try{ 
-      swissData = typeof swissApiResponse==="string"?JSON.parse(swissApiResponse):swissApiResponse; 
-    } catch(e) { 
-      console.error(`${tag} Swiss data parse failed:`, e); 
-      return; 
-    }
-
-    // Update guest_reports with swiss_data and trigger modal
-    if (requestData.user_id) {
-      console.log(`${tag} Updating guest_reports for Astro data only`);
-      
-      const { error: updateError } = await sb
-        .from("guest_reports")
-        .update({
-          swiss_data: swissData,
-          modal_ready: true,
-          has_report_log: false, // No report log for Astro data only
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", requestData.user_id);
-
-      if (updateError) {
-        console.error(`${tag} Failed to update guest_reports:`, updateError);
-        return;
-      }
-
-      console.log(`${tag} Guest report updated successfully, triggering modal`);
-      
-      // Call orchestrate-report-ready to trigger modal
-      const orchestratorUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/orchestrate-report-ready`;
-      const orchestratorPayload = {
-        guest_report_id: requestData.user_id
-      };
-      
-      const orchestratorPromise = fetch(orchestratorUrl, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
-        },
-        body: JSON.stringify(orchestratorPayload),
-      });
-
-      console.log(`${tag} Modal trigger initiated for Astro data only`);
-      
-      // Use EdgeRuntime.waitUntil to ensure the modal trigger completes
-      if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
-        EdgeRuntime.waitUntil(orchestratorPromise.catch(e => console.error(`${tag} Modal trigger failed:`, e)));
-      } else {
-        orchestratorPromise.catch(e => console.error(`${tag} Modal trigger failed:`, e));
-      }
-    }
-    
-  } catch(e) { 
-    console.error(`${tag} Astro data only processing error:`, e); 
-  }
-}
-
 /*──────────────── performance timing helper -------------------------------*/
 async function logPerformanceTiming(
   requestId: string,
@@ -618,18 +551,6 @@ serve(async (req)=>{
           swissApiStatus:swiss.status,
           requestId:reqId
         }).catch(e => console.error(`[translator-edge-${reqId}] Report generation failed:`, e))
-      );
-    }
-    
-    // 2. Handle Astro data only requests (request without reportType)
-    if(body.request && !body.reportType && swiss.ok && swiss.status === 200){
-      console.log(`[translator-edge-${reqId}] Starting Astro data only modal trigger`);
-      processingPromises.push(
-        handleAstroDataOnly({
-          requestData: body,
-          swissApiResponse: swissData,
-          requestId: reqId
-        }).catch(e => console.error(`[translator-edge-${reqId}] Astro data modal trigger failed:`, e))
       );
     }
     
