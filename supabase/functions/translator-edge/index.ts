@@ -245,13 +245,9 @@ async function handleReportGenerationParallel(params:{requestData:any;swissApiRe
   console.log(`${tag} Starting report generation immediately with Swiss data`);
   
   try{
-    const { processReportRequest } = await import("../_shared/reportOrchestrator.ts");
-    
-    // Log the exact handoff timing
-    console.log(`${tag} waitUntil handoff to orchestrator registered at: ${new Date().toISOString()}`);
-    
-    // Fire off report generation - don't await it
-    const reportPromise = processReportRequest({
+    // Call the new report-orchestrator edge function
+    const orchestratorUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/report-orchestrator`;
+    const orchestratorPayload = {
       endpoint: requestData.request,
       report_type: requestData.reportType,
       user_id: requestData.user_id,
@@ -259,18 +255,30 @@ async function handleReportGenerationParallel(params:{requestData:any;swissApiRe
       is_guest: !!requestData.is_guest,
       chartData: { ...swissData, person_a_name: requestData.person_a?.name, person_b_name: requestData.person_b?.name },
       ...requestData
+    };
+    
+    console.log(`${tag} Calling report-orchestrator edge function`);
+    
+    // Fire off report generation - don't await it
+    const orchestratorPromise = fetch(orchestratorUrl, {
+      method: "POST",
+      headers: { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
+      },
+      body: JSON.stringify(orchestratorPayload),
     });
 
-    console.log(`${tag} Report generation initiated in parallel`);
+    console.log(`${tag} Report generation initiated in parallel via edge function`);
     
     // Use EdgeRuntime.waitUntil to ensure the report generation completes even if the main response finishes
     if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
       console.log(`${tag} EdgeRuntime.waitUntil is available - using it for async processing`);
-      EdgeRuntime.waitUntil(reportPromise.catch(e => console.error(`${tag} Report generation failed:`, e)));
+      EdgeRuntime.waitUntil(orchestratorPromise.catch(e => console.error(`${tag} Report generation failed:`, e)));
     } else {
       console.warn(`${tag} EdgeRuntime.waitUntil NOT available - using fallback fire-and-forget`);
       // Fallback: fire and forget
-      reportPromise.catch(e => console.error(`${tag} Report generation failed:`, e));
+      orchestratorPromise.catch(e => console.error(`${tag} Report generation failed:`, e));
     }
     
   } catch(e) { 
