@@ -1,21 +1,17 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { log } from '@/utils/logUtils';
+import React, { createContext, useContext, ReactNode } from 'react';
+import { pricingService, usePricing as usePricingService } from '@/services/pricing';
 
-interface PriceData {
-  id: string;
-  unit_price_usd: number;
-  name: string;
-  description: string;
-  report_type?: string;
-}
+// Re-export types from the service
+export type { PriceData, TrustedPricingObject } from '@/services/pricing';
 
 interface PricingContextType {
-  prices: PriceData[];
+  prices: any[];
   isLoading: boolean;
   error: string | null;
-  getPriceById: (id: string) => PriceData | null;
-  getPriceByReportType: (reportType: string) => PriceData | null;
+  getPriceById: (id: string) => any | null;
+  getPriceByReportType: (reportType: string) => any | null;
+  getAllPrices: () => any[];
+  refresh: () => Promise<any[]>;
 }
 
 const PricingContext = createContext<PricingContextType | undefined>(undefined);
@@ -25,86 +21,17 @@ interface PricingProviderProps {
 }
 
 export const PricingProvider: React.FC<PricingProviderProps> = ({ children }) => {
-  const [prices, setPrices] = useState<PriceData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchAllPrices = async () => {
-      // Skip Supabase calls during SSR
-      if (typeof window === 'undefined') {
-        console.log('🏷️ Skipping price fetch');
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        setIsLoading(true);
-        setError(null);
-        
-        log('debug', 'Fetch prices from edge function', null, 'pricing');
-        
-        // Get Supabase configuration with fallbacks
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
-        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
-        
-        console.log('🔧 Using Supabase URL:', supabaseUrl);
-        
-        // Call the get-prices edge function instead of direct table access
-        const response = await fetch(`${supabaseUrl}/functions/v1/get-prices`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabaseAnonKey}`
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-
-        if (result.error) {
-          console.error('❌ Error fetching prices:', result.error);
-          setError(result.error);
-          return;
-        }
-
-        if (!result.prices || result.prices.length === 0) {
-          console.warn('⚠️ No prices found in price_list table');
-          setError('No prices found');
-          return;
-        }
-
-        setPrices(result.prices);
-        console.log(`✅ Successfully loaded ${result.prices.length} prices`);
-        
-      } catch (err) {
-        console.error('❌ Unexpected error fetching prices:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchAllPrices();
-  }, []);
-
-  const getPriceById = (id: string): PriceData | null => {
-    return prices.find(p => p.id === id) || null;
-  };
-
-  const getPriceByReportType = (reportType: string): PriceData | null => {
-    return prices.find(p => p.report_type === reportType) || null;
-  };
+  // Use the centralized pricing service
+  const pricingData = usePricingService();
 
   const value: PricingContextType = {
-    prices,
-    isLoading,
-    error,
-    getPriceById,
-    getPriceByReportType,
+    prices: pricingData.prices,
+    isLoading: pricingData.isLoading,
+    error: pricingData.error,
+    getPriceById: pricingData.getPriceById,
+    getPriceByReportType: pricingData.getPriceByReportType,
+    getAllPrices: pricingData.getAllPrices,
+    refresh: pricingData.refresh,
   };
 
   return (

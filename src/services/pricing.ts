@@ -1,94 +1,240 @@
+import React from 'react';
+import { createClient } from '@supabase/supabase-js';
 
-// Legacy pricing service - now replaced by PricingContext
-// This file is kept for reference and backward compatibility
+// Types
+export interface PriceData {
+  id: string;
+  unit_price_usd: number;
+  name: string;
+  description: string;
+  report_type?: string;
+}
 
-export { usePriceFetch } from '@/hooks/usePriceFetch';
+export interface TrustedPricingObject {
+  valid: boolean;
+  promo_code_id?: string;
+  discount_usd: number;
+  trusted_base_price_usd: number;
+  final_price_usd: number;
+  report_type: string;
+  reason?: string;
+}
 
-// Re-export types for backward compatibility
-export type ReportTypeMapping = {
-  reportType: string;
-  essenceType?: string;
-  relationshipType?: string;
-  reportCategory?: string;
-  reportSubCategory?: string;
-};
+// Global cache
+let cachedPrices: PriceData[] | null = null;
+let lastFetchTime: number = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-// Legacy function - now deprecated, use usePriceFetch hook instead
-export const fetchReportPrice = async (formData: ReportTypeMapping): Promise<number> => {
-  console.warn('⚠️ fetchReportPrice is deprecated. Please use usePriceFetch hook instead.');
-  throw new Error('fetchReportPrice is deprecated. Please use usePriceFetch hook instead.');
-};
+// Supabase configuration with fallbacks
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
 
-// Get report title based on form data
-export const getReportTitle = (formData: ReportTypeMapping): string => {
-  const { reportType, essenceType, relationshipType, reportCategory, reportSubCategory } = formData;
-  
-  if (reportType === 'essence') {
-    switch (essenceType) {
-      case 'professional': return 'Professional Essence Report';
-      case 'relational': return 'Relational Essence Report';
-      case 'personal': return 'Personal Essence Report';
-      default: return 'Personal Essence Report';
-    }
+const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: false
   }
-  
-  if (reportType === 'sync' || reportType === 'compatibility') {
-    switch (relationshipType) {
-      case 'professional': return 'Professional Compatibility Report';
-      case 'personal': return 'Personal Compatibility Report';
-      default: return 'Personal Compatibility Report';
-    }
-  }
-  
-  if (reportCategory === 'snapshot') {
-    switch (reportSubCategory) {
-      case 'focus': return 'Focus Snapshot Report';
-      case 'monthly': return 'Monthly Energy Report';
-      case 'mindset': return 'Mindset Report';
-      default: return 'Focus Snapshot Report';
-    }
-  }
-  
-  // Fallback based on report type
-  const reportTitles: Record<string, string> = {
-    natal: 'Natal Report',
-    compatibility: 'Compatibility Report',
-    essence: 'Essence Report',
-    flow: 'Flow Report',
-    mindset: 'Mindset Report',
-    monthly: 'Monthly Forecast',
-    focus: 'Focus Report',
-    sync: 'Sync Report'
-  };
-  
-  return reportTitles[reportType] || 'Personal Report';
-};
+});
 
-// Hook for pricing with caching
-export const usePricing = () => {
-  const calculatePricing = (basePrice: number, promoValidation: any) => {
-    if (promoValidation.status === 'none' || promoValidation.status === 'invalid') {
-      return {
-        basePrice,
-        discount: 0,
-        discountPercent: 0,
-        finalPrice: basePrice,
-        isFree: false
-      };
-    }
+/**
+ * 🎯 Centralized Pricing Service
+ * Fetches prices once and caches them for all components
+ */
+class PricingService {
+  private static instance: PricingService;
+  private prices: PriceData[] = [];
+  private isLoading = false;
+  private error: string | null = null;
+  private subscribers: Set<(prices: PriceData[], error: string | null) => void> = new Set();
 
-    const discountPercent = promoValidation.discountPercent;
-    const discount = basePrice * (discountPercent / 100);
-    const finalPrice = basePrice - discount;
+  private constructor() {}
+
+  static getInstance(): PricingService {
+    if (!PricingService.instance) {
+      PricingService.instance = new PricingService();
+    }
+    return PricingService.instance;
+  }
+
+  /**
+   * Subscribe to price updates
+   */
+  subscribe(callback: (prices: PriceData[], error: string | null) => void): () => void {
+    this.subscribers.add(callback);
     
-    return {
-      basePrice,
-      discount,
-      discountPercent,
-      finalPrice: Math.max(0, finalPrice),
-      isFree: discountPercent === 100
+    // Immediately call with current state
+    callback(this.prices, this.error);
+    
+    // Return unsubscribe function
+    return () => {
+      this.subscribers.delete(callback);
     };
-  };
+  }
 
-  return { calculatePricing };
+  /**
+   * Notify all subscribers
+   */
+  private notifySubscribers(): void {
+    this.subscribers.forEach(callback => {
+      callback(this.prices, this.error);
+    });
+  }
+
+  /**
+   * Fetch prices from edge function (with caching)
+   */
+  async fetchPrices(): Promise<PriceData[]> {
+    // Return cached data if still valid
+    if (cachedPrices && (Date.now() - lastFetchTime) < CACHE_DURATION) {
+      console.log('📦 Using cached prices (age:', Math.round((Date.now() - lastFetchTime) / 1000), 's)');
+      return cachedPrices;
+    }
+
+    // If already loading, wait for current request
+    if (this.isLoading) {
+      return new Promise((resolve, reject) => {
+        const checkComplete = () => {
+          if (!this.isLoading) {
+            if (this.error) {
+              reject(new Error(this.error));
+            } else {
+              resolve(this.prices);
+            }
+          } else {
+            setTimeout(checkComplete, 100);
+          }
+        };
+        checkComplete();
+      });
+    }
+
+    this.isLoading = true;
+    this.error = null;
+    this.notifySubscribers();
+
+    try {
+      console.log('🔄 Fetching fresh prices from edge function...');
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/get-prices`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      if (!result.prices || result.prices.length === 0) {
+        throw new Error('No prices found');
+      }
+
+      // Update cache
+      cachedPrices = result.prices;
+      lastFetchTime = Date.now();
+      this.prices = result.prices;
+      
+      console.log(`✅ Successfully loaded ${result.prices.length} prices (cached for 5 minutes)`);
+      
+    } catch (error) {
+      this.error = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Error fetching prices:', this.error);
+      throw error;
+    } finally {
+      this.isLoading = false;
+      this.notifySubscribers();
+    }
+
+    return this.prices;
+  }
+
+  /**
+   * Get price by ID
+   */
+  getPriceById(id: string): PriceData | null {
+    return this.prices.find(p => p.id === id) || null;
+  }
+
+  /**
+   * Get price by report type
+   */
+  getPriceByReportType(reportType: string): PriceData | null {
+    return this.prices.find(p => p.report_type === reportType) || null;
+  }
+
+  /**
+   * Get all prices
+   */
+  getAllPrices(): PriceData[] {
+    return this.prices;
+  }
+
+  /**
+   * Get loading state
+   */
+  getLoadingState(): boolean {
+    return this.isLoading;
+  }
+
+  /**
+   * Get error state
+   */
+  getError(): string | null {
+    return this.error;
+  }
+
+  /**
+   * Clear cache (force refresh)
+   */
+  clearCache(): void {
+    cachedPrices = null;
+    lastFetchTime = 0;
+    console.log('🗑️ Pricing cache cleared');
+  }
+}
+
+// Export singleton instance
+export const pricingService = PricingService.getInstance();
+
+// React hook for easy integration
+export const usePricing = () => {
+  const [prices, setPrices] = React.useState<PriceData[]>([]);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    // Subscribe to pricing service updates
+    const unsubscribe = pricingService.subscribe((newPrices, newError) => {
+      setPrices(newPrices);
+      setError(newError);
+      setIsLoading(pricingService.getLoadingState());
+    });
+
+    // Trigger initial fetch if needed
+    if (prices.length === 0 && !isLoading && !error) {
+      pricingService.fetchPrices().catch(console.error);
+    }
+
+    return unsubscribe;
+  }, []);
+
+  return {
+    prices,
+    isLoading,
+    error,
+    getPriceById: (id: string) => pricingService.getPriceById(id),
+    getPriceByReportType: (reportType: string) => pricingService.getPriceByReportType(reportType),
+    getAllPrices: () => pricingService.getAllPrices(),
+    refresh: () => {
+      pricingService.clearCache();
+      return pricingService.fetchPrices();
+    }
+  };
 };

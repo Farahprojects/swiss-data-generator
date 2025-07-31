@@ -24,30 +24,21 @@ export const PricingPage = () => {
       try {
         setLoading(true);
         
-        // Get Supabase configuration with fallbacks
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
-        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
+        // Use the centralized pricing service
+        const { pricingService } = await import('@/services/pricing');
+        const priceData = await pricingService.fetchPrices();
         
-        // Call the get-prices edge function instead of direct table access
-        const response = await fetch(`${supabaseUrl}/functions/v1/get-prices`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabaseAnonKey}`
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-
-        if (result.error) {
-          throw new Error(result.error);
-        }
-
-        setPrices(result.prices || []);
+        // Map PriceData to PriceItem format
+        const mappedPrices: PriceItem[] = priceData.map(price => ({
+          id: price.id,
+          name: price.name,
+          description: price.description,
+          report_type: price.report_type || null,
+          endpoint: null, // PriceData doesn't have endpoint, set to null
+          unit_price_usd: price.unit_price_usd
+        }));
+        
+        setPrices(mappedPrices);
       } catch (err) {
         console.error('Error fetching prices:', err);
         setError('Failed to load pricing information. Please try again later.');
