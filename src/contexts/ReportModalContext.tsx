@@ -48,6 +48,16 @@ export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
 
 export const useReportModal = () => {
   const ctx = useContext(ReportModalContext);
-  if (!ctx) throw new Error('useReportModal used outside provider');
+  if (!ctx) {
+    // Return a no-op implementation during SSR or when context is not available
+    return {
+      open: () => {
+        console.warn('useReportModal: Context not available, open() called during SSR or before provider mount');
+      },
+      close: () => {
+        console.warn('useReportModal: Context not available, close() called during SSR or before provider mount');
+      }
+    };
+  }
   return ctx;
 }; 
