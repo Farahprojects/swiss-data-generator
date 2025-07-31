@@ -554,7 +554,54 @@ serve(async (req)=>{
       );
     }
     
-    // 2. Start logging asynchronously
+    // 2. NEW: For astro-only reports (no AI report), trigger orchestration to open modal
+    if(body.is_guest && userId && swiss.ok && !body.reportType) {
+      console.log(`[translator-edge-${reqId}] Swiss data only purchase - triggering orchestration`);
+      
+      // Update guest_reports to set modal_ready for astro-only reports
+      const orchestrationPromise = (async () => {
+        try {
+          // Set modal_ready = true for astro-only reports
+          const { error: updateError } = await sb
+            .from("guest_reports")
+            .update({ 
+              modal_ready: true,
+              swiss_boolean: true,
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", userId);
+            
+          if (updateError) {
+            console.error(`[translator-edge-${reqId}] Failed to update guest_reports:`, updateError);
+            return;
+          }
+          
+          console.log(`[translator-edge-${reqId}] Updated guest_reports modal_ready=true for astro-only report`);
+          
+          // Call orchestrate-report-ready using Supabase client method
+          const { data: orchResult, error: orchError } = await sb.functions.invoke('orchestrate-report-ready', {
+            body: { guest_report_id: userId }
+          });
+          
+          if (orchError) {
+            console.error(`[translator-edge-${reqId}] Orchestration failed:`, orchError);
+          } else {
+            console.log(`[translator-edge-${reqId}] Orchestration completed successfully for astro-only report`);
+          }
+        } catch (error) {
+          console.error(`[translator-edge-${reqId}] Orchestration error:`, error);
+        }
+      })();
+      
+      // Use EdgeRuntime.waitUntil if available, otherwise fire and forget
+      if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
+        EdgeRuntime.waitUntil(orchestrationPromise);
+      } else {
+        orchestrationPromise.catch(e => console.error(`[translator-edge-${reqId}] Background orchestration error:`, e));
+      }
+    }
+    
+    // 3. Start logging asynchronously
     console.log(`[translator-edge-${reqId}] Starting async logging`);
     logTranslatorAsync({ 
       request_type:canon, 
