@@ -114,13 +114,16 @@ serve(async (req) => {
     }
 
     // ✅ UPDATED: Validate report is ready for orchestration
-    // Now that link-report-guest is the new boss, we expect:
-    // - has_report_log = true (set by link-report-guest)
-    // - modal_ready = true (set by link-report-guest)
-    // - report_log_id exists (set by link-report-guest)
-    const isReportReady = guestReport.has_report_log === true && 
-                         guestReport.modal_ready === true && 
-                         guestReport.report_log_id;
+    // Handle both AI reports and Astro data only requests
+    const isAIReportReady = guestReport.has_report_log === true && 
+                           guestReport.modal_ready === true && 
+                           guestReport.report_log_id;
+    
+    const isAstroDataOnlyReady = guestReport.modal_ready === true && 
+                                 guestReport.swiss_data && 
+                                 !guestReport.has_report_log;
+    
+    const isReportReady = isAIReportReady || isAstroDataOnlyReady;
 
     if (!isReportReady) {
       console.warn(`[orchestrate-report-ready] Report not ready for orchestration:`, {
@@ -146,13 +149,13 @@ serve(async (req) => {
     const reportData = {
       guest_report: guestReport,
       report_content: guestReport.report_logs?.report_text || null,
-      swiss_data: guestReport.translator_logs?.swiss_data || null,
+      swiss_data: guestReport.swiss_data || guestReport.translator_logs?.swiss_data || null,
       metadata: {
-        content_type: guestReport.swiss_boolean && guestReport.is_ai_report ? 'both' : 
-                     guestReport.swiss_boolean ? 'astro' : 
+        content_type: guestReport.swiss_data && guestReport.is_ai_report ? 'both' : 
+                     guestReport.swiss_data ? 'astro' : 
                      guestReport.is_ai_report ? 'ai' : 'none',
         has_ai_report: !!guestReport.is_ai_report,
-        has_swiss_data: !!guestReport.translator_logs?.swiss_data,
+        has_swiss_data: !!(guestReport.swiss_data || guestReport.translator_logs?.swiss_data),
         is_ready: true
       }
     };
