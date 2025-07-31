@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ReportFormData } from '@/types/public-report';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { usePricing } from '@/contexts/PricingContext';
 import FormStep from './FormStep';
 
 interface PaymentStepProps {
@@ -47,6 +48,16 @@ const PaymentStep = ({
   const [trustedPricing, setTrustedPricing] = useState<TrustedPricingObject | null>(null);
   
   const { toast } = useToast();
+  const { getPriceById, isLoading: pricesLoading } = usePricing();
+  
+  // Get base price from cached data
+  const getBasePrice = () => {
+    const priceIdentifier = getPriceIdentifier();
+    if (!priceIdentifier) return 0;
+    
+    const priceData = getPriceById(priceIdentifier);
+    return priceData ? Number(priceData.unit_price_usd) : 0;
+  };
   
   // Add timeout mechanism to prevent stuck processing state
   useEffect(() => {
@@ -82,27 +93,69 @@ const PaymentStep = ({
   const name = watch('name');
   const promoCode = watch('promoCode') || '';
 
-  // Validate promo code and get trusted pricing
+  // Get price identifier from form data
+  const getPriceIdentifier = () => {
+    // Prioritize direct reportType for unified mobile/desktop behavior
+    if (reportType) {
+      return reportType;
+    }
+    
+    // Fallback to request field for astro data
+    if (requestField) {
+      return requestField;
+    }
+    
+    // Legacy fallback for form combinations (desktop compatibility)
+    if (essenceType && reportCategory === 'the-self') {
+      return `essence_${essenceType}`;
+    }
+    
+    if (relationshipType && reportCategory === 'compatibility') {
+      return `sync_${relationshipType}`;
+    }
+    
+    return '';
+  };
+
+  // Validate promo code and get trusted pricing using cached data
   const validatePromoCode = async (promoCode: string): Promise<TrustedPricingObject> => {
     setIsValidatingPromo(true);
     setPromoError('');
 
     try {
-      const formData = {
-        reportType,
-        essenceType,
-        relationshipType,
-        reportCategory,
-        reportSubCategory,
-        request: requestField
-      };
+      const priceIdentifier = getPriceIdentifier();
+      
+      if (!priceIdentifier) {
+        throw new Error('No price identifier could be determined from form data');
+      }
 
+      // Get base price from cached pricing data
+      const priceData = getPriceById(priceIdentifier);
+      
+      if (!priceData) {
+        throw new Error(`Price not found for report type: ${priceIdentifier}`);
+      }
+
+      const basePrice = Number(priceData.unit_price_usd);
+      
+      // If no promo code, return base pricing
+      if (!promoCode || promoCode.trim() === '') {
+        return {
+          valid: true,
+          discount_usd: 0,
+          trusted_base_price_usd: basePrice,
+          final_price_usd: basePrice,
+          report_type: priceIdentifier,
+        };
+      }
+
+      // Validate promo code with edge function (only for promo validation, not price lookup)
       const { data, error } = await supabase.functions.invoke('validate-promo-code', {
         body: { 
           promoCode: promoCode.trim(),
           email: watch('email'),
-          reportType: formData.reportType,
-          request: formData.request
+          reportType: priceIdentifier,
+          request: requestField
         }
       });
 
@@ -111,11 +164,18 @@ const PaymentStep = ({
         throw new Error('Failed to validate promo code');
       }
 
-      return data as TrustedPricingObject;
+      // Use the base price from cache, but apply promo discount from validation
+      const promoResult = data as TrustedPricingObject;
+      
+      return {
+        ...promoResult,
+        trusted_base_price_usd: basePrice, // Use cached price
+        final_price_usd: promoResult.valid ? promoResult.final_price_usd : basePrice,
+      };
 
     } catch (error) {
       console.error('❌ Promo validation exception:', error);
-      throw new Error('Failed to validate promo code');
+      throw new Error('Failed to validate pricing');
     } finally {
       setIsValidatingPromo(false);
     }
@@ -172,7 +232,7 @@ const PaymentStep = ({
                     {reportType || request || 'Personal Report'}
                   </span>
                   <span className="font-normal text-gray-900">
-                    ${trustedPricing?.trusted_base_price_usd?.toFixed(2) || '0.00'}
+                    ${pricesLoading ? '...' : (trustedPricing?.trusted_base_price_usd || getBasePrice()).toFixed(2)}
                   </span>
                 </div>
                 {trustedPricing?.discount_usd > 0 && (
@@ -186,7 +246,7 @@ const PaymentStep = ({
                 <div className="border-t pt-3">
                   <div className="flex justify-between items-center font-light text-xl text-gray-900">
                     <span>Total</span>
-                    <span>${trustedPricing?.final_price_usd?.toFixed(2) || '0.00'}</span>
+                    <span>${pricesLoading ? '...' : (trustedPricing?.final_price_usd || getBasePrice()).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
