@@ -16,6 +16,7 @@ const corsHeaders = {
 
 interface ValidatePromoRequest {
   promoCode: string;
+  basePrice: number;
   email?: string;
   reportType?: string;
   request?: string;
@@ -56,7 +57,7 @@ serve(async (req) => {
   const startTime = Date.now();
 
   try {
-    const { promoCode, email, reportType, request }: ValidatePromoRequest = await req.json();
+    const { promoCode, basePrice, email, reportType, request }: ValidatePromoRequest = await req.json();
     
     logValidation("validation_started", {
       promoCode: promoCode?.substring(0, 3) + "***", // Partially mask for logs
@@ -74,6 +75,21 @@ serve(async (req) => {
         final_price_usd: 0,
         report_type: "",
         reason: "Promo code is required"
+      } as TrustedPricingResponse), {
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (!basePrice || typeof basePrice !== 'number' || basePrice <= 0) {
+      logValidationError("missing_base_price", new Error("No valid base price provided"));
+      return new Response(JSON.stringify({ 
+        valid: false,
+        discount_usd: 0,
+        trusted_base_price_usd: 0,
+        final_price_usd: 0,
+        report_type: "",
+        reason: "Base price is required"
       } as TrustedPricingResponse), {
         status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -99,44 +115,13 @@ serve(async (req) => {
 
     const normalizedCode = promoCode.trim().toUpperCase();
     
-    logValidation("database_lookup_started", { 
+    logValidation("promo_validation_started", { 
       normalized_code: normalizedCode.substring(0, 3) + "***",
-      price_identifier: priceIdentifier
-    });
-
-    // Step 1: Fetch base price from price_list
-    const { data: priceData, error: priceError } = await supabaseAdmin
-      .from('price_list')
-      .select('id, unit_price_usd')
-      .eq('id', priceIdentifier)
-      .single();
-
-    if (priceError || !priceData) {
-      logValidationError("price_lookup_failed", priceError, { 
-        price_identifier: priceIdentifier,
-        error_code: priceError?.code 
-      });
-      
-      return new Response(JSON.stringify({ 
-        valid: false,
-        discount_usd: 0,
-        trusted_base_price_usd: 0,
-        final_price_usd: 0,
-        report_type: "",
-        reason: "Report type not found"
-      } as TrustedPricingResponse), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    const basePrice = Number(priceData.unit_price_usd);
-    logValidation("base_price_found", { 
       price_identifier: priceIdentifier,
       base_price: basePrice
     });
 
-    // Step 2: Query the promo_codes table
+    // Query the promo_codes table
     const { data: promo, error: promoError } = await supabaseAdmin
       .from('promo_codes')
       .select('*')
