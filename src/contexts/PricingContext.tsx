@@ -44,12 +44,18 @@ export const PricingProvider: React.FC<PricingProviderProps> = ({ children }) =>
         
         log('debug', 'Fetch prices from edge function', null, 'pricing');
         
+        // Get Supabase configuration with fallbacks
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
+        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
+        
+        console.log('🔧 Using Supabase URL:', supabaseUrl);
+        
         // Call the get-prices edge function instead of direct table access
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-prices`, {
+        const response = await fetch(`${supabaseUrl}/functions/v1/get-prices`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+            'Authorization': `Bearer ${supabaseAnonKey}`
           }
         });
 
