@@ -267,7 +267,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const onSubmit = async (data: ReportFormData) => {
     const submissionData = coachSlug ? { ...data, coachSlug } : data;
     // This will be called by PaymentStep with the final price and promo code
-    console.log('ReportForm onSubmit called - this should be handled by PaymentStep');
   };
 
   const handleButtonClick = async () => {
@@ -333,8 +332,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
   // Success state checks
   if (reportCreated && createdGuestReportId && userName && userEmail) {
-    console.log('📱 Rendering SuccessScreen (reportCreated path)');
-    log('debug', 'Rendering SuccessScreen with guaranteed guest ID', { createdGuestReportId }, 'ReportForm');
     return (
       <SuccessScreen 
         name={userName} 
@@ -351,7 +348,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     const email = reportData?.email || statusReportData.guest_report?.email;
     
     if (name && email) {
-      console.log('📱 Rendering SuccessScreen (status success path)');
       return (
         <SuccessScreen 
           name={name} 
