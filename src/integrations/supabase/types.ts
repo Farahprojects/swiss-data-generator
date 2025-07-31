@@ -1888,10 +1888,6 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
-      generate_session_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
       get_all_users_admin: {
         Args: Record<PropertyKey, never>
         Returns: {

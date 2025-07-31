@@ -23,16 +23,27 @@ export const PricingPage = () => {
     const fetchPrices = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
-          .from('price_list')
-          .select('*')
-          .order('unit_price_usd', { ascending: true });
+        
+        // Call the get-prices edge function instead of direct table access
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-prices`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+          }
+        });
 
-        if (error) {
-          throw error;
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        setPrices(data || []);
+        const result = await response.json();
+
+        if (result.error) {
+          throw new Error(result.error);
+        }
+
+        setPrices(result.prices || []);
       } catch (err) {
         console.error('Error fetching prices:', err);
         setError('Failed to load pricing information. Please try again later.');

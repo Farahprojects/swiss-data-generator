@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { log } from '@/utils/logUtils';
 
@@ -42,25 +42,37 @@ export const PricingProvider: React.FC<PricingProviderProps> = ({ children }) =>
         setIsLoading(true);
         setError(null);
         
-        log('debug', 'Fetch prices', null, 'pricing');
+        log('debug', 'Fetch prices from edge function', null, 'pricing');
         
-        const { data, error: fetchError } = await supabase
-          .from('price_list')
-          .select('id, unit_price_usd, name, description, report_type');
+        // Call the get-prices edge function instead of direct table access
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-prices`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+          }
+        });
 
-        if (fetchError) {
-          console.error('❌ Error fetching prices:', fetchError);
-          setError(fetchError.message);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.error) {
+          console.error('❌ Error fetching prices:', result.error);
+          setError(result.error);
           return;
         }
 
-        if (!data || data.length === 0) {
+        if (!result.prices || result.prices.length === 0) {
           console.warn('⚠️ No prices found in price_list table');
           setError('No prices found');
           return;
         }
 
-        setPrices(data);
+        setPrices(result.prices);
+        console.log(`✅ Successfully loaded ${result.prices.length} prices`);
         
       } catch (err) {
         console.error('❌ Unexpected error fetching prices:', err);
