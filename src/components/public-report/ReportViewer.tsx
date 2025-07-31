@@ -28,6 +28,7 @@ export const ReportViewer = ({
   onBack, 
   onStateReset 
 }: ReportViewerProps) => {
+  console.info('[ReportViewer] mounted with data.id =', reportData?.guest_report?.id);
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [activeView, setActiveView] = useState<'report' | 'astro'>(
     reportData.metadata.content_type === 'ai' ? 'report' : 'astro'

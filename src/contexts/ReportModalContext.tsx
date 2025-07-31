@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { ReportData } from '@/utils/reportContentExtraction';
 import { ReportViewer } from '@/components/public-report/ReportViewer';
 
@@ -19,6 +19,7 @@ export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
   const [payload, setPayload] = useState<ReportPayload | null>(null);
 
   const open = (d: ReportPayload) => {
+    if (!d) return console.warn('[ModalCTX] open called with null');
     console.log(`🚀 ReportModalProvider: open() called at ${new Date().toISOString()}`);
     console.log(`📦 ReportModalProvider: payload being set:`, d);
     setPayload(d);
@@ -28,6 +29,11 @@ export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
     console.log(`🚀 ReportModalProvider: close() called at ${new Date().toISOString()}`);
     setPayload(null);
   };
+
+  // Diagnostic logging for state changes
+  useEffect(() => {
+    console.info('[ModalCTX] state changed → payload:', payload);
+  }, [payload]);
 
   return (
     <ReportModalContext.Provider value={{ open, close }}>

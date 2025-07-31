@@ -48,6 +48,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     if (hasOpenedModal) return; // Prevent duplicate opens
     
     logSuccessScreen('info', 'Report ready signal received, opening modal');
+    console.info('[SuccessScreen] about to open modal', reportData);
     setCountdownTime(0);
     setHasOpenedModal(true);
     open(reportData); // <- single call opens modal
