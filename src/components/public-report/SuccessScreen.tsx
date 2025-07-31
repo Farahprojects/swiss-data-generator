@@ -40,16 +40,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   const [countdownTime, setCountdownTime] = useState(24);
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [errorState, setErrorState] = useState<ErrorState | null>(null);
-  const [waitForReport, setWaitForReport] = useState(false);
-
-  // Start waiting for report when component mounts
-  useEffect(() => {
-    if (onStartWaiting) {
-      logSuccessScreen('info', 'Starting to wait for report');
-      onStartWaiting();
-      setWaitForReport(true);
-    }
-  }, [onStartWaiting]);
 
   // Single call opens modal (with duplicate prevention)
   const [hasOpenedModal, setHasOpenedModal] = useState(false);
@@ -63,11 +53,11 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     open(reportData); // <- single call opens modal
   }, [open, hasOpenedModal]);
 
-  // Conditional realtime listener - only listens when waitForReport is true
+  // IMMEDIATE realtime listener - no conditional waiting
   useEffect(() => {
-    if (!waitForReport || !guestReportId) return;
+    if (!guestReportId) return;
 
-    logSuccessScreen('info', 'Setting up conditional realtime listener for report ready', { guestReportId });
+    logSuccessScreen('info', 'Setting up immediate realtime listener for report ready', { guestReportId });
     
     const channel = supabase
       .channel(`guest_report:${guestReportId}`)
@@ -76,10 +66,13 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
         
         if (payload?.payload?.data) {
           logSuccessScreen('info', 'Orchestrator sent report data, triggering modal');
-          setWaitForReport(false); // Clear the flag to prevent duplicate listeners
           handleReportReady(payload.payload.data);
+        } else if (payload?.data) {
+          // Fallback for direct data structure
+          logSuccessScreen('info', 'Orchestrator sent report data (direct), triggering modal');
+          handleReportReady(payload.data);
         } else {
-          console.warn('⚠️ Broadcast payload missing nested data field:', payload);
+          console.warn('⚠️ Broadcast payload missing data field:', payload);
         }
       })
       .subscribe((status) => {
@@ -87,10 +80,18 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
       });
 
     return () => {
-      logSuccessScreen('debug', 'Cleaning up conditional realtime subscription');
+      logSuccessScreen('debug', 'Cleaning up realtime subscription');
       supabase.removeChannel(channel);
     };
-  }, [waitForReport, guestReportId, handleReportReady]);
+  }, [guestReportId, handleReportReady]);
+
+  // Start waiting for report when component mounts (separate from listener)
+  useEffect(() => {
+    if (onStartWaiting) {
+      logSuccessScreen('info', 'Starting to wait for report');
+      onStartWaiting();
+    }
+  }, [onStartWaiting]);
 
 
   // Simple error handlers
