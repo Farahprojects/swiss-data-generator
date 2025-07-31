@@ -51,12 +51,17 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     }
   }, [onStartWaiting]);
 
-  // Single call opens modal
+  // Single call opens modal (with duplicate prevention)
+  const [hasOpenedModal, setHasOpenedModal] = useState(false);
+  
   const handleReportReady = useCallback((reportData: ReportData) => {
+    if (hasOpenedModal) return; // Prevent duplicate opens
+    
     logSuccessScreen('info', 'Report ready signal received, opening modal');
     setCountdownTime(0);
+    setHasOpenedModal(true);
     open(reportData); // <- single call opens modal
-  }, [open]);
+  }, [open, hasOpenedModal]);
 
   // Conditional realtime listener - only listens when waitForReport is true
   useEffect(() => {
@@ -88,77 +93,42 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   }, [waitForReport, guestReportId, handleReportReady]);
 
 
-  // Simple error logging for new errors detected by edge function
+  // Simple error handlers
   const handleTriggerErrorLogging = useCallback(async (guestReportId: string, email: string) => {
-    logSuccessScreen('info', 'Triggering error logging for Swiss processing error');
-    
-    try {
-      const { data, error } = await supabase.functions.invoke('log-user-error', {
-        body: {
-          guestReportId,
-          errorType: 'swiss_processing_error',
-          errorMessage: 'Swiss data processing failed due to stack depth limit or malformed data',
-          email
-        }
-      });
-
-      if (error) {
-        logSuccessScreen('error', 'Error logging failed', { error });
-      } else if (data?.case_number) {
-        logSuccessScreen('info', 'Error logged successfully', { caseNumber: data.case_number });
-        
-        setErrorState(prev => prev ? {
-          ...prev,
-          case_number: data.case_number,
-          logged_at: new Date().toISOString()
-        } : null);
-      }
-    } catch (err) {
-      logSuccessScreen('error', 'Failed to log error', { err });
-    }
+    // Let ErrorStateHandler handle the error logging
   }, []);
 
-  // Session cleanup - let the edge function handle this
   const handleCleanupSession = useCallback(() => {
-    logSuccessScreen('info', 'Cleaning up session due to error');
-    // The edge function will handle any necessary cleanup
+    // Let ErrorStateHandler handle cleanup
   }, []);
 
-  // Check if report is ready using the smart edge function
+  // Check if report is already ready (one-time check)
   useEffect(() => {
-    const checkReportStatus = async () => {
-      if (!guestReportId) {
-        logSuccessScreen('warn', 'No guest report ID available for status check');
-        setCheckingStatus(false);
-        return;
-      }
+    if (!guestReportId) {
+      setCheckingStatus(false);
+      return;
+    }
 
+    const checkReportStatus = async () => {
       try {
-        logSuccessScreen('debug', 'Checking if report is already ready');
-        
         const { data, error } = await supabase.functions.invoke('check-report-status', {
           body: { guest_report_id: guestReportId }
         });
 
         if (error) {
           console.error('❌ Error checking report status:', error);
-          setCheckingStatus(false);
           return;
         }
 
-        // Handle error state responses from the smart edge function
+        // Handle error state
         if (data?.error_state) {
-          logSuccessScreen('info', 'Error state detected from check-report-status', { errorState: data.error_state });
           setErrorState(data.error_state);
-          setCheckingStatus(false);
           return;
         }
 
+        // If report is ready, open modal immediately
         if (data?.ready && data?.data) {
-          logSuccessScreen('info', 'Report is already ready, triggering handleReportReady immediately');
           handleReportReady(data.data);
-        } else {
-          logSuccessScreen('debug', 'Report not ready yet, waiting for orchestrator');
         }
       } catch (err) {
         console.error('❌ Failed to check report status:', err);
@@ -170,9 +140,9 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     checkReportStatus();
   }, [guestReportId, handleReportReady]);
 
-  // Simple visual countdown timer with timeout fallback
+  // Independent countdown timer
   useEffect(() => {
-    if (checkingStatus || errorState) return;
+    if (countdownTime === 0) return; // Already done
 
     const timer = setInterval(() => {
       setCountdownTime((prev) => {
@@ -187,14 +157,13 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     // Fallback timeout after 24 seconds
     const fallbackTimeout = setTimeout(() => {
       console.warn('⏱️ Timeout reached. Report modal never appeared.');
-      // For now just log - could add fallback fetch logic here
     }, 24000);
 
     return () => {
       clearInterval(timer);
       clearTimeout(fallbackTimeout);
     };
-  }, [checkingStatus, errorState]);
+  }, [countdownTime]);
 
   // Show error state if detected by the edge function
   if (errorState) {
