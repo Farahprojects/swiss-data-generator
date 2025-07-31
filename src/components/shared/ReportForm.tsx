@@ -12,8 +12,6 @@ import CombinedPersonalDetailsForm from '@/components/public-report/CombinedPers
 import SecondPersonForm from '@/components/public-report/SecondPersonForm';
 import PaymentStep from '@/components/public-report/PaymentStep';
 import SuccessScreen from '@/components/public-report/SuccessScreen';
-import { ReportViewer } from '@/components/public-report/ReportViewer';
-
 import { clearGuestReportId } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
 import { useGuestReportData } from '@/hooks/useGuestReportData';
@@ -43,8 +41,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const [sessionRestored, setSessionRestored] = useState(false);
   const [waitingForReport, setWaitingForReport] = useState(false);
   
-  // Modal context
-  const { isOpen, data, close, open } = useReportModal();
+  // Modal context - simplified
+  const { open } = useReportModal();
 
   // Hooks
   const { status, error: statusError, reportData: statusReportData, setStatus, reset: resetStatus } = useReportStatus();
@@ -66,27 +64,12 @@ export const ReportForm: React.FC<ReportFormProps> = ({
    */
   useEffect(() => {
     if (
-      !isOpen &&                       // modal not already open
       guestReportData &&               // we just fetched data
       (guestReportData.report_content || guestReportData.swiss_data) // it's real
     ) {
       open(guestReportData);           // 🎉 single source of truth
     }
-  }, [isOpen, guestReportData, open]);
-
-  // Add debug logs
-  console.log(`🔍 ReportForm render state at ${new Date().toISOString()}:`, { 
-    isOpen, 
-    hasData: !!data, 
-    status, 
-    hasGuestData: !!guestReportData,
-    guestDataHasContent: !!(guestReportData?.report_content || guestReportData?.swiss_data)
-  });
-
-  // Track if we should be showing modal
-  if (isOpen && data) {
-    console.log(`🎯 ReportForm: MODAL SHOULD BE VISIBLE at ${new Date().toISOString()} - isOpen: ${isOpen}, hasData: ${!!data}`);
-  }
+  }, [guestReportData, open]);
 
   // State restoration effect
   useEffect(() => {
@@ -297,20 +280,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     const submissionData = coachSlug ? { ...formData, coachSlug } : formData;
     await submitReport(submissionData, trustedPricing);
   };
-
-  /* 🔑 EARLY RETURN — must sit BEFORE the switch */
-  if (isOpen && data) {
-    console.log(`🎯 ReportForm: Modal guard firing at ${new Date().toISOString()} - returning ReportViewer`);
-    return (
-      <ReportViewer
-        reportData={data}
-        onBack={close}
-        onStateReset={resetComponentStates}
-      />
-    );
-  } else {
-    console.log(`❌ ReportForm: Modal guard NOT firing at ${new Date().toISOString()} - isOpen: ${isOpen}, hasData: ${!!data}`);
-  }
 
   /* ↓ everything else follows ↓ */
   // Status-based rendering with single switch statement
