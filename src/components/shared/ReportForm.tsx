@@ -99,7 +99,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       log('info', 'Payment confirmed via unified fetch, transitioning to success state', null, 'ReportForm');
       setStatus('success', undefined, guestReportData);
     } else if (guestReport?.payment_status === 'pending') {
-      log('info', 'Payment pending via unified fetch, starting polling', null, 'ReportForm');
+      log('info', 'Payment pending, waiting for realtime update', null, 'ReportForm');
       setStatus('waiting');
     } else {
       log('error', 'Unexpected payment status', { paymentStatus: guestReport?.payment_status }, 'ReportForm');
@@ -107,23 +107,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }
   }, [guestReportData, status, setStatus]);
 
-  // Handle polling for waiting payments
-  useEffect(() => {
-    if (guestReportData && status === 'waiting') {
-      const guestReport = guestReportData.guest_report;
-      log('debug', 'Polling result', { paymentStatus: guestReport?.payment_status }, 'ReportForm');
-      
-      if (guestReport?.payment_status === 'paid') {
-        log('info', 'Payment confirmed via polling, transitioning to success state', null, 'ReportForm');
-        setStatus('success', undefined, guestReportData);
-      }
-    }
-    
-    if (guestReportError && status === 'waiting') {
-      log('error', 'Polling error', guestReportError, 'ReportForm');
-      setStatus('error', 'Failed to verify payment status');
-    }
-  }, [guestReportData, guestReportError, status, setStatus]);
+
 
 
 
