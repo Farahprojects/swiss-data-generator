@@ -323,7 +323,7 @@ serve(async (req) => {
 
       console.log(`[standard-report-one][${requestId}] Report log inserted successfully for ${reportData.is_guest ? 'guest' : 'user'} report`);
       
-      // ✅ NEW: Call link-report-guest function for guest reports (non-blocking)
+      // ✅ NEW: Call finalize-report function for guest reports (SYNCHRONOUS)
       if (reportData.user_id && reportData.is_guest) {
         try {
           // Get the report_log_id from the insert result
@@ -338,34 +338,39 @@ serve(async (req) => {
             .single();
           
           if (insertData?.id) {
-            console.log(`[standard-report-one][${requestId}] Calling link-report-guest for guest report:`, {
+            console.log(`[standard-report-one][${requestId}] Calling finalize-report for guest report:`, {
               guest_report_id: reportData.user_id,
               report_log_id: insertData.id
             });
             
-            // Use EdgeRuntime.waitUntil for non-blocking execution
-            EdgeRuntime.waitUntil(
-              fetch(`${SUPABASE_URL}/functions/v1/link-report-guest`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
-                },
-                body: JSON.stringify({
-                  guest_report_id: reportData.user_id,
-                  report_log_id: insertData.id
-                })
-              }).catch(error => {
-                console.error(`[standard-report-one][${requestId}] link-report-guest call failed:`, error);
+            // ✅ SYNCHRONOUS call - AI engine waits for finalization to complete
+            const finalizeResponse = await fetch(`${SUPABASE_URL}/functions/v1/finalize-report`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+              },
+              body: JSON.stringify({
+                guest_report_id: reportData.user_id,
+                report_log_id: insertData.id
               })
-            );
+            });
             
-            console.log(`[standard-report-one][${requestId}] link-report-guest called asynchronously`);
+            if (!finalizeResponse.ok) {
+              const errorText = await finalizeResponse.text();
+              console.error(`[standard-report-one][${requestId}] finalize-report call failed:`, {
+                status: finalizeResponse.status,
+                error: errorText
+              });
+            } else {
+              const finalizeResult = await finalizeResponse.json();
+              console.log(`[standard-report-one][${requestId}] finalize-report completed successfully:`, finalizeResult);
+            }
           } else {
             console.error(`[standard-report-one][${requestId}] Could not find report_log_id for guest report`);
           }
-        } catch (guestError) {
-          console.error(`[standard-report-one][${requestId}] Error calling link-report-guest:`, guestError);
+        } catch (finalizeError) {
+          console.error(`[standard-report-one][${requestId}] Error calling finalize-report:`, finalizeError);
         }
       }
     } catch (logError) {
