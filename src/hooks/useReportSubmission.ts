@@ -4,7 +4,7 @@ import { ReportFormData } from '@/types/public-report';
 import { storeGuestReportId } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
 
-interface TrustedPricingObject {
+export interface TrustedPricingObject {
   valid: boolean;
   promo_code_id?: string;
   discount_usd: number;

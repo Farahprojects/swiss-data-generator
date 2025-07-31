@@ -158,11 +158,12 @@ export const ReportViewer = ({
           textToCopy = renderUnifiedContentAsText(reportData);
           contentDescription = 'report and astro data';
           break;
-        case 'ai':
+        case 'ai': {
           const blocks = ReportParser.parseReport(extractReportContent(reportData));
           textToCopy = blocks.map(block => block.text).join('\n');
           contentDescription = 'report';
           break;
+        }
         case 'astro':
           textToCopy = renderAstroDataAsText(reportData);
           contentDescription = 'astro data';

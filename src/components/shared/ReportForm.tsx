@@ -3,7 +3,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { ReportFormData } from '@/types/public-report';
-import { useReportSubmission } from '@/hooks/useReportSubmission';
+import { useReportSubmission, TrustedPricingObject } from '@/hooks/useReportSubmission';
 import { useTokenRecovery } from '@/hooks/useTokenRecovery';
 import { useReportStatus, ReportStatus } from '@/hooks/useReportStatus';
 
@@ -70,6 +70,14 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       open(guestReportData);           // 🎉 single source of truth
     }
   }, [guestReportData, open]);
+
+  // Handle token recovery error
+  useEffect(() => {
+    if (guestId && tokenRecovery.error) {
+      clearGuestReportId();
+      window.history.replaceState({}, '', '/report');
+    }
+  }, [guestId, tokenRecovery.error]);
 
   // State restoration effect
   useEffect(() => {
@@ -191,7 +199,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     };
     
     checkFormCompletion();
-  }, [form.watch(), isValid, shouldUnlockForm, onFormStateChange]);
+  }, [form, isValid, shouldUnlockForm, onFormStateChange]);
 
   const effectiveGuestId = createdGuestReportId || guestId;
 
@@ -258,7 +266,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     await onSubmit(formData);
   };
 
-  const handleSubmitWithTrustedPricing = async (trustedPricing: any) => {
+  const handleSubmitWithTrustedPricing = async (trustedPricing: TrustedPricingObject) => {
     const formData = form.getValues();
     const submissionData = coachSlug ? { ...formData, coachSlug } : formData;
     await submitReport(submissionData, trustedPricing);
@@ -365,13 +373,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     );
   }
   
-  if (guestId && tokenRecovery.error) {
-    React.useEffect(() => {
-      clearGuestReportId();
-      window.history.replaceState({}, '', '/report');
-    }, []);
-  }
-
   // Main form rendering - single JSX block guarded by status
   if (status === 'collecting' || (!guestId && !reportCreated)) {
     return (
