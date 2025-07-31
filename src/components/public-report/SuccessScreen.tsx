@@ -2,17 +2,16 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { CheckCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { ReportData } from '@/utils/reportContentExtraction';
 import EntertainmentWindow from './EntertainmentWindow';
 import ErrorStateHandler from './ErrorStateHandler';
 import { supabase } from '@/integrations/supabase/client';
 import { logSuccessScreen } from '@/utils/logUtils';
+import { useReportModal } from '@/contexts/ReportModalContext';
 
 interface SuccessScreenProps {
   name: string;
   email: string;
-  onViewReport?: (reportData: ReportData) => void;
   guestReportId?: string;
   onStartWaiting?: () => void;
 }
@@ -31,12 +30,11 @@ interface ErrorState {
 const SuccessScreen: React.FC<SuccessScreenProps> = ({ 
   name, 
   email, 
-  onViewReport, 
   guestReportId,
   onStartWaiting
 }) => {
   const firstName = name?.split(' ')[0] || 'there';
-  const isMobile = useIsMobile();
+  const { open } = useReportModal();
 
   // Simple states
   const [countdownTime, setCountdownTime] = useState(24);
@@ -54,34 +52,34 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     }
   }, [onStartWaiting]);
 
-  // Simple modal trigger - no callbacks
+  // Single call opens modal
   const handleReportReady = useCallback((reportData: ReportData) => {
-    console.log('✅ handleReportReady called with:', reportData);
+    console.log(`🎯 SuccessScreen: handleReportReady called at ${new Date().toISOString()} with:`, reportData);
     logSuccessScreen('info', 'Report ready signal received, opening modal');
     setReportReady(true);
     setCountdownTime(0);
     
-    if (onViewReport) {
-      logSuccessScreen('info', 'Calling onViewReport with report data');
-      onViewReport(reportData);
-    } else {
-      logSuccessScreen('warn', 'onViewReport callback not available');
-    }
-  }, [onViewReport]);
+    console.log(`🚀 SuccessScreen: Calling open(reportData) to trigger modal at ${new Date().toISOString()}`);
+    console.log(`📦 SuccessScreen: reportData being passed:`, reportData);
+    open(reportData); // <- single call opens modal
+    console.log(`✅ SuccessScreen: open(reportData) call completed at ${new Date().toISOString()}`);
+  }, [open]);
 
   // Conditional realtime listener - only listens when waitForReport is true
   useEffect(() => {
     if (!waitForReport || !guestReportId) return;
 
     logSuccessScreen('info', 'Setting up conditional realtime listener for report ready', { guestReportId });
+    console.log(`📡 SuccessScreen: Setting up realtime listener for guest_report:${guestReportId} at ${new Date().toISOString()}`);
     
     const channel = supabase
       .channel(`guest_report:${guestReportId}`)
       .on('broadcast', { event: 'report_ready' }, (payload) => {
-        console.log('🔥 Received report_ready broadcast:', payload);
+        console.log(`🔥 SuccessScreen: Received report_ready broadcast at ${new Date().toISOString()}:`, payload);
         logSuccessScreen('debug', 'Realtime message received from orchestrator', { payload });
         
         if (payload?.payload?.data) {
+          console.log(`✅ SuccessScreen: Orchestrator sent report data, triggering modal at ${new Date().toISOString()}`);
           logSuccessScreen('info', 'Orchestrator sent report data, triggering modal');
           setWaitForReport(false); // Clear the flag to prevent duplicate listeners
           handleReportReady(payload.payload.data);
@@ -90,10 +88,12 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
         }
       })
       .subscribe((status) => {
+        console.log(`📡 SuccessScreen: Realtime subscription status: ${status} at ${new Date().toISOString()}`);
         logSuccessScreen('debug', 'Realtime subscription status', { status });
       });
 
     return () => {
+      console.log(`🧹 SuccessScreen: Cleaning up realtime subscription at ${new Date().toISOString()}`);
       logSuccessScreen('debug', 'Cleaning up conditional realtime subscription');
       supabase.removeChannel(channel);
     };
@@ -223,7 +223,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-b from-background to-muted/20">
-      <div className={isMobile ? 'w-full max-w-md' : 'w-full max-w-4xl'}>
+              <div className="w-full max-w-4xl">
         <Card className="border-2 border-gray-200 shadow-lg">
           <CardContent className="p-8 text-center space-y-6">
             {reportReady ? (

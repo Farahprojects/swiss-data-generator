@@ -19,6 +19,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useGuestReportData } from '@/hooks/useGuestReportData';
 import { ReportData } from '@/utils/reportContentExtraction';
 import { log } from '@/utils/logUtils';
+import { useReportModal } from '@/contexts/ReportModalContext';
 
 interface ReportFormProps {
   coachSlug?: string;
@@ -39,10 +40,11 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   
   // State management
   const [createdGuestReportId, setCreatedGuestReportId] = useState<string | null>(null);
-  const [viewingReport, setViewingReport] = useState(false);
-  const [reportData, setReportData] = useState<ReportData | null>(null);
   const [sessionRestored, setSessionRestored] = useState(false);
   const [waitingForReport, setWaitingForReport] = useState(false);
+  
+  // Modal context
+  const { isOpen, data, close, open } = useReportModal();
 
   // Hooks
   const { status, error: statusError, reportData: statusReportData, setStatus, reset: resetStatus } = useReportStatus();
@@ -56,6 +58,35 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   } = useReportSubmission(setCreatedGuestReportId);
 
   const { data: guestReportData, error: guestReportError, refetch: refetchGuestData } = useGuestReportData(guestId);
+  
+  /**
+   *  👉  ONE-SHOT REFRESH RECOVERY
+   *  If we loaded the page with an existing guestReportId and the server
+   *  says the report is already finished, open the modal immediately.
+   */
+  useEffect(() => {
+    if (
+      !isOpen &&                       // modal not already open
+      guestReportData &&               // we just fetched data
+      (guestReportData.report_content || guestReportData.swiss_data) // it's real
+    ) {
+      open(guestReportData);           // 🎉 single source of truth
+    }
+  }, [isOpen, guestReportData, open]);
+
+  // Add debug logs
+  console.log(`🔍 ReportForm render state at ${new Date().toISOString()}:`, { 
+    isOpen, 
+    hasData: !!data, 
+    status, 
+    hasGuestData: !!guestReportData,
+    guestDataHasContent: !!(guestReportData?.report_content || guestReportData?.swiss_data)
+  });
+
+  // Track if we should be showing modal
+  if (isOpen && data) {
+    console.log(`🎯 ReportForm: MODAL SHOULD BE VISIBLE at ${new Date().toISOString()} - isOpen: ${isOpen}, hasData: ${!!data}`);
+  }
 
   // State restoration effect
   useEffect(() => {
@@ -111,27 +142,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }
   }, [guestReportData, guestReportError, status, setStatus]);
 
-  // Simple modal trigger when data is ready
-  useEffect(() => {
-    if (guestReportData && guestId) {
-      const guestReport = guestReportData.guest_report;
-      const hasReportContent = guestReportData.report_content;
-      const hasSwissData = guestReportData.swiss_data;
-      
-      if (hasReportContent || hasSwissData) {
-        log('info', 'Report data ready, triggering modal', null, 'ReportForm');
-        setReportData(guestReportData);
-        setViewingReport(true);
-      }
-    }
-  }, [guestReportData, guestId]);
 
-  // Debug log to confirm modal opening
-  useEffect(() => {
-    if (viewingReport && reportData) {
-      console.log("✅ Opening modal with reportData:", reportData);
-    }
-  }, [viewingReport, reportData]);
 
 
   // Form setup
@@ -221,8 +232,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     log('debug', 'Resetting component states', null, 'ReportForm');
     
     form.reset();
-    setViewingReport(false);
-    setReportData(null);
     setCreatedGuestReportId(null);
     setSessionRestored(false);
     
@@ -268,11 +277,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }, 300);
   };
 
-  // Simple modal trigger - no conditions
-  const handleViewReport = useCallback((data: ReportData) => {
-    setReportData(data);          // ✅ Actually store the report
-    setViewingReport(true);       // ✅ Now this means something
-  }, []);
+
 
 
 
@@ -293,6 +298,21 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     await submitReport(submissionData, trustedPricing);
   };
 
+  /* 🔑 EARLY RETURN — must sit BEFORE the switch */
+  if (isOpen && data) {
+    console.log(`🎯 ReportForm: Modal guard firing at ${new Date().toISOString()} - returning ReportViewer`);
+    return (
+      <ReportViewer
+        reportData={data}
+        onBack={close}
+        onStateReset={resetComponentStates}
+      />
+    );
+  } else {
+    console.log(`❌ ReportForm: Modal guard NOT firing at ${new Date().toISOString()} - isOpen: ${isOpen}, hasData: ${!!data}`);
+  }
+
+  /* ↓ everything else follows ↓ */
   // Status-based rendering with single switch statement
   switch (status) {
     case 'verifying':
@@ -342,52 +362,14 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       break;
   }
 
-  if (viewingReport && reportData) {
-    return (
-      <ReportViewer
-        reportData={reportData}
-        onBack={() => navigate('/report', { replace: true })}
-        isMobile={false}
-        onStateReset={resetComponentStates}
-      />
-    );
-  }
-
-  if (viewingReport && isProcessing) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading report...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (viewingReport && (guestReportError || !guestReportData)) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <p className="text-destructive mb-4">Failed to load report</p>
-          <button 
-            onClick={() => navigate('/report', { replace: true })}
-            className="bg-primary text-primary-foreground px-4 py-2 rounded"
-          >
-            Go Back
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   // Success state checks
   if (reportCreated && createdGuestReportId && userName && userEmail) {
+    console.log('📱 Rendering SuccessScreen (reportCreated path)');
     log('debug', 'Rendering SuccessScreen with guaranteed guest ID', { createdGuestReportId }, 'ReportForm');
     return (
       <SuccessScreen 
         name={userName} 
         email={userEmail} 
-        onViewReport={handleViewReport}
         guestReportId={createdGuestReportId}
         onStartWaiting={() => setWaitingForReport(true)}
       />
@@ -400,11 +382,11 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     const email = reportData?.email || statusReportData.guest_report?.email;
     
     if (name && email) {
+      console.log('📱 Rendering SuccessScreen (status success path)');
       return (
         <SuccessScreen 
           name={name} 
           email={email} 
-          onViewReport={handleViewReport}
           guestReportId={guestId || undefined}
           onStartWaiting={() => setWaitingForReport(true)}
         />
@@ -417,7 +399,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       <SuccessScreen 
         name={tokenRecovery.recoveredName} 
         email={tokenRecovery.recoveredEmail} 
-        onViewReport={handleViewReport}
         guestReportId={guestId}
         onStartWaiting={() => setWaitingForReport(true)}
       />

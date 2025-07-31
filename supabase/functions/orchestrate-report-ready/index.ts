@@ -15,7 +15,8 @@ function isValidUUID(uuid: string): boolean {
 
 serve(async (req) => {
   const startTime = Date.now();
-  console.log(`[orchestrate-report-ready] Request started at ${new Date().toISOString()}`);
+  const requestId = Math.random().toString(36).substring(7);
+  console.log(`[orchestrate-report-ready][${requestId}] 🚀 Request started at ${new Date().toISOString()}`);
 
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -70,13 +71,13 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[orchestrate-report-ready] Processing report orchestration (called by link-report-guest): ${guest_report_id}`);
+    console.log(`[orchestrate-report-ready][${requestId}] 📋 Processing report orchestration (called by link-report-guest): ${guest_report_id}`);
 
     // Initialize Supabase client with service role
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Fetch the guest report with related data
-    console.log("[orchestrate-report-ready] Fetching complete report data...");
+    console.log(`[orchestrate-report-ready][${requestId}] 🔍 Fetching complete report data...`);
     const { data: guestReport, error: fetchError } = await supabase
       .from("guest_reports")
       .select(`
@@ -156,10 +157,10 @@ serve(async (req) => {
       }
     };
 
-    console.log(`[orchestrate-report-ready] Report orchestration completed (triggered by link-report-guest): ${guest_report_id}`);
+    console.log(`[orchestrate-report-ready][${requestId}] ✅ Report orchestration completed (triggered by link-report-guest): ${guest_report_id}`);
     
     // Send realtime message to SuccessScreen
-    console.log(`[orchestrate-report-ready] Broadcasting report data to realtime channel: guest_report:${guest_report_id}`);
+    console.log(`[orchestrate-report-ready][${requestId}] 📡 Broadcasting report data to realtime channel: guest_report:${guest_report_id} at ${new Date().toISOString()}`);
     
     const channel = supabase.channel(`guest_report:${guest_report_id}`);
     await channel.send({
@@ -172,7 +173,7 @@ serve(async (req) => {
       }
     });
 
-    console.log(`[orchestrate-report-ready] Realtime broadcast sent successfully`);
+    console.log(`[orchestrate-report-ready][${requestId}] ✅ Realtime broadcast sent successfully at ${new Date().toISOString()}`);
 
     // NEW: Call create-temp-report-data function to create temp data for ChatGPT button
     console.log(`[orchestrate-report-ready] Creating temp report data for ChatGPT functionality...`);

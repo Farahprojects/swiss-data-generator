@@ -5,12 +5,9 @@ import FeaturesSection from '@/components/public-report/FeaturesSection';
 import TestsSection from '@/components/public-report/TestsSection';
 import TheraiChatGPTSection from '@/components/public-report/TheraiChatGPTSection';
 import { ReportForm } from '@/components/shared/ReportForm';
-import MobileReportTrigger from '@/components/public-report/MobileReportTrigger';
-import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
 import Footer from '@/components/Footer';
 import { supabase } from '@/integrations/supabase/client';
 import Logo from '@/components/Logo';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
@@ -19,12 +16,10 @@ import { log } from '@/utils/logUtils';
 
 const PublicReport = () => {
   // ALL HOOKS MUST BE DECLARED FIRST - NEVER INSIDE TRY-CATCH
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [scrollY, setScrollY] = useState(0);
   const [showCancelledMessage, setShowCancelledMessage] = useState(false);
   const [activeGuestId, setActiveGuestId] = useState<string | null>(null);
   const [isGuestIdLoading, setIsGuestIdLoading] = useState(true);
-  const isMobile = useIsMobile();
   const location = useLocation();
 
   // Direct URL parsing fix for hydration issue - reliable guest_id detection
@@ -74,23 +69,13 @@ const PublicReport = () => {
   }, []);
 
   const handleGetReportClick = () => {
-    if (isMobile) {
-      setIsDrawerOpen(true);
-    } else if (typeof window !== 'undefined') {
-      // For desktop, scroll to form
+    if (typeof window !== 'undefined') {
+      // Scroll to form
       const reportSection = document.querySelector('#report-form');
       if (reportSection) {
         reportSection.scrollIntoView({ behavior: 'smooth' });
       }
     }
-  };
-
-  const handleCloseDrawer = () => {
-    setIsDrawerOpen(false);
-  };
-
-  const handleOpenDrawer = () => {
-    setIsDrawerOpen(true);
   };
 
   const handleDismissCancelMessage = () => {
@@ -351,20 +336,9 @@ const PublicReport = () => {
         </section>
 
         <TestsSection />
-        {!isMobile && (
-          <div id="report-form">
-            <ReportForm guestId={activeGuestId} />
-          </div>
-        )}
-        <MobileReportTrigger 
-          isDrawerOpen={isDrawerOpen}
-          onOpenDrawer={handleOpenDrawer}
-        />
-        <MobileReportDrawer 
-          isOpen={isDrawerOpen} 
-          onClose={handleCloseDrawer}
-          guestId={activeGuestId}
-        />
+        <div id="report-form">
+          <ReportForm guestId={activeGuestId} />
+        </div>
         <TheraiChatGPTSection />
         <FeaturesSection onGetReportClick={handleGetReportClick} />
         <Footer />

@@ -8,6 +8,7 @@ import { ModalStateProvider } from './contexts/ModalStateProvider';
 import { SettingsModalProvider } from './contexts/SettingsModalContext';
 import { PricingProvider } from './contexts/PricingContext';
 import NavigationStateProvider from './contexts/NavigationStateContext';
+import { ReportModalProvider } from './contexts/ReportModalContext';
 import { Toaster } from "@/components/ui/toaster";
 import "./App.css";
 import DashboardLayout from './components/dashboard/DashboardLayout';
@@ -76,8 +77,9 @@ function App() {
               <NavigationStateProvider>
                 <AuthProvider>
                   <PricingProvider>
-                    <ModalStateProvider>
-                      <SettingsModalProvider>
+                                          <ModalStateProvider>
+                        <SettingsModalProvider>
+                          <ReportModalProvider>
                   <div className="min-h-screen bg-background">
                     <Routes>
                       <Route path="/" element={<Index />} />
@@ -119,8 +121,9 @@ function App() {
                     </Routes>
                   </div>
                       <Toaster />
-                    </SettingsModalProvider>
-                  </ModalStateProvider>
+                          </ReportModalProvider>
+                        </SettingsModalProvider>
+                      </ModalStateProvider>
                 </PricingProvider>
               </AuthProvider>
             </NavigationStateProvider>
