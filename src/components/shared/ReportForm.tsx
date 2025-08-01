@@ -18,6 +18,7 @@ import { useGuestReportData } from '@/hooks/useGuestReportData';
 import { ReportData } from '@/utils/reportContentExtraction';
 import { log } from '@/utils/logUtils';
 import { useReportModal } from '@/contexts/ReportModalContext';
+import { resetGuestSessionOn404 } from '@/utils/urlHelpers';
 
 interface ReportFormProps {
   coachSlug?: string;
@@ -62,22 +63,18 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     if (guestReportError) {
       console.warn('[ReportForm] Guest report error detected:', guestReportError);
       
-      // Clear all memory keys related to session or report
-      localStorage.removeItem("guestId");
-      localStorage.removeItem("reportUrl");
-      localStorage.removeItem("pending_report_email");
-      sessionStorage.removeItem("guestId");
-      sessionStorage.removeItem("reportUrl");
-
-      // Optional: flag that we *already refreshed once* to avoid infinite loop
-      if (!sessionStorage.getItem("refreshOnce")) {
-        sessionStorage.setItem("refreshOnce", "true");
-        window.location.reload(); // or redirect to "/" or report setup page
-      } else {
-        console.warn("Prevented infinite reload loop");
-        // Fallback to homepage redirect if reload loop detected
-        window.location.href = '/';
-      }
+      // Comprehensive state reset
+      resetGuestSessionOn404().then(() => {
+        // Optional: flag that we *already refreshed once* to avoid infinite loop
+        if (!sessionStorage.getItem("refreshOnce")) {
+          sessionStorage.setItem("refreshOnce", "true");
+          window.location.reload(); // or redirect to "/" or report setup page
+        } else {
+          console.warn("Prevented infinite reload loop");
+          // Fallback to homepage redirect if reload loop detected
+          window.location.href = '/';
+        }
+      });
     }
   }, [guestReportError]);
   

@@ -1,6 +1,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { resetGuestSessionOn404 } from '@/utils/urlHelpers';
 
 export const useGuestReportData = (reportId: string | null) => {
   return useQuery({
@@ -25,12 +26,8 @@ export const useGuestReportData = (reportId: string | null) => {
         if ((error as any)?.status === 404 || error.message?.includes('not found') || error.message?.includes('404')) {
           console.warn("Guest report not found — clearing session and refreshing app");
 
-          // Clear all memory keys related to session or report
-          localStorage.removeItem("guestId");
-          localStorage.removeItem("reportUrl");
-          localStorage.removeItem("pending_report_email");
-          sessionStorage.removeItem("guestId");
-          sessionStorage.removeItem("reportUrl");
+          // Comprehensive state reset
+          await resetGuestSessionOn404();
 
           // Optional: flag that we *already refreshed once* to avoid infinite loop
           if (!sessionStorage.getItem("refreshOnce")) {

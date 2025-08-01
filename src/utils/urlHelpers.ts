@@ -94,6 +94,43 @@ export const getGuestReportId = (): string | null => {
 };
 
 /**
+ * Comprehensive guest session reset for 404 errors
+ * Clears all in-memory state, React Query cache, and storage
+ */
+export const resetGuestSessionOn404 = async (): Promise<void> => {
+  console.warn('🔄 Resetting guest session due to 404 error...');
+  
+  try {
+    // Clear all memory keys related to session or report
+    localStorage.removeItem("guestId");
+    localStorage.removeItem("reportUrl");
+    localStorage.removeItem("pending_report_email");
+    localStorage.removeItem("currentGuestReportId");
+    sessionStorage.removeItem("guestId");
+    sessionStorage.removeItem("reportUrl");
+
+    // Clear React Query cache for guest report data
+    try {
+      const { useQueryClient } = await import('@tanstack/react-query');
+      const queryClient = useQueryClient();
+      queryClient.removeQueries({ queryKey: ['guest-report-data'] });
+      queryClient.removeQueries({ queryKey: ['token-recovery'] });
+      queryClient.removeQueries({ queryKey: ['guest-report-data', null] });
+      console.log('✅ React Query cache cleared for guest report data');
+    } catch (error) {
+      console.log('⚠️ React Query not available for cache clearing');
+    }
+
+    // Clear URL parameters
+    clearGuestReportIdFromUrl();
+
+    console.log('✅ Guest session reset completed');
+  } catch (error) {
+    console.error('❌ Error during guest session reset:', error);
+  }
+};
+
+/**
  * Store guest report ID in both URL and localStorage
  */
 export const storeGuestReportId = (guestReportId: string): void => {
