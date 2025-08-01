@@ -201,52 +201,9 @@ async function inferTimezone(obj:any){
   return null;
 }
 
-/*──────────────── report helper (OPTIMIZED) -------------------------------*/
-async function handleReportGenerationParallel(params:{requestData:any;swissApiResponse:any;swissApiStatus:number;requestId?:string}){
-  const { requestData,swissApiResponse,swissApiStatus,requestId } = params;
-  const tag = requestId ? `[reportHandler][${requestId}]` : "[reportHandler]";
-  console.log(`${tag} Swiss status ${swissApiStatus} - Starting PARALLEL processing`);
-  
-  // Log report_generation_dispatched timing
+/*──────────────── simple orchestrator call ---------------------------*/
+async function callOrchestratorFireForget(requestData: any, swissData: any) {
   try {
-    await sb.from("performance_timings").insert({
-      request_id: requestId || crypto.randomUUID().slice(0,8),
-      stage: 'report_generation_dispatched',
-      guest_report_id: requestData?.user_id || null,
-      start_time: new Date().toISOString(),
-      end_time: new Date().toISOString(),
-      duration_ms: 0,
-      metadata: { 
-        function: 'translator-edge',
-        location: 'handleReportGenerationParallel',
-        swiss_status: swissApiStatus,
-        report_type: requestData?.reportType
-      }
-    });
-  } catch (err) {
-    console.error('Failed to log report_generation_dispatched:', err);
-  }
-  
-  // Check for reportType instead of report
-  if (swissApiStatus!==200 || !requestData?.reportType) {
-    console.log(`${tag} Skipping report generation - status: ${swissApiStatus}, reportType: ${requestData?.reportType}`);
-    return;
-  }
-  
-  let swissData: any;
-  try{ 
-    swissData = typeof swissApiResponse==="string"?JSON.parse(swissApiResponse):swissApiResponse; 
-  } catch(e) { 
-    console.error(`${tag} Swiss data parse failed:`, e); 
-    return; 
-  }
-
-  // Start report generation immediately without waiting for database logging
-  console.log(`${tag} Starting report generation immediately with Swiss data`);
-  
-  try{
-    // Call the new report-orchestrator edge function
-    const orchestratorUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/report-orchestrator`;
     const orchestratorPayload = {
       endpoint: requestData.request,
       report_type: requestData.reportType,
@@ -257,58 +214,16 @@ async function handleReportGenerationParallel(params:{requestData:any;swissApiRe
       ...requestData
     };
     
-    console.log(`${tag} Calling report-orchestrator edge function`);
-    
-    // Fire off report generation - don't await it
-    const orchestratorPromise = fetch(orchestratorUrl, {
+    fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/report-orchestrator`, {
       method: "POST",
       headers: { 
         "Content-Type": "application/json",
         "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
       },
       body: JSON.stringify(orchestratorPayload),
-    });
-
-    console.log(`${tag} Report generation initiated in parallel via edge function`);
-    
-    // Use EdgeRuntime.waitUntil to ensure the report generation completes even if the main response finishes
-    if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
-      console.log(`${tag} EdgeRuntime.waitUntil is available - using it for async processing`);
-      EdgeRuntime.waitUntil(orchestratorPromise.catch(e => console.error(`${tag} Report generation failed:`, e)));
-    } else {
-      console.warn(`${tag} EdgeRuntime.waitUntil NOT available - using fallback fire-and-forget`);
-      // Fallback: fire and forget
-      orchestratorPromise.catch(e => console.error(`${tag} Report generation failed:`, e));
-    }
-    
+    }).catch(e => console.error("Orchestrator call failed:", e));
   } catch(e) { 
-    console.error(`${tag} Report orchestrator error:`, e); 
-  }
-}
-
-/*──────────────── performance timing helper -------------------------------*/
-async function logPerformanceTiming(
-  requestId: string,
-  stage: string,
-  guestReportId: string,
-  startTime: number,
-  endTime: number,
-  metadata: any
-) {
-  try {
-    const duration = endTime - startTime;
-    await sb.from("performance_timings").insert({
-      request_id: requestId,
-      stage,
-      guest_report_id: guestReportId,
-      start_time: new Date(startTime).toISOString(),
-      end_time: new Date(endTime).toISOString(),
-      duration_ms: duration,
-      metadata
-    });
-    console.log(`📊 [translator-edge] Performance logged - ${stage}: ${duration}ms`);
-  } catch (error) {
-    console.error(`❌ [translator-edge] Performance logging failed:`, error);
+    console.error("Orchestrator call error:", e); 
   }
 }
 
@@ -350,32 +265,13 @@ async function logTranslatorAsync(run:{request_type:string;request_payload:any;s
 /*──────────────── Canon ----------------------------------------------------*/
 const CANON:Record<string,string>={ natal:"natal",transits:"transits",progressions:"progressions",return:"return",synastry:"synastry",compatibility:"synastry",positions:"positions",moonphases:"moonphases",body:"body_matrix",body_matrix:"body_matrix",sync:"sync",essence:"essence",flow:"flow",mindset:"mindset",monthly:"monthly",focus:"focus" };
 
-/*──────────────── Edge Function (OPTIMIZED) -------------------------------*/
+/*──────────────── Edge Function (SIMPLIFIED) -------------------------------*/
 serve(async (req)=>{
   if(req.method==="OPTIONS") return new Response(null,{status:204,headers:corsHeaders});
-  const t0=Date.now();
   const reqId = crypto.randomUUID().slice(0,8);
   let skipLogging=false, requestType="unknown", googleGeo=false, userId:string|undefined, isGuest=false;
   
-  // Log translator_edge_start timing immediately
-  try {
-    await sb.from("performance_timings").insert({
-      request_id: reqId,
-      stage: 'translator_edge_start',
-      guest_report_id: null, // Will be updated once we parse the body
-      start_time: new Date().toISOString(),
-      end_time: new Date().toISOString(),
-      duration_ms: 0,
-      metadata: { 
-        function: 'translator-edge',
-        timestamp: new Date().toISOString()
-      }
-    });
-  } catch (err) {
-    console.error('Failed to log translator_edge_start:', err);
-  }
   try{
-    // Extract user_id and is_guest before validation for proper error logging
     const rawBodyText = await req.text();
     let rawBody: any;
     try {
@@ -386,6 +282,7 @@ serve(async (req)=>{
       console.error(`[translator-edge-${reqId}] JSON parse failed:`, parseErr);
       throw new Error("Invalid JSON in request body");
     }
+    
     function normalisePerson(src:any={}):any{
       return {
         birth_date: src.birth_date||src.date||null,
@@ -407,55 +304,28 @@ serve(async (req)=>{
       }
       return input;
     }
+    
     const body = normaliseBody(rawBody);
-    console.log(`[translator-edge-${reqId}]`, JSON.stringify(body));
     skipLogging = body.skip_logging===true;
     const parsed = baseSchema.parse(body);
     requestType = parsed.request.trim().toLowerCase();
     const canon = CANON[requestType];
     if(!canon) throw new Error(`Unknown request '${parsed.request}'`);
 
-    // 🔒 EARLY UPDATE: Set is_ai_report flag synchronously before any processing
-    if (isGuest && userId && body.reportType) {
-      const isAiReportFlag = body.reportType.includes('_personal') || body.reportType.includes('_professional') || body.reportType.includes('_business');
-      console.log(`[translator-edge-${reqId}] Setting is_ai_report=${isAiReportFlag} for reportType: ${body.reportType} (EARLY UPDATE)`);
-      
-      try {
-        const { error } = await sb.from("guest_reports")
-          .update({ is_ai_report: isAiReportFlag })
-          .eq("id", userId);
-        
-        if (error) {
-          console.error(`[translator-edge-${reqId}] Failed to update is_ai_report:`, error);
-        } else {
-          console.log(`[translator-edge-${reqId}] Updated is_ai_report=${isAiReportFlag} for guest: ${userId} (EARLY UPDATE)`);
-        }
-      } catch(e) {
-        console.error(`[translator-edge-${reqId}] is_ai_report update exception:`, e);
-      }
-    }
-
+    // Build Swiss API payload
     let payload:any;
     if(canon==="sync" && parsed.person_a && parsed.person_b){
       const {data:pa,googleGeoUsed:g1}=await ensureLatLon(parsed.person_a);
       const tzA=await inferTimezone(pa);
-      console.log(`[translator-edge-${reqId}] Person A timezone inferred: ${tzA}`);
-      // Assign timezone back to the person object
       pa.tz = tzA || pa.tz || "UTC";
       const utcA=toUtcISO({...pa,tz:pa.tz,location:pa.location||""});
-      console.log(`[translator-edge-${reqId}] Person A UTC generated: ${utcA}`);
       const normA={...normalise(pa),utc:utcA,tz:pa.tz};
-      console.log(`[translator-edge-${reqId}] Person A final payload:`, JSON.stringify(normA));
 
       const {data:pb,googleGeoUsed:g2}=await ensureLatLon(parsed.person_b);
       const tzB=await inferTimezone(pb);
-      console.log(`[translator-edge-${reqId}] Person B timezone inferred: ${tzB}`);
-      // Assign timezone back to the person object
       pb.tz = tzB || pb.tz || "UTC";
       const utcB=toUtcISO({...pb,tz:pb.tz,location:pb.location||""});
-      console.log(`[translator-edge-${reqId}] Person B UTC generated: ${utcB}`);
       const normB={...normalise(pb),utc:utcB,tz:pb.tz};
-      console.log(`[translator-edge-${reqId}] Person B final payload:`, JSON.stringify(normB));
 
       googleGeo = g1||g2;
       payload = { person_a: normA, person_b: normB, ...parsed };
@@ -465,10 +335,7 @@ serve(async (req)=>{
       if(["natal","essence","sync","flow","mindset","monthly","focus","progressions","return","transits"].includes(canon)){
         try{
           const tzGuess = await inferTimezone(withLatLon);
-
-          // 🔒 Pull from person_a if exists
           const source = parsed.person_a ?? parsed;
-
           const date = source.birth_date ?? source.date;
           const time = source.birth_time ?? source.time;
 
@@ -478,138 +345,45 @@ serve(async (req)=>{
           withLatLon.birth_date = date;
           withLatLon.birth_time = time;
           withLatLon.tz = parsed.tz || tzGuess || source.tz || "UTC";
-
           const utcISO = toUtcISO({
             birth_date: date,
             birth_time: time,
             tz: withLatLon.tz,
             location: source.location ?? parsed.location ?? ""
           });
-
           withLatLon.utc = parsed.utc || utcISO;
         }catch(e){ console.warn(`[translator-edge-${reqId}] UTC gen fail`, e); }
       }
-      // Flatten payload if it's just person_a
       payload = {
         ...(parsed.person_a ?? withLatLon),
         utc: withLatLon.utc,
         tz: withLatLon.tz,
-        reportType: parsed.reportType,  // Changed from 'report' to 'reportType'
+        reportType: parsed.reportType,
         request: parsed.request,
         user_id: parsed.user_id,
         is_guest: parsed.is_guest,
         house_system: parsed.person_a?.house_system ?? withLatLon.house_system ?? "P",
       };
     }
-    console.log(`[translator-edge-${reqId}] Final payload being sent to Swiss API:`, JSON.stringify(payload));
+
+    // Call Swiss API
     const url = `${SWISS_API}/${canon}`;
-    console.log(`[translator-edge-${reqId}] Calling Swiss API at: ${url}`);
-    
-    // Measure Swiss API timing specifically
-    const swissApiStart = Date.now();
-    const swiss = await fetch(url,{ method:["moonphases","positions"].includes(canon)?"GET":"POST", headers:{"Content-Type":"application/json"}, body:["moonphases","positions"].includes(canon)?undefined:JSON.stringify(payload) });
+    const swiss = await fetch(url,{ 
+      method:["moonphases","positions"].includes(canon)?"GET":"POST", 
+      headers:{"Content-Type":"application/json"}, 
+      body:["moonphases","positions"].includes(canon)?undefined:JSON.stringify(payload) 
+    });
     const txt = await swiss.text();
-    const swissApiEnd = Date.now();
-    const swissApiDuration = swissApiEnd - swissApiStart;
-    
-    console.log(`[translator-edge-${reqId}] Swiss API response status: ${swiss.status}`);
-    console.log(`[translator-edge-${reqId}] Swiss API duration: ${swissApiDuration}ms`);
-    console.log(`[translator-edge-${reqId}] Swiss API raw response: ${txt.substring(0, 500)}...`);
     const swissData = (()=>{ try{return JSON.parse(txt);}catch{return { raw:txt }; }})();
 
-    // Log performance timing before handing over to report generation
-    const translatorEndTime = Date.now();
-    const correlationRequestId = parsed.request_id || reqId;
-    
-    if (isGuest && userId) {
-      logPerformanceTiming(
-        correlationRequestId,
-        'translator_edge',
-        userId,
-        t0,
-        translatorEndTime,
-        {
-          request_type: canon,
-          swiss_api_ms: swissApiDuration,
-          geocoding_used: googleGeo,
-          report_type: parsed.reportType,
-          total_processing_ms: translatorEndTime - t0
-        }
-      ).catch(e => console.error(`[translator-edge-${reqId}] Performance logging failed:`, e));
-    }
-
-    // PARALLEL PROCESSING: Start both report generation and logging simultaneously
-    const processingPromises = [];
-    
-    // 1. Start report generation immediately if conditions are met
-    if(body.reportType && swiss.ok){
-      console.log(`[translator-edge-${reqId}] Starting parallel report generation`);
-      processingPromises.push(
-        handleReportGenerationParallel({
-          requestData:body,
-          swissApiResponse:swissData,
-          swissApiStatus:swiss.status,
-          requestId:reqId
-        }).catch(e => console.error(`[translator-edge-${reqId}] Report generation failed:`, e))
-      );
-    }
-    
-    // 2. NEW: For astro-only reports (no AI report), trigger orchestration to open modal
-    if(body.is_guest && userId && swiss.ok && !body.reportType) {
-      console.log(`[translator-edge-${reqId}] Swiss data only purchase - triggering orchestration`);
-      
-      // Update guest_reports to set modal_ready for astro-only reports
-      const orchestrationPromise = (async () => {
-        try {
-          // Set modal_ready = true for astro-only reports
-          const { error: updateError } = await sb
-            .from("guest_reports")
-            .update({ 
-              modal_ready: true,
-              swiss_boolean: true,
-              updated_at: new Date().toISOString()
-            })
-            .eq("id", userId);
-            
-          if (updateError) {
-            console.error(`[translator-edge-${reqId}] Failed to update guest_reports:`, updateError);
-            return;
-          }
-          
-          console.log(`[translator-edge-${reqId}] Updated guest_reports modal_ready=true for astro-only report`);
-          
-          // Call orchestrate-report-ready using Supabase client method
-          const { data: orchResult, error: orchError } = await sb.functions.invoke('orchestrate-report-ready', {
-            body: { guest_report_id: userId }
-          });
-          
-          if (orchError) {
-            console.error(`[translator-edge-${reqId}] Orchestration failed:`, orchError);
-          } else {
-            console.log(`[translator-edge-${reqId}] Orchestration completed successfully for astro-only report`);
-          }
-        } catch (error) {
-          console.error(`[translator-edge-${reqId}] Orchestration error:`, error);
-        }
-      })();
-      
-      // Use EdgeRuntime.waitUntil if available, otherwise fire and forget
-      if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
-        EdgeRuntime.waitUntil(orchestrationPromise);
-      } else {
-        orchestrationPromise.catch(e => console.error(`[translator-edge-${reqId}] Background orchestration error:`, e));
-      }
-    }
-    
-    // 3. Start logging asynchronously
-    console.log(`[translator-edge-${reqId}] Starting async logging`);
+    // Log to translator_logs (fire-and-forget)
     logTranslatorAsync({ 
       request_type:canon, 
       request_payload:body, 
       swiss_data:swissData, 
       swiss_status:swiss.status, 
-      processing_ms:Date.now()-t0, 
-      swiss_api_ms:swissApiDuration,
+      processing_ms:0, 
+      swiss_api_ms:0,
       error: swiss.ok?undefined:`Swiss ${swiss.status}`, 
       google_geo:googleGeo, 
       translator_payload:payload, 
@@ -618,10 +392,12 @@ serve(async (req)=>{
       is_guest:body.is_guest 
     });
 
+    // If we need to pass data to orchestrator, do it and forget
+    if(swiss.ok && (body.reportType || (!body.reportType && body.is_guest))) {
+      callOrchestratorFireForget(body, swissData);
+    }
 
-
-    // Return Swiss response immediately - don't wait for report generation or logging
-    console.log(`[translator-edge-${reqId}] Returning Swiss response immediately (${Date.now()-t0}ms)`);
+    // Return Swiss response immediately
     return new Response(txt,{status:swiss.status,headers:corsHeaders});
     
   }catch(err){
@@ -634,8 +410,8 @@ serve(async (req)=>{
       request_payload:"n/a", 
       swiss_data:{error:msg}, 
       swiss_status:500, 
-      processing_ms:Date.now()-t0, 
-      swiss_api_ms:0, // No Swiss API call in error case
+      processing_ms:0, 
+      swiss_api_ms:0,
       error:msg, 
       google_geo:googleGeo, 
       translator_payload:null, 
