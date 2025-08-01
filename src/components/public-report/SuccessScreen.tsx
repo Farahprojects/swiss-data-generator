@@ -8,7 +8,7 @@ import ErrorStateHandler from './ErrorStateHandler';
 import { supabase } from '@/integrations/supabase/client';
 import { logSuccessScreen } from '@/utils/logUtils';
 import { useReportModal } from '@/contexts/ReportModalContext';
-import { resetGuestSessionOn404 } from '@/utils/urlHelpers';
+import { useGuestSessionManager } from '@/hooks/useGuestSessionManager';
 
 interface SuccessScreenProps {
   name: string;
@@ -36,23 +36,14 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 }) => {
   const firstName = name?.split(' ')[0] || 'there';
   const { open } = useReportModal();
+  const { handleSessionReset } = useGuestSessionManager(guestReportId);
 
   // Guard against missing guest report ID
   if (!guestReportId) {
-    console.warn('[SuccessScreen] No guestReportId provided, redirecting to homepage');
+    console.warn('[SuccessScreen] No guestReportId provided, delegating to session manager');
     
-    // Comprehensive state reset
-    resetGuestSessionOn404().then(() => {
-      // Optional: flag that we *already refreshed once* to avoid infinite loop
-      if (!sessionStorage.getItem("refreshOnce")) {
-        sessionStorage.setItem("refreshOnce", "true");
-        window.location.reload(); // or redirect to "/" or report setup page
-      } else {
-        console.warn("Prevented infinite reload loop");
-        // Fallback to homepage redirect if reload loop detected
-        window.location.href = '/';
-      }
-    });
+    // Delegate to centralized session manager
+    handleSessionReset('success_screen_missing_guest_id');
     
     // Show a brief loading state before redirect
     return (

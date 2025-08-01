@@ -19,6 +19,7 @@ import { ReportData } from '@/utils/reportContentExtraction';
 import { log } from '@/utils/logUtils';
 import { useReportModal } from '@/contexts/ReportModalContext';
 import { resetGuestSessionOn404 } from '@/utils/urlHelpers';
+import { useGuestSessionManager } from '@/hooks/useGuestSessionManager';
 
 interface ReportFormProps {
   coachSlug?: string;
@@ -57,26 +58,15 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   } = useReportSubmission(setCreatedGuestReportId);
 
   const { data: guestReportData, error: guestReportError, refetch: refetchGuestData } = useGuestReportData(guestId);
+  const { handleSessionReset } = useGuestSessionManager(guestId);
   
-  // Handle guest report errors gracefully
+  // Handle guest report errors gracefully - delegate to session manager
   useEffect(() => {
     if (guestReportError) {
-      console.warn('[ReportForm] Guest report error detected:', guestReportError);
-      
-      // Comprehensive state reset
-      resetGuestSessionOn404().then(() => {
-        // Optional: flag that we *already refreshed once* to avoid infinite loop
-        if (!sessionStorage.getItem("refreshOnce")) {
-          sessionStorage.setItem("refreshOnce", "true");
-          window.location.reload(); // or redirect to "/" or report setup page
-        } else {
-          console.warn("Prevented infinite reload loop");
-          // Fallback to homepage redirect if reload loop detected
-          window.location.href = '/';
-        }
-      });
+      console.warn('[ReportForm] Guest report error detected, delegating to session manager');
+      handleSessionReset('report_form_error');
     }
-  }, [guestReportError]);
+  }, [guestReportError, handleSessionReset]);
   
   /**
    *  👉  ONE-SHOT REFRESH RECOVERY

@@ -1,9 +1,11 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { resetGuestSessionOn404 } from '@/utils/urlHelpers';
+import { useGuestSessionManager } from './useGuestSessionManager';
 
 export const useGuestReportData = (reportId: string | null) => {
+  const { handleSessionReset } = useGuestSessionManager(reportId);
+
   return useQuery({
     queryKey: ['guest-report-data', reportId],
     queryFn: async () => {
@@ -24,21 +26,10 @@ export const useGuestReportData = (reportId: string | null) => {
         // Handle 404 errors gracefully - guest report no longer exists
         // Supabase function errors have a status property
         if ((error as any)?.status === 404 || error.message?.includes('not found') || error.message?.includes('404')) {
-          console.warn("Guest report not found — clearing session and refreshing app");
-
-          // Comprehensive state reset
-          await resetGuestSessionOn404();
-
-          // Optional: flag that we *already refreshed once* to avoid infinite loop
-          if (!sessionStorage.getItem("refreshOnce")) {
-            sessionStorage.setItem("refreshOnce", "true");
-            window.location.reload(); // or redirect to "/" or report setup page
-          } else {
-            console.warn("Prevented infinite reload loop");
-            // Fallback to homepage redirect if reload loop detected
-            window.location.href = '/';
-          }
+          console.warn("Guest report not found — delegating to session manager");
           
+          // Delegate to centralized session manager
+          await handleSessionReset('guest_report_404');
           return null;
         }
         

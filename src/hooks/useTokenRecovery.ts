@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { log } from '@/utils/logUtils';
-import { resetGuestSessionOn404 } from '@/utils/urlHelpers';
+import { useGuestSessionManager } from './useGuestSessionManager';
 
 interface TokenRecoveryState {
   isRecovering: boolean;
@@ -13,6 +13,8 @@ interface TokenRecoveryState {
 }
 
 export const useTokenRecovery = (guestId: string | null) => {
+  const { handleSessionReset } = useGuestSessionManager(guestId);
+  
   const [state, setState] = useState<TokenRecoveryState>({
     isRecovering: false,
     recovered: false,
@@ -32,19 +34,12 @@ export const useTokenRecovery = (guestId: string | null) => {
         .single();
 
       if (error || !guestReport) {
-        // Handle 404 errors with comprehensive reset
+        // Handle 404 errors with centralized session manager
         if (error?.code === 'PGRST116' || error?.message?.includes('not found')) {
-          console.warn('[useTokenRecovery] Guest report not found, resetting session');
-          await resetGuestSessionOn404();
+          console.warn('[useTokenRecovery] Guest report not found, delegating to session manager');
           
-          // Optional: flag that we *already refreshed once* to avoid infinite loop
-          if (!sessionStorage.getItem("refreshOnce")) {
-            sessionStorage.setItem("refreshOnce", "true");
-            window.location.reload();
-          } else {
-            console.warn("Prevented infinite reload loop");
-            window.location.href = '/';
-          }
+          // Delegate to centralized session manager
+          await handleSessionReset('token_recovery_404');
           return;
         }
         
