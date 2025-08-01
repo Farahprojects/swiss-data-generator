@@ -197,6 +197,10 @@ serve(async (req) => {
     // OPTIMIZATION: Single database operation with UUID as both id and stripe_session_id
     const guestReportId = crypto.randomUUID();
     
+    // Extract reportType and determine if it's an AI report
+    const { reportType } = reportData;
+    const isAI = !!reportType;
+    
     const guestReportData = {
       id: guestReportId,
       stripe_session_id: guestReportId,
@@ -210,7 +214,8 @@ serve(async (req) => {
       email_sent: false,
       coach_id: null,
       translator_log_id: null,
-      report_log_id: null
+      report_log_id: null,
+      is_ai_report: isAI
     };
 
     const { error: insertError } = await supabaseAdmin
