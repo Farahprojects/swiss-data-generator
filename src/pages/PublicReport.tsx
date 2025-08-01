@@ -78,6 +78,16 @@ const PublicReport = () => {
     }
   };
 
+  // Shared scroll function that can be used for both form and success screen
+  const scrollToReportSection = () => {
+    if (typeof window !== 'undefined') {
+      const reportSection = document.querySelector('#report-form');
+      if (reportSection) {
+        reportSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  };
+
   const handleDismissCancelMessage = () => {
     setShowCancelledMessage(false);
     // Clear the status from URL
@@ -337,7 +347,7 @@ const PublicReport = () => {
 
         <TestsSection />
         <div id="report-form">
-          <ReportForm guestId={activeGuestId} />
+          <ReportForm guestId={activeGuestId} onSuccessScroll={scrollToReportSection} />
         </div>
         <TheraiChatGPTSection />
         <FeaturesSection onGetReportClick={handleGetReportClick} />

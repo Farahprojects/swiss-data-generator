@@ -26,6 +26,7 @@ interface ReportFormProps {
   fontFamily?: string;
   guestId?: string | null;
   onFormStateChange?: (isValid: boolean, hasSelectedType: boolean) => void;
+  onSuccessScroll?: () => void;
 }
 
 export const ReportForm: React.FC<ReportFormProps> = ({ 
@@ -33,7 +34,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   themeColor = '#6366F1',
   fontFamily = 'Inter',
   guestId = null,
-  onFormStateChange
+  onFormStateChange,
+  onSuccessScroll
 }) => {
   const navigate = useNavigate();
   
@@ -125,10 +127,15 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }
   }, [guestReportData, status, setStatus]);
 
-
-
-
-
+  // Scroll to success screen when status changes to success
+  useEffect(() => {
+    if (status === 'success' && onSuccessScroll) {
+      // Small delay to ensure the success screen has rendered
+      setTimeout(() => {
+        onSuccessScroll();
+      }, 100);
+    }
+  }, [status, onSuccessScroll]);
 
   // Form setup
   const form = useForm<ReportFormData>({
