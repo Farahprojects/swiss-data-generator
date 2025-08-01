@@ -105,7 +105,6 @@ async function createGuestReportFromLegacyMetadata(sessionId: string, session: a
       promo_code_used: md.promo_code_used || null,
       coach_slug: md.coach_slug || null,
       coach_name: md.coach_name || null,
-      is_ai_report: false, // Set by initiate-report-flow
     })
     .select()
     .single();
@@ -453,7 +452,6 @@ serve(async (req) => {
 
     const updateData: any = {
       payment_status: "paid"
-      // is_ai_report is set by initiate-report-flow
     };
 
     // Update coach information if present in metadata (for backwards compatibility)
