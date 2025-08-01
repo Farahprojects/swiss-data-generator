@@ -1,5 +1,3 @@
-// updated for deployment 
-
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -52,7 +50,6 @@ const baseSchema = z.object({
   is_guest:      z.boolean().optional(),
   user_id:       z.string().optional(),
   skip_logging:  z.boolean().optional(),
-  request_id:    z.string().optional(),  // Added for performance correlation
 
   // Flexible payload support
   name:          z.string().optional(),
@@ -201,77 +198,61 @@ async function inferTimezone(obj:any){
   return null;
 }
 
-/*──────────────── simple orchestrator call ---------------------------*/
-async function callOrchestratorFireForget(requestData: any, swissData: any) {
-  try {
-    const orchestratorPayload = {
+/*──────────────── report helper -------------------------------------------*/
+async function handleReportGeneration(params:{requestData:any;swissApiResponse:any;swissApiStatus:number;requestId?:string}){
+  const { requestData,swissApiResponse,swissApiStatus,requestId } = params;
+  const tag = requestId ? `[reportHandler][${requestId}]` : "[reportHandler]";
+  console.log(`${tag} Swiss status ${swissApiStatus}`);
+  
+  // Changed: Check for reportType instead of report
+  if (swissApiStatus!==200 || !requestData?.reportType) return;
+  
+  let swissData: any;
+  try{ swissData = typeof swissApiResponse==="string"?JSON.parse(swissApiResponse):swissApiResponse; }catch{ console.error(`${tag} parse fail`); return; }
+  try{
+    const { processReportRequest } = await import("../_shared/reportOrchestrator.ts");
+    await processReportRequest({
       endpoint: requestData.request,
-      report_type: requestData.reportType,
+      report_type: requestData.reportType,  // Changed from report to reportType
       user_id: requestData.user_id,
       apiKey: requestData.api_key,
       is_guest: !!requestData.is_guest,
       chartData: { ...swissData, person_a_name: requestData.person_a?.name, person_b_name: requestData.person_b?.name },
       ...requestData
-    };
-    
-    fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/report-orchestrator`, {
-      method: "POST",
-      headers: { 
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
-      },
-      body: JSON.stringify(orchestratorPayload),
-    }).catch(e => console.error("Orchestrator call failed:", e));
-  } catch(e) { 
-    console.error("Orchestrator call error:", e); 
-  }
+    });
+  }catch(e){ console.error(`${tag} orchestrator error`, e); }
 }
 
-/*──────────────── logging (OPTIMIZED) -------------------------------------*/
-async function logTranslatorAsync(run:{request_type:string;request_payload:any;swiss_data:any;swiss_status:number;processing_ms:number;swiss_api_ms:number;error?:string;google_geo:boolean;translator_payload:any;user_id?:string;skip:boolean;is_guest?:boolean}){
+/*──────────────── logging --------------------------------------------------*/
+async function logTranslator(run:{request_type:string;request_payload:any;swiss_data:any;swiss_status:number;processing_ms:number;error?:string;google_geo:boolean;translator_payload:any;user_id?:string;skip:boolean;is_guest?:boolean}){
   if(run.skip) return;
-  
-  // Use background processing for logging to avoid blocking
-  const logPromise = (async () => {
-    try {
-      const { error } = await sb.from("translator_logs").insert({
-        request_type: run.request_type,
-        request_payload: run.request_payload,
-        translator_payload: run.translator_payload,
-        response_status: run.swiss_status,
-        swiss_data: run.swiss_data,
-        processing_time_ms: run.swiss_api_ms, // Now logging actual Swiss API time
-        error_message: run.error,
-        google_geo: run.google_geo,
-        user_id: run.user_id ?? null,
-        is_guest: run.is_guest ?? false,
-        swiss_error: run.swiss_status !== 200,
-      });
-      if(error) console.error("[translator] log fail", error.message);
-    } catch(e) {
-      console.error("[translator] async log exception:", e);
-    }
-  })();
-
-  // Use EdgeRuntime.waitUntil if available, otherwise fire and forget
-  if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
-    EdgeRuntime.waitUntil(logPromise);
-  } else {
-    // Fire and forget - don't await
-    logPromise.catch(e => console.error("[translator] background log error:", e));
-  }
+  const { error } = await sb.from("translator_logs").insert({
+    request_type: run.request_type,
+    request_payload: run.request_payload,
+    translator_payload: run.translator_payload,
+    response_status: run.swiss_status,
+    swiss_data: run.swiss_data,
+    processing_time_ms: run.processing_ms,
+    error_message: run.error,
+    google_geo: run.google_geo,
+    user_id: run.user_id ?? null,
+    is_guest: run.is_guest ?? false,
+    swiss_error: run.swiss_status !== 200, // Set swiss_error based on status
+  });
+  if(error) console.error("[translator] log fail", error.message);
 }
 
 /*──────────────── Canon ----------------------------------------------------*/
 const CANON:Record<string,string>={ natal:"natal",transits:"transits",progressions:"progressions",return:"return",synastry:"synastry",compatibility:"synastry",positions:"positions",moonphases:"moonphases",body:"body_matrix",body_matrix:"body_matrix",sync:"sync",essence:"essence",flow:"flow",mindset:"mindset",monthly:"monthly",focus:"focus" };
 
-/*──────────────── Edge Function (SIMPLIFIED) -------------------------------*/
+/*──────────────── Edge Function -------------------------------------------*/
 serve(async (req)=>{
   if(req.method==="OPTIONS") return new Response(null,{status:204,headers:corsHeaders});
+  const t0=Date.now();
   const reqId = crypto.randomUUID().slice(0,8);
   let skipLogging=false, requestType="unknown", googleGeo=false, userId:string|undefined, isGuest=false;
-  
   try{
+    // Extract user_id and is_guest before validation for proper error logging
     const rawBodyText = await req.text();
     let rawBody: any;
     try {
@@ -282,7 +263,6 @@ serve(async (req)=>{
       console.error(`[translator-edge-${reqId}] JSON parse failed:`, parseErr);
       throw new Error("Invalid JSON in request body");
     }
-    
     function normalisePerson(src:any={}):any{
       return {
         birth_date: src.birth_date||src.date||null,
@@ -304,28 +284,35 @@ serve(async (req)=>{
       }
       return input;
     }
-    
     const body = normaliseBody(rawBody);
+    console.log(`[translator-edge-${reqId}]`, JSON.stringify(body));
     skipLogging = body.skip_logging===true;
     const parsed = baseSchema.parse(body);
     requestType = parsed.request.trim().toLowerCase();
     const canon = CANON[requestType];
     if(!canon) throw new Error(`Unknown request '${parsed.request}'`);
 
-    // Build Swiss API payload
     let payload:any;
     if(canon==="sync" && parsed.person_a && parsed.person_b){
       const {data:pa,googleGeoUsed:g1}=await ensureLatLon(parsed.person_a);
       const tzA=await inferTimezone(pa);
+      console.log(`[translator-edge-${reqId}] Person A timezone inferred: ${tzA}`);
+      // Assign timezone back to the person object
       pa.tz = tzA || pa.tz || "UTC";
       const utcA=toUtcISO({...pa,tz:pa.tz,location:pa.location||""});
+      console.log(`[translator-edge-${reqId}] Person A UTC generated: ${utcA}`);
       const normA={...normalise(pa),utc:utcA,tz:pa.tz};
+      console.log(`[translator-edge-${reqId}] Person A final payload:`, JSON.stringify(normA));
 
       const {data:pb,googleGeoUsed:g2}=await ensureLatLon(parsed.person_b);
       const tzB=await inferTimezone(pb);
+      console.log(`[translator-edge-${reqId}] Person B timezone inferred: ${tzB}`);
+      // Assign timezone back to the person object
       pb.tz = tzB || pb.tz || "UTC";
       const utcB=toUtcISO({...pb,tz:pb.tz,location:pb.location||""});
+      console.log(`[translator-edge-${reqId}] Person B UTC generated: ${utcB}`);
       const normB={...normalise(pb),utc:utcB,tz:pb.tz};
+      console.log(`[translator-edge-${reqId}] Person B final payload:`, JSON.stringify(normB));
 
       googleGeo = g1||g2;
       payload = { person_a: normA, person_b: normB, ...parsed };
@@ -335,7 +322,10 @@ serve(async (req)=>{
       if(["natal","essence","sync","flow","mindset","monthly","focus","progressions","return","transits"].includes(canon)){
         try{
           const tzGuess = await inferTimezone(withLatLon);
+
+          // 🔒 Pull from person_a if exists
           const source = parsed.person_a ?? parsed;
+
           const date = source.birth_date ?? source.date;
           const time = source.birth_time ?? source.time;
 
@@ -345,81 +335,49 @@ serve(async (req)=>{
           withLatLon.birth_date = date;
           withLatLon.birth_time = time;
           withLatLon.tz = parsed.tz || tzGuess || source.tz || "UTC";
+
           const utcISO = toUtcISO({
             birth_date: date,
             birth_time: time,
             tz: withLatLon.tz,
             location: source.location ?? parsed.location ?? ""
           });
+
           withLatLon.utc = parsed.utc || utcISO;
         }catch(e){ console.warn(`[translator-edge-${reqId}] UTC gen fail`, e); }
       }
+      // Flatten payload if it's just person_a
       payload = {
         ...(parsed.person_a ?? withLatLon),
         utc: withLatLon.utc,
         tz: withLatLon.tz,
-        reportType: parsed.reportType,
+        reportType: parsed.reportType,  // Changed from 'report' to 'reportType'
         request: parsed.request,
         user_id: parsed.user_id,
         is_guest: parsed.is_guest,
         house_system: parsed.person_a?.house_system ?? withLatLon.house_system ?? "P",
       };
     }
-
-    // Call Swiss API
+    console.log(`[translator-edge-${reqId}] Final payload being sent to Swiss API:`, JSON.stringify(payload));
     const url = `${SWISS_API}/${canon}`;
-    const swiss = await fetch(url,{ 
-      method:["moonphases","positions"].includes(canon)?"GET":"POST", 
-      headers:{"Content-Type":"application/json"}, 
-      body:["moonphases","positions"].includes(canon)?undefined:JSON.stringify(payload) 
-    });
+    console.log(`[translator-edge-${reqId}] Calling Swiss API at: ${url}`);
+    const swiss = await fetch(url,{ method:["moonphases","positions"].includes(canon)?"GET":"POST", headers:{"Content-Type":"application/json"}, body:["moonphases","positions"].includes(canon)?undefined:JSON.stringify(payload) });
     const txt = await swiss.text();
+    console.log(`[translator-edge-${reqId}] Swiss API response status: ${swiss.status}`);
+    console.log(`[translator-edge-${reqId}] Swiss API raw response: ${txt.substring(0, 500)}...`);
     const swissData = (()=>{ try{return JSON.parse(txt);}catch{return { raw:txt }; }})();
 
-    // Log to translator_logs (fire-and-forget)
-    logTranslatorAsync({ 
-      request_type:canon, 
-      request_payload:body, 
-      swiss_data:swissData, 
-      swiss_status:swiss.status, 
-      processing_ms:0, 
-      swiss_api_ms:0,
-      error: swiss.ok?undefined:`Swiss ${swiss.status}`, 
-      google_geo:googleGeo, 
-      translator_payload:payload, 
-      user_id:body.user_id, 
-      skip:skipLogging, 
-      is_guest:body.is_guest 
-    });
-
-    // If we need to pass data to orchestrator, do it and forget
-    if(swiss.ok && (body.reportType || (!body.reportType && body.is_guest))) {
-      callOrchestratorFireForget(body, swissData);
+    // Changed: Check for reportType instead of report
+    if(body.reportType && swiss.ok){
+      try{ await handleReportGeneration({requestData:body,swissApiResponse:swissData,swissApiStatus:swiss.status,requestId:reqId}); }catch(e){ console.error(`[translator-edge-${reqId}] report err`, e); }
     }
 
-    // Return Swiss response immediately
+    await logTranslator({ request_type:canon, request_payload:body, swiss_data:swissData, swiss_status:swiss.status, processing_ms:Date.now()-t0, error: swiss.ok?undefined:`Swiss ${swiss.status}`, google_geo:googleGeo, translator_payload:payload, user_id:body.user_id, skip:skipLogging, is_guest:body.is_guest });
     return new Response(txt,{status:swiss.status,headers:corsHeaders});
-    
   }catch(err){
     const msg = (err as Error).message;
     console.error(`[translator-edge-${reqId}]`, msg);
-    
-    // Log error asynchronously
-    logTranslatorAsync({ 
-      request_type:requestType, 
-      request_payload:"n/a", 
-      swiss_data:{error:msg}, 
-      swiss_status:500, 
-      processing_ms:0, 
-      swiss_api_ms:0,
-      error:msg, 
-      google_geo:googleGeo, 
-      translator_payload:null, 
-      user_id:userId, 
-      skip:skipLogging, 
-      is_guest:isGuest 
-    });
-    
+    await logTranslator({ request_type:requestType, request_payload:"n/a", swiss_data:{error:msg}, swiss_status:500, processing_ms:Date.now()-t0, error:msg, google_geo:googleGeo, translator_payload:null, user_id:userId, skip:skipLogging, is_guest:isGuest });
     return new Response(JSON.stringify({ error:msg }),{status:500,headers:corsHeaders});
   }
 });
