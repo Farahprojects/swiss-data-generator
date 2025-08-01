@@ -197,9 +197,9 @@ serve(async (req) => {
     // OPTIMIZATION: Single database operation with UUID as both id and stripe_session_id
     const guestReportId = crypto.randomUUID();
     
-    // Extract reportType and determine if it's an AI report
-    const { reportType } = reportData;
-    const isAI = !!reportType;
+    // Determine if it's an AI report based on request type
+    // AI reports have reportType but request is NOT 'essence' or 'sync'
+    const isAI = !['essence', 'sync'].includes(reportData.request) && !!reportData.reportType;
     
     const guestReportData = {
       id: guestReportId,
