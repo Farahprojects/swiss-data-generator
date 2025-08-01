@@ -71,7 +71,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[orchestrate-report-ready][${requestId}] 📋 Processing report orchestration (called by link-report-guest): ${guest_report_id}`);
+    console.log(`[orchestrate-report-ready][${requestId}] 📋 Processing report orchestration: ${guest_report_id}`);
 
     // Initialize Supabase client with service role
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -160,7 +160,7 @@ serve(async (req) => {
       }
     };
 
-    console.log(`[orchestrate-report-ready][${requestId}] ✅ Report orchestration completed (triggered by link-report-guest): ${guest_report_id}`);
+          console.log(`[orchestrate-report-ready][${requestId}] ✅ Report orchestration completed: ${guest_report_id}`);
     
     // Send realtime message to SuccessScreen
     console.log(`[orchestrate-report-ready][${requestId}] 📡 Broadcasting report data to realtime channel: guest_report:${guest_report_id} at ${new Date().toISOString()}`);
