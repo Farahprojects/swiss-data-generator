@@ -92,6 +92,10 @@ async function createGuestReportFromLegacyMetadata(sessionId: string, session: a
     returnYear: md.returnYear || ''
   };
 
+  // Extract reportType and determine if it's an AI report
+  const { reportType } = reportData;
+  const isAI = !!reportType;
+
   // Create guest_reports record
   const { data: guestReport, error: insertError } = await supabase
     .from("guest_reports")
@@ -105,7 +109,7 @@ async function createGuestReportFromLegacyMetadata(sessionId: string, session: a
       promo_code_used: md.promo_code_used || null,
       coach_slug: md.coach_slug || null,
       coach_name: md.coach_name || null,
-      is_ai_report: false, // Will be set by translator-edge
+      is_ai_report: isAI,
     })
     .select()
     .single();
@@ -451,9 +455,13 @@ serve(async (req) => {
 
     console.log(`🔄 [verify-guest-payment] Processing payment for product: ${productId}`);
 
+    // Extract reportType and determine if it's an AI report
+    const { reportType } = existingReport.report_data;
+    const isAI = !!reportType;
+
     const updateData: any = {
-      payment_status: "paid"
-      // is_ai_report will be set by translator-edge
+      payment_status: "paid",
+      is_ai_report: isAI
     };
 
     // Update coach information if present in metadata (for backwards compatibility)
