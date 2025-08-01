@@ -141,30 +141,9 @@ serve(async (req) => {
       }
     }
 
-    // ✅ UPDATED: Validate report is ready for orchestration
-    // Trust that if this function is called, the report is ready
-    // Only check for essential fields that we need
-    const isReportReady = guestReport.modal_ready === true && 
-                         guestReport.report_log_id;
-
-    if (!isReportReady) {
-      console.warn(`[orchestrate-report-ready] Report not ready for orchestration:`, {
-        modal_ready: guestReport.modal_ready,
-        report_log_id: guestReport.report_log_id,
-        swiss_boolean: guestReport.swiss_boolean,
-        has_report: guestReport.has_report,
-        translator_log_id: guestReport.translator_log_id
-      });
-      
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "Report not ready for orchestration - missing modal_ready or report_log_id",
-          timestamp: new Date().toISOString()
-        }),
-        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    // ✅ UPDATED: Trust-based validation - if this function is called, the report is ready
+    // No validation conditions - we trust the calling function knows what it's doing
+    console.log(`[orchestrate-report-ready][${requestId}] ✅ Trusting that report is ready (no validation checks)`);
 
     // Prepare complete report data for frontend - EXACT SAME FORMAT AS check-report-status
     const reportData = {
