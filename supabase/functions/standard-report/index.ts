@@ -318,57 +318,6 @@ serve(async (req) => {
       });
 
       console.log(`[standard-report][${requestId}] Report log inserted successfully for ${reportData.is_guest ? 'guest' : 'user'} report`);
-      
-      // ✅ NEW: Call finalize-report function for guest reports (SYNCHRONOUS)
-      if (reportData.user_id && reportData.is_guest) {
-        try {
-          // Get the report_log_id from the insert result
-          const { data: insertData } = await supabase
-            .from("report_logs")
-            .select("id")
-            .eq("user_id", reportData.user_id)
-            .eq("report_type", reportType)
-            .eq("status", "success")
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .single();
-          
-          if (insertData?.id) {
-            console.log(`[standard-report][${requestId}] Calling finalize-report for guest report:`, {
-              guest_report_id: reportData.user_id,
-              report_log_id: insertData.id
-            });
-            
-            // ✅ SYNCHRONOUS call - AI engine waits for finalization to complete
-            const finalizeResponse = await fetch(`${SUPABASE_URL}/functions/v1/finalize-report`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
-              },
-              body: JSON.stringify({
-                guest_report_id: reportData.user_id,
-                report_log_id: insertData.id
-              })
-            });
-            
-            if (!finalizeResponse.ok) {
-              const errorText = await finalizeResponse.text();
-              console.error(`[standard-report][${requestId}] finalize-report call failed:`, {
-                status: finalizeResponse.status,
-                error: errorText
-              });
-            } else {
-              const finalizeResult = await finalizeResponse.json();
-              console.log(`[standard-report][${requestId}] finalize-report completed successfully:`, finalizeResult);
-            }
-          } else {
-            console.error(`[standard-report][${requestId}] Could not find report_log_id for guest report`);
-          }
-        } catch (finalizeError) {
-          console.error(`[standard-report][${requestId}] Error calling finalize-report:`, finalizeError);
-        }
-      }
     } catch (logError) {
       // ✅ LOGGING: Report log insert exception
       console.error(`[standard-report][${requestId}] Report log insert exception:`, {
