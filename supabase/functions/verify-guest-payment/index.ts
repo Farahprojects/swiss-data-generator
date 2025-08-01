@@ -41,9 +41,20 @@ async function kickTranslator(guestReportId: string, reportData: ReportData, req
     });
     
     // OPTIMIZATION: Direct function call without error handling overhead
-    await supabase.functions.invoke('translator-edge', {
+    const translatorPromise = supabase.functions.invoke('translator-edge', {
       body: translatorPayload
     });
+
+    // Fire-and-forget using EdgeRuntime.waitUntil
+    if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
+      EdgeRuntime.waitUntil(translatorPromise.catch(err => {
+        console.error(`❌ [verify-guest-payment] translator-edge failed for guest: ${guestReportId}`, err);
+      }));
+    } else {
+      translatorPromise.catch(err => {
+        console.error(`❌ [verify-guest-payment] translator-edge failed for guest: ${guestReportId}`, err);
+      });
+    }
 
     console.log(`✅ [verify-guest-payment] translator-edge invoked for guest: ${guestReportId}`);
   } catch (err) {
