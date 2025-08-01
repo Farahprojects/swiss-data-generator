@@ -131,11 +131,7 @@ serve(async (req) => {
     console.log("[create-temp-report-data] Fetching guest report data...");
     const { data: guestReport, error: fetchError } = await supabase
       .from("guest_reports")
-      .select(`
-        *,
-        report_logs!guest_reports_report_log_id_fkey(report_text),
-        translator_logs!guest_reports_translator_log_id_fkey(swiss_data)
-      `)
+      .select("*")
       .eq("id", guest_report_id)
       .single();
 
@@ -164,12 +160,44 @@ serve(async (req) => {
       );
     }
 
+    // Fetch related data separately since foreign keys were removed
+    let reportLogData: { report_text: string } | null = null;
+    let translatorLogData: { swiss_data: any } | null = null;
+
+    if (guestReport.report_log_id) {
+      const { data: reportLog, error: reportLogError } = await supabase
+        .from("report_logs")
+        .select("report_text")
+        .eq("id", guestReport.report_log_id)
+        .single();
+      
+      if (!reportLogError && reportLog) {
+        reportLogData = reportLog as { report_text: string };
+      } else {
+        console.warn(`[create-temp-report-data] Could not fetch report_log for ${guestReport.report_log_id}:`, reportLogError);
+      }
+    }
+
+    if (guestReport.translator_log_id) {
+      const { data: translatorLog, error: translatorLogError } = await supabase
+        .from("translator_logs")
+        .select("swiss_data")
+        .eq("id", guestReport.translator_log_id)
+        .single();
+      
+      if (!translatorLogError && translatorLog) {
+        translatorLogData = translatorLog as { swiss_data: any };
+      } else {
+        console.warn(`[create-temp-report-data] Could not fetch translator_log for ${guestReport.translator_log_id}:`, translatorLogError);
+      }
+    }
+
     // Generate secure tokens
     const { plainToken, tokenHash, chatHash } = await generateSecureTokens();
 
     // Prepare data for temp_report_data
-    const reportContent = guestReport.report_logs?.report_text || null;
-    const swissData = guestReport.translator_logs?.swiss_data || null;
+    const reportContent = reportLogData?.report_text || null;
+    const swissData = translatorLogData?.swiss_data || null;
     const reportName = guestReport.report_data?.name || 'Guest Report';
 
     const metadata = {
