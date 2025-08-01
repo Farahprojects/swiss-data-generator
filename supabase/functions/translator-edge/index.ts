@@ -198,30 +198,7 @@ async function inferTimezone(obj:any){
   return null;
 }
 
-/*──────────────── report helper -------------------------------------------*/
-async function handleReportGeneration(params:{requestData:any;swissApiResponse:any;swissApiStatus:number;requestId?:string}){
-  const { requestData,swissApiResponse,swissApiStatus,requestId } = params;
-  const tag = requestId ? `[reportHandler][${requestId}]` : "[reportHandler]";
-  console.log(`${tag} Swiss status ${swissApiStatus}`);
-  
-  // Changed: Check for reportType instead of report
-  if (swissApiStatus!==200 || !requestData?.reportType) return;
-  
-  let swissData: any;
-  try{ swissData = typeof swissApiResponse==="string"?JSON.parse(swissApiResponse):swissApiResponse; }catch{ console.error(`${tag} parse fail`); return; }
-  try{
-    const { processReportRequest } = await import("../_shared/reportOrchestrator.ts");
-    await processReportRequest({
-      endpoint: requestData.request,
-      report_type: requestData.reportType,  // Changed from report to reportType
-      user_id: requestData.user_id,
-      apiKey: requestData.api_key,
-      is_guest: !!requestData.is_guest,
-      chartData: { ...swissData, person_a_name: requestData.person_a?.name, person_b_name: requestData.person_b?.name },
-      ...requestData
-    });
-  }catch(e){ console.error(`${tag} orchestrator error`, e); }
-}
+
 
 /*──────────────── logging --------------------------------------------------*/
 async function logTranslator(run:{request_type:string;request_payload:any;swiss_data:any;swiss_status:number;processing_ms:number;error?:string;google_geo:boolean;translator_payload:any;user_id?:string;skip:boolean;is_guest?:boolean}){
@@ -367,9 +344,26 @@ serve(async (req)=>{
     console.log(`[translator-edge-${reqId}] Swiss API raw response: ${txt.substring(0, 500)}...`);
     const swissData = (()=>{ try{return JSON.parse(txt);}catch{return { raw:txt }; }})();
 
-    // Changed: Check for reportType instead of report
+    // Fire report-orchestrator if we have reportType
     if(body.reportType && swiss.ok){
-      try{ await handleReportGeneration({requestData:body,swissApiResponse:swissData,swissApiStatus:swiss.status,requestId:reqId}); }catch(e){ console.error(`[translator-edge-${reqId}] report err`, e); }
+      const orchestratorUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/report-orchestrator`;
+      const orchestratorPayload = {
+        endpoint: body.request,
+        report_type: body.reportType,
+        user_id: body.user_id,
+        chartData: swissData,
+        ...body
+      };
+      
+      // Fire and forget - no await, no error handling
+      fetch(orchestratorUrl, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
+        },
+        body: JSON.stringify(orchestratorPayload),
+      }).catch(() => {}); // Silent fail
     }
 
     await logTranslator({ request_type:canon, request_payload:body, swiss_data:swissData, swiss_status:swiss.status, processing_ms:Date.now()-t0, error: swiss.ok?undefined:`Swiss ${swiss.status}`, google_geo:googleGeo, translator_payload:payload, user_id:body.user_id, skip:skipLogging, is_guest:body.is_guest });
