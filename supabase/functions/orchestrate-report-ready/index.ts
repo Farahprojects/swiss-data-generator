@@ -142,17 +142,13 @@ serve(async (req) => {
     }
 
     // ✅ UPDATED: Validate report is ready for orchestration
-    // Now that link-report-guest is the new boss, we expect:
-    // - has_report_log = true (set by link-report-guest)
-    // - modal_ready = true (set by link-report-guest)
-    // - report_log_id exists (set by link-report-guest)
-    const isReportReady = guestReport.has_report_log === true && 
-                         guestReport.modal_ready === true && 
+    // Trust that if this function is called, the report is ready
+    // Only check for essential fields that we need
+    const isReportReady = guestReport.modal_ready === true && 
                          guestReport.report_log_id;
 
     if (!isReportReady) {
       console.warn(`[orchestrate-report-ready] Report not ready for orchestration:`, {
-        has_report_log: guestReport.has_report_log,
         modal_ready: guestReport.modal_ready,
         report_log_id: guestReport.report_log_id,
         swiss_boolean: guestReport.swiss_boolean,
@@ -163,7 +159,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: "Report not ready for orchestration - link-report-guest must complete first",
+          error: "Report not ready for orchestration - missing modal_ready or report_log_id",
           timestamp: new Date().toISOString()
         }),
         { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
