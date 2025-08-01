@@ -57,6 +57,30 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
   const { data: guestReportData, error: guestReportError, refetch: refetchGuestData } = useGuestReportData(guestId);
   
+  // Handle guest report errors gracefully
+  useEffect(() => {
+    if (guestReportError) {
+      console.warn('[ReportForm] Guest report error detected:', guestReportError);
+      
+      // Clear all memory keys related to session or report
+      localStorage.removeItem("guestId");
+      localStorage.removeItem("reportUrl");
+      localStorage.removeItem("pending_report_email");
+      sessionStorage.removeItem("guestId");
+      sessionStorage.removeItem("reportUrl");
+
+      // Optional: flag that we *already refreshed once* to avoid infinite loop
+      if (!sessionStorage.getItem("refreshOnce")) {
+        sessionStorage.setItem("refreshOnce", "true");
+        window.location.reload(); // or redirect to "/" or report setup page
+      } else {
+        console.warn("Prevented infinite reload loop");
+        // Fallback to homepage redirect if reload loop detected
+        window.location.href = '/';
+      }
+    }
+  }, [guestReportError]);
+  
   /**
    *  👉  ONE-SHOT REFRESH RECOVERY
    *  If we loaded the page with an existing guestReportId and the server
