@@ -8,6 +8,7 @@ import ErrorStateHandler from './ErrorStateHandler';
 import { supabase } from '@/integrations/supabase/client';
 import { logSuccessScreen } from '@/utils/logUtils';
 import { useReportModal } from '@/contexts/ReportModalContext';
+import { useGuestReportData } from '@/hooks/useGuestReportData';
 
 interface SuccessScreenProps {
   name: string;
@@ -43,6 +44,9 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
   // Single call opens modal (with duplicate prevention)
   const [hasOpenedModal, setHasOpenedModal] = useState(false);
+  
+  // Guest report data hook
+  const { data: guestReportData, error: guestReportError } = useGuestReportData(guestReportId);
   
   const handleReportReady = useCallback((reportData: ReportData) => {
     if (hasOpenedModal) return; // Prevent duplicate opens
@@ -94,14 +98,89 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     }
   }, [onStartWaiting]);
 
+  // Handle guest report data errors (e.g., database reset, report not found)
+  useEffect(() => {
+    if (guestReportError && guestReportId) {
+      console.error('❌ Guest report error detected in SuccessScreen:', guestReportError);
+      
+      // Check if it's a 404 error (report not found)
+      const isNotFoundError = guestReportError.message?.includes('404') || 
+                             guestReportError.message?.includes('not found') ||
+                             guestReportError.message?.includes('FunctionsHttpError');
+      
+      if (isNotFoundError) {
+        console.log('🔄 Guest report not found (likely database reset), triggering error state');
+        
+        // Create error state for guest report not found
+        const errorState: ErrorState = {
+          type: 'guest_report_not_found',
+          message: 'Your report session was lost due to a system reset. Please start over.',
+          requires_cleanup: true,
+          requires_error_logging: true,
+          guest_report_id: guestReportId,
+          email: email
+        };
+        
+        setErrorState(errorState);
+      }
+    }
+  }, [guestReportError, guestReportId, email]);
 
-  // Simple error handlers
+
+  // Error handling functions
   const handleTriggerErrorLogging = useCallback(async (guestReportId: string, email: string) => {
-    // Let ErrorStateHandler handle the error logging
+    console.log('📝 Triggering error logging for guest report:', guestReportId);
+    
+    try {
+      // Log the error to the database
+      const { error: logError } = await supabase.functions.invoke('log-user-error', {
+        body: {
+          error_type: 'guest_report_not_found',
+          error_message: 'Guest report not found - likely database reset',
+          guest_report_id: guestReportId,
+          email: email,
+          user_agent: navigator.userAgent,
+          url: window.location.href
+        }
+      });
+      
+      if (logError) {
+        console.error('❌ Failed to log error:', logError);
+      } else {
+        console.log('✅ Error logged successfully');
+      }
+    } catch (error) {
+      console.error('❌ Error during error logging:', error);
+    }
   }, []);
 
   const handleCleanupSession = useCallback(() => {
-    // Let ErrorStateHandler handle cleanup
+    console.log('🧹 Starting comprehensive session cleanup...');
+    
+    try {
+      // Clear all session data
+      const errorKeys = [
+        'guest_report_id',
+        'guest_report_error',
+        'report_error_state',
+        'error_case_number',
+        'swiss_processing_error',
+        'pending_report_email'
+      ];
+      
+      errorKeys.forEach(key => {
+        localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
+      });
+      
+      // Clear URL completely - remove all parameters
+      const cleanUrl = new URL(window.location.origin + '/report');
+      window.history.replaceState(null, '', cleanUrl.toString());
+      
+      console.log('✅ Session cleanup completed');
+    } catch (error) {
+      console.error('❌ Error during session cleanup:', error);
+    }
   }, []);
 
   // Check if report is already ready (one-time check)
@@ -119,6 +198,29 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
         if (error) {
           console.error('❌ Error checking report status:', error);
+          
+          // Check if it's a 404 error (guest report not found)
+          const isNotFoundError = error.message?.includes('404') || 
+                                 error.message?.includes('not found') ||
+                                 error.message?.includes('FunctionsHttpError');
+          
+          if (isNotFoundError) {
+            console.log('🔄 Guest report not found (likely database reset), triggering error state');
+            
+            // Create error state for guest report not found
+            const errorState: ErrorState = {
+              type: 'guest_report_not_found',
+              message: 'Your report session was lost due to a system reset. Please start over.',
+              requires_cleanup: true,
+              requires_error_logging: true,
+              guest_report_id: guestReportId,
+              email: email
+            };
+            
+            setErrorState(errorState);
+            return;
+          }
+          
           return;
         }
 
