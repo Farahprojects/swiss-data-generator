@@ -118,7 +118,7 @@ serve(async (req) => {
 
     // Determine report types based on actual data and report_type
     const isEssenceOrSyncReport = ['essence', 'sync'].includes(guestReport.report_type);
-    const isAstroReport = !!swissData;
+    const isAstroReport = !!swissData && Object.keys(swissData).length > 0;
     const isAiReport = guestReport.is_ai_report && !!guestReport.report_log_id;
 
     // Extract content based on report type - prioritize AI reports from report_logs
@@ -143,12 +143,24 @@ serve(async (req) => {
       reportContent = swissData.report.content;
     }
 
+    // Update isAiReport check to include actual content
+    const isAiReportWithContent = isAiReport && !!reportContent;
+
     const isAstroOnly = isAstroReport && !isAiReport;
 
+    // Check if we have any actual data before proceeding
+    if (!isAstroReport && !isAiReportWithContent) {
+      console.log('[get-guest-report] No report data found, returning 404');
+      return new Response(
+        JSON.stringify({ error: 'No report data found', code: 'NO_DATA' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     let contentType: 'astro' | 'ai' | 'both' | 'none' = 'none';
-    if (isAstroReport && isAiReport) contentType = 'both';
+    if (isAstroReport && isAiReportWithContent) contentType = 'both';
     else if (isAstroReport) contentType = 'astro';
-    else if (isAiReport) contentType = 'ai';
+    else if (isAiReportWithContent) contentType = 'ai';
 
     const responseData: ReportData = {
       guest_report: {
@@ -166,7 +178,7 @@ serve(async (req) => {
       swiss_data: swissData,
       metadata: {
         is_astro_report: isAstroReport,
-        is_ai_report: isAiReport,
+        is_ai_report: isAiReportWithContent,
         content_type: contentType,
       },
     };
@@ -181,7 +193,7 @@ serve(async (req) => {
       swiss_data: swissData,
       metadata: {
         content_type: contentType,
-        has_ai_report: isAiReport,
+        has_ai_report: isAiReportWithContent,
         has_swiss_data: isAstroReport,
         is_ready: true
       }
