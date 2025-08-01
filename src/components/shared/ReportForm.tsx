@@ -18,7 +18,6 @@ import { useGuestReportData } from '@/hooks/useGuestReportData';
 import { ReportData } from '@/utils/reportContentExtraction';
 import { log } from '@/utils/logUtils';
 import { useReportModal } from '@/contexts/ReportModalContext';
-import { resetGuestSessionOn404 } from '@/utils/urlHelpers';
 import { useGuestSessionManager } from '@/hooks/useGuestSessionManager';
 
 interface ReportFormProps {
