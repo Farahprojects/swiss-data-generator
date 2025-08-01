@@ -80,36 +80,34 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     open(reportData); // <- single call opens modal
   }, [open, hasOpenedModal]);
 
-  // IMMEDIATE realtime listener - no conditional waiting
+  // Direct RPC call - no WebSocket needed
   useEffect(() => {
     if (!guestReportId) return;
 
-    logSuccessScreen('info', 'Setting up immediate realtime listener for report ready', { guestReportId });
+    logSuccessScreen('info', 'Calling orchestrate-report-ready directly', { guestReportId });
     
-    const channel = supabase
-      .channel(`guest_report:${guestReportId}`)
-      .on('broadcast', { event: 'report_ready' }, (payload) => {
-        logSuccessScreen('debug', 'Realtime message received from orchestrator', { payload });
-        
-        if (payload?.payload?.data) {
-          logSuccessScreen('info', 'Orchestrator sent report data, triggering modal');
-          handleReportReady(payload.payload.data);
-        } else if (payload?.data) {
-          // Fallback for direct data structure
-          logSuccessScreen('info', 'Orchestrator sent report data (direct), triggering modal');
-          handleReportReady(payload.data);
-        } else {
-          console.warn('⚠️ Broadcast payload missing data field:', payload);
-        }
-      })
-      .subscribe((status) => {
-        logSuccessScreen('debug', 'Realtime subscription status', { status });
-      });
+    const callOrchestrator = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('orchestrate-report-ready', {
+          body: { guest_report_id: guestReportId }
+        });
 
-    return () => {
-      logSuccessScreen('debug', 'Cleaning up realtime subscription');
-      supabase.removeChannel(channel);
+        if (error) {
+          console.error('❌ Error calling orchestrate-report-ready:', error);
+          return;
+        }
+
+        // If report is ready, open modal immediately
+        if (data?.ready && data?.data) {
+          logSuccessScreen('info', 'Orchestrator returned report data, triggering modal');
+          handleReportReady(data.data);
+        }
+      } catch (err) {
+        console.error('❌ Failed to call orchestrate-report-ready:', err);
+      }
     };
+
+    callOrchestrator();
   }, [guestReportId, handleReportReady]);
 
   // Start waiting for report when component mounts (separate from listener)

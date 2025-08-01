@@ -162,22 +162,6 @@ serve(async (req) => {
 
           console.log(`[orchestrate-report-ready][${requestId}] ✅ Report orchestration completed: ${guest_report_id}`);
     
-    // Send realtime message to SuccessScreen
-    console.log(`[orchestrate-report-ready][${requestId}] 📡 Broadcasting report data to realtime channel: guest_report:${guest_report_id} at ${new Date().toISOString()}`);
-    
-    const channel = supabase.channel(`guest_report:${guest_report_id}`);
-    await channel.send({
-      type: 'broadcast',
-      event: 'report_ready',
-      payload: {
-        ok: true,
-        ready: true,
-        data: reportData
-      }
-    });
-
-    console.log(`[orchestrate-report-ready][${requestId}] ✅ Realtime broadcast sent successfully at ${new Date().toISOString()}`);
-
     // Fire-and-forget: Call create-temp-report-data function (no await, no error handling)
     console.log(`[orchestrate-report-ready] Firing create-temp-report-data (fire-and-forget)...`);
     supabase.functions.invoke('create-temp-report-data', {
@@ -188,7 +172,7 @@ serve(async (req) => {
     
     const processingTime = Date.now() - startTime;
 
-    // Return EXACT SAME FORMAT as check-report-status
+    // Return report data directly - no WebSocket broadcast needed
     return new Response(
       JSON.stringify({ 
         ok: true, 
