@@ -162,13 +162,6 @@ serve(async (req) => {
 
           console.log(`[orchestrate-report-ready][${requestId}] ✅ Report orchestration completed: ${guest_report_id}`);
     
-    // Set modal_ready = true to trigger WebSocket listener
-    console.log(`[orchestrate-report-ready][${requestId}] Setting modal_ready = true for WebSocket trigger`);
-    await supabase
-      .from("guest_reports")
-      .update({ modal_ready: true })
-      .eq("id", guest_report_id);
-    
     // Fire-and-forget: Call create-temp-report-data function (no await, no error handling)
     console.log(`[orchestrate-report-ready] Firing create-temp-report-data (fire-and-forget)...`);
     supabase.functions.invoke('create-temp-report-data', {
