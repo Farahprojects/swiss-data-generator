@@ -80,34 +80,57 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     open(reportData); // <- single call opens modal
   }, [open, hasOpenedModal]);
 
-  // Direct RPC call - no WebSocket needed
+  // WebSocket listener for modal_ready changes
   useEffect(() => {
     if (!guestReportId) return;
 
-    logSuccessScreen('info', 'Calling orchestrate-report-ready directly', { guestReportId });
+    logSuccessScreen('info', 'Setting up WebSocket listener for modal_ready', { guestReportId });
     
-    const callOrchestrator = async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke('orchestrate-report-ready', {
-          body: { guest_report_id: guestReportId }
-        });
-
-        if (error) {
-          console.error('❌ Error calling orchestrate-report-ready:', error);
-          return;
+    const channel = supabase.channel(`guest_report_modal:${guestReportId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'guest_reports',
+          filter: `id=eq.${guestReportId}`
+        },
+        (payload) => {
+          const newRecord = payload.new as any;
+          const oldRecord = payload.old as any;
+          
+          // Check if modal_ready flipped from false/null to true
+          if (!oldRecord?.modal_ready && newRecord?.modal_ready === true) {
+            logSuccessScreen('info', 'modal_ready flipped to true, opening modal', { guestReportId });
+            
+            // Fetch the complete report data
+            supabase.functions.invoke('orchestrate-report-ready', {
+              body: { guest_report_id: guestReportId }
+            }).then(({ data, error }) => {
+              if (error) {
+                console.error('❌ Error fetching report data after modal_ready:', error);
+                return;
+              }
+              
+              if (data?.ready && data?.data) {
+                handleReportReady(data.data);
+              }
+            }).catch(err => {
+              console.error('❌ Failed to fetch report data after modal_ready:', err);
+            });
+            
+            // Clean up the listener immediately
+            channel.unsubscribe();
+          }
         }
+      )
+      .subscribe();
 
-        // If report is ready, open modal immediately
-        if (data?.ready && data?.data) {
-          logSuccessScreen('info', 'Orchestrator returned report data, triggering modal');
-          handleReportReady(data.data);
-        }
-      } catch (err) {
-        console.error('❌ Failed to call orchestrate-report-ready:', err);
-      }
+    // Cleanup function
+    return () => {
+      logSuccessScreen('info', 'Cleaning up WebSocket listener', { guestReportId });
+      channel.unsubscribe();
     };
-
-    callOrchestrator();
   }, [guestReportId, handleReportReady]);
 
   // Start waiting for report when component mounts (separate from listener)
