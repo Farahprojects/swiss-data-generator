@@ -110,23 +110,23 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
           if (!oldRecord?.modal_ready && newRecord?.modal_ready === true) {
             logSuccessScreen('info', 'modal_ready flipped to true, opening modal', { guestReportId });
             
-            // Fetch the complete report data
-            supabase.functions.invoke('orchestrate-report-ready', {
+            // Fetch the cached report data (already prepared by orchestrate-report-ready)
+            supabase.functions.invoke('get-cached-report-data', {
               body: { guest_report_id: guestReportId }
             }).then(({ data, error }) => {
               if (error) {
-                console.error('❌ Error fetching report data after modal_ready:', error);
+                console.error('❌ Error fetching cached report data after modal_ready:', error);
                 return;
               }
               
               if (data?.ready && data?.data) {
-                logSuccessScreen('info', 'Report data fetched successfully, opening modal', { guestReportId });
+                logSuccessScreen('info', 'Cached report data fetched successfully, opening modal', { guestReportId });
                 handleReportReady(data.data);
               } else {
-                logSuccessScreen('warn', 'Report data not ready after modal_ready trigger', { guestReportId, data });
+                logSuccessScreen('warn', 'Cached report data not ready after modal_ready trigger', { guestReportId, data });
               }
             }).catch(err => {
-              console.error('❌ Failed to fetch report data after modal_ready:', err);
+              console.error('❌ Failed to fetch cached report data after modal_ready:', err);
             });
             
             // Clean up the listener immediately
@@ -143,28 +143,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
       )
       .subscribe((status) => {
         logSuccessScreen('info', 'WebSocket subscription status', { guestReportId, status });
-        
-        // Test the subscription by manually triggering an update
-        if (status === 'SUBSCRIBED') {
-          logSuccessScreen('info', 'WebSocket subscription successful, testing with manual update', { guestReportId });
-          
-          // Test: Manually update modal_ready to see if subscription works
-          setTimeout(() => {
-            logSuccessScreen('info', 'Testing WebSocket subscription with manual update', { guestReportId });
-            supabase
-              .from('guest_reports')
-              .update({ modal_ready: false })
-              .eq('id', guestReportId)
-              .then(() => {
-                setTimeout(() => {
-                  supabase
-                    .from('guest_reports')
-                    .update({ modal_ready: true })
-                    .eq('id', guestReportId);
-                }, 1000);
-              });
-          }, 2000);
-        }
       });
 
     // Cleanup function
