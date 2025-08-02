@@ -79,8 +79,5 @@ verify_jwt = false
 [functions.retrieve-temp-report]
 verify_jwt = false
 
-[functions.check-report-status]
-verify_jwt = false
-
 [functions.create-temp-report-data]
 verify_jwt = false

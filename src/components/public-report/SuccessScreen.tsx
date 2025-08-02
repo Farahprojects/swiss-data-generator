@@ -170,44 +170,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     // Let ErrorStateHandler handle cleanup
   }, []);
 
-  // Check if report is already ready (one-time check)
-  useEffect(() => {
-    if (!guestReportId) {
-      setCheckingStatus(false);
-      return;
-    }
-
-    const checkReportStatus = async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke('check-report-status', {
-          body: { guest_report_id: guestReportId }
-        });
-
-        if (error) {
-          console.error('❌ Error checking report status:', error);
-          return;
-        }
-
-        // Handle error state
-        if (data?.error_state) {
-          setErrorState(data.error_state);
-          return;
-        }
-
-        // If report is ready, open modal immediately
-        if (data?.ready && data?.data) {
-          handleReportReady(data.data);
-        }
-      } catch (err) {
-        console.error('❌ Failed to check report status:', err);
-      } finally {
-        setCheckingStatus(false);
-      }
-    };
-
-    checkReportStatus();
-  }, [guestReportId, handleReportReady]);
-
   // Independent countdown timer
   useEffect(() => {
     if (countdownTime === 0) return; // Already done
