@@ -1052,6 +1052,7 @@ export type Database = {
           description: string | null
           endpoint: string | null
           id: string
+          is_ai: string | null
           name: string
           product_code: string | null
           report_type: string | null
@@ -1062,6 +1063,7 @@ export type Database = {
           description?: string | null
           endpoint?: string | null
           id: string
+          is_ai?: string | null
           name: string
           product_code?: string | null
           report_type?: string | null
@@ -1072,6 +1074,7 @@ export type Database = {
           description?: string | null
           endpoint?: string | null
           id?: string
+          is_ai?: string | null
           name?: string
           product_code?: string | null
           report_type?: string | null
