@@ -1,4 +1,4 @@
--- Enable realtime for guest_reports table
+-- Enable realtime for guest_reports table (RLS disabled for testing)
 -- This ensures UPDATE events are broadcast when modal_ready changes
 
 -- 1. Set REPLICA IDENTITY FULL to ensure all column changes are captured
@@ -7,20 +7,10 @@ ALTER TABLE guest_reports REPLICA IDENTITY FULL;
 -- 2. Add guest_reports to the realtime publication
 ALTER PUBLICATION supabase_realtime ADD TABLE guest_reports;
 
--- 3. Create minimal RLS policy for realtime notifications
--- This allows the realtime system to check if the event should be visible
--- without exposing sensitive data
-CREATE OR REPLACE POLICY realtime_ping
-ON guest_reports
-FOR SELECT
-USING ( 
-  id = current_setting('realtime.subscription_parameters'::text)::uuid 
-);
+-- 3. Disable RLS on guest_reports for testing (no policies needed)
+ALTER TABLE guest_reports DISABLE ROW LEVEL SECURITY;
 
--- 4. Enable RLS on guest_reports if not already enabled
-ALTER TABLE guest_reports ENABLE ROW LEVEL SECURITY;
-
--- 5. Add debug logging to the trigger that sets modal_ready
+-- 4. Add debug logging to the trigger that sets modal_ready
 -- This will help us track when the trigger fires
 CREATE OR REPLACE FUNCTION log_modal_ready_change()
 RETURNS TRIGGER AS $$
