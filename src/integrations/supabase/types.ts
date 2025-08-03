@@ -655,7 +655,6 @@ export type Database = {
           has_swiss_error: boolean | null
           id: string
           is_ai_report: boolean | null
-          is_report_set_at: string | null
           modal_ready: boolean | null
           payment_status: string
           promo_code_used: string | null
@@ -667,7 +666,6 @@ export type Database = {
           stripe_session_id: string
           swiss_boolean: boolean | null
           translator_log_id: string | null
-          updated_at: string
           user_error_id: string | null
         }
         Insert: {
@@ -683,7 +681,6 @@ export type Database = {
           has_swiss_error?: boolean | null
           id?: string
           is_ai_report?: boolean | null
-          is_report_set_at?: string | null
           modal_ready?: boolean | null
           payment_status?: string
           promo_code_used?: string | null
@@ -695,7 +692,6 @@ export type Database = {
           stripe_session_id: string
           swiss_boolean?: boolean | null
           translator_log_id?: string | null
-          updated_at?: string
           user_error_id?: string | null
         }
         Update: {
@@ -711,7 +707,6 @@ export type Database = {
           has_swiss_error?: boolean | null
           id?: string
           is_ai_report?: boolean | null
-          is_report_set_at?: string | null
           modal_ready?: boolean | null
           payment_status?: string
           promo_code_used?: string | null
@@ -723,7 +718,6 @@ export type Database = {
           stripe_session_id?: string
           swiss_boolean?: boolean | null
           translator_log_id?: string | null
-          updated_at?: string
           user_error_id?: string | null
         }
         Relationships: [
