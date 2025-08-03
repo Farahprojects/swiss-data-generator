@@ -74,6 +74,10 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     
     logSuccessScreen('info', 'Report ready signal received, opening modal');
     console.info('[SuccessScreen] about to open modal', reportData);
+    
+    // 6. Modal context hook
+    console.log('[ModalCTX] open() called with', reportData);
+    
     setCountdownTime(0);
     setHasOpenedModal(true);
     open(reportData); // <- single call opens modal
@@ -85,9 +89,13 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     
     logSuccessScreen('info', 'Fetching cached report data', { guestReportId });
     
+    // 5. Fetch layer timing
+    console.time('[SS] fetchCachedReport');
     const { data, error } = await supabase.functions.invoke('get-cached-report-data', {
       body: { guest_report_id: guestReportId }
     });
+    console.timeEnd('[SS] fetchCachedReport');   // measure latency
+    console.log('[SS] cached-response', {data, error});
     
     if (error) {
       logSuccessScreen('error', 'Error fetching cached report data', { guestReportId, error });
@@ -117,6 +125,9 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
         .eq('id', guestReportId)
         .maybeSingle();
       
+      // 2. SuccessScreen "early check" logging
+      console.log('[SS] immediate DB check result →', data?.modal_ready);
+      
       if (data?.modal_ready) {
         logSuccessScreen('info', 'modal_ready already true, opening modal immediately', { guestReportId });
         await fetchCachedReport(); // opens the modal immediately
@@ -135,6 +146,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
     logSuccessScreen('info', 'Setting up WebSocket listener for modal_ready', { guestReportId });
     
+    // 3. WebSocket lifecycle logging
     const channel = supabase.channel(`guest_report_modal:${guestReportId}`)
       .on(
         'postgres_changes',
@@ -174,9 +186,12 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
           }
         }
       )
-      .subscribe((status) => {
-        logSuccessScreen('info', 'WebSocket subscription status', { guestReportId, status });
-      });
+      .subscribe(
+         status => console.log('[SS] subscription status →', status)
+      );
+
+    // ALSO listen for low-level socket errors
+    console.log('[SS] realtime client available:', !!supabase.realtime);
 
     // Cleanup function
     return () => {
