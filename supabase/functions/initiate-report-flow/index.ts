@@ -47,6 +47,7 @@ interface ReportData {
   returnYear?: string
   notes?: string
   priceId?: string
+  isAstroOnly?: boolean
 }
 
 interface TrustedPricing {
@@ -197,8 +198,8 @@ serve(async (req) => {
     // OPTIMIZATION: Single database operation with UUID as both id and stripe_session_id
     const guestReportId = crypto.randomUUID();
     
-    // Determine if it's an AI report using frontend determination
-    // AI reports are anything that's NOT astro-only (sync, essence)
+    // Determine if it's an AI report using the frontend's isAstroOnly field
+    // This leverages the existing isAstroReport() logic from the frontend
     const isAI = !reportData.isAstroOnly;
     
     const guestReportData = {
