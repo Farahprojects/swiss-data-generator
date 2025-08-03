@@ -3,6 +3,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ReportFormData } from '@/types/public-report';
 import { storeGuestReportId } from '@/utils/urlHelpers';
 import { supabase } from '@/integrations/supabase/client';
+import { isAstroReport } from '@/utils/reportHelpers';
 
 export interface TrustedPricingObject {
   valid: boolean;
@@ -74,16 +75,19 @@ export const useReportSubmission = (
         house_system: ''
       } : undefined;
 
+      const reportType = data.request || data.reportType || 'essence_personal';
+      
       const reportData = {
         email: data.email,
-        reportType: data.request || data.reportType || 'essence_personal',
+        reportType,
         request: data.request || data.reportType?.split('_')[0] || 'essence',
         essenceType: data.essenceType,
         relationshipType: data.relationshipType,
         returnYear: data.returnYear,
         notes: data.notes,
         person_a,
-        person_b
+        person_b,
+        isAstroOnly: isAstroReport(reportType)
       };
 
       const { data: flowResponse, error } = await supabase.functions.invoke('initiate-report-flow', {
