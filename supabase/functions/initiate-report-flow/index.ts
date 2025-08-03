@@ -119,7 +119,7 @@ serve(async (req) => {
     const priceIdentifier = trustedPricing.report_type;
     const { data: priceData, error: priceError } = await supabaseAdmin
       .from('price_list')
-      .select('id, unit_price_usd')
+      .select('id, unit_price_usd, is_ai')
       .eq('id', priceIdentifier)
       .single();
 
@@ -137,6 +137,7 @@ serve(async (req) => {
     }
 
     const validatedBasePrice = Number(priceData.unit_price_usd);
+    const isAI = priceData.is_ai || false;
     
     // Step 2: Re-validate promo code if present
     let validatedDiscount = 0;
@@ -197,16 +198,6 @@ serve(async (req) => {
 
     // OPTIMIZATION: Single database operation with UUID as both id and stripe_session_id
     const guestReportId = crypto.randomUUID();
-    
-    // Determine if it's an AI report based on form data
-    // AI Report: Has BOTH reportType AND request (or just reportType for legacy)
-    // Astro-Only: Has ONLY request, NO reportType
-    const hasReportType = !!reportData.reportType;
-    const hasRequest = !!reportData.request;
-    
-    // AI report = has reportType (AI processing) + may have request (astro data)
-    // Astro-only = has only request (no AI processing)
-    const isAI = hasReportType;
     
     const guestReportData = {
       id: guestReportId,
