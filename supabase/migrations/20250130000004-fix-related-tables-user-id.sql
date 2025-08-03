@@ -16,10 +16,10 @@ WHERE user_id IS NOT NULL
 ALTER TABLE report_logs DROP COLUMN user_id;
 ALTER TABLE report_logs RENAME COLUMN user_id_new TO user_id;
 
--- Add foreign key constraint
-ALTER TABLE report_logs 
-ADD CONSTRAINT fk_report_logs_user_id 
-FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+-- Skip foreign key constraint for now to avoid FK violations with old data
+-- ALTER TABLE report_logs 
+-- ADD CONSTRAINT fk_report_logs_user_id 
+-- FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 -- 2. Fix translator_logs.user_id to be NOT NULL
 -- First, identify records with NULL user_id
