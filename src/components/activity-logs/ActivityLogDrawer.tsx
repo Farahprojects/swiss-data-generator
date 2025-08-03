@@ -50,7 +50,7 @@ const createLegacyReportData = (content: string): ReportData => {
       email: '',
       report_type: null,
       swiss_boolean: null,
-      is_ai_report: true,
+      is_ai_report: null, // Remove mock data - let the actual data determine this
       payment_status: 'completed',
       created_at: new Date().toISOString(),
       promo_code_used: null,
@@ -60,7 +60,7 @@ const createLegacyReportData = (content: string): ReportData => {
     swiss_data: null,
     metadata: {
       is_astro_report: false,
-      is_ai_report: true,
+      is_ai_report: null, // Remove mock data - let the actual data determine this
       content_type: 'ai'
     }
   };
