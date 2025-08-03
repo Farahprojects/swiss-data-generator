@@ -199,50 +199,20 @@ serve(async (req) => {
     // OPTIMIZATION: Single database operation with UUID as both id and stripe_session_id
     const guestReportId = crypto.randomUUID();
     
-    // Create guest user in auth.users first
-    logFlowEvent("creating_guest_user", { email: reportData.email });
+    // Generate a simple guest hash for identification (optional)
+    const guestHash = crypto.randomUUID().substring(0, 16);
     
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    logFlowEvent("creating_guest_report", { 
       email: reportData.email,
-      password: crypto.randomUUID(), // Generate secure random password
-      email_confirm: true, // Auto-confirm the email
-      user_metadata: {
-        is_guest: true,
-        created_at: new Date().toISOString()
-      }
-    });
-
-    if (authError) {
-      logFlowError("guest_user_creation_failed", authError, { email: reportData.email });
-      return new Response(JSON.stringify({ 
-        error: 'Failed to create guest user',
-        details: authError.message 
-      }), {
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    if (!authData.user) {
-      logFlowError("no_user_data_returned", null, { email: reportData.email });
-      return new Response(JSON.stringify({ 
-        error: 'No user data returned from guest user creation' 
-      }), {
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    logFlowEvent("guest_user_created", { 
-      user_id: authData.user.id, 
-      email: reportData.email 
+      guestReportId,
+      guestHash
     });
     
     const guestReportData = {
       id: guestReportId,
-      user_id: authData.user.id, // Use the real user_id from auth.users
+      user_id: null, // No auth.users entry - completely anonymous
       stripe_session_id: guestReportId,
-      email: reportData.email,
+      email: reportData.email, // Store email as plain text
       report_type: reportData.reportType || 'essence_personal',
       amount_paid: expectedFinalPriceRounded,
       report_data: reportData,
@@ -274,7 +244,7 @@ serve(async (req) => {
 
     logFlowEvent("flow_completed", { 
       guestReportId,
-      user_id: authData.user.id,
+      user_id: null, // No user_id for anonymous reports
       isFreeReport,
       finalPrice: expectedFinalPriceRounded,
       processing_time_ms: processingTimeMs
@@ -295,7 +265,7 @@ serve(async (req) => {
 
       return new Response(JSON.stringify({ 
         guestReportId,
-        user_id: authData.user.id, // Include user_id for frontend auth
+        user_id: null, // Include user_id for frontend auth
         finalPrice: expectedFinalPriceRounded,
         isFreeReport: true,
         processing_time_ms: processingTimeMs
@@ -330,7 +300,7 @@ serve(async (req) => {
 
       return new Response(JSON.stringify({ 
         guestReportId,
-        user_id: authData.user.id, // Include user_id for frontend auth
+        user_id: null, // Include user_id for frontend auth
         finalPrice: expectedFinalPriceRounded,
         isFreeReport: false,
         checkoutUrl: checkoutData.url,
