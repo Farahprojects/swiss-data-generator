@@ -192,6 +192,16 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
     // ALSO listen for low-level socket errors
     console.log('[SS] realtime client available:', !!supabase.realtime);
+    
+    // Enable realtime debug logs (if available)
+    try {
+      (supabase.realtime as any).setDebug?.(true);
+    } catch (e) {
+      console.log('[SS] realtime debug not available');
+    }
+    
+    // Set authentication parameters for RLS
+    // channel.setAuth({ guest_report_id: guestReportId }); // This line is removed
 
     // Cleanup function
     return () => {
