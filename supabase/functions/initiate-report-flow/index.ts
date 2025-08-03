@@ -198,9 +198,15 @@ serve(async (req) => {
     // OPTIMIZATION: Single database operation with UUID as both id and stripe_session_id
     const guestReportId = crypto.randomUUID();
     
-    // Determine if it's an AI report using the frontend's isAstroOnly field
-    // This leverages the existing isAstroReport() logic from the frontend
-    const isAI = !reportData.isAstroOnly;
+    // Determine if it's an AI report based on form data
+    // AI Report: Has BOTH reportType AND request (or just reportType for legacy)
+    // Astro-Only: Has ONLY request, NO reportType
+    const hasReportType = !!reportData.reportType;
+    const hasRequest = !!reportData.request;
+    
+    // AI report = has reportType (AI processing) + may have request (astro data)
+    // Astro-only = has only request (no AI processing)
+    const isAI = hasReportType;
     
     const guestReportData = {
       id: guestReportId,
