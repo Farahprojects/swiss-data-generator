@@ -23,33 +23,19 @@ const corsHeaders = {
 /*──────────────── schema & utils ------------------------------------------*/
 // Updated schema now allows top‑level `utc` and keeps legacy field names for compatibility
 const baseSchema = z.object({
-  request: z.string().nonempty(),
-
-  // Date fields
-  date:        z.string().optional(),
-  birth_date:  z.string().optional(),
-
-  // Time fields
-  time:        z.string().optional(),
-  birth_time:  z.string().optional(),
-
-  // Timezone name (IANA)
-  tz: z.string().optional(),
-
-  // Explicit local timestamp and explicit UTC timestamp
-  local: z.string().optional(),
-  utc:   z.string().optional(),
-
-  // Location
-  latitude:  z.number().optional(),
-  longitude: z.number().optional(),
-  location:  z.string().optional(),
-
-  // Misc routing / flags
-  reportType:    z.string().optional(),  // Changed from 'report' to 'reportType'
+  request:        z.string(),
+  reportType:     z.string().optional(),
+  utc:           z.string().optional(),
+  local:         z.string().optional(),
+  date:          z.string().optional(),
+  time:          z.string().optional(),
+  birth_date:    z.string().optional(),
+  birth_time:    z.string().optional(),
+  tz:            z.string().optional(),
+  location:      z.string().optional(),
+  house_system:  z.string().optional(),
   is_guest:      z.boolean().optional(),
   user_id:       z.string().optional(),
-  skip_logging:  z.boolean().optional(),
 
   // Flexible payload support
   name:          z.string().optional(),
@@ -201,8 +187,7 @@ async function inferTimezone(obj:any){
 
 
 /*──────────────── logging --------------------------------------------------*/
-async function logTranslator(run:{request_type:string;request_payload:any;swiss_data:any;swiss_status:number;processing_ms:number;error?:string;google_geo:boolean;translator_payload:any;user_id?:string;skip:boolean;is_guest?:boolean}){
-  if(run.skip) return;
+async function logTranslator(run:{request_type:string;request_payload:any;swiss_data:any;swiss_status:number;processing_ms:number;error?:string;google_geo:boolean;translator_payload:any;user_id?:string;is_guest?:boolean}){
   const { error } = await sb.from("translator_logs").insert({
     request_type: run.request_type,
     request_payload: run.request_payload,
@@ -227,7 +212,7 @@ serve(async (req)=>{
   if(req.method==="OPTIONS") return new Response(null,{status:204,headers:corsHeaders});
   const t0=Date.now();
   const reqId = crypto.randomUUID().slice(0,8);
-  let skipLogging=false, requestType="unknown", googleGeo=false, userId:string|undefined, isGuest=false;
+  let requestType="unknown", googleGeo=false, userId:string|undefined, isGuest=false;
   try{
     // Extract user_id and is_guest before validation for proper error logging
     const rawBodyText = await req.text();
@@ -263,7 +248,6 @@ serve(async (req)=>{
     }
     const body = normaliseBody(rawBody);
     console.log(`[translator-edge-${reqId}]`, JSON.stringify(body));
-    skipLogging = body.skip_logging===true;
     const parsed = baseSchema.parse(body);
     requestType = parsed.request.trim().toLowerCase();
     const canon = CANON[requestType];
@@ -366,12 +350,12 @@ serve(async (req)=>{
       }).catch(() => {}); // Silent fail
     }
 
-    await logTranslator({ request_type:canon, request_payload:body, swiss_data:swissData, swiss_status:swiss.status, processing_ms:Date.now()-t0, error: swiss.ok?undefined:`Swiss ${swiss.status}`, google_geo:googleGeo, translator_payload:payload, user_id:body.user_id, skip:skipLogging, is_guest:body.is_guest });
+    await logTranslator({ request_type:canon, request_payload:body, swiss_data:swissData, swiss_status:swiss.status, processing_ms:Date.now()-t0, error: swiss.ok?undefined:`Swiss ${swiss.status}`, google_geo:googleGeo, translator_payload:payload, user_id:body.user_id, is_guest:body.is_guest });
     return new Response(txt,{status:swiss.status,headers:corsHeaders});
   }catch(err){
     const msg = (err as Error).message;
     console.error(`[translator-edge-${reqId}]`, msg);
-    await logTranslator({ request_type:requestType, request_payload:"n/a", swiss_data:{error:msg}, swiss_status:500, processing_ms:Date.now()-t0, error:msg, google_geo:googleGeo, translator_payload:null, user_id:userId, skip:skipLogging, is_guest:isGuest });
+    await logTranslator({ request_type:requestType, request_payload:"n/a", swiss_data:{error:msg}, swiss_status:500, processing_ms:Date.now()-t0, error:msg, google_geo:googleGeo, translator_payload:null, user_id:userId, is_guest:isGuest });
     return new Response(JSON.stringify({ error:msg }),{status:500,headers:corsHeaders});
   }
 });
