@@ -64,7 +64,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
   // Simple states
   const [countdownTime, setCountdownTime] = useState(24);
-  const [checkingStatus, setCheckingStatus] = useState(true);
   const [errorState, setErrorState] = useState<ErrorState | null>(null);
 
   // Single call opens modal (with duplicate prevention)
@@ -226,17 +225,8 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
             ) : (
               <>
                 <div className="text-center mb-6">
-                  {checkingStatus ? (
-                    <>
-                      <div className="text-3xl font-light text-gray-900 mb-2">...</div>
-                      <p className="text-sm text-gray-600">Checking report status...</p>
-                    </>
-                  ) : (
-                    <>
-                      <div className="text-3xl font-light text-gray-900 mb-2">{countdownTime}s</div>
-                      <p className="text-sm text-gray-600">Generating your report...</p>
-                    </>
-                  )}
+                  <div className="text-3xl font-light text-gray-900 mb-2">{countdownTime}s</div>
+                  <p className="text-sm text-gray-600">Generating your report...</p>
                 </div>
 
                 <div className="bg-muted/50 rounded-lg p-4 text-sm">
@@ -244,12 +234,10 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
                   <span className="font-medium">{email}</span>
                 </div>
 
-                {!checkingStatus && (
-                  <EntertainmentWindow 
-                    mode="text"
-                    className="mb-4"
-                  />
-                )}
+                <EntertainmentWindow 
+                  mode="text"
+                  className="mb-4"
+                />
               </>
             )}
           </CardContent>
