@@ -79,6 +79,56 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     open(reportData); // <- single call opens modal
   }, [open, hasOpenedModal]);
 
+  // fetchCachedReport helper function
+  const fetchCachedReport = useCallback(async () => {
+    if (!guestReportId) return;
+    
+    logSuccessScreen('info', 'Fetching cached report data', { guestReportId });
+    
+    const { data, error } = await supabase.functions.invoke('get-cached-report-data', {
+      body: { guest_report_id: guestReportId }
+    });
+    
+    if (error) {
+      logSuccessScreen('error', 'Error fetching cached report data', { guestReportId, error });
+      console.error('❌ Error fetching cached report data:', error);
+      return;
+    }
+    
+    if (data?.ready && data?.data) {
+      logSuccessScreen('info', 'Cached report data fetched successfully, opening modal', { guestReportId });
+      handleReportReady(data.data);
+    } else {
+      logSuccessScreen('warn', 'Cached report data not ready', { guestReportId, data });
+    }
+  }, [guestReportId, handleReportReady]);
+
+  // --- early synchronous check -------------
+  // This runs before React renders, ensuring we catch modal_ready if it's already true
+  React.useEffect(() => {
+    if (!guestReportId) return;
+
+    const checkModalReadyImmediately = async () => {
+      logSuccessScreen('info', 'Performing immediate modal_ready check', { guestReportId });
+      
+      const { data } = await supabase
+        .from('guest_reports')
+        .select('modal_ready')
+        .eq('id', guestReportId)
+        .maybeSingle();
+      
+      if (data?.modal_ready) {
+        logSuccessScreen('info', 'modal_ready already true, opening modal immediately', { guestReportId });
+        await fetchCachedReport(); // opens the modal immediately
+        return; // modal now open; skip listener
+      } else {
+        logSuccessScreen('info', 'modal_ready not yet true, will wait for WebSocket updates', { guestReportId });
+      }
+    };
+
+    checkModalReadyImmediately();
+  }, [guestReportId, fetchCachedReport]);
+
   // WebSocket listener for modal_ready changes
   useEffect(() => {
     if (!guestReportId) return;
@@ -109,28 +159,12 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
           if (!oldRecord?.modal_ready && newRecord?.modal_ready === true) {
             logSuccessScreen('info', 'modal_ready flipped to true, opening modal', { guestReportId });
             
-            // Fetch the cached report data (already prepared by orchestrate-report-ready)
-            supabase.functions.invoke('get-cached-report-data', {
-              body: { guest_report_id: guestReportId }
-            }).then(({ data, error }) => {
-              if (error) {
-                console.error('❌ Error fetching cached report data after modal_ready:', error);
-                return;
-              }
-              
-              if (data?.ready && data?.data) {
-                logSuccessScreen('info', 'Cached report data fetched successfully, opening modal', { guestReportId });
-                handleReportReady(data.data);
-              } else {
-                logSuccessScreen('warn', 'Cached report data not ready after modal_ready trigger', { guestReportId, data });
-              }
-            }).catch(err => {
-              console.error('❌ Failed to fetch cached report data after modal_ready:', err);
+            // Fetch the cached report data and open modal
+            fetchCachedReport().then(() => {
+              // Clean up the listener immediately after opening modal
+              logSuccessScreen('info', 'Unsubscribing from WebSocket after modal_ready trigger', { guestReportId });
+              channel.unsubscribe();
             });
-            
-            // Clean up the listener immediately
-            logSuccessScreen('info', 'Unsubscribing from WebSocket after modal_ready trigger', { guestReportId });
-            channel.unsubscribe();
           } else {
             logSuccessScreen('debug', 'WebSocket update received but modal_ready condition not met', { 
               guestReportId,
@@ -149,7 +183,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
       logSuccessScreen('info', 'Cleaning up WebSocket listener', { guestReportId });
       channel.unsubscribe();
     };
-  }, [guestReportId, handleReportReady]);
+  }, [guestReportId, fetchCachedReport]);
 
   // Start waiting for report when component mounts (separate from listener)
   useEffect(() => {
