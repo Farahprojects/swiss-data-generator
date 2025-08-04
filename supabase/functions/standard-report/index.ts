@@ -296,7 +296,7 @@ serve(async (req) => {
     // Log successful report generation
     const durationMs = Date.now() - startTime;
     try {
-      await supabase.from("report_logs").insert({
+      const insertResult = await supabase.from("report_logs").insert({
         api_key: reportData.api_key || null,
         user_id: reportData.user_id || null,
         report_type: reportType,
@@ -311,7 +311,16 @@ serve(async (req) => {
         created_at: new Date().toISOString(),
       });
 
-      console.log(`[standard-report][${requestId}] Report log inserted successfully for ${reportData.is_guest ? 'guest' : 'user'} report`);
+      if (insertResult.error) {
+        console.error(`[standard-report][${requestId}] Report log insert failed:`, {
+          error: insertResult.error,
+          user_id: reportData.user_id,
+          is_guest: reportData.is_guest,
+          report_type: reportType
+        });
+      } else {
+        console.log(`[standard-report][${requestId}] Report log inserted successfully for ${reportData.is_guest ? 'guest' : 'user'} report`);
+      }
     } catch (logError) {
       // ✅ LOGGING: Report log insert exception
       console.error(`[standard-report][${requestId}] Report log insert exception:`, {
