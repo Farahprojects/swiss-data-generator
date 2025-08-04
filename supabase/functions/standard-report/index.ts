@@ -97,27 +97,7 @@ async function retryWithBackoff<T>(
 async function getSystemPrompt(reportType: string, requestId: string): Promise<string> {
   const logPrefix = `[standard-report][${requestId}]`;
 
-  const fetchPrompt = async () => {
-    const { data, error, status } = await supabase
-      .from("report_prompts")
-      .select("system_prompt")
-      .eq("name", reportType) // Changed from hardcoded "standard" to dynamic reportType
-      .maybeSingle();
 
-    if (error) {
-      // Let retry mechanism handle transient errors, throw for others or if retries exhausted
-      if (status === 401 || status === 403 || status === 404) { // Non-retryable DB errors
-         throw new Error(`Non-retryable DB error fetching system prompt (${status}): ${error.message}`);
-      }
-      throw new Error(`Failed to fetch system prompt (status ${status}): ${error.message}`);
-    }
-
-    if (!data || !data.system_prompt) {
-      throw new Error(`System prompt not found for ${reportType} report`);
-    }
-    
-    return data.system_prompt;
-  };
 
   try {
     // Direct fetch without retry logic - should be fast and reliable
