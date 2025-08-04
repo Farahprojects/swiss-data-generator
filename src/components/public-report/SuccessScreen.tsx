@@ -117,23 +117,23 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     if (!guestReportId) return;
 
         const checkReportReadyImmediately = async () => {
-      logSuccessScreen('info', 'Performing immediate report_logs user_id check', { guestReportId });
+      logSuccessScreen('info', 'Performing immediate is_guest boolean check', { guestReportId });
 
       const { data } = await supabase
         .from('report_logs')
-        .select('report_text')
+        .select('is_guest')
         .eq('user_id', guestReportId)
         .maybeSingle();
 
       // 2. SuccessScreen "early check" logging
-      console.log('[SS] immediate DB check result →', data?.report_text ? 'ready' : 'not ready');
+      console.log('[SS] immediate DB check result →', data?.is_guest ? 'ready' : 'not ready');
 
-      if (data?.report_text) {
-        logSuccessScreen('info', 'Guest report already ready in report_logs, opening modal immediately', { guestReportId });
+      if (data?.is_guest === true) {
+        logSuccessScreen('info', 'is_guest boolean is true, opening modal immediately', { guestReportId });
         await fetchCachedReport(); // opens the modal immediately
         return; // modal now open; skip listener
       } else {
-        logSuccessScreen('info', 'Guest report not yet ready in report_logs, will wait for WebSocket updates', { guestReportId });
+        logSuccessScreen('info', 'is_guest boolean not true yet, will wait for WebSocket updates', { guestReportId });
       }
     };
     
@@ -142,11 +142,11 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
   }, [guestReportId, fetchCachedReport]);
 
-  // WebSocket listener for report_logs where is_guest = true
+  // WebSocket listener for report_logs INSERT events - lightweight boolean check only
   useEffect(() => {
     if (!guestReportId) return;
 
-    logSuccessScreen('info', 'Setting up WebSocket listener for report_logs user_id', { guestReportId });
+    logSuccessScreen('info', 'Setting up lightweight WebSocket listener for is_guest boolean', { guestReportId });
     
     // 3. WebSocket lifecycle logging
     const channel = supabase.channel(`guest_report_modal:${guestReportId}`)
@@ -161,27 +161,25 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
         (payload) => {
           logSuccessScreen('info', 'WebSocket received report_logs insert', { 
             guestReportId, 
-            payload: payload,
-            newRecord: payload.new
+            payload: payload
           });
           
           const newRecord = payload.new as any;
           
-          // Check if this is our guest report that's ready
-          if (newRecord?.user_id === guestReportId && newRecord?.report_text) {
-            logSuccessScreen('info', 'Guest report ready in report_logs, opening modal', { guestReportId });
+          // ✅ LIGHTWEIGHT: Only check is_guest boolean
+          if (newRecord?.is_guest === true) {
+            logSuccessScreen('info', 'is_guest boolean is true, triggering report modal', { guestReportId });
             
-            // Fetch the cached report data and open modal
+            // ✅ LIGHTWEIGHT: Just trigger the edge function, no heavy processing
             fetchCachedReport().then(() => {
-              // Clean up the listener immediately after opening modal
-              logSuccessScreen('info', 'Unsubscribing from WebSocket after report_logs trigger', { guestReportId });
+              // Clean up the listener immediately after triggering
+              logSuccessScreen('info', 'Unsubscribing from WebSocket after is_guest trigger', { guestReportId });
               channel.unsubscribe();
             });
           } else {
-            logSuccessScreen('debug', 'WebSocket update received but user_id condition not met', { 
+            logSuccessScreen('debug', 'WebSocket update received but is_guest not true', { 
               guestReportId,
-              userId: newRecord?.user_id,
-              hasReportText: !!newRecord?.report_text
+              isGuest: newRecord?.is_guest
             });
           }
         }
