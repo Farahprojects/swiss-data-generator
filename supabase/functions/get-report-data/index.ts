@@ -79,7 +79,7 @@ serve(async (req) => {
     console.log(`[get-report-data][${requestId}] 🔍 Fetching guest report data...`);
     const { data: guestReport, error: fetchError } = await supabase
       .from("guest_reports")
-      .select("id, email, report_type, is_ai_report, created_at, payment_status, report_data, has_report_log")
+      .select("id, email, report_type, is_ai_report, created_at, payment_status, report_data")
       .eq("id", guest_report_id)
       .single();
 
