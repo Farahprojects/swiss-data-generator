@@ -64,13 +64,10 @@ verify_jwt = false
 [functions.verification-emailer]
 verify_jwt = false
 
-[functions.get-guest-report]
+[functions.get-report-data]
 verify_jwt = false
 
 [functions.log-user-error]
-verify_jwt = false
-
-[functions.orchestrate-report-ready]
 verify_jwt = false
 
 [functions.verify-guest-payment]

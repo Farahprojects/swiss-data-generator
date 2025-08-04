@@ -135,9 +135,9 @@ export type Database = {
     }
     Enums: {
       [_ in never]: never
+      }
     }
   }
-}
 
 export type Tables<
   PublicTableNameOrOptions extends

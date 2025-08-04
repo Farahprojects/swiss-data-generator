@@ -127,11 +127,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
       // 2. SuccessScreen "early check" logging
       console.log('[SS] immediate DB check result →', data?.report_text ? 'ready' : 'not ready');
-      console.log('[SS] immediate DB check details →', { 
-        hasData: !!data, 
-        hasReportText: !!data?.report_text,
-        reportTextLength: data?.report_text?.length || 0
-      });
 
       if (data?.report_text) {
         logSuccessScreen('info', 'Guest report already ready in report_logs, opening modal immediately', { guestReportId });
@@ -153,14 +148,15 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
     logSuccessScreen('info', 'Setting up WebSocket listener for report_logs user_id', { guestReportId });
     
-    // 3. WebSocket lifecycle logging - Listen to ALL report_logs inserts and filter in callback
+    // 3. WebSocket lifecycle logging
     const channel = supabase.channel(`guest_report_modal:${guestReportId}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'report_logs'
+          table: 'report_logs',
+          filter: `user_id=eq.${guestReportId}`
         },
         (payload) => {
           logSuccessScreen('info', 'WebSocket received report_logs insert', { 
@@ -191,14 +187,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
         }
       )
       .subscribe(
-         status => {
-           console.log('[SS] subscription status →', status);
-           if (status === 'SUBSCRIBED') {
-             logSuccessScreen('info', 'WebSocket successfully subscribed to report_logs', { guestReportId });
-           } else if (status === 'CHANNEL_ERROR') {
-             logSuccessScreen('error', 'WebSocket subscription failed', { guestReportId, status });
-           }
-         }
+         status => console.log('[SS] subscription status →', status)
       );
 
     // ALSO listen for low-level socket errors
