@@ -145,7 +145,7 @@ const VideoComponent: React.FC = () => {
       </div>
       
       {/* Placeholder overlay for demo */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-200/30 to-blue-200/30 flex items-center justify-center">
+                      <div className="absolute inset-0 bg-gradient-to-br from-gray-200/30 to-gray-300/30 flex items-center justify-center">
         <p className="text-gray-600 font-light text-center">
           Video Content<br />
           <span className="text-sm opacity-70">Coming Soon</span>

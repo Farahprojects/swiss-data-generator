@@ -77,7 +77,7 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
     ],
     slug: "life-shift",
     time: "10 min",
-    color: "bg-purple-500",
+            color: "bg-gray-900",
     imageSrc: "https://auth.theraiastro.com/storage/v1/object/public/feature-images//focus.png"
   },
   {

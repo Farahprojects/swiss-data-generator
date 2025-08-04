@@ -32,7 +32,7 @@ const TestimonialsSection = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-12"
         >
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                          <h2 className="text-3xl md:text-4xl font-light mb-4">
             What People Are Saying
           </h2>
           <p className="text-lg text-muted-foreground">
@@ -59,7 +59,7 @@ const TestimonialsSection = () => {
                   <blockquote className="text-foreground italic text-sm leading-relaxed mb-3">
                     "{testimonial.quote}"
                   </blockquote>
-                  <div className="text-primary font-semibold text-sm">
+                  <div className="text-gray-900 font-normal text-sm">
                     — {testimonial.name}, {testimonial.title}
                   </div>
                 </div>

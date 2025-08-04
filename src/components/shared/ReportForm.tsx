@@ -100,6 +100,18 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     setSessionRestored(true);
     setCreatedGuestReportId(guestId);
     
+    // 🔥 SMART CHECK: Is payment already confirmed?
+    const storedPaymentStatus = localStorage.getItem('guest_payment_status');
+    const storedGuestId = localStorage.getItem('guest_report_id');
+    
+    if (storedPaymentStatus === 'paid' && storedGuestId === guestId) {
+      log('info', 'Payment already confirmed, skipping validation and fetching report data', null, 'ReportForm');
+      setStatus('success');
+      // Fetch report data directly
+      return;
+    }
+    
+    // Original Stripe redirect logic (only if payment not already confirmed)
     const hasExistingSession = localStorage.getItem('pending_report_email');
     
     if (!hasExistingSession) {
@@ -117,15 +129,21 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     
     if (guestReport?.payment_status === 'paid') {
       log('info', 'Payment confirmed via unified fetch, transitioning to success state', null, 'ReportForm');
+      // 🔥 STORE PAYMENT STATUS
+      localStorage.setItem('guest_payment_status', 'paid');
+      localStorage.setItem('guest_report_id', guestId);
       setStatus('success', undefined, guestReportData);
     } else if (guestReport?.payment_status === 'pending') {
       log('info', 'Payment pending, waiting for realtime update', null, 'ReportForm');
       setStatus('waiting');
+    } else if (guestReport?.payment_status === undefined || guestReport?.payment_status === null) {
+      log('info', 'No payment status found, clearing session for fresh start', null, 'ReportForm');
+      handleSessionReset('no_payment_status');
     } else {
       log('error', 'Unexpected payment status', { paymentStatus: guestReport?.payment_status }, 'ReportForm');
       setStatus('error', `Payment status: ${guestReport?.payment_status}`);
     }
-  }, [guestReportData, status, setStatus]);
+  }, [guestReportData, status, setStatus, handleSessionReset, guestId]);
 
   // Scroll to success screen when status changes to success
   useEffect(() => {

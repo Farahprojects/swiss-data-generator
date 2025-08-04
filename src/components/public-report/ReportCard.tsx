@@ -28,7 +28,7 @@ const ReportCard = ({
     if (parts.length === 2) {
       return (
         <>
-          <span className="text-primary font-semibold">{parts[0]}</span>
+                          <span className="text-gray-900 font-normal">{parts[0]}</span>
           <span className="text-foreground"> – {parts[1]}</span>
         </>
       );
@@ -40,16 +40,16 @@ const ReportCard = ({
     <Card className="border border-muted h-full">
       <CardContent className="p-6 space-y-3">
         <div className="flex justify-between items-start">
-          <h3 className="font-bold text-lg text-primary flex items-center">
+                          <h3 className="font-normal text-lg text-gray-900 flex items-center">
             {icon}
             {title}
           </h3>
-          <span className="font-bold text-lg text-primary bg-primary/10 px-2 py-1 rounded">
+                          <span className="font-normal text-lg text-gray-900 bg-gray-100 px-2 py-1 rounded">
             {price}
           </span>
         </div>
 
-        <span className="text-xs text-white bg-primary px-2 py-0.5 rounded-full inline-block w-fit">
+                        <span className="text-xs text-white bg-gray-900 px-2 py-0.5 rounded-full inline-block w-fit">
           Best for {bestFor}
         </span>
 
@@ -63,7 +63,7 @@ const ReportCard = ({
 
         {subTypes && (
           <div>
-            <h4 className="text-sm font-semibold text-muted-foreground mt-2 mb-1">
+                            <h4 className="text-sm font-normal text-muted-foreground mt-2 mb-1">
               Included Report Styles
             </h4>
             <ul className="space-y-1 pl-4 list-disc text-sm">

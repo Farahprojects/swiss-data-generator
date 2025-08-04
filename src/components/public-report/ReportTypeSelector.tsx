@@ -233,7 +233,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
                               <IconComponent className="h-6 w-6 text-gray-700" />
                             </div>
                             <div className="flex-1 text-left">
-                              <h3 className="text-lg font-semibold text-gray-900">{category.title}</h3>
+                              <h3 className="text-lg font-normal text-gray-900">{category.title}</h3>
                               <p className="text-sm text-muted-foreground">{category.description}</p>
                             </div>
                           </div>
@@ -282,7 +282,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
                                 <IconComponent className="h-6 w-6 text-gray-700" />
                               </div>
                               <div className="flex-1 text-left">
-                                <h3 className="text-lg font-semibold text-gray-900">{sub.title}</h3>
+                                <h3 className="text-lg font-normal text-gray-900">{sub.title}</h3>
                                 <p className="text-sm text-muted-foreground">{sub.description}</p>
                               </div>
                             </div>
@@ -383,7 +383,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
                                 <IconComponent className="h-6 w-6 text-gray-700" />
                               </div>
                               <div className="flex-1 text-left">
-                                <h3 className="text-lg font-semibold text-gray-900">{type.title}</h3>
+                                <h3 className="text-lg font-normal text-gray-900">{type.title}</h3>
                                 <p className="text-sm text-muted-foreground">{type.description}</p>
                               </div>
                             </div>
@@ -458,7 +458,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
                                 <IconComponent className="h-6 w-6 text-gray-700" />
                               </div>
                               <div className="flex-1 text-left">
-                                <h3 className="text-lg font-semibold text-gray-900">{type.title}</h3>
+                                <h3 className="text-lg font-normal text-gray-900">{type.title}</h3>
                                 <p className="text-sm text-muted-foreground">{type.description}</p>
                               </div>
                             </div>

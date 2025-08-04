@@ -29,7 +29,7 @@ export const ReportActions = ({
               <Copy className="h-6 w-6 text-blue-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-foreground">Copy Report Text</h3>
+                              <h3 className="font-normal text-foreground">Copy Report Text</h3>
               <p className="text-sm text-muted-foreground mt-1">
                 Copy your report content to paste into notes, messages, or any app
               </p>
@@ -54,7 +54,7 @@ export const ReportActions = ({
                 <Download className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <h3 className="font-semibold text-foreground">Download PDF</h3>
+                <h3 className="font-normal text-foreground">Download PDF</h3>
                 <p className="text-sm text-muted-foreground mt-1">
                   Save your report as a PDF for offline reading
                 </p>
@@ -84,7 +84,7 @@ export const ReportActions = ({
               />
             </div>
             <div>
-              <h3 className={`font-semibold transition-colors duration-200 ${isCopyCompleted ? 'text-foreground' : 'text-muted-foreground'}`}>
+                              <h3 className={`font-normal transition-colors duration-200 ${isCopyCompleted ? 'text-foreground' : 'text-muted-foreground'}`}>
                 Analyze with ChatGPT
               </h3>
               <p className="text-sm text-muted-foreground mt-1">

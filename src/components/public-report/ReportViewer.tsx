@@ -346,7 +346,7 @@ export const ReportViewer = ({
               <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-blue-600 rounded-full animate-spin mx-auto" style={{ animationDelay: '-0.5s' }}></div>
             </div>
             <div className="space-y-2">
-              <h3 className="text-xl font-semibold text-gray-900">
+                              <h3 className="text-xl font-light text-gray-900">
                 {transitionPhase === 'fading' && 'Closing Session'}
                 {transitionPhase === 'clearing' && 'Clearing Data'}
                 {transitionPhase === 'transitioning' && 'Resetting Form'}
@@ -468,7 +468,7 @@ export const ReportViewer = ({
       <Dialog open={activeModal === 'chatgpt'} onOpenChange={() => setActiveModal(null)}>
         <DialogContent className="sm:max-w-md bg-white border-0 shadow-2xl">
           <DialogHeader className="text-center">
-            <DialogTitle className="text-2xl font-semibold text-gray-900">
+            <DialogTitle className="text-2xl font-light text-gray-900">
               Analyze with ChatGPT
             </DialogTitle>
             <DialogDescription className="text-base text-gray-600 leading-relaxed mt-2">
@@ -479,7 +479,7 @@ export const ReportViewer = ({
             <Button
               onClick={handleChatGPTCopyAndGo}
               disabled={isCopping}
-              className="h-12 text-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
+              className="h-12 text-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-normal rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
             >
               {isCopping ? 'Opening...' : 'Go'}
             </Button>
@@ -487,7 +487,7 @@ export const ReportViewer = ({
               onClick={() => setActiveModal(null)}
               disabled={isCopping}
               variant="outline"
-              className="h-12 text-lg text-gray-900 font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98] border-gray-200"
+              className="h-12 text-lg text-gray-900 font-normal rounded-full transition-all duration-200 ease-out active:scale-[0.98] border-gray-200"
             >
               Cancel
             </Button>
@@ -499,7 +499,7 @@ export const ReportViewer = ({
       <Dialog open={activeModal === 'close'} onOpenChange={() => setActiveModal(null)}>
         <DialogContent className="sm:max-w-md bg-white border-0 shadow-2xl">
           <DialogHeader className="text-center">
-            <DialogTitle className="text-2xl font-semibold text-gray-900">
+            <DialogTitle className="text-2xl font-light text-gray-900">
               Close Session
             </DialogTitle>
             <DialogDescription className="text-base text-gray-600 leading-relaxed mt-2">
@@ -510,7 +510,7 @@ export const ReportViewer = ({
             <Button
               onClick={handleCloseSession}
               disabled={isTransitioning}
-              className="h-12 text-lg bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
+              className="h-12 text-lg bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-normal rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
             >
               {isTransitioning ? (
                 <div className="flex items-center gap-2">
@@ -528,7 +528,7 @@ export const ReportViewer = ({
               onClick={() => setActiveModal(null)}
               disabled={isTransitioning}
               variant="outline"
-              className="h-12 text-lg text-gray-900 font-semibold rounded-full transition-all duration-200 ease-out active:scale-[0.98] border-gray-200 disabled:opacity-50"
+              className="h-12 text-lg text-gray-900 font-normal rounded-full transition-all duration-200 ease-out active:scale-[0.98] border-gray-200 disabled:opacity-50"
             >
               Cancel
             </Button>

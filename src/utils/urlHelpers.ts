@@ -106,6 +106,8 @@ export const resetGuestSessionOn404 = async (): Promise<void> => {
     localStorage.removeItem("reportUrl");
     localStorage.removeItem("pending_report_email");
     localStorage.removeItem("currentGuestReportId");
+    localStorage.removeItem("guest_payment_status");
+    localStorage.removeItem("guest_report_id");
     sessionStorage.removeItem("guestId");
     sessionStorage.removeItem("reportUrl");
 
@@ -185,6 +187,8 @@ export const clearAllSessionData = async (stateResetCallbacks?: (() => void)[]):
     // Clear all localStorage items (comprehensive)
     const localStorageKeysToRemove = [
       'currentGuestReportId',
+      'guest_payment_status',
+      'guest_report_id',
       'reportFormData', 
       'guestReportData',
       'formStep',

@@ -69,7 +69,7 @@ const CombinedPersonalDetailsForm = ({ register, setValue, watch, errors, onPlac
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Contact Information Section */}
         <div className="space-y-4">
-          <h3 className="text-xl font-semibold text-gray-900">Contact Information</h3>
+                          <h3 className="text-xl font-light text-gray-900">Contact Information</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
             <div className="space-y-2">
               <Label htmlFor="name">Full Name *</Label>
@@ -105,7 +105,7 @@ const CombinedPersonalDetailsForm = ({ register, setValue, watch, errors, onPlac
 
         {/* Birth Details Section */}
         <div className="space-y-4">
-          <h3 className="text-xl font-semibold text-gray-900">Birth Details</h3>
+                          <h3 className="text-xl font-light text-gray-900">Birth Details</h3>
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="space-y-2">
               <Label htmlFor="birthDate">Birth Date *</Label>
