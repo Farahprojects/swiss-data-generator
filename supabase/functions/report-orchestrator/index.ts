@@ -32,57 +32,28 @@ interface ReportPayload {
   [k: string]: any;
 }
 
-// Get the next engine using round-robin selection
-async function getNextEngine(): Promise<string> {
-  try {
-    const { data: last, error } = await supabase
-      .from("report_logs")
-      .select("engine_used")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-      
-    if (error) {
-      console.warn("[report-orchestrator] Engine selection error, using first engine:", error);
-      return EDGE_ENGINES[0];
-    }
-    
-    const idx = last ? EDGE_ENGINES.indexOf(last.engine_used) : -1;
-    const nextEngine = EDGE_ENGINES[(idx + 1) % EDGE_ENGINES.length];
-    
-    console.log(`[report-orchestrator] Selected engine: ${nextEngine} (last was: ${last?.engine_used || 'none'})`);
-    return nextEngine;
-  } catch (error) {
-    console.error("[report-orchestrator] Engine selection failed:", error);
-    return EDGE_ENGINES[0];
-  }
+// Get the next engine using simple round-robin (no DB lookup needed)
+function getNextEngine(): string {
+  // Use timestamp-based selection for simple round-robin
+  const timestamp = Date.now();
+  const engineIndex = Math.floor(timestamp / 1000) % EDGE_ENGINES.length;
+  const selectedEngine = EDGE_ENGINES[engineIndex];
+  
+  console.log(`[report-orchestrator] Selected engine: ${selectedEngine} (timestamp-based selection)`);
+  return selectedEngine;
 }
 
 // Validate that the report type exists in prompts
-async function validateReportType(reportType: string): Promise<boolean> {
-  try {
-    const { data: promptExists, error } = await supabase
-      .from("report_prompts")
-      .select("name")
-      .eq("name", reportType)
-      .maybeSingle();
-    
-    if (error) {
-      console.error("[report-orchestrator] Prompt validation error:", error);
-      return false;
-    }
-    
-    if (!promptExists) {
-      console.warn(`[report-orchestrator] Report type not found: ${reportType}`);
-      return false;
-    }
-    
-    console.log(`[report-orchestrator] Report type validated: ${reportType}`);
-    return true;
-  } catch (error) {
-    console.error("[report-orchestrator] Prompt validation failed:", error);
+// REMOVED: Unnecessary database lookup - report types are validated upstream
+function validateReportType(reportType: string): boolean {
+  // Simple validation - report types are validated upstream
+  if (!reportType || typeof reportType !== 'string') {
+    console.warn(`[report-orchestrator] Invalid report type: ${reportType}`);
     return false;
   }
+  
+  console.log(`[report-orchestrator] Report type validated: ${reportType}`);
+  return true;
 }
 
 // Call the selected engine
@@ -136,7 +107,7 @@ serve(async (req) => {
     console.log(`[report-orchestrator] Processing request for report type: ${payload.report_type}`);
     
     // Step 1: Validate report type exists
-    const isValidReportType = await validateReportType(payload.report_type);
+    const isValidReportType = validateReportType(payload.report_type);
     if (!isValidReportType) {
       return new Response(JSON.stringify({ 
         success: false, 
@@ -148,7 +119,7 @@ serve(async (req) => {
     }
     
     // Step 2: Select next engine
-    const selectedEngine = await getNextEngine();
+    const selectedEngine = getNextEngine();
     
     // Step 3: Call the engine (fire-and-forget)
     callEngine(selectedEngine, payload).catch(error => {
