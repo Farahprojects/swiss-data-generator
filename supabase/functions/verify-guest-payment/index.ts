@@ -507,8 +507,12 @@ serve(async (req) => {
     ).catch(err => console.error('Performance logging failed:', err));
 
     // Start translator-edge processing (fire-and-forget)
-    // Data is already in correct structure from useReportSubmission
-    kickTranslator(updatedReport.id, updatedReport.report_data, requestId, supabase);
+    // Pass the complete guest report data including is_ai_report
+    const translatorPayload = {
+      ...updatedReport.report_data,
+      is_ai_report: updatedReport.is_ai_report
+    };
+    kickTranslator(updatedReport.id, translatorPayload, requestId, supabase);
 
     const processingTimeMs = Date.now() - stageStartTime;
 

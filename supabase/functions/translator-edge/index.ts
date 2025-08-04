@@ -355,18 +355,15 @@ serve(async (req)=>{
     // Add astro data only reports to report_ready_signals for UI detection
     if (body.is_guest && body.user_id && swiss.ok) {
       try {
-        // Check if this is an astro data only report (not AI)
-        const { data: guestReport } = await sb
-          .from('guest_reports')
-          .select('is_ai_report')
-          .eq('id', body.user_id)
-          .single();
-
+        // Use is_ai_report from the payload (passed from verify-guest-payment)
+        const isAIReport = body.is_ai_report || false;
+        
         // If it's astro data only (not AI report), add to report_ready_signals
-        if (guestReport && !guestReport.is_ai_report) {
+        if (!isAIReport) {
           console.log(`[translator-edge-${reqId}] Adding astro data only report to report_ready_signals: ${body.user_id}`);
           await sb.from('report_ready_signals').insert({
             guest_report_id: body.user_id,
+            is_ai_report: false,
             created_at: new Date().toISOString()
           });
         }
