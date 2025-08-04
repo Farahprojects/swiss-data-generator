@@ -19,11 +19,11 @@ export const IndividualAstroFormatter: React.FC<IndividualAstroFormatterProps> =
   className = ''
 }) => {
   const reportInfo = reportData.guest_report?.report_data;
-  const name = reportInfo?.name || 'Unknown';
-  const birthDate = reportInfo?.birthDate;
-  const birthLocation = reportInfo?.birthLocation;
-  const latitude = reportInfo?.latitude;
-  const longitude = reportInfo?.longitude;
+  const name = reportInfo?.person_a?.name || reportInfo?.name || 'Unknown';
+  const birthDate = reportInfo?.person_a?.birth_date || reportInfo?.birthDate;
+  const birthLocation = reportInfo?.person_a?.birth_location || reportInfo?.birthLocation;
+  const latitude = reportInfo?.person_a?.latitude || reportInfo?.latitude;
+  const longitude = reportInfo?.person_a?.longitude || reportInfo?.longitude;
 
   if (!swissData) {
     return (
