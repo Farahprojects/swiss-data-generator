@@ -236,7 +236,11 @@ serve(async (req) => {
         .eq("id", guestReportId);
 
       // OPTIMIZATION: Skip performance logging, start processing immediately
-      kickTranslator(record.id, record.report_data, requestId, supabase);
+      const translatorPayload = {
+        ...record.report_data,
+        is_ai_report: record.is_ai_report
+      };
+      kickTranslator(record.id, translatorPayload, requestId, supabase);
 
       console.log(`✅ [verify-guest-payment] Promo report processing started: ${guestReportId}`);
 
@@ -356,7 +360,11 @@ serve(async (req) => {
         ).catch(err => console.error('Performance logging failed:', err));
 
         // Start translator-edge processing for legacy session
-        kickTranslator(guestReportId, legacyReportData, requestId, supabase);
+        const legacyTranslatorPayload = {
+          ...legacyReportData,
+          is_ai_report: false // Legacy reports are never AI reports
+        };
+        kickTranslator(guestReportId, legacyTranslatorPayload, requestId, supabase);
 
         console.log(`✅ [verify-guest-payment] Legacy payment verification completed: ${guestReportId}`);
 
