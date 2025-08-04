@@ -15,7 +15,7 @@ function isValidUUID(uuid: string): boolean {
 serve(async (req) => {
   const startTime = Date.now();
   const requestId = Math.random().toString(36).substring(7);
-  console.log(`[get-report-data][${requestId}] 🚀 Request started at ${new Date().toISOString()}`);
+  console.log(`[get-report-data][${requestId}] 🚀 Request started at ${new Date().toISOString()} - DEPLOYMENT TRIGGER`);
 
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
