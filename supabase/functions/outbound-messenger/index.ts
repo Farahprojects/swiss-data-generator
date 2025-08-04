@@ -1,6 +1,6 @@
 // Outbound message sender via SMTP endpoint
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=deno&deno-std=0.177.0";
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=deno&deno-std=0.224.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
