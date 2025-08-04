@@ -18,7 +18,7 @@ import { Client, CreateClientData } from '@/types/database';
 import { clientsService } from '@/services/clients';
 import { useToast } from '@/hooks/use-toast';
 import { X } from 'lucide-react';
-import { PlaceAutocomplete } from '@/components/shared/forms/place-input/PlaceAutocomplete';
+import { CleanPlaceAutocomplete } from '@/components/shared/forms/place-input/CleanPlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 
 const clientFormSchema = z.object({
@@ -192,7 +192,7 @@ const EditClientForm = ({ client, open, onOpenChange, onClientUpdated }: EditCli
               name="birth_location"
               control={control}
               render={({ field }) => (
-                <PlaceAutocomplete
+                <CleanPlaceAutocomplete
                   label="Birth Location"
                   value={field.value || ''}
                   onChange={field.onChange}
