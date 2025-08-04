@@ -223,7 +223,6 @@ serve(async (req) => {
       promo_code_used: trustedPricing.promo_code_id || null,
       email_sent: false,
       translator_log_id: null,
-      report_log_id: null,
       is_ai_report: isAI
     };
 

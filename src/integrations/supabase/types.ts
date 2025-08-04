@@ -23,7 +23,6 @@ export type Database = {
           promo_code_used: string | null
           email_sent: boolean
           modal_ready: boolean | null
-          report_log_id: string | null
           translator_log_id: string | null
           is_ai_report: boolean | null
           created_at: string
@@ -50,7 +49,6 @@ export type Database = {
           promo_code_used?: string | null
           email_sent?: boolean
           modal_ready?: boolean | null
-          report_log_id?: string | null
           translator_log_id?: string | null
           is_ai_report?: boolean | null
           created_at?: string
@@ -77,7 +75,6 @@ export type Database = {
           promo_code_used?: string | null
           email_sent?: boolean
           modal_ready?: boolean | null
-          report_log_id?: string | null
           translator_log_id?: string | null
           is_ai_report?: boolean | null
           created_at?: string
