@@ -116,18 +116,18 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   React.useEffect(() => {
     if (!guestReportId) return;
 
-    const checkReportReadyImmediately = async () => {
+        const checkReportReadyImmediately = async () => {
       logSuccessScreen('info', 'Performing immediate report_logs is_guest check', { guestReportId });
-      
+
       const { data } = await supabase
         .from('report_logs')
         .select('is_guest')
         .eq('is_guest', true)
         .maybeSingle();
-      
+
       // 2. SuccessScreen "early check" logging
       console.log('[SS] immediate DB check result →', data?.is_guest);
-      
+
       if (data?.is_guest === true) {
         logSuccessScreen('info', 'Guest report already ready in report_logs, opening modal immediately', { guestReportId });
         await fetchCachedReport(); // opens the modal immediately
@@ -136,11 +136,16 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
         logSuccessScreen('info', 'Guest report not yet ready in report_logs, will wait for WebSocket updates', { guestReportId });
       }
     };
+    
+    // DISABLED FOR TESTING - Immediate check commented out
+    // checkReportReadyImmediately();
 
-    checkReportReadyImmediately();
+    // checkReportReadyImmediately();
   }, [guestReportId, fetchCachedReport]);
 
       // WebSocket listener for report_logs where is_guest = true
+      // DISABLED FOR TESTING - WebSocket subscription commented out
+      /*
   useEffect(() => {
     if (!guestReportId) return;
 
@@ -206,6 +211,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
       channel.unsubscribe();
     };
   }, [guestReportId, fetchCachedReport]);
+  */
 
   // Start waiting for report when component mounts (separate from listener)
   useEffect(() => {
