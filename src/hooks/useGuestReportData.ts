@@ -16,9 +16,9 @@ export const useGuestReportData = (reportId: string | null) => {
       
       console.log('[useGuestReportData] Fetching guest report data for:', reportId);
       
-      const { data, error } = await supabase.functions.invoke('get-guest-report', {
-        body: { id: reportId }
-      });
+              const { data, error } = await supabase.functions.invoke('get-report-data', {
+          body: { guest_report_id: reportId }
+        });
       
       if (error) {
         console.error('[useGuestReportData] Error fetching guest report:', error);

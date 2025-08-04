@@ -148,17 +148,15 @@ async function processGuestReportPdf(guestReportId: string, requestId: string) {
     .single();
   if (error || !gr) throw new Error(`Guest report not found: ${error?.message}`);
 
-  // 2. fetch report content from report_logs where is_guest = true
+  // 2. fetch report content from report_logs where user_id = guestReportId
   const { data: reportLog, error: reportLogError } = await supabase
     .from("report_logs")
     .select("report_text")
-    .eq("is_guest", true)
-    .order("created_at", { ascending: false })
-    .limit(1)
+    .eq("user_id", guestReportId)
     .single();
   
   if (reportLogError || !reportLog) {
-    throw new Error("Report content not found - no report_logs entry with is_guest = true");
+    throw new Error("Report content not found - no report_logs entry with user_id = guestReportId");
   }
 
   const reportContent = reportLog.report_text;

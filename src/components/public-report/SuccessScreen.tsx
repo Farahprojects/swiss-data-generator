@@ -91,7 +91,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     
     // 5. Fetch layer timing
     console.time('[SS] fetchCachedReport');
-    const { data, error } = await supabase.functions.invoke('get-cached-report-data', {
+    const { data, error } = await supabase.functions.invoke('get-report-data', {
       body: { guest_report_id: guestReportId }
     });
     console.timeEnd('[SS] fetchCachedReport');   // measure latency
@@ -117,18 +117,18 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     if (!guestReportId) return;
 
         const checkReportReadyImmediately = async () => {
-      logSuccessScreen('info', 'Performing immediate report_logs is_guest check', { guestReportId });
+      logSuccessScreen('info', 'Performing immediate report_logs user_id check', { guestReportId });
 
       const { data } = await supabase
         .from('report_logs')
-        .select('is_guest')
-        .eq('is_guest', true)
+        .select('report_text')
+        .eq('user_id', guestReportId)
         .maybeSingle();
 
       // 2. SuccessScreen "early check" logging
-      console.log('[SS] immediate DB check result →', data?.is_guest);
+      console.log('[SS] immediate DB check result →', data?.report_text ? 'ready' : 'not ready');
 
-      if (data?.is_guest === true) {
+      if (data?.report_text) {
         logSuccessScreen('info', 'Guest report already ready in report_logs, opening modal immediately', { guestReportId });
         await fetchCachedReport(); // opens the modal immediately
         return; // modal now open; skip listener
@@ -146,7 +146,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   useEffect(() => {
     if (!guestReportId) return;
 
-    logSuccessScreen('info', 'Setting up WebSocket listener for report_logs is_guest', { guestReportId });
+    logSuccessScreen('info', 'Setting up WebSocket listener for report_logs user_id', { guestReportId });
     
     // 3. WebSocket lifecycle logging
     const channel = supabase.channel(`guest_report_modal:${guestReportId}`)
@@ -156,7 +156,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
           event: 'INSERT',
           schema: 'public',
           table: 'report_logs',
-          filter: `is_guest=eq.true`
+          filter: `user_id=eq.${guestReportId}`
         },
         (payload) => {
           logSuccessScreen('info', 'WebSocket received report_logs insert', { 
@@ -167,8 +167,8 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
           
           const newRecord = payload.new as any;
           
-          // Check if this is a guest report that's ready
-          if (newRecord?.is_guest === true) {
+          // Check if this is our guest report that's ready
+          if (newRecord?.user_id === guestReportId && newRecord?.report_text) {
             logSuccessScreen('info', 'Guest report ready in report_logs, opening modal', { guestReportId });
             
             // Fetch the cached report data and open modal
@@ -178,9 +178,10 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
               channel.unsubscribe();
             });
           } else {
-            logSuccessScreen('debug', 'WebSocket update received but is_guest condition not met', { 
+            logSuccessScreen('debug', 'WebSocket update received but user_id condition not met', { 
               guestReportId,
-              isGuest: newRecord?.is_guest
+              userId: newRecord?.user_id,
+              hasReportText: !!newRecord?.report_text
             });
           }
         }

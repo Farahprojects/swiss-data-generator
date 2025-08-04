@@ -15,7 +15,7 @@ function isValidUUID(uuid: string): boolean {
 serve(async (req) => {
   const startTime = Date.now();
   const requestId = Math.random().toString(36).substring(7);
-  console.log(`[get-cached-report-data][${requestId}] 🚀 Request started at ${new Date().toISOString()}`);
+  console.log(`[get-report-data][${requestId}] 🚀 Request started at ${new Date().toISOString()}`);
 
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -27,7 +27,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.error("[get-cached-report-data] Missing environment variables");
+      console.error("[get-report-data] Missing environment variables");
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -42,9 +42,9 @@ serve(async (req) => {
     let requestBody;
     try {
       requestBody = await req.json();
-      console.log("[get-cached-report-data] Request body received:", { keys: Object.keys(requestBody) });
+      console.log("[get-report-data] Request body received:", { keys: Object.keys(requestBody) });
     } catch (parseError) {
-      console.error("[get-cached-report-data] Failed to parse JSON:", parseError);
+      console.error("[get-report-data] Failed to parse JSON:", parseError);
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -59,7 +59,7 @@ serve(async (req) => {
 
     // Validate guest_report_id
     if (!guest_report_id || typeof guest_report_id !== 'string' || !isValidUUID(guest_report_id)) {
-      console.error("[get-cached-report-data] Invalid guest_report_id format:", guest_report_id);
+      console.error("[get-report-data] Invalid guest_report_id format:", guest_report_id);
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -70,13 +70,13 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[get-cached-report-data][${requestId}] 📋 Fetching cached report data: ${guest_report_id}`);
+    console.log(`[get-report-data][${requestId}] 📋 Fetching report data: ${guest_report_id}`);
 
     // Initialize Supabase client with service role
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Fetch the guest report data
-    console.log(`[get-cached-report-data][${requestId}] 🔍 Fetching guest report data...`);
+    console.log(`[get-report-data][${requestId}] 🔍 Fetching guest report data...`);
     const { data: guestReport, error: fetchError } = await supabase
       .from("guest_reports")
       .select("id, email, report_type, is_ai_report, swiss_boolean, created_at")
@@ -84,7 +84,7 @@ serve(async (req) => {
       .single();
 
     if (fetchError) {
-      console.error("[get-cached-report-data] Database error:", fetchError);
+      console.error("[get-report-data] Database error:", fetchError);
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -97,7 +97,7 @@ serve(async (req) => {
     }
 
     if (!guestReport) {
-      console.warn("[get-cached-report-data] Guest report not found:", guest_report_id);
+      console.warn("[get-report-data] Guest report not found:", guest_report_id);
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -108,43 +108,39 @@ serve(async (req) => {
       );
     }
 
-    // Fetch report data from report_logs where is_guest = true
-    console.log(`[get-cached-report-data][${requestId}] 🔍 Fetching report_logs data...`);
+    // Fetch report data from report_logs where user_id = guest_report_id
+    console.log(`[get-report-data][${requestId}] 🔍 Fetching report_logs data...`);
     const { data: reportLogs, error: reportLogsError } = await supabase
       .from("report_logs")
       .select("report_text, created_at")
-      .eq("is_guest", true)
-      .order("created_at", { ascending: false })
-      .limit(1)
+      .eq("user_id", guest_report_id)
       .single();
     
     let reportLogData: { report_text: string } | null = null;
     if (!reportLogsError && reportLogs) {
       reportLogData = reportLogs as { report_text: string };
     } else {
-      console.warn(`[get-cached-report-data] Could not fetch report_logs:`, reportLogsError);
+      console.warn(`[get-report-data] Could not fetch report_logs:`, reportLogsError);
     }
 
-    // Fetch translator data from translator_logs where is_guest = true
-    console.log(`[get-cached-report-data][${requestId}] 🔍 Fetching translator_logs data...`);
+    // Fetch translator data from translator_logs where user_id = guest_report_id
+    console.log(`[get-report-data][${requestId}] 🔍 Fetching translator_logs data...`);
     const { data: translatorLogs, error: translatorLogsError } = await supabase
       .from("translator_logs")
       .select("swiss_data, created_at")
-      .eq("is_guest", true)
-      .order("created_at", { ascending: false })
-      .limit(1)
+      .eq("user_id", guest_report_id)
       .single();
     
     let translatorLogData: { swiss_data: any } | null = null;
     if (!translatorLogsError && translatorLogs) {
       translatorLogData = translatorLogs as { swiss_data: any };
     } else {
-      console.warn(`[get-cached-report-data] Could not fetch translator_logs:`, translatorLogsError);
+      console.warn(`[get-report-data] Could not fetch translator_logs:`, translatorLogsError);
     }
 
     // Check if we have report data (indicating the report is ready)
     if (!reportLogData?.report_text) {
-      console.warn(`[get-cached-report-data] Report not ready - no report_text found: ${guest_report_id}`);
+      console.warn(`[get-report-data] Report not ready - no report_text found: ${guest_report_id}`);
       return new Response(
         JSON.stringify({ 
           ready: false, 
@@ -155,7 +151,7 @@ serve(async (req) => {
       );
     }
 
-    // Prepare complete report data for frontend - EXACT SAME FORMAT AS orchestrate-report-ready
+    // Prepare complete report data for frontend
     const reportData = {
       guest_report: guestReport,
       report_content: reportLogData?.report_text || null,
@@ -171,9 +167,9 @@ serve(async (req) => {
     };
 
     const processingTime = Date.now() - startTime;
-    console.log(`[get-cached-report-data][${requestId}] ✅ Cached report data retrieved in ${processingTime}ms: ${guest_report_id}`);
+    console.log(`[get-report-data][${requestId}] ✅ Report data retrieved in ${processingTime}ms: ${guest_report_id}`);
     
-    // Return cached report data
+    // Return report data
     return new Response(
       JSON.stringify({ 
         ok: true, 
@@ -185,7 +181,7 @@ serve(async (req) => {
 
   } catch (error) {
     const processingTime = Date.now() - startTime;
-    console.error("[get-cached-report-data] Unexpected error:", error);
+    console.error("[get-report-data] Unexpected error:", error);
     
     return new Response(
       JSON.stringify({ 
