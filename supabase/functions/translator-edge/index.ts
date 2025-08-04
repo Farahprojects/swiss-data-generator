@@ -351,6 +351,30 @@ serve(async (req)=>{
     }
 
     await logTranslator({ request_type:canon, request_payload:body, swiss_data:swissData, swiss_status:swiss.status, processing_ms:Date.now()-t0, error: swiss.ok?undefined:`Swiss ${swiss.status}`, google_geo:googleGeo, translator_payload:payload, user_id:body.user_id, is_guest:body.is_guest });
+    
+    // Add astro data only reports to report_ready_signals for UI detection
+    if (body.is_guest && body.user_id && swiss.ok) {
+      try {
+        // Check if this is an astro data only report (not AI)
+        const { data: guestReport } = await sb
+          .from('guest_reports')
+          .select('is_ai_report')
+          .eq('id', body.user_id)
+          .single();
+
+        // If it's astro data only (not AI report), add to report_ready_signals
+        if (guestReport && !guestReport.is_ai_report) {
+          console.log(`[translator-edge-${reqId}] Adding astro data only report to report_ready_signals: ${body.user_id}`);
+          await sb.from('report_ready_signals').insert({
+            guest_report_id: body.user_id,
+            created_at: new Date().toISOString()
+          });
+        }
+      } catch (error) {
+        console.warn(`[translator-edge-${reqId}] Failed to add to report_ready_signals:`, error);
+      }
+    }
+    
     return new Response(txt,{status:swiss.status,headers:corsHeaders});
   }catch(err){
     const msg = (err as Error).message;
