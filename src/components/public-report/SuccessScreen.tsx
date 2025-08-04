@@ -113,34 +113,34 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
   // --- early synchronous check -------------
   // This runs before React renders, ensuring we catch modal_ready if it's already true
-  React.useEffect(() => {
-    if (!guestReportId) return;
+  // React.useEffect(() => {
+  //   if (!guestReportId) return;
 
-        const checkReportReadyImmediately = async () => {
-      logSuccessScreen('info', 'Performing immediate signal check', { guestReportId });
+  //       const checkReportReadyImmediately = async () => {
+  //     logSuccessScreen('info', 'Performing immediate signal check', { guestReportId });
 
-      const { data } = await supabase
-        .from('report_ready_signals')
-        .select('guest_report_id')
-        .eq('guest_report_id', guestReportId)
-        .maybeSingle();
+  //     const { data } = await supabase
+  //       .from('report_ready_signals')
+  //       .select('guest_report_id')
+  //       .eq('guest_report_id', guestReportId)
+  //       .maybeSingle();
 
-      // 2. SuccessScreen "early check" logging
-      console.log('[SS] immediate DB check result →', data ? 'ready' : 'not ready');
+  //     // 2. SuccessScreen "early check" logging
+  //     console.log('[SS] immediate DB check result →', data ? 'ready' : 'not ready');
 
-      if (data) {
-        logSuccessScreen('info', 'Signal found, opening modal immediately', { guestReportId });
-        await fetchCachedReport(); // opens the modal immediately
-        return; // modal now open; skip listener
-      } else {
-        logSuccessScreen('info', 'No signal found yet, will wait for WebSocket updates', { guestReportId });
-      }
-    };
+  //     if (data) {
+  //       logSuccessScreen('info', 'Signal found, opening modal immediately', { guestReportId });
+  //       await fetchCachedReport(); // opens the modal immediately
+  //       return; // modal now open; skip listener
+  //     } else {
+  //       logSuccessScreen('info', 'No signal found yet, will wait for WebSocket updates', { guestReportId });
+  //     }
+  //   };
     
-    // ENABLED - Immediate check for already ready reports
-    checkReportReadyImmediately();
+  //   // ENABLED - Immediate check for already ready reports
+  //   checkReportReadyImmediately();
 
-  }, [guestReportId, fetchCachedReport]);
+  // }, [guestReportId, fetchCachedReport]);
 
   // WebSocket listener for report_ready_signals - lightweight signal only
   useEffect(() => {
