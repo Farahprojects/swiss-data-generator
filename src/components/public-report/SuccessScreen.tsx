@@ -40,19 +40,11 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, guestReportI
     );
   }
 
-  const fetchAndOpenReport = useCallback(async () => {
-    const { data, error } = await supabase.functions.invoke('get-report-data', {
-      body: { guest_report_id: guestReportId },
-    });
-
-    if (error || !data?.ready || !data?.data) {
-      logSuccessScreen('error', 'Error or incomplete data fetching report', { error, data });
-      return;
-    }
-
-    open(data.data);
+  // Report modal is now handled by ReportForm's useGuestReportData hook
+  // This prevents duplicate API calls to get-report-data
+  const handleReportReady = useCallback(() => {
     setHasOpenedModal(true);
-  }, [guestReportId, open]);
+  }, []);
 
   // WebSocket subscription for report_ready_signals
   useEffect(() => {
@@ -67,7 +59,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, guestReportI
         },
         () => {
           if (!hasOpenedModal) {
-            fetchAndOpenReport();
+            handleReportReady();
             channel.unsubscribe();
           }
         }
@@ -77,7 +69,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, guestReportI
     return () => {
       channel.unsubscribe();
     };
-  }, [guestReportId, fetchAndOpenReport, hasOpenedModal]);
+  }, [guestReportId, handleReportReady, hasOpenedModal]);
 
   // Countdown UI fallback (purely visual)
   useEffect(() => {
