@@ -140,19 +140,29 @@ async function processGuestReportPdf(guestReportId: string, requestId: string) {
     log(`Failed to confirm edge function call: ${error}`);
   }
 
-  // 1. fetch report with joins to get content from report_logs
+  // 1. fetch report data
   const { data: gr, error } = await supabase
     .from("guest_reports")
-    .select(`
-      id, email, report_type, created_at, email_sent,
-      report_logs!report_log_id(report_text)
-    `)
+    .select("id, email, report_type, created_at, email_sent")
     .eq("id", guestReportId)
     .single();
   if (error || !gr) throw new Error(`Guest report not found: ${error?.message}`);
 
-  const reportContent = gr.report_logs?.report_text;
-  if (!reportContent) throw new Error("Report content empty - no linked report_logs entry");
+  // 2. fetch report content from report_logs where is_guest = true
+  const { data: reportLog, error: reportLogError } = await supabase
+    .from("report_logs")
+    .select("report_text")
+    .eq("is_guest", true)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+  
+  if (reportLogError || !reportLog) {
+    throw new Error("Report content not found - no report_logs entry with is_guest = true");
+  }
+
+  const reportContent = reportLog.report_text;
+  if (!reportContent) throw new Error("Report content empty - no report_text in report_logs");
   if (gr.email_sent) { log("Email already sent – skipping"); return { skipped:true }; }
 
   // 2. generate PDF

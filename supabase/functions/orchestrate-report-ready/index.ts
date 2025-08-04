@@ -76,11 +76,11 @@ serve(async (req) => {
     // Initialize Supabase client with service role
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch the guest report with related data
-    console.log(`[orchestrate-report-ready][${requestId}] 🔍 Fetching complete report data...`);
+    // Fetch the guest report data
+    console.log(`[orchestrate-report-ready][${requestId}] 🔍 Fetching guest report data...`);
     const { data: guestReport, error: fetchError } = await supabase
       .from("guest_reports")
-      .select("*")
+      .select("id, email, report_type, is_ai_report, swiss_boolean, created_at")
       .eq("id", guest_report_id)
       .single();
 
@@ -109,36 +109,38 @@ serve(async (req) => {
       );
     }
 
-    // Fetch related data separately since foreign keys were removed
+    // Fetch report data from report_logs where is_guest = true
+    console.log(`[orchestrate-report-ready][${requestId}] 🔍 Fetching report_logs data...`);
+    const { data: reportLogs, error: reportLogsError } = await supabase
+      .from("report_logs")
+      .select("report_text, created_at")
+      .eq("is_guest", true)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+    
     let reportLogData: { report_text: string } | null = null;
-    let translatorLogData: { swiss_data: any } | null = null;
-
-    if (guestReport.report_log_id) {
-      const { data: reportLog, error: reportLogError } = await supabase
-        .from("report_logs")
-        .select("report_text")
-        .eq("id", guestReport.report_log_id)
-        .single();
-      
-      if (!reportLogError && reportLog) {
-        reportLogData = reportLog as { report_text: string };
-      } else {
-        console.warn(`[orchestrate-report-ready] Could not fetch report_log for ${guestReport.report_log_id}:`, reportLogError);
-      }
+    if (!reportLogsError && reportLogs) {
+      reportLogData = reportLogs as { report_text: string };
+    } else {
+      console.warn(`[orchestrate-report-ready] Could not fetch report_logs:`, reportLogsError);
     }
 
-    if (guestReport.translator_log_id) {
-      const { data: translatorLog, error: translatorLogError } = await supabase
-        .from("translator_logs")
-        .select("swiss_data")
-        .eq("id", guestReport.translator_log_id)
-        .single();
-      
-      if (!translatorLogError && translatorLog) {
-        translatorLogData = translatorLog as { swiss_data: any };
-      } else {
-        console.warn(`[orchestrate-report-ready] Could not fetch translator_log for ${guestReport.translator_log_id}:`, translatorLogError);
-      }
+    // Fetch translator data from translator_logs where is_guest = true
+    console.log(`[orchestrate-report-ready][${requestId}] 🔍 Fetching translator_logs data...`);
+    const { data: translatorLogs, error: translatorLogsError } = await supabase
+      .from("translator_logs")
+      .select("swiss_data, created_at")
+      .eq("is_guest", true)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+    
+    let translatorLogData: { swiss_data: any } | null = null;
+    if (!translatorLogsError && translatorLogs) {
+      translatorLogData = translatorLogs as { swiss_data: any };
+    } else {
+      console.warn(`[orchestrate-report-ready] Could not fetch translator_logs:`, translatorLogsError);
     }
 
     // ✅ UPDATED: Trust-based validation - if this function is called, the report is ready

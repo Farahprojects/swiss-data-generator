@@ -75,11 +75,11 @@ serve(async (req) => {
     // Initialize Supabase client with service role
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch the guest report with related data (same as orchestrate-report-ready)
-    console.log(`[get-cached-report-data][${requestId}] 🔍 Fetching complete report data...`);
+    // Fetch the guest report data
+    console.log(`[get-cached-report-data][${requestId}] 🔍 Fetching guest report data...`);
     const { data: guestReport, error: fetchError } = await supabase
       .from("guest_reports")
-      .select("*")
+      .select("id, email, report_type, is_ai_report, swiss_boolean, created_at")
       .eq("id", guest_report_id)
       .single();
 
@@ -108,41 +108,43 @@ serve(async (req) => {
       );
     }
 
-    // Fetch related data separately since foreign keys were removed
+    // Fetch report data from report_logs where is_guest = true
+    console.log(`[get-cached-report-data][${requestId}] 🔍 Fetching report_logs data...`);
+    const { data: reportLogs, error: reportLogsError } = await supabase
+      .from("report_logs")
+      .select("report_text, created_at")
+      .eq("is_guest", true)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+    
     let reportLogData: { report_text: string } | null = null;
+    if (!reportLogsError && reportLogs) {
+      reportLogData = reportLogs as { report_text: string };
+    } else {
+      console.warn(`[get-cached-report-data] Could not fetch report_logs:`, reportLogsError);
+    }
+
+    // Fetch translator data from translator_logs where is_guest = true
+    console.log(`[get-cached-report-data][${requestId}] 🔍 Fetching translator_logs data...`);
+    const { data: translatorLogs, error: translatorLogsError } = await supabase
+      .from("translator_logs")
+      .select("swiss_data, created_at")
+      .eq("is_guest", true)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+    
     let translatorLogData: { swiss_data: any } | null = null;
-
-    if (guestReport.report_log_id) {
-      const { data: reportLog, error: reportLogError } = await supabase
-        .from("report_logs")
-        .select("report_text")
-        .eq("id", guestReport.report_log_id)
-        .single();
-      
-      if (!reportLogError && reportLog) {
-        reportLogData = reportLog as { report_text: string };
-      } else {
-        console.warn(`[get-cached-report-data] Could not fetch report_log for ${guestReport.report_log_id}:`, reportLogError);
-      }
+    if (!translatorLogsError && translatorLogs) {
+      translatorLogData = translatorLogs as { swiss_data: any };
+    } else {
+      console.warn(`[get-cached-report-data] Could not fetch translator_logs:`, translatorLogsError);
     }
 
-    if (guestReport.translator_log_id) {
-      const { data: translatorLog, error: translatorLogError } = await supabase
-        .from("translator_logs")
-        .select("swiss_data")
-        .eq("id", guestReport.translator_log_id)
-        .single();
-      
-      if (!translatorLogError && translatorLog) {
-        translatorLogData = translatorLog as { swiss_data: any };
-      } else {
-        console.warn(`[get-cached-report-data] Could not fetch translator_log for ${guestReport.translator_log_id}:`, translatorLogError);
-      }
-    }
-
-    // Check if modal_ready is true (indicating the report is cached and ready)
-    if (!guestReport.modal_ready) {
-      console.warn(`[get-cached-report-data] Report not ready - modal_ready is false: ${guest_report_id}`);
+    // Check if we have report data (indicating the report is ready)
+    if (!reportLogData?.report_text) {
+      console.warn(`[get-cached-report-data] Report not ready - no report_text found: ${guest_report_id}`);
       return new Response(
         JSON.stringify({ 
           ready: false, 
