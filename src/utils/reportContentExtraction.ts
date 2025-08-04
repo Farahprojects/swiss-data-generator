@@ -26,12 +26,14 @@ export const extractReportContent = (reportData: ReportData): string => {
 };
 
 export const getPersonName = (reportData: ReportData): string => {
-  return reportData.guest_report?.report_data?.name || 'Unknown';
+  const reportDataObj = reportData.guest_report?.report_data;
+  return reportDataObj?.person_a?.name || reportDataObj?.name || 'Unknown';
 };
 
 export const getReportTitle = (reportData: ReportData): string => {
-  const personA = reportData.guest_report?.report_data?.name;
-  const personB = reportData.guest_report?.report_data?.secondPersonName;
+  const reportDataObj = reportData.guest_report?.report_data;
+  const personA = reportDataObj?.person_a?.name || reportDataObj?.name;
+  const personB = reportDataObj?.person_b?.name || reportDataObj?.secondPersonName;
   const reportType = reportData.guest_report?.report_type || '';
   
   if (personB) {
