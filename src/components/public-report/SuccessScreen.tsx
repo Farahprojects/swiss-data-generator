@@ -137,15 +137,12 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
       }
     };
     
-    // DISABLED FOR TESTING - Immediate check commented out
-    // checkReportReadyImmediately();
+    // ENABLED - Immediate check for already ready reports
+    checkReportReadyImmediately();
 
-    // checkReportReadyImmediately();
   }, [guestReportId, fetchCachedReport]);
 
-      // WebSocket listener for report_logs where is_guest = true
-      // DISABLED FOR TESTING - WebSocket subscription commented out
-      /*
+  // WebSocket listener for report_logs where is_guest = true
   useEffect(() => {
     if (!guestReportId) return;
 
@@ -211,7 +208,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
       channel.unsubscribe();
     };
   }, [guestReportId, fetchCachedReport]);
-  */
 
   // Start waiting for report when component mounts (separate from listener)
   useEffect(() => {
