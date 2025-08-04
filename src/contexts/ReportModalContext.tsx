@@ -18,15 +18,36 @@ const ReportModalContext = createContext<ModalContext | null>(null);
 export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
   const [payload, setPayload] = useState<ReportPayload | null>(null);
 
+  // Restore modal state from sessionStorage on mount
+  useEffect(() => {
+    const storedPayload = sessionStorage.getItem('reportModalPayload');
+    if (storedPayload) {
+      try {
+        const parsedPayload = JSON.parse(storedPayload);
+        console.log('🔄 ReportModalProvider: Restoring modal state from sessionStorage');
+        setPayload(parsedPayload);
+      } catch (error) {
+        console.warn('⚠️ ReportModalProvider: Failed to parse stored modal payload:', error);
+        sessionStorage.removeItem('reportModalPayload');
+      }
+    }
+  }, []);
+
   const open = (d: ReportPayload) => {
     if (!d) return console.warn('[ModalCTX] open called with null');
     console.log(`🚀 ReportModalProvider: open() called at ${new Date().toISOString()}`);
     console.log(`📦 ReportModalProvider: payload being set:`, d);
+    
+    // Persist modal state to sessionStorage
+    sessionStorage.setItem('reportModalPayload', JSON.stringify(d));
     setPayload(d);
   };
 
   const close = () => {
     console.log(`🚀 ReportModalProvider: close() called at ${new Date().toISOString()}`);
+    
+    // Clear persisted modal state
+    sessionStorage.removeItem('reportModalPayload');
     setPayload(null);
   };
 

@@ -137,8 +137,23 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       log('info', 'Payment pending, waiting for realtime update', null, 'ReportForm');
       setStatus('waiting');
     } else if (guestReport?.payment_status === undefined || guestReport?.payment_status === null) {
-      log('info', 'No payment status found, clearing session for fresh start', null, 'ReportForm');
-      handleSessionReset('no_payment_status');
+      // Before resetting, check if user actually has a report via other indicators
+      log('info', 'No payment status found, validating if report exists before clearing session', null, 'ReportForm');
+      
+      // Import the validation function dynamically to avoid circular imports
+      import('@/utils/reportValidation').then(async ({ shouldResetSession }) => {
+        const shouldReset = await shouldResetSession(guestId);
+        if (shouldReset) {
+          log('info', 'Report validation confirms no report exists, proceeding with session reset', null, 'ReportForm');
+          handleSessionReset('no_payment_status_and_no_report');
+        } else {
+          log('info', 'Report validation found existing report, skipping session reset', null, 'ReportForm');
+          setStatus('success', undefined, guestReportData);
+        }
+      }).catch(error => {
+        log('error', 'Failed to validate report existence, defaulting to session reset', { error }, 'ReportForm');
+        handleSessionReset('validation_failed');
+      });
     } else {
       log('error', 'Unexpected payment status', { paymentStatus: guestReport?.payment_status }, 'ReportForm');
       setStatus('error', `Payment status: ${guestReport?.payment_status}`);

@@ -26,6 +26,21 @@ export const useGuestSessionManager = (initialGuestId?: string | null) => {
   const handleSessionReset = useCallback(async (reason: string = 'unknown') => {
     console.warn(`🔄 Guest session reset triggered: ${reason}`);
     
+    // For non-404 reasons, validate if report exists before resetting
+    if (reason !== 'guest_report_404' && state.guestId) {
+      try {
+        const { shouldResetSession } = await import('@/utils/reportValidation');
+        const shouldReset = await shouldResetSession(state.guestId);
+        
+        if (!shouldReset) {
+          console.log('🛡️ Session reset prevented - user has valid report');
+          return;
+        }
+      } catch (error) {
+        console.warn('⚠️ Report validation failed, proceeding with reset:', error);
+      }
+    }
+    
     setState(prev => ({ ...prev, isResetting: true, hasError: true, errorMessage: reason }));
     
     try {
@@ -33,6 +48,9 @@ export const useGuestSessionManager = (initialGuestId?: string | null) => {
       queryClient.removeQueries({ queryKey: ['guest-report-data'] });
       queryClient.removeQueries({ queryKey: ['token-recovery'] });
       queryClient.removeQueries({ queryKey: ['guest-report-data', null] });
+      
+      // Clear persisted modal state when resetting session
+      sessionStorage.removeItem('reportModalPayload');
       
       // Comprehensive state reset
       await resetGuestSessionOn404();
@@ -50,7 +68,7 @@ export const useGuestSessionManager = (initialGuestId?: string | null) => {
       // Fallback to homepage redirect
       window.location.href = '/';
     }
-  }, [queryClient]);
+  }, [queryClient, state.guestId]);
 
   // Set guest ID and trigger loading state
   const setGuestId = useCallback((guestId: string | null) => {
