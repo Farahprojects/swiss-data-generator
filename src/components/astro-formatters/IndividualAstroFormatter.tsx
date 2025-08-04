@@ -46,25 +46,6 @@ export const IndividualAstroFormatter: React.FC<IndividualAstroFormatterProps> =
         longitude={longitude}
       />
 
-      {/* Birth Information */}
-      {enrichedData.name && (
-        <div className="text-center mb-8 text-gray-700">
-          <div className="text-lg font-medium">{enrichedData.name}</div>
-          <div className="text-sm">
-            {enrichedData.dateISO} — {enrichedData.timeISO} ({enrichedData.tz})
-          </div>
-          {enrichedData.meta?.location && (
-            <div className="text-sm">
-              {enrichedData.meta.location}
-              {enrichedData.meta.lat && enrichedData.meta.lon && (
-                <span className="text-xs text-gray-500 ml-2">
-                  ({enrichedData.meta.lat.toFixed(2)}°, {enrichedData.meta.lon.toFixed(2)}°)
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Chart Angles */}
       {enrichedData.angles && enrichedData.angles.length > 0 && (
