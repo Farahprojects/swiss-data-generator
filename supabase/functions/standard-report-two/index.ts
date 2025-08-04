@@ -324,6 +324,18 @@ serve(async (req) => {
         });
       } else {
         console.log(`[standard-report-two][${requestId}] Report log inserted successfully for ${reportData.is_guest ? 'guest' : 'user'} report`);
+        
+        // ✅ Insert signal for guest reports
+        if (reportData.is_guest && reportData.user_id) {
+          try {
+            await supabase.from('report_ready_signals').insert({
+              guest_report_id: reportData.user_id
+            });
+            console.log(`[standard-report-two][${requestId}] Signal inserted for guest report: ${reportData.user_id}`);
+          } catch (signalError) {
+            console.error(`[standard-report-two][${requestId}] Signal insert failed:`, signalError);
+          }
+        }
       }
     } catch (logError) {
       // ✅ LOGGING: Report log insert exception

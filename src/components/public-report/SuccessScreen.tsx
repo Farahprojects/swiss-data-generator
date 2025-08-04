@@ -117,23 +117,23 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     if (!guestReportId) return;
 
         const checkReportReadyImmediately = async () => {
-      logSuccessScreen('info', 'Performing immediate is_guest boolean check', { guestReportId });
+      logSuccessScreen('info', 'Performing immediate signal check', { guestReportId });
 
       const { data } = await supabase
-        .from('report_logs')
-        .select('is_guest')
-        .eq('user_id', guestReportId)
+        .from('report_ready_signals')
+        .select('guest_report_id')
+        .eq('guest_report_id', guestReportId)
         .maybeSingle();
 
       // 2. SuccessScreen "early check" logging
-      console.log('[SS] immediate DB check result →', data?.is_guest ? 'ready' : 'not ready');
+      console.log('[SS] immediate DB check result →', data ? 'ready' : 'not ready');
 
-      if (data?.is_guest === true) {
-        logSuccessScreen('info', 'is_guest boolean is true, opening modal immediately', { guestReportId });
+      if (data) {
+        logSuccessScreen('info', 'Signal found, opening modal immediately', { guestReportId });
         await fetchCachedReport(); // opens the modal immediately
         return; // modal now open; skip listener
       } else {
-        logSuccessScreen('info', 'is_guest boolean not true yet, will wait for WebSocket updates', { guestReportId });
+        logSuccessScreen('info', 'No signal found yet, will wait for WebSocket updates', { guestReportId });
       }
     };
     
@@ -142,46 +142,29 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
   }, [guestReportId, fetchCachedReport]);
 
-  // WebSocket listener for report_logs INSERT events - lightweight boolean check only
+  // WebSocket listener for report_ready_signals - lightweight signal only
   useEffect(() => {
     if (!guestReportId) return;
 
-    logSuccessScreen('info', 'Setting up lightweight WebSocket listener for is_guest boolean', { guestReportId });
+    logSuccessScreen('info', 'Listening to report_ready_signals for guest report', { guestReportId });
     
     // 3. WebSocket lifecycle logging
-    const channel = supabase.channel(`guest_report_modal:${guestReportId}`)
+    const channel = supabase.channel(`ready:${guestReportId}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'report_logs',
-          filter: `user_id=eq.${guestReportId}`
+          table: 'report_ready_signals',
+          filter: `guest_report_id=eq.${guestReportId}`
         },
-        (payload) => {
-          logSuccessScreen('info', 'WebSocket received report_logs insert', { 
-            guestReportId, 
-            payload: payload
+        () => {
+          logSuccessScreen('info', 'Signal received: opening modal now', { guestReportId });
+          fetchCachedReport().then(() => {
+            // Clean up the listener immediately after triggering
+            logSuccessScreen('info', 'Unsubscribing from WebSocket after signal trigger', { guestReportId });
+            channel.unsubscribe();
           });
-          
-          const newRecord = payload.new as any;
-          
-          // ✅ LIGHTWEIGHT: Only check is_guest boolean
-          if (newRecord?.is_guest === true) {
-            logSuccessScreen('info', 'is_guest boolean is true, triggering report modal', { guestReportId });
-            
-            // ✅ LIGHTWEIGHT: Just trigger the edge function, no heavy processing
-            fetchCachedReport().then(() => {
-              // Clean up the listener immediately after triggering
-              logSuccessScreen('info', 'Unsubscribing from WebSocket after is_guest trigger', { guestReportId });
-              channel.unsubscribe();
-            });
-          } else {
-            logSuccessScreen('debug', 'WebSocket update received but is_guest not true', { 
-              guestReportId,
-              isGuest: newRecord?.is_guest
-            });
-          }
         }
       )
       .subscribe(
@@ -197,9 +180,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     } catch (e) {
       console.log('[SS] realtime debug not available');
     }
-    
-    // Set authentication parameters for RLS
-    // channel.setAuth({ guest_report_id: guestReportId }); // This line is removed
 
     // Cleanup function
     return () => {
