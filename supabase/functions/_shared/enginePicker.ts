@@ -14,21 +14,21 @@ export const TOTAL_ENGINES = ENGINES.length;
 
 export async function pickNextEngine(supabaseAdmin: SupabaseClient): Promise<string> {
   try {
-    // 1) Get the next sequence value (atomic, super-fast)
+    // 1) Get the next sequence value using our custom function (atomic, super-fast)
     const { data, error } = await supabaseAdmin
-      .rpc("nextval", { sequence_name: "engine_selector_seq" })
+      .rpc('get_next_engine_sequence')
       .single();
 
-    if (error || !data?.nextval) {
+    if (error || data === null || data === undefined) {
       console.error("[enginePicker] Sequence fetch failed:", error);
       throw new Error("Sequence fetch failed");
     }
 
     // 2) Simple modulo gives round-robin index
-    const idx = Number(data.nextval) % TOTAL_ENGINES;
+    const idx = Number(data) % TOTAL_ENGINES;
     const selectedEngine = ENGINES[idx];
     
-    console.log(`[enginePicker] Selected engine: ${selectedEngine} (sequence: ${data.nextval}, index: ${idx})`);
+    console.log(`[enginePicker] Selected engine: ${selectedEngine} (sequence: ${data}, index: ${idx})`);
     return selectedEngine;
     
   } catch (error) {
