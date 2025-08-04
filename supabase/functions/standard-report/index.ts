@@ -120,8 +120,22 @@ async function getSystemPrompt(reportType: string, requestId: string): Promise<s
   };
 
   try {
-    const systemPrompt = await retryWithBackoff(fetchPrompt, logPrefix, MAX_DB_RETRIES, 500, 2, "database system prompt fetch");
-    return systemPrompt;
+    // Direct fetch without retry logic - should be fast and reliable
+    const { data, error, status } = await supabase
+      .from("report_prompts")
+      .select("system_prompt")
+      .eq("name", reportType)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(`Failed to fetch system prompt (status ${status}): ${error.message}`);
+    }
+
+    if (!data || !data.system_prompt) {
+      throw new Error(`System prompt not found for ${reportType} report`);
+    }
+    
+    return data.system_prompt;
   } catch (err) {
     throw err; // Propagate the error to be handled by the main handler
   }
