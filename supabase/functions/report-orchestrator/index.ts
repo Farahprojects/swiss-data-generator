@@ -74,15 +74,7 @@ function callEngineFireAndForget(engine: string, payload: ReportPayload): void {
       "Authorization": `Bearer ${supabaseServiceKey}`
     },
     body: JSON.stringify(requestPayload),
-  })
-  .then(response => {
-    if (!response.ok) {
-      console.error(`[report-orchestrator] Engine ${engine} returned ${response.status}`);
-    } else {
-      console.log(`[report-orchestrator] Engine ${engine} called successfully`);
-    }
-  })
-  .catch(error => {
+  }).catch(error => {
     console.error(`[report-orchestrator] Engine ${engine} fire-and-forget failed:`, error);
   });
 }
