@@ -69,19 +69,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     }
   }, [guestReportError, handleSessionReset]);
   
-  /**
-   *  👉  ONE-SHOT REFRESH RECOVERY
-   *  If we loaded the page with an existing guestReportId and the server
-   *  says the report is already finished, open the modal immediately.
-   */
-  useEffect(() => {
-    if (
-      guestReportData &&               // we just fetched data
-      (guestReportData.report_content || guestReportData.swiss_data) // it's real
-    ) {
-      open(guestReportData);           // 🎉 single source of truth
-    }
-  }, [guestReportData, open]);
+  // Removed redundant modal opening logic - SuccessScreen handles this
 
   // Handle token recovery error
   useEffect(() => {
@@ -105,19 +93,14 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     const storedGuestId = localStorage.getItem('guest_report_id');
     
     if (storedPaymentStatus === 'paid' && storedGuestId === guestId) {
-      log('info', 'Payment already confirmed, skipping validation and fetching report data', null, 'ReportForm');
+      log('info', 'Payment already confirmed, transitioning to success', null, 'ReportForm');
       setStatus('success');
-      // Fetch report data directly
       return;
     }
     
-    // Original Stripe redirect logic (only if payment not already confirmed)
-    const hasExistingSession = localStorage.getItem('pending_report_email');
-    
-    if (!hasExistingSession) {
-      log('info', 'Stripe redirect detected, starting unified data fetching', null, 'ReportForm');
-      setStatus('verifying');
-    }
+    // Start verification to check if report exists
+    log('info', 'Starting validation check for existing report', null, 'ReportForm');
+    setStatus('verifying');
   }, [guestId, sessionRestored, setStatus]);
 
   // Handle guest data when guestId is provided
@@ -125,24 +108,39 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     if (!guestReportData || status !== 'verifying') return;
 
     const guestReport = guestReportData.guest_report;
-    log('debug', 'Unified data fetch result', { paymentStatus: guestReport?.payment_status }, 'ReportForm');
+    const validation = guestReportData.validation;
     
-    if (guestReport?.payment_status === 'paid') {
-      log('info', 'Payment confirmed via unified fetch, transitioning to success state', null, 'ReportForm');
-      // 🔥 STORE PAYMENT STATUS
-      localStorage.setItem('guest_payment_status', 'paid');
-      localStorage.setItem('guest_report_id', guestId);
+    log('debug', 'Unified data fetch result', { 
+      paymentStatus: guestReport?.payment_status,
+      hasReport: validation?.hasReport,
+      validationDetails: validation?.validationDetails
+    }, 'ReportForm');
+    
+    // Check if user has a valid report (payment confirmed OR other indicators)
+    if (validation?.hasReport) {
+      log('info', 'Valid report detected, transitioning to success state', {
+        hasPaidStatus: validation.hasPaidStatus,
+        hasTranslatorLog: validation.hasTranslatorLog, 
+        hasReportReadySignal: validation.hasReportReadySignal,
+        hasReportData: validation.hasReportData
+      }, 'ReportForm');
+      
+      // Store payment status if confirmed
+      if (validation.hasPaidStatus) {
+        localStorage.setItem('guest_payment_status', 'paid');
+        localStorage.setItem('guest_report_id', guestId);
+      }
+      
       setStatus('success', undefined, guestReportData);
     } else if (guestReport?.payment_status === 'pending') {
       log('info', 'Payment pending, waiting for realtime update', null, 'ReportForm');
       setStatus('waiting');
-    } else if (guestReport?.payment_status === undefined || guestReport?.payment_status === null) {
-      // Simplified: just reset session if no payment status
-      log('info', 'No payment status found, resetting session', null, 'ReportForm');
-      handleSessionReset('no_payment_status');
     } else {
-      log('error', 'Unexpected payment status', { paymentStatus: guestReport?.payment_status }, 'ReportForm');
-      setStatus('error', `Payment status: ${guestReport?.payment_status}`);
+      log('info', 'No valid report found, resetting session', { 
+        paymentStatus: guestReport?.payment_status,
+        validationDetails: validation?.validationDetails 
+      }, 'ReportForm');
+      handleSessionReset('no_valid_report');
     }
   }, [guestReportData, status, setStatus, handleSessionReset, guestId]);
 
