@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { pickNextEngine } from "../_shared/enginePicker.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,13 +16,6 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   auth: { persistSession: false }
 });
 
-// Available engines for round-robin selection
-const EDGE_ENGINES = [
-  "standard-report",
-  "standard-report-one", 
-  "standard-report-two",
-];
-
 interface ReportPayload {
   endpoint: string;
   report_type: string;
@@ -32,16 +26,7 @@ interface ReportPayload {
   [k: string]: any;
 }
 
-// Get the next engine using simple round-robin (no DB lookup needed)
-function getNextEngine(): string {
-  // Use timestamp-based selection for simple round-robin
-  const timestamp = Date.now();
-  const engineIndex = Math.floor(timestamp / 1000) % EDGE_ENGINES.length;
-  const selectedEngine = EDGE_ENGINES[engineIndex];
-  
-  console.log(`[report-orchestrator] Selected engine: ${selectedEngine} (timestamp-based selection)`);
-  return selectedEngine;
-}
+// Engine selection now handled by pickNextEngine() from _shared/enginePicker.ts
 
 // Validate that the report type exists in prompts
 // REMOVED: Unnecessary database lookup - report types are validated upstream
@@ -118,8 +103,8 @@ serve(async (req) => {
       });
     }
     
-    // Step 2: Select next engine
-    const selectedEngine = getNextEngine();
+    // Step 2: Select next engine using atomic sequence-based selection
+    const selectedEngine = await pickNextEngine(supabase);
     
     // Step 3: Call the engine (fire-and-forget)
     callEngine(selectedEngine, payload).catch(error => {
