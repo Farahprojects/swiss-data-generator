@@ -4,7 +4,7 @@ import { CheckCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { ReportData } from '@/utils/reportContentExtraction';
 import EntertainmentWindow from './EntertainmentWindow';
-import ErrorStateHandler from './ErrorStateHandler';
+
 import { supabase } from '@/integrations/supabase/client';
 import { logSuccessScreen } from '@/utils/logUtils';
 import { useReportModal } from '@/contexts/ReportModalContext';
@@ -17,16 +17,7 @@ interface SuccessScreenProps {
   onStartWaiting?: () => void;
 }
 
-interface ErrorState {
-  type: string;
-  case_number?: string;
-  message: string;
-  logged_at?: string;
-  requires_cleanup?: boolean;
-  requires_error_logging?: boolean;
-  guest_report_id?: string;
-  email?: string;
-}
+
 
 const SuccessScreen: React.FC<SuccessScreenProps> = ({ 
   name, 
@@ -64,8 +55,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
   // Simple states
   const [countdownTime, setCountdownTime] = useState(24);
-  const [errorState, setErrorState] = useState<ErrorState | null>(null);
-
+  
   // Single call opens modal (with duplicate prevention)
   const [hasOpenedModal, setHasOpenedModal] = useState(false);
   
@@ -105,50 +95,40 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
     
     if (data?.ready && data?.data) {
       logSuccessScreen('info', 'Cached report data fetched successfully, opening modal', { guestReportId });
+      console.time('[SS] modal open start');
       handleReportReady(data.data);
+      console.timeEnd('[SS] modal open start');
     } else {
       logSuccessScreen('warn', 'Cached report data not ready', { guestReportId, data });
     }
   }, [guestReportId, handleReportReady]);
 
-  // --- early synchronous check -------------
-  // This runs before React renders, ensuring we catch modal_ready if it's already true
-  React.useEffect(() => {
+
+
+    // Immediate check — fire and forget (non-blocking)
+  useEffect(() => {
     if (!guestReportId) return;
 
-        const checkReportReadyImmediately = async () => {
-      logSuccessScreen('info', 'Performing immediate signal check', { guestReportId });
-
+    (async () => {
       const { data } = await supabase
         .from('report_ready_signals')
         .select('guest_report_id')
         .eq('guest_report_id', guestReportId)
         .maybeSingle();
 
-      // 2. SuccessScreen "early check" logging
-      console.log('[SS] immediate DB check result →', data ? 'ready' : 'not ready');
-
       if (data) {
-        logSuccessScreen('info', 'Signal found, opening modal immediately', { guestReportId });
-        await fetchCachedReport(); // opens the modal immediately
-        return; // modal now open; skip listener
-      } else {
-        logSuccessScreen('info', 'No signal found yet, will wait for WebSocket updates', { guestReportId });
+        logSuccessScreen('info', 'Signal found immediately, triggering fetch', { guestReportId });
+        fetchCachedReport(); // no await - fire and forget
       }
-    };
-    
-    // ENABLED - Immediate check for already ready reports
-    checkReportReadyImmediately();
+    })();
+  }, [guestReportId]);
 
-  }, [guestReportId, fetchCachedReport]);
-
-  // WebSocket listener for report_ready_signals - lightweight signal only
+  // Real-time listener (non-blocking)
   useEffect(() => {
     if (!guestReportId) return;
 
-    logSuccessScreen('info', 'Listening to report_ready_signals for guest report', { guestReportId });
+    logSuccessScreen('info', 'Setting up WebSocket listener', { guestReportId });
     
-    // 3. WebSocket lifecycle logging
     const channel = supabase.channel(`ready:${guestReportId}`)
       .on(
         'postgres_changes',
@@ -159,9 +139,10 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
           filter: `guest_report_id=eq.${guestReportId}`
         },
         () => {
-          logSuccessScreen('info', 'Signal received: opening modal now', { guestReportId });
+          logSuccessScreen('info', 'Signal received via socket', { guestReportId });
+          console.time('WS→fetch start');
           fetchCachedReport().then(() => {
-            // Clean up the listener immediately after triggering
+            console.timeEnd('WS→fetch start');
             logSuccessScreen('info', 'Unsubscribing from WebSocket after signal trigger', { guestReportId });
             channel.unsubscribe();
           });
@@ -171,42 +152,14 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
          status => console.log('[SS] subscription status →', status)
       );
 
-    // ALSO listen for low-level socket errors
-    console.log('[SS] realtime client available:', !!supabase.realtime);
-    
-    // Enable realtime debug logs (if available)
-    try {
-      (supabase.realtime as any).setDebug?.(true);
-    } catch (e) {
-      console.log('[SS] realtime debug not available');
-    }
-
     // Cleanup function
     return () => {
       logSuccessScreen('info', 'Cleaning up WebSocket listener', { guestReportId });
       channel.unsubscribe();
     };
-  }, [guestReportId, fetchCachedReport]);
+  }, [guestReportId]);
 
-  // Start waiting for report when component mounts (separate from listener)
-  useEffect(() => {
-    if (onStartWaiting) {
-      logSuccessScreen('info', 'Starting to wait for report');
-      onStartWaiting();
-    }
-  }, [onStartWaiting]);
-
-
-  // Simple error handlers
-  const handleTriggerErrorLogging = useCallback(async (guestReportId: string, email: string) => {
-    // Let ErrorStateHandler handle the error logging
-  }, []);
-
-  const handleCleanupSession = useCallback(() => {
-    // Let ErrorStateHandler handle cleanup
-  }, []);
-
-  // Independent countdown timer
+  // Independent countdown timer (aesthetics only)
   useEffect(() => {
     if (countdownTime === 0) return; // Already done
 
@@ -220,27 +173,19 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
       });
     }, 1000);
 
-    // Fallback timeout after 24 seconds
-    const fallbackTimeout = setTimeout(() => {
-      console.warn('⏱️ Timeout reached. Report modal never appeared.');
-    }, 24000);
-
     return () => {
       clearInterval(timer);
-      clearTimeout(fallbackTimeout);
     };
   }, [countdownTime]);
 
-  // Show error state if detected by the edge function
-  if (errorState) {
-    return (
-      <ErrorStateHandler
-        errorState={errorState}
-        onTriggerErrorLogging={handleTriggerErrorLogging}
-        onCleanupSession={handleCleanupSession}
-      />
-    );
-  }
+  
+
+
+
+
+
+
+
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-b from-background to-muted/20">
