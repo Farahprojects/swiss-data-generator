@@ -137,23 +137,9 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       log('info', 'Payment pending, waiting for realtime update', null, 'ReportForm');
       setStatus('waiting');
     } else if (guestReport?.payment_status === undefined || guestReport?.payment_status === null) {
-      // Before resetting, check if user actually has a report via other indicators
-      log('info', 'No payment status found, validating if report exists before clearing session', null, 'ReportForm');
-      
-      // Import the validation function dynamically to avoid circular imports
-      import('@/utils/reportValidation').then(async ({ shouldResetSession }) => {
-        const shouldReset = await shouldResetSession(guestId);
-        if (shouldReset) {
-          log('info', 'Report validation confirms no report exists, proceeding with session reset', null, 'ReportForm');
-          handleSessionReset('no_payment_status_and_no_report');
-        } else {
-          log('info', 'Report validation found existing report, skipping session reset', null, 'ReportForm');
-          setStatus('success', undefined, guestReportData);
-        }
-      }).catch(error => {
-        log('error', 'Failed to validate report existence, defaulting to session reset', { error }, 'ReportForm');
-        handleSessionReset('validation_failed');
-      });
+      // Simplified: just reset session if no payment status
+      log('info', 'No payment status found, resetting session', null, 'ReportForm');
+      handleSessionReset('no_payment_status');
     } else {
       log('error', 'Unexpected payment status', { paymentStatus: guestReport?.payment_status }, 'ReportForm');
       setStatus('error', `Payment status: ${guestReport?.payment_status}`);
@@ -237,19 +223,10 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
   const shouldUnlockForm = !!(selectedReportType || selectedRequest);
 
-  // Form state change effect
+  // Form state change effect - simplified
   useEffect(() => {
-    const checkFormCompletion = async () => {
-      const formData = form.getValues();
-      const hasReportTypeOrRequest = !!(formData.reportType || formData.request);
-      const hasPersonalInfo = !!(formData.name && formData.email && formData.birthDate && formData.birthTime);
-      const hasLocationWithCoords = !!(formData.birthLocation && formData.birthLatitude && formData.birthLongitude);
-      
-      onFormStateChange?.(isValid, shouldUnlockForm);
-    };
-    
-    checkFormCompletion();
-  }, [form, isValid, shouldUnlockForm, onFormStateChange]);
+    onFormStateChange?.(isValid, shouldUnlockForm);
+  }, [isValid, shouldUnlockForm, onFormStateChange]);
 
   const effectiveGuestId = createdGuestReportId || guestId;
 
