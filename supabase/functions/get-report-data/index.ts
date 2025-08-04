@@ -79,7 +79,7 @@ serve(async (req) => {
     console.log(`[get-report-data][${requestId}] 🔍 Fetching guest report data...`);
     const { data: guestReport, error: fetchError } = await supabase
       .from("guest_reports")
-      .select("id, email, report_type, is_ai_report, swiss_boolean, created_at")
+      .select("id, email, report_type, is_ai_report, created_at")
       .eq("id", guest_report_id)
       .single();
 
@@ -157,8 +157,8 @@ serve(async (req) => {
       report_content: reportLogData?.report_text || null,
       swiss_data: translatorLogData?.swiss_data || null,
       metadata: {
-        content_type: guestReport.swiss_boolean && guestReport.is_ai_report ? 'both' : 
-                     guestReport.swiss_boolean ? 'astro' : 
+        content_type: translatorLogData?.swiss_data && guestReport.is_ai_report ? 'both' : 
+                     translatorLogData?.swiss_data ? 'astro' : 
                      guestReport.is_ai_report ? 'ai' : 'none',
         has_ai_report: !!guestReport.is_ai_report,
         has_swiss_data: !!translatorLogData?.swiss_data,
