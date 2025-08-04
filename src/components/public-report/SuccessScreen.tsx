@@ -116,72 +116,69 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
   React.useEffect(() => {
     if (!guestReportId) return;
 
-    const checkModalReadyImmediately = async () => {
-      logSuccessScreen('info', 'Performing immediate modal_ready check', { guestReportId });
+    const checkReportReadyImmediately = async () => {
+      logSuccessScreen('info', 'Performing immediate report_logs is_guest check', { guestReportId });
       
       const { data } = await supabase
-        .from('guest_reports')
-        .select('modal_ready')
-        .eq('id', guestReportId)
+        .from('report_logs')
+        .select('is_guest')
+        .eq('is_guest', true)
         .maybeSingle();
       
       // 2. SuccessScreen "early check" logging
-      console.log('[SS] immediate DB check result →', data?.modal_ready);
+      console.log('[SS] immediate DB check result →', data?.is_guest);
       
-      if (data?.modal_ready) {
-        logSuccessScreen('info', 'modal_ready already true, opening modal immediately', { guestReportId });
+      if (data?.is_guest === true) {
+        logSuccessScreen('info', 'Guest report already ready in report_logs, opening modal immediately', { guestReportId });
         await fetchCachedReport(); // opens the modal immediately
         return; // modal now open; skip listener
       } else {
-        logSuccessScreen('info', 'modal_ready not yet true, will wait for WebSocket updates', { guestReportId });
+        logSuccessScreen('info', 'Guest report not yet ready in report_logs, will wait for WebSocket updates', { guestReportId });
       }
     };
 
-    checkModalReadyImmediately();
+    checkReportReadyImmediately();
   }, [guestReportId, fetchCachedReport]);
 
-  // WebSocket listener for modal_ready changes
+      // WebSocket listener for report_logs where is_guest = true
   useEffect(() => {
     if (!guestReportId) return;
 
-    logSuccessScreen('info', 'Setting up WebSocket listener for modal_ready', { guestReportId });
+    logSuccessScreen('info', 'Setting up WebSocket listener for report_logs is_guest', { guestReportId });
     
     // 3. WebSocket lifecycle logging
     const channel = supabase.channel(`guest_report_modal:${guestReportId}`)
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: 'INSERT',
           schema: 'public',
-          table: 'guest_reports',
-          filter: `id=eq.${guestReportId}`
+          table: 'report_logs',
+          filter: `is_guest=eq.true`
         },
         (payload) => {
-          logSuccessScreen('info', 'WebSocket received update', { 
+          logSuccessScreen('info', 'WebSocket received report_logs insert', { 
             guestReportId, 
             payload: payload,
-            newRecord: payload.new,
-            oldRecord: payload.old
+            newRecord: payload.new
           });
           
           const newRecord = payload.new as any;
-          const oldRecord = payload.old as any;
           
-          // Check if modal_ready flipped from false/null to true
-          if (!oldRecord?.modal_ready && newRecord?.modal_ready === true) {
-            logSuccessScreen('info', 'modal_ready flipped to true, opening modal', { guestReportId });
+          // Check if this is a guest report that's ready
+          if (newRecord?.is_guest === true) {
+            logSuccessScreen('info', 'Guest report ready in report_logs, opening modal', { guestReportId });
             
             // Fetch the cached report data and open modal
             fetchCachedReport().then(() => {
               // Clean up the listener immediately after opening modal
-              logSuccessScreen('info', 'Unsubscribing from WebSocket after modal_ready trigger', { guestReportId });
+              logSuccessScreen('info', 'Unsubscribing from WebSocket after report_logs trigger', { guestReportId });
               channel.unsubscribe();
             });
           } else {
-            logSuccessScreen('debug', 'WebSocket update received but modal_ready condition not met', { 
+            logSuccessScreen('debug', 'WebSocket update received but is_guest condition not met', { 
               guestReportId,
-              oldModalReady: oldRecord?.modal_ready,
-              newModalReady: newRecord?.modal_ready
+              isGuest: newRecord?.is_guest
             });
           }
         }

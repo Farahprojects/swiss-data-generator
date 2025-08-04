@@ -98,6 +98,33 @@ export type Database = {
           }
         ]
       }
+      report_logs: {
+        Row: {
+          id: string
+          user_id: string | null
+          is_guest: boolean
+          report_text: string | null
+          created_at: string
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          is_guest?: boolean
+          report_text?: string | null
+          created_at?: string
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          is_guest?: boolean
+          report_text?: string | null
+          created_at?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       // Add other tables as needed...
     }
     Views: {
