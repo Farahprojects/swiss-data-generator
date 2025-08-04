@@ -227,20 +227,7 @@ serve(async (req) => {
       guestReportId = record.id;
       console.log(`✅ [verify-guest-payment] Promo report found: ${guestReportId}`);
 
-      // OPTIMIZATION: Quick idempotency check - use payment_status instead
-      if (record.payment_status === "paid") {
-        console.log(`🔄 [verify-guest-payment] Promo report already processed: ${guestReportId}`);
-
-        return new Response(JSON.stringify({
-          success: true,
-          verified: true,
-          paymentStatus: "paid",
-          guestReportId: record.id,
-          message: "Promo report already processed",
-          idempotent: true,
-          processing_time_ms: Date.now() - stageStartTime
-        }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
+      // Guest paid, proceed with processing
 
       // OPTIMIZATION: Single database operation - update status and trigger processing
       await supabase
