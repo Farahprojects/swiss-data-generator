@@ -54,28 +54,37 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, guestReportI
     setHasOpenedModal(true);
   }, [guestReportId, open]);
 
-  // WebSocket subscription for report_ready_signals
+  // Polling mechanism for report_ready_signals
   useEffect(() => {
-    const channel = supabase.channel(`ready:${guestReportId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'report_ready_signals',
-          filter: `guest_report_id=eq.${guestReportId}`,
-        },
-        () => {
-          if (!hasOpenedModal) {
-            fetchAndOpenReport();
-            channel.unsubscribe();
-          }
+    if (hasOpenedModal) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        // Query report_ready_signals table for current guest_report_id
+        const { data, error } = await supabase
+          .from('report_ready_signals')
+          .select('guest_report_id')
+          .eq('guest_report_id', guestReportId)
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          // PGRST116 is "not found" - which is expected while waiting
+          logSuccessScreen('error', 'Error polling report_ready_signals', { error });
+          return;
         }
-      )
-      .subscribe();
+
+        // If a row exists, the signal is found
+        if (data && data.guest_report_id === guestReportId) {
+          clearInterval(pollInterval);
+          fetchAndOpenReport();
+        }
+      } catch (error) {
+        logSuccessScreen('error', 'Exception during polling', { error });
+      }
+    }, 2000); // Poll every 2 seconds
 
     return () => {
-      channel.unsubscribe();
+      clearInterval(pollInterval);
     };
   }, [guestReportId, fetchAndOpenReport, hasOpenedModal]);
 
@@ -88,6 +97,8 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, guestReportI
 
     return () => clearInterval(timer);
   }, [countdownTime]);
+
+
 
   useEffect(() => {
     if (onStartWaiting) onStartWaiting();
