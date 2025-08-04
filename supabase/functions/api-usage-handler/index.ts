@@ -6,7 +6,7 @@
   Trigger: pg_net → called by DB trigger when a translator_log row is inserted
  * ========================================================================== */
 
-import { serve } from "https://deno.land/std@0.235.0/http/server.ts";
+import { serve } from "jsr:@std/http/server";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 /* ─────────────────────────── ENV ───────────────────────────────────────── */
