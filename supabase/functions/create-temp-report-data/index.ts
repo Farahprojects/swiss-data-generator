@@ -178,18 +178,19 @@ serve(async (req) => {
       }
     }
 
-    if (guestReport.translator_log_id) {
-      const { data: translatorLog, error: translatorLogError } = await supabase
-        .from("translator_logs")
-        .select("swiss_data")
-        .eq("id", guestReport.translator_log_id)
-        .single();
-      
-      if (!translatorLogError && translatorLog) {
-        translatorLogData = translatorLog as { swiss_data: any };
-      } else {
-        console.warn(`[create-temp-report-data] Could not fetch translator_log for ${guestReport.translator_log_id}:`, translatorLogError);
-      }
+    // Fetch translator log using user_id = guest_report_id (new approach)
+    const { data: translatorLog, error: translatorLogError } = await supabase
+      .from("translator_logs")
+      .select("swiss_data")
+      .eq("user_id", guest_report_id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+    
+    if (!translatorLogError && translatorLog) {
+      translatorLogData = translatorLog as { swiss_data: any };
+    } else {
+      console.warn(`[create-temp-report-data] Could not fetch translator_log for user_id ${guest_report_id}:`, translatorLogError);
     }
 
     // Generate secure tokens

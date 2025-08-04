@@ -140,7 +140,6 @@ serve(async (req) => {
     /* ── record usage row ──────────────────────────────────────────────── */
     const { data: usageData, error: usageErr } = await sb.from("api_usage").insert({
       user_id,
-      translator_log_id: log_id,
       endpoint: request_type,
       report_tier,
       used_geo_lookup: google_geo,
