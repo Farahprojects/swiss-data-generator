@@ -2,11 +2,11 @@ import React, { useCallback, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { ReportFormData } from '@/types/public-report';
 import { useReportSubmission, TrustedPricingObject } from '@/hooks/useReportSubmission';
-
 import ReportTypeSelector from '@/components/public-report/ReportTypeSelector';
 import CombinedPersonalDetailsForm from '@/components/public-report/CombinedPersonalDetailsForm';
 import SecondPersonForm from '@/components/public-report/SecondPersonForm';
 import PaymentStep from '@/components/public-report/PaymentStep';
+import SuccessScreen from '@/components/public-report/SuccessScreen';
 
 interface ReportFormProps {
   coachSlug?: string;
@@ -56,7 +56,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const { register, handleSubmit, watch, setValue, control, formState: { errors, isValid } } = form;
   
   // Report submission hook
-  const { isProcessing, submitReport } = useReportSubmission();
+  const { isProcessing, reportCreated, submitReport } = useReportSubmission();
 
   // Watch form values for step progression
   const formValues = form.watch();
@@ -164,6 +164,29 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const resetForm = useCallback(() => {
     form.reset();
   }, [form]);
+
+  // Scroll to report section when success screen appears (same as CTA buttons)
+  useEffect(() => {
+    if (reportCreated && userName && userEmail) {
+      const reportSection = document.querySelector('#report-form');
+      if (reportSection) {
+        reportSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }, [reportCreated, userName, userEmail]);
+
+  // Show success screen when report is created
+  if (reportCreated && userName && userEmail) {
+    const guestReportId = localStorage.getItem('currentGuestReportId');
+    
+    return (
+      <SuccessScreen 
+        name={userName} 
+        email={userEmail} 
+        guestReportId={guestReportId || undefined}
+      />
+    );
+  }
 
   return (
     <div className="space-y-0" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
