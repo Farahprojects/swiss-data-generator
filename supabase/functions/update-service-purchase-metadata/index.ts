@@ -1,5 +1,5 @@
 
-import { serve } from "jsr:@std/http/server";
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@12.14.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
