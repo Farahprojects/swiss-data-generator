@@ -347,7 +347,11 @@ const PublicReport = () => {
 
         <TestsSection />
         <div id="report-form">
-          <ReportForm guestId={activeGuestId} onSuccessScroll={scrollToReportSection} />
+          <ReportForm onReportCreated={(guestReportId, name, email) => {
+            // Handle report creation - parent can manage success state
+            console.log('Report created:', { guestReportId, name, email });
+            // Could navigate to success page or show success component here
+          }} />
         </div>
         <TheraiChatGPTSection />
         <FeaturesSection onGetReportClick={handleGetReportClick} />

@@ -1,160 +1,29 @@
-
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useCallback, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { useNavigate } from 'react-router-dom';
 import { ReportFormData } from '@/types/public-report';
 import { useReportSubmission, TrustedPricingObject } from '@/hooks/useReportSubmission';
-import { useTokenRecovery } from '@/hooks/useTokenRecovery';
-import { useReportStatus, ReportStatus } from '@/hooks/useReportStatus';
 
 import ReportTypeSelector from '@/components/public-report/ReportTypeSelector';
 import CombinedPersonalDetailsForm from '@/components/public-report/CombinedPersonalDetailsForm';
 import SecondPersonForm from '@/components/public-report/SecondPersonForm';
 import PaymentStep from '@/components/public-report/PaymentStep';
-import SuccessScreen from '@/components/public-report/SuccessScreen';
-import { clearGuestReportId } from '@/utils/urlHelpers';
-import { supabase } from '@/integrations/supabase/client';
-import { useGuestReportData } from '@/hooks/useGuestReportData';
-import { ReportData } from '@/utils/reportContentExtraction';
-import { log } from '@/utils/logUtils';
-import { useReportModal } from '@/contexts/ReportModalContext';
-import { useGuestSessionManager } from '@/hooks/useGuestSessionManager';
 
 interface ReportFormProps {
   coachSlug?: string;
   themeColor?: string;
   fontFamily?: string;
-  guestId?: string | null;
   onFormStateChange?: (isValid: boolean, hasSelectedType: boolean) => void;
-  onSuccessScroll?: () => void;
+  onReportCreated?: (guestReportId: string, name: string, email: string) => void;
 }
 
 export const ReportForm: React.FC<ReportFormProps> = ({ 
   coachSlug,
   themeColor = '#6366F1',
   fontFamily = 'Inter',
-  guestId = null,
   onFormStateChange,
-  onSuccessScroll
+  onReportCreated
 }) => {
-  const navigate = useNavigate();
-  
-  // State management
-  const [createdGuestReportId, setCreatedGuestReportId] = useState<string | null>(null);
-  const [sessionRestored, setSessionRestored] = useState(false);
-  const [waitingForReport, setWaitingForReport] = useState(false);
-  
-  // Modal context - simplified
-  const { open } = useReportModal();
-
-  // Hooks
-  const { status, error: statusError, reportData: statusReportData, setStatus, reset: resetStatus } = useReportStatus();
-  const tokenRecovery = useTokenRecovery(guestId);
-  
-  const { 
-    isProcessing, 
-    reportCreated, 
-    submitReport,
-    resetReportState
-  } = useReportSubmission(setCreatedGuestReportId);
-
-  const { data: guestReportData, error: guestReportError, refetch: refetchGuestData } = useGuestReportData(guestId);
-  const { handleSessionReset } = useGuestSessionManager(guestId);
-  
-  // Handle guest report errors gracefully - delegate to session manager
-  useEffect(() => {
-    if (guestReportError) {
-      console.warn('[ReportForm] Guest report error detected, delegating to session manager');
-      handleSessionReset('report_form_error');
-    }
-  }, [guestReportError, handleSessionReset]);
-  
-  // Removed redundant modal opening logic - SuccessScreen handles this
-
-  // Handle token recovery error
-  useEffect(() => {
-    if (guestId && tokenRecovery.error) {
-      clearGuestReportId();
-      window.history.replaceState({}, '', '/report');
-    }
-  }, [guestId, tokenRecovery.error]);
-
-  // State restoration effect
-  useEffect(() => {
-    if (!guestId || sessionRestored) return;
-
-    log('info', 'Restoring session state for guest ID', { guestId }, 'ReportForm');
-    
-    setSessionRestored(true);
-    setCreatedGuestReportId(guestId);
-    
-    // 🔥 SMART CHECK: Is payment already confirmed?
-    const storedPaymentStatus = localStorage.getItem('guest_payment_status');
-    const storedGuestId = localStorage.getItem('guest_report_id');
-    
-    if (storedPaymentStatus === 'paid' && storedGuestId === guestId) {
-      log('info', 'Payment already confirmed, transitioning to success', null, 'ReportForm');
-      setStatus('success');
-      return;
-    }
-    
-    // Start verification to check if report exists
-    log('info', 'Starting validation check for existing report', null, 'ReportForm');
-    setStatus('verifying');
-  }, [guestId, sessionRestored, setStatus]);
-
-  // Handle guest data when guestId is provided
-  useEffect(() => {
-    if (!guestReportData || status !== 'verifying') return;
-
-    const guestReport = guestReportData.guest_report;
-    const validation = guestReportData.validation;
-    
-    log('debug', 'Unified data fetch result', { 
-      paymentStatus: guestReport?.payment_status,
-      hasReport: validation?.hasReport,
-      validationDetails: validation?.validationDetails
-    }, 'ReportForm');
-    
-    // Check if user has a valid report (payment confirmed OR other indicators)
-    if (validation?.hasReport) {
-      log('info', 'Valid report detected, transitioning to success state', {
-        hasPaidStatus: validation.hasPaidStatus,
-        hasTranslatorLog: validation.hasTranslatorLog, 
-        hasReportReadySignal: validation.hasReportReadySignal,
-        hasReportData: validation.hasReportData
-      }, 'ReportForm');
-      
-      // Store payment status if confirmed
-      if (validation.hasPaidStatus) {
-        localStorage.setItem('guest_payment_status', 'paid');
-        localStorage.setItem('guest_report_id', guestId);
-      }
-      
-      setStatus('success', undefined, guestReportData);
-    } else if (guestReport?.payment_status === 'pending') {
-      log('info', 'Payment pending, waiting for realtime update', null, 'ReportForm');
-      setStatus('waiting');
-    } else {
-      log('info', 'No valid report found, resetting session', { 
-        paymentStatus: guestReport?.payment_status,
-        validationDetails: validation?.validationDetails 
-      }, 'ReportForm');
-      handleSessionReset('no_valid_report');
-    }
-  }, [guestReportData, status, setStatus, handleSessionReset, guestId]);
-
-  // Scroll to success screen when status changes to success
-  useEffect(() => {
-    if (status === 'success' && onSuccessScroll) {
-      // Small delay to ensure the success screen has rendered
-      setTimeout(() => {
-        onSuccessScroll();
-      }, 100);
-    }
-  }, [status, onSuccessScroll]);
-
-  // Form setup
+  // Core form setup
   const form = useForm<ReportFormData>({
     mode: 'onBlur',
     defaultValues: {
@@ -185,22 +54,26 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   });
 
   const { register, handleSubmit, watch, setValue, control, formState: { errors, isValid } } = form;
+  
+  // Report submission hook
+  const { isProcessing, submitReport } = useReportSubmission();
 
+  // Watch form values for step progression
+  const formValues = form.watch();
   const selectedReportType = watch('reportType');
   const selectedRequest = watch('request');
-  const selectedReportCategory = watch('reportCategory');
-  const userName = watch('name');
-  const userEmail = watch('email');
-
   const reportCategory = watch('reportCategory');
   const reportType = watch('reportType');
   const request = watch('request');
+  const userName = watch('name');
+  const userEmail = watch('email');
   
+  // Determine if second person is required
   const requiresSecondPerson = reportCategory === 'compatibility' || 
                                reportType?.startsWith('sync_') || 
                                request === 'sync';
 
-  const formValues = form.watch();
+  // Step progression logic
   const step1Done = Boolean(formValues.reportType || formValues.request);
 
   const step2Done =
@@ -221,26 +94,10 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
   const shouldUnlockForm = !!(selectedReportType || selectedRequest);
 
-  // Form state change effect - simplified
+  // Form state change effect
   useEffect(() => {
     onFormStateChange?.(isValid, shouldUnlockForm);
   }, [isValid, shouldUnlockForm, onFormStateChange]);
-
-  const effectiveGuestId = createdGuestReportId || guestId;
-
-  const resetComponentStates = useCallback(() => {
-    log('debug', 'Resetting component states', null, 'ReportForm');
-    
-    form.reset();
-    setCreatedGuestReportId(null);
-    setSessionRestored(false);
-    
-    tokenRecovery.reset();
-    resetStatus();
-    resetReportState();
-    
-    log('debug', 'Component states reset', null, 'ReportForm');
-  }, [form, tokenRecovery, resetStatus, resetReportState]);
 
   // Scroll handling refs
   const paymentStepRef = useRef<HTMLDivElement>(null);
@@ -273,14 +130,11 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       paymentStepRef.current?.scrollIntoView({ 
         behavior: 'smooth', 
         block: 'start' 
-        });
+      });
     }, 300);
   };
 
-
-
-
-
+  // Form submission handlers
   const onSubmit = async (data: ReportFormData) => {
     const submissionData = coachSlug ? { ...data, coachSlug } : data;
     // This will be called by PaymentStep with the final price and promo code
@@ -294,127 +148,38 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const handleSubmitWithTrustedPricing = async (trustedPricing: TrustedPricingObject) => {
     const formData = form.getValues();
     const submissionData = coachSlug ? { ...formData, coachSlug } : formData;
-    await submitReport(submissionData, trustedPricing);
+    
+    try {
+      const result = await submitReport(submissionData, trustedPricing);
+      if (result.success && result.guestReportId && userName && userEmail) {
+        // Notify parent component about successful report creation
+        onReportCreated?.(result.guestReportId, userName, userEmail);
+      }
+    } catch (error) {
+      console.error('Report submission failed:', error);
+    }
   };
 
-  /* ↓ everything else follows ↓ */
-  // Status-based rendering with single switch statement
-  switch (status) {
-    case 'verifying':
-      return (
-        <div className="min-h-screen flex items-center justify-center p-8">
-          <div className="text-center space-y-6">
-            <div className="w-12 h-12 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto"></div>
-            <p className="text-xl text-gray-600 font-light">Finalizing your report...</p>
-            <p className="text-sm text-gray-500">Please wait while we verify your payment</p>
-          </div>
-        </div>
-      );
+  // Reset form utility
+  const resetForm = useCallback(() => {
+    form.reset();
+  }, [form]);
 
-    case 'waiting':
-      return (
-        <div className="min-h-screen flex items-center justify-center p-8">
-          <div className="text-center space-y-6">
-            <div className="w-12 h-12 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto"></div>
-            <p className="text-xl text-gray-600 font-light">Processing payment...</p>
-            <p className="text-sm text-gray-500">This usually takes just a few seconds</p>
-            <div className="flex items-center justify-center space-x-1 mt-4">
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
-            </div>
-          </div>
-        </div>
-      );
+  return (
+    <div className="space-y-0" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <div className="space-y-8">
+          <ReportTypeSelector
+            control={control}
+            errors={errors}
+            selectedReportType={selectedReportType}
+            showReportGuide={false}
+            setShowReportGuide={() => {}}
+            setValue={setValue}
+          />
 
-    case 'error':
-      return (
-        <div className="min-h-screen flex items-center justify-center p-8">
-          <div className="text-center space-y-6">
-            <p className="text-xl text-destructive">Payment verification failed</p>
-            <p className="text-sm text-gray-500">{statusError}</p>
-            <button 
-              onClick={() => navigate('/report')}
-              className="bg-primary text-primary-foreground px-6 py-2 rounded-lg"
-            >
-              Try Again
-            </button>
-          </div>
-        </div>
-      );
-
-    default:
-      break;
-  }
-
-  // Success state checks
-  if (reportCreated && createdGuestReportId && userName && userEmail) {
-    return (
-      <SuccessScreen 
-        name={userName} 
-        email={userEmail} 
-        guestReportId={createdGuestReportId}
-        onStartWaiting={() => setWaitingForReport(true)}
-      />
-    );
-  }
-
-  if (status === 'success' && statusReportData) {
-    const reportData = statusReportData.guest_report?.report_data;
-    const name = reportData?.name;
-    const email = reportData?.email || statusReportData.guest_report?.email;
-    
-    if (name && email) {
-      return (
-        <SuccessScreen 
-          name={name} 
-          email={email} 
-          guestReportId={guestId || undefined}
-          onStartWaiting={() => setWaitingForReport(true)}
-        />
-      );
-    }
-  }
-  
-  if (guestId && tokenRecovery.recovered && tokenRecovery.recoveredName && tokenRecovery.recoveredEmail) {
-    return (
-      <SuccessScreen 
-        name={tokenRecovery.recoveredName} 
-        email={tokenRecovery.recoveredEmail} 
-        guestReportId={guestId}
-        onStartWaiting={() => setWaitingForReport(true)}
-      />
-    );
-  }
-  
-  if (guestId && tokenRecovery.isRecovering) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-8">
-        <div className="text-center space-y-6">
-          <div className="w-12 h-12 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto"></div>
-          <p className="text-xl text-gray-600 font-light">Recovering your session...</p>
-        </div>
-      </div>
-    );
-  }
-  
-  // Main form rendering - single JSX block guarded by status
-  if (status === 'collecting' || (!guestId && !reportCreated)) {
-    return (
-      <div className="space-y-0" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="space-y-8">
-            <ReportTypeSelector
-              control={control}
-              errors={errors}
-              selectedReportType={selectedReportType}
-              showReportGuide={false}
-              setShowReportGuide={() => {}}
-              setValue={setValue}
-            />
-
-            {step1Done && (
-              <>
+          {step1Done && (
+            <>
               <CombinedPersonalDetailsForm
                 register={register}
                 setValue={setValue}
@@ -423,23 +188,23 @@ export const ReportForm: React.FC<ReportFormProps> = ({
                 onPlaceSelected={handleFirstPersonPlaceSelected}
               />
 
-                {requiresSecondPerson && (
-                  <div ref={secondPersonRef}>
-              <SecondPersonForm
-                register={register}
-                setValue={setValue}
-                watch={watch}
-                errors={errors}
-                onPlaceSelected={handleSecondPersonPlaceSelected}
-              />
+              {requiresSecondPerson && (
+                <div ref={secondPersonRef}>
+                  <SecondPersonForm
+                    register={register}
+                    setValue={setValue}
+                    watch={watch}
+                    errors={errors}
+                    onPlaceSelected={handleSecondPersonPlaceSelected}
+                  />
                 </div>
-                )}
-              </>
-            )}
+              )}
+            </>
+          )}
 
-            {step2Done && (
-              <div ref={paymentStepRef}>
-                <PaymentStep
+          {step2Done && (
+            <div ref={paymentStepRef}>
+              <PaymentStep
                 register={register}
                 watch={watch}
                 errors={errors}
@@ -447,14 +212,11 @@ export const ReportForm: React.FC<ReportFormProps> = ({
                 onSubmit={handleButtonClick}
                 onSubmitWithTrustedPricing={handleSubmitWithTrustedPricing}
                 isProcessing={isProcessing}
-                />
-              </div>
-            )}
-          </div>
-        </form>
-      </div>
-    );
-  }
-
-  return null;
+              />
+            </div>
+          )}
+        </div>
+      </form>
+    </div>
+  );
 };
