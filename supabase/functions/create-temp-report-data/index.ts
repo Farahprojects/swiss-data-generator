@@ -160,25 +160,26 @@ serve(async (req) => {
       );
     }
 
-    // Fetch related data separately since foreign keys were removed
+    // Fetch related data separately using user_id = guest_report_id
     let reportLogData: { report_text: string } | null = null;
     let translatorLogData: { swiss_data: any } | null = null;
 
-    if (guestReport.report_log_id) {
-      const { data: reportLog, error: reportLogError } = await supabase
-        .from("report_logs")
-        .select("report_text")
-        .eq("id", guestReport.report_log_id)
-        .single();
-      
-      if (!reportLogError && reportLog) {
-        reportLogData = reportLog as { report_text: string };
-      } else {
-        console.warn(`[create-temp-report-data] Could not fetch report_log for ${guestReport.report_log_id}:`, reportLogError);
-      }
+    // Fetch report log using user_id = guest_report_id  
+    const { data: reportLog, error: reportLogError } = await supabase
+      .from("report_logs")
+      .select("report_text")
+      .eq("user_id", guest_report_id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+    
+    if (!reportLogError && reportLog) {
+      reportLogData = reportLog as { report_text: string };
+    } else {
+      console.warn(`[create-temp-report-data] Could not fetch report_log for user_id ${guest_report_id}:`, reportLogError);
     }
 
-    // Fetch translator log using user_id = guest_report_id (new approach)
+    // Fetch translator log using user_id = guest_report_id
     const { data: translatorLog, error: translatorLogError } = await supabase
       .from("translator_logs")
       .select("swiss_data")
