@@ -56,36 +56,35 @@ function validateReportType(reportType: string): boolean {
   return true;
 }
 
-// Call the selected engine
-async function callEngine(engine: string, payload: ReportPayload): Promise<void> {
-  try {
-    const edgeUrl = `${supabaseUrl}/functions/v1/${engine}`;
-    const requestPayload = { 
-      ...payload, 
-      reportType: payload.report_type, 
-      selectedEngine: engine 
-    };
-    
-    console.log(`[report-orchestrator] Calling engine: ${engine}`);
-    
-    const response = await fetch(edgeUrl, {
-      method: "POST",
-      headers: { 
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${supabaseServiceKey}`
-      },
-      body: JSON.stringify(requestPayload),
-    });
-    
+// Call the selected engine (fire-and-forget)
+function callEngineFireAndForget(engine: string, payload: ReportPayload): void {
+  const edgeUrl = `${supabaseUrl}/functions/v1/${engine}`;
+  const requestPayload = { 
+    ...payload, 
+    reportType: payload.report_type, 
+    selectedEngine: engine 
+  };
+  
+  console.log(`[report-orchestrator] Calling engine: ${engine}`);
+  
+  fetch(edgeUrl, {
+    method: "POST",
+    headers: { 
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${supabaseServiceKey}`
+    },
+    body: JSON.stringify(requestPayload),
+  })
+  .then(response => {
     if (!response.ok) {
-      throw new Error(`Engine ${engine} returned ${response.status}: ${await response.text()}`);
+      console.error(`[report-orchestrator] Engine ${engine} returned ${response.status}`);
+    } else {
+      console.log(`[report-orchestrator] Engine ${engine} called successfully`);
     }
-    
-    console.log(`[report-orchestrator] Engine ${engine} called successfully`);
-  } catch (error) {
-    console.error(`[report-orchestrator] Engine ${engine} call failed:`, error);
-    throw error;
-  }
+  })
+  .catch(error => {
+    console.error(`[report-orchestrator] Engine ${engine} fire-and-forget failed:`, error);
+  });
 }
 
 serve(async (req) => {
@@ -122,9 +121,7 @@ serve(async (req) => {
     const selectedEngine = getNextEngine();
     
     // Step 3: Call the engine (fire-and-forget)
-    callEngine(selectedEngine, payload).catch(error => {
-      console.error(`[report-orchestrator] Engine call failed:`, error);
-    });
+    callEngineFireAndForget(selectedEngine, payload);
     
     // Return immediately - don't wait for engine response
     return new Response(JSON.stringify({ 
