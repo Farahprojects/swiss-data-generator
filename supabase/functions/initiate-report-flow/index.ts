@@ -139,7 +139,22 @@ serve(async (req) => {
     }
 
     const validatedBasePrice = Number(priceData.unit_price_usd);
-    const isAI = priceData.is_ai || false;
+    
+    // Validate is_ai field is properly set
+    if (priceData.is_ai === null || priceData.is_ai === undefined) {
+      logFlowError("missing_is_ai_field", new Error("is_ai field not set in price_list"), { 
+        price_identifier: priceIdentifier,
+        price_data: priceData
+      });
+      return new Response(JSON.stringify({ 
+        error: 'Product configuration error: is_ai field not set' 
+      }), {
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    const isAI = priceData.is_ai;
     
     // Step 2: Re-validate promo code if present
     let validatedDiscount = 0;
