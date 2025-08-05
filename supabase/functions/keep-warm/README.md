@@ -20,13 +20,6 @@ The keep-warm service pings all critical edge functions every 30 seconds to keep
 curl -X POST https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/keep-warm
 ```
 
-### Cron Job Example
-```bash
-# Add to crontab (runs every 30 seconds)
-* * * * * curl -X POST https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/keep-warm
-* * * * * sleep 30; curl -X POST https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/keep-warm
-```
-
 ### Automated Service
 ```bash
 npm run keep-warm
