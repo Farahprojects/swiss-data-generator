@@ -297,53 +297,39 @@ serve(async (req) => {
       duration_ms: Date.now() - startTime
     });
     
-    // Log successful report generation
+    // Log successful report generation (fire-and-forget)
     const durationMs = Date.now() - startTime;
-    try {
-      const insertResult = await supabase.from("report_logs").insert({
-        api_key: reportData.api_key || null,
-        user_id: reportData.user_id || null,
-        report_type: reportType,
-        endpoint: reportData.endpoint,
-        report_text: report,
-        status: "success",
-        duration_ms: durationMs,
-        client_id: reportData.client_id || null,
-        engine_used: selectedEngine,
-        metadata: metadata,
-        is_guest: reportData.is_guest || false,
-        created_at: new Date().toISOString(),
-      });
-
-      if (insertResult.error) {
-        console.error(`[standard-report-one][${requestId}] Report log insert failed:`, {
-          error: insertResult.error,
-          user_id: reportData.user_id,
-          is_guest: reportData.is_guest,
-          report_type: reportType
-        });
-      } else {
-        console.log(`[standard-report-one][${requestId}] Report log inserted successfully for ${reportData.is_guest ? 'guest' : 'user'} report`);
-        
-        // ✅ Insert signal for guest reports
-        if (reportData.is_guest && reportData.user_id) {
-          try {
-            await supabase.from('report_ready_signals').insert({
-              guest_report_id: reportData.user_id
-            });
-            console.log(`[standard-report-one][${requestId}] Signal inserted for guest report: ${reportData.user_id}`);
-          } catch (signalError) {
-            console.error(`[standard-report-one][${requestId}] Signal insert failed:`, signalError);
-          }
-        }
-      }
-    } catch (logError) {
-      // ✅ LOGGING: Report log insert exception
-      console.error(`[standard-report-one][${requestId}] Report log insert exception:`, {
-        report_type: reportType,
-        user_id: reportData.user_id,
-        error: logError
-      });
+    
+    // Fire-and-forget report_logs insert
+    supabase.from("report_logs").insert({
+      api_key: reportData.api_key || null,
+      user_id: reportData.user_id || null,
+      report_type: reportType,
+      endpoint: reportData.endpoint,
+      report_text: report,
+      status: "success",
+      duration_ms: durationMs,
+      client_id: reportData.client_id || null,
+      engine_used: selectedEngine,
+      metadata: metadata,
+      is_guest: reportData.is_guest || false,
+      created_at: new Date().toISOString(),
+    })
+    .then(() => console.log(`[standard-report-one][${requestId}] Report log insert succeeded for ${reportData.is_guest ? 'guest' : 'user'} report`))
+    .catch(err => console.error(`[standard-report-one][${requestId}] Report log insert failed:`, {
+      error: err,
+      user_id: reportData.user_id,
+      is_guest: reportData.is_guest,
+      report_type: reportType
+    }));
+    
+    // Fire-and-forget report_ready_signals insert for guest reports
+    if (reportData.is_guest && reportData.user_id) {
+      supabase.from('report_ready_signals').insert({
+        guest_report_id: reportData.user_id
+      })
+      .then(() => console.log(`[standard-report-one][${requestId}] Signal inserted for guest report: ${reportData.user_id}`))
+      .catch(err => console.error(`[standard-report-one][${requestId}] Signal insert failed:`, err));
     }
     
     // Return the generated report with proper structure

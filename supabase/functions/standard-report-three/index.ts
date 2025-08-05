@@ -339,31 +339,25 @@ serve(async (req) => {
     // Generate the report
     const { report, metadata } = await generateReport(systemPrompt, reportData, requestId);
     
-    // Log successful report generation
+    // Log successful report generation (fire-and-forget)
     const durationMs = Date.now() - startTime;
-    try {
-      const insertLog = await supabase.from("report_logs").insert({
-        api_key: reportData.api_key || null,
-        user_id: reportData.user_id || null,
-        report_type: reportType,
-        endpoint: reportData.endpoint,
-        report_text: report,
-        status: "success",
-        duration_ms: durationMs,
-        client_id: reportData.client_id || null,
-        engine_used: reportData.selectedEngine || "standard-report-three",
-        metadata: metadata,
-        created_at: new Date().toISOString(),
-      });
-
-      if (insertLog.error) {
-        console.error(`${logPrefix} Failed to log success to report_logs:`, insertLog.error.message);
-      } else {
-        console.log(`${logPrefix} Successfully logged report generation to report_logs.`);
-      }
-    } catch (logError) {
-      console.error(`${logPrefix} Exception during report_logs insert:`, logError);
-    }
+    
+    // Fire-and-forget report_logs insert
+    supabase.from("report_logs").insert({
+      api_key: reportData.api_key || null,
+      user_id: reportData.user_id || null,
+      report_type: reportType,
+      endpoint: reportData.endpoint,
+      report_text: report,
+      status: "success",
+      duration_ms: durationMs,
+      client_id: reportData.client_id || null,
+      engine_used: reportData.selectedEngine || "standard-report-three",
+      metadata: metadata,
+      created_at: new Date().toISOString(),
+    })
+    .then(() => console.log(`${logPrefix} Successfully logged report generation to report_logs.`))
+    .catch(err => console.error(`${logPrefix} Failed to log success to report_logs:`, err));
     
     // Return the generated report with proper structure
     console.log(`${logPrefix} Successfully processed ${reportType} request in ${Date.now() - startTime}ms`);
@@ -382,30 +376,24 @@ serve(async (req) => {
     const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
     console.error(`${logPrefix} Error processing request: ${errorMessage}`, err instanceof Error ? err.stack : err);
     
-    // Log error to report_logs
+    // Log error to report_logs (fire-and-forget)
     const durationMs = Date.now() - startTime;
-    try {
-      const insertLog = await supabase.from("report_logs").insert({
-        api_key: reportData?.api_key || null,
-        user_id: reportData?.user_id || null,
-        report_type: reportData?.reportType || reportData?.report_type || null,
-        endpoint: reportData?.endpoint || null,
-        report_text: null,
-        status: "error",
-        error_message: errorMessage,
-        duration_ms: durationMs,
-        client_id: reportData?.client_id || null,
-        engine_used: reportData?.selectedEngine || "standard-report-three",
-        created_at: new Date().toISOString(),
-      });
-      if (insertLog.error) {
-        console.error(`${logPrefix} Failed to log error to report_logs:`, insertLog.error.message);
-      } else {
-        console.log(`${logPrefix} Logged error to report_logs.`);
-      }
-    } catch (logErr) {
-      console.error(`${logPrefix} Exception during report_logs error insert:`, logErr);
-    }
+    
+    supabase.from("report_logs").insert({
+      api_key: reportData?.api_key || null,
+      user_id: reportData?.user_id || null,
+      report_type: reportData?.reportType || reportData?.report_type || null,
+      endpoint: reportData?.endpoint || null,
+      report_text: null,
+      status: "error",
+      error_message: errorMessage,
+      duration_ms: durationMs,
+      client_id: reportData?.client_id || null,
+      engine_used: reportData?.selectedEngine || "standard-report-three",
+      created_at: new Date().toISOString(),
+    })
+    .then(() => console.log(`${logPrefix} Logged error to report_logs.`))
+    .catch(err => console.error(`${logPrefix} Failed to log error to report_logs:`, err));
     
     return jsonResponse({
       success: false,
