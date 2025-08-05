@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
 import { storeGuestReportId } from '@/utils/urlHelpers';
 import { log } from '@/utils/logUtils';
+import { useIsMobile } from '@/hooks/use-mobile';
+import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
 
 const PublicReport = () => {
   // ALL HOOKS MUST BE DECLARED FIRST - NEVER INSIDE TRY-CATCH
@@ -20,7 +22,9 @@ const PublicReport = () => {
   const [showCancelledMessage, setShowCancelledMessage] = useState(false);
   const [activeGuestId, setActiveGuestId] = useState<string | null>(null);
   const [isGuestIdLoading, setIsGuestIdLoading] = useState(true);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const location = useLocation();
+  const isMobile = useIsMobile();
 
   // Direct URL parsing fix for hydration issue - reliable guest_id detection
   useEffect(() => {
@@ -69,8 +73,11 @@ const PublicReport = () => {
   }, []);
 
   const handleGetReportClick = () => {
-    if (typeof window !== 'undefined') {
-      // Scroll to form
+    if (isMobile) {
+      // Open mobile drawer
+      setIsMobileDrawerOpen(true);
+    } else {
+      // Scroll to form on desktop
       const reportSection = document.querySelector('#report-form');
       if (reportSection) {
         reportSection.scrollIntoView({ behavior: 'smooth' });
@@ -356,6 +363,12 @@ const PublicReport = () => {
         <TheraiChatGPTSection />
         <FeaturesSection onGetReportClick={handleGetReportClick} />
         <Footer />
+
+        {/* Mobile Report Drawer */}
+        <MobileReportDrawer
+          isOpen={isMobileDrawerOpen}
+          onOpenChange={setIsMobileDrawerOpen}
+        />
       </div>
     );
   } catch (err: any) {
