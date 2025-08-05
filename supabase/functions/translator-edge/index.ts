@@ -346,8 +346,8 @@ serve(async (req)=>{
         ...body
       };
       
-      // Fire and forget with waitUntil to prevent cut-off
-      const orchestratorPromise = fetch(orchestratorUrl, {
+      // Fire and forget - no await, no error handling
+      fetch(orchestratorUrl, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
@@ -355,11 +355,6 @@ serve(async (req)=>{
         },
         body: JSON.stringify(orchestratorPayload),
       }).catch(() => {}); // Silent fail
-      
-      // Use waitUntil if available to prevent fetch from being cut off
-      if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
-        EdgeRuntime.waitUntil(orchestratorPromise);
-      }
     }
 
     await logTranslator({ request_type:canon, request_payload:body, swiss_data:swissData, swiss_status:swiss.status, processing_ms:Date.now()-t0, error: swiss.ok?undefined:`Swiss ${swiss.status}`, google_geo:googleGeo, translator_payload:payload, user_id:body.user_id, is_guest:body.is_guest });
