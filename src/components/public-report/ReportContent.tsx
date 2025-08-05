@@ -21,6 +21,11 @@ export const ReportContent: React.FC<ReportContentProps> = ({
 }) => {
   const contentType = reportData.metadata.content_type;
 
+  // Timing logs for overall content rendering
+  const renderStartTime = performance.now();
+  console.log('[ReportContent] 🚀 Starting content rendering...');
+  console.log(`[ReportContent] 📋 Content type: ${contentType}, Active view: ${activeView}`);
+
   const renderContent = () => {
     switch (contentType) {
       case 'ai':
@@ -79,5 +84,11 @@ export const ReportContent: React.FC<ReportContentProps> = ({
     }
   };
 
-  return renderContent();
+  const content = renderContent();
+  
+  const renderEndTime = performance.now();
+  const renderDuration = renderEndTime - renderStartTime;
+  console.log(`[ReportContent] ✅ Content rendering completed in ${renderDuration.toFixed(2)}ms`);
+  
+  return content;
 };

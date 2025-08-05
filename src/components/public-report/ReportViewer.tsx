@@ -28,6 +28,8 @@ export const ReportViewer = ({
   onBack, 
   onStateReset 
 }: ReportViewerProps) => {
+  const mountStartTime = performance.now();
+  console.info('[ReportViewer] 🚀 Starting ReportViewer mount...');
   console.info('[ReportViewer] mounted with data.id =', reportData?.guest_report?.id);
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [activeView, setActiveView] = useState<'report' | 'astro'>(
@@ -559,4 +561,11 @@ export const ReportViewer = ({
       </Dialog>
     </>
   );
+  
+  // Add timing log after component renders
+  useEffect(() => {
+    const mountEndTime = performance.now();
+    const mountDuration = mountEndTime - mountStartTime;
+    console.log(`[ReportViewer] ✅ ReportViewer mount completed in ${mountDuration.toFixed(2)}ms`);
+  }, []);
 };
