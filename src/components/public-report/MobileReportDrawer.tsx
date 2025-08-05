@@ -80,8 +80,11 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
     try {
       const { data, error } = await supabase.functions.invoke('validate-promo-code', {
         body: {
-          promo_code: promoCode,
-          price_identifier: priceIdentifier
+          promoCode: promoCode,
+          basePrice: getBasePrice(),
+          reportType: priceIdentifier,
+          email: form.getValues('email'),
+          request: form.getValues('request')
         }
       });
 
