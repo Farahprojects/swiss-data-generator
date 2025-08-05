@@ -1,8 +1,6 @@
 
 import React from 'react';
-import { useIsMobile } from '@/hooks/use-mobile';
-import ReportGuideModal from './ReportGuideModal';
-import ReportGuideDrawer from './ReportGuideDrawer';
+import { ResponsiveReportDialog } from '@/components/shared/ResponsiveReportDialog';
 
 interface ReportGuideResponsiveProps {
   isOpen: boolean;
@@ -11,23 +9,10 @@ interface ReportGuideResponsiveProps {
 }
 
 const ReportGuideResponsive = ({ isOpen, onClose, targetReportType }: ReportGuideResponsiveProps) => {
-  const isMobile = useIsMobile();
-
-  if (isMobile) {
-    return (
-      <ReportGuideDrawer 
-        isOpen={isOpen} 
-        onClose={onClose}
-        targetReportType={targetReportType}
-      />
-    );
-  }
-
   return (
-    <ReportGuideModal 
-      isOpen={isOpen} 
+    <ResponsiveReportDialog
+      isOpen={isOpen}
       onClose={onClose}
-      targetReportType={targetReportType}
     />
   );
 };

@@ -65,9 +65,10 @@ export const useReportCache = () => {
       const entries = Object.entries(newCache);
       if (entries.length > MAX_CACHE_SIZE) {
         // Remove oldest entry
-        const oldestKey = entries.reduce((oldest, [key, entry]) => 
-          entry.timestamp < oldest.timestamp ? { key, ...entry } : oldest
-        ).key;
+        const oldestEntry = entries.reduce((oldest, [key, entry]) => 
+          entry.timestamp < oldest[1].timestamp ? [key, entry] : oldest
+        );
+        const oldestKey = oldestEntry[0];
         
         delete newCache[oldestKey];
         console.log(`🗑️ Cache limit: Removed oldest entry ${oldestKey}`);

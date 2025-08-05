@@ -25,13 +25,13 @@ const MobileDrawerHeader = ({ currentStep, totalSteps, onClose }: MobileDrawerHe
                 key={i}
                 className={`w-1.5 h-1.5 rounded-full transition-all duration-500 ease-out ${
                   i + 1 <= currentStep 
-                    ? 'bg-[hsl(var(--apple-blue))] scale-125 shadow-sm' 
-                    : 'bg-[hsl(var(--apple-gray-light))] scale-100'
+                    ? 'bg-gray-900 scale-125 shadow-sm' 
+                    : 'bg-gray-300 scale-100'
                 }`}
               />
             ))}
           </div>
-          <span className="text-xs font-light text-[hsl(var(--apple-gray-dark))] tracking-wide">
+          <span className="text-xs font-light text-gray-600 tracking-wide">
             {currentStep} of {totalSteps}
           </span>
         </div>
@@ -40,10 +40,10 @@ const MobileDrawerHeader = ({ currentStep, totalSteps, onClose }: MobileDrawerHe
       {/* Elegant close button */}
       <button
         onClick={onClose}
-        className="w-8 h-8 rounded-full bg-[hsl(var(--apple-gray-light))]/50 hover:bg-[hsl(var(--apple-gray-light))] transition-all duration-300 ease-out active:scale-95 flex items-center justify-center backdrop-blur-sm"
+        className="w-8 h-8 rounded-full bg-gray-200/50 hover:bg-gray-200 transition-all duration-300 ease-out active:scale-95 flex items-center justify-center backdrop-blur-sm"
         aria-label="Close"
       >
-        <X className="h-3.5 w-3.5 text-[hsl(var(--apple-gray-dark))]" />
+        <X className="h-3.5 w-3.5 text-gray-600" />
       </button>
     </div>
   );

@@ -6,7 +6,7 @@ import ReportTypeSelector from '@/components/public-report/ReportTypeSelector';
 import CombinedPersonalDetailsForm from '@/components/public-report/CombinedPersonalDetailsForm';
 import SecondPersonForm from '@/components/public-report/SecondPersonForm';
 import PaymentStep from '@/components/public-report/PaymentStep';
-import { SuccessScreen } from '@/components/public-report/SuccessScreen';
+import { UnifiedSuccessHandler } from './UnifiedSuccessHandler';
 import { useReportModal } from '@/contexts/ReportModalContext';
 import { useSessionManager } from '@/hooks/useSessionManager';
 
@@ -182,10 +182,10 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     const guestReportId = localStorage.getItem('currentGuestReportId');
     
     return (
-      <SuccessScreen 
-        name={userName} 
-        email={userEmail} 
-        guestReportId={guestReportId || undefined}
+      <UnifiedSuccessHandler
+        name={userName}
+        email={userEmail}
+        guestReportId={guestReportId || ''}
       />
     );
   }
