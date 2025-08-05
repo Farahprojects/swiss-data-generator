@@ -95,6 +95,11 @@ serve(async (req) => {
   try {
     const payload: ReportPayload = await req.json();
     
+    // Warm-up check
+    if (payload?.warm === true) {
+      return new Response("Warm-up", { status: 200, headers: corsHeaders });
+    }
+    
     console.log(`[report-orchestrator] Processing request for report type: ${payload.report_type}`);
     
     // Step 1: Validate report type exists

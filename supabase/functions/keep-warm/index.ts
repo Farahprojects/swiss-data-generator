@@ -21,6 +21,7 @@ const EDGE_FUNCTIONS = [
   "verify-guest-payment",
   "initiate-report-flow",
   "get-report-data",
+  "report-orchestrator",
 ];
 
 // Simple warm-up payload for all functions
