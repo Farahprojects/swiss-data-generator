@@ -8,10 +8,10 @@ const corsHeaders = {
   "Content-Type": "application/json",
 };
 
-// Initialize Supabase client
+// Initialize Supabase client with internal API key
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+const edgeInternalKey = Deno.env.get("EDGE_INTERNAL_API_KEY")!;
+const supabase = createClient(supabaseUrl, edgeInternalKey, {
   auth: { persistSession: false }
 });
 
@@ -71,7 +71,7 @@ function callEngineFireAndForget(engine: string, payload: ReportPayload): void {
     method: "POST",
     headers: { 
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${supabaseServiceKey}`
+      "Authorization": `Bearer ${edgeInternalKey}`
     },
     body: JSON.stringify(requestPayload),
   }).catch(error => {
