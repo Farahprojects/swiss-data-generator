@@ -23,11 +23,8 @@ const EDGE_FUNCTIONS = [
   "get-report-data",
 ];
 
-// Lightweight payload for warming requests
-const WARM_PAYLOAD = {
-  warm: true,
-  timestamp: new Date().toISOString(),
-};
+// Simple warm-up payload for all functions
+const WARM_PAYLOAD = { warm: true };
 
 // Ping a single edge function
 async function pingEdgeFunction(functionName: string): Promise<{ success: boolean; duration: number; error?: string }> {

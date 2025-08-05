@@ -21,6 +21,18 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Warm-up check
+  if (req.method === "POST") {
+    try {
+      const body = await req.json();
+      if (body?.warm === true) {
+        return new Response("Warm-up", { status: 200, headers: corsHeaders });
+      }
+    } catch {
+      // If JSON parsing fails, continue with normal flow
+    }
+  }
+
   try {
     // Validate environment variables
     const supabaseUrl = Deno.env.get("SUPABASE_URL");

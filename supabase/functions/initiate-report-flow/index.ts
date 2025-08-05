@@ -90,6 +90,18 @@ serve(async (req) => {
     return corsResponse;
   }
 
+  // Warm-up check
+  if (req.method === "POST") {
+    try {
+      const body = await req.json();
+      if (body?.warm === true) {
+        return new Response("Warm-up", { status: 200, headers: corsHeaders });
+      }
+    } catch {
+      // If JSON parsing fails, continue with normal flow
+    }
+  }
+
   const startTime = Date.now();
 
   try {

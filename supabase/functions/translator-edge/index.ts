@@ -213,6 +213,19 @@ serve(async (req)=>{
   const t0=Date.now();
   const reqId = crypto.randomUUID().slice(0,8);
   let requestType="unknown", googleGeo=false, userId:string|undefined, isGuest=false;
+  
+  // Warm-up check
+  if (req.method === "POST") {
+    try {
+      const body = await req.json();
+      if (body?.warm === true) {
+        return new Response("Warm-up", { status: 200, headers: corsHeaders });
+      }
+    } catch {
+      // If JSON parsing fails, continue with normal flow
+    }
+  }
+  
   try{
     // Extract user_id and is_guest before validation for proper error logging
     const rawBodyText = await req.text();
