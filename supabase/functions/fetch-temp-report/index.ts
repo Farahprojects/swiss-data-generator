@@ -1,8 +1,8 @@
-import { withSecurity } from "../_shared/security.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.3";
 
-// Define a unique name for this function for logging and rule-matching.
-const FUNCTION_NAME = "fetch-temp-report";
+// Security middleware temporarily disabled due to Deno.openKv issues
+// import { withSecurity } from "../_shared/security.ts";
+// const FUNCTION_NAME = "fetch-temp-report";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -72,6 +72,6 @@ const handler = async (req: Request): Promise<Response> => {
   }
 };
 
-// Temporarily disable security middleware due to Deno.openKv issues
+// Security middleware temporarily disabled due to Deno.openKv issues
 // Deno.serve(withSecurity(handler, FUNCTION_NAME));
 Deno.serve(handler); 
