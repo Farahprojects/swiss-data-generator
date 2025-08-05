@@ -8,12 +8,8 @@ const corsHeaders = {
   "Content-Type": "application/json",
 };
 
-// Initialize Supabase client with internal API key
+// Get Supabase URL for edge function calls
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-const edgeInternalKey = Deno.env.get("EDGE_INTERNAL_API_KEY")!;
-const supabase = createClient(supabaseUrl, edgeInternalKey, {
-  auth: { persistSession: false }
-});
 
 interface ReportPayload {
   endpoint: string;
@@ -70,8 +66,7 @@ function callEngineFireAndForget(engine: string, payload: ReportPayload): void {
   fetch(edgeUrl, {
     method: "POST",
     headers: { 
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${edgeInternalKey}`
+      "Content-Type": "application/json"
     },
     body: JSON.stringify(requestPayload),
   }).catch(error => {
