@@ -178,6 +178,33 @@ serve(async (req) => {
     const roundedDiscount = Math.round(discountAmount * 100) / 100;
     const roundedFinalPrice = Math.round(finalPrice * 100) / 100;
 
+    // Increment times_used for successful promo validation
+    try {
+      const { error: updateError } = await supabaseAdmin
+        .from('promo_codes')
+        .update({ times_used: promo.times_used + 1 })
+        .eq('id', promo.id);
+
+      if (updateError) {
+        logValidationError("usage_increment_failed", updateError, { 
+          promo_id: promo.id,
+          current_usage: promo.times_used
+        });
+        // Don't fail the validation, just log the error
+      } else {
+        logValidation("usage_incremented", { 
+          promo_id: promo.id,
+          new_usage: promo.times_used + 1
+        });
+      }
+    } catch (incrementError) {
+      logValidationError("usage_increment_exception", incrementError, { 
+        promo_id: promo.id,
+        current_usage: promo.times_used
+      });
+      // Don't fail the validation, just log the error
+    }
+
     const processingTimeMs = Date.now() - startTime;
 
     logValidation("validation_successful", { 
