@@ -9,7 +9,6 @@ const corsHeaders = {
 
 // Configuration
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
 // List of edge functions to keep warm
 const EDGE_FUNCTIONS = [
@@ -38,8 +37,7 @@ async function pingEdgeFunction(functionName: string): Promise<{ success: boolea
     const response = await fetch(edgeUrl, {
       method: "POST",
       headers: { 
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`
+        "Content-Type": "application/json"
       },
       body: JSON.stringify(WARM_PAYLOAD),
     });
