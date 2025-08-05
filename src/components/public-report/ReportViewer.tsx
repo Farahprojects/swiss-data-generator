@@ -256,41 +256,68 @@ export const ReportViewer = ({
   const handleChatGPTCopyAndGo = async () => {
     try {
       setIsCopping(true);
+      console.log('[ChatGPT] Starting ChatGPT integration...');
 
       let uuid = cachedUuid;
       let token = chatToken;
 
       // If not cached, fetch new token
       if (!chatToken || !cachedUuid) {
+        console.log('[ChatGPT] No cached token, fetching new one...');
         toast({
           title: "Preparing ChatGPT...",
           description: "Fetching secure access token…",
         });
 
-        /* 1. look up UUID from temp_report_data */
+        /* 1. Get guest report ID and create temp data if needed */
         const guestReportId = getGuestReportId();
+        console.log('[ChatGPT] Guest report ID:', guestReportId);
         if (!guestReportId) throw new Error("Guest report ID not found");
 
-        const { data: tempRow, error } = await supabase
-          .from("temp_report_data")
-          .select("id")
-          .eq("guest_report_id", guestReportId)
-          .single();
-
-        if (error || !tempRow) throw new Error("Report row not found");
-        uuid = tempRow.id;
+        // Always call create-temp-report-data first to ensure temp data exists
+        console.log('[ChatGPT] Creating temp report data...');
+        toast({
+          title: "Preparing ChatGPT...",
+          description: "Creating temporary data...",
+        });
+        
+        const createResponse = await fetch(
+          "https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/create-temp-report-data",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ guest_report_id: guestReportId }),
+          }
+        );
+        
+        if (!createResponse.ok) {
+          throw new Error("Failed to create temp report data");
+        }
+        
+        const createResult = await createResponse.json();
+        console.log('[ChatGPT] Create temp data result:', createResult);
+        
+        // Use the temp_data_id from the create response
+        uuid = createResult.temp_data_id;
 
         /* 2. call edge function → get token */
+        console.log('[ChatGPT] Calling fetch-temp-report with uuid:', uuid);
         const res = await fetch(
-          "https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/retrieve-temp-report",
+          "https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/fetch-temp-report",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ uuid }),
           },
         );
-        if (!res.ok) throw new Error("Edge function returned " + res.status);
+        console.log('[ChatGPT] Edge function response status:', res.status);
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.log('[ChatGPT] Edge function error response:', errorText);
+          throw new Error("Edge function returned " + res.status);
+        }
         const result = await res.json();
+        console.log('[ChatGPT] Edge function result:', result);
         token = result.token;
         
         // Cache both token and uuid for subsequent calls
@@ -300,6 +327,7 @@ export const ReportViewer = ({
 
       /* 3. Copy formatted message to clipboard */
       const formattedMessage = `uuid: ${uuid}\ntoken: ${token}`;
+      console.log('[ChatGPT] Formatted message:', formattedMessage);
       
       try {
         await navigator.clipboard.writeText(formattedMessage);
@@ -308,6 +336,7 @@ export const ReportViewer = ({
           description: "Now paste this in ChatGPT to load your report.",
         });
       } catch (clipboardError) {
+        console.log('[ChatGPT] Clipboard error:', clipboardError);
         toast({
           title: "Opening ChatGPT...",
           description: "Ready to load your report!",
@@ -317,9 +346,11 @@ export const ReportViewer = ({
       /* 4. build ?message= param and open ChatGPT */
       const message = encodeURIComponent(formattedMessage);
       const gptUrl = `https://chatgpt.com/g/g-68636dbe19588191b04b0a60bcbf3df3-therai?message=${message}`;
+      console.log('[ChatGPT] Opening URL:', gptUrl);
 
       setTimeout(() => {
-        window.open(gptUrl, "_blank");
+        const newWindow = window.open(gptUrl, "_blank");
+        console.log('[ChatGPT] Window opened:', newWindow);
         setActiveModal(null);
         setIsCopping(false);
       }, 800);
