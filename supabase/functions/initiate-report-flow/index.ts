@@ -3,12 +3,30 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=deno&deno-std=0.224.0";
 
+// DIAGNOSTIC LOGGING - Make it sing!
+console.log("🎵 [INITIATE-FLOW] Starting function initialization...");
+console.log("🎵 [INITIATE-FLOW] Deno version:", Deno.version);
+console.log("🎵 [INITIATE-FLOW] Environment check:", {
+  SUPABASE_URL: Deno.env.get('SUPABASE_URL') ? "SET" : "NOT SET",
+  SUPABASE_SERVICE_ROLE_KEY: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ? "SET" : "NOT SET",
+  SITE_URL: Deno.env.get('SITE_URL') || "NOT SET"
+});
+
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: { persistSession: false }
-});
+console.log("🎵 [INITIATE-FLOW] Creating Supabase client...");
+
+let supabaseAdmin;
+try {
+  supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: { persistSession: false }
+  });
+  console.log("🎵 [INITIATE-FLOW] Supabase client created successfully");
+} catch (error) {
+  console.error("🎵 [INITIATE-FLOW] ERROR creating Supabase client:", error);
+  throw error;
+}
 
 // Inline CORS utilities to avoid import issues
 const corsHeaders = {
@@ -84,24 +102,41 @@ function logFlowError(event: string, error: any, details: any = {}) {
 }
 
 serve(async (req) => {
+  console.log("🎵 [INITIATE-FLOW] Request received:", {
+    method: req.method,
+    url: req.url,
+    headers: Object.fromEntries(req.headers.entries())
+  });
+
   // Handle CORS preflight requests
   const corsResponse = handleCors(req);
   if (corsResponse) {
+    console.log("🎵 [INITIATE-FLOW] CORS preflight handled");
     return corsResponse;
   }
 
   const startTime = Date.now();
+  console.log("🎵 [INITIATE-FLOW] Starting request processing...");
 
   try {
+    console.log("🎵 [INITIATE-FLOW] Parsing request body...");
     const body = await req.json();
+    console.log("🎵 [INITIATE-FLOW] Request body parsed successfully");
     
     // Warm-up check
     if (body?.warm === true) {
+      console.log("🎵 [INITIATE-FLOW] Warm-up request handled");
       return new Response("Warm-up", { status: 200, headers: corsHeaders });
     }
     
     const { reportData, trustedPricing }: InitiateReportFlowRequest = body
     
+    console.log("🎵 [INITIATE-FLOW] Extracted data:", {
+      hasReportData: !!reportData,
+      hasTrustedPricing: !!trustedPricing,
+      email: reportData?.email
+    });
+
     logFlowEvent("flow_started", {
       email: reportData?.email,
       reportType: reportData?.reportType,
