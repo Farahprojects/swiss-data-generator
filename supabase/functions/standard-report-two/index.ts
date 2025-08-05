@@ -329,8 +329,7 @@ serve(async (req) => {
         if (reportData.is_guest && reportData.user_id) {
           try {
             await supabase.from('report_ready_signals').insert({
-              guest_report_id: reportData.user_id,
-              is_ai_report: true
+              guest_report_id: reportData.user_id
             });
             console.log(`[standard-report-two][${requestId}] Signal inserted for guest report: ${reportData.user_id}`);
           } catch (signalError) {
