@@ -86,8 +86,12 @@ function _mapReportPayload({
 
 export const mapReportPayload = memoize(_mapReportPayload, {
   normalizer: (args) => JSON.stringify(args[0]),
-  maxAge: 5 * 60 * 1000,
-  max: 100,
+  maxAge: 5 * 60 * 1000, // 5 minutes
+  max: 50, // Reduced from 100 to prevent memory bloat
+  dispose: (key, value) => {
+    // Clean up large objects when cache entry is disposed
+    console.log('🗑️ Cleaning up report payload cache entry');
+  }
 });
 
 export const mapReportPayloadFresh = _mapReportPayload;

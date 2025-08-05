@@ -1,46 +1,58 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 
-export const useTabVisibility = () => {
-  const [isVisible, setIsVisible] = useState(() => 
-    typeof document !== 'undefined' ? !document.hidden : true
-  );
-  const [wasHidden, setWasHidden] = useState(false);
+interface UseTabVisibilityOptions {
+  onTabHidden?: () => void;
+  onTabVisible?: () => void;
+  pausePollingOnHidden?: boolean;
+}
 
-  const handleVisibilityChange = useCallback(() => {
-    if (typeof document === 'undefined') return;
-    const isCurrentlyVisible = !document.hidden;
-    
-    if (!isCurrentlyVisible && isVisible) {
-      // Tab is becoming hidden
-      setWasHidden(true);
-    } else if (isCurrentlyVisible && !isVisible) {
-      // Tab is becoming visible again
-      setWasHidden(false);
-    }
-    
-    setIsVisible(isCurrentlyVisible);
-  }, [isVisible]);
+export const useTabVisibility = (options: UseTabVisibilityOptions = {}) => {
+  const { onTabHidden, onTabVisible, pausePollingOnHidden = true } = options;
+  const isVisibleRef = useRef(true);
 
   useEffect(() => {
-    // Skip in SSR environment
-    if (typeof window === 'undefined' || typeof document === 'undefined') return;
-    
+    const handleVisibilityChange = () => {
+      const isVisible = !document.hidden;
+      
+      if (isVisible !== isVisibleRef.current) {
+        isVisibleRef.current = isVisible;
+        
+        if (isVisible) {
+          onTabVisible?.();
+          // Broadcast that this tab is now active
+          localStorage.setItem('activeTab', Date.now().toString());
+        } else {
+          onTabHidden?.();
+        }
+      }
+    };
+
+    // Listen for visibility changes
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
-    // Also listen for focus/blur events as backup
-    const handleFocus = () => setIsVisible(true);
-    const handleBlur = () => setIsVisible(false);
-    
-    window.addEventListener('focus', handleFocus);
-    window.addEventListener('blur', handleBlur);
+    // Check if another tab is already active
+    const checkOtherTabs = () => {
+      const lastActive = localStorage.getItem('activeTab');
+      if (lastActive) {
+        const timeSinceLastActive = Date.now() - parseInt(lastActive);
+        // If another tab was active within last 5 seconds, this tab should pause
+        if (timeSinceLastActive < 5000 && !document.hidden) {
+          onTabHidden?.();
+        }
+      }
+    };
+
+    // Check on mount
+    checkOtherTabs();
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('blur', handleBlur);
     };
-  }, [handleVisibilityChange]);
+  }, [onTabHidden, onTabVisible]);
 
-  return { isVisible, wasHidden };
+  return {
+    isVisible: isVisibleRef.current,
+    pausePollingOnHidden
+  };
 };

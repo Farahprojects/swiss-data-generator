@@ -1,56 +1,45 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { CheckCircle } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { ReportData } from '@/utils/reportContentExtraction';
-import EntertainmentWindow from './EntertainmentWindow';
-import ErrorStateHandler from './ErrorStateHandler';
-import { supabase } from '@/integrations/supabase/client';
-import { logSuccessScreen } from '@/utils/logUtils';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useReportModal } from '@/contexts/ReportModalContext';
-import { useGuestSessionManager } from '@/hooks/useGuestSessionManager';
+import { supabase } from '@/integrations/supabase/client';
+import { sessionManager } from '@/utils/sessionManager';
 
 interface SuccessScreenProps {
   name: string;
   email: string;
   guestReportId?: string;
-  onStartWaiting?: () => void;
 }
 
-const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, guestReportId, onStartWaiting }) => {
-  const firstName = name?.split(' ')[0] || 'there';
+export const SuccessScreen: React.FC<SuccessScreenProps> = ({ 
+  name, 
+  email, 
+  guestReportId 
+}) => {
   const { open } = useReportModal();
-  const { handleSessionReset } = useGuestSessionManager(guestReportId);
   const [hasOpenedModal, setHasOpenedModal] = useState(false);
-  const [countdownTime, setCountdownTime] = useState(24);
 
-  // Guard clause
-  if (!guestReportId) {
-    handleSessionReset('success_screen_missing_guest_id');
-    return (
-      <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-b from-background to-muted/20">
-        <div className="w-full max-w-4xl">
-          <Card className="border-2 border-gray-200 shadow-lg">
-            <CardContent className="p-8 text-center space-y-6">
-              <div className="text-3xl font-light text-gray-900 mb-2">Redirecting...</div>
-              <p className="text-sm text-gray-600">Taking you back to the homepage</p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
+  // Register with SessionManager for state reset
+  useEffect(() => {
+    const componentId = 'SuccessScreen';
+    
+    const stateResetCallback = () => {
+      console.log('🔄 SuccessScreen: State reset triggered by SessionManager');
+      setHasOpenedModal(false);
+    };
+
+    sessionManager.registerStateReset(componentId, stateResetCallback);
+
+    return () => {
+      sessionManager.unregisterStateReset(componentId);
+    };
+  }, []);
+
+  const logSuccessScreen = (level: 'info' | 'warn' | 'error', message: string, data?: any) => {
+    console[level](`[SuccessScreen] ${message}`, data);
+  };
 
   const fetchAndOpenReport = useCallback(async () => {
-    const { data, error } = await supabase.functions.invoke('get-report-data', {
-      body: { guest_report_id: guestReportId },
-    });
-
-    if (error || !data?.ready || !data?.data) {
-      logSuccessScreen('error', 'Error or incomplete data fetching report', { error, data });
-      return;
-    }
-
-    open(data.data);
+    // Just open the modal with the guestReportId - the modal will handle fetching the data
+    open(guestReportId);
     setHasOpenedModal(true);
   }, [guestReportId, open]);
 
@@ -88,58 +77,49 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ name, email, guestReportI
     };
   }, [guestReportId, fetchAndOpenReport, hasOpenedModal]);
 
-  // Countdown UI fallback (purely visual)
-  useEffect(() => {
-    if (countdownTime === 0) return;
-    const timer = setInterval(() => {
-      setCountdownTime(prev => (prev <= 1 ? 0 : prev - 1));
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [countdownTime]);
-
-
-
-  useEffect(() => {
-    if (onStartWaiting) onStartWaiting();
-  }, [onStartWaiting]);
-
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-b from-background to-muted/20">
-      <div className="w-full max-w-4xl">
-        <Card className="border-2 border-gray-200 shadow-lg">
-          <CardContent className="p-8 text-center space-y-6">
-            {countdownTime === 0 ? (
-              <>
-                <div className="flex items-center justify-center gap-4 py-4">
-                  <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-                    <CheckCircle className="h-6 w-6 text-green-600" />
-                  </div>
-                </div>
-                <div>
-                  <h2 className="text-2xl font-light text-gray-900 mb-1 tracking-tight">Report Ready!</h2>
-                  <p className="text-gray-600 font-light">Opening your report...</p>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="text-center mb-6">
-                  <div className="text-3xl font-light text-gray-900 mb-2">{countdownTime}s</div>
-                  <p className="text-sm text-gray-600">Generating your report...</p>
-                </div>
-                <div className="bg-muted/50 rounded-lg p-4 text-sm">
-                  Hi {firstName}! Your report is being prepared.<br />
-                  <span className="font-medium">{email}</span>
-                </div>
-                <EntertainmentWindow mode="text" className="mb-4" />
-              </>
-            )}
-          </CardContent>
-        </Card>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
+        <div className="space-y-4">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          
+          <div className="space-y-2">
+            <h1 className="text-2xl font-light text-gray-900">
+              Report Generated Successfully!
+            </h1>
+            <p className="text-gray-600">
+              Your personalized astrology report is ready for {name}.
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-600">Name:</span>
+            <span className="font-medium text-gray-900">{name}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-600">Email:</span>
+            <span className="font-medium text-gray-900">{email}</span>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <p className="text-sm text-gray-600">
+            Your report is being prepared and will open automatically when ready...
+          </p>
+          
+          <div className="flex items-center justify-center space-x-2">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+            <span className="text-sm text-gray-600">Preparing your report</span>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
-
-export default SuccessScreen;
 

@@ -161,68 +161,69 @@ export const clearAllSessionData = async (stateResetCallbacks?: (() => void)[]):
       stateResetCallbacks.forEach((callback, index) => {
         try {
           callback();
-          console.log(`✅ State reset callback ${index + 1} executed successfully`);
+          console.log(`✅ State reset callback ${index + 1} executed`);
         } catch (error) {
           console.error(`❌ State reset callback ${index + 1} failed:`, error);
         }
       });
     }
 
-    // Clear React Query cache if available
-    try {
-      const { useQueryClient } = await import('@tanstack/react-query');
-      try {
-        const queryClient = useQueryClient();
-        queryClient.clear();
-        console.log('✅ React Query cache cleared');
-      } catch (error) {
-        // QueryClient not available in current context, continue
-        log('warn', 'QueryClient not available for clearing', null, 'urlHelpers');
-      }
-    } catch (error) {
-      // React Query not available, continue
-      console.log('⚠️ React Query not available');
-    }
-
-    // Clear all localStorage items (comprehensive)
-    const localStorageKeysToRemove = [
+    // Clear all storage
+    const storageKeys = [
       'currentGuestReportId',
       'guest_payment_status',
       'guest_report_id',
-      'reportFormData', 
-      'guestReportData',
-      'formStep',
-      'paymentSession',
-      'reportProgress',
-      'pending_report_email',
-      'mobile_drawer_state',
-      'mobile_form_data'
+      'last_route',
+      'last_route_params',
+      'modalState',
+      'activeTab'
     ];
-    
-    localStorageKeysToRemove.forEach(key => {
-      localStorage.removeItem(key);
-    });
-    
-    // Clear pattern-based localStorage items
-    Object.keys(localStorage).forEach((key) => {
-      if (key.startsWith('guest_report_') || 
-          key.startsWith('report_') || 
-          key.startsWith('mobile_') ||
-          key.startsWith('drawer_') ||
-          key.includes('temp_report') ||
-          key.includes('chat_token')) {
+
+    storageKeys.forEach(key => {
+      try {
         localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
+      } catch (error) {
+        console.error(`Error removing ${key}:`, error);
       }
     });
-    
-    // Clear all sessionStorage
-    sessionStorage.clear();
-    
-    log('info', 'Comprehensive session data cleared', null, 'urlHelpers');
-    
+
+    // Clear React Query cache more comprehensively
+    try {
+      const { useQueryClient } = await import('@tanstack/react-query');
+      const queryClient = useQueryClient();
+      
+      // Clear all guest-related queries
+      queryClient.removeQueries({ queryKey: ['guest-report-data'] });
+      queryClient.removeQueries({ queryKey: ['token-recovery'] });
+      queryClient.removeQueries({ queryKey: ['guest-report-data', null] });
+      queryClient.removeQueries({ queryKey: ['temp-report-data'] });
+      queryClient.removeQueries({ queryKey: ['report-data'] });
+      
+      // Clear any cached report payloads
+      queryClient.removeQueries({ queryKey: ['report-payload'] });
+      
+      console.log('✅ React Query cache cleared comprehensively');
+    } catch (error) {
+      console.log('⚠️ React Query not available for cache clearing');
+    }
+
+    // Clear URL parameters
+    clearGuestReportIdFromUrl();
+
+    // Force garbage collection if available (Chrome only)
+    if (typeof window !== 'undefined' && 'gc' in window) {
+      try {
+        (window as any).gc();
+        console.log('🗑️ Garbage collection triggered');
+      } catch (error) {
+        console.log('⚠️ Garbage collection not available');
+      }
+    }
+
+    console.log('✅ Comprehensive session clearing completed');
   } catch (error) {
-    console.error('❌ Error during session clearing:', error);
-    throw error;
+    console.error('❌ Error during comprehensive session clearing:', error);
   }
 };
 

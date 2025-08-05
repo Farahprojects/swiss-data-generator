@@ -40,6 +40,7 @@ import PreviewWebsite from './pages/PreviewWebsite';
 import { CoachReportPage } from './components/website-builder/CoachReportPage';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
+import { MemoryMonitor } from './components/debug/MemoryMonitor';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -85,59 +86,62 @@ function App() {
               <NavigationStateProvider>
                 <AuthProvider>
                   <PricingProvider>
-                                          <ModalStateProvider>
-                        <SettingsModalProvider>
-                          <ReportModalProvider>
-                  <div className="min-h-screen bg-background">
-                    <Routes>
-                      <Route path="/" element={<Index />} />
-                      <Route path="/features" element={<Features />} />
-                      <Route path="/report" element={<PublicReport />} />
-                      <Route path="/pricing" element={<Pricing />} />
-                      <Route path="/contact" element={<Contact />} />
-                      <Route path="/about" element={<About />} />
-                      <Route path="/legal" element={<Legal />} />
-                      <Route path="/blog" element={<Blog />} />
-                      <Route path="/blog/:slug" element={<BlogPost />} />
-                      
-                      <Route path="/login" element={<Login />} />
-                      <Route path="/signup" element={<Signup />} />
-                      <Route path="/auth/password" element={<ResetPassword />} />
-                      
-                      {/* Preview route for website builder */}
-                      <Route path="/preview/:previewId" element={<PreviewWebsite />} />
-                      
-                      <Route path="/dashboard" element={<AuthGuard><DashboardLayout /></AuthGuard>}>
-                        <Route index element={<DashboardHome />} />
-                        <Route path="calendar" element={<CalendarPage />} />
-                        <Route path="clients" element={<ClientsPage />} />
-                        <Route path="clients/:clientId" element={<ClientDetailPage />} />
-                        <Route path="reports" element={<ReportsPage />} />
-                        <Route path="reports/create" element={<CreateReportPage />} />
-                        <Route path="messages" element={<MessagesPage />} />
-                        <Route path="settings" element={<UserSettings />} />
-                        <Route path="website-builder" element={<WebsiteBuilder />} />
-                      </Route>
-                      
-                      {/* Coach report page route */}
-                      <Route path="/:slug/vibe" element={<CoachReportPage />} />
-                      
-                      {/* Dynamic slug route for published coach websites - moved before catch-all */}
-                      <Route path="/:slug" element={<PublicCoachWebsite />} />
-                      
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </div>
-                      <Toaster />
-                          </ReportModalProvider>
-                        </SettingsModalProvider>
-                      </ModalStateProvider>
-                </PricingProvider>
-              </AuthProvider>
-            </NavigationStateProvider>
-          </Router>
-        </QueryClientProvider>
-      </ThemeProvider>
+                    <ModalStateProvider>
+                      <SettingsModalProvider>
+                        <ReportModalProvider>
+                          <div className="min-h-screen bg-background">
+                            <Routes>
+                              <Route path="/" element={<Index />} />
+                              <Route path="/features" element={<Features />} />
+                              <Route path="/report" element={<PublicReport />} />
+                              <Route path="/pricing" element={<Pricing />} />
+                              <Route path="/contact" element={<Contact />} />
+                              <Route path="/about" element={<About />} />
+                              <Route path="/legal" element={<Legal />} />
+                              <Route path="/blog" element={<Blog />} />
+                              <Route path="/blog/:slug" element={<BlogPost />} />
+                              
+                              <Route path="/login" element={<Login />} />
+                              <Route path="/signup" element={<Signup />} />
+                              <Route path="/auth/password" element={<ResetPassword />} />
+                              
+                              {/* Preview route for website builder */}
+                              <Route path="/preview/:previewId" element={<PreviewWebsite />} />
+                              
+                              <Route path="/dashboard" element={<AuthGuard><DashboardLayout /></AuthGuard>}>
+                                <Route index element={<DashboardHome />} />
+                                <Route path="calendar" element={<CalendarPage />} />
+                                <Route path="clients" element={<ClientsPage />} />
+                                <Route path="clients/:clientId" element={<ClientDetailPage />} />
+                                <Route path="reports" element={<ReportsPage />} />
+                                <Route path="reports/create" element={<CreateReportPage />} />
+                                <Route path="messages" element={<MessagesPage />} />
+                                <Route path="settings" element={<UserSettings />} />
+                                <Route path="website-builder" element={<WebsiteBuilder />} />
+                              </Route>
+                              
+                              {/* Coach report page route */}
+                              <Route path="/:slug/vibe" element={<CoachReportPage />} />
+                              
+                              {/* Dynamic slug route for published coach websites - moved before catch-all */}
+                              <Route path="/:slug" element={<PublicCoachWebsite />} />
+                              
+                              <Route path="*" element={<NotFound />} />
+                            </Routes>
+                          </div>
+                          <Toaster />
+                        </ReportModalProvider>
+                      </SettingsModalProvider>
+                    </ModalStateProvider>
+                  </PricingProvider>
+                </AuthProvider>
+              </NavigationStateProvider>
+            </Router>
+            
+            {/* Development-only memory monitor */}
+            {process.env.NODE_ENV === 'development' && <MemoryMonitor />}
+          </QueryClientProvider>
+        </ThemeProvider>
       </ErrorBoundary>
     </SSRErrorBoundary>
   );

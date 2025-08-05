@@ -195,7 +195,6 @@ export const ReportViewer = ({
   const handleCloseSession = async () => {
     if (isTransitioning) return;
     
-
     setIsTransitioning(true);
     
     try {
@@ -221,23 +220,15 @@ export const ReportViewer = ({
       // Phase 3: Background cleanup with visual progress
       setTransitionPhase('transitioning');
       
-      // Prepare state reset callbacks
-      const stateResetCallbacks: (() => void)[] = [];
+      // Use SessionManager for comprehensive session clearing
+      const { sessionManager } = await import('@/utils/sessionManager');
       
-      if (onStateReset) {
-        stateResetCallbacks.push(onStateReset);
-      }
-      
-
-      
-      // Execute cleanup in background with visual feedback
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Phase 4: Smooth navigation transition
-      setTransitionPhase('complete');
-      
-      // Use enhanced force navigation reset with state callbacks
-      await forceNavigationReset(stateResetCallbacks);
+      // Execute professional session clearing
+      await sessionManager.clearSession({
+        showProgress: true,
+        redirectTo: '/',
+        preserveNavigation: false
+      });
       
     } catch (error) {
       console.error('❌ Error during elegant session close:', error);

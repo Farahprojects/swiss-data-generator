@@ -6,7 +6,9 @@ import ReportTypeSelector from '@/components/public-report/ReportTypeSelector';
 import CombinedPersonalDetailsForm from '@/components/public-report/CombinedPersonalDetailsForm';
 import SecondPersonForm from '@/components/public-report/SecondPersonForm';
 import PaymentStep from '@/components/public-report/PaymentStep';
-import SuccessScreen from '@/components/public-report/SuccessScreen';
+import { SuccessScreen } from '@/components/public-report/SuccessScreen';
+import { useReportModal } from '@/contexts/ReportModalContext';
+import { useSessionManager } from '@/hooks/useSessionManager';
 
 interface ReportFormProps {
   coachSlug?: string;
