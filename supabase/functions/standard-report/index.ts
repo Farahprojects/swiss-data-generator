@@ -125,11 +125,12 @@ async function getSystemPrompt(reportType: string, requestId: string): Promise<s
 async function generateReport(systemPrompt: string, reportData: any, requestId: string): Promise<{ report: string; metadata: any }> {
   const logPrefix = `[standard-report][${requestId}]`;
 
-  // Structure data for the prompt
+  // Structure data for the prompt (only essential fields, exclude Swiss data)
   const userMessage = JSON.stringify({
     chartData: reportData.chartData,
     endpoint: reportData.endpoint,
-    ...reportData // Include any other relevant data
+    report_type: reportData.report_type,
+    // Only include essential fields, exclude Swiss data that's already processed
   });
 
   const requestBody = {
