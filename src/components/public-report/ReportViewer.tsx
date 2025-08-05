@@ -297,28 +297,19 @@ export const ReportViewer = ({
         const createResult = await createResponse.json();
         console.log('[ChatGPT] Create temp data result:', createResult);
         
-        // Use the temp_data_id from the create response
+        // Use the data directly from create-temp-report-data response
         uuid = createResult.temp_data_id;
-
-        /* 2. call edge function → get token */
-        console.log('[ChatGPT] Calling fetch-temp-report with uuid:', uuid);
-        const res = await fetch(
-          "https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/fetch-temp-report",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ uuid }),
-          },
-        );
-        console.log('[ChatGPT] Edge function response status:', res.status);
-        if (!res.ok) {
-          const errorText = await res.text();
-          console.log('[ChatGPT] Edge function error response:', errorText);
-          throw new Error("Edge function returned " + res.status);
-        }
-        const result = await res.json();
-        console.log('[ChatGPT] Edge function result:', result);
-        token = result.token;
+        token = createResult.plain_token;
+        
+        console.log('[ChatGPT] ✅ Retrieved data from create-temp-report-data:', {
+          uuid: uuid,
+          has_token: !!token,
+          has_chat_hash: !!createResult.chat_hash
+        });
+        
+        // Cache the data for future use
+        setChatToken(token);
+        setCachedUuid(uuid);
         
         // Cache both token and uuid for subsequent calls
         setChatToken(token);

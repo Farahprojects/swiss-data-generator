@@ -116,11 +116,42 @@ serve(async (req) => {
     }
 
     if (existingTempData) {
-      console.log(`[create-temp-report-data] Temp data already exists for: ${guest_report_id}`);
+      console.log(`[create-temp-report-data] Temp data already exists for: ${guest_report_id}, fetching existing data...`);
+      
+      // Fetch the existing temp data to get the tokens
+      const { data: existingData, error: fetchError } = await supabase
+        .from("temp_report_data")
+        .select("id, plain_token, chat_hash, expires_at")
+        .eq("guest_report_id", guest_report_id)
+        .single();
+        
+      if (fetchError || !existingData) {
+        console.error("[create-temp-report-data] Error fetching existing temp data:", fetchError);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: "Failed to fetch existing temp data",
+            details: fetchError?.message,
+            timestamp: new Date().toISOString()
+          }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      console.log(`[create-temp-report-data] ✅ Returning existing temp data:`, {
+        temp_data_id: existingData.id,
+        has_plain_token: !!existingData.plain_token,
+        has_chat_hash: !!existingData.chat_hash
+      });
+      
       return new Response(
         JSON.stringify({ 
           success: true, 
           message: "Temp data already exists",
+          temp_data_id: existingData.id,
+          plain_token: existingData.plain_token,
+          chat_hash: existingData.chat_hash,
+          expires_at: existingData.expires_at,
           timestamp: new Date().toISOString()
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
