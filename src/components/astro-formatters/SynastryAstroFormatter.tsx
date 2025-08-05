@@ -17,8 +17,8 @@ export const SynastryAstroFormatter: React.FC<SynastryAstroFormatterProps> = ({
   className = ''
 }) => {
   const reportInfo = reportData.guest_report?.report_data;
-  const personAName = reportInfo?.name || 'Person A';
-  const personBName = reportInfo?.secondPersonName || 'Person B';
+  const personAName = reportInfo?.person_a?.name || reportInfo?.name || 'Person A';
+  const personBName = reportInfo?.person_b?.name || reportInfo?.secondPersonName || 'Person B';
 
   if (!swissData) {
     return (
@@ -34,10 +34,10 @@ export const SynastryAstroFormatter: React.FC<SynastryAstroFormatterProps> = ({
   const personBDisplay = enrichedData.personB.name || personBName;
 
   // Get birth details from mapped report data
-  const personABirthDate = reportData?.people?.A?.birthDate || reportData?.birthDate;
-  const personABirthPlace = reportData?.people?.A?.location || reportData?.birthLocation;
-  const personBBirthDate = reportData?.people?.B?.birthDate || reportData?.secondPersonBirthDate;
-  const personBBirthPlace = reportData?.people?.B?.location || reportData?.secondPersonBirthLocation;
+  const personABirthDate = reportInfo?.person_a?.birth_date || reportData?.people?.A?.birthDate || reportData?.birthDate;
+  const personABirthPlace = reportInfo?.person_a?.location || reportData?.people?.A?.location || reportData?.birthLocation;
+  const personBBirthDate = reportInfo?.person_b?.birth_date || reportData?.people?.B?.birthDate || reportData?.secondPersonBirthDate;
+  const personBBirthPlace = reportInfo?.person_b?.location || reportData?.people?.B?.location || reportData?.secondPersonBirthLocation;
 
   return (
     <div className={`font-inter max-w-4xl mx-auto py-8 ${className}`}>
