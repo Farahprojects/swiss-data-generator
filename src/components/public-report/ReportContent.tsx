@@ -1,8 +1,10 @@
 
 import React from 'react';
 import { ReportRenderer } from '@/components/shared/ReportRenderer';
-import { AstroDataRenderer } from './AstroDataRenderer';
+import { IndividualAstroFormatter } from '@/components/astro-formatters/IndividualAstroFormatter';
+import { SynastryAstroFormatter } from '@/components/astro-formatters/SynastryAstroFormatter';
 import { ReportData } from '@/utils/reportContentExtraction';
+import { isSynastryReport } from './AstroDataRenderer';
 
 interface ReportContentProps {
   reportData: ReportData;
@@ -36,10 +38,17 @@ export const ReportContent: React.FC<ReportContentProps> = ({
       case 'astro':
         return (
           <div className="max-w-4xl mx-auto px-0 md:px-4 py-8">
-            <AstroDataRenderer 
-              swissData={reportData.swiss_data} 
-              reportData={reportData}
-            />
+            {isSynastryReport(reportData) ? (
+              <SynastryAstroFormatter 
+                swissData={reportData.swiss_data} 
+                reportData={reportData}
+              />
+            ) : (
+              <IndividualAstroFormatter 
+                swissData={reportData.swiss_data} 
+                reportData={reportData}
+              />
+            )}
           </div>
         );
       
@@ -47,10 +56,17 @@ export const ReportContent: React.FC<ReportContentProps> = ({
         return (
           <div className="max-w-4xl mx-auto px-0 md:px-4 py-8">
             {activeView === 'astro' ? (
-              <AstroDataRenderer 
-                swissData={reportData.swiss_data} 
-                reportData={reportData}
-              />
+              isSynastryReport(reportData) ? (
+                <SynastryAstroFormatter 
+                  swissData={reportData.swiss_data} 
+                  reportData={reportData}
+                />
+              ) : (
+                <IndividualAstroFormatter 
+                  swissData={reportData.swiss_data} 
+                  reportData={reportData}
+                />
+              )
             ) : (
               <ReportRenderer reportData={reportData} />
             )}
