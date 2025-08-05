@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Drawer } from 'vaul';
-import { useMobileDrawerForm } from '@/hooks/useMobileDrawerForm';
+import { useForm } from 'react-hook-form';
+import { ReportFormData } from '@/types/public-report';
 import MobileDrawerHeader from './drawer-components/MobileDrawerHeader';
 import MobileDrawerFooter from './drawer-components/MobileDrawerFooter';
 import Step1ReportType from './drawer-steps/Step1ReportType';
@@ -11,6 +12,8 @@ import Step3Payment from './drawer-steps/Step3Payment';
 import { SuccessScreen } from '@/components/public-report/SuccessScreen';
 import { useReportSubmission, TrustedPricingObject } from '@/hooks/useReportSubmission';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
+import { supabase } from '@/integrations/supabase/client';
+import { usePricing } from '@/contexts/PricingContext';
 
 interface MobileReportDrawerProps {
   isOpen: boolean;
@@ -23,48 +26,163 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
   onOpenChange,
   onReportCreated
 }) => {
-  const {
-    form,
-    currentStep,
-    nextStep,
-    prevStep,
-    resetForm,
-  } = useMobileDrawerForm();
+  // Use the same form logic as desktop
+  const form = useForm<ReportFormData>({
+    mode: 'onBlur',
+    defaultValues: {
+      reportType: '',
+      reportSubCategory: '',
+      relationshipType: '',
+      essenceType: '',
+      name: '',
+      email: '',
+      birthDate: '',
+      birthTime: '',
+      birthLocation: '',
+      birthLatitude: undefined,
+      birthLongitude: undefined,
+      birthPlaceId: '',
+      secondPersonName: '',
+      secondPersonBirthDate: '',
+      secondPersonBirthTime: '',
+      secondPersonBirthLocation: '',
+      secondPersonLatitude: undefined,
+      secondPersonLongitude: undefined,
+      secondPersonPlaceId: '',
+      returnYear: '',
+      notes: '',
+      promoCode: '',
+      request: '',
+    },
+  });
 
   const { register, handleSubmit, watch, setValue, control, formState: { errors, isValid } } = form;
   
-  const {
-    submitReport,
-    isProcessing,
-    reportCreated
-  } = useReportSubmission();
-
+  // Report submission hook (same as desktop)
+  const { isProcessing, reportCreated, submitReport } = useReportSubmission();
   const { getReportPrice } = usePriceFetch();
+  const { getPriceById } = usePricing();
 
-  // Watch form values for step validation
+  // Validate promo code (same as desktop)
+  const validatePromoCode = async (promoCode: string): Promise<TrustedPricingObject> => {
+    const priceIdentifier = getPriceIdentifier();
+    if (!priceIdentifier) {
+      return {
+        valid: false,
+        discount_usd: 0,
+        trusted_base_price_usd: 0,
+        final_price_usd: 0,
+        report_type: '',
+        reason: 'Invalid report type'
+      };
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('validate-promo-code', {
+        body: {
+          promo_code: promoCode,
+          price_identifier: priceIdentifier
+        }
+      });
+
+      if (error) {
+        console.error('Promo validation error:', error);
+        return {
+          valid: false,
+          discount_usd: 0,
+          trusted_base_price_usd: getBasePrice(),
+          final_price_usd: getBasePrice(),
+          report_type: priceIdentifier,
+          reason: 'Failed to validate promo code'
+        };
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Promo validation failed:', error);
+      return {
+        valid: false,
+        discount_usd: 0,
+        trusted_base_price_usd: getBasePrice(),
+        final_price_usd: getBasePrice(),
+        report_type: priceIdentifier,
+        reason: 'Network error'
+      };
+    }
+  };
+
+  // Get base price from cached data (same as desktop)
+  const getBasePrice = () => {
+    const priceIdentifier = getPriceIdentifier();
+    if (!priceIdentifier) return 0;
+    
+    const priceData = getPriceById(priceIdentifier);
+    return priceData ? Number(priceData.unit_price_usd) : 0;
+  };
+
+  // Get price identifier from form data (same as desktop)
+  const getPriceIdentifier = () => {
+    const formData = form.getValues();
+    
+    // Prioritize direct reportType for unified mobile/desktop behavior
+    if (formData.reportType) {
+      return formData.reportType;
+    }
+    
+    // Fallback to request field
+    if (formData.request) {
+      return formData.request;
+    }
+    
+    // Legacy fallback for sub-categories
+    if (formData.reportSubCategory) {
+      return formData.reportSubCategory;
+    }
+    
+    return null;
+  };
+
+  // Step management for mobile drawer
+  const [currentStep, setCurrentStep] = useState(1);
+  const totalSteps = 4;
+
+  // Watch form values (same as desktop)
+  const formValues = form.watch();
+  const selectedReportType = watch('reportType');
+  const selectedRequest = watch('request');
   const reportCategory = watch('reportCategory');
-  const reportSubCategory = watch('reportSubCategory');
-  const name = watch('name');
-  const email = watch('email');
-  const birthDate = watch('birthDate');
-  const birthTime = watch('birthTime');
-  const birthLocation = watch('birthLocation');
-  const secondPersonName = watch('secondPersonName');
-  const secondPersonBirthDate = watch('secondPersonBirthDate');
-  const secondPersonBirthTime = watch('secondPersonBirthTime');
-  const secondPersonBirthLocation = watch('secondPersonBirthLocation');
   const reportType = watch('reportType');
   const request = watch('request');
+  const userName = watch('name');
+  const userEmail = watch('email');
+  
+  // Determine if second person is required (same as desktop)
+  const requiresSecondPerson = reportCategory === 'compatibility' || 
+                               reportType?.startsWith('sync_') || 
+                               request === 'sync';
 
-  // Step validation logic
+  // Step progression logic (same as desktop)
+  const step1Done = Boolean(formValues.reportType || formValues.request);
+  const step2Done =
+    step1Done &&
+    Boolean(
+      formValues.name &&
+        formValues.email &&
+        formValues.birthDate &&
+        formValues.birthTime &&
+        formValues.birthLocation,
+    ) &&
+    (!requiresSecondPerson || (
+      formValues.secondPersonName &&
+      formValues.secondPersonBirthDate &&
+      formValues.secondPersonBirthTime &&
+      formValues.secondPersonBirthLocation
+    ));
+
+  // Step validation for mobile drawer
   const step1Valid = !!reportCategory;
-  
-  const step1_5Valid = !!reportSubCategory;
-  
-  const requiresSecondPerson = reportType === 'compatibility' || request === 'sync';
-  const step2Valid = !!(name && email && birthDate && birthTime && birthLocation) &&
-    (!requiresSecondPerson || !!(secondPersonName && secondPersonBirthDate && secondPersonBirthTime && secondPersonBirthLocation));
-  
+  const step1_5Valid = !!formValues.reportSubCategory;
+  const step2Valid = step2Done;
   const step3Valid = isValid;
 
   // Determine if we can go to next step
@@ -78,8 +196,27 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
     }
   };
 
-  // Handle form submission
-  const onSubmit = async (data: any) => {
+  // Navigation functions
+  const nextStep = () => {
+    if (currentStep < totalSteps && canGoNext()) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  // Reset form utility
+  const resetForm = () => {
+    form.reset();
+    setCurrentStep(1);
+  };
+
+  // Handle form submission with promo validation (same as desktop)
+  const onSubmit = async (data: ReportFormData) => {
     try {
       // Calculate trusted pricing 
       const formData = {
@@ -109,6 +246,44 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
     }
   };
 
+  // Handle button click with promo validation (same as desktop)
+  const handleButtonClick = async () => {
+    try {
+      const formData = form.getValues();
+      const currentPromoCode = formData.promoCode?.trim() || '';
+      
+      // Always validate promo code (even if empty) to get trusted pricing
+      const pricingResult = await validatePromoCode(currentPromoCode || '');
+      
+      if (!pricingResult.valid) {
+        // Show error in the form
+        form.setError('promoCode', { 
+          type: 'manual', 
+          message: pricingResult.reason || 'Invalid Promo Code' 
+        });
+        return;
+      }
+
+      // Clear any promo errors
+      form.clearErrors('promoCode');
+
+      // Submit with trusted pricing
+      const result = await submitReport(formData, pricingResult);
+      if (result && onReportCreated) {
+        onReportCreated(result);
+      }
+
+    } catch (error) {
+      console.error('❌ Pricing validation failed:', error);
+      form.setError('promoCode', { 
+        type: 'manual', 
+        message: 'Failed to validate pricing. Please try again.' 
+      });
+    }
+  };
+
+
+
   // Close drawer handler
   const handleClose = () => {
     resetForm();
@@ -116,7 +291,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
   };
 
   // Show success screen if report was created
-  if (reportCreated) {
+  if (reportCreated && userName && userEmail) {
     const guestReportId = localStorage.getItem('currentGuestReportId');
     return (
       <Drawer.Root open={isOpen} onOpenChange={onOpenChange}>
@@ -125,8 +300,8 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
           <Drawer.Content className="fixed bottom-0 left-0 right-0 h-[96%] bg-white rounded-t-2xl z-[100] overflow-hidden">
             <div className="h-full overflow-y-auto">
               <SuccessScreen 
-                name={name || ''}
-                email={email || ''}
+                name={userName} 
+                email={userEmail} 
                 guestReportId={guestReportId || undefined}
               />
             </div>
@@ -145,7 +320,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
           {/* Header */}
           <MobileDrawerHeader
             currentStep={currentStep}
-            totalSteps={4}
+            totalSteps={totalSteps}
             onClose={handleClose}
           />
 
@@ -166,7 +341,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
                   <Step1_5AstroData
                     control={control}
                     setValue={setValue}
-                    selectedSubCategory={reportSubCategory}
+                    selectedSubCategory={formValues.reportSubCategory}
                     onNext={nextStep}
                   />
                 ) : (
@@ -174,7 +349,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
                     control={control}
                     setValue={setValue}
                     selectedCategory={reportCategory}
-                    selectedSubCategory={reportSubCategory}
+                    selectedSubCategory={formValues.reportSubCategory}
                     onNext={nextStep}
                   />
                 )}
@@ -205,11 +380,11 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
           {/* Footer */}
           <MobileDrawerFooter
             currentStep={currentStep}
-            totalSteps={4}
+            totalSteps={totalSteps}
             onPrevious={prevStep}
             onNext={nextStep}
-            onSubmit={handleSubmit(onSubmit)}
-            canGoNext={canGoNext()}
+            onSubmit={handleButtonClick}
+            canGoNext={canGoNext() as boolean}
             isProcessing={isProcessing}
             isLastStep={currentStep === 4}
           />

@@ -42,9 +42,6 @@ const Step3Payment = ({
   const requestField = watch('request');
   const request = watch('request');
   const name = watch('name');
-  const promoCode = watch('promoCode') || '';
-
-  // Removed overly aggressive error clearing - handled in onChange
 
   // Add timeout mechanism to prevent stuck processing state
   useEffect(() => {
@@ -66,8 +63,6 @@ const Step3Payment = ({
       }
     };
   }, [isProcessing, onTimeoutChange]);
-
-  // Removed dead scroll logic - can be re-added later if needed
 
   // Get price and title using context with global fallback
   let basePrice: number | null = null;

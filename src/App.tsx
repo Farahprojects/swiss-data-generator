@@ -40,7 +40,7 @@ import PreviewWebsite from './pages/PreviewWebsite';
 import { CoachReportPage } from './components/website-builder/CoachReportPage';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
-import { MemoryMonitor } from './components/debug/MemoryMonitor';
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -138,8 +138,7 @@ function App() {
               </NavigationStateProvider>
             </Router>
             
-            {/* Development-only memory monitor */}
-            {process.env.NODE_ENV === 'development' && <MemoryMonitor />}
+
           </QueryClientProvider>
         </ThemeProvider>
       </ErrorBoundary>

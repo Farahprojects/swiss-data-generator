@@ -57,7 +57,7 @@ const MobileDrawerFooter = ({
               : hasTimedOut
                 ? 'Try Again'
                 : isLastStep 
-                  ? 'Submit and View' 
+                  ? 'Get Your Report' 
                   : 'Next'}
           </span>
           {!isProcessing && <ChevronRight className="h-4 w-4" />}
