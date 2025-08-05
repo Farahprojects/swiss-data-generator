@@ -56,8 +56,8 @@ function validateReportType(reportType: string): boolean {
   return true;
 }
 
-// Call the selected engine (fire-and-forget)
-function callEngineFireAndForget(engine: string, payload: ReportPayload): void {
+// Call the selected engine (fire-and-forget with waitUntil)
+function callEngineFireAndForget(engine: string, payload: ReportPayload, ctx?: any): void {
   const edgeUrl = `${supabaseUrl}/functions/v1/${engine}`;
   const requestPayload = { 
     ...payload, 
@@ -67,7 +67,7 @@ function callEngineFireAndForget(engine: string, payload: ReportPayload): void {
   
   console.log(`[report-orchestrator] Calling engine: ${engine}`);
   
-  fetch(edgeUrl, {
+  const fetchPromise = fetch(edgeUrl, {
     method: "POST",
     headers: { 
       "Content-Type": "application/json",
@@ -77,6 +77,13 @@ function callEngineFireAndForget(engine: string, payload: ReportPayload): void {
   }).catch(error => {
     console.error(`[report-orchestrator] Engine ${engine} fire-and-forget failed:`, error);
   });
+  
+  // Use waitUntil if available to prevent fetch from being cut off
+  if (ctx?.waitUntil) {
+    ctx.waitUntil(fetchPromise);
+  } else if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
+    EdgeRuntime.waitUntil(fetchPromise);
+  }
 }
 
 serve(async (req) => {
@@ -117,8 +124,8 @@ serve(async (req) => {
     // Step 2: Select next engine using simple timestamp-based selection
     const selectedEngine = getNextEngine();
     
-    // Step 3: Call the engine (fire-and-forget)
-    callEngineFireAndForget(selectedEngine, payload);
+    // Step 3: Call the engine (fire-and-forget with waitUntil)
+    callEngineFireAndForget(selectedEngine, payload, req);
     
     // Return immediately - don't wait for engine response
     return new Response(JSON.stringify({ 
