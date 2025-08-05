@@ -21,18 +21,6 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Warm-up check
-  if (req.method === "POST") {
-    try {
-      const body = await req.json();
-      if (body?.warm === true) {
-        return new Response("Warm-up", { status: 200, headers: corsHeaders });
-      }
-    } catch {
-      // If JSON parsing fails, continue with normal flow
-    }
-  }
-
   try {
     // Validate environment variables
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -55,6 +43,11 @@ serve(async (req) => {
     try {
       requestBody = await req.json();
       console.log("[get-report-data] Request body received:", { keys: Object.keys(requestBody) });
+      
+      // Warm-up check
+      if (requestBody?.warm === true) {
+        return new Response("Warm-up", { status: 200, headers: corsHeaders });
+      }
     } catch (parseError) {
       console.error("[get-report-data] Failed to parse JSON:", parseError);
       return new Response(

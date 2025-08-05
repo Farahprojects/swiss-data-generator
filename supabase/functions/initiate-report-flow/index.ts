@@ -90,22 +90,17 @@ serve(async (req) => {
     return corsResponse;
   }
 
-  // Warm-up check
-  if (req.method === "POST") {
-    try {
-      const body = await req.json();
-      if (body?.warm === true) {
-        return new Response("Warm-up", { status: 200, headers: corsHeaders });
-      }
-    } catch {
-      // If JSON parsing fails, continue with normal flow
-    }
-  }
-
   const startTime = Date.now();
 
   try {
-    const { reportData, trustedPricing }: InitiateReportFlowRequest = await req.json()
+    const body = await req.json();
+    
+    // Warm-up check
+    if (body?.warm === true) {
+      return new Response("Warm-up", { status: 200, headers: corsHeaders });
+    }
+    
+    const { reportData, trustedPricing }: InitiateReportFlowRequest = body
     
     logFlowEvent("flow_started", {
       email: reportData?.email,

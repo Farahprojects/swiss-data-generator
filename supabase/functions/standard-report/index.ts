@@ -242,21 +242,16 @@ serve(async (req) => {
     );
   }
 
-  // Warm-up check
-  try {
-    const body = await req.json();
-    if (body?.warm === true) {
-      return new Response("Warm-up", { status: 200, headers: CORS_HEADERS });
-    }
-  } catch {
-    // If JSON parsing fails, continue with normal flow
-  }
-
   try {
     // Parse the request payload
     let reportData;
     try {
       reportData = await req.json();
+      
+      // Warm-up check
+      if (reportData?.warm === true) {
+        return new Response("Warm-up", { status: 200, headers: CORS_HEADERS });
+      }
     } catch (parseError) {
       return jsonResponse(
         { error: "Invalid JSON payload", details: parseError.message, requestId },

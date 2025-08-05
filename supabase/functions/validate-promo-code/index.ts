@@ -54,22 +54,19 @@ serve(async (req) => {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
-  // Warm-up check
-  if (req.method === "POST") {
-    try {
-      const body = await req.json();
-      if (body?.warm === true) {
-        return new Response("Warm-up", { status: 200, headers: corsHeaders });
-      }
-    } catch {
-      // If JSON parsing fails, continue with normal flow
-    }
-  }
-
   const startTime = Date.now();
 
   try {
-    const { promoCode, basePrice, email, reportType, request }: ValidatePromoRequest = await req.json();
+    // Read body once and check for warm-up
+    const body = await req.json();
+    
+    // Warm-up check
+    if (body?.warm === true) {
+      return new Response("Warm-up", { status: 200, headers: corsHeaders });
+    }
+    
+    // Extract data for normal function
+    const { promoCode, basePrice, email, reportType, request }: ValidatePromoRequest = body;
     
     logValidation("validation_started", {
       promoCode: promoCode?.substring(0, 3) + "***", // Partially mask for logs

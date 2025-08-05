@@ -169,18 +169,6 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Warm-up check
-  if (req.method === "POST") {
-    try {
-      const body = await req.json();
-      if (body?.warm === true) {
-        return new Response("Warm-up", { status: 200, headers: corsHeaders });
-      }
-    } catch {
-      // If JSON parsing fails, continue with normal flow
-    }
-  }
-
   const entryTimestamp = Date.now();
   const requestId = crypto.randomUUID().slice(0, 8);
   const stageStartTime = Date.now();
@@ -199,6 +187,11 @@ serve(async (req) => {
 
   try {
     const requestBody = await req.json();
+    
+    // Warm-up check
+    if (requestBody?.warm === true) {
+      return new Response("Warm-up", { status: 200, headers: corsHeaders });
+    }
     const { sessionId, type } = requestBody;
     backgroundRequestId = requestBody.backgroundRequestId || "not_provided";
     const fallbackSync = requestBody.fallback_sync || false;
