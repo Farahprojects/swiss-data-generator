@@ -46,6 +46,11 @@ const PublicReport = () => {
     
     if (isStripeSuccessReturn) {
       log('info', '🎯 Stripe success return detected', { guestId: id, sessionId, status }, 'publicReport');
+      
+      // Call the new edge function to process the paid report
+      if (id) {
+        processPaidReport(id, sessionId);
+      }
     }
     
     log('debug', 'URL params', { id, sessionId, status, isStripeSuccessReturn }, 'publicReport');
@@ -66,6 +71,31 @@ const PublicReport = () => {
     setIsGuestIdLoading(false);
     log('debug', 'Final activeGuestId will be', { finalId: id || localStorage.getItem('currentGuestReportId') }, 'publicReport');
   }, []);
+
+  // Function to call the process-paid-report edge function
+  const processPaidReport = async (guestId: string, sessionId?: string) => {
+    try {
+      log('info', '🔄 Calling process-paid-report edge function', { guestId, sessionId }, 'publicReport');
+      
+      const { data, error } = await supabase.functions.invoke('process-paid-report', {
+        body: {
+          guest_id: guestId,
+          session_id: sessionId
+        }
+      });
+
+      if (error) {
+        log('error', '❌ process-paid-report failed', { error, guestId }, 'publicReport');
+        console.error('process-paid-report error:', error);
+      } else {
+        log('info', '✅ process-paid-report successful', { data, guestId }, 'publicReport');
+        console.log('process-paid-report response:', data);
+      }
+    } catch (err) {
+      log('error', '❌ process-paid-report exception', { error: err, guestId }, 'publicReport');
+      console.error('process-paid-report exception:', err);
+    }
+  };
 
   // Check for cancelled payment status
   useEffect(() => {
