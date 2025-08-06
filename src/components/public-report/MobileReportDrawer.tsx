@@ -320,7 +320,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
   return (
     <Drawer.Root open={isOpen} onOpenChange={onOpenChange}>
       <Drawer.Portal>
-        <Drawer.Overlay className="fixed inset-0 bg-black/40 z-[100]" />
+          <Drawer.Overlay className="fixed inset-0 bg-white z-[100]" />
         <Drawer.Content className="fixed bottom-0 left-0 right-0 h-[96%] bg-white rounded-t-2xl z-[100] flex flex-col">
           
           {/* Header */}
