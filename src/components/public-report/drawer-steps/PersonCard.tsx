@@ -69,16 +69,24 @@ const PersonCard = ({
     
     // Use the name property from PlaceData interface
     setValue(loc, place.name);
-    if (place.latitude) setValue(getField('birthLatitude') as keyof ReportFormData, place.latitude);
-    if (place.longitude) setValue(getField('birthLongitude') as keyof ReportFormData, place.longitude);
-    if (place.placeId) setValue(getField('birthPlaceId') as keyof ReportFormData, place.placeId);
+    
+    // Always set coordinates, even if undefined - this ensures form consistency
+    setValue(getField('birthLatitude') as keyof ReportFormData, place.latitude || undefined);
+    setValue(getField('birthLongitude') as keyof ReportFormData, place.longitude || undefined);
+    setValue(getField('birthPlaceId') as keyof ReportFormData, place.placeId || undefined);
 
     console.log(`✅ Person ${personNumber} location data saved:`, {
       location: place.name,
       latitude: place.latitude,
       longitude: place.longitude,
-      placeId: place.placeId
+      placeId: place.placeId,
+      hasCoordinates: !!(place.latitude && place.longitude)
     });
+
+    // If coordinates are missing, log a warning
+    if (!place.latitude || !place.longitude) {
+      console.warn(`⚠️ Person ${personNumber} location "${place.name}" missing coordinates - this may cause issues with report generation`);
+    }
 
     (document.activeElement as HTMLElement)?.blur?.();
 

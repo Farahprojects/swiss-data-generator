@@ -68,8 +68,8 @@ export const useReportSubmission = (
         birth_date: data.secondPersonBirthDate,
         birth_time: data.secondPersonBirthTime,
         location: data.secondPersonBirthLocation,
-        latitude: data.secondPersonLatitude,
-        longitude: data.secondPersonLongitude,
+        latitude: data.secondPersonLatitude ?? null, // Ensure null instead of undefined
+        longitude: data.secondPersonLongitude ?? null, // Ensure null instead of undefined  
         place_id: data.secondPersonPlaceId,
         tz: '',
         house_system: ''
