@@ -121,29 +121,13 @@ export const useReportSubmission = (
         return { success: true, guestReportId };
       }
 
-      // For paid reports, redirect to checkout
+      // For paid reports, redirect to checkout immediately to preserve user gesture
       if (flowResponse.checkoutUrl) {
-        window.open(flowResponse.checkoutUrl, '_self');
+        window.location.href = flowResponse.checkoutUrl;
         return { success: true };
       }
 
-      // Fallback for paid reports without checkout URL
-      const { data: checkoutResponse, error: checkoutError } = await supabase.functions.invoke('create-checkout', {
-        body: {
-          guest_report_id: guestReportId,
-          amount: trustedPricing.final_price_usd,
-          email: data.email,
-          description: "Astrology Report",
-          successUrl: `${window.location.origin}/report?guest_id=${guestReportId}`,
-          cancelUrl: `${window.location.origin}/checkout/${guestReportId}?status=cancelled`
-        }
-      });
-
-      if (checkoutError || !checkoutResponse?.url) {
-        throw new Error('❌ Failed to create checkout session');
-      }
-
-      window.open(checkoutResponse.url, '_self');
+      throw new Error('❌ No checkout URL returned from report flow');
       return { success: true };
 
     } catch (err: any) {
