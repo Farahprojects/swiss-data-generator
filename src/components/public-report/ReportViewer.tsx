@@ -21,7 +21,7 @@ interface ReportViewerProps {
   onStateReset?: () => void;
 }
 
-type ModalType = 'chatgpt' | 'close' | null;
+type ModalType = 'chatgpt' | 'close' | 'ai-choice' | null;
 type TransitionPhase = 'idle' | 'fading' | 'clearing' | 'transitioning' | 'complete';
 
 export const ReportViewer = ({ 
@@ -37,18 +37,26 @@ export const ReportViewer = ({
   const [activeView, setActiveView] = useState<'report' | 'astro'>(
     reportData.metadata.content_type === 'ai' ? 'report' : 'astro'
   );
-  const [chatToken, setChatToken] = useState<string | null>(null);
-  const [cachedUuid, setCachedUuid] = useState<string | null>(null);
   const [isCopping, setIsCopping] = useState(false);
   const [isCopyCompleted, setIsCopyCompleted] = useState(false);
   const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>('idle');
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [chatGPTMessage, setChatGPTMessage] = useState<string>('');
+  const [hasChosenAIPath, setHasChosenAIPath] = useState(false);
+  const [genericCopySuccess, setGenericCopySuccess] = useState(false);
   const { toast } = useToast();
 
   // Determine view logic based on content type
   const contentType = reportData.metadata.content_type;
   const showToggle = contentType === 'both';
-  const defaultView = contentType === 'ai' ? 'report' : contentType === 'astro' ? 'astro' : 'report';
+  
+  // Prioritize report content over astro data
+  const hasReportContent = !!reportData.report_content && reportData.report_content.trim().length > 20;
+  const hasAstroData = !!reportData.swiss_data;
+  
+  // Default to report if available, otherwise astro data
+  const defaultView = hasReportContent ? 'report' : hasAstroData ? 'astro' : 'report';
+  
   // Enforce content-based view restrictions
   useEffect(() => {
     if (!showToggle) {
@@ -211,8 +219,8 @@ export const ReportViewer = ({
       setTransitionPhase('clearing');
       
       // Reset component state gracefully
-      setChatToken(null);
-      setCachedUuid(null);
+      // setChatToken(null); // Removed
+      // setCachedUuid(null); // Removed
       setIsCopyCompleted(false);
       
       // Reset view state
@@ -253,80 +261,113 @@ export const ReportViewer = ({
       setIsCopping(true);
       console.log('[ChatGPT] Starting ChatGPT integration...');
 
-      let uuid = cachedUuid;
-      let token = chatToken;
-
-      // If not cached, fetch new token
-      if (!chatToken || !cachedUuid) {
-        console.log('[ChatGPT] No cached token, fetching new one...');
-        toast({
-          title: "Preparing ChatGPT...",
-          description: "Fetching secure access token…",
-        });
-
-        /* 1. Get guest report ID and create temp data if needed */
-        const guestReportId = getGuestReportId();
-        console.log('[ChatGPT] Guest report ID:', guestReportId);
-        if (!guestReportId) throw new Error("Guest report ID not found");
-
-        // Always call create-temp-report-data first to ensure temp data exists
-        console.log('[ChatGPT] Creating temp report data...');
-        toast({
-          title: "Preparing ChatGPT...",
-          description: "Creating temporary data...",
-        });
-        
-        const createResponse = await fetch(
-          "https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/create-temp-report-data",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ guest_report_id: guestReportId }),
-          }
-        );
-        
-        if (!createResponse.ok) {
-          throw new Error("Failed to create temp report data");
-        }
-        
-        const createResult = await createResponse.json();
-        console.log('[ChatGPT] Create temp data result:', createResult);
-        
-        // Use the data directly from create-temp-report-data response
-        uuid = createResult.temp_data_id;
-        token = createResult.plain_token;
-        
-        console.log('[ChatGPT] ✅ Retrieved data from create-temp-report-data:', {
-          uuid: uuid,
-          has_token: !!token,
-          has_chat_hash: !!createResult.chat_hash
-        });
-        
-        // Cache the data for future use
-        setChatToken(token);
-        setCachedUuid(uuid);
-        
-        // Cache both token and uuid for subsequent calls
-        setChatToken(token);
-        setCachedUuid(uuid);
+      // Debug clipboard permissions on mobile
+      try {
+        const permission = await navigator.permissions.query({ name: 'clipboard-write' as PermissionName });
+        console.log('[ChatGPT] Clipboard permission state:', permission.state);
+      } catch (permError) {
+        console.log('[ChatGPT] Could not check clipboard permission:', permError);
       }
 
-      /* 3. Copy formatted message to clipboard */
+      toast({
+        title: "Preparing ChatGPT...",
+        description: "Fetching secure access token…",
+      });
+
+      /* 1. Get guest report ID from the current report data */
+      const guestReportId = reportData.guest_report?.id;
+      console.log('[ChatGPT] Guest report ID:', guestReportId);
+      if (!guestReportId) throw new Error("Guest report ID not found");
+
+      /* 2. Always call create-temp-report-data to get fresh keys */
+      console.log('[ChatGPT] Fetching temp report data...');
+      toast({
+        title: "Preparing ChatGPT...",
+        description: "Creating temporary data...",
+      });
+      
+      const createResponse = await fetch(
+        "https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/create-temp-report-data",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ guest_report_id: guestReportId }),
+        }
+      );
+      
+      if (!createResponse.ok) {
+        throw new Error("Failed to create temp report data");
+      }
+      
+      const createResult = await createResponse.json();
+      console.log('[ChatGPT] Create temp data result:', createResult);
+      
+      const uuid = createResult.temp_data_id;
+      const token = createResult.plain_token;
+      
+      console.log('[ChatGPT] ✅ Retrieved data from create-temp-report-data:', {
+        uuid: uuid,
+        has_token: !!token,
+        has_chat_hash: !!createResult.chat_hash
+      });
+
+      /* 3. Copy formatted message to clipboard - do this immediately after getting data */
       const formattedMessage = `uuid: ${uuid}\ntoken: ${token}`;
       console.log('[ChatGPT] Formatted message:', formattedMessage);
       
+      // Store message for manual copying
+      setChatGPTMessage(formattedMessage);
+      
+      // Try clipboard copy immediately after getting the data
+      let clipboardSuccess = false;
       try {
         await navigator.clipboard.writeText(formattedMessage);
+        console.log('[ChatGPT] ✅ Clipboard copy successful');
+        clipboardSuccess = true;
         toast({
           title: "✅ Copied to clipboard!",
           description: "Now paste this in ChatGPT to load your report.",
         });
       } catch (clipboardError) {
-        console.log('[ChatGPT] Clipboard error:', clipboardError);
-        toast({
-          title: "Opening ChatGPT...",
-          description: "Ready to load your report!",
-        });
+        console.error('[ChatGPT] ❌ Clipboard error:', clipboardError);
+        clipboardSuccess = false;
+        
+        // Fallback for mobile browsers
+        try {
+          // Create a temporary textarea element
+          const textArea = document.createElement('textarea');
+          textArea.value = formattedMessage;
+          textArea.style.position = 'fixed';
+          textArea.style.left = '-999999px';
+          textArea.style.top = '-999999px';
+          document.body.appendChild(textArea);
+          textArea.focus();
+          textArea.select();
+          
+          const successful = document.execCommand('copy');
+          document.body.removeChild(textArea);
+          
+          if (successful) {
+            console.log('[ChatGPT] ✅ Fallback clipboard copy successful');
+            clipboardSuccess = true;
+            toast({
+              title: "✅ Copied to clipboard!",
+              description: "Now paste this in ChatGPT to load your report.",
+            });
+          } else {
+            console.error('[ChatGPT] ❌ Fallback clipboard also failed');
+            toast({
+              title: "Opening ChatGPT...",
+              description: "Ready to load your report!",
+            });
+          }
+        } catch (fallbackError) {
+          console.error('[ChatGPT] ❌ Fallback clipboard error:', fallbackError);
+          toast({
+            title: "Opening ChatGPT...",
+            description: "Ready to load your report!",
+          });
+        }
       }
 
       /* 4. build ?message= param and open ChatGPT */
@@ -334,12 +375,13 @@ export const ReportViewer = ({
       const gptUrl = `https://chatgpt.com/g/g-68636dbe19588191b04b0a60bcbf3df3-therai?message=${message}`;
       console.log('[ChatGPT] Opening URL:', gptUrl);
 
+      // Open ChatGPT immediately after clipboard attempt
       setTimeout(() => {
         const newWindow = window.open(gptUrl, "_blank");
         console.log('[ChatGPT] Window opened:', newWindow);
         setActiveModal(null);
         setIsCopping(false);
-      }, 800);
+      }, clipboardSuccess ? 800 : 100); // Faster if clipboard failed
     } catch (err) {
       console.error("ChatGPT setup failed:", err);
       toast({
@@ -349,6 +391,160 @@ export const ReportViewer = ({
       });
       setIsCopping(false);
       setActiveModal(null);
+    }
+  };
+
+  const handleManualCopy = async () => {
+    if (!chatGPTMessage) return;
+    
+    try {
+      await navigator.clipboard.writeText(chatGPTMessage);
+      toast({
+        title: "✅ Copied to clipboard!",
+        description: "Now paste this in ChatGPT to load your report.",
+      });
+    } catch (error) {
+      console.error('[ChatGPT] Manual copy failed:', error);
+      toast({
+        title: "Copy failed",
+        description: "Please manually copy the text above.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleOpenChatGPTModal = async () => {
+    // Show AI choice prompt first
+    setActiveModal('ai-choice');
+  };
+
+  const handlePremiumFlow = async () => {
+    try {
+      // Generate the message immediately when modal opens
+      const guestReportId = reportData.guest_report?.id;
+      if (!guestReportId) {
+        toast({
+          title: "Error",
+          description: "Report data not found.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Fetch temp data to generate message
+      const createResponse = await fetch(
+        "https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/create-temp-report-data",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ guest_report_id: guestReportId }),
+        }
+      );
+      
+      if (!createResponse.ok) {
+        throw new Error("Failed to create temp report data");
+      }
+      
+      const createResult = await createResponse.json();
+      const uuid = createResult.temp_data_id;
+      const token = createResult.plain_token;
+      
+      const formattedMessage = `uuid: ${uuid}\ntoken: ${token}`;
+      setChatGPTMessage(formattedMessage);
+      
+      setHasChosenAIPath(true);
+      setActiveModal('chatgpt');
+    } catch (error) {
+      console.error('[ChatGPT] Failed to prepare message:', error);
+      toast({
+        title: "Error",
+        description: "Failed to prepare ChatGPT data.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleGenericFlow = async () => {
+    try {
+      // Prepare generic AI data (report content + astro JSON)
+      let genericData = '';
+      
+      // Add report content if available
+      if (reportData.report_content && reportData.report_content.trim().length > 20) {
+        genericData += `ASTROLOGY REPORT:\n\n${reportData.report_content}\n\n`;
+      }
+      
+      // Add astro data if available
+      if (reportData.swiss_data) {
+        genericData += `ASTROLOGICAL DATA:\n${JSON.stringify(reportData.swiss_data, null, 2)}\n\n`;
+      }
+      
+      // Add instruction
+      genericData += `INSTRUCTIONS: Please interpret this astrology report and provide insights about the person's personality, life themes, and potential opportunities.`;
+      
+      // Copy to clipboard
+      try {
+        await navigator.clipboard.writeText(genericData);
+        setGenericCopySuccess(true);
+        
+        // Auto-close modal after 3 seconds so user can see the animation
+        setTimeout(() => {
+          setGenericCopySuccess(false);
+          setActiveModal(null);
+        }, 3000);
+      } catch (clipboardError) {
+        console.error('[Generic AI] Clipboard error:', clipboardError);
+        
+        // Fallback for mobile browsers
+        try {
+          const textArea = document.createElement('textarea');
+          textArea.value = genericData;
+          textArea.style.position = 'fixed';
+          textArea.style.left = '-999999px';
+          textArea.style.top = '-999999px';
+          document.body.appendChild(textArea);
+          textArea.focus();
+          textArea.select();
+          
+          const successful = document.execCommand('copy');
+          
+          // Always remove the temporary element
+          if (document.body.contains(textArea)) {
+            document.body.removeChild(textArea);
+          }
+          
+          if (successful) {
+            setGenericCopySuccess(true);
+            
+            // Auto-close modal after 3 seconds so user can see the animation
+            setTimeout(() => {
+              setGenericCopySuccess(false);
+              setActiveModal(null);
+            }, 3000);
+          } else {
+            toast({
+              title: "Data ready",
+              description: "Your astrology data is ready to paste into any AI tool.",
+            });
+          }
+        } catch (fallbackError) {
+          console.error('[Generic AI] Fallback clipboard error:', fallbackError);
+          toast({
+            title: "Data ready",
+            description: "Your astrology data is ready to paste into any AI tool.",
+          });
+        }
+      }
+      
+      setHasChosenAIPath(true);
+      // Don't close modal immediately - let the 3-second timeout handle it
+    } catch (error) {
+      console.error('[Generic AI] Failed to prepare data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to prepare AI data.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -448,7 +644,7 @@ export const ReportViewer = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setActiveModal('chatgpt')}
+                      onClick={handleOpenChatGPTModal}
                       className="text-gray-700 text-base font-medium hover:text-black hover:bg-gray-100 transition-colors active:scale-95 border-gray-200"
                     >
                       <img 
@@ -500,7 +696,7 @@ export const ReportViewer = ({
               
               <Button
                 variant="outline"
-                onClick={() => setActiveModal('chatgpt')}
+                onClick={handleOpenChatGPTModal}
                 disabled={isCopping}
                 className="flex-1 h-12 text-base font-medium text-gray-700 hover:text-black hover:bg-gray-100 transition-colors border-gray-200 rounded-xl"
               >
@@ -519,6 +715,55 @@ export const ReportViewer = ({
         )}
       </div>
 
+      {/* AI Choice Modal */}
+      <Dialog open={activeModal === 'ai-choice'} onOpenChange={(open) => {
+        if (!open) {
+          setGenericCopySuccess(false);
+        }
+        setActiveModal(null);
+      }}>
+        <DialogContent className="sm:max-w-md bg-white border-0 shadow-2xl">
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-xl font-light text-gray-900">
+              Do you use ChatGPT Premium?
+            </DialogTitle>
+            <DialogDescription className="text-base text-gray-600 leading-relaxed mt-2">
+              We've prepped your astrology data for AI-based interpretation.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex flex-col gap-3 mt-6">
+            <Button
+              onClick={handlePremiumFlow}
+              className="h-12 text-lg bg-blue-600 hover:bg-blue-700 text-white font-normal rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
+            >
+              Yes, open in ChatGPT
+            </Button>
+            <Button
+              onClick={handleGenericFlow}
+              disabled={genericCopySuccess}
+              className={`h-12 text-lg font-normal rounded-full transition-all duration-500 ease-out active:scale-[0.98] ${
+                genericCopySuccess 
+                  ? 'bg-green-600 text-white cursor-default' 
+                  : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+              }`}
+            >
+              {genericCopySuccess ? 'Done, enjoy!' : 'No, I\'ll use another AI'}
+            </Button>
+            <Button
+              onClick={() => {
+                setGenericCopySuccess(false);
+                setActiveModal(null);
+              }}
+              variant="ghost"
+              className="h-10 text-sm text-gray-500 font-normal rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
+            >
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* ChatGPT Confirmation Modal */}
       <Dialog open={activeModal === 'chatgpt'} onOpenChange={() => setActiveModal(null)}>
         <DialogContent className="sm:max-w-md bg-white border-0 shadow-2xl">
@@ -530,6 +775,16 @@ export const ReportViewer = ({
               We'll copy your access token to clipboard and open ChatGPT. Simply paste the token in the chat to load your report.
             </DialogDescription>
           </DialogHeader>
+          
+          {chatGPTMessage && (
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-xs text-gray-600 mb-2">Your access token:</p>
+              <div className="text-xs font-mono text-gray-800 break-all bg-white p-2 rounded border">
+                {chatGPTMessage}
+              </div>
+            </div>
+          )}
+          
           <div className="flex flex-col gap-3 mt-6">
             <Button
               onClick={handleChatGPTCopyAndGo}
@@ -537,6 +792,13 @@ export const ReportViewer = ({
               className="h-12 text-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-normal rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
             >
               {isCopping ? 'Opening...' : 'Go'}
+            </Button>
+            <Button
+              onClick={handleManualCopy}
+              disabled={isCopping}
+              className="h-12 text-lg bg-gray-200 hover:bg-gray-300 text-gray-800 font-normal rounded-full transition-all duration-200 ease-out active:scale-[0.98]"
+            >
+              {isCopping ? 'Copying...' : 'Copy Token'}
             </Button>
             <Button
               onClick={() => setActiveModal(null)}
