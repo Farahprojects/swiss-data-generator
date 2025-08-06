@@ -40,6 +40,7 @@ import PreviewWebsite from './pages/PreviewWebsite';
 import { CoachReportPage } from './components/website-builder/CoachReportPage';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
+import StripeReturn from './pages/StripeReturn';
 
 
 const queryClient = new QueryClient({
@@ -100,6 +101,7 @@ function App() {
                               <Route path="/legal" element={<Legal />} />
                               <Route path="/blog" element={<Blog />} />
                               <Route path="/blog/:slug" element={<BlogPost />} />
+                              <Route path="/stripe-return" element={<StripeReturn />} />
                               
                               <Route path="/login" element={<Login />} />
                               <Route path="/signup" element={<Signup />} />

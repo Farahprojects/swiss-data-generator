@@ -85,9 +85,9 @@ serve(async (req) => {
       /* -------- Success & cancel URLs - USE PASSED URLS -------- */
       const baseOrigin = req.headers.get("origin") || Deno.env.get("SUPABASE_URL") || "https://theraiastro.com";
       
-      // Use the successUrl passed from initiate-report-flow (which now points to /report?guest_id=...)
-      const finalSuccessUrl = successUrl ?? `${baseOrigin}/report?guest_id=${guest_report_id}`;
-      const finalCancelUrl = cancelUrl ?? `${baseOrigin}/report?status=cancelled`;
+      // Use /stripe-return for better UX control
+      const finalSuccessUrl = successUrl ?? `${baseOrigin}/stripe-return?guest_id=${guest_report_id}&session_id={CHECKOUT_SESSION_ID}`;
+      const finalCancelUrl = cancelUrl ?? `${baseOrigin}/stripe-return?guest_id=${guest_report_id}&status=cancelled`;
       
       console.log("🔗 Success URL:", finalSuccessUrl);
       console.log("🔗 Cancel URL:", finalCancelUrl);
