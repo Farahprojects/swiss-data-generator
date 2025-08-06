@@ -14,7 +14,7 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
   email, 
   guestReportId 
 }) => {
-  const { open, isOpen } = useReportModal();
+  const { open } = useReportModal();
   const [hasOpenedModal, setHasOpenedModal] = useState(false);
 
   // Register with SessionManager for state reset
@@ -76,17 +76,6 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
       clearInterval(pollInterval);
     };
   }, [guestReportId, fetchAndOpenReport, hasOpenedModal]);
-
-  // Close the success screen when modal opens
-  useEffect(() => {
-    if (isOpen && !hasOpenedModal) {
-      logSuccessScreen('info', 'Modal opened - closing success screen');
-      // Navigate away from success screen or trigger parent to close it
-      // Since this is managed by parent component's reportCreated state,
-      // we need to find a way to reset that state
-      window.history.replaceState(null, '', '/');
-    }
-  }, [isOpen, hasOpenedModal]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
