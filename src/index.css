@@ -242,13 +242,13 @@ gmp-place-autocomplete::part(result-item) {
   -webkit-touch-callout: default;
 }
 
-/* Keep footer at bottom of drawer, not fixed to viewport */
+/* Fixed footer at bottom of viewport, resists keyboard push */
 .mobile-form-protector .mobile-footer-fixed {
-  position: relative !important;
-  bottom: auto !important;
-  left: auto !important;
-  right: auto !important;
-  z-index: 10 !important;
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 50 !important;
   background: white !important;
   border-top: 1px solid #f3f4f6 !important;
   padding-bottom: env(safe-area-inset-bottom, 0px) !important;
