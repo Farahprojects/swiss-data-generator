@@ -198,6 +198,7 @@ async function updateGuestReportPaymentStatus(guestReportId: string) {
     .from('guest_reports')
     .update({
       payment_status: 'paid',
+      updated_at: new Date().toISOString(),
     })
     .eq('id', guestReportId)
     .eq('payment_status', 'pending'); // Idempotency check

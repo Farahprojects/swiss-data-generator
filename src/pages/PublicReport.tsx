@@ -15,7 +15,6 @@ import { storeGuestReportId } from '@/utils/urlHelpers';
 import { log } from '@/utils/logUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
-import { PaymentSuccessMessage } from '@/components/public-report/PaymentSuccessMessage';
 
 const PublicReport = () => {
   // ALL HOOKS MUST BE DECLARED FIRST - NEVER INSIDE TRY-CATCH
@@ -24,7 +23,6 @@ const PublicReport = () => {
   const [activeGuestId, setActiveGuestId] = useState<string | null>(null);
   const [isGuestIdLoading, setIsGuestIdLoading] = useState(true);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
-  const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
   const location = useLocation();
   const isMobile = useIsMobile();
 
@@ -61,21 +59,8 @@ const PublicReport = () => {
   // Check for cancelled payment status
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const status = params.get('status');
-    const sessionId = params.get('session_id');
-    
-    if (status === 'cancelled') {
+    if (params.get('status') === 'cancelled') {
       setShowCancelledMessage(true);
-    } else if (status === 'success' && sessionId) {
-      // Payment successful - show success message and clear URL params
-      console.log('Payment successful, session_id:', sessionId);
-      setShowPaymentSuccess(true);
-      
-      // Clear the URL params but keep the guest_id if present
-      const newUrl = new URL(window.location.href);
-      newUrl.searchParams.delete('status');
-      newUrl.searchParams.delete('session_id');
-      window.history.replaceState({}, '', newUrl.toString());
     }
   }, [location.search]);
 
@@ -149,11 +134,6 @@ const PublicReport = () => {
   try {
     return (
       <div className="min-h-screen bg-background">
-        {/* Payment Success Message */}
-        {showPaymentSuccess && (
-          <PaymentSuccessMessage onClose={() => setShowPaymentSuccess(false)} />
-        )}
-
         {/* Show cancelled payment message */}
         {showCancelledMessage && (
           <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md px-4">
