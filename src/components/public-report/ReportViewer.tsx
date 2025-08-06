@@ -34,9 +34,14 @@ export const ReportViewer = ({
   console.info('[ReportViewer] mounted with data.id =', reportData?.guest_report?.id);
   const isMobile = useIsMobile();
   const [activeModal, setActiveModal] = useState<ModalType>(null);
-  const [activeView, setActiveView] = useState<'report' | 'astro'>(
-    reportData.metadata.content_type === 'ai' ? 'report' : 'astro'
-  );
+  const [activeView, setActiveView] = useState<'report' | 'astro'>(() => {
+    // Prioritize report content over astro data from initial state
+    const hasReportContent = !!reportData.report_content && reportData.report_content.trim().length > 20;
+    const hasAstroData = !!reportData.swiss_data;
+    
+    // Default to report if available, otherwise astro data
+    return hasReportContent ? 'report' : hasAstroData ? 'astro' : 'report';
+  });
   const [isCopping, setIsCopping] = useState(false);
   const [isCopyCompleted, setIsCopyCompleted] = useState(false);
   const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>('idle');
