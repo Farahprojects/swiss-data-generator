@@ -60,6 +60,11 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   // Report submission hook
   const { isProcessing, reportCreated, submitReport } = useReportSubmission();
 
+  // Refs for scrolling
+  const successScreenRef = useRef<HTMLDivElement>(null);
+  const secondPersonRef = useRef<HTMLDivElement>(null);
+  const paymentStepRef = useRef<HTMLDivElement>(null);
+
   // Watch form values for step progression
   const formValues = form.watch();
   const selectedReportType = watch('reportType');
@@ -100,10 +105,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   useEffect(() => {
     onFormStateChange?.(isValid, shouldUnlockForm);
   }, [isValid, shouldUnlockForm, onFormStateChange]);
-
-  // Scroll handling refs
-  const paymentStepRef = useRef<HTMLDivElement>(null);
-  const secondPersonRef = useRef<HTMLDivElement>(null);
 
   const handleFirstPersonPlaceSelected = () => {
     const isDesktop = window.innerWidth >= 640;
@@ -170,10 +171,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   // Scroll to report section when success screen appears (same as CTA buttons)
   useEffect(() => {
     if (reportCreated && userName && userEmail) {
-      const reportSection = document.querySelector('#report-form');
-      if (reportSection) {
-        reportSection.scrollIntoView({ behavior: 'smooth' });
-      }
+      successScreenRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [reportCreated, userName, userEmail]);
 
@@ -182,11 +180,13 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     const guestReportId = localStorage.getItem('currentGuestReportId');
     
     return (
-      <SuccessScreen 
-        name={userName} 
-        email={userEmail} 
-        guestReportId={guestReportId || undefined}
-      />
+      <div ref={successScreenRef} data-success-screen>
+        <SuccessScreen 
+          name={userName} 
+          email={userEmail} 
+          guestReportId={guestReportId || undefined}
+        />
+      </div>
     );
   }
 

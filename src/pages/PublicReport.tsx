@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import HeroSection from '@/components/public-report/HeroSection';
 import FeaturesSection from '@/components/public-report/FeaturesSection';
@@ -25,6 +25,10 @@ const PublicReport = () => {
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const location = useLocation();
   const isMobile = useIsMobile();
+
+  // Refs for scrolling
+  const successScreenRef = useRef<HTMLDivElement>(null);
+  const reportFormRef = useRef<HTMLDivElement>(null);
 
   // Direct URL parsing fix for hydration issue - reliable guest_id detection
   useEffect(() => {
@@ -77,10 +81,14 @@ const PublicReport = () => {
       // Open mobile drawer
       setIsMobileDrawerOpen(true);
     } else {
-      // Scroll to form on desktop
-      const reportSection = document.querySelector('#report-form');
-      if (reportSection) {
-        reportSection.scrollIntoView({ behavior: 'smooth' });
+      // Check if success screen is visible, otherwise scroll to form
+      if (successScreenRef.current) {
+        successScreenRef.current.scrollIntoView({ behavior: 'smooth' });
+      } else {
+        const reportSection = document.querySelector('#report-form');
+        if (reportSection) {
+          reportSection.scrollIntoView({ behavior: 'smooth' });
+        }
       }
     }
   };
@@ -88,9 +96,14 @@ const PublicReport = () => {
   // Shared scroll function that can be used for both form and success screen
   const scrollToReportSection = () => {
     if (typeof window !== 'undefined') {
-      const reportSection = document.querySelector('#report-form');
-      if (reportSection) {
-        reportSection.scrollIntoView({ behavior: 'smooth' });
+      // Check if success screen is visible, otherwise scroll to form
+      if (successScreenRef.current) {
+        successScreenRef.current.scrollIntoView({ behavior: 'smooth' });
+      } else {
+        const reportSection = document.querySelector('#report-form');
+        if (reportSection) {
+          reportSection.scrollIntoView({ behavior: 'smooth' });
+        }
       }
     }
   };
@@ -353,11 +366,18 @@ const PublicReport = () => {
         </section>
 
         <TestsSection />
-        <div id="report-form">
+        <div id="report-form" ref={reportFormRef}>
           <ReportForm onReportCreated={(guestReportId, name, email) => {
             // Handle report creation - parent can manage success state
             console.log('Report created:', { guestReportId, name, email });
-            // Could navigate to success page or show success component here
+            // The ReportForm will show the SuccessScreen internally
+            // We need to update our ref to point to the success screen
+            setTimeout(() => {
+              const successScreen = document.querySelector('[data-success-screen]');
+              if (successScreen) {
+                successScreenRef.current = successScreen as HTMLDivElement;
+              }
+            }, 100);
           }} />
         </div>
         <TheraiChatGPTSection />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, forwardRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useReportModal } from "@/contexts/ReportModalContext";
 import { useReportSubmission } from "@/hooks/useReportSubmission";
@@ -11,11 +11,11 @@ interface SuccessScreenProps {
   guestReportId?: string;
 }
 
-export const SuccessScreen: React.FC<SuccessScreenProps> = ({
+export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(({
   name,
   email,
   guestReportId,
-}) => {
+}, ref) => {
   /* helpers */
   const { open } = useReportModal();
   const { resetReportState } = useReportSubmission();
@@ -29,18 +29,21 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
   const pollRef = useRef<NodeJS.Timeout>();
   const frameRef = useRef<number>(); // desktop scroll helper
 
-  /* --- scroll to top on desktop once SuccessScreen mounts --- */
+  /* --- scroll to success screen on desktop once SuccessScreen mounts --- */
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.innerWidth >= 768) {
       frameRef.current = requestAnimationFrame(() => {
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        // Scroll to the success screen itself instead of top of page
+        if (ref && typeof ref === 'object' && ref.current) {
+          ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
       });
     }
     return () => {
       if (frameRef.current) cancelAnimationFrame(frameRef.current);
     };
-  }, []);
+  }, [ref]);
 
   /* --- poll for ready signal, then open modal & close drawer --- */
   useEffect(() => {
@@ -117,4 +120,4 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
       </div>
     </div>
   );
-};
+});
