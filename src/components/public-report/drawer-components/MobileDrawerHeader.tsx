@@ -40,7 +40,7 @@ const MobileDrawerHeader = ({ currentStep, totalSteps, onClose }: MobileDrawerHe
         className="w-8 h-8 rounded-full bg-[hsl(var(--apple-gray-light))]/50 hover:bg-[hsl(var(--apple-gray-light))] transition-all duration-300 ease-out active:scale-95 flex items-center justify-center backdrop-blur-sm"
         aria-label="Close"
       >
-        <X className="h-3.5 w-3.5 text-[hsl(var(--apple-gray-dark))]" />
+        <X className="h-5 w-5 text-[hsl(var(--apple-gray-dark))]" strokeWidth={2.5} />
       </button>
     </div>
   );
