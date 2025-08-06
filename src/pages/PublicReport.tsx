@@ -15,6 +15,7 @@ import { storeGuestReportId } from '@/utils/urlHelpers';
 import { log } from '@/utils/logUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useStripeSuccess } from '@/contexts/StripeSuccessContext';
+import { useGuestReportData } from '@/hooks/useGuestReportData';
 import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
 import { SuccessScreen } from '@/components/public-report/SuccessScreen';
 
@@ -28,7 +29,10 @@ const PublicReport = () => {
   const [isStripeReturn, setIsStripeReturn] = useState(false);
   const location = useLocation();
   const isMobile = useIsMobile();
-  const { stripeSuccess, setStripeSuccess } = useStripeSuccess();
+  const { stripeSuccess, setStripeSuccess, proceedToReport } = useStripeSuccess();
+  
+  // Fetch guest report data for the success screen
+  const { data: guestReportData } = useGuestReportData(stripeSuccess.guestId);
 
   // Refs for scrolling
   const successScreenRef = useRef<HTMLDivElement>(null);
@@ -113,6 +117,23 @@ const PublicReport = () => {
       } else {
         log('info', '✅ process-paid-report successful', { data, guestId }, 'publicReport');
         console.log('process-paid-report response:', data);
+        
+        // If report is already generated, automatically proceed to success screen
+        if (data?.already_generated) {
+          log('info', '🎯 Report already generated, automatically proceeding to success screen', { guestId }, 'publicReport');
+          
+          // Clean URL parameters
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.delete('guest_id');
+          newUrl.searchParams.delete('session_id');
+          newUrl.searchParams.delete('status');
+          window.history.replaceState({}, '', newUrl.toString());
+          
+          // Brief delay for user feedback, then proceed
+          setTimeout(() => {
+            proceedToReport();
+          }, 1000);
+        }
         
         // Update state to show success
         setStripeSuccess({
@@ -464,14 +485,25 @@ const PublicReport = () => {
           onOpenChange={setIsMobileDrawerOpen}
         />
 
+        {/* Payment Processing Success Message */}
+        {stripeSuccess.showSuccessModal && stripeSuccess.isProcessing && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl p-8 max-w-md w-full text-center">
+              <div className="w-12 h-12 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto mb-4"></div>
+              <h3 className="text-xl font-light text-gray-900 mb-2">Payment Successful!</h3>
+              <p className="text-gray-600">Loading your report...</p>
+            </div>
+          </div>
+        )}
+
         {/* Original Success Screen when proceeding from Stripe */}
         {stripeSuccess.showOriginalSuccessScreen && stripeSuccess.guestId && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <SuccessScreen
                 ref={successScreenRef}
-                name="Guest User"
-                email="guest@example.com"
+                name={guestReportData?.person_a?.name || "Guest User"}
+                email={guestReportData?.person_a?.email || "guest@example.com"}
                 guestReportId={stripeSuccess.guestId}
               />
             </div>
