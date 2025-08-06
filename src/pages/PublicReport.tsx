@@ -15,7 +15,6 @@ import { storeGuestReportId } from '@/utils/urlHelpers';
 import { log } from '@/utils/logUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useStripeSuccess } from '@/contexts/StripeSuccessContext';
-import { StripeSuccessModal } from '@/components/public-report/StripeSuccessModal';
 import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
 import { SuccessScreen } from '@/components/public-report/SuccessScreen';
 
@@ -464,9 +463,6 @@ const PublicReport = () => {
           isOpen={isMobileDrawerOpen}
           onOpenChange={setIsMobileDrawerOpen}
         />
-
-        {/* Stripe Success Modal */}
-        <StripeSuccessModal />
 
         {/* Original Success Screen when proceeding from Stripe */}
         {stripeSuccess.showOriginalSuccessScreen && stripeSuccess.guestId && (
