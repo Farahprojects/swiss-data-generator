@@ -77,16 +77,16 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
     };
   }, [guestReportId, fetchAndOpenReport, hasOpenedModal]);
 
-  // Log modal state changes for debugging
+  // Close the success screen when modal opens
   useEffect(() => {
-    logSuccessScreen('info', 'Modal state changed', { isOpen, hasOpenedModal });
+    if (isOpen && !hasOpenedModal) {
+      logSuccessScreen('info', 'Modal opened - closing success screen');
+      // Navigate away from success screen or trigger parent to close it
+      // Since this is managed by parent component's reportCreated state,
+      // we need to find a way to reset that state
+      window.history.replaceState(null, '', '/');
+    }
   }, [isOpen, hasOpenedModal]);
-
-  // Hide the success screen when modal is open
-  if (isOpen) {
-    logSuccessScreen('info', 'Success screen hidden - modal is open');
-    return null;
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
