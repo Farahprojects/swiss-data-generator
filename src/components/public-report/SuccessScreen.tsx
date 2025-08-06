@@ -40,12 +40,17 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
   };
 
   const fetchAndOpenReport = useCallback(async () => {
-    // Just open the modal with the guestReportId - the modal will handle fetching the data
+    if (hasOpenedModal) return;
+    
+    logSuccessScreen('info', 'Opening report modal');
+    // Open the modal at app level - ReportViewer renders outside drawer via ReportModalContext
     open(guestReportId);
     setHasOpenedModal(true);
-    // Close the success screen by resetting the report state
+    
+    // Reset the report state to close the success screen
+    // This is safe because ReportViewer renders at app level, not inside drawer
     resetReportState();
-  }, [guestReportId, open, resetReportState]);
+  }, [guestReportId, open, resetReportState, hasOpenedModal]);
 
   // Polling mechanism for report_ready_signals
   useEffect(() => {
