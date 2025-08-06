@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useReportModal } from '@/contexts/ReportModalContext';
 import { useReportSubmission } from '@/hooks/useReportSubmission';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,6 +18,7 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
   const { open } = useReportModal();
   const { resetReportState } = useReportSubmission();
   const [hasOpenedModal, setHasOpenedModal] = useState(false);
+  const frameRef = useRef<number>();
 
   // Register with SessionManager for state reset
   useEffect(() => {
@@ -35,6 +36,15 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
     };
   }, []);
 
+  // Cleanup frame on unmount
+  useEffect(() => {
+    return () => {
+      if (frameRef.current) {
+        cancelAnimationFrame(frameRef.current);
+      }
+    };
+  }, []);
+
   const logSuccessScreen = (level: 'info' | 'warn' | 'error', message: string, data?: any) => {
     console[level](`[SuccessScreen] ${message}`, data);
   };
@@ -47,9 +57,10 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
     open(guestReportId);
     setHasOpenedModal(true);
     
-    // Reset the report state to close the success screen
-    // This is safe because ReportViewer renders at app level, not inside drawer
-    resetReportState();
+    // Defer state reset to allow SuccessScreen to unmount cleanly
+    frameRef.current = requestAnimationFrame(() => {
+      resetReportState();
+    });
   }, [guestReportId, open, resetReportState, hasOpenedModal]);
 
   // Polling mechanism for report_ready_signals
