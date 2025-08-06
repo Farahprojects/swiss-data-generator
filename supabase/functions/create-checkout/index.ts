@@ -20,14 +20,6 @@ serve(async (req) => {
     apiVersion: "2024-04-10",
   });
 
-  /* ──────────────  Supabase init  ────────────── */
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  
-  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-    auth: { persistSession: false }
-  });
-
   try {
     const body = await req.json();
     
@@ -140,19 +132,6 @@ serve(async (req) => {
         amount_total: session.amount_total,
         guest_report_id: guest_report_id
       });
-
-      // Update the guest_report with the real Stripe session ID
-      const { error: updateError } = await supabaseAdmin
-        .from("guest_reports")
-        .update({ stripe_session_id: session.id })
-        .eq("id", guest_report_id);
-
-      if (updateError) {
-        console.error("❌ Failed to update stripe_session_id:", updateError);
-        // Don't fail the checkout - the session was created successfully
-      } else {
-        console.log("✅ Updated guest_report with Stripe session ID:", session.id);
-      }
 
       return new Response(
         JSON.stringify({ 
