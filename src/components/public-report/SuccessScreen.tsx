@@ -1,9 +1,13 @@
-import React, { useState, useEffect, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+} from "react";
 import { useReportModal } from "@/contexts/ReportModalContext";
 import { useReportSubmission } from "@/hooks/useReportSubmission";
+import { supabase } from "@/integrations/supabase/client";
 import { useMobileDrawer } from "@/contexts/MobileDrawerContext";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SuccessScreenProps {
   name: string;
@@ -16,35 +20,32 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
   email,
   guestReportId,
 }) => {
-  /* helpers */
+  /** modal + global state helpers */
   const { open } = useReportModal();
   const { resetReportState } = useReportSubmission();
-  const isMobile = useIsMobile();
-  
-  // Only use mobile drawer context when on mobile
-  const mobileDrawer = isMobile ? useMobileDrawer() : null;
+  const { closeDrawer } = useMobileDrawer();
 
-  /* flags / timers */
-  const [modalOpened, setModalOpened] = useState(false);
+  /** local flags */
+  const [hasOpenedModal, setHasOpenedModal] = useState(false);
+  const frameRef = useRef<number>();
   const pollRef = useRef<NodeJS.Timeout>();
-  const frameRef = useRef<number>(); // desktop scroll helper
 
-  /* --- scroll to top on desktop once SuccessScreen mounts --- */
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (window.innerWidth >= 768) {
-      frameRef.current = requestAnimationFrame(() => {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      });
-    }
-    return () => {
-      if (frameRef.current) cancelAnimationFrame(frameRef.current);
-    };
-  }, []);
+  /** open modal + schedule state reset (guaranteed after paint) */
+  const openModalAndReset = useCallback(() => {
+    if (hasOpenedModal) return;
 
-  /* --- poll for ready signal, then open modal & close drawer --- */
+    open(guestReportId);
+    closeDrawer();        // Close the mobile drawer immediately
+    setHasOpenedModal(true);
+
+    frameRef.current = requestAnimationFrame(() => {
+      resetReportState();
+    });
+  }, [guestReportId, hasOpenedModal, open, resetReportState, closeDrawer]);
+
+  /** poll Supabase until report_ready_signals row exists */
   useEffect(() => {
-    if (modalOpened) return;
+    if (hasOpenedModal) return;
 
     pollRef.current = setInterval(async () => {
       const { data, error } = await supabase
@@ -60,33 +61,47 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
 
       if (data?.guest_report_id) {
         clearInterval(pollRef.current as NodeJS.Timeout);
-
-        open(guestReportId);           // show report modal
-        mobileDrawer?.closeDrawer();   // collapse mobile drawer (only on mobile)
-        resetReportState();            // clear submission state
-        setModalOpened(true);          // unmount SuccessScreen
+        openModalAndReset();
       }
     }, 2000);
 
     return () => clearInterval(pollRef.current as NodeJS.Timeout);
-  }, [guestReportId, modalOpened, open, mobileDrawer, resetReportState]);
+  }, [guestReportId, hasOpenedModal, openModalAndReset]);
 
-  /* unmount once modal is open */
-  if (modalOpened) return null;
+  /** clean up any pending animation frame */
+  useEffect(() => () => {
+    if (frameRef.current) cancelAnimationFrame(frameRef.current);
+  }, []);
 
-  /* --------------- UI --------------- */
+  /* ----------- RENDER ----------- */
+
+  /* Once the modal has opened, return null so this screen unmounts */
+  if (hasOpenedModal) return null;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
         <div className="space-y-4">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            <svg
+              className="w-8 h-8 text-green-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
             </svg>
           </div>
 
           <div className="space-y-2">
-            <h1 className="text-2xl font-light text-gray-900">Report Generated Successfully!</h1>
+            <h1 className="text-2xl font-light text-gray-900">
+              Report Generated Successfully!
+            </h1>
             <p className="text-gray-600">
               Your personalized astrology report is ready for {name}.
             </p>
