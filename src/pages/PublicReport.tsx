@@ -118,9 +118,9 @@ const PublicReport = () => {
         log('info', '✅ process-paid-report successful', { data, guestId }, 'publicReport');
         console.log('process-paid-report response:', data);
         
-        // If report is already generated, automatically proceed to success screen
-        if (data?.already_generated) {
-          log('info', '🎯 Report already generated, automatically proceeding to success screen', { guestId }, 'publicReport');
+        // If report is already generated OR generation was successful, automatically proceed to success screen
+        if (data?.already_generated || data?.success) {
+          log('info', '🎯 Report ready or processing, automatically proceeding to success screen', { guestId, already_generated: data?.already_generated, success: data?.success }, 'publicReport');
           
           // Clean URL parameters
           const newUrl = new URL(window.location.href);
