@@ -64,20 +64,27 @@ const PersonCard = ({
 
   const handlePlaceSelect = (place: PlaceData) => {
     const loc = getField('birthLocation') as keyof ReportFormData;
+    const latField = isSecondPerson ? 'secondPersonLatitude' : 'birthLatitude';
+    const lngField = isSecondPerson ? 'secondPersonLongitude' : 'birthLongitude';
+    const placeIdField = isSecondPerson ? 'secondPersonPlaceId' : 'birthPlaceId';
 
-    console.log(`🗺️ Person ${personNumber} selected place:`, place);
+    console.log(`🗺️ [PlaceSelect] Person ${personNumber} selected place:`, place);
+    console.log(`🗺️ [PlaceSelect] Person ${personNumber} lat/lng:`, place.latitude, place.longitude);
     
     // Use the name property from PlaceData interface
-    setValue(loc, place.name);
-    if (place.latitude) setValue(getField('birthLatitude') as keyof ReportFormData, place.latitude);
-    if (place.longitude) setValue(getField('birthLongitude') as keyof ReportFormData, place.longitude);
-    if (place.placeId) setValue(getField('birthPlaceId') as keyof ReportFormData, place.placeId);
+    setValue(loc, place.name, { shouldDirty: true, shouldValidate: true });
+    if (place.latitude) setValue(latField as keyof ReportFormData, place.latitude, { shouldDirty: true, shouldValidate: true });
+    if (place.longitude) setValue(lngField as keyof ReportFormData, place.longitude, { shouldDirty: true, shouldValidate: true });
+    if (place.placeId) setValue(placeIdField as keyof ReportFormData, place.placeId, { shouldDirty: true, shouldValidate: true });
 
-    console.log(`✅ Person ${personNumber} location data saved:`, {
+    console.log(`✅ Person ${personNumber} location data saved with fields:`, {
       location: place.name,
       latitude: place.latitude,
       longitude: place.longitude,
-      placeId: place.placeId
+      placeId: place.placeId,
+      latField,
+      lngField,
+      placeIdField
     });
 
     (document.activeElement as HTMLElement)?.blur?.();

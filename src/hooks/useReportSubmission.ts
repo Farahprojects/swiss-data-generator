@@ -75,6 +75,13 @@ export const useReportSubmission = (
         house_system: ''
       } : undefined;
 
+      // Debug logging for Person B coordinates
+      console.log('[Final Values] Person B coordinates:', {
+        secondPersonLatitude: data.secondPersonLatitude,
+        secondPersonLongitude: data.secondPersonLongitude,
+        secondPersonBirthLocation: data.secondPersonBirthLocation
+      });
+
       const reportType = data.request || data.reportType || 'essence_personal';
       
       const reportData = {
