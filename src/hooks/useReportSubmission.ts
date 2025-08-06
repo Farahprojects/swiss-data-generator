@@ -96,39 +96,17 @@ export const useReportSubmission = (
         isAstroOnly: isAstroReport(reportType)
       };
 
-      // Use the new orchestrated edge function for single-call submission
-      const { data: response, error } = await supabase.functions.invoke('initiate-and-checkout', {
-        body: {
-          reportData,
-          trustedPricing
-        }
-      });
-
-      if (error || !response?.success) {
-        throw new Error('❌ Failed to process report: ' + (error?.message || response?.error || 'Unknown error'));
-      }
-
-      const guestReportId = response.guestReportId;
-      storeGuestReportId(guestReportId);
-      setCreatedGuestReportId?.(guestReportId);
-
-      if (response.isFreeReport) {
-        toast({
-          title: "Report Created!",
-          description: "Your free report is being generated and will be sent to your email shortly.",
-        });
-        setReportCreated(true);
-        setIsProcessing(false);
-        return { success: true, guestReportId };
-      }
-
-      // For paid reports, redirect immediately using window.location.href to preserve user gesture
-      if (response.checkoutUrl) {
-        window.location.href = response.checkoutUrl;
-        return { success: true };
-      }
-
-      throw new Error('❌ No checkout URL returned for paid report');
+      // Encode data for URL parameters to preserve user gesture
+      const reportDataParam = encodeURIComponent(JSON.stringify(reportData));
+      const trustedPricingParam = encodeURIComponent(JSON.stringify(trustedPricing));
+      
+      // Direct navigation to edge function for immediate redirect (mobile-safe)
+      const functionUrl = `https://wrvqqvqvwqmfdqvqmaar.supabase.co/functions/v1/initiate-and-checkout?reportData=${reportDataParam}&trustedPricing=${trustedPricingParam}`;
+      
+      console.log("🔄 [REPORT-SUBMISSION] Redirecting to edge function for immediate checkout...");
+      window.location.href = functionUrl;
+      
+      return { success: true };
 
     } catch (err: any) {
       console.error(err);

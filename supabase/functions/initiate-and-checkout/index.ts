@@ -16,7 +16,25 @@ serve(async (req) => {
   try {
     console.log("🔄 [INITIATE-AND-CHECKOUT] Starting orchestrated flow...");
     
-    const payload = await req.json();
+    // Support both POST (JSON body) and GET (URL params) for mobile compatibility
+    let payload;
+    if (req.method === "POST") {
+      payload = await req.json();
+    } else {
+      // Parse URL params for GET request
+      const url = new URL(req.url);
+      const reportDataStr = url.searchParams.get('reportData');
+      const trustedPricingStr = url.searchParams.get('trustedPricing');
+      
+      if (!reportDataStr || !trustedPricingStr) {
+        throw new Error('Missing reportData or trustedPricing in URL parameters');
+      }
+      
+      payload = {
+        reportData: JSON.parse(decodeURIComponent(reportDataStr)),
+        trustedPricing: JSON.parse(decodeURIComponent(trustedPricingStr))
+      };
+    }
     console.log("🔄 [INITIATE-AND-CHECKOUT] Received payload:", {
       hasReportData: !!payload.reportData,
       hasTrustedPricing: !!payload.trustedPricing,
@@ -48,29 +66,18 @@ serve(async (req) => {
       hasCheckoutUrl: !!initiateResponse.checkoutUrl
     });
 
-    // If it's a free report, return early
+    // If it's a free report, redirect to success page
     if (initiateResponse.isFreeReport) {
-      return new Response(JSON.stringify({
-        success: true,
-        guestReportId: initiateResponse.guestReportId,
-        isFreeReport: true
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200
-      });
+      const origin = req.headers.get("origin") || "https://theraiastro.com";
+      const redirectUrl = `${origin}/report?guest_id=${initiateResponse.guestReportId}`;
+      console.log("✅ [INITIATE-AND-CHECKOUT] Free report - redirecting to:", redirectUrl);
+      return Response.redirect(redirectUrl, 302);
     }
 
-    // If checkout URL is already provided, return it
+    // If checkout URL is already provided, redirect to it
     if (initiateResponse.checkoutUrl) {
-      console.log("✅ [INITIATE-AND-CHECKOUT] Checkout URL already provided by initiate-report-flow");
-      return new Response(JSON.stringify({
-        success: true,
-        guestReportId: initiateResponse.guestReportId,
-        checkoutUrl: initiateResponse.checkoutUrl
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200
-      });
+      console.log("✅ [INITIATE-AND-CHECKOUT] Checkout URL already provided - redirecting to:", initiateResponse.checkoutUrl);
+      return Response.redirect(initiateResponse.checkoutUrl, 302);
     }
 
     // Step 2: Create checkout session if not provided
@@ -93,17 +100,10 @@ serve(async (req) => {
       throw new Error('Failed to create checkout session: ' + (checkoutError?.message || 'Unknown error'));
     }
 
-    console.log("✅ [INITIATE-AND-CHECKOUT] Checkout session created successfully");
+    console.log("✅ [INITIATE-AND-CHECKOUT] Checkout session created successfully - redirecting to:", checkoutResponse.url);
 
-    // Return the checkout URL
-    return new Response(JSON.stringify({
-      success: true,
-      guestReportId: initiateResponse.guestReportId,
-      checkoutUrl: checkoutResponse.url
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200
-    });
+    // Redirect directly to Stripe checkout
+    return Response.redirect(checkoutResponse.url, 302);
 
   } catch (error) {
     console.error("❌ [INITIATE-AND-CHECKOUT] Error in orchestrated flow:", error);
