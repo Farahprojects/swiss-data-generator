@@ -67,7 +67,7 @@ const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: -50 }}
         transition={{ duration: 0.3 }}
-        className="space-y-12"
+        className="space-y-6"
         style={{ paddingTop: `${topSafePadding + 24}px` }}
       >
         {/* Header */}
