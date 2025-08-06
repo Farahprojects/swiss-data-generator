@@ -9,7 +9,7 @@ import { SettingsModalProvider } from './contexts/SettingsModalContext';
 import { PricingProvider } from './contexts/PricingContext';
 import NavigationStateProvider from './contexts/NavigationStateContext';
 import { ReportModalProvider } from './contexts/ReportModalContext';
-
+import { StripeSuccessProvider } from './contexts/StripeSuccessContext';
 import { Toaster } from "@/components/ui/toaster";
 import "./App.css";
 import DashboardLayout from './components/dashboard/DashboardLayout';
@@ -86,7 +86,8 @@ function App() {
                     <ModalStateProvider>
                       <SettingsModalProvider>
                         <ReportModalProvider>
-                          <div className="min-h-screen bg-background">
+                          <StripeSuccessProvider>
+                            <div className="min-h-screen bg-background">
                             <Routes>
                               <Route path="/" element={<Index />} />
                               <Route path="/features" element={<Features />} />
@@ -128,7 +129,8 @@ function App() {
                             </Routes>
                             </div>
                             <Toaster />
-                          </ReportModalProvider>
+                          </StripeSuccessProvider>
+                        </ReportModalProvider>
                       </SettingsModalProvider>
                     </ModalStateProvider>
                   </PricingProvider>
