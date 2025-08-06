@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { UseFormRegister, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { Tag } from 'lucide-react';
@@ -31,6 +31,7 @@ const Step3Payment = ({
   const topSafePadding = useMobileSafeTopPadding();
   const [showPromoCode, setShowPromoCode] = useState(false);
   const [hasTimedOut, setHasTimedOut] = useState(false);
+  const promoCodeRef = useRef<HTMLDivElement>(null);
 
   const { getReportPrice, getReportTitle } = usePriceFetch();
 
@@ -132,6 +133,12 @@ const Step3Payment = ({
               open={showPromoCode} 
               onOpenChange={(open) => {
                 setShowPromoCode(open);
+                if (open) {
+                  // Auto-scroll to promo code section when it opens
+                  setTimeout(() => {
+                    promoCodeRef.current?.scrollIntoView({ behavior: 'smooth' });
+                  }, 100);
+                }
               }}
             >
               <CollapsibleTrigger asChild>
@@ -144,7 +151,7 @@ const Step3Payment = ({
                 </button>
               </CollapsibleTrigger>
 
-              <CollapsibleContent className="mt-4">
+              <CollapsibleContent ref={promoCodeRef} className="mt-4">
                 <div className="space-y-4">
                   <div className="space-y-3">
                     <Label htmlFor="promoCode" className="text-base font-light text-gray-700">Promo Code</Label>
