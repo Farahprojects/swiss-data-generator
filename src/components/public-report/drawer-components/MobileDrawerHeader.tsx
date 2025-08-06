@@ -19,21 +19,18 @@ const MobileDrawerHeader = ({ currentStep, totalSteps, onClose }: MobileDrawerHe
       <div className="flex items-center space-x-6">
         {/* Elegant step indicator */}
         <div className="flex items-center space-x-3">
-          <div className="flex space-x-1.5">
-            {Array.from({ length: totalSteps }, (_, i) => (
+          <div className="flex space-x-2">
+            {Array.from({ length: 4 }, (_, i) => (
               <div
                 key={i}
-                className={`w-1.5 h-1.5 rounded-full transition-all duration-500 ease-out ${
+                className={`w-3 h-3 rounded-full border-2 border-black transition-all duration-300 ease-out ${
                   i + 1 <= currentStep 
-                    ? 'bg-[hsl(var(--apple-blue))] scale-125 shadow-sm' 
-                    : 'bg-[hsl(var(--apple-gray-light))] scale-100'
+                    ? 'bg-black' 
+                    : 'bg-white'
                 }`}
               />
             ))}
           </div>
-          <span className="text-xs font-light text-[hsl(var(--apple-gray-dark))] tracking-wide">
-            {currentStep} of {totalSteps}
-          </span>
         </div>
       </div>
       
