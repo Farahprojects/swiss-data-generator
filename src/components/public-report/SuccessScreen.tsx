@@ -66,7 +66,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(({
 
         open(guestReportId);           // show report modal
         mobileDrawer?.closeDrawer();   // collapse mobile drawer (only on mobile)
-        resetReportState();            // clear submission state
+        // Note: Removed resetReportState() to preserve state on refresh
         setModalOpened(true);          // unmount SuccessScreen
       }
     }, 2000);

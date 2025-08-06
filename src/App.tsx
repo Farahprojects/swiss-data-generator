@@ -64,13 +64,8 @@ function App() {
     return <div>Loading...</div>;
   }
 
-  // Cleanup refreshOnce flag after reload to prevent infinite loops
-  React.useEffect(() => {
-    if (sessionStorage.getItem("refreshOnce")) {
-      sessionStorage.removeItem("refreshOnce");
-      console.log("[App] Cleared refreshOnce flag after reload");
-    }
-  }, []);
+  // Note: Removed automatic refreshOnce cleanup to preserve state on refresh
+  // State should only be cleared by explicit user actions
 
   return (
     <SSRErrorBoundary>

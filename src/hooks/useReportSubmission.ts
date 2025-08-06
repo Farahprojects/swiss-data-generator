@@ -22,9 +22,8 @@ export const useReportSubmission = (
   const [reportCreated, setReportCreated] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    setReportCreated(false);
-  }, []);
+  // Note: Removed automatic state reset on mount to preserve state on refresh
+  // State should only be cleared by explicit user actions
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
