@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useReportModal } from '@/contexts/ReportModalContext';
+import { useReportSubmission } from '@/hooks/useReportSubmission';
 import { supabase } from '@/integrations/supabase/client';
 import { sessionManager } from '@/utils/sessionManager';
 
@@ -15,6 +16,7 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
   guestReportId 
 }) => {
   const { open } = useReportModal();
+  const { resetReportState } = useReportSubmission();
   const [hasOpenedModal, setHasOpenedModal] = useState(false);
 
   // Register with SessionManager for state reset
@@ -41,7 +43,9 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
     // Just open the modal with the guestReportId - the modal will handle fetching the data
     open(guestReportId);
     setHasOpenedModal(true);
-  }, [guestReportId, open]);
+    // Close the success screen by resetting the report state
+    resetReportState();
+  }, [guestReportId, open, resetReportState]);
 
   // Polling mechanism for report_ready_signals
   useEffect(() => {
