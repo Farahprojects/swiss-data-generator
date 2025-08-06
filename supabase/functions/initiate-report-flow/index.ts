@@ -339,8 +339,8 @@ serve(async (req) => {
           amount: expectedFinalPriceRounded,
           email: reportData.email,
           description: "Astrology Report",
-          successUrl: `${Deno.env.get('SITE_URL') || 'https://therai.com'}/report?guest_id=${guestReportId}`,
-          cancelUrl: `${Deno.env.get('SITE_URL') || 'https://therai.com'}/checkout/${guestReportId}?status=cancelled`
+          successUrl: `${Deno.env.get('SITE_URL') || 'https://theraiastro.com'}/report?guest_id=${guestReportId}`,
+          cancelUrl: `${Deno.env.get('SITE_URL') || 'https://theraiastro.com'}/checkout/${guestReportId}?status=cancelled`
         }
       });
 
