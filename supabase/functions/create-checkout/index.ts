@@ -251,7 +251,7 @@ serve(async (req) => {
     }
 
     /* -------- Success & cancel URLs -------- */
-    const baseOrigin = req.headers.get("origin") || "";
+    const baseOrigin = req.headers.get("origin") || Deno.env.get("SUPABASE_URL") || "https://theraiastro.com";
     const paymentStatus = mode === "payment" ? "success" : "setup-success";
     const cancelStatus  = mode === "payment" ? "cancelled" : "setup-cancelled";
 
@@ -260,15 +260,15 @@ serve(async (req) => {
 
     if (isGuest) {
       // For guests, use session_id format for verification
-      finalSuccessUrl = successUrl ?? `${baseOrigin}/payment-return?session_id={CHECKOUT_SESSION_ID}`;
-      finalCancelUrl = cancelUrl ?? `${baseOrigin}/report?status=cancelled`;
+      finalSuccessUrl = successUrl ?? `${baseOrigin}/stripe-return?session_id={CHECKOUT_SESSION_ID}`;
+      finalCancelUrl = cancelUrl ?? `${baseOrigin}/stripe-return?status=cancelled`;
     } else {
       // For signed-in users, use existing format
       finalSuccessUrl =
         successUrl ??
-        `${baseOrigin}/payment-return?status=${paymentStatus}` +
+        `${baseOrigin}/stripe-return?status=${paymentStatus}` +
           (mode === "payment" && amount ? `&amount=${amount}` : "");
-      finalCancelUrl = cancelUrl ?? `${baseOrigin}/report?status=cancelled`;
+      finalCancelUrl = cancelUrl ?? `${baseOrigin}/stripe-return?status=cancelled`;
     }
 
     /* -------- Prepare metadata with location field mapping -------- */
