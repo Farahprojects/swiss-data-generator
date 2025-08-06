@@ -14,6 +14,7 @@ import { useReportSubmission, TrustedPricingObject } from '@/hooks/useReportSubm
 import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { supabase } from '@/integrations/supabase/client';
 import { usePricing } from '@/contexts/PricingContext';
+import { MobileDrawerProvider } from '@/contexts/MobileDrawerContext';
 
 interface MobileReportDrawerProps {
   isOpen: boolean;
@@ -302,11 +303,13 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
           <Drawer.Overlay className="fixed inset-0 bg-black/40 z-[100]" />
           <Drawer.Content className="fixed bottom-0 left-0 right-0 h-[96%] bg-white rounded-t-2xl z-[100] overflow-hidden">
             <div className="h-full overflow-y-auto">
-              <SuccessScreen 
-                name={userName} 
-                email={userEmail} 
-                guestReportId={guestReportId || undefined}
-              />
+              <MobileDrawerProvider closeDrawer={() => onOpenChange(false)}>
+                <SuccessScreen 
+                  name={userName} 
+                  email={userEmail} 
+                  guestReportId={guestReportId || undefined}
+                />
+              </MobileDrawerProvider>
             </div>
           </Drawer.Content>
         </Drawer.Portal>

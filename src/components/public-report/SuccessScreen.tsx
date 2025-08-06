@@ -7,6 +7,7 @@ import React, {
 import { useReportModal } from "@/contexts/ReportModalContext";
 import { useReportSubmission } from "@/hooks/useReportSubmission";
 import { supabase } from "@/integrations/supabase/client";
+import { useMobileDrawer } from "@/contexts/MobileDrawerContext";
 
 interface SuccessScreenProps {
   name: string;
@@ -22,6 +23,7 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
   /** modal + global state helpers */
   const { open } = useReportModal();
   const { resetReportState } = useReportSubmission();
+  const { closeDrawer } = useMobileDrawer();
 
   /** local flags */
   const [hasOpenedModal, setHasOpenedModal] = useState(false);
@@ -33,12 +35,13 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
     if (hasOpenedModal) return;
 
     open(guestReportId);
+    closeDrawer();        // Close the mobile drawer immediately
     setHasOpenedModal(true);
 
     frameRef.current = requestAnimationFrame(() => {
       resetReportState();
     });
-  }, [guestReportId, hasOpenedModal, open, resetReportState]);
+  }, [guestReportId, hasOpenedModal, open, resetReportState, closeDrawer]);
 
   /** poll Supabase until report_ready_signals row exists */
   useEffect(() => {
