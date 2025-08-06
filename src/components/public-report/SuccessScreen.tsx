@@ -129,3 +129,4 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
       </div>
     </div>
   );
+};
