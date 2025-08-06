@@ -13,8 +13,8 @@ const MobileDrawerHeader = ({ currentStep, totalSteps, onClose }: MobileDrawerHe
 
   return (
     <div 
-      className="flex items-center justify-between px-6 py-5 bg-white/95 backdrop-blur-xl border-b border-gray-100/50"
-      style={{ paddingTop: `${topSafePadding + 16}px` }}
+      className="flex items-center justify-between px-6 py-2 bg-white/95 backdrop-blur-xl border-b border-gray-100/50"
+      style={{ paddingTop: `${topSafePadding + 8}px` }}
     >
       <div className="flex items-center space-x-6">
         {/* Elegant step indicator */}
