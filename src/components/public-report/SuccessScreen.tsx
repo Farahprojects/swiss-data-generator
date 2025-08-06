@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useReportModal } from "@/contexts/ReportModalContext";
 import { useReportSubmission } from "@/hooks/useReportSubmission";
 import { useMobileDrawer } from "@/contexts/MobileDrawerContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SuccessScreenProps {
   name: string;
@@ -18,7 +19,10 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
   /* helpers */
   const { open } = useReportModal();
   const { resetReportState } = useReportSubmission();
-  const { closeDrawer } = useMobileDrawer();
+  const isMobile = useIsMobile();
+  
+  // Only use mobile drawer context when on mobile
+  const mobileDrawer = isMobile ? useMobileDrawer() : null;
 
   /* flags / timers */
   const [modalOpened, setModalOpened] = useState(false);
@@ -57,15 +61,15 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
       if (data?.guest_report_id) {
         clearInterval(pollRef.current as NodeJS.Timeout);
 
-        open(guestReportId);   // show report modal
-        closeDrawer();         // collapse mobile drawer
-        resetReportState();    // clear submission state
-        setModalOpened(true);  // unmount SuccessScreen
+        open(guestReportId);           // show report modal
+        mobileDrawer?.closeDrawer();   // collapse mobile drawer (only on mobile)
+        resetReportState();            // clear submission state
+        setModalOpened(true);          // unmount SuccessScreen
       }
     }, 2000);
 
     return () => clearInterval(pollRef.current as NodeJS.Timeout);
-  }, [guestReportId, modalOpened, open, closeDrawer, resetReportState]);
+  }, [guestReportId, modalOpened, open, mobileDrawer, resetReportState]);
 
   /* unmount once modal is open */
   if (modalOpened) return null;
