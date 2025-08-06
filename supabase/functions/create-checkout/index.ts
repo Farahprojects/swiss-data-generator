@@ -133,6 +133,19 @@ serve(async (req) => {
         guest_report_id: guest_report_id
       });
 
+      // Update the guest_report with the real Stripe session ID
+      const { error: updateError } = await supabaseAdmin
+        .from("guest_reports")
+        .update({ stripe_session_id: session.id })
+        .eq("id", guest_report_id);
+
+      if (updateError) {
+        console.error("❌ Failed to update stripe_session_id:", updateError);
+        // Don't fail the checkout - the session was created successfully
+      } else {
+        console.log("✅ Updated guest_report with Stripe session ID:", session.id);
+      }
+
       return new Response(
         JSON.stringify({ 
           sessionId: session.id, 

@@ -270,7 +270,6 @@ serve(async (req) => {
     const guestReportData = {
       id: guestReportId,
       user_id: null, // No auth.users entry - completely anonymous
-      stripe_session_id: guestReportId,
       email: reportData.email, // Store email as plain text
       report_type: reportData.reportType || 'essence_personal',
       amount_paid: expectedFinalPriceRounded,
