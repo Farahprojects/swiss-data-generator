@@ -89,7 +89,7 @@ serve(async (req) => {
     const baseOrigin = req.headers.get("origin") || Deno.env.get("SUPABASE_URL") || "https://theraiastro.com";
     
     // Use /stripe-return for consistent routing
-    const finalSuccessUrl = successUrl ?? `${baseOrigin}/stripe-return?session_id={CHECKOUT_SESSION_ID}`;
+    const finalSuccessUrl = successUrl ?? `${baseOrigin}/stripe-return?session_id={CHECKOUT_SESSION_ID}&status=success`;
     const finalCancelUrl = cancelUrl ?? `${baseOrigin}/stripe-return?status=cancelled`;
     
     console.log("🔗 Success URL:", finalSuccessUrl);

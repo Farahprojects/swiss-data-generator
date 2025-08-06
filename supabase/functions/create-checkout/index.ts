@@ -86,7 +86,7 @@ serve(async (req) => {
       const baseOrigin = req.headers.get("origin") || Deno.env.get("SUPABASE_URL") || "https://theraiastro.com";
       
       // Use /stripe-return for better UX control
-      const finalSuccessUrl = successUrl ?? `${baseOrigin}/stripe-return?guest_id=${guest_report_id}&session_id={CHECKOUT_SESSION_ID}`;
+      const finalSuccessUrl = successUrl ?? `${baseOrigin}/stripe-return?guest_id=${guest_report_id}&session_id={CHECKOUT_SESSION_ID}&status=success`;
       const finalCancelUrl = cancelUrl ?? `${baseOrigin}/stripe-return?guest_id=${guest_report_id}&status=cancelled`;
       
       console.log("🔗 Success URL:", finalSuccessUrl);
@@ -260,7 +260,7 @@ serve(async (req) => {
 
     if (isGuest) {
       // For guests, use session_id format for verification
-      finalSuccessUrl = successUrl ?? `${baseOrigin}/stripe-return?session_id={CHECKOUT_SESSION_ID}`;
+      finalSuccessUrl = successUrl ?? `${baseOrigin}/stripe-return?session_id={CHECKOUT_SESSION_ID}&status=success`;
       finalCancelUrl = cancelUrl ?? `${baseOrigin}/stripe-return?status=cancelled`;
     } else {
       // For signed-in users, use existing format

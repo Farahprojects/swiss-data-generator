@@ -23,6 +23,7 @@ const PublicReport = () => {
   const [activeGuestId, setActiveGuestId] = useState<string | null>(null);
   const [isGuestIdLoading, setIsGuestIdLoading] = useState(true);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const [isStripeReturn, setIsStripeReturn] = useState(false);
   const location = useLocation();
   const isMobile = useIsMobile();
 
@@ -36,8 +37,18 @@ const PublicReport = () => {
     
     const search = new URLSearchParams(window.location.search);
     const id = search.get("guest_id");
+    const sessionId = search.get("session_id");
+    const status = search.get("status");
     
-    log('debug', 'URL param guest_id', { id }, 'publicReport');
+    // Detect Stripe success return
+    const isStripeSuccessReturn = status === 'success' && !!sessionId;
+    setIsStripeReturn(isStripeSuccessReturn);
+    
+    if (isStripeSuccessReturn) {
+      log('info', '🎯 Stripe success return detected', { guestId: id, sessionId, status }, 'publicReport');
+    }
+    
+    log('debug', 'URL params', { id, sessionId, status, isStripeSuccessReturn }, 'publicReport');
     
     if (id) {
       log('info', 'Guest ID found, storing and setting state', { id }, 'publicReport');

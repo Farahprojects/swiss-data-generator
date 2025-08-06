@@ -19,10 +19,17 @@ export default function StripeReturn() {
     
     if (guestId) {
       console.log('✅ [StripeReturn] Found guest_id, navigating to report page');
-      navigate(`/report?guest_id=${guestId}`, { replace: true });
+      // Pass through all parameters for proper detection
+      const reportUrl = sessionId && status 
+        ? `/report?guest_id=${guestId}&session_id=${sessionId}&status=${status}`
+        : `/report?guest_id=${guestId}`;
+      navigate(reportUrl, { replace: true });
     } else if (sessionId) {
       console.log('✅ [StripeReturn] Found session_id, navigating to report page');
-      navigate(`/report?session_id=${sessionId}`, { replace: true });
+      const reportUrl = status 
+        ? `/report?session_id=${sessionId}&status=${status}`
+        : `/report?session_id=${sessionId}`;
+      navigate(reportUrl, { replace: true });
     } else {
       console.log('⚠️ [StripeReturn] No guest_id or session_id found, navigating to home');
       navigate(`/`, { replace: true }); // fallback
