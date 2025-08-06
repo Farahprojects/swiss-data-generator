@@ -71,7 +71,7 @@ const Step2BirthDetails: React.FC<Step2BirthDetailsProps> = React.memo(({
         style={{ paddingTop: `${topSafePadding + 24}px` }}
       >
         {/* Header */}
-        <div className="flex items-center justify-center px-6 py-8">
+        <div className="flex items-center justify-center px-6 py-2">
           <div className="text-center">
             <h1 className="text-4xl md:text-5xl font-light text-gray-900 mb-4 tracking-tight">
               Your <em className="italic font-light">Info</em>
