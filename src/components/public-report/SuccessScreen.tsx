@@ -14,7 +14,7 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
   email, 
   guestReportId 
 }) => {
-  const { open } = useReportModal();
+  const { open, isOpen } = useReportModal();
   const [hasOpenedModal, setHasOpenedModal] = useState(false);
 
   // Register with SessionManager for state reset
@@ -76,6 +76,17 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
       clearInterval(pollInterval);
     };
   }, [guestReportId, fetchAndOpenReport, hasOpenedModal]);
+
+  // Log modal state changes for debugging
+  useEffect(() => {
+    logSuccessScreen('info', 'Modal state changed', { isOpen, hasOpenedModal });
+  }, [isOpen, hasOpenedModal]);
+
+  // Hide the success screen when modal is open
+  if (isOpen) {
+    logSuccessScreen('info', 'Success screen hidden - modal is open');
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
