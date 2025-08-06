@@ -45,6 +45,11 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
     };
   }, []);
 
+  // Early return guard - immediately unmount SuccessScreen's markup once modal is triggered
+  if (hasOpenedModal) {
+    return null;
+  }
+
   const logSuccessScreen = (level: 'info' | 'warn' | 'error', message: string, data?: any) => {
     console[level](`[SuccessScreen] ${message}`, data);
   };
