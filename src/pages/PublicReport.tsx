@@ -14,6 +14,8 @@ import { AlertTriangle } from "lucide-react";
 import { storeGuestReportId } from '@/utils/urlHelpers';
 import { log } from '@/utils/logUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useStripeSuccess } from '@/contexts/StripeSuccessContext';
+import { StripeSuccessModal } from '@/components/public-report/StripeSuccessModal';
 import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
 
 const PublicReport = () => {
@@ -26,6 +28,7 @@ const PublicReport = () => {
   const [isStripeReturn, setIsStripeReturn] = useState(false);
   const location = useLocation();
   const isMobile = useIsMobile();
+  const { stripeSuccess, setStripeSuccess } = useStripeSuccess();
 
   // Refs for scrolling
   const successScreenRef = useRef<HTMLDivElement>(null);
@@ -46,6 +49,15 @@ const PublicReport = () => {
     
     if (isStripeSuccessReturn) {
       log('info', '🎯 Stripe success return detected', { guestId: id, sessionId, status }, 'publicReport');
+      
+      // Update global state
+      setStripeSuccess({
+        showSuccessModal: true,
+        guestId: id,
+        sessionId,
+        status,
+        isProcessing: true
+      });
       
       // Call the new edge function to process the paid report
       if (id) {
@@ -87,9 +99,27 @@ const PublicReport = () => {
       if (error) {
         log('error', '❌ process-paid-report failed', { error, guestId }, 'publicReport');
         console.error('process-paid-report error:', error);
+        
+        // Update state to show error
+        setStripeSuccess({
+          showSuccessModal: true,
+          guestId,
+          sessionId,
+          status: 'error',
+          isProcessing: false
+        });
       } else {
         log('info', '✅ process-paid-report successful', { data, guestId }, 'publicReport');
         console.log('process-paid-report response:', data);
+        
+        // Update state to show success
+        setStripeSuccess({
+          showSuccessModal: true,
+          guestId,
+          sessionId,
+          status: 'success',
+          isProcessing: false
+        });
       }
     } catch (err) {
       log('error', '❌ process-paid-report exception', { error: err, guestId }, 'publicReport');
@@ -430,6 +460,9 @@ const PublicReport = () => {
           isOpen={isMobileDrawerOpen}
           onOpenChange={setIsMobileDrawerOpen}
         />
+
+        {/* Stripe Success Modal */}
+        <StripeSuccessModal />
       </div>
     );
   } catch (err: any) {
