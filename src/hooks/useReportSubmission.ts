@@ -16,7 +16,8 @@ export interface TrustedPricingObject {
 }
 
 export const useReportSubmission = (
-  setCreatedGuestReportId?: (id: string) => void
+  setCreatedGuestReportId?: (id: string) => void,
+  closeDrawer?: () => void
 ) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [reportCreated, setReportCreated] = useState(false);
@@ -104,7 +105,16 @@ export const useReportSubmission = (
       const functionUrl = `https://wrvqqvqvwqmfdqvqmaar.supabase.co/functions/v1/initiate-and-checkout?reportData=${reportDataParam}&trustedPricing=${trustedPricingParam}`;
       
       console.log("🔄 [REPORT-SUBMISSION] Redirecting to edge function for immediate checkout...");
-      window.location.href = functionUrl;
+      
+      // Close drawer first if callback provided, then redirect after delay
+      if (closeDrawer) {
+        closeDrawer();
+        setTimeout(() => {
+          window.location.href = functionUrl;
+        }, 100);
+      } else {
+        window.location.href = functionUrl;
+      }
       
       return { success: true };
 
