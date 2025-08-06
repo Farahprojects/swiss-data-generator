@@ -7,6 +7,7 @@ interface StripeSuccessState {
   sessionId: string | null;
   status: string | null;
   isProcessing: boolean;
+  showOriginalSuccessScreen: boolean;
 }
 
 interface StripeSuccessContextType {
@@ -14,6 +15,7 @@ interface StripeSuccessContextType {
   setStripeSuccess: (state: StripeSuccessState) => void;
   clearStripeSuccess: () => void;
   hydrateFromUrl: () => void;
+  proceedToReport: () => void;
 }
 
 const StripeSuccessContext = createContext<StripeSuccessContextType | undefined>(undefined);
@@ -36,7 +38,8 @@ export const StripeSuccessProvider: React.FC<StripeSuccessProviderProps> = ({ ch
     guestId: null,
     sessionId: null,
     status: null,
-    isProcessing: false
+    isProcessing: false,
+    showOriginalSuccessScreen: false
   });
 
   // Hydrate state from URL on mount
@@ -62,7 +65,8 @@ export const StripeSuccessProvider: React.FC<StripeSuccessProviderProps> = ({ ch
         guestId,
         sessionId,
         status,
-        isProcessing: true
+        isProcessing: true,
+        showOriginalSuccessScreen: false
       });
     }
   };
@@ -74,8 +78,19 @@ export const StripeSuccessProvider: React.FC<StripeSuccessProviderProps> = ({ ch
       guestId: null,
       sessionId: null,
       status: null,
-      isProcessing: false
+      isProcessing: false,
+      showOriginalSuccessScreen: false
     });
+  };
+
+  const proceedToReport = () => {
+    log('info', '🔄 Proceeding to original success screen', { guestId: stripeSuccess.guestId }, 'stripeSuccess');
+    setStripeSuccess(prev => ({
+      ...prev,
+      showSuccessModal: false,
+      isProcessing: false,
+      showOriginalSuccessScreen: true
+    }));
   };
 
   return (
@@ -83,7 +98,8 @@ export const StripeSuccessProvider: React.FC<StripeSuccessProviderProps> = ({ ch
       stripeSuccess,
       setStripeSuccess,
       clearStripeSuccess,
-      hydrateFromUrl
+      hydrateFromUrl,
+      proceedToReport
     }}>
       {children}
     </StripeSuccessContext.Provider>

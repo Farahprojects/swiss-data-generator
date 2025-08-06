@@ -17,6 +17,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useStripeSuccess } from '@/contexts/StripeSuccessContext';
 import { StripeSuccessModal } from '@/components/public-report/StripeSuccessModal';
 import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
+import { SuccessScreen } from '@/components/public-report/SuccessScreen';
 
 const PublicReport = () => {
   // ALL HOOKS MUST BE DECLARED FIRST - NEVER INSIDE TRY-CATCH
@@ -56,7 +57,8 @@ const PublicReport = () => {
         guestId: id,
         sessionId,
         status,
-        isProcessing: true
+        isProcessing: true,
+        showOriginalSuccessScreen: false
       });
       
       // Call the new edge function to process the paid report
@@ -106,7 +108,8 @@ const PublicReport = () => {
           guestId,
           sessionId,
           status: 'error',
-          isProcessing: false
+          isProcessing: false,
+          showOriginalSuccessScreen: false
         });
       } else {
         log('info', '✅ process-paid-report successful', { data, guestId }, 'publicReport');
@@ -118,7 +121,8 @@ const PublicReport = () => {
           guestId,
           sessionId,
           status: 'success',
-          isProcessing: false
+          isProcessing: false,
+          showOriginalSuccessScreen: false
         });
       }
     } catch (err) {
@@ -463,6 +467,20 @@ const PublicReport = () => {
 
         {/* Stripe Success Modal */}
         <StripeSuccessModal />
+
+        {/* Original Success Screen when proceeding from Stripe */}
+        {stripeSuccess.showOriginalSuccessScreen && stripeSuccess.guestId && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <SuccessScreen
+                ref={successScreenRef}
+                name="Guest User"
+                email="guest@example.com"
+                guestReportId={stripeSuccess.guestId}
+              />
+            </div>
+          </div>
+        )}
       </div>
     );
   } catch (err: any) {

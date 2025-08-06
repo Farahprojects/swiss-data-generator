@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle, Loader2 } from 'lucide-react';
 
 export const StripeSuccessModal: React.FC = () => {
-  const { stripeSuccess, clearStripeSuccess } = useStripeSuccess();
+  const { stripeSuccess, proceedToReport } = useStripeSuccess();
 
   if (!stripeSuccess.showSuccessModal) {
     return null;
@@ -33,32 +33,24 @@ export const StripeSuccessModal: React.FC = () => {
                   Payment Successful!
                 </h2>
                 <p className="text-gray-600">
-                  Your payment has been processed and your report is being generated.
+                  Your payment has been processed successfully. Your report is ready to be generated.
                 </p>
-                <div className="bg-gray-50 rounded-lg p-3 space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Guest ID:</span>
-                    <span className="font-mono text-gray-900">{stripeSuccess.guestId}</span>
-                  </div>
-                  {stripeSuccess.sessionId && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Session ID:</span>
-                      <span className="font-mono text-gray-900">{stripeSuccess.sessionId}</span>
-                    </div>
-                  )}
-                </div>
+                <p className="text-sm text-gray-500">
+                  Would you like to continue to view your report?
+                </p>
               </>
             )}
           </div>
           
-          <div className="flex justify-end space-x-2">
-            <Button
-              variant="outline"
-              onClick={clearStripeSuccess}
-              disabled={stripeSuccess.isProcessing}
-            >
-              Close
-            </Button>
+          <div className="flex justify-center">
+            {!stripeSuccess.isProcessing && (
+              <Button
+                onClick={proceedToReport}
+                className="w-full"
+              >
+                Continue to Report
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
