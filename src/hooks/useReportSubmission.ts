@@ -16,7 +16,8 @@ export interface TrustedPricingObject {
 }
 
 export const useReportSubmission = (
-  setCreatedGuestReportId?: (id: string) => void
+  setCreatedGuestReportId?: (id: string) => void,
+  onDrawerClose?: () => void
 ) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [reportCreated, setReportCreated] = useState(false);
@@ -158,10 +159,29 @@ export const useReportSubmission = (
     }
   };
 
+  // NEW: Function that handles form submission and drawer closing
+  const submitReportAndCloseDrawer = async (
+    data: ReportFormData,
+    trustedPricing: TrustedPricingObject
+  ): Promise<{ success: boolean; guestReportId?: string }> => {
+    try {
+      // Close drawer immediately after form submission
+      onDrawerClose?.();
+      
+      // Call existing submitReport logic
+      return await submitReport(data, trustedPricing);
+      
+    } catch (error) {
+      // Re-throw error for handling in component
+      throw error;
+    }
+  };
+
   return {
     isProcessing,
     reportCreated,
     submitReport,
+    submitReportAndCloseDrawer,
     resetReportState: () => setReportCreated(false)
   };
 };

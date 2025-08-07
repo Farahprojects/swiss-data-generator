@@ -60,7 +60,10 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
   const { register, handleSubmit, watch, setValue, control, formState: { errors, isValid } } = form;
   
   // Report submission hook (same as desktop)
-  const { isProcessing, reportCreated, submitReport } = useReportSubmission();
+  const { isProcessing, reportCreated, submitReportAndCloseDrawer } = useReportSubmission(
+    undefined, // No setCreatedGuestReportId needed for mobile
+    () => onOpenChange(false)  // Pass drawer close callback
+  );
   const { getReportPrice } = usePriceFetch();
   const { getPriceById } = usePricing();
 
@@ -241,7 +244,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
         report_type: data.reportType || data.reportSubCategory || data.request || ''
       };
       
-      const result = await submitReport(data, trustedPricing);
+      const result = await submitReportAndCloseDrawer(data, trustedPricing);
       if (result && onReportCreated) {
         onReportCreated(result);
       }
@@ -272,7 +275,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
       form.clearErrors('promoCode');
 
       // Submit with trusted pricing
-      const result = await submitReport(formData, pricingResult);
+      const result = await submitReportAndCloseDrawer(formData, pricingResult);
       if (result && onReportCreated) {
         onReportCreated(result);
       }
