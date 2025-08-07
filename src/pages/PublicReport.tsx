@@ -20,13 +20,20 @@ import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
 import { SuccessScreen } from '@/components/public-report/SuccessScreen';
 
 const PublicReport = () => {
+  // Synchronous URL parsing - happens before any React logic
+  const urlParams = new URLSearchParams(window.location.search);
+  const guestId = urlParams.get("guest_id");
+  const sessionId = urlParams.get("session_id");
+  const status = urlParams.get("status");
+  const isStripeSuccessReturn = status === 'success' && !!sessionId;
+
   // ALL HOOKS MUST BE DECLARED FIRST - NEVER INSIDE TRY-CATCH
   const [scrollY, setScrollY] = useState(0);
   const [showCancelledMessage, setShowCancelledMessage] = useState(false);
-  const [activeGuestId, setActiveGuestId] = useState<string | null>(null);
+  const [activeGuestId, setActiveGuestId] = useState<string | null>(guestId || null);
   const [isGuestIdLoading, setIsGuestIdLoading] = useState(true);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
-  const [isStripeReturn, setIsStripeReturn] = useState(false);
+  const [isStripeReturn, setIsStripeReturn] = useState(isStripeSuccessReturn);
   const [unifiedSuccessData, setUnifiedSuccessData] = useState<{ guestReportId: string; name: string; email: string } | null>(null);
   const location = useLocation();
   const isMobile = useIsMobile();
@@ -39,44 +46,29 @@ const PublicReport = () => {
   const successScreenRef = useRef<HTMLDivElement>(null);
   const reportFormRef = useRef<HTMLDivElement>(null);
 
-  // Direct URL parsing fix for hydration issue - reliable guest_id detection
+  // Process Stripe return immediately if detected
   useEffect(() => {
-    log('debug', 'window.location.search', { search: window.location.search }, 'publicReport');
-    
-    const search = new URLSearchParams(window.location.search);
-    const id = search.get("guest_id");
-    const sessionId = search.get("session_id");
-    const status = search.get("status");
-    
-    // Detect Stripe success return
-    const isStripeSuccessReturn = status === 'success' && !!sessionId;
-    setIsStripeReturn(isStripeSuccessReturn);
-    
-    if (isStripeSuccessReturn) {
-      log('info', '🎯 Stripe success return detected', { guestId: id, sessionId, status }, 'publicReport');
+    if (isStripeSuccessReturn && guestId) {
+      log('info', '🎯 Immediate Stripe success detection', { guestId, sessionId, status }, 'publicReport');
       
-      // Update global state
+      // Update global state immediately
       setStripeSuccess({
         showSuccessModal: true,
-        guestId: id,
+        guestId,
         sessionId,
         status,
         isProcessing: true,
         showOriginalSuccessScreen: false
       });
       
-      // Call the new edge function to process the paid report
-      if (id) {
-        processPaidReport(id, sessionId);
-      }
+      // Process immediately
+      processPaidReport(guestId, sessionId);
     }
     
-    log('debug', 'URL params', { id, sessionId, status, isStripeSuccessReturn }, 'publicReport');
-    
-    if (id) {
-      log('info', 'Guest ID found, storing and setting state', { id }, 'publicReport');
-      storeGuestReportId(id);
-      setActiveGuestId(id);
+    // Handle guest ID storage
+    if (guestId) {
+      log('info', 'Guest ID found, storing and setting state', { guestId }, 'publicReport');
+      storeGuestReportId(guestId);
     } else {
       // Check localStorage for existing session
       const storedGuestId = localStorage.getItem('currentGuestReportId');
@@ -87,7 +79,7 @@ const PublicReport = () => {
     }
     
     setIsGuestIdLoading(false);
-    log('debug', 'Final activeGuestId will be', { finalId: id || localStorage.getItem('currentGuestReportId') }, 'publicReport');
+    log('debug', 'Final activeGuestId will be', { finalId: guestId || localStorage.getItem('currentGuestReportId') }, 'publicReport');
   }, []);
 
   // Function to call the process-paid-report edge function
