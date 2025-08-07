@@ -14,7 +14,6 @@ interface StripeSuccessContextType {
   stripeSuccess: StripeSuccessState;
   setStripeSuccess: (state: StripeSuccessState) => void;
   clearStripeSuccess: () => void;
-  hydrateFromUrl: () => void;
   proceedToReport: () => void;
 }
 
@@ -42,34 +41,7 @@ export const StripeSuccessProvider: React.FC<StripeSuccessProviderProps> = ({ ch
     showOriginalSuccessScreen: false
   });
 
-  // Hydrate state from URL on mount
-  useEffect(() => {
-    hydrateFromUrl();
-  }, []);
 
-  const hydrateFromUrl = () => {
-    if (typeof window === 'undefined') return;
-
-    const search = new URLSearchParams(window.location.search);
-    const guestId = search.get("guest_id");
-    const sessionId = search.get("session_id");
-    const status = search.get("status");
-
-    const isStripeSuccessReturn = status === 'success' && !!sessionId;
-
-    if (isStripeSuccessReturn && guestId) {
-      log('info', '🔄 Hydrating Stripe success state from URL', { guestId, sessionId, status }, 'stripeSuccess');
-      
-      setStripeSuccess({
-        showSuccessModal: true,
-        guestId,
-        sessionId,
-        status,
-        isProcessing: true,
-        showOriginalSuccessScreen: false
-      });
-    }
-  };
 
   const clearStripeSuccess = () => {
     log('info', '🔄 Clearing Stripe success state', null, 'stripeSuccess');
@@ -98,7 +70,6 @@ export const StripeSuccessProvider: React.FC<StripeSuccessProviderProps> = ({ ch
       stripeSuccess,
       setStripeSuccess,
       clearStripeSuccess,
-      hydrateFromUrl,
       proceedToReport
     }}>
       {children}
