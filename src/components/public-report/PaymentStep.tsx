@@ -194,12 +194,30 @@ const PaymentStep = ({
     let pricingResult: TrustedPricingObject;
 
     try {
-      // Always validate promo code (even if empty) to get trusted pricing
-      pricingResult = await validatePromoCode(currentPromoCode || '');
-      
-      if (!pricingResult.valid) {
-        setPromoError(pricingResult.reason || 'Invalid Promo Code');
-        return;
+      // Only validate promo code if one is provided
+      if (currentPromoCode) {
+        pricingResult = await validatePromoCode(currentPromoCode);
+        
+        if (!pricingResult.valid) {
+          setPromoError(pricingResult.reason || 'Invalid Promo Code');
+          return;
+        }
+      } else {
+        // No promo code provided - use base pricing
+        const priceIdentifier = getPriceIdentifier();
+        if (!priceIdentifier) {
+          setPromoError('Invalid report type');
+          return;
+        }
+        
+        pricingResult = {
+          valid: true,
+          discount_usd: 0,
+          trusted_base_price_usd: getBasePrice(),
+          final_price_usd: getBasePrice(),
+          report_type: priceIdentifier,
+          reason: undefined
+        };
       }
 
       setTrustedPricing(pricingResult);

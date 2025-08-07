@@ -259,16 +259,39 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
       const formData = form.getValues();
       const currentPromoCode = formData.promoCode?.trim() || '';
       
-      // Always validate promo code (even if empty) to get trusted pricing
-      const pricingResult = await validatePromoCode(currentPromoCode || '');
+      let pricingResult: TrustedPricingObject;
       
-      if (!pricingResult.valid) {
-        // Show error in the form
-        form.setError('promoCode', { 
-          type: 'manual', 
-          message: pricingResult.reason || 'Invalid Promo Code' 
-        });
-        return;
+      // Only validate promo code if one is provided
+      if (currentPromoCode) {
+        pricingResult = await validatePromoCode(currentPromoCode);
+        
+        if (!pricingResult.valid) {
+          // Show error in the form
+          form.setError('promoCode', { 
+            type: 'manual', 
+            message: pricingResult.reason || 'Invalid Promo Code' 
+          });
+          return;
+        }
+      } else {
+        // No promo code provided - use base pricing
+        const priceIdentifier = getPriceIdentifier();
+        if (!priceIdentifier) {
+          form.setError('promoCode', { 
+            type: 'manual', 
+            message: 'Invalid report type' 
+          });
+          return;
+        }
+        
+        pricingResult = {
+          valid: true,
+          discount_usd: 0,
+          trusted_base_price_usd: getBasePrice(),
+          final_price_usd: getBasePrice(),
+          report_type: priceIdentifier,
+          reason: undefined
+        };
       }
 
       // Clear any promo errors
