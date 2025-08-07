@@ -47,7 +47,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(({
     console.log("[SuccessScreen] Setting up realtime listener for:", guestReportId);
 
     const channel = supabase
-      .channel('report-ready-listener')
+      .channel(`report-ready-${guestReportId}`) // unique channel per report
       .on(
         'postgres_changes',
         {
@@ -58,14 +58,38 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(({
         },
         (payload) => {
           console.log("[SuccessScreen] Report ready signal received:", payload);
-          open(guestReportId);           // show report modal
-          setModalOpened(true);          // unmount SuccessScreen
+          // Immediately cleanup and open modal
+          supabase.removeChannel(channel);
+          open(guestReportId);
+          setModalOpened(true);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("[SuccessScreen] Channel subscription status:", status);
+      });
+
+    // Check if signal already exists (in case it was inserted before listener setup)
+    const checkExistingSignal = async () => {
+      const { data } = await supabase
+        .from("report_ready_signals")
+        .select("guest_report_id")
+        .eq("guest_report_id", guestReportId)
+        .single();
+      
+      if (data && !modalOpened) {
+        console.log("[SuccessScreen] Found existing signal, opening modal immediately");
+        supabase.removeChannel(channel);
+        open(guestReportId);
+        setModalOpened(true);
+      }
+    };
+
+    // Small delay to ensure channel is subscribed before checking
+    const timeoutId = setTimeout(checkExistingSignal, 100);
 
     return () => {
       console.log("[SuccessScreen] Cleaning up realtime listener");
+      clearTimeout(timeoutId);
       supabase.removeChannel(channel);
     };
   }, [guestReportId, modalOpened, open]);
