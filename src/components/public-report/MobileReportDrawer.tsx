@@ -60,7 +60,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
   const { register, handleSubmit, watch, setValue, control, formState: { errors, isValid } } = form;
   
   // Report submission hook (same as desktop)
-  const { isProcessing, reportCreated, submitReport } = useReportSubmission(undefined, () => onOpenChange(false));
+  const { isProcessing, reportCreated, submitReport } = useReportSubmission();
   const { getReportPrice } = usePriceFetch();
   const { getPriceById } = usePricing();
 

@@ -16,8 +16,7 @@ export interface TrustedPricingObject {
 }
 
 export const useReportSubmission = (
-  setCreatedGuestReportId?: (id: string) => void,
-  closeDrawer?: () => void
+  setCreatedGuestReportId?: (id: string) => void
 ) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [reportCreated, setReportCreated] = useState(false);
@@ -97,25 +96,54 @@ export const useReportSubmission = (
         isAstroOnly: isAstroReport(reportType)
       };
 
-      // Encode data for URL parameters to preserve user gesture
-      const reportDataParam = encodeURIComponent(JSON.stringify(reportData));
-      const trustedPricingParam = encodeURIComponent(JSON.stringify(trustedPricing));
-      
-      // Direct navigation to edge function for immediate redirect (mobile-safe)
-      const functionUrl = `https://wrvqqvqvwqmfdqvqmaar.supabase.co/functions/v1/initiate-and-checkout?reportData=${reportDataParam}&trustedPricing=${trustedPricingParam}`;
-      
-      console.log("🔄 [REPORT-SUBMISSION] Redirecting to edge function for immediate checkout...");
-      
-      // Close drawer first if callback provided, then redirect after delay
-      if (closeDrawer) {
-        closeDrawer();
-        setTimeout(() => {
-          window.location.href = functionUrl;
-        }, 100);
-      } else {
-        window.location.href = functionUrl;
+      const { data: flowResponse, error } = await supabase.functions.invoke('initiate-report-flow', {
+        body: {
+          reportData,
+          trustedPricing
+        }
+      });
+
+      if (error || !flowResponse?.guestReportId) {
+        throw new Error('❌ Failed to create report: ' + (error?.message || 'Unknown error'));
       }
-      
+
+      const guestReportId = flowResponse.guestReportId;
+      storeGuestReportId(guestReportId);
+      setCreatedGuestReportId?.(guestReportId);
+
+      if (flowResponse.isFreeReport) {
+        toast({
+          title: "Report Created!",
+          description: "Your free report is being generated and will be sent to your email shortly.",
+        });
+        setReportCreated(true);
+        setIsProcessing(false);
+        return { success: true, guestReportId };
+      }
+
+      // For paid reports, redirect to checkout
+      if (flowResponse.checkoutUrl) {
+        window.open(flowResponse.checkoutUrl, '_self');
+        return { success: true };
+      }
+
+      // Fallback for paid reports without checkout URL
+      const { data: checkoutResponse, error: checkoutError } = await supabase.functions.invoke('create-checkout', {
+        body: {
+          guest_report_id: guestReportId,
+          amount: trustedPricing.final_price_usd,
+          email: data.email,
+          description: "Astrology Report",
+          successUrl: `${window.location.origin}/report?guest_id=${guestReportId}`,
+          cancelUrl: `${window.location.origin}/checkout/${guestReportId}?status=cancelled`
+        }
+      });
+
+      if (checkoutError || !checkoutResponse?.url) {
+        throw new Error('❌ Failed to create checkout session');
+      }
+
+      window.open(checkoutResponse.url, '_self');
       return { success: true };
 
     } catch (err: any) {
