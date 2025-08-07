@@ -16,7 +16,8 @@ export interface TrustedPricingObject {
 }
 
 export const useReportSubmission = (
-  setCreatedGuestReportId?: (id: string) => void
+  setCreatedGuestReportId?: (id: string) => void,
+  closeDrawer?: () => void
 ) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [reportCreated, setReportCreated] = useState(false);
@@ -123,7 +124,14 @@ export const useReportSubmission = (
 
       // For paid reports, redirect to checkout
       if (flowResponse.checkoutUrl) {
-        window.open(flowResponse.checkoutUrl, '_self');
+        if (closeDrawer) {
+          closeDrawer();
+          setTimeout(() => {
+            window.open(flowResponse.checkoutUrl, '_self');
+          }, 100);
+        } else {
+          window.open(flowResponse.checkoutUrl, '_self');
+        }
         return { success: true };
       }
 
@@ -143,7 +151,14 @@ export const useReportSubmission = (
         throw new Error('❌ Failed to create checkout session');
       }
 
-      window.open(checkoutResponse.url, '_self');
+      if (closeDrawer) {
+        closeDrawer();
+        setTimeout(() => {
+          window.open(checkoutResponse.url, '_self');
+        }, 100);
+      } else {
+        window.open(checkoutResponse.url, '_self');
+      }
       return { success: true };
 
     } catch (err: any) {
