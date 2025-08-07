@@ -8,12 +8,14 @@ interface SuccessScreenProps {
   name: string;
   email: string;
   guestReportId?: string;
+  isLoading?: boolean;
 }
 
 export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(({
   name,
   email,
   guestReportId,
+  isLoading = false,
 }, ref) => {
   /* helpers */
   const { open } = useReportModal();
@@ -43,7 +45,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(({
 
   /* --- poll for ready signal, then open modal & close drawer --- */
   useEffect(() => {
-    if (modalOpened) return;
+    if (modalOpened || isLoading || !guestReportId) return;
 
     pollRef.current = setInterval(async () => {
       const { data, error } = await supabase
@@ -67,7 +69,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(({
     }, 2000);
 
     return () => clearInterval(pollRef.current as NodeJS.Timeout);
-  }, [guestReportId, modalOpened, open]);
+  }, [guestReportId, modalOpened, open, isLoading]);
 
   /* unmount once modal is open */
   if (modalOpened) return null;
@@ -104,12 +106,17 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(({
 
         <div className="space-y-3">
           <p className="text-sm text-gray-600">
-            Your report is being prepared and will open automatically when ready...
+            {isLoading 
+              ? "Processing your report request..." 
+              : "Your report is being prepared and will open automatically when ready..."
+            }
           </p>
 
           <div className="flex items-center justify-center space-x-2">
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
-            <span className="text-sm text-gray-600">Preparing your report</span>
+            <span className="text-sm text-gray-600">
+              {isLoading ? "Processing request" : "Preparing your report"}
+            </span>
           </div>
         </div>
       </div>

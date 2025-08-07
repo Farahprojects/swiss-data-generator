@@ -71,7 +71,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
   // Local processing state
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [successData, setSuccessData] = useState<{name: string; email: string; guestReportId: string} | null>(null);
+  const [successData, setSuccessData] = useState<{name: string; email: string; guestReportId: string; isLoading?: boolean} | null>(null);
   const { getReportPrice } = usePriceFetch();
   const { getPriceById } = usePricing();
 
@@ -268,52 +268,56 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
     console.log('🔵 [MOBILE] Trusted pricing:', trustedPricing);
     console.log('🔵 [MOBILE] Email field:', transformedReportData.email);
     
-    // Close drawer first
+    // Close drawer and immediately show success screen with loading state
     onOpenChange(false);
+    setSuccessData({
+      name: formData.name,
+      email: formData.email,
+      guestReportId: '', // Will be updated when API completes
+      isLoading: true
+    });
+    setShowSuccess(true);
     
-    // Wait for drawer animation
-    setTimeout(async () => {
-      try {
-        const submissionData = {
-          reportData: transformedReportData,
-          trustedPricing,
-          is_guest: true
-        };
-        
-        console.log('🔵 [MOBILE] Final submission data:', submissionData);
-        
-        const { data, error } = await supabase.functions.invoke('initiate-report-flow', {
-          body: submissionData
-        });
-        
-        if (error) {
-          console.error('❌ [MOBILE] Report submission failed:', error);
-          return;
-        }
-        
-        console.log('✅ [MOBILE] Report submission response:', data);
-        
-        // Handle response
-        if (data?.checkoutUrl) {
-          // Paid report - redirect to Stripe
-          window.location.href = data.checkoutUrl;
-        } else if (data?.success || data?.guestReportId) {
-          // Free report success - trigger SuccessScreen immediately
-          setSuccessData({
-            name: formData.name,
-            email: formData.email,
-            guestReportId: data.guestReportId
-          });
-          setShowSuccess(true);
-          onReportCreated?.(data);
-        }
-        
-      } catch (error) {
+    try {
+      const submissionData = {
+        reportData: transformedReportData,
+        trustedPricing,
+        is_guest: true
+      };
+      
+      console.log('🔵 [MOBILE] Final submission data:', submissionData);
+      
+      const { data, error } = await supabase.functions.invoke('initiate-report-flow', {
+        body: submissionData
+      });
+      
+      if (error) {
         console.error('❌ [MOBILE] Report submission failed:', error);
-      } finally {
-        setIsProcessing(false);
+        return;
       }
-    }, 100);
+      
+      console.log('✅ [MOBILE] Report submission response:', data);
+      
+      // Handle response
+      if (data?.checkoutUrl) {
+        // Paid report - redirect to Stripe
+        window.location.href = data.checkoutUrl;
+      } else if (data?.success || data?.guestReportId) {
+        // Free report success - update success data with final guestReportId
+        setSuccessData({
+          name: formData.name,
+          email: formData.email,
+          guestReportId: data.guestReportId,
+          isLoading: false
+        });
+        onReportCreated?.(data);
+      }
+      
+    } catch (error) {
+      console.error('❌ [MOBILE] Report submission failed:', error);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // Handle button click with promo validation
@@ -386,6 +390,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
         name={successData.name}
         email={successData.email}
         guestReportId={successData.guestReportId}
+        isLoading={successData.isLoading}
       />
     );
   }
