@@ -268,11 +268,15 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
     console.log('🔵 [MOBILE] Trusted pricing:', trustedPricing);
     console.log('🔵 [MOBILE] Email field:', transformedReportData.email);
     
+    // Use watched values for reliability - they're always up-to-date
+    const displayName = userName || formData.name;
+    const displayEmail = userEmail || formData.email;
+    
     // Close drawer and immediately show success screen with loading state
     onOpenChange(false);
     setSuccessData({
-      name: formData.name,
-      email: formData.email,
+      name: displayName,
+      email: displayEmail,
       guestReportId: '', // Will be updated when API completes
       isLoading: true
     });
@@ -305,8 +309,8 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
       } else if (data?.success || data?.guestReportId) {
         // Free report success - update success data with final guestReportId
         setSuccessData({
-          name: formData.name,
-          email: formData.email,
+          name: displayName,
+          email: displayEmail,
           guestReportId: data.guestReportId,
           isLoading: false
         });
