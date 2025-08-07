@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { usePricing } from '@/contexts/PricingContext';
 
 import { MobileDrawerProvider } from '@/contexts/MobileDrawerContext';
+import { setFormMemory } from '@/utils/formMemoryCache';
 
 interface TrustedPricingObject {
   valid: boolean;
@@ -267,6 +268,9 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
     console.log('🔵 [MOBILE] Transformed report data:', transformedReportData);
     console.log('🔵 [MOBILE] Trusted pricing:', trustedPricing);
     console.log('🔵 [MOBILE] Email field:', transformedReportData.email);
+    
+    // Store name/email in memory cache
+    setFormMemory(formData.name, formData.email);
     
     // Close drawer and immediately show success screen with loading state
     onOpenChange(false);

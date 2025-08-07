@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, forwardRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useReportModal } from "@/contexts/ReportModalContext";
+import { getFormMemory } from "@/utils/formMemoryCache";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -21,6 +22,11 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(({
   const { open } = useReportModal();
   
   const isMobile = useIsMobile();
+
+  /* get name/email from memory if not provided as props */
+  const memoryData = getFormMemory();
+  const displayName = name || memoryData?.name || '';
+  const displayEmail = email || memoryData?.email || '';
 
   /* flags / timers */
   const [modalOpened, setModalOpened] = useState(false);
@@ -88,7 +94,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(({
           <div className="space-y-2">
             <h1 className="text-2xl font-light text-gray-900">Report Generated Successfully!</h1>
             <p className="text-gray-600">
-              Your personalized astrology report is ready for {name}.
+              Your personalized astrology report is ready for {displayName}.
             </p>
           </div>
         </div>
@@ -96,11 +102,11 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(({
         <div className="bg-gray-50 rounded-xl p-4 space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-gray-600">Name:</span>
-            <span className="font-medium text-gray-900">{name}</span>
+            <span className="font-medium text-gray-900">{displayName}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-gray-600">Email:</span>
-            <span className="font-medium text-gray-900">{email}</span>
+            <span className="font-medium text-gray-900">{displayEmail}</span>
           </div>
         </div>
 
