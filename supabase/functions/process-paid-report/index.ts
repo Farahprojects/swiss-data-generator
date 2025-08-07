@@ -110,28 +110,23 @@ serve(async (req) => {
       });
     }
 
-    // Step 4: Directly trigger report generation (skip verify-guest-payment)
-    console.log(`🔄 [process-paid-report] Directly triggering report generation for: ${guest_id}`);
+    // Step 4: Call verify-guest-payment with the guest_id
+    console.log(`🔄 [process-paid-report] Calling verify-guest-payment for: ${guest_id}`);
     
-    const translatorPayload = {
-      guest_report_id: guest_id,
-      report_data: guestReport.report_data,
-      is_ai_report: guestReport.is_ai_report
-    };
-    
-    const requestId = crypto.randomUUID().substring(0, 8);
-    
-    // Call translator-edge directly for report generation
-    const translatorResponse = await supabase.functions.invoke('translator-edge', {
-      body: translatorPayload
+    const verifyResponse = await supabase.functions.invoke('verify-guest-payment', {
+      body: {
+        sessionId: guest_id,
+        type: 'promo', // Use promo type since we're bypassing Stripe verification
+        requestId: crypto.randomUUID().substring(0, 8)
+      }
     });
 
-    if (translatorResponse.error) {
-      console.error(`❌ [process-paid-report] translator-edge failed: ${guest_id}`, translatorResponse.error);
+    if (verifyResponse.error) {
+      console.error(`❌ [process-paid-report] verify-guest-payment failed: ${guest_id}`, verifyResponse.error);
       return new Response(JSON.stringify({ 
         error: "Failed to trigger report generation",
         guest_id,
-        translator_error: translatorResponse.error
+        verify_error: verifyResponse.error
       }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
