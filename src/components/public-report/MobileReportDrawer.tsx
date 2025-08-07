@@ -250,7 +250,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
     }
   };
 
-  // Handle button click with promo validation - close drawer first for clean redirect
+  // Handle button click with promo validation (same as desktop)
   const handleButtonClick = async () => {
     try {
       const formData = form.getValues();
@@ -271,22 +271,11 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
       // Clear any promo errors
       form.clearErrors('promoCode');
 
-      // Close drawer first to free up mobile context for redirect
-      onOpenChange(false);
-      
-      // Wait for drawer animation to complete, then submit with immediate redirect (like desktop)
-      setTimeout(async () => {
-        try {
-          const result = await submitReport(formData, pricingResult);
-          if (result && onReportCreated) {
-            onReportCreated(result);
-          }
-        } catch (error) {
-          console.error('❌ Submission after drawer close failed:', error);
-          // Reopen drawer to show error
-          onOpenChange(true);
-        }
-      }, 100);
+      // Submit with trusted pricing
+      const result = await submitReport(formData, pricingResult);
+      if (result && onReportCreated) {
+        onReportCreated(result);
+      }
 
     } catch (error) {
       console.error('❌ Pricing validation failed:', error);
