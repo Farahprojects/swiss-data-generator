@@ -22,6 +22,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(({
 
   /* flags / timers */
   const [modalOpened, setModalOpened] = useState(false);
+  const pollRef = useRef<NodeJS.Timeout>();
   const frameRef = useRef<number>(); // desktop scroll helper
 
   /* --- scroll to success screen on desktop once SuccessScreen mounts --- */
@@ -40,58 +41,32 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(({
     };
   }, [ref]);
 
-  /* --- realtime listener for ready signal, then open modal --- */
+  /* --- poll for ready signal, then open modal & close drawer --- */
   useEffect(() => {
-    if (modalOpened || !guestReportId) return;
+    if (modalOpened) return;
 
-    console.log("[SuccessScreen] Setting up realtime listener for:", guestReportId);
-
-    const channel = supabase
-      .channel(`report-ready-${guestReportId}`) // unique channel per report
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'report_ready_signals',
-          filter: `guest_report_id=eq.${guestReportId}`
-        },
-        (payload) => {
-          console.log("[SuccessScreen] Report ready signal received:", payload);
-          // Immediately cleanup and open modal
-          supabase.removeChannel(channel);
-          open(guestReportId);
-          setModalOpened(true);
-        }
-      )
-      .subscribe((status) => {
-        console.log("[SuccessScreen] Channel subscription status:", status);
-      });
-
-    // Check if signal already exists (in case it was inserted before listener setup)
-    const checkExistingSignal = async () => {
-      const { data } = await supabase
+    pollRef.current = setInterval(async () => {
+      const { data, error } = await supabase
         .from("report_ready_signals")
         .select("guest_report_id")
         .eq("guest_report_id", guestReportId)
         .single();
-      
-      if (data && !modalOpened) {
-        console.log("[SuccessScreen] Found existing signal, opening modal immediately");
-        supabase.removeChannel(channel);
-        open(guestReportId);
-        setModalOpened(true);
+
+      if (error?.code && error.code !== "PGRST116") {
+        console.error("[SuccessScreen] polling error:", error);
+        return;
       }
-    };
 
-    // Small delay to ensure channel is subscribed before checking
-    const timeoutId = setTimeout(checkExistingSignal, 100);
+      if (data?.guest_report_id) {
+        clearInterval(pollRef.current as NodeJS.Timeout);
 
-    return () => {
-      console.log("[SuccessScreen] Cleaning up realtime listener");
-      clearTimeout(timeoutId);
-      supabase.removeChannel(channel);
-    };
+        open(guestReportId);           // show report modal
+        // Note: Removed resetReportState() to preserve state on refresh
+        setModalOpened(true);          // unmount SuccessScreen
+      }
+    }, 2000);
+
+    return () => clearInterval(pollRef.current as NodeJS.Timeout);
   }, [guestReportId, modalOpened, open]);
 
   /* unmount once modal is open */
