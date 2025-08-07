@@ -232,24 +232,35 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
   const handleDirectSubmission = async (formData: ReportFormData, trustedPricing: TrustedPricingObject) => {
     setIsProcessing(true);
     
+    // Debug logging for mobile
+    console.log('🔵 [MOBILE] Form data being sent:', formData);
+    console.log('🔵 [MOBILE] Trusted pricing:', trustedPricing);
+    console.log('🔵 [MOBILE] Email field:', formData.email);
+    
     // Close drawer first
     onOpenChange(false);
     
     // Wait for drawer animation
     setTimeout(async () => {
       try {
+        const submissionData = {
+          reportData: formData,
+          trustedPricing,
+          is_guest: true
+        };
+        
+        console.log('🔵 [MOBILE] Final submission data:', submissionData);
+        
         const { data, error } = await supabase.functions.invoke('initiate-report-flow', {
-          body: {
-            ...formData,
-            trustedPricing,
-            is_guest: true
-          }
+          body: submissionData
         });
         
         if (error) {
-          console.error('Report submission failed:', error);
+          console.error('❌ [MOBILE] Report submission failed:', error);
           return;
         }
+        
+        console.log('✅ [MOBILE] Report submission response:', data);
         
         // Handle response
         if (data?.checkoutUrl) {
@@ -261,7 +272,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
         }
         
       } catch (error) {
-        console.error('Report submission failed:', error);
+        console.error('❌ [MOBILE] Report submission failed:', error);
       } finally {
         setIsProcessing(false);
       }

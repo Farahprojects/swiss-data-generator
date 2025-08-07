@@ -1,6 +1,7 @@
 import React, { useCallback, useRef, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { ReportFormData } from '@/types/public-report';
+import { supabase } from '@/integrations/supabase/client';
 interface TrustedPricingObject {
   valid: boolean;
   discount_usd: number;
@@ -67,11 +68,53 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   // Local processing state - this component is not being simplified yet
   const [isProcessing, setIsProcessing] = useState(false);
   
-  // Placeholder for report submission
+  // Direct submission to initiate-report-flow (desktop)
   const submitReport = async (data: ReportFormData, pricing: TrustedPricingObject) => {
-    // This component still needs to be updated separately
-    console.warn('ReportForm still needs to be updated to use direct edge function calls');
-    return { success: false, guestReportId: '' };
+    // Debug logging for desktop
+    console.log('🟡 [DESKTOP] Form data being sent:', data);
+    console.log('🟡 [DESKTOP] Trusted pricing:', pricing);
+    console.log('🟡 [DESKTOP] Email field:', data.email);
+    
+    setIsProcessing(true);
+    
+    try {
+      const submissionData = {
+        reportData: data,
+        trustedPricing: pricing,
+        is_guest: true
+      };
+      
+      console.log('🟡 [DESKTOP] Final submission data:', submissionData);
+      
+      const { data: responseData, error } = await supabase.functions.invoke('initiate-report-flow', {
+        body: submissionData
+      });
+      
+      if (error) {
+        console.error('❌ [DESKTOP] Report submission failed:', error);
+        return { success: false, guestReportId: '' };
+      }
+      
+      console.log('✅ [DESKTOP] Report submission response:', responseData);
+      
+      // Handle response
+      if (responseData?.checkoutUrl) {
+        // Paid report - redirect to Stripe
+        window.location.href = responseData.checkoutUrl;
+        return { success: true, guestReportId: responseData.guestReportId || '' };
+      } else if (responseData?.success) {
+        // Free report success
+        return { success: true, guestReportId: responseData.guestReportId || '' };
+      }
+      
+      return { success: false, guestReportId: '' };
+      
+    } catch (error) {
+      console.error('❌ [DESKTOP] Report submission failed:', error);
+      return { success: false, guestReportId: '' };
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // Refs for scrolling
