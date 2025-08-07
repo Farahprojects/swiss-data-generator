@@ -196,7 +196,9 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
 
   // Step validation for mobile drawer
   const step1Valid = !!reportCategory;
-  const step1_5Valid = !!formValues.reportSubCategory;
+  const step1_5Valid = reportCategory === 'astro-data' 
+    ? !!formValues.request 
+    : !!formValues.reportSubCategory;
   const step2Valid = step2Done;
   const step3Valid = isValid;
 
