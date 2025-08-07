@@ -71,8 +71,6 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
   
   // Local processing state
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [successData, setSuccessData] = useState<{name: string; email: string; guestReportId: string; isLoading?: boolean} | null>(null);
   const { getReportPrice } = usePriceFetch();
   const { getPriceById } = usePricing();
 
@@ -272,15 +270,8 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
     // Store name/email in memory cache
     setFormMemory(formData.name, formData.email);
     
-    // Close drawer and immediately show success screen with loading state
+    // Close drawer 
     onOpenChange(false);
-    setSuccessData({
-      name: formData.name,
-      email: formData.email,
-      guestReportId: '', // Will be updated when API completes
-      isLoading: true
-    });
-    setShowSuccess(true);
     
     try {
       const submissionData = {
@@ -307,13 +298,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
         // Paid report - redirect to Stripe
         window.location.href = data.checkoutUrl;
       } else if (data?.success || data?.guestReportId) {
-        // Free report success - update success data with final guestReportId
-        setSuccessData({
-          name: formData.name,
-          email: formData.email,
-          guestReportId: data.guestReportId,
-          isLoading: false
-        });
+        // Free report success 
         onReportCreated?.(data);
       }
       
@@ -387,17 +372,6 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
     onOpenChange(false);
   };
 
-  // If success screen should be shown, render it instead of the drawer
-  if (showSuccess && successData) {
-    return (
-      <SuccessScreen
-        name={successData.name}
-        email={successData.email}
-        guestReportId={successData.guestReportId}
-        isLoading={successData.isLoading}
-      />
-    );
-  }
 
   return (
     <Drawer.Root open={isOpen} onOpenChange={onOpenChange}>
