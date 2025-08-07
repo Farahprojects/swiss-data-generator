@@ -454,15 +454,29 @@ const PublicReport = () => {
         </section>
 
         <TestsSection />
-        <div id="report-form" ref={reportFormRef}>
-          <ReportForm onReportCreated={(guestReportId, name, email) => {
-            // NEW: Unified success handling for desktop
-            setUnifiedSuccessData({ guestReportId, name, email });
-          }} />
-        </div>
+        {!isMobile && (
+          <div id="report-form" ref={reportFormRef}>
+            <ReportForm onReportCreated={(guestReportId, name, email) => {
+              // NEW: Unified success handling for desktop
+              setUnifiedSuccessData({ guestReportId, name, email });
+            }} />
+          </div>
+        )}
         <TheraiChatGPTSection />
         <FeaturesSection onGetReportClick={handleGetReportClick} />
         <Footer />
+
+        {isMobile && scrollY > 120 && !isMobileDrawerOpen && !unifiedSuccessData && !stripeSuccess.showSuccessModal && !stripeSuccess.showOriginalSuccessScreen && (
+          <div className="fixed bottom-6 right-6 z-50">
+            <Button
+              onClick={handleGetReportClick}
+              className="bg-gray-900 text-white px-6 py-4 rounded-xl text-base font-normal shadow-lg hover:bg-gray-800 transition-all duration-300"
+              aria-label="Unlock report"
+            >
+              Unlock
+            </Button>
+          </div>
+        )}
 
         {/* Mobile Report Drawer */}
         <MobileReportDrawer
