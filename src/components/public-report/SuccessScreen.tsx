@@ -74,7 +74,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(({
 
   /* --------------- UI --------------- */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
         <div className="space-y-4">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
