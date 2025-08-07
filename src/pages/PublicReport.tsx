@@ -27,6 +27,7 @@ const PublicReport = () => {
   const [isGuestIdLoading, setIsGuestIdLoading] = useState(true);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [isStripeReturn, setIsStripeReturn] = useState(false);
+  const [unifiedSuccessData, setUnifiedSuccessData] = useState<{ guestReportId: string; name: string; email: string } | null>(null);
   const location = useLocation();
   const isMobile = useIsMobile();
   const { stripeSuccess, setStripeSuccess, proceedToReport } = useStripeSuccess();
@@ -463,16 +464,8 @@ const PublicReport = () => {
         <TestsSection />
         <div id="report-form" ref={reportFormRef}>
           <ReportForm onReportCreated={(guestReportId, name, email) => {
-            // Handle report creation - parent can manage success state
-            console.log('Report created:', { guestReportId, name, email });
-            // The ReportForm will show the SuccessScreen internally
-            // We need to update our ref to point to the success screen
-            setTimeout(() => {
-              const successScreen = document.querySelector('[data-success-screen]');
-              if (successScreen) {
-                successScreenRef.current = successScreen as HTMLDivElement;
-              }
-            }, 100);
+            // NEW: Unified success handling for desktop
+            setUnifiedSuccessData({ guestReportId, name, email });
           }} />
         </div>
         <TheraiChatGPTSection />
@@ -483,6 +476,10 @@ const PublicReport = () => {
         <MobileReportDrawer
           isOpen={isMobileDrawerOpen}
           onOpenChange={setIsMobileDrawerOpen}
+          onReportCreated={(reportData) => {
+            // NEW: Unified success handling for mobile
+            setUnifiedSuccessData(reportData);
+          }}
         />
 
         {/* Payment Processing Success Message */}
@@ -505,6 +502,20 @@ const PublicReport = () => {
                 name={guestReportData?.person_a?.name || "Guest User"}
                 email={guestReportData?.person_a?.email || "guest@example.com"}
                 guestReportId={stripeSuccess.guestId}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* UNIFIED Success Screen - works for both mobile and desktop */}
+        {unifiedSuccessData && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <SuccessScreen
+                ref={successScreenRef}
+                name={unifiedSuccessData.name}
+                email={unifiedSuccessData.email}
+                guestReportId={unifiedSuccessData.guestReportId}
               />
             </div>
           </div>

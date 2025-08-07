@@ -168,27 +168,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     form.reset();
   }, [form]);
 
-  // Scroll to report section when success screen appears (same as CTA buttons)
-  useEffect(() => {
-    if (reportCreated && userName && userEmail) {
-      successScreenRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [reportCreated, userName, userEmail]);
 
-  // Show success screen when report is created
-  if (reportCreated && userName && userEmail) {
-    const guestReportId = localStorage.getItem('currentGuestReportId');
-    
-    return (
-      <div ref={successScreenRef} data-success-screen>
-        <SuccessScreen 
-          name={userName} 
-          email={userEmail} 
-          guestReportId={guestReportId || undefined}
-        />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-0" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
