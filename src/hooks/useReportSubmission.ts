@@ -164,17 +164,11 @@ export const useReportSubmission = (
     data: ReportFormData,
     trustedPricing: TrustedPricingObject
   ): Promise<{ success: boolean; guestReportId?: string }> => {
-    try {
-      // Close drawer immediately after form submission
-      onDrawerClose?.();
-      
-      // Call existing submitReport logic
-      return await submitReport(data, trustedPricing);
-      
-    } catch (error) {
-      // Re-throw error for handling in component
-      throw error;
-    }
+    // Close drawer immediately and trust the submission will succeed
+    onDrawerClose?.();
+    
+    // Call existing submitReport logic (trust it will work)
+    return await submitReport(data, trustedPricing);
   };
 
   return {
