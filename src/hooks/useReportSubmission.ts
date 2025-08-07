@@ -17,7 +17,8 @@ export interface TrustedPricingObject {
 
 export const useReportSubmission = (
   setCreatedGuestReportId?: (id: string) => void,
-  onDrawerClose?: () => void
+  onDrawerClose?: () => void,
+  onSuccess?: (guestReportId: string, name: string, email: string) => void
 ) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [reportCreated, setReportCreated] = useState(false);
@@ -119,6 +120,10 @@ export const useReportSubmission = (
         });
         setReportCreated(true);
         setIsProcessing(false);
+        
+        // NEW: Trigger success callback for mobile
+        onSuccess?.(guestReportId, data.name, data.email);
+        
         return { success: true, guestReportId };
       }
 

@@ -27,6 +27,7 @@ const PublicReport = () => {
   const [isGuestIdLoading, setIsGuestIdLoading] = useState(true);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [isStripeReturn, setIsStripeReturn] = useState(false);
+  const [mobileSuccessData, setMobileSuccessData] = useState<{ guestReportId: string; name: string; email: string } | null>(null);
   const location = useLocation();
   const isMobile = useIsMobile();
   const { stripeSuccess, setStripeSuccess, proceedToReport } = useStripeSuccess();
@@ -483,6 +484,10 @@ const PublicReport = () => {
         <MobileReportDrawer
           isOpen={isMobileDrawerOpen}
           onOpenChange={setIsMobileDrawerOpen}
+          onReportCreated={(reportData) => {
+            // NEW: Handle mobile report creation
+            setMobileSuccessData(reportData);
+          }}
         />
 
         {/* Payment Processing Success Message */}
@@ -505,6 +510,20 @@ const PublicReport = () => {
                 name={guestReportData?.person_a?.name || "Guest User"}
                 email={guestReportData?.person_a?.email || "guest@example.com"}
                 guestReportId={stripeSuccess.guestId}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Mobile Success Screen */}
+        {mobileSuccessData && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <SuccessScreen
+                ref={successScreenRef}
+                name={mobileSuccessData.name}
+                email={mobileSuccessData.email}
+                guestReportId={mobileSuccessData.guestReportId}
               />
             </div>
           </div>
