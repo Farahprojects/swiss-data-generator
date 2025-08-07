@@ -22,7 +22,6 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(({
 
   /* flags / timers */
   const [modalOpened, setModalOpened] = useState(false);
-  const pollRef = useRef<NodeJS.Timeout>();
   const frameRef = useRef<number>(); // desktop scroll helper
 
   /* --- scroll to success screen on desktop once SuccessScreen mounts --- */
@@ -41,32 +40,34 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(({
     };
   }, [ref]);
 
-  /* --- poll for ready signal, then open modal & close drawer --- */
+  /* --- realtime listener for ready signal, then open modal --- */
   useEffect(() => {
-    if (modalOpened) return;
+    if (modalOpened || !guestReportId) return;
 
-    pollRef.current = setInterval(async () => {
-      const { data, error } = await supabase
-        .from("report_ready_signals")
-        .select("guest_report_id")
-        .eq("guest_report_id", guestReportId)
-        .single();
+    console.log("[SuccessScreen] Setting up realtime listener for:", guestReportId);
 
-      if (error?.code && error.code !== "PGRST116") {
-        console.error("[SuccessScreen] polling error:", error);
-        return;
-      }
+    const channel = supabase
+      .channel('report-ready-listener')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'report_ready_signals',
+          filter: `guest_report_id=eq.${guestReportId}`
+        },
+        (payload) => {
+          console.log("[SuccessScreen] Report ready signal received:", payload);
+          open(guestReportId);           // show report modal
+          setModalOpened(true);          // unmount SuccessScreen
+        }
+      )
+      .subscribe();
 
-      if (data?.guest_report_id) {
-        clearInterval(pollRef.current as NodeJS.Timeout);
-
-        open(guestReportId);           // show report modal
-        // Note: Removed resetReportState() to preserve state on refresh
-        setModalOpened(true);          // unmount SuccessScreen
-      }
-    }, 2000);
-
-    return () => clearInterval(pollRef.current as NodeJS.Timeout);
+    return () => {
+      console.log("[SuccessScreen] Cleaning up realtime listener");
+      supabase.removeChannel(channel);
+    };
   }, [guestReportId, modalOpened, open]);
 
   /* unmount once modal is open */
