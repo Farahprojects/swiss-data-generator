@@ -110,19 +110,18 @@ serve(async (req) => {
       });
     }
 
-    // Step 4: Fire-and-forget report generation
-    console.log(`🔄 [process-paid-report] Triggering report generation (fire-and-forget): ${guest_id}`);
+    // Step 4: Fire-and-forget report generation via verify-guest-payment
+    console.log(`🔄 [process-paid-report] Triggering report generation via verify-guest-payment: ${guest_id}`);
     
     // Fire-and-forget - don't wait for response
     EdgeRuntime.waitUntil(
-      supabase.functions.invoke('translator-edge', {
+      supabase.functions.invoke('verify-guest-payment', {
         body: {
-          guest_report_id: guest_id,
-          report_data: guestReport.report_data,
-          is_ai_report: guestReport.is_ai_report
+          sessionId: guest_id,
+          type: 'promo'
         }
       }).then(() => {
-        console.log(`✅ [process-paid-report] Report generation triggered successfully: ${guest_id}`);
+        console.log(`✅ [process-paid-report] Report generation triggered successfully via verify-guest-payment: ${guest_id}`);
       }).catch((error) => {
         console.error(`❌ [process-paid-report] Report generation failed: ${guest_id}`, error);
       })
