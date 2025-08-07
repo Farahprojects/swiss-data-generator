@@ -232,10 +232,37 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
   const handleDirectSubmission = async (formData: ReportFormData, trustedPricing: TrustedPricingObject) => {
     setIsProcessing(true);
     
+    // Transform form data to match translator edge function field names
+    const transformedReportData = {
+      // Keep original form fields for compatibility
+      ...formData,
+      
+      // Add translator field names for birth data
+      birth_date: formData.birthDate,
+      birth_time: formData.birthTime,
+      location: formData.birthLocation,
+      latitude: formData.birthLatitude,
+      longitude: formData.birthLongitude,
+      
+      // Second person fields with translator names
+      second_person_birth_date: formData.secondPersonBirthDate,
+      second_person_birth_time: formData.secondPersonBirthTime,
+      second_person_location: formData.secondPersonBirthLocation,
+      second_person_latitude: formData.secondPersonLatitude,
+      second_person_longitude: formData.secondPersonLongitude,
+      
+      // Ensure request field is set
+      request: formData.request || 'essence',
+      
+      // Guest flags
+      is_guest: true
+    };
+    
     // Debug logging for mobile
-    console.log('🔵 [MOBILE] Form data being sent:', formData);
+    console.log('🔵 [MOBILE] Original form data:', formData);
+    console.log('🔵 [MOBILE] Transformed report data:', transformedReportData);
     console.log('🔵 [MOBILE] Trusted pricing:', trustedPricing);
-    console.log('🔵 [MOBILE] Email field:', formData.email);
+    console.log('🔵 [MOBILE] Email field:', transformedReportData.email);
     
     // Close drawer first
     onOpenChange(false);
@@ -244,7 +271,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
     setTimeout(async () => {
       try {
         const submissionData = {
-          reportData: formData,
+          reportData: transformedReportData,
           trustedPricing,
           is_guest: true
         };

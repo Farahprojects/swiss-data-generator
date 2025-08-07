@@ -207,7 +207,37 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
   const handleSubmitWithTrustedPricing = async (trustedPricing: TrustedPricingObject) => {
     const formData = form.getValues();
-    const submissionData = coachSlug ? { ...formData, coachSlug } : formData;
+    
+    // Transform form data to match translator edge function field names
+    const transformedReportData = {
+      // Keep original form fields for compatibility
+      ...formData,
+      
+      // Add translator field names for birth data
+      birth_date: formData.birthDate,
+      birth_time: formData.birthTime,
+      location: formData.birthLocation,
+      latitude: formData.birthLatitude,
+      longitude: formData.birthLongitude,
+      
+      // Second person fields with translator names
+      second_person_birth_date: formData.secondPersonBirthDate,
+      second_person_birth_time: formData.secondPersonBirthTime,
+      second_person_location: formData.secondPersonBirthLocation,
+      second_person_latitude: formData.secondPersonLatitude,
+      second_person_longitude: formData.secondPersonLongitude,
+      
+      // Ensure request field is set
+      request: formData.request || 'essence',
+      
+      // Guest flags
+      is_guest: true
+    };
+
+    const submissionData = coachSlug ? { ...transformedReportData, coachSlug } : transformedReportData;
+    
+    console.log('🔍 [DESKTOP] Original form data:', formData);
+    console.log('🔍 [DESKTOP] Transformed report data:', transformedReportData);
     
     try {
       const result = await submitReport(submissionData, trustedPricing);
