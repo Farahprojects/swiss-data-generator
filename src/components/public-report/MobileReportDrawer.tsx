@@ -70,6 +70,8 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
   
   // Local processing state
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successData, setSuccessData] = useState<{name: string; email: string; guestReportId: string} | null>(null);
   const { getReportPrice } = usePriceFetch();
   const { getPriceById } = usePricing();
 
@@ -293,8 +295,14 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
         if (data?.checkoutUrl) {
           // Paid report - redirect to Stripe
           window.location.href = data.checkoutUrl;
-        } else if (data?.success) {
-          // Free report success
+        } else if (data?.success || data?.guestReportId) {
+          // Free report success - trigger SuccessScreen immediately
+          setSuccessData({
+            name: formData.name,
+            email: formData.email,
+            guestReportId: data.guestReportId
+          });
+          setShowSuccess(true);
           onReportCreated?.(data);
         }
         
@@ -368,6 +376,17 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
     resetForm();
     onOpenChange(false);
   };
+
+  // If success screen should be shown, render it instead of the drawer
+  if (showSuccess && successData) {
+    return (
+      <SuccessScreen
+        name={successData.name}
+        email={successData.email}
+        guestReportId={successData.guestReportId}
+      />
+    );
+  }
 
   return (
     <Drawer.Root open={isOpen} onOpenChange={onOpenChange}>

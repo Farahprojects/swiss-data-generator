@@ -67,6 +67,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   
   // Local processing state - this component is not being simplified yet
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successData, setSuccessData] = useState<{name: string; email: string; guestReportId: string} | null>(null);
   
   // Direct submission to initiate-report-flow (desktop)
   const submitReport = async (data: ReportFormData, pricing: TrustedPricingObject) => {
@@ -102,8 +104,14 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         // Paid report - redirect to Stripe
         window.location.href = responseData.checkoutUrl;
         return { success: true, guestReportId: responseData.guestReportId || '' };
-      } else if (responseData?.success) {
-        // Free report success
+      } else if (responseData?.success || responseData?.guestReportId) {
+        // Free report success - trigger SuccessScreen immediately
+        setSuccessData({
+          name: submissionData.reportData.name,
+          email: submissionData.reportData.email,
+          guestReportId: responseData.guestReportId
+        });
+        setShowSuccess(true);
         return { success: true, guestReportId: responseData.guestReportId || '' };
       }
       
@@ -256,6 +264,17 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   }, [form]);
 
 
+
+  // If success screen should be shown, render it instead of the form
+  if (showSuccess && successData) {
+    return (
+      <SuccessScreen
+        name={successData.name}
+        email={successData.email}
+        guestReportId={successData.guestReportId}
+      />
+    );
+  }
 
   return (
     <div className="space-y-0" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
