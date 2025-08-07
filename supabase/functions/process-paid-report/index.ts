@@ -110,28 +110,23 @@ serve(async (req) => {
       });
     }
 
-    // Step 4: Call verify-guest-payment with the guest_id
-    console.log(`🔄 [process-paid-report] Calling verify-guest-payment for: ${guest_id}`);
+    // Step 4: Fire-and-forget report generation
+    console.log(`🔄 [process-paid-report] Triggering report generation (fire-and-forget): ${guest_id}`);
     
-    const verifyResponse = await supabase.functions.invoke('verify-guest-payment', {
-      body: {
-        sessionId: guest_id,
-        type: 'promo', // Use promo type since we're bypassing Stripe verification
-        requestId: crypto.randomUUID().substring(0, 8)
-      }
-    });
-
-    if (verifyResponse.error) {
-      console.error(`❌ [process-paid-report] verify-guest-payment failed: ${guest_id}`, verifyResponse.error);
-      return new Response(JSON.stringify({ 
-        error: "Failed to trigger report generation",
-        guest_id,
-        verify_error: verifyResponse.error
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
-    }
+    // Fire-and-forget - don't wait for response
+    EdgeRuntime.waitUntil(
+      supabase.functions.invoke('translator-edge', {
+        body: {
+          guest_report_id: guest_id,
+          report_data: guestReport.report_data,
+          is_ai_report: guestReport.is_ai_report
+        }
+      }).then(() => {
+        console.log(`✅ [process-paid-report] Report generation triggered successfully: ${guest_id}`);
+      }).catch((error) => {
+        console.error(`❌ [process-paid-report] Report generation failed: ${guest_id}`, error);
+      })
+    );
 
     console.log(`✅ [process-paid-report] Successfully processed paid report: ${guest_id}`);
 
