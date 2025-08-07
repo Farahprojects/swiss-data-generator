@@ -105,13 +105,6 @@ const Step1_5AstroData = ({ control, setValue, selectedSubCategory, onNext }: St
                         </span>
                       </div>
                       <p className="text-sm text-[hsl(var(--apple-gray))] font-light leading-relaxed">{subCategory.description}</p>
-                      <div className={`mt-2 text-xs font-medium transition-colors duration-300 ${
-                        isSelected 
-                          ? 'text-green-600' 
-                          : 'text-green-500'
-                      }`}>
-                        ⚡ Instant delivery (~5 seconds)
-                      </div>
                     </div>
                   </div>
                 </motion.button>
