@@ -1,7 +1,14 @@
-import React, { useCallback, useRef, useEffect } from 'react';
+import React, { useCallback, useRef, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { ReportFormData } from '@/types/public-report';
-import { useReportSubmission, TrustedPricingObject } from '@/hooks/useReportSubmission';
+interface TrustedPricingObject {
+  valid: boolean;
+  discount_usd: number;
+  trusted_base_price_usd: number;
+  final_price_usd: number;
+  report_type: string;
+  reason?: string;
+}
 import ReportTypeSelector from '@/components/public-report/ReportTypeSelector';
 import CombinedPersonalDetailsForm from '@/components/public-report/CombinedPersonalDetailsForm';
 import SecondPersonForm from '@/components/public-report/SecondPersonForm';
@@ -57,8 +64,15 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
   const { register, handleSubmit, watch, setValue, control, formState: { errors, isValid } } = form;
   
-  // Report submission hook
-  const { isProcessing, reportCreated, submitReport } = useReportSubmission();
+  // Local processing state - this component is not being simplified yet
+  const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Placeholder for report submission
+  const submitReport = async (data: ReportFormData, pricing: TrustedPricingObject) => {
+    // This component still needs to be updated separately
+    console.warn('ReportForm still needs to be updated to use direct edge function calls');
+    return { success: false, guestReportId: '' };
+  };
 
   // Refs for scrolling
   const successScreenRef = useRef<HTMLDivElement>(null);

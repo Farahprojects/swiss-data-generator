@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, forwardRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useReportModal } from "@/contexts/ReportModalContext";
-import { useReportSubmission } from "@/hooks/useReportSubmission";
+
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SuccessScreenProps {
@@ -17,7 +17,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(({
 }, ref) => {
   /* helpers */
   const { open } = useReportModal();
-  const { resetReportState } = useReportSubmission();
+  
   const isMobile = useIsMobile();
 
   /* flags / timers */
@@ -67,7 +67,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(({
     }, 2000);
 
     return () => clearInterval(pollRef.current as NodeJS.Timeout);
-  }, [guestReportId, modalOpened, open, resetReportState]);
+  }, [guestReportId, modalOpened, open]);
 
   /* unmount once modal is open */
   if (modalOpened) return null;

@@ -10,11 +10,20 @@ import Step1_5AstroData from './drawer-steps/Step1_5AstroData';
 import Step2BirthDetails from './drawer-steps/Step2BirthDetails';
 import Step3Payment from './drawer-steps/Step3Payment';
 import { SuccessScreen } from '@/components/public-report/SuccessScreen';
-import { useReportSubmission, TrustedPricingObject } from '@/hooks/useReportSubmission';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { supabase } from '@/integrations/supabase/client';
 import { usePricing } from '@/contexts/PricingContext';
+
 import { MobileDrawerProvider } from '@/contexts/MobileDrawerContext';
+
+interface TrustedPricingObject {
+  valid: boolean;
+  discount_usd: number;
+  trusted_base_price_usd: number;
+  final_price_usd: number;
+  report_type: string;
+  reason?: string;
+}
 
 interface MobileReportDrawerProps {
   isOpen: boolean;
@@ -59,11 +68,8 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
 
   const { register, handleSubmit, watch, setValue, control, formState: { errors, isValid } } = form;
   
-  // Report submission hook (same as desktop)
-  const { isProcessing, reportCreated, submitReportAndCloseDrawer } = useReportSubmission(
-    undefined, // No setCreatedGuestReportId needed for mobile
-    () => onOpenChange(false)  // Pass drawer close callback
-  );
+  // Local processing state
+  const [isProcessing, setIsProcessing] = useState(false);
   const { getReportPrice } = usePriceFetch();
   const { getPriceById } = usePricing();
 
@@ -222,38 +228,47 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
     setCurrentStep(1);
   };
 
-  // Handle form submission with promo validation (same as desktop)
-  const onSubmit = async (data: ReportFormData) => {
-    try {
-      // Calculate trusted pricing 
-      const formData = {
-        reportType: data.reportType,
-        essenceType: data.essenceType,
-        relationshipType: data.relationshipType,
-        reportCategory: data.reportCategory,
-        reportSubCategory: data.reportSubCategory,
-        request: data.request
-      };
-      
-      const price = getReportPrice(formData);
-      const trustedPricing: TrustedPricingObject = {
-        valid: true,
-        discount_usd: 0,
-        trusted_base_price_usd: price,
-        final_price_usd: price,
-        report_type: data.reportType || data.reportSubCategory || data.request || ''
-      };
-      
-      const result = await submitReportAndCloseDrawer(data, trustedPricing);
-      if (result && onReportCreated) {
-        onReportCreated(result);
+  // Direct submission to initiate-report-flow
+  const handleDirectSubmission = async (formData: ReportFormData, trustedPricing: TrustedPricingObject) => {
+    setIsProcessing(true);
+    
+    // Close drawer first
+    onOpenChange(false);
+    
+    // Wait for drawer animation
+    setTimeout(async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('initiate-report-flow', {
+          body: {
+            ...formData,
+            trustedPricing,
+            is_guest: true
+          }
+        });
+        
+        if (error) {
+          console.error('Report submission failed:', error);
+          return;
+        }
+        
+        // Handle response
+        if (data?.checkoutUrl) {
+          // Paid report - redirect to Stripe
+          window.location.href = data.checkoutUrl;
+        } else if (data?.success) {
+          // Free report success
+          onReportCreated?.(data);
+        }
+        
+      } catch (error) {
+        console.error('Report submission failed:', error);
+      } finally {
+        setIsProcessing(false);
       }
-    } catch (error) {
-      console.error('Report submission failed:', error);
-    }
+    }, 100);
   };
 
-  // Handle button click with promo validation (same as desktop)
+  // Handle button click with promo validation
   const handleButtonClick = async () => {
     try {
       const formData = form.getValues();
@@ -266,7 +281,6 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
         pricingResult = await validatePromoCode(currentPromoCode);
         
         if (!pricingResult.valid) {
-          // Show error in the form
           form.setError('promoCode', { 
             type: 'manual', 
             message: pricingResult.reason || 'Invalid Promo Code' 
@@ -297,11 +311,8 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
       // Clear any promo errors
       form.clearErrors('promoCode');
 
-      // Submit with trusted pricing
-      const result = await submitReportAndCloseDrawer(formData, pricingResult);
-      if (result && onReportCreated) {
-        onReportCreated(result);
-      }
+      // Submit directly to initiate-report-flow
+      await handleDirectSubmission(formData, pricingResult);
 
     } catch (error) {
       console.error('❌ Pricing validation failed:', error);
