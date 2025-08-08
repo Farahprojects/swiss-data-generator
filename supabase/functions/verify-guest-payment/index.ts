@@ -19,17 +19,48 @@ async function kickTranslator(guestReportId: string, reportData: ReportData, req
     
     // Extract request type efficiently (minimal processing)
     const smartRequest = reportData.request || reportData.reportType?.split('_')[0] || 'essence';
+    const rqLower = String(smartRequest).toLowerCase();
     
     console.log(`🧠 [verify-guest-payment] Smart extraction from request: "${reportData.reportType}" → "${smartRequest}"`);
     
-    // OPTIMIZATION: Minimal payload preparation
-    const translatorPayload = {
+    // Build a normalized payload for translator-edge
+    const basePayload: any = {
       ...reportData,
       request: smartRequest,
       is_guest: true,
       user_id: guestReportId,
-      request_id: requestId
+      request_id: requestId,
     };
+
+    // For compatibility/sync astro-data, construct person_a and person_b from flat fields
+    if (["sync", "compatibility", "synastry"].includes(rqLower)) {
+      const personA = {
+        birth_date: reportData.birth_date || reportData.birthDate || null,
+        birth_time: reportData.birth_time || reportData.birthTime || null,
+        location: reportData.location || reportData.birthLocation || "",
+        latitude: reportData.latitude ?? reportData.birthLatitude ?? null,
+        longitude: reportData.longitude ?? reportData.birthLongitude ?? null,
+        tz: reportData.tz || reportData.timezone || "",
+        name: reportData.name || "",
+        house_system: reportData.house_system || reportData.hsys || "",
+      };
+
+      const personB = {
+        birth_date: reportData.second_person_birth_date || reportData.secondPersonBirthDate || null,
+        birth_time: reportData.second_person_birth_time || reportData.secondPersonBirthTime || null,
+        location: reportData.second_person_location || reportData.secondPersonBirthLocation || "",
+        latitude: reportData.second_person_latitude ?? reportData.secondPersonLatitude ?? null,
+        longitude: reportData.second_person_longitude ?? reportData.secondPersonLongitude ?? null,
+        tz: reportData.second_person_tz || reportData.secondPersonTimezone || "",
+        name: reportData.second_person_name || reportData.secondPersonName || "",
+        house_system: reportData.second_person_house_system || "",
+      };
+
+      basePayload.person_a = personA;
+      basePayload.person_b = personB;
+    }
+
+    const translatorPayload = basePayload;
     
     console.log(`🔄 [verify-guest-payment] Translator payload (structured):`, {
       request: translatorPayload.request,
