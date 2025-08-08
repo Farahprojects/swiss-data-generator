@@ -2,48 +2,22 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { CachedReport, ReportCache } from '@/types/reportReference';
 import { supabase } from '@/integrations/supabase/client';
 
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-const MAX_CACHE_SIZE = 10; // Maximum number of cached reports
+const CACHE_TTL = Infinity; // No timeout - cache until session ends
+const MAX_CACHE_SIZE = 1; // Only 1 report maximum per session
 
 export const useReportCache = () => {
   const [cache, setCache] = useState<ReportCache>({});
   const cleanupIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Cleanup expired cache entries
+  // Cleanup expired cache entries - disabled since no timeout
   const cleanupExpiredCache = useCallback(() => {
-    const now = Date.now();
-    setCache(prevCache => {
-      const newCache = { ...prevCache };
-      let hasChanges = false;
-
-      Object.keys(newCache).forEach(key => {
-        const entry = newCache[key];
-        if (now - entry.timestamp > entry.ttl) {
-          delete newCache[key];
-          hasChanges = true;
-          console.log(`🗑️ Cache cleanup: Removed expired entry for ${key}`);
-        }
-      });
-
-      return hasChanges ? newCache : prevCache;
-    });
+    // No cleanup needed since TTL is Infinity
   }, []);
 
-  // Get cached report if available and not expired
+  // Get cached report if available
   const getCachedReport = useCallback((guestReportId: string) => {
     const entry = cache[guestReportId];
     if (!entry) return null;
-
-    const now = Date.now();
-    if (now - entry.timestamp > entry.ttl) {
-      // Remove expired entry
-      setCache(prev => {
-        const newCache = { ...prev };
-        delete newCache[guestReportId];
-        return newCache;
-      });
-      return null;
-    }
 
     return entry.data;
   }, [cache]);
@@ -58,19 +32,8 @@ export const useReportCache = () => {
     };
 
     setCache(prev => {
-      const newCache = { ...prev, [guestReportId]: newEntry };
-
-      // Enforce max cache size
-      const entries = Object.entries(newCache);
-      if (entries.length > MAX_CACHE_SIZE) {
-        // Remove oldest entry
-        const oldestKey = entries.reduce((oldest, [key, entry]) => 
-          entry.timestamp < oldest[1].timestamp ? [key, entry] : oldest
-        )[0];
-        
-        delete newCache[oldestKey];
-      }
-
+      // Clear any existing cache since we only want 1 report
+      const newCache = { [guestReportId]: newEntry };
       return newCache;
     });
 
@@ -120,16 +83,15 @@ export const useReportCache = () => {
     }
   }, [getCachedReport, cacheReport]);
 
-  // Setup cleanup interval
+  // No cleanup interval needed since no timeout
   useEffect(() => {
-    cleanupIntervalRef.current = setInterval(cleanupExpiredCache, 60000); // Clean every minute
-
+    // Cleanup on unmount only
     return () => {
       if (cleanupIntervalRef.current) {
         clearInterval(cleanupIntervalRef.current);
       }
     };
-  }, [cleanupExpiredCache]);
+  }, []);
 
   // Manual cleanup on unmount
   useEffect(() => {
