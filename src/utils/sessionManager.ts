@@ -26,7 +26,6 @@ export class SessionManager {
    */
   registerStateReset(componentId: string, callback: () => void): void {
     this.stateResetCallbacks.set(componentId, callback);
-    console.log(`📝 SessionManager: Registered state reset for ${componentId}`);
   }
 
   /**
@@ -34,7 +33,6 @@ export class SessionManager {
    */
   unregisterStateReset(componentId: string): void {
     this.stateResetCallbacks.delete(componentId);
-    console.log(`🗑️ SessionManager: Unregistered state reset for ${componentId}`);
   }
 
   /**

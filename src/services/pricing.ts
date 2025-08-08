@@ -113,8 +113,6 @@ class PricingService {
     this.notifySubscribers();
 
     try {
-      console.log('🔄 Fetching fresh prices from edge function...');
-      
       const response = await fetch(`${supabaseUrl}/functions/v1/get-prices`, {
         method: 'GET',
         headers: {
@@ -141,8 +139,6 @@ class PricingService {
       cachedPrices = result.prices;
       lastFetchTime = Date.now();
       this.prices = result.prices;
-      
-      console.log(`✅ Successfully loaded ${result.prices.length} prices (cached for 5 minutes)`);
       
     } catch (error) {
       this.error = error instanceof Error ? error.message : 'Unknown error';
@@ -197,7 +193,6 @@ class PricingService {
   clearCache(): void {
     cachedPrices = null;
     lastFetchTime = 0;
-    console.log('🗑️ Pricing cache cleared');
   }
 }
 
