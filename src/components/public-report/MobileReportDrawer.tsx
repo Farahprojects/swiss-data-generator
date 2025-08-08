@@ -159,8 +159,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
 
   // Step management for mobile drawer
   const [currentStep, setCurrentStep] = useState(1);
-  let totalSteps = 5;
-
+  
   // Watch form values (same as desktop)
   const formValues = form.watch();
   const selectedReportType = watch('reportType');
@@ -176,10 +175,66 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
                                reportType?.startsWith('sync_') || 
                                request === 'sync';
 
-  // Dynamic total steps based on report type
-  totalSteps = requiresSecondPerson ? 5 : 4;
+  // Step configuration array - single source of truth
+  const getSteps = () => {
+    const baseSteps = [
+      { 
+        id: 1, 
+        component: Step1ReportType,
+        validation: () => !!reportCategory,
+        props: { control, setValue, selectedCategory: reportCategory, onNext: nextStep }
+      },
+      { 
+        id: 2, 
+        component: reportCategory === 'astro-data' ? Step1_5AstroData : Step1_5SubCategory,
+        validation: () => reportCategory === 'astro-data' 
+          ? !!formValues.request 
+          : !!formValues.reportSubCategory,
+        props: { 
+          control, 
+          setValue, 
+          selectedSubCategory: formValues.reportSubCategory,
+          selectedCategory: reportCategory,
+          onNext: nextStep 
+        }
+      },
+      { 
+        id: 3, 
+        component: Step2PersonA,
+        validation: () => step2Done,
+        props: { register, setValue, watch, errors, onNext: nextStep }
+      }
+    ];
+    
+    const secondPersonStep = requiresSecondPerson 
+      ? [{
+          id: 4, 
+          component: Step2PersonB,
+          validation: () => step3Done,
+          props: { register, setValue, watch, errors, onNext: nextStep }
+        }]
+      : [];
+      
+    const paymentStep = [{
+      id: requiresSecondPerson ? 5 : 4, 
+      component: Step3Payment,
+      validation: () => isValid,
+      props: { 
+        register, 
+        watch, 
+        errors, 
+        isProcessing, 
+        onTimeoutChange: () => {} 
+      }
+    }];
+    
+    return [...baseSteps, ...secondPersonStep, ...paymentStep];
+  };
 
-  // Step progression logic for new 5-step structure
+  const steps = getSteps();
+  const totalSteps = steps.length;
+
+  // Step progression logic for validation
   const step1Done = Boolean(formValues.reportType || formValues.request);
   const step2Done = step1Done && Boolean(
     formValues.name &&
@@ -195,38 +250,15 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
     formValues.secondPersonBirthLocation
   ));
 
-  // Step validation for mobile drawer
-  const step1Valid = !!reportCategory;
-  const step1_5Valid = reportCategory === 'astro-data' 
-    ? !!formValues.request 
-    : !!formValues.reportSubCategory;
-  const step2Valid = step2Done;
-  const step3Valid = step3Done;
-  const step4Valid = isValid;
-
-  // Determine if we can go to next step
-  const canGoNext = () => {
-    switch (currentStep) {
-      case 1: return step1Valid;
-      case 2: return step1_5Valid;
-      case 3: return step2Valid;
-      case 4: 
-        if (requiresSecondPerson) {
-          return step3Valid; // Person B validation
-        } else {
-          return step4Valid; // Payment validation (skipped Person B)
-        }
-      case 5: 
-        if (requiresSecondPerson) {
-          return step4Valid; // Payment validation
-        } else {
-          return false; // Should not reach here for non-compatibility reports
-        }
-      default: return false;
-    }
+  // Simplified validation - single pattern
+  const getCurrentStepValidation = () => {
+    const currentStepConfig = steps.find(s => s.id === currentStep);
+    return currentStepConfig?.validation() || false;
   };
 
-  // Navigation functions
+  // Simplified navigation
+  const canGoNext = () => getCurrentStepValidation();
+
   const nextStep = () => {
     if (currentStep < totalSteps && canGoNext()) {
       setCurrentStep(currentStep + 1);
@@ -236,6 +268,85 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
   const prevStep = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
+    }
+  };
+
+  // Simplified rendering - single render function
+  const renderCurrentStep = () => {
+    const currentStepConfig = steps.find(s => s.id === currentStep);
+    
+    if (!currentStepConfig) return null;
+    
+    const StepComponent = currentStepConfig.component;
+    
+    // Type-safe rendering based on step ID
+    switch (currentStep) {
+      case 1:
+        return (
+          <Step1ReportType
+            control={control}
+            setValue={setValue}
+            selectedCategory={reportCategory}
+            onNext={nextStep}
+          />
+        );
+      case 2:
+        return reportCategory === 'astro-data' ? (
+          <Step1_5AstroData
+            control={control}
+            setValue={setValue}
+            selectedSubCategory={formValues.reportSubCategory}
+            onNext={nextStep}
+          />
+        ) : (
+          <Step1_5SubCategory
+            control={control}
+            setValue={setValue}
+            selectedCategory={reportCategory}
+            selectedSubCategory={formValues.reportSubCategory}
+            onNext={nextStep}
+          />
+        );
+      case 3:
+        return (
+          <Step2PersonA
+            register={register}
+            setValue={setValue}
+            watch={watch}
+            errors={errors}
+            onNext={nextStep}
+          />
+        );
+      case 4:
+        return requiresSecondPerson ? (
+          <Step2PersonB
+            register={register}
+            setValue={setValue}
+            watch={watch}
+            errors={errors}
+            onNext={nextStep}
+          />
+        ) : (
+          <Step3Payment
+            register={register}
+            watch={watch}
+            errors={errors}
+            isProcessing={isProcessing}
+            onTimeoutChange={() => {}}
+          />
+        );
+      case 5:
+        return requiresSecondPerson ? (
+          <Step3Payment
+            register={register}
+            watch={watch}
+            errors={errors}
+            isProcessing={isProcessing}
+            onTimeoutChange={() => {}}
+          />
+        ) : null;
+      default:
+        return null;
     }
   };
 
@@ -433,81 +544,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
 
           {/* Content Area */}
           <div className="flex-1 overflow-y-auto px-6 py-4">
-            {currentStep === 1 && (
-              <Step1ReportType
-                control={control}
-                setValue={setValue}
-                selectedCategory={reportCategory}
-                onNext={nextStep}
-              />
-            )}
-
-            {currentStep === 2 && (
-              <>
-                {reportCategory === 'astro-data' ? (
-                  <Step1_5AstroData
-                    control={control}
-                    setValue={setValue}
-                    selectedSubCategory={formValues.reportSubCategory}
-                    onNext={nextStep}
-                  />
-                ) : (
-                  <Step1_5SubCategory
-                    control={control}
-                    setValue={setValue}
-                    selectedCategory={reportCategory}
-                    selectedSubCategory={formValues.reportSubCategory}
-                    onNext={nextStep}
-                  />
-                )}
-              </>
-            )}
-
-            {currentStep === 3 && (
-              <Step2PersonA
-                register={register}
-                setValue={setValue}
-                watch={watch}
-                errors={errors}
-                onNext={nextStep}
-              />
-            )}
-
-            {currentStep === 4 && (
-              <>
-                {requiresSecondPerson ? (
-                  <Step2PersonB
-                    register={register}
-                    setValue={setValue}
-                    watch={watch}
-                    errors={errors}
-                    onNext={nextStep}
-                  />
-                ) : (
-                  <Step3Payment
-                    register={register}
-                    watch={watch}
-                    errors={errors}
-                    isProcessing={isProcessing}
-                    onTimeoutChange={() => {}}
-                  />
-                )}
-              </>
-            )}
-
-            {currentStep === 5 && (
-              <>
-                {requiresSecondPerson ? (
-                  <Step3Payment
-                    register={register}
-                    watch={watch}
-                    errors={errors}
-                    isProcessing={isProcessing}
-                    onTimeoutChange={() => {}}
-                  />
-                ) : null}
-              </>
-            )}
+            {renderCurrentStep()}
           </div>
 
           {/* Footer */}
