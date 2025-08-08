@@ -284,9 +284,6 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
     console.log('🔵 [MOBILE] Trusted pricing:', trustedPricing);
     console.log('🔵 [MOBILE] Email field:', transformedReportData.email);
     
-    // Store name/email in memory cache
-    setFormMemory(formData.name, formData.email);
-    
     // T2 - Call closeDrawer()
     const T2 = Date.now();
     console.log('🔍 [DIAGNOSTIC] T2 - Call closeDrawer:', { label: 'T2', ts: T2, durationFromT0: T2 - T0 });
