@@ -358,7 +358,7 @@ serve(async (req) => {
       // Call translator-edge directly with the full payload
       supabaseAdmin.functions.invoke('translator-edge', {
         body: {
-          user_id: null,
+          user_id: guestReportId,
           is_guest: true,
           is_ai_report: isAI,
           reportType: reportData.reportType,
