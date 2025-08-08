@@ -193,20 +193,9 @@ const PaymentStep = ({
     const currentPromoCode = promoCode.trim();
     let pricingResult: TrustedPricingObject;
 
-    // Debug logging for desktop payment
-    console.log('🟡 [DESKTOP-PAYMENT] Starting pricing validation...');
-    console.log('🟡 [DESKTOP-PAYMENT] Promo code:', currentPromoCode);
-    console.log('🟡 [DESKTOP-PAYMENT] Form values:', {
-      name: watch('name'),
-      email: watch('email'),
-      reportType: watch('reportType'),
-      request: watch('request')
-    });
-
     try {
       // Only validate promo code if one is provided
       if (currentPromoCode) {
-        console.log('🟡 [DESKTOP-PAYMENT] Validating promo code...');
         pricingResult = await validatePromoCode(currentPromoCode);
         
         if (!pricingResult.valid) {
@@ -221,8 +210,6 @@ const PaymentStep = ({
           return;
         }
         
-        console.log('🟡 [DESKTOP-PAYMENT] Using base pricing for:', priceIdentifier);
-        
         pricingResult = {
           valid: true,
           discount_usd: 0,
@@ -233,20 +220,16 @@ const PaymentStep = ({
         };
       }
 
-      console.log('🟡 [DESKTOP-PAYMENT] Final pricing result:', pricingResult);
       setTrustedPricing(pricingResult);
 
       // Use the new onSubmitWithTrustedPricing if available, otherwise fallback to onSubmit
       if (onSubmitWithTrustedPricing) {
-        console.log('🟡 [DESKTOP-PAYMENT] Calling onSubmitWithTrustedPricing...');
         onSubmitWithTrustedPricing(pricingResult);
       } else {
-        console.log('🟡 [DESKTOP-PAYMENT] Fallback to onSubmit...');
         onSubmit();
       }
 
     } catch (error) {
-      console.error('❌ [DESKTOP-PAYMENT] Pricing validation failed:', error);
       setPromoError('Failed to validate pricing. Please try again.');
     }
   };
