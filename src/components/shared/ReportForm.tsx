@@ -72,9 +72,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   
   // Direct submission to initiate-report-flow (desktop)
   const submitReport = async (data: ReportFormData, pricing: TrustedPricingObject) => {
-    const T0 = Date.now(); // T0 before making the fetch
-    console.log('🔍 [DIAGNOSTIC] T0 - Before fetch (DESKTOP):', { label: 'T0', ts: T0, status: 'starting' });
-    
     // Debug logging for desktop
     console.log('🟡 [DESKTOP] Form data being sent:', data);
     console.log('🟡 [DESKTOP] Trusted pricing:', pricing);
@@ -93,16 +90,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       
       const { data: responseData, error } = await supabase.functions.invoke('initiate-report-flow', {
         body: submissionData
-      });
-      
-      // T1 - Immediately after fetch() returns HTTP status
-      const T1 = Date.now();
-      console.log('🔍 [DIAGNOSTIC] T1 - HTTP response (DESKTOP):', { 
-        label: 'T1', 
-        ts: T1, 
-        status: error ? 'error' : 'success',
-        httpStatus: error ? error.status : 200,
-        durationFromT0: T1 - T0
       });
       
       if (error) {

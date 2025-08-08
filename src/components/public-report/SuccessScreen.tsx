@@ -33,12 +33,6 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(({
   const pollRef = useRef<NodeJS.Timeout>();
   const frameRef = useRef<number>(); // desktop scroll helper
 
-  // T5 - SuccessScreen mount
-  useEffect(() => {
-    const T5 = Date.now();
-    console.log('🔍 [DIAGNOSTIC] T5 - SuccessScreen mount:', { label: 'T5', ts: T5, status: 'success_screen_mounted' });
-  }, []);
-
   /* --- scroll to success screen on desktop once SuccessScreen mounts --- */
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -59,17 +53,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(({
   useEffect(() => {
     if (modalOpened || isLoading || !guestReportId) return;
 
-    // T6 - Polling starts
-    const T6 = Date.now();
-    console.log('🔍 [DIAGNOSTIC] T6 - Polling starts:', { label: 'T6', ts: T6, status: 'polling_started' });
-
-    let pollCount = 0;
-    const maxPolls = 30; // 60 seconds max (30 * 2 seconds)
-
     pollRef.current = setInterval(async () => {
-      pollCount++;
-      console.log(`🔍 [DIAGNOSTIC] Poll attempt ${pollCount}/${maxPolls} for guestReportId: ${guestReportId}`);
-      
       const { data, error } = await supabase
         .from("report_ready_signals")
         .select("guest_report_id")
@@ -82,20 +66,11 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(({
       }
 
       if (data?.guest_report_id) {
-        console.log(`✅ [DIAGNOSTIC] Signal found on poll ${pollCount}! Opening modal...`);
         clearInterval(pollRef.current as NodeJS.Timeout);
 
         open(guestReportId);           // show report modal
         // Note: Removed resetReportState() to preserve state on refresh
         setModalOpened(true);          // unmount SuccessScreen
-      } else {
-        console.log(`⏳ [DIAGNOSTIC] No signal yet on poll ${pollCount} (${pollCount * 2}s elapsed)`);
-        
-        // If we've been polling for too long, show a message
-        if (pollCount >= maxPolls) {
-          console.warn(`⚠️ [DIAGNOSTIC] Polling timeout after ${maxPolls * 2}s - no signal found`);
-          clearInterval(pollRef.current as NodeJS.Timeout);
-        }
       }
     }, 2000);
 

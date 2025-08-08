@@ -62,11 +62,6 @@ function callEngineFireAndForget(engine: string, payload: ReportPayload): void {
   };
   
   console.log(`[report-orchestrator] Calling engine: ${engine}`);
-  console.log(`[report-orchestrator] Engine URL: ${edgeUrl}`);
-  console.log(`[report-orchestrator] Payload keys:`, Object.keys(requestPayload));
-  console.log(`[report-orchestrator] User ID: ${requestPayload.user_id}`);
-  console.log(`[report-orchestrator] Report type: ${requestPayload.report_type}`);
-  console.log(`[report-orchestrator] Is guest: ${requestPayload.is_guest}`);
   
   fetch(edgeUrl, {
     method: "POST",
@@ -74,14 +69,7 @@ function callEngineFireAndForget(engine: string, payload: ReportPayload): void {
       "Content-Type": "application/json"
     },
     body: JSON.stringify(requestPayload),
-  })
-  .then(response => {
-    console.log(`[report-orchestrator] Engine ${engine} response status: ${response.status}`);
-    if (!response.ok) {
-      console.error(`[report-orchestrator] Engine ${engine} failed with status: ${response.status}`);
-    }
-  })
-  .catch(error => {
+  }).catch(error => {
     console.error(`[report-orchestrator] Engine ${engine} fire-and-forget failed:`, error);
   });
 }

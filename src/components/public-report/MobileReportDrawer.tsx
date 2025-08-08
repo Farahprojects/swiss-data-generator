@@ -75,23 +75,6 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
   const { getReportPrice } = usePriceFetch();
   const { getPriceById } = usePricing();
 
-  // Instrumented onOpenChange handler
-  const handleOpenChange = (open: boolean) => {
-    if (!open && isOpen) {
-      // T3 - onCloseBegin
-      const T3 = Date.now();
-      console.log('🔍 [DIAGNOSTIC] T3 - onCloseBegin:', { label: 'T3', ts: T3, status: 'drawer_closing' });
-      
-      // Use setTimeout to simulate onCloseComplete (T4)
-      setTimeout(() => {
-        const T4 = Date.now();
-        console.log('🔍 [DIAGNOSTIC] T4 - onCloseComplete:', { label: 'T4', ts: T4, status: 'drawer_closed' });
-      }, 300); // Assume 300ms animation duration
-    }
-    
-    onOpenChange(open);
-  };
-
   // Validate promo code (same as desktop)
   const validatePromoCode = async (promoCode: string): Promise<TrustedPricingObject> => {
     const priceIdentifier = getPriceIdentifier();
@@ -271,9 +254,6 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
 
   // Direct submission to initiate-report-flow
   const handleDirectSubmission = async (formData: ReportFormData, trustedPricing: TrustedPricingObject) => {
-    const T0 = Date.now(); // T0 before making the fetch
-    console.log('🔍 [DIAGNOSTIC] T0 - Before fetch:', { label: 'T0', ts: T0, status: 'starting' });
-    
     setIsProcessing(true);
     
     // Transform form data to match translator edge function field names
@@ -311,9 +291,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
     // Store name/email in memory cache
     setFormMemory(formData.name, formData.email);
     
-    // T2 - Call closeDrawer()
-    const T2 = Date.now();
-    console.log('🔍 [DIAGNOSTIC] T2 - Call closeDrawer:', { label: 'T2', ts: T2, durationFromT0: T2 - T0 });
+    // Close drawer 
     onOpenChange(false);
     
     try {
@@ -325,80 +303,24 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
       
       console.log('🔵 [MOBILE] Final submission data:', submissionData);
       
-      // Add timeout and retry logic
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+      const { data, error } = await supabase.functions.invoke('initiate-report-flow', {
+        body: submissionData
+      });
       
-      let retryCount = 0;
-      const maxRetries = 1;
-      let lastError;
+      if (error) {
+        console.error('❌ [MOBILE] Report submission failed:', error);
+        return;
+      }
       
-      while (retryCount <= maxRetries) {
-        try {
-          const { data, error } = await supabase.functions.invoke('initiate-report-flow', {
-            body: submissionData
-          });
-          
-          clearTimeout(timeoutId);
-          
-          // T1 - Immediately after fetch() returns HTTP status
-          const T1 = Date.now();
-          console.log('🔍 [DIAGNOSTIC] T1 - HTTP response:', { 
-            label: 'T1', 
-            ts: T1, 
-            status: error ? 'error' : 'success',
-            httpStatus: error ? error.status : 200,
-            durationFromT0: T1 - T0,
-            retryCount
-          });
-          
-          if (error) {
-            console.error('❌ [MOBILE] Report submission failed:', error);
-            lastError = error;
-            
-            if (retryCount < maxRetries) {
-              retryCount++;
-              const backoffDelay = retryCount === 1 ? 300 : 900; // 300ms then 900ms
-              console.log(`🔄 [MOBILE] Retrying in ${backoffDelay}ms (attempt ${retryCount}/${maxRetries})`);
-              await new Promise(resolve => setTimeout(resolve, backoffDelay));
-              continue;
-            }
-            return;
-          }
-          
-          console.log('✅ [MOBILE] Report submission response:', data);
-          
-          // Handle response
-          if (data?.checkoutUrl) {
-            // Paid report - redirect to Stripe
-            window.location.href = data.checkoutUrl;
-          } else if (data?.success || data?.guestReportId) {
-            // Free report success 
-            onReportCreated?.(data);
-          }
-          
-          break; // Success, exit retry loop
-          
-        } catch (fetchError: any) {
-          clearTimeout(timeoutId);
-          lastError = fetchError;
-          
-          if (fetchError.name === 'AbortError') {
-            console.error('❌ [MOBILE] Request timeout after 10s');
-            break;
-          }
-          
-          if (retryCount < maxRetries) {
-            retryCount++;
-            const backoffDelay = retryCount === 1 ? 300 : 900;
-            console.log(`🔄 [MOBILE] Retrying in ${backoffDelay}ms (attempt ${retryCount}/${maxRetries})`);
-            await new Promise(resolve => setTimeout(resolve, backoffDelay));
-            continue;
-          }
-          
-          console.error('❌ [MOBILE] Report submission failed after retries:', fetchError);
-          break;
-        }
+      console.log('✅ [MOBILE] Report submission response:', data);
+      
+      // Handle response
+      if (data?.checkoutUrl) {
+        // Paid report - redirect to Stripe
+        window.location.href = data.checkoutUrl;
+      } else if (data?.success || data?.guestReportId) {
+        // Free report success 
+        onReportCreated?.(data);
       }
       
     } catch (error) {
@@ -473,7 +395,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
 
 
   return (
-    <Drawer.Root open={isOpen} onOpenChange={handleOpenChange}>
+    <Drawer.Root open={isOpen} onOpenChange={onOpenChange}>
       <Drawer.Portal>
           <Drawer.Overlay className="fixed inset-0 bg-white z-[100]" />
         <Drawer.Content className="fixed bottom-0 left-0 right-0 h-[96%] bg-white rounded-2xl z-[100] flex flex-col">

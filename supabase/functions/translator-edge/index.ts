@@ -337,24 +337,14 @@ serve(async (req)=>{
 
     // Fire report-orchestrator if we have reportType
     if(body.reportType && swiss.ok){
-      console.log(`[translator-edge-${reqId}] 🔥 Firing report-orchestrator for report type: ${body.reportType}`);
-      console.log(`[translator-edge-${reqId}] User ID: ${body.user_id}`);
-      console.log(`[translator-edge-${reqId}] Is guest: ${body.is_guest}`);
-      console.log(`[translator-edge-${reqId}] Is AI report: ${body.is_ai_report}`);
-      
       const orchestratorUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/report-orchestrator`;
       const orchestratorPayload = {
         endpoint: body.request,
         report_type: body.reportType,
         user_id: body.user_id,
         chartData: swissData,
-        is_guest: body.is_guest,
-        is_ai_report: body.is_ai_report,
         ...body
       };
-      
-      console.log(`[translator-edge-${reqId}] Orchestrator URL: ${orchestratorUrl}`);
-      console.log(`[translator-edge-${reqId}] Orchestrator payload keys:`, Object.keys(orchestratorPayload));
       
       // Fire and forget - no await, no error handling
       fetch(orchestratorUrl, {
@@ -364,18 +354,7 @@ serve(async (req)=>{
           "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
         },
         body: JSON.stringify(orchestratorPayload),
-      })
-      .then(response => {
-        console.log(`[translator-edge-${reqId}] Orchestrator response status: ${response.status}`);
-        if (!response.ok) {
-          console.error(`[translator-edge-${reqId}] Orchestrator failed with status: ${response.status}`);
-        }
-      })
-      .catch(error => {
-        console.error(`[translator-edge-${reqId}] Orchestrator call failed:`, error);
-      });
-    } else {
-      console.log(`[translator-edge-${reqId}] ⏭️ Skipping report-orchestrator - reportType: ${body.reportType}, swiss.ok: ${swiss.ok}`);
+      }).catch(() => {}); // Silent fail
     }
 
     await logTranslator({ request_type:canon, request_payload:body, swiss_data:swissData, swiss_status:swiss.status, processing_ms:Date.now()-t0, error: swiss.ok?undefined:`Swiss ${swiss.status}`, google_geo:googleGeo, translator_payload:payload, user_id:body.user_id, is_guest:body.is_guest });
