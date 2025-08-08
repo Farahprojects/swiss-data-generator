@@ -51,6 +51,10 @@ export const ReportViewer = ({
   const [genericCopySuccess, setGenericCopySuccess] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const { toast } = useToast();
+  // Email modal state
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'checking' | 'already' | 'sending' | 'sent' | 'error'>('idle');
+  const [emailSentAt, setEmailSentAt] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   // Determine view logic based on content type
   const contentType = reportData.metadata.content_type;
@@ -77,6 +81,43 @@ export const ReportViewer = ({
       document.body.style.overflow = 'unset';
     };
   }, []);
+
+  // Check email status when opening the Email modal
+  useEffect(() => {
+    if (activeModal === 'email') {
+      setEmailError(null);
+      setEmailStatus('checking');
+      const guestReportId = reportData.guest_report?.id;
+      if (!guestReportId) {
+        setEmailStatus('error');
+        setEmailError('Report not found.');
+        return;
+      }
+      supabase
+        .from('guest_reports')
+        .select('email_sent, email_sent_at')
+        .eq('id', guestReportId)
+        .maybeSingle()
+        .then(({ data, error }) => {
+          if (error) {
+            setEmailStatus('error');
+            setEmailError('Failed to check email status.');
+            return;
+          }
+          if (data?.email_sent) {
+            setEmailStatus('already');
+            setEmailSentAt(data.email_sent_at ?? null);
+          } else {
+            setEmailStatus('idle');
+            setEmailSentAt(null);
+          }
+        });
+    } else {
+      setEmailStatus('idle');
+      setEmailSentAt(null);
+      setEmailError(null);
+    }
+  }, [activeModal, reportData.guest_report?.id]);
 
   const handleDownloadPdf = () => {
     // Check if there's PDF data in the report
@@ -726,74 +767,93 @@ export const ReportViewer = ({
         <DialogContent className="sm:max-w-md bg-white border-0 shadow-2xl">
           <DialogHeader className="text-center">
             <DialogTitle className="text-2xl font-light text-gray-900">
-              Email your PDF report
+              {emailStatus === 'sent'
+                ? 'Email sent'
+                : emailStatus === 'already'
+                ? 'Email already sent'
+                : 'Email your PDF report'}
             </DialogTitle>
             <DialogDescription className="text-base text-gray-600 leading-relaxed mt-2">
-              We'll email the PDF to: <span className="font-medium text-gray-900">{reportData.guest_report?.email}</span>
+              {emailStatus === 'checking' && 'Checking email status...'}
+              {emailStatus === 'error' && (emailError || 'Something went wrong. Please try again.')}
+              {emailStatus === 'already' && (
+                <>We sent your report on{' '}
+                  <span className="font-medium text-gray-900">{emailSentAt ? new Date(emailSentAt).toLocaleString() : 'earlier'}</span>.
+                  {' '}Please check all inboxes (and spam).</>
+              )}
+              {emailStatus === 'sent' && (
+                <>We’ve emailed the PDF to: <span className="font-medium text-gray-900">{reportData.guest_report?.email}</span>. Please check your inbox.</>
+              )}
+              {emailStatus !== 'checking' && emailStatus !== 'already' && emailStatus !== 'error' && emailStatus !== 'sent' && (
+                <>We'll email the PDF to: <span className="font-medium text-gray-900">{reportData.guest_report?.email}</span></>
+              )}
             </DialogDescription>
           </DialogHeader>
 
           <div className="mt-6 flex gap-3">
-            <Button
-              variant="ghost"
-              onClick={() => setActiveModal(null)}
-              className="h-11 text-base text-gray-600"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={async () => {
-                try {
-                  setIsSendingEmail(true);
-                  const guestReportId = reportData.guest_report?.id;
-                  if (!guestReportId) {
-                    throw new Error('Report not found');
-                  }
+            {(emailStatus === 'idle') && (
+              <>
+                <Button
+                  variant="ghost"
+                  onClick={() => setActiveModal(null)}
+                  className="h-11 text-base text-gray-600"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={async () => {
+                    try {
+                      setIsSendingEmail(true);
+                      setEmailStatus('sending');
+                      const guestReportId = reportData.guest_report?.id;
+                      if (!guestReportId) {
+                        throw new Error('Report not found');
+                      }
 
-                  const { data: statusRow, error: statusErr } = await supabase
-                    .from('guest_reports')
-                    .select('email_sent, email_sent_at')
-                    .eq('id', guestReportId)
-                    .maybeSingle();
+                      const { data: statusRow, error: statusErr } = await supabase
+                        .from('guest_reports')
+                        .select('email_sent, email_sent_at')
+                        .eq('id', guestReportId)
+                        .maybeSingle();
 
-                  if (statusErr) throw new Error('Failed to check email status');
+                      if (statusErr) throw new Error('Failed to check email status');
 
-                  if (statusRow?.email_sent) {
-                    const sentAt = statusRow.email_sent_at ? new Date(statusRow.email_sent_at).toLocaleString() : 'earlier';
-                    toast({
-                      title: 'Email already sent',
-                      description: `We sent your report on ${sentAt}. Please check all inboxes (and spam).`,
-                    });
-                    setActiveModal(null);
-                    return;
-                  }
+                      if (statusRow?.email_sent) {
+                        setEmailStatus('already');
+                        setEmailSentAt(statusRow.email_sent_at ?? null);
+                        setIsSendingEmail(false);
+                        return;
+                      }
 
-                  const { data, error } = await supabase.functions.invoke('process-guest-report-pdf', {
-                    body: { guest_report_id: guestReportId }
-                  });
+                      const { error } = await supabase.functions.invoke('process-guest-report-pdf', {
+                        body: { guest_report_id: guestReportId }
+                      });
 
-                  if (error) throw new Error(error.message);
+                      if (error) throw new Error(error.message);
 
-                  toast({
-                    title: 'Email sent!',
-                    description: 'Your PDF report is on its way. Please check your inbox.',
-                  });
-                  setActiveModal(null);
-                } catch (e: any) {
-                  toast({
-                    title: 'Email failed',
-                    description: e?.message || 'Please try again.',
-                    variant: 'destructive'
-                  });
-                } finally {
-                  setIsSendingEmail(false);
-                }
-              }}
-              disabled={isSendingEmail}
-              className="h-11 text-base"
-            >
-              {isSendingEmail ? 'Sending…' : 'Send email'}
-            </Button>
+                      setEmailStatus('sent');
+                    } catch (e: any) {
+                      setEmailStatus('error');
+                      setEmailError(e?.message || 'Please try again.');
+                    } finally {
+                      setIsSendingEmail(false);
+                    }
+                  }}
+                  disabled={isSendingEmail}
+                  className="h-11 text-base"
+                >
+                  {isSendingEmail ? 'Sending…' : 'Send email'}
+                </Button>
+              </>
+            )}
+
+            {emailStatus === 'checking' && (
+              <Button disabled className="h-11 text-base w-full">Checking…</Button>
+            )}
+
+            {(emailStatus === 'already' || emailStatus === 'sent' || emailStatus === 'error') && (
+              <Button onClick={() => setActiveModal(null)} className="h-11 text-base w-full">Close</Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
