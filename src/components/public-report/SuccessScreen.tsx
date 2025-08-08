@@ -33,6 +33,12 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(({
   const pollRef = useRef<NodeJS.Timeout>();
   const frameRef = useRef<number>(); // desktop scroll helper
 
+  // T5 - SuccessScreen mount
+  useEffect(() => {
+    const T5 = Date.now();
+    console.log('🔍 [DIAGNOSTIC] T5 - SuccessScreen mount:', { label: 'T5', ts: T5, status: 'success_screen_mounted' });
+  }, []);
+
   /* --- scroll to success screen on desktop once SuccessScreen mounts --- */
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -52,6 +58,10 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(({
   /* --- poll for ready signal, then open modal & close drawer --- */
   useEffect(() => {
     if (modalOpened || isLoading || !guestReportId) return;
+
+    // T6 - Polling starts
+    const T6 = Date.now();
+    console.log('🔍 [DIAGNOSTIC] T6 - Polling starts:', { label: 'T6', ts: T6, status: 'polling_started' });
 
     pollRef.current = setInterval(async () => {
       const { data, error } = await supabase
