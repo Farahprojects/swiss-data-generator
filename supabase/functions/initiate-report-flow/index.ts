@@ -354,51 +354,16 @@ serve(async (req) => {
 
     // Handle free reports - process immediately
     if (isFreeReport) {
-      const requestId = crypto.randomUUID().substring(0, 8);
-      const translatorPayload: any = {
-        ...normalizedReportData,
-        request: rqLower || smartRequest,
-        reportType: (normalizedReportData as any).reportType || (normalizedReportData as any).product_id || 'essence',
-        is_guest: true,
-        user_id: guestReportId,
-        request_id: requestId,
-      };
-
-      logFlowEvent("translator_edge_invocation_started", {
-        guestReportId,
-        request: translatorPayload.request,
-        reportType: translatorPayload.reportType,
-        has_person_a: !!(translatorPayload as any).person_a,
-        has_person_b: !!(translatorPayload as any).person_b,
-      });
-
       // Fire and forget - don't wait for completion
-      try {
-        // @ts-ignore - EdgeRuntime is available in Supabase Edge environment
-        EdgeRuntime?.waitUntil?.(
-          supabaseAdmin.functions.invoke('translator-edge', { body: translatorPayload })
-            .then(({ data, error }) => {
-              if (error) {
-                logFlowError('translator_edge_invocation_failed', error, { guestReportId, requestId });
-              } else {
-                logFlowEvent('translator_edge_invoked', { guestReportId, requestId });
-              }
-            })
-            .catch((err: any) => {
-              logFlowError('translator_edge_invocation_exception', err, { guestReportId, requestId });
-            })
-        );
-      } catch (_e) {
-        // Fallback without waitUntil
-        supabaseAdmin.functions.invoke('translator-edge', { body: translatorPayload })
-          .then(({ error }) => {
-            if (error) logFlowError('translator_edge_invocation_failed', error, { guestReportId, requestId });
-          })
-          .catch((err: any) => {
-            logFlowError('translator_edge_invocation_exception', err, { guestReportId, requestId });
-          });
-      }
-
+      supabaseAdmin.functions.invoke('verify-guest-payment', {
+        body: {
+          sessionId: guestReportId,
+          type: 'promo',
+          requestId: crypto.randomUUID().substring(0, 8)
+        }
+      }).catch(error => {
+        console.log(`⚠️ Failed to trigger verify-guest-payment: ${error.message}`);
+      });
 
       return new Response(JSON.stringify({ 
         guestReportId,

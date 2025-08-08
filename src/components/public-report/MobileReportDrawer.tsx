@@ -298,12 +298,8 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
         // Paid report - redirect to Stripe
         window.location.href = data.checkoutUrl;
       } else if (data?.success || data?.guestReportId) {
-        // Free report success - pass structured data matching desktop flow
-        onReportCreated?.({
-          guestReportId: data.guestReportId,
-          name: formData.name,
-          email: formData.email
-        });
+        // Free report success 
+        onReportCreated?.(data);
       }
       
     } catch (error) {
