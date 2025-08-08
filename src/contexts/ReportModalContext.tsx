@@ -95,11 +95,6 @@ export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
     setIsOpen(false);
   }, [currentReport, removeFromCache]);
 
-  // Diagnostic logging for state changes
-  useEffect(() => {
-    console.info('[ModalCTX] state changed → currentReport:', currentReport, 'isOpen:', isOpen);
-  }, [currentReport, isOpen]);
-
   return (
     <ReportModalContext.Provider value={{ 
       open, 
@@ -180,7 +175,6 @@ const LazyReportViewer = ({
   // Cleanup function to clear report data when component unmounts
   useEffect(() => {
     return () => {
-      console.log('🗑️ LazyReportViewer: Cleaning up report data on unmount');
       setReportData(null);
     };
   }, []);
