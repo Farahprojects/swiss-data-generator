@@ -89,38 +89,23 @@ serve(async (req) => {
     const { reportData, trustedPricing }: InitiateReportFlowRequest = body;
     if (!reportData?.email || !trustedPricing) return bad('Missing required report data or trusted pricing');
 
-    // 1) Re-validate price/product
-    const { data: priceData, error: priceError } = await supabaseAdmin
+    // 1) Kick off both reads in parallel (before any awaits)
+    const pricePromise = supabaseAdmin
       .from('price_list')
       .select('id, unit_price_usd, is_ai')
       .eq('id', trustedPricing.report_type)
       .single();
-    if (priceError || !priceData) return forbid('Price validation failed');
-    if (priceData.is_ai == null) return oops('Product configuration error: is_ai field not set');
 
-    // 2) Re-validate promo (optional)
-    let discountPercent = 0;
-    if (trustedPricing.promo_code_id) {
-      const { data: promoData, error: promoError } = await supabaseAdmin
-        .from('promo_codes')
-        .select('discount_percent')
-        .eq('id', trustedPricing.promo_code_id)
-        .eq('is_active', true)
-        .single();
-      if (promoError || !promoData) return forbid('Promo code validation failed');
-      discountPercent = promoData.discount_percent ?? 0;
-    }
+    const promoPromise = trustedPricing.promo_code_id
+      ? supabaseAdmin
+          .from('promo_codes')
+          .select('discount_percent')
+          .eq('id', trustedPricing.promo_code_id)
+          .eq('is_active', true)
+          .single()
+      : Promise.resolve({ data: null, error: null } as const);
 
-    // 3) Compute final + compare to trusted
-    const base = Number(priceData.unit_price_usd);
-    const discount = r2(base * (discountPercent / 100));
-    const final = r2(Math.max(0, base - discount));
-    if (final !== Number(trustedPricing.final_price_usd)) return forbid('Pricing mismatch detected');
-
-    const isFreeReport = final === 0;
-    const isAI = priceData.is_ai;
-
-    // 4) Build normalized payload
+    // 2) Do cheap CPU work (normalization) while network calls are running
     const guestReportId = crypto.randomUUID();
     const smartRequest = (reportData as any).request || reportData.reportType?.split('_')[0] || 'essence';
     const rqLower = String(smartRequest).toLowerCase();
@@ -154,7 +139,23 @@ serve(async (req) => {
       };
     }
 
-    // 5) Insert (idempotent)
+    // 3) Now await both results together
+    const [{ data: priceData, error: priceError }, { data: promoData, error: promoError }] =
+      await Promise.all([pricePromise, promoPromise]);
+
+    if (priceError || !priceData) return forbid('Price validation failed');
+    if (priceData.is_ai == null) return oops('Product configuration error: is_ai field not set');
+    if (promoError) return forbid('Promo code validation failed');
+
+    const base = Number(priceData.unit_price_usd);
+    const pct = promoData?.discount_percent ?? 0;
+    const final = r2(Math.max(0, base - r2(base * pct / 100)));
+    if (final !== Number(trustedPricing.final_price_usd)) return forbid('Pricing mismatch detected');
+
+    const isFreeReport = final === 0;
+    const isAI = priceData.is_ai;
+
+    // 4) Upsert with minimal returning (still awaited)
     const guestReportData = {
       id: guestReportId,
       user_id: null, // anonymous
@@ -172,27 +173,24 @@ serve(async (req) => {
 
     const { error: insertError } = await supabaseAdmin
       .from("guest_reports")
-      .upsert(guestReportData, { onConflict: 'id' });
+      .upsert(guestReportData, { onConflict: 'id', returning: 'minimal' });
     if (insertError) return oops('Failed to create report record');
 
     const ms = Date.now() - start;
 
-    // 6) Free report → kick translator-edge and return
+    // 5) Free report → kick translator-edge and return
     if (isFreeReport) {
-      const translatorPayload: any = {
-        ...normalizedReportData,
-        request: smartRequest,
+      void supabaseAdmin.functions.invoke('translator-edge', { body: {
+        ...normalizedReportData, 
+        request: smartRequest, 
         reportType: reportData.reportType,
-        is_guest: true,
-        is_ai_report: isAI,
+        is_guest: true, 
+        is_ai_report: isAI, 
         user_id: guestReportId,
-        request_id: crypto.randomUUID().slice(0, 8),
-        email: reportData.email,
+        request_id: crypto.randomUUID().slice(0, 8), 
+        email: reportData.email, 
         name: reportData.name,
-      };
-
-      void supabaseAdmin.functions.invoke('translator-edge', { body: translatorPayload })
-        .catch(e => debug('translator-edge invoke failed:', e?.message));
+      }});
 
       return ok({
         guestReportId,
@@ -203,7 +201,7 @@ serve(async (req) => {
       });
     }
 
-    // 7) Paid report → create checkout
+    // 6) Paid report → create checkout
     try {
       const { data: checkoutData, error: checkoutError } = await supabaseAdmin.functions.invoke('create-checkout', {
         body: {
