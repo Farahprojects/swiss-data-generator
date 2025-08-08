@@ -14,7 +14,6 @@ import ReportTypeSelector from '@/components/public-report/ReportTypeSelector';
 import CombinedPersonalDetailsForm from '@/components/public-report/CombinedPersonalDetailsForm';
 import SecondPersonForm from '@/components/public-report/SecondPersonForm';
 import PaymentStep from '@/components/public-report/PaymentStep';
-import { SuccessScreen } from '@/components/public-report/SuccessScreen';
 import { useReportModal } from '@/contexts/ReportModalContext';
 import { useSessionManager } from '@/hooks/useSessionManager';
 
@@ -67,8 +66,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   
   // Local processing state - this component is not being simplified yet
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [successData, setSuccessData] = useState<{name: string; email: string; guestReportId: string} | null>(null);
   
   // Direct submission to initiate-report-flow (desktop)
   const submitReport = async (data: ReportFormData, pricing: TrustedPricingObject) => {
@@ -119,13 +116,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           // Paid report - redirect to Stripe
           window.location.href = responseData.checkoutUrl;
         } else if (responseData?.success || responseData?.guestReportId) {
-          // Free report success - trigger SuccessScreen immediately
-          setSuccessData({
-            name: submissionData.reportData.name,
-            email: submissionData.reportData.email,
-            guestReportId: responseData.guestReportId
-          });
-          setShowSuccess(true);
+          // Free report success - notify parent component
+          onReportCreated?.(responseData.guestReportId, data.name, data.email);
         }
       }).catch(error => {
         console.error('❌ [DESKTOP] Report submission failed:', error);
@@ -143,7 +135,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   };
 
   // Refs for scrolling
-  const successScreenRef = useRef<HTMLDivElement>(null);
   const secondPersonRef = useRef<HTMLDivElement>(null);
   const paymentStepRef = useRef<HTMLDivElement>(null);
 
@@ -279,19 +270,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const resetForm = useCallback(() => {
     form.reset();
   }, [form]);
-
-
-
-  // If success screen should be shown, render it instead of the form
-  if (showSuccess && successData) {
-    return (
-      <SuccessScreen
-        name={successData.name}
-        email={successData.email}
-        guestReportId={successData.guestReportId}
-      />
-    );
-  }
 
   return (
     <div className="space-y-0" style={{ fontFamily: `${fontFamily}, sans-serif` }}>
