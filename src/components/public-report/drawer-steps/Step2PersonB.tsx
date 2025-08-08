@@ -54,9 +54,6 @@ const Step2PersonB: React.FC<Step2PersonBProps> = React.memo(({
             <h1 className="text-4xl md:text-5xl font-light text-gray-900 mb-4 tracking-tight">
               Partner's <em className="italic font-light">Details</em>
             </h1>
-            <p className="text-lg text-gray-500 font-light leading-relaxed max-w-md mx-auto">
-              Now let's add your partner's information
-            </p>
           </div>
         </div>
 
