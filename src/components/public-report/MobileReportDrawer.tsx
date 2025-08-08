@@ -289,6 +289,15 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
     console.log('🔍 [DIAGNOSTIC] T2 - Call closeDrawer:', { label: 'T2', ts: T2, durationFromT0: T2 - T0 });
     onOpenChange(false);
     
+    // IMMEDIATE: Trigger success screen right after closing drawer
+    // Don't wait for edge function response
+    const immediateReportData = {
+      guestReportId: 'pending', // Will be updated by polling
+      name: formData.name,
+      email: formData.email
+    };
+    onReportCreated?.(immediateReportData);
+    
     try {
       const submissionData = {
         reportData: transformedReportData,
@@ -326,8 +335,13 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
           // Paid report - redirect to Stripe
           window.location.href = data.checkoutUrl;
         } else if (data?.success || data?.guestReportId) {
-          // Free report success - trigger success screen
-          onReportCreated?.(data);
+          // Free report success - update the success screen with real data
+          const realReportData = {
+            guestReportId: data.guestReportId,
+            name: formData.name,
+            email: formData.email
+          };
+          onReportCreated?.(realReportData);
         }
       }).catch(error => {
         console.error('❌ [MOBILE] Report submission failed:', error);
