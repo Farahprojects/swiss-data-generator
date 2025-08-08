@@ -101,9 +101,6 @@ const PersonCard = ({
 
   return (
     <div className="bg-white w-full mb-8" data-person={personNumber}>
-      <div className="mb-8">
-        <h2 className="text-3xl font-light text-gray-900 mb-2 tracking-tight">{title}</h2>
-      </div>
 
       <div className="space-y-8">
         <div className="space-y-3">
