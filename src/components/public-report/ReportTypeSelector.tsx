@@ -136,12 +136,12 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
       onChange: (v: any) => void,
     ) => {
       onChange(value);
-      // Do NOT set reportType for snapshot category here
-      if (value !== 'snapshot' && setValue) {
-        setValue('reportType', reportType, { shouldValidate: true });
-      } else {
-        // Clear reportType for categories that need sub-selection or don't use reportType
+      if (value === 'astro-data') {
+        // Astro data uses the `request` field instead of reportType
         setValue?.('reportType', '', { shouldValidate: true });
+      } else {
+        // Set reportType directly for all other categories (including Monthly Energy)
+        setValue?.('reportType', reportType, { shouldValidate: true });
       }
     },
     [setValue],
@@ -171,7 +171,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
   /* ──────────────────────────
    * Derived UI helpers
    * ────────────────────────── */
-  const showSnapshotSubCategories = watchedCategory === 'snapshot';
+  const showSnapshotSubCategories = watchedCategory === 'snapshot' && snapshotSubCategories.length > 0;
   const showAstroDataSubCategories = watchedCategory === 'astro-data';
   const showEssenceOptions = watchedCategory === 'the-self';
   const showRelationshipOptions = watchedCategory === 'compatibility';

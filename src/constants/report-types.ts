@@ -45,22 +45,14 @@ export const reportCategories = [
   },
   {
     value: 'snapshot',
-    title: 'Snapshot',
-    description: 'Perfect timing insights for your current life chapter',
-    icon: Camera,
-    reportType: 'focus',
-  },
-];
-
-export const snapshotSubCategories = [
-  {
-    value: 'monthly',
     title: 'Monthly Energy',
     description: 'Your personal energy forecast and monthly momentum guide',
     icon: Calendar,
     reportType: 'monthly',
   },
 ];
+
+export const snapshotSubCategories = [];
 
 export const detailedEssenceTypes = [
   {
