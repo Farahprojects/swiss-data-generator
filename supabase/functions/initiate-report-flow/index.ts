@@ -355,14 +355,21 @@ serve(async (req) => {
     // Handle free reports - process immediately
     if (isFreeReport) {
       // Fire and forget - don't wait for completion
-      supabaseAdmin.functions.invoke('verify-guest-payment', {
+      // Call translator-edge directly with the full payload
+      supabaseAdmin.functions.invoke('translator-edge', {
         body: {
-          sessionId: guestReportId,
-          type: 'promo',
-          requestId: crypto.randomUUID().substring(0, 8)
+          user_id: null,
+          is_guest: true,
+          is_ai_report: isAI,
+          reportType: reportData.reportType,
+          request: smartRequest,
+          report_data: normalizedReportData,
+          guest_report_id: guestReportId,
+          email: reportData.email,
+          name: reportData.name
         }
       }).catch(error => {
-        console.log(`⚠️ Failed to trigger verify-guest-payment: ${error.message}`);
+        console.log(`⚠️ Failed to trigger translator-edge: ${error.message}`);
       });
 
       return new Response(JSON.stringify({ 
