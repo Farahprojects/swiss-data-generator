@@ -190,7 +190,7 @@ const PublicReport = () => {
         successScreenRef.current.scrollIntoView({ behavior: 'smooth' });
       } else {
         const reportSection = document.querySelector('#report-form');
-        if (reportSection) {
+        if (reportSection && reportSection instanceof HTMLElement) {
           reportSection.scrollIntoView({ behavior: 'smooth' });
         }
       }
@@ -205,7 +205,7 @@ const PublicReport = () => {
         successScreenRef.current.scrollIntoView({ behavior: 'smooth' });
       } else {
         const reportSection = document.querySelector('#report-form');
-        if (reportSection) {
+        if (reportSection && reportSection instanceof HTMLElement) {
           reportSection.scrollIntoView({ behavior: 'smooth' });
         }
       }

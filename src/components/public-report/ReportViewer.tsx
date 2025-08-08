@@ -30,8 +30,6 @@ export const ReportViewer = ({
   onStateReset 
 }: ReportViewerProps) => {
   const mountStartTime = performance.now();
-  console.info('[ReportViewer] 🚀 Starting ReportViewer mount...');
-  console.info('[ReportViewer] mounted with data.id =', reportData?.guest_report?.id);
   const isMobile = useIsMobile();
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [activeView, setActiveView] = useState<'report' | 'astro'>(() => {
