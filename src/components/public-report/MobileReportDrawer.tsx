@@ -7,7 +7,8 @@ import MobileDrawerFooter from './drawer-components/MobileDrawerFooter';
 import Step1ReportType from './drawer-steps/Step1ReportType';
 import Step1_5SubCategory from './drawer-steps/Step1_5SubCategory';
 import Step1_5AstroData from './drawer-steps/Step1_5AstroData';
-import Step2BirthDetails from './drawer-steps/Step2BirthDetails';
+import Step2PersonA from './drawer-steps/Step2PersonA';
+import Step2PersonB from './drawer-steps/Step2PersonB';
 import Step3Payment from './drawer-steps/Step3Payment';
 import { SuccessScreen } from '@/components/public-report/SuccessScreen';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
@@ -158,7 +159,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
 
   // Step management for mobile drawer
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 4;
+  const totalSteps = 5;
 
   // Watch form values (same as desktop)
   const formValues = form.watch();
@@ -175,23 +176,21 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
                                reportType?.startsWith('sync_') || 
                                request === 'sync';
 
-  // Step progression logic (same as desktop)
+  // Step progression logic for new 5-step structure
   const step1Done = Boolean(formValues.reportType || formValues.request);
-  const step2Done =
-    step1Done &&
-    Boolean(
-      formValues.name &&
-        formValues.email &&
-        formValues.birthDate &&
-        formValues.birthTime &&
-        formValues.birthLocation,
-    ) &&
-    (!requiresSecondPerson || (
-      formValues.secondPersonName &&
-      formValues.secondPersonBirthDate &&
-      formValues.secondPersonBirthTime &&
-      formValues.secondPersonBirthLocation
-    ));
+  const step2Done = step1Done && Boolean(
+    formValues.name &&
+    formValues.email &&
+    formValues.birthDate &&
+    formValues.birthTime &&
+    formValues.birthLocation
+  );
+  const step3Done = step2Done && (!requiresSecondPerson || (
+    formValues.secondPersonName &&
+    formValues.secondPersonBirthDate &&
+    formValues.secondPersonBirthTime &&
+    formValues.secondPersonBirthLocation
+  ));
 
   // Step validation for mobile drawer
   const step1Valid = !!reportCategory;
@@ -199,7 +198,8 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
     ? !!formValues.request 
     : !!formValues.reportSubCategory;
   const step2Valid = step2Done;
-  const step3Valid = isValid;
+  const step3Valid = step3Done;
+  const step4Valid = isValid;
 
   // Determine if we can go to next step
   const canGoNext = () => {
@@ -207,7 +207,18 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
       case 1: return step1Valid;
       case 2: return step1_5Valid;
       case 3: return step2Valid;
-      case 4: return step3Valid;
+      case 4: 
+        if (requiresSecondPerson) {
+          return step3Valid; // Person B validation
+        } else {
+          return step4Valid; // Payment validation (skipped Person B)
+        }
+      case 5: 
+        if (requiresSecondPerson) {
+          return step4Valid; // Payment validation
+        } else {
+          return false; // Should not reach here for non-compatibility reports
+        }
       default: return false;
     }
   };
@@ -215,13 +226,23 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
   // Navigation functions
   const nextStep = () => {
     if (currentStep < totalSteps && canGoNext()) {
-      setCurrentStep(currentStep + 1);
+      // Skip Person B step for non-compatibility reports
+      if (currentStep === 3 && !requiresSecondPerson) {
+        setCurrentStep(5); // Skip to payment step
+      } else {
+        setCurrentStep(currentStep + 1);
+      }
     }
   };
 
   const prevStep = () => {
     if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+      // Handle going back from payment step for non-compatibility reports
+      if (currentStep === 5 && !requiresSecondPerson) {
+        setCurrentStep(3); // Go back to Person A step
+      } else {
+        setCurrentStep(currentStep - 1);
+      }
     }
   };
 
@@ -419,7 +440,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
             )}
 
             {currentStep === 3 && (
-              <Step2BirthDetails
+              <Step2PersonA
                 register={register}
                 setValue={setValue}
                 watch={watch}
@@ -429,13 +450,39 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
             )}
 
             {currentStep === 4 && (
-              <Step3Payment
-                register={register}
-                watch={watch}
-                errors={errors}
-                isProcessing={isProcessing}
-                onTimeoutChange={() => {}}
-              />
+              <>
+                {requiresSecondPerson ? (
+                  <Step2PersonB
+                    register={register}
+                    setValue={setValue}
+                    watch={watch}
+                    errors={errors}
+                    onNext={nextStep}
+                  />
+                ) : (
+                  <Step3Payment
+                    register={register}
+                    watch={watch}
+                    errors={errors}
+                    isProcessing={isProcessing}
+                    onTimeoutChange={() => {}}
+                  />
+                )}
+              </>
+            )}
+
+            {currentStep === 5 && (
+              <>
+                {requiresSecondPerson ? (
+                  <Step3Payment
+                    register={register}
+                    watch={watch}
+                    errors={errors}
+                    isProcessing={isProcessing}
+                    onTimeoutChange={() => {}}
+                  />
+                ) : null}
+              </>
             )}
           </div>
 
@@ -448,7 +495,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
             onSubmit={handleButtonClick}
             canGoNext={canGoNext() as boolean}
             isProcessing={isProcessing}
-            isLastStep={currentStep === 4}
+            isLastStep={requiresSecondPerson ? currentStep === 5 : currentStep === 4}
           />
 
         </Drawer.Content>
