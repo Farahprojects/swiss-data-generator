@@ -126,7 +126,7 @@ class ServerPdfGenerator {
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 // ─── MAIN WORK ────────────────────────────────────────────────────────────────
-async function processGuestReportPdf(guestReportId: string, requestId: string) {
+async function processGuestReportPdf(guestReportId: string, requestId: string, recipientEmail?: string) {
   const log = (msg: string) => console.log(`[process-guest-report-pdf][${requestId}] ${msg}`);
 
   // FIRST THING: Mark that the edge function was called
@@ -143,7 +143,7 @@ async function processGuestReportPdf(guestReportId: string, requestId: string) {
   // 1. fetch report data
   const { data: gr, error } = await supabase
     .from("guest_reports")
-    .select("id, email, report_type, created_at, email_sent")
+    .select("id, email, report_type, created_at, email_sent, email_sent_at")
     .eq("id", guestReportId)
     .single();
   if (error || !gr) throw new Error(`Guest report not found: ${error?.message}`);
@@ -161,7 +161,7 @@ async function processGuestReportPdf(guestReportId: string, requestId: string) {
 
   const reportContent = reportLog.report_text;
   if (!reportContent) throw new Error("Report content empty - no report_text in report_logs");
-  if (gr.email_sent) { log("Email already sent – skipping"); return { skipped:true }; }
+  if (gr.email_sent) { log("Email already sent – skipping"); return { skipped:true, sentAt: gr.email_sent_at }; }
 
   // 2. generate PDF
   const pdfBase64 = ServerPdfGenerator.generateReportPdf({
@@ -199,7 +199,7 @@ async function processGuestReportPdf(guestReportId: string, requestId: string) {
   // 5. build payload for send-email edge-function
   const emailPayload = {
     template_type: "report_delivery",      // easier debugging / future use
-    to: gr.email,
+    to: recipientEmail || gr.email,
     subject: tmpl.subject,
     html: tmpl.body_html,
     text: tmpl.body_text ?? "",
@@ -235,7 +235,7 @@ async function processGuestReportPdf(guestReportId: string, requestId: string) {
 
   // 7. mark as sent
   await supabase.from("guest_reports")
-    .update({ email_sent: true })
+    .update({ email_sent: true, email_sent_at: new Date().toISOString() })
     .eq("id", guestReportId);
 
   log("PDF created and email sent successfully");
@@ -254,13 +254,13 @@ serve(async (req) => {
   const requestId = crypto.randomUUID().substring(0,8);
 
   try {
-    const { guest_report_id } = await req.json();
+    const { guest_report_id, email } = await req.json();
     if (!guest_report_id) return new Response(
       JSON.stringify({ error: "guest_report_id required" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
 
-    const result = await processGuestReportPdf(guest_report_id, requestId);
+    const result = await processGuestReportPdf(guest_report_id, requestId, email);
     return new Response(JSON.stringify(result), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

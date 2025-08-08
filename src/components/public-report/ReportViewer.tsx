@@ -21,7 +21,7 @@ interface ReportViewerProps {
   onStateReset?: () => void;
 }
 
-type ModalType = 'chatgpt' | 'close' | 'ai-choice' | null;
+type ModalType = 'chatgpt' | 'close' | 'ai-choice' | 'email' | null;
 type TransitionPhase = 'idle' | 'fading' | 'clearing' | 'transitioning' | 'complete';
 
 export const ReportViewer = ({ 
@@ -49,6 +49,7 @@ export const ReportViewer = ({
   const [chatGPTMessage, setChatGPTMessage] = useState<string>('');
   const [hasChosenAIPath, setHasChosenAIPath] = useState(false);
   const [genericCopySuccess, setGenericCopySuccess] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
   const { toast } = useToast();
 
   // Determine view logic based on content type
@@ -622,11 +623,11 @@ export const ReportViewer = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleCopyToClipboard}
+                onClick={() => setActiveModal('email')}
                 className="text-gray-700 text-base font-medium hover:text-black hover:bg-gray-100 transition-colors active:scale-95 border-gray-200"
               >
-                <Copy className="h-4 w-4 mr-1" />
-                Copy
+                <Paperclip className="h-4 w-4 mr-1" />
+                Email
               </Button>
             )}
             
@@ -692,11 +693,11 @@ export const ReportViewer = ({
             <div className="flex gap-3">
               <Button
                 variant="outline"
-                onClick={handleCopyToClipboard}
+                onClick={() => setActiveModal('email')}
                 className="flex-1 h-12 text-base font-medium text-gray-700 hover:text-black hover:bg-gray-100 transition-colors border-gray-200 rounded-xl"
               >
-                <Copy className="h-5 w-5 mr-2" />
-                Copy
+                <Paperclip className="h-5 w-5 mr-2" />
+                Email
               </Button>
               
               <Button
@@ -719,6 +720,83 @@ export const ReportViewer = ({
           </div>
         )}
       </div>
+
+      {/* Email PDF Modal */}
+      <Dialog open={activeModal === 'email'} onOpenChange={() => setActiveModal(null)}>
+        <DialogContent className="sm:max-w-md bg-white border-0 shadow-2xl">
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-2xl font-light text-gray-900">
+              Email your PDF report
+            </DialogTitle>
+            <DialogDescription className="text-base text-gray-600 leading-relaxed mt-2">
+              We'll email the PDF to: <span className="font-medium text-gray-900">{reportData.guest_report?.email}</span>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-6 flex gap-3">
+            <Button
+              variant="ghost"
+              onClick={() => setActiveModal(null)}
+              className="h-11 text-base text-gray-600"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                try {
+                  setIsSendingEmail(true);
+                  const guestReportId = reportData.guest_report?.id;
+                  if (!guestReportId) {
+                    throw new Error('Report not found');
+                  }
+
+                  const { data: statusRow, error: statusErr } = await supabase
+                    .from('guest_reports')
+                    .select('email_sent, email_sent_at')
+                    .eq('id', guestReportId)
+                    .maybeSingle();
+
+                  if (statusErr) throw new Error('Failed to check email status');
+
+                  if (statusRow?.email_sent) {
+                    const sentAt = statusRow.email_sent_at ? new Date(statusRow.email_sent_at).toLocaleString() : 'earlier';
+                    toast({
+                      title: 'Email already sent',
+                      description: `We sent your report on ${sentAt}. Please check all inboxes (and spam).`,
+                    });
+                    setActiveModal(null);
+                    return;
+                  }
+
+                  const { data, error } = await supabase.functions.invoke('process-guest-report-pdf', {
+                    body: { guest_report_id: guestReportId }
+                  });
+
+                  if (error) throw new Error(error.message);
+
+                  toast({
+                    title: 'Email sent!',
+                    description: 'Your PDF report is on its way. Please check your inbox.',
+                  });
+                  setActiveModal(null);
+                } catch (e: any) {
+                  toast({
+                    title: 'Email failed',
+                    description: e?.message || 'Please try again.',
+                    variant: 'destructive'
+                  });
+                } finally {
+                  setIsSendingEmail(false);
+                }
+              }}
+              disabled={isSendingEmail}
+              className="h-11 text-base"
+            >
+              {isSendingEmail ? 'Sending…' : 'Send email'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* AI Choice Modal */}
       <Dialog open={activeModal === 'ai-choice'} onOpenChange={(open) => {
