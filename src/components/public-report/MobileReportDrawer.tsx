@@ -159,7 +159,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
 
   // Step management for mobile drawer
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 5;
+  let totalSteps = 5;
 
   // Watch form values (same as desktop)
   const formValues = form.watch();
@@ -175,6 +175,9 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
   const requiresSecondPerson = reportCategory === 'compatibility' || 
                                reportType?.startsWith('sync_') || 
                                request === 'sync';
+
+  // Dynamic total steps based on report type
+  totalSteps = requiresSecondPerson ? 5 : 4;
 
   // Step progression logic for new 5-step structure
   const step1Done = Boolean(formValues.reportType || formValues.request);
@@ -226,23 +229,13 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
   // Navigation functions
   const nextStep = () => {
     if (currentStep < totalSteps && canGoNext()) {
-      // Skip Person B step for non-compatibility reports
-      if (currentStep === 3 && !requiresSecondPerson) {
-        setCurrentStep(5); // Skip to payment step
-      } else {
-        setCurrentStep(currentStep + 1);
-      }
+      setCurrentStep(currentStep + 1);
     }
   };
 
   const prevStep = () => {
     if (currentStep > 1) {
-      // Handle going back from payment step for non-compatibility reports
-      if (currentStep === 5 && !requiresSecondPerson) {
-        setCurrentStep(3); // Go back to Person A step
-      } else {
-        setCurrentStep(currentStep - 1);
-      }
+      setCurrentStep(currentStep - 1);
     }
   };
 
@@ -495,7 +488,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
             onSubmit={handleButtonClick}
             canGoNext={canGoNext() as boolean}
             isProcessing={isProcessing}
-            isLastStep={requiresSecondPerson ? currentStep === 5 : currentStep === 4}
+            isLastStep={currentStep === totalSteps}
           />
 
         </Drawer.Content>
