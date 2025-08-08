@@ -267,6 +267,52 @@ serve(async (req) => {
       guestHash
     });
     
+    // Normalize report data for translator-edge compatibility
+    const smartRequest = (reportData as any).request || reportData.reportType?.split('_')[0] || 'essence';
+    const rqLower = String(smartRequest).toLowerCase();
+
+    // Build a normalized report_data payload and keep original fields for backward compatibility
+    const normalizedReportData: any = {
+      ...reportData,
+      request: smartRequest,
+      product_id: trustedPricing.report_type,
+    };
+
+    // For compatibility/sync reports, ensure person_a and person_b are present
+    if (["sync", "compatibility", "synastry"].includes(rqLower)) {
+      const personA = {
+        birth_date: (reportData as any).birth_date || reportData.birthDate || null,
+        birth_time: (reportData as any).birth_time || reportData.birthTime || null,
+        location: (reportData as any).location || reportData.birthLocation || "",
+        latitude: (reportData as any).latitude ?? reportData.birthLatitude ?? null,
+        longitude: (reportData as any).longitude ?? reportData.birthLongitude ?? null,
+        tz: (reportData as any).tz || (reportData as any).timezone || "",
+        name: (reportData as any).name || "",
+        house_system: (reportData as any).house_system || (reportData as any).hsys || "",
+      };
+
+      const personB = {
+        birth_date: (reportData as any).second_person_birth_date || (reportData as any).secondPersonBirthDate || null,
+        birth_time: (reportData as any).second_person_birth_time || (reportData as any).secondPersonBirthTime || null,
+        location: (reportData as any).second_person_location || (reportData as any).secondPersonBirthLocation || "",
+        latitude: (reportData as any).second_person_latitude ?? (reportData as any).secondPersonLatitude ?? null,
+        longitude: (reportData as any).second_person_longitude ?? (reportData as any).secondPersonLongitude ?? null,
+        tz: (reportData as any).second_person_tz || (reportData as any).secondPersonTimezone || "",
+        name: (reportData as any).second_person_name || (reportData as any).secondPersonName || "",
+        house_system: (reportData as any).second_person_house_system || "",
+      };
+
+      normalizedReportData.person_a = personA;
+      normalizedReportData.person_b = personB;
+    }
+
+    logFlowEvent("normalized_report_data_ready", {
+      request: smartRequest,
+      has_person_a: !!(normalizedReportData as any).person_a,
+      has_person_b: !!(normalizedReportData as any).person_b,
+      product_id: trustedPricing.report_type,
+    });
+
     const guestReportData = {
       id: guestReportId,
       user_id: null, // No auth.users entry - completely anonymous
@@ -274,7 +320,7 @@ serve(async (req) => {
       email: reportData.email, // Store email as plain text
       report_type: reportData.reportType || 'essence_personal',
       amount_paid: expectedFinalPriceRounded,
-      report_data: reportData,
+      report_data: normalizedReportData,
       payment_status: isFreeReport ? "paid" : "pending", // Free reports are immediately paid
       purchase_type: 'report',
       promo_code_used: trustedPricing.promo_code_id || null,
