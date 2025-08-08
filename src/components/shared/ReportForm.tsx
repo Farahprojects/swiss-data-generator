@@ -70,12 +70,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   // Direct submission to initiate-report-flow (desktop)
   const submitReport = async (data: ReportFormData, pricing: TrustedPricingObject) => {
     const T0 = Date.now(); // T0 before making the fetch
-    console.log('🔍 [DIAGNOSTIC] T0 - Before fetch (DESKTOP):', { label: 'T0', ts: T0, status: 'starting' });
-    
-    // Debug logging for desktop
-    console.log('🟡 [DESKTOP] Form data being sent:', data);
-    console.log('🟡 [DESKTOP] Trusted pricing:', pricing);
-    console.log('🟡 [DESKTOP] Email field:', data.email);
     
     setIsProcessing(true);
     
@@ -86,30 +80,16 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         is_guest: true
       };
       
-      console.log('🟡 [DESKTOP] Final submission data:', submissionData);
-      
       // FIRE: Start the edge function (don't await - fire and forget)
       const submissionPromise = supabase.functions.invoke('initiate-report-flow', {
         body: submissionData
       });
       
-      // T1 - Immediately after starting the request (not waiting for response)
-      const T1 = Date.now();
-      console.log('🔍 [DIAGNOSTIC] T1 - Edge function fired (DESKTOP):', { 
-        label: 'T1', 
-        ts: T1, 
-        status: 'edge_function_fired',
-        durationFromT0: T1 - T0
-      });
-      
       // Handle the response in the background (don't block UI)
       submissionPromise.then(({ data: responseData, error }) => {
         if (error) {
-          console.error('❌ [DESKTOP] Report submission failed:', error);
           return;
         }
-        
-        console.log('✅ [DESKTOP] Report submission response:', responseData);
         
         // Handle response
         if (responseData?.checkoutUrl) {
@@ -120,14 +100,13 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           onReportCreated?.(responseData.guestReportId, data.name, data.email);
         }
       }).catch(error => {
-        console.error('❌ [DESKTOP] Report submission failed:', error);
+        // Silent error handling
       });
       
       // Return success immediately (don't wait for response)
       return { success: true, guestReportId: '' };
       
     } catch (error) {
-      console.error('❌ [DESKTOP] Report submission failed:', error);
       return { success: false, guestReportId: '' };
     } finally {
       setIsProcessing(false);
@@ -251,9 +230,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     };
 
     const submissionData = coachSlug ? { ...transformedReportData, coachSlug } : transformedReportData;
-    
-    console.log('🔍 [DESKTOP] Original form data:', formData);
-    console.log('🔍 [DESKTOP] Transformed report data:', transformedReportData);
     
     try {
       const result = await submitReport(submissionData, trustedPricing);
