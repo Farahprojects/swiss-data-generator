@@ -69,13 +69,11 @@ export const useReportCache = () => {
         )[0];
         
         delete newCache[oldestKey];
-        console.log(`🗑️ Cache limit: Removed oldest entry ${oldestKey}`);
       }
 
       return newCache;
     });
 
-    console.log(`💾 Cached report for ${guestReportId}`);
   }, []);
 
   // Remove specific report from cache
@@ -85,13 +83,11 @@ export const useReportCache = () => {
       delete newCache[guestReportId];
       return newCache;
     });
-    console.log(`🗑️ Removed from cache: ${guestReportId}`);
   }, []);
 
   // Clear all cache
   const clearCache = useCallback(() => {
     setCache({});
-    console.log('🗑️ Cache cleared');
   }, []);
 
   // Fetch report data with caching
@@ -103,7 +99,6 @@ export const useReportCache = () => {
     }
 
     // Fetch fresh data
-    console.log(`📥 Fetching fresh report data for ${guestReportId}`);
     
     try {
       const { data, error } = await supabase.functions.invoke('get-report-data', {
@@ -117,7 +112,6 @@ export const useReportCache = () => {
       // Cache the result
       cacheReport(guestReportId, data.data);
       
-      console.log(`✅ Report data fetched and cached for ${guestReportId}`);
       return data.data;
       
     } catch (err) {
