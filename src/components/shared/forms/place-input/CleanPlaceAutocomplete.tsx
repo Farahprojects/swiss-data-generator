@@ -127,14 +127,10 @@ export const CleanPlaceAutocomplete = ({
 
       if (onPlaceSelect) {
         try {
-          console.log('🔍 Fetching place details for:', prediction.place_id);
-          
           // Get place details to fetch coordinates
           const { data: detailsData, error: detailsError } = await supabase.functions.invoke('google-place-details', {
             body: { placeId: prediction.place_id }
           });
-
-          console.log('📍 Place details response:', detailsData, detailsError);
 
           if (detailsError || !detailsData) {
             console.warn('Could not fetch place details, using basic data:', detailsError);
@@ -155,7 +151,6 @@ export const CleanPlaceAutocomplete = ({
             longitude: detailsData.longitude
           };
           
-          console.log('✅ Final place data:', placeData);
           onPlaceSelect(placeData);
 
         } catch (error) {
