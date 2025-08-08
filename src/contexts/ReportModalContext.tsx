@@ -163,11 +163,8 @@ const LazyReportViewer = ({
         setLoading(true);
         setError(null);
         
-        console.log(`📥 LazyReportViewer: Fetching report data for ${reportReference.guestReportId}`);
-        
         const data = await fetchReportData(reportReference.guestReportId);
         setReportData(data);
-        console.log(`✅ LazyReportViewer: Report data loaded successfully`);
         
       } catch (err) {
         console.error('❌ LazyReportViewer: Error fetching report data:', err);

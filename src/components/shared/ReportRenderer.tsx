@@ -23,16 +23,7 @@ export const ReportRenderer: React.FC<ReportRendererProps> = ({
     );
   }
 
-  // Timing logs for the "praising" step
-  const parseStartTime = performance.now();
-  console.log('[ReportRenderer] 🚀 Starting report parsing (praising step)...');
-  
   const blocks = ReportParser.parseReport(content);
-  
-  const parseEndTime = performance.now();
-  const parseDuration = parseEndTime - parseStartTime;
-  console.log(`[ReportRenderer] ✅ Report parsing completed in ${parseDuration.toFixed(2)}ms`);
-  console.log(`[ReportRenderer] 📊 Parsed ${blocks.length} blocks from ${content.length} characters`);
 
   const renderBlock = (block: ParsedBlock, index: number) => {
     switch (block.type) {

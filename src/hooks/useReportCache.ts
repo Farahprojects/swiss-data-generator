@@ -45,7 +45,6 @@ export const useReportCache = () => {
       return null;
     }
 
-    console.log(`📋 Cache hit: Using cached report for ${guestReportId}`);
     return entry.data;
   }, [cache]);
 

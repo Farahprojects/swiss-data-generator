@@ -67,19 +67,8 @@ export class ReportParser {
   }
 
   static parseReport(content: string): ParsedBlock[] {
-    const cleanStartTime = performance.now();
     const cleaned = this.cleanContent(content);
-    const cleanEndTime = performance.now();
-    const cleanDuration = cleanEndTime - cleanStartTime;
-    
-    const processStartTime = performance.now();
     const blocks = this.processBlocks(cleaned);
-    const processEndTime = performance.now();
-    const processDuration = processEndTime - processStartTime;
-    
-    console.log(`[ReportParser] 🧹 Content cleaning: ${cleanDuration.toFixed(2)}ms`);
-    console.log(`[ReportParser] 📝 Block processing: ${processDuration.toFixed(2)}ms`);
-    console.log(`[ReportParser] 📊 Total parsing: ${(cleanDuration + processDuration).toFixed(2)}ms`);
     
     return blocks;
   }
