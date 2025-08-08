@@ -57,25 +57,11 @@ const subCategoryOptions = {
   ],
   'snapshot': [
     {
-      value: 'focus',
-      title: 'Focus',
-      description: 'Optimal timing insights for peak productivity and clarity',
-      icon: Target,
-      reportType: 'focus',
-    },
-    {
       value: 'monthly',
       title: 'Monthly Energy',
       description: 'Your personal energy forecast and monthly momentum guide',
       icon: Calendar,
       reportType: 'monthly',
-    },
-    {
-      value: 'mindset',
-      title: 'Mindset',
-      description: 'Mental clarity insights and unlock your cognitive patterns',
-      icon: Brain,
-      reportType: 'mindset',
     },
   ],
 };
