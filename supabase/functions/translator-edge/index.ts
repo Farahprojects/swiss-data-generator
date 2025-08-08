@@ -362,21 +362,46 @@ serve(async (req)=>{
     // Add astro data only reports to report_ready_signals for UI detection
     if (body.is_guest && body.user_id && swiss.ok) {
       try {
-        // Use is_ai_report from the payload (passed from verify-guest-payment)
-        const isAIReport = body.is_ai_report || false;
+        // Debug log the raw is_ai_report value
+        console.log(`[translator-edge-${reqId}] DEBUG: Raw is_ai_report value:`, JSON.stringify(body.is_ai_report), typeof body.is_ai_report);
+        
+        // Properly handle is_ai_report - could be boolean, string "true"/"false", or missing
+        let isAIReport = false;
+        if (typeof body.is_ai_report === 'boolean') {
+          isAIReport = body.is_ai_report;
+        } else if (typeof body.is_ai_report === 'string') {
+          isAIReport = body.is_ai_report.toLowerCase().trim() === 'true';
+        }
+        
+        console.log(`[translator-edge-${reqId}] DEBUG: Processed isAIReport:`, isAIReport);
+        console.log(`[translator-edge-${reqId}] DEBUG: Should add to report_ready_signals?`, !isAIReport);
         
         // If it's astro data only (not AI report), add to report_ready_signals
         if (!isAIReport) {
           console.log(`[translator-edge-${reqId}] Adding astro data only report to report_ready_signals: ${body.user_id}`);
-          await sb.from('report_ready_signals').insert({
+          const { data, error } = await sb.from('report_ready_signals').insert({
             guest_report_id: body.user_id,
             is_ai_report: false,
             created_at: new Date().toISOString()
           });
+          
+          if (error) {
+            console.error(`[translator-edge-${reqId}] Error inserting into report_ready_signals:`, error);
+          } else {
+            console.log(`[translator-edge-${reqId}] Successfully added to report_ready_signals:`, data);
+          }
+        } else {
+          console.log(`[translator-edge-${reqId}] Skipping report_ready_signals - this is an AI report`);
         }
       } catch (error) {
         console.warn(`[translator-edge-${reqId}] Failed to add to report_ready_signals:`, error);
       }
+    } else {
+      console.log(`[translator-edge-${reqId}] DEBUG: Skipping report_ready_signals - conditions not met:`, {
+        is_guest: body.is_guest,
+        user_id: !!body.user_id,
+        swiss_ok: swiss.ok
+      });
     }
     
     return new Response(txt,{status:swiss.status,headers:corsHeaders});
