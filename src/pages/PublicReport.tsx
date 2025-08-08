@@ -518,7 +518,7 @@ const PublicReport = () => {
         {/* Original Success Screen when proceeding from Stripe */}
         {stripeSuccess.showOriginalSuccessScreen && stripeSuccess.guestId && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto flex items-center justify-center">
               <SuccessScreen
                 ref={successScreenRef}
                 name={guestReportData?.person_a?.name || "Guest User"}
@@ -532,7 +532,7 @@ const PublicReport = () => {
         {/* UNIFIED Success Screen - works for both mobile and desktop */}
         {unifiedSuccessData && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto flex items-center justify-center">
               <SuccessScreen
                 ref={successScreenRef}
                 name={unifiedSuccessData.name}
