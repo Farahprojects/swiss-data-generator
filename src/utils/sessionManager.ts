@@ -119,6 +119,7 @@ export class SessionManager {
     const storageKeys = [
       // Guest report data
       'currentGuestReportId',
+      'currentGuestReportId_timestamp', // New timestamp tracking
       'guest_payment_status',
       'guest_report_id',
       'guestId',
@@ -135,10 +136,12 @@ export class SessionManager {
       
       // Tab management
       'activeTab',
+      'activeTabId', // New tab ID tracking
       
       // Form data
       'formData',
       'reportFormData',
+      'formMemoryData', // New form memory persistence
       
       // Temporary data
       'temp_report_data',
@@ -295,23 +298,60 @@ export class SessionManager {
   }
 
   /**
-   * Get current session status
+   * Get session status for debugging
    */
   getSessionStatus(): {
     hasGuestReport: boolean;
     hasModalState: boolean;
     hasNavigationState: boolean;
     registeredComponents: string[];
+    memoryUsage?: any;
+    activeTimers?: any;
   } {
-    const guestReportId = localStorage.getItem('currentGuestReportId');
-    const modalState = sessionStorage.getItem('modalState');
-    const lastRoute = localStorage.getItem('last_route');
+    const hasGuestReport = !!localStorage.getItem('currentGuestReportId');
+    const hasModalState = !!sessionStorage.getItem('modalState') || !!sessionStorage.getItem('reportModalState');
+    const hasNavigationState = !!localStorage.getItem('last_route');
+    const registeredComponents = Array.from(this.stateResetCallbacks.keys());
+
+    // Development-only diagnostics
+    let memoryUsage: any = undefined;
+    let activeTimers: any = undefined;
+
+    if (process.env.NODE_ENV === 'development') {
+      try {
+        // Memory usage (Chrome only)
+        if (typeof window !== 'undefined' && 'performance' in window) {
+          const memory = (performance as any).memory;
+          if (memory) {
+            memoryUsage = {
+              usedJSHeapSize: `${(memory.usedJSHeapSize / 1024 / 1024).toFixed(1)}MB`,
+              totalJSHeapSize: `${(memory.totalJSHeapSize / 1024 / 1024).toFixed(1)}MB`,
+              jsHeapSizeLimit: `${(memory.jsHeapSizeLimit / 1024 / 1024).toFixed(1)}MB`
+            };
+          }
+        }
+
+        // Storage usage
+        const localStorageKeys = Object.keys(localStorage);
+        const sessionStorageKeys = Object.keys(sessionStorage);
+        
+        activeTimers = {
+          localStorageKeys: localStorageKeys.length,
+          sessionStorageKeys: sessionStorageKeys.length,
+          registeredComponents: registeredComponents.length
+        };
+      } catch (error) {
+        console.warn('Failed to get development diagnostics:', error);
+      }
+    }
 
     return {
-      hasGuestReport: !!guestReportId,
-      hasModalState: !!modalState,
-      hasNavigationState: !!lastRoute,
-      registeredComponents: Array.from(this.stateResetCallbacks.keys())
+      hasGuestReport,
+      hasModalState,
+      hasNavigationState,
+      registeredComponents,
+      memoryUsage,
+      activeTimers
     };
   }
 }

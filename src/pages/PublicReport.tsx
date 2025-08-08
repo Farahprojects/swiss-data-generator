@@ -65,10 +65,26 @@ const PublicReport = () => {
       processPaidReport(guestId, sessionId);
     }
     
-    // Handle guest ID storage
+    // Handle guest ID storage with timestamp comparison to prevent race conditions
     if (guestId) {
-      log('info', 'Guest ID found, storing and setting state', { guestId }, 'publicReport');
-      storeGuestReportId(guestId);
+      const storedGuestId = localStorage.getItem('currentGuestReportId');
+      const storedTimestamp = localStorage.getItem('currentGuestReportId_timestamp');
+      const currentTimestamp = Date.now().toString();
+      
+      // Only overwrite if no stored data exists or if URL data is newer
+      if (!storedGuestId || !storedTimestamp || 
+          parseInt(currentTimestamp) > parseInt(storedTimestamp)) {
+        log('info', 'Guest ID found, storing and setting state', { guestId }, 'publicReport');
+        storeGuestReportId(guestId);
+        localStorage.setItem('currentGuestReportId_timestamp', currentTimestamp);
+      } else {
+        log('debug', 'Skipping URL guest ID - localStorage has newer data', { 
+          urlGuestId: guestId, 
+          storedGuestId, 
+          storedTimestamp 
+        }, 'publicReport');
+        setActiveGuestId(storedGuestId);
+      }
     } else {
       // Check localStorage for existing session
       const storedGuestId = localStorage.getItem('currentGuestReportId');

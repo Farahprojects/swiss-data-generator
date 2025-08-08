@@ -10,6 +10,7 @@ interface UseTabVisibilityOptions {
 export const useTabVisibility = (options: UseTabVisibilityOptions = {}) => {
   const { onTabHidden, onTabVisible, pausePollingOnHidden = true } = options;
   const isVisibleRef = useRef(true);
+  const tabIdRef = useRef<string>(`tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -20,8 +21,10 @@ export const useTabVisibility = (options: UseTabVisibilityOptions = {}) => {
         
         if (isVisible) {
           onTabVisible?.();
-          // Broadcast that this tab is now active
-          localStorage.setItem('activeTab', Date.now().toString());
+          // Broadcast that this tab is now active with unique tab ID
+          const timestamp = Date.now().toString();
+          localStorage.setItem('activeTab', timestamp);
+          localStorage.setItem('activeTabId', tabIdRef.current);
         } else {
           onTabHidden?.();
         }
@@ -34,7 +37,9 @@ export const useTabVisibility = (options: UseTabVisibilityOptions = {}) => {
     // Check if another tab is already active
     const checkOtherTabs = () => {
       const lastActive = localStorage.getItem('activeTab');
-      if (lastActive) {
+      const lastActiveTabId = localStorage.getItem('activeTabId');
+      
+      if (lastActive && lastActiveTabId !== tabIdRef.current) {
         const timeSinceLastActive = Date.now() - parseInt(lastActive);
         // If another tab was active within last 5 seconds, this tab should pause
         if (timeSinceLastActive < 5000 && !document.hidden) {
@@ -43,11 +48,31 @@ export const useTabVisibility = (options: UseTabVisibilityOptions = {}) => {
       }
     };
 
+    // Cleanup function to remove this tab's timestamp when tab closes
+    const handleBeforeUnload = () => {
+      const currentActiveTabId = localStorage.getItem('activeTabId');
+      if (currentActiveTabId === tabIdRef.current) {
+        localStorage.removeItem('activeTab');
+        localStorage.removeItem('activeTabId');
+      }
+    };
+
     // Check on mount
     checkOtherTabs();
 
+    // Add beforeunload listener for cleanup
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      
+      // Cleanup on unmount if this tab was the active one
+      const currentActiveTabId = localStorage.getItem('activeTabId');
+      if (currentActiveTabId === tabIdRef.current) {
+        localStorage.removeItem('activeTab');
+        localStorage.removeItem('activeTabId');
+      }
     };
   }, [onTabHidden, onTabVisible]);
 

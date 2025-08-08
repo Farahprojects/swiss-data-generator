@@ -171,12 +171,15 @@ export const clearAllSessionData = async (stateResetCallbacks?: (() => void)[]):
     // Clear all storage
     const storageKeys = [
       'currentGuestReportId',
+      'currentGuestReportId_timestamp', // New timestamp tracking
       'guest_payment_status',
       'guest_report_id',
       'last_route',
       'last_route_params',
       'modalState',
-      'activeTab'
+      'activeTab',
+      'activeTabId', // New tab ID tracking
+      'formMemoryData' // New form memory persistence
     ];
 
     storageKeys.forEach(key => {
