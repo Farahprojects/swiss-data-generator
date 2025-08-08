@@ -355,22 +355,31 @@ serve(async (req) => {
     // Handle free reports - process immediately
     if (isFreeReport) {
       // Fire and forget - don't wait for completion
-      // Call translator-edge directly with the full payload
-      supabaseAdmin.functions.invoke('translator-edge', {
-        body: {
-          user_id: guestReportId,
-          is_guest: true,
-          is_ai_report: isAI,
-          reportType: reportData.reportType,
-          request: smartRequest,
-          report_data: normalizedReportData,
-          guest_report_id: guestReportId,
-          email: reportData.email,
-          name: reportData.name
-        }
-      }).catch(error => {
-        console.log(`⚠️ Failed to trigger translator-edge: ${error.message}`);
+      // Build translator-edge payload to EXACTLY match expectations (mirror verify-guest-payment)
+      const requestId = crypto.randomUUID().slice(0, 8);
+      const translatorPayload: any = {
+        ...normalizedReportData, // flatten all report fields at top level
+        request: smartRequest,
+        reportType: reportData.reportType,
+        is_guest: true,
+        is_ai_report: isAI,
+        user_id: guestReportId,
+        request_id: requestId,
+        email: reportData.email,
+        name: reportData.name,
+      };
+
+      logFlowEvent("translator_payload_preview", {
+        guestReportId,
+        request: translatorPayload.request,
+        has_person_a: !!translatorPayload.person_a,
+        birth_date: translatorPayload.birth_date || translatorPayload.person_a?.birth_date || null,
       });
+
+      supabaseAdmin.functions.invoke('translator-edge', { body: translatorPayload })
+        .catch(error => {
+          console.log(`⚠️ Failed to trigger translator-edge: ${error.message}`);
+        });
 
       return new Response(JSON.stringify({ 
         guestReportId,
