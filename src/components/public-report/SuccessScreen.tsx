@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, forwardRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useReportModal } from "@/contexts/ReportModalContext";
-import { getFormMemory } from "@/utils/formMemoryCache";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -23,10 +22,9 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(({
   
   const isMobile = useIsMobile();
 
-  /* get name/email from memory if not provided as props */
-  const memoryData = getFormMemory();
-  const displayName = name || memoryData?.name || '';
-  const displayEmail = email || memoryData?.email || '';
+  /* use name/email from props directly */
+  const displayName = name || '';
+  const displayEmail = email || '';
 
   /* flags / timers */
   const [modalOpened, setModalOpened] = useState(false);
