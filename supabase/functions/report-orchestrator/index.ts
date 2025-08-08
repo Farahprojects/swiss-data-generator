@@ -39,19 +39,6 @@ function getNextEngine(): string {
   return selectedEngine;
 }
 
-// Validate that the report type exists in prompts
-// REMOVED: Unnecessary database lookup - report types are validated upstream
-function validateReportType(reportType: string): boolean {
-  // Simple validation - report types are validated upstream
-  if (!reportType || typeof reportType !== 'string') {
-    console.warn(`[report-orchestrator] Invalid report type: ${reportType}`);
-    return false;
-  }
-  
-  console.log(`[report-orchestrator] Report type validated: ${reportType}`);
-  return true;
-}
-
 // Call the selected engine (fire-and-forget)
 function callEngineFireAndForget(engine: string, payload: ReportPayload): void {
   const edgeUrl = `${supabaseUrl}/functions/v1/${engine}`;
@@ -97,22 +84,10 @@ serve(async (req) => {
     
     console.log(`[report-orchestrator] Processing request for report type: ${payload.report_type}`);
     
-    // Step 1: Validate report type exists
-    const isValidReportType = validateReportType(payload.report_type);
-    if (!isValidReportType) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: "Invalid report type" 
-      }), {
-        status: 400,
-        headers: corsHeaders,
-      });
-    }
-    
-    // Step 2: Select next engine using simple timestamp-based selection
+    // Step 1: Select next engine using simple timestamp-based selection
     const selectedEngine = getNextEngine();
     
-    // Step 3: Call the engine (fire-and-forget)
+    // Step 2: Call the engine (fire-and-forget)
     callEngineFireAndForget(selectedEngine, payload);
     
     // Return immediately - don't wait for engine response
