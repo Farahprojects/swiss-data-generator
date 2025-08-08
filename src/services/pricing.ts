@@ -8,6 +8,7 @@ export interface PriceData {
   name: string;
   description: string;
   report_type?: string;
+  is_ai?: boolean;
 }
 
 export interface TrustedPricingObject {

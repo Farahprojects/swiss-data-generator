@@ -66,9 +66,9 @@ const Step1_5AstroData = ({ control, setValue, selectedSubCategory, onNext }: St
               const handleClick = () => {
                 field.onChange(subCategory.value);
                 
-                // Use unified form data structure (same as desktop)
+                // Use unified form data structure (set both for consistency)
                 setValue('request', subCategory.value);
-                setValue('reportType', ''); // Clear reportType since astro data uses request field
+                setValue('reportType', subCategory.value);
                 
                 // Removed auto-advance - let user manually proceed
               };

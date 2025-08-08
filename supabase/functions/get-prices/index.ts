@@ -26,7 +26,7 @@ serve(async (req) => {
     // Fetch all prices from price_list table
     const { data: prices, error } = await supabase
       .from('price_list')
-      .select('id, unit_price_usd, name, description, report_type')
+      .select('id, unit_price_usd, name, description, report_type, is_ai')
       .order('unit_price_usd', { ascending: true })
 
     if (error) {

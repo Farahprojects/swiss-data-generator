@@ -76,8 +76,27 @@ export const usePriceFetch = () => {
 
   const getReportTitle = useCallback((formData: ReportTypeMapping): string => {
     const { reportType, essenceType, relationshipType, reportCategory, reportSubCategory, request } = formData;
-    
-    // Handle astro data based on request field
+
+    // Derive price id and fetch price metadata
+    const priceId = getProductId(formData);
+    const priceData = priceId ? getPriceById(priceId) : null;
+
+    // Prefer price metadata to determine AI vs Astro when available
+    if (priceData && typeof priceData.is_ai !== 'undefined') {
+      const isAi = priceData.is_ai === true;
+
+      if (!isAi) {
+        // Astro-only variants
+        if ((request || reportType) === 'sync' || reportType === 'compatibility') {
+          return 'Compatibility - Astro Data';
+        }
+        // Default to essence/self for astro-only
+        return 'The Self - Astro Data';
+      }
+      // For AI variants, fall through to existing logic below
+    }
+
+    // Existing fallbacks when price metadata is unavailable
     if (request && !reportType) {
       switch (request) {
         case 'essence': return 'The Self - Astro Data';
@@ -132,8 +151,8 @@ export const usePriceFetch = () => {
       sync: 'Sync Report'
     };
     
-    return reportTitles[reportType] || 'Personal Report';
-  }, []);
+    return reportTitles[reportType || ''] || 'Personal Report';
+  }, [getPriceById]);
 
   const calculatePricing = useCallback((basePrice: number, promoValidation: any) => {
     if (promoValidation.status === 'none' || promoValidation.status === 'invalid') {
