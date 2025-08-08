@@ -247,6 +247,9 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
 
   // Direct submission to initiate-report-flow
   const handleDirectSubmission = async (formData: ReportFormData, trustedPricing: TrustedPricingObject) => {
+    const T0 = Date.now(); // T0 before making the fetch
+    console.log('🔍 [DIAGNOSTIC] T0 - Before fetch:', { label: 'T0', ts: T0, status: 'starting' });
+    
     setIsProcessing(true);
     
     // Transform form data to match translator edge function field names
@@ -284,7 +287,9 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
     // Store name/email in memory cache
     setFormMemory(formData.name, formData.email);
     
-    // Close drawer 
+    // T2 - Call closeDrawer()
+    const T2 = Date.now();
+    console.log('🔍 [DIAGNOSTIC] T2 - Call closeDrawer:', { label: 'T2', ts: T2, durationFromT0: T2 - T0 });
     onOpenChange(false);
     
     try {
@@ -296,25 +301,40 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
       
       console.log('🔵 [MOBILE] Final submission data:', submissionData);
       
-      const { data, error } = await supabase.functions.invoke('initiate-report-flow', {
+      // FIRE: Start the edge function (don't await - fire and forget)
+      const submissionPromise = supabase.functions.invoke('initiate-report-flow', {
         body: submissionData
       });
       
-      if (error) {
+      // T1 - Immediately after starting the request (not waiting for response)
+      const T1 = Date.now();
+      console.log('🔍 [DIAGNOSTIC] T1 - Edge function fired:', { 
+        label: 'T1', 
+        ts: T1, 
+        status: 'edge_function_fired',
+        durationFromT0: T1 - T0
+      });
+      
+      // Handle the response in the background (don't block UI)
+      submissionPromise.then(({ data, error }) => {
+        if (error) {
+          console.error('❌ [MOBILE] Report submission failed:', error);
+          return;
+        }
+        
+        console.log('✅ [MOBILE] Report submission response:', data);
+        
+        // Handle response
+        if (data?.checkoutUrl) {
+          // Paid report - redirect to Stripe
+          window.location.href = data.checkoutUrl;
+        } else if (data?.success || data?.guestReportId) {
+          // Free report success - trigger success screen
+          onReportCreated?.(data);
+        }
+      }).catch(error => {
         console.error('❌ [MOBILE] Report submission failed:', error);
-        return;
-      }
-      
-      console.log('✅ [MOBILE] Report submission response:', data);
-      
-      // Handle response
-      if (data?.checkoutUrl) {
-        // Paid report - redirect to Stripe
-        window.location.href = data.checkoutUrl;
-      } else if (data?.success || data?.guestReportId) {
-        // Free report success 
-        onReportCreated?.(data);
-      }
+      });
       
     } catch (error) {
       console.error('❌ [MOBILE] Report submission failed:', error);
