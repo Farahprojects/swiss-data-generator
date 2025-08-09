@@ -28,7 +28,7 @@ const PublicReport = () => {
   const isStripeSuccessReturn = status === 'success' && !!sessionId;
 
   // ALL HOOKS MUST BE DECLARED FIRST - NEVER INSIDE TRY-CATCH
-  const [scrollY, setScrollY] = useState(0);
+
   const [showCancelledMessage, setShowCancelledMessage] = useState(false);
   const [activeGuestId, setActiveGuestId] = useState<string | null>(guestId || null);
   const [isGuestIdLoading, setIsGuestIdLoading] = useState(true);
@@ -68,26 +68,11 @@ const PublicReport = () => {
       window.history.replaceState({}, '', newUrl.toString());
     }
     
-    // Handle guest ID storage with timestamp comparison to prevent race conditions
+    // Simple guest ID handling - URL takes precedence
     if (guestId) {
-      const storedGuestId = localStorage.getItem('currentGuestReportId');
-      const storedTimestamp = localStorage.getItem('currentGuestReportId_timestamp');
-      const currentTimestamp = Date.now().toString();
-      
-      // Only overwrite if no stored data exists or if URL data is newer
-      if (!storedGuestId || !storedTimestamp || 
-          parseInt(currentTimestamp) > parseInt(storedTimestamp)) {
-        log('info', 'Guest ID found, storing and setting state', { guestId }, 'publicReport');
-        storeGuestReportId(guestId);
-        localStorage.setItem('currentGuestReportId_timestamp', currentTimestamp);
-      } else {
-        log('debug', 'Skipping URL guest ID - localStorage has newer data', { 
-          urlGuestId: guestId, 
-          storedGuestId, 
-          storedTimestamp 
-        }, 'publicReport');
-        setActiveGuestId(storedGuestId);
-      }
+      log('info', 'Guest ID found, storing and setting state', { guestId }, 'publicReport');
+      storeGuestReportId(guestId);
+      setActiveGuestId(guestId);
     } else {
       // Check localStorage for existing session
       const storedGuestId = localStorage.getItem('currentGuestReportId');
@@ -152,17 +137,7 @@ const PublicReport = () => {
     }
   }, [location.search]);
 
-  // Scroll position tracking
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
 
-    const handleScroll = () => {
-      setScrollY(window.scrollY);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   const handleGetReportClick = () => {
     if (isMobile) {
@@ -204,8 +179,7 @@ const PublicReport = () => {
     window.history.replaceState({}, '', newUrl.toString());
   };
 
-  // Calculate text opacity based on scroll position
-  const textOpacity = Math.max(0, 1 - (scrollY / 100)); // Fade out over 100px scroll
+
 
   // Show loading spinner while determining guest ID
   if (isGuestIdLoading) {
@@ -251,7 +225,7 @@ const PublicReport = () => {
         <header className="fixed top-0 left-0 z-50 p-6">
           <div 
             className="transition-opacity duration-300 ease-out"
-            style={{ opacity: textOpacity }}
+
           >
             <Logo size="md" asLink={false} />
           </div>
@@ -466,7 +440,7 @@ const PublicReport = () => {
         <FeaturesSection onGetReportClick={handleGetReportClick} />
         <Footer />
 
-        {isMobile && scrollY > 120 && !isMobileDrawerOpen && !unifiedSuccessData && !stripeSuccess.showSuccessModal && !stripeSuccess.showOriginalSuccessScreen && (
+        {isMobile && !isMobileDrawerOpen && !unifiedSuccessData && !stripeSuccess.showSuccessModal && !stripeSuccess.showOriginalSuccessScreen && (
           <div className="fixed bottom-6 right-6 z-50">
             <Button
               onClick={handleGetReportClick}
