@@ -10,6 +10,8 @@ const corsHeaders = {
 
 // Get Supabase URL for edge function calls
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const sb = createClient(supabaseUrl, supabaseServiceKey, { auth: { persistSession: false } });
 
 interface ReportPayload {
   endpoint: string;
@@ -21,22 +23,39 @@ interface ReportPayload {
   [k: string]: any;
 }
 
-// Available engines for simple round-robin selection
+// Available engines for DB-driven round-robin selection
 const ENGINES = [
   "standard-report",
   "standard-report-one", 
   "standard-report-two",
 ];
 
-// Simple engine selection (no DB required)
-function getNextEngine(): string {
-  // Use timestamp-based selection for simple round-robin
-  const timestamp = Date.now();
-  const engineIndex = Math.floor(timestamp / 1000) % ENGINES.length;
-  const selectedEngine = ENGINES[engineIndex];
-  
-  console.log(`[report-orchestrator] Selected engine: ${selectedEngine} (timestamp-based selection)`);
-  return selectedEngine;
+// DB-driven engine selection based on the most recent engine_used in report_logs
+async function getNextEngine(): Promise<string> {
+  try {
+    const { data, error } = await sb
+      .from("report_logs")
+      .select("engine_used, created_at")
+      .not("engine_used", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.warn("[report-orchestrator] Engine lookup failed, defaulting to first engine:", error.message);
+      return ENGINES[0];
+    }
+
+    const lastEngine: string | undefined = Array.isArray(data) && data.length > 0 ? (data[0] as any).engine_used : undefined;
+    const lastIndex = lastEngine ? ENGINES.indexOf(lastEngine) : -1;
+    const nextIndex = ((lastIndex >= 0 ? lastIndex : -1) + 1) % ENGINES.length;
+    const selectedEngine = ENGINES[nextIndex];
+
+    console.log(`[report-orchestrator] Selected engine: ${selectedEngine} (db-driven)`);
+    return selectedEngine;
+  } catch (e: any) {
+    console.warn("[report-orchestrator] Engine selection error, defaulting to first engine:", e?.message || e);
+    return ENGINES[0];
+  }
 }
 
 // Call the selected engine (fire-and-forget)
@@ -45,7 +64,8 @@ function callEngineFireAndForget(engine: string, payload: ReportPayload): void {
   const requestPayload = { 
     ...payload, 
     reportType: payload.report_type, 
-    selectedEngine: engine 
+    selectedEngine: engine,
+    engine_used: engine,
   };
   
   console.log(`[report-orchestrator] Calling engine: ${engine}`);
@@ -84,8 +104,8 @@ serve(async (req) => {
     
     console.log(`[report-orchestrator] Processing request for report type: ${payload.report_type}`);
     
-    // Step 1: Select next engine using simple timestamp-based selection
-    const selectedEngine = getNextEngine();
+    // Step 1: Select next engine using DB-driven selection from report_logs
+    const selectedEngine = await getNextEngine();
     
     // Step 2: Call the engine (fire-and-forget)
     callEngineFireAndForget(selectedEngine, payload);
