@@ -12,7 +12,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
   const { open } = useReportModal();
   const isMobile = useIsMobile();
 
-  // 1) Single source of truth: guest_id from URL
+  // --- 1) Single source of truth: guest_id from URL
   const [guestId, setGuestId] = useState<string | null>(null);
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -20,12 +20,11 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
     setGuestId(id);
   }, []);
 
-  // 2) DB check state
+  // --- 2) DB check (must succeed or we STOP)
   const [guestReportData, setGuestReportData] = useState<any>(null);
-  const [dbReady, setDbReady] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
+  const [dbReady, setDbReady] = useState(false);
 
-  // 3) Do the DB check (HARD STOP if this fails; we never poll)
   useEffect(() => {
     setDbReady(false);
     setDbError(null);
@@ -36,7 +35,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
       return;
     }
 
-    const run = async () => {
+    (async () => {
       const { data, error } = await supabase
         .from("guest_reports")
         .select("*")
@@ -45,57 +44,38 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
 
       if (error) {
         setDbError(`[DB] Failed to load guest report for id=${guestId}: ${error.message || error.code}`);
-        return; // hard stop: NO polling
+        return; // hard stop
       }
       if (!data) {
         setDbError(`[DB] No guest report found for id=${guestId}.`);
-        return; // hard stop: NO polling
+        return; // hard stop
       }
 
       setGuestReportData(data);
-      setDbReady(true); // only now can polling begin
-    };
-
-    run();
+      setDbReady(true);
+    })();
   }, [guestId]);
 
-  const displayName = guestReportData?.person_a?.name ?? "";
-  const displayEmail = guestReportData?.person_a?.email ?? "";
+  // --- 3) UI identity (we only poll AFTER the UI is ready to show both)
+  const displayName  = guestReportData?.person_a?.name  ?? guestReportData?.name  ?? "";
+  const displayEmail = guestReportData?.email ?? guestReportData?.person_a?.email ?? "";
+  const uiReady = Boolean(guestId && displayEmail); // must have BOTH to start polling
 
-  // 4) UI validation - fail loudly if can't populate UI
-  const [uiError, setUiError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!guestReportData) return;
-    
-    const email = guestReportData?.email ?? guestReportData?.person_a?.email ?? "";
-
-    if (!guestId) {
-      setUiError("[UI] guest_id missing after successful DB fetch.");
-      return;
-    }
-    if (!email) {
-      setUiError(`[UI] email missing in guest_reports for id=${guestId}.`);
-      return;
-    }
-    setUiError(null); // identity is good
-  }, [guestReportData, guestId]);
-
-  // 5) Polling (gated by dbReady AND uiError). Never runs on error.
+  // --- 4) Polling (gated by uiReady)
   const [modalOpened, setModalOpened] = useState(false);
   const pollRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
-    if (modalOpened || isLoading || !guestId || !dbReady || uiError) return;
+    if (modalOpened || isLoading || !uiReady) return;
 
     pollRef.current = setInterval(async () => {
       const { data, error } = await supabase
         .from("report_ready_signals")
         .select("guest_report_id")
-        .eq("guest_report_id", guestId)
+        .eq("guest_report_id", guestId as string)
         .single();
 
-      // ignore "no rows" error (PGRST116), surface other errors to console
+      // ignore "no rows" (PGRST116), log other errors
       if (error?.code && error.code !== "PGRST116") {
         console.error("[SuccessScreen] polling error:", error);
         return;
@@ -103,41 +83,47 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
 
       if (data?.guest_report_id) {
         clearInterval(pollRef.current as NodeJS.Timeout);
-        open(guestId);
+        open(guestId as string);
         setModalOpened(true);
       }
     }, 2000);
 
     return () => clearInterval(pollRef.current as NodeJS.Timeout);
-  }, [guestId, dbReady, uiError, modalOpened, open, isLoading]);
+  }, [uiReady, modalOpened, open, isLoading, guestId]);
 
+  // --- 5) Smooth scroll on desktop
+  const frameRef = useRef<number>();
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.innerWidth >= 768) {
+      frameRef.current = requestAnimationFrame(() => {
+        if (ref && typeof ref === "object" && ref.current) {
+          ref.current.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      });
+    }
+    return () => {
+      if (frameRef.current) cancelAnimationFrame(frameRef.current);
+    };
+  }, [ref]);
+
+  // --- 6) Unmount after modal opens
   if (modalOpened) return null;
 
-  // 5) UI Error (explicit: why the screen can't render identity)
-  if (uiError) {
-    return (
-      <div ref={ref} className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-4">
-        <h1 className="text-2xl font-light text-gray-900">We hit a snag</h1>
-        <p className="text-sm text-red-600 whitespace-pre-wrap">{uiError}</p>
-        <p className="text-xs text-gray-500">
-          Debug: guest_id={guestId ?? "(none)"} • hasData={!!guestReportData ? "yes" : "no"}
-        </p>
-      </div>
-    );
-  }
-
-  // 6) DB Error UI (explicit: why the screen isn't progressing)
+  // --- 7) Error surfaces (why we’re not progressing)
   if (dbError) {
     return (
       <div ref={ref} className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-4">
         <h1 className="text-2xl font-light text-gray-900">We hit a snag</h1>
         <p className="text-sm text-red-600 whitespace-pre-wrap">{dbError}</p>
-        <p className="text-sm text-gray-600">Polling is paused until the guest report is found.</p>
+        <p className="text-xs text-gray-500">Polling blocked until the guest report is found.</p>
       </div>
     );
   }
 
-  // 6) UI (loads name/email from DB only)
+  // --- 8) UI (explicitly shows guest_id + email so we know uiReady truthfully reflects UI state)
+  const showLoading = isLoading || !dbReady;
+
   return (
     <div ref={ref} className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
       <div className="space-y-4">
@@ -149,12 +135,18 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
         <div className="space-y-2">
           <h1 className="text-2xl font-light text-gray-900">Report Generated Successfully!</h1>
           <p className="text-gray-600">
-            {dbReady ? `Your personalized astrology report is ready for ${displayName}.` : "Loading your details..."}
+            {showLoading ? "Loading your details..." : `Your personalized astrology report is ready for ${displayName}.`}
           </p>
         </div>
       </div>
 
       <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-600">Guest ID:</span>
+          <span className="font-mono text-gray-900 truncate max-w-[220px]" title={guestId || ""}>
+            {guestId || ""}
+          </span>
+        </div>
         <div className="flex justify-between text-sm">
           <span className="text-gray-600">Name:</span>
           <span className="font-medium text-gray-900">{displayName}</span>
@@ -167,15 +159,17 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
 
       <div className="space-y-3">
         <p className="text-sm text-gray-600">
-          {isLoading || !dbReady
+          {showLoading
             ? "Processing your report request..."
-            : "Your report is being prepared and will open automatically when ready..."}
+            : (uiReady
+                ? "Your report is being prepared and will open automatically when ready..."
+                : "Waiting for identity (guest_id & email) to render...")}
         </p>
 
         <div className="flex items-center justify-center space-x-2">
           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
           <span className="text-sm text-gray-600">
-            {isLoading || !dbReady ? "Processing request" : "Preparing your report"}
+            {showLoading ? "Processing request" : (uiReady ? "Preparing your report" : "Awaiting identity")}
           </span>
         </div>
       </div>
