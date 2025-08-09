@@ -72,6 +72,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
   
   // Local processing state
   const [isProcessing, setIsProcessing] = useState(false);
+  const [hasTimedOut, setHasTimedOut] = useState(false);
   const { getReportPrice } = usePriceFetch();
   const { getPriceById } = usePricing();
 
@@ -251,6 +252,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
     console.log('🔍 [DIAGNOSTIC] T0 - Before fetch:', { label: 'T0', ts: T0, status: 'starting' });
 
     setIsProcessing(true);
+    setHasTimedOut(false);
 
     // Transform form data to match translator edge function field names
     const transformedReportData = {
@@ -324,9 +326,10 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
     // T2 - Call closeDrawer()
     const T2 = Date.now();
     console.log('🔍 [DIAGNOSTIC] T2 - Call closeDrawer:', { label: 'T2', ts: T2, durationFromT0: T2 - T0 });
-    onOpenChange(false);
+    // Small delay to let the button show Processing... before closing
+    setTimeout(() => onOpenChange(false), 300);
 
-    // IMMEDIATE: Trigger success screen right after closing drawer
+    // IMMEDIATE: Trigger success screen right after scheduling drawer close
     // Don't wait for edge function response
     const immediateReportData = {
       guestReportId: 'pending', // Will be updated by polling
@@ -334,6 +337,12 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
       email: formData.email
     };
     onReportCreated?.(immediateReportData);
+
+    // Safety timeout to avoid indefinite processing if redirect fails
+    const timeoutId = window.setTimeout(() => {
+      setHasTimedOut(true);
+      setIsProcessing(false);
+    }, 20000);
 
     try {
       const submissionData = {
@@ -362,6 +371,9 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
       submissionPromise.then(({ data, error }) => {
         if (error) {
           console.error('❌ [MOBILE] Report submission failed:', error);
+          clearTimeout(timeoutId);
+          setIsProcessing(false);
+          setHasTimedOut(true);
           return;
         }
 
@@ -379,15 +391,20 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
             email: formData.email
           };
           onReportCreated?.(realReportData);
+          clearTimeout(timeoutId);
+          setIsProcessing(false);
         }
       }).catch(error => {
         console.error('❌ [MOBILE] Report submission failed:', error);
+        clearTimeout(timeoutId);
+        setIsProcessing(false);
+        setHasTimedOut(true);
       });
 
     } catch (error) {
       console.error('❌ [MOBILE] Report submission failed:', error);
-    } finally {
       setIsProcessing(false);
+      setHasTimedOut(true);
     }
   };
 
@@ -557,6 +574,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
             canGoNext={canGoNext() as boolean}
             isProcessing={isProcessing}
             isLastStep={currentStep === totalSteps}
+            hasTimedOut={hasTimedOut}
           />
 
         </Drawer.Content>

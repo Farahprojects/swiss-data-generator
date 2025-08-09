@@ -99,7 +99,11 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         return { success: true, guestReportId };
       }
 
-      // Paid flow: fire-and-forget + redirect
+      // Paid flow: fire-and-forget + redirect, keep processing true until redirect (or timeout)
+      const timeoutId = window.setTimeout(() => {
+        setIsProcessing(false);
+      }, 20000);
+
       const submissionPromise = supabase.functions.invoke('initiate-report-flow', {
         body: {
           reportData: data,
@@ -108,24 +112,32 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         }
       });
 
-      // Handle the response in the background (don't block UI)
       submissionPromise.then(({ data: responseData, error }) => {
         if (error) {
+          clearTimeout(timeoutId);
+          setIsProcessing(false);
           return;
         }
         if (responseData?.checkoutUrl) {
           window.location.href = responseData.checkoutUrl;
         } else if (responseData?.success || responseData?.guestReportId) {
           onReportCreated?.(responseData.guestReportId, (data as any).name, (data as any).email);
+          clearTimeout(timeoutId);
+          setIsProcessing(false);
         }
-      }).catch(() => {});
+      }).catch(() => {
+        clearTimeout(timeoutId);
+        setIsProcessing(false);
+      });
 
       // Return success immediately (don't wait for response)
       return { success: true, guestReportId: '' };
     } catch (error) {
       return { success: false, guestReportId: '' };
     } finally {
-      setIsProcessing(false);
+      if (pricing.final_price_usd === 0) {
+        setIsProcessing(false);
+      }
     }
   };
 
