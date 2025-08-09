@@ -113,8 +113,8 @@ serve(async (req) => {
     // Step 4: Fire-and-forget report generation via verify-guest-payment
     console.log(`🔄 [process-paid-report] Triggering report generation via verify-guest-payment: ${guest_id}`);
     
-    // Fire-and-forget - don't wait for response
-    EdgeRuntime.waitUntil(
+    // Fire-and-forget - don't wait for response, use void to ensure no await
+    void EdgeRuntime.waitUntil(
       supabase.functions.invoke('verify-guest-payment', {
         body: {
           sessionId: guest_id,
