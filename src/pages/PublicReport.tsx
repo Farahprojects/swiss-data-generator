@@ -18,7 +18,6 @@ import { useStripeSuccess } from '@/contexts/StripeSuccessContext';
 import { useGuestReportData } from '@/hooks/useGuestReportData';
 import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
 import { SuccessScreen } from '@/components/public-report/SuccessScreen';
-import { getFormMemory } from '@/utils/formMemoryCache';
 
 const PublicReport = () => {
   // Synchronous URL parsing - happens before any React logic
@@ -135,12 +134,7 @@ const PublicReport = () => {
       // Fire-and-forget report generation
       triggerReportGeneration(stripeSuccess.guestId, stripeSuccess.sessionId || undefined);
       
-      // Get name/email from form memory cache
-      const formMemory = getFormMemory();
-      const name = formMemory?.name || 'Guest User';
-      const email = formMemory?.email || 'guest@example.com';
-      
-      // Immediately transition to success screen with guest ID and user data
+      // Immediately transition to success screen with guest ID
       setStripeSuccess({
         showSuccessModal: false,
         guestId: stripeSuccess.guestId,
@@ -148,13 +142,6 @@ const PublicReport = () => {
         status: 'success',
         isProcessing: false,
         showOriginalSuccessScreen: true
-      });
-      
-      // Store user data for success screen
-      setUnifiedSuccessData({
-        guestReportId: stripeSuccess.guestId,
-        name,
-        email
       });
     }
   }, [stripeSuccess.showSuccessModal, stripeSuccess.isProcessing, stripeSuccess.guestId, stripeSuccess.sessionId]);
@@ -515,7 +502,7 @@ const PublicReport = () => {
         )}
 
         {/* Original Success Screen when proceeding from Stripe */}
-        {stripeSuccess.showOriginalSuccessScreen && stripeSuccess.guestId && !unifiedSuccessData && (
+        {stripeSuccess.showOriginalSuccessScreen && stripeSuccess.guestId && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto flex items-center justify-center">
               <SuccessScreen
