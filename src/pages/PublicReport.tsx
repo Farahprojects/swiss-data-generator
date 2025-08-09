@@ -122,6 +122,16 @@ const PublicReport = () => {
       } else {
         log('info', '✅ process-paid-report successful', { data, guestId }, 'publicReport');
         console.log('process-paid-report response:', data);
+        
+        // Transition to success screen after process-paid-report completes
+        setStripeSuccess({
+          showSuccessModal: false,
+          guestId: guestId,
+          sessionId: sessionId || null,
+          status: 'success',
+          isProcessing: false,
+          showOriginalSuccessScreen: true
+        });
       }
     } catch (err) {
       log('error', '❌ process-paid-report exception', { error: err, guestId }, 'publicReport');
