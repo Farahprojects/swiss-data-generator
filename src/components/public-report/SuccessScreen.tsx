@@ -113,7 +113,20 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
 
   if (modalOpened) return null;
 
-  // 5) Error UI (explicit: why the screen isn’t progressing)
+  // 5) UI Error (explicit: why the screen can't render identity)
+  if (uiError) {
+    return (
+      <div ref={ref} className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-4">
+        <h1 className="text-2xl font-light text-gray-900">We hit a snag</h1>
+        <p className="text-sm text-red-600 whitespace-pre-wrap">{uiError}</p>
+        <p className="text-xs text-gray-500">
+          Debug: guest_id={guestId ?? "(none)"} • hasData={!!guestReportData ? "yes" : "no"}
+        </p>
+      </div>
+    );
+  }
+
+  // 6) DB Error UI (explicit: why the screen isn't progressing)
   if (dbError) {
     return (
       <div ref={ref} className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-4">
