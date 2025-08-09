@@ -87,6 +87,11 @@ serve(async (req) => {
 
   try {
     const { reportData, trustedPricing }: InitiateReportFlowRequest = body;
+    debug('[initiate-report-flow] Received payload', {
+      reportData,
+      trustedPricing,
+      is_guest: body?.is_guest,
+    });
     if (!reportData?.email || !trustedPricing) return bad('Missing required report data or trusted pricing');
 
     // 1) Kick off both reads in parallel (before any awaits)
@@ -139,6 +144,8 @@ serve(async (req) => {
       };
     }
 
+    debug('[initiate-report-flow] Normalized report data', normalizedReportData);
+
     // 3) Now await both results together
     const [{ data: priceData, error: priceError }, { data: promoData, error: promoError }] =
       await Promise.all([pricePromise, promoPromise]);
@@ -180,17 +187,19 @@ serve(async (req) => {
 
     // 5) Free report → kick translator-edge and return
     if (isFreeReport) {
-      void supabaseAdmin.functions.invoke('translator-edge', { body: {
-        ...normalizedReportData, 
-        request: smartRequest, 
+      const translatorPayload = {
+        ...normalizedReportData,
+        request: smartRequest,
         reportType: reportData.reportType,
-        is_guest: true, 
-        is_ai_report: isAI, 
+        is_guest: true,
+        is_ai_report: isAI,
         user_id: guestReportId,
-        request_id: crypto.randomUUID().slice(0, 8), 
-        email: reportData.email, 
+        request_id: crypto.randomUUID().slice(0, 8),
+        email: reportData.email,
         name: reportData.name,
-      }});
+      };
+      debug('[initiate-report-flow] Translator-edge payload (free)', translatorPayload);
+      void supabaseAdmin.functions.invoke('translator-edge', { body: translatorPayload });
 
       return ok({
         guestReportId,
@@ -203,15 +212,17 @@ serve(async (req) => {
 
     // 6) Paid report → create checkout
     try {
+      const checkoutPayload = {
+        guest_report_id: guestReportId,
+        amount: final,
+        email: reportData.email,
+        description: "Astrology Report",
+        successUrl: `${SITE_URL}/stripe-return?guest_id=${guestReportId}&session_id={CHECKOUT_SESSION_ID}&status=success`,
+        cancelUrl: `${SITE_URL}/stripe-return?guest_id=${guestReportId}&status=cancelled`,
+      };
+      debug('[initiate-report-flow] create-checkout payload (paid)', checkoutPayload);
       const { data: checkoutData, error: checkoutError } = await supabaseAdmin.functions.invoke('create-checkout', {
-        body: {
-          guest_report_id: guestReportId,
-          amount: final,
-          email: reportData.email,
-          description: "Astrology Report",
-          successUrl: `${SITE_URL}/stripe-return?guest_id=${guestReportId}&session_id={CHECKOUT_SESSION_ID}&status=success`,
-          cancelUrl: `${SITE_URL}/stripe-return?guest_id=${guestReportId}&status=cancelled`
-        }
+        body: checkoutPayload,
       });
 
       if (checkoutError || !checkoutData?.url) return oops('Failed to create checkout session');
