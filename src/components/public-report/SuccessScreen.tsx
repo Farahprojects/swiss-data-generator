@@ -29,15 +29,6 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
       storedId,
       effectiveId
     });
-    
-    // Log when guest_id comes from memory (localStorage)
-    if (!urlId && storedId) {
-      console.log(`✅ [SuccessScreen] Guest ID received from memory: ${storedId}`);
-    } else if (urlId) {
-      console.log(`✅ [SuccessScreen] Guest ID received from URL: ${urlId}`);
-    } else {
-      console.log(`❌ [SuccessScreen] No guest ID found in URL or memory`);
-    }
   }, []);
 
   // --- 2) DB check (must succeed or we STOP)
