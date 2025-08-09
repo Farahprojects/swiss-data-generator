@@ -253,7 +253,10 @@ serve(async (req) => {
     // Parse the request payload
     let reportData;
     try {
+      const tParseStart = Date.now();
       reportData = await req.json();
+      const tParse = Date.now() - tParseStart;
+      console.log(`[standard-report-one][${requestId}] ⏱️ JSON parse: ${tParse}ms`);
       
       // Warm-up check
       if (reportData?.warm === true) {
@@ -290,7 +293,10 @@ serve(async (req) => {
     }
 
     // Fetch the system prompt using the dynamic report type
+    const tPromptStart = Date.now();
     const systemPrompt = await getSystemPrompt(reportType, requestId);
+    const tPrompt = Date.now() - tPromptStart;
+    console.log(`[standard-report-one][${requestId}] ⏱️ Prompt fetch: ${tPrompt}ms`);
     
     // ✅ LOGGING: System prompt fetched successfully
     console.log(`[standard-report-one][${requestId}] System prompt fetched for report type: ${reportType}`);
