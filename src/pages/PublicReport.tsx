@@ -15,7 +15,7 @@ import { storeGuestReportId } from '@/utils/urlHelpers';
 import { log } from '@/utils/logUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useStripeSuccess } from '@/contexts/StripeSuccessContext';
-import { useGuestReportData } from '@/hooks/useGuestReportData';
+
 import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
 import { SuccessScreen } from '@/components/public-report/SuccessScreen';
 
@@ -39,8 +39,7 @@ const PublicReport = () => {
   const isMobile = useIsMobile();
   const { stripeSuccess, setStripeSuccess, proceedToReport } = useStripeSuccess();
   
-  // Fetch guest report data for the success screen
-  const { data: guestReportData } = useGuestReportData(stripeSuccess.guestId);
+
 
   // Refs for scrolling
   const successScreenRef = useRef<HTMLDivElement>(null);
@@ -507,9 +506,7 @@ const PublicReport = () => {
             <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto flex items-center justify-center">
               <SuccessScreen
                 ref={successScreenRef}
-                name={guestReportData?.person_a?.name || "Guest User"}
-                email={guestReportData?.person_a?.email || "guest@example.com"}
-                guestReportId={stripeSuccess.guestId}
+                isLoading={false}
               />
             </div>
           </div>
@@ -521,9 +518,7 @@ const PublicReport = () => {
             <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto flex items-center justify-center">
               <SuccessScreen
                 ref={successScreenRef}
-                name={unifiedSuccessData.name}
-                email={unifiedSuccessData.email}
-                guestReportId={unifiedSuccessData.guestReportId}
+                isLoading={false}
               />
             </div>
           </div>
