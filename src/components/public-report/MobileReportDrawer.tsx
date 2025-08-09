@@ -274,7 +274,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
       second_person_longitude: formData.secondPersonLongitude,
 
       // Ensure request field is set
-      request: formData.request || 'essence',
+      request: formData.request || (formData.reportType?.includes('sync') ? 'sync' : 'essence'),
 
       // Guest flags
       is_guest: true

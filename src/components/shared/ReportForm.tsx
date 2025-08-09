@@ -255,7 +255,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       second_person_longitude: formData.secondPersonLongitude,
       
       // Ensure request field is set
-      request: formData.request || 'essence',
+      request: formData.request || (formData.reportType?.includes('sync') ? 'sync' : 'essence'),
       
       // Guest flags
       is_guest: true

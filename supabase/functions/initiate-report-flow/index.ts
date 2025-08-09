@@ -112,7 +112,7 @@ serve(async (req) => {
 
     // 2) Do cheap CPU work (normalization) while network calls are running
     const guestReportId = crypto.randomUUID();
-    const smartRequest = (reportData as any).request || reportData.reportType?.split('_')[0] || 'essence';
+    const smartRequest = reportData.reportType?.split('_')[0] || (reportData as any).request || 'essence';
     const rqLower = String(smartRequest).toLowerCase();
 
     const normalizedReportData: any = {
