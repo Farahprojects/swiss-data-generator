@@ -432,7 +432,6 @@ const PublicReport = () => {
           <div id="report-form" ref={reportFormRef}>
             <ReportForm onReportCreated={(guestReportId, name, email) => {
               // NEW: Unified success handling for desktop
-              console.log('[React] Received guest_id from free report:', guestReportId);
               setUnifiedSuccessData({ guestReportId, name, email });
             }} />
           </div>
@@ -459,7 +458,6 @@ const PublicReport = () => {
           onOpenChange={setIsMobileDrawerOpen}
           onReportCreated={(reportData) => {
             // NEW: Unified success handling for mobile
-            console.log('[React] Received guest_id from free report:', reportData.guestReportId);
             setUnifiedSuccessData(reportData);
           }}
         />

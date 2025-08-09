@@ -12,23 +12,12 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
   const { open } = useReportModal();
   const isMobile = useIsMobile();
 
-  // --- 1) Single source of truth: guest_id from URL or localStorage
+  // --- 1) Single source of truth: guest_id from URL
   const [guestId, setGuestId] = useState<string | null>(null);
   useEffect(() => {
     if (typeof window === "undefined") return;
-    
-    // First try URL, then fallback to localStorage
-    const urlId = new URLSearchParams(window.location.search).get("guest_id");
-    const storedId = localStorage.getItem('currentGuestReportId');
-    
-    const effectiveId = urlId || storedId;
-    setGuestId(effectiveId);
-    
-    console.log('[SuccessScreen] Guest ID resolution:', {
-      urlId,
-      storedId,
-      effectiveId
-    });
+    const id = new URLSearchParams(window.location.search).get("guest_id");
+    setGuestId(id);
   }, []);
 
   // --- 2) DB check (must succeed or we STOP)

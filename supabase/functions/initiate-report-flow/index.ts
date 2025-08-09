@@ -178,9 +178,8 @@ serve(async (req) => {
 
     const ms = Date.now() - start;
 
-    // 5) Free report → kick translator-edge and return with guest_id for immediate SuccessScreen
+    // 5) Free report → kick translator-edge and return
     if (isFreeReport) {
-      // Fire-and-forget call to translator-edge
       void supabaseAdmin.functions.invoke('translator-edge', { body: {
         ...normalizedReportData, 
         request: smartRequest, 
@@ -198,9 +197,7 @@ serve(async (req) => {
         user_id: null,
         finalPrice: final,
         isFreeReport: true,
-        processing_time_ms: ms,
-        // Include guest_id for immediate SuccessScreen display
-        guest_id: guestReportId
+        processing_time_ms: ms
       });
     }
 
