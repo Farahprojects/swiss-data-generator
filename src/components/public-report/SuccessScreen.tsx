@@ -80,9 +80,11 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
 
     pollRef.current = setInterval(async () => {
       const { data, error } = await supabase
-        .from("report_ready_signals")
-        .select("guest_report_id")
-        .eq("guest_report_id", guestId as string)
+        .from("report_logs")
+        .select("user_id")
+        .eq("user_id", guestId as string)
+        .order("created_at", { ascending: false })
+        .limit(1)
         .single();
 
       // ignore "no rows" (PGRST116), log other errors
@@ -91,7 +93,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
         return;
       }
 
-      if (data?.guest_report_id) {
+      if (data?.user_id) {
         clearInterval(pollRef.current as NodeJS.Timeout);
         open(guestId as string);
         setModalOpened(true);
