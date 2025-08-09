@@ -62,12 +62,31 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
   const displayName = guestReportData?.person_a?.name ?? "";
   const displayEmail = guestReportData?.person_a?.email ?? "";
 
-  // 4) Polling (gated by dbReady). Never runs on error.
+  // 4) UI validation - fail loudly if can't populate UI
+  const [uiError, setUiError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!guestReportData) return;
+    
+    const email = guestReportData?.email ?? guestReportData?.person_a?.email ?? "";
+
+    if (!guestId) {
+      setUiError("[UI] guest_id missing after successful DB fetch.");
+      return;
+    }
+    if (!email) {
+      setUiError(`[UI] email missing in guest_reports for id=${guestId}.`);
+      return;
+    }
+    setUiError(null); // identity is good
+  }, [guestReportData, guestId]);
+
+  // 5) Polling (gated by dbReady AND uiError). Never runs on error.
   const [modalOpened, setModalOpened] = useState(false);
   const pollRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
-    if (modalOpened || isLoading || !guestId || !dbReady) return;
+    if (modalOpened || isLoading || !guestId || !dbReady || uiError) return;
 
     pollRef.current = setInterval(async () => {
       const { data, error } = await supabase
@@ -90,7 +109,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
     }, 2000);
 
     return () => clearInterval(pollRef.current as NodeJS.Timeout);
-  }, [guestId, dbReady, modalOpened, open, isLoading]);
+  }, [guestId, dbReady, uiError, modalOpened, open, isLoading]);
 
   if (modalOpened) return null;
 
