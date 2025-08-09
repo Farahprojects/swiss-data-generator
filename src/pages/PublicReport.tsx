@@ -104,6 +104,38 @@ const PublicReport = () => {
 
 
 
+  // Function to trigger report generation via process-paid-report
+  const triggerReportGeneration = async (guestId: string, sessionId?: string) => {
+    try {
+      log('info', '🔄 Triggering report generation via process-paid-report', { guestId, sessionId }, 'publicReport');
+      
+      const { data, error } = await supabase.functions.invoke('process-paid-report', {
+        body: {
+          guest_id: guestId,
+          session_id: sessionId
+        }
+      });
+
+      if (error) {
+        log('error', '❌ process-paid-report failed', { error, guestId }, 'publicReport');
+        console.error('process-paid-report error:', error);
+      } else {
+        log('info', '✅ process-paid-report successful', { data, guestId }, 'publicReport');
+        console.log('process-paid-report response:', data);
+      }
+    } catch (err) {
+      log('error', '❌ process-paid-report exception', { error: err, guestId }, 'publicReport');
+      console.error('process-paid-report exception:', err);
+    }
+  };
+
+  // Trigger report generation when popup appears
+  useEffect(() => {
+    if (stripeSuccess.showSuccessModal && stripeSuccess.isProcessing && stripeSuccess.guestId) {
+      triggerReportGeneration(stripeSuccess.guestId, stripeSuccess.sessionId || undefined);
+    }
+  }, [stripeSuccess.showSuccessModal, stripeSuccess.isProcessing, stripeSuccess.guestId, stripeSuccess.sessionId]);
+
   // Check for cancelled payment status
   useEffect(() => {
     const params = new URLSearchParams(location.search);
