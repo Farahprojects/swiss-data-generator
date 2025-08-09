@@ -119,7 +119,6 @@ const PublicReport = () => {
         console.error('process-paid-report error:', error);
       } else {
         log('info', '✅ process-paid-report successful', { data, guestId }, 'publicReport');
-        console.log('process-paid-report response:', data);
       }
     }).catch((err) => {
       log('error', '❌ process-paid-report exception', { error: err, guestId }, 'publicReport');
