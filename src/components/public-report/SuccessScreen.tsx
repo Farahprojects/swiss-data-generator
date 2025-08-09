@@ -71,67 +71,43 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
   const displayEmail = guestReportData?.email ?? guestReportData?.person_a?.email ?? "";
   const uiReady = Boolean(guestId && displayEmail); // must have BOTH to start polling
 
-  // --- 4) Polling (gated by uiReady)
+  // --- 4) Readiness listener (WebSocket) — starts when UI is ready
   const [modalOpened, setModalOpened] = useState(false);
-  const hasStartedRef = useRef(false);
-  const stoppedRef = useRef(false);
-  const timerRef = useRef<number | null>(null);
-  const controllerRef = useRef<AbortController | null>(null);
+  const wsStartedRef = useRef(false);
+  const wsStoppedRef = useRef(false);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   useEffect(() => {
-    if (modalOpened || isLoading || !uiReady || hasStartedRef.current || stoppedRef.current) return;
+    if (modalOpened || isLoading || !uiReady || wsStartedRef.current || wsStoppedRef.current) return;
 
-    hasStartedRef.current = true;
-    const startId = Date.now();
-    console.log('[SuccessScreen] Poller started id=', startId);
+    wsStartedRef.current = true;
+    const channel = supabase.channel(`ready_${guestId}`);
+    channelRef.current = channel;
 
-    const checkOnce = async () => {
-      if (stoppedRef.current) return;
+    channel.on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'report_ready_signals', filter: `guest_report_id=eq.${guestId}` },
+      () => {
+        if (wsStoppedRef.current) return;
+        // Stop first
+        wsStoppedRef.current = true;
+        try { channel.unsubscribe(); } catch {}
 
-      // cancel any previous in-flight notion (best-effort)
-      if (controllerRef.current) {
-        try { controllerRef.current.abort(); } catch {}
-      }
-      controllerRef.current = new AbortController();
-
-      const { data, error } = await supabase
-        .from("report_ready_signals")
-        .select("guest_report_id")
-        .eq("guest_report_id", guestId as string)
-        .single();
-
-      if (stoppedRef.current) return; // ignore late replies
-
-      if (error?.code && error.code !== "PGRST116") {
-        console.error("[SuccessScreen] polling error:", error);
-      }
-
-      if (data?.guest_report_id && !stoppedRef.current) {
-        // stop first
-        stoppedRef.current = true;
-        if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
-        if (controllerRef.current) { try { controllerRef.current.abort(); } catch {} controllerRef.current = null; }
-
-        // hand off
+        // Handoff
         open(guestId as string);
         setModalOpened(true);
-        try { sessionStorage.removeItem("guest_id"); } catch {}
-        return;
+        try { sessionStorage.removeItem('guest_id'); } catch {}
       }
+    );
 
-      // schedule next tick
-      if (!stoppedRef.current) {
-        timerRef.current = window.setTimeout(checkOnce, 2000);
-      }
-    };
-
-    // kick off
-    checkOnce();
+    channel.subscribe();
 
     return () => {
-      stoppedRef.current = true;
-      if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
-      if (controllerRef.current) { try { controllerRef.current.abort(); } catch {} controllerRef.current = null; }
+      wsStoppedRef.current = true;
+      if (channelRef.current) {
+        try { channelRef.current.unsubscribe(); } catch {}
+        channelRef.current = null;
+      }
     };
   }, [uiReady, modalOpened, open, isLoading, guestId]);
 
