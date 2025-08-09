@@ -500,8 +500,8 @@ const PublicReport = () => {
           </div>
         )}
 
-        {/* Original Success Screen when proceeding from Stripe */}
-        {stripeSuccess.showOriginalSuccessScreen && stripeSuccess.guestId && (
+        {/* Success Screen - unified for both Stripe return and direct form submission */}
+        {(stripeSuccess.showOriginalSuccessScreen && stripeSuccess.guestId) || unifiedSuccessData ? (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto flex items-center justify-center">
               <SuccessScreen
@@ -510,19 +510,7 @@ const PublicReport = () => {
               />
             </div>
           </div>
-        )}
-
-        {/* UNIFIED Success Screen - works for both mobile and desktop */}
-        {unifiedSuccessData && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto flex items-center justify-center">
-              <SuccessScreen
-                ref={successScreenRef}
-                isLoading={false}
-              />
-            </div>
-          </div>
-        )}
+        ) : null}
       </div>
     );
   } catch (err: any) {
