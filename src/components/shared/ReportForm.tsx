@@ -75,12 +75,14 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     try {
       // Free promo path: await response and persist guest_id
       if (pricing.final_price_usd === 0) {
+        const payloadBody = {
+          reportData: data,
+          trustedPricing: pricing,
+          is_guest: true
+        };
+        console.log('[ReportForm] Final payload to initiate-report-flow (FREE):', payloadBody);
         const { data: resp, error } = await supabase.functions.invoke('initiate-report-flow', {
-          body: {
-            reportData: data,
-            trustedPricing: pricing,
-            is_guest: true
-          }
+          body: payloadBody
         });
         if (error) {
           return { success: false, guestReportId: '' };
@@ -104,12 +106,14 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         setIsProcessing(false);
       }, 20000);
 
+      const payloadBody = {
+        reportData: data,
+        trustedPricing: pricing,
+        is_guest: true
+      };
+      console.log('[ReportForm] Final payload to initiate-report-flow (PAID):', payloadBody);
       const submissionPromise = supabase.functions.invoke('initiate-report-flow', {
-        body: {
-          reportData: data,
-          trustedPricing: pricing,
-          is_guest: true
-        }
+        body: payloadBody
       });
 
       submissionPromise.then(({ data: responseData, error }) => {
