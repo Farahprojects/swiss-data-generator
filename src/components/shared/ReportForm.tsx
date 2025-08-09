@@ -69,43 +69,59 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   
   // Direct submission to initiate-report-flow (desktop)
   const submitReport = async (data: ReportFormData, pricing: TrustedPricingObject) => {
-    const T0 = Date.now(); // T0 before making the fetch
-    
+    const T0 = Date.now();
     setIsProcessing(true);
-    
+
     try {
-      const submissionData = {
-        reportData: data,
-        trustedPricing: pricing,
-        is_guest: true
-      };
-      
-      // FIRE: Start the edge function (don't await - fire and forget)
+      // Free promo path: await response and persist guest_id
+      if (pricing.final_price_usd === 0) {
+        const { data: resp, error } = await supabase.functions.invoke('initiate-report-flow', {
+          body: {
+            reportData: data,
+            trustedPricing: pricing,
+            is_guest: true
+          }
+        });
+        if (error) {
+          return { success: false, guestReportId: '' };
+        }
+        const guestReportId = (resp?.guestReportId || resp?.guest_id) as string | undefined;
+        const isFree = Boolean(resp?.isFreeReport);
+        if (!isFree || !guestReportId) {
+          return { success: false, guestReportId: '' };
+        }
+        try {
+          sessionStorage.setItem('guest_id', guestReportId);
+          console.log('[SuccessMemory] stored guest_id:', guestReportId);
+        } catch {}
+        // Notify parent immediately to open success UI
+        onReportCreated?.(guestReportId, (data as any).name, (data as any).email);
+        return { success: true, guestReportId };
+      }
+
+      // Paid flow: fire-and-forget + redirect
       const submissionPromise = supabase.functions.invoke('initiate-report-flow', {
-        body: submissionData
+        body: {
+          reportData: data,
+          trustedPricing: pricing,
+          is_guest: true
+        }
       });
-      
+
       // Handle the response in the background (don't block UI)
       submissionPromise.then(({ data: responseData, error }) => {
         if (error) {
           return;
         }
-        
-        // Handle response
         if (responseData?.checkoutUrl) {
-          // Paid report - redirect to Stripe
           window.location.href = responseData.checkoutUrl;
         } else if (responseData?.success || responseData?.guestReportId) {
-          // Free report success - notify parent component
-          onReportCreated?.(responseData.guestReportId, data.name, data.email);
+          onReportCreated?.(responseData.guestReportId, (data as any).name, (data as any).email);
         }
-      }).catch(error => {
-        // Silent error handling
-      });
-      
+      }).catch(() => {});
+
       // Return success immediately (don't wait for response)
       return { success: true, guestReportId: '' };
-      
     } catch (error) {
       return { success: false, guestReportId: '' };
     } finally {

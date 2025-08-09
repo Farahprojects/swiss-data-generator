@@ -12,12 +12,22 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
   const { open } = useReportModal();
   const isMobile = useIsMobile();
 
-  // --- 1) Single source of truth: guest_id from URL
+  // --- 1) Resolve guest_id: URL param first, then sessionStorage fallback
   const [guestId, setGuestId] = useState<string | null>(null);
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const id = new URLSearchParams(window.location.search).get("guest_id");
-    setGuestId(id);
+    const params = new URLSearchParams(window.location.search);
+    const urlId = params.get("guest_id");
+    if (urlId) {
+      setGuestId(urlId);
+      return;
+    }
+    try {
+      const storedId = sessionStorage.getItem("guest_id");
+      if (storedId) {
+        setGuestId(storedId);
+      }
+    } catch {}
   }, []);
 
   // --- 2) DB check (must succeed or we STOP)
@@ -85,6 +95,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
         clearInterval(pollRef.current as NodeJS.Timeout);
         open(guestId as string);
         setModalOpened(true);
+        try { sessionStorage.removeItem("guest_id"); } catch {}
       }
     }, 2000);
 
