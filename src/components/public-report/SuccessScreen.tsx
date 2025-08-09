@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, forwardRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useReportModal } from "@/contexts/ReportModalContext";
-
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SuccessScreenProps {
@@ -22,9 +21,46 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(({
   
   const isMobile = useIsMobile();
 
-  /* use name/email from props directly */
-  const displayName = name || '';
-  const displayEmail = email || '';
+  /* Read guest_id from URL params as source of truth */
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlGuestId = urlParams.get('guest_id');
+  const effectiveGuestId = urlGuestId || guestReportId;
+
+  /* Load guest report data if guest_id is present */
+  const [guestReportData, setGuestReportData] = useState<any>(null);
+  const [isLoadingGuestData, setIsLoadingGuestData] = useState(false);
+
+  useEffect(() => {
+    if (effectiveGuestId && !guestReportData) {
+      setIsLoadingGuestData(true);
+      
+      const loadGuestReport = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('guest_reports')
+            .select('*')
+            .eq('id', effectiveGuestId)
+            .single();
+          
+          setIsLoadingGuestData(false);
+          if (error) {
+            console.error('[SuccessScreen] Failed to load guest report:', error);
+          } else if (data) {
+            setGuestReportData(data);
+          }
+        } catch (error) {
+          setIsLoadingGuestData(false);
+          console.error('[SuccessScreen] Error loading guest report:', error);
+        }
+      };
+      
+      loadGuestReport();
+    }
+  }, [effectiveGuestId, guestReportData]);
+
+  /* use name/email from guest report data or props as fallback */
+  const displayName = guestReportData?.person_a?.name || name || '';
+  const displayEmail = guestReportData?.person_a?.email || email || '';
 
   /* flags / timers */
   const [modalOpened, setModalOpened] = useState(false);
@@ -49,13 +85,13 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(({
 
   /* --- poll for ready signal, then open modal & close drawer --- */
   useEffect(() => {
-    if (modalOpened || isLoading || !guestReportId) return;
+    if (modalOpened || isLoading || !effectiveGuestId) return;
 
     pollRef.current = setInterval(async () => {
       const { data, error } = await supabase
         .from("report_ready_signals")
         .select("guest_report_id")
-        .eq("guest_report_id", guestReportId)
+        .eq("guest_report_id", effectiveGuestId)
         .single();
 
       if (error?.code && error.code !== "PGRST116") {
@@ -66,14 +102,14 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(({
       if (data?.guest_report_id) {
         clearInterval(pollRef.current as NodeJS.Timeout);
 
-        open(guestReportId);           // show report modal
+        open(effectiveGuestId);           // show report modal
         // Note: Removed resetReportState() to preserve state on refresh
         setModalOpened(true);          // unmount SuccessScreen
       }
     }, 2000);
 
     return () => clearInterval(pollRef.current as NodeJS.Timeout);
-  }, [guestReportId, modalOpened, open, isLoading]);
+  }, [effectiveGuestId, modalOpened, open, isLoading]);
 
   /* unmount once modal is open */
   if (modalOpened) return null;
