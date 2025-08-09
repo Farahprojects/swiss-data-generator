@@ -130,7 +130,12 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
     chartData: reportData.chartData,
     endpoint: reportData.endpoint,
     report_type: reportData.report_type,
-    // Only include essential fields, exclude Swiss data that's already processed
+    // Include person identity so AI can personalize output
+    person_a_name: reportData?.person_a?.name || reportData?.name || null,
+    person_b_name: reportData?.person_b?.name || reportData?.secondPersonName || null,
+    // Minimal person objects (name only) to keep payload lean
+    person_a: reportData?.person_a ? { name: reportData.person_a.name } : undefined,
+    person_b: reportData?.person_b ? { name: reportData.person_b.name } : undefined,
   });
 
   const requestBody = {

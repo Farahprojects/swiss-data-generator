@@ -173,9 +173,12 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
     chartData: reportData.chartData,
     endpoint: reportData.endpoint,
     report_type: reportData.report_type,
-    // Only include essential fields, exclude Swiss data that's already processed
+    person_a_name: reportData?.person_a?.name || reportData?.name || null,
+    person_b_name: reportData?.person_b?.name || reportData?.secondPersonName || null,
+    person_a: reportData?.person_a ? { name: reportData.person_a.name } : undefined,
+    person_b: reportData?.person_b ? { name: reportData.person_b.name } : undefined,
   });
-
+  
   console.log(`${logPrefix} Calling Gemini API with model: ${GOOGLE_MODEL}`);
   console.log(`${logPrefix} API Key format check: ${GOOGLE_API_KEY.length > 20 ? "Valid length" : "Invalid length"}`);
 
