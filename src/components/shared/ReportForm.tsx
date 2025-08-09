@@ -80,7 +80,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           trustedPricing: pricing,
           is_guest: true
         };
-        console.log('[ReportForm] Final payload to initiate-report-flow (FREE):\n' + JSON.stringify(payloadBody, null, 2));
+        
         const { data: resp, error } = await supabase.functions.invoke('initiate-report-flow', {
           body: payloadBody
         });
@@ -111,7 +111,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         trustedPricing: pricing,
         is_guest: true
       };
-      console.log('[ReportForm] Final payload to initiate-report-flow (PAID):\n' + JSON.stringify(payloadBody, null, 2));
+      
       const submissionPromise = supabase.functions.invoke('initiate-report-flow', {
         body: payloadBody
       });
