@@ -104,45 +104,45 @@ const PublicReport = () => {
 
 
 
-  // Function to trigger report generation via process-paid-report
-  const triggerReportGeneration = async (guestId: string, sessionId?: string) => {
-    try {
-      log('info', '🔄 Triggering report generation via process-paid-report', { guestId, sessionId }, 'publicReport');
-      
-      const { data, error } = await supabase.functions.invoke('process-paid-report', {
-        body: {
-          guest_id: guestId,
-          session_id: sessionId
-        }
-      });
-
+  // Function to trigger report generation via process-paid-report (fire-and-forget)
+  const triggerReportGeneration = (guestId: string, sessionId?: string) => {
+    log('info', '🔄 Triggering report generation via process-paid-report (fire-and-forget)', { guestId, sessionId }, 'publicReport');
+    
+    // Fire-and-forget - don't await
+    supabase.functions.invoke('process-paid-report', {
+      body: {
+        guest_id: guestId,
+        session_id: sessionId
+      }
+    }).then(({ data, error }) => {
       if (error) {
         log('error', '❌ process-paid-report failed', { error, guestId }, 'publicReport');
         console.error('process-paid-report error:', error);
       } else {
         log('info', '✅ process-paid-report successful', { data, guestId }, 'publicReport');
         console.log('process-paid-report response:', data);
-        
-        // Transition to success screen after process-paid-report completes
-        setStripeSuccess({
-          showSuccessModal: false,
-          guestId: guestId,
-          sessionId: sessionId || null,
-          status: 'success',
-          isProcessing: false,
-          showOriginalSuccessScreen: true
-        });
       }
-    } catch (err) {
+    }).catch((err) => {
       log('error', '❌ process-paid-report exception', { error: err, guestId }, 'publicReport');
       console.error('process-paid-report exception:', err);
-    }
+    });
   };
 
-  // Trigger report generation when popup appears
+  // Trigger report generation and transition to success screen when popup appears
   useEffect(() => {
     if (stripeSuccess.showSuccessModal && stripeSuccess.isProcessing && stripeSuccess.guestId) {
+      // Fire-and-forget report generation
       triggerReportGeneration(stripeSuccess.guestId, stripeSuccess.sessionId || undefined);
+      
+      // Immediately transition to success screen with guest ID
+      setStripeSuccess({
+        showSuccessModal: false,
+        guestId: stripeSuccess.guestId,
+        sessionId: stripeSuccess.sessionId,
+        status: 'success',
+        isProcessing: false,
+        showOriginalSuccessScreen: true
+      });
     }
   }, [stripeSuccess.showSuccessModal, stripeSuccess.isProcessing, stripeSuccess.guestId, stripeSuccess.sessionId]);
 
