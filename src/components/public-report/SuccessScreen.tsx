@@ -73,33 +73,66 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
 
   // --- 4) Polling (gated by uiReady)
   const [modalOpened, setModalOpened] = useState(false);
-  const pollRef = useRef<NodeJS.Timeout>();
+  const hasStartedRef = useRef(false);
+  const stoppedRef = useRef(false);
+  const timerRef = useRef<number | null>(null);
+  const controllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    if (modalOpened || isLoading || !uiReady) return;
+    if (modalOpened || isLoading || !uiReady || hasStartedRef.current || stoppedRef.current) return;
 
-    pollRef.current = setInterval(async () => {
+    hasStartedRef.current = true;
+    const startId = Date.now();
+    console.log('[SuccessScreen] Poller started id=', startId);
+
+    const checkOnce = async () => {
+      if (stoppedRef.current) return;
+
+      // cancel any previous in-flight notion (best-effort)
+      if (controllerRef.current) {
+        try { controllerRef.current.abort(); } catch {}
+      }
+      controllerRef.current = new AbortController();
+
       const { data, error } = await supabase
         .from("report_ready_signals")
         .select("guest_report_id")
         .eq("guest_report_id", guestId as string)
         .single();
 
-      // ignore "no rows" (PGRST116), log other errors
+      if (stoppedRef.current) return; // ignore late replies
+
       if (error?.code && error.code !== "PGRST116") {
         console.error("[SuccessScreen] polling error:", error);
-        return;
       }
 
-      if (data?.guest_report_id) {
-        clearInterval(pollRef.current as NodeJS.Timeout);
+      if (data?.guest_report_id && !stoppedRef.current) {
+        // stop first
+        stoppedRef.current = true;
+        if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+        if (controllerRef.current) { try { controllerRef.current.abort(); } catch {} controllerRef.current = null; }
+
+        // hand off
         open(guestId as string);
         setModalOpened(true);
         try { sessionStorage.removeItem("guest_id"); } catch {}
+        return;
       }
-    }, 2000);
 
-    return () => clearInterval(pollRef.current as NodeJS.Timeout);
+      // schedule next tick
+      if (!stoppedRef.current) {
+        timerRef.current = window.setTimeout(checkOnce, 2000);
+      }
+    };
+
+    // kick off
+    checkOnce();
+
+    return () => {
+      stoppedRef.current = true;
+      if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+      if (controllerRef.current) { try { controllerRef.current.abort(); } catch {} controllerRef.current = null; }
+    };
   }, [uiReady, modalOpened, open, isLoading, guestId]);
 
   // --- 5) Smooth scroll on desktop
