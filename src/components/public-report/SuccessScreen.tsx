@@ -12,75 +12,62 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
   const { open } = useReportModal();
   const isMobile = useIsMobile();
 
-  // --- 1) SINGLE SOURCE OF TRUTH: Stripe guest_id from URL ---
+  // 1) Single source of truth: guest_id from URL
   const [guestId, setGuestId] = useState<string | null>(null);
-  const [idError, setIdError] = useState<string | null>(null);
-
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get("guest_id");
-    if (!id) {
-      setIdError("Missing guest_id in URL.");
-      return;
-    }
+    const id = new URLSearchParams(window.location.search).get("guest_id");
     setGuestId(id);
   }, []);
 
-  // --- 2) NORMAL DB CHECK (same as elsewhere): fetch guest_reports by id ---
+  // 2) DB check state
   const [guestReportData, setGuestReportData] = useState<any>(null);
-  const [isLoadingGuestData, setIsLoadingGuestData] = useState(false);
+  const [dbReady, setDbReady] = useState(false);
+  const [dbError, setDbError] = useState<string | null>(null);
 
+  // 3) Do the DB check (HARD STOP if this fails; we never poll)
   useEffect(() => {
-    if (!guestId) return;
+    setDbReady(false);
+    setDbError(null);
+    setGuestReportData(null);
 
-    const loadGuestReport = async () => {
-      setIsLoadingGuestData(true);
+    if (!guestId) {
+      setDbError("Missing guest_id in URL.");
+      return;
+    }
+
+    const run = async () => {
       const { data, error } = await supabase
         .from("guest_reports")
         .select("*")
         .eq("id", guestId)
         .single();
 
-      setIsLoadingGuestData(false);
       if (error) {
-        console.error("[SuccessScreen] Failed to load guest report:", error);
-        setIdError("Could not load guest report.");
-      } else {
-        setGuestReportData(data);
+        setDbError(`[DB] Failed to load guest report for id=${guestId}: ${error.message || error.code}`);
+        return; // hard stop: NO polling
       }
+      if (!data) {
+        setDbError(`[DB] No guest report found for id=${guestId}.`);
+        return; // hard stop: NO polling
+      }
+
+      setGuestReportData(data);
+      setDbReady(true); // only now can polling begin
     };
 
-    loadGuestReport();
+    run();
   }, [guestId]);
 
-  // --- 3) Render values from DB ONLY ---
   const displayName = guestReportData?.person_a?.name ?? "";
   const displayEmail = guestReportData?.person_a?.email ?? "";
 
-  // --- 4) Polling starts only after we have a guestId ---
+  // 4) Polling (gated by dbReady). Never runs on error.
   const [modalOpened, setModalOpened] = useState(false);
   const pollRef = useRef<NodeJS.Timeout>();
-  const frameRef = useRef<number>();
 
-  // Scroll into view on desktop
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (window.innerWidth >= 768) {
-      frameRef.current = requestAnimationFrame(() => {
-        if (ref && typeof ref === "object" && ref.current) {
-          ref.current.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      });
-    }
-    return () => {
-      if (frameRef.current) cancelAnimationFrame(frameRef.current);
-    };
-  }, [ref]);
-
-  // Start polling once we have a guestId
-  useEffect(() => {
-    if (modalOpened || isLoading || !guestId) return;
+    if (modalOpened || isLoading || !guestId || !dbReady) return;
 
     pollRef.current = setInterval(async () => {
       const { data, error } = await supabase
@@ -89,6 +76,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
         .eq("guest_report_id", guestId)
         .single();
 
+      // ignore "no rows" error (PGRST116), surface other errors to console
       if (error?.code && error.code !== "PGRST116") {
         console.error("[SuccessScreen] polling error:", error);
         return;
@@ -96,27 +84,28 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
 
       if (data?.guest_report_id) {
         clearInterval(pollRef.current as NodeJS.Timeout);
-        open(guestId);            // open modal with the same single source of truth
-        setModalOpened(true);     // unmount SuccessScreen
+        open(guestId);
+        setModalOpened(true);
       }
     }, 2000);
 
     return () => clearInterval(pollRef.current as NodeJS.Timeout);
-  }, [guestId, modalOpened, open, isLoading]);
+  }, [guestId, dbReady, modalOpened, open, isLoading]);
 
   if (modalOpened) return null;
 
-  // --- 5) Basic error surface if Stripe guest_id is missing/bad ---
-  if (idError) {
+  // 5) Error UI (explicit: why the screen isn’t progressing)
+  if (dbError) {
     return (
-      <div ref={ref} className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
+      <div ref={ref} className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-4">
         <h1 className="text-2xl font-light text-gray-900">We hit a snag</h1>
-        <p className="text-gray-600">{idError}</p>
+        <p className="text-sm text-red-600 whitespace-pre-wrap">{dbError}</p>
+        <p className="text-sm text-gray-600">Polling is paused until the guest report is found.</p>
       </div>
     );
   }
 
-  // --- UI ---
+  // 6) UI (loads name/email from DB only)
   return (
     <div ref={ref} className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
       <div className="space-y-4">
@@ -128,7 +117,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
         <div className="space-y-2">
           <h1 className="text-2xl font-light text-gray-900">Report Generated Successfully!</h1>
           <p className="text-gray-600">
-            {guestReportData ? `Your personalized astrology report is ready for ${displayName}.` : "Loading your details..."}
+            {dbReady ? `Your personalized astrology report is ready for ${displayName}.` : "Loading your details..."}
           </p>
         </div>
       </div>
@@ -146,7 +135,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
 
       <div className="space-y-3">
         <p className="text-sm text-gray-600">
-          {isLoading || isLoadingGuestData
+          {isLoading || !dbReady
             ? "Processing your report request..."
             : "Your report is being prepared and will open automatically when ready..."}
         </p>
@@ -154,7 +143,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
         <div className="flex items-center justify-center space-x-2">
           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
           <span className="text-sm text-gray-600">
-            {isLoading || isLoadingGuestData ? "Processing request" : "Preparing your report"}
+            {isLoading || !dbReady ? "Processing request" : "Preparing your report"}
           </span>
         </div>
       </div>
