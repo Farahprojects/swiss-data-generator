@@ -51,7 +51,7 @@ const PublicReport = () => {
     if (isStripeSuccessReturn && guestId) {
       log('info', '🎯 Immediate Stripe success detection', { guestId, sessionId, status }, 'publicReport');
       
-      // Update global state immediately
+      // Update global state immediately - webhook will handle report generation
       setStripeSuccess({
         showSuccessModal: true,
         guestId,
@@ -61,8 +61,12 @@ const PublicReport = () => {
         showOriginalSuccessScreen: false
       });
       
-      // Process immediately
-      processPaidReport(guestId, sessionId);
+      // Clean URL parameters immediately
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete('guest_id');
+      newUrl.searchParams.delete('session_id');
+      newUrl.searchParams.delete('status');
+      window.history.replaceState({}, '', newUrl.toString());
     }
     
     // Handle guest ID storage with timestamp comparison to prevent race conditions
@@ -98,67 +102,7 @@ const PublicReport = () => {
     log('debug', 'Final activeGuestId will be', { finalId: guestId || localStorage.getItem('currentGuestReportId') }, 'publicReport');
   }, []);
 
-  // Function to call the process-paid-report edge function
-  const processPaidReport = async (guestId: string, sessionId?: string) => {
-    try {
-      log('info', '🔄 Calling process-paid-report edge function', { guestId, sessionId }, 'publicReport');
-      
-      const { data, error } = await supabase.functions.invoke('process-paid-report', {
-        body: {
-          guest_id: guestId,
-          session_id: sessionId
-        }
-      });
 
-      if (error) {
-        log('error', '❌ process-paid-report failed', { error, guestId }, 'publicReport');
-        console.error('process-paid-report error:', error);
-        
-        // Update state to show error
-        setStripeSuccess({
-          showSuccessModal: true,
-          guestId,
-          sessionId,
-          status: 'error',
-          isProcessing: false,
-          showOriginalSuccessScreen: false
-        });
-      } else {
-        log('info', '✅ process-paid-report successful', { data, guestId }, 'publicReport');
-        console.log('process-paid-report response:', data);
-        
-        // If report is already generated OR generation was successful, automatically proceed to success screen
-        if (data?.already_generated || data?.success) {
-          log('info', '🎯 Report ready or processing, automatically proceeding to success screen', { guestId, already_generated: data?.already_generated, success: data?.success }, 'publicReport');
-          
-          // Clean URL parameters
-          const newUrl = new URL(window.location.href);
-          newUrl.searchParams.delete('guest_id');
-          newUrl.searchParams.delete('session_id');
-          newUrl.searchParams.delete('status');
-          window.history.replaceState({}, '', newUrl.toString());
-          
-          // Brief delay for user feedback, then proceed
-          setTimeout(() => {
-            proceedToReport();
-          }, 1000);
-        }
-        
-        // Update state to show success
-        setStripeSuccess({
-          showSuccessModal: true,
-          guestId,
-          sessionId,
-          status: 'success',
-          isProcessing: false,
-          showOriginalSuccessScreen: false
-        });
-      }
-    } catch (err) {
-      log('error', '❌ process-paid-report exception', { error: err, guestId }, 'publicReport');
-      console.error('process-paid-report exception:', err);
-    }
-  };
 
   // Check for cancelled payment status
   useEffect(() => {
