@@ -289,7 +289,7 @@ serve(async (req) => {
       .insert({
         guest_report_id: guest_report_id,
         report_content: reportContent,
-        swiss_data: swissData,
+        // swiss_data removed to avoid duplication; source is translator_logs
         metadata: metadata,
         plain_token: plainToken,
         token_hash: tokenHash,
