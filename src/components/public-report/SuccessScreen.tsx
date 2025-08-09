@@ -73,34 +73,56 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
 
   // --- 4) Polling (gated by uiReady)
   const [modalOpened, setModalOpened] = useState(false);
-  const pollRef = useRef<NodeJS.Timeout>();
+  const hasTriggeredRef = useRef(false);
+  const timerRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (modalOpened || isLoading || !uiReady) return;
+    if (isLoading || !uiReady || hasTriggeredRef.current) return;
 
-    pollRef.current = setInterval(async () => {
+    const checkOnce = async () => {
+      if (hasTriggeredRef.current) return;
       const { data, error } = await supabase
-        .from("report_ready_signals")
-        .select("guest_report_id")
-        .eq("guest_report_id", guestId as string)
+        .from("report_logs")
+        .select("user_id")
+        .eq("user_id", guestId as string)
+        .order("created_at", { ascending: false })
+        .limit(1)
         .single();
 
-      // ignore "no rows" (PGRST116), log other errors
       if (error?.code && error.code !== "PGRST116") {
         console.error("[SuccessScreen] polling error:", error);
-        return;
       }
 
-      if (data?.guest_report_id) {
-        clearInterval(pollRef.current as NodeJS.Timeout);
+      if (data?.user_id) {
+        hasTriggeredRef.current = true;
+        if (timerRef.current) {
+          clearTimeout(timerRef.current);
+          timerRef.current = null;
+        }
         open(guestId as string);
         setModalOpened(true);
         try { sessionStorage.removeItem("guest_id"); } catch {}
+        return;
       }
-    }, 2000);
 
-    return () => clearInterval(pollRef.current as NodeJS.Timeout);
-  }, [uiReady, modalOpened, open, isLoading, guestId]);
+      // schedule next check
+      if (!hasTriggeredRef.current) {
+        timerRef.current = window.setTimeout(checkOnce, 2000);
+      }
+    };
+
+    // kick off first check immediately
+    checkOnce();
+
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      // prevent re-arming after unmount
+      hasTriggeredRef.current = true;
+    };
+  }, [uiReady, isLoading, guestId, open]);
 
   // --- 5) Smooth scroll on desktop
   const frameRef = useRef<number>();
