@@ -94,106 +94,6 @@ async function kickTranslator(guestReportId: string, reportData: ReportData, req
   }
 }
 
-
-// LEGACY: Create guest_reports record from Stripe metadata (backward compatibility)
-async function createGuestReportFromLegacyMetadata(sessionId: string, session: any, supabase: any): Promise<string> {
-  const md = session.metadata ?? {};
-  
-  console.log(`🔄 [verify-guest-payment] Creating legacy guest report for session: ${sessionId}`);
-
-  // Extract report data from Stripe metadata (legacy format)
-  const reportData = {
-    name: md.name || '',
-    birthDate: md.birthDate || '',
-    birthTime: md.birthTime || '',
-    birthLocation: md.birthLocation || '',
-    birthLatitude: md.birthLatitude || '',
-    birthLongitude: md.birthLongitude || '',
-    reportType: md.reportType || md.priceId || 'essence',
-    product_id: md.priceId || md.reportType || 'essence',
-    essenceType: md.essenceType || '',
-    // Add any other fields that might be in legacy metadata
-    secondPersonName: md.secondPersonName || '',
-    secondPersonBirthDate: md.secondPersonBirthDate || '',
-    secondPersonBirthTime: md.secondPersonBirthTime || '',
-    secondPersonBirthLocation: md.secondPersonBirthLocation || '',
-    secondPersonLatitude: md.secondPersonLatitude || '',
-    secondPersonLongitude: md.secondPersonLongitude || '',
-    relationshipType: md.relationshipType || '',
-    returnYear: md.returnYear || ''
-  };
-
-  // Create guest_reports record
-  const { data: guestReport, error: insertError } = await supabase
-    .from("guest_reports")
-    .insert({
-      stripe_session_id: sessionId,
-      email: session.customer_details?.email || 'legacy@unknown.com',
-      payment_status: 'paid', // Already verified from Stripe
-      amount_paid: (session.amount_total ?? 0) / 100,
-      report_type: reportData.reportType,
-      report_data: reportData,
-      promo_code_used: md.promo_code_used || null,
-      coach_slug: md.coach_slug || null,
-      coach_name: md.coach_name || null,
-    })
-    .select()
-    .single();
-
-  if (insertError) {
-    // Check if it's a unique constraint violation (already exists)
-    if (insertError.message?.includes('duplicate') || insertError.message?.includes('unique')) {
-      console.log(`🔄 [verify-guest-payment] Legacy guest report already exists for session: ${sessionId}`);
-      
-      // Fetch existing record
-      const { data: existingReport, error: fetchError } = await supabase
-        .from("guest_reports")
-        .select("*")
-        .eq("stripe_session_id", sessionId)
-        .single();
-
-      if (fetchError || !existingReport) {
-        throw new Error(`Failed to fetch existing guest report: ${fetchError?.message}`);
-      }
-
-      return existingReport.id;
-    }
-    
-    throw new Error(`Failed to create legacy guest report: ${insertError.message}`);
-  }
-
-  console.log(`✅ [verify-guest-payment] Legacy guest report created: ${guestReport.id}`);
-
-  return guestReport.id;
-}
-
-// Helper function to log performance timing
-async function logPerformanceTiming(
-  requestId: string,
-  stage: string,
-  guestReportId: string,
-  startTime: number,
-  endTime: number,
-  metadata: any,
-  supabase: any
-) {
-  try {
-    const duration = endTime - startTime;
-    await supabase.from("performance_timings").insert({
-      request_id: requestId,
-      stage,
-      guest_report_id: guestReportId,
-      start_time: new Date(startTime).toISOString(),
-      end_time: new Date(endTime).toISOString(),
-      duration_ms: duration,
-      metadata
-    });
-    console.log(`📊 [verify-guest-payment] Performance logged - ${stage}: ${duration}ms`);
-  } catch (error) {
-    console.error(`❌ [verify-guest-payment] Performance logging failed:`, error);
-  }
-}
-
 // MAIN HANDLER
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -239,31 +139,6 @@ serve(async (req) => {
     if (!sessionId) throw new Error("Session ID is required");
 
     console.log(`🔄 [verify-guest-payment] Starting verification for session: ${sessionId}`);
-
-    // OPTIMIZATION: Skip initial performance logging to reduce latency
-
-    // Check if this is a promo (free) session or guest report ID
-    const isPromoFlow = paymentType === 'promo';
-    
-    if (isPromoFlow) {
-      console.log(`🔄 [verify-guest-payment] Processing promo session: ${sessionId}`);
-
-      // For promo flow, sessionId is actually the guestReportId
-      const { data: record, error } = await supabase
-        .from("guest_reports")
-        .select("*")
-        .eq("id", sessionId)
-        .single();
-
-      if (error || !record) {
-        console.error(`❌ [verify-guest-payment] Promo report not found: ${sessionId}`, error);
-        throw new Error("Promo report not found");
-      }
-
-      guestReportId = record.id;
-      console.log(`✅ [verify-guest-payment] Promo report found: ${guestReportId}`);
-
-      // Guest paid, proceed with processing
 
       // OPTIMIZATION: Single database operation - update status and trigger processing
       await supabase
