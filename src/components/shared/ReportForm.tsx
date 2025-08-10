@@ -93,6 +93,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
             localStorage.setItem('reportUrl', resp.reportUrl as string);
             sessionStorage.setItem('reportUrl', resp.reportUrl as string);
           } catch {}
+          // Mark flow as free to ensure success screen shows
+          try { sessionStorage.setItem('pendingFlow', 'free'); } catch {}
         }
         const guestReportId = (resp?.guestReportId || resp?.guest_id) as string | undefined;
         const isFree = Boolean(resp?.isFreeReport);
@@ -127,6 +129,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           return;
         }
         if (responseData?.checkoutUrl) {
+          try { sessionStorage.setItem('pendingFlow', 'paid'); } catch {}
           window.location.href = responseData.checkoutUrl;
         } else if (responseData?.success || responseData?.guestReportId) {
           onReportCreated?.(responseData.guestReportId, (data as any).name, (data as any).email);
