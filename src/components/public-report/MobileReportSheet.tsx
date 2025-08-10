@@ -100,6 +100,9 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
           console.error('❌ [MOBILE] Free report submission failed:', error);
           return;
         }
+        if (data?.reportUrl) {
+          console.log('[PROMO] reportUrl:', data.reportUrl);
+        }
         const guestReportId = (data?.guestReportId || data?.guest_id) as string | undefined;
         const isFree = Boolean(data?.isFreeReport);
         if (!isFree || !guestReportId) {

@@ -201,11 +201,13 @@ serve(async (req) => {
       debug('[initiate-report-flow] Translator-edge payload (free)', translatorPayload);
       void supabaseAdmin.functions.invoke('translator-edge', { body: translatorPayload });
 
+      const reportUrl = `${SITE_URL}/report?guest_id=${guestReportId}&success=1`;
       return ok({
         guestReportId,
         user_id: null,
         finalPrice: final,
         isFreeReport: true,
+        reportUrl,
         processing_time_ms: ms
       });
     }
