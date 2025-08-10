@@ -133,10 +133,9 @@ export const resetGuestSessionOn404 = async (): Promise<void> => {
 };
 
 /**
- * Store guest report ID in both URL and localStorage
+ * Store guest report ID in URL only (no persistent localStorage)
  */
 export const storeGuestReportId = (guestReportId: string): void => {
-  localStorage.setItem('currentGuestReportId', guestReportId);
   setGuestReportIdInUrl(guestReportId);
 };
 

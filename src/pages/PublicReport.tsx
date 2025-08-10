@@ -44,17 +44,35 @@ const PublicReport = () => {
   const { open, isOpen } = useReportModal();
   
 
-  // Simple state/memory inspector: logs on mount only (no side effects)
+  // Simple state/memory inspector + cleanup on mount (no side effects)
   useEffect(() => {
     try {
-      const params = new URLSearchParams(window.location.search);
-      const snapshot = {
-        url: typeof window !== 'undefined' ? window.location.href : null,
-        params: {
-          guest_id: params.get('guest_id'),
-          session_id: params.get('session_id'),
-          status: params.get('status'),
-        },
+      // 1) Purge legacy/null keys from localStorage
+      const LS_KEYS_TO_REMOVE = ['currentGuestReportId', 'reportUrl'];
+      LS_KEYS_TO_REMOVE.forEach((k) => {
+        try { localStorage.removeItem(k); } catch {}
+      });
+
+      // 2) Restrict sessionStorage to allowed keys only
+      const ALLOWED_SS = new Set(['reportUrl', 'pendingFlow']);
+      try {
+        Object.keys(sessionStorage).forEach((k) => {
+          if (!ALLOWED_SS.has(k)) sessionStorage.removeItem(k);
+        });
+      } catch {}
+
+      // 3) Build snapshot with real URL params only (avoid null noise)
+      const url = typeof window !== 'undefined' ? window.location.href : null;
+      const sp = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+      const params: Record<string, string> = {};
+      ['guest_id', 'session_id', 'status'].forEach((k) => {
+        const v = sp.get(k);
+        if (v) params[k] = v;
+      });
+
+      const snapshot: any = {
+        url,
+        ...(Object.keys(params).length ? { params } : {}),
         localStorage: {
           currentGuestReportId: (() => { try { return localStorage.getItem('currentGuestReportId'); } catch { return null; } })(),
         },
@@ -63,7 +81,7 @@ const PublicReport = () => {
           pendingFlow: (() => { try { return sessionStorage.getItem('pendingFlow'); } catch { return null; } })(),
         },
       };
-      // Single, clean log output
+
       console.log('[StateMemoryCheck] Snapshot on mount:', snapshot);
     } catch (e) {
       console.warn('[StateMemoryCheck] Failed to read state/memory snapshot:', e);
