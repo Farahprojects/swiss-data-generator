@@ -73,22 +73,15 @@ const PublicReport = () => {
       window.history.replaceState({}, '', newUrl.toString());
     }
     
-    // Simple guest ID handling - URL takes precedence
+    // Simple guest ID handling - URL only
     if (guestId) {
       log('info', 'Guest ID found, storing and setting state', { guestId }, 'publicReport');
       storeGuestReportId(guestId);
       setActiveGuestId(guestId);
-    } else {
-      // Check localStorage for existing session
-      const storedGuestId = localStorage.getItem('currentGuestReportId');
-      log('debug', 'Stored guest_id from localStorage', { storedGuestId }, 'publicReport');
-      if (storedGuestId) {
-        setActiveGuestId(storedGuestId);
-      }
     }
     
     setIsGuestIdLoading(false);
-    log('debug', 'Final activeGuestId will be', { finalId: guestId || localStorage.getItem('currentGuestReportId') }, 'publicReport');
+    log('debug', 'Final activeGuestId will be', { finalId: guestId }, 'publicReport');
   }, []);
 
 

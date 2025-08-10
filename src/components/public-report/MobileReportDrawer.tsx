@@ -301,10 +301,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
           console.error('❌ [MOBILE] Invalid free response:', data);
           return;
         }
-        try {
-          sessionStorage.setItem('guest_id', guestReportId);
-          // guest_id persisted silently
-        } catch {}
+        // No guest_id persistence; URL is the single source of truth
         // Close drawer and open success UI
         onOpenChange(false);
         onReportCreated?.({ guestReportId, name: formData.name, email: formData.email });

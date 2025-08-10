@@ -95,9 +95,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         if (!isFree || !guestReportId) {
           return { success: false, guestReportId: '' };
         }
-        try {
-          sessionStorage.setItem('guest_id', guestReportId);
-        } catch {}
+        // No guest_id persistence; URL is the single source of truth
         // Notify parent immediately to open success UI
         onReportCreated?.(guestReportId, (data as any).name, (data as any).email);
         return { success: true, guestReportId };
