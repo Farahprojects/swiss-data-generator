@@ -30,6 +30,28 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
     } catch {}
   }, []);
 
+  // Gracefully wait a short period for guest_id to appear (mobile path)
+  useEffect(() => {
+    if (guestId) return;
+    let stopped = false;
+    const start = Date.now();
+    const GRACE_MS = 3000;
+    const tick = () => {
+      if (stopped) return;
+      try {
+        const id = sessionStorage.getItem('guest_id');
+        if (id) { setGuestId(id); return; }
+      } catch {}
+      if (Date.now() - start >= GRACE_MS) {
+        setDbError("Missing guest_id in URL.");
+        return;
+      }
+      setTimeout(tick, 250);
+    };
+    tick();
+    return () => { stopped = true; };
+  }, [guestId]);
+
   // --- 2) DB check (must succeed or we STOP)
   const [guestReportData, setGuestReportData] = useState<any>(null);
   const [dbError, setDbError] = useState<string | null>(null);
@@ -40,29 +62,30 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
     setDbError(null);
     setGuestReportData(null);
 
-    if (!guestId) {
-      setDbError("Missing guest_id in URL.");
-      return;
-    }
+    if (!guestId) return;
 
     (async () => {
-      const { data, error } = await supabase
-        .from("guest_reports")
-        .select("*")
-        .eq("id", guestId)
-        .single();
-
-      if (error) {
-        setDbError(`[DB] Failed to load guest report for id=${guestId}: ${error.message || error.code}`);
-        return; // hard stop
+      const GRACE_MS = 3000;
+      const RETRY_MS = 300;
+      const deadline = Date.now() + GRACE_MS;
+      let lastError: any = null;
+      while (Date.now() <= deadline) {
+        const { data, error } = await supabase
+          .from("guest_reports")
+          .select("*")
+          .eq("id", guestId)
+          .single();
+        if (!error && data) {
+          setGuestReportData(data);
+          setDbReady(true);
+          return;
+        }
+        lastError = error;
+        await new Promise(r => setTimeout(r, RETRY_MS));
       }
-      if (!data) {
-        setDbError(`[DB] No guest report found for id=${guestId}.`);
-        return; // hard stop
-      }
-
-      setGuestReportData(data);
-      setDbReady(true);
+      setDbError(lastError
+        ? `[DB] Failed to load guest report for id=${guestId}: ${lastError.message || lastError.code}`
+        : `[DB] No guest report found for id=${guestId}.`);
     })();
   }, [guestId]);
 
