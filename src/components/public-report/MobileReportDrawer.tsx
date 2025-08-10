@@ -16,7 +16,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { usePricing } from '@/contexts/PricingContext';
 
 import { MobileDrawerProvider } from '@/contexts/MobileDrawerContext';
-import MobileFormProtector from '@/components/public-report/MobileFormProtector';
 
 
 interface TrustedPricingObject {
@@ -477,107 +476,109 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
   return (
     <Drawer.Root open={isOpen} onOpenChange={onOpenChange}>
       <Drawer.Portal>
-        <Drawer.Overlay className="fixed inset-0 bg-black/40" />
-        <Drawer.Content className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-xl max-h-[85vh]">
-          <MobileDrawerProvider closeDrawer={handleClose}>
-            <MobileFormProtector isOpen={isOpen}>
-              <div className="p-6">
-                <MobileDrawerHeader currentStep={currentStep} totalSteps={totalSteps} onClose={handleClose} />
+          <Drawer.Overlay className="fixed inset-0 bg-white z-[100]" />
+        <Drawer.Content className="fixed bottom-0 left-0 right-0 h-[96%] bg-white rounded-2xl z-[100] flex flex-col">
+          
+          {/* Header */}
+          <MobileDrawerHeader
+            currentStep={currentStep}
+            totalSteps={totalSteps}
+            onClose={handleClose}
+          />
 
-                <div id="mobile-drawer-scroll" className="mt-4 space-y-6">
-                  {currentStep === 1 && (
-                    <Step1ReportType
-                      control={control}
-                      setValue={setValue}
-                      selectedCategory={reportCategory}
-                      onNext={nextStep}
-                    />
-                  )}
+          {/* Content Area */}
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            {currentStep === 1 && (
+              <Step1ReportType
+                control={control}
+                setValue={setValue}
+                selectedCategory={reportCategory}
+                onNext={nextStep}
+              />
+            )}
 
-                  {currentStep === 2 && (
-                    <>
-                      {reportCategory === 'astro-data' ? (
-                        <Step1_5AstroData
-                          control={control}
-                          setValue={setValue}
-                          selectedSubCategory={formValues.reportSubCategory}
-                          onNext={nextStep}
-                        />
-                      ) : (
-                        <Step1_5SubCategory
-                          control={control}
-                          setValue={setValue}
-                          selectedCategory={reportCategory}
-                          selectedSubCategory={formValues.reportSubCategory}
-                          onNext={nextStep}
-                        />
-                      )}
-                    </>
-                  )}
+            {currentStep === 2 && (
+              <>
+                {reportCategory === 'astro-data' ? (
+                  <Step1_5AstroData
+                    control={control}
+                    setValue={setValue}
+                    selectedSubCategory={formValues.reportSubCategory}
+                    onNext={nextStep}
+                  />
+                ) : (
+                  <Step1_5SubCategory
+                    control={control}
+                    setValue={setValue}
+                    selectedCategory={reportCategory}
+                    selectedSubCategory={formValues.reportSubCategory}
+                    onNext={nextStep}
+                  />
+                )}
+              </>
+            )}
 
-                  {currentStep === 3 && (
-                    <Step2PersonA
-                      register={register}
-                      setValue={setValue}
-                      watch={watch}
-                      errors={errors}
-                      onNext={nextStep}
-                    />
-                  )}
+            {currentStep === 3 && (
+              <Step2PersonA
+                register={register}
+                setValue={setValue}
+                watch={watch}
+                errors={errors}
+                onNext={nextStep}
+              />
+            )}
 
-                  {currentStep === 4 && (
-                    <>
-                      {requiresSecondPerson ? (
-                        <Step2PersonB
-                          register={register}
-                          setValue={setValue}
-                          watch={watch}
-                          errors={errors}
-                          onNext={nextStep}
-                        />
-                      ) : (
-                        <Step3Payment
-                          register={register}
-                          watch={watch}
-                          errors={errors}
-                          isProcessing={isProcessing}
-                          onTimeoutChange={() => {}}
-                        />
-                      )}
-                    </>
-                  )}
+            {currentStep === 4 && (
+              <>
+                {requiresSecondPerson ? (
+                  <Step2PersonB
+                    register={register}
+                    setValue={setValue}
+                    watch={watch}
+                    errors={errors}
+                    onNext={nextStep}
+                  />
+                ) : (
+                  <Step3Payment
+                    register={register}
+                    watch={watch}
+                    errors={errors}
+                    isProcessing={isProcessing}
+                    onTimeoutChange={() => {}}
+                  />
+                )}
+              </>
+            )}
 
-                  {currentStep === 5 && (
-                    <>
-                      {requiresSecondPerson ? (
-                        <Step3Payment
-                          register={register}
-                          watch={watch}
-                          errors={errors}
-                          isProcessing={isProcessing}
-                          onTimeoutChange={() => {}}
-                        />
-                      ) : null}
-                    </>
-                  )}
-                </div>
-              </div>
-            </MobileFormProtector>
-          </MobileDrawerProvider>
+            {currentStep === 5 && (
+              <>
+                {requiresSecondPerson ? (
+                  <Step3Payment
+                    register={register}
+                    watch={watch}
+                    errors={errors}
+                    isProcessing={isProcessing}
+                    onTimeoutChange={() => {}}
+                  />
+                ) : null}
+              </>
+            )}
+          </div>
+
+          {/* Footer */}
+          <MobileDrawerFooter
+            currentStep={currentStep}
+            totalSteps={totalSteps}
+            onPrevious={prevStep}
+            onNext={nextStep}
+            onSubmit={handleButtonClick}
+            canGoNext={canGoNext() as boolean}
+            isProcessing={isProcessing}
+            isLastStep={currentStep === totalSteps}
+            hasTimedOut={hasTimedOut}
+          />
+
         </Drawer.Content>
-
-        {/* Fixed Footer outside transformed content to respect viewport */}
-        <MobileDrawerFooter
-          currentStep={currentStep}
-          totalSteps={totalSteps}
-          onPrevious={prevStep}
-          onNext={nextStep}
-          onSubmit={handleButtonClick}
-          canGoNext={canGoNext() as boolean}
-          isProcessing={isProcessing}
-          isLastStep={currentStep === totalSteps}
-          hasTimedOut={hasTimedOut}
-        />
       </Drawer.Portal>
     </Drawer.Root>
   );
