@@ -56,13 +56,11 @@ const PublicReport = () => {
           status: params.get('status'),
         },
         localStorage: {
-          reportUrl: (() => { try { return localStorage.getItem('reportUrl'); } catch { return null; } })(),
           currentGuestReportId: (() => { try { return localStorage.getItem('currentGuestReportId'); } catch { return null; } })(),
         },
         sessionStorage: {
           reportUrl: (() => { try { return sessionStorage.getItem('reportUrl'); } catch { return null; } })(),
           pendingFlow: (() => { try { return sessionStorage.getItem('pendingFlow'); } catch { return null; } })(),
-          autoOpenedReportModal: (() => { try { return sessionStorage.getItem('autoOpenedReportModal'); } catch { return null; } })(),
         },
       };
       // Single, clean log output
@@ -72,24 +70,6 @@ const PublicReport = () => {
     }
   }, []);
 
-  // Direct modal open on refresh from stored reportUrl (safe to assume paid)
-  useEffect(() => {
-    try {
-      if (isOpen) return;
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('guest_id')) return; // URL already has id; normal flow will handle
-      const storedUrl = (() => { try { return localStorage.getItem('reportUrl') || sessionStorage.getItem('reportUrl'); } catch { return null; } })();
-      if (!storedUrl) return;
-      const recoveredId = (() => { try { return new URL(storedUrl).searchParams.get('guest_id'); } catch { return null; } })();
-      if (!recoveredId) return;
-      if (sessionStorage.getItem('autoOpenedReportModal') === '1') return;
-      console.log('[Recovery] Opening report modal from stored reportUrl with guest_id:', recoveredId);
-      open(recoveredId);
-      sessionStorage.setItem('autoOpenedReportModal', '1');
-    } catch (e) {
-      console.warn('[Recovery] Failed to open modal from stored reportUrl:', e);
-    }
-  }, [isOpen, open]);
 
 
   // Refs for scrolling
@@ -247,13 +227,10 @@ const PublicReport = () => {
     };
   }, [isMobile]);
 
-  // Auto-open report modal when a guest ID is present (once per session)
+  // Auto-open report modal when a guest ID is present
   useEffect(() => {
     if (isGuestIdLoading) return;
     if (isOpen) return;
-
-    const alreadyOpened = sessionStorage.getItem('autoOpenedReportModal') === '1';
-    if (alreadyOpened) return;
 
     const id = activeGuestId;
     if (!id) return;
@@ -261,7 +238,6 @@ const PublicReport = () => {
     const t = setTimeout(() => {
       try {
         open(id);
-        sessionStorage.setItem('autoOpenedReportModal', '1');
       } catch (e) {
         console.warn('Auto-open modal failed', e);
       }

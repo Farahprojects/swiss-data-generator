@@ -52,23 +52,12 @@ export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
       metadata
     };
     
-    const newState = {
-      currentReport: reportRef,
-      isOpen: true
-    };
-    
-    // Store only minimal state in sessionStorage
-    sessionStorage.setItem('reportModalState', JSON.stringify(newState));
     setCurrentReport(reportRef);
     setIsOpen(true);
   }, []);
 
   const close = useCallback(() => {
     try { console.log(`[Modal] close @${Date.now()}`); } catch {}
-    // Clear persisted modal state
-    sessionStorage.removeItem('reportModalState');
-    sessionStorage.removeItem('reportModalPayload'); // Clear any old full payload data
-    
     // Clean up cache for current report
     if (currentReport?.guestReportId) {
       removeFromCache(currentReport.guestReportId);
