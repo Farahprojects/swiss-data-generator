@@ -259,7 +259,7 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
   );
 
   const footer = (
-    <div ref={footerRef} className="mobile-footer-fixed">
+    <div ref={footerRef} className="mobile-footer-fixed bg-white">
       <MobileDrawerFooter
         currentStep={currentStep}
         totalSteps={totalSteps}
