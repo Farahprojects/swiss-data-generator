@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, forwardRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useReportModal } from "@/contexts/ReportModalContext";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useSuccessModal } from "@/contexts/SuccessModalContext";
 
 interface SuccessScreenProps {
   isLoading?: boolean;
@@ -11,6 +12,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
 ({ isLoading = false }, ref) => {
   const { open } = useReportModal();
   const isMobile = useIsMobile();
+  const { close: closeSuccess } = useSuccessModal();
 
   // --- 1) Resolve guest_id: URL param first, then sessionStorage fallback
   const [guestId, setGuestId] = useState<string | null>(null);
@@ -97,6 +99,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
         open(guestId as string);
         setModalOpened(true);
         try { sessionStorage.removeItem('guest_id'); } catch {}
+        try { closeSuccess(); } catch {}
       }
     );
 
@@ -109,7 +112,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
         channelRef.current = null;
       }
     };
-  }, [uiReady, modalOpened, open, isLoading, guestId]);
+  }, [uiReady, modalOpened, open, isLoading, guestId, closeSuccess]);
 
   // --- 5) Smooth scroll on desktop
   const frameRef = useRef<number>();
