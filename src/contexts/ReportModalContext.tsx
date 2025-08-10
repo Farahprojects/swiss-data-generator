@@ -57,6 +57,7 @@ export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
 
   const open = useCallback(async (guestReportId: string, metadata?: any) => {
     if (!guestReportId) return console.warn('[ModalCTX] open called with null guestReportId');
+    try { console.log(`[Modal] open called id=${guestReportId} @${Date.now()}`); } catch {}
     
     const reportRef: ReportReference = {
       guestReportId,
@@ -78,6 +79,7 @@ export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const close = useCallback(() => {
+    try { console.log(`[Modal] close @${Date.now()}`); } catch {}
     // Clear persisted modal state
     sessionStorage.removeItem('reportModalState');
     sessionStorage.removeItem('reportModalPayload'); // Clear any old full payload data

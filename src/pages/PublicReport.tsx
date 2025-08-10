@@ -20,6 +20,7 @@ import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
 import MobileReportSheet from '@/components/public-report/MobileReportSheet';
 import { SuccessScreen } from '@/components/public-report/SuccessScreen';
 import { useReportModal } from '@/contexts/ReportModalContext';
+import { hasSeen } from '@/utils/seenReportTracker';
 
 const PublicReport = () => {
   // Synchronous URL parsing - happens before any React logic
@@ -277,7 +278,21 @@ const PublicReport = () => {
     newUrl.searchParams.delete('status');
     window.history.replaceState({}, '', newUrl.toString());
   };
+  // Seen-flag routing helpers
+  const hasUrlSuccess = typeof window === 'undefined' ? false : (new URLSearchParams(window.location.search).get('success') === '1');
+  const urlHasGuestParam = typeof window === 'undefined' ? false : new URLSearchParams(window.location.search).has('guest_id');
+  const pendingFlow = typeof window === 'undefined' ? null : sessionStorage.getItem('pendingFlow');
+  const unifiedGuestId = unifiedSuccessData?.guestReportId || null;
+  const hasSeenUnified = unifiedGuestId ? hasSeen(unifiedGuestId) : false;
 
+  useEffect(() => {
+    if (!unifiedGuestId) return;
+    const action = hasSeenUnified ? 'open' : 'wait';
+    console.log(`[Provider] boot: url success=${hasUrlSuccess ? 1 : 0} id=${unifiedGuestId} hasSeen=${hasSeenUnified ? 1 : 0} → action=${action}`);
+    if (hasSeenUnified && !isOpen) {
+      open(unifiedGuestId);
+    }
+  }, [unifiedGuestId, hasSeenUnified, isOpen, open, hasUrlSuccess]);
 
 
   // Show loading spinner while determining guest ID
@@ -582,7 +597,7 @@ const PublicReport = () => {
         {/* Success Screen - unified for both Stripe return and direct form submission */}
         {(
           (stripeSuccess.showOriginalSuccessScreen && stripeSuccess.guestId) ||
-          (unifiedSuccessData && (typeof window === 'undefined' ? true : (new URLSearchParams(window.location.search).has('guest_id') || sessionStorage.getItem('pendingFlow') !== 'paid')))
+          (unifiedSuccessData && (typeof window === 'undefined' ? true : (!hasSeenUnified && (urlHasGuestParam || pendingFlow !== 'paid'))))
         ) ? (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto flex items-center justify-center">

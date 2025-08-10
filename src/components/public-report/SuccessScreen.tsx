@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, forwardRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useReportModal } from "@/contexts/ReportModalContext";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { markSeen } from "@/utils/seenReportTracker";
 
 interface SuccessScreenProps {
   isLoading?: boolean;
@@ -76,6 +77,8 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
   const wsStartedRef = useRef(false);
   const wsStoppedRef = useRef(false);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const seenMarkedRef = useRef(false);
+  const wsTriggeredRef = useRef(false);
 
   useEffect(() => {
     if (modalOpened || isLoading || !uiReady || wsStartedRef.current || wsStoppedRef.current) return;
@@ -94,9 +97,21 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
         try { channel.unsubscribe(); } catch {}
 
         // Handoff
+        wsTriggeredRef.current = true;
         open(guestId as string);
         setModalOpened(true);
         try { sessionStorage.removeItem('guest_id'); } catch {}
+        // Seen flag marking (idempotent, after open)
+        {
+          const isReadyForSeenMark = Boolean(
+            guestId && !isLoading && dbReady && guestReportData && uiReady && wsTriggeredRef.current
+          );
+          if (!seenMarkedRef.current && isReadyForSeenMark) {
+            try { markSeen(guestId as string); } catch {}
+            seenMarkedRef.current = true;
+            console.log(`[SeenFlag] ready=true for ${guestId}, marking seen @${Date.now()}`);
+          }
+        }
       }
     );
 
