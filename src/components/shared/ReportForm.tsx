@@ -89,19 +89,16 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         }
         if (resp?.reportUrl) {
           console.log('[PROMO] reportUrl:', resp.reportUrl);
-          try {
-            localStorage.setItem('reportUrl', resp.reportUrl as string);
-            sessionStorage.setItem('reportUrl', resp.reportUrl as string);
-          } catch {}
-          // Mark flow as free to ensure success screen shows
-          try { sessionStorage.setItem('pendingFlow', 'free'); } catch {}
         }
         const guestReportId = (resp?.guestReportId || resp?.guest_id) as string | undefined;
         const isFree = Boolean(resp?.isFreeReport);
         if (!isFree || !guestReportId) {
           return { success: false, guestReportId: '' };
         }
-        // No guest_id persistence; URL is the single source of truth
+        try {
+          sessionStorage.setItem('guest_id', guestReportId);
+          console.log('[SuccessMemory] stored guest_id:', guestReportId);
+        } catch {}
         // Notify parent immediately to open success UI
         onReportCreated?.(guestReportId, (data as any).name, (data as any).email);
         return { success: true, guestReportId };
@@ -129,7 +126,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           return;
         }
         if (responseData?.checkoutUrl) {
-          try { sessionStorage.setItem('pendingFlow', 'paid'); } catch {}
           window.location.href = responseData.checkoutUrl;
         } else if (responseData?.success || responseData?.guestReportId) {
           onReportCreated?.(responseData.guestReportId, (data as any).name, (data as any).email);

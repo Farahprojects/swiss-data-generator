@@ -52,35 +52,13 @@ const PublicReport = () => {
 
   // Process Stripe return immediately if detected
   useEffect(() => {
-    // Phase 1: Check for existing URL state first.
-    let currentGuestId = guestId;
-
-    // Phase 2: If no guest_id in URL, try to recover from storage.
-    if (!currentGuestId) {
-      try {
-        const reportUrlFromStorage = localStorage.getItem('reportUrl') || sessionStorage.getItem('reportUrl');
-        if (reportUrlFromStorage) {
-          console.log('[Recovery] Found reportUrl in storage:', reportUrlFromStorage);
-          // Update the URL in the address bar without reloading the page.
-          window.history.replaceState({}, '', reportUrlFromStorage);
-          // Re-parse the URL to get the guest_id.
-          const recoveredUrlParams = new URLSearchParams(new URL(reportUrlFromStorage).search);
-          currentGuestId = recoveredUrlParams.get("guest_id");
-          console.log('[Recovery] Recovered guest_id from storage:', currentGuestId);
-        }
-      } catch (e) {
-        console.error('[Recovery] Error recovering report URL from storage:', e);
-      }
-    }
-
-    // Phase 3: Process Stripe return or standard guest flow with the determined guest ID.
-    if (isStripeSuccessReturn && currentGuestId) {
-      log('info', '🎯 Immediate Stripe success detection', { guestId: currentGuestId, sessionId, status }, 'publicReport');
+    if (isStripeSuccessReturn && guestId) {
+      log('info', '🎯 Immediate Stripe success detection', { guestId, sessionId, status }, 'publicReport');
       
       // Update global state immediately - webhook will handle report generation
       setStripeSuccess({
         showSuccessModal: true,
-        guestId: currentGuestId,
+        guestId,
         sessionId,
         status,
         isProcessing: true,
@@ -95,27 +73,24 @@ const PublicReport = () => {
       window.history.replaceState({}, '', newUrl.toString());
     }
     
-    // Simple guest ID handling - URL only
-    if (currentGuestId) {
-      log('info', 'Guest ID found, storing and setting state', { guestId: currentGuestId }, 'publicReport');
-      storeGuestReportId(currentGuestId);
-      setActiveGuestId(currentGuestId);
+    // Simple guest ID handling - URL takes precedence
+    if (guestId) {
+      log('info', 'Guest ID found, storing and setting state', { guestId }, 'publicReport');
+      storeGuestReportId(guestId);
+      setActiveGuestId(guestId);
+    } else {
+      // Check localStorage for existing session
+      const storedGuestId = localStorage.getItem('currentGuestReportId');
+      log('debug', 'Stored guest_id from localStorage', { storedGuestId }, 'publicReport');
+      if (storedGuestId) {
+        setActiveGuestId(storedGuestId);
+      }
     }
     
     setIsGuestIdLoading(false);
-    log('debug', 'Final activeGuestId will be', { finalId: currentGuestId }, 'publicReport');
+    log('debug', 'Final activeGuestId will be', { finalId: guestId || localStorage.getItem('currentGuestReportId') }, 'publicReport');
   }, []);
 
-  // Effect to show success screen if a guest ID is present (from URL or recovery)
-  useEffect(() => {
-    if (!isGuestIdLoading && activeGuestId) {
-      // If we have a guest ID but the success screen isn't showing, trigger it.
-      // This is primarily for the refresh/recovery flow.
-      if (!unifiedSuccessData && !stripeSuccess.showOriginalSuccessScreen) {
-        setUnifiedSuccessData({ guestReportId: activeGuestId, name: '', email: '' });
-      }
-    }
-  }, [isGuestIdLoading, activeGuestId, unifiedSuccessData, stripeSuccess.showOriginalSuccessScreen]);
 
 
   // Function to trigger report generation via process-paid-report (fire-and-forget)
