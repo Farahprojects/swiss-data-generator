@@ -382,6 +382,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
         // Handle response
         if (data?.checkoutUrl) {
           // Paid report - redirect to Stripe
+          try { sessionStorage.setItem('pendingFlow', 'paid'); } catch {}
           window.location.href = data.checkoutUrl;
         } else if (data?.success || data?.guestReportId) {
           // Free report success - update the success screen with real data

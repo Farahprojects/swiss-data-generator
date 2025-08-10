@@ -121,6 +121,7 @@ const PublicReport = () => {
       triggerReportGeneration(stripeSuccess.guestId, stripeSuccess.sessionId || undefined);
       
       // Immediately transition to success screen with guest ID
+      try { sessionStorage.removeItem('pendingFlow'); } catch {}
       setStripeSuccess({
         showSuccessModal: false,
         guestId: stripeSuccess.guestId,
@@ -158,6 +159,13 @@ const PublicReport = () => {
       }
     }
   };
+
+  // Reset potential stale success state when opening the mobile drawer
+  useEffect(() => {
+    if (isMobileDrawerOpen) {
+      setUnifiedSuccessData(null);
+    }
+  }, [isMobileDrawerOpen]);
 
   // Shared scroll function that can be used for both form and success screen
   const scrollToReportSection = () => {
@@ -499,7 +507,10 @@ const PublicReport = () => {
         )}
 
         {/* Success Screen - unified for both Stripe return and direct form submission */}
-        {(stripeSuccess.showOriginalSuccessScreen && stripeSuccess.guestId) || unifiedSuccessData ? (
+        {(
+          (stripeSuccess.showOriginalSuccessScreen && stripeSuccess.guestId) ||
+          (unifiedSuccessData && (typeof window === 'undefined' ? true : sessionStorage.getItem('pendingFlow') !== 'paid'))
+        ) ? (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto flex items-center justify-center">
               <SuccessScreen
