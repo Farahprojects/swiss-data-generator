@@ -69,6 +69,100 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
   const { getReportPrice } = usePriceFetch();
   const { getPriceById } = usePricing();
 
+  // Direct submission to initiate-report-flow (mirrors drawer logic)
+  const handleDirectSubmission = async (formData: ReportFormData, trustedPricing: TrustedPricingObject) => {
+    const T0 = Date.now();
+    setIsProcessing(true);
+    setHasTimedOut(false);
+
+    const transformedReportData = {
+      ...formData,
+      birth_date: formData.birthDate,
+      birth_time: formData.birthTime,
+      location: formData.birthLocation,
+      latitude: formData.birthLatitude,
+      longitude: formData.birthLongitude,
+      second_person_birth_date: formData.secondPersonBirthDate,
+      second_person_birth_time: formData.secondPersonBirthTime,
+      second_person_location: formData.secondPersonBirthLocation,
+      second_person_latitude: formData.secondPersonLatitude,
+      second_person_longitude: formData.secondPersonLongitude,
+      request: formData.request || (formData.reportType?.includes('sync') ? 'sync' : 'essence'),
+      is_guest: true,
+    } as any;
+
+    // Free promo path
+    if (trustedPricing.final_price_usd === 0) {
+      try {
+        const submissionData = { reportData: transformedReportData, trustedPricing, is_guest: true };
+        const { data, error } = await supabase.functions.invoke('initiate-report-flow', { body: submissionData });
+        if (error) {
+          console.error('❌ [MOBILE] Free report submission failed:', error);
+          return;
+        }
+        const guestReportId = (data?.guestReportId || data?.guest_id) as string | undefined;
+        const isFree = Boolean(data?.isFreeReport);
+        if (!isFree || !guestReportId) {
+          console.error('❌ [MOBILE] Invalid free response:', data);
+          return;
+        }
+        try { sessionStorage.setItem('guest_id', guestReportId); } catch {}
+        onOpenChange(false);
+        onReportCreated?.({ guestReportId, name: formData.name, email: formData.email });
+      } catch (err) {
+        console.error('❌ [MOBILE] Free flow exception:', err);
+      } finally {
+        setIsProcessing(false);
+      }
+      return;
+    }
+
+    // Paid flow
+    // Close after a small delay to allow button state update
+    setTimeout(() => onOpenChange(false), 300);
+
+    // Trigger success UI immediately with pending id
+    onReportCreated?.({ guestReportId: 'pending', name: formData.name, email: formData.email });
+
+    const timeoutId = window.setTimeout(() => {
+      setHasTimedOut(true);
+      setIsProcessing(false);
+    }, 20000);
+
+    try {
+      const submissionData = { reportData: transformedReportData, trustedPricing, is_guest: true };
+      const submissionPromise = supabase.functions.invoke('initiate-report-flow', { body: submissionData });
+
+      submissionPromise.then(({ data, error }) => {
+        if (error) {
+          console.error('❌ [MOBILE] Report submission failed:', error);
+          clearTimeout(timeoutId);
+          setIsProcessing(false);
+          setHasTimedOut(true);
+          return;
+        }
+
+        if (data?.checkoutUrl) {
+          try { sessionStorage.setItem('pendingFlow', 'paid'); } catch {}
+          window.location.href = data.checkoutUrl;
+        } else if (data?.success || data?.guestReportId) {
+          onReportCreated?.({ guestReportId: data.guestReportId, name: formData.name, email: formData.email });
+          clearTimeout(timeoutId);
+          setIsProcessing(false);
+        }
+      }).catch((err) => {
+        console.error('❌ [MOBILE] Report submission failed:', err);
+        clearTimeout(timeoutId);
+        setIsProcessing(false);
+        setHasTimedOut(true);
+      });
+    } catch (err) {
+      console.error('❌ [MOBILE] Report submission failed:', err);
+      setIsProcessing(false);
+      setHasTimedOut(true);
+    }
+  };
+
   const getPriceIdentifier = () => {
     const data = form.getValues();
     if (data.reportType) return data.reportType;
@@ -133,13 +227,7 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
         pricing = { valid: true, discount_usd: 0, trusted_base_price_usd: getBasePrice(), final_price_usd: getBasePrice(), report_type: id };
       }
       form.clearErrors('promoCode');
-      // Reuse existing submission from drawer
-      // For brevity, call back to parent to handle success screen, as current code already does.
-      // Keep same fire-and-forget semantics by invoking initiate-report-flow as in drawer.
-      // We can reuse the same handler by importing from drawer in a later refactor.
-      // For now, signal submit to parent via onReportCreated after closing.
-      onReportCreated?.({ guestReportId: 'pending' });
-      onOpenChange(false);
+      await handleDirectSubmission(formData, pricing);
     } catch (e) {
       form.setError('promoCode', { type: 'manual', message: 'Failed to validate pricing. Please try again.' });
     }
