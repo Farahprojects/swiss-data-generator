@@ -89,6 +89,10 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         }
         if (resp?.reportUrl) {
           console.log('[PROMO] reportUrl:', resp.reportUrl);
+          try {
+            localStorage.setItem('reportUrl', resp.reportUrl as string);
+            sessionStorage.setItem('reportUrl', resp.reportUrl as string);
+          } catch {}
         }
         const guestReportId = (resp?.guestReportId || resp?.guest_id) as string | undefined;
         const isFree = Boolean(resp?.isFreeReport);
