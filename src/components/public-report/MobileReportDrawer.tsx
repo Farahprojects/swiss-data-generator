@@ -329,14 +329,8 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
     // Small delay to let the button show Processing... before closing
     setTimeout(() => onOpenChange(false), 300);
 
-    // IMMEDIATE: Trigger success screen right after scheduling drawer close
-    // Don't wait for edge function response
-    const immediateReportData = {
-      guestReportId: 'pending', // Will be updated by polling
-      name: formData.name,
-      email: formData.email
-    };
-    onReportCreated?.(immediateReportData);
+    // Don't trigger success screen immediately - wait for backend response
+    // to determine if it's free (success) or paid (stripe redirect)
 
     // Safety timeout to avoid indefinite processing if redirect fails
     const timeoutId = window.setTimeout(() => {

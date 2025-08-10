@@ -134,8 +134,9 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         setIsProcessing(false);
       });
 
-      // Return success immediately (don't wait for response)
-      return { success: true, guestReportId: '' };
+      // Don't return success immediately for paid flow - wait for backend response
+      // The success will be triggered in the .then() callback if it's actually free
+      return { success: false, guestReportId: '' };
     } catch (error) {
       return { success: false, guestReportId: '' };
     } finally {
