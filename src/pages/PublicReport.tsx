@@ -17,6 +17,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useStripeSuccess } from '@/contexts/StripeSuccessContext';
 
 import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
+import MobileReportSheet from '@/components/public-report/MobileReportSheet';
 import { SuccessScreen } from '@/components/public-report/SuccessScreen';
 
 const PublicReport = () => {
@@ -485,13 +486,13 @@ const PublicReport = () => {
           </div>
         )}
 
-        {/* Mobile Report Drawer */}
-        <MobileReportDrawer
+        {/* Mobile: use top-level portal sheet for stable keyboard handling */}
+        <MobileReportSheet
           isOpen={isMobileDrawerOpen}
           onOpenChange={setIsMobileDrawerOpen}
-          onReportCreated={(reportData) => {
-            // NEW: Unified success handling for mobile
-            setUnifiedSuccessData(reportData);
+          onReportCreated={(data) => {
+            console.log('[PublicReport] onReportCreated (mobile):', data);
+            setUnifiedSuccessData({ guestReportId: data?.guestReportId, name: data?.name, email: data?.email });
           }}
         />
 

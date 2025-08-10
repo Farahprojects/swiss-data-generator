@@ -296,5 +296,31 @@ gmp-place-autocomplete::part(result-item) {
 }
 
 /* -------------------------------------------------------------------------- */
+/*  MOBILE SHEET (PORTAL)                                                     */
+/* -------------------------------------------------------------------------- */
+.sheet__scroll {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--kb, 0px) + var(--footer-h, 80px));
+}
+
+.sheet__backdrop {
+  pointer-events: auto;
+  touch-action: none; /* prevent pull-to-refresh on Android */
+}
+
+/* Ensure focused fields clear the footer */
+.sheet__scroll input,
+.sheet__scroll textarea,
+.sheet__scroll [contenteditable] {
+  scroll-margin-bottom: calc(var(--footer-h, 80px) + 24px);
+}
+
+@supports not (height: 100dvh) {
+  .sheet__container { height: 100vh; }
+}
+/* -------------------------------------------------------------------------- */
+/*  END SHEET                                                                 */
+/* -------------------------------------------------------------------------- */
+
+/* -------------------------------------------------------------------------- */
 /*  END                                                                      */
 /* -------------------------------------------------------------------------- */
