@@ -259,18 +259,20 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
   );
 
   const footer = (
-    <div ref={footerRef} className="mobile-footer-fixed bg-white">
-      <MobileDrawerFooter
-        currentStep={currentStep}
-        totalSteps={totalSteps}
-        onPrevious={prevStep}
-        onNext={nextStep}
-        onSubmit={handleButtonClick}
-        canGoNext={!!canGoNext}
-        isProcessing={isProcessing}
-        isLastStep={currentStep === totalSteps}
-        hasTimedOut={hasTimedOut}
-      />
+    <div ref={footerRef} className="mobile-footer-fixed bg-white" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      <div className="w-full max-w-full">
+        <MobileDrawerFooter
+          currentStep={currentStep}
+          totalSteps={totalSteps}
+          onPrevious={prevStep}
+          onNext={nextStep}
+          onSubmit={handleButtonClick}
+          canGoNext={!!canGoNext}
+          isProcessing={isProcessing}
+          isLastStep={currentStep === totalSteps}
+          hasTimedOut={hasTimedOut}
+        />
+      </div>
     </div>
   );
 

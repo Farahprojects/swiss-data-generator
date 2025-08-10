@@ -332,14 +332,12 @@ gmp-place-autocomplete::part(result-item) {
   right: 0;
   bottom: 0;
   z-index: 2147483647; /* win all stacks */
-  contain: strict;               /* isolate layout/paint of the footer itself */
+  contain: paint;                /* avoid size containment to prevent collapse */
   backface-visibility: hidden;
   -webkit-transform: translateZ(0); /* pin rendering on some Android builds */
   transform: translateZ(0);
   touch-action: manipulation;    /* reduce accidental gestures on bar */
 }
-
-.mobile-footer-fixed { outline: 2px dashed red; }
 
 /* Sheet root/backdrop per guidance */
 .sheet-root { position: fixed; inset: 0; display: flex; flex-direction: column; min-height: 100dvh; }
