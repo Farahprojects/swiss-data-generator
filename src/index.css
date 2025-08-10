@@ -324,3 +324,12 @@ gmp-place-autocomplete::part(result-item) {
 /* -------------------------------------------------------------------------- */
 /*  END                                                                      */
 /* -------------------------------------------------------------------------- */
+
+/* Global fixed footer rule for portal sheet */
+.mobile-footer-fixed {
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 10000 !important;
+}

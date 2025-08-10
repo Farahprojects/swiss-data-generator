@@ -192,7 +192,7 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
       <div className="absolute inset-0 bg-black/50 sheet__backdrop" onClick={handleClose} />
 
       {/* Sheet container (no transforms) */}
-      <div className="fixed inset-x-0 bottom-0 top-0 flex flex-col bg-white" style={{ height: '100dvh' }} role="dialog" aria-modal="true">
+      <div className="fixed inset-x-0 bottom-0 top-0 flex flex-col bg-white sheet__container" style={{ height: '100dvh' }} role="dialog" aria-modal="true">
         <MobileDrawerHeader currentStep={currentStep} totalSteps={totalSteps} onClose={handleClose} />
         <div className="flex-1 overflow-y-auto px-6 py-4 sheet__scroll" style={{ WebkitOverflowScrolling: 'touch' }}>
           {currentStep === 1 && (
