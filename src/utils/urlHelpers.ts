@@ -141,6 +141,26 @@ export const storeGuestReportId = (guestReportId: string): void => {
 };
 
 /**
+ * Build a shareable report URL for a given guest id
+ */
+export const buildReportUrl = (guestReportId: string): string => {
+  if (typeof window === 'undefined') return `/report?guest_id=${guestReportId}&success=1`;
+  const origin = window.location.origin;
+  return `${origin}/report?guest_id=${guestReportId}&success=1`;
+};
+
+/**
+ * Store a report URL in both localStorage and sessionStorage for quick retrieval
+ */
+export const storeReportUrl = (guestReportId: string): void => {
+  try {
+    const url = buildReportUrl(guestReportId);
+    localStorage.setItem('reportUrl', url);
+    sessionStorage.setItem('reportUrl', url);
+  } catch {}
+};
+
+/**
  * Clear guest report ID from both URL and localStorage
  */
 export const clearGuestReportId = (): void => {
