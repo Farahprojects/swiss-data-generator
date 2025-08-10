@@ -73,7 +73,6 @@ const PublicReport = () => {
       }
     }
 
-
     // Phase 3: Process Stripe return or standard guest flow with the determined guest ID.
     if (isStripeSuccessReturn && currentGuestId) {
       log('info', '🎯 Immediate Stripe success detection', { guestId: currentGuestId, sessionId, status }, 'publicReport');
