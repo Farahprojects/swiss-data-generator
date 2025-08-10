@@ -208,6 +208,7 @@ serve(async (req) => {
         finalPrice: final,
         isFreeReport: true,
         reportUrl,
+        url: reportUrl,
         processing_time_ms: ms
       });
     }
@@ -235,6 +236,7 @@ serve(async (req) => {
         finalPrice: final,
         isFreeReport: false,
         checkoutUrl: checkoutData.url,
+        url: checkoutData.url,
         processing_time_ms: ms
       });
     } catch {
