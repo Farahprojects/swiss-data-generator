@@ -73,29 +73,22 @@ const PublicReport = () => {
       window.history.replaceState({}, '', newUrl.toString());
     }
     
-    // Simple guest ID handling - URL only; if missing, try recover via stored reportUrl
+    // Simple guest ID handling - URL takes precedence
     if (guestId) {
       log('info', 'Guest ID found, storing and setting state', { guestId }, 'publicReport');
       storeGuestReportId(guestId);
       setActiveGuestId(guestId);
     } else {
-      try {
-        const savedUrl = localStorage.getItem('reportUrl') || sessionStorage.getItem('reportUrl');
-        if (savedUrl && typeof window !== 'undefined') {
-          // Replace location to recovered URL (stays on this page but with params)
-          window.history.replaceState({}, '', savedUrl);
-          const params = new URL(savedUrl).searchParams;
-          const recoveredId = params.get('guest_id');
-          if (recoveredId) {
-            setActiveGuestId(recoveredId);
-            setUnifiedSuccessData({ guestReportId: recoveredId, name: '', email: '' });
-          }
-        }
-      } catch {}
+      // Check localStorage for existing session
+      const storedGuestId = localStorage.getItem('currentGuestReportId');
+      log('debug', 'Stored guest_id from localStorage', { storedGuestId }, 'publicReport');
+      if (storedGuestId) {
+        setActiveGuestId(storedGuestId);
+      }
     }
     
     setIsGuestIdLoading(false);
-    log('debug', 'Final activeGuestId will be', { finalId: guestId }, 'publicReport');
+    log('debug', 'Final activeGuestId will be', { finalId: guestId || localStorage.getItem('currentGuestReportId') }, 'publicReport');
   }, []);
 
 
