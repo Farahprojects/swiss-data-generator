@@ -490,6 +490,10 @@ const PublicReport = () => {
         <MobileReportSheet
           isOpen={isMobileDrawerOpen}
           onOpenChange={setIsMobileDrawerOpen}
+          onReportCreated={(data) => {
+            console.log('[PublicReport] onReportCreated (mobile):', data);
+            setUnifiedSuccessData({ guestReportId: data?.guestReportId, name: data?.name, email: data?.email });
+          }}
         />
 
         {/* Payment Processing Success Message */}

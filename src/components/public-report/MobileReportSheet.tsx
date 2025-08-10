@@ -10,7 +10,6 @@ import Step2PersonA from './drawer-steps/Step2PersonA';
 import Step2PersonB from './drawer-steps/Step2PersonB';
 import Step3Payment from './drawer-steps/Step3Payment';
 import { ReportFormData } from '@/types/public-report';
-import { useSuccessModal } from '@/contexts/SuccessModalContext';
 import { supabase } from '@/integrations/supabase/client';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { usePricing } from '@/contexts/PricingContext';
@@ -21,8 +20,7 @@ interface MobileReportSheetProps {
   onReportCreated?: (reportData: any) => void;
 }
 
-const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenChange }) => {
-  const success = useSuccessModal();
+const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenChange, onReportCreated }) => {
   const form = useForm<ReportFormData>({
     mode: 'onBlur',
     defaultValues: {
@@ -110,7 +108,7 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
         }
         try { sessionStorage.setItem('guest_id', guestReportId); } catch {}
         onOpenChange(false);
-        success.open({ guestId: guestReportId, email: formData.email });
+        onReportCreated?.({ guestReportId, name: formData.name, email: formData.email });
       } catch (err) {
         console.error('❌ [MOBILE] Free flow exception:', err);
       } finally {
@@ -124,7 +122,7 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
     setTimeout(() => onOpenChange(false), 300);
 
     // Trigger success UI immediately with pending id
-    success.open({ guestId: 'pending', email: formData.email });
+    onReportCreated?.({ guestReportId: 'pending', name: formData.name, email: formData.email });
 
     const timeoutId = window.setTimeout(() => {
       setHasTimedOut(true);
@@ -148,7 +146,7 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
           try { sessionStorage.setItem('pendingFlow', 'paid'); } catch {}
           window.location.href = data.checkoutUrl;
         } else if (data?.success || data?.guestReportId) {
-          success.update({ guestId: data.guestReportId, email: formData.email });
+          onReportCreated?.({ guestReportId: data.guestReportId, name: formData.name, email: formData.email });
           clearTimeout(timeoutId);
           setIsProcessing(false);
         }
@@ -218,8 +216,6 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
   const handleButtonClick = async () => {
     try {
       const formData = form.getValues();
-      // Open Success immediately for consistent UX; details will fill in later
-      try { success.open({ email: formData.email }); } catch {}
       const code = formData.promoCode?.trim() || '';
       let pricing: TrustedPricingObject;
       if (code) {
