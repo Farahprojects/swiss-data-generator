@@ -83,9 +83,6 @@ const PublicReport = () => {
       log('debug', 'Stored guest_id from localStorage', { storedGuestId }, 'publicReport');
       if (storedGuestId) {
         setActiveGuestId(storedGuestId);
-        try { sessionStorage.setItem('guest_id', storedGuestId); } catch {}
-        // Reopen Success overlay so it can handoff to report when ready
-        setUnifiedSuccessData({ guestReportId: storedGuestId, name: '', email: '' });
       }
     }
     
