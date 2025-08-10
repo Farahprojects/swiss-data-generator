@@ -44,6 +44,9 @@ const PublicReport = () => {
   // Refs for scrolling
   const successScreenRef = useRef<HTMLDivElement>(null);
   const reportFormRef = useRef<HTMLDivElement>(null);
+  // Hero observer ref and visibility state for mobile Unlock FAB
+  const heroRef = useRef<HTMLDivElement>(null);
+  const [showUnlockFab, setShowUnlockFab] = useState(false);
 
   // Process Stripe return immediately if detected
   useEffect(() => {
@@ -170,6 +173,21 @@ const PublicReport = () => {
       }
     }
   };
+  
+  // Observe hero visibility to toggle mobile Unlock FAB with smooth transition
+  useEffect(() => {
+    if (!isMobile) return;
+    const target = heroRef.current;
+    if (!target) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      setShowUnlockFab(!entry.isIntersecting);
+    }, { threshold: 0 });
+    observer.observe(target);
+    return () => {
+      try { observer.disconnect(); } catch {}
+    };
+  }, [isMobile]);
+
 
   const handleDismissCancelMessage = () => {
     setShowCancelledMessage(false);
@@ -231,7 +249,9 @@ const PublicReport = () => {
           </div>
         </header>
         
-        <HeroSection onGetReportClick={handleGetReportClick} />
+        <div ref={heroRef}>
+          <HeroSection onGetReportClick={handleGetReportClick} />
+        </div>
         
         {/* Sample Report Section */}
         <section className="py-24 bg-gradient-to-b from-white to-gray-50/30">
@@ -441,7 +461,12 @@ const PublicReport = () => {
         <Footer />
 
         {isMobile && !isMobileDrawerOpen && !unifiedSuccessData && !stripeSuccess.showSuccessModal && !stripeSuccess.showOriginalSuccessScreen && (
-          <div className="fixed bottom-6 right-6 z-50">
+          <div
+            className={`fixed bottom-6 right-6 z-50 transition-all duration-300 ${
+              showUnlockFab ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
+            }`}
+            aria-hidden={!showUnlockFab}
+          >
             <Button
               onClick={handleGetReportClick}
               className="bg-gray-900 text-white px-6 py-4 rounded-xl text-base font-normal shadow-lg hover:bg-gray-800 transition-all duration-300"
