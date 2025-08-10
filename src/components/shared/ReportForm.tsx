@@ -87,6 +87,9 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         if (error) {
           return { success: false, guestReportId: '' };
         }
+        if (resp?.reportUrl) {
+          console.log('[PROMO] reportUrl:', resp.reportUrl);
+        }
         const guestReportId = (resp?.guestReportId || resp?.guest_id) as string | undefined;
         const isFree = Boolean(resp?.isFreeReport);
         if (!isFree || !guestReportId) {
