@@ -19,6 +19,7 @@ import { useStripeSuccess } from '@/contexts/StripeSuccessContext';
 import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
 import MobileReportSheet from '@/components/public-report/MobileReportSheet';
 import { SuccessScreen } from '@/components/public-report/SuccessScreen';
+import { useReportModal } from '@/contexts/ReportModalContext';
 
 const PublicReport = () => {
   // Synchronous URL parsing - happens before any React logic
@@ -39,8 +40,8 @@ const PublicReport = () => {
   const location = useLocation();
   const isMobile = useIsMobile();
   const { stripeSuccess, setStripeSuccess, proceedToReport } = useStripeSuccess();
+  const { open, isOpen } = useReportModal();
   
-
 
   // Refs for scrolling
   const successScreenRef = useRef<HTMLDivElement>(null);
@@ -196,6 +197,29 @@ const PublicReport = () => {
       try { observer.disconnect(); } catch {}
     };
   }, [isMobile]);
+
+  // Auto-open report modal when a guest ID is present (once per session)
+  useEffect(() => {
+    if (isGuestIdLoading) return;
+    if (isOpen) return;
+
+    const alreadyOpened = sessionStorage.getItem('autoOpenedReportModal') === '1';
+    if (alreadyOpened) return;
+
+    const id = activeGuestId;
+    if (!id) return;
+
+    const t = setTimeout(() => {
+      try {
+        open(id);
+        sessionStorage.setItem('autoOpenedReportModal', '1');
+      } catch (e) {
+        console.warn('Auto-open modal failed', e);
+      }
+    }, 300);
+
+    return () => clearTimeout(t);
+  }, [isGuestIdLoading, isOpen, activeGuestId, open]);
 
 
   const handleDismissCancelMessage = () => {
