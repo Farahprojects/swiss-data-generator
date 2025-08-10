@@ -218,6 +218,8 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
   const handleButtonClick = async () => {
     try {
       const formData = form.getValues();
+      // Open Success immediately for consistent UX; details will fill in later
+      try { success.open({ email: formData.email }); } catch {}
       const code = formData.promoCode?.trim() || '';
       let pricing: TrustedPricingObject;
       if (code) {
