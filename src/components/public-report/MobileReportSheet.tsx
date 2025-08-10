@@ -13,7 +13,6 @@ import { ReportFormData } from '@/types/public-report';
 import { supabase } from '@/integrations/supabase/client';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { usePricing } from '@/contexts/PricingContext';
-import { storeReportUrl } from '@/utils/urlHelpers';
 
 interface MobileReportSheetProps {
   isOpen: boolean;
@@ -108,7 +107,6 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
           return;
         }
         try { sessionStorage.setItem('guest_id', guestReportId); } catch {}
-        try { storeReportUrl(guestReportId); } catch {}
         onOpenChange(false);
         onReportCreated?.({ guestReportId, name: formData.name, email: formData.email });
       } catch (err) {

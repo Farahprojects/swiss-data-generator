@@ -11,7 +11,7 @@ import Logo from '@/components/Logo';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
-import { storeGuestReportId, storeReportUrl } from '@/utils/urlHelpers';
+import { storeGuestReportId } from '@/utils/urlHelpers';
 import { log } from '@/utils/logUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useStripeSuccess } from '@/contexts/StripeSuccessContext';
@@ -84,10 +84,6 @@ const PublicReport = () => {
       log('debug', 'Stored guest_id from localStorage', { storedGuestId }, 'publicReport');
       if (storedGuestId) {
         setActiveGuestId(storedGuestId);
-        try { sessionStorage.setItem('guest_id', storedGuestId); } catch {}
-        try { storeReportUrl(storedGuestId); } catch {}
-        // Reopen Success overlay so it can handoff to report when ready
-        setUnifiedSuccessData({ guestReportId: storedGuestId, name: '', email: '' });
       }
     }
     
