@@ -38,23 +38,8 @@ export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
       sessionManager.unregisterStateReset(componentId);
     };
   }, [clearCache]);
-
-  // Restore minimal modal state from sessionStorage on mount
-  useEffect(() => {
-    const storedState = sessionStorage.getItem('reportModalState');
-    if (storedState) {
-      try {
-        const parsedState = JSON.parse(storedState);
-        console.log('🔄 ReportModalProvider: Restoring minimal modal state from sessionStorage');
-        setCurrentReport(parsedState.currentReport);
-        setIsOpen(parsedState.isOpen);
-      } catch (error) {
-        console.warn('⚠️ ReportModalProvider: Failed to parse stored modal state:', error);
-        sessionStorage.removeItem('reportModalState');
-      }
-    }
-  }, []);
-
+ 
+  
   const open = useCallback(async (guestReportId: string, metadata?: any) => {
     if (!guestReportId) return console.warn('[ModalCTX] open called with null guestReportId');
     try { console.log(`[Modal] open called id=${guestReportId} @${Date.now()}`); } catch {}
