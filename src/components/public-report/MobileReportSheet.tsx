@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useForm } from 'react-hook-form';
 import MobileDrawerHeader from './drawer-components/MobileDrawerHeader';
@@ -188,7 +188,7 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
       const target = e.target as HTMLElement | null;
       if (!target) return;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-        try { (target as HTMLElement).scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch {}
+        try { (target as HTMLElement).scrollIntoView({ block: 'nearest' }); } catch {}
       }
     };
     document.addEventListener('focusin', onFocusIn);
@@ -209,12 +209,22 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
     };
   }, [isOpen]);
 
+  // Measure footer once when opening (layout phase)
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    const el = footerRef.current;
+    if (el) {
+      const h = Math.round(el.getBoundingClientRect().height);
+      document.documentElement.style.setProperty('--footer-h', `${h}px`);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const sheet = (
-    <div className="fixed inset-0 z-[9999]">
+    <div className="sheet-root z-[9999]">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50 sheet__backdrop" onClick={handleClose} />
+      <div className="sheet-backdrop" onClick={handleClose} />
 
       {/* Sheet container (no transforms) */}
       <div className="fixed inset-x-0 bottom-0 top-0 flex flex-col bg-white sheet__container" style={{ height: '100dvh' }} role="dialog" aria-modal="true">
@@ -245,25 +255,29 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
           )}
         </div>
       </div>
-
-      {/* Fixed footer sibling to scroller */}
-      <div ref={footerRef} className="mobile-footer-fixed">
-        <MobileDrawerFooter
-          currentStep={currentStep}
-          totalSteps={totalSteps}
-          onPrevious={prevStep}
-          onNext={nextStep}
-          onSubmit={handleButtonClick}
-          canGoNext={!!canGoNext}
-          isProcessing={isProcessing}
-          isLastStep={currentStep === totalSteps}
-          hasTimedOut={hasTimedOut}
-        />
-      </div>
     </div>
   );
 
-  return createPortal(sheet, document.body);
+  const footer = (
+    <div ref={footerRef} className="mobile-footer-fixed">
+      <MobileDrawerFooter
+        currentStep={currentStep}
+        totalSteps={totalSteps}
+        onPrevious={prevStep}
+        onNext={nextStep}
+        onSubmit={handleButtonClick}
+        canGoNext={!!canGoNext}
+        isProcessing={isProcessing}
+        isLastStep={currentStep === totalSteps}
+        hasTimedOut={hasTimedOut}
+      />
+    </div>
+  );
+
+  return <>
+    {createPortal(sheet, document.body)}
+    {createPortal(footer, document.body)}
+  </>;
 };
 
 export default MobileReportSheet; 
