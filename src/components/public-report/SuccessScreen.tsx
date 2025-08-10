@@ -71,27 +71,8 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
   const displayEmail = guestReportData?.email ?? guestReportData?.person_a?.email ?? "";
   const uiReady = Boolean(guestId && displayEmail); // must have BOTH to start polling
 
-  // Modal state must be defined before effects referencing it
-  const [modalOpened, setModalOpened] = useState(false);
-
-  // One-time upset signal if uiReady cannot start
-  const upsetLoggedRef = useRef(false);
-  useEffect(() => {
-    if (upsetLoggedRef.current || modalOpened) return;
-    // If we have no guestId at all, we can never start
-    if (!guestId) {
-      console.warn('[SuccessScreen][uiReady] Cannot start: missing guest_id (mobile/desktop).');
-      upsetLoggedRef.current = true;
-      return;
-    }
-    // If DB finished but email is missing, uiReady will never be true
-    if (dbReady && !displayEmail) {
-      console.warn(`[SuccessScreen][uiReady] Cannot start: missing email for guest_id=${guestId}.`);
-      upsetLoggedRef.current = true;
-    }
-  }, [guestId, dbReady, displayEmail, modalOpened]);
-
   // --- 4) Readiness listener (WebSocket) — starts when UI is ready
+  const [modalOpened, setModalOpened] = useState(false);
   const wsStartedRef = useRef(false);
   const wsStoppedRef = useRef(false);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
