@@ -18,16 +18,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const urlId = params.get("guest_id");
-    if (urlId) {
-      setGuestId(urlId);
-      return;
-    }
-    try {
-      const storedId = sessionStorage.getItem("guest_id");
-      if (storedId) {
-        setGuestId(storedId);
-      }
-    } catch {}
+    if (urlId) setGuestId(urlId);
   }, []);
 
   // --- 2) DB check (must succeed or we STOP)
