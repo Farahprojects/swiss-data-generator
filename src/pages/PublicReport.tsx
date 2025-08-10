@@ -43,6 +43,35 @@ const PublicReport = () => {
   const { open, isOpen } = useReportModal();
   
 
+  // Simple state/memory inspector: logs on mount only (no side effects)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const snapshot = {
+        url: typeof window !== 'undefined' ? window.location.href : null,
+        params: {
+          guest_id: params.get('guest_id'),
+          session_id: params.get('session_id'),
+          status: params.get('status'),
+        },
+        localStorage: {
+          reportUrl: (() => { try { return localStorage.getItem('reportUrl'); } catch { return null; } })(),
+          currentGuestReportId: (() => { try { return localStorage.getItem('currentGuestReportId'); } catch { return null; } })(),
+        },
+        sessionStorage: {
+          reportUrl: (() => { try { return sessionStorage.getItem('reportUrl'); } catch { return null; } })(),
+          pendingFlow: (() => { try { return sessionStorage.getItem('pendingFlow'); } catch { return null; } })(),
+          autoOpenedReportModal: (() => { try { return sessionStorage.getItem('autoOpenedReportModal'); } catch { return null; } })(),
+        },
+      };
+      // Single, clean log output
+      console.log('[StateMemoryCheck] Snapshot on mount:', snapshot);
+    } catch (e) {
+      console.warn('[StateMemoryCheck] Failed to read state/memory snapshot:', e);
+    }
+  }, []);
+
+
   // Refs for scrolling
   const successScreenRef = useRef<HTMLDivElement>(null);
   const reportFormRef = useRef<HTMLDivElement>(null);
