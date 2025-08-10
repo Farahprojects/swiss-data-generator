@@ -102,7 +102,9 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
         }
         if (data?.reportUrl) {
           console.log('[PROMO] reportUrl:', data.reportUrl);
+          try { sessionStorage.setItem('reportUrl', data.reportUrl); } catch {}
         }
+        try { sessionStorage.setItem('pendingFlow', 'free'); } catch {}
         const guestReportId = (data?.guestReportId || data?.guest_id) as string | undefined;
         const isFree = Boolean(data?.isFreeReport);
         if (!isFree || !guestReportId) {

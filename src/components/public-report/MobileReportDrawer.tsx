@@ -305,6 +305,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
           sessionStorage.setItem('guest_id', guestReportId);
           console.log('[SuccessMemory] stored guest_id:', guestReportId);
         } catch {}
+        try { sessionStorage.setItem('pendingFlow', 'free'); } catch {}
         // Close drawer and open success UI
         onOpenChange(false);
         onReportCreated?.({ guestReportId, name: formData.name, email: formData.email });
