@@ -303,7 +303,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
         }
         try {
           sessionStorage.setItem('guest_id', guestReportId);
-          console.log('[SuccessMemory] stored guest_id:', guestReportId);
+          // guest_id persisted silently
         } catch {}
         // Close drawer and open success UI
         onOpenChange(false);

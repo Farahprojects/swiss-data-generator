@@ -97,7 +97,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         }
         try {
           sessionStorage.setItem('guest_id', guestReportId);
-          console.log('[SuccessMemory] stored guest_id:', guestReportId);
         } catch {}
         // Notify parent immediately to open success UI
         onReportCreated?.(guestReportId, (data as any).name, (data as any).email);
