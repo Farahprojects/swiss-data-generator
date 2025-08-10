@@ -147,6 +147,8 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
 
   // Scroll lock html+body and visualViewport keyboard padding
   const scrollLockCount = useRef(0);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const footerRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (!isOpen) return;
     const html = document.documentElement;
@@ -165,17 +167,40 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
       const vvHeight = vv?.height ?? height;
       const kb = Math.max(0, height - vvHeight);
       document.documentElement.style.setProperty('--kb', `${kb}px`);
+      // Also measure footer height dynamically
+      const fh = footerRef.current?.offsetHeight ?? 0;
+      document.documentElement.style.setProperty('--footer-h', `${fh}px`);
     };
     const onVV = () => { if (raf) return; raf = requestAnimationFrame(updateKB); };
     vv?.addEventListener('resize', onVV);
     vv?.addEventListener('scroll', onVV);
     updateKB();
 
+    // Recalculate footer height on resize/orientation changes
+    const onResize = () => { requestAnimationFrame(() => {
+      const fh = footerRef.current?.offsetHeight ?? 0;
+      document.documentElement.style.setProperty('--footer-h', `${fh}px`);
+    }); };
+    window.addEventListener('resize', onResize);
+
+    // Focusin handler to ensure inputs are visible
+    const onFocusIn = (e: FocusEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        try { (target as HTMLElement).scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch {}
+      }
+    };
+    document.addEventListener('focusin', onFocusIn);
+
     return () => {
       vv?.removeEventListener('resize', onVV);
       vv?.removeEventListener('scroll', onVV);
       if (raf) cancelAnimationFrame(raf);
       document.documentElement.style.removeProperty('--kb');
+      document.documentElement.style.removeProperty('--footer-h');
+      window.removeEventListener('resize', onResize);
+      document.removeEventListener('focusin', onFocusIn);
       if (scrollLockCount.current > 0) scrollLockCount.current -= 1;
       if (scrollLockCount.current === 0) {
         html.style.overflow = prevHtmlOverflow;
@@ -194,7 +219,7 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
       {/* Sheet container (no transforms) */}
       <div className="fixed inset-x-0 bottom-0 top-0 flex flex-col bg-white sheet__container" style={{ height: '100dvh' }} role="dialog" aria-modal="true">
         <MobileDrawerHeader currentStep={currentStep} totalSteps={totalSteps} onClose={handleClose} />
-        <div className="flex-1 overflow-y-auto px-6 py-4 sheet__scroll" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4 sheet__scroll" style={{ WebkitOverflowScrolling: 'touch' }}>
           {currentStep === 1 && (
             <Step1ReportType control={control} setValue={setValue} selectedCategory={reportCategory} onNext={nextStep} />
           )}
@@ -222,7 +247,7 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
       </div>
 
       {/* Fixed footer sibling to scroller */}
-      <div className="mobile-footer-fixed">
+      <div ref={footerRef} className="mobile-footer-fixed">
         <MobileDrawerFooter
           currentStep={currentStep}
           totalSteps={totalSteps}
