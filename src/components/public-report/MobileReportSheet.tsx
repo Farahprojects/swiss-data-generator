@@ -101,7 +101,14 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
           return;
         }
         if (data?.reportUrl) {
+          // Print the URL for visibility/debugging as requested
           console.log('[PROMO] reportUrl:', data.reportUrl);
+          try {
+            localStorage.setItem('reportUrl', data.reportUrl as string);
+            sessionStorage.setItem('reportUrl', data.reportUrl as string);
+          } catch {}
+          // Mark flow as free to avoid stale 'paid' gating the success screen
+          try { sessionStorage.setItem('pendingFlow', 'free'); } catch {}
         }
         const guestReportId = (data?.guestReportId || data?.guest_id) as string | undefined;
         const isFree = Boolean(data?.isFreeReport);

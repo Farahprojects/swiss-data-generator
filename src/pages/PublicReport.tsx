@@ -73,11 +73,25 @@ const PublicReport = () => {
       window.history.replaceState({}, '', newUrl.toString());
     }
     
-    // Simple guest ID handling - URL only
+    // Simple guest ID handling - URL only; if missing, try recover via stored reportUrl
     if (guestId) {
       log('info', 'Guest ID found, storing and setting state', { guestId }, 'publicReport');
       storeGuestReportId(guestId);
       setActiveGuestId(guestId);
+    } else {
+      try {
+        const savedUrl = localStorage.getItem('reportUrl') || sessionStorage.getItem('reportUrl');
+        if (savedUrl && typeof window !== 'undefined') {
+          // Replace location to recovered URL (stays on this page but with params)
+          window.history.replaceState({}, '', savedUrl);
+          const params = new URL(savedUrl).searchParams;
+          const recoveredId = params.get('guest_id');
+          if (recoveredId) {
+            setActiveGuestId(recoveredId);
+            setUnifiedSuccessData({ guestReportId: recoveredId, name: '', email: '' });
+          }
+        }
+      } catch {}
     }
     
     setIsGuestIdLoading(false);
