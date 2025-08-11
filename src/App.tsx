@@ -31,7 +31,7 @@ import Contact from './pages/Contact';
 import About from './pages/About';
 import Legal from './pages/Legal';
 import NotFound from './pages/NotFound';
-import ErrorBoundary from './components/ErrorBoundary';
+
 import SSRErrorBoundary from './components/SSRErrorBoundary';
 import Features from './pages/Features';
 import WebsiteBuilder from './pages/dashboard/WebsiteBuilder';
@@ -70,7 +70,6 @@ function App() {
 
   return (
     <SSRErrorBoundary>
-      <ErrorBoundary>
         <ThemeProvider 
           attribute="class" 
           defaultTheme="light" 
@@ -141,7 +140,6 @@ function App() {
 
           </QueryClientProvider>
         </ThemeProvider>
-      </ErrorBoundary>
     </SSRErrorBoundary>
   );
 }
