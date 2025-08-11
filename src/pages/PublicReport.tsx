@@ -19,8 +19,8 @@ import { useStripeSuccess } from '@/contexts/StripeSuccessContext';
 import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
 import MobileReportSheet from '@/components/public-report/MobileReportSheet';
 import { SuccessScreen } from '@/components/public-report/SuccessScreen';
-import { useReportModal } from '@/contexts/ReportModalContext';
-import { hasSeen } from '@/utils/seenReportTracker';
+
+
 
 const PublicReport = () => {
   // Synchronous URL parsing - happens before any React logic
@@ -41,7 +41,7 @@ const PublicReport = () => {
   const location = useLocation();
   const isMobile = useIsMobile();
   const { stripeSuccess, setStripeSuccess, proceedToReport } = useStripeSuccess();
-  const { open, isOpen } = useReportModal();
+  
   
 
   // Simple state/memory inspector + cleanup on mount (no side effects)
@@ -256,23 +256,13 @@ const PublicReport = () => {
     window.history.replaceState({}, '', newUrl.toString());
   };
   // Seen-flag routing helpers
-  const hasUrlSuccess = typeof window === 'undefined' ? false : (new URLSearchParams(window.location.search).get('success') === '1');
+  
   // Resolve guest id from URL or session storage (single source of truth)
   const _sp = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search);
   const urlGuest = _sp ? _sp.get('guest_id') : null;
   if (urlGuest) { try { sessionStorage.setItem('guestId', urlGuest); } catch {} }
   const resolvedGuestId = typeof window === 'undefined' ? null : (urlGuest || sessionStorage.getItem('guestId'));
   const hasGuest = Boolean(resolvedGuestId);
-  const unifiedGuestId = unifiedSuccessData?.guestReportId || null;
-  const hasSeenUnified = unifiedGuestId ? hasSeen(unifiedGuestId) : false;
-  useEffect(() => {
-    if (!unifiedGuestId) return;
-    const action = hasSeenUnified ? 'open' : 'wait';
-    console.log(`[Provider] boot: url success=${hasUrlSuccess ? 1 : 0} id=${unifiedGuestId} hasSeen=${hasSeenUnified ? 1 : 0} → action=${action}`);
-    if (hasSeenUnified && !isOpen) {
-      open(unifiedGuestId);
-    }
-  }, [unifiedGuestId, hasSeenUnified, isOpen, open, hasUrlSuccess]);
 
 
   // Show loading spinner while determining guest ID
@@ -577,7 +567,7 @@ const PublicReport = () => {
         {/* Success Screen - unified for both Stripe return and direct form submission */}
         {(
           (stripeSuccess.showOriginalSuccessScreen && (stripeSuccess.guestId || hasGuest)) ||
-          (unifiedSuccessData && !hasSeenUnified && hasGuest)
+          (unifiedSuccessData && hasGuest)
         ) ? (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto flex items-center justify-center">

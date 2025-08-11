@@ -43,6 +43,13 @@ export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
   const open = useCallback(async (guestReportId: string, metadata?: any) => {
     if (!guestReportId) return console.warn('[ModalCTX] open called with null guestReportId');
     try { console.log(`[Modal] open called id=${guestReportId} @${Date.now()}`); } catch {}
+
+    // Write flags when the modal opens
+    try {
+      sessionStorage.setItem('guestId', guestReportId);
+      sessionStorage.setItem('success', '1');
+      localStorage.setItem(`seen:${guestReportId}`, '1');
+    } catch {}
     
     const reportRef: ReportReference = {
       guestReportId,

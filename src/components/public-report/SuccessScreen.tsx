@@ -19,17 +19,6 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // One-time migration: reportUrl -> guestId, then remove legacy key
-    try {
-      const legacy = sessionStorage.getItem("reportUrl");
-      if (legacy) {
-        try {
-          const id = new URL(legacy).searchParams.get("guest_id");
-          if (id) sessionStorage.setItem("guestId", id);
-        } catch {}
-        sessionStorage.removeItem("reportUrl");
-      }
-    } catch {}
 
     const sp = new URLSearchParams(window.location.search);
     const fromUrlId = sp.get("guest_id");
