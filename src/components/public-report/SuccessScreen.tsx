@@ -1,178 +1,64 @@
 import React, { useState, useEffect, useRef, forwardRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useReportModal } from "@/contexts/ReportModalContext";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { hasSeen, markSeen } from "@/utils/seenReportTracker";
-import { sessionManager } from "@/utils/sessionManager";
-import { logUserError } from "@/services/errorService";
 
 interface SuccessScreenProps {
-  isLoading: boolean;
-  guestId?: string | null;
-  isSeen?: boolean;
+  guestId: string;
 }
 
 export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
-({ isLoading = false }, ref) => {
-  const { open } = useReportModal();
-  const isMobile = useIsMobile();
+({ guestId }, ref) => {
+  const { open: openReportModal } = useReportModal();
+  const [guestData, setGuestData] = useState<{name: string, email: string} | null>(null);
 
-  // --- 1) Resolve guest identity and URL
-  const [guestId, setGuestId] = useState<string | null>(null);
-  const [reportUrl, setReportUrl] = useState<string | null>(null);
+  // --- Main WebSocket Listener ---
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!guestId) return;
 
-    const url = window.location.href;
-    const params = new URLSearchParams(window.location.search);
-    const fromUrl = params.get('guest_id');
-    const last = localStorage.getItem('seen:last');
-    const decided = fromUrl || last;
-    setGuestId(decided || null);
-
-    const hasSeenDirect = decided ? !!localStorage.getItem(`seen:${decided}`) : false;
-    console.log('[ReportDetect]', {
-      url,
-      seenLast: last,
-      hasSeenDirect,
-      decidedGuestId: decided,
-      autoOpen: hasSeenDirect
-    });
-
-    if (decided && hasSeenDirect && !modalOpened) {
-      open(decided);
-      setModalOpened(true);
-    }
-  }, [open]);
-
-  // --- 2) DB check (must succeed or we STOP)
-  const [guestReportData, setGuestReportData] = useState<any>(null);
-  const [dbError, setDbError] = useState<string | null>(null);
-  const [dbReady, setDbReady] = useState(false);
-
-  useEffect(() => {
-    setDbReady(false);
-    setDbError(null);
-    setGuestReportData(null);
-
-    if (!guestId) {
-      setDbError("Missing guest_id in URL.");
-      return;
-    }
-
-    (async () => {
+    // Fetch guest details for UI display
+    const fetchGuestDetails = async () => {
       const { data, error } = await supabase
         .from("guest_reports")
-        .select("*")
+        .select("name, email, person_a:report_data->person_a->>name, person_a_email:report_data->person_a->>email")
         .eq("id", guestId)
         .single();
-
-      if (error) {
-        setDbError(`[DB] Failed to load guest report for id=${guestId}: ${error.message || error.code}`);
-        return; // hard stop
-      }
-      if (!data) {
-        setDbError(`[DB] No guest report found for id=${guestId}.`);
-        return; // hard stop
-      }
-
-      setGuestReportData(data);
-      setDbReady(true);
-    })();
-  }, [guestId]);
-
-  // --- 3) UI identity (we only poll AFTER the UI is ready to show both)
-  const displayName  = guestReportData?.person_a?.name  ?? guestReportData?.name  ?? "";
-  const displayEmail = guestReportData?.email ?? guestReportData?.person_a?.email ?? "";
-  const uiReady = Boolean(guestId && displayEmail); // must have BOTH to start polling
-
-  // WebSocket listener retained but will not start if modal opens via seen-bypass
-  const [modalOpened, setModalOpened] = useState(false);
-  const wsStartedRef = useRef(false);
-  const wsStoppedRef = useRef(false);
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const seenMarkedRef = useRef(false);
-  const wsTriggeredRef = useRef(false);
-
-  useEffect(() => {
-    if (modalOpened || !guestId || wsStartedRef.current || wsStoppedRef.current) return;
-
-    wsStartedRef.current = true;
-    const channel = supabase.channel(`ready_${guestId}`);
-    channelRef.current = channel;
-
-    channel.on(
-      'postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'report_ready_signals', filter: `guest_report_id=eq.${guestId}` },
-      () => {
-        if (wsStoppedRef.current) return;
-        wsStoppedRef.current = true;
-        try { channel.unsubscribe(); } catch {}
-        wsTriggeredRef.current = true;
-        open(guestId as string);
-        setModalOpened(true);
-      }
-    );
-
-    channel.subscribe();
-
-    return () => {
-      wsStoppedRef.current = true;
-      if (channelRef.current) {
-        try { channelRef.current.unsubscribe(); } catch {}
-        channelRef.current = null;
+      
+      if (data) {
+        const displayName = data.person_a ?? data.name ?? "";
+        const displayEmail = data.person_a_email ?? data.email ?? "";
+        setGuestData({ name: displayName, email: displayEmail });
+      } else {
+        console.error(`[SuccessScreen] Failed to fetch guest details for ${guestId}`, error);
       }
     };
-  }, [guestId, modalOpened, open]);
-  // Log errors but don't auto-redirect to avoid infinite loops
-  useEffect(() => {
-    if (!dbError || !guestId) return;
     
-    logUserError({ 
-      guestReportId: guestId, 
-      errorType: 'success_screen_snag', 
-      errorMessage: dbError 
-    }).catch(e => {
-      console.warn('[SuccessScreen] Failed to log snag error', e);
-    });
-  }, [dbError, guestId]);
+    fetchGuestDetails();
 
-  useEffect(() => {
-    if (modalOpened) return;
-    if (!guestId) return;
-    const wasSeenResult = !!localStorage.getItem(`seen:${guestId}`);
-    if (wasSeenResult) {
-      open(guestId);
-      setModalOpened(true);
-    }
-  }, [guestId, modalOpened, open]);
+    // Setup WebSocket listener
+    const channel = supabase.channel(`ready_${guestId}`);
 
-  // --- 5) Smooth scroll on desktop
-  const frameRef = useRef<number>();
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (window.innerWidth >= 768) {
-      frameRef.current = requestAnimationFrame(() => {
-        if (ref && typeof ref === "object" && ref.current) {
-          ref.current.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      });
-    }
-    return () => {
-      if (frameRef.current) cancelAnimationFrame(frameRef.current);
+    const handleNewSignal = () => {
+      console.log(`[SuccessScreen] WebSocket signal received for ${guestId}. Opening report.`);
+      openReportModal(guestId);
+      channel.unsubscribe();
     };
-  }, [ref]);
+    
+    channel
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'report_ready_signals', 
+        filter: `guest_report_id=eq.${guestId}` 
+      }, handleNewSignal)
+      .subscribe();
 
-  if (modalOpened) return null;
+    console.log(`[SuccessScreen] Subscribed to WebSocket for guestId: ${guestId}`);
 
-  // --- 7) Error surfaces (why we’re not progressing)
-  if (dbError) {
-    console.error(`[SuccessScreen] DB Error: ${dbError}`, { guestId });
-    return null; // Render nothing for now
-  }
-
-  // --- 8) UI (explicitly shows guest_id + email so we know uiReady truthfully reflects UI state)
-  const showLoading = isLoading || !dbReady;
+    return () => {
+      console.log(`[SuccessScreen] Unsubscribing from WebSocket for guestId: ${guestId}`);
+      channel.unsubscribe();
+    };
+  }, [guestId, openReportModal]);
 
   return (
     <div ref={ref} className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
@@ -183,17 +69,23 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
           </svg>
         </div>
         <div className="space-y-2">
-          <h1 className="text-2xl font-light text-gray-900">Report Generated Successfully!</h1>
+          <h1 className="text-2xl font-light text-gray-900">Report Request Received!</h1>
           <p className="text-gray-600">
-            {isLoading ? "Loading your details..." : `Your personalized astrology report is being prepared.`}
+            {guestData?.name ? `Your report for ${guestData.name} is being prepared.` : "Your report is being prepared."}
           </p>
         </div>
       </div>
+
       <div className="space-y-3">
-        <p className="text-sm text-gray-600">It will open automatically.</p>
+        <p className="text-sm text-gray-600">
+          Your report will open automatically when it's ready.
+        </p>
+
         <div className="flex items-center justify-center space-x-2">
           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
-          <span className="text-sm text-gray-600">Preparing your report</span>
+          <span className="text-sm text-gray-600">
+            Listening for report...
+          </span>
         </div>
       </div>
     </div>

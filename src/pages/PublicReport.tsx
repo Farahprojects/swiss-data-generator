@@ -13,6 +13,7 @@ import { AlertTriangle } from "lucide-react";
 import { useIsMobile } from '@/hooks/use-mobile';
 import MobileReportSheet from '@/components/public-report/MobileReportSheet';
 import ReportFlowChecker from '@/components/public-report/ReportFlowChecker';
+import { SuccessScreen } from '@/components/public-report/SuccessScreen';
 
 const PublicReport = () => {
   const location = useLocation();
@@ -20,6 +21,7 @@ const PublicReport = () => {
   const [showCancelledMessage, setShowCancelledMessage] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [activeGuestId, setActiveGuestId] = useState<string | null>(null);
+  const [paidGuestId, setPaidGuestId] = useState<string | null>(null);
   
   const reportFormRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
@@ -361,10 +363,16 @@ const PublicReport = () => {
             guestId={activeGuestId}
             onPaid={(paidGuestId) => {
               console.log(`Report ${paidGuestId} is paid! Ready to show success screen.`);
-              // Here we would trigger the success screen
+              setPaidGuestId(paidGuestId);
               setActiveGuestId(null); // Stop checking once paid
             }}
           />
+        )}
+
+        {paidGuestId && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <SuccessScreen guestId={paidGuestId} />
+          </div>
         )}
       </div>
     );
