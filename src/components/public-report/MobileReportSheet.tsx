@@ -145,7 +145,7 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
     }
     try {
       const { data, error } = await supabase.functions.invoke('validate-promo-code', {
-        body: { promoCode, basePrice: getBasePrice(), reportType: id, email: form.getValues('email'), request: form.getValues('request') }
+        body: { promoCode, basePrice: getBasePrice(), reportType: id }
       });
       if (error) return { valid: false, discount_usd: 0, trusted_base_price_usd: getBasePrice(), final_price_usd: getBasePrice(), report_type: id, reason: 'Failed to validate promo code' };
       return data as TrustedPricingObject;

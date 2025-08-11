@@ -19,9 +19,7 @@ const corsHeaders = {
 interface ValidatePromoRequest {
   promoCode: string;
   basePrice: number;
-  email?: string;
   reportType?: string;
-  request?: string;
 }
 
 interface TrustedPricingResponse {
@@ -68,13 +66,11 @@ serve(async (req) => {
     }
     
     // Extract data for normal function
-    const { promoCode, basePrice, email, reportType, request }: ValidatePromoRequest = body;
+    const { promoCode, basePrice, reportType }: ValidatePromoRequest = body;
     
     logValidation("validation_started", {
       promoCode: promoCode?.substring(0, 3) + "***", // Partially mask for logs
-      email: email || "not_provided",
       reportType,
-      request
     });
 
     if (!promoCode || typeof promoCode !== 'string' || !promoCode.trim()) {
@@ -108,9 +104,9 @@ serve(async (req) => {
     }
 
     // Determine the price identifier (reportType or request)
-    const priceIdentifier = reportType || request;
+    const priceIdentifier = reportType;
     if (!priceIdentifier) {
-      logValidationError("missing_price_identifier", new Error("No reportType or request provided"));
+      logValidationError("missing_price_identifier", new Error("No reportType provided"));
       return new Response(JSON.stringify({ 
         valid: false,
         discount_usd: 0,
@@ -188,33 +184,6 @@ serve(async (req) => {
     // Round to 2 decimal places
     const roundedDiscount = Math.round(discountAmount * 100) / 100;
     const roundedFinalPrice = Math.round(finalPrice * 100) / 100;
-
-    // Increment times_used for successful promo validation
-    try {
-      const { error: updateError } = await supabaseAdmin
-        .from('promo_codes')
-        .update({ times_used: promo.times_used + 1 })
-        .eq('id', promo.id);
-
-      if (updateError) {
-        logValidationError("usage_increment_failed", updateError, { 
-          promo_id: promo.id,
-          current_usage: promo.times_used
-        });
-        // Don't fail the validation, just log the error
-      } else {
-        logValidation("usage_incremented", { 
-          promo_id: promo.id,
-          new_usage: promo.times_used + 1
-        });
-      }
-    } catch (incrementError) {
-      logValidationError("usage_increment_exception", incrementError, { 
-        promo_id: promo.id,
-        current_usage: promo.times_used
-      });
-      // Don't fail the validation, just log the error
-    }
 
     const processingTimeMs = Date.now() - startTime;
 

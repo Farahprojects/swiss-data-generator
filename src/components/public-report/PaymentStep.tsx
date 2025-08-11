@@ -123,46 +123,18 @@ const PaymentStep = ({
     setPromoError('');
 
     try {
-      const priceIdentifier = getPriceIdentifier();
+      const id = getPriceIdentifier();
       
-      if (!priceIdentifier) {
-        throw new Error('No price identifier could be determined from form data');
+      if (!id) {
+        return { valid: false, discount_usd: 0, trusted_base_price_usd: 0, final_price_usd: 0, report_type: '', reason: 'Invalid report type' };
       }
 
-      // Get base price from cached pricing data
-      const priceData = getPriceById(priceIdentifier);
-      
-      if (!priceData) {
-        throw new Error(`Price not found for report type: ${priceIdentifier}`);
-      }
-
-      const basePrice = Number(priceData.unit_price_usd);
-      
-      // If no promo code, return base pricing
-      if (!promoCode || promoCode.trim() === '') {
-        return {
-          valid: true,
-          discount_usd: 0,
-          trusted_base_price_usd: basePrice,
-          final_price_usd: basePrice,
-          report_type: priceIdentifier,
-        };
-      }
-
-      // Validate promo code with edge function (pass cached base price)
       const { data, error } = await supabase.functions.invoke('validate-promo-code', {
-        body: { 
-          promoCode: promoCode.trim(),
-          email: watch('email'),
-          reportType: priceIdentifier,
-          request: requestField,
-          basePrice: basePrice // Pass cached price to avoid DB query
-        }
+        body: { promoCode, basePrice: getBasePrice(), reportType: id }
       });
 
       if (error) {
-        console.error('❌ Promo validation error:', error);
-        throw new Error('Failed to validate promo code');
+        return { valid: false, discount_usd: 0, trusted_base_price_usd: getBasePrice(), final_price_usd: getBasePrice(), report_type: id, reason: 'Failed to validate promo code' };
       }
 
       // Use the base price from cache, but apply promo discount from validation
@@ -170,8 +142,8 @@ const PaymentStep = ({
       
       return {
         ...promoResult,
-        trusted_base_price_usd: basePrice, // Use cached price
-        final_price_usd: promoResult.valid ? promoResult.final_price_usd : basePrice,
+        trusted_base_price_usd: getBasePrice(), // Use cached price
+        final_price_usd: promoResult.valid ? promoResult.final_price_usd : getBasePrice(),
       };
 
     } catch (error) {
