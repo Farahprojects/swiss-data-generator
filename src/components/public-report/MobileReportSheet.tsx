@@ -107,6 +107,18 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
           console.error('❌ [MOBILE] Invalid free response:', data);
           return;
         }
+        
+        // FREE REPORTS: Save guest data immediately
+        sessionStorage.setItem('guestId', guestReportId);
+        sessionStorage.setItem('guestData', JSON.stringify({
+          guestReportId,
+          name: formData.name, 
+          email: formData.email,
+          reportType: formData.reportType,
+          isFree: true
+        }));
+        console.log('[MobileSheet] Saved free guest data:', guestReportId);
+        
         onOpenChange(false);
         onReportCreated?.({ guestReportId, name: formData.name, email: formData.email });
       } catch (err) {
@@ -140,7 +152,19 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
           return;
         }
 
-        if (data?.checkoutUrl) {
+        if (data?.checkoutUrl && data?.guestReportId) {
+          // PAID REPORTS: Save guest data before Stripe redirect
+          sessionStorage.setItem('guestId', data.guestReportId);
+          sessionStorage.setItem('guestData', JSON.stringify({
+            guestReportId: data.guestReportId,
+            name: formData.name,
+            email: formData.email, 
+            reportType: formData.reportType,
+            isFree: false,
+            stripeUrl: data.checkoutUrl
+          }));
+          localStorage.setItem('stripe_return_location', `/report?guest_id=${data.guestReportId}`);
+          console.log('[MobileSheet] Saved paid guest data before redirect:', data.guestReportId);
           
           window.location.href = data.checkoutUrl;
         } else if (data?.success || data?.guestReportId) {

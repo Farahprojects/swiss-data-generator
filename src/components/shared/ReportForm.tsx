@@ -92,6 +92,18 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         if (!isFree || !guestReportId) {
           return { success: false, guestReportId: '' };
         }
+        
+        // FREE REPORTS: Save guest data immediately
+        sessionStorage.setItem('guestId', guestReportId);
+        sessionStorage.setItem('guestData', JSON.stringify({
+          guestReportId,
+          name: (data as any).name,
+          email: (data as any).email,
+          reportType: (data as any).reportType,
+          isFree: true
+        }));
+        console.log('[ReportForm] Saved free guest data:', guestReportId);
+        
         // Notify parent immediately to open success UI
         onReportCreated?.(guestReportId, (data as any).name, (data as any).email);
         return { success: true, guestReportId };
@@ -118,7 +130,19 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           setIsProcessing(false);
           return;
         }
-        if (responseData?.checkoutUrl) {
+        if (responseData?.checkoutUrl && responseData?.guestReportId) {
+          // PAID REPORTS: Save guest data before Stripe redirect
+          sessionStorage.setItem('guestId', responseData.guestReportId);
+          sessionStorage.setItem('guestData', JSON.stringify({
+            guestReportId: responseData.guestReportId,
+            name: (data as any).name,
+            email: (data as any).email,
+            reportType: (data as any).reportType,
+            isFree: false,
+            stripeUrl: responseData.checkoutUrl
+          }));
+          localStorage.setItem('stripe_return_location', `/report?guest_id=${responseData.guestReportId}`);
+          console.log('[ReportForm] Saved paid guest data before redirect:', responseData.guestReportId);
           
           window.location.href = responseData.checkoutUrl;
         } else if (responseData?.success || responseData?.guestReportId) {
