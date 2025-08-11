@@ -103,11 +103,12 @@ export class SessionManager {
     const storageKeys = [
       // Guest report data
       'currentGuestReportId',
-      'currentGuestReportId_timestamp', // New timestamp tracking
+      'currentGuestReportId_timestamp',
       'guest_payment_status',
       'guest_report_id',
       'guestId',
       'reportUrl',
+      'seen', // Added to catch all seen keys
       
       // Navigation state
       'last_route',
@@ -120,23 +121,36 @@ export class SessionManager {
       
       // Tab management
       'activeTab',
-      'activeTabId', // New tab ID tracking
+      'activeTabId',
       
       // Form data
       'formData',
       'reportFormData',
-      'formMemoryData', // New form memory persistence
+      'formMemoryData',
       
       // Temporary data
       'temp_report_data',
       'chat_token',
-      'cached_uuid'
+      'cached_uuid',
+
+      // Misc
+      'countdown_shown' // Added to catch all countdown keys
     ];
 
     storageKeys.forEach(key => {
       try {
+        // Clear keys that are exact matches
         localStorage.removeItem(key);
         sessionStorage.removeItem(key);
+        
+        // Clear keys that start with the given string (for dynamic keys like seen: and countdown_shown:)
+        for (let i = 0; i < localStorage.length; i++) {
+          const a_key = localStorage.key(i);
+          if (a_key && a_key.startsWith(key)) {
+            localStorage.removeItem(a_key);
+          }
+        }
+
       } catch (error) {
         console.error(`Error removing ${key}:`, error);
       }

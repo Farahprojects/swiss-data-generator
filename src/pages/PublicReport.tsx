@@ -19,6 +19,7 @@ import { useStripeSuccess } from '@/contexts/StripeSuccessContext';
 import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
 import MobileReportSheet from '@/components/public-report/MobileReportSheet';
 import { SuccessScreen } from '@/components/public-report/SuccessScreen';
+import { sessionManager } from '@/utils/sessionManager';
 
 
 
@@ -46,17 +47,7 @@ const PublicReport = () => {
   
   // One-time full clean of known keys on first visit to report route
   useEffect(() => {
-    try {
-      const FLAG = 'report:oneTimeCleanDone';
-      if (localStorage.getItem(FLAG) === '1') return;
-
-      // Fully wipe storage on first mount, then set flag to avoid repeating
-      try { sessionStorage.clear(); } catch {}
-      try { localStorage.clear(); } catch {}
-      try { localStorage.setItem(FLAG, '1'); } catch {}
-
-      try { console.log('[OneTimeClean] Fully cleared localStorage and sessionStorage on mount'); } catch {}
-    } catch {}
+    sessionManager.clearSession({ preserveNavigation: true });
   }, []);
 
 
