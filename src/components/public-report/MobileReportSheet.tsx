@@ -122,8 +122,6 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
     // Close after a small delay to allow button state update
     setTimeout(() => onOpenChange(false), 300);
 
-    // Trigger success UI immediately with pending id
-    onReportCreated?.({ guestReportId: 'pending', name: formData.name, email: formData.email });
 
     const timeoutId = window.setTimeout(() => {
       setHasTimedOut(true);
