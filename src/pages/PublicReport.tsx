@@ -23,6 +23,18 @@ const PublicReport = () => {
   const [activeGuestId, setActiveGuestId] = useState<string | null>(null);
   const [paidGuestId, setPaidGuestId] = useState<string | null>(null);
   
+  const handleReportCreated = (guestId: string, paymentStatus: string) => {
+    if (paymentStatus === 'paid') {
+      // If the report is already paid (e.g., free promo), skip the checker and go straight to success.
+      console.log(`[PublicReport] Report ${guestId} is already paid. Showing success screen directly.`);
+      setPaidGuestId(guestId);
+    } else {
+      // If payment is pending, use the checker to handle the payment flow.
+      console.log(`[PublicReport] Report ${guestId} is pending payment. Starting checker.`);
+      setActiveGuestId(guestId);
+    }
+  };
+
   const reportFormRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const [showUnlockFab, setShowUnlockFab] = useState(false);
@@ -320,9 +332,9 @@ const PublicReport = () => {
         <TestsSection />
         {!isMobile && (
           <div id="report-form" ref={reportFormRef}>
-            <ReportForm onReportCreated={(guestReportId) => {
-              console.log("Desktop form submitted. Guest ID:", guestReportId);
-              setActiveGuestId(guestReportId);
+            <ReportForm onReportCreated={(guestReportId, name, email, paymentStatus) => {
+              console.log("Desktop form submitted. Guest ID:", guestReportId, "Status:", paymentStatus);
+              handleReportCreated(guestReportId, paymentStatus);
             }} />
           </div>
         )}
@@ -351,9 +363,9 @@ const PublicReport = () => {
         <MobileReportSheet
           isOpen={isMobileDrawerOpen}
           onOpenChange={setIsMobileDrawerOpen}
-          onReportCreated={(guestReportId) => {
-            console.log("Mobile form submitted. Guest ID:", guestReportId);
-            setActiveGuestId(guestReportId);
+          onReportCreated={(guestReportId, paymentStatus) => {
+            console.log("Mobile form submitted. Guest ID:", guestReportId, "Status:", paymentStatus);
+            handleReportCreated(guestReportId, paymentStatus);
             setIsMobileDrawerOpen(false); // Close the sheet on submit
           }}
         />

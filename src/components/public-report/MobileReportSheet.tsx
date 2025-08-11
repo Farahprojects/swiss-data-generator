@@ -17,7 +17,7 @@ import { usePricing } from '@/contexts/PricingContext';
 interface MobileReportSheetProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onReportCreated?: (reportData: any) => void;
+  onReportCreated?: (guestReportId: string, paymentStatus: string) => void;
 }
 
 const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenChange, onReportCreated }) => {
@@ -105,10 +105,11 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
       }
       
       const guestReportId = data?.guestReportId || null;
+      const paymentStatus = data?.paymentStatus || 'pending';
 
       if (guestReportId) {
         onOpenChange(false);
-        onReportCreated?.(guestReportId);
+        onReportCreated?.(guestReportId, paymentStatus);
       } else {
         console.error('❌ [MOBILE] Invalid response from server:', data);
       }

@@ -22,7 +22,7 @@ interface ReportFormProps {
   themeColor?: string;
   fontFamily?: string;
   onFormStateChange?: (isValid: boolean, hasSelectedType: boolean) => void;
-  onReportCreated?: (guestReportId: string, name: string, email: string) => void;
+  onReportCreated?: (guestReportId: string, name: string, email: string, paymentStatus: string) => void;
 }
 
 export const ReportForm: React.FC<ReportFormProps> = ({ 
@@ -87,7 +87,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       }
 
       const guestReportId = resp?.guestReportId || null;
-      return { success: !!guestReportId, guestReportId };
+      const paymentStatus = resp?.paymentStatus || 'pending';
+      return { success: !!guestReportId, guestReportId, paymentStatus };
 
     } catch (error) {
       console.error("Submission failed with exception", error);
@@ -217,9 +218,9 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     
     try {
       const result = await submitReport(submissionData, trustedPricing);
-      if (result.success && result.guestReportId) {
+      if (result.success && result.guestReportId && result.paymentStatus) {
         // Notify parent component about successful report creation
-        onReportCreated?.(result.guestReportId, userName, userEmail);
+        onReportCreated?.(result.guestReportId, userName, userEmail, result.paymentStatus);
       }
     } catch (error) {
       console.error('Report submission failed:', error);

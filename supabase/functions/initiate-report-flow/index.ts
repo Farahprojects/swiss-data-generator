@@ -243,6 +243,7 @@ serve(async (req) => {
 
     return ok({
       guestReportId,
+      paymentStatus: guestReportData.payment_status,
       processing_time_ms: ms
     });
 
