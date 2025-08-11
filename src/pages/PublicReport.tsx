@@ -16,7 +16,6 @@ import { log } from '@/utils/logUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useStripeSuccess } from '@/contexts/StripeSuccessContext';
 
-import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
 import MobileReportSheet from '@/components/public-report/MobileReportSheet';
 import { SuccessScreen } from '@/components/public-report/SuccessScreen';
 import { sessionManager } from '@/utils/sessionManager';

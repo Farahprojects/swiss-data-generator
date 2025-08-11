@@ -76,6 +76,16 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
 
   const start = Date.now();
+  
+  // Performance logging - identify calling component
+  const userAgent = req.headers.get('user-agent') || '';
+  const referer = req.headers.get('referer') || '';
+  console.log('🚀 [PERF] Request started', {
+    timestamp: new Date().toISOString(),
+    userAgent: userAgent.substring(0, 100),
+    referer,
+    isMobile: /mobile|android|iphone/i.test(userAgent)
+  });
 
   // Parse JSON safely
   let body: any = null;
@@ -87,6 +97,17 @@ serve(async (req) => {
 
   try {
     const { reportData, trustedPricing }: InitiateReportFlowRequest = body;
+    
+    // Component identification logging
+    console.log('🎯 [PERF] Payload received', {
+      timestamp: new Date().toISOString(),
+      email: reportData?.email,
+      reportType: reportData?.reportType,
+      payloadSize: JSON.stringify(body).length,
+      hasSecondPerson: !!(reportData?.secondPersonName),
+      componentSource: body?.componentSource || 'unknown'
+    });
+    
     debug('[initiate-report-flow] Received payload', {
       reportData,
       trustedPricing,
@@ -202,6 +223,13 @@ serve(async (req) => {
       void supabaseAdmin.functions.invoke('translator-edge', { body: translatorPayload });
 
       const reportUrl = `${SITE_URL}/report?guest_id=${guestReportId}&success=1`;
+      console.log('✅ [PERF] Free report completed', {
+        timestamp: new Date().toISOString(),
+        guestReportId,
+        processing_time_ms: ms,
+        reportType: reportData.reportType
+      });
+      
       return ok({
         guestReportId,
         user_id: null,
@@ -228,6 +256,14 @@ serve(async (req) => {
       });
 
       if (checkoutError || !checkoutData?.url) return oops('Failed to create checkout session');
+
+      console.log('💳 [PERF] Paid report checkout created', {
+        timestamp: new Date().toISOString(),
+        guestReportId,
+        processing_time_ms: ms,
+        finalPrice: final,
+        reportType: reportData.reportType
+      });
 
       return ok({
         guestReportId,
