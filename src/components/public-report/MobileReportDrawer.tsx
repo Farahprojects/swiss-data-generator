@@ -305,7 +305,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
           sessionStorage.setItem('guest_id', guestReportId);
           console.log('[SuccessMemory] stored guest_id:', guestReportId);
         } catch {}
-        try { sessionStorage.setItem('pendingFlow', 'free'); } catch {}
+        
         // Close drawer and open success UI
         onOpenChange(false);
         onReportCreated?.({ guestReportId, name: formData.name, email: formData.email });
@@ -377,7 +377,7 @@ const MobileReportDrawer: React.FC<MobileReportDrawerProps> = ({
         // Handle response
         if (data?.checkoutUrl) {
           // Paid report - redirect to Stripe
-          try { sessionStorage.setItem('pendingFlow', 'paid'); } catch {}
+          
           window.location.href = data.checkoutUrl;
         } else if (data?.success || data?.guestReportId) {
           // Free report success - update the success screen with real data

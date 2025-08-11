@@ -54,7 +54,7 @@ const PublicReport = () => {
       });
 
       // 2) Restrict sessionStorage to allowed keys only (post-migration)
-      const ALLOWED_SS = new Set(['pendingFlow', 'guestId', 'success']);
+      const ALLOWED_SS = new Set(['guestId', 'success']);
       try {
         Object.keys(sessionStorage).forEach((k) => {
           if (!ALLOWED_SS.has(k)) sessionStorage.removeItem(k);
@@ -70,12 +70,22 @@ const PublicReport = () => {
         if (v) params[k] = v;
       });
 
+      // Build a complete localStorage dump for diagnostics
+      const ls: Record<string, string | null> = {};
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i)!;
+          ls[k] = localStorage.getItem(k);
+        }
+      } catch {}
+
       const snapshot: any = {
         url,
         ...(Object.keys(params).length ? { params } : {}),
         localStorage: {
           currentGuestReportId: (() => { try { return localStorage.getItem('currentGuestReportId'); } catch { return null; } })(),
         },
+        localStorageAll: ls,
         sessionStorage: {
           guestId: (() => { try { return sessionStorage.getItem('guestId'); } catch { return null; } })(),
           success: (() => { try { return sessionStorage.getItem('success'); } catch { return null; } })(),

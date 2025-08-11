@@ -96,7 +96,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           sessionStorage.setItem('guestId', guestReportId);
           console.log('[SuccessMemory] stored guestId:', guestReportId);
         } catch {}
-        try { sessionStorage.setItem('pendingFlow', 'free'); } catch {}
+        
         // Notify parent immediately to open success UI
         onReportCreated?.(guestReportId, (data as any).name, (data as any).email);
         return { success: true, guestReportId };
@@ -124,7 +124,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           return;
         }
         if (responseData?.checkoutUrl) {
-          try { sessionStorage.setItem('pendingFlow', 'paid'); } catch {}
+          
           window.location.href = responseData.checkoutUrl;
         } else if (responseData?.success || responseData?.guestReportId) {
           onReportCreated?.(responseData.guestReportId, (data as any).name, (data as any).email);

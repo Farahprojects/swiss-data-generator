@@ -49,8 +49,9 @@ export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
       sessionStorage.setItem('guestId', guestReportId);
       sessionStorage.setItem('success', '1');
       localStorage.setItem(`seen:${guestReportId}`, '1');
+      console.log("[SeenFlag] wrote", `seen:${guestReportId}`, localStorage.getItem(`seen:${guestReportId}`));
     } catch {}
-    
+
     const reportRef: ReportReference = {
       guestReportId,
       reportType: metadata?.report_type || 'unknown',
