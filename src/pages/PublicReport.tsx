@@ -53,8 +53,8 @@ const PublicReport = () => {
         try { localStorage.removeItem(k); } catch {}
       });
 
-      // 2) Restrict sessionStorage to allowed keys only
-      const ALLOWED_SS = new Set(['reportUrl', 'pendingFlow']);
+      // 2) Restrict sessionStorage to allowed keys only (post-migration)
+      const ALLOWED_SS = new Set(['pendingFlow', 'guestId', 'success']);
       try {
         Object.keys(sessionStorage).forEach((k) => {
           if (!ALLOWED_SS.has(k)) sessionStorage.removeItem(k);
@@ -77,11 +77,11 @@ const PublicReport = () => {
           currentGuestReportId: (() => { try { return localStorage.getItem('currentGuestReportId'); } catch { return null; } })(),
         },
         sessionStorage: {
-          reportUrl: (() => { try { return sessionStorage.getItem('reportUrl'); } catch { return null; } })(),
+          guestId: (() => { try { return sessionStorage.getItem('guestId'); } catch { return null; } })(),
+          success: (() => { try { return sessionStorage.getItem('success'); } catch { return null; } })(),
           pendingFlow: (() => { try { return sessionStorage.getItem('pendingFlow'); } catch { return null; } })(),
         },
       };
-
       console.log('[StateMemoryCheck] Snapshot on mount:', snapshot);
     } catch (e) {
       console.warn('[StateMemoryCheck] Failed to read state/memory snapshot:', e);
@@ -245,24 +245,7 @@ const PublicReport = () => {
     };
   }, [isMobile]);
 
-  // Auto-open report modal when a guest ID is present
-  useEffect(() => {
-    if (isGuestIdLoading) return;
-    if (isOpen) return;
-
-    const id = activeGuestId;
-    if (!id) return;
-
-    const t = setTimeout(() => {
-      try {
-        open(id);
-      } catch (e) {
-        console.warn('Auto-open modal failed', e);
-      }
-    }, 300);
-
-    return () => clearTimeout(t);
-  }, [isGuestIdLoading, isOpen, activeGuestId, open]);
+  // SuccessScreen owns modal opening; removed legacy auto-open effect
 
 
   const handleDismissCancelMessage = () => {
@@ -274,11 +257,14 @@ const PublicReport = () => {
   };
   // Seen-flag routing helpers
   const hasUrlSuccess = typeof window === 'undefined' ? false : (new URLSearchParams(window.location.search).get('success') === '1');
-  const urlHasGuestParam = typeof window === 'undefined' ? false : new URLSearchParams(window.location.search).has('guest_id');
-  const pendingFlow = typeof window === 'undefined' ? null : sessionStorage.getItem('pendingFlow');
+  // Resolve guest id from URL or session storage (single source of truth)
+  const _sp = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search);
+  const urlGuest = _sp ? _sp.get('guest_id') : null;
+  if (urlGuest) { try { sessionStorage.setItem('guestId', urlGuest); } catch {} }
+  const resolvedGuestId = typeof window === 'undefined' ? null : (urlGuest || sessionStorage.getItem('guestId'));
+  const hasGuest = Boolean(resolvedGuestId);
   const unifiedGuestId = unifiedSuccessData?.guestReportId || null;
   const hasSeenUnified = unifiedGuestId ? hasSeen(unifiedGuestId) : false;
-
   useEffect(() => {
     if (!unifiedGuestId) return;
     const action = hasSeenUnified ? 'open' : 'wait';
@@ -590,8 +576,8 @@ const PublicReport = () => {
 
         {/* Success Screen - unified for both Stripe return and direct form submission */}
         {(
-          (stripeSuccess.showOriginalSuccessScreen && stripeSuccess.guestId) ||
-          (unifiedSuccessData && (typeof window === 'undefined' ? true : (!hasSeenUnified && (urlHasGuestParam || pendingFlow !== 'paid'))))
+          (stripeSuccess.showOriginalSuccessScreen && (stripeSuccess.guestId || hasGuest)) ||
+          (unifiedSuccessData && !hasSeenUnified && hasGuest)
         ) ? (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto flex items-center justify-center">

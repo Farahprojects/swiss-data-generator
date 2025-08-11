@@ -100,10 +100,6 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
           console.error('❌ [MOBILE] Free report submission failed:', error);
           return;
         }
-        if (data?.reportUrl) {
-          console.log('[PROMO] reportUrl:', data.reportUrl);
-          try { sessionStorage.setItem('reportUrl', data.reportUrl); } catch {}
-        }
         try { sessionStorage.setItem('pendingFlow', 'free'); } catch {}
         const guestReportId = (data?.guestReportId || data?.guest_id) as string | undefined;
         const isFree = Boolean(data?.isFreeReport);
@@ -111,7 +107,7 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
           console.error('❌ [MOBILE] Invalid free response:', data);
           return;
         }
-        try { sessionStorage.setItem('guest_id', guestReportId); } catch {}
+        try { sessionStorage.setItem('guestId', guestReportId); } catch {}
         onOpenChange(false);
         onReportCreated?.({ guestReportId, name: formData.name, email: formData.email });
       } catch (err) {

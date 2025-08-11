@@ -18,6 +18,19 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
   const [successFlag, setSuccessFlag] = useState<"1" | null>(null);
   useEffect(() => {
     if (typeof window === "undefined") return;
+
+    // One-time migration: reportUrl -> guestId, then remove legacy key
+    try {
+      const legacy = sessionStorage.getItem("reportUrl");
+      if (legacy) {
+        try {
+          const id = new URL(legacy).searchParams.get("guest_id");
+          if (id) sessionStorage.setItem("guestId", id);
+        } catch {}
+        sessionStorage.removeItem("reportUrl");
+      }
+    } catch {}
+
     const sp = new URLSearchParams(window.location.search);
     const fromUrlId = sp.get("guest_id");
     const fromUrlSuccess = sp.get("success");
@@ -29,13 +42,6 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
       let ssId: string | null = null;
       try {
         ssId = sessionStorage.getItem("guestId") || sessionStorage.getItem("guest_id") || null;
-        if (!ssId) {
-          const legacy = sessionStorage.getItem("reportUrl");
-          if (legacy) {
-            const u = new URL(legacy);
-            ssId = u.searchParams.get("guest_id");
-          }
-        }
       } catch {}
       if (ssId) setGuestId(ssId);
     }
