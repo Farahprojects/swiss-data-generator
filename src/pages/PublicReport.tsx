@@ -44,6 +44,7 @@ const PublicReport = () => {
   const reportFormRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const [showUnlockFab, setShowUnlockFab] = useState(false);
+  const [showHeader, setShowHeader] = useState(true);
   
   
   
@@ -241,6 +242,19 @@ const PublicReport = () => {
     };
   }, [isMobile]);
 
+  // Observe hero visibility to fade header in/out
+  useEffect(() => {
+    const target = heroRef.current;
+    if (!target) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      setShowHeader(entry.isIntersecting);
+    }, { threshold: 0.1 });
+    observer.observe(target);
+    return () => {
+      try { observer.disconnect(); } catch {}
+    };
+  }, []);
+
   // SuccessScreen owns modal opening; removed legacy auto-open effect
 
 
@@ -293,11 +307,10 @@ const PublicReport = () => {
         )}
 
         {/* Animated header with logo */}
-        <header className="fixed top-0 left-0 z-50 p-6">
-          <div 
-            className="transition-opacity duration-300 ease-out"
-
-          >
+        <header className={`fixed top-0 left-0 z-50 p-6 transition-opacity duration-500 ease-out ${
+          showHeader ? 'opacity-100' : 'opacity-0'
+        }`}>
+          <div>
             <Logo size="md" asLink={false} />
           </div>
         </header>
