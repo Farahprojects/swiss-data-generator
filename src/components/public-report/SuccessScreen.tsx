@@ -19,12 +19,12 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
     const fetchGuestDetails = async () => {
       const { data, error } = await supabase
         .from("guest_reports")
-        .select("name, email, person_a:report_data->person_a->>name, person_a_email:report_data->person_a->>email")
+        .select("email, name:report_data->>name, person_a_name:report_data->person_a->>name, person_a_email:report_data->person_a->>email")
         .eq("id", guestId)
         .single();
       
       if (data) {
-        const displayName = data.person_a ?? data.name ?? "";
+        const displayName = data.person_a_name ?? data.name ?? "";
         const displayEmail = data.person_a_email ?? data.email ?? "";
         setGuestData({ name: displayName, email: displayEmail });
       } else {
