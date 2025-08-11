@@ -92,11 +92,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         if (!isFree || !guestReportId) {
           return { success: false, guestReportId: '' };
         }
-        try {
-          sessionStorage.setItem('guestId', guestReportId);
-          console.log('[SuccessMemory] stored guestId:', guestReportId);
-        } catch {}
-        
         // Notify parent immediately to open success UI
         onReportCreated?.(guestReportId, (data as any).name, (data as any).email);
         return { success: true, guestReportId };

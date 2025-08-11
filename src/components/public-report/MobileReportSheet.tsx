@@ -107,7 +107,6 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
           console.error('❌ [MOBILE] Invalid free response:', data);
           return;
         }
-        try { sessionStorage.setItem('guestId', guestReportId); } catch {}
         onOpenChange(false);
         onReportCreated?.({ guestReportId, name: formData.name, email: formData.email });
       } catch (err) {

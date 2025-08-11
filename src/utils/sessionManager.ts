@@ -134,7 +134,12 @@ export class SessionManager {
       'cached_uuid',
 
       // Misc
-      'countdown_shown' // Added to catch all countdown keys
+      'countdown_shown', // Added to catch all countdown keys
+
+      // Stripe and flow state
+      'stripe_return_location',
+      'pendingFlow',
+      'report:oneTimeCleanDone'
     ];
 
     storageKeys.forEach(key => {

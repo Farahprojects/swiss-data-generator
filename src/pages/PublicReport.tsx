@@ -253,7 +253,7 @@ const PublicReport = () => {
   // Resolve guest id from URL or session storage (single source of truth)
   const _sp = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search);
   const urlGuest = _sp ? _sp.get('guest_id') : null;
-  if (urlGuest) { try { sessionStorage.setItem('guestId', urlGuest); } catch {} }
+  
   const resolvedGuestId = typeof window === 'undefined' ? null : (urlGuest || sessionStorage.getItem('guestId'));
   const hasGuest = Boolean(resolvedGuestId);
 
