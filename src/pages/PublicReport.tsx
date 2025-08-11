@@ -24,9 +24,9 @@ import { sessionManager } from '@/utils/sessionManager';
 
 
 const PublicReport = () => {
-  // Synchronous URL parsing - happens before any React logic
+  // The URL is the single source of truth.
   const urlParams = new URLSearchParams(window.location.search);
-  const guestId = urlParams.get("guest_id");
+  const guestIdFromUrl = urlParams.get("guest_id");
   const sessionId = urlParams.get("session_id");
   const status = urlParams.get("status");
   const isStripeSuccessReturn = status === 'success' && !!sessionId;
@@ -34,14 +34,11 @@ const PublicReport = () => {
   // ALL HOOKS MUST BE DECLARED FIRST - NEVER INSIDE TRY-CATCH
 
   const [showCancelledMessage, setShowCancelledMessage] = useState(false);
-  const [activeGuestId, setActiveGuestId] = useState<string | null>(guestId || null);
-  const [isGuestIdLoading, setIsGuestIdLoading] = useState(true);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
-  const [isStripeReturn, setIsStripeReturn] = useState(isStripeSuccessReturn);
   const [unifiedSuccessData, setUnifiedSuccessData] = useState<{ guestReportId: string; name: string; email: string } | null>(null);
   const location = useLocation();
   const isMobile = useIsMobile();
-  const { stripeSuccess, setStripeSuccess, proceedToReport } = useStripeSuccess();
+  const { stripeSuccess, setStripeSuccess } = useStripeSuccess();
   
   
   
@@ -49,62 +46,6 @@ const PublicReport = () => {
   useEffect(() => {
     // sessionManager.clearSession({ preserveNavigation: true });
   }, []);
-
-
-  // Simple state/memory inspector + cleanup on mount (no side effects)
-  useEffect(() => {
-    try {
-      // 1) Purge legacy/null keys from localStorage
-      const LS_KEYS_TO_REMOVE = ['currentGuestReportId', 'reportUrl'];
-      LS_KEYS_TO_REMOVE.forEach((k) => {
-        try { localStorage.removeItem(k); } catch {}
-      });
-
-      // 2) Restrict sessionStorage to allowed keys only (post-migration)
-      const ALLOWED_SS = new Set(['guestId', 'success']);
-      try {
-        Object.keys(sessionStorage).forEach((k) => {
-          if (!ALLOWED_SS.has(k)) sessionStorage.removeItem(k);
-        });
-      } catch {}
-
-      // 3) Build snapshot with real URL params only (avoid null noise)
-      const url = typeof window !== 'undefined' ? window.location.href : null;
-      const sp = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
-      const params: Record<string, string> = {};
-      ['guest_id', 'session_id', 'status'].forEach((k) => {
-        const v = sp.get(k);
-        if (v) params[k] = v;
-      });
-
-      // Build a complete localStorage dump for diagnostics
-      const ls: Record<string, string | null> = {};
-      try {
-        for (let i = 0; i < localStorage.length; i++) {
-          const k = localStorage.key(i)!;
-          ls[k] = localStorage.getItem(k);
-        }
-      } catch {}
-
-      const snapshot: any = {
-        url,
-        ...(Object.keys(params).length ? { params } : {}),
-        localStorage: {
-          currentGuestReportId: (() => { try { return localStorage.getItem('currentGuestReportId'); } catch { return null; } })(),
-        },
-        localStorageAll: ls,
-        sessionStorage: {
-          guestId: (() => { try { return sessionStorage.getItem('guestId'); } catch { return null; } })(),
-          success: (() => { try { return sessionStorage.getItem('success'); } catch { return null; } })(),
-          pendingFlow: (() => { try { return sessionStorage.getItem('pendingFlow'); } catch { return null; } })(),
-        },
-      };
-      console.log('[StateMemoryCheck] Snapshot on mount:', snapshot);
-    } catch (e) {
-      console.warn('[StateMemoryCheck] Failed to read state/memory snapshot:', e);
-    }
-  }, []);
-
 
 
   // Refs for scrolling
@@ -116,13 +57,13 @@ const PublicReport = () => {
 
   // Process Stripe return immediately if detected
   useEffect(() => {
-    if (isStripeSuccessReturn && guestId) {
-      log('info', '🎯 Immediate Stripe success detection', { guestId, sessionId, status }, 'publicReport');
+    if (isStripeSuccessReturn && guestIdFromUrl) {
+      log('info', '🎯 Immediate Stripe success detection', { guestId: guestIdFromUrl, sessionId, status }, 'publicReport');
       
       // Update global state immediately - webhook will handle report generation
       setStripeSuccess({
         showSuccessModal: true,
-        guestId,
+        guestId: guestIdFromUrl,
         sessionId,
         status,
         isProcessing: true,
@@ -131,46 +72,11 @@ const PublicReport = () => {
       
       // Clean URL parameters immediately
       const newUrl = new URL(window.location.href);
-      newUrl.searchParams.delete('guest_id');
       newUrl.searchParams.delete('session_id');
       newUrl.searchParams.delete('status');
       window.history.replaceState({}, '', newUrl.toString());
     }
-    
-    console.log('[Detection] Searching for guest session on mount...');
-    // Simple guest ID handling - URL > localStorage.reportUrl
-    let resolvedGuestId = null;
-    let source = 'none';
-
-    if (guestId) {
-      resolvedGuestId = guestId;
-      source = 'URL';
-    } else {
-      try {
-        const reportUrlFromStorage = localStorage.getItem('reportUrl');
-        if (reportUrlFromStorage) {
-          const recoveredUrl = new URL(reportUrlFromStorage);
-          const recoveredId = recoveredUrl.searchParams.get('guest_id');
-          if (recoveredId) {
-            resolvedGuestId = recoveredId;
-            source = 'localStorage.reportUrl';
-            // Restore the URL in the address bar for consistency
-            window.history.replaceState({}, '', recoveredUrl.toString());
-          }
-        }
-      } catch (e) {
-        console.warn('Could not read or parse reportUrl from localStorage', e);
-      }
-    }
-
-    if (resolvedGuestId) {
-      setActiveGuestId(resolvedGuestId);
-      log('info', `[Detection] Guest ID found in ${source}`, { guestId: resolvedGuestId }, 'publicReport');
-    }
-    
-    setIsGuestIdLoading(false);
-    log('debug', 'Final activeGuestId will be', { finalId: resolvedGuestId }, 'publicReport');
-  }, []);
+  }, [guestIdFromUrl, isStripeSuccessReturn, sessionId, setStripeSuccess, status]);
 
 
 
@@ -214,7 +120,7 @@ const PublicReport = () => {
         showOriginalSuccessScreen: true
       });
     }
-  }, [stripeSuccess.showSuccessModal, stripeSuccess.isProcessing, stripeSuccess.guestId, stripeSuccess.sessionId]);
+  }, [stripeSuccess.showSuccessModal, stripeSuccess.isProcessing, stripeSuccess.guestId, stripeSuccess.sessionId, setStripeSuccess]);
 
   // Check for cancelled payment status
   useEffect(() => {
@@ -299,17 +205,8 @@ const PublicReport = () => {
   const hasGuest = Boolean(resolvedGuestId);
 
 
-  // Show loading spinner while determining guest ID
-  if (isGuestIdLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-8">
-        <div className="text-center space-y-6">
-          <div className="w-12 h-12 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto"></div>
-          <p className="text-xl text-gray-600 font-light">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  // Render loading state if needed (optional, can be removed if loading is fast)
+  // if (isGuestIdLoading) { ... }
 
   try {
     return (
@@ -599,10 +496,7 @@ const PublicReport = () => {
         )}
 
         {/* Success Screen - unified for both Stripe return and direct form submission */}
-        {(
-          (stripeSuccess.showOriginalSuccessScreen && (stripeSuccess.guestId || hasGuest)) ||
-          (unifiedSuccessData && hasGuest)
-        ) ? (
+        {(guestIdFromUrl || unifiedSuccessData) && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto flex items-center justify-center">
               <SuccessScreen
@@ -611,7 +505,7 @@ const PublicReport = () => {
               />
             </div>
           </div>
-        ) : null}
+        )}
       </div>
     );
   } catch (err: any) {
