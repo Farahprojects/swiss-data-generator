@@ -108,16 +108,12 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
           return;
         }
         
-        // FREE REPORTS: Save guest data immediately
+        // FREE REPORTS: Save URL from initiate-report-flow
         sessionStorage.setItem('guestId', guestReportId);
-        sessionStorage.setItem('guestData', JSON.stringify({
-          guestReportId,
-          name: formData.name, 
-          email: formData.email,
-          reportType: formData.reportType,
-          isFree: true
-        }));
-        console.log('[MobileSheet] Saved free guest data:', guestReportId);
+        if (data?.reportUrl) {
+          sessionStorage.setItem('reportUrl', data.reportUrl);
+          console.log('[MobileSheet] Saved free report URL:', data.reportUrl);
+        }
         
         onOpenChange(false);
         onReportCreated?.({ guestReportId, name: formData.name, email: formData.email });
@@ -153,20 +149,23 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
         }
 
         if (data?.checkoutUrl && data?.guestReportId) {
-          // PAID REPORTS: Save guest data before Stripe redirect
+          // PAID REPORTS: Save URL from initiate-report-flow
           sessionStorage.setItem('guestId', data.guestReportId);
-          sessionStorage.setItem('guestData', JSON.stringify({
-            guestReportId: data.guestReportId,
-            name: formData.name,
-            email: formData.email, 
-            reportType: formData.reportType,
-            isFree: false,
-            stripeUrl: data.checkoutUrl
-          }));
-          console.log('[MobileSheet] Saved paid guest data before redirect:', data.guestReportId);
+          sessionStorage.setItem('reportUrl', data.checkoutUrl);
+          console.log('[MobileSheet] Saved paid report URL:', data.checkoutUrl);
           
           window.location.href = data.checkoutUrl;
+        } else if (data?.reportUrl && data?.guestReportId) {
+          // FREE REPORTS: Save URL from initiate-report-flow
+          sessionStorage.setItem('guestId', data.guestReportId);
+          sessionStorage.setItem('reportUrl', data.reportUrl);
+          console.log('[MobileSheet] Saved free report URL:', data.reportUrl);
+          
+          onReportCreated?.({ guestReportId: data.guestReportId, name: formData.name, email: formData.email });
+          clearTimeout(timeoutId);
+          setIsProcessing(false);
         } else if (data?.success || data?.guestReportId) {
+          // Fallback for legacy response format
           onReportCreated?.({ guestReportId: data.guestReportId, name: formData.name, email: formData.email });
           clearTimeout(timeoutId);
           setIsProcessing(false);

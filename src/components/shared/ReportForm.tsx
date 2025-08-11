@@ -93,16 +93,12 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           return { success: false, guestReportId: '' };
         }
         
-        // FREE REPORTS: Save guest data immediately
+        // FREE REPORTS: Save URL from initiate-report-flow
         sessionStorage.setItem('guestId', guestReportId);
-        sessionStorage.setItem('guestData', JSON.stringify({
-          guestReportId,
-          name: (data as any).name,
-          email: (data as any).email,
-          reportType: (data as any).reportType,
-          isFree: true
-        }));
-        console.log('[ReportForm] Saved free guest data:', guestReportId);
+        if (resp?.reportUrl) {
+          sessionStorage.setItem('reportUrl', resp.reportUrl);
+          console.log('[ReportForm] Saved free report URL:', resp.reportUrl);
+        }
         
         // Notify parent immediately to open success UI
         onReportCreated?.(guestReportId, (data as any).name, (data as any).email);
@@ -131,20 +127,23 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           return;
         }
         if (responseData?.checkoutUrl && responseData?.guestReportId) {
-          // PAID REPORTS: Save guest data before Stripe redirect
+          // PAID REPORTS: Save URL from initiate-report-flow
           sessionStorage.setItem('guestId', responseData.guestReportId);
-          sessionStorage.setItem('guestData', JSON.stringify({
-            guestReportId: responseData.guestReportId,
-            name: (data as any).name,
-            email: (data as any).email,
-            reportType: (data as any).reportType,
-            isFree: false,
-            stripeUrl: responseData.checkoutUrl
-          }));
-          console.log('[ReportForm] Saved paid guest data before redirect:', responseData.guestReportId);
+          sessionStorage.setItem('reportUrl', responseData.checkoutUrl);
+          console.log('[ReportForm] Saved paid report URL:', responseData.checkoutUrl);
           
           window.location.href = responseData.checkoutUrl;
+        } else if (responseData?.reportUrl && responseData?.guestReportId) {
+          // FREE REPORTS: Save URL from initiate-report-flow
+          sessionStorage.setItem('guestId', responseData.guestReportId);
+          sessionStorage.setItem('reportUrl', responseData.reportUrl);
+          console.log('[ReportForm] Saved free report URL:', responseData.reportUrl);
+          
+          onReportCreated?.(responseData.guestReportId, (data as any).name, (data as any).email);
+          clearTimeout(timeoutId);
+          setIsProcessing(false);
         } else if (responseData?.success || responseData?.guestReportId) {
+          // Fallback for legacy response format
           onReportCreated?.(responseData.guestReportId, (data as any).name, (data as any).email);
           clearTimeout(timeoutId);
           setIsProcessing(false);

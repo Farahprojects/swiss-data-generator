@@ -16,9 +16,9 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
   const { open } = useReportModal();
   const isMobile = useIsMobile();
 
-  // --- 1) Resolve guest identity (seen-based; ignore success flag)
+  // --- 1) Resolve guest identity and URL
   const [guestId, setGuestId] = useState<string | null>(null);
-  const [guestSessionData, setGuestSessionData] = useState<any | null>(null);
+  const [reportUrl, setReportUrl] = useState<string | null>(null);
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -50,23 +50,21 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
       console.error('🔎 [DEBUG][SuccessScreen] Memory logging error:', error);
     }
 
-    const resolveGuestData = (): { guestId: string, guestData: any } | null => {
+    const resolveGuestData = (): { guestId: string, reportUrl: string } | null => {
       const q = new URLSearchParams(window.location.search);
       const urlGuest = q.get('guest_id');
 
       const sessionGuest = sessionStorage.getItem('guestId');
-      const sessionDataRaw = sessionStorage.getItem('guestData');
-      let parsed: any = null;
-      try { parsed = sessionDataRaw ? JSON.parse(sessionDataRaw) : null; } catch { parsed = null; }
+      const sessionUrl = sessionStorage.getItem('reportUrl');
 
       const guestId = urlGuest || sessionGuest;
-      if (guestId && parsed) {
-        return { guestId, guestData: parsed };
+      if (guestId && sessionUrl) {
+        return { guestId, reportUrl: sessionUrl };
       }
 
       const lastSeen = localStorage.getItem('seen:last');
       if (lastSeen) {
-        return { guestId: lastSeen, guestData: null };
+        return { guestId: lastSeen, reportUrl: null };
       }
 
       return null;
@@ -74,14 +72,15 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
 
     const resolved = resolveGuestData();
     setGuestId(resolved?.guestId || null);
-    setGuestSessionData(resolved?.guestData || null);
+    setReportUrl(resolved?.reportUrl || null);
     
-    // Log final resolution and session data presence
+    // Log final resolution and URL presence
     if (resolved?.guestId) {
       const wasSeen = localStorage.getItem(`seen:${resolved.guestId}`) !== null;
       console.log('🔎 [DEBUG][SuccessScreen] Final guest resolution:', {
         guestId: resolved.guestId,
-        hasSessionData: Boolean(resolved.guestData),
+        hasReportUrl: Boolean(resolved.reportUrl),
+        reportUrl: resolved.reportUrl,
         wasSeen,
         isMobile,
         timestamp: new Date().toISOString(),
