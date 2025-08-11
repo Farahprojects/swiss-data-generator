@@ -138,35 +138,36 @@ const PublicReport = () => {
     }
     
     console.log('[Detection] Searching for guest session on mount...');
-    // Simple guest ID handling - URL > sessionStorage > localStorage
+    // Simple guest ID handling - URL > localStorage.reportUrl
     let resolvedGuestId = null;
+    let source = 'none';
+
     if (guestId) {
       resolvedGuestId = guestId;
-      log('info', 'Guest ID found in URL', { guestId: resolvedGuestId }, 'publicReport');
-      try { sessionStorage.setItem('guestId', resolvedGuestId); } catch {} // Persist to session
+      source = 'URL';
     } else {
       try {
-        const sessionGuestId = sessionStorage.getItem('guestId');
-        if (sessionGuestId) {
-          resolvedGuestId = sessionGuestId;
-          log('info', 'Guest ID found in sessionStorage', { guestId: resolvedGuestId }, 'publicReport');
-        } else {
-          const localGuestId = localStorage.getItem('currentGuestReportId');
-          if (localGuestId) {
-            resolvedGuestId = localGuestId;
-            log('info', 'Guest ID found in localStorage', { guestId: resolvedGuestId }, 'publicReport');
+        const reportUrlFromStorage = localStorage.getItem('reportUrl');
+        if (reportUrlFromStorage) {
+          const recoveredUrl = new URL(reportUrlFromStorage);
+          const recoveredId = recoveredUrl.searchParams.get('guest_id');
+          if (recoveredId) {
+            resolvedGuestId = recoveredId;
+            source = 'localStorage.reportUrl';
+            // Restore the URL in the address bar for consistency
+            window.history.replaceState({}, '', recoveredUrl.toString());
           }
         }
       } catch (e) {
-        console.warn('Could not read guest ID from storage', e);
+        console.warn('Could not read or parse reportUrl from localStorage', e);
       }
     }
 
     if (resolvedGuestId) {
       setActiveGuestId(resolvedGuestId);
+      log('info', `[Detection] Guest ID found in ${source}`, { guestId: resolvedGuestId }, 'publicReport');
     }
     
-    console.log('[Detection] Search complete. Found guestId:', resolvedGuestId);
     setIsGuestIdLoading(false);
     log('debug', 'Final activeGuestId will be', { finalId: resolvedGuestId }, 'publicReport');
   }, []);
