@@ -115,6 +115,14 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
 
         // Handoff
         wsTriggeredRef.current = true;
+        console.log('🔎 [DEBUG][SuccessScreen] WS trigger -> open()', {
+          guestId,
+          uiReady,
+          dbReady,
+          isLoading,
+          successFlag,
+          ts: new Date().toISOString()
+        });
         open(guestId as string);
         setModalOpened(true);
         try { sessionStorage.removeItem('guest_id'); } catch {}
@@ -151,6 +159,14 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
       if (channelRef.current) { try { channelRef.current.unsubscribe(); } catch {} channelRef.current = null; }
       try { markSeen(guestId); } catch {}
       seenMarkedRef.current = true;
+      console.log('🔎 [DEBUG][SuccessScreen] success=1 bypass -> open()', {
+        guestId,
+        uiReady,
+        dbReady,
+        isLoading,
+        successFlag,
+        ts: new Date().toISOString()
+      });
       open(guestId);
       setModalOpened(true);
     }
@@ -161,6 +177,14 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
     if (modalOpened || successFlag === "1") return;
     if (guestId && dbReady && hasSeen(guestId)) {
       if (!seenMarkedRef.current) { try { markSeen(guestId); } catch {} seenMarkedRef.current = true; }
+      console.log('🔎 [DEBUG][SuccessScreen] seen auto-open -> open()', {
+        guestId,
+        uiReady,
+        dbReady,
+        isLoading,
+        successFlag,
+        ts: new Date().toISOString()
+      });
       open(guestId);
       setModalOpened(true);
     }
