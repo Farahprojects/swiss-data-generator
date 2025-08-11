@@ -10,6 +10,7 @@ const ReportFlowChecker = ({ guestId, onPaid }: ReportFlowCheckerProps) => {
   const [status, setStatus] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log(`[ReportFlowChecker] Received guestId: ${guestId}`);
     if (!guestId) return;
 
     const poll = async () => {
