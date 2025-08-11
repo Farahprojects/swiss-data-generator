@@ -137,22 +137,36 @@ const PublicReport = () => {
       window.history.replaceState({}, '', newUrl.toString());
     }
     
-    // Simple guest ID handling - URL takes precedence
+    // Simple guest ID handling - URL > sessionStorage > localStorage
+    let resolvedGuestId = null;
     if (guestId) {
-      log('info', 'Guest ID found, storing and setting state', { guestId }, 'publicReport');
-      storeGuestReportId(guestId);
-      setActiveGuestId(guestId);
+      resolvedGuestId = guestId;
+      log('info', 'Guest ID found in URL', { guestId: resolvedGuestId }, 'publicReport');
+      try { sessionStorage.setItem('guestId', resolvedGuestId); } catch {} // Persist to session
     } else {
-      // Check localStorage for existing session
-      const storedGuestId = localStorage.getItem('currentGuestReportId');
-      log('debug', 'Stored guest_id from localStorage', { storedGuestId }, 'publicReport');
-      if (storedGuestId) {
-        setActiveGuestId(storedGuestId);
+      try {
+        const sessionGuestId = sessionStorage.getItem('guestId');
+        if (sessionGuestId) {
+          resolvedGuestId = sessionGuestId;
+          log('info', 'Guest ID found in sessionStorage', { guestId: resolvedGuestId }, 'publicReport');
+        } else {
+          const localGuestId = localStorage.getItem('currentGuestReportId');
+          if (localGuestId) {
+            resolvedGuestId = localGuestId;
+            log('info', 'Guest ID found in localStorage', { guestId: resolvedGuestId }, 'publicReport');
+          }
+        }
+      } catch (e) {
+        console.warn('Could not read guest ID from storage', e);
       }
+    }
+
+    if (resolvedGuestId) {
+      setActiveGuestId(resolvedGuestId);
     }
     
     setIsGuestIdLoading(false);
-    log('debug', 'Final activeGuestId will be', { finalId: guestId || localStorage.getItem('currentGuestReportId') }, 'publicReport');
+    log('debug', 'Final activeGuestId will be', { finalId: resolvedGuestId }, 'publicReport');
   }, []);
 
 
