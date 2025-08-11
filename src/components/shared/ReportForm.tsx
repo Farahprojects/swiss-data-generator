@@ -93,12 +93,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           return { success: false, guestReportId: '' };
         }
         
-        // FREE REPORTS: Save URL from initiate-report-flow
-        sessionStorage.setItem('guestId', guestReportId);
-        if (resp?.reportUrl) {
-          sessionStorage.setItem('reportUrl', resp.reportUrl);
-          console.log('[ReportForm] Saved free report URL:', resp.reportUrl);
-        }
         
         // Notify parent immediately to open success UI
         onReportCreated?.(guestReportId, (data as any).name, (data as any).email);
@@ -127,11 +121,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
           return;
         }
         if (responseData?.checkoutUrl && responseData?.guestReportId) {
-          // PAID REPORTS: Save URL from initiate-report-flow
-          sessionStorage.setItem('guestId', responseData.guestReportId);
-          sessionStorage.setItem('reportUrl', responseData.checkoutUrl);
-          console.log('[ReportForm] Saved paid report URL:', responseData.checkoutUrl);
-          
           window.location.href = responseData.checkoutUrl;
         } else if (responseData?.reportUrl && responseData?.guestReportId) {
           // FREE REPORTS: Save URL from initiate-report-flow

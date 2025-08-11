@@ -56,8 +56,6 @@ export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
     } catch {}
 
     try {
-      sessionStorage.setItem('guestId', guestReportId);
-      // success flag removed; rely on seen flags only
       localStorage.setItem(`seen:${guestReportId}`, '1');
       localStorage.setItem('seen:last', guestReportId);
       console.log("[SeenFlag] wrote", `seen:${guestReportId}`, localStorage.getItem(`seen:${guestReportId}`));
