@@ -137,6 +137,7 @@ const PublicReport = () => {
       window.history.replaceState({}, '', newUrl.toString());
     }
     
+    console.log('[Detection] Searching for guest session on mount...');
     // Simple guest ID handling - URL > sessionStorage > localStorage
     let resolvedGuestId = null;
     if (guestId) {
@@ -165,6 +166,7 @@ const PublicReport = () => {
       setActiveGuestId(resolvedGuestId);
     }
     
+    console.log('[Detection] Search complete. Found guestId:', resolvedGuestId);
     setIsGuestIdLoading(false);
     log('debug', 'Final activeGuestId will be', { finalId: resolvedGuestId }, 'publicReport');
   }, []);
