@@ -6,133 +6,23 @@ import TestsSection from '@/components/public-report/TestsSection';
 import TheraiChatGPTSection from '@/components/public-report/TheraiChatGPTSection';
 import { ReportForm } from '@/components/shared/ReportForm';
 import Footer from '@/components/Footer';
-import { supabase } from '@/integrations/supabase/client';
 import Logo from '@/components/Logo';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
-import { storeGuestReportId } from '@/utils/urlHelpers';
-import { log } from '@/utils/logUtils';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useStripeSuccess } from '@/contexts/StripeSuccessContext';
-
 import MobileReportSheet from '@/components/public-report/MobileReportSheet';
-import { SuccessScreen } from '@/components/public-report/SuccessScreen';
-import { sessionManager } from '@/utils/sessionManager';
-import { useReportModal } from '@/contexts/ReportModalContext';
-
-
 
 const PublicReport = () => {
-  // The URL is the single source of truth.
-  const urlParams = new URLSearchParams(window.location.search);
-  const guestIdFromUrl = urlParams.get("guest_id");
-  const sessionId = urlParams.get("session_id");
-  const status = urlParams.get("status");
-  const isStripeSuccessReturn = status === 'success' && !!sessionId;
-
-  // ALL HOOKS MUST BE DECLARED FIRST - NEVER INSIDE TRY-CATCH
   const location = useLocation();
   const isMobile = useIsMobile();
-  const { stripeSuccess, setStripeSuccess } = useStripeSuccess();
-  const { open: openReportModal, isOpen } = useReportModal();
   const [showCancelledMessage, setShowCancelledMessage] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
-  const [unifiedSuccessData, setUnifiedSuccessData] = useState<{ guestId: string; name: string; email: string; isSeen?: boolean } | null>(null);
-  const successScreenRef = useRef<HTMLDivElement>(null);
+  
   const reportFormRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const [showUnlockFab, setShowUnlockFab] = useState(false);
   const [showHeader, setShowHeader] = useState(true);
-  
-  
-  
-  // SESSION DETECTION & RECOVERY - minimal: URL first, else seen:last
-  useEffect(() => {
-    if (guestIdFromUrl || isOpen) return;
-
-    const last = localStorage.getItem('seen:last');
-    const hasSeenDirect = last ? !!localStorage.getItem(`seen:${last}`) : false;
-
-    if (last) {
-      setUnifiedSuccessData({ guestId: last, name: '', email: '', isSeen: hasSeenDirect });
-    }
-
-    console.log('[ReportDetect]', {
-      url: window.location.href,
-      seenLast: last,
-      hasSeenDirect,
-      decidedGuestId: last,
-      autoOpen: hasSeenDirect
-    });
-  }, [isOpen, guestIdFromUrl]);
-
-  // Process Stripe return immediately if detected
-  useEffect(() => {
-    if (isStripeSuccessReturn && guestIdFromUrl) {
-      log('info', '🎯 Immediate Stripe success detection', { guestId: guestIdFromUrl, sessionId, status }, 'publicReport');
-      
-      // Update global state immediately - webhook will handle report generation
-      setStripeSuccess({
-        showSuccessModal: true,
-        guestId: guestIdFromUrl,
-        sessionId,
-        status,
-        isProcessing: true,
-        showOriginalSuccessScreen: false
-      });
-      
-      // Clean URL parameters immediately
-      const newUrl = new URL(window.location.href);
-      newUrl.searchParams.delete('session_id');
-      newUrl.searchParams.delete('status');
-      window.history.replaceState({}, '', newUrl.toString());
-    }
-  }, [guestIdFromUrl, isStripeSuccessReturn, sessionId, setStripeSuccess, status]);
-
-
-
-  // Function to trigger report generation via process-paid-report (fire-and-forget)
-  const triggerReportGeneration = (guestId: string, sessionId?: string) => {
-    log('info', '🔄 Triggering report generation via process-paid-report (fire-and-forget)', { guestId, sessionId }, 'publicReport');
-    
-    // Fire-and-forget - don't await
-    supabase.functions.invoke('process-paid-report', {
-      body: {
-        guest_id: guestId,
-        session_id: sessionId
-      }
-    }).then(({ data, error }) => {
-      if (error) {
-        log('error', '❌ process-paid-report failed', { error, guestId }, 'publicReport');
-        console.error('process-paid-report error:', error);
-      } else {
-        log('info', '✅ process-paid-report successful', { data, guestId }, 'publicReport');
-      }
-    }).catch((err) => {
-      log('error', '❌ process-paid-report exception', { error: err, guestId }, 'publicReport');
-      console.error('process-paid-report exception:', err);
-    });
-  };
-
-  // Trigger report generation and transition to success screen when popup appears
-  useEffect(() => {
-    if (stripeSuccess.showSuccessModal && stripeSuccess.isProcessing && stripeSuccess.guestId) {
-      // Fire-and-forget report generation
-      triggerReportGeneration(stripeSuccess.guestId, stripeSuccess.sessionId || undefined);
-      
-      // Immediately transition to success screen with guest ID
-      
-      setStripeSuccess({
-        showSuccessModal: false,
-        guestId: stripeSuccess.guestId,
-        sessionId: stripeSuccess.sessionId,
-        status: 'success',
-        isProcessing: false,
-        showOriginalSuccessScreen: true
-      });
-    }
-  }, [stripeSuccess.showSuccessModal, stripeSuccess.isProcessing, stripeSuccess.guestId, stripeSuccess.sessionId, setStripeSuccess]);
 
   // Check for cancelled payment status
   useEffect(() => {
@@ -142,43 +32,13 @@ const PublicReport = () => {
     }
   }, [location.search]);
 
-
-
   const handleGetReportClick = () => {
     if (isMobile) {
-      // Open mobile drawer
       setIsMobileDrawerOpen(true);
     } else {
-      // Check if success screen is visible, otherwise scroll to form
-      if (successScreenRef.current) {
-        successScreenRef.current.scrollIntoView({ behavior: 'smooth' });
-      } else {
-        const reportSection = document.querySelector('#report-form');
-        if (reportSection && reportSection instanceof HTMLElement) {
-          reportSection.scrollIntoView({ behavior: 'smooth' });
-        }
-      }
-    }
-  };
-
-  // Reset potential stale success state when opening the mobile drawer
-  useEffect(() => {
-    if (isMobileDrawerOpen) {
-      setUnifiedSuccessData(null);
-    }
-  }, [isMobileDrawerOpen]);
-
-  // Shared scroll function that can be used for both form and success screen
-  const scrollToReportSection = () => {
-    if (typeof window !== 'undefined') {
-      // Check if success screen is visible, otherwise scroll to form
-      if (successScreenRef.current) {
-        successScreenRef.current.scrollIntoView({ behavior: 'smooth' });
-      } else {
-        const reportSection = document.querySelector('#report-form');
-        if (reportSection && reportSection instanceof HTMLElement) {
-          reportSection.scrollIntoView({ behavior: 'smooth' });
-        }
+      const reportSection = document.querySelector('#report-form');
+      if (reportSection && reportSection instanceof HTMLElement) {
+        reportSection.scrollIntoView({ behavior: 'smooth' });
       }
     }
   };
@@ -210,9 +70,6 @@ const PublicReport = () => {
     };
   }, []);
 
-  // SuccessScreen owns modal opening; removed legacy auto-open effect
-
-
   const handleDismissCancelMessage = () => {
     setShowCancelledMessage(false);
     // Clear the status from URL
@@ -220,18 +77,7 @@ const PublicReport = () => {
     newUrl.searchParams.delete('status');
     window.history.replaceState({}, '', newUrl.toString());
   };
-  // Seen-flag routing helpers
   
-  // Resolve guest id from URL or seen:last
-  const _sp = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search);
-  const urlGuest = _sp ? _sp.get('guest_id') : null;
-  const resolvedGuestId = typeof window === 'undefined' ? null : (urlGuest || localStorage.getItem('seen:last'));
-  const hasGuest = Boolean(resolvedGuestId);
-
-
-  // Render loading state if needed (optional, can be removed if loading is fast)
-  // if (isGuestIdLoading) { ... }
-
   try {
     return (
       <div className="min-h-screen bg-background">
@@ -470,9 +316,9 @@ const PublicReport = () => {
         <TestsSection />
         {!isMobile && (
           <div id="report-form" ref={reportFormRef}>
-            <ReportForm onReportCreated={(guestReportId, name, email) => {
-              // NEW: Unified success handling for desktop
-              setUnifiedSuccessData({ guestId: guestReportId, name, email, isSeen: false });
+            <ReportForm onReportCreated={() => {
+              // This callback can be simplified or used to show a simple "Submitted!" message
+              console.log("Desktop form submitted.");
             }} />
           </div>
         )}
@@ -480,12 +326,12 @@ const PublicReport = () => {
         <FeaturesSection onGetReportClick={handleGetReportClick} />
         <Footer />
 
-        {isMobile && !isMobileDrawerOpen && !unifiedSuccessData && !stripeSuccess.showSuccessModal && !stripeSuccess.showOriginalSuccessScreen && (
+        {isMobile && (
           <div
             className={`fixed bottom-6 right-6 z-50 transition-all duration-300 ${
-              showUnlockFab ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
+              showUnlockFab && !isMobileDrawerOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
             }`}
-            aria-hidden={!showUnlockFab}
+            aria-hidden={!showUnlockFab || isMobileDrawerOpen}
           >
             <Button
               onClick={handleGetReportClick}
@@ -501,36 +347,12 @@ const PublicReport = () => {
         <MobileReportSheet
           isOpen={isMobileDrawerOpen}
           onOpenChange={setIsMobileDrawerOpen}
-          onReportCreated={(data) => {
-            console.log('[PublicReport] onReportCreated (mobile):', data);
-            setUnifiedSuccessData({ guestId: data?.guestReportId, name: data?.name, email: data?.email, isSeen: false });
+          onReportCreated={() => {
+            // This callback can be simplified or used to show a simple "Submitted!" message
+            console.log("Mobile form submitted.");
+            setIsMobileDrawerOpen(false); // Close the sheet on submit
           }}
         />
-
-        {/* Payment Processing Success Message */}
-        {stripeSuccess.showSuccessModal && stripeSuccess.isProcessing && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl p-8 max-w-md w-full text-center">
-              <div className="w-12 h-12 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto mb-4"></div>
-              <h3 className="text-xl font-light text-gray-900 mb-2">Payment Successful!</h3>
-              <p className="text-gray-600">Loading your report...</p>
-            </div>
-          </div>
-        )}
-
-        {/* Success Screen - unified for both Stripe return and direct form submission */}
-        {(guestIdFromUrl || unifiedSuccessData) && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto flex items-center justify-center">
-              <SuccessScreen
-                ref={successScreenRef}
-                guestId={guestIdFromUrl || unifiedSuccessData?.guestId}
-                isSeen={unifiedSuccessData?.isSeen || false}
-                isLoading={false}
-              />
-            </div>
-          </div>
-        )}
       </div>
     );
   } catch (err: any) {

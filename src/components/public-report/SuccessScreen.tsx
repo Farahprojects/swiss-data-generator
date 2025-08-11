@@ -5,7 +5,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { hasSeen, markSeen } from "@/utils/seenReportTracker";
 import { sessionManager } from "@/utils/sessionManager";
 import { logUserError } from "@/services/errorService";
-import ErrorStateHandler from "@/components/public-report/ErrorStateHandler";
 
 interface SuccessScreenProps {
   isLoading: boolean;
@@ -163,6 +162,17 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
       if (frameRef.current) cancelAnimationFrame(frameRef.current);
     };
   }, [ref]);
+
+  if (modalOpened) return null;
+
+  // --- 7) Error surfaces (why we’re not progressing)
+  if (dbError) {
+    console.error(`[SuccessScreen] DB Error: ${dbError}`, { guestId });
+    return null; // Render nothing for now
+  }
+
+  // --- 8) UI (explicitly shows guest_id + email so we know uiReady truthfully reflects UI state)
+  const showLoading = isLoading || !dbReady;
 
   return (
     <div ref={ref} className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
