@@ -44,7 +44,9 @@ const PublicReport = () => {
   const reportFormRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const [showUnlockFab, setShowUnlockFab] = useState(false);
-  const [headerOpacity, setHeaderOpacity] = useState(1);
+  
+  
+  
   // SESSION DETECTION & RECOVERY - Runs once on mount
   useEffect(() => {
     // === MEMORY STATE DEBUG LOGGING ===
@@ -240,25 +242,8 @@ const PublicReport = () => {
   }, [isMobile]);
 
   // SuccessScreen owns modal opening; removed legacy auto-open effect
-  // Fade out header while scrolling the hero section, then bring it back after
-  useEffect(() => {
-    const handleScroll = () => {
-      const hero = heroRef.current;
-      if (!hero) return;
-      const heroHeight = hero.offsetHeight || window.innerHeight;
-      const y = window.scrollY;
-      const progress = Math.min(Math.max(y / heroHeight, 0), 1);
-      const opacity = y >= heroHeight ? 1 : 1 - progress;
-      setHeaderOpacity(opacity);
-    };
-    // Initialize on mount
-    handleScroll();
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, []);
-  
+
+
   const handleDismissCancelMessage = () => {
     setShowCancelledMessage(false);
     // Clear the status from URL
@@ -311,7 +296,7 @@ const PublicReport = () => {
         <header className="fixed top-0 left-0 z-50 p-6">
           <div 
             className="transition-opacity duration-300 ease-out"
-            style={{ opacity: headerOpacity }}
+
           >
             <Logo size="md" asLink={false} />
           </div>
