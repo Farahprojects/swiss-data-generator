@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, forwardRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useReportModal } from "@/contexts/ReportModalContext";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { markSeen } from "@/utils/seenReportTracker";
+import { hasSeen, markSeen } from "@/utils/seenReportTracker";
 
 interface SuccessScreenProps {
   isLoading?: boolean;
@@ -13,22 +13,42 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
   const { open } = useReportModal();
   const isMobile = useIsMobile();
 
-  // --- 1) Resolve guest_id: URL param first, then sessionStorage fallback
+  // --- 1) Resolve guest identity & success flag (single owner: SuccessScreen)
   const [guestId, setGuestId] = useState<string | null>(null);
+  const [successFlag, setSuccessFlag] = useState<"1" | null>(null);
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    const urlId = params.get("guest_id");
-    if (urlId) {
-      setGuestId(urlId);
-      return;
+    const sp = new URLSearchParams(window.location.search);
+    const fromUrlId = sp.get("guest_id");
+    const fromUrlSuccess = sp.get("success");
+
+    if (fromUrlId) {
+      setGuestId(fromUrlId);
+      try { sessionStorage.setItem("guestId", fromUrlId); } catch {}
+    } else {
+      let ssId: string | null = null;
+      try {
+        ssId = sessionStorage.getItem("guestId") || sessionStorage.getItem("guest_id") || null;
+        if (!ssId) {
+          const legacy = sessionStorage.getItem("reportUrl");
+          if (legacy) {
+            const u = new URL(legacy);
+            ssId = u.searchParams.get("guest_id");
+          }
+        }
+      } catch {}
+      if (ssId) setGuestId(ssId);
     }
-    try {
-      const storedId = sessionStorage.getItem("guest_id");
-      if (storedId) {
-        setGuestId(storedId);
-      }
-    } catch {}
+
+    if (fromUrlSuccess === "1") {
+      setSuccessFlag("1");
+      try { sessionStorage.setItem("success", "1"); } catch {}
+    } else {
+      try {
+        const ssSuccess = sessionStorage.getItem("success") === "1" ? "1" : null;
+        if (ssSuccess) setSuccessFlag("1");
+      } catch {}
+    }
   }, []);
 
   // --- 2) DB check (must succeed or we STOP)
@@ -81,7 +101,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
   const wsTriggeredRef = useRef(false);
 
   useEffect(() => {
-    if (modalOpened || isLoading || !uiReady || wsStartedRef.current || wsStoppedRef.current) return;
+    if (modalOpened || isLoading || successFlag === "1" || !uiReady || wsStartedRef.current || wsStoppedRef.current) return;
 
     wsStartedRef.current = true;
     const channel = supabase.channel(`ready_${guestId}`);
@@ -124,7 +144,30 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
         channelRef.current = null;
       }
     };
-  }, [uiReady, modalOpened, open, isLoading, guestId]);
+  }, [uiReady, modalOpened, open, isLoading, guestId, successFlag]);
+
+  // Success=1 bypass: open immediately without WS
+  useEffect(() => {
+    if (modalOpened) return;
+    if (successFlag === "1" && guestId) {
+      wsStoppedRef.current = true;
+      if (channelRef.current) { try { channelRef.current.unsubscribe(); } catch {} channelRef.current = null; }
+      try { markSeen(guestId); } catch {}
+      seenMarkedRef.current = true;
+      open(guestId);
+      setModalOpened(true);
+    }
+  }, [successFlag, guestId, modalOpened, open]);
+
+  // Auto-open if already seen and DB confirms existence
+  useEffect(() => {
+    if (modalOpened || successFlag === "1") return;
+    if (guestId && dbReady && hasSeen(guestId)) {
+      if (!seenMarkedRef.current) { try { markSeen(guestId); } catch {} seenMarkedRef.current = true; }
+      open(guestId);
+      setModalOpened(true);
+    }
+  }, [dbReady, guestId, modalOpened, successFlag, open]);
 
   // --- 5) Smooth scroll on desktop
   const frameRef = useRef<number>();
