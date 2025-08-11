@@ -141,7 +141,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
             isFree: false,
             stripeUrl: responseData.checkoutUrl
           }));
-          localStorage.setItem('stripe_return_location', `/report?guest_id=${responseData.guestReportId}`);
           console.log('[ReportForm] Saved paid guest data before redirect:', responseData.guestReportId);
           
           window.location.href = responseData.checkoutUrl;

@@ -163,7 +163,6 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
             isFree: false,
             stripeUrl: data.checkoutUrl
           }));
-          localStorage.setItem('stripe_return_location', `/report?guest_id=${data.guestReportId}`);
           console.log('[MobileSheet] Saved paid guest data before redirect:', data.guestReportId);
           
           window.location.href = data.checkoutUrl;
