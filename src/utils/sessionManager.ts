@@ -11,6 +11,8 @@ export class SessionManager {
   private static instance: SessionManager;
   private stateResetCallbacks: Map<string, () => void> = new Map();
   private isClearing = false;
+  private intervalIds: Set<number> = new Set();
+  private timeoutIds: Set<number> = new Set();
 
   private constructor() {}
 
@@ -59,6 +61,7 @@ export class SessionManager {
       await this.clearReportCache();
       await this.clearModalStates();
       this.clearUrlParameters();
+      await this.clearAllTimers();
 
       // Phase 2: Navigation reset
       if (!preserveNavigation) {
@@ -266,6 +269,55 @@ export class SessionManager {
       console.error('❌ Navigation failed:', error);
       // Ultimate fallback
       window.location.href = '/';
+    }
+  }
+
+  /**
+   * Timer management
+   */
+  registerInterval(id: number) {
+    try {
+      this.intervalIds.add(id);
+    } catch {}
+  }
+
+  registerTimeout(id: number) {
+    try {
+      this.timeoutIds.add(id);
+    } catch {}
+  }
+
+  unregisterInterval(id: number) {
+    try {
+      this.intervalIds.delete(id);
+      clearInterval(id);
+    } catch {}
+  }
+
+  unregisterTimeout(id: number) {
+    try {
+      this.timeoutIds.delete(id);
+      clearTimeout(id);
+    } catch {}
+  }
+
+  private async clearAllTimers(): Promise<void> {
+    try {
+      this.intervalIds.forEach((id) => {
+        try { clearInterval(id); } catch {}
+      });
+      this.timeoutIds.forEach((id) => {
+        try { clearTimeout(id); } catch {}
+      });
+      this.intervalIds.clear();
+      this.timeoutIds.clear();
+      
+      // Best-effort clear of possible stray timers in dev tools overrides
+      if (typeof window !== 'undefined') {
+        // No reliable way to enumerate all timers; we rely on registration API
+      }
+    } catch (error) {
+      console.warn('Timer cleanup encountered an issue:', error);
     }
   }
 
