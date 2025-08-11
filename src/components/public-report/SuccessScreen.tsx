@@ -74,9 +74,9 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
     setGuestId(resolved?.guestId || null);
     setReportUrl(resolved?.reportUrl || null);
     
-    // Log final resolution and URL presence
+    // Log final resolution and URL presence with proper seen check
     if (resolved?.guestId) {
-      const wasSeen = localStorage.getItem(`seen:${resolved.guestId}`) !== null;
+      const wasSeen = hasSeen(resolved.guestId);
       console.log('🔎 [DEBUG][SuccessScreen] Final guest resolution:', {
         guestId: resolved.guestId,
         hasReportUrl: Boolean(resolved.reportUrl),
@@ -84,6 +84,15 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
         wasSeen,
         isMobile,
         timestamp: new Date().toISOString(),
+      });
+      
+      // Log the exact localStorage state for debugging
+      console.log('🔎 [DEBUG][SuccessScreen] LocalStorage seen check details:', {
+        directKey: `seen:${resolved.guestId}`,
+        directValue: localStorage.getItem(`seen:${resolved.guestId}`),
+        lastKey: 'seen:last', 
+        lastValue: localStorage.getItem('seen:last'),
+        hasSeenResult: wasSeen
       });
     } else {
       console.log('🔎 [DEBUG][SuccessScreen] No guest ID resolved (URL/session/seen)');
@@ -142,6 +151,15 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
   useEffect(() => {
     if (modalOpened || isLoading || !uiReady || wsStartedRef.current || wsStoppedRef.current) return;
 
+    console.log('🌐 [DEBUG][SuccessScreen] Starting WebSocket listener (auto-open did not trigger)', {
+      modalOpened,
+      isLoading,
+      uiReady,
+      guestId,
+      wsAlreadyStarted: wsStartedRef.current,
+      wsAlreadyStopped: wsStoppedRef.current
+    });
+
     wsStartedRef.current = true;
     const channel = supabase.channel(`ready_${guestId}`);
     channelRef.current = channel;
@@ -196,8 +214,30 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
   // Auto-open if already seen and DB confirms existence
   useEffect(() => {
     if (modalOpened) return;
-    if (guestId && dbReady && hasSeen(guestId)) {
-      if (!seenMarkedRef.current) { try { markSeen(guestId); } catch {} seenMarkedRef.current = true; }
+    
+    const wasSeenResult = guestId ? hasSeen(guestId) : false;
+    
+    console.log('🚀 [DEBUG][SuccessScreen] Auto-open decision logic:', {
+      modalOpened,
+      guestId,
+      dbReady,
+      wasSeenResult,
+      shouldAutoOpen: guestId && dbReady && wasSeenResult,
+      conditions: {
+        hasGuestId: Boolean(guestId),
+        dbIsReady: dbReady,
+        wasPreviouslySeen: wasSeenResult
+      }
+    });
+    
+    if (guestId && dbReady && wasSeenResult) {
+      console.log('🚀 [DEBUG][SuccessScreen] ✅ AUTO-OPEN TRIGGERED - Bypassing WebSocket wait');
+      
+      if (!seenMarkedRef.current) { 
+        try { markSeen(guestId); } catch {} 
+        seenMarkedRef.current = true; 
+      }
+      
       console.log('🔎 [DEBUG][SuccessScreen] seen auto-open -> open()', {
         guestId,
         uiReady,
@@ -205,8 +245,11 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
         isLoading,
         ts: new Date().toISOString()
       });
+      
       open(guestId);
       setModalOpened(true);
+    } else {
+      console.log('🚀 [DEBUG][SuccessScreen] ❌ AUTO-OPEN SKIPPED - Will wait for WebSocket');
     }
   }, [dbReady, guestId, modalOpened, open]);
 
