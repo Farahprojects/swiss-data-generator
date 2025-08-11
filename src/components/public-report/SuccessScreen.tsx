@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useReportModal } from "@/contexts/ReportModalContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { hasSeen, markSeen } from "@/utils/seenReportTracker";
+import { sessionManager } from "@/utils/sessionManager";
 
 interface SuccessScreenProps {
   isLoading: boolean;
@@ -20,24 +21,77 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    // === MEMORY STATE DEBUG LOGGING FOR MOBILE ===
+    console.log('🔎 [DEBUG][SuccessScreen] Memory state on component mount:');
+    try {
+      const sessionStatus = sessionManager.getSessionStatus();
+      console.log('🔎 [DEBUG][SuccessScreen] SessionManager status:', sessionStatus);
+      
+      // Log current URL and params
+      console.log('🔎 [DEBUG][SuccessScreen] Current URL:', window.location.href);
+      console.log('🔎 [DEBUG][SuccessScreen] URL params:', Object.fromEntries(new URLSearchParams(window.location.search)));
+      
+      // Log all seen-related localStorage
+      const seenKeys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('seen:')) {
+          seenKeys.push(`${key}=${localStorage.getItem(key)}`);
+        }
+      }
+      console.log('🔎 [DEBUG][SuccessScreen] Seen keys in localStorage:', seenKeys);
+      
+      // Log sessionStorage guestId
+      const sessionGuestId = sessionStorage.getItem('guestId') || sessionStorage.getItem('guest_id');
+      console.log('🔎 [DEBUG][SuccessScreen] SessionStorage guestId:', sessionGuestId);
+      
+    } catch (error) {
+      console.error('🔎 [DEBUG][SuccessScreen] Memory logging error:', error);
+    }
+
     const resolveGuestId = (): string | null => {
       const q = new URLSearchParams(window.location.search);
       const fromUrl = q.get("guest_id");
-      if (fromUrl) return fromUrl;
+      if (fromUrl) {
+        console.log('🔎 [DEBUG][SuccessScreen] Guest ID resolved from URL:', fromUrl);
+        return fromUrl;
+      }
 
       try {
         const last = localStorage.getItem("seen:last");
-        if (last) return last;
+        if (last) {
+          console.log('🔎 [DEBUG][SuccessScreen] Guest ID resolved from seen:last:', last);
+          return last;
+        }
         for (let i = 0; i < localStorage.length; i++) {
           const k = localStorage.key(i)!;
-          if (k && k.startsWith("seen:") && k !== "seen:last") return k.slice(5);
+          if (k && k.startsWith("seen:") && k !== "seen:last") {
+            const foundId = k.slice(5);
+            console.log('🔎 [DEBUG][SuccessScreen] Guest ID resolved from seen scan:', foundId, 'from key:', k);
+            return foundId;
+          }
         }
-      } catch {}
+      } catch (error) {
+        console.error('🔎 [DEBUG][SuccessScreen] Error resolving guest ID:', error);
+      }
+      console.log('🔎 [DEBUG][SuccessScreen] No guest ID resolved');
       return null;
     };
 
-    setGuestId(resolveGuestId());
-  }, []);
+    const resolvedId = resolveGuestId();
+    setGuestId(resolvedId);
+    
+    // Log final resolution and any stale data indicators
+    if (resolvedId) {
+      const hasSeen = localStorage.getItem(`seen:${resolvedId}`) !== null;
+      console.log('🔎 [DEBUG][SuccessScreen] Final guest ID resolution:', {
+        guestId: resolvedId,
+        wasSeen: hasSeen,
+        isMobile: isMobile,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [isMobile]);
 
   // --- 2) DB check (must succeed or we STOP)
   const [guestReportData, setGuestReportData] = useState<any>(null);

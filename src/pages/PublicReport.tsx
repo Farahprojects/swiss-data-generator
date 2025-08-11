@@ -49,7 +49,39 @@ const PublicReport = () => {
   
   // SESSION DETECTION & RECOVERY - Runs once on mount
   useEffect(() => {
+    // === MEMORY STATE DEBUG LOGGING ===
+    console.log('🔎 [DEBUG][PublicReport] Memory state on mount/refresh:');
+    try {
+      const sessionStatus = sessionManager.getSessionStatus();
+      console.log('🔎 [DEBUG][PublicReport] SessionManager status:', sessionStatus);
+      
+      // Log all localStorage keys
+      const localStorageKeys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key) localStorageKeys.push(`${key}=${localStorage.getItem(key)}`);
+      }
+      console.log('🔎 [DEBUG][PublicReport] localStorage keys:', localStorageKeys);
+      
+      // Log all sessionStorage keys
+      const sessionStorageKeys = [];
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key) sessionStorageKeys.push(`${key}=${sessionStorage.getItem(key)}`);
+      }
+      console.log('🔎 [DEBUG][PublicReport] sessionStorage keys:', sessionStorageKeys);
+      
+      // Check for multiple seen keys (stale data indicator)
+      const seenKeys = localStorageKeys.filter(k => k.startsWith('seen:'));
+      if (seenKeys.length > 2) { // seen:last + one active should be normal
+        console.warn('🔎 [DEBUG][PublicReport] Multiple seen keys detected (potential stale data):', seenKeys);
+      }
+    } catch (error) {
+      console.error('🔎 [DEBUG][PublicReport] Memory logging error:', error);
+    }
+
     if (guestIdFromUrl || isOpen) {
+      console.log('🔎 [DEBUG][PublicReport] Skipping recovery - URL guest ID or modal already open', { guestIdFromUrl, isOpen });
       return; // A guestId in the URL is the source of truth, or modal is already open.
     }
 
@@ -60,16 +92,19 @@ const PublicReport = () => {
         const key = localStorage.key(i);
         if (key && key.startsWith('seen:')) {
           recoveredId = key.split(':')[1];
+          console.log('🔎 [DEBUG][PublicReport] Found seen key during recovery scan:', key, 'extracted ID:', recoveredId);
           break;
         }
       }
     } catch (e) {
-      console.warn('[Recovery] Failed to scan localStorage for a seen report.', e);
+      console.warn('🔎 [DEBUG][PublicReport] Failed to scan localStorage for seen report:', e);
     }
 
     if (recoveredId) {
-      console.log(`[Recovery] Found seen report ${recoveredId} in localStorage. Handing off to SuccessScreen.`);
+      console.log('🔎 [DEBUG][PublicReport] Recovery successful - handing off to SuccessScreen:', recoveredId);
       setUnifiedSuccessData({ guestId: recoveredId, name: '', email: '', isSeen: true });
+    } else {
+      console.log('🔎 [DEBUG][PublicReport] No recovery ID found - clean state');
     }
   }, [isOpen, guestIdFromUrl]);
 
