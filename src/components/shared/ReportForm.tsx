@@ -122,16 +122,6 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         }
         if (responseData?.checkoutUrl && responseData?.guestReportId) {
           window.location.href = responseData.checkoutUrl;
-        } else if (responseData?.reportUrl && responseData?.guestReportId) {
-          // FREE REPORTS: Save URL from initiate-report-flow
-          sessionStorage.setItem('guestId', responseData.guestReportId);
-          sessionStorage.setItem('reportUrl', responseData.reportUrl);
-          console.log('[ReportForm] Saved free report URL:', responseData.reportUrl);
-          
-          onReportCreated?.(responseData.guestReportId, (data as any).name, (data as any).email);
-          clearTimeout(timeoutId);
-          setIsProcessing(false);
-        } else if (responseData?.success || responseData?.guestReportId) {
           // Fallback for legacy response format
           onReportCreated?.(responseData.guestReportId, (data as any).name, (data as any).email);
           clearTimeout(timeoutId);

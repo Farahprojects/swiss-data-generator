@@ -47,68 +47,24 @@ const PublicReport = () => {
   
   
   
-  // SESSION DETECTION & RECOVERY - Runs once on mount
+  // SESSION DETECTION & RECOVERY - minimal: URL first, else seen:last
   useEffect(() => {
-    // === MEMORY STATE DEBUG LOGGING ===
-    console.log('🔎 [DEBUG][PublicReport] Memory state on mount/refresh:');
-    try {
-      const sessionStatus = sessionManager.getSessionStatus();
-      console.log('🔎 [DEBUG][PublicReport] SessionManager status:', sessionStatus);
-      
-      // Log all localStorage keys
-      const localStorageKeys = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key) localStorageKeys.push(`${key}=${localStorage.getItem(key)}`);
-      }
-      console.log('🔎 [DEBUG][PublicReport] localStorage keys:', localStorageKeys);
-      
-      // Log all sessionStorage keys
-      const sessionStorageKeys = [];
-      for (let i = 0; i < sessionStorage.length; i++) {
-        const key = sessionStorage.key(i);
-        if (key) sessionStorageKeys.push(`${key}=${sessionStorage.getItem(key)}`);
-      }
-      console.log('🔎 [DEBUG][PublicReport] sessionStorage keys:', sessionStorageKeys);
-      
-      // Check for multiple seen keys (stale data indicator)
-      const seenKeys = localStorageKeys.filter(k => k.startsWith('seen:'));
-      if (seenKeys.length > 2) { // seen:last + one active should be normal
-        console.warn('🔎 [DEBUG][PublicReport] Multiple seen keys detected (potential stale data):', seenKeys);
-        // Clear stale data and stop recovery attempt
-        sessionManager.clearSession({ redirectTo: '/report', preserveNavigation: false, showProgress: false });
-        return;
-      }
-    } catch (error) {
-      console.error('🔎 [DEBUG][PublicReport] Memory logging error:', error);
+    if (guestIdFromUrl || isOpen) return;
+
+    const last = localStorage.getItem('seen:last');
+    const hasSeenDirect = last ? !!localStorage.getItem(`seen:${last}`) : false;
+
+    if (last) {
+      setUnifiedSuccessData({ guestId: last, name: '', email: '', isSeen: hasSeenDirect });
     }
 
-    if (guestIdFromUrl || isOpen) {
-      console.log('🔎 [DEBUG][PublicReport] Skipping recovery - URL guest ID or modal already open', { guestIdFromUrl, isOpen });
-      return; // A guestId in the URL is the source of truth, or modal is already open.
-    }
-
-    // Fallback: Scan localStorage for a "seen:" report to handle refresh.
-    let recoveredId: string | null = null;
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('seen:')) {
-          recoveredId = key.split(':')[1];
-          console.log('🔎 [DEBUG][PublicReport] Found seen key during recovery scan:', key, 'extracted ID:', recoveredId);
-          break;
-        }
-      }
-    } catch (e) {
-      console.warn('🔎 [DEBUG][PublicReport] Failed to scan localStorage for seen report:', e);
-    }
-
-    if (recoveredId) {
-      console.log('🔎 [DEBUG][PublicReport] Recovery successful - handing off to SuccessScreen:', recoveredId);
-      setUnifiedSuccessData({ guestId: recoveredId, name: '', email: '', isSeen: true });
-    } else {
-      console.log('🔎 [DEBUG][PublicReport] No recovery ID found - clean state');
-    }
+    console.log('[ReportDetect]', {
+      url: window.location.href,
+      seenLast: last,
+      hasSeenDirect,
+      decidedGuestId: last,
+      autoOpen: hasSeenDirect
+    });
   }, [isOpen, guestIdFromUrl]);
 
   // Process Stripe return immediately if detected
@@ -166,7 +122,7 @@ const PublicReport = () => {
       triggerReportGeneration(stripeSuccess.guestId, stripeSuccess.sessionId || undefined);
       
       // Immediately transition to success screen with guest ID
-      try { sessionStorage.removeItem('pendingFlow'); } catch {}
+      
       setStripeSuccess({
         showSuccessModal: false,
         guestId: stripeSuccess.guestId,
@@ -266,11 +222,10 @@ const PublicReport = () => {
   };
   // Seen-flag routing helpers
   
-  // Resolve guest id from URL or session storage (single source of truth)
+  // Resolve guest id from URL or seen:last
   const _sp = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search);
   const urlGuest = _sp ? _sp.get('guest_id') : null;
-  
-  const resolvedGuestId = typeof window === 'undefined' ? null : (urlGuest || sessionStorage.getItem('guestId'));
+  const resolvedGuestId = typeof window === 'undefined' ? null : (urlGuest || localStorage.getItem('seen:last'));
   const hasGuest = Boolean(resolvedGuestId);
 
 

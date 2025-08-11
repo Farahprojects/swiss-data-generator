@@ -140,9 +140,6 @@ export class SessionManager {
       'countdown_shown', // Added to catch all countdown keys
 
       // Stripe and flow state
-      'stripe_return_location',
-      'pendingFlow',
-      'report:oneTimeCleanDone'
     ];
 
     storageKeys.forEach(key => {
