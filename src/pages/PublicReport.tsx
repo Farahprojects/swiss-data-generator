@@ -44,6 +44,33 @@ const PublicReport = () => {
   const reportFormRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const [showUnlockFab, setShowUnlockFab] = useState(false);
+
+  // REFRESH_TEST_START — forceGuest override (remove when done)
+  const openReportModalByGuestId = openReportModal;
+  (function forceGuestOverride() {
+    if (typeof window === 'undefined') return;
+    try {
+      const q = new URLSearchParams(window.location.search);
+      const force = q.get('forceGuest');
+      if (!force) return;
+
+      // Mark as seen so refresh works with our normal detector
+      localStorage.setItem(`seen:${force}`, String(Date.now()));
+      localStorage.setItem('seen:last', force);
+      console.log('[REFRESH_TEST] forcing guest:', force);
+
+      // Open immediately (no WS)
+      openReportModalByGuestId?.(force);
+
+      // Clean the URL (remove the test param) so future reloads are “normal”
+      q.delete('forceGuest');
+      const cleaned = window.location.pathname + (q.toString() ? `?${q}` : '') + window.location.hash;
+      window.history.replaceState(null, '', cleaned);
+    } catch (e) {
+      console.warn('[REFRESH_TEST] forceGuest override failed:', e);
+    }
+  })();
+  // REFRESH_TEST_END
   
   
   
