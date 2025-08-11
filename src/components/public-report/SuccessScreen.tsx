@@ -210,28 +210,17 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
       }
     };
   }, [uiReady, modalOpened, open, isLoading, guestId]);
-  // Automatically log and cleanup on snag errors
-  const snagHandledRef = useRef(false);
+  // Log errors but don't auto-redirect to avoid infinite loops
   useEffect(() => {
-    if (!dbError) return;
-    if (snagHandledRef.current) return;
-    snagHandledRef.current = true;
-    (async () => {
-      try {
-        if (guestId) {
-          await logUserError({ guestReportId: guestId, errorType: 'success_screen_snag', errorMessage: dbError });
-        }
-      } catch (e) {
-        console.warn('[SuccessScreen] Failed to log snag error', e);
-      } finally {
-        try {
-          await sessionManager.clearSession({ redirectTo: '/report', preserveNavigation: false, showProgress: false });
-        } catch (e) {
-          console.warn('[SuccessScreen] Failed to clear session after snag', e);
-          try { window.location.href = '/report'; } catch {}
-        }
-      }
-    })();
+    if (!dbError || !guestId) return;
+    
+    logUserError({ 
+      guestReportId: guestId, 
+      errorType: 'success_screen_snag', 
+      errorMessage: dbError 
+    }).catch(e => {
+      console.warn('[SuccessScreen] Failed to log snag error', e);
+    });
   }, [dbError, guestId]);
 
   // Auto-open if already seen and DB confirms existence

@@ -75,6 +75,9 @@ const PublicReport = () => {
       const seenKeys = localStorageKeys.filter(k => k.startsWith('seen:'));
       if (seenKeys.length > 2) { // seen:last + one active should be normal
         console.warn('🔎 [DEBUG][PublicReport] Multiple seen keys detected (potential stale data):', seenKeys);
+        // Clear stale data and stop recovery attempt
+        sessionManager.clearSession({ redirectTo: '/report', preserveNavigation: false, showProgress: false });
+        return;
       }
     } catch (error) {
       console.error('🔎 [DEBUG][PublicReport] Memory logging error:', error);
