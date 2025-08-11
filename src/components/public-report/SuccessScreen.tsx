@@ -15,37 +15,28 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
   const { open } = useReportModal();
   const isMobile = useIsMobile();
 
-  // --- 1) Resolve guest identity & success flag (single owner: SuccessScreen)
+  // --- 1) Resolve guest identity (seen-based; ignore success flag)
   const [guestId, setGuestId] = useState<string | null>(null);
-  const [successFlag, setSuccessFlag] = useState<"1" | null>(null);
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    const resolveGuestId = (): string | null => {
+      const q = new URLSearchParams(window.location.search);
+      const fromUrl = q.get("guest_id");
+      if (fromUrl) return fromUrl;
 
-    const sp = new URLSearchParams(window.location.search);
-    const fromUrlId = sp.get("guest_id");
-    const fromUrlSuccess = sp.get("success");
-
-    if (fromUrlId) {
-      setGuestId(fromUrlId);
-      try { sessionStorage.setItem("guestId", fromUrlId); } catch {}
-    } else {
-      let ssId: string | null = null;
       try {
-        ssId = sessionStorage.getItem("guestId") || sessionStorage.getItem("guest_id") || null;
+        const last = localStorage.getItem("seen:last");
+        if (last) return last;
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i)!;
+          if (k && k.startsWith("seen:") && k !== "seen:last") return k.slice(5);
+        }
       } catch {}
-      if (ssId) setGuestId(ssId);
-    }
+      return null;
+    };
 
-    if (fromUrlSuccess === "1") {
-      setSuccessFlag("1");
-      try { sessionStorage.setItem("success", "1"); } catch {}
-    } else {
-      try {
-        const ssSuccess = sessionStorage.getItem("success") === "1" ? "1" : null;
-        if (ssSuccess) setSuccessFlag("1");
-      } catch {}
-    }
+    setGuestId(resolveGuestId());
   }, []);
 
   // --- 2) DB check (must succeed or we STOP)
@@ -98,7 +89,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
   const wsTriggeredRef = useRef(false);
 
   useEffect(() => {
-    if (modalOpened || isLoading || successFlag === "1" || !uiReady || wsStartedRef.current || wsStoppedRef.current) return;
+    if (modalOpened || isLoading || !uiReady || wsStartedRef.current || wsStoppedRef.current) return;
 
     wsStartedRef.current = true;
     const channel = supabase.channel(`ready_${guestId}`);
@@ -120,7 +111,6 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
           uiReady,
           dbReady,
           isLoading,
-          successFlag,
           ts: new Date().toISOString()
         });
         open(guestId as string);
@@ -149,32 +139,12 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
         channelRef.current = null;
       }
     };
-  }, [uiReady, modalOpened, open, isLoading, guestId, successFlag]);
+  }, [uiReady, modalOpened, open, isLoading, guestId]);
 
-  // Success=1 bypass: open immediately without WS
-  useEffect(() => {
-    if (modalOpened) return;
-    if (successFlag === "1" && guestId) {
-      wsStoppedRef.current = true;
-      if (channelRef.current) { try { channelRef.current.unsubscribe(); } catch {} channelRef.current = null; }
-      try { markSeen(guestId); } catch {}
-      seenMarkedRef.current = true;
-      console.log('🔎 [DEBUG][SuccessScreen] success=1 bypass -> open()', {
-        guestId,
-        uiReady,
-        dbReady,
-        isLoading,
-        successFlag,
-        ts: new Date().toISOString()
-      });
-      open(guestId);
-      setModalOpened(true);
-    }
-  }, [successFlag, guestId, modalOpened, open]);
 
   // Auto-open if already seen and DB confirms existence
   useEffect(() => {
-    if (modalOpened || successFlag === "1") return;
+    if (modalOpened) return;
     if (guestId && dbReady && hasSeen(guestId)) {
       if (!seenMarkedRef.current) { try { markSeen(guestId); } catch {} seenMarkedRef.current = true; }
       console.log('🔎 [DEBUG][SuccessScreen] seen auto-open -> open()', {
@@ -182,13 +152,12 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
         uiReady,
         dbReady,
         isLoading,
-        successFlag,
         ts: new Date().toISOString()
       });
       open(guestId);
       setModalOpened(true);
     }
-  }, [dbReady, guestId, modalOpened, successFlag, open]);
+  }, [dbReady, guestId, modalOpened, open]);
 
   // --- 5) Smooth scroll on desktop
   const frameRef = useRef<number>();
