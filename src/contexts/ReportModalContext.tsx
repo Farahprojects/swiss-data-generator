@@ -42,18 +42,10 @@ export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
   
   const open = useCallback(async (guestReportId: string, metadata?: any) => {
     if (!guestReportId) return console.warn('[ModalCTX] open called with null guestReportId');
-    try {
-      const stack = new Error().stack;
-      console.log('🔎 [DEBUG][ReportModalContext.open] invoked', {
-        guestReportId,
-        metadata,
-        ts: new Date().toISOString(),
-        href: typeof window !== 'undefined' ? window.location.href : 'ssr'
-      });
-      if (stack) console.log('🔎 [DEBUG][ReportModalContext.open] stack', stack);
-    } catch {}
 
     try {
+      sessionStorage.setItem('guestId', guestReportId);
+      // success flag removed; rely on seen flags only
       localStorage.setItem(`seen:${guestReportId}`, '1');
       localStorage.setItem('seen:last', guestReportId);
       console.log("[SeenFlag] wrote", `seen:${guestReportId}`, localStorage.getItem(`seen:${guestReportId}`));
