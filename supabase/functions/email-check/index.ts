@@ -1,7 +1,7 @@
 
 // deno-lint-ignore-file 
 // ────────────────────────────────────────────────────────────────────────────────
-//  check-email-change.ts   – full verbose version
+//  check-email-change.ts   – full verbose
 // ────────────────────────────────────────────────────────────────────────────────
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
