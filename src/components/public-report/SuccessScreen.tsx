@@ -287,11 +287,28 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
 
   // --- 7) Error surfaces (why we’re not progressing)
   if (dbError) {
+    const errorState = {
+      type: 'guest_report_load_error' as const,
+      case_number: '',
+      message: dbError,
+      requires_error_logging: true,
+      requires_session_cleanup: true
+    };
+
     return (
-      <div ref={ref} className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-4">
-        <h1 className="text-2xl font-light text-gray-900">We hit a snag</h1>
-        <p className="text-sm text-red-600 whitespace-pre-wrap">{dbError}</p>
-        <p className="text-xs text-gray-500">Polling blocked until the guest report is found.</p>
+      <div ref={ref} className="max-w-md w-full">
+        <ErrorStateHandler 
+          errorState={errorState}
+          onTriggerErrorLogging={(guestReportId: string, email: string) => {
+            if (guestId) {
+              logUserError({
+                guestReportId: guestId,
+                errorType: 'guest_report_load_error',
+                errorMessage: dbError
+              });
+            }
+          }}
+        />
       </div>
     );
   }
