@@ -31,6 +31,21 @@ const PublicReport = () => {
   const status = urlParams.get("status");
   const isStripeSuccessReturn = status === 'success' && !!sessionId;
 
+  // Log detection and state on mount for diagnostics
+  useEffect(() => {
+    console.log('[Detection] Checking for guestId in URL on mount. Found:', guestIdFromUrl);
+    try {
+      const snapshot = {
+        url: window.location.href,
+        localStorage: { ...localStorage },
+        sessionStorage: { ...sessionStorage },
+      };
+      console.log('[StateMemoryCheck] Snapshot on mount:', snapshot);
+    } catch (e) {
+      console.warn('[StateMemoryCheck] Failed to build snapshot:', e);
+    }
+  }, [guestIdFromUrl]);
+
   // ALL HOOKS MUST BE DECLARED FIRST - NEVER INSIDE TRY-CATCH
 
   const [showCancelledMessage, setShowCancelledMessage] = useState(false);
