@@ -18,6 +18,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
 
   // --- 1) Resolve guest identity (seen-based; ignore success flag)
   const [guestId, setGuestId] = useState<string | null>(null);
+  const [guestSessionData, setGuestSessionData] = useState<any | null>(null);
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -49,47 +50,44 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
       console.error('🔎 [DEBUG][SuccessScreen] Memory logging error:', error);
     }
 
-    const resolveGuestId = (): string | null => {
+    const resolveGuestData = (): { guestId: string, guestData: any } | null => {
       const q = new URLSearchParams(window.location.search);
-      const fromUrl = q.get("guest_id");
-      if (fromUrl) {
-        console.log('🔎 [DEBUG][SuccessScreen] Guest ID resolved from URL:', fromUrl);
-        return fromUrl;
+      const urlGuest = q.get('guest_id');
+
+      const sessionGuest = sessionStorage.getItem('guestId');
+      const sessionDataRaw = sessionStorage.getItem('guestData');
+      let parsed: any = null;
+      try { parsed = sessionDataRaw ? JSON.parse(sessionDataRaw) : null; } catch { parsed = null; }
+
+      const guestId = urlGuest || sessionGuest;
+      if (guestId && parsed) {
+        return { guestId, guestData: parsed };
       }
 
-      try {
-        const last = localStorage.getItem("seen:last");
-        if (last) {
-          console.log('🔎 [DEBUG][SuccessScreen] Guest ID resolved from seen:last:', last);
-          return last;
-        }
-        for (let i = 0; i < localStorage.length; i++) {
-          const k = localStorage.key(i)!;
-          if (k && k.startsWith("seen:") && k !== "seen:last") {
-            const foundId = k.slice(5);
-            console.log('🔎 [DEBUG][SuccessScreen] Guest ID resolved from seen scan:', foundId, 'from key:', k);
-            return foundId;
-          }
-        }
-      } catch (error) {
-        console.error('🔎 [DEBUG][SuccessScreen] Error resolving guest ID:', error);
+      const lastSeen = localStorage.getItem('seen:last');
+      if (lastSeen) {
+        return { guestId: lastSeen, guestData: null };
       }
-      console.log('🔎 [DEBUG][SuccessScreen] No guest ID resolved');
+
       return null;
     };
 
-    const resolvedId = resolveGuestId();
-    setGuestId(resolvedId);
+    const resolved = resolveGuestData();
+    setGuestId(resolved?.guestId || null);
+    setGuestSessionData(resolved?.guestData || null);
     
-    // Log final resolution and any stale data indicators
-    if (resolvedId) {
-      const hasSeen = localStorage.getItem(`seen:${resolvedId}`) !== null;
-      console.log('🔎 [DEBUG][SuccessScreen] Final guest ID resolution:', {
-        guestId: resolvedId,
-        wasSeen: hasSeen,
-        isMobile: isMobile,
-        timestamp: new Date().toISOString()
+    // Log final resolution and session data presence
+    if (resolved?.guestId) {
+      const wasSeen = localStorage.getItem(`seen:${resolved.guestId}`) !== null;
+      console.log('🔎 [DEBUG][SuccessScreen] Final guest resolution:', {
+        guestId: resolved.guestId,
+        hasSessionData: Boolean(resolved.guestData),
+        wasSeen,
+        isMobile,
+        timestamp: new Date().toISOString(),
       });
+    } else {
+      console.log('🔎 [DEBUG][SuccessScreen] No guest ID resolved (URL/session/seen)');
     }
   }, [isMobile]);
 
