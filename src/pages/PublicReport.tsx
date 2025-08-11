@@ -12,12 +12,14 @@ import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
 import { useIsMobile } from '@/hooks/use-mobile';
 import MobileReportSheet from '@/components/public-report/MobileReportSheet';
+import ReportFlowChecker from '@/components/public-report/ReportFlowChecker';
 
 const PublicReport = () => {
   const location = useLocation();
   const isMobile = useIsMobile();
   const [showCancelledMessage, setShowCancelledMessage] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const [activeGuestId, setActiveGuestId] = useState<string | null>(null);
   
   const reportFormRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
@@ -316,9 +318,9 @@ const PublicReport = () => {
         <TestsSection />
         {!isMobile && (
           <div id="report-form" ref={reportFormRef}>
-            <ReportForm onReportCreated={() => {
-              // This callback can be simplified or used to show a simple "Submitted!" message
-              console.log("Desktop form submitted.");
+            <ReportForm onReportCreated={(guestReportId) => {
+              console.log("Desktop form submitted. Guest ID:", guestReportId);
+              setActiveGuestId(guestReportId);
             }} />
           </div>
         )}
@@ -347,12 +349,23 @@ const PublicReport = () => {
         <MobileReportSheet
           isOpen={isMobileDrawerOpen}
           onOpenChange={setIsMobileDrawerOpen}
-          onReportCreated={() => {
-            // This callback can be simplified or used to show a simple "Submitted!" message
-            console.log("Mobile form submitted.");
+          onReportCreated={(guestReportId) => {
+            console.log("Mobile form submitted. Guest ID:", guestReportId);
+            setActiveGuestId(guestReportId);
             setIsMobileDrawerOpen(false); // Close the sheet on submit
           }}
         />
+
+        {activeGuestId && (
+          <ReportFlowChecker 
+            guestId={activeGuestId}
+            onPaid={(paidGuestId) => {
+              console.log(`Report ${paidGuestId} is paid! Ready to show success screen.`);
+              // Here we would trigger the success screen
+              setActiveGuestId(null); // Stop checking once paid
+            }}
+          />
+        )}
       </div>
     );
   } catch (err: any) {

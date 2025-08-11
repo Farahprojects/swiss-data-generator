@@ -206,8 +206,10 @@ serve(async (req) => {
 
     const ms = Date.now() - start;
 
-    // 5) Free report → kick translator-edge and return
+    // For both free and paid reports, we now just return the guest_id.
+    // A new frontend "checker" component will handle the subsequent flow.
     if (isFreeReport) {
+      // For free reports, we still kick off the report generation in the background.
       const translatorPayload = {
         ...normalizedReportData,
         request: smartRequest,
@@ -222,63 +224,31 @@ serve(async (req) => {
       debug('[initiate-report-flow] Translator-edge payload (free)', translatorPayload);
       void supabaseAdmin.functions.invoke('translator-edge', { body: translatorPayload });
 
-      const reportUrl = `${SITE_URL}/report?guest_id=${guestReportId}&success=1`;
-      console.log('✅ [PERF] Free report completed', {
+      console.log('✅ [PERF] Free report initiated', {
         timestamp: new Date().toISOString(),
         guestReportId,
         processing_time_ms: ms,
         reportType: reportData.reportType
       });
-      
-      return ok({
-        guestReportId,
-        user_id: null,
-        finalPrice: final,
-        isFreeReport: true,
-        reportUrl,
-        processing_time_ms: ms
-      });
-    }
-
-    // 6) Paid report → create checkout
-    try {
-      const checkoutPayload = {
-        guest_report_id: guestReportId,
-        amount: final,
-        email: reportData.email,
-        description: "Astrology Report",
-        successUrl: `${SITE_URL}/stripe-return?guest_id=${guestReportId}&session_id={CHECKOUT_SESSION_ID}&status=success`,
-        cancelUrl: `${SITE_URL}/stripe-return?guest_id=${guestReportId}&status=cancelled`,
-      };
-      debug('[initiate-report-flow] create-checkout payload (paid)', checkoutPayload);
-      const { data: checkoutData, error: checkoutError } = await supabaseAdmin.functions.invoke('create-checkout', {
-        body: checkoutPayload,
-      });
-
-      if (checkoutError || !checkoutData?.url) return oops('Failed to create checkout session');
-
-      console.log('💳 [PERF] Paid report checkout created', {
+    } else {
+      // For paid reports, we simply record it and wait for the checker to handle payment.
+      console.log('💳 [PERF] Paid report initiated, awaiting payment', {
         timestamp: new Date().toISOString(),
         guestReportId,
         processing_time_ms: ms,
         finalPrice: final,
         reportType: reportData.reportType
       });
-
-      return ok({
-        guestReportId,
-        user_id: null,
-        finalPrice: final,
-        isFreeReport: false,
-        checkoutUrl: checkoutData.url,
-        processing_time_ms: ms
-      });
-    } catch {
-      return oops('Failed to create checkout session');
     }
+
+    return ok({
+      guestReportId,
+      processing_time_ms: ms
+    });
 
   } catch (err: any) {
     debug('Unhandled flow error:', err?.message || err);
     return oops(err?.message || 'Internal server error');
   }
 });
+
