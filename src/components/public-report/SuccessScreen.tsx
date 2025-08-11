@@ -4,6 +4,7 @@ import { useReportModal } from "@/contexts/ReportModalContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { hasSeen, markSeen } from "@/utils/seenReportTracker";
 import { sessionManager } from "@/utils/sessionManager";
+import { logUserError } from "@/services/errorService";
 
 interface SuccessScreenProps {
   isLoading: boolean;
@@ -209,7 +210,29 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
       }
     };
   }, [uiReady, modalOpened, open, isLoading, guestId]);
-
+  // Automatically log and cleanup on snag errors
+  const snagHandledRef = useRef(false);
+  useEffect(() => {
+    if (!dbError) return;
+    if (snagHandledRef.current) return;
+    snagHandledRef.current = true;
+    (async () => {
+      try {
+        if (guestId) {
+          await logUserError({ guestReportId: guestId, errorType: 'success_screen_snag', errorMessage: dbError });
+        }
+      } catch (e) {
+        console.warn('[SuccessScreen] Failed to log snag error', e);
+      } finally {
+        try {
+          await sessionManager.clearSession({ redirectTo: '/report', preserveNavigation: false, showProgress: false });
+        } catch (e) {
+          console.warn('[SuccessScreen] Failed to clear session after snag', e);
+          try { window.location.href = '/report'; } catch {}
+        }
+      }
+    })();
+  }, [dbError, guestId]);
 
   // Auto-open if already seen and DB confirms existence
   useEffect(() => {
