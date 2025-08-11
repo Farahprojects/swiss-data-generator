@@ -47,7 +47,7 @@ const PublicReport = () => {
   
   // One-time full clean of known keys on first visit to report route
   useEffect(() => {
-    sessionManager.clearSession({ preserveNavigation: true });
+    // sessionManager.clearSession({ preserveNavigation: true });
   }, []);
 
 
