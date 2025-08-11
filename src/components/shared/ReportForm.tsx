@@ -69,78 +69,31 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   
   // Direct submission to initiate-report-flow (desktop)
   const submitReport = async (data: ReportFormData, pricing: TrustedPricingObject) => {
-    const T0 = Date.now();
     setIsProcessing(true);
-
     try {
-      // Free promo path: await response and persist guest_id
-      if (pricing.final_price_usd === 0) {
-        const payloadBody = {
-          reportData: data,
-          trustedPricing: pricing,
-          is_guest: true
-        };
-        
-        const { data: resp, error } = await supabase.functions.invoke('initiate-report-flow', {
-          body: payloadBody
-        });
-        if (error) {
-          return { success: false, guestReportId: '' };
-        }
-        const guestReportId = (resp?.guestReportId || resp?.guest_id) as string | undefined;
-        const isFree = Boolean(resp?.isFreeReport);
-        if (!isFree || !guestReportId) {
-          return { success: false, guestReportId: '' };
-        }
-        
-        
-        // Notify parent immediately to open success UI
-        onReportCreated?.(guestReportId, (data as any).name, (data as any).email);
-        return { success: true, guestReportId };
-      }
-
-      // Paid flow: fire-and-forget + redirect, keep processing true until redirect (or timeout)
-      const timeoutId = window.setTimeout(() => {
-        setIsProcessing(false);
-      }, 20000);
-
       const payloadBody = {
         reportData: data,
         trustedPricing: pricing,
         is_guest: true
       };
       
-      const submissionPromise = supabase.functions.invoke('initiate-report-flow', {
+      const { data: resp, error } = await supabase.functions.invoke('initiate-report-flow', {
         body: payloadBody
       });
 
-      submissionPromise.then(({ data: responseData, error }) => {
-        if (error) {
-          clearTimeout(timeoutId);
-          setIsProcessing(false);
-          return;
-        }
-        if (responseData?.checkoutUrl && responseData?.guestReportId) {
-          window.location.href = responseData.checkoutUrl;
-          // Fallback for legacy response format
-          onReportCreated?.(responseData.guestReportId, (data as any).name, (data as any).email);
-          clearTimeout(timeoutId);
-          setIsProcessing(false);
-        }
-      }).catch(() => {
-        clearTimeout(timeoutId);
-        setIsProcessing(false);
-      });
-
-      // Don't return success immediately for paid flow - wait for backend response
-      // The success will be triggered in the .then() callback if it's actually free
-      return { success: false, guestReportId: '' };
-    } catch (error) {
-      return { success: false, guestReportId: '' };
-    } finally {
-      if (pricing.final_price_usd === 0) {
-        setIsProcessing(false);
+      if (error) {
+        console.error("Submission failed", error);
+        return { success: false, guestReportId: null };
       }
+
+      const guestReportId = resp?.guestReportId || null;
+      return { success: !!guestReportId, guestReportId };
+
+    } catch (error) {
+      console.error("Submission failed with exception", error);
+      return { success: false, guestReportId: null };
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -264,7 +217,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     
     try {
       const result = await submitReport(submissionData, trustedPricing);
-      if (result.success && result.guestReportId && userName && userEmail) {
+      if (result.success && result.guestReportId) {
         // Notify parent component about successful report creation
         onReportCreated?.(result.guestReportId, userName, userEmail);
       }

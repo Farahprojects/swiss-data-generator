@@ -69,101 +69,54 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
   const { getReportPrice } = usePriceFetch();
   const { getPriceById } = usePricing();
 
-  // Direct submission to initiate-report-flow (mirrors drawer logic)
+  // Direct submission to initiate-report-flow
   const handleDirectSubmission = async (formData: ReportFormData, trustedPricing: TrustedPricingObject) => {
-    const T0 = Date.now();
     setIsProcessing(true);
-    setHasTimedOut(false);
-
-    const transformedReportData = {
-      ...formData,
-      birth_date: formData.birthDate,
-      birth_time: formData.birthTime,
-      location: formData.birthLocation,
-      latitude: formData.birthLatitude,
-      longitude: formData.birthLongitude,
-      second_person_birth_date: formData.secondPersonBirthDate,
-      second_person_birth_time: formData.secondPersonBirthTime,
-      second_person_location: formData.secondPersonBirthLocation,
-      second_person_latitude: formData.secondPersonLatitude,
-      second_person_longitude: formData.secondPersonLongitude,
-      request: formData.request || (formData.reportType?.includes('sync') ? 'sync' : 'essence'),
-      is_guest: true,
-    } as any;
-
-    // Free promo path
-    if (trustedPricing.final_price_usd === 0) {
-      try {
-        const submissionData = { reportData: transformedReportData, trustedPricing, is_guest: true };
-        const { data, error } = await supabase.functions.invoke('initiate-report-flow', { body: submissionData });
-        if (error) {
-          console.error('❌ [MOBILE] Free report submission failed:', error);
-          return;
-        }
-        
-        const guestReportId = (data?.guestReportId || data?.guest_id) as string | undefined;
-        const isFree = Boolean(data?.isFreeReport);
-        if (!isFree || !guestReportId) {
-          console.error('❌ [MOBILE] Invalid free response:', data);
-          return;
-        }
-        
-        
-        onOpenChange(false);
-        onReportCreated?.({ guestReportId, name: formData.name, email: formData.email });
-      } catch (err) {
-        console.error('❌ [MOBILE] Free flow exception:', err);
-      } finally {
-        setIsProcessing(false);
-      }
-      return;
-    }
-
-    // Paid flow
-    // Close after a small delay to allow button state update
-    setTimeout(() => onOpenChange(false), 300);
-
-
-    const timeoutId = window.setTimeout(() => {
-      setHasTimedOut(true);
-      setIsProcessing(false);
-    }, 20000);
-
     try {
-      const submissionData = { reportData: transformedReportData, trustedPricing, is_guest: true };
-      const submissionPromise = supabase.functions.invoke('initiate-report-flow', { body: submissionData });
+      const transformedReportData = {
+        ...formData,
+        birth_date: formData.birthDate,
+        birth_time: formData.birthTime,
+        location: formData.birthLocation,
+        latitude: formData.birthLatitude,
+        longitude: formData.birthLongitude,
+        second_person_birth_date: formData.secondPersonBirthDate,
+        second_person_birth_time: formData.secondPersonBirthTime,
+        second_person_location: formData.secondPersonBirthLocation,
+        second_person_latitude: formData.secondPersonLatitude,
+        second_person_longitude: formData.secondPersonLongitude,
+        request: formData.request || (formData.reportType?.includes('sync') ? 'sync' : 'essence'),
+        is_guest: true,
+      } as any;
+      
+      const payloadBody = {
+        reportData: transformedReportData,
+        trustedPricing,
+        is_guest: true
+      };
 
-      submissionPromise.then(({ data, error }) => {
-        if (error) {
-          console.error('❌ [MOBILE] Report submission failed:', error);
-          clearTimeout(timeoutId);
-          setIsProcessing(false);
-          setHasTimedOut(true);
-          return;
-        }
-
-        if (data?.checkoutUrl && data?.guestReportId) {
-          window.location.href = data.checkoutUrl;
-        } else if (data?.reportUrl && data?.guestReportId) {
-          onReportCreated?.({ guestReportId: data.guestReportId, name: formData.name, email: formData.email });
-          clearTimeout(timeoutId);
-          setIsProcessing(false);
-        } else if (data?.success || data?.guestReportId) {
-          // Fallback for legacy response format
-          onReportCreated?.({ guestReportId: data.guestReportId, name: formData.name, email: formData.email });
-          clearTimeout(timeoutId);
-          setIsProcessing(false);
-        }
-      }).catch((err) => {
-        console.error('❌ [MOBILE] Report submission failed:', err);
-        clearTimeout(timeoutId);
-        setIsProcessing(false);
-        setHasTimedOut(true);
+      const { data, error } = await supabase.functions.invoke('initiate-report-flow', {
+        body: payloadBody
       });
+
+      if (error) {
+        console.error('❌ [MOBILE] Submission failed:', error);
+        return;
+      }
+      
+      const guestReportId = data?.guestReportId || null;
+
+      if (guestReportId) {
+        onOpenChange(false);
+        onReportCreated?.(guestReportId);
+      } else {
+        console.error('❌ [MOBILE] Invalid response from server:', data);
+      }
+
     } catch (err) {
-      console.error('❌ [MOBILE] Report submission failed:', err);
+      console.error('❌ [MOBILE] Submission exception:', err);
+    } finally {
       setIsProcessing(false);
-      setHasTimedOut(true);
     }
   };
 
