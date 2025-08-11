@@ -185,8 +185,7 @@ const LazyReportViewer = ({
       case_number: '',
       message: error,
       requires_error_logging: true,
-      requires_session_cleanup: false,
-      guest_report_id: reportReference.guestReportId
+      requires_session_cleanup: false
     };
 
     return (

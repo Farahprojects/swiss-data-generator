@@ -164,23 +164,6 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
     };
   }, [ref]);
 
-  if (dbError) {
-    const errorState = {
-      type: 'guest_report_load_error' as const,
-      case_number: '',
-      message: dbError,
-      requires_error_logging: true,
-      requires_session_cleanup: true,
-      guest_report_id: guestId,
-    };
-
-    return (
-      <div ref={ref} className="max-w-md w-full">
-        <ErrorStateHandler errorState={errorState} />
-      </div>
-    );
-  }
-
   return (
     <div ref={ref} className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
       <div className="space-y-4">
