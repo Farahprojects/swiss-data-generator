@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { ReportData } from '@/utils/reportContentExtraction';
 import { ReportViewer } from '@/components/public-report/ReportViewer';
+import ErrorStateHandler from '@/components/public-report/ErrorStateHandler';
+import { logUserError } from '@/services/errorService';
 import { ReportReference } from '@/types/reportReference';
 import { useReportCache } from '@/hooks/useReportCache';
 import { sessionManager } from '@/utils/sessionManager';
@@ -180,17 +182,30 @@ const LazyReportViewer = ({
   }
 
   if (error) {
+    const errorState = {
+      type: 'report_modal_load_error' as const,
+      case_number: '',
+      message: error,
+      requires_error_logging: true,
+      requires_session_cleanup: false
+    };
+
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-8 text-center">
-          <p className="text-red-600 mb-4">Error loading report</p>
-          <p className="text-sm text-gray-600 mb-4">{error}</p>
-          <button 
-            onClick={onBack}
-            className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800"
-          >
-            Go Back
-          </button>
+        <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+          <ErrorStateHandler 
+            errorState={errorState}
+            onTriggerErrorLogging={(guestReportId: string, email: string) => {
+              logUserError({
+                guestReportId,
+                errorType: 'report_modal_load_error',
+                errorMessage: error
+              });
+            }}
+            onCleanupSession={() => {
+              onBack();
+            }}
+          />
         </div>
       </div>
     );

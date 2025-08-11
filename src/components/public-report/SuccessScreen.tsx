@@ -5,6 +5,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { hasSeen, markSeen } from "@/utils/seenReportTracker";
 import { sessionManager } from "@/utils/sessionManager";
 import { logUserError } from "@/services/errorService";
+import ErrorStateHandler from "@/components/public-report/ErrorStateHandler";
 
 interface SuccessScreenProps {
   isLoading: boolean;
