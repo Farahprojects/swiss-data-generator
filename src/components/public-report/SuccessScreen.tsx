@@ -5,7 +5,9 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { hasSeen, markSeen } from "@/utils/seenReportTracker";
 
 interface SuccessScreenProps {
-  isLoading?: boolean;
+  isLoading: boolean;
+  guestId?: string | null;
+  isSeen?: boolean;
 }
 
 export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(

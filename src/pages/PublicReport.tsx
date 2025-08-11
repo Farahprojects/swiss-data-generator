@@ -39,7 +39,7 @@ const PublicReport = () => {
   const { open: openReportModal, isOpen } = useReportModal();
   const [showCancelledMessage, setShowCancelledMessage] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
-  const [unifiedSuccessData, setUnifiedSuccessData] = useState<{ guestId: string; name: string; email: string } | null>(null);
+  const [unifiedSuccessData, setUnifiedSuccessData] = useState<{ guestId: string; name: string; email: string; isSeen?: boolean } | null>(null);
   const successScreenRef = useRef<HTMLDivElement>(null);
   const reportFormRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
@@ -47,46 +47,31 @@ const PublicReport = () => {
   
   
   
-  // UNIFIED SESSION DETECTION & RECOVERY
+  // SESSION DETECTION & RECOVERY - Runs once on mount
   useEffect(() => {
-    // This effect runs once on mount to determine if there's a session to restore.
-    console.log('[Detection] Starting session check...');
-
-    if (isOpen) {
-      console.log('[Detection] Modal is already open. Aborting check.');
-      return;
+    if (guestIdFromUrl || isOpen) {
+      return; // A guestId in the URL is the source of truth, or modal is already open.
     }
 
-    // Priority 1: Check URL for a guest_id
-    if (guestIdFromUrl) {
-      console.log(`[Detection] Found guestId in URL: ${guestIdFromUrl}. Opening report.`);
-      openReportModal(guestIdFromUrl);
-      return;
-    }
-
-    // Priority 2: Scan localStorage for a "seen:" report as a fallback
+    // Fallback: Scan localStorage for a "seen:" report to handle refresh.
     let recoveredId: string | null = null;
     try {
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && key.startsWith('seen:')) {
           recoveredId = key.split(':')[1];
-          break; // Found the first one, that's our best guess.
+          break;
         }
       }
     } catch (e) {
-      console.warn('[Detection] Failed to scan localStorage for a seen report.', e);
+      console.warn('[Recovery] Failed to scan localStorage for a seen report.', e);
     }
 
     if (recoveredId) {
-      console.log(`[Detection] Found seen report in localStorage: ${recoveredId}. Opening report.`);
-      openReportModal(recoveredId);
-      return;
+      console.log(`[Recovery] Found seen report ${recoveredId} in localStorage. Handing off to SuccessScreen.`);
+      setUnifiedSuccessData({ guestId: recoveredId, name: '', email: '', isSeen: true });
     }
-
-    console.log('[Detection] No active session found in URL or localStorage.');
-
-  }, [isOpen, guestIdFromUrl, openReportModal]);
+  }, [isOpen, guestIdFromUrl]);
 
   // Process Stripe return immediately if detected
   useEffect(() => {
@@ -482,7 +467,7 @@ const PublicReport = () => {
           <div id="report-form" ref={reportFormRef}>
             <ReportForm onReportCreated={(guestReportId, name, email) => {
               // NEW: Unified success handling for desktop
-              setUnifiedSuccessData({ guestId: guestReportId, name, email });
+              setUnifiedSuccessData({ guestId: guestReportId, name, email, isSeen: false });
             }} />
           </div>
         )}
@@ -513,7 +498,7 @@ const PublicReport = () => {
           onOpenChange={setIsMobileDrawerOpen}
           onReportCreated={(data) => {
             console.log('[PublicReport] onReportCreated (mobile):', data);
-            setUnifiedSuccessData({ guestId: data?.guestReportId, name: data?.name, email: data?.email });
+            setUnifiedSuccessData({ guestId: data?.guestReportId, name: data?.name, email: data?.email, isSeen: false });
           }}
         />
 
@@ -534,6 +519,8 @@ const PublicReport = () => {
             <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto flex items-center justify-center">
               <SuccessScreen
                 ref={successScreenRef}
+                guestId={guestIdFromUrl || unifiedSuccessData?.guestId}
+                isSeen={unifiedSuccessData?.isSeen || false}
                 isLoading={false}
               />
             </div>
