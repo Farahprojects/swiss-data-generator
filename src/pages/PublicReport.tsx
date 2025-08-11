@@ -50,44 +50,12 @@ const PublicReport = () => {
       const FLAG = 'report:oneTimeCleanDone';
       if (localStorage.getItem(FLAG) === '1') return;
 
-      const KEYS_LOCAL = [
-        'currentGuestReportId',
-        'currentGuestReportId_timestamp',
-        'guest_payment_status',
-        'guest_report_id',
-        'guestId',
-        'reportUrl',
-        'last_route',
-        'last_route_params',
-        'modalState',
-        'reportModalState',
-        'reportModalPayload',
-        'activeTab',
-        'activeTabId',
-        'formData',
-        'reportFormData',
-        'formMemoryData',
-        'temp_report_data',
-        'chat_token',
-        'cached_uuid',
-        'autoOpenedReportModal'
-      ];
-      const KEYS_SESSION = [
-        'currentGuestReportId',
-        'guestId',
-        'reportUrl',
-        'pendingFlow',
-        'autoOpenedReportModal',
-        'reportModalState',
-        'reportModalPayload',
-        'success'
-      ];
+      // Fully wipe storage on first mount, then set flag to avoid repeating
+      try { sessionStorage.clear(); } catch {}
+      try { localStorage.clear(); } catch {}
+      try { localStorage.setItem(FLAG, '1'); } catch {}
 
-      KEYS_LOCAL.forEach(k => { try { localStorage.removeItem(k); } catch {} });
-      KEYS_SESSION.forEach(k => { try { sessionStorage.removeItem(k); } catch {} });
-
-      localStorage.setItem(FLAG, '1');
-      try { console.log('[OneTimeClean] Completed initial storage cleanup'); } catch {}
+      try { console.log('[OneTimeClean] Fully cleared localStorage and sessionStorage on mount'); } catch {}
     } catch {}
   }, []);
 
