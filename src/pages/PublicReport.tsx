@@ -20,6 +20,7 @@ import MobileReportDrawer from '@/components/public-report/MobileReportDrawer';
 import MobileReportSheet from '@/components/public-report/MobileReportSheet';
 import { SuccessScreen } from '@/components/public-report/SuccessScreen';
 import { sessionManager } from '@/utils/sessionManager';
+import { useReportModal } from '@/contexts/ReportModalContext';
 
 
 
@@ -31,44 +32,61 @@ const PublicReport = () => {
   const status = urlParams.get("status");
   const isStripeSuccessReturn = status === 'success' && !!sessionId;
 
-  // Log detection and state on mount for diagnostics
-  useEffect(() => {
-    console.log('[Detection] Checking for guestId in URL on mount. Found:', guestIdFromUrl);
-    try {
-      const snapshot = {
-        url: window.location.href,
-        localStorage: { ...localStorage },
-        sessionStorage: { ...sessionStorage },
-      };
-      console.log('[StateMemoryCheck] Snapshot on mount:', snapshot);
-    } catch (e) {
-      console.warn('[StateMemoryCheck] Failed to build snapshot:', e);
-    }
-  }, [guestIdFromUrl]);
-
   // ALL HOOKS MUST BE DECLARED FIRST - NEVER INSIDE TRY-CATCH
-
-  const [showCancelledMessage, setShowCancelledMessage] = useState(false);
-  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
-  const [unifiedSuccessData, setUnifiedSuccessData] = useState<{ guestReportId: string; name: string; email: string } | null>(null);
   const location = useLocation();
   const isMobile = useIsMobile();
   const { stripeSuccess, setStripeSuccess } = useStripeSuccess();
-  
-  
-  
-  // One-time full clean of known keys on first visit to report route
-  useEffect(() => {
-    // sessionManager.clearSession({ preserveNavigation: true });
-  }, []);
-
-
-  // Refs for scrolling
+  const { open: openReportModal, isOpen } = useReportModal();
+  const [showCancelledMessage, setShowCancelledMessage] = useState(false);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const [unifiedSuccessData, setUnifiedSuccessData] = useState<{ guestId: string; name: string; email: string } | null>(null);
   const successScreenRef = useRef<HTMLDivElement>(null);
   const reportFormRef = useRef<HTMLDivElement>(null);
-  // Hero observer ref and visibility state for mobile Unlock FAB
   const heroRef = useRef<HTMLDivElement>(null);
   const [showUnlockFab, setShowUnlockFab] = useState(false);
+  
+  
+  
+  // UNIFIED SESSION DETECTION & RECOVERY
+  useEffect(() => {
+    // This effect runs once on mount to determine if there's a session to restore.
+    console.log('[Detection] Starting session check...');
+
+    if (isOpen) {
+      console.log('[Detection] Modal is already open. Aborting check.');
+      return;
+    }
+
+    // Priority 1: Check URL for a guest_id
+    if (guestIdFromUrl) {
+      console.log(`[Detection] Found guestId in URL: ${guestIdFromUrl}. Opening report.`);
+      openReportModal(guestIdFromUrl);
+      return;
+    }
+
+    // Priority 2: Scan localStorage for a "seen:" report as a fallback
+    let recoveredId: string | null = null;
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('seen:')) {
+          recoveredId = key.split(':')[1];
+          break; // Found the first one, that's our best guess.
+        }
+      }
+    } catch (e) {
+      console.warn('[Detection] Failed to scan localStorage for a seen report.', e);
+    }
+
+    if (recoveredId) {
+      console.log(`[Detection] Found seen report in localStorage: ${recoveredId}. Opening report.`);
+      openReportModal(recoveredId);
+      return;
+    }
+
+    console.log('[Detection] No active session found in URL or localStorage.');
+
+  }, [isOpen, guestIdFromUrl, openReportModal]);
 
   // Process Stripe return immediately if detected
   useEffect(() => {
@@ -464,7 +482,7 @@ const PublicReport = () => {
           <div id="report-form" ref={reportFormRef}>
             <ReportForm onReportCreated={(guestReportId, name, email) => {
               // NEW: Unified success handling for desktop
-              setUnifiedSuccessData({ guestReportId, name, email });
+              setUnifiedSuccessData({ guestId: guestReportId, name, email });
             }} />
           </div>
         )}
@@ -495,7 +513,7 @@ const PublicReport = () => {
           onOpenChange={setIsMobileDrawerOpen}
           onReportCreated={(data) => {
             console.log('[PublicReport] onReportCreated (mobile):', data);
-            setUnifiedSuccessData({ guestReportId: data?.guestReportId, name: data?.name, email: data?.email });
+            setUnifiedSuccessData({ guestId: data?.guestReportId, name: data?.name, email: data?.email });
           }}
         />
 
