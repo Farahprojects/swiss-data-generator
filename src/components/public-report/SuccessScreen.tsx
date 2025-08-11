@@ -4,35 +4,17 @@ import { useReportModal } from "@/contexts/ReportModalContext";
 
 interface SuccessScreenProps {
   guestId: string;
+  name: string;
+  email: string;
 }
 
 export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
-({ guestId }, ref) => {
+({ guestId, name, email }, ref) => {
   const { open: openReportModal } = useReportModal();
-  const [guestData, setGuestData] = useState<{name: string, email: string} | null>(null);
 
   // --- Main WebSocket Listener ---
   useEffect(() => {
     if (!guestId) return;
-
-    // Fetch guest details for UI display
-    const fetchGuestDetails = async () => {
-      const { data, error } = await supabase
-        .from("guest_reports")
-        .select("email, name:report_data->>name, person_a_name:report_data->person_a->>name, person_a_email:report_data->person_a->>email")
-        .eq("id", guestId)
-        .single();
-      
-      if (data) {
-        const displayName = data.person_a_name ?? data.name ?? "";
-        const displayEmail = data.person_a_email ?? data.email ?? "";
-        setGuestData({ name: displayName, email: displayEmail });
-      } else {
-        console.error(`[SuccessScreen] Failed to fetch guest details for ${guestId}`, error);
-      }
-    };
-    
-    fetchGuestDetails();
 
     // Setup WebSocket listener
     const channel = supabase.channel(`ready_${guestId}`);
@@ -71,7 +53,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
         <div className="space-y-2">
           <h1 className="text-2xl font-light text-gray-900">Report Request Received!</h1>
           <p className="text-gray-600">
-            {guestData?.name ? `Your report for ${guestData.name} is being prepared.` : "Your report is being prepared."}
+            {name ? `Your report for ${name} is being prepared.` : "Your report is being prepared."}
           </p>
         </div>
       </div>

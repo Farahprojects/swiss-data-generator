@@ -244,6 +244,8 @@ serve(async (req) => {
     return ok({
       guestReportId,
       paymentStatus: guestReportData.payment_status,
+      name: reportData.name,
+      email: reportData.email,
       processing_time_ms: ms
     });
 

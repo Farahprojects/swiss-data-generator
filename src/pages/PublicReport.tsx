@@ -20,18 +20,18 @@ const PublicReport = () => {
   const isMobile = useIsMobile();
   const [showCancelledMessage, setShowCancelledMessage] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
-  const [activeGuestId, setActiveGuestId] = useState<string | null>(null);
-  const [paidGuestId, setPaidGuestId] = useState<string | null>(null);
+  const [activeGuest, setActiveGuest] = useState<{ id: string } | null>(null);
+  const [paidGuest, setPaidGuest] = useState<{ id: string, name: string, email: string } | null>(null);
   
-  const handleReportCreated = (guestId: string, paymentStatus: string) => {
+  const handleReportCreated = (guestId: string, paymentStatus: string, name: string, email: string) => {
     if (paymentStatus === 'paid') {
       // If the report is already paid (e.g., free promo), skip the checker and go straight to success.
       console.log(`[PublicReport] Report ${guestId} is already paid. Showing success screen directly.`);
-      setPaidGuestId(guestId);
+      setPaidGuest({ id: guestId, name, email });
     } else {
       // If payment is pending, use the checker to handle the payment flow.
       console.log(`[PublicReport] Report ${guestId} is pending payment. Starting checker.`);
-      setActiveGuestId(guestId);
+      setActiveGuest({ id: guestId });
     }
   };
 
@@ -334,7 +334,7 @@ const PublicReport = () => {
           <div id="report-form" ref={reportFormRef}>
             <ReportForm onReportCreated={(guestReportId, name, email, paymentStatus) => {
               console.log("Desktop form submitted. Guest ID:", guestReportId, "Status:", paymentStatus);
-              handleReportCreated(guestReportId, paymentStatus);
+              handleReportCreated(guestReportId, paymentStatus, name, email);
             }} />
           </div>
         )}
@@ -363,27 +363,28 @@ const PublicReport = () => {
         <MobileReportSheet
           isOpen={isMobileDrawerOpen}
           onOpenChange={setIsMobileDrawerOpen}
-          onReportCreated={(guestReportId, paymentStatus) => {
+          onReportCreated={(guestReportId, paymentStatus, name, email) => {
             console.log("Mobile form submitted. Guest ID:", guestReportId, "Status:", paymentStatus);
-            handleReportCreated(guestReportId, paymentStatus);
+            handleReportCreated(guestReportId, paymentStatus, name, email);
             setIsMobileDrawerOpen(false); // Close the sheet on submit
           }}
         />
 
-        {activeGuestId && (
+        {activeGuest && (
           <ReportFlowChecker 
-            guestId={activeGuestId}
+            guestId={activeGuest.id}
             onPaid={(paidGuestId) => {
               console.log(`Report ${paidGuestId} is paid! Ready to show success screen.`);
-              setPaidGuestId(paidGuestId);
-              setActiveGuestId(null); // Stop checking once paid
+              // We don't have name/email here yet, so SuccessScreen will fetch them.
+              setPaidGuest({ id: paidGuestId, name: '', email: '' });
+              setActiveGuest(null); // Stop checking once paid
             }}
           />
         )}
 
-        {paidGuestId && (
+        {paidGuest && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <SuccessScreen guestId={paidGuestId} />
+            <SuccessScreen guestId={paidGuest.id} name={paidGuest.name} email={paidGuest.email} />
           </div>
         )}
       </div>
