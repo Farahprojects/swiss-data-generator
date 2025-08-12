@@ -1,6 +1,6 @@
 
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
@@ -25,6 +25,8 @@ import { PublicCoachWebsite } from './components/website-builder/PublicCoachWebs
 import PreviewWebsite from './pages/PreviewWebsite';
 import { CoachReportPage } from './components/website-builder/CoachReportPage';
 
+import { AuthProvider } from './contexts/AuthContext';
+
 // Lazy load the authenticated shell
 const AuthedAppShell = lazy(() => import('./AuthedAppShell'));
 
@@ -37,6 +39,13 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+const ConditionalAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const location = useLocation();
+  const path = location.pathname;
+  const skipAuth = path.startsWith('/report') || path.startsWith('/dashboard');
+  return skipAuth ? <>{children}</> : <AuthProvider>{children}</AuthProvider>;
+};
 
 function App() {
   if (typeof window === 'undefined') {
@@ -53,40 +62,42 @@ function App() {
     >
       <QueryClientProvider client={queryClient}>
         <Router>
-          <div className="min-h-screen bg-background">
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<Index />} />
-              <Route path="/features" element={<Features />} />
-              <Route path="/report" element={<PublicReport />} />
-              <Route path="/pricing" element={<Pricing />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/legal" element={<Legal />} />
-              <Route path="/blog" element={<Blog />} />
-              <Route path="/blog/:slug" element={<BlogPost />} />
-              <Route path="/stripe-return" element={<StripeReturn />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/auth/password" element={<ResetPassword />} />
-              <Route path="/preview/:previewId" element={<PreviewWebsite />} />
-              <Route path="/:slug/vibe" element={<CoachReportPage />} />
-              <Route path="/:slug" element={<PublicCoachWebsite />} />
+<ConditionalAuth>
+            <div className="min-h-screen bg-background">
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={<Index />} />
+                <Route path="/features" element={<Features />} />
+                <Route path="/report" element={<PublicReport />} />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/legal" element={<Legal />} />
+                <Route path="/blog" element={<Blog />} />
+                <Route path="/blog/:slug" element={<BlogPost />} />
+                <Route path="/stripe-return" element={<StripeReturn />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/auth/password" element={<ResetPassword />} />
+                <Route path="/preview/:previewId" element={<PreviewWebsite />} />
+                <Route path="/:slug/vibe" element={<CoachReportPage />} />
+                <Route path="/:slug" element={<PublicCoachWebsite />} />
 
-              {/* Authenticated Routes */}
-              <Route 
-                path="/dashboard/*"
-                element={
-                  <Suspense fallback={<div>Loading Dashboard...</div>}>
-                    <AuthedAppShell />
-                  </Suspense>
-                } 
-              />
-              
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </div>
-          <Toaster />
+                {/* Authenticated Routes */}
+                <Route 
+                  path="/dashboard/*"
+                  element={
+                    <Suspense fallback={<div>Loading Dashboard...</div>}>
+                      <AuthedAppShell />
+                    </Suspense>
+                  } 
+                />
+                
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </div>
+            <Toaster />
+          </ConditionalAuth>
         </Router>
       </QueryClientProvider>
     </ThemeProvider>
