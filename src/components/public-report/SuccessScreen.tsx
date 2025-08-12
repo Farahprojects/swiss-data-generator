@@ -14,66 +14,36 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
   const { open: openReportModal } = useReportModal();
   const [guestData, setGuestData] = useState<{name: string, email: string} | null>(null);
 
-  // --- Main WebSocket Listener ---
+  // --- Main Polling Mechanism ---
   useEffect(() => {
     if (!guestId) return;
 
-    const checkAndListen = async () => {
-      // 1. Check if the signal already exists.
-      const { data: existingSignal, error: checkError } = await supabase
+    const intervalId = setInterval(async () => {
+      console.log(`[SuccessScreen] Polling for report signal for guestId: ${guestId}`);
+      const { data, error } = await supabase
         .from('report_ready_signals')
         .select('id')
         .eq('guest_report_id', guestId)
         .limit(1);
 
-      if (checkError) {
-        console.error('[SuccessScreen] Error checking for existing signal:', checkError);
+      if (error) {
+        console.error('[SuccessScreen] Error polling for report signal:', error);
+        // Optional: stop polling on error or just continue
+        return;
       }
 
-      if (existingSignal && existingSignal.length > 0) {
-        console.log(`[SuccessScreen] Signal for ${guestId} already exists. Opening report immediately.`);
+      if (data && data.length > 0) {
+        console.log(`[SuccessScreen] Polling found signal for ${guestId}. Opening report.`);
         openReportModal(guestId);
-        return; // Signal found, no need to listen.
+        clearInterval(intervalId); // Stop polling once the signal is found
       }
+    }, 1000); // Poll every 1 second
 
-      // 2. If no signal, set up the WebSocket listener.
-      const channel = supabase.channel(`ready_${guestId}`);
-
-      const handleNewSignal = () => {
-        console.log(`[SuccessScreen] WebSocket signal received for ${guestId}. Opening report.`);
-        openReportModal(guestId);
-        channel.unsubscribe();
-      };
-      
-      channel
-        .on('postgres_changes', { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'report_ready_signals', 
-          filter: `guest_report_id=eq.${guestId}` 
-        }, handleNewSignal)
-        .subscribe();
-
-      console.log(`[SuccessScreen] Subscribed to WebSocket for guestId: ${guestId}`);
-
-      // Return the cleanup function for the channel
-      return () => {
-        console.log(`[SuccessScreen] Unsubscribing from WebSocket for guestId: ${guestId}`);
-        try { channel.unsubscribe(); } catch {}
-      };
-    };
-
-    let cleanup: (() => void) | undefined;
-    checkAndListen().then(cleanupFn => {
-      if (cleanupFn) {
-        cleanup = cleanupFn;
-      }
-    });
-
+    // Cleanup function to clear the interval when the component unmounts
     return () => {
-      cleanup?.();
+      console.log(`[SuccessScreen] Unmounting, clearing polling for guestId: ${guestId}`);
+      clearInterval(intervalId);
     };
-
   }, [guestId, openReportModal]);
 
   return (
@@ -111,7 +81,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
         <div className="flex items-center justify-center space-x-2">
           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
           <span className="text-sm text-gray-600">
-            Listening for report...
+            Finalizing your report...
           </span>
         </div>
       </div>
