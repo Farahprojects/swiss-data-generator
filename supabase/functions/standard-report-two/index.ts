@@ -112,9 +112,8 @@ async function getSystemPrompt(reportType: string, requestId: string): Promise<s
   
   console.log(`${logPrefix} Cache MISS for system prompt: ${reportType}. Fetching from DB.`);
 
-
   try {
-    // Direct fetch without retry logic - should be fast and reliable
+    // Direct, single fetch from the database. No retry logic.
     const { data, error, status } = await supabase
       .from("report_prompts")
       .select("system_prompt")
@@ -135,6 +134,7 @@ async function getSystemPrompt(reportType: string, requestId: string): Promise<s
     
     return data.system_prompt;
   } catch (err) {
+    console.error(`${logPrefix} Critical error fetching system prompt:`, err.message);
     throw err; // Propagate the error to be handled by the main handler
   }
 }
