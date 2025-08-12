@@ -25,18 +25,8 @@ const ReportFlowChecker = ({ guestId, onPaid }: ReportFlowCheckerProps) => {
 
         if (data.payment_status === 'paid') {
           onPaid(guestId);
-        } else if (data.payment_status === 'pending') {
-          // If pending, create a checkout session and redirect
-          const { data: sessionData, error: sessionError } = await supabase.functions.invoke('create-payment-session', {
-            body: { guest_id: guestId },
-          });
-
-          if (sessionError) throw sessionError;
-          
-          if (sessionData.checkoutUrl) {
-            window.location.href = sessionData.checkoutUrl;
-          }
         }
+        // No need to handle 'pending' status here anymore, as the redirect happens before the checker is even mounted.
       } catch (error) {
         console.error('Error in payment flow checker:', error);
       }

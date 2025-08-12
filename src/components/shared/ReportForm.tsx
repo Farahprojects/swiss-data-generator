@@ -90,6 +90,12 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       const paymentStatus = resp?.paymentStatus || 'pending';
       const name = resp?.name || '';
       const email = resp?.email || '';
+      const checkoutUrl = resp?.checkoutUrl || null;
+
+      if (checkoutUrl) {
+        window.location.href = checkoutUrl;
+      }
+
       return { success: !!guestReportId, guestReportId, paymentStatus, name, email };
 
     } catch (error) {

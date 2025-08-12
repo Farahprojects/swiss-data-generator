@@ -108,6 +108,12 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
       const paymentStatus = data?.paymentStatus || 'pending';
       const name = data?.name || '';
       const email = data?.email || '';
+      const checkoutUrl = data?.checkoutUrl || null;
+
+      if (checkoutUrl) {
+        window.location.href = checkoutUrl;
+        return; // Redirecting, so no need to proceed
+      }
 
       if (guestReportId) {
         onOpenChange(false);
