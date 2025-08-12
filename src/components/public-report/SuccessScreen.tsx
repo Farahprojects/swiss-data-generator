@@ -58,6 +58,17 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
         </div>
       </div>
 
+      <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-left">
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-600 font-medium">Name:</span>
+          <span className="font-normal text-gray-900">{name}</span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-600 font-medium">Email:</span>
+          <span className="font-normal text-gray-900">{email}</span>
+        </div>
+      </div>
+
       <div className="space-y-3">
         <p className="text-sm text-gray-600">
           Your report will open automatically when it's ready.
