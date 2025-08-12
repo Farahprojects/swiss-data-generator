@@ -11,6 +11,7 @@ interface SuccessScreenProps {
 export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
 ({ guestId, name, email }, ref) => {
   const { open: openReportModal } = useReportModal();
+  const [modalOpened, setModalOpened] = useState(false);
 
   // --- Main WebSocket Listener ---
   useEffect(() => {
@@ -22,6 +23,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
     const handleNewSignal = () => {
       console.log(`[SuccessScreen] WebSocket signal received for ${guestId}. Opening report.`);
       openReportModal(guestId);
+      setModalOpened(true); // Self-destruct after opening the modal
       channel.unsubscribe();
     };
     
@@ -41,6 +43,10 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
       channel.unsubscribe();
     };
   }, [guestId, openReportModal]);
+
+  if (modalOpened) {
+    return null;
+  }
 
   return (
     <div ref={ref} className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
