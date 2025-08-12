@@ -42,6 +42,7 @@ export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
     
     const stateResetCallback = () => {
       console.log('🔄 ReportModalProvider: State reset triggered by SessionManager');
+      sessionStorage.removeItem(SESSION_STORAGE_KEY); // Also clear persisted ID on full session reset
       setCurrentReport(null);
       setIsOpen(false);
       clearCache();
