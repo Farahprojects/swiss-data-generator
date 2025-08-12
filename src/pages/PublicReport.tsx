@@ -20,7 +20,7 @@ const PublicReport = () => {
   const isMobile = useIsMobile();
   const [showCancelledMessage, setShowCancelledMessage] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
-  const [activeGuest, setActiveGuest] = useState<{ id: string } | null>(null);
+  const [activeGuest, setActiveGuest] = useState<{ id: string, name: string, email: string } | null>(null);
   const [paidGuest, setPaidGuest] = useState<{ id: string, name: string, email: string } | null>(null);
   
   const handleReportCreated = (guestId: string, paymentStatus: string, name: string, email: string) => {
@@ -31,7 +31,7 @@ const PublicReport = () => {
     } else {
       // If payment is pending, use the checker to handle the payment flow.
       console.log(`[PublicReport] Report ${guestId} is pending payment. Starting checker.`);
-      setActiveGuest({ id: guestId });
+      setActiveGuest({ id: guestId, name, email });
     }
   };
 
@@ -375,8 +375,8 @@ const PublicReport = () => {
             guestId={activeGuest.id}
             onPaid={(paidGuestId) => {
               console.log(`Report ${paidGuestId} is paid! Ready to show success screen.`);
-              // We don't have name/email here yet, so SuccessScreen will fetch them.
-              setPaidGuest({ id: paidGuestId, name: '', email: '' });
+              // Now we have the name and email from the activeGuest state
+              setPaidGuest({ id: paidGuestId, name: activeGuest.name, email: activeGuest.email });
               setActiveGuest(null); // Stop checking once paid
             }}
           />
