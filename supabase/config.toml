@@ -1,19 +1,63 @@
-
 project_id = "e658f804-66d4-43ba-9cca-5e3b8e536f52"
+
+[functions.api]
+verify_jwt = false
+
+[functions.api-usage-handler]
+verify_jwt = false
+
+[functions.cleanup-orphaned-images]
+verify_jwt = false
 
 [functions.contact-form-handler]
 verify_jwt = false
 
-[functions.create-guest-checkout]
+[functions.create-checkout]
 verify_jwt = false
 
 [functions.create-report]
+verify_jwt = false
+
+[functions.create-temp-report-data]
 verify_jwt = false
 
 [functions.email-check]
 verify_jwt = false
 
 [functions.email-verification]
+verify_jwt = false
+
+[functions.fetch-temp-report]
+verify_jwt = false
+
+[functions.generate-insights]
+verify_jwt = false
+
+[functions.get-payment-status]
+verify_jwt = false
+
+[functions.get-prices]
+verify_jwt = false
+
+[functions.get-report-data]
+verify_jwt = false
+
+[functions.google-place-details]
+verify_jwt = false
+
+[functions.google-places-autocomplete]
+verify_jwt = false
+
+[functions.google-speech-to-text]
+verify_jwt = false
+
+[functions.initiate-report-flow]
+verify_jwt = false
+
+[functions.keep-warm]
+verify_jwt = false
+
+[functions.log-user-error]
 verify_jwt = false
 
 [functions.outbound-messenger]
@@ -28,7 +72,19 @@ verify_jwt = false
 [functions.process-guest-report-pdf]
 verify_jwt = false
 
+[functions.process-paid-report]
+verify_jwt = false
+
 [functions.process-topup-queue]
+verify_jwt = false
+
+[functions.report-orchestrator]
+verify_jwt = false
+
+[functions.report-prep]
+verify_jwt = false
+
+[functions.retrieve-temp-report]
 verify_jwt = false
 
 [functions.send-email]
@@ -58,23 +114,17 @@ verify_jwt = false
 [functions.swiss]
 verify_jwt = false
 
+[functions.translator-edge]
+verify_jwt = false
+
 [functions.update-service-purchase-metadata]
+verify_jwt = false
+
+[functions.validate-promo-code]
 verify_jwt = false
 
 [functions.verification-emailer]
 verify_jwt = false
 
-[functions.get-report-data]
-verify_jwt = false
-
-[functions.log-user-error]
-verify_jwt = false
-
 [functions.verify-guest-payment]
-verify_jwt = false
-
-[functions.retrieve-temp-report]
-verify_jwt = false
-
-[functions.create-temp-report-data]
 verify_jwt = false

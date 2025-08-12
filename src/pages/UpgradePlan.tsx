@@ -113,11 +113,11 @@ const UpgradePlan = () => {
         .filter(([_, isSelected]) => isSelected)
         .map(([name]) => name);
       
-      const planPriceId = getPriceId(selectedPlan);
+      const planPriceId = await getPriceId(selectedPlan);
       
-      const addOnPriceIds = selectedAddOnsList.map(addOn => getPriceId(addOn));
+      const addOnPriceIds = await Promise.all(selectedAddOnsList.map(addOn => getPriceId(addOn)));
       
-      const allPriceIds = [planPriceId, ...addOnPriceIds].filter(Boolean);
+      const allPriceIds = ([planPriceId, ...addOnPriceIds].filter(Boolean) as string[]);
       
       if (!allPriceIds.length) {
         toast({
@@ -128,11 +128,20 @@ const UpgradePlan = () => {
         return;
       }
       
-      const { data, error } = await supabase.functions.invoke('stripe-checkout-handler', {
+      // Temporarily support single-item checkout only
+      if (allPriceIds.length > 1) {
+        toast({
+          title: "Checkout not available",
+          description: "Multiple items checkout isn't supported yet. Please select a single plan without add-ons.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: { 
-          priceIds: allPriceIds,
-          planType: selectedPlan,
-          addOns: selectedAddOnsList
+          mode: 'payment',
+          priceId: allPriceIds[0] as string,
         }
       });
       
