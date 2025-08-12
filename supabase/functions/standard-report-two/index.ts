@@ -129,15 +129,11 @@ async function getSystemPrompt(reportType: string, requestId: string): Promise<s
 async function generateReport(systemPrompt: string, reportData: any, requestId: string): Promise<{ report: string; metadata: any }> {
   const logPrefix = `[standard-report][${requestId}]`;
 
-  // Structure data for the prompt (only essential fields, exclude Swiss data)
+  // Structure data for the prompt. The AI will get the full chartData.
   const userMessage = JSON.stringify({
     chartData: reportData.chartData,
     endpoint: reportData.endpoint,
     report_type: reportData.report_type,
-    person_a_name: reportData?.person_a?.name || reportData?.name || null,
-    person_b_name: reportData?.person_b?.name || reportData?.secondPersonName || null,
-    person_a: reportData?.person_a ? { name: reportData.person_a.name } : undefined,
-    person_b: reportData?.person_b ? { name: reportData.person_b.name } : undefined,
   });
 
   const requestBody = {
