@@ -39,6 +39,9 @@ try {
 const OPENAI_MODEL = "gpt-4o";
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions";
 
+// Simple in-memory cache for system prompts
+const promptCache = new Map<string, string>();
+
 // CORS headers for cross-domain requests
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -99,8 +102,15 @@ async function retryWithBackoff<T>(
 
 // Fetch the system prompt from the reports_prompts table - now accepts reportType parameter
 async function getSystemPrompt(reportType: string, requestId: string): Promise<string> {
-  const logPrefix = `[standard-report][${requestId}]`;
+  const logPrefix = `[standard-report-two][${requestId}]`;
 
+  // 1. Check cache first
+  if (promptCache.has(reportType)) {
+    console.log(`${logPrefix} Cache HIT for system prompt: ${reportType}`);
+    return promptCache.get(reportType)!;
+  }
+  
+  console.log(`${logPrefix} Cache MISS for system prompt: ${reportType}. Fetching from DB.`);
 
 
   try {
@@ -118,6 +128,10 @@ async function getSystemPrompt(reportType: string, requestId: string): Promise<s
     if (!data || !data.system_prompt) {
       throw new Error(`System prompt not found for ${reportType} report`);
     }
+    
+    // 2. Store in cache on successful fetch
+    promptCache.set(reportType, data.system_prompt);
+    console.log(`${logPrefix} Stored system prompt in cache: ${reportType}`);
     
     return data.system_prompt;
   } catch (err) {
@@ -227,8 +241,9 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
 
 // Main handler function
 serve(async (req) => {
+  let reportData: any; // Define here to be accessible in catch block
   const requestId = crypto.randomUUID().substring(0, 8); // Short unique ID for this request
-  const logPrefix = `[standard-report][${requestId}]`;
+  const logPrefix = `[standard-report-two][${requestId}]`;
   const startTime = Date.now();
 
   // Handle CORS preflight requests
@@ -247,7 +262,6 @@ serve(async (req) => {
 
   try {
     // Parse the request payload
-    let reportData;
     try {
       reportData = await req.json();
       

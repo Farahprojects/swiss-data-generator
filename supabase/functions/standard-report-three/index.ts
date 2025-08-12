@@ -58,6 +58,9 @@ try {
 const GOOGLE_MODEL = "gemini-2.5-flash-preview-04-17";
 const GOOGLE_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GOOGLE_MODEL}:generateContent`;
 
+// Simple in-memory cache for system prompts
+const promptCache = new Map<string, string>();
+
 // CORS headers for cross-domain requests
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -122,6 +125,14 @@ async function retryWithBackoff<T>(
 // Fetch the system prompt from the reports_prompts table - now accepts reportType parameter
 async function getSystemPrompt(reportType: string, requestId: string): Promise<string> {
   const logPrefix = `[standard-report-three][${requestId}]`;
+  
+  // 1. Check cache first
+  if (promptCache.has(reportType)) {
+    console.log(`${logPrefix} Cache HIT for system prompt: ${reportType}`);
+    return promptCache.get(reportType)!;
+  }
+  
+  console.log(`${logPrefix} Cache MISS for system prompt: ${reportType}. Fetching from DB.`);
   console.log(`${logPrefix} Fetching system prompt for report type: ${reportType}`);
 
   const fetchPrompt = async () => {
@@ -145,6 +156,10 @@ async function getSystemPrompt(reportType: string, requestId: string): Promise<s
       throw new Error(`System prompt not found for ${reportType} report`);
     }
     
+    // 2. Store in cache on successful fetch
+    promptCache.set(reportType, data.system_prompt);
+    console.log(`${logPrefix} Stored system prompt in cache: ${reportType}`);
+
     console.log(`${logPrefix} Retrieved system prompt for '${reportType}' report type`);
     return data.system_prompt;
   };

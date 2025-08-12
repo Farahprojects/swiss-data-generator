@@ -35,6 +35,9 @@ try {
 const OPENAI_MODEL = "gpt-4o";
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions";
 
+// Simple in-memory cache for system prompts
+const promptCache = new Map<string, string>();
+
 // CORS headers for cross-domain requests
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -97,7 +100,13 @@ async function retryWithBackoff<T>(
 async function getSystemPrompt(reportType: string, requestId: string): Promise<string> {
   const logPrefix = `[standard-report][${requestId}]`;
 
-
+  // 1. Check cache first
+  if (promptCache.has(reportType)) {
+    console.log(`[standard-report][${requestId}] Cache HIT for system prompt: ${reportType}`);
+    return promptCache.get(reportType)!;
+  }
+  
+  console.log(`[standard-report][${requestId}] Cache MISS for system prompt: ${reportType}. Fetching from DB.`);
 
   try {
     // Direct fetch without retry logic - should be fast and reliable
@@ -115,6 +124,10 @@ async function getSystemPrompt(reportType: string, requestId: string): Promise<s
       throw new Error(`System prompt not found for ${reportType} report`);
     }
     
+    // 2. Store in cache on successful fetch
+    promptCache.set(reportType, data.system_prompt);
+    console.log(`[standard-report][${requestId}] Stored system prompt in cache: ${reportType}`);
+
     return data.system_prompt;
   } catch (err) {
     throw err; // Propagate the error to be handled by the main handler

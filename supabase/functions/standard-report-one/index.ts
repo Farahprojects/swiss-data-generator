@@ -39,6 +39,9 @@ try {
 const OPENAI_MODEL = "gpt-4o";
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions";
 
+// Simple in-memory cache for system prompts
+const promptCache = new Map<string, string>();
+
 // CORS headers for cross-domain requests
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -99,8 +102,15 @@ async function retryWithBackoff<T>(
 
 // Fetch the system prompt from the reports_prompts table - now accepts reportType parameter
 async function getSystemPrompt(reportType: string, requestId: string): Promise<string> {
-  const logPrefix = `[standard-report][${requestId}]`;
+  const logPrefix = `[standard-report-one][${requestId}]`;
 
+  // 1. Check cache first
+  if (promptCache.has(reportType)) {
+    console.log(`${logPrefix} Cache HIT for system prompt: ${reportType}`);
+    return promptCache.get(reportType)!;
+  }
+  
+  console.log(`${logPrefix} Cache MISS for system prompt: ${reportType}. Fetching from DB.`);
 
 
   try {
@@ -118,6 +128,10 @@ async function getSystemPrompt(reportType: string, requestId: string): Promise<s
     if (!data || !data.system_prompt) {
       throw new Error(`System prompt not found for ${reportType} report`);
     }
+    
+    // 2. Store in cache on successful fetch
+    promptCache.set(reportType, data.system_prompt);
+    console.log(`${logPrefix} Stored system prompt in cache: ${reportType}`);
     
     return data.system_prompt;
   } catch (err) {
@@ -227,8 +241,9 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
 
 // Main handler function
 serve(async (req) => {
+  let reportData: any; // Define here to be accessible in catch block
   const requestId = crypto.randomUUID().substring(0, 8); // Short unique ID for this request
-  const logPrefix = `[standard-report][${requestId}]`;
+  const logPrefix = `[standard-report-one][${requestId}]`;
   const startTime = Date.now();
 
   // Handle CORS preflight requests
@@ -247,7 +262,6 @@ serve(async (req) => {
 
   try {
     // Parse the request payload
-    let reportData;
     try {
       reportData = await req.json();
       
@@ -268,7 +282,7 @@ serve(async (req) => {
     const selectedEngine = reportData.selectedEngine || "standard-report"; // Fall back to default if not provided
 
     // ✅ LOGGING: Initial request received
-    console.log(`[standard-report-one][${requestId}] Request received:`, {
+    console.log(`${logPrefix} Request received:`, {
       report_type: reportType,
       user_id: reportData.user_id,
       endpoint: reportData.endpoint,
@@ -277,7 +291,7 @@ serve(async (req) => {
 
     // Validate required fields
     if (!reportData || !reportData.chartData || !reportData.endpoint) {
-      console.error(`[standard-report-one][${requestId}] Validation failed: Missing required fields`);
+      console.error(`${logPrefix} Validation failed: Missing required fields`);
       return jsonResponse(
         { error: "Missing required fields: chartData and endpoint are required", requestId },
         { status: 400 },
@@ -289,13 +303,13 @@ serve(async (req) => {
     const systemPrompt = await getSystemPrompt(reportType, requestId);
     
     // ✅ LOGGING: System prompt fetched successfully
-    console.log(`[standard-report-one][${requestId}] System prompt fetched for report type: ${reportType}`);
+    console.log(`${logPrefix} System prompt fetched for report type: ${reportType}`);
 
     // Generate the report
     const { report, metadata } = await generateReport(systemPrompt, reportData, requestId);
     
     // ✅ LOGGING: OpenAI API call completed
-    console.log(`[standard-report-one][${requestId}] OpenAI API completed:`, {
+    console.log(`${logPrefix} OpenAI API completed:`, {
       report_type: reportType,
       user_id: reportData.user_id,
       metadata: metadata,
@@ -320,8 +334,8 @@ serve(async (req) => {
       is_guest: reportData.is_guest || false,
       created_at: new Date().toISOString(),
     })
-    .then(() => console.log(`[standard-report-one][${requestId}] Report log insert succeeded for ${reportData.is_guest ? 'guest' : 'user'} report`))
-    .catch(err => console.error(`[standard-report-one][${requestId}] Report log insert failed:`, {
+    .then(() => console.log(`${logPrefix} Report log insert succeeded for ${reportData.is_guest ? 'guest' : 'user'} report`))
+    .catch(err => console.error(`${logPrefix} Report log insert failed:`, {
       error: err,
       user_id: reportData.user_id,
       is_guest: reportData.is_guest,
@@ -333,8 +347,8 @@ serve(async (req) => {
       supabase.from('report_ready_signals').insert({
         guest_report_id: reportData.user_id
       })
-      .then(() => console.log(`[standard-report-one][${requestId}] Signal inserted for guest report: ${reportData.user_id}`))
-      .catch(err => console.error(`[standard-report-one][${requestId}] Signal insert failed:`, err));
+      .then(() => console.log(`${logPrefix} Signal inserted for guest report: ${reportData.user_id}`))
+      .catch(err => console.error(`${logPrefix} Signal insert failed:`, err));
     }
     
     // Return the generated report with proper structure
@@ -353,7 +367,7 @@ serve(async (req) => {
     const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
     
     // ✅ LOGGING: Main handler error
-    console.error(`[standard-report-one][${requestId}] Main handler error:`, {
+    console.error(`${logPrefix} Main handler error:`, {
       report_type: reportData?.reportType || reportData?.report_type,
       user_id: reportData?.user_id,
       error: errorMessage,
@@ -378,7 +392,7 @@ serve(async (req) => {
       })
       .then(({ error }) => {
         if (error) {
-          console.error(`[standard-report-one][${requestId}] Error report log insert failed:`, {
+          console.error(`${logPrefix} Error report log insert failed:`, {
             report_type: reportData?.reportType || reportData?.report_type,
             user_id: reportData?.user_id,
             error: error
@@ -387,7 +401,7 @@ serve(async (req) => {
       });
     } catch (logErr) {
       // ✅ LOGGING: Error report log insert exception
-      console.error(`[standard-report-one][${requestId}] Error report log insert exception:`, {
+      console.error(`${logPrefix} Error report log insert exception:`, {
         report_type: reportData?.reportType || reportData?.report_type,
         user_id: reportData?.user_id,
         error: logErr
