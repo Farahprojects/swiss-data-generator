@@ -85,6 +85,12 @@ const SynastrySnapshot: React.FC<Props> = ({ rawSyncJSON, reportData }) => {
     synastry: parsed.synastry_aspects?.aspects || []
   };
 
+  const formattedDate = new Date(data.meta.date || new Date().toISOString()).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+
   const personADisplay = data.personA.name || "Person A";
   const personBDisplay = data.personB.name || "Person B";
   
