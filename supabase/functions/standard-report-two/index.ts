@@ -45,6 +45,7 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Max-Age': '600',
   'Content-Type': 'application/json',
 };
 
@@ -311,7 +312,7 @@ serve(async (req) => {
     
     // Fire-and-forget report_logs insert
     supabase.from("report_logs").insert({
-      api_key: reportData.api_key || null,
+      api_key: null,
       user_id: reportData.user_id || null,
       report_type: reportType,
       endpoint: reportData.endpoint,
@@ -368,7 +369,7 @@ serve(async (req) => {
     const durationMs = Date.now() - startTime;
     try {
       const insertLog = await supabase.from("report_logs").insert({
-        api_key: reportData?.api_key || null,
+        api_key: null,
         user_id: reportData?.user_id || null,
         report_type: reportData?.reportType || reportData?.report_type || null,
         endpoint: reportData?.endpoint || null,
