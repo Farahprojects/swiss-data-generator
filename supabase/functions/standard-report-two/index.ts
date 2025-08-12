@@ -130,12 +130,11 @@ async function getSystemPrompt(reportType: string, requestId: string): Promise<s
     
     // 2. Store in cache on successful fetch
     promptCache.set(reportType, data.system_prompt);
-    console.log(`${logPrefix} Stored system prompt in cache: ${reportType}`);
     
     return data.system_prompt;
   } catch (err) {
-    console.error(`${logPrefix} Critical error fetching system prompt:`, err.message);
-    throw err; // Propagate the error to be handled by the main handler
+    // Fail silently but propagate the error
+    throw err;
   }
 }
 
@@ -254,19 +253,18 @@ function logAndSignalCompletion(logPrefix: string, reportData: any, report: stri
     is_guest: reportData.is_guest || false,
     created_at: new Date().toISOString(),
   }, { returning: "minimal" })
-  .then(null, (err) => console.error(`${logPrefix} Report log insert failed:`, {
-    error: err,
-    user_id: reportData.user_id,
-    is_guest: reportData.is_guest,
-    report_type: reportData.reportType || reportData.report_type
-  }));
+  .then(null, (err) => {
+    // Silently fail on insert
+  });
   
   // Fire-and-forget report_ready_signals insert for guest reports
   if (reportData.is_guest && reportData.user_id) {
     supabase.from('report_ready_signals').insert({
       guest_report_id: reportData.user_id
     }, { returning: "minimal" })
-    .then(null, (err) => console.error(`${logPrefix} Signal insert failed:`, err));
+    .then(null, (err) => {
+      // Silently fail on insert
+    });
   }
 }
 
@@ -397,20 +395,11 @@ serve(async (req) => {
       })
       .then(({ error }) => {
         if (error) {
-          console.error(`${logPrefix} Error report log insert failed:`, {
-            report_type: reportData?.reportType || reportData?.report_type,
-            user_id: reportData?.user_id,
-            error: error
-          });
+          // Silently fail on error log insert
         }
       });
     } catch (logErr) {
-      // ✅ LOGGING: Error report log insert exception
-      console.error(`${logPrefix} Error report log insert exception:`, {
-        report_type: reportData?.reportType || reportData?.report_type,
-        user_id: reportData?.user_id,
-        error: logErr
-      });
+      // Silently fail on exception
     }
     
     return jsonResponse({
