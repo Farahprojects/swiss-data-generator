@@ -14,6 +14,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import MobileReportSheet from '@/components/public-report/MobileReportSheet';
 import ReportFlowChecker from '@/components/public-report/ReportFlowChecker';
 import { SuccessScreen } from '@/components/public-report/SuccessScreen';
+import { PricingProvider } from '@/contexts/PricingContext';
+import { ReportModalProvider } from '@/contexts/ReportModalContext';
 
 const PublicReport = () => {
   const location = useLocation();
@@ -116,299 +118,303 @@ const PublicReport = () => {
   
   try {
     return (
-      <div className="min-h-screen bg-background">
-        {/* Show cancelled payment message */}
-        {showCancelledMessage && (
-          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md px-4">
-            <Card className="border-amber-200 bg-amber-50">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-amber-800">Payment Cancelled</p>
-                    <p className="text-xs text-amber-700">Your payment was cancelled. You can try again anytime.</p>
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={handleDismissCancelMessage}
-                    className="text-amber-600 hover:text-amber-800 hover:bg-amber-100"
-                  >
-                    ×
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Animated header with logo */}
-        <header className={`fixed top-0 left-0 z-50 p-6 transition-opacity duration-500 ease-out ${
-          showHeader ? 'opacity-100' : 'opacity-0'
-        }`}>
-          <div>
-            <PublicLogo size="md" asLink={false} />
-          </div>
-        </header>
-        
-        <div ref={heroRef}>
-          <HeroSection onGetReportClick={handleGetReportClick} />
-        </div>
-        
-        {/* Sample Report Section */}
-        <section className="py-24 bg-gradient-to-b from-white to-gray-50/30">
-          <div className="w-full md:px-4 md:container md:mx-auto">
-            <div className="max-w-6xl mx-auto">
-              <div className="text-center mb-20">
-                <h2 className="text-4xl md:text-5xl font-light text-gray-900 mb-6 tracking-tight">
-                  See What You'll Get
-                </h2>
-                <p className="text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed">
-                  Real psychological profiles with actionable insights - see the depth and precision you'll receive.
-                </p>
+      <PricingProvider>
+        <ReportModalProvider>
+          <div className="min-h-screen bg-background">
+            {/* Show cancelled payment message */}
+            {showCancelledMessage && (
+              <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md px-4">
+                <Card className="border-amber-200 bg-amber-50">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-amber-800">Payment Cancelled</p>
+                        <p className="text-xs text-amber-700">Your payment was cancelled. You can try again anytime.</p>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={handleDismissCancelMessage}
+                        className="text-amber-600 hover:text-amber-800 hover:bg-amber-100"
+                      >
+                        ×
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
+            )}
 
-              {/* Sync Pro Compatibility Preview */}
-              <div className="mb-24">
-                <div className="flex flex-col md:grid md:grid-cols-2 gap-0 md:gap-12 mb-16">
-                  {/* Peter's Profile */}
-                  <div className="bg-white/80 backdrop-blur-sm rounded-none md:rounded-2xl p-0 md:p-8 border-0 md:border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group mb-4 md:mb-0">
-                    <div className="p-3 md:p-0">
-                      <div className="text-center mb-8">
-                        <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Peter Farah</h3>
-                        <p className="text-gray-600 font-normal">Creative Visionary • Structured Strategist</p>
+            {/* Animated header with logo */}
+            <header className={`fixed top-0 left-0 z-50 p-6 transition-opacity duration-500 ease-out ${
+              showHeader ? 'opacity-100' : 'opacity-0'
+            }`}>
+              <div>
+                <PublicLogo size="md" asLink={false} />
+              </div>
+            </header>
+            
+            <div ref={heroRef}>
+              <HeroSection onGetReportClick={handleGetReportClick} />
+            </div>
+            
+            {/* Sample Report Section */}
+            <section className="py-24 bg-gradient-to-b from-white to-gray-50/30">
+              <div className="w-full md:px-4 md:container md:mx-auto">
+                <div className="max-w-6xl mx-auto">
+                  <div className="text-center mb-20">
+                    <h2 className="text-4xl md:text-5xl font-light text-gray-900 mb-6 tracking-tight">
+                      See What You'll Get
+                    </h2>
+                    <p className="text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed">
+                      Real psychological profiles with actionable insights - see the depth and precision you'll receive.
+                    </p>
+                  </div>
+
+                  {/* Sync Pro Compatibility Preview */}
+                  <div className="mb-24">
+                    <div className="flex flex-col md:grid md:grid-cols-2 gap-0 md:gap-12 mb-16">
+                      {/* Peter's Profile */}
+                      <div className="bg-white/80 backdrop-blur-sm rounded-none md:rounded-2xl p-0 md:p-8 border-0 md:border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group mb-4 md:mb-0">
+                        <div className="p-3 md:p-0">
+                          <div className="text-center mb-8">
+                            <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Peter Farah</h3>
+                            <p className="text-gray-600 font-normal">Creative Visionary • Structured Strategist</p>
+                          </div>
+                          
+                          <div className="space-y-6">
+                          <div className="transform group-hover:translate-x-1 transition-transform duration-300">
+                            <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Communication Style</h4>
+                            <p className="text-gray-600 text-sm leading-relaxed">Expressive and conceptual, prefers big-picture discussions with room for structured planning.</p>
+                          </div>
+                          
+                          <div className="transform group-hover:translate-x-1 transition-transform duration-500">
+                            <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Decision Making</h4>
+                            <p className="text-gray-600 text-sm leading-relaxed">Balances intuitive insights with methodical analysis, values both innovation and process.</p>
+                          </div>
+                          
+                          <div className="transform group-hover:translate-x-1 transition-transform duration-700">
+                            <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Relationship Needs</h4>
+                            <p className="text-gray-600 text-sm leading-relaxed">Thrives with partners who appreciate both creative freedom and collaborative planning.</p>
+                          </div>
+                          </div>
+                        </div>
                       </div>
+
+                      {/* Olivia's Profile */}
+                      <div className="bg-white/80 backdrop-blur-sm rounded-none md:rounded-2xl p-0 md:p-8 border-0 md:border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group">
+                        <div className="p-3 md:p-0">
+                          <div className="text-center mb-8">
+                            <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Olivia Patten</h3>
+                            <p className="text-gray-600 font-normal">Intuitive Connector • Detail Orchestrator</p>
+                          </div>
+                          
+                          <div className="space-y-6">
+                          <div className="transform group-hover:translate-x-1 transition-transform duration-300">
+                            <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Communication Style</h4>
+                            <p className="text-gray-600 text-sm leading-relaxed">Empathetic and thorough, excels at reading between the lines and organizing details.</p>
+                          </div>
+                          
+                          <div className="transform group-hover:translate-x-1 transition-transform duration-500">
+                            <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Decision Making</h4>
+                            <p className="text-gray-600 text-sm leading-relaxed">Combines emotional intelligence with systematic execution, values harmony and efficiency.</p>
+                          </div>
+                          
+                          <div className="transform group-hover:translate-x-1 transition-transform duration-700">
+                            <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Relationship Needs</h4>
+                            <p className="text-gray-600 text-sm leading-relaxed">Values partners who bring vision while appreciating her attention to emotional nuances.</p>
+                          </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Their Sync Dynamic */}
+                    <div className="relative overflow-hidden bg-white/60 backdrop-blur-sm rounded-none md:rounded-2xl p-4 md:p-12 border-0 md:border border-gray-200/50">
+                      {/* Subtle background elements */}
+                      <div className="absolute inset-0 opacity-20">
+                        <div className="absolute top-6 left-12 w-1 h-1 bg-gray-400 rounded-full animate-pulse"></div>
+                        <div className="absolute top-12 right-16 w-0.5 h-0.5 bg-gray-500 rounded-full animate-ping" style={{animationDelay: '1s'}}></div>
+                        <div className="absolute bottom-8 left-1/4 w-1 h-1 bg-gray-400 rounded-full animate-pulse" style={{animationDelay: '2s'}}></div>
+                        <div className="absolute bottom-12 right-1/3 w-0.5 h-0.5 bg-gray-500 rounded-full animate-ping" style={{animationDelay: '0.5s'}}></div>
+                      </div>
+
+                      <h3 className="text-3xl md:text-4xl font-light text-gray-900 mb-12 text-center relative z-10 tracking-tight">
+                        Their Sync Dynamic
+                        <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 w-16 h-px bg-gradient-to-r from-transparent via-gray-400 to-transparent"></div>
+                      </h3>
                       
-                      <div className="space-y-6">
-                      <div className="transform group-hover:translate-x-1 transition-transform duration-300">
-                        <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Communication Style</h4>
-                        <p className="text-gray-600 text-sm leading-relaxed">Expressive and conceptual, prefers big-picture discussions with room for structured planning.</p>
-                      </div>
-                      
-                      <div className="transform group-hover:translate-x-1 transition-transform duration-500">
-                        <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Decision Making</h4>
-                        <p className="text-gray-600 text-sm leading-relaxed">Balances intuitive insights with methodical analysis, values both innovation and process.</p>
-                      </div>
-                      
-                      <div className="transform group-hover:translate-x-1 transition-transform duration-700">
-                        <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Relationship Needs</h4>
-                        <p className="text-gray-600 text-sm leading-relaxed">Thrives with partners who appreciate both creative freedom and collaborative planning.</p>
-                      </div>
+                      <div className="grid md:grid-cols-3 gap-12 relative z-10">
+                        <div className="text-center group">
+                          <div className="w-24 h-24 bg-gray-50 border border-gray-200/50 rounded-full flex items-center justify-center mx-auto mb-6 hover:scale-105 transition-all duration-500 hover:border-gray-300/60">
+                            <span className="text-3xl font-light text-gray-700 group-hover:scale-110 transition-transform duration-300">92%</span>
+                          </div>
+                          <h4 className="font-medium text-gray-900 mb-3 text-sm tracking-wide uppercase group-hover:text-gray-700 transition-colors duration-300">Vision Alignment</h4>
+                          <p className="text-gray-600 text-sm leading-relaxed">Both value growth and structured progress toward shared goals.</p>
+                        </div>
+                        
+                        <div className="text-center group">
+                          <div className="w-24 h-24 bg-gray-50 border border-gray-200/50 rounded-full flex items-center justify-center mx-auto mb-6 hover:scale-105 transition-all duration-500 hover:border-gray-300/60" style={{animationDelay: '0.2s'}}>
+                            <span className="text-3xl font-light text-gray-700 group-hover:scale-110 transition-transform duration-300">88%</span>
+                          </div>
+                          <h4 className="font-medium text-gray-900 mb-3 text-sm tracking-wide uppercase group-hover:text-gray-700 transition-colors duration-300">Communication Flow</h4>
+                          <p className="text-gray-600 text-sm leading-relaxed">Peter's big picture thinking complements Olivia's detail orientation perfectly.</p>
+                        </div>
+                        
+                        <div className="text-center group">
+                          <div className="w-24 h-24 bg-gray-50 border border-gray-200/50 rounded-full flex items-center justify-center mx-auto mb-6 hover:scale-105 transition-all duration-500 hover:border-gray-300/60" style={{animationDelay: '0.4s'}}>
+                            <span className="text-3xl font-light text-gray-700 group-hover:scale-110 transition-transform duration-300">95%</span>
+                          </div>
+                          <h4 className="font-medium text-gray-900 mb-3 text-sm tracking-wide uppercase group-hover:text-gray-700 transition-colors duration-300">Growth Potential</h4>
+                          <p className="text-gray-600 text-sm leading-relaxed">Their different strengths create a powerful dynamic for mutual development.</p>
+                        </div>
                       </div>
                     </div>
                   </div>
-
-                  {/* Olivia's Profile */}
-                  <div className="bg-white/80 backdrop-blur-sm rounded-none md:rounded-2xl p-0 md:p-8 border-0 md:border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group">
-                    <div className="p-3 md:p-0">
-                      <div className="text-center mb-8">
-                        <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Olivia Patten</h3>
-                        <p className="text-gray-600 font-normal">Intuitive Connector • Detail Orchestrator</p>
-                      </div>
-                      
-                      <div className="space-y-6">
-                      <div className="transform group-hover:translate-x-1 transition-transform duration-300">
-                        <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Communication Style</h4>
-                        <p className="text-gray-600 text-sm leading-relaxed">Empathetic and thorough, excels at reading between the lines and organizing details.</p>
-                      </div>
-                      
-                      <div className="transform group-hover:translate-x-1 transition-transform duration-500">
-                        <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Decision Making</h4>
-                        <p className="text-gray-600 text-sm leading-relaxed">Combines emotional intelligence with systematic execution, values harmony and efficiency.</p>
-                      </div>
-                      
-                      <div className="transform group-hover:translate-x-1 transition-transform duration-700">
-                        <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Relationship Needs</h4>
-                        <p className="text-gray-600 text-sm leading-relaxed">Values partners who bring vision while appreciating her attention to emotional nuances.</p>
-                      </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Their Sync Dynamic */}
-                <div className="relative overflow-hidden bg-white/60 backdrop-blur-sm rounded-none md:rounded-2xl p-4 md:p-12 border-0 md:border border-gray-200/50">
-                  {/* Subtle background elements */}
-                  <div className="absolute inset-0 opacity-20">
-                    <div className="absolute top-6 left-12 w-1 h-1 bg-gray-400 rounded-full animate-pulse"></div>
-                    <div className="absolute top-12 right-16 w-0.5 h-0.5 bg-gray-500 rounded-full animate-ping" style={{animationDelay: '1s'}}></div>
-                    <div className="absolute bottom-8 left-1/4 w-1 h-1 bg-gray-400 rounded-full animate-pulse" style={{animationDelay: '2s'}}></div>
-                    <div className="absolute bottom-12 right-1/3 w-0.5 h-0.5 bg-gray-500 rounded-full animate-ping" style={{animationDelay: '0.5s'}}></div>
-                  </div>
-
-                  <h3 className="text-3xl md:text-4xl font-light text-gray-900 mb-12 text-center relative z-10 tracking-tight">
-                    Their Sync Dynamic
-                    <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 w-16 h-px bg-gradient-to-r from-transparent via-gray-400 to-transparent"></div>
-                  </h3>
                   
-                  <div className="grid md:grid-cols-3 gap-12 relative z-10">
-                    <div className="text-center group">
-                      <div className="w-24 h-24 bg-gray-50 border border-gray-200/50 rounded-full flex items-center justify-center mx-auto mb-6 hover:scale-105 transition-all duration-500 hover:border-gray-300/60">
-                        <span className="text-3xl font-light text-gray-700 group-hover:scale-110 transition-transform duration-300">92%</span>
+                  {/* Examples Grid */}
+                  <div className="flex flex-col md:grid md:grid-cols-2 gap-0 md:gap-12 mb-16">
+                    {/* Cognitive Processing Profile Card */}
+                    <div className="bg-white/80 backdrop-blur-sm rounded-none md:rounded-2xl p-0 md:p-8 border-0 md:border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group mb-4 md:mb-0">
+                      <div className="p-3 md:p-0">
+                        <div className="text-center mb-8">
+                          <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Cognitive Processing Profile</h3>
+                          <p className="text-gray-600 font-normal">Personal Essence Report • Generated in 2 minutes</p>
+                        </div>
+                        
+                        <div className="space-y-6">
+                        <div className="transform group-hover:translate-x-1 transition-transform duration-300">
+                          <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Primary Style</h4>
+                          <p className="text-gray-600 text-sm leading-relaxed">Creative Visionary (Big-Picture) - Naturally gravitates towards seeing the grand scheme and weaving ideas into cohesive visions.</p>
+                        </div>
+                        
+                        <div className="transform group-hover:translate-x-1 transition-transform duration-500">
+                          <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Secondary Style</h4>
+                          <p className="text-gray-600 text-sm leading-relaxed">Structured Strategist (Process) - Brings methodical execution to innovative ideas.</p>
+                        </div>
+                        
+                        <div className="transform group-hover:translate-x-1 transition-transform duration-700">
+                          <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Key Insight</h4>
+                          <p className="text-gray-600 text-sm leading-relaxed">A harmonious blend of creativity and structure that enables navigating challenges with agility while bringing visionary ideas to fruition.</p>
+                        </div>
+                        </div>
                       </div>
-                      <h4 className="font-medium text-gray-900 mb-3 text-sm tracking-wide uppercase group-hover:text-gray-700 transition-colors duration-300">Vision Alignment</h4>
-                      <p className="text-gray-600 text-sm leading-relaxed">Both value growth and structured progress toward shared goals.</p>
                     </div>
-                    
-                    <div className="text-center group">
-                      <div className="w-24 h-24 bg-gray-50 border border-gray-200/50 rounded-full flex items-center justify-center mx-auto mb-6 hover:scale-105 transition-all duration-500 hover:border-gray-300/60" style={{animationDelay: '0.2s'}}>
-                        <span className="text-3xl font-light text-gray-700 group-hover:scale-110 transition-transform duration-300">88%</span>
+
+                    {/* Astro Data Card */}
+                    <div className="bg-white/80 backdrop-blur-sm rounded-none md:rounded-2xl p-0 md:p-8 border-0 md:border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group">
+                      <div className="p-3 md:p-0">
+                        <div className="text-center mb-8">
+                          <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Raw Astro Data</h3>
+                          <p className="text-gray-600 font-normal">Precise astronomical calculations • Powered by Therai Swiss</p>
+                        </div>
+                        
+                        <div className="space-y-6">
+                        <div className="transform group-hover:translate-x-1 transition-transform duration-300">
+                          <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">What This Shows</h4>
+                          <p className="text-gray-600 text-sm leading-relaxed">The exact astronomical positions at your birth moment - the foundation for all astrological interpretation.</p>
+                        </div>
+                        
+                        <div className="transform group-hover:translate-x-1 transition-transform duration-500">
+                          <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Sample Data</h4>
+                          <p className="text-gray-600 text-sm leading-relaxed">Sun: Gemini 15°42' • Moon: Scorpio 28°13' • Rising: Virgo 3°51'</p>
+                        </div>
+                        
+                        <div className="transform group-hover:translate-x-1 transition-transform duration-700">
+                          <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Why It Matters</h4>
+                          <p className="text-gray-600 text-sm leading-relaxed">These precise coordinates create your unique cosmic blueprint - no two people born at different times have identical data.</p>
+                        </div>
+                        </div>
+
+                        <div className="mt-6 p-4 bg-gray-50/60 rounded-xl border border-gray-200/30">
+                          <div className="flex items-center justify-center gap-2 mb-2">
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
+                            <span className="text-xs font-medium text-gray-700 tracking-wide uppercase">Therai Swiss</span>
+                          </div>
+                          <p className="text-xs text-gray-600 text-center leading-relaxed">
+                            Swiss-precision astronomical calculations in seconds
+                          </p>
+                        </div>
                       </div>
-                      <h4 className="font-medium text-gray-900 mb-3 text-sm tracking-wide uppercase group-hover:text-gray-700 transition-colors duration-300">Communication Flow</h4>
-                      <p className="text-gray-600 text-sm leading-relaxed">Peter's big picture thinking complements Olivia's detail orientation perfectly.</p>
                     </div>
-                    
-                    <div className="text-center group">
-                      <div className="w-24 h-24 bg-gray-50 border border-gray-200/50 rounded-full flex items-center justify-center mx-auto mb-6 hover:scale-105 transition-all duration-500 hover:border-gray-300/60" style={{animationDelay: '0.4s'}}>
-                        <span className="text-3xl font-light text-gray-700 group-hover:scale-110 transition-transform duration-300">95%</span>
-                      </div>
-                      <h4 className="font-medium text-gray-900 mb-3 text-sm tracking-wide uppercase group-hover:text-gray-700 transition-colors duration-300">Growth Potential</h4>
-                      <p className="text-gray-600 text-sm leading-relaxed">Their different strengths create a powerful dynamic for mutual development.</p>
-                    </div>
+                  </div>
+                  
+                  <div className="text-center mt-16">
+                    <button 
+                      onClick={handleGetReportClick}
+                      className="bg-gray-900 text-white px-12 py-4 rounded-xl text-lg font-normal hover:bg-gray-800 transition-all duration-300 hover:scale-105 border border-gray-800/20 shadow-lg hover:shadow-xl"
+                    >
+                      Unlock
+                    </button>
+                    <p className="text-gray-500 mt-4 font-light">Takes 2 minutes • Instant results</p>
                   </div>
                 </div>
               </div>
+            </section>
 
-              {/* Examples Grid */}
-              <div className="flex flex-col md:grid md:grid-cols-2 gap-0 md:gap-12 mb-16">
-                {/* Cognitive Processing Profile Card */}
-                <div className="bg-white/80 backdrop-blur-sm rounded-none md:rounded-2xl p-0 md:p-8 border-0 md:border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group mb-4 md:mb-0">
-                  <div className="p-3 md:p-0">
-                    <div className="text-center mb-8">
-                      <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Cognitive Processing Profile</h3>
-                      <p className="text-gray-600 font-normal">Personal Essence Report • Generated in 2 minutes</p>
-                    </div>
-                    
-                    <div className="space-y-6">
-                    <div className="transform group-hover:translate-x-1 transition-transform duration-300">
-                      <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Primary Style</h4>
-                      <p className="text-gray-600 text-sm leading-relaxed">Creative Visionary (Big-Picture) - Naturally gravitates towards seeing the grand scheme and weaving ideas into cohesive visions.</p>
-                    </div>
-                    
-                    <div className="transform group-hover:translate-x-1 transition-transform duration-500">
-                      <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Secondary Style</h4>
-                      <p className="text-gray-600 text-sm leading-relaxed">Structured Strategist (Process) - Brings methodical execution to innovative ideas.</p>
-                    </div>
-                    
-                    <div className="transform group-hover:translate-x-1 transition-transform duration-700">
-                      <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Key Insight</h4>
-                      <p className="text-gray-600 text-sm leading-relaxed">A harmonious blend of creativity and structure that enables navigating challenges with agility while bringing visionary ideas to fruition.</p>
-                    </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Astro Data Card */}
-                <div className="bg-white/80 backdrop-blur-sm rounded-none md:rounded-2xl p-0 md:p-8 border-0 md:border border-gray-200/50 hover:border-gray-300/60 transition-all duration-500 hover:translate-y-[-2px] group">
-                  <div className="p-3 md:p-0">
-                    <div className="text-center mb-8">
-                      <h3 className="text-2xl font-light text-gray-900 mb-2 tracking-tight">Raw Astro Data</h3>
-                      <p className="text-gray-600 font-normal">Precise astronomical calculations • Powered by Therai Swiss</p>
-                    </div>
-                    
-                    <div className="space-y-6">
-                    <div className="transform group-hover:translate-x-1 transition-transform duration-300">
-                      <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">What This Shows</h4>
-                      <p className="text-gray-600 text-sm leading-relaxed">The exact astronomical positions at your birth moment - the foundation for all astrological interpretation.</p>
-                    </div>
-                    
-                    <div className="transform group-hover:translate-x-1 transition-transform duration-500">
-                      <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Sample Data</h4>
-                      <p className="text-gray-600 text-sm leading-relaxed">Sun: Gemini 15°42' • Moon: Scorpio 28°13' • Rising: Virgo 3°51'</p>
-                    </div>
-                    
-                    <div className="transform group-hover:translate-x-1 transition-transform duration-700">
-                      <h4 className="font-medium text-gray-900 mb-2 text-sm tracking-wide uppercase">Why It Matters</h4>
-                      <p className="text-gray-600 text-sm leading-relaxed">These precise coordinates create your unique cosmic blueprint - no two people born at different times have identical data.</p>
-                    </div>
-                    </div>
-
-                    <div className="mt-6 p-4 bg-gray-50/60 rounded-xl border border-gray-200/30">
-                      <div className="flex items-center justify-center gap-2 mb-2">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
-                        <span className="text-xs font-medium text-gray-700 tracking-wide uppercase">Therai Swiss</span>
-                      </div>
-                      <p className="text-xs text-gray-600 text-center leading-relaxed">
-                        Swiss-precision astronomical calculations in seconds
-                      </p>
-                    </div>
-                  </div>
-                </div>
+            <TestsSection />
+            {!isMobile && (
+              <div id="report-form" ref={reportFormRef}>
+                <ReportForm onReportCreated={({ guestReportId, name, email, paymentStatus }) => {
+                  console.log("Desktop form submitted. Guest ID:", guestReportId, "Status:", paymentStatus);
+                  handleReportCreated(guestReportId, paymentStatus, name, email);
+                }} />
               </div>
-              
-              <div className="text-center mt-16">
-                <button 
+            )}
+            <TheraiChatGPTSection />
+            <FeaturesSection onGetReportClick={handleGetReportClick} />
+            <PublicFooter />
+
+            {isMobile && (
+              <div
+                className={`fixed bottom-6 right-6 z-50 transition-all duration-300 ${
+                  showUnlockFab && !isMobileDrawerOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
+                }`}
+                aria-hidden={!showUnlockFab || isMobileDrawerOpen}
+              >
+                <Button
                   onClick={handleGetReportClick}
-                  className="bg-gray-900 text-white px-12 py-4 rounded-xl text-lg font-normal hover:bg-gray-800 transition-all duration-300 hover:scale-105 border border-gray-800/20 shadow-lg hover:shadow-xl"
+                  className="bg-gray-900 text-white px-6 py-4 rounded-xl text-base font-normal shadow-lg hover:bg-gray-800 transition-all duration-300"
+                  aria-label="Unlock report"
                 >
                   Unlock
-                </button>
-                <p className="text-gray-500 mt-4 font-light">Takes 2 minutes • Instant results</p>
+                </Button>
               </div>
-            </div>
+            )}
+
+            {/* Mobile: use top-level portal sheet for stable keyboard handling */}
+            <MobileReportSheet
+              isOpen={isMobileDrawerOpen}
+              onOpenChange={setIsMobileDrawerOpen}
+              onReportCreated={(guestReportId, paymentStatus, name, email) => {
+                console.log("Mobile form submitted. Guest ID:", guestReportId, "Status:", paymentStatus);
+                handleReportCreated(guestReportId, paymentStatus, name, email);
+                setIsMobileDrawerOpen(false); // Close the sheet on submit
+              }}
+            />
+
+            {activeGuest && (
+              <ReportFlowChecker 
+                guestId={activeGuest.id}
+                onPaid={(paidGuestId) => {
+                  console.log(`Report ${paidGuestId} is paid! Ready to show success screen.`);
+                  // For stripe return, we set the isStripeReturn flag so the success screen can fetch the details.
+                  const isStripe = !activeGuest.name; // A simple check: if name is missing, it must be a stripe return.
+                  setPaidGuest({ id: paidGuestId, name: activeGuest.name, email: activeGuest.email, isStripeReturn: isStripe });
+                  setActiveGuest(null); // Stop checking once paid
+                }}
+              />
+            )}
+
+            {paidGuest && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                <SuccessScreen guestId={paidGuest.id} name={paidGuest.name} email={paidGuest.email} isStripeReturn={paidGuest.isStripeReturn} />
+              </div>
+            )}
           </div>
-        </section>
-
-        <TestsSection />
-        {!isMobile && (
-          <div id="report-form" ref={reportFormRef}>
-            <ReportForm onReportCreated={({ guestReportId, name, email, paymentStatus }) => {
-              console.log("Desktop form submitted. Guest ID:", guestReportId, "Status:", paymentStatus);
-              handleReportCreated(guestReportId, paymentStatus, name, email);
-            }} />
-          </div>
-        )}
-        <TheraiChatGPTSection />
-        <FeaturesSection onGetReportClick={handleGetReportClick} />
-        <PublicFooter />
-
-        {isMobile && (
-          <div
-            className={`fixed bottom-6 right-6 z-50 transition-all duration-300 ${
-              showUnlockFab && !isMobileDrawerOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
-            }`}
-            aria-hidden={!showUnlockFab || isMobileDrawerOpen}
-          >
-            <Button
-              onClick={handleGetReportClick}
-              className="bg-gray-900 text-white px-6 py-4 rounded-xl text-base font-normal shadow-lg hover:bg-gray-800 transition-all duration-300"
-              aria-label="Unlock report"
-            >
-              Unlock
-            </Button>
-          </div>
-        )}
-
-        {/* Mobile: use top-level portal sheet for stable keyboard handling */}
-        <MobileReportSheet
-          isOpen={isMobileDrawerOpen}
-          onOpenChange={setIsMobileDrawerOpen}
-          onReportCreated={(guestReportId, paymentStatus, name, email) => {
-            console.log("Mobile form submitted. Guest ID:", guestReportId, "Status:", paymentStatus);
-            handleReportCreated(guestReportId, paymentStatus, name, email);
-            setIsMobileDrawerOpen(false); // Close the sheet on submit
-          }}
-        />
-
-        {activeGuest && (
-          <ReportFlowChecker 
-            guestId={activeGuest.id}
-            onPaid={(paidGuestId) => {
-              console.log(`Report ${paidGuestId} is paid! Ready to show success screen.`);
-              // For stripe return, we set the isStripeReturn flag so the success screen can fetch the details.
-              const isStripe = !activeGuest.name; // A simple check: if name is missing, it must be a stripe return.
-              setPaidGuest({ id: paidGuestId, name: activeGuest.name, email: activeGuest.email, isStripeReturn: isStripe });
-              setActiveGuest(null); // Stop checking once paid
-            }}
-          />
-        )}
-
-        {paidGuest && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <SuccessScreen guestId={paidGuest.id} name={paidGuest.name} email={paidGuest.email} isStripeReturn={paidGuest.isStripeReturn} />
-          </div>
-        )}
-      </div>
+        </ReportModalProvider>
+      </PricingProvider>
     );
   } catch (err: any) {
     return <div>Sorry, something went wrong.</div>;
