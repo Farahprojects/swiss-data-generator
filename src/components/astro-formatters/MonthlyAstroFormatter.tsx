@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHeader, TableHead, TableRow } from '@
 import { ChartHeader } from './shared/ChartHeader';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { parseAstroData } from '@/lib/synastryFormatter';
 
 interface MonthlyAstroFormatterProps {
   swissData: any;
@@ -25,7 +26,12 @@ export const MonthlyAstroFormatter: React.FC<MonthlyAstroFormatterProps> = ({
   reportData,
   className = ''
 }) => {
-  if (!swissData || !swissData.monthly) {
+  const parsed = parseAstroData(swissData);
+  const monthly = parsed?.monthly ?? swissData?.monthly;
+  const meta = parsed?.meta ?? swissData?.meta ?? {};
+  const subject = parsed?.subject ?? swissData?.subject ?? {};
+
+  if (!monthly) {
     return (
       <div className={`text-center text-gray-500 py-16 ${className}`}>
         <p className="text-lg font-light">No monthly outlook data available for this report.</p>
@@ -33,10 +39,12 @@ export const MonthlyAstroFormatter: React.FC<MonthlyAstroFormatterProps> = ({
     );
   }
 
-  const { meta, subject, monthly } = swissData;
-  const { peaks, top_events, daily_index } = monthly;
+  const { peaks, top_events, daily_index } = monthly as any;
   
-  const monthName = new Date(`${meta.month}-02`).toLocaleString('default', { month: 'long', year: 'numeric' });
+  const monthStr = (meta as any).month;
+  const monthName = monthStr
+    ? new Date(`${monthStr}-02`).toLocaleString('default', { month: 'long', year: 'numeric' })
+    : new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
 
   return (
     <div className={`font-inter max-w-4xl mx-auto py-8 ${className}`}>
