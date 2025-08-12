@@ -352,7 +352,7 @@ const PublicReport = () => {
         <TestsSection />
         {!isMobile && (
           <div id="report-form" ref={reportFormRef}>
-            <ReportForm onReportCreated={(guestReportId, name, email, paymentStatus) => {
+            <ReportForm onReportCreated={({ guestReportId, name, email, paymentStatus }) => {
               console.log("Desktop form submitted. Guest ID:", guestReportId, "Status:", paymentStatus);
               handleReportCreated(guestReportId, paymentStatus, name, email);
             }} />
