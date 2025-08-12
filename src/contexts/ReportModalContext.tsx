@@ -5,6 +5,8 @@ import { ReportReference } from '@/types/reportReference';
 import { useReportCache } from '@/hooks/useReportCache';
 import { sessionManager } from '@/utils/sessionManager';
 
+const SESSION_STORAGE_KEY = 'report_modal_guest_id';
+
 interface ModalContext {
   open: (guestReportId: string, metadata?: any) => void;
   close: () => void;
@@ -20,6 +22,19 @@ export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
   const [currentReport, setCurrentReport] = useState<ReportReference | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const { fetchReportData, removeFromCache, clearCache, cacheSize } = useReportCache();
+
+  // On initial load, check session storage for a persisted report ID
+  useEffect(() => {
+    try {
+      const persistedGuestId = sessionStorage.getItem(SESSION_STORAGE_KEY);
+      if (persistedGuestId) {
+        console.log(`[ModalCTX] Found persisted guestId: ${persistedGuestId}. Re-opening modal.`);
+        open(persistedGuestId);
+      }
+    } catch (error) {
+      console.warn('[ModalCTX] Could not access session storage for persistence.', error);
+    }
+  }, []); // Empty dependency array ensures this runs only once on mount
 
   // Register with SessionManager for state reset
   useEffect(() => {
@@ -44,7 +59,7 @@ export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
     if (!guestReportId) return console.warn('[ModalCTX] open called with null guestReportId');
 
     try {
-      sessionStorage.setItem('guestId', guestReportId);
+      sessionStorage.setItem(SESSION_STORAGE_KEY, guestReportId);
       // success flag removed; rely on seen flags only
       localStorage.setItem(`seen:${guestReportId}`, '1');
       localStorage.setItem('seen:last', guestReportId);
@@ -64,7 +79,13 @@ export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const close = useCallback(() => {
-    try { console.log(`[Modal] close @${Date.now()}`); } catch {}
+    try {
+      console.log(`[Modal] close @${Date.now()}`);
+      sessionStorage.removeItem(SESSION_STORAGE_KEY); // Clear persisted ID on close
+    } catch (error) {
+      console.warn('[ModalCTX] Could not access session storage to clear persisted ID.', error);
+    }
+
     // Clean up cache for current report
     if (currentReport?.guestReportId) {
       removeFromCache(currentReport.guestReportId);
