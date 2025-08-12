@@ -1,7 +1,7 @@
 import { BaseTemplate } from './BaseTemplate';
 import { PdfGenerationOptions, PdfMetadata } from '../types';
-import { isSynastryData, parseSynastryRich } from '@/lib/synastryFormatter';
-import { parseSwissDataRich, EnrichedSnapshot } from '@/utils/swissFormatter';
+import { isSynastryData, parseAstroData } from '@/lib/synastryFormatter';
+import { parseSwissDataRich } from '@/utils/swissFormatter';
 
 export interface AstroPdfData {
   id: string;
@@ -24,7 +24,7 @@ export class AstroTemplate extends BaseTemplate {
     };
     this.setMetadata(metadata);
 
-    // Header - Using a serif font closest to GT Sectra
+    // Header
     const logoY = 20;
     this.doc.setFontSize(26).setFont('times', 'normal').setTextColor(40, 40, 60);
     this.doc.text('Therai.', this.pageWidth / 2, logoY + 12, { align: 'center' });
@@ -56,53 +56,70 @@ export class AstroTemplate extends BaseTemplate {
   }
 
   public renderSynastryData(swissData: any, startY: number, targetDoc?: any): number {
-    const data = parseSynastryRich(swissData);
+    const data = parseAstroData(swissData);
     const doc = targetDoc || this.doc;
     let y = startY;
 
+    const { meta, natal_set, synastry_aspects, composite_chart, transits } = data;
+
     // Header
     doc.setFontSize(16).setFont('helvetica', 'bold').setTextColor(40, 40, 60);
-    const personADisplay = data.personA.name || "Person A";
-    const personBDisplay = data.personB.name || "Person B";
-    doc.text(`${personADisplay} & ${personBDisplay} - Compatibility Astro Data`, this.margins.left, y);
+    const personAName = natal_set?.personA?.name || 'Person A';
+    const personBName = natal_set?.personB?.name || 'Person B';
+    doc.text(`${personAName} & ${personBName} - Compatibility Astro Data`, this.margins.left, y);
     y += 20;
 
     // Date and time
     doc.setFontSize(12).setFont('helvetica', 'normal').setTextColor(100);
-    const formattedDate = new Date(data.meta.dateISO).toLocaleDateString("en-US", {
+    const formattedDate = new Date(meta.date).toLocaleDateString("en-US", {
       month: "long", day: "numeric", year: "numeric"
     });
-    const formattedTime = new Date(`1970-01-01T${data.meta.time}Z`).toLocaleTimeString("en-US", {
+    const formattedTime = new Date(`1970-01-01T${meta.time}Z`).toLocaleTimeString("en-US", {
       hour: "numeric", minute: "2-digit"
     });
     doc.text(`${formattedDate} — ${formattedTime}`, this.margins.left, y);
     y += 15;
 
-    if (data.meta.tz) {
-      doc.text(data.meta.tz, this.margins.left, y);
+    if (meta.tz) {
+      doc.text(meta.tz, this.margins.left, y);
       y += 15;
     }
 
-    // Person A
-    y = this.renderPersonSection(data.personA, personADisplay, y, targetDoc);
+    // Person A Natal
+    if (natal_set?.personA) {
+      y = this.renderPersonSection(natal_set.personA, 'Natal Data', y, targetDoc);
+      y += 10;
+    }
     
-    // Divider
-    y += 10;
-    doc.setDrawColor(200);
-    const pageWidth = targetDoc ? targetDoc.internal.pageSize.getWidth() : this.pageWidth;
-    doc.line(this.margins.left, y, pageWidth - this.margins.right, y);
-    y += 15;
-
-    // Person B  
-    y = this.renderPersonSection(data.personB, personBDisplay, y, targetDoc);
+    // Person B Natal
+    if (natal_set?.personB) {
+      const pageWidth = targetDoc ? targetDoc.internal.pageSize.getWidth() : this.pageWidth;
+      doc.setDrawColor(200).line(this.margins.left, y, pageWidth - this.margins.right, y);
+      y += 15;
+      y = this.renderPersonSection(natal_set.personB, 'Natal Data', y, targetDoc);
+    }
+    
+    // Synastry Aspects
+    if (synastry_aspects?.aspects) {
+      y += 15;
+      y = this.renderSection(`SYNASTRY ASPECTS (${personAName} ↔ ${personBName})`, synastry_aspects.aspects, y, false, targetDoc);
+    }
 
     // Composite Chart
-    y += 15;
-    y = this.renderSection("COMPOSITE CHART - MIDPOINTS", data.composite, y, true, targetDoc);
+    if (composite_chart) {
+      y += 15;
+      y = this.renderSection("COMPOSITE CHART - MIDPOINTS", composite_chart, y, true, targetDoc);
+    }
 
-    // Synastry Aspects
-    y += 15;
-    y = this.renderSection(`SYNASTRY ASPECTS (${personADisplay} ↔ ${personBDisplay})`, data.synastry, y, false, targetDoc);
+    // Transits
+    if (transits?.personA?.aspects_to_natal) {
+      y+= 15;
+      y = this.renderSection(`TRANSITS to ${transits.personA.name}`, transits.personA.aspects_to_natal, y, false, targetDoc);
+    }
+    if (transits?.personB?.aspects_to_natal) {
+      y+= 15;
+      y = this.renderSection(`TRANSITS to ${transits.personB.name}`, transits.personB.aspects_to_natal, y, false, targetDoc);
+    }
 
     return y;
   }
@@ -142,33 +159,27 @@ export class AstroTemplate extends BaseTemplate {
       y += 15;
     }
 
-    // Chart Angles
     if (data.angles && data.angles.length > 0) {
       y += 10;
       y = this.renderAnglesSection(data.angles, y, targetDoc);
     }
 
-    // House Cusps
     if (data.houses && data.houses.length > 0) {
       y += 15;
       y = this.renderHousesSection(data.houses, y, targetDoc);
     }
 
-    // Planetary Positions (now includes house placements)
     y += 10;
     y = this.renderSection("NATAL PLANETARY POSITIONS", data.planets, y, true, targetDoc);
 
-    // Natal Aspects
     y += 15;
     y = this.renderSection("NATAL ASPECTS", data.aspects, y, false, targetDoc);
 
-    // Current Transit Positions
     if (data.transits?.planets && data.transits.planets.length > 0) {
       y += 15;
       y = this.renderSection("CURRENT TRANSIT POSITIONS", data.transits.planets, y, true, targetDoc);
     }
 
-    // Transit Aspects to Natal
     if (data.transits?.aspects && data.transits.aspects.length > 0) {
       y += 15;
       y = this.renderSection("TRANSIT ASPECTS TO NATAL", data.transits.aspects, y, false, targetDoc);
@@ -177,12 +188,15 @@ export class AstroTemplate extends BaseTemplate {
     return y;
   }
 
-  private renderPersonSection(person: any, displayName: string, startY: number, targetDoc?: any): number {
+  private renderPersonSection(person: any, title: string, startY: number, targetDoc?: any): number {
     let y = startY;
     
-    y = this.renderSection(`${displayName} - CURRENT POSITIONS`, person.planets, y, true, targetDoc);
+    // Render Planets
+    y = this.renderSection(`${person.name} - Planets`, person.planets, y, true, targetDoc);
     y += 10;
-    y = this.renderSection(`${displayName} - ASPECTS TO NATAL`, person.aspectsToNatal, y, false, targetDoc);
+    
+    // Render Natal Aspects
+    y = this.renderSection(`${person.name} - ${title}`, person.aspects, y, false, targetDoc);
     
     return y;
   }
@@ -197,7 +211,7 @@ export class AstroTemplate extends BaseTemplate {
     doc.text(title, this.margins.left, y);
     y += 12;
 
-    if (data.length === 0) {
+    if (!data || data.length === 0) {
       doc.setFontSize(9).setFont('helvetica', 'italic').setTextColor(150);
       doc.text(isPlanetTable ? 'No planetary data available.' : 'No significant aspects detected.', this.margins.left, y);
       return y + 10;
@@ -225,29 +239,25 @@ export class AstroTemplate extends BaseTemplate {
       }
 
       if (isPlanetTable) {
-        doc.text(item.name, this.margins.left, y);
-        let position = `${String(item.deg).padStart(2, "0")}°${String(item.min).padStart(2, "0")}' in ${item.sign}`;
-        if (item.house) {
-          position += ` (House ${item.house})`;
-        }
+        const sign = (item.sign || '').padEnd(12);
+        const deg = String(Math.floor(item.deg || 0)).padStart(2, '0');
+        const min = String(Math.round((item.deg - Math.floor(item.deg)) * 60)).padStart(2, '0');
+        const house = item.house ? `(H${item.house})` : '';
+        const position = `${deg}° ${sign} ${min}' ${house}`;
+
+        doc.text(item.name || 'Unknown', this.margins.left, y);
         doc.text(position, this.margins.left + 80, y);
-        if (item.retro) {
+        
+        if (item.retrograde) {
           doc.setFont('helvetica', 'italic');
-          doc.text(' R', this.margins.left + 170, y);
+          doc.text('R', this.margins.left + 170, y);
           doc.setFont('helvetica', 'normal');
         }
       } else {
-        // Handle both transit aspects (transitPlanet/natalPlanet) and natal aspects (a/b)
-        const planetA = item.transitPlanet || item.a || 'Unknown';
-        const planetB = item.natalPlanet || item.b || 'Unknown';
-        const aspectType = item.type || 'Unknown';
-        const orbDeg = item.orbDeg || 0;
-        const orbMin = item.orbMin || 0;
-        
-        doc.text(planetA, this.margins.left, y);
-        doc.text(aspectType, this.margins.left + 60, y);
-        doc.text(planetB, this.margins.left + 100, y);
-        doc.text(`${orbDeg}°${String(orbMin).padStart(2, "0")}'`, this.margins.left + 130, y);
+        doc.text(item.a || 'Unknown', this.margins.left, y);
+        doc.text(item.type || 'Unknown', this.margins.left + 60, y);
+        doc.text(item.b || 'Unknown', this.margins.left + 100, y);
+        doc.text(`${item.orb?.toFixed(2) ?? '0.00'}°`, this.margins.left + 130, y);
       }
       y += 10;
     });
@@ -264,7 +274,7 @@ export class AstroTemplate extends BaseTemplate {
     doc.text('CHART ANGLES', this.margins.left, y);
     y += 12;
 
-    if (angles.length === 0) {
+    if (!angles || angles.length === 0) {
       doc.setFontSize(9).setFont('helvetica', 'italic').setTextColor(150);
       doc.text('No angle data available.', this.margins.left, y);
       return y + 10;
@@ -278,9 +288,9 @@ export class AstroTemplate extends BaseTemplate {
 
     // Data
     doc.setFontSize(9).setFont('helvetica', 'normal').setTextColor(40);
-    angles.forEach((angle: any) => {
-      doc.text(angle.name, this.margins.left, y);
-      const position = `${String(angle.deg).padStart(2, "0")}°${String(angle.min).padStart(2, "0")}' in ${angle.sign}`;
+    Object.entries(angles).forEach(([name, data]: [string, any]) => {
+      const position = `${Math.floor(data.deg)}° in ${data.sign}`;
+      doc.text(name, this.margins.left, y);
       doc.text(position, this.margins.left + 80, y);
       y += 10;
     });
@@ -298,7 +308,7 @@ export class AstroTemplate extends BaseTemplate {
     doc.text('HOUSE CUSPS', this.margins.left, y);
     y += 12;
 
-    if (houses.length === 0) {
+    if (!houses || houses.length === 0) {
       doc.setFontSize(9).setFont('helvetica', 'italic').setTextColor(150);
       doc.text('No house data available.', this.margins.left, y);
       return y + 10;
@@ -312,14 +322,14 @@ export class AstroTemplate extends BaseTemplate {
 
     // Data
     doc.setFontSize(9).setFont('helvetica', 'normal').setTextColor(40);
-    houses.forEach((house: any) => {
+    Object.entries(houses).forEach(([number, data]: [string, any]) => {
       if (y > pageHeight - 40) {
         doc.addPage();
         y = this.margins.top;
       }
       
-      doc.text(`House ${house.number}`, this.margins.left, y);
-      const position = `${String(house.deg).padStart(2, "0")}°${String(house.min).padStart(2, "0")}' in ${house.sign}`;
+      doc.text(`House ${number}`, this.margins.left, y);
+      const position = `${Math.floor(data.deg)}° in ${data.sign}`;
       doc.text(position, this.margins.left + 80, y);
       y += 10;
     });
