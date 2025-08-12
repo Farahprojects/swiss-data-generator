@@ -91,7 +91,7 @@ export const SynastryAstroFormatter: React.FC<SynastryAstroFormatterProps> = ({
                       <TableCell>{planet.sign}</TableCell>
                     </TableRow>
                   ))}
-                </Body>
+                </TableBody>
               </Table>
             </CardContent>
           </Card>
