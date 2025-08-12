@@ -144,32 +144,9 @@ export class SessionManager {
 
     storageKeys.forEach(key => {
       try {
-        // Clear keys that are exact matches
+      // Clear keys that are exact matches
         localStorage.removeItem(key);
         sessionStorage.removeItem(key);
-        
-      // Clear keys that start with the given string (for dynamic keys like seen: and countdown_shown:)
-      // We need to collect keys first, then remove them to avoid iteration issues
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const a_key = localStorage.key(i);
-        if (a_key && a_key.startsWith(key + ':')) {
-          keysToRemove.push(a_key);
-        }
-      }
-      
-      // Also check for exact prefix matches without ':' for keys like 'seen'
-      for (let i = 0; i < localStorage.length; i++) {
-        const a_key = localStorage.key(i);
-        if (a_key && key === 'seen' && a_key.startsWith('seen:')) {
-          keysToRemove.push(a_key);
-        }
-      }
-        
-        // Now remove all collected keys
-        keysToRemove.forEach(keyToRemove => {
-          localStorage.removeItem(keyToRemove);
-        });
 
       } catch (error) {
         console.error(`Error removing ${key}:`, error);
