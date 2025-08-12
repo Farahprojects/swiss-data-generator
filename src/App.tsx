@@ -26,6 +26,7 @@ import PreviewWebsite from './pages/PreviewWebsite';
 import { CoachReportPage } from './components/website-builder/CoachReportPage';
 
 import { AuthProvider } from './contexts/AuthContext';
+import NavigationStateProvider from './contexts/NavigationStateContext';
 
 // Lazy load the authenticated shell
 const AuthedAppShell = lazy(() => import('./AuthedAppShell'));
@@ -44,7 +45,13 @@ const ConditionalAuth: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const location = useLocation();
   const path = location.pathname;
   const skipAuth = path.startsWith('/report') || path.startsWith('/dashboard');
-  return skipAuth ? <>{children}</> : <AuthProvider>{children}</AuthProvider>;
+  return skipAuth ? (
+    <>{children}</>
+  ) : (
+    <NavigationStateProvider>
+      <AuthProvider>{children}</AuthProvider>
+    </NavigationStateProvider>
+  );
 };
 
 function App() {
