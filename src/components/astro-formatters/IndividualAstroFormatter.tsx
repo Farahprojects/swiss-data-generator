@@ -1,11 +1,12 @@
 
 import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartHeader } from './shared/ChartHeader';
-import { PlanetaryPositions } from './shared/PlanetaryPositions';
 import { AspectTable } from './shared/AspectTable';
 import { HouseCusps } from './shared/HouseCusps';
 import { ChartAngles } from './shared/ChartAngles';
-import { parseSwissDataRich } from '@/utils/swissFormatter';
+import { PlanetaryPositions } from './shared/PlanetaryPositions';
+import { parseAstroData } from '@/lib/synastryFormatter';
 
 interface IndividualAstroFormatterProps {
   swissData: any;
@@ -18,13 +19,6 @@ export const IndividualAstroFormatter: React.FC<IndividualAstroFormatterProps> =
   reportData,
   className = ''
 }) => {
-  const reportInfo = reportData.guest_report?.report_data;
-  const name = reportInfo?.person_a?.name || reportInfo?.name || 'Unknown';
-  const birthDate = reportInfo?.person_a?.birth_date || reportInfo?.birthDate;
-  const birthLocation = reportInfo?.person_a?.birth_location || reportInfo?.birthLocation;
-  const latitude = reportInfo?.person_a?.latitude || reportInfo?.latitude;
-  const longitude = reportInfo?.person_a?.longitude || reportInfo?.longitude;
-
   if (!swissData) {
     return (
       <div className={`text-center text-gray-500 py-16 ${className}`}>
@@ -33,55 +27,52 @@ export const IndividualAstroFormatter: React.FC<IndividualAstroFormatterProps> =
     );
   }
 
-  // Use the rich parser to get complete, formatted data
-  const enrichedData = parseSwissDataRich(swissData);
+  const astroData = parseAstroData(swissData);
+  const { subject, natal, transits } = astroData;
 
+  const birthDate = reportData.guest_report?.report_data?.birthDate;
+  
   return (
     <div className={`font-inter max-w-4xl mx-auto py-8 ${className}`}>
       <ChartHeader
-        name={name}
+        name={subject?.name || natal?.name || 'Unknown'}
         birthDate={birthDate}
-        birthLocation={birthLocation}
-        latitude={latitude}
-        longitude={longitude}
+        birthLocation={subject?.location}
+        latitude={subject?.lat}
+        longitude={subject?.lon}
       />
 
+      <div className="space-y-8 mt-8">
+        {natal && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl font-light text-gray-800">
+                Natal Chart: Your Core Blueprint
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              <ChartAngles angles={natal.angles} />
+              <HouseCusps houses={natal.houses} title="House Cusps" />
+              <PlanetaryPositions planets={natal.planets} title="Natal Planetary Positions" />
+              <AspectTable aspects={natal.aspects} title="Natal Aspects" />
+            </CardContent>
+          </Card>
+        )}
 
-      {/* Chart Angles */}
-      {enrichedData.angles && enrichedData.angles.length > 0 && (
-        <ChartAngles angles={enrichedData.angles} />
-      )}
-
-      {/* House Cusps */}
-      {enrichedData.houses && enrichedData.houses.length > 0 && (
-        <HouseCusps houses={enrichedData.houses} title="HOUSE CUSPS" />
-      )}
-
-      {/* Natal Planetary Positions */}
-      {enrichedData.planets && enrichedData.planets.length > 0 && (
-        <PlanetaryPositions planets={enrichedData.planets} title="NATAL PLANETARY POSITIONS" />
-      )}
-
-      {/* Natal Aspects */}
-      {enrichedData.aspects && enrichedData.aspects.length > 0 && (
-        <AspectTable aspects={enrichedData.aspects} title="NATAL ASPECTS" />
-      )}
-
-      {/* Current Transit Positions */}
-      {enrichedData.transits?.planets && enrichedData.transits.planets.length > 0 && (
-        <PlanetaryPositions 
-          planets={enrichedData.transits.planets} 
-          title="CURRENT TRANSIT POSITIONS"
-        />
-      )}
-
-      {/* Transit Aspects to Natal */}
-      {enrichedData.transits?.aspects && enrichedData.transits.aspects.length > 0 && (
-        <AspectTable 
-          aspects={enrichedData.transits.aspects} 
-          title="TRANSIT ASPECTS TO NATAL"
-        />
-      )}
+        {transits && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl font-light text-gray-800">
+                Current Transits: The Present Moment
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              <PlanetaryPositions planets={transits.planets} title="Current Transit Positions" />
+              <AspectTable aspects={transits.aspects_to_natal} title="Transit Aspects to Natal" />
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 };

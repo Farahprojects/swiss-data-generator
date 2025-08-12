@@ -116,6 +116,26 @@ const enrichAspects = (aspects: Aspect[]): EnrichedAspect[] => {
   });
 };
 
+const parseNatal = (block: any) => {
+  if (!block) return null;
+  const personData = block; // In single reports, the block is the person data
+
+  const anglesArray = personData.angles
+    ? Object.entries(personData.angles).map(([name, data]: [string, any]) => ({
+        name,
+        ...data
+      }))
+    : [];
+
+  return {
+    name: personData.name || 'Unknown',
+    planets: enrichPlanets(personData.planets ?? {}),
+    angles: anglesArray,
+    houses: personData.houses ?? [],
+    aspects: enrichAspects(personData.aspects ?? [])
+  };
+};
+
 const parseNatalSet = (block: any) => {
   if (!block || !block.subjects) return null;
 
@@ -189,13 +209,19 @@ export const parseAstroData = (raw: any): any => {
   }
 
   const parsedData: any = {
-    meta: raw.meta ?? {}
+    meta: raw.meta ?? {},
+    subject: raw.subject ?? {} // Carry over subject info
   };
 
-  for (const key in raw) {
-    if (raw.hasOwnProperty(key) && typeof raw[key] === 'object' && raw[key]?.block_type) {
-      const block = raw[key];
+  const dataRoot = raw.blocks || raw;
+
+  for (const key in dataRoot) {
+    if (dataRoot.hasOwnProperty(key) && typeof dataRoot[key] === 'object' && dataRoot[key]?.block_type) {
+      const block = dataRoot[key];
       switch (block.block_type) {
+        case 'natal':
+          parsedData.natal = parseNatal(block);
+          break;
         case 'natal_set':
           parsedData.natal_set = parseNatalSet(block);
           break;
@@ -224,6 +250,7 @@ export const isSynastryData = (raw: any): boolean => {
 
   // The new format is identifiable by the explicit `block_type` keys.
   return (
+    raw.blocks?.natal?.block_type === 'natal' ||
     raw.natal?.block_type === 'natal_set' ||
     raw.synastry_aspects?.block_type === 'synastry' ||
     raw.composite_chart?.block_type === 'composite'
