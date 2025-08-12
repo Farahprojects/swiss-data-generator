@@ -118,26 +118,29 @@ const enrichAspects = (aspects: Aspect[]): EnrichedAspect[] => {
 
 const parseNatalSet = (block: any) => {
   if (!block || !block.subjects) return null;
-  const personA = block.subjects.person_a;
-  const personB = block.subjects.person_b;
+
+  const processPerson = (personData: any) => {
+    if (!personData) return undefined;
+
+    const anglesArray = personData.angles 
+      ? Object.entries(personData.angles).map(([name, data]: [string, any]) => ({
+          name,
+          ...data
+        }))
+      : [];
+
+    return {
+      name: personData.name || 'Unknown',
+      planets: enrichPlanets(personData.planets ?? {}),
+      angles: anglesArray,
+      houses: personData.houses ?? [],
+      aspects: enrichAspects(personData.aspects ?? [])
+    };
+  };
 
   return {
-    personA: {
-      name: personA?.name || 'Person A',
-      planets: enrichPlanets(personA?.planets ?? {}),
-      angles: personA?.angles ?? {},
-      houses: personA?.houses ?? [],
-      aspects: enrichAspects(personA?.aspects ?? [])
-    },
-    personB: personB
-      ? {
-          name: personB?.name || 'Person B',
-          planets: enrichPlanets(personB?.planets ?? {}),
-          angles: personB?.angles ?? {},
-          houses: personB?.houses ?? [],
-          aspects: enrichAspects(personB?.aspects ?? [])
-        }
-      : undefined
+    personA: processPerson(block.subjects.person_a),
+    personB: processPerson(block.subjects.person_b)
   };
 };
 
