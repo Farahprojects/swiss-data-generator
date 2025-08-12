@@ -253,8 +253,7 @@ function logAndSignalCompletion(logPrefix: string, reportData: any, report: stri
     metadata: metadata,
     is_guest: reportData.is_guest || false,
     created_at: new Date().toISOString(),
-  })
-  .then(() => console.log(`${logPrefix} Report log insert succeeded for ${reportData.is_guest ? 'guest' : 'user'} report`))
+  }, { returning: "minimal" })
   .catch(err => console.error(`${logPrefix} Report log insert failed:`, {
     error: err,
     user_id: reportData.user_id,
@@ -266,8 +265,7 @@ function logAndSignalCompletion(logPrefix: string, reportData: any, report: stri
   if (reportData.is_guest && reportData.user_id) {
     supabase.from('report_ready_signals').insert({
       guest_report_id: reportData.user_id
-    })
-    .then(() => console.log(`${logPrefix} Signal inserted for guest report: ${reportData.user_id}`))
+    }, { returning: "minimal" })
     .catch(err => console.error(`${logPrefix} Signal insert failed:`, err));
   }
 }
