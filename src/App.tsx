@@ -28,6 +28,8 @@ import { CoachReportPage } from './components/website-builder/CoachReportPage';
 import { AuthProvider } from './contexts/AuthContext';
 import NavigationStateProvider from '@/contexts/NavigationStateContext';
 import { SettingsModalProvider } from '@/contexts/SettingsModalContext';
+import { PricingProvider } from '@/contexts/PricingContext';
+import { ReportModalProvider } from '@/contexts/ReportModalContext';
 
 // Lazy load the authenticated shell
 const AuthedAppShell = lazy(() => import('./AuthedAppShell'));
@@ -45,10 +47,25 @@ const queryClient = new QueryClient({
 const ConditionalAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   const path = location.pathname;
-  const skipAuth = path.startsWith('/report') || path.startsWith('/dashboard');
-  return skipAuth ? (
-    <>{children}</>
-  ) : (
+
+  if (path.startsWith('/dashboard')) {
+    // Dashboard shell provides its own providers
+    return <>{children}</>;
+  }
+
+  if (path.startsWith('/report')) {
+    // Public report needs pricing and report modal, but no auth
+    return (
+      <PricingProvider>
+        <ReportModalProvider>
+          {children}
+        </ReportModalProvider>
+      </PricingProvider>
+    );
+  }
+
+  // Public pages that still use auth-aware UI
+  return (
     <NavigationStateProvider>
       <SettingsModalProvider>
         <AuthProvider>{children}</AuthProvider>
