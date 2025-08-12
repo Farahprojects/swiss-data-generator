@@ -164,9 +164,8 @@ const parseTransits = (block: any) => {
 
 const parseCompositeChart = (block: any) => {
   if (!block || !block.planets) return null;
-  return {
-    planets: enrichPlanets(block.planets)
-  };
+  // Return the enriched planets array directly to match the expected data structure.
+  return enrichPlanets(block.planets);
 };
 
 const parseSynastryAspects = (block: any) => {
