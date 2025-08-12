@@ -8,7 +8,6 @@
   Uses system prompts from the reports_prompts table
   Enhanced for production readiness with retries, timeouts, and structured logging.
 ────────────────────────────────────────────────────────────────────────────────*/
-import "https://deno.land/x/xhr@0.1.0/mod.ts"; // fetch polyfill for Edge runtime
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -32,7 +31,7 @@ if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY_TWO");
 // Initialize Supabase client
 let supabase: SupabaseClient;
 try {
-  supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+  supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
 } catch (err) {
   throw err;
 }
@@ -368,7 +367,7 @@ serve(async (req) => {
     // Log error to report_logs
     const durationMs = Date.now() - startTime;
     try {
-      const insertLog = await supabase.from("report_logs").insert({
+      supabase.from("report_logs").insert({
         api_key: null,
         user_id: reportData?.user_id || null,
         report_type: reportData?.reportType || reportData?.report_type || null,
@@ -380,15 +379,16 @@ serve(async (req) => {
         client_id: reportData?.client_id || null,
         engine_used: reportData?.selectedEngine || "standard-report",
         created_at: new Date().toISOString(),
+      })
+      .then(({ error }) => {
+        if (error) {
+          console.error(`[standard-report-one][${requestId}] Error report log insert failed:`, {
+            report_type: reportData?.reportType || reportData?.report_type,
+            user_id: reportData?.user_id,
+            error: error
+          });
+        }
       });
-      if (insertLog.error) {
-        // ✅ LOGGING: Error report log insert failed
-        console.error(`[standard-report-one][${requestId}] Error report log insert failed:`, {
-          report_type: reportData?.reportType || reportData?.report_type,
-          user_id: reportData?.user_id,
-          error: insertLog.error
-        });
-      }
     } catch (logErr) {
       // ✅ LOGGING: Error report log insert exception
       console.error(`[standard-report-one][${requestId}] Error report log insert exception:`, {

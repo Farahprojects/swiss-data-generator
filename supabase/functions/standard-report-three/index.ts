@@ -5,7 +5,6 @@
   Uses system prompts from the reports_prompts table
   Enhanced for production readiness with retries, timeouts, and structured logging.
 ────────────────────────────────────────────────────────────────────────────────*/
-import "https://deno.land/x/xhr@0.1.0/mod.ts"; // fetch polyfill for Edge runtime
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -49,7 +48,7 @@ if (!GOOGLE_API_KEY) {
 let supabase: SupabaseClient;
 try {
   console.log(`${LOG_PREFIX_INIT} Creating Supabase client...`);
-  supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+  supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
   console.log(`${LOG_PREFIX_INIT} Supabase client created successfully`);
 } catch (err) {
   console.error(`${LOG_PREFIX_INIT} Failed to create Supabase client:`, err);

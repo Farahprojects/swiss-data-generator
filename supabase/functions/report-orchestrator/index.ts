@@ -61,9 +61,14 @@ async function getNextEngine(): Promise<string> {
 // Call the selected engine (fire-and-forget)
 function callEngineFireAndForget(engine: string, payload: ReportPayload): void {
   const edgeUrl = `${supabaseUrl}/functions/v1/${engine}`;
+  // Explicitly build the payload to prevent passing through an api_key
   const requestPayload = { 
-    ...payload, 
-    reportType: payload.report_type, 
+    user_id: payload.user_id,
+    endpoint: payload.endpoint,
+    report_type: payload.report_type,
+    chartData: payload.chartData,
+    is_guest: payload.is_guest,
+    // Add any other fields that are explicitly needed by the engines
     selectedEngine: engine,
     engine_used: engine,
   };
@@ -84,7 +89,7 @@ function callEngineFireAndForget(engine: string, payload: ReportPayload): void {
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 200, headers: corsHeaders });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   if (req.method !== "POST") {
