@@ -1,7 +1,7 @@
 import { BaseTemplate } from './BaseTemplate';
 import { PdfGenerationOptions, PdfMetadata } from '../types';
 import { isSynastryData, parseAstroData } from '@/lib/synastryFormatter';
-import { parseSwissDataRich } from '@/utils/swissFormatter';
+
 
 export interface AstroPdfData {
   id: string;
@@ -125,7 +125,8 @@ export class AstroTemplate extends BaseTemplate {
   }
 
   public renderEssenceData(swissData: any, startY: number, targetDoc?: any): number {
-    const data = parseSwissDataRich(swissData);
+    const parsed = parseAstroData(swissData);
+    const natal = parsed?.natal;
     const doc = targetDoc || this.doc;
     let y = startY;
 
@@ -134,55 +135,63 @@ export class AstroTemplate extends BaseTemplate {
     doc.text('Your Astro Data', this.margins.left, y);
     y += 20;
 
-    if (data.name) {
+    if (natal?.name) {
       doc.setFontSize(14).setFont('helvetica', 'bold').setTextColor(60);
-      doc.text(data.name, this.margins.left, y);
+      doc.text(natal.name, this.margins.left, y);
       y += 15;
     }
 
     // Date and time
     doc.setFontSize(12).setFont('helvetica', 'normal').setTextColor(100);
-    const formattedDate = new Date(data.dateISO).toLocaleDateString("en-US", {
+    const formattedDate = new Date(parsed?.meta?.date || new Date().toISOString()).toLocaleDateString("en-US", {
       month: "long", day: "numeric", year: "numeric"
     });
-    const formattedTime = new Date(`1970-01-01T${data.timeISO}Z`).toLocaleTimeString("en-US", {
+    const formattedTime = new Date(`1970-01-01T${parsed?.meta?.time || '00:00'}Z`).toLocaleTimeString("en-US", {
       hour: "numeric", minute: "2-digit"
     });
-    doc.text(`${formattedDate} — ${formattedTime} (${data.tz})`, this.margins.left, y);
+    const tz = parsed?.meta?.tz ? ` (${parsed.meta.tz})` : '';
+    doc.text(`${formattedDate} — ${formattedTime}${tz}`, this.margins.left, y);
     y += 15;
 
-    if (data.meta?.location) {
-      doc.text(`${data.meta.location}`, this.margins.left, y);
-      if (data.meta.lat && data.meta.lon) {
-        doc.text(` (${data.meta.lat.toFixed(2)}°, ${data.meta.lon.toFixed(2)}°)`, this.margins.left + 100, y);
+    if (parsed?.meta?.location) {
+      doc.text(`${parsed.meta.location}`, this.margins.left, y);
+      if (parsed.meta.lat && parsed.meta.lon) {
+        doc.text(` (${Number(parsed.meta.lat).toFixed(2)}°, ${Number(parsed.meta.lon).toFixed(2)}°)`, this.margins.left + 100, y);
       }
       y += 15;
     }
 
-    if (data.angles && data.angles.length > 0) {
+    if (natal?.angles && natal.angles.length > 0) {
       y += 10;
-      y = this.renderAnglesSection(data.angles, y, targetDoc);
+      // Convert angles array to a map for rendering helper
+      const anglesMap: Record<string, any> = {};
+      natal.angles.forEach((a: any) => { anglesMap[a.name] = a; });
+      y = this.renderAnglesSection(anglesMap as any, y, targetDoc);
     }
 
-    if (data.houses && data.houses.length > 0) {
+    if (natal?.houses && (Array.isArray(natal.houses) ? natal.houses.length > 0 : Object.keys(natal.houses || {}).length > 0)) {
       y += 15;
-      y = this.renderHousesSection(data.houses, y, targetDoc);
+      const housesMap: Record<string, any> = Array.isArray(natal.houses)
+        ? natal.houses.reduce((acc: any, h: any) => { acc[String(h.number ?? '')] = h; return acc; }, {})
+        : natal.houses;
+      y = this.renderHousesSection(housesMap as any, y, targetDoc);
     }
 
     y += 10;
-    y = this.renderSection("NATAL PLANETARY POSITIONS", data.planets, y, true, targetDoc);
+    y = this.renderSection("NATAL PLANETARY POSITIONS", natal?.planets || [], y, true, targetDoc);
 
     y += 15;
-    y = this.renderSection("NATAL ASPECTS", data.aspects, y, false, targetDoc);
+    y = this.renderSection("NATAL ASPECTS", natal?.aspects || [], y, false, targetDoc);
 
-    if (data.transits?.planets && data.transits.planets.length > 0) {
+    const transitsA = parsed?.transits?.personA;
+    if (transitsA?.planets && transitsA.planets.length > 0) {
       y += 15;
-      y = this.renderSection("CURRENT TRANSIT POSITIONS", data.transits.planets, y, true, targetDoc);
+      y = this.renderSection("CURRENT TRANSIT POSITIONS", transitsA.planets, y, true, targetDoc);
     }
 
-    if (data.transits?.aspects && data.transits.aspects.length > 0) {
+    if (transitsA?.aspects_to_natal && transitsA.aspects_to_natal.length > 0) {
       y += 15;
-      y = this.renderSection("TRANSIT ASPECTS TO NATAL", data.transits.aspects, y, false, targetDoc);
+      y = this.renderSection("TRANSIT ASPECTS TO NATAL", transitsA.aspects_to_natal, y, false, targetDoc);
     }
 
     return y;

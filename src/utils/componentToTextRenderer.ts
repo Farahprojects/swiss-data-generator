@@ -1,6 +1,6 @@
 
 import { ReportData } from './reportContentExtraction';
-import { parseSwissDataRich } from './swissFormatter';
+
 import { isSynastryData, parseAstroData } from '@/lib/synastryFormatter';
 
 const isSynastryReport = (reportData: ReportData): boolean => {
@@ -26,7 +26,8 @@ export const renderAstroDataAsText = (reportData: ReportData): string => {
 };
 
 const renderIndividualAsText = (reportData: ReportData): string => {
-  const data = parseSwissDataRich(reportData.swiss_data);
+  const parsed = parseAstroData(reportData.swiss_data);
+  const natal = parsed.natal;
   const reportInfo = reportData.guest_report?.report_data;
 
   let text = '';
@@ -38,18 +39,21 @@ const renderIndividualAsText = (reportData: ReportData): string => {
   if (reportInfo?.birthDate) text += `Born: ${reportInfo.birthDate}\n`;
   if (reportInfo?.birthLocation) text += `Birth Location: ${reportInfo.birthLocation}\n\n`;
 
-  if (data.angles?.length > 0) {
+  if (natal?.angles?.length > 0) {
     text += 'CHART ANGLES\n------------\n';
-    data.angles.forEach((angle: any) => {
-      text += `${angle.name}: ${String(Math.floor(angle.deg))}' in ${angle.sign}\n`;
+    natal.angles.forEach((angle: any) => {
+      const degInt = Math.floor(angle.deg || 0);
+      text += `${angle.name}: ${String(degInt)}' in ${angle.sign}\n`;
     });
     text += '\n';
   }
 
-  if (data.planets?.length > 0) {
+  if (natal?.planets?.length > 0) {
     text += 'NATAL PLANETARY POSITIONS\n-------------------------\n';
-    data.planets.forEach((planet: any) => {
-      let line = `${(planet.name || '').padEnd(10)}: ${String(Math.floor(planet.deg)).padStart(2, '0')}° ${planet.sign.padEnd(10)}`;
+    natal.planets.forEach((planet: any) => {
+      const degInt = Math.floor(planet.deg || 0);
+      const sign = String(planet.sign || '').padEnd(10);
+      let line = `${(planet.name || '').padEnd(10)}: ${String(degInt).padStart(2, '0')}° ${sign}`;
       if (planet.house) line += ` (H${planet.house})`;
       if (planet.retrograde) line += ' R';
       text += line + '\n';
@@ -57,10 +61,11 @@ const renderIndividualAsText = (reportData: ReportData): string => {
     text += '\n';
   }
 
-  if (data.aspects?.length > 0) {
+  if (natal?.aspects?.length > 0) {
     text += 'NATAL ASPECTS\n-------------\n';
-    data.aspects.forEach((aspect: any) => {
-      text += `${aspect.a} ${aspect.type} ${aspect.b} (Orb: ${aspect.orb?.toFixed(2)}°)\n`;
+    natal.aspects.forEach((aspect: any) => {
+      const orb = typeof aspect.orb === 'number' ? aspect.orb.toFixed(2) : 'N/A';
+      text += `${aspect.a} ${aspect.type} ${aspect.b} (Orb: ${orb}°)\n`;
     });
     text += '\n';
   }

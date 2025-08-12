@@ -1,6 +1,6 @@
 
 import React from "react";
-import { parseSwissDataRich, EnrichedSnapshot } from "@/utils/swissFormatter";
+import { parseAstroData } from "@/lib/synastryFormatter";
 
 interface Props {
   rawSwissJSON: any;
@@ -35,11 +35,11 @@ const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON, reportData }) => {
     );
   }
 
-  let data: EnrichedSnapshot;
+  let parsed: any;
   try {
-    data = parseSwissDataRich(rawSwissJSON);
+    parsed = parseAstroData(rawSwissJSON);
   } catch (error) {
-    console.error('❌ AstroSnapshot: Failed to parse Swiss data:', error);
+    console.error('❌ AstroSnapshot: Failed to parse astro data:', error);
     return (
       <div className="w-full max-w-md mx-auto font-sans text-[15px] leading-relaxed text-neutral-900">
         <div className="text-center mb-6">
@@ -55,6 +55,64 @@ const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON, reportData }) => {
       </div>
     );
   }
+
+  if (!parsed?.natal) {
+    console.warn('⚠️ AstroSnapshot: No natal data found in astro payload');
+    return (
+      <div className="w-full max-w-md mx-auto font-sans text-[15px] leading-relaxed text-neutral-900">
+        <div className="text-center mb-6">
+          <h2 className="font-semibold text-lg mb-2">Astro Data</h2>
+          <p className="text-sm text-neutral-600">No natal data available</p>
+        </div>
+      </div>
+    );
+  }
+
+  const natal = parsed.natal;
+  const data: any = {
+    dateISO: parsed.meta?.date || new Date().toISOString().split('T')[0],
+    timeISO: parsed.meta?.time || '00:00:00',
+    tz: parsed.meta?.tz,
+    meta: {
+      location: parsed.meta?.location,
+      lat: parsed.meta?.lat,
+      lon: parsed.meta?.lon,
+    },
+    angles: Array.isArray(natal.angles)
+      ? natal.angles.map((a: any) => ({
+          ...a,
+          min: typeof a.min === 'number' ? a.min : Math.round((a.deg - Math.floor(a.deg)) * 60),
+        }))
+      : [],
+    houses: Array.isArray(natal.houses)
+      ? natal.houses
+      : natal.houses && typeof natal.houses === 'object'
+        ? Object.entries(natal.houses).map(([number, h]: [string, any]) => ({ number: Number(number), ...h }))
+        : [],
+    planets: (natal.planets || []).map((p: any) => ({
+      ...p,
+      min: Math.round((p.deg - Math.floor(p.deg)) * 60),
+      retro: p.retrograde,
+    })),
+    aspects: (natal.aspects || []).map((a: any) => ({
+      ...a,
+      orbDeg: Math.floor(a.orb ?? 0),
+      orbMin: Math.round(((a.orb ?? 0) - Math.floor(a.orb ?? 0)) * 60),
+    })),
+    transits: parsed.transits?.personA
+      ? {
+          planets: (parsed.transits.personA.planets || []).map((p: any) => ({
+            ...p,
+            min: Math.round((p.deg - Math.floor(p.deg)) * 60),
+          })),
+          aspects: (parsed.transits.personA.aspects_to_natal || []).map((a: any) => ({
+            ...a,
+            orbDeg: Math.floor(a.orb ?? 0),
+            orbMin: Math.round(((a.orb ?? 0) - Math.floor(a.orb ?? 0)) * 60),
+          })),
+        }
+      : { planets: [], aspects: [] },
+  };
 
   // Show parsing errors if any
   if (data.meta?.error) {

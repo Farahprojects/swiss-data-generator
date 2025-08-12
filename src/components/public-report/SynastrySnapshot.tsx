@@ -1,6 +1,6 @@
 // components/public-report/SynastrySnapshot.tsx
 import React from "react";
-import { parseSynastryRich, EnrichedPlanet, EnrichedAspect } from "@/lib/synastryFormatter";
+import { parseAstroData } from "@/lib/synastryFormatter";
 
 const SectionTitle: React.FC<{ children: string }> = ({ children }) => (
   <h3 className="mt-8 mb-2 text-center font-semibold tracking-wider text-xs text-neutral-500 uppercase border-b pb-1">
@@ -8,7 +8,7 @@ const SectionTitle: React.FC<{ children: string }> = ({ children }) => (
   </h3>
 );
 
-const PlanetTable: React.FC<{ planets: EnrichedPlanet[] }> = ({ planets }) => (
+const PlanetTable: React.FC<{ planets: { name: string; deg: number; sign: string; retrograde?: boolean }[] }> = ({ planets }) => (
   <table className="w-full text-sm">
     <thead>
       <tr className="text-neutral-500 text-xs tracking-wide">
@@ -21,8 +21,8 @@ const PlanetTable: React.FC<{ planets: EnrichedPlanet[] }> = ({ planets }) => (
         <tr key={p.name}>
           <td className="py-1 pr-2 text-left">{p.name}</td>
           <td className="py-1 text-left">
-            {String(p.deg).padStart(2, "0")}°{String(p.min).padStart(2, "0")}' in {p.sign}
-            {p.retro && <span className="italic text-sm ml-1">Retrograde</span>}
+            {String(Math.floor(p.deg)).padStart(2, "0")}°{String(Math.round((p.deg - Math.floor(p.deg)) * 60)).padStart(2, "0")}' in {p.sign}
+            {p.retrograde && <span className="italic text-sm ml-1">Retrograde</span>}
           </td>
         </tr>
       ))}
@@ -30,7 +30,7 @@ const PlanetTable: React.FC<{ planets: EnrichedPlanet[] }> = ({ planets }) => (
   </table>
 );
 
-const AspectTable: React.FC<{ aspects: EnrichedAspect[] }> = ({ aspects }) => (
+const AspectTable: React.FC<{ aspects: { a: string; b: string; type: string; orb: number }[] }> = ({ aspects }) => (
   <table className="w-full text-sm">
     <thead>
       <tr className="text-neutral-500 text-xs tracking-wide">
@@ -47,7 +47,7 @@ const AspectTable: React.FC<{ aspects: EnrichedAspect[] }> = ({ aspects }) => (
           <td className="py-1 pr-2 text-left">{a.type}</td>
           <td className="py-1 pr-2 text-left">{a.b}</td>
           <td className="py-1 text-left">
-            {a.orbDeg}°{String(a.orbMin).padStart(2, "0")}'
+            {Math.floor(a.orb)}°{String(Math.round((a.orb - Math.floor(a.orb)) * 60)).padStart(2, "0")}'
           </td>
         </tr>
       ))}
@@ -75,20 +75,16 @@ const SynastrySnapshot: React.FC<Props> = ({ rawSyncJSON, reportData }) => {
     }
   };
 
-  const data = parseSynastryRich(enrichedData);
+  const parsed = parseAstroData(enrichedData);
 
-  const formattedDate = new Date(data.meta.dateISO).toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
+  const data = {
+    meta: { date: parsed.meta?.date, time: parsed.meta?.time, tz: parsed.meta?.tz },
+    personA: parsed.natal_set?.personA ? { ...parsed.natal_set.personA, aspectsToNatal: parsed.natal_set.personA.aspects } : { name: '', planets: [], aspectsToNatal: [] },
+    personB: parsed.natal_set?.personB ? { ...parsed.natal_set.personB, aspectsToNatal: parsed.natal_set.personB.aspects } : { name: '', planets: [], aspectsToNatal: [] },
+    composite: parsed.composite_chart || [],
+    synastry: parsed.synastry_aspects?.aspects || []
+  };
 
-  const formattedTime = new Date(`1970-01-01T${data.meta.time}Z`).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-
-  // Use actual names if available, fallback to Person A/B
   const personADisplay = data.personA.name || "Person A";
   const personBDisplay = data.personB.name || "Person B";
   
