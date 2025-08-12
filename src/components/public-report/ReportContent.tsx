@@ -20,10 +20,13 @@ export const ReportContent: React.FC<ReportContentProps> = ({
   setActiveView,
   isMobile = false
 }) => {
-  const contentType = reportData.metadata.content_type;
-  const astroReportType = getAstroReportType(reportData.swiss_data);
+  const hasAiContent = !!reportData.report_content && reportData.report_content.trim().length > 20;
+  const hasAstroContent = !!reportData.swiss_data;
+  const astroReportType = hasAstroContent ? getAstroReportType(reportData.swiss_data) : null;
 
   const renderAstroContent = () => {
+    if (!hasAstroContent) return null;
+
     switch (astroReportType) {
       case 'monthly':
         return <MonthlyAstroFormatter swissData={reportData.swiss_data} reportData={reportData} />;
@@ -36,36 +39,36 @@ export const ReportContent: React.FC<ReportContentProps> = ({
   };
 
   const renderContent = () => {
-    switch (contentType) {
-      case 'ai':
-        return (
-          <div className="max-w-4xl mx-auto px-0 md:px-4 py-8">
-            <ReportRenderer reportData={reportData} />
+    if (hasAiContent && hasAstroContent) {
+      // 'both' case: render with a toggle
+      return (
+        <div className="max-w-4xl mx-auto px-0 md:px-4 py-8">
+          {activeView === 'astro' ? renderAstroContent() : <ReportRenderer reportData={reportData} />}
+        </div>
+      );
+    } else if (hasAstroContent) {
+      // 'astro' only case
+      return (
+        <div className="max-w-4xl mx-auto px-0 md:px-4 py-8">
+          {renderAstroContent()}
+        </div>
+      );
+    } else if (hasAiContent) {
+      // 'ai' only case
+      return (
+        <div className="max-w-4xl mx-auto px-0 md:px-4 py-8">
+          <ReportRenderer reportData={reportData} />
+        </div>
+      );
+    } else {
+      // Default empty case
+      return (
+        <div className="max-w-4xl mx-auto px-0 md:px-4 py-8">
+          <div className="text-center text-gray-500">
+            <p>No content available for this report.</p>
           </div>
-        );
-      
-      case 'astro':
-        return (
-          <div className="max-w-4xl mx-auto px-0 md:px-4 py-8">
-            {renderAstroContent()}
-          </div>
-        );
-      
-      case 'both':
-        return (
-          <div className="max-w-4xl mx-auto px-0 md:px-4 py-8">
-            {activeView === 'astro' ? renderAstroContent() : <ReportRenderer reportData={reportData} />}
-          </div>
-        );
-      
-      default:
-        return (
-          <div className="max-w-4xl mx-auto px-0 md:px-4 py-8">
-            <div className="text-center text-gray-500">
-              <p>No content available for this report.</p>
-            </div>
-          </div>
-        );
+        </div>
+      );
     }
   };
 
