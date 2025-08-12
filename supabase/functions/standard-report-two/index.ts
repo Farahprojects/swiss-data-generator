@@ -141,7 +141,7 @@ async function getSystemPrompt(reportType: string, requestId: string): Promise<s
 
 // Generate report using OpenAI API
 async function generateReport(systemPrompt: string, reportData: any, requestId: string): Promise<{ report: string; metadata: any }> {
-  const logPrefix = `[standard-report][${requestId}]`;
+  const logPrefix = `[standard-report-two][${requestId}]`;
 
   // Structure data for the prompt. The AI will get the full chartData.
   const userMessage = JSON.stringify({
@@ -279,10 +279,10 @@ serve(async (req) => {
     
     // Extract the report type and selected engine from the payload
     const reportType = reportData.reportType || reportData.report_type || "standard";
-    const selectedEngine = reportData.selectedEngine || "standard-report"; // Fall back to default if not provided
+    const selectedEngine = reportData.selectedEngine || "standard-report-two"; // Fall back to default if not provided
 
     // ✅ LOGGING: Initial request received
-    console.log(`[standard-report-two][${requestId}] Request received:`, {
+    console.log(`${logPrefix} Request received:`, {
       report_type: reportType,
       user_id: reportData.user_id,
       endpoint: reportData.endpoint,
@@ -291,7 +291,7 @@ serve(async (req) => {
 
     // Validate required fields
     if (!reportData || !reportData.chartData || !reportData.endpoint) {
-      console.error(`[standard-report-two][${requestId}] Validation failed: Missing required fields`);
+      console.error(`${logPrefix} Validation failed: Missing required fields`);
       return jsonResponse(
         { error: "Missing required fields: chartData and endpoint are required", requestId },
         { status: 400 },
@@ -303,13 +303,13 @@ serve(async (req) => {
     const systemPrompt = await getSystemPrompt(reportType, requestId);
     
     // ✅ LOGGING: System prompt fetched successfully
-    console.log(`[standard-report-two][${requestId}] System prompt fetched for report type: ${reportType}`);
+    console.log(`${logPrefix} System prompt fetched for report type: ${reportType}`);
 
     // Generate the report
     const { report, metadata } = await generateReport(systemPrompt, reportData, requestId);
     
     // ✅ LOGGING: OpenAI API call completed
-    console.log(`[standard-report-two][${requestId}] OpenAI API completed:`, {
+    console.log(`${logPrefix} OpenAI API completed:`, {
       report_type: reportType,
       user_id: reportData.user_id,
       metadata: metadata,
@@ -334,8 +334,8 @@ serve(async (req) => {
       is_guest: reportData.is_guest || false,
       created_at: new Date().toISOString(),
     })
-    .then(() => console.log(`[standard-report-two][${requestId}] Report log insert succeeded for ${reportData.is_guest ? 'guest' : 'user'} report`))
-    .catch(err => console.error(`[standard-report-two][${requestId}] Report log insert failed:`, {
+    .then(() => console.log(`${logPrefix} Report log insert succeeded for ${reportData.is_guest ? 'guest' : 'user'} report`))
+    .catch(err => console.error(`${logPrefix} Report log insert failed:`, {
       error: err,
       user_id: reportData.user_id,
       is_guest: reportData.is_guest,
@@ -347,8 +347,8 @@ serve(async (req) => {
       supabase.from('report_ready_signals').insert({
         guest_report_id: reportData.user_id
       })
-      .then(() => console.log(`[standard-report-two][${requestId}] Signal inserted for guest report: ${reportData.user_id}`))
-      .catch(err => console.error(`[standard-report-two][${requestId}] Signal insert failed:`, err));
+      .then(() => console.log(`${logPrefix} Signal inserted for guest report: ${reportData.user_id}`))
+      .catch(err => console.error(`${logPrefix} Signal insert failed:`, err));
     }
     
     // Return the generated report with proper structure
@@ -367,7 +367,7 @@ serve(async (req) => {
     const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
     
     // ✅ LOGGING: Main handler error
-    console.error(`[standard-report-two][${requestId}] Main handler error:`, {
+    console.error(`${logPrefix} Main handler error:`, {
       report_type: reportData?.reportType || reportData?.report_type,
       user_id: reportData?.user_id,
       error: errorMessage,
@@ -387,12 +387,12 @@ serve(async (req) => {
         error_message: errorMessage,
         duration_ms: durationMs,
         client_id: reportData?.client_id || null,
-        engine_used: reportData?.selectedEngine || "standard-report",
+        engine_used: reportData?.selectedEngine || "standard-report-two",
         created_at: new Date().toISOString(),
       })
       .then(({ error }) => {
         if (error) {
-          console.error(`[standard-report-two][${requestId}] Error report log insert failed:`, {
+          console.error(`${logPrefix} Error report log insert failed:`, {
             report_type: reportData?.reportType || reportData?.report_type,
             user_id: reportData?.user_id,
             error: error
@@ -401,7 +401,7 @@ serve(async (req) => {
       });
     } catch (logErr) {
       // ✅ LOGGING: Error report log insert exception
-      console.error(`[standard-report-two][${requestId}] Error report log insert exception:`, {
+      console.error(`${logPrefix} Error report log insert exception:`, {
         report_type: reportData?.reportType || reportData?.report_type,
         user_id: reportData?.user_id,
         error: logErr
