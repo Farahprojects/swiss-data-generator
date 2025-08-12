@@ -18,7 +18,8 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
   useEffect(() => {
     if (!guestId) return;
 
-    // If this is a Stripe return, we need to fetch the name and email.
+    // If this is a Stripe return, we can fetch the name and email for display.
+    // This is an enhancement and should not block the main WebSocket logic.
     if (isStripeReturn) {
       const fetchGuestDetails = async () => {
         const { data, error } = await supabase
@@ -38,7 +39,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
       fetchGuestDetails();
     }
 
-    // Setup WebSocket listener
+    // Setup WebSocket listener immediately
     const channel = supabase.channel(`ready_${guestId}`);
 
     const handleNewSignal = () => {
@@ -63,10 +64,6 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
       channel.unsubscribe();
     };
   }, [guestId, openReportModal, isStripeReturn]);
-
-  if (isStripeReturn && !guestData) {
-    return null; // Wait for data to be fetched
-  }
 
   return (
     <div ref={ref} className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
