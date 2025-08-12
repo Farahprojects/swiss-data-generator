@@ -33,6 +33,7 @@ import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import StripeReturn from './pages/StripeReturn';
 import NotFound from './pages/NotFound';
+import NavigationStateProvider from './contexts/NavigationStateContext';
 
 // This shell contains all routes that can rely on AuthContext. It is lazy-loaded.
 const AuthedAppShell: React.FC = () => {
@@ -45,33 +46,15 @@ const AuthedAppShell: React.FC = () => {
   }
 
   return (
-    <AuthProvider>
-      <PricingProvider>
-        <ModalStateProvider>
-          <SettingsModalProvider>
-            <ReportModalProvider>
-              <StripeSuccessProvider>
-                <div className="min-h-screen bg-background">
+    <NavigationStateProvider>
+      <AuthProvider>
+        <PricingProvider>
+          <ModalStateProvider>
+            <SettingsModalProvider>
+              <ReportModalProvider>
+                <StripeSuccessProvider>
                   <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/features" element={<Features />} />
-                    {/* /report is intentionally excluded to keep it auth-free */}
-                    <Route path="/pricing" element={<Pricing />} />
-                    <Route path="/contact" element={<Contact />} />
-                    <Route path="/about" element={<About />} />
-                    <Route path="/legal" element={<Legal />} />
-                    <Route path="/blog" element={<Blog />} />
-                    <Route path="/blog/:slug" element={<BlogPost />} />
-                    <Route path="/stripe-return" element={<StripeReturn />} />
-
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/signup" element={<Signup />} />
-                    <Route path="/auth/password" element={<ResetPassword />} />
-
-                    {/* Preview route for website builder */}
-                    <Route path="/preview/:previewId" element={<PreviewWebsite />} />
-
-                    <Route path="/dashboard" element={<AuthGuard><DashboardLayout /></AuthGuard>}>
+                    <Route path="/" element={<AuthGuard><DashboardLayout /></AuthGuard>}>
                       <Route index element={<DashboardHome />} />
                       <Route path="calendar" element={<CalendarPage />} />
                       <Route path="clients" element={<ClientsPage />} />
@@ -82,22 +65,15 @@ const AuthedAppShell: React.FC = () => {
                       <Route path="settings" element={<UserSettings />} />
                       <Route path="website-builder" element={<WebsiteBuilder />} />
                     </Route>
-
-                    {/* Coach report page route */}
-                    <Route path="/:slug/vibe" element={<CoachReportPage />} />
-
-                    {/* Dynamic slug route for published coach websites - moved before catch-all */}
-                    <Route path="/:slug" element={<PublicCoachWebsite />} />
-
-                    <Route path="*" element={<NotFound />} />
+                    {/* The root App.tsx will handle the NotFound case for all other routes */}
                   </Routes>
-                </div>
-              </StripeSuccessProvider>
-            </ReportModalProvider>
-          </SettingsModalProvider>
-        </ModalStateProvider>
-      </PricingProvider>
-    </AuthProvider>
+                </StripeSuccessProvider>
+              </ReportModalProvider>
+            </SettingsModalProvider>
+          </ModalStateProvider>
+        </PricingProvider>
+      </AuthProvider>
+    </NavigationStateProvider>
   );
 };
 

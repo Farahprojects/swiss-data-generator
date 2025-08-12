@@ -5,8 +5,8 @@ import FeaturesSection from '@/components/public-report/FeaturesSection';
 import TestsSection from '@/components/public-report/TestsSection';
 import TheraiChatGPTSection from '@/components/public-report/TheraiChatGPTSection';
 import { ReportForm } from '@/components/shared/ReportForm';
-import Footer from '@/components/Footer';
-import Logo from '@/components/Logo';
+import { PublicFooter } from '@/components/public-report/PublicFooter';
+import { PublicLogo } from '@/components/public-report/PublicLogo';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
@@ -147,7 +147,7 @@ const PublicReport = () => {
           showHeader ? 'opacity-100' : 'opacity-0'
         }`}>
           <div>
-            <Logo size="md" asLink={false} />
+            <PublicLogo size="md" asLink={false} />
           </div>
         </header>
         
@@ -360,7 +360,7 @@ const PublicReport = () => {
         )}
         <TheraiChatGPTSection />
         <FeaturesSection onGetReportClick={handleGetReportClick} />
-        <Footer />
+        <PublicFooter />
 
         {isMobile && (
           <div

@@ -14,6 +14,15 @@ const debug = (...args: any[]) => {
   if (process.env.NODE_ENV !== 'production') console.log(...args);
 };
 
+// Lightweight trace object
+if (typeof window !== 'undefined' && !(window as any).__authTrace) {
+  (window as any).__authTrace = {
+    providerMounts: 0,
+    listeners: 0,
+    initialSessionChecks: 0,
+  };
+}
+
 // ──────────────────────────────────────────
 // Remove hardcoded constants - use the centralized Supabase client instead
 // ──────────────────────────────────────────
@@ -82,12 +91,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (initializedRef.current) return;
     initializedRef.current = true;
 
+    if (typeof window !== 'undefined') (window as any).__authTrace.providerMounts++;
     log('debug', 'Initializing AuthContext with enhanced session management', null, 'auth');
 
     // Set up auth state listener
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, supaSession) => {
+      if (typeof window !== 'undefined') (window as any).__authTrace.listeners++;
       log('debug', 'Auth state change', { event, hasSession: !!supaSession }, 'auth');
       
       // Set user and session state immediately to avoid race conditions
@@ -138,6 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     /* ────────────────────────────
      * Bootstrap existing session ONLY ONCE
      * ────────────────────────────*/
+    if (typeof window !== 'undefined') (window as any).__authTrace.initialSessionChecks++;
     supabase.auth.getSession().then(({ data: { session: supaSession } }) => {
       log('debug', 'Initial session check', { hasSession: !!supaSession }, 'auth');
       
