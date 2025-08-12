@@ -82,7 +82,7 @@ export const SynastryAstroFormatter: React.FC<SynastryAstroFormatterProps> = ({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {composite_chart.planets?.map((planet: any) => (
+                  {composite_chart?.map((planet: any) => (
                     <TableRow key={planet.name}>
                       <TableCell className="font-medium">
                         <span className="mr-2">{planet.unicode}</span> {planet.name}
