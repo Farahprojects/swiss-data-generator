@@ -23,6 +23,26 @@ const PublicReport = () => {
   const [activeGuest, setActiveGuest] = useState<{ id: string, name: string, email: string } | null>(null);
   const [paidGuest, setPaidGuest] = useState<{ id: string, name: string, email: string } | null>(null);
   
+  // Effect to detect and handle Stripe return
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const guestId = params.get('guest_id');
+    const paymentStatus = params.get('payment_status');
+
+    if (guestId && paymentStatus === 'success') {
+      // This is a return from a successful Stripe payment.
+      // We don't have name/email, so the checker will need to fetch them or the success screen will.
+      // For now, we'll start the checker.
+      console.log(`[PublicReport] Stripe return detected for guestId: ${guestId}. Starting checker.`);
+      setActiveGuest({ id: guestId, name: '', email: '' });
+
+      // Clean the URL to avoid re-triggering on refresh
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete('payment_status');
+      window.history.replaceState({}, '', newUrl.toString());
+    }
+  }, []); // Run only once on component mount
+
   const handleReportCreated = (guestId: string, paymentStatus: string, name: string, email: string) => {
     if (paymentStatus === 'paid') {
       // If the report is already paid (e.g., free promo), skip the checker and go straight to success.
