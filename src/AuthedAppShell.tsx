@@ -1,11 +1,11 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
-import { ModalStateProvider } from './contexts/ModalStateProvider';
-import { SettingsModalProvider } from './contexts/SettingsModalContext';
-import { PricingProvider } from './contexts/PricingContext';
-import { ReportModalProvider } from './contexts/ReportModalContext';
-import { StripeSuccessProvider } from './contexts/StripeSuccessContext';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { ModalStateProvider } from '@/contexts/ModalStateProvider';
+import { SettingsModalProvider } from '@/contexts/SettingsModalContext';
+import { PricingProvider } from '@/contexts/PricingContext';
+import { ReportModalProvider } from '@/contexts/ReportModalContext';
+import { StripeSuccessProvider } from '@/contexts/StripeSuccessContext';
 import DashboardLayout from './components/dashboard/DashboardLayout';
 import DashboardHome from './pages/dashboard/DashboardHome';
 import ClientsPage from './pages/dashboard/ClientsPage';
@@ -33,7 +33,7 @@ import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import StripeReturn from './pages/StripeReturn';
 import NotFound from './pages/NotFound';
-import NavigationStateProvider from './contexts/NavigationStateContext';
+import NavigationStateProvider from '@/contexts/NavigationStateContext';
 
 // This shell contains all routes that can rely on AuthContext. It is lazy-loaded.
 const AuthedAppShell: React.FC = () => {
