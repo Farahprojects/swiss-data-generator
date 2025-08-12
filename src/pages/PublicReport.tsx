@@ -21,7 +21,7 @@ const PublicReport = () => {
   const [showCancelledMessage, setShowCancelledMessage] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [activeGuest, setActiveGuest] = useState<{ id: string, name: string, email: string } | null>(null);
-  const [paidGuest, setPaidGuest] = useState<{ id: string, name: string, email: string } | null>(null);
+  const [paidGuest, setPaidGuest] = useState<{ id: string, name: string, email: string, isStripeReturn?: boolean } | null>(null);
   
   // Effect to detect and handle Stripe return
   useEffect(() => {
@@ -395,8 +395,9 @@ const PublicReport = () => {
             guestId={activeGuest.id}
             onPaid={(paidGuestId) => {
               console.log(`Report ${paidGuestId} is paid! Ready to show success screen.`);
-              // Now we have the name and email from the activeGuest state
-              setPaidGuest({ id: paidGuestId, name: activeGuest.name, email: activeGuest.email });
+              // For stripe return, we set the isStripeReturn flag so the success screen can fetch the details.
+              const isStripe = !activeGuest.name; // A simple check: if name is missing, it must be a stripe return.
+              setPaidGuest({ id: paidGuestId, name: activeGuest.name, email: activeGuest.email, isStripeReturn: isStripe });
               setActiveGuest(null); // Stop checking once paid
             }}
           />
@@ -404,7 +405,7 @@ const PublicReport = () => {
 
         {paidGuest && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <SuccessScreen guestId={paidGuest.id} name={paidGuest.name} email={paidGuest.email} />
+            <SuccessScreen guestId={paidGuest.id} name={paidGuest.name} email={paidGuest.email} isStripeReturn={paidGuest.isStripeReturn} />
           </div>
         )}
       </div>

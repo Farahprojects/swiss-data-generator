@@ -301,6 +301,17 @@ serve(async (req) => {
           if (session.payment_status === 'paid') {
             const guestReportId = metadata.guest_report_id;
             await updateGuestReportPaymentStatus(guestReportId);
+            
+            // CRITICAL: Now, trigger the report generation flow
+            console.log(`[WEBHOOK] Invoking process-paid-report for guest: ${guestReportId}`);
+            const { error: invokeError } = await supabase.functions.invoke('process-paid-report', {
+              body: { guest_id: guestReportId }
+            });
+            if (invokeError) {
+              console.error(`[WEBHOOK] Failed to invoke process-paid-report for ${guestReportId}:`, invokeError);
+              // Do not throw, as the payment itself was successful. Log the error.
+            }
+
           } else {
             console.log(`[WEBHOOK] Session payment_status is '${session.payment_status}', not 'paid'. Skipping update.`);
           }

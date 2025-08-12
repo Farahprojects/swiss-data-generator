@@ -4,18 +4,39 @@ import { useReportModal } from "@/contexts/ReportModalContext";
 
 interface SuccessScreenProps {
   guestId: string;
-  name: string;
-  email: string;
+  name?: string;
+  email?: string;
+  isStripeReturn?: boolean;
 }
 
 export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
-({ guestId, name, email }, ref) => {
+({ guestId, name, email, isStripeReturn = false }, ref) => {
   const { open: openReportModal } = useReportModal();
-  const [modalOpened, setModalOpened] = useState(false);
+  const [guestData, setGuestData] = useState<{name: string, email: string} | null>(null);
 
   // --- Main WebSocket Listener ---
   useEffect(() => {
     if (!guestId) return;
+
+    // If this is a Stripe return, we need to fetch the name and email.
+    if (isStripeReturn) {
+      const fetchGuestDetails = async () => {
+        const { data, error } = await supabase
+          .from("guest_reports")
+          .select("email, name:report_data->>name, person_a_name:report_data->person_a->>name, person_a_email:report_data->person_a->>email")
+          .eq("id", guestId)
+          .single();
+        
+        if (data) {
+          const displayName = data.person_a_name ?? data.name ?? "";
+          const displayEmail = data.person_a_email ?? data.email ?? "";
+          setGuestData({ name: displayName, email: displayEmail });
+        } else {
+          console.error(`[SuccessScreen] Failed to fetch guest details for ${guestId}`, error);
+        }
+      };
+      fetchGuestDetails();
+    }
 
     // Setup WebSocket listener
     const channel = supabase.channel(`ready_${guestId}`);
@@ -23,7 +44,6 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
     const handleNewSignal = () => {
       console.log(`[SuccessScreen] WebSocket signal received for ${guestId}. Opening report.`);
       openReportModal(guestId);
-      setModalOpened(true); // Self-destruct after opening the modal
       channel.unsubscribe();
     };
     
@@ -42,10 +62,10 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
       console.log(`[SuccessScreen] Unsubscribing from WebSocket for guestId: ${guestId}`);
       channel.unsubscribe();
     };
-  }, [guestId, openReportModal]);
+  }, [guestId, openReportModal, isStripeReturn]);
 
-  if (modalOpened) {
-    return null;
+  if (isStripeReturn && !guestData) {
+    return null; // Wait for data to be fetched
   }
 
   return (
@@ -59,7 +79,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
         <div className="space-y-2">
           <h1 className="text-2xl font-light text-gray-900">Report Request Received!</h1>
           <p className="text-gray-600">
-            {name ? `Your report for ${name} is being prepared.` : "Your report is being prepared."}
+            {(name || guestData?.name) ? `Your report for ${name || guestData?.name} is being prepared.` : "Your report is being prepared."}
           </p>
         </div>
       </div>
@@ -67,11 +87,11 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
       <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-left">
         <div className="flex justify-between text-sm">
           <span className="text-gray-600 font-medium">Name:</span>
-          <span className="font-normal text-gray-900">{name}</span>
+          <span className="font-normal text-gray-900">{name || guestData?.name}</span>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-gray-600 font-medium">Email:</span>
-          <span className="font-normal text-gray-900">{email}</span>
+          <span className="font-normal text-gray-900">{email || guestData?.email}</span>
         </div>
       </div>
 
