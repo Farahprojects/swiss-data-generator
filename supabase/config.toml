@@ -81,8 +81,6 @@ verify_jwt = false
 [functions.report-orchestrator]
 verify_jwt = false
 
-[functions.report-prep]
-verify_jwt = false
 
 [functions.retrieve-temp-report]
 verify_jwt = false
