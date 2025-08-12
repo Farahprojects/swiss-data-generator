@@ -239,6 +239,41 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
   }
 }
 
+// Fire-and-forget logging and signaling
+function logAndSignalCompletion(logPrefix: string, reportData: any, report: string, metadata: any, durationMs: number, selectedEngine: string) {
+  // Fire-and-forget report_logs insert
+  supabase.from("report_logs").insert({
+    api_key: null,
+    user_id: reportData.user_id || null,
+    report_type: reportData.reportType || reportData.report_type || "standard",
+    endpoint: reportData.endpoint,
+    report_text: report,
+    status: "success",
+    duration_ms: durationMs,
+    client_id: reportData.client_id || null,
+    engine_used: selectedEngine,
+    metadata: metadata,
+    is_guest: reportData.is_guest || false,
+    created_at: new Date().toISOString(),
+  })
+  .then(() => console.log(`${logPrefix} Report log insert succeeded for ${reportData.is_guest ? 'guest' : 'user'} report`))
+  .catch(err => console.error(`${logPrefix} Report log insert failed:`, {
+    error: err,
+    user_id: reportData.user_id,
+    is_guest: reportData.is_guest,
+    report_type: reportData.reportType || reportData.report_type
+  }));
+  
+  // Fire-and-forget report_ready_signals insert for guest reports
+  if (reportData.is_guest && reportData.user_id) {
+    supabase.from('report_ready_signals').insert({
+      guest_report_id: reportData.user_id
+    })
+    .then(() => console.log(`${logPrefix} Signal inserted for guest report: ${reportData.user_id}`))
+    .catch(err => console.error(`${logPrefix} Signal insert failed:`, err));
+  }
+}
+
 // Main handler function
 serve(async (req) => {
   let reportData: any; // Define here to be accessible in catch block
@@ -301,25 +336,11 @@ serve(async (req) => {
     
     // Log successful report generation (fire-and-forget)
     const durationMs = Date.now() - startTime;
+    logAndSignalCompletion(logPrefix, reportData, report, metadata, durationMs, selectedEngine);
     
-    // Fire-and-forget report_logs insert
-    supabase.from("report_logs").insert({
-      api_key: null,
-      user_id: reportData.user_id || null,
-      report_type: reportType,
-      endpoint: reportData.endpoint,
-      report_text: report,
-      status: "success",
-      duration_ms: durationMs,
-      client_id: reportData.client_id || null,
-      engine_used: selectedEngine,
-      metadata: metadata,
-      is_guest: reportData.is_guest || false,
-      created_at: new Date().toISOString(),
-    })
-    .then(() => console.log(`${logPrefix} Successfully logged report generation to report_logs.`))
-    .catch(err => console.error(`${logPrefix} Failed to log success to report_logs:`, err));
-    
+    // ✅ LOGGING: Final response being sent
+    console.log(`${logPrefix} Request processing complete. Sending success response.`);
+
     // Return the generated report with proper structure
     return jsonResponse({
       success: true,
