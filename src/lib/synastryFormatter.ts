@@ -213,6 +213,21 @@ export const parseAstroData = (raw: any): any => {
     subject: raw.subject ?? {} // Carry over subject info
   };
 
+  // Handle single-block, top-level report types like 'monthly'
+  if (raw.block_type) {
+    switch(raw.block_type) {
+      case 'monthly':
+        // The core data is in the 'components' object for monthly reports
+        parsedData.monthly = raw.components;
+        // Also attach the top-level block type for easy identification
+        if (parsedData.monthly) {
+            parsedData.monthly.block_type = 'monthly';
+        }
+        return parsedData;
+    }
+  }
+
+  // Continue with existing logic for multi-block reports (natal, synastry)
   const dataRoot = raw.blocks || raw;
 
   for (const key in dataRoot) {
@@ -250,6 +265,7 @@ export const isSynastryData = (raw: any): boolean => {
 
   // The new format is identifiable by the explicit `block_type` keys.
   return (
+    raw.block_type === 'monthly' ||
     raw.blocks?.natal?.block_type === 'natal' ||
     raw.natal?.block_type === 'natal_set' ||
     raw.synastry_aspects?.block_type === 'synastry' ||

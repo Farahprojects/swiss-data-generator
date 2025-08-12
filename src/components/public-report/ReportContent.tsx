@@ -3,8 +3,9 @@ import React from 'react';
 import { ReportRenderer } from '@/components/shared/ReportRenderer';
 import { IndividualAstroFormatter } from '@/components/astro-formatters/IndividualAstroFormatter';
 import { SynastryAstroFormatter } from '@/components/astro-formatters/SynastryAstroFormatter';
+import { MonthlyAstroFormatter } from '@/components/astro-formatters/MonthlyAstroFormatter';
 import { ReportData } from '@/utils/reportContentExtraction';
-import { isSynastryReport } from './AstroDataRenderer';
+import { getAstroReportType } from './AstroDataRenderer';
 
 interface ReportContentProps {
   reportData: ReportData;
@@ -20,6 +21,19 @@ export const ReportContent: React.FC<ReportContentProps> = ({
   isMobile = false
 }) => {
   const contentType = reportData.metadata.content_type;
+  const astroReportType = getAstroReportType(reportData.swiss_data);
+
+  const renderAstroContent = () => {
+    switch (astroReportType) {
+      case 'monthly':
+        return <MonthlyAstroFormatter swissData={reportData.swiss_data} reportData={reportData} />;
+      case 'synastry':
+        return <SynastryAstroFormatter swissData={reportData.swiss_data} reportData={reportData} />;
+      case 'individual':
+      default:
+        return <IndividualAstroFormatter swissData={reportData.swiss_data} reportData={reportData} />;
+    }
+  };
 
   const renderContent = () => {
     switch (contentType) {
@@ -33,38 +47,14 @@ export const ReportContent: React.FC<ReportContentProps> = ({
       case 'astro':
         return (
           <div className="max-w-4xl mx-auto px-0 md:px-4 py-8">
-            {isSynastryReport(reportData) ? (
-              <SynastryAstroFormatter 
-                swissData={reportData.swiss_data} 
-                reportData={reportData}
-              />
-            ) : (
-              <IndividualAstroFormatter 
-                swissData={reportData.swiss_data} 
-                reportData={reportData}
-              />
-            )}
+            {renderAstroContent()}
           </div>
         );
       
       case 'both':
         return (
           <div className="max-w-4xl mx-auto px-0 md:px-4 py-8">
-            {activeView === 'astro' ? (
-              isSynastryReport(reportData) ? (
-                <SynastryAstroFormatter 
-                  swissData={reportData.swiss_data} 
-                  reportData={reportData}
-                />
-              ) : (
-                <IndividualAstroFormatter 
-                  swissData={reportData.swiss_data} 
-                  reportData={reportData}
-                />
-              )
-            ) : (
-              <ReportRenderer reportData={reportData} />
-            )}
+            {activeView === 'astro' ? renderAstroContent() : <ReportRenderer reportData={reportData} />}
           </div>
         );
       
