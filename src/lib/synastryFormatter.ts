@@ -1,167 +1,229 @@
-// lib/synastryFormatter.ts - Synastry data formatter
-import { PLANET_NAMES, ASPECT_NAMES, degreesToSign } from './astroUtils';
+// lib/synastryFormatter.ts - Synastry data formatter for Swiss Ephemeris sync v1.1+
+import { ZODIAC_SIGNS } from './astroUtils';
 
-export interface EnrichedPlanet {
-  name: string;
-  sign: string;
-  glyph: string;
+type PlanetDetail = {
   deg: number;
-  min: number;
-  retro: boolean;
-}
-
-export interface EnrichedAspect {
-  a: string;
-  b: string;
-  type: string;
-  orbDeg: number;
-  orbMin: number;
-}
-
-export interface PersonBlock {
-  label: string;
-  name?: string;
-  planets: EnrichedPlanet[];
-  aspectsToNatal: EnrichedAspect[];
-}
-
-export interface EnrichedSynastry {
-  meta: {
-    dateISO: string;
-    time: string;
-    lunarPhase?: string;
-    personAName?: string;
-    personBName?: string;
-    tz?: string;
-  };
-  personA: PersonBlock;
-  personB: PersonBlock;
-  composite: EnrichedPlanet[];
-  synastry: EnrichedAspect[];
-}
-
-// Helper to enrich planets from various formats
-const enrichPlanets = (rawPlanets: any): EnrichedPlanet[] => {
-  if (Array.isArray(rawPlanets)) {
-    return rawPlanets.map(planet => {
-      const { sign, glyph, deg, min } = degreesToSign(planet.longitude);
-      return {
-        name: PLANET_NAMES[planet.planet?.toLowerCase()] ?? planet.planet,
-        sign,
-        glyph,
-        deg,
-        min,
-        retro: !!planet.retrograde
-      };
-    });
-  }
-
-  if (typeof rawPlanets === 'object' && rawPlanets !== null) {
-    return Object.entries(rawPlanets).map(([key, val]: [string, any]) => {
-      const longitude = val.deg ?? val.longitude ?? val;
-      const { sign, glyph, deg, min } = degreesToSign(longitude);
-      return {
-        name: PLANET_NAMES[key.toLowerCase()] ?? key,
-        sign,
-        glyph,
-        deg,
-        min,
-        retro: !!val.retrograde
-      };
-    });
-  }
-
-  return [];
+  sign: string;
+  house: number | null;
+  retrograde: boolean;
 };
 
-// Helper to enrich aspects
-const enrichAspects = (arr: any[]): EnrichedAspect[] =>
-  (arr ?? []).map(a => {
-    const orbDeg = Math.floor(a.orb ?? 0);
-    const orbMin = Math.round(((a.orb ?? 0) - orbDeg) * 60);
+type EnrichedPlanet = PlanetDetail & {
+  name: string;
+  sign_num: number;
+  sign_icon: string;
+  unicode: string;
+};
+
+type Aspect = {
+  a: string;
+  b: string;
+  orb: number;
+  type: string;
+};
+
+type EnrichedAspect = Aspect & {
+  a_unicode: string;
+  b_unicode: string;
+  aspect_unicode: string;
+  aspect_group: 'easy' | 'hard' | 'neutral';
+  orb_band: 'tight' | 'medium' | 'wide' | 'exact';
+  orbMin: number;
+};
+
+const ZODIAC_TO_NUM = ZODIAC_SIGNS.reduce((acc, sign, i) => {
+  acc[sign.toLowerCase()] = i;
+  return acc;
+}, {} as Record<string, number>);
+
+const PLANET_UNICODE: { [key: string]: string } = {
+  Sun: '☉',
+  Moon: '☽',
+  Mercury: '☿',
+  Venus: '♀',
+  Mars: '♂',
+  Jupiter: '♃',
+  Saturn: '♄',
+  Uranus: '♅',
+  Neptune: '♆',
+  Pluto: '♇',
+  Chiron: '⚷',
+  TrueNode: '☊',
+  ASC: 'Asc',
+  MC: 'MC',
+  DSC: 'Dsc',
+  IC: 'IC'
+};
+
+const ASPECT_UNICODE: { [key: string]: string } = {
+  Conjunction: '☌',
+  Opposition: '☍',
+  Trine: '△',
+  Square: '□',
+  Sextile: ' sextile ',
+  Quintile: '☌☌☌☌☌',
+  Septile: '☌☌☌☌☌☌☌',
+  Trisection: '☌☍☌',
+  Decile: '☌☌☌☌☌☌☌☌☌'
+};
+
+const ASPECT_GROUP: { [key: string]: 'easy' | 'hard' | 'neutral' } = {
+  Conjunction: 'neutral',
+  Opposition: 'hard',
+  Trine: 'easy',
+  Square: 'hard',
+  Sextile: 'easy',
+  Quintile: 'easy',
+  Septile: 'neutral',
+  Trisection: 'neutral',
+  Decile: 'neutral'
+};
+
+const getOrbBand = (orb: number): 'tight' | 'medium' | 'wide' | 'exact' => {
+  if (orb < 0.5) return 'exact';
+  if (orb < 2) return 'tight';
+  if (orb < 5) return 'medium';
+  return 'wide';
+};
+
+const enrichPlanets = (planets: { [key: string]: PlanetDetail }): EnrichedPlanet[] => {
+  if (!planets || typeof planets !== 'object') return [];
+  return Object.entries(planets).map(([name, details]) => {
+    const signNum = ZODIAC_TO_NUM[details.sign.toLowerCase()] || 0;
     return {
-      a: PLANET_NAMES[a.a?.toLowerCase()] ?? a.a,
-      b: PLANET_NAMES[a.b?.toLowerCase()] ?? a.b,
-      type: ASPECT_NAMES[a.type?.toLowerCase()] ?? a.type,
-      orbDeg,
+      ...details,
+      name,
+      sign_num: signNum,
+      sign_icon: ZODIAC_SIGNS[signNum],
+      unicode: PLANET_UNICODE[name]
+    };
+  });
+};
+
+const enrichAspects = (aspects: Aspect[]): EnrichedAspect[] => {
+  if (!Array.isArray(aspects)) return [];
+  return aspects.map(a => {
+    const orbMin = Math.floor(a.orb);
+    return {
+      ...a,
+      a_unicode: PLANET_UNICODE[a.a],
+      b_unicode: PLANET_UNICODE[a.b],
+      aspect_unicode: ASPECT_UNICODE[a.type],
+      aspect_group: ASPECT_GROUP[a.type],
+      orb_band: getOrbBand(a.orb),
       orbMin
     };
   });
+};
 
-export const parseSynastryRich = (raw: any): EnrichedSynastry => {
-  console.log('🔍 [parseSynastryRich] Full raw data:', raw);
-
-  const meta = raw.meta ?? {};
-  const transits = raw.transits ?? {};
-  const pA = transits.person_a ?? raw.person_a ?? {};
-  const pB = transits.person_b ?? raw.person_b ?? {};
-
-  console.log('🔍 [parseSynastryRich] Name fields check:', {
-    'meta.personAName': meta.personAName,
-    'raw.personAName': raw.personAName,
-    'raw.person_a_name': raw.person_a_name,
-    'raw.name': raw.name,
-    'meta.name': meta.name,
-    'meta.personBName': meta.personBName,
-    'raw.personBName': raw.personBName,
-    'raw.person_b_name': raw.person_b_name,
-    'raw.secondPersonName': raw.secondPersonName,
-    'meta.secondPersonName': meta.secondPersonName,
-    'raw.chartData': raw.chartData
-  });
-
-  const personAName = raw.chartData?.person_a_name ||
-                      meta.personAName ||
-                      raw.personAName ||
-                      raw.person_a_name ||
-                      raw.name ||
-                      meta.name;
-
-  const personBName = raw.chartData?.person_b_name ||
-                      meta.personBName ||
-                      raw.personBName ||
-                      raw.person_b_name ||
-                      raw.secondPersonName ||
-                      meta.secondPersonName;
-
-  console.log('🔍 [parseSynastryRich] Extracted names:', { personAName, personBName });
+const parseNatalSet = (block: any) => {
+  if (!block || !block.subjects) return null;
+  const personA = block.subjects.person_a;
+  const personB = block.subjects.person_b;
 
   return {
-    meta: {
-      dateISO: meta.date ?? meta.utc?.split('T')[0] ?? new Date().toISOString().split('T')[0],
-      time: meta.time ?? meta.utc?.split('T')[1]?.split('.')[0] ?? '12:00:00',
-      lunarPhase: meta.lunar_phase,
-      personAName,
-      personBName,
-      tz: meta.tz
-    },
     personA: {
-      label: personAName || 'Person A',
-      name: personAName,
-      planets: enrichPlanets(pA.planets ?? {}),
-      aspectsToNatal: enrichAspects(pA.aspects_to_natal ?? [])
+      name: personA?.name || 'Person A',
+      planets: enrichPlanets(personA?.planets ?? {}),
+      angles: personA?.angles ?? {},
+      houses: personA?.houses ?? [],
+      aspects: enrichAspects(personA?.aspects ?? [])
     },
-    personB: {
-      label: personBName || 'Person B',
-      name: personBName,
-      planets: enrichPlanets(pB.planets ?? {}),
-      aspectsToNatal: enrichAspects(pB.aspects_to_natal ?? [])
-    },
-    composite: enrichPlanets(raw.composite_chart ?? {}),
-    synastry: enrichAspects(raw.synastry_aspects ?? [])
+    personB: personB
+      ? {
+          name: personB?.name || 'Person B',
+          planets: enrichPlanets(personB?.planets ?? {}),
+          angles: personB?.angles ?? {},
+          houses: personB?.houses ?? [],
+          aspects: enrichAspects(personB?.aspects ?? [])
+        }
+      : undefined
   };
+};
+
+const parseTransits = (block: any) => {
+  if (!block) return null;
+  const personA = block.person_a;
+  const personB = block.person_b;
+
+  return {
+    personA: {
+      name: personA?.name || 'Person A',
+      planets: enrichPlanets(personA?.planets ?? {}),
+      aspects_to_natal: enrichAspects(personA?.aspects_to_natal ?? [])
+    },
+    personB: personB
+      ? {
+          name: personB?.name || 'Person B',
+          planets: enrichPlanets(personB?.planets ?? {}),
+          aspects_to_natal: enrichAspects(personB?.aspects_to_natal ?? [])
+        }
+      : undefined
+  };
+};
+
+const parseCompositeChart = (block: any) => {
+  if (!block || !block.planets) return null;
+  return {
+    planets: enrichPlanets(block.planets)
+  };
+};
+
+const parseSynastryAspects = (block: any) => {
+  if (!block || !block.pairs) return null;
+  return {
+    aspects: enrichAspects(block.pairs)
+  };
+};
+
+/**
+ * New dynamic parser for swiss ephemeris sync data (v1.1+)
+ * It dispatches parsing to dedicated functions based on `block_type`.
+ */
+export const parseAstroData = (raw: any): any => {
+  if (!raw || typeof raw !== 'object') {
+    console.warn('⚠️ [parseAstroData] received invalid or empty data');
+    return {};
+  }
+
+  const parsedData: any = {
+    meta: raw.meta ?? {}
+  };
+
+  for (const key in raw) {
+    if (raw.hasOwnProperty(key) && typeof raw[key] === 'object' && raw[key]?.block_type) {
+      const block = raw[key];
+      switch (block.block_type) {
+        case 'natal_set':
+          parsedData.natal_set = parseNatalSet(block);
+          break;
+        case 'transits':
+          parsedData.transits = parseTransits(block);
+          break;
+        case 'composite':
+          parsedData.composite_chart = parseCompositeChart(block);
+          break;
+        case 'synastry':
+          parsedData.synastry_aspects = parseSynastryAspects(block);
+          break;
+        default:
+          console.warn(`[parseAstroData] Unknown block_type: "${block.block_type}"`);
+          parsedData[key] = block; // Carry over unknown blocks
+      }
+    }
+  }
+
+  return parsedData;
 };
 
 // Helper to detect if data is synastry/sync format
 export const isSynastryData = (raw: any): boolean => {
   if (!raw) return false;
 
-  return !!(
-    raw.transits?.person_a ||
-    raw.transits?.person_b ||
-    raw.person_a ||
-    raw.person_b ||
-    raw.synastry_aspects ||
-    raw.composite_chart
+  // The new format is identifiable by the explicit `block_type` keys.
+  return (
+    raw.natal?.block_type === 'natal_set' ||
+    raw.synastry_aspects?.block_type === 'synastry' ||
+    raw.composite_chart?.block_type === 'composite'
   );
 };

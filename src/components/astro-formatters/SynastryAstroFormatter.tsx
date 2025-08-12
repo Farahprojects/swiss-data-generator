@@ -1,9 +1,11 @@
-
 import React from 'react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Table, TableBody, TableCell, TableHeader, TableHead, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { parseAstroData } from '@/lib/synastryFormatter';
 import { ChartHeader } from './shared/ChartHeader';
-import { PlanetaryPositions } from './shared/PlanetaryPositions';
 import { AspectTable } from './shared/AspectTable';
-import { parseSynastryRich } from '@/lib/synastryFormatter';
+import { ChartAngles } from './shared/ChartAngles';
 
 interface SynastryAstroFormatterProps {
   swissData: any;
@@ -16,10 +18,6 @@ export const SynastryAstroFormatter: React.FC<SynastryAstroFormatterProps> = ({
   reportData,
   className = ''
 }) => {
-  const reportInfo = reportData.guest_report?.report_data;
-  const personAName = reportInfo?.person_a?.name || reportInfo?.name || 'Person A';
-  const personBName = reportInfo?.person_b?.name || reportInfo?.secondPersonName || 'Person B';
-
   if (!swissData) {
     return (
       <div className={`text-center text-gray-500 py-16 ${className}`}>
@@ -28,121 +26,137 @@ export const SynastryAstroFormatter: React.FC<SynastryAstroFormatterProps> = ({
     );
   }
 
-  // Use the rich parser to get complete, formatted synastry data
-  const enrichedData = parseSynastryRich(swissData);
-  const personADisplay = enrichedData.personA.name || personAName;
-  const personBDisplay = enrichedData.personB.name || personBName;
+  // Use the new dynamic parser
+  const astroData = parseAstroData(swissData);
 
-  // Get birth details from mapped report data
-  const personABirthDate = reportInfo?.person_a?.birth_date || reportData?.people?.A?.birthDate || reportData?.birthDate;
-  const personABirthPlace = reportInfo?.person_a?.location || reportData?.people?.A?.location || reportData?.birthLocation;
-  const personBBirthDate = reportInfo?.person_b?.birth_date || reportData?.people?.B?.birthDate || reportData?.secondPersonBirthDate;
-  const personBBirthPlace = reportInfo?.person_b?.location || reportData?.people?.B?.location || reportData?.secondPersonBirthLocation;
+  const { meta, natal_set, synastry_aspects, composite_chart, transits } = astroData;
+
+  const personA = natal_set?.personA;
+  const personB = natal_set?.personB;
 
   return (
     <div className={`font-inter max-w-4xl mx-auto py-8 ${className}`}>
-      <ChartHeader
-        name={`${personADisplay} & ${personBDisplay}`}
-        title="Compatibility Chart Analysis"
-      />
+      {meta && (
+        <ChartHeader
+          title="Relationship Chart"
+          name={personA && personB ? `${personA.name} & ${personB.name}` : 'Synastry Analysis'}
+        />
+      )}
 
-      {/* Analysis Information */}
-      <div className="text-center mb-12 text-gray-700">
-        <div className="space-y-2">
-          {personABirthDate || personABirthPlace ? (
-            <div className="text-sm">
-              <strong>{personADisplay}:</strong> 
-              {personABirthDate && ` ${personABirthDate}`}
-              {personABirthPlace && `, ${personABirthPlace}`}
-            </div>
-          ) : null}
-          
-          {personBBirthDate || personBBirthPlace ? (
-            <div className="text-sm">
-              <strong>{personBDisplay}:</strong> 
-              {personBBirthDate && ` ${personBBirthDate}`}
-              {personBBirthPlace && `, ${personBBirthPlace}`}
-            </div>
-          ) : null}
-          
-        </div>
-      </div>
+      <div className="space-y-8 mt-8">
+        {/* Synastry Aspects */}
+        {synastry_aspects && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl font-light text-gray-800">
+                Synastry: The Core Dynamics
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600 mb-4">
+                These aspects show the fundamental interactions between your two personalities.
+              </p>
+              <AspectTable aspects={synastry_aspects.aspects} />
+            </CardContent>
+          </Card>
+        )}
 
-      {/* Person A Data */}
-      <div className="mb-16">
-        <div className="text-center mb-8 pb-4 border-b border-gray-200">
-          <h2 className="text-2xl font-light text-gray-900 tracking-tight">{personADisplay}</h2>
-        </div>
-        
-        {enrichedData.personA.planets && enrichedData.personA.planets.length > 0 && (
-          <PlanetaryPositions 
-            planets={enrichedData.personA.planets} 
-            title="CURRENT POSITIONS" 
-          />
+        {/* Composite Chart */}
+        {composite_chart && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl font-light text-gray-800">
+                Composite Chart: The Relationship's Identity
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600 mb-4">
+                This chart represents the relationship itself as a third entity.
+              </p>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Planet</TableHead>
+                    <TableHead>Degree</TableHead>
+                    <TableHead>Sign</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {composite_chart.planets?.map((planet: any) => (
+                    <TableRow key={planet.name}>
+                      <TableCell className="font-medium">
+                        <span className="mr-2">{planet.unicode}</span> {planet.name}
+                      </TableCell>
+                      <TableCell>{`${Math.floor(planet.deg)}°`}</TableCell>
+                      <TableCell>{planet.sign}</TableCell>
+                    </TableRow>
+                  ))}
+                </Body>
+              </Table>
+            </CardContent>
+          </Card>
         )}
-        
-        {enrichedData.personA.aspectsToNatal && enrichedData.personA.aspectsToNatal.length > 0 && (
-          <AspectTable 
-            aspects={enrichedData.personA.aspectsToNatal} 
-            title="ASPECTS TO NATAL" 
-          />
-        )}
-      </div>
 
-      {/* Person B Data */}
-      <div className="mb-16">
-        <div className="text-center mb-8 pb-4 border-b border-gray-200">
-          <h2 className="text-2xl font-light text-gray-900 tracking-tight">{personBDisplay}</h2>
-        </div>
-        
-        {enrichedData.personB.planets && enrichedData.personB.planets.length > 0 && (
-          <PlanetaryPositions 
-            planets={enrichedData.personB.planets} 
-            title="CURRENT POSITIONS" 
-          />
+        {/* Natal Charts as Accordion */}
+        {natal_set && (
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="natal-charts">
+              <AccordionTrigger className="text-2xl font-light text-gray-800 hover:no-underline">
+                Natal Charts: The Foundation
+              </AccordionTrigger>
+              <AccordionContent className="space-y-6">
+                {personA && (
+                  <div>
+                    <h4 className="text-xl font-light text-gray-700 mb-2">{personA.name}</h4>
+                    <ChartAngles angles={personA.angles} />
+                    <AspectTable aspects={personA.aspects} title="Natal Aspects" />
+                  </div>
+                )}
+                {personB && (
+                  <div>
+                    <h4 className="text-xl font-light text-gray-700 mt-6 mb-2">{personB.name}</h4>
+                    <ChartAngles angles={personB.angles} />
+                    <AspectTable aspects={personB.aspects} title="Natal Aspects" />
+                  </div>
+                )}
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         )}
-        
-        {enrichedData.personB.aspectsToNatal && enrichedData.personB.aspectsToNatal.length > 0 && (
-          <AspectTable 
-            aspects={enrichedData.personB.aspectsToNatal} 
-            title="ASPECTS TO NATAL" 
-          />
-        )}
-      </div>
 
-      {/* Composite Chart */}
-      <div className="mb-16">
-        <div className="text-center mb-8 pb-4 border-b border-gray-200">
-          <h2 className="text-2xl font-light text-gray-900 tracking-tight">Composite Chart</h2>
-        </div>
-        
-        {enrichedData.composite && enrichedData.composite.length > 0 ? (
-          <PlanetaryPositions 
-            planets={enrichedData.composite} 
-            title="COMPOSITE MIDPOINTS" 
-          />
-        ) : (
-          <div className="text-center text-gray-500 italic text-sm">
-            No composite chart data available.
-          </div>
-        )}
-      </div>
-
-      {/* Synastry Aspects */}
-      <div className="mb-16">
-        <div className="text-center mb-8 pb-4 border-b border-gray-200">
-          <h2 className="text-2xl font-light text-gray-900 tracking-tight">Relationship Dynamics</h2>
-        </div>
-        
-        {enrichedData.synastry && enrichedData.synastry.length > 0 ? (
-          <AspectTable 
-            aspects={enrichedData.synastry} 
-            title={`SYNASTRY ASPECTS (${personADisplay} ↔ ${personBDisplay})`} 
-          />
-        ) : (
-          <div className="text-center text-gray-500 italic text-sm">
-            No significant synastry aspects detected.
-          </div>
+        {/* Transits */}
+        {transits && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl font-light text-gray-800">
+                Current Transits: The Present Moment
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {transits.personA && (
+                <div>
+                  <h4 className="text-xl font-light text-gray-700 mb-2">
+                    Transits to {transits.personA.name}'s Chart
+                  </h4>
+                  <AspectTable
+                    aspects={transits.personA.aspects_to_natal}
+                    title="Current Influences"
+                  />
+                </div>
+              )}
+              {transits.personB && (
+                <div className="mt-6">
+                  <h4 className="text-xl font-light text-gray-700 mb-2">
+                    Transits to {transits.personB.name}'s Chart
+                  </h4>
+                  <AspectTable
+                    aspects={transits.personB.aspects_to_natal}
+                    title="Current Influences"
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>
