@@ -4,7 +4,6 @@
   Uses system prompts from the reports_prompts table
   Enhanced for production readiness with retries, timeouts, and structured logging.
 ────────────────────────────────────────────────────────────────────────────────*/
-import "https://deno.land/x/xhr@0.1.0/mod.ts"; // fetch polyfill for Edge runtime
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -28,7 +27,7 @@ if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
 // Initialize Supabase client
 let supabase: SupabaseClient;
 try {
-  supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+  supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
 } catch (err) {
   throw err;
 }
@@ -41,6 +40,7 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Max-Age': '600',
   'Content-Type': 'application/json',
 };
 
@@ -309,7 +309,7 @@ serve(async (req) => {
     
     // Fire-and-forget report_logs insert
     supabase.from("report_logs").insert({
-      api_key: reportData.api_key || null,
+      api_key: null,
       user_id: reportData.user_id || null,
       report_type: reportType,
       endpoint: reportData.endpoint,
@@ -366,7 +366,7 @@ serve(async (req) => {
     const durationMs = Date.now() - startTime;
     
     supabase.from("report_logs").insert({
-      api_key: reportData?.api_key || null,
+      api_key: null,
       user_id: reportData?.user_id || null,
       report_type: reportData?.reportType || reportData?.report_type || null,
       endpoint: reportData?.endpoint || null,
