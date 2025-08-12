@@ -26,7 +26,8 @@ import PreviewWebsite from './pages/PreviewWebsite';
 import { CoachReportPage } from './components/website-builder/CoachReportPage';
 
 import { AuthProvider } from './contexts/AuthContext';
-import NavigationStateProvider from './contexts/NavigationStateContext';
+import NavigationStateProvider from '@/contexts/NavigationStateContext';
+import { SettingsModalProvider } from '@/contexts/SettingsModalContext';
 
 // Lazy load the authenticated shell
 const AuthedAppShell = lazy(() => import('./AuthedAppShell'));
@@ -49,7 +50,9 @@ const ConditionalAuth: React.FC<{ children: React.ReactNode }> = ({ children }) 
     <>{children}</>
   ) : (
     <NavigationStateProvider>
-      <AuthProvider>{children}</AuthProvider>
+      <SettingsModalProvider>
+        <AuthProvider>{children}</AuthProvider>
+      </SettingsModalProvider>
     </NavigationStateProvider>
   );
 };
