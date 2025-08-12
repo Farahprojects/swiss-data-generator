@@ -1,5 +1,5 @@
 import React from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 
 // Types
 export interface PriceData {
@@ -26,15 +26,7 @@ let cachedPrices: PriceData[] | null = null;
 let lastFetchTime: number = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-// Supabase configuration with fallbacks
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: false
-  }
-});
+// Use shared Supabase client singleton
 
 /**
  * 🎯 Centralized Pricing Service
@@ -113,23 +105,11 @@ class PricingService {
     this.notifySubscribers();
 
     try {
-      const response = await fetch(`${supabaseUrl}/functions/v1/get-prices`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseAnonKey}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      const { data, error } = await supabase.functions.invoke('get-prices');
+      if (error) {
+        throw new Error(error.message);
       }
-
-      const result = await response.json();
-
-      if (result.error) {
-        throw new Error(result.error);
-      }
+      const result = data as { prices: PriceData[]; error?: string };
 
       if (!result.prices || result.prices.length === 0) {
         throw new Error('No prices found');

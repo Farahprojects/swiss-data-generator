@@ -6,7 +6,7 @@ import { getAbsoluteUrl } from '@/utils/urlUtils';
 import { log } from '@/utils/logUtils';
 
 import { authService } from '@/services/authService';
-import { SUPABASE_CONFIG } from '@/config/supabase-config';
+
 
 /**
  * Utility – only logs outside production builds.
@@ -216,9 +216,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
     try {
+      if (!SUPABASE_URL) {
+        return { error: new Error('Missing Supabase URL') };
+      }
       // Create popup window
       const popup = window.open(
-        `${SUPABASE_CONFIG.url}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(`${baseUrl}/dashboard`)}`,
+        `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(`${baseUrl}/dashboard`)}`,
         'googleSignIn',
         'width=500,height=600,scrollbars=yes,resizable=yes'
       );
@@ -252,10 +255,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
     try {
+      if (!SUPABASE_URL) {
+        return { error: new Error('Missing Supabase URL') };
+      }
       
       // Create popup window
       const popup = window.open(
-        `${SUPABASE_CONFIG.url}/auth/v1/authorize?provider=apple&redirect_to=${encodeURIComponent(`${baseUrl}/dashboard`)}`,
+        `${SUPABASE_URL}/auth/v1/authorize?provider=apple&redirect_to=${encodeURIComponent(`${baseUrl}/dashboard`)}`,
         'appleSignIn',
         'width=500,height=600,scrollbars=yes,resizable=yes'
       );
