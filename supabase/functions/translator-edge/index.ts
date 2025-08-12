@@ -269,7 +269,7 @@ serve(async (req)=>{
       pa.tz = tzA || pa.tz || "UTC";
       const utcA=toUtcISO({...pa,tz:pa.tz,location:pa.location||""});
       console.log(`[translator-edge-${reqId}] Person A UTC generated: ${utcA}`);
-      const normA={...normalise(pa),utc:utcA,tz:pa.tz};
+      const normA={...normalise(pa),utc:utcA,tz:pa.tz, name: parsed.person_a.name || ''};
       console.log(`[translator-edge-${reqId}] Person A final payload:`, JSON.stringify(normA));
 
       const {data:pb,googleGeoUsed:g2}=await ensureLatLon(parsed.person_b);
@@ -279,7 +279,7 @@ serve(async (req)=>{
       pb.tz = tzB || pb.tz || "UTC";
       const utcB=toUtcISO({...pb,tz:pb.tz,location:pb.location||""});
       console.log(`[translator-edge-${reqId}] Person B UTC generated: ${utcB}`);
-      const normB={...normalise(pb),utc:utcB,tz:pb.tz};
+      const normB={...normalise(pb),utc:utcB,tz:pb.tz, name: parsed.person_b.name || ''};
       console.log(`[translator-edge-${reqId}] Person B final payload:`, JSON.stringify(normB));
 
       googleGeo = g1||g2;
@@ -319,6 +319,7 @@ serve(async (req)=>{
         ...(parsed.person_a ?? withLatLon),
         utc: withLatLon.utc,
         tz: withLatLon.tz,
+        name: parsed.name || parsed.person_a?.name || '',
         reportType: parsed.reportType,  // Changed from 'report' to 'reportType'
         request: parsed.request,
         user_id: parsed.user_id,
