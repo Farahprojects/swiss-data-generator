@@ -18,52 +18,63 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
   useEffect(() => {
     if (!guestId) return;
 
-    // If this is a Stripe return, we can fetch the name and email for display.
-    // This is an enhancement and should not block the main WebSocket logic.
-    if (isStripeReturn) {
-      const fetchGuestDetails = async () => {
-        const { data, error } = await supabase
-          .from("guest_reports")
-          .select("email, name:report_data->>name, person_a_name:report_data->person_a->>name, person_a_email:report_data->person_a->>email")
-          .eq("id", guestId)
-          .single();
-        
-        if (data) {
-          const displayName = data.person_a_name ?? data.name ?? "";
-          const displayEmail = data.person_a_email ?? data.email ?? "";
-          setGuestData({ name: displayName, email: displayEmail });
-        } else {
-          console.error(`[SuccessScreen] Failed to fetch guest details for ${guestId}`, error);
-        }
+    const checkAndListen = async () => {
+      // 1. Check if the signal already exists.
+      const { data: existingSignal, error: checkError } = await supabase
+        .from('report_ready_signals')
+        .select('id')
+        .eq('guest_report_id', guestId)
+        .limit(1);
+
+      if (checkError) {
+        console.error('[SuccessScreen] Error checking for existing signal:', checkError);
+      }
+
+      if (existingSignal && existingSignal.length > 0) {
+        console.log(`[SuccessScreen] Signal for ${guestId} already exists. Opening report immediately.`);
+        openReportModal(guestId);
+        return; // Signal found, no need to listen.
+      }
+
+      // 2. If no signal, set up the WebSocket listener.
+      const channel = supabase.channel(`ready_${guestId}`);
+
+      const handleNewSignal = () => {
+        console.log(`[SuccessScreen] WebSocket signal received for ${guestId}. Opening report.`);
+        openReportModal(guestId);
+        channel.unsubscribe();
       };
-      fetchGuestDetails();
-    }
+      
+      channel
+        .on('postgres_changes', { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'report_ready_signals', 
+          filter: `guest_report_id=eq.${guestId}` 
+        }, handleNewSignal)
+        .subscribe();
 
-    // Setup WebSocket listener immediately
-    const channel = supabase.channel(`ready_${guestId}`);
+      console.log(`[SuccessScreen] Subscribed to WebSocket for guestId: ${guestId}`);
 
-    const handleNewSignal = () => {
-      console.log(`[SuccessScreen] WebSocket signal received for ${guestId}. Opening report.`);
-      openReportModal(guestId);
-      channel.unsubscribe();
+      // Return the cleanup function for the channel
+      return () => {
+        console.log(`[SuccessScreen] Unsubscribing from WebSocket for guestId: ${guestId}`);
+        try { channel.unsubscribe(); } catch {}
+      };
     };
-    
-    channel
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'report_ready_signals', 
-        filter: `guest_report_id=eq.${guestId}` 
-      }, handleNewSignal)
-      .subscribe();
 
-    console.log(`[SuccessScreen] Subscribed to WebSocket for guestId: ${guestId}`);
+    let cleanup: (() => void) | undefined;
+    checkAndListen().then(cleanupFn => {
+      if (cleanupFn) {
+        cleanup = cleanupFn;
+      }
+    });
 
     return () => {
-      console.log(`[SuccessScreen] Unsubscribing from WebSocket for guestId: ${guestId}`);
-      channel.unsubscribe();
+      cleanup?.();
     };
-  }, [guestId, openReportModal, isStripeReturn]);
+
+  }, [guestId, openReportModal]);
 
   return (
     <div ref={ref} className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
