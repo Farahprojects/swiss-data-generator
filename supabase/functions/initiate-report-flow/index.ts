@@ -230,6 +230,14 @@ serve(async (req) => {
         processing_time_ms: ms,
         reportType: reportData.reportType
       });
+
+      return ok({
+        guestReportId,
+        paymentStatus: 'paid',
+        name: reportData.name,
+        email: reportData.email,
+        processing_time_ms: ms
+      });
     } else {
       // For paid reports, create the checkout session immediately.
       const checkoutPayload = {
