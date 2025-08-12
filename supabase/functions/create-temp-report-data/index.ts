@@ -233,36 +233,6 @@ serve(async (req) => {
     const swissData = translatorLogData?.swiss_data || null;
     const reportName = guestReport.report_data?.name || 'Guest Report';
 
-    // NEW: Call report-prep to build AI-ready payload (non-blocking failure)
-    let prepPayload: any = null;
-    let prepDurationMs = 0;
-    try {
-      const prepStart = Date.now();
-      const chartDataCandidate = (swissData?.chartData ?? swissData?.data ?? swissData) || undefined;
-      const inputForPrep = {
-        endpoint: guestReport.report_data?.endpoint || 'standard',
-        report_type: guestReport.report_type,
-        chartData: chartDataCandidate,
-        request: guestReport.report_data?.request,
-        person_a: guestReport.report_data?.person_a,
-        person_b: guestReport.report_data?.person_b,
-        name: guestReport.report_data?.name,
-        secondPersonName: guestReport.report_data?.second_person_name || guestReport.report_data?.secondPersonName,
-        is_guest: true,
-        user_id: guest_report_id,
-      };
-      const { data: prepResp, error: prepErr } = await supabase.functions.invoke('report-prep', { body: inputForPrep });
-      if (prepErr) {
-        console.warn('[create-temp-report-data] report-prep error:', prepErr);
-      } else {
-        prepPayload = prepResp?.ai_payload ?? null;
-        prepDurationMs = Date.now() - prepStart;
-        console.log('[create-temp-report-data] report-prep succeeded in', prepDurationMs, 'ms');
-      }
-    } catch (e) {
-      console.warn('[create-temp-report-data] report-prep invocation failed:', e);
-    }
-
     const metadata = {
       report_type: guestReport.report_type,
       report_data_name: reportName,
@@ -273,9 +243,6 @@ serve(async (req) => {
       has_ai_report: !!guestReport.is_ai_report,
       has_swiss_data: !!swissData,
       customer_email: guestReport.email,
-      // Store compact prep details for testing
-      prep_ai_payload: prepPayload || null,
-      prep_duration_ms: prepDurationMs,
     };
 
     // Calculate expiration (72 hours from now)
