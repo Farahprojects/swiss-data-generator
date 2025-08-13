@@ -29,7 +29,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
     if (!guestId) return;
 
     const POLLING_INTERVAL_MS = 1000;
-    const POLLING_TIMEOUT_MS = 12000;
+    const POLLING_TIMEOUT_MS = 14000;
     let elapsedTime = 0;
 
     const intervalId = setInterval(async () => {
