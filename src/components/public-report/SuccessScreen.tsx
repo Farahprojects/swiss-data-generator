@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, forwardRef } from "react";
+import React, { useState, useEffect, forwardRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useReportModal } from "@/contexts/ReportModalContext";
 import { logUserError } from "@/services/errorService";
@@ -21,6 +21,8 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
   const [caseNumber, setCaseNumber] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const { clearSession } = useSessionManager("SuccessScreen");
+  const [manualCheckFailed, setManualCheckFailed] = useState(false);
+  const [modalOpened, setModalOpened] = useState(false);
 
   // --- Main Polling Mechanism ---
   useEffect(() => {
@@ -76,6 +78,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
 
   const handleManualCheck = async () => {
     setIsChecking(true);
+    setManualCheckFailed(false);
     try {
       const { data, error } = await supabase.functions.invoke('get-report-data', {
         body: { guest_report_id: guestId },
@@ -83,16 +86,19 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
 
       if (!error && data?.success && data?.reportData) {
         openReportModal(guestId);
+        setModalOpened(true);
       } else {
-        clearSession({});
+        setManualCheckFailed(true);
       }
     } catch (e) {
-      console.error("Failed to manually check for report, resetting session.", e);
-      clearSession({});
+      console.error("Failed to manually check for report", e);
+      setManualCheckFailed(true);
     } finally {
       setIsChecking(false);
     }
   };
+
+  if (modalOpened) return null;
 
   if (showError) {
     return (
@@ -109,6 +115,11 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
               There was a delay preparing the report for <span className="font-semibold">{name || guestData?.name || 'you'}</span>. 
               An error has been logged, and our team will investigate.
             </p>
+            {manualCheckFailed && (
+              <p className="text-sm text-amber-700 pt-2">
+                We checked again, but your report is still being prepared. You can try again in a few moments, or return home.
+              </p>
+            )}
             {caseNumber && (
               <p className="text-sm text-gray-500 pt-2">
                 Your case number is: <span className="font-semibold">{caseNumber}</span>
@@ -120,14 +131,18 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
           </div>
         </div>
         <div className="pt-4">
-          <Button onClick={handleManualCheck} disabled={isChecking} className="w-full">
+          <Button 
+            onClick={manualCheckFailed ? () => clearSession({}) : handleManualCheck} 
+            disabled={isChecking} 
+            className="w-full"
+          >
             {isChecking ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Checking Status...
+                Checking...
               </>
             ) : (
-              "Check Status & Return Home"
+              manualCheckFailed ? "Return Home" : "Check Status Now"
             )}
           </Button>
         </div>
