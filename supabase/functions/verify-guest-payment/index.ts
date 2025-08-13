@@ -9,7 +9,7 @@ const corsHeaders = {
 };
 
 interface VerifyGuestPaymentRequest {
-  guest_report_id: string;
+  sessionId: string;
   type?: string;
 }
 
@@ -20,12 +20,12 @@ serve(async (req) => {
   }
 
   try {
-    const { guest_report_id, type } = await req.json() as VerifyGuestPaymentRequest;
+    const { sessionId, type } = await req.json() as VerifyGuestPaymentRequest;
     
-    console.log(`🔄 [verify-guest-payment] Processing request for guest_report_id: ${guest_report_id}, type: ${type}`);
+    console.log(`🔄 [verify-guest-payment] Processing request for sessionId: ${sessionId}, type: ${type}`);
 
-    if (!guest_report_id) {
-      return new Response(JSON.stringify({ error: "guest_report_id is required" }), {
+    if (!sessionId) {
+      return new Response(JSON.stringify({ error: "sessionId is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
@@ -40,19 +40,19 @@ serve(async (req) => {
     });
 
     // Step 1: Fetch guest report data
-    console.log(`🔍 [verify-guest-payment] Fetching guest report: ${guest_report_id}`);
+    console.log(`🔍 [verify-guest-payment] Fetching guest report: ${sessionId}`);
     
     const { data: guestReport, error: queryError } = await supabase
       .from("guest_reports")
       .select("*")
-      .eq("id", guest_report_id)
+      .eq("id", sessionId)
       .single();
 
     if (queryError || !guestReport) {
-      console.error(`❌ [verify-guest-payment] Guest report not found: ${guest_report_id}`, queryError);
+      console.error(`❌ [verify-guest-payment] Guest report not found: ${sessionId}`, queryError);
       return new Response(JSON.stringify({ 
         error: "Guest report not found",
-        guest_report_id 
+        sessionId 
       }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -67,7 +67,7 @@ serve(async (req) => {
     });
 
     // Step 2: Pass to translator-edge (fire-and-forget)
-    console.log(`🔄 [verify-guest-payment] Passing to translator-edge: ${guest_report_id}`);
+    console.log(`🔄 [verify-guest-payment] Passing to translator-edge: ${sessionId}`);
     
     const translatorPayload = {
       ...guestReport.report_data,
@@ -75,7 +75,7 @@ serve(async (req) => {
       reportType: guestReport.report_type,
       is_guest: true,
       is_ai_report: guestReport.is_ai_report,
-      user_id: guest_report_id,
+      user_id: sessionId,
       request_id: crypto.randomUUID().slice(0, 8),
       email: guestReport.email,
       name: guestReport.report_data?.person_a?.name || guestReport.report_data?.name
@@ -86,15 +86,15 @@ serve(async (req) => {
       supabase.functions.invoke('translator-edge', {
         body: translatorPayload
       }).catch((error) => {
-        console.error(`❌ [verify-guest-payment] Translator-edge failed: ${guest_report_id}`, error);
+        console.error(`❌ [verify-guest-payment] Translator-edge failed: ${sessionId}`, error);
       })
     );
 
-    console.log(`✅ [verify-guest-payment] Successfully passed to translator-edge: ${guest_report_id}`);
+    console.log(`✅ [verify-guest-payment] Successfully passed to translator-edge: ${sessionId}`);
 
     return new Response(JSON.stringify({
       success: true,
-      guest_report_id,
+      sessionId,
       message: "Report generation triggered successfully",
       processing_time_ms: Date.now() - Date.now() // Placeholder for actual timing
     }), {
