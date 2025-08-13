@@ -209,20 +209,10 @@ serve(async (req) => {
     // For both free and paid reports, we now just return the guest_id.
     // A new frontend "checker" component will handle the subsequent flow.
     if (isFreeReport) {
-      // For free reports, we still kick off the report generation in the background.
-      const translatorPayload = {
-        ...normalizedReportData,
-        request: smartRequest,
-        reportType: reportData.reportType,
-        is_guest: true,
-        is_ai_report: isAI,
-        user_id: guestReportId,
-        request_id: crypto.randomUUID().slice(0, 8),
-        email: reportData.email,
-        name: reportData.name,
-      };
-      debug('[initiate-report-flow] Translator-edge payload (free)', translatorPayload);
-      void supabaseAdmin.functions.invoke('translator-edge', { body: translatorPayload });
+      // For free reports, we now make a simple fire-and-forget call to trigger the report generation.
+      void supabaseAdmin.functions.invoke('verify-guest-payment', { 
+        body: { guest_report_id: guestReportId } 
+      });
 
       console.log('✅ [PERF] Free report initiated', {
         timestamp: new Date().toISOString(),
