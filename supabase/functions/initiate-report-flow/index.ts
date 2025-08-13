@@ -25,8 +25,6 @@ const forbid = (m: string) => json(403, { error: m });
 const oops = (m: string) => json(500, { error: m });
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
-let _waitUntil: (p: Promise<any>) => void = () => {};
-
 // ---- Types ------------------------------------------------------------------
 
 interface ReportData {
@@ -70,40 +68,6 @@ interface InitiateReportFlowRequest {
   reportData: ReportData
   trustedPricing: TrustedPricing
 }
-
-// ---- Detached Handler for Post-Response Processing --------------------------
-
-async function handleFreeReportGeneration(
-  supabaseAdmin: any,
-  guestReportId: string,
-  normalizedReportData: any,
-  reportData: ReportData,
-  isAI: boolean
-) {
-  const start = Date.now();
-  const smartRequest = reportData.reportType?.split('_')[0] || (reportData as any).request || 'essence';
-  
-  const translatorPayload = {
-    ...normalizedReportData,
-    request: smartRequest,
-    reportType: reportData.reportType,
-    is_guest: true,
-    is_ai_report: isAI,
-    user_id: guestReportId,
-    request_id: crypto.randomUUID().slice(0, 8),
-    email: reportData.email,
-    name: reportData.name,
-  };
-  debug('[handleFreeReportGeneration] Invoking translator-edge', translatorPayload);
-
-  try {
-    await supabaseAdmin.functions.invoke('translator-edge', { body: translatorPayload });
-    console.log(`✅ [background] Free report generation triggered for ${guestReportId} in ${Date.now() - start}ms`);
-  } catch (error) {
-    console.error(`❌ [background] Error triggering translator-edge for ${guestReportId}:`, error);
-  }
-}
-
 
 // ---- Handler ----------------------------------------------------------------
 
@@ -242,25 +206,31 @@ serve(async (req) => {
 
     const ms = Date.now() - start;
 
+    // For both free and paid reports, we now just return the guest_id.
+    // A new frontend "checker" component will handle the subsequent flow.
     if (isFreeReport) {
-      // For free reports, schedule the generation to run *after* the response is sent.
-      _waitUntil(
-        handleFreeReportGeneration(
-          supabaseAdmin,
-          guestReportId,
-          normalizedReportData,
-          reportData,
-          isAI
-        )
-      );
+      // For free reports, we still kick off the report generation in the background.
+      const translatorPayload = {
+        ...normalizedReportData,
+        request: smartRequest,
+        reportType: reportData.reportType,
+        is_guest: true,
+        is_ai_report: isAI,
+        user_id: guestReportId,
+        request_id: crypto.randomUUID().slice(0, 8),
+        email: reportData.email,
+        name: reportData.name,
+      };
+      debug('[initiate-report-flow] Translator-edge payload (free)', translatorPayload);
+      void supabaseAdmin.functions.invoke('translator-edge', { body: translatorPayload });
 
-      console.log('✅ [PERF] Free report initiated, response sent.', {
+      console.log('✅ [PERF] Free report initiated', {
         timestamp: new Date().toISOString(),
         guestReportId,
         processing_time_ms: ms,
         reportType: reportData.reportType
       });
-      
+
       return ok({
         guestReportId,
         paymentStatus: 'paid',
@@ -308,15 +278,5 @@ serve(async (req) => {
     debug('Unhandled flow error:', err?.message || err);
     return oops(err?.message || 'Internal server error');
   }
-}, {
-  onListen({ port, hostname }) {
-    console.log(`[initiate-report-flow] Server listening on http://${hostname}:${port}`);
-  },
-  // This is the key to detaching background tasks.
-  // We grab the context's waitUntil method so we can use it later.
-  experimental_flash: true,
-  onBeforeServe(ctx) {
-    _waitUntil = ctx.waitUntil.bind(ctx);
-  },
 });
 
