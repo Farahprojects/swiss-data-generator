@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef, forwardRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useReportModal } from "@/contexts/ReportModalContext";
 import { logUserError } from "@/services/errorService";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
+import { useSessionManager } from "@/hooks/useSessionManager";
 
 interface SuccessScreenProps {
   guestId: string;
@@ -16,6 +19,8 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
   const [guestData, setGuestData] = useState<{name: string, email: string} | null>(null);
   const [showError, setShowError] = useState(false);
   const [caseNumber, setCaseNumber] = useState<string | null>(null);
+  const [isChecking, setIsChecking] = useState(false);
+  const { clearSession } = useSessionManager("SuccessScreen");
 
   // --- Main Polling Mechanism ---
   useEffect(() => {
@@ -69,6 +74,26 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
     };
   }, [guestId, openReportModal, email, guestData?.email]);
 
+  const handleManualCheck = async () => {
+    setIsChecking(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('get-report-data', {
+        body: { guest_report_id: guestId },
+      });
+
+      if (!error && data?.success && data?.reportData) {
+        openReportModal(guestId);
+      } else {
+        clearSession({});
+      }
+    } catch (e) {
+      console.error("Failed to manually check for report, resetting session.", e);
+      clearSession({});
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
   if (showError) {
     return (
       <div ref={ref} className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
@@ -81,7 +106,8 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
           <div className="space-y-2">
             <h1 className="text-2xl font-light text-gray-900">We've hit a small issue</h1>
             <p className="text-gray-600">
-              There was a delay preparing your report. An error has been logged, and our team will investigate.
+              There was a delay preparing the report for <span className="font-semibold">{name || guestData?.name || 'you'}</span>. 
+              An error has been logged, and our team will investigate.
             </p>
             {caseNumber && (
               <p className="text-sm text-gray-500 pt-2">
@@ -89,9 +115,21 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
               </p>
             )}
             <p className="text-sm text-gray-500">
-              We will get back to you within 24 hours.
+              We will get back to you at <span className="font-semibold">{email || guestData?.email}</span> within 24 hours.
             </p>
           </div>
+        </div>
+        <div className="pt-4">
+          <Button onClick={handleManualCheck} disabled={isChecking} className="w-full">
+            {isChecking ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Checking Status...
+              </>
+            ) : (
+              "Check Status & Return Home"
+            )}
+          </Button>
         </div>
       </div>
     );
