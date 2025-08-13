@@ -22,8 +22,8 @@ const PublicReport = () => {
   const isMobile = useIsMobile();
   const [showCancelledMessage, setShowCancelledMessage] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
-  const [activeGuest, setActiveGuest] = useState<{ id: string, name: string, email: string } | null>(null);
-  const [paidGuest, setPaidGuest] = useState<{ id: string, name: string, email: string, isStripeReturn?: boolean } | null>(null);
+  const [activeGuest, setActiveGuest] = useState<{ guestId: string, name: string, email: string } | null>(null);
+  const [paidGuest, setPaidGuest] = useState<{ guestId: string, name: string, email: string, isStripeReturn?: boolean } | null>(null);
   
   // Effect to detect and handle Stripe return
   useEffect(() => {
@@ -36,7 +36,7 @@ const PublicReport = () => {
       // We don't have name/email, so the checker will need to fetch them or the success screen will.
       // For now, we'll start the checker.
       console.log(`[PublicReport] Stripe return detected for guestId: ${guestId}. Starting checker.`);
-      setActiveGuest({ id: guestId, name: '', email: '' });
+      setActiveGuest({ guestId: guestId, name: '', email: '' });
 
       // Clean the URL to avoid re-triggering on refresh
       const newUrl = new URL(window.location.href);
@@ -49,11 +49,11 @@ const PublicReport = () => {
     if (paymentStatus === 'paid') {
       // If the report is already paid (e.g., free promo), skip the checker and go straight to success.
       console.log(`[PublicReport] Report ${guestId} is already paid. Showing success screen directly.`);
-      setPaidGuest({ id: guestId, name, email });
+      setPaidGuest({ guestId: guestId, name, email });
     } else {
       // If payment is pending, use the checker to handle the payment flow.
       console.log(`[PublicReport] Report ${guestId} is pending payment. Starting checker.`);
-      setActiveGuest({ id: guestId, name, email });
+      setActiveGuest({ guestId: guestId, name, email });
     }
   };
 
@@ -396,7 +396,7 @@ const PublicReport = () => {
 
             {activeGuest && (
               <ReportFlowChecker 
-                guestId={activeGuest.id}
+                guestId={activeGuest.guestId}
                 onPaid={(paidData) => {
                   console.log(`Report ${paidData.guestId} is paid! Ready to show success screen.`);
                   // For stripe return, we set the isStripeReturn flag so the success screen can fetch the details.
@@ -416,7 +416,7 @@ const PublicReport = () => {
 
             {paidGuest && (
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                <SuccessScreen guestId={paidGuest.id} name={paidGuest.name} email={paidGuest.email} isStripeReturn={paidGuest.isStripeReturn} />
+                <SuccessScreen guestId={paidGuest.guestId} name={paidGuest.name} email={paidGuest.email} isStripeReturn={paidGuest.isStripeReturn} />
               </div>
             )}
           </div>
