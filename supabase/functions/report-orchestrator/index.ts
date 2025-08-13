@@ -28,6 +28,7 @@ const ENGINES = [
   "standard-report",
   "standard-report-one", 
   "standard-report-two",
+  "standard-report-three",
 ];
 
 // DB-driven engine selection based on the most recent engine_used in report_logs
