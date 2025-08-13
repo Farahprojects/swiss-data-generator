@@ -8,7 +8,6 @@
 ────────────────────────────────────────────────────────────────────────────────*/
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { GoogleAuth } from "https://esm.sh/google-auth-library@9.11.0";
 
 /*───────────────────────────────────────────────────────────────────────────────
   CONFIG & SINGLETONS
@@ -40,6 +39,9 @@ try {
 } catch (err) {
   throw err;
 }
+
+const GOOGLE_MODEL = "gemini-2.5-flash";
+const GOOGLE_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GOOGLE_MODEL}:generateContent`;
 
 // Simple in-memory cache for system prompts
 const promptCache = new Map<string, string>();
@@ -154,12 +156,26 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
     report_type: reportData.report_type,
   });
 
-    const genai = new GoogleAuth().fromAPIKey(Deno.env.get('GOOGLE_API_KEY')!);
-    const model = genai.getGenerativeModel({
-      model: "gemini-2.5-flash",
-    });
+  const apiUrl = `${GOOGLE_ENDPOINT}?key=${GOOGLE_API_KEY}`;
 
-    const callGeminiApi = async () => {
+  const requestBody = {
+    contents: [
+      {
+        role: "user",
+        parts: [
+          { text: systemPrompt },
+          { text: userMessage }
+        ]
+      }
+    ],
+    generationConfig: {
+      topK: 40,
+      topP: 0.95,
+      maxOutputTokens: 8192,
+    }
+  };
+
+  const callGeminiApi = async () => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
         controller.abort();
@@ -167,24 +183,12 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
 
     let response;
     try {
-        const result = await model.generateContent({
-            contents: [
-              {
-                role: "user",
-                parts: [
-                  { text: systemPrompt },
-                  { text: userMessage }
-                ]
-              }
-            ],
-            generationConfig: {
-              topK: 40,
-              topP: 0.95,
-              maxOutputTokens: 8192,
-            }
+        response = await fetch(apiUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(requestBody),
+            signal: controller.signal,
         });
-        response = result.response;
-
     } catch (fetchError) {
         // This catch is primarily for network errors or if AbortController aborts
         clearTimeout(timeoutId);
@@ -196,12 +200,17 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
     
     clearTimeout(timeoutId); // Clear timeout if fetch completed
 
-    if (!response) {
-      const error = new Error(`Gemini API error: No response`);
-      throw Object.assign(error, { skipRetry: true });
+    if (!response.ok) {
+      const errorText = await response.text();
+      const error = new Error(`Gemini API error: ${response.status} - ${errorText}`);
+      (error as any).status = response.status;
+      if (response.status === 400 || response.status === 404 || response.status === 401 || response.status === 403) {
+        throw Object.assign(error, { skipRetry: true });
+      }
+      throw error;
     }
 
-    const data = response;
+    const data = await response.json();
 
     if (!data.candidates || data.candidates.length === 0 || !data.candidates[0].content || !data.candidates[0].content.parts || data.candidates[0].content.parts.length === 0) {
       throw new Error("Malformed response from Gemini API: No content/parts in candidate");
@@ -214,7 +223,7 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
       token_count: data.usageMetadata?.totalTokenCount || 0,
       prompt_tokens: data.usageMetadata?.promptTokenCount || 0,
       completion_tokens: data.usageMetadata?.candidatesTokenCount || 0,
-      model: "gemini-2.5-flash"
+      model: GOOGLE_MODEL
     };
     
     return { report: generatedText, metadata };
