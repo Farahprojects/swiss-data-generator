@@ -80,14 +80,19 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
     setIsChecking(true);
     setManualCheckFailed(false);
     try {
-      const { data, error } = await supabase.functions.invoke('get-report-data', {
-        body: { guest_report_id: guestId },
-      });
+      const { data, error } = await supabase
+        .from('report_ready_signals')
+        .select('id')
+        .eq('guest_report_id', guestId)
+        .limit(1);
 
-      if (!error && data?.success && data?.reportData) {
+      if (!error && data && data.length > 0) {
         openReportModal(guestId);
         setModalOpened(true);
       } else {
+        if (error) {
+          console.error("Error manually checking for report signal:", error);
+        }
         setManualCheckFailed(true);
       }
     } catch (e) {
