@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const cors = {
   "Access-Control-Allow-Origin":  "*",
@@ -33,17 +32,15 @@ serve(async (req) => {
   // CORS pre-flight
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
 
-  let guestReportId: string | null = null;
-
   try {
     const raw = await req.text();
-    const payload = JSON.parse(raw);
-    guestReportId = payload.guest_report_id; // Extract for error logging
+    const payload = JSON.parse(raw) as EmailPayload;
 
     // basic validation
     const { to, subject, html } = payload;
     if (!to || !subject || !html) {
-      throw new Error("Missing to / subject / html");
+      return new Response(JSON.stringify({ error: "Missing to / subject / html" }),
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
     }
 
     // secrets
@@ -51,7 +48,8 @@ serve(async (req) => {
     const smtpToken = Deno.env.get("THERIA_SMTP_TOKEN");
     if (!endpoint || !smtpToken) {
       log("error", "Missing SMTP env", { endpointSet: !!endpoint, tokenSet: !!smtpToken });
-      throw new Error("SMTP secrets not set");
+      return new Response(JSON.stringify({ error: "SMTP secrets not set" }),
+        { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
     }
 
     // attachment defaults
@@ -76,7 +74,8 @@ serve(async (req) => {
     if (!r.ok) {
       const err = await r.text();
       log("error", "SMTP service error", { status: r.status, err });
-      throw new Error(`SMTP failed: ${err}`);
+      return new Response(JSON.stringify({ error: "SMTP failed", details: err }),
+        { status: 502, headers: { ...cors, "Content-Type": "application/json" } });
     }
 
     log("info", "Email queued OK", { to, subject });
@@ -84,28 +83,8 @@ serve(async (req) => {
       { status: 200, headers: { ...cors, "Content-Type": "application/json" } });
 
   } catch (e) {
-    const errorMessage = e instanceof Error ? e.message : "An unexpected error occurred in send-email";
-    log("error", "Unhandled exception", { err: errorMessage });
-
-    // Log to user_errors table
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } }
-    );
-
-    const { error: logError } = await supabase.from('user_errors').insert({
-      guest_report_id: guestReportId,
-      error_type: 'EMAIL_FAILURE',
-      error_message: errorMessage,
-      metadata: { function: 'send-email' }
-    });
-
-    if (logError) {
-      log("error", "Failed to log email error to user_errors", { dbError: logError.message });
-    }
-
-    return new Response(JSON.stringify({ error: "Unexpected error", details: errorMessage }),
+    log("error", "Unhandled exception", { err: String(e) });
+    return new Response(JSON.stringify({ error: "Unexpected error", details: String(e) }),
       { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
   }
 });
