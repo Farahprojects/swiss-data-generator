@@ -22,20 +22,20 @@ const PublicReport = () => {
   const isMobile = useIsMobile();
   const [showCancelledMessage, setShowCancelledMessage] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
-  const [activeGuest, setActiveGuest] = useState<{ guestId: string; name: string; email: string; isStripeReturn?: boolean } | null>(null);
+  const [activeGuest, setActiveGuest] = useState<{ guestId: string; name: string; email: string; paymentStatus: 'paid' | 'pending'; isStripeReturn?: boolean } | null>(null);
   const [paidGuest, setPaidGuest] = useState<{ guestId: string; name: string; email: string; isStripeReturn?: boolean } | null>(null);
   
   // Effect to detect and handle Stripe return
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const guestId = params.get('guest_id');
-    const paymentStatus = params.get('payment_status');
+    const paymentStatusParam = params.get('payment_status');
 
-    if (guestId && paymentStatus === 'success') {
+    if (guestId && paymentStatusParam === 'success') {
       // This is a return from a successful Stripe payment.
-      // We don't have name/email, so the checker will need to fetch them.
       console.log(`[PublicReport] Stripe return detected for guestId: ${guestId}. Starting checker.`);
-      setActiveGuest({ guestId: guestId, name: '', email: '', isStripeReturn: true });
+      // The checker will handle polling for the 'paid' status from the webhook.
+      setActiveGuest({ guestId: guestId, name: '', email: '', paymentStatus: 'pending', isStripeReturn: true });
 
       // Clean the URL to avoid re-triggering on refresh
       const newUrl = new URL(window.location.href);
@@ -44,16 +44,10 @@ const PublicReport = () => {
     }
   }, []); // Run only once on component mount
 
-  const handleReportCreated = (guestId: string, paymentStatus: string, name: string, email: string) => {
-    if (paymentStatus === 'paid') {
-      // If the report is already paid (e.g., free promo), skip the checker and go straight to success.
-      console.log(`[PublicReport] Report ${guestId} is already paid. Showing success screen directly.`);
-      setPaidGuest({ guestId: guestId, name, email });
-    } else {
-      // If payment is pending, use the checker to handle the payment flow.
-      console.log(`[PublicReport] Report ${guestId} is pending payment. Starting checker.`);
-      setActiveGuest({ guestId: guestId, name, email, isStripeReturn: false });
-    }
+  const handleReportCreated = (guestId: string, paymentStatus: 'paid' | 'pending', name: string, email: string) => {
+    // Always use the checker to handle the next step.
+    console.log(`[PublicReport] Report created for ${guestId}. Handing off to checker with status: ${paymentStatus}.`);
+    setActiveGuest({ guestId, name, email, paymentStatus });
   };
 
   const reportFormRef = useRef<HTMLDivElement>(null);
@@ -357,7 +351,7 @@ const PublicReport = () => {
               <div id="report-form" ref={reportFormRef}>
                 <ReportForm onReportCreated={({ guestReportId, name, email, paymentStatus }) => {
                   console.log("Desktop form submitted. Guest ID:", guestReportId, "Status:", paymentStatus);
-                  handleReportCreated(guestReportId, paymentStatus, name, email);
+                  handleReportCreated(guestReportId, paymentStatus as ('paid' | 'pending'), name, email);
                 }} />
               </div>
             )}
@@ -388,7 +382,7 @@ const PublicReport = () => {
               onOpenChange={setIsMobileDrawerOpen}
               onReportCreated={(guestReportId, paymentStatus, name, email) => {
                 console.log("Mobile form submitted. Guest ID:", guestReportId, "Status:", paymentStatus);
-                handleReportCreated(guestReportId, paymentStatus, name, email);
+                handleReportCreated(guestReportId, paymentStatus as ('paid' | 'pending'), name, email);
                 setIsMobileDrawerOpen(false); // Close the sheet on submit
               }}
             />
@@ -403,10 +397,13 @@ const PublicReport = () => {
               </div>
             )}
 
-            {/* The checker component itself is invisible, so this is fine to keep */}
+            {/* The checker component itself is invisible, but it's now the main orchestrator */}
             {activeGuest && (
               <ReportFlowChecker 
                 guestId={activeGuest.guestId}
+                paymentStatus={activeGuest.paymentStatus}
+                name={activeGuest.name}
+                email={activeGuest.email}
                 onPaid={(paidData) => {
                   console.log(`Report ${paidData.guestId} is paid! Ready to show success screen.`);
                   setPaidGuest({
@@ -417,8 +414,6 @@ const PublicReport = () => {
                   });
                   setActiveGuest(null); // Stop checking once paid
                 }}
-                name={activeGuest.name}
-                email={activeGuest.email}
               />
             )}
 

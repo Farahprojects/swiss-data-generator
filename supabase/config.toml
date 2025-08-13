@@ -113,9 +113,18 @@ verify_jwt = false
 
 [functions.swiss]
 verify_jwt = false
+  memory_mb = 256
+  timeout_s = 25
+  insecure = true
+
+[functions.create-payment-session]
+
+[functions.trigger-report-generation]
 
 [functions.translator-edge]
 verify_jwt = false
+  memory_mb = 256
+  timeout_s = 25
 
 [functions.validate-promo-code]
 verify_jwt = false
