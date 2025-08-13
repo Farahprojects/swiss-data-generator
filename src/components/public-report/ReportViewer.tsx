@@ -657,19 +657,6 @@ export const ReportViewer = ({
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Hide Copy and ChatGPT buttons on mobile - they'll be in the footer */}
-            {!isMobile && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setActiveModal('email')}
-                className="text-gray-700 text-base font-medium hover:text-black hover:bg-gray-100 transition-colors active:scale-95 border-gray-200"
-              >
-                <Paperclip className="h-4 w-4 mr-1" />
-                Email
-              </Button>
-            )}
-            
             {(reportData.guest_report?.report_data?.report_pdf_base64 || reportData.swiss_data || (reportData.report_content && reportData.report_content.trim().length > 20)) && (
               <Button
                 variant="outline"
@@ -732,15 +719,6 @@ export const ReportViewer = ({
             <div className="flex gap-3">
               <Button
                 variant="outline"
-                onClick={() => setActiveModal('email')}
-                className="flex-1 h-12 text-base font-medium text-gray-700 hover:text-black hover:bg-gray-100 transition-colors border-gray-200 rounded-xl"
-              >
-                <Paperclip className="h-5 w-5 mr-2" />
-                Email
-              </Button>
-              
-              <Button
-                variant="outline"
                 onClick={handleOpenChatGPTModal}
                 disabled={isCopping}
                 className="flex-1 h-12 text-base font-medium text-gray-700 hover:text-black hover:bg-gray-100 transition-colors border-gray-200 rounded-xl"
@@ -759,102 +737,6 @@ export const ReportViewer = ({
           </div>
         )}
       </div>
-
-      {/* Email PDF Modal */}
-      <Dialog open={activeModal === 'email'} onOpenChange={() => setActiveModal(null)}>
-        <DialogContent className="sm:max-w-md bg-white border-0 shadow-2xl">
-          <DialogHeader className="text-center">
-            <DialogTitle className="text-2xl font-light text-gray-900">
-              {emailStatus === 'sent'
-                ? 'Email sent'
-                : emailStatus === 'already'
-                ? 'Email already sent'
-                : 'Email your PDF report'}
-            </DialogTitle>
-            <DialogDescription className="text-base text-gray-600 leading-relaxed mt-2">
-              {emailStatus === 'checking' && 'Checking email status...'}
-              {emailStatus === 'error' && (emailError || 'Something went wrong. Please try again.')}
-              {emailStatus === 'already' && (
-                <>We sent your report on{' '}
-                  <span className="font-medium text-gray-900">{emailSentAt ? new Date(emailSentAt).toLocaleString() : 'earlier'}</span>.
-                  {' '}Please check all inboxes (and spam).</>
-              )}
-              {emailStatus === 'sent' && (
-                <>We’ve emailed the PDF to: <span className="font-medium text-gray-900">{reportData.guest_report?.email}</span>. Please check your inbox.</>
-              )}
-              {emailStatus !== 'checking' && emailStatus !== 'already' && emailStatus !== 'error' && emailStatus !== 'sent' && (
-                <>We'll email the PDF to: <span className="font-medium text-gray-900">{reportData.guest_report?.email}</span></>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="mt-6 flex gap-3">
-            {(emailStatus === 'idle') && (
-              <>
-                <Button
-                  variant="ghost"
-                  onClick={() => setActiveModal(null)}
-                  className="h-11 text-base text-gray-600"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={async () => {
-                    try {
-                      setIsSendingEmail(true);
-                      setEmailStatus('sending');
-                      const guestReportId = reportData.guest_report?.id;
-                      if (!guestReportId) {
-                        throw new Error('Report not found');
-                      }
-
-                      const { data: statusRow, error: statusErr } = await supabase
-                        .from('guest_reports')
-                        .select('email_sent, email_sent_at')
-                        .eq('id', guestReportId)
-                        .maybeSingle();
-
-                      if (statusErr) throw new Error('Failed to check email status');
-
-                      if (statusRow?.email_sent) {
-                        setEmailStatus('already');
-                        setEmailSentAt(statusRow.email_sent_at ?? null);
-                        setIsSendingEmail(false);
-                        return;
-                      }
-
-                      const { error } = await supabase.functions.invoke('process-guest-report-pdf', {
-                        body: { guest_report_id: guestReportId }
-                      });
-
-                      if (error) throw new Error(error.message);
-
-                      setEmailStatus('sent');
-                    } catch (e: any) {
-                      setEmailStatus('error');
-                      setEmailError(e?.message || 'Please try again.');
-                    } finally {
-                      setIsSendingEmail(false);
-                    }
-                  }}
-                  disabled={isSendingEmail}
-                  className="h-11 text-base"
-                >
-                  {isSendingEmail ? 'Sending…' : 'Send email'}
-                </Button>
-              </>
-            )}
-
-            {emailStatus === 'checking' && (
-              <Button disabled className="h-11 text-base w-full">Checking…</Button>
-            )}
-
-            {(emailStatus === 'already' || emailStatus === 'sent' || emailStatus === 'error') && (
-              <Button onClick={() => setActiveModal(null)} className="h-11 text-base w-full">Close</Button>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* AI Choice Modal */}
       <Dialog open={activeModal === 'ai-choice'} onOpenChange={(open) => {

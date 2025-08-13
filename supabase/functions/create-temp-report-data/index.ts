@@ -280,6 +280,14 @@ serve(async (req) => {
       );
     }
 
+    // Fire-and-forget email dispatch
+    supabase.functions.invoke('send-email', {
+      body: {
+        guest_report_id: guest_report_id,
+        temp_data_id: tempData.id
+      }
+    }).catch(console.error);
+
     const processingTime = Date.now() - startTime;
     console.log(`[create-temp-report-data] Successfully created temp data for: ${guest_report_id} in ${processingTime}ms`);
 
