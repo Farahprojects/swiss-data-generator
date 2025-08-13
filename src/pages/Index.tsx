@@ -118,7 +118,7 @@ const Index = () => {
                 transition={{ delay: 1.0, duration: 0.6 }}
                 className="space-y-8"
               >
-                <Link to="/report">
+                <Link to="/signup">
                   <Button 
                     size="lg" 
                     className="bg-primary text-white px-12 py-6 rounded-xl text-lg font-medium hover:bg-primary-hover transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
