@@ -1,11 +1,12 @@
 /* eslint-disable no-console */
 
-/*─────────────────────Made──────────────────────────────────────────────────────────
-  standard-report.ts (no-cache)
-  Edge Function: Generates standard reports using OpenAI's GPT-4o model
-  Uses system prompts from the report_prompts table
-  Leaned out for speed: no prompt caching, minimal logging, fire-and-forget DB writes.
-────────────────────────────────────────────────────────────────────────────────*/
+/*───────────────────── standard-report.ts (responses-api, no-cache) ─────────────────────
+   - Accepts JSON payload (incl. full chartData from Orchestrator)
+   - Fetches system prompt from DB (no caching)
+   - Calls OpenAI Responses API with native input_json (no stringify of chartData)
+   - Fire-and-forget DB inserts
+   - Minimal logging, fast fail, CORS
+──────────────────────────────────────────────────────────────────────────────────────────*/
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -17,15 +18,16 @@ const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY_THREE") ?? "";
 const API_TIMEOUT_MS = parseInt(Deno.env.get("API_TIMEOUT_MS") || "30000");
 
+// Default to a fast, high-quality model; override via payload.selectedModel if needed
+const DEFAULT_MODEL = "gpt-4o-mini";
+const RESPONSES_ENDPOINT = "https://api.openai.com/v1/responses";
+
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) throw new Error("Missing Supabase env vars");
 if (!OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY_THREE");
 
-let supabase: SupabaseClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+const supabase: SupabaseClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
-
-const OPENAI_MODEL = "gpt-4o";
-const OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -50,39 +52,58 @@ async function getSystemPrompt(reportType: string): Promise<string> {
     .from("report_prompts")
     .select("system_prompt")
     .eq("name", reportType)
-    .single(); // fail if multiple
-
+    .single();
   if (error) throw new Error(`Failed to fetch system prompt (status ${status}): ${error.message}`);
   if (!data?.system_prompt) throw new Error(`System prompt not found for ${reportType}`);
   return data.system_prompt;
 }
 
-async function generateReport(systemPrompt: string, reportData: any): Promise<{ report: string; metadata: any }> {
-  const userPayload = {
-    chartData: reportData.chartData,
-    endpoint: reportData.endpoint,
-    report_type: reportData.report_type ?? reportData.reportType,
-  };
+/*───────────────────────────────────────────────────────────────────────────────
+  OPENAI (Responses API)
+────────────────────────────────────────────────────────────────────────────────*/
+type GenOut = {
+  text?: string;
+  json?: unknown;
+  usage?: unknown;
+  processingMs?: number;
+};
 
-  const requestBody = {
-    model: OPENAI_MODEL,
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: JSON.stringify(userPayload) },
-    ],
-    top_p: 0.95,
-  };
+async function generateReport(systemPrompt: string, reportData: any, model: string): Promise<GenOut> {
+  const input = [
+    {
+      role: "system",
+      content: [{ type: "input_text", text: systemPrompt }],
+    },
+    {
+      role: "user",
+      content: [
+        { type: "input_text", text: "Analyze the following Swiss Inference JSON according to the instructions." },
+        // Native JSON into the model (no stringify)
+        { type: "input_json", json: reportData.chartData },
+        ...(reportData.endpoint ? [{ type: "input_text", text: `Endpoint: ${reportData.endpoint}` }] : []),
+        ...(reportData.report_type || reportData.reportType
+          ? [{ type: "input_text", text: `Report type: ${reportData.report_type ?? reportData.reportType}` }]
+          : []),
+      ],
+    },
+  ];
 
   const controller = new AbortController();
+  const startFetchAt = Date.now();
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
 
-  const response = await fetch(OPENAI_ENDPOINT, {
+  const res = await fetch(RESPONSES_ENDPOINT, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
       Authorization: `Bearer ${OPENAI_API_KEY}`,
+      "Content-Type": "application/json",
     },
-    body: JSON.stringify(requestBody),
+    body: JSON.stringify({
+      model,
+      input,
+      temperature: 0.2,
+      max_output_tokens: 900, // cap to keep latency tight; tweak if needed
+    }),
     signal: controller.signal,
   }).catch((e) => {
     clearTimeout(timeoutId);
@@ -91,27 +112,50 @@ async function generateReport(systemPrompt: string, reportData: any): Promise<{ 
 
   clearTimeout(timeoutId);
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`OpenAI Responses error: ${res.status} - ${text}`);
   }
 
-  const data = await response.json();
-  const content = data?.choices?.[0]?.message?.content;
-  if (!content) throw new Error("Malformed OpenAI response: no content");
+  const processingMs = Number(res.headers.get("openai-processing-ms") ?? 0);
+  const data = await res.json();
 
-  const metadata = {
-    token_count: data?.usage?.total_tokens ?? 0,
-    prompt_tokens: data?.usage?.prompt_tokens ?? 0,
-    completion_tokens: data?.usage?.completion_tokens ?? 0,
-    model: OPENAI_MODEL,
-  };
+  // Prefer the convenience field if present
+  let outText: string | undefined = typeof data?.output_text === "string" ? data.output_text : undefined;
+  let outJson: unknown | undefined;
 
-  return { report: content, metadata };
+  // Fallback: extract from the output parts
+  if (!outText || data?.output) {
+    try {
+      const output = Array.isArray(data.output) ? data.output : [];
+      // Concatenate any output_text parts and pick first output_json if present
+      let buf = outText ?? "";
+      for (const item of output) {
+        const parts = Array.isArray(item?.content) ? item.content : [];
+        for (const p of parts) {
+          if (p?.type === "output_text" && typeof p.text === "string") buf += p.text;
+          if (!outJson && p?.type === "output_json") outJson = p.json;
+        }
+      }
+      outText = buf || outText;
+    } catch {
+      // ignore parse quirks, keep whatever we have
+    }
+  }
+
+  return { text: outText?.trim(), json: outJson, usage: data?.usage ?? null, processingMs };
 }
 
-// Fire-and-forget logging/signals (no await)
-function logAndSignalCompletion(reportData: any, report: string, metadata: any, durationMs: number, selectedEngine: string) {
+/*───────────────────────────────────────────────────────────────────────────────
+  FIRE-AND-FORGET DB WRITES
+────────────────────────────────────────────────────────────────────────────────*/
+function logAndSignalCompletion(
+  reportData: any,
+  reportPayload: { text?: string; json?: unknown },
+  metadata: any,
+  durationMs: number,
+  selectedEngine: string,
+) {
   supabase
     .from("report_logs")
     .insert(
@@ -120,7 +164,8 @@ function logAndSignalCompletion(reportData: any, report: string, metadata: any, 
         user_id: reportData.user_id ?? null,
         report_type: reportData.reportType ?? reportData.report_type ?? "standard",
         endpoint: reportData.endpoint,
-        report_text: report,
+        // Store whichever came back; text prioritized, else JSON string
+        report_text: reportPayload.text ?? (reportPayload.json ? JSON.stringify(reportPayload.json) : null),
         status: "success",
         duration_ms: durationMs,
         client_id: reportData.client_id ?? null,
@@ -145,37 +190,62 @@ function logAndSignalCompletion(reportData: any, report: string, metadata: any, 
   HANDLER
 ────────────────────────────────────────────────────────────────────────────────*/
 serve(async (req) => {
-  const start = Date.now();
-
   if (req.method === "OPTIONS") return new Response("", { status: 204, headers: CORS_HEADERS });
   if (req.method !== "POST") return jsonResponse({ error: "Method not allowed" }, { status: 405 });
 
+  const t0 = Date.now();
+  let reportData: any;
   try {
-    const reportData = await req.json();
+    reportData = await req.json();
+  } catch {
+    return jsonResponse({ success: false, error: "Invalid JSON body" }, { status: 400 });
+  }
 
-    // Warm-up
-    if (reportData?.warm === true) return new Response("Warm-up", { status: 200, headers: CORS_HEADERS });
+  if (reportData?.warm === true) return new Response("Warm-up", { status: 200, headers: CORS_HEADERS });
 
+  try {
     const reportType = reportData.reportType ?? reportData.report_type ?? "standard";
     const selectedEngine = reportData.selectedEngine ?? "standard-report-two";
+    const model = reportData.selectedModel ?? DEFAULT_MODEL;
 
-    const systemPrompt = await getSystemPrompt(reportType);
-    const { report, metadata } = await generateReport(systemPrompt, reportData);
+    if (!reportData?.chartData) {
+      return jsonResponse({ success: false, error: "Missing chartData from orchestrator" }, { status: 400 });
+    }
 
-    const durationMs = Date.now() - start;
-    logAndSignalCompletion(reportData, report, metadata, durationMs, selectedEngine);
+    const sp = await getSystemPrompt(reportType);
+    const t1 = Date.now();
 
+    const out = await generateReport(sp, reportData, model);
+    const t2 = Date.now();
+
+    // Fire-and-forget DB writes
+    logAndSignalCompletion(
+      reportData,
+      { text: out.text, json: out.json },
+      { model, usage: out.usage, processing_ms: out.processingMs },
+      t2 - t0,
+      selectedEngine,
+    );
+
+    // Return both forms if present; you decide what to parse downstream
     return jsonResponse({
       success: true,
+      model,
       report: {
-        title: `${reportType} ${reportData.endpoint} Report`,
-        content: report,
+        // Prefer text, but include json if model returned it
+        text: out.text ?? null,
+        json: out.json ?? null,
         generated_at: new Date().toISOString(),
         engine_used: selectedEngine,
       },
+      timings_ms: {
+        prompt_fetch: t1 - t0,
+        openai_total: t2 - t1,
+        total: t2 - t0,
+        openai_processing: out.processingMs ?? null, // server-side time from header
+      },
     });
   } catch (err) {
-    // Fail fast with minimal payload
     return jsonResponse({ success: false, error: (err as Error).message }, { status: 500 });
   }
 });
