@@ -1,10 +1,11 @@
 /* eslint-disable no-console */
 
-/*──────────────── standard-report.ts (responses, no-cache, structured-logs) ────────────────
-   - Native JSON → OpenAI Responses API (input_json)
+/*──────── standard-report.ts (responses-api, no-cache, structured-logs, fixed) ────────
+   - Uses OpenAI Responses API
+   - Sends chartData as input_text (stringified JSON) ← FIX for 400 invalid_value
    - Fire-and-forget DB inserts
-   - Structured JSON logs for observability
-────────────────────────────────────────────────────────────────────────────────────────────*/
+   - Structured JSON logs + error rows
+──────────────────────────────────────────────────────────────────────────────────────*/
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -34,13 +35,12 @@ const CORS_HEADERS = {
 };
 
 /*───────────────────────────────────────────────────────────────────────────────
-  LOGGING (structured JSON lines)
+  LOGGING
 ────────────────────────────────────────────────────────────────────────────────*/
 function slog(level: "info" | "error" | "warn", event: string, meta: Record<string, unknown> = {}) {
   try {
     console.log(JSON.stringify({ level, event, ts: new Date().toISOString(), ...meta }));
   } catch {
-    // best-effort
     console.log(`[${level}] ${event}`);
   }
 }
@@ -77,6 +77,14 @@ type GenOut = {
 };
 
 async function generateReport(systemPrompt: string, reportData: any, model: string): Promise<GenOut> {
+  // Stringify once; Responses API only accepts input_text (no input_json)
+  let chartDataStr = "";
+  try {
+    chartDataStr = JSON.stringify(reportData.chartData);
+  } catch (e) {
+    throw new Error("chartData is not serializable JSON");
+  }
+
   const input = [
     {
       role: "system",
@@ -86,7 +94,7 @@ async function generateReport(systemPrompt: string, reportData: any, model: stri
       role: "user",
       content: [
         { type: "input_text", text: "Analyze the following Swiss Inference JSON according to the instructions." },
-        { type: "input_json", json: reportData.chartData },
+        { type: "input_text", text: chartDataStr }, // ← send JSON as text
         ...(reportData.endpoint ? [{ type: "input_text", text: `Endpoint: ${reportData.endpoint}` }] : []),
         ...(reportData.report_type || reportData.reportType
           ? [{ type: "input_text", text: `Report type: ${reportData.report_type ?? reportData.reportType}` }]
@@ -96,7 +104,6 @@ async function generateReport(systemPrompt: string, reportData: any, model: stri
   ];
 
   const controller = new AbortController();
-  const fetchStartedAt = Date.now();
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
 
   const res = await fetch(RESPONSES_ENDPOINT, {
@@ -127,7 +134,7 @@ async function generateReport(systemPrompt: string, reportData: any, model: stri
   const processingMs = Number(res.headers.get("openai-processing-ms") ?? 0);
   const data = await res.json();
 
-  // Pull output text/json
+  // Extract output text / json if present
   let outText: string | undefined = typeof data?.output_text === "string" ? data.output_text : undefined;
   let outJson: unknown | undefined;
 
@@ -152,7 +159,7 @@ async function generateReport(systemPrompt: string, reportData: any, model: stri
 }
 
 /*───────────────────────────────────────────────────────────────────────────────
-  DB LOGGING (success + error)
+  DB LOGGING
 ────────────────────────────────────────────────────────────────────────────────*/
 function logSuccess(reportData: any, payload: { text?: string; json?: unknown }, metadata: any, durationMs: number, engine: string) {
   supabase
@@ -270,7 +277,7 @@ serve(async (req) => {
       openai_total_ms: genMs,
     });
 
-    // Fire-and-forget DB log (success) & optional guest signal
+    // Fire-and-forget DB log (success)
     const totalMs = Date.now() - t0;
     logSuccess(
       reportData,
