@@ -306,15 +306,7 @@ serve(async (req) => {
 
   try {
     // Parse the request payload
-    try {
-      reportData = await req.json();
-    } catch (parseError) {
-      return jsonResponse(
-        { error: "Invalid JSON payload", details: parseError.message, requestId },
-        { status: 400 },
-        requestId
-      );
-    }
+    reportData = await req.json();
     
     // Extract the report type from the payload (either reportType or report_type)
     const reportType = reportData.reportType || reportData.report_type || "standard";

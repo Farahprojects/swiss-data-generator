@@ -287,7 +287,7 @@ function logAndSignalCompletion(logPrefix: string, reportData: any, report: stri
 serve(async (req) => {
   let reportData: any; // Define here to be accessible in catch block
   const requestId = crypto.randomUUID().substring(0, 8); // Short unique ID for this request
-  const logPrefix = `[standard-report-for][${requestId}]`;
+  const logPrefix = `[standard-report-four][${requestId}]`;
   const startTime = Date.now();
 
   // Handle CORS preflight requests
@@ -306,15 +306,7 @@ serve(async (req) => {
 
   try {
     // Parse the request payload
-    try {
-      reportData = await req.json();
-    } catch (parseError) {
-      return jsonResponse(
-        { error: "Invalid JSON payload", details: (parseError as any).message, requestId },
-        { status: 400 },
-        requestId
-      );
-    }
+    reportData = await req.json();
     
     // Extract the report type from the payload (either reportType or report_type)
     const reportType = reportData.reportType || reportData.report_type || "standard";
