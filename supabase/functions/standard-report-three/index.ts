@@ -14,7 +14,7 @@ import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-
 ────────────────────────────────────────────────────────────────────────────────*/
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY") ?? "";
+const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_ONE") ?? "";
 
 // Production Readiness Configuration
 const MAX_API_RETRIES = parseInt(Deno.env.get("MAX_API_RETRIES") || "3");
