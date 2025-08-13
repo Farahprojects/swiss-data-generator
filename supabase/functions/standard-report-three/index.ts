@@ -266,9 +266,9 @@ function logAndSignalCompletion(logPrefix: string, reportData: any, report: stri
   });
   
   // Fire-and-forget report_ready_signals insert for guest reports
-  if (reportData.is_guest && reportData.guest_id) {
+  if (reportData.is_guest && reportData.user_id) {
     supabase.from('report_ready_signals').insert({
-      guest_report_id: reportData.guest_id,
+      guest_report_id: reportData.user_id,
       is_ai_report: true,
     }, { returning: 'minimal' })
     .then(null, (error) => {
