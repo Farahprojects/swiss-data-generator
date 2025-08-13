@@ -16,7 +16,6 @@ interface SuccessScreenProps {
 export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
 ({ guestId, name, email, isStripeReturn = false }, ref) => {
   const { open: openReportModal } = useReportModal();
-  const [guestData, setGuestData] = useState<{name: string, email: string} | null>(null);
   const [showError, setShowError] = useState(false);
   const [caseNumber, setCaseNumber] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(false);
@@ -74,7 +73,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
       console.log(`[SuccessScreen] Unmounting, clearing polling for guestId: ${guestId}`);
       clearInterval(intervalId);
     };
-  }, [guestId, openReportModal, email, guestData?.email]);
+  }, [guestId, openReportModal]);
 
   const handleManualCheck = async () => {
     setIsChecking(true);
@@ -117,7 +116,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
           <div className="space-y-2">
             <h1 className="text-2xl font-light text-gray-900">We've hit a small issue</h1>
             <p className="text-gray-600">
-              There was a delay preparing the report for <span className="font-semibold">{name || guestData?.name || 'you'}</span>. 
+              There was a delay preparing the report for <span className="font-semibold">{name || 'you'}</span>. 
               An error has been logged, and our team will investigate.
             </p>
             {manualCheckFailed && (
@@ -131,7 +130,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
               </p>
             )}
             <p className="text-sm text-gray-500">
-              We will get back to you at <span className="font-semibold">{email || guestData?.email}</span> within 24 hours.
+              We will get back to you at <span className="font-semibold">{email || 'you'}</span> within 24 hours.
             </p>
           </div>
         </div>
@@ -166,7 +165,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
         <div className="space-y-2">
           <h1 className="text-2xl font-light text-gray-900">Report Request Received!</h1>
           <p className="text-gray-600">
-            {(name || guestData?.name) ? `Your report for ${name || guestData?.name} is being prepared.` : "Your report is being prepared."}
+            {name ? `Your report for ${name} is being prepared.` : "Your report is being prepared."}
           </p>
         </div>
       </div>
@@ -174,11 +173,11 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
       <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-left">
         <div className="flex justify-between text-sm">
           <span className="text-gray-600 font-medium">Name:</span>
-          <span className="font-normal text-gray-900">{name || guestData?.name}</span>
+          <span className="font-normal text-gray-900">{name}</span>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-gray-600 font-medium">Email:</span>
-          <span className="font-normal text-gray-900">{email || guestData?.email}</span>
+          <span className="font-normal text-gray-900">{email}</span>
         </div>
       </div>
 

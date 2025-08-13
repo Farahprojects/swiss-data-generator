@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { Loader2 } from 'lucide-react';
 
 interface ReportFlowCheckerProps {
   guestId: string;
-  onPaid: (guestId: string) => void;
+  name?: string;
+  email?: string;
+  onPaid: (paidData: { guestId: string; name: string; email: string }) => void;
 }
 
-const ReportFlowChecker = ({ guestId, onPaid }: ReportFlowCheckerProps) => {
+export const ReportFlowChecker = ({ guestId, onPaid, name, email }: ReportFlowCheckerProps) => {
   const [status, setStatus] = useState<string | null>(null);
 
   useEffect(() => {
@@ -24,7 +27,11 @@ const ReportFlowChecker = ({ guestId, onPaid }: ReportFlowCheckerProps) => {
         setStatus(data.payment_status);
 
         if (data.payment_status === 'paid') {
-          onPaid(guestId);
+          onPaid({ 
+            guestId, 
+            name: data.name || name, 
+            email: data.email || email 
+          });
         }
         // No need to handle 'pending' status here anymore, as the redirect happens before the checker is even mounted.
       } catch (error) {
@@ -35,14 +42,14 @@ const ReportFlowChecker = ({ guestId, onPaid }: ReportFlowCheckerProps) => {
     poll();
     
     // Simple polling for demonstration. In a real app, this would be more robust.
-    const interval = setInterval(() => {
+    const intervalId = setInterval(() => {
         if(status !== 'paid') {
             poll();
         }
     }, 5000);
 
-    return () => clearInterval(interval);
-  }, [guestId, onPaid, status]);
+    return () => clearInterval(intervalId);
+  }, [guestId, onPaid, status, name, email]);
 
   return null; // This component does not render anything itself
 };

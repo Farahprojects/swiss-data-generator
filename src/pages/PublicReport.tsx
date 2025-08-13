@@ -397,13 +397,20 @@ const PublicReport = () => {
             {activeGuest && (
               <ReportFlowChecker 
                 guestId={activeGuest.id}
-                onPaid={(paidGuestId) => {
-                  console.log(`Report ${paidGuestId} is paid! Ready to show success screen.`);
+                onPaid={(paidData) => {
+                  console.log(`Report ${paidData.guestId} is paid! Ready to show success screen.`);
                   // For stripe return, we set the isStripeReturn flag so the success screen can fetch the details.
                   const isStripe = !activeGuest.name; // A simple check: if name is missing, it must be a stripe return.
-                  setPaidGuest({ id: paidGuestId, name: activeGuest.name, email: activeGuest.email, isStripeReturn: isStripe });
+                  setPaidGuest({
+                    guestId: paidData.guestId,
+                    name: paidData.name,
+                    email: paidData.email,
+                    isStripeReturn: isStripe
+                  });
                   setActiveGuest(null); // Stop checking once paid
                 }}
+                name={activeGuest.name}
+                email={activeGuest.email}
               />
             )}
 

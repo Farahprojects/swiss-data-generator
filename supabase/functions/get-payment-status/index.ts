@@ -27,7 +27,7 @@ serve(async (req) => {
 
     const { data, error } = await supabaseAdmin
       .from("guest_reports")
-      .select("payment_status")
+      .select("payment_status, report_data, email")
       .eq("id", guest_id)
       .single();
 
@@ -35,9 +35,22 @@ serve(async (req) => {
       throw error;
     }
 
-    return new Response(JSON.stringify({ payment_status: data.payment_status }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    if (queryError) {
+      return new Response(JSON.stringify({ error: "Guest report not found or query failed", details: queryError.message }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const name = data.report_data?.person_a?.name || data.report_data?.name || '';
+
+    return new Response(JSON.stringify({ 
+      payment_status: data.payment_status,
+      name: name,
+      email: data.email 
+    }), {
       status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
