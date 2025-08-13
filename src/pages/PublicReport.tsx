@@ -9,7 +9,7 @@ import { PublicFooter } from '@/components/public-report/PublicFooter';
 import { PublicLogo } from '@/components/public-report/PublicLogo';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import { useIsMobile } from '@/hooks/use-mobile';
 import MobileReportSheet from '@/components/public-report/MobileReportSheet';
 import ReportFlowChecker from '@/components/public-report/ReportFlowChecker';
@@ -22,8 +22,8 @@ const PublicReport = () => {
   const isMobile = useIsMobile();
   const [showCancelledMessage, setShowCancelledMessage] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
-  const [activeGuest, setActiveGuest] = useState<{ guestId: string, name: string, email: string } | null>(null);
-  const [paidGuest, setPaidGuest] = useState<{ guestId: string, name: string, email: string, isStripeReturn?: boolean } | null>(null);
+  const [activeGuest, setActiveGuest] = useState<{ guestId: string; name: string; email: string; isStripeReturn?: boolean } | null>(null);
+  const [paidGuest, setPaidGuest] = useState<{ guestId: string; name: string; email: string; isStripeReturn?: boolean } | null>(null);
   
   // Effect to detect and handle Stripe return
   useEffect(() => {
@@ -33,10 +33,9 @@ const PublicReport = () => {
 
     if (guestId && paymentStatus === 'success') {
       // This is a return from a successful Stripe payment.
-      // We don't have name/email, so the checker will need to fetch them or the success screen will.
-      // For now, we'll start the checker.
+      // We don't have name/email, so the checker will need to fetch them.
       console.log(`[PublicReport] Stripe return detected for guestId: ${guestId}. Starting checker.`);
-      setActiveGuest({ guestId: guestId, name: '', email: '' });
+      setActiveGuest({ guestId: guestId, name: '', email: '', isStripeReturn: true });
 
       // Clean the URL to avoid re-triggering on refresh
       const newUrl = new URL(window.location.href);
@@ -53,7 +52,7 @@ const PublicReport = () => {
     } else {
       // If payment is pending, use the checker to handle the payment flow.
       console.log(`[PublicReport] Report ${guestId} is pending payment. Starting checker.`);
-      setActiveGuest({ guestId: guestId, name, email });
+      setActiveGuest({ guestId: guestId, name, email, isStripeReturn: false });
     }
   };
 
@@ -393,19 +392,28 @@ const PublicReport = () => {
                 setIsMobileDrawerOpen(false); // Close the sheet on submit
               }}
             />
+            
+            {/* Loading modal for when we are verifying payment status after a Stripe redirect */}
+            {activeGuest && activeGuest.isStripeReturn && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white rounded-xl shadow-lg p-8 flex items-center gap-4">
+                  <Loader2 className="h-6 w-6 animate-spin text-gray-700" />
+                  <p className="text-gray-700 font-medium">Checking payment status...</p>
+                </div>
+              </div>
+            )}
 
+            {/* The checker component itself is invisible, so this is fine to keep */}
             {activeGuest && (
               <ReportFlowChecker 
                 guestId={activeGuest.guestId}
                 onPaid={(paidData) => {
                   console.log(`Report ${paidData.guestId} is paid! Ready to show success screen.`);
-                  // For stripe return, we set the isStripeReturn flag so the success screen can fetch the details.
-                  const isStripe = !activeGuest.name; // A simple check: if name is missing, it must be a stripe return.
                   setPaidGuest({
                     guestId: paidData.guestId,
                     name: paidData.name,
                     email: paidData.email,
-                    isStripeReturn: isStripe
+                    isStripeReturn: activeGuest.isStripeReturn
                   });
                   setActiveGuest(null); // Stop checking once paid
                 }}
