@@ -280,14 +280,37 @@ serve(async (req) => {
       );
     }
 
-    // Fire-and-forget email dispatch
-    supabase.functions.invoke('send-email', {
-      body: {
-        guest_report_id: guest_report_id,
-        temp_data_id: tempData.id
-      }
-    }).catch(console.error);
+    // --- Non-blocking post-processing ---
+    // This runs after the main response is sent to the client.
+    const runPostProcessing = async () => {
+      try {
+        const { error: invokeError } = await supabase.functions.invoke('process-guest-report-pdf', {
+          body: { guest_report_id: guest_report_id }
+        });
 
+        if (invokeError) throw invokeError;
+
+        const { error: updateError } = await supabase
+          .from('guest_reports')
+          .update({ email_sent: true, email_sent_at: new Date().toISOString() })
+          .eq('id', guest_report_id);
+
+        if (updateError) throw updateError;
+
+      } catch (e) {
+        console.error(`[create-temp-report-data] Non-blocking email process failed for ${guest_report_id}:`, e);
+        await supabase.from('user_errors').insert({
+            guest_report_id: guest_report_id,
+            error_type: 'EMAIL_AUTOMATION_FAILURE',
+            error_message: e.message,
+            metadata: { function: 'create-temp-report-data' }
+        });
+      }
+    };
+    
+    // Fire the post-processing without waiting for it to complete
+    runPostProcessing().catch(console.error);
+    
     const processingTime = Date.now() - startTime;
     console.log(`[create-temp-report-data] Successfully created temp data for: ${guest_report_id} in ${processingTime}ms`);
 
