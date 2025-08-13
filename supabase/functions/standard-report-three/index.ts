@@ -8,6 +8,7 @@
 ────────────────────────────────────────────────────────────────────────────────*/
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { GoogleAuth } from "https://esm.sh/google-auth-library@9.11.0";
 
 /*───────────────────────────────────────────────────────────────────────────────
   CONFIG & SINGLETONS
@@ -39,9 +40,6 @@ try {
 } catch (err) {
   throw err;
 }
-
-const GOOGLE_MODEL = "gemini-2.5-flash-preview-04-17";
-const GOOGLE_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GOOGLE_MODEL}:generateContent`;
 
 // Simple in-memory cache for system prompts
 const promptCache = new Map<string, string>();
@@ -156,26 +154,12 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
     report_type: reportData.report_type,
   });
 
-  const apiUrl = `${GOOGLE_ENDPOINT}?key=${GOOGLE_API_KEY}`;
+    const genai = new GoogleAuth().fromAPIKey(Deno.env.get('GOOGLE_API_KEY')!);
+    const model = genai.getGenerativeModel({
+      model: "gemini-2.5-flash",
+    });
 
-  const requestBody = {
-    contents: [
-      {
-        role: "user",
-        parts: [
-          { text: systemPrompt },
-          { text: userMessage }
-        ]
-      }
-    ],
-    generationConfig: {
-      topK: 40,
-      topP: 0.95,
-      maxOutputTokens: 8192,
-    }
-  };
-
-  const callGeminiApi = async () => {
+    const callGeminiApi = async () => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
         controller.abort();
@@ -183,12 +167,24 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
 
     let response;
     try {
-        response = await fetch(apiUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(requestBody),
-            signal: controller.signal,
+        const result = await model.generateContent({
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  { text: systemPrompt },
+                  { text: userMessage }
+                ]
+              }
+            ],
+            generationConfig: {
+              topK: 40,
+              topP: 0.95,
+              maxOutputTokens: 8192,
+            }
         });
+        response = result.response;
+
     } catch (fetchError) {
         // This catch is primarily for network errors or if AbortController aborts
         clearTimeout(timeoutId);
@@ -200,17 +196,12 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
     
     clearTimeout(timeoutId); // Clear timeout if fetch completed
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      const error = new Error(`Gemini API error: ${response.status} - ${errorText}`);
-      (error as any).status = response.status;
-      if (response.status === 400 || response.status === 404 || response.status === 401 || response.status === 403) {
-        throw Object.assign(error, { skipRetry: true });
-      }
-      throw error;
+    if (!response) {
+      const error = new Error(`Gemini API error: No response`);
+      throw Object.assign(error, { skipRetry: true });
     }
 
-    const data = await response.json();
+    const data = response;
 
     if (!data.candidates || data.candidates.length === 0 || !data.candidates[0].content || !data.candidates[0].content.parts || data.candidates[0].content.parts.length === 0) {
       throw new Error("Malformed response from Gemini API: No content/parts in candidate");
@@ -220,10 +211,10 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
     
     // Collect AI metadata only
     const metadata = {
-      token_count: data.usage?.total_tokens || 0,
-      prompt_tokens: data.usage?.prompt_tokens || 0,
-      completion_tokens: data.usage?.completion_tokens || 0,
-      model: "gemini-pro"
+      token_count: data.usageMetadata?.totalTokenCount || 0,
+      prompt_tokens: data.usageMetadata?.promptTokenCount || 0,
+      completion_tokens: data.usageMetadata?.candidatesTokenCount || 0,
+      model: "gemini-2.5-flash"
     };
     
     return { report: generatedText, metadata };
@@ -256,21 +247,24 @@ function logAndSignalCompletion(logPrefix: string, reportData: any, report: stri
     is_guest: reportData.is_guest || false,
     created_at: new Date().toISOString(),
   })
-  .then(() => console.log(`${logPrefix} Report log insert succeeded for ${reportData.is_guest ? 'guest' : 'user'} report`))
-  .catch(err => console.error(`${logPrefix} Report log insert failed:`, {
-    error: err,
-    user_id: reportData.user_id,
-    is_guest: reportData.is_guest,
-    report_type: reportData.reportType || reportData.report_type
-  }));
+  .then(null, (error) => {
+      console.error(`${logPrefix} Report log insert failed:`, {
+        error: error,
+        user_id: reportData.user_id,
+        is_guest: reportData.is_guest,
+        report_type: reportData.reportType || reportData.report_type
+      });
+  });
   
   // Fire-and-forget report_ready_signals insert for guest reports
-  if (reportData.is_guest && reportData.user_id) {
+  if (reportData.is_guest && reportData.guest_id) {
     supabase.from('report_ready_signals').insert({
-      guest_report_id: reportData.user_id
-    })
-    .then(() => console.log(`${logPrefix} Signal inserted for guest report: ${reportData.user_id}`))
-    .catch(err => console.error(`${logPrefix} Signal insert failed:`, err));
+      guest_report_id: reportData.guest_id,
+      is_ai_report: true,
+    }, { returning: 'minimal' })
+    .then(null, (error) => {
+        console.error(`${logPrefix} Signal insert failed:`, error)
+    });
   }
 }
 
