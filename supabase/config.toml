@@ -126,3 +126,6 @@ verify_jwt = false
 
 [functions.verify-guest-payment]
 verify_jwt = false
+
+[functions.standard-report-for]
+verify_jwt = false
