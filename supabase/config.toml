@@ -117,9 +117,6 @@ verify_jwt = false
 [functions.translator-edge]
 verify_jwt = false
 
-[functions.update-service-purchase-metadata]
-verify_jwt = false
-
 [functions.validate-promo-code]
 verify_jwt = false
 
