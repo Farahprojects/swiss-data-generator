@@ -32,7 +32,6 @@ interface ReportData {
   reportType: string
   request?: string
   relationshipType?: string
-  essenceType?: string
   reportCategory?: string
   name: string
   email: string
@@ -50,7 +49,6 @@ interface ReportData {
   secondPersonLongitude?: number
   secondPersonPlaceId?: string
   returnYear?: string
-  notes?: string
   priceId?: string
   isAstroOnly?: boolean
 }
