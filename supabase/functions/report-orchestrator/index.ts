@@ -25,10 +25,8 @@ interface ReportPayload {
 
 // Available engines for DB-driven round-robin selection
 const ENGINES = [
-  "standard-report",
-  "standard-report-one", 
-  "standard-report-two",
   "standard-report-three",
+  "standard-report-four",
 ];
 
 // DB-driven engine selection based on the most recent engine_used in report_logs
