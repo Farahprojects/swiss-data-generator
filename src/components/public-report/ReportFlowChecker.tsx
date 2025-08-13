@@ -4,74 +4,62 @@ import { Loader2 } from 'lucide-react';
 
 interface ReportFlowCheckerProps {
   guestId: string;
-  paymentStatus: 'paid' | 'pending';
   name: string;
   email: string;
   onPaid: (paidData: { guestId: string; name: string; email: string }) => void;
 }
 
-export const ReportFlowChecker = ({ guestId, paymentStatus, name, email, onPaid }: ReportFlowCheckerProps) => {
+export const ReportFlowChecker = ({ guestId, name, email, onPaid }: ReportFlowCheckerProps) => {
 
   useEffect(() => {
     if (!guestId) return;
 
-    const handleFlow = async () => {
-      // Flow for paid reports (e.g. promo/free)
-      if (paymentStatus === 'paid') {
-        console.log('[ReportFlowChecker] "Paid" status detected. Triggering report generation...');
-        // Fire-and-forget the report generation
-        supabase.functions.invoke('trigger-report-generation', { body: { guest_report_id: guestId } });
-        // Immediately move to the success screen
-        onPaid({ guestId, name, email });
-        return;
-      }
+    let pollingInterval: number | undefined;
 
-      // Flow for pending payments
-      if (paymentStatus === 'pending') {
-        console.log('[ReportFlowChecker] "Pending" status detected. Creating payment session...');
-        const { data, error } = await supabase.functions.invoke('create-payment-session', {
-          body: { guest_report_id: guestId },
-        });
+    const poll = async () => {
+      console.log('[ReportFlowChecker] Polling payment status for:', guestId);
+      const { data, error } = await supabase.functions.invoke('get-payment-status', {
+        body: { guest_id: guestId },
+      });
 
-        if (error || !data?.checkoutUrl) {
-          console.error('Failed to create payment session:', error);
-          // Handle error appropriately, e.g. show an error message
-          return;
-        }
-        // Redirect to Stripe
-        window.location.href = data.checkoutUrl;
+      if (error) {
+        console.error('[ReportFlowChecker] Polling error:', error);
+        // Optional: stop polling on persistent error
         return;
       }
       
-      // Flow for Stripe returns (no initial paymentStatus prop)
-      // This is the original polling logic.
-      const poll = async () => {
-        const { data, error } = await supabase.functions.invoke('get-payment-status', {
-          body: { guest_id: guestId },
+      // If paid (either from promo or Stripe webhook), trigger generation and finish.
+      if (data?.payment_status === 'paid') {
+        if(pollingInterval) clearInterval(pollingInterval);
+        console.log('[ReportFlowChecker] "Paid" status confirmed. Triggering report generation...');
+        supabase.functions.invoke('trigger-report-generation', { body: { guest_report_id: guestId } });
+        onPaid({ guestId, name: data.name || name, email: data.email || email });
+      } 
+      // If pending, it must be a non-Stripe return that needs payment. Create session.
+      else if (data?.payment_status === 'pending') {
+        if(pollingInterval) clearInterval(pollingInterval);
+        console.log('[ReportFlowChecker] "Pending" status confirmed. Creating payment session...');
+        const { data: sessionData, error: sessionError } = await supabase.functions.invoke('create-payment-session', {
+          body: { guest_report_id: guestId },
         });
 
-        if (error) {
-          console.error('[ReportFlowChecker] Polling error:', error);
+        if (sessionError || !sessionData?.checkoutUrl) {
+          console.error('Failed to create payment session:', sessionError);
           return;
         }
-
-        if (data?.payment_status === 'paid') {
-          console.log('[ReportFlowChecker] Payment confirmed via polling!', data);
-          onPaid({ 
-            guestId, 
-            name: data.name || name, 
-            email: data.email || email 
-          });
-        }
-      };
-
-      const intervalId = setInterval(poll, 2000);
-      return () => clearInterval(intervalId);
+        window.location.href = sessionData.checkoutUrl;
+      }
     };
 
-    handleFlow();
+    // Start polling immediately on mount
+    poll(); // Initial check
+    pollingInterval = setInterval(poll, 3000); // Subsequent checks
 
-  }, [guestId, paymentStatus, name, email, onPaid]);
+    return () => {
+      if (pollingInterval) clearInterval(pollingInterval);
+    };
+
+  }, [guestId, name, email, onPaid]);
 
   return null; // This component does not render anything itself
 };
