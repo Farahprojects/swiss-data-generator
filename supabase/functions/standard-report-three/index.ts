@@ -172,6 +172,9 @@ async function generateReport(systemPrompt: string, reportData: any, requestId: 
       topK: 40,
       topP: 0.95,
       maxOutputTokens: 8192,
+      thinkingConfig: {
+        thinkingBudget: 0
+      }
     }
   };
 
