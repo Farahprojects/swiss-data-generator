@@ -28,7 +28,7 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   throw new Error("Missing required Supabase environment variables");
 }
 
-if (!GOOGLE_API_KEY) {
+if (GOOGLE_API_ONE) {
   throw new Error("Missing Google API key");
 }
 
