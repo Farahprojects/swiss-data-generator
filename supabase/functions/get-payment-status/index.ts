@@ -17,8 +17,10 @@ serve(async (req) => {
 
   try {
     const { guest_id } = await req.json();
+    console.log(`[get-payment-status] Received request for guest_id: ${guest_id}`);
 
     if (!guest_id) {
+      console.error("[get-payment-status] Error: guest_id is required");
       return new Response(JSON.stringify({ error: "guest_id is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -32,27 +34,32 @@ serve(async (req) => {
       .single();
 
     if (error) {
-      throw error;
-    }
-
-    if (queryError) {
-      return new Response(JSON.stringify({ error: "Guest report not found or query failed", details: queryError.message }), {
+      console.error(`[get-payment-status] Supabase query error for guest_id ${guest_id}:`, error);
+      return new Response(JSON.stringify({ error: "Guest report not found or query failed", details: error.message }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    
+    console.log(`[get-payment-status] Successfully fetched data for guest_id ${guest_id}:`, data);
 
     const name = data.report_data?.person_a?.name || data.report_data?.name || '';
+    console.log(`[get-payment-status] Extracted name: "${name}" and email: "${data.email}"`);
 
-    return new Response(JSON.stringify({ 
+    const responsePayload = { 
       payment_status: data.payment_status,
       name: name,
       email: data.email 
-    }), {
+    };
+
+    console.log(`[get-payment-status] Sending response for guest_id ${guest_id}:`, responsePayload);
+
+    return new Response(JSON.stringify(responsePayload), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
+    console.error('[get-payment-status] Unhandled exception:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
