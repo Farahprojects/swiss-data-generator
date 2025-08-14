@@ -31,9 +31,16 @@ serve(async (req) => {
     }
 
     const systemPrompt = { role: "system", content: "You are a helpful assistant." };
+
+    // Map `text` to `content` for the OpenAI API
+    const apiMessages = messages.map((msg: { role: string; text: string }) => ({
+      role: msg.role,
+      content: msg.text,
+    }));
+
     const requestBody = {
       model: OPENAI_MODEL,
-      messages: [systemPrompt, ...messages],
+      messages: [systemPrompt, ...apiMessages],
       temperature: 0.7,
     };
 
