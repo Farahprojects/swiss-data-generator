@@ -18,7 +18,6 @@ export const ReportFlowChecker = ({ guestId, name, email, onPaid }: ReportFlowCh
     let pollingInterval: number | undefined;
 
     const poll = async () => {
-      console.log('[ReportFlowChecker] Polling payment status for:', guestId);
       const { data, error } = await supabase.functions.invoke('get-payment-status', {
         body: { guest_id: guestId },
       });
@@ -33,14 +32,12 @@ export const ReportFlowChecker = ({ guestId, name, email, onPaid }: ReportFlowCh
         
         if (!hasTriggeredGenerationRef.current) {
           hasTriggeredGenerationRef.current = true;
-          console.log('[ReportFlowChecker] "Paid" status confirmed. Triggering report generation...');
           supabase.functions.invoke('trigger-report-generation', { body: { guest_report_id: guestId } });
           onPaid({ guestId, name: data.name || name, email: data.email || email });
         }
       } 
       else if (data?.payment_status === 'pending') {
         if(pollingInterval) clearInterval(pollingInterval);
-        console.log('[ReportFlowChecker] "Pending" status confirmed. Creating payment session...');
         const { data: sessionData, error: sessionError } = await supabase.functions.invoke('create-payment-session', {
           body: { guest_report_id: guestId },
         });

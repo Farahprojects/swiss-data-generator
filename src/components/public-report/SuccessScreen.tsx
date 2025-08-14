@@ -37,55 +37,46 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
 
     // --- Main Polling Mechanism ---
     useEffect(() => {
-      if (!guestId) return;
+      if (!guestId || modalOpened) {
+        return;
+      }
 
-      const POLLING_INTERVAL_MS = 1000;
-      const POLLING_TIMEOUT_MS = 14000;
-      let elapsedTime = 0;
+      const poll = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('report_ready_signals')
+            .select('id')
+            .eq('guest_report_id', guestId)
+            .single();
 
-      const intervalId = setInterval(async () => {
-        elapsedTime += POLLING_INTERVAL_MS;
+          if (error) {
+            // This is expected if the row doesn't exist yet, so we don't log it.
+            return;
+          }
 
-        // Check for timeout
-        if (elapsedTime >= POLLING_TIMEOUT_MS) {
-          clearInterval(intervalId);
-          console.error(`[SuccessScreen] Polling timed out for guestId: ${guestId}`);
-          const loggedCaseNumber = await logUserError({
-            guestReportId: guestId,
-            errorType: 'POLLING_TIMEOUT',
-            errorMessage: `Polling for report signal timed out after ${POLLING_TIMEOUT_MS / 1000} seconds.`,
-          });
-          setCaseNumber(loggedCaseNumber);
-          setShowError(true);
-          return;
+          if (data) {
+            clearInterval(intervalId);
+            setModalOpened(true);
+            openReportModal(guestId);
+          }
+        } catch (e) {
+          console.error("Error polling for report signal:", e);
         }
-
-        console.log(`[SuccessScreen] Polling for report signal for guestId: ${guestId}`);
-        const { data, error } = await supabase
-          .from('report_ready_signals')
-          .select('id')
-          .eq('guest_report_id', guestId)
-          .limit(1);
-
-        if (error) {
-          console.error('[SuccessScreen] Error polling for report signal:', error);
-          // Optional: stop polling on error or just continue
-          return;
-        }
-
-        if (data && data.length > 0) {
-          console.log(`[SuccessScreen] Polling found signal for ${guestId}. Opening report.`);
-          openReportModal(guestId);
-          clearInterval(intervalId); // Stop polling once the signal is found
-        }
-      }, 1000); // Poll every 1 second
-
-      // Cleanup function to clear the interval when the component unmounts
-      return () => {
-        console.log(`[SuccessScreen] Unmounting, clearing polling for guestId: ${guestId}`);
-        clearInterval(intervalId);
       };
-    }, [guestId, openReportModal]);
+
+      const intervalId = setInterval(poll, 1000); // Poll every second
+
+      const timeoutId = setTimeout(() => {
+        clearInterval(intervalId);
+        console.error(`[SuccessScreen] Polling timed out for guestId: ${guestId}`);
+        handleTimeout();
+      }, 14000); // 14-second timeout
+
+      return () => {
+        clearInterval(intervalId);
+        clearTimeout(timeoutId);
+      };
+    }, [guestId, openReportModal, modalOpened]);
 
     const handleManualCheck = async () => {
       setIsChecking(true);
