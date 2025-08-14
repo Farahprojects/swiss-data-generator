@@ -205,6 +205,28 @@ serve(async (req) => {
 
     const ms = Date.now() - start;
     
+    if (isFreeReport) {
+      console.log('✅ [PERF] Free report created', {
+        timestamp: new Date().toISOString(),
+        guestReportId,
+        processing_time_ms: ms,
+        reportType: reportData.reportType
+      });
+
+      return ok({
+        guestReportId,
+        paymentStatus: 'paid',
+        name: reportData.name,
+        email: reportData.email,
+        processing_time_ms: ms
+      });
+    } else {
+      const checkoutPayload = {
+        guestReportId,
+        finalPrice: final,
+        successUrl: `${SITE_URL}/report-success?session_id=${guestReportId}`,
+        cancelUrl: `${SITE_URL}/report-cancelled?session_id=${guestReportId}`,
+      };
       
       const { data: checkoutData, error: checkoutError } = await supabaseAdmin.functions.invoke('create-checkout', {
         body: checkoutPayload,

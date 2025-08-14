@@ -15,7 +15,7 @@ export const ReportFlowChecker = ({ guestId, name, email, onPaid }: ReportFlowCh
   useEffect(() => {
     if (!guestId) return;
 
-    let pollingInterval: number | undefined;
+    let pollingInterval: NodeJS.Timeout | undefined;
 
     const poll = async () => {
       console.log('[ReportFlowChecker] Polling payment status for:', guestId);
