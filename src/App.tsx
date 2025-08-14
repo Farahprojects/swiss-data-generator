@@ -62,7 +62,7 @@ const ConditionalAuth: React.FC<{ children: React.ReactNode }> = ({ children }) 
     );
   }
 
-  // Public pages that still use auth-aware UI
+  // All other pages (including 404/NotFound) need auth and navigation providers
   return (
     <NavigationStateProvider>
       <SettingsModalProvider>
