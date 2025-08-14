@@ -16,12 +16,21 @@ class ChatController {
   private isTurnActive = false;
   
   async initializeConversation(conversationId?: string) {
+    console.log('[ChatController] initializeConversation called with conversationId:', conversationId);
     if (conversationId) {
       // Logic to load an existing conversation will go here
       // For now, we'll focus on creating a new one
+      console.log('[ChatController] Using existing conversationId:', conversationId);
     } else {
-      const newConversation = await createConversation();
-      useChatStore.getState().startConversation(newConversation.id);
+      console.log('[ChatController] No conversationId, calling createConversation()');
+      try {
+        const newConversation = await createConversation();
+        console.log('[ChatController] createConversation succeeded:', newConversation.id);
+        useChatStore.getState().startConversation(newConversation.id);
+      } catch (error) {
+        console.error('[ChatController] createConversation failed:', error);
+        throw error; // Re-throw to prevent silent failure
+      }
     }
   }
 
@@ -31,9 +40,16 @@ class ChatController {
     
     let { conversationId, messages } = useChatStore.getState();
     if (!conversationId) {
-      const newConversation = await createConversation();
-      conversationId = newConversation.id;
-      useChatStore.getState().startConversation(conversationId);
+      console.log('[ChatController] sendTextMessage: No conversationId, calling createConversation()');
+      try {
+        const newConversation = await createConversation();
+        console.log('[ChatController] sendTextMessage: createConversation succeeded:', newConversation.id);
+        conversationId = newConversation.id;
+        useChatStore.getState().startConversation(conversationId);
+      } catch (error) {
+        console.error('[ChatController] sendTextMessage: createConversation failed:', error);
+        throw error; // Re-throw to prevent silent failure
+      }
     }
     
     // Optimistically add user message to UI
@@ -89,9 +105,16 @@ class ChatController {
     
     let { conversationId } = useChatStore.getState();
     if (!conversationId) {
-      const newConversation = await createConversation();
-      conversationId = newConversation.id;
-      useChatStore.getState().startConversation(conversationId);
+      console.log('[ChatController] startTurn: No conversationId, calling createConversation()');
+      try {
+        const newConversation = await createConversation();
+        console.log('[ChatController] startTurn: createConversation succeeded:', newConversation.id);
+        conversationId = newConversation.id;
+        useChatStore.getState().startConversation(conversationId);
+      } catch (error) {
+        console.error('[ChatController] startTurn: createConversation failed:', error);
+        throw error; // Re-throw to prevent silent failure
+      }
     }
     
     useChatStore.getState().setStatus('recording');

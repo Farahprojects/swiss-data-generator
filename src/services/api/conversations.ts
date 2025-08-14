@@ -6,13 +6,29 @@ import { getGuestId } from '../auth/session';
 export const createConversation = async (reportId?: string): Promise<Conversation> => {
   const guestId = getGuestId();
   console.log('[createConversation] Called with reportId:', reportId, 'using guestId from session:', guestId);
+  
+  // Log the exact values being inserted
+  const insertData = { report_id: reportId, guest_id: guestId };
+  console.log('[createConversation] INSERT data:', JSON.stringify(insertData));
+  
   const { data, error } = await supabase
     .from('conversations')
-    .insert({ report_id: reportId, guest_id: guestId })
+    .insert(insertData)
     .select()
     .single();
 
-  if (error) throw new Error(error.message);
+  // Log the complete response
+  console.log('[createConversation] Supabase response:', {
+    status: error ? 'error' : 'success',
+    data: data ? { id: data.id, guest_id: data.guest_id, report_id: data.report_id } : null,
+    error: error ? { code: error.code, message: error.message, details: error.details } : null
+  });
+
+  if (error) {
+    console.error('[createConversation] Database error:', error);
+    throw new Error(error.message);
+  }
+  
   console.log('[createConversation] Created conversation:', data.id, 'with guestId:', guestId);
   return { ...data, messages: [] };
 };
@@ -64,13 +80,29 @@ export const getOrCreateConversation = async (guestId: string, reportId: string)
 
   // Create new conversation
   console.log('[getOrCreateConversation] Creating new conversation with guestId:', guestId);
+  
+  // Log the exact values being inserted
+  const insertData = { guest_id: guestId, report_id: reportId };
+  console.log('[getOrCreateConversation] INSERT data:', JSON.stringify(insertData));
+  
   const { data: newConv, error: createError } = await supabase
     .from('conversations')
-    .insert({ guest_id: guestId, report_id: reportId })
+    .insert(insertData)
     .select('id')
     .single();
 
-  if (createError) throw new Error(createError.message);
+  // Log the complete response
+  console.log('[getOrCreateConversation] Supabase response:', {
+    status: createError ? 'error' : 'success',
+    data: newConv ? { id: newConv.id } : null,
+    error: createError ? { code: createError.code, message: createError.message, details: createError.details } : null
+  });
+
+  if (createError) {
+    console.error('[getOrCreateConversation] Database error:', createError);
+    throw new Error(createError.message);
+  }
+  
   console.log('[getOrCreateConversation] Created new conversation:', newConv.id);
   return { conversationId: newConv.id };
 };
