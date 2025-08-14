@@ -16,7 +16,7 @@ export const ChatBox = () => {
   }, [messages]);
 
   return (
-    <div className="flex flex-col flex-1 bg-white max-w-4xl w-full mx-auto border-x border-gray-100">
+    <div className="flex flex-col flex-1 bg-white max-w-4xl w-full mx-auto border-x border-gray-100 pb-4">
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6">
         <MessageList />
       </div>
