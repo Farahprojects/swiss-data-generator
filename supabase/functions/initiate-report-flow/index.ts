@@ -204,18 +204,58 @@ serve(async (req) => {
     if (insertError) return oops('Failed to create report record');
 
     const ms = Date.now() - start;
-
-    // This function's only job is to create the record and return the status.
-    // A new frontend "checker" component will handle all subsequent flows.
-    console.log(`[initiate-report-flow] Record created for ${guestReportId} in ${ms}ms. Status: ${isFreeReport ? 'paid' : 'pending'}`);
-
-    return ok({
-      guestReportId,
-      paymentStatus: isFreeReport ? 'paid' : 'pending',
-      name: reportData.name,
-      email: reportData.email,
-    });
     
+    if (isFreeReport) {
+      console.log('✅ [PERF] Free report initiated', {
+        timestamp: new Date().toISOString(),
+        guestReportId,
+        processing_time_ms: ms,
+        reportType: reportData.reportType
+      });
+
+      return ok({
+        guestReportId,
+        paymentStatus: 'paid',
+        name: reportData.name,
+        email: reportData.email,
+        processing_time_ms: ms
+      });
+    } else {
+      // For paid reports, create the checkout session immediately.
+      const checkoutPayload = {
+        guest_report_id: guestReportId,
+        amount: final,
+        email: reportData.email,
+        description: `Astrology Report: ${reportData.reportType}`,
+        successUrl: `${SITE_URL}/report?guest_id=${guestReportId}&payment_status=success`,
+        cancelUrl: `${SITE_URL}/report?guest_id=${guestReportId}&payment_status=cancelled`,
+      };
+      
+      const { data: checkoutData, error: checkoutError } = await supabaseAdmin.functions.invoke('create-checkout', {
+        body: checkoutPayload,
+      });
+
+      if (checkoutError || !checkoutData?.url) {
+        return oops('Failed to create checkout session');
+      }
+
+      console.log('💳 [PERF] Paid report checkout created', {
+        timestamp: new Date().toISOString(),
+        guestReportId,
+        processing_time_ms: ms,
+        finalPrice: final,
+        reportType: reportData.reportType
+      });
+
+      return ok({
+        guestReportId,
+        paymentStatus: 'pending',
+        checkoutUrl: checkoutData.url,
+        name: reportData.name,
+        email: reportData.email,
+        processing_time_ms: ms
+      });
+    }
   } catch (err: any) {
     debug('Unhandled flow error:', err?.message || err);
     return oops(err?.message || 'Internal server error');
