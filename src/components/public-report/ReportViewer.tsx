@@ -21,6 +21,81 @@ interface ReportViewerProps {
   onStateReset?: () => void;
 }
 
+const ReportViewerActions: React.FC<{ guestId: string }> = ({ guestId }) => {
+  const { toast } = useToast();
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    if (!guestId) {
+      toast({
+        variant: "destructive",
+        title: "Download Failed",
+        description: "Report ID is missing.",
+      });
+      return;
+    }
+
+    setIsDownloading(true);
+    toast({
+      title: "Preparing Download",
+      description: "Your PDF is being generated and will begin downloading shortly.",
+    });
+
+    try {
+      const { data, error } = await supabase.functions.invoke('download-report-pdf', {
+        body: { guest_report_id: guestId },
+      });
+
+      if (error) {
+        // The edge function streams the response, so check for a non-blob error first
+        try {
+          const errorJson = JSON.parse(new TextDecoder().decode(data));
+          if (errorJson.error) {
+            throw new Error(errorJson.error);
+          }
+        } catch {
+          // If parsing fails, it's likely a direct error message
+          throw new Error(error.message || 'An unknown error occurred.');
+        }
+      }
+      
+      const blob = new Blob([data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Therai-Report-${guestId.substring(0, 8)}.pdf`; // A fallback filename
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+    } catch (error: any) {
+      console.error("PDF Download Error:", error);
+      toast({
+        variant: "destructive",
+        title: "Download Failed",
+        description: error.message || "Could not download the report PDF. Please try again.",
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={handleDownload}
+      disabled={isDownloading}
+      className="text-gray-700 text-base font-medium hover:text-black hover:bg-gray-100 transition-colors active:scale-95 border-gray-200"
+    >
+      <Download className="h-4 w-4 mr-1" />
+      {isDownloading ? 'Downloading...' : 'PDF'}
+    </Button>
+  );
+};
+
+
 type ModalType = 'chatgpt' | 'close' | 'ai-choice' | 'email' | null;
 type TransitionPhase = 'idle' | 'fading' | 'clearing' | 'transitioning' | 'complete';
 
@@ -116,95 +191,6 @@ export const ReportViewer = ({
       setEmailError(null);
     }
   }, [activeModal, reportData.guest_report?.id]);
-
-  const handleDownloadPdf = () => {
-    // Check if there's PDF data in the report
-    const pdfData = reportData.guest_report?.report_data?.report_pdf_base64;
-    if (!pdfData) {
-      return;
-    }
-
-    try {
-      const byteCharacters = atob(pdfData);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${getPersonName(reportData).replace(/\s+/g, '_')}_Report.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      toast({
-        title: "Download failed",
-        description: "Unable to download PDF. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleDownloadUnifiedPdf = async () => {
-    const hasReportContent = !!reportData.report_content && reportData.report_content.trim().length > 20;
-    const hasSwissData = !!reportData.swiss_data;
-
-    if (!hasReportContent && !hasSwissData) {
-      toast({
-        title: "No data available",
-        description: "Unable to generate PDF without report or astro data.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      await PdfGenerator.generateUnifiedPdf({
-        reportContent: reportData.report_content,
-        swissData: reportData.swiss_data,
-        customerName: getPersonName(reportData),
-        reportPdfData: reportData.guest_report?.report_data?.report_pdf_base64,
-        reportType: reportData.guest_report.report_type || ''
-      });
-
-      const sections = [];
-      if (reportData.report_content) sections.push("AI Report");
-      if (reportData.swiss_data) sections.push("Astro Data");
-      
-      toast({
-        title: "PDF Generated!",
-        description: `Your ${sections.join(" + ")} PDF has been downloaded.`,
-      });
-    } catch (error) {
-      toast({
-        title: "PDF generation failed",
-        description: "Unable to generate PDF. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  // Smart PDF download logic
-  const handleSmartPdfDownload = () => {
-    const hasPdfData = !!reportData.guest_report?.report_data?.report_pdf_base64;
-    const hasSwissData = !!reportData.swiss_data;
-    const hasReportContent = !!reportData.report_content && reportData.report_content.trim().length > 20;
-
-    if (hasPdfData && hasSwissData) {
-      // Both exist - generate unified PDF
-      handleDownloadUnifiedPdf();
-    } else if (hasPdfData) {
-      // Only PDF exists - use simple download
-      handleDownloadPdf();
-    } else if (hasSwissData || hasReportContent) {
-      // Only Swiss data or report content exists - generate unified PDF
-      handleDownloadUnifiedPdf();
-    }
-  };
 
   const handleCopyToClipboard = async () => {
     try {
@@ -657,17 +643,7 @@ export const ReportViewer = ({
           </div>
 
           <div className="flex items-center gap-3">
-            {(reportData.guest_report?.report_data?.report_pdf_base64 || reportData.swiss_data || (reportData.report_content && reportData.report_content.trim().length > 20)) && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSmartPdfDownload}
-                className="text-gray-700 text-base font-medium hover:text-black hover:bg-gray-100 transition-colors active:scale-95 border-gray-200"
-              >
-                <Download className="h-4 w-4 mr-1" />
-                PDF
-              </Button>
-            )}
+            <ReportViewerActions guestId={reportData.guest_report?.id} />
             
             {!isMobile && (
               <TooltipProvider>
