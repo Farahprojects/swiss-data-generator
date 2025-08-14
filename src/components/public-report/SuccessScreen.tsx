@@ -34,6 +34,12 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
     const { clearSession } = useSessionManager("SuccessScreen");
     const [manualCheckFailed, setManualCheckFailed] = useState(false);
     const [modalOpened, setModalOpened] = useState(false);
+    const [isTimedOut, setIsTimedOut] = useState(false);
+
+    const handleTimeout = () => {
+      // Instead of showing an error, we now show the "View Report" button.
+      setIsTimedOut(true);
+    };
 
     // --- Main Polling Mechanism ---
     useEffect(() => {
@@ -198,12 +204,29 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
             Your report will open automatically when it's ready.
           </p>
 
-          <div className="flex items-center justify-center space-x-2">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
-            <span className="text-sm text-gray-600">
-              Finalizing your report...
-            </span>
-          </div>
+          {isTimedOut ? (
+            <Button 
+              onClick={handleManualCheck} 
+              disabled={isChecking} 
+              className="w-full"
+            >
+              {isChecking ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Checking...
+                </>
+              ) : (
+                "View Report"
+              )}
+            </Button>
+          ) : (
+            <div className="flex items-center justify-center space-x-2 pt-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+              <span className="text-sm text-gray-600">
+                Finalizing your report...
+              </span>
+            </div>
+          )}
         </div>
       </div>
     );
