@@ -7,7 +7,6 @@ import { llmService } from '@/services/llm/chat';
 import { ttsService } from '@/services/voice/tts';
 import { Message } from '@/core/types';
 import { v4 as uuidv4 } from 'uuid';
-import { createConversation } from '@/services/api/conversations';
 // No longer need appendMessage from the client
 // import { appendMessage } from '@/services/api/messages';
 import { STT_PROVIDER, LLM_PROVIDER, TTS_PROVIDER } from '@/config/env';
@@ -15,23 +14,17 @@ import { STT_PROVIDER, LLM_PROVIDER, TTS_PROVIDER } from '@/config/env';
 class ChatController {
   private isTurnActive = false;
   
-  async initializeConversation(conversationId?: string) {
+  async initializeConversation(conversationId: string) {
     console.log('[ChatController] initializeConversation called with conversationId:', conversationId);
-    if (conversationId) {
-      // Logic to load an existing conversation will go here
-      // For now, we'll focus on creating a new one
-      console.log('[ChatController] Using existing conversationId:', conversationId);
-    } else {
-      console.log('[ChatController] No conversationId, calling createConversation()');
-      try {
-        const newConversation = await createConversation();
-        console.log('[ChatController] createConversation succeeded:', newConversation.id);
-        useChatStore.getState().startConversation(newConversation.id);
-      } catch (error) {
-        console.error('[ChatController] createConversation failed:', error);
-        throw error; // Re-throw to prevent silent failure
-      }
+    
+    // FAIL FAST: conversationId is now required
+    if (!conversationId) {
+      console.error('[ChatController] initializeConversation: FAIL FAST - conversationId is required');
+      throw new Error('conversationId is required for conversation initialization');
     }
+    
+    console.log('[ChatController] Using existing conversationId:', conversationId);
+    useChatStore.getState().startConversation(conversationId);
   }
 
   async sendTextMessage(text: string) {
