@@ -66,6 +66,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   
   // Local processing state - this component is not being simplified yet
   const [isProcessing, setIsProcessing] = useState(false);
+  const submissionRef = useRef(false);
   
   // Direct submission to initiate-report-flow (desktop)
   const submitReport = async (data: ReportFormData, pricing: TrustedPricingObject) => {
@@ -194,6 +195,9 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   };
 
   const handleSubmitWithTrustedPricing = async (trustedPricing: TrustedPricingObject) => {
+    if (submissionRef.current) return; // Prevent double submission
+    submissionRef.current = true;
+
     const formData = form.getValues();
     
     // Transform form data to match translator edge function field names
@@ -233,6 +237,8 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       }
     } catch (error) {
       console.error('Report submission failed:', error);
+    } finally {
+      submissionRef.current = false; // Allow submission again
     }
   };
 
