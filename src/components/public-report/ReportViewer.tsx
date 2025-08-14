@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Download, Copy, X, Paperclip } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -471,9 +472,15 @@ export const ReportViewer = ({
     }
   };
 
+  const navigate = useNavigate();
+
   const handleOpenChatGPTModal = async () => {
-    // Show AI choice prompt first
-    setActiveModal('ai-choice');
+    const guestReportId = reportData.guest_report?.id;
+    if (guestReportId) {
+      navigate(`/chat/${guestReportId}`);
+    } else {
+      navigate('/chat');
+    }
   };
 
   const handlePremiumFlow = async () => {
