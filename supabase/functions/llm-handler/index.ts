@@ -14,21 +14,31 @@ const CORS_HEADERS = {
 };
 
 serve(async (req) => {
+  console.log("[llm-handler] Received request");
+
   if (req.method === "OPTIONS") {
+    console.log("[llm-handler] Handling OPTIONS request");
     return new Response("ok", { headers: CORS_HEADERS });
   }
 
   try {
+    console.log("[llm-handler] Processing request body");
     const { messages } = await req.json();
 
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      console.error("[llm-handler] Invalid or empty messages array in request");
+      throw new Error("Invalid or empty messages array in request");
+    }
+
+    const systemPrompt = { role: "system", content: "You are a helpful assistant." };
     const requestBody = {
       model: OPENAI_MODEL,
-      messages: [
-        { role: "system", content: "You are a helpful assistant." },
-        ...messages,
-      ],
+      messages: [systemPrompt, ...messages],
       temperature: 0.7,
     };
+
+    console.log(`[llm-handler] Sending request to OpenAI with ${messages.length} messages.`);
+    console.log("[llm-handler] OpenAI Request Body:", JSON.stringify(requestBody, null, 2));
 
     const response = await fetch(OPENAI_ENDPOINT, {
       method: "POST",
@@ -39,20 +49,26 @@ serve(async (req) => {
       body: JSON.stringify(requestBody),
     });
 
+    console.log(`[llm-handler] Received response from OpenAI with status: ${response.status}`);
+
     if (!response.ok) {
       const errorText = await response.text();
+      console.error(`[llm-handler] OpenAI API error response: ${errorText}`);
       throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
+    console.log("[llm-handler] Successfully parsed OpenAI response.");
     const assistantResponse = data.choices[0].message.content;
 
+    console.log("[llm-handler] Sending successful response to client.");
     return new Response(JSON.stringify({ response: assistantResponse }), {
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
       status: 200,
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    console.error("[llm-handler] An unexpected error occurred:", err);
+    return new Response(JSON.stringify({ error: err.message, stack: err.stack }), {
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
       status: 500,
     });

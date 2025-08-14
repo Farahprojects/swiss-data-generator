@@ -10,12 +10,23 @@ const CORS_HEADERS = {
 };
 
 serve(async (req) => {
+  console.log("[tts-handler] Received request");
+
   if (req.method === "OPTIONS") {
+    console.log("[tts-handler] Handling OPTIONS request");
     return new Response("ok", { headers: CORS_HEADERS });
   }
 
   try {
+    console.log("[tts-handler] Processing request body");
     const { text } = await req.json();
+
+    if (!text || typeof text !== 'string' || text.trim().length === 0) {
+      console.error("[tts-handler] Invalid or empty text in request");
+      throw new Error("Invalid or empty text in request");
+    }
+
+    console.log(`[tts-handler] Generating speech for text: "${text}"`);
 
     const requestBody = {
       model: "tts-1",
@@ -23,6 +34,7 @@ serve(async (req) => {
       voice: "alloy",
     };
 
+    console.log("[tts-handler] Sending request to OpenAI for speech synthesis.");
     const response = await fetch(OPENAI_ENDPOINT, {
       method: "POST",
       headers: {
@@ -32,19 +44,25 @@ serve(async (req) => {
       body: JSON.stringify(requestBody),
     });
 
+    console.log(`[tts-handler] Received response from OpenAI with status: ${response.status}`);
+
     if (!response.ok) {
       const errorText = await response.text();
+      console.error(`[tts-handler] OpenAI API error response: ${errorText}`);
       throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
     }
 
     const audioBlob = await response.blob();
+    console.log(`[tts-handler] Successfully received audio blob of size: ${audioBlob.size} bytes.`);
     
+    console.log("[tts-handler] Sending successful audio response to client.");
     return new Response(audioBlob, {
       headers: { ...CORS_HEADERS, "Content-Type": "audio/mpeg" },
       status: 200,
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    console.error("[tts-handler] An unexpected error occurred:", err);
+    return new Response(JSON.stringify({ error: err.message, stack: err.stack }), {
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
       status: 500,
     });
