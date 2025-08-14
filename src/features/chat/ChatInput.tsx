@@ -1,13 +1,14 @@
 // src/features/chat/ChatInput.tsx
 import React, { useState } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
-import { Mic, Send, Volume2 } from 'lucide-react';
+import { Mic, Send, Volume2, VolumeX } from 'lucide-react';
 import { useChatStore } from '@/core/store';
 import { chatController } from './ChatController';
 
 export const ChatInput = () => {
   const [text, setText] = useState('');
   const status = useChatStore((state) => state.status);
+  const [isMuted, setIsMuted] = useState(false);
 
   const handleSend = () => {
     if (text.trim()) {
@@ -28,12 +29,18 @@ export const ChatInput = () => {
 
   return (
     <div className="bg-white/80 backdrop-blur-lg border-t border-gray-100 p-4">
-      <div className="flex items-end gap-3 max-w-4xl mx-auto">
+      <div className="flex items-end gap-2 max-w-4xl mx-auto">
         <button 
-          className="p-2 text-gray-400 hover:text-gray-900 transition-colors"
+          className="p-3 text-gray-500 hover:text-gray-900 transition-colors"
           onClick={handleMicClick}
         >
           <Mic size={24} className={isRecording ? 'text-red-500' : ''} />
+        </button>
+        <button 
+          className="p-3 text-gray-500 hover:text-gray-900 transition-colors"
+          onClick={() => setIsMuted(!isMuted)}
+        >
+          {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
         </button>
         <TextareaAutosize
           value={text}

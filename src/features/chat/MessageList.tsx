@@ -3,9 +3,14 @@ import { useChatStore } from '@/core/store';
 import { Message } from '@/core/types';
 import { PlayCircle, MessageCircle } from 'lucide-react';
 import { audioPlayer } from '@/services/voice/audioPlayer';
+import { useTypewriter } from '@/hooks/useTypewriter';
 
-const MessageItem = ({ message }: { message: Message }) => {
+const MessageItem = ({ message, isLast }: { message: Message; isLast: boolean }) => {
   const isUser = message.role === 'user';
+  const displayText = useTypewriter(message.text || '', 30);
+  
+  const textContent = isUser || !isLast ? message.text : displayText;
+
   return (
     <div className={`flex items-end gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
@@ -15,7 +20,7 @@ const MessageItem = ({ message }: { message: Message }) => {
             : 'bg-gray-100 text-gray-800'
         }`}
       >
-        <p className="text-base font-light leading-relaxed">{message.text}</p>
+        <p className="text-base font-light leading-relaxed">{textContent}</p>
         {message.audioUrl && (
           <button
             onClick={() => audioPlayer.play(message.audioUrl!)}
@@ -46,20 +51,22 @@ export const MessageList = () => {
 
   if (messages.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-400">
-        <MessageCircle size={48} className="mb-4" />
-        <h2 className="text-2xl font-light text-gray-800">Start the Conversation</h2>
-        <p className="mt-2 font-light">
-          Ask anything or tap the mic to begin.
-        </p>
+      <div className="flex-1 flex flex-col justify-end pb-8">
+        <div className="p-4">
+          <MessageCircle size={48} className="text-gray-300" />
+          <h2 className="mt-4 text-3xl font-light text-gray-800">Ready to talk?</h2>
+          <p className="mt-2 text-gray-500 font-light">
+            Your chat history will appear here.
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
     <>
-      {messages.map((msg) => (
-        <MessageItem key={msg.id} message={msg} />
+      {messages.map((msg, index) => (
+        <MessageItem key={msg.id} message={msg} isLast={index === messages.length - 1} />
       ))}
       <div ref={scrollRef} />
     </>
