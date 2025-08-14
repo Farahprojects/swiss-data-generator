@@ -115,7 +115,7 @@ function App() {
 
                 {/* Chat Route */}
                 <Route 
-                  path="/chat/:reportId?" 
+                  path="/chat/:conversationId?" 
                   element={
                     <Suspense fallback={<div>Loading Chat...</div>}>
                       <ReportChatScreen />

@@ -7,14 +7,13 @@ export const useChat = (conversationId?: string) => {
   const state = useChatStore();
 
   useEffect(() => {
-    if (conversationId) {
-      chatController.loadConversation(conversationId);
-    }
+    chatController.initializeConversation(conversationId);
   }, [conversationId]);
 
   return {
     ...state,
     startTurn: chatController.startTurn,
+    sendTextMessage: chatController.sendTextMessage,
     endTurn: chatController.endTurn,
     cancelTurn: chatController.cancelTurn,
   };
