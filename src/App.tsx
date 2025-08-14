@@ -107,8 +107,6 @@ function App() {
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/auth/password" element={<ResetPassword />} />
                 <Route path="/preview/:previewId" element={<PreviewWebsite />} />
-                <Route path="/:slug/vibe" element={<CoachReportPage />} />
-                <Route path="/:slug" element={<PublicCoachWebsite />} />
 
                 {/* Authenticated Routes */}
                 <Route 
@@ -119,6 +117,10 @@ function App() {
                     </Suspense>
                   } 
                 />
+
+                {/* Catch-all routes - must be last */}
+                <Route path="/:slug/vibe" element={<CoachReportPage />} />
+                <Route path="/:slug" element={<PublicCoachWebsite />} />
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>
