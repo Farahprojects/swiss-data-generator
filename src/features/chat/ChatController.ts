@@ -9,6 +9,7 @@ import { Message } from '@/core/types';
 import { v4 as uuidv4 } from 'uuid';
 import { createConversation, getConversationByReportId } from '@/services/api/conversations';
 import { appendMessage } from '@/services/api/messages';
+import { STT_PROVIDER, LLM_PROVIDER, TTS_PROVIDER } from '@/config/env';
 
 class ChatController {
   private isTurnActive = false;
@@ -39,6 +40,9 @@ class ChatController {
       conversationId: conversationId!,
       role: 'user' as const,
       text,
+      meta: {
+        stt_provider: STT_PROVIDER,
+      }
     };
     
     const userMessage = await appendMessage(userMessageData);
@@ -58,6 +62,10 @@ class ChatController {
       role: 'assistant' as const,
       text: llmResponse,
       audioUrl,
+      meta: {
+        llm_provider: LLM_PROVIDER,
+        tts_provider: TTS_PROVIDER,
+      }
     };
     
     const assistantMessage = await appendMessage(assistantMessageData);
@@ -109,6 +117,9 @@ class ChatController {
         role: 'user' as const,
         text: transcription,
         audioUrl: URL.createObjectURL(audioBlob),
+        meta: {
+          stt_provider: STT_PROVIDER,
+        }
       };
       
       const userMessage = await appendMessage(userMessageData);
@@ -128,6 +139,10 @@ class ChatController {
         role: 'assistant' as const,
         text: llmResponse,
         audioUrl,
+        meta: {
+          llm_provider: LLM_PROVIDER,
+          tts_provider: TTS_PROVIDER,
+        }
       };
       
       const assistantMessage = await appendMessage(assistantMessageData);
