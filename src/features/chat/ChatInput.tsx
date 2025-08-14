@@ -39,29 +39,31 @@ export const ChatInput = () => {
       <div className="flex items-end gap-2 max-w-4xl mx-auto">
         <button 
           className="p-3 text-gray-500 hover:text-gray-900 transition-colors"
-          onClick={handleMicClick}
-        >
-          <Mic size={24} className={isRecording ? 'text-red-500' : ''} />
-        </button>
-        <button 
-          className="p-3 text-gray-500 hover:text-gray-900 transition-colors"
           onClick={() => setIsMuted(!isMuted)}
         >
           {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
         </button>
-        <TextareaAutosize
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Share your thoughts..."
-          className="flex-1 px-4 py-2.5 text-base font-light bg-white border-2 border-black rounded-3xl focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-black resize-none text-black placeholder-gray-500"
-          maxRows={6}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              handleSend();
-            }
-          }}
-        />
+        <div className="flex-1 relative">
+          <TextareaAutosize
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Share your thoughts..."
+            className="w-full px-4 py-2.5 pr-12 text-base font-light bg-white border-2 border-black rounded-3xl focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-black resize-none text-black placeholder-gray-500 overflow-y-auto"
+            maxRows={4}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+          />
+          <button 
+            className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 text-gray-500 hover:text-gray-900 transition-colors"
+            onClick={handleMicClick}
+          >
+            <Mic size={20} className={isRecording ? 'text-red-500' : ''} />
+          </button>
+        </div>
       </div>
       <div className="max-w-4xl mx-auto mt-2">
         <p className="text-xs text-gray-400 font-light text-center">
