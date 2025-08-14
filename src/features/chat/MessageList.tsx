@@ -16,8 +16,8 @@ const MessageItem = ({ message, isLast }: { message: Message; isLast: boolean })
       <div
         className={`px-4 py-3 rounded-2xl max-w-lg lg:max-w-xl ${
           isUser
-            ? 'bg-black text-white'
-            : 'bg-gray-100 text-gray-800'
+            ? 'bg-gray-200 text-black'
+            : 'text-black'
         }`}
       >
         <p className="text-base font-light leading-relaxed">{textContent}</p>
