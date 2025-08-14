@@ -3,9 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { Message } from '@/core/types';
 
 export const appendMessage = async (message: Omit<Message, 'id' | 'createdAt'>): Promise<Message> => {
+  const { conversationId, ...rest } = message;
   const { data, error } = await supabase
     .from('messages')
-    .insert(message)
+    .insert({
+      conversation_id: conversationId,
+      ...rest
+    })
     .select()
     .single();
 
