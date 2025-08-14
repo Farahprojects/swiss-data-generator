@@ -6,6 +6,7 @@ import { ttsService } from '@/services/voice/tts';
 import { audioPlayer } from '@/services/voice/audioPlayer';
 import { useChatStore } from '@/core/store';
 import { SilenceDetector } from './audioAnalyser';
+import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 
 export type ConversationState = 'listening' | 'processing' | 'replying';
 
@@ -15,10 +16,11 @@ export const useConversationFSM = () => {
   const addMessage = useChatStore((s) => s.addMessage);
   const [detector, setDetector] = useState<SilenceDetector | null>(null);
   const [fallbackTimer, setFallbackTimer] = useState<number | null>(null);
+  const isConversationOpen = useConversationUIStore((s) => s.isConversationOpen);
 
-  // start listening when entering listening state
+  // start listening when entering listening state & overlay open
   useEffect(() => {
-    if (state !== 'listening') return;
+    if (state !== 'listening' || !isConversationOpen) return;
     (async () => {
       await audioRecorder.start();
       // 20s hard cap fallback (Safari / permission quirks)
@@ -34,14 +36,22 @@ export const useConversationFSM = () => {
       if (fallbackTimer) clearTimeout(fallbackTimer);
       detector?.cleanup();
       setDetector(null);
+      // ensure mic is off when leaving listening or overlay closes
+      audioRecorder.cancel();
     };
-  }, [state]);
+  }, [state, isConversationOpen]);
 
   const handleSilence = async () => {
-    if (state !== 'listening') return;
+    if (state !== 'listening' || !isConversationOpen) return;
     if (fallbackTimer) clearTimeout(fallbackTimer);
     setState('processing');
-    const blob = await audioRecorder.stop();
+    let blob: Blob;
+    try {
+      blob = await audioRecorder.stop();
+    } catch {
+      // already stopped
+      blob = new Blob();
+    }
     detector?.cleanup();
 
     try {
@@ -52,11 +62,14 @@ export const useConversationFSM = () => {
       setState('replying');
       const audioUrl = await ttsService.speak(assistantMsg.id, assistantMsg.text);
       audioPlayer.play(audioUrl, () => {
-        setState('listening');
+        if (useConversationUIStore.getState().isConversationOpen) setState('listening');
       });
     } catch (err) {
       console.error(err);
-      setState('listening');
+      // brief cooldown to avoid tight error loops
+      setTimeout(() => {
+        if (useConversationUIStore.getState().isConversationOpen) setState('listening');
+      }, 2000);
     }
   };
 
