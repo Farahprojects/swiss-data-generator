@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 
@@ -10,6 +10,7 @@ interface ReportFlowCheckerProps {
 }
 
 export const ReportFlowChecker = ({ guestId, name, email, onPaid }: ReportFlowCheckerProps) => {
+  const hasTriggeredGenerationRef = useRef(false);
 
   useEffect(() => {
     if (!guestId) return;
@@ -29,9 +30,13 @@ export const ReportFlowChecker = ({ guestId, name, email, onPaid }: ReportFlowCh
       
       if (data?.payment_status === 'paid') {
         if(pollingInterval) clearInterval(pollingInterval);
-        console.log('[ReportFlowChecker] "Paid" status confirmed. Triggering report generation...');
-        supabase.functions.invoke('trigger-report-generation', { body: { guest_report_id: guestId } });
-        onPaid({ guestId, name: data.name || name, email: data.email || email });
+        
+        if (!hasTriggeredGenerationRef.current) {
+          hasTriggeredGenerationRef.current = true;
+          console.log('[ReportFlowChecker] "Paid" status confirmed. Triggering report generation...');
+          supabase.functions.invoke('trigger-report-generation', { body: { guest_report_id: guestId } });
+          onPaid({ guestId, name: data.name || name, email: data.email || email });
+        }
       } 
       else if (data?.payment_status === 'pending') {
         if(pollingInterval) clearInterval(pollingInterval);
