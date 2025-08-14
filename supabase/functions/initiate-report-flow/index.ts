@@ -21,9 +21,18 @@ const corsHeaders = {
 const json = (status: number, payload: unknown) =>
   new Response(JSON.stringify(payload), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 const ok = (p: unknown) => json(200, p);
-const bad = (m: string) => json(400, { error: m });
-const forbid = (m: string) => json(403, { error: m });
-const oops = (m: string) => json(500, { error: m });
+const bad = (m: string) => {
+  console.error('❌ [ERROR] Bad Request (400):', m);
+  return json(400, { error: m });
+};
+const forbid = (m: string) => {
+  console.error('❌ [ERROR] Forbidden (403):', m);
+  return json(403, { error: m });
+};
+const oops = (m: string) => {
+  console.error('❌ [ERROR] Internal Server Error (500):', m);
+  return json(500, { error: m });
+};
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
 // ---- Types ------------------------------------------------------------------
@@ -170,14 +179,32 @@ serve(async (req) => {
     const [{ data: priceData, error: priceError }, { data: promoData, error: promoError }] =
       await Promise.all([pricePromise, promoPromise]);
 
-    if (priceError || !priceData) return forbid('Price validation failed');
-    if (priceData.is_ai == null) return oops('Product configuration error: is_ai field not set');
-    if (promoError) return forbid('Promo code validation failed');
+    if (priceError || !priceData) {
+      console.error('❌ [ERROR] Price validation failed:', { priceError, reportType: trustedPricing.report_type });
+      return forbid('Price validation failed');
+    }
+    if (priceData.is_ai == null) {
+      console.error('❌ [ERROR] Product configuration error:', { reportType: trustedPricing.report_type, priceData });
+      return oops('Product configuration error: is_ai field not set');
+    }
+    if (promoError) {
+      console.error('❌ [ERROR] Promo code validation failed:', { promoError, promoCodeId: trustedPricing.promo_code_id });
+      return forbid('Promo code validation failed');
+    }
 
     const base = Number(priceData.unit_price_usd);
     const pct = promoData?.discount_percent ?? 0;
     const final = r2(Math.max(0, base - r2(base * pct / 100)));
-    if (final !== Number(trustedPricing.final_price_usd)) return forbid('Pricing mismatch detected');
+    if (final !== Number(trustedPricing.final_price_usd)) {
+      console.error('❌ [ERROR] Pricing mismatch detected:', {
+        calculated: final,
+        trusted: trustedPricing.final_price_usd,
+        base,
+        discount_percent: pct,
+        reportType: trustedPricing.report_type
+      });
+      return forbid('Pricing mismatch detected');
+    }
 
     const isFreeReport = final === 0;
     const isAI = priceData.is_ai;
@@ -201,7 +228,15 @@ serve(async (req) => {
     const { error: insertError } = await supabaseAdmin
       .from("guest_reports")
       .upsert(guestReportData, { onConflict: 'id', returning: 'minimal' });
-    if (insertError) return oops('Failed to create report record');
+    if (insertError) {
+      console.error('❌ [ERROR] Failed to create report record:', { 
+        insertError, 
+        guestReportId, 
+        reportType: reportData.reportType,
+        email: reportData.email
+      });
+      return oops('Failed to create report record');
+    }
 
     const ms = Date.now() - start;
     
@@ -233,6 +268,14 @@ serve(async (req) => {
       });
 
       if (checkoutError || !checkoutData?.url) {
+        console.error('❌ [ERROR] Failed to create checkout session:', { 
+          checkoutError, 
+          checkoutData, 
+          guestReportId, 
+          finalPrice: final,
+          reportType: reportData.reportType,
+          email: reportData.email
+        });
         return oops('Failed to create checkout session');
       }
 
@@ -254,6 +297,13 @@ serve(async (req) => {
       });
     }
   } catch (err: any) {
+    console.error('❌ [ERROR] Unhandled flow error:', {
+      error: err?.message || err,
+      stack: err?.stack,
+      timestamp: new Date().toISOString(),
+      userAgent: req.headers.get('user-agent'),
+      referer: req.headers.get('referer')
+    });
     debug('Unhandled flow error:', err?.message || err);
     return oops(err?.message || 'Internal server error');
   }
