@@ -204,13 +204,46 @@ serve(async (req) => {
     if (insertError) return oops('Failed to create report record');
 
     const ms = Date.now() - start;
-    
+
+    if (isFreeReport) {
+      console.log('✅ [PERF] Free report initiated', {
+        timestamp: new Date().toISOString(),
+        guestReportId,
+        processing_time_ms: ms,
+        reportType: reportData.reportType
+      });
+
+      return ok({
+        guestReportId,
+        paymentStatus: 'paid',
+        name: reportData.name,
+        email: reportData.email,
+        processing_time_ms: ms
+      });
+    } else {
+      // For paid reports, create the checkout session immediately.
+      const checkoutPayload = {
+        guest_report_id: guestReportId,
+        amount: final,
+        email: reportData.email,
+        description: `Astrology Report: ${reportData.reportType}`,
+        successUrl: `${SITE_URL}/report?guest_id=${guestReportId}&payment_status=success`,
+        cancelUrl: `${SITE_URL}/report?guest_id=${guestReportId}&payment_status=cancelled`,
+      };
       
       const { data: checkoutData, error: checkoutError } = await supabaseAdmin.functions.invoke('create-checkout', {
         body: checkoutPayload,
       });
 
       if (checkoutError || !checkoutData?.url) {
+        console.error('❌ [ERROR] Failed to create checkout session:', { 
+          checkoutError, 
+          checkoutData, 
+          guestReportId,
+          finalPrice: final,
+          reportType: reportData.reportType,
+          email: reportData.email
+        });
         return oops('Failed to create checkout session');
       }
 
