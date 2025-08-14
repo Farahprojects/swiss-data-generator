@@ -7,6 +7,12 @@ export const createConversation = async (reportId?: string): Promise<Conversatio
   const guestId = getGuestId();
   console.log('[createConversation] Called with reportId:', reportId, 'using guestId from session:', guestId);
   
+  // FAIL FAST: If no guestId, don't create a fallback
+  if (!guestId) {
+    console.error('[createConversation] FAIL FAST: No guestId available');
+    throw new Error('guestId is required for conversation creation');
+  }
+  
   // Log the exact values being inserted
   const insertData = { report_id: reportId, guest_id: guestId };
   console.log('[createConversation] INSERT data:', JSON.stringify(insertData));
@@ -61,6 +67,16 @@ export const listConversations = async (): Promise<Partial<Conversation>[]> => {
 
 export const getOrCreateConversation = async (guestId: string, reportId: string): Promise<{ conversationId: string }> => {
   console.log('[getOrCreateConversation] Called with guestId:', guestId, 'reportId:', reportId);
+  
+  // FAIL FAST: Validate inputs
+  if (!guestId) {
+    console.error('[getOrCreateConversation] FAIL FAST: guestId is required');
+    throw new Error('guestId is required for conversation creation');
+  }
+  if (!reportId) {
+    console.error('[getOrCreateConversation] FAIL FAST: reportId is required');
+    throw new Error('reportId is required for conversation creation');
+  }
   
   // Try to find existing conversation
   const { data: existing, error: fetchError } = await supabase

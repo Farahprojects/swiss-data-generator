@@ -30,15 +30,18 @@ serve(async (req) => {
     }
     
     // 1. Save the user's message first
-    console.log("[llm-handler] Inserting user message into DB.");
+    console.log("[llm-handler] Inserting user message into DB with conversation_id:", conversationId);
+    const messageInsertData = {
+      conversation_id: conversationId,
+      role: 'user',
+      text: userMessage.text,
+      meta: userMessage.meta || {},
+    };
+    console.log("[llm-handler] Message INSERT data:", JSON.stringify(messageInsertData));
+    
     const { data: newUserMessage, error: userMessageError } = await supabaseAdmin
       .from('messages')
-      .insert({
-        conversation_id: conversationId,
-        role: 'user',
-        text: userMessage.text,
-        meta: userMessage.meta || {},
-      })
+      .insert(messageInsertData)
       .select()
       .single();
 
@@ -91,15 +94,18 @@ serve(async (req) => {
     console.log("[llm-handler] Received successful response from OpenAI.");
 
     // 4. Save the assistant's message
-    console.log("[llm-handler] Inserting assistant message into DB.");
+    console.log("[llm-handler] Inserting assistant message into DB with conversation_id:", conversationId);
+    const assistantMessageInsertData = {
+      conversation_id: conversationId,
+      role: 'assistant',
+      text: assistantResponseText,
+      meta: { llm_provider: "openai", model: OPENAI_MODEL },
+    };
+    console.log("[llm-handler] Assistant message INSERT data:", JSON.stringify(assistantMessageInsertData));
+    
     const { data: newAssistantMessage, error: assistantMessageError } = await supabaseAdmin
       .from('messages')
-      .insert({
-        conversation_id: conversationId,
-        role: 'assistant',
-        text: assistantResponseText,
-        meta: { llm_provider: "openai", model: OPENAI_MODEL },
-      })
+      .insert(assistantMessageInsertData)
       .select()
       .single();
 

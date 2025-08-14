@@ -40,16 +40,8 @@ class ChatController {
     
     let { conversationId, messages } = useChatStore.getState();
     if (!conversationId) {
-      console.log('[ChatController] sendTextMessage: No conversationId, calling createConversation()');
-      try {
-        const newConversation = await createConversation();
-        console.log('[ChatController] sendTextMessage: createConversation succeeded:', newConversation.id);
-        conversationId = newConversation.id;
-        useChatStore.getState().startConversation(conversationId);
-      } catch (error) {
-        console.error('[ChatController] sendTextMessage: createConversation failed:', error);
-        throw error; // Re-throw to prevent silent failure
-      }
+      console.error('[ChatController] sendTextMessage: FAIL FAST - No conversationId in store. This should be set by useChat hook.');
+      throw new Error('No conversation established. Cannot send message.');
     }
     
     // Optimistically add user message to UI
@@ -105,16 +97,8 @@ class ChatController {
     
     let { conversationId } = useChatStore.getState();
     if (!conversationId) {
-      console.log('[ChatController] startTurn: No conversationId, calling createConversation()');
-      try {
-        const newConversation = await createConversation();
-        console.log('[ChatController] startTurn: createConversation succeeded:', newConversation.id);
-        conversationId = newConversation.id;
-        useChatStore.getState().startConversation(conversationId);
-      } catch (error) {
-        console.error('[ChatController] startTurn: createConversation failed:', error);
-        throw error; // Re-throw to prevent silent failure
-      }
+      console.error('[ChatController] startTurn: FAIL FAST - No conversationId in store. This should be set by useChat hook.');
+      throw new Error('No conversation established. Cannot start turn.');
     }
     
     useChatStore.getState().setStatus('recording');
