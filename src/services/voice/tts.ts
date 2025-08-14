@@ -2,28 +2,30 @@
 import { supabase } from '@/integrations/supabase/client';
 
 class TtsService {
-  async speak(text: string): Promise<string> {
-    console.log(`[TTS] Generating audio for "${text}"...`);
+  async speak(messageId: string, text: string): Promise<string> {
+    console.log(`[TTS] Requesting audio for message ${messageId}...`);
 
     const { data, error } = await supabase.functions.invoke('tts-handler', {
-      body: { text },
+      body: { messageId, text },
     });
 
     if (error) {
       console.error("[TTS] Error invoking tts-handler:", error);
       throw new Error(`Error invoking tts-handler: ${error.message}`);
     }
-
-    if (data instanceof Blob) {
-      console.log("[TTS] Received audio blob, creating URL.");
-      const audioUrl = URL.createObjectURL(data);
-      return audioUrl;
-    } else {
-      console.error("[TTS] Response was not a blob. Full response:", data);
-      // Attempt to parse the error if it's a JSON object
-      const errorMessage = data?.error || "Unknown TTS error: Response was not a blob.";
-      throw new Error(errorMessage);
+    
+    if (data.error) {
+      console.error("[TTS] tts-handler returned an error:", data.error);
+      throw new Error(`tts-handler returned an error: ${data.error}`);
     }
+
+    if (!data.audioUrl) {
+      console.error("[TTS] Response did not contain an audioUrl.");
+      throw new Error("Response from tts-handler was invalid.");
+    }
+
+    console.log(`[TTS] Received audio URL: ${data.audioUrl}`);
+    return data.audioUrl;
   }
 }
 

@@ -67,7 +67,7 @@ class ChatController {
 
       // Generate audio but don't play it automatically
       if (assistantMessage.text) {
-        ttsService.speak(assistantMessage.text).then(audioUrl => {
+        ttsService.speak(assistantMessage.id, assistantMessage.text).then(audioUrl => {
           console.log("[ChatController] Pre-generated audio for text message.");
           // Optionally update the message with the audioUrl if needed
         }).catch(err => console.error("[ChatController] Failed to pre-generate audio:", err));
@@ -144,7 +144,7 @@ class ChatController {
 
       // For voice, we play the audio automatically
       if (assistantMessage.text) {
-        const audioUrl = await ttsService.speak(assistantMessage.text);
+        const audioUrl = await ttsService.speak(assistantMessage.id, assistantMessage.text);
         // Optionally update the message with the audioUrl
         audioPlayer.play(audioUrl, () => {
           useChatStore.getState().setStatus('idle');
