@@ -7,13 +7,28 @@ import { llmService } from '@/services/llm/chat';
 import { ttsService } from '@/services/voice/tts';
 import { Message } from '@/core/types';
 import { v4 as uuidv4 } from 'uuid';
+import { createConversation, getConversation } from '@/services/api/conversations';
+import { appendMessage } from '@/services/api/messages';
 
 class ChatController {
   private isTurnActive = false;
+  
+  async loadConversation(id: string) {
+    const conversation = await getConversation(id);
+    useChatStore.getState().startConversation(conversation.id);
+    conversation.messages.forEach(msg => useChatStore.getState().addMessage(msg));
+  }
 
-  async startTurn() {
+  async startTurn(reportId?: string) {
     if (this.isTurnActive) return;
     this.isTurnActive = true;
+    
+    let { conversationId } = useChatStore.getState();
+    if (!conversationId) {
+      const newConversation = await createConversation(reportId);
+      conversationId = newConversation.id;
+      useChatStore.getState().startConversation(conversationId);
+    }
     
     useChatStore.getState().setStatus('recording');
     try {
@@ -33,14 +48,14 @@ class ChatController {
       
       const transcription = await sttService.transcribe(audioBlob);
 
-      const userMessage: Message = {
-        id: uuidv4(),
-        conversationId: useChatStore.getState().conversationId || 'local',
-        role: 'user',
+      const userMessageData = {
+        conversationId: useChatStore.getState().conversationId!,
+        role: 'user' as const,
         text: transcription,
         audioUrl: URL.createObjectURL(audioBlob),
-        createdAt: new Date().toISOString(),
       };
+      
+      const userMessage = await appendMessage(userMessageData);
       useChatStore.getState().addMessage(userMessage);
 
       useChatStore.getState().setStatus('thinking');
@@ -52,14 +67,14 @@ class ChatController {
 
       const audioUrl = await ttsService.speak(llmResponse);
 
-      const assistantMessage: Message = {
-        id: uuidv4(),
-        conversationId: useChatStore.getState().conversationId || 'local',
-        role: 'assistant',
+      const assistantMessageData = {
+        conversationId: useChatStore.getState().conversationId!,
+        role: 'assistant' as const,
         text: llmResponse,
         audioUrl,
-        createdAt: new Date().toISOString(),
       };
+      
+      const assistantMessage = await appendMessage(assistantMessageData);
       useChatStore.getState().addMessage(assistantMessage);
 
       audioPlayer.play(audioUrl, () => {

@@ -25,6 +25,9 @@ import { PublicCoachWebsite } from './components/website-builder/PublicCoachWebs
 import PreviewWebsite from './pages/PreviewWebsite';
 import { CoachReportPage } from './components/website-builder/CoachReportPage';
 
+// Lazy load chat screen
+const ReportChatScreen = lazy(() => import('./screens/ReportChatScreen'));
+
 import { AuthProvider } from './contexts/AuthContext';
 import NavigationStateProvider from '@/contexts/NavigationStateContext';
 import { SettingsModalProvider } from '@/contexts/SettingsModalContext';
@@ -109,6 +112,16 @@ function App() {
                 <Route path="/preview/:previewId" element={<PreviewWebsite />} />
                 <Route path="/:slug/vibe" element={<CoachReportPage />} />
                 <Route path="/:slug" element={<PublicCoachWebsite />} />
+
+                {/* Chat Route */}
+                <Route 
+                  path="/chat/:reportId?" 
+                  element={
+                    <Suspense fallback={<div>Loading Chat...</div>}>
+                      <ReportChatScreen />
+                    </Suspense>
+                  } 
+                />
 
                 {/* Authenticated Routes */}
                 <Route 
