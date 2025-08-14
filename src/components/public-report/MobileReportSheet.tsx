@@ -61,7 +61,6 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
   const [currentStep, setCurrentStep] = React.useState(1);
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [hasTimedOut, setHasTimedOut] = React.useState(false);
-  const submissionRef = useRef(false);
 
   const nextStep = () => { if (currentStep < totalSteps) setCurrentStep(s => s + 1); };
   const prevStep = () => { if (currentStep > 1) setCurrentStep(s => s - 1); };
@@ -72,9 +71,6 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
 
   // Direct submission to initiate-report-flow
   const handleDirectSubmission = async (formData: ReportFormData, trustedPricing: TrustedPricingObject) => {
-    if (submissionRef.current) return; // Prevent double submission
-    submissionRef.current = true;
-
     setIsProcessing(true);
     try {
       const transformedReportData = {
@@ -130,7 +126,6 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
       console.error('❌ [MOBILE] Submission exception:', err);
     } finally {
       setIsProcessing(false);
-      submissionRef.current = false; // Allow submission again
     }
   };
 
