@@ -35,6 +35,10 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
     const [manualCheckFailed, setManualCheckFailed] = useState(false);
     const [modalOpened, setModalOpened] = useState(false);
 
+    const handleTimeout = () => {
+      setShowError(true);
+    };
+
     // --- Main Polling Mechanism ---
     useEffect(() => {
       if (!guestId) return;
@@ -50,13 +54,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
         if (elapsedTime >= POLLING_TIMEOUT_MS) {
           clearInterval(intervalId);
           console.error(`[SuccessScreen] Polling timed out for guestId: ${guestId}`);
-          const loggedCaseNumber = await logUserError({
-            guestReportId: guestId,
-            errorType: 'POLLING_TIMEOUT',
-            errorMessage: `Polling for report signal timed out after ${POLLING_TIMEOUT_MS / 1000} seconds.`,
-          });
-          setCaseNumber(loggedCaseNumber);
-          setShowError(true);
+          handleTimeout();
           return;
         }
 
@@ -75,8 +73,9 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
 
         if (data && data.length > 0) {
           console.log(`[SuccessScreen] Polling found signal for ${guestId}. Opening report.`);
-          openReportModal(guestId);
           clearInterval(intervalId); // Stop polling once the signal is found
+          setModalOpened(true);
+          openReportModal(guestId);
         }
       }, 1000); // Poll every 1 second
 
@@ -95,19 +94,31 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
           .from('report_ready_signals')
           .select('id')
           .eq('guest_report_id', guestId)
-          .limit(1);
+          .single();
 
-        if (!error && data && data.length > 0) {
+        if (!error && data) {
           openReportModal(guestId);
           setModalOpened(true);
         } else {
-          if (error) {
-            console.error("Error manually checking for report signal:", error);
-          }
+          // If the manual check fails, now we log the error.
+          console.error("Manual check for report signal failed.", error);
+          const loggedCaseNumber = await logUserError({
+            guestReportId: guestId,
+            errorType: 'MANUAL_CHECK_FAILURE',
+            errorMessage: `User's manual check failed after initial polling timeout.`,
+          });
+          setCaseNumber(loggedCaseNumber);
           setManualCheckFailed(true);
         }
       } catch (e) {
-        console.error("Failed to manually check for report", e);
+        console.error("Exception during manual check for report", e);
+        // Also log error on exception
+        const loggedCaseNumber = await logUserError({
+            guestReportId: guestId,
+            errorType: 'MANUAL_CHECK_EXCEPTION',
+            errorMessage: `An exception occurred during the user's manual check.`,
+        });
+        setCaseNumber(loggedCaseNumber);
         setManualCheckFailed(true);
       } finally {
         setIsChecking(false);
