@@ -26,7 +26,9 @@ const ReportViewerActions: React.FC<{ guestId: string }> = ({ guestId }) => {
   const [isDownloading, setIsDownloading] = useState(false);
 
   const handleDownload = async () => {
+    console.log('[PDF] Download initiated for guestId:', guestId);
     if (!guestId) {
+      console.error('[PDF] Download failed: guestId is missing.');
       toast({
         variant: "destructive",
         title: "Download Failed",
@@ -42,32 +44,57 @@ const ReportViewerActions: React.FC<{ guestId: string }> = ({ guestId }) => {
     });
 
     try {
-      const { data, error } = await supabase.functions.invoke('download-report-pdf', {
+      console.log('[PDF] Invoking "download-report-pdf" function...');
+      const { data, error, ...rest } = await supabase.functions.invoke('download-report-pdf', {
         body: { guest_report_id: guestId },
       });
+      console.log('[PDF] Function response:', { data, error, ...rest });
 
       if (error) {
+        console.error('[PDF] Function invocation error object:', error);
         // The edge function streams the response, so check for a non-blob error first
         try {
-          const errorJson = JSON.parse(new TextDecoder().decode(data));
+          const errorText = new TextDecoder().decode(data);
+          console.error(`[PDF] Function returned error payload: ${errorText}`);
+          const errorJson = JSON.parse(errorText);
           if (errorJson.error) {
             throw new Error(errorJson.error);
           }
-        } catch {
+        } catch (e) {
+          console.error('[PDF] Could not parse error response. Defaulting to generic message.', e);
           // If parsing fails, it's likely a direct error message
-          throw new Error(error.message || 'An unknown error occurred.');
+          throw new Error(error.message || 'An unknown error occurred during function execution.');
         }
       }
       
+      if (!data) {
+        throw new Error('No data received from the PDF generation service.');
+      }
+
+      console.log('[PDF] Received data, creating blob...');
       const blob = new Blob([data], { type: 'application/pdf' });
+      console.log(`[PDF] Blob created. Size: ${blob.size} bytes`);
+
+      if (blob.size === 0) {
+        console.error('[PDF] Blob size is 0. The PDF is empty.');
+        throw new Error('The generated PDF is empty.');
+      }
+
       const url = window.URL.createObjectURL(blob);
+      console.log('[PDF] Created object URL:', url);
+      
       const a = document.createElement('a');
       a.href = url;
       a.download = `Therai-Report-${guestId.substring(0, 8)}.pdf`; // A fallback filename
+      console.log('[PDF] Triggering download with filename:', a.download);
+      
       document.body.appendChild(a);
       a.click();
+      
+      // Cleanup
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
+      console.log('[PDF] Download link clicked and resources cleaned up.');
 
     } catch (error: any) {
       console.error("PDF Download Error:", error);
