@@ -4,23 +4,32 @@ import { Message } from '@/core/types';
 
 interface LlmRequest {
   conversationId: string;
-  reportId?: string;
-  messages: Message[];
+  userMessage: {
+    text: string;
+    meta?: Record<string, any>;
+  };
 }
 
 class LlmService {
-  async chat(request: LlmRequest): Promise<string> {
-    console.log(`[LLM] Getting response for conversation ${request.conversationId}...`);
+  async chat(request: LlmRequest): Promise<Message> {
+    console.log(`[LLM] Sending message for conversation ${request.conversationId}...`);
     
     const { data, error } = await supabase.functions.invoke('llm-handler', {
-      body: { messages: request.messages },
+      body: {
+        conversationId: request.conversationId,
+        userMessage: request.userMessage,
+      },
     });
 
     if (error) {
       throw new Error(`Error invoking llm-handler: ${error.message}`);
     }
 
-    return data.response;
+    if (data.error) {
+      throw new Error(`llm-handler returned an error: ${data.error}`);
+    }
+
+    return data as Message;
   }
 }
 

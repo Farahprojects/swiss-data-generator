@@ -5,13 +5,14 @@ import { OPENAI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY } from "../_shared/c
 
 const OPENAI_MODEL = "gpt-4o";
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions";
-const MAX_API_RETRIES = 3;
-const API_TIMEOUT_MS = 30000;
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Initialize Supabase client with service role key
+const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 serve(async (req) => {
   console.log("[llm-handler] Received request");
@@ -22,31 +23,55 @@ serve(async (req) => {
   }
 
   try {
-    console.log("[llm-handler] Processing request body");
-    const { messages } = await req.json();
+    const { conversationId, userMessage } = await req.json();
 
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      console.error("[llm-handler] Invalid or empty messages array in request");
-      throw new Error("Invalid or empty messages array in request");
+    if (!conversationId || !userMessage) {
+      throw new Error("Missing 'conversationId' or 'userMessage' in request body.");
+    }
+    
+    // 1. Save the user's message first
+    console.log("[llm-handler] Inserting user message into DB.");
+    const { data: newUserMessage, error: userMessageError } = await supabaseAdmin
+      .from('messages')
+      .insert({
+        conversation_id: conversationId,
+        role: 'user',
+        text: userMessage.text,
+        meta: userMessage.meta || {},
+      })
+      .select()
+      .single();
+
+    if (userMessageError) {
+      console.error("[llm-handler] Error saving user message:", userMessageError);
+      throw new Error(`Failed to save user message: ${userMessageError.message}`);
+    }
+    console.log("[llm-handler] User message saved successfully.");
+
+    // 2. Fetch the conversation history
+    console.log("[llm-handler] Fetching conversation history from DB.");
+    const { data: messages, error: historyError } = await supabaseAdmin
+      .from('messages')
+      .select('role, text')
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: true });
+
+    if (historyError) {
+      console.error("[llm-handler] Error fetching conversation history:", historyError);
+      throw new Error(`Failed to fetch conversation history: ${historyError.message}`);
     }
 
+    // 3. Call OpenAI API
     const systemPrompt = { role: "system", content: "You are a helpful assistant." };
-
-    // Map `text` to `content` for the OpenAI API
-    const apiMessages = messages.map((msg: { role: string; text: string }) => ({
-      role: msg.role,
-      content: msg.text,
-    }));
-
+    const apiMessages = messages.map(msg => ({ role: msg.role, content: msg.text }));
+    
     const requestBody = {
       model: OPENAI_MODEL,
       messages: [systemPrompt, ...apiMessages],
       temperature: 0.7,
     };
 
-    console.log(`[llm-handler] Sending request to OpenAI with ${messages.length} messages.`);
-    console.log("[llm-handler] OpenAI Request Body:", JSON.stringify(requestBody, null, 2));
-
+    console.log(`[llm-handler] Sending request to OpenAI with ${apiMessages.length} messages.`);
     const response = await fetch(OPENAI_ENDPOINT, {
       method: "POST",
       headers: {
@@ -55,24 +80,41 @@ serve(async (req) => {
       },
       body: JSON.stringify(requestBody),
     });
-
-    console.log(`[llm-handler] Received response from OpenAI with status: ${response.status}`);
-
+    
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`[llm-handler] OpenAI API error response: ${errorText}`);
       throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
     }
-
+    
     const data = await response.json();
-    console.log("[llm-handler] Successfully parsed OpenAI response.");
-    const assistantResponse = data.choices[0].message.content;
+    const assistantResponseText = data.choices[0].message.content;
+    console.log("[llm-handler] Received successful response from OpenAI.");
 
-    console.log("[llm-handler] Sending successful response to client.");
-    return new Response(JSON.stringify({ response: assistantResponse }), {
+    // 4. Save the assistant's message
+    console.log("[llm-handler] Inserting assistant message into DB.");
+    const { data: newAssistantMessage, error: assistantMessageError } = await supabaseAdmin
+      .from('messages')
+      .insert({
+        conversation_id: conversationId,
+        role: 'assistant',
+        text: assistantResponseText,
+        meta: { llm_provider: "openai", model: OPENAI_MODEL },
+      })
+      .select()
+      .single();
+
+    if (assistantMessageError) {
+      console.error("[llm-handler] Error saving assistant message:", assistantMessageError);
+      throw new Error(`Failed to save assistant message: ${assistantMessageError.message}`);
+    }
+
+    // 5. Return the newly created assistant message
+    console.log("[llm-handler] Assistant message saved. Returning to client.");
+    return new Response(JSON.stringify(newAssistantMessage), {
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
       status: 200,
     });
+
   } catch (err) {
     console.error("[llm-handler] An unexpected error occurred:", err);
     return new Response(JSON.stringify({ error: err.message, stack: err.stack }), {

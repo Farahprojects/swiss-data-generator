@@ -7,8 +7,9 @@ import { llmService } from '@/services/llm/chat';
 import { ttsService } from '@/services/voice/tts';
 import { Message } from '@/core/types';
 import { v4 as uuidv4 } from 'uuid';
-import { createConversation, getConversationByReportId } from '@/services/api/conversations';
-import { appendMessage } from '@/services/api/messages';
+import { createConversation } from '@/services/api/conversations';
+// No longer need appendMessage from the client
+// import { appendMessage } from '@/services/api/messages';
 import { STT_PROVIDER, LLM_PROVIDER, TTS_PROVIDER } from '@/config/env';
 
 class ChatController {
@@ -28,77 +29,55 @@ class ChatController {
     if (this.isTurnActive) return;
     this.isTurnActive = true;
     
-    let { conversationId } = useChatStore.getState();
+    let { conversationId, messages } = useChatStore.getState();
     if (!conversationId) {
-      // If there's no active conversation, create one.
       const newConversation = await createConversation();
       conversationId = newConversation.id;
       useChatStore.getState().startConversation(conversationId);
     }
     
-    const userMessageData = {
-      conversationId: conversationId!,
+    // Optimistically add user message to UI
+    const tempUserMessage: Message = {
+      id: uuidv4(),
+      conversationId,
       role: 'user' as const,
       text,
-      meta: {
-        stt_provider: STT_PROVIDER,
-      }
+      createdAt: new Date().toISOString(),
     };
+    useChatStore.getState().addMessage(tempUserMessage);
     
-    try {
-      console.log("[ChatController] Appending user message to DB:", userMessageData);
-      const userMessage = await appendMessage(userMessageData);
-      useChatStore.getState().addMessage(userMessage);
-    } catch (error) {
-      console.error("[ChatController] Failed to save user message:", error);
-      useChatStore.getState().setError("Failed to save your message.");
-      this.isTurnActive = false;
-      return;
-    }
-
     useChatStore.getState().setStatus('thinking');
 
     try {
-      console.log("[ChatController] Calling LLM service.");
-      const llmResponse = await llmService.chat({
-        conversationId,
-        messages: useChatStore.getState().messages,
-      });
-      console.log("[ChatController] Received LLM response:", llmResponse);
-      
-      console.log("[ChatController] Calling TTS service.");
-      const audioUrl = await ttsService.speak(llmResponse);
-      console.log("[ChatController] Received audio URL:", audioUrl);
-      
-      const assistantMessageData = {
-        conversationId,
-        role: 'assistant' as const,
-        text: llmResponse,
-        audioUrl,
-        meta: {
-          llm_provider: LLM_PROVIDER,
-          tts_provider: TTS_PROVIDER,
-        }
+      const userMessageForApi = {
+        text,
+        meta: { stt_provider: 'text_input' }
       };
+
+      console.log("[ChatController] Calling new LLM service.");
+      const assistantMessage = await llmService.chat({
+        conversationId,
+        userMessage: userMessageForApi,
+      });
+      console.log("[ChatController] Received complete assistant message:", assistantMessage);
       
-      try {
-        console.log("[ChatController] Appending assistant message to DB:", assistantMessageData);
-        const assistantMessage = await appendMessage(assistantMessageData);
-        useChatStore.getState().addMessage(assistantMessage);
-      } catch (error) {
-        console.error("[ChatController] Failed to save assistant message:", error);
-        useChatStore.getState().setError("Failed to save the AI's response.");
-        this.isTurnActive = false;
-        return;
+      // Replace temp user message with the real one from the DB later if needed, for now this is fine.
+      // We get the final assistant message from the handler.
+      useChatStore.getState().addMessage(assistantMessage);
+
+      // Generate audio but don't play it automatically
+      if (assistantMessage.text) {
+        ttsService.speak(assistantMessage.text).then(audioUrl => {
+          console.log("[ChatController] Pre-generated audio for text message.");
+          // Optionally update the message with the audioUrl if needed
+        }).catch(err => console.error("[ChatController] Failed to pre-generate audio:", err));
       }
 
-      // Set status to idle and release turn lock *after* saving the message
-      useChatStore.getState().setStatus('idle');
-      this.isTurnActive = false;
-      
     } catch (error) {
       console.error("[ChatController] Error during AI turn:", error);
       useChatStore.getState().setError("An error occurred while getting the AI's response.");
+    } finally {
+      useChatStore.getState().setStatus('idle');
       this.isTurnActive = false;
     }
   }
@@ -135,74 +114,44 @@ class ChatController {
     useChatStore.getState().setStatus('transcribing');
     try {
       const audioBlob = await audioRecorder.stop();
-      
       const transcription = await sttService.transcribe(audioBlob);
 
-      const userMessageData = {
+      // Optimistically add user message to UI
+      const tempUserMessage: Message = {
+        id: uuidv4(),
         conversationId: useChatStore.getState().conversationId!,
         role: 'user' as const,
         text: transcription,
         audioUrl: URL.createObjectURL(audioBlob),
-        meta: {
-          stt_provider: STT_PROVIDER,
-        }
+        createdAt: new Date().toISOString(),
       };
-      
-      try {
-        console.log("[ChatController] Appending user (voice) message to DB:", userMessageData);
-        const userMessage = await appendMessage(userMessageData);
-        useChatStore.getState().addMessage(userMessage);
-      } catch (error) {
-        console.error("[ChatController] Failed to save user (voice) message:", error);
-        useChatStore.getState().setError("Failed to save your message.");
-        this.isTurnActive = false;
-        return;
-      }
+      useChatStore.getState().addMessage(tempUserMessage);
 
       useChatStore.getState().setStatus('thinking');
 
-      try {
-        console.log("[ChatController] Calling LLM service (voice).");
-        const llmResponse = await llmService.chat({
-          conversationId: useChatStore.getState().conversationId || 'local',
-          messages: useChatStore.getState().messages,
-        });
-        console.log("[ChatController] Received LLM response (voice):", llmResponse);
+      const userMessageForApi = {
+        text: transcription,
+        meta: { stt_provider: STT_PROVIDER }
+      };
 
-        console.log("[ChatController] Calling TTS service (voice).");
-        const audioUrl = await ttsService.speak(llmResponse);
-        console.log("[ChatController] Received audio URL (voice):", audioUrl);
+      const assistantMessage = await llmService.chat({
+        conversationId: useChatStore.getState().conversationId!,
+        userMessage: userMessageForApi,
+      });
 
-        const assistantMessageData = {
-          conversationId: useChatStore.getState().conversationId!,
-          role: 'assistant' as const,
-          text: llmResponse,
-          audioUrl,
-          meta: {
-            llm_provider: LLM_PROVIDER,
-            tts_provider: TTS_PROVIDER,
-          }
-        };
-        
-        try {
-          console.log("[ChatController] Appending assistant message to DB (voice):", assistantMessageData);
-          const assistantMessage = await appendMessage(assistantMessageData);
-          useChatStore.getState().addMessage(assistantMessage);
-        } catch (error) {
-          console.error("[ChatController] Failed to save assistant message (voice):", error);
-          useChatStore.getState().setError("Failed to save the AI's response.");
-          this.isTurnActive = false;
-          return;
-        }
+      // Add the final assistant message
+      useChatStore.getState().addMessage(assistantMessage);
 
-        console.log("[ChatController] Playing audio response (voice).");
+      // For voice, we play the audio automatically
+      if (assistantMessage.text) {
+        const audioUrl = await ttsService.speak(assistantMessage.text);
+        // Optionally update the message with the audioUrl
         audioPlayer.play(audioUrl, () => {
           useChatStore.getState().setStatus('idle');
           this.isTurnActive = false;
         });
-      } catch (error) {
-        console.error("[ChatController] Error during AI turn (voice):", error);
-        useChatStore.getState().setError("An error occurred while processing your request.");
+      } else {
+        useChatStore.getState().setStatus('idle');
         this.isTurnActive = false;
       }
 
