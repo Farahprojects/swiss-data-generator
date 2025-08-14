@@ -1,24 +1,59 @@
 import { useState, useEffect } from 'react';
+import { audioRecorder } from '@/services/voice/recorder';
+import { sttService } from '@/services/voice/stt';
+import { llmService } from '@/services/llm/chat';
+import { ttsService } from '@/services/voice/tts';
+import { audioPlayer } from '@/services/voice/audioPlayer';
+import { useChatStore } from '@/core/store';
+import { SilenceDetector } from './audioAnalyser';
 
-type ConversationState = 'listening' | 'processing' | 'replying';
+export type ConversationState = 'listening' | 'processing' | 'replying';
 
 export const useConversationFSM = () => {
   const [state, setState] = useState<ConversationState>('listening');
+  const conversationId = useChatStore((s) => s.conversationId)!;
+  const addMessage = useChatStore((s) => s.addMessage);
+  const [detector, setDetector] = useState<SilenceDetector | null>(null);
 
-  /**
-   * Transition helpers – for now they simply change state, but we can wire
-   * actual STT/LLM/TTS promises later.
-   */
-  const toProcessing = () => setState('processing');
-  const toReplying = () => setState('replying');
-  const toListening = () => setState('listening');
-
-  // Demo effect: auto-cycle through states for now (will be replaced)
+  // start listening when entering listening state
   useEffect(() => {
-    if (state === 'listening') return;
-    const id = setTimeout(() => setState('listening'), 2500);
-    return () => clearTimeout(id);
+    if (state !== 'listening') return;
+    (async () => {
+      await audioRecorder.start();
+      const stream = (audioRecorder as any).getStream?.() as MediaStream | undefined;
+      if (stream) {
+        const det = new SilenceDetector(() => handleSilence());
+        await det.attachStream(stream);
+        setDetector(det);
+      }
+    })();
+    return () => {
+      detector?.cleanup();
+      setDetector(null);
+    };
   }, [state]);
 
-  return { state, toProcessing, toReplying, toListening };
+  const handleSilence = async () => {
+    if (state !== 'listening') return;
+    setState('processing');
+    const blob = await audioRecorder.stop();
+    detector?.cleanup();
+
+    try {
+      const transcription = await sttService.transcribe(blob);
+      addMessage({ id: crypto.randomUUID(), conversationId, role: 'user', text: transcription, createdAt: new Date().toISOString() });
+      const assistantMsg = await llmService.chat({ conversationId, userMessage: { text: transcription } });
+      addMessage(assistantMsg);
+      setState('replying');
+      const audioUrl = await ttsService.speak(assistantMsg.id, assistantMsg.text);
+      audioPlayer.play(audioUrl, () => {
+        setState('listening');
+      });
+    } catch (err) {
+      console.error(err);
+      setState('listening');
+    }
+  };
+
+  return { state };
 };
