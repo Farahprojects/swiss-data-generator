@@ -21,9 +21,7 @@ import StripeReturn from './pages/StripeReturn';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ResetPassword from './pages/auth/Password';
-import { PublicCoachWebsite } from './components/website-builder/PublicCoachWebsite';
 import PreviewWebsite from './pages/PreviewWebsite';
-import { CoachReportPage } from './components/website-builder/CoachReportPage';
 
 import { AuthProvider } from './contexts/AuthContext';
 import NavigationStateProvider from '@/contexts/NavigationStateContext';
@@ -118,10 +116,7 @@ function App() {
                   } 
                 />
 
-                {/* Catch-all routes - must be last */}
-                <Route path="/:slug/vibe" element={<CoachReportPage />} />
-                <Route path="/:slug" element={<PublicCoachWebsite />} />
-                
+                {/* Slug routes temporarily removed */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </div>
