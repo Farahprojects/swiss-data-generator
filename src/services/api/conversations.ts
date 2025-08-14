@@ -40,3 +40,30 @@ export const listConversations = async (): Promise<Partial<Conversation>[]> => {
   if (error) throw new Error(error.message);
   return data;
 };
+
+export const getOrCreateConversation = async (guestId: string, reportId: string): Promise<{ conversationId: string }> => {
+  // Try to find existing conversation
+  const { data: existing, error: fetchError } = await supabase
+    .from('conversations')
+    .select('id')
+    .eq('guest_id', guestId)
+    .eq('report_id', reportId)
+    .limit(1)
+    .maybeSingle();
+
+  if (fetchError) throw new Error(fetchError.message);
+
+  if (existing) {
+    return { conversationId: existing.id };
+  }
+
+  // Create new conversation
+  const { data: newConv, error: createError } = await supabase
+    .from('conversations')
+    .insert({ guest_id: guestId, report_id: reportId })
+    .select('id')
+    .single();
+
+  if (createError) throw new Error(createError.message);
+  return { conversationId: newConv.id };
+};

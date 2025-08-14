@@ -475,7 +475,9 @@ export const ReportViewer = ({
   const navigate = useNavigate();
 
   const handleOpenChatGPTModal = async () => {
-    navigate('/chat');
+    const guestId = reportData.guest_report?.id;
+    const reportId = reportData.guest_report?.id; // Same as guestId in this context
+    navigate('/chat', { state: { guestId, reportId } });
   };
 
   const handlePremiumFlow = async () => {
