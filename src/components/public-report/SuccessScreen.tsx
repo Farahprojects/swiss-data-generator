@@ -56,13 +56,8 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
         if (elapsedTime >= POLLING_TIMEOUT_MS) {
           clearInterval(intervalId);
           console.error(`[SuccessScreen] Polling timed out for guestId: ${guestId}`);
-          const loggedCaseNumber = await logUserError({
-            guestReportId: guestId,
-            errorType: 'POLLING_TIMEOUT',
-            errorMessage: `Polling for report signal timed out after ${POLLING_TIMEOUT_MS / 1000} seconds.`,
-          });
-          setCaseNumber(loggedCaseNumber);
-          setShowError(true);
+          // ONLY set the timeout flag. Do not show the error yet.
+          handleTimeout();
           return;
         }
 
@@ -95,7 +90,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
 
     const handleManualCheck = async () => {
       setIsChecking(true);
-      setManualCheckFailed(false);
+      setManualCheckFailed(false); // Reset this on each check
       try {
         const { data, error } = await supabase
           .from('report_ready_signals')
@@ -107,14 +102,25 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
           openReportModal(guestId);
           setModalOpened(true);
         } else {
-          if (error) {
-            console.error("Error manually checking for report signal:", error);
-          }
-          setManualCheckFailed(true);
+          // THIS is where the failure is now handled.
+          console.error("Manual check for report signal failed.", error);
+          const loggedCaseNumber = await logUserError({
+            guestReportId: guestId,
+            errorType: 'MANUAL_CHECK_FAILURE',
+            errorMessage: `User's manual check failed after initial polling timeout.`,
+          });
+          setCaseNumber(loggedCaseNumber);
+          setShowError(true); // Trigger the full error screen.
         }
       } catch (e) {
         console.error("Failed to manually check for report", e);
-        setManualCheckFailed(true);
+        const loggedCaseNumber = await logUserError({
+            guestReportId: guestId,
+            errorType: 'MANUAL_CHECK_EXCEPTION',
+            errorMessage: `An exception occurred during manual check: ${e.message}`,
+        });
+        setCaseNumber(loggedCaseNumber);
+        setShowError(true); // Also show error on exception
       } finally {
         setIsChecking(false);
       }
@@ -137,11 +143,6 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
                 There was a delay preparing the report for <span className="font-semibold">{name || 'you'}</span>. 
                 An error has been logged, and our team will investigate.
               </p>
-              {manualCheckFailed && (
-                <p className="text-sm text-amber-700 pt-2">
-                  We checked again, but your report is still being prepared. You can try again in a few moments, or return home.
-                </p>
-              )}
               {caseNumber && (
                 <p className="text-sm text-gray-500 pt-2">
                   Your case number is: <span className="font-semibold">{caseNumber}</span>
@@ -154,7 +155,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
           </div>
           <div className="pt-4">
             <Button 
-              onClick={manualCheckFailed ? () => clearSession({}) : handleManualCheck} 
+              onClick={handleManualCheck} 
               disabled={isChecking} 
               className="w-full"
             >
@@ -164,7 +165,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
                   Checking...
                 </>
               ) : (
-                manualCheckFailed ? "Return Home" : "Check Status Now"
+                "Check Status Now"
               )}
             </Button>
           </div>
