@@ -1,7 +1,7 @@
 // src/features/chat/ChatInput.tsx
 import React, { useState } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
-import { Mic, Send, Volume2, VolumeX } from 'lucide-react';
+import { Mic, Volume2, VolumeX } from 'lucide-react';
 import { useChatStore } from '@/core/store';
 import { chatController } from './ChatController';
 import { useConversationUIStore } from './conversation-ui-store';
@@ -53,7 +53,7 @@ export const ChatInput = () => {
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Share your thoughts..."
-          className="flex-1 px-4 py-2.5 text-base font-light bg-gray-100 border-2 border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-transparent resize-none"
+          className="flex-1 px-4 py-2.5 text-base font-light bg-white border-2 border-black rounded-3xl focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-black resize-none text-black placeholder-gray-500"
           maxRows={6}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -62,13 +62,6 @@ export const ChatInput = () => {
             }
           }}
         />
-        <button
-          onClick={handleSend}
-          className="p-3 bg-black text-white rounded-full hover:bg-gray-800 disabled:bg-gray-300 disabled:opacity-70 transition-all"
-          disabled={!text.trim() || status !== 'idle'}
-        >
-          <Send size={20} />
-        </button>
       </div>
       <div className="max-w-4xl mx-auto mt-2">
         <p className="text-xs text-gray-400 font-light text-center">
