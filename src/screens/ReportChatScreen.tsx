@@ -1,5 +1,5 @@
 // src/screens/ReportChatScreen.tsx
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { ChatBox } from '@/features/chat/ChatBox';
 import { useChat } from '@/features/chat/useChat';
@@ -9,9 +9,11 @@ const ReportChatScreen = () => {
   useChat(conversationId);
 
   return (
-    <div className="w-full h-screen bg-gray-50 flex items-center justify-center">
-      <div className="w-full h-full max-w-2xl mx-auto flex flex-col">
-        <ChatBox />
+    <div className="font-sans antialiased text-gray-800 bg-gray-50">
+      <div className="flex h-screen">
+        <div className="flex-1 flex flex-col">
+          <ChatBox />
+        </div>
       </div>
     </div>
   );

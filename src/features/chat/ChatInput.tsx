@@ -24,37 +24,38 @@ export const ChatInput = () => {
     }
   };
 
+  const isRecording = status === 'recording';
+
   return (
-    <div className="flex items-end p-4 bg-white border-t border-gray-200/80">
-      <button 
-        className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-        onClick={handleMicClick}
-      >
-        <Mic size={24} />
-      </button>
-      <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-        <Volume2 size={24} />
-      </button>
-      <TextareaAutosize
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="Share your thoughts about mindset..."
-        className="flex-1 px-4 py-2 mx-2 text-base font-light bg-gray-100/80 border border-transparent rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-300 resize-none"
-        maxRows={5}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSend();
-          }
-        }}
-      />
-      <button
-        onClick={handleSend}
-        className="p-3 bg-purple-500 text-white rounded-full hover:bg-purple-600 disabled:bg-purple-300 disabled:opacity-50 transition-colors"
-        disabled={!text.trim() || status !== 'idle'}
-      >
-        <Send size={20} />
-      </button>
+    <div className="bg-white/80 backdrop-blur-lg border-t border-gray-100 p-4">
+      <div className="flex items-end gap-3 max-w-4xl mx-auto">
+        <button 
+          className="p-2 text-gray-400 hover:text-gray-900 transition-colors"
+          onClick={handleMicClick}
+        >
+          <Mic size={24} className={isRecording ? 'text-red-500' : ''} />
+        </button>
+        <TextareaAutosize
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Share your thoughts..."
+          className="flex-1 px-4 py-2.5 text-base font-light bg-gray-100 border-2 border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-transparent resize-none"
+          maxRows={6}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              handleSend();
+            }
+          }}
+        />
+        <button
+          onClick={handleSend}
+          className="p-3 bg-black text-white rounded-full hover:bg-gray-800 disabled:bg-gray-300 disabled:opacity-70 transition-all"
+          disabled={!text.trim() || status !== 'idle'}
+        >
+          <Send size={20} />
+        </button>
+      </div>
     </div>
   );
 };
