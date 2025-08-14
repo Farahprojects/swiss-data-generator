@@ -93,7 +93,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <Router>
 <ConditionalAuth>
-            <div className="min-h-screen bg-background">
+            <div className="min-h-screen bg-background overflow-hidden">
               <Routes>
                 {/* Public Routes */}
                 <Route path="/" element={<Index />} />

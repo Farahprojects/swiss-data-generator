@@ -51,7 +51,7 @@ export const MessageList = () => {
 
   if (messages.length === 0) {
     return (
-      <div className="flex-1 flex flex-col justify-end pb-8">
+      <div className="flex-1 flex flex-col justify-end">
         <div className="p-4">
           <MessageCircle size={48} className="text-gray-300" />
           <h2 className="mt-4 text-3xl font-light text-gray-800">Ready to talk?</h2>
