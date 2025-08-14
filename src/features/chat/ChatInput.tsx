@@ -4,11 +4,13 @@ import TextareaAutosize from 'react-textarea-autosize';
 import { Mic, Send, Volume2, VolumeX } from 'lucide-react';
 import { useChatStore } from '@/core/store';
 import { chatController } from './ChatController';
+import { useConversationUIStore } from './conversation-ui-store';
 
 export const ChatInput = () => {
   const [text, setText] = useState('');
   const status = useChatStore((state) => state.status);
   const [isMuted, setIsMuted] = useState(false);
+  const { isConversationOpen, openConversation, closeConversation } = useConversationUIStore();
 
   const handleSend = () => {
     if (text.trim()) {
@@ -18,10 +20,15 @@ export const ChatInput = () => {
   };
 
   const handleMicClick = () => {
+    if (!isConversationOpen) {
+      openConversation();
+      chatController.startTurn();
+      return;
+    }
     if (status === 'recording') {
       chatController.endTurn();
     } else {
-      chatController.startTurn();
+      closeConversation();
     }
   };
 

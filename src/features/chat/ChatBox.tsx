@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
 import { useChatStore } from '@/core/store';
+import { ConversationOverlay } from './ConversationOverlay/ConversationOverlay';
 
 export const ChatBox = () => {
   const { error } = useChatStore();
@@ -21,6 +22,7 @@ export const ChatBox = () => {
       </div>
       {error && <div className="p-3 text-sm font-medium text-red-700 bg-red-100 border-t border-red-200">{error}</div>}
       <ChatInput />
+      <ConversationOverlay />
     </div>
   );
 };
