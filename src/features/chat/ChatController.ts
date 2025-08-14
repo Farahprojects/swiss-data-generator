@@ -65,13 +65,8 @@ class ChatController {
       // We get the final assistant message from the handler.
       useChatStore.getState().addMessage(assistantMessage);
 
-      // Generate audio but don't play it automatically
-      if (assistantMessage.text) {
-        ttsService.speak(assistantMessage.id, assistantMessage.text).then(audioUrl => {
-          console.log("[ChatController] Pre-generated audio for text message.");
-          // Optionally update the message with the audioUrl if needed
-        }).catch(err => console.error("[ChatController] Failed to pre-generate audio:", err));
-      }
+      // For text messages, we don't generate audio automatically
+      // Audio can be generated on-demand when user clicks the speaker button
 
     } catch (error) {
       console.error("[ChatController] Error during AI turn:", error);
