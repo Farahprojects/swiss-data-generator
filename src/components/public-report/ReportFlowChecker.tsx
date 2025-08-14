@@ -24,18 +24,15 @@ export const ReportFlowChecker = ({ guestId, name, email, onPaid }: ReportFlowCh
 
       if (error) {
         console.error('[ReportFlowChecker] Polling error:', error);
-        // Optional: stop polling on persistent error
         return;
       }
       
-      // If paid (either from promo or Stripe webhook), trigger generation and finish.
       if (data?.payment_status === 'paid') {
         if(pollingInterval) clearInterval(pollingInterval);
         console.log('[ReportFlowChecker] "Paid" status confirmed. Triggering report generation...');
         supabase.functions.invoke('trigger-report-generation', { body: { guest_report_id: guestId } });
         onPaid({ guestId, name: data.name || name, email: data.email || email });
       } 
-      // If pending, it must be a non-Stripe return that needs payment. Create session.
       else if (data?.payment_status === 'pending') {
         if(pollingInterval) clearInterval(pollingInterval);
         console.log('[ReportFlowChecker] "Pending" status confirmed. Creating payment session...');
@@ -51,9 +48,8 @@ export const ReportFlowChecker = ({ guestId, name, email, onPaid }: ReportFlowCh
       }
     };
 
-    // Start polling immediately on mount
-    poll(); // Initial check
-    pollingInterval = setInterval(poll, 3000); // Subsequent checks
+    poll(); 
+    pollingInterval = setInterval(poll, 3000); 
 
     return () => {
       if (pollingInterval) clearInterval(pollingInterval);
@@ -61,7 +57,7 @@ export const ReportFlowChecker = ({ guestId, name, email, onPaid }: ReportFlowCh
 
   }, [guestId, name, email, onPaid]);
 
-  return null; // This component does not render anything itself
+  return null; 
 };
 
 export default ReportFlowChecker;

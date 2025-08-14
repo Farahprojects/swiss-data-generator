@@ -32,6 +32,7 @@ const PublicReport = () => {
     const paymentStatusParam = params.get('payment_status');
 
     if (guestId && paymentStatusParam === 'success') {
+      // This is a return from a successful Stripe payment.
       console.log(`[PublicReport] Stripe return detected for guestId: ${guestId}. Starting checker.`);
       // The checker will handle polling for the 'paid' status from the webhook.
       setActiveGuest({ guestId: guestId, name: '', email: '', isStripeReturn: true });
