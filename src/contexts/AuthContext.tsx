@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
-import { useNavigationState } from '@/contexts/NavigationStateContext';
 import { getAbsoluteUrl } from '@/utils/urlUtils';
 import { log } from '@/utils/logUtils';
 
@@ -75,7 +74,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [pendingEmailAddress, setPendingEmailAddress] = useState<string | null>(null);
   const [isPendingEmailCheck, setIsPendingEmailCheck] = useState(false);
-  const { clearNavigationState } = useNavigationState();
   const initializedRef = useRef(false);
 
   /* ─────────────────────────────────────────────────────────────
@@ -313,7 +311,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(null);
       setPendingEmailAddress(null);
       setIsPendingEmailCheck(false);
-      clearNavigationState();
+      
+      // Clear navigation state from localStorage directly
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('last_route');
+        localStorage.removeItem('last_route_params');
+      }
 
       // Sign out from Supabase with global scope
       await supabase.auth.signOut({ scope: 'global' });
