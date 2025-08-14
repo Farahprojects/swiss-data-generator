@@ -14,13 +14,16 @@ export const useConversationFSM = () => {
   const conversationId = useChatStore((s) => s.conversationId)!;
   const addMessage = useChatStore((s) => s.addMessage);
   const [detector, setDetector] = useState<SilenceDetector | null>(null);
+  const [fallbackTimer, setFallbackTimer] = useState<number | null>(null);
 
   // start listening when entering listening state
   useEffect(() => {
     if (state !== 'listening') return;
     (async () => {
       await audioRecorder.start();
-      const stream = (audioRecorder as any).getStream?.() as MediaStream | undefined;
+      // 20s hard cap fallback (Safari / permission quirks)
+      setFallbackTimer(window.setTimeout(() => handleSilence(), 20000));
+      const stream = audioRecorder.getStream();
       if (stream) {
         const det = new SilenceDetector(() => handleSilence());
         await det.attachStream(stream);
@@ -28,6 +31,7 @@ export const useConversationFSM = () => {
       }
     })();
     return () => {
+      if (fallbackTimer) clearTimeout(fallbackTimer);
       detector?.cleanup();
       setDetector(null);
     };
@@ -35,6 +39,7 @@ export const useConversationFSM = () => {
 
   const handleSilence = async () => {
     if (state !== 'listening') return;
+    if (fallbackTimer) clearTimeout(fallbackTimer);
     setState('processing');
     const blob = await audioRecorder.stop();
     detector?.cleanup();

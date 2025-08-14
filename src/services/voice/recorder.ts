@@ -5,6 +5,10 @@ class AudioRecorder {
   private audioChunks: Blob[] = [];
   private stream: MediaStream | null = null;
 
+  getStream(): MediaStream | null {
+    return this.stream;
+  }
+
   async start(): Promise<void> {
     if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
       console.warn('Recorder is already recording.');

@@ -1,8 +1,15 @@
+export const getBrowserThresholdDb = () => {
+  const ua = navigator.userAgent.toLowerCase();
+  if (ua.includes('firefox')) return -50;
+  if (/safari/.test(ua) && !/chrome|chromium/.test(ua)) return -48; // Safari
+  return -45; // Chrome/Edge default
+};
+
 export class SilenceDetector {
   private context: AudioContext | null = null;
   private analyser!: AnalyserNode;
   private source!: MediaStreamAudioSourceNode;
-  private silenceThreshold = -45; // dB
+  private silenceThreshold = getBrowserThresholdDb();
   private silenceDuration = 3000; // ms
   private silenceTimer: number | null = null;
   private onSilence: () => void;
@@ -12,7 +19,7 @@ export class SilenceDetector {
   }
 
   async attachStream(stream: MediaStream) {
-    this.context = new AudioContext();
+    this.context = new (window.AudioContext || (window as any).webkitAudioContext)();
     this.source = this.context.createMediaStreamSource(stream);
     this.analyser = this.context.createAnalyser();
     this.analyser.fftSize = 2048;
@@ -24,7 +31,7 @@ export class SilenceDetector {
     const data = new Uint8Array(this.analyser.fftSize);
     this.analyser.getByteTimeDomainData(data);
     const rms = Math.sqrt(data.reduce((s, v) => s + (v - 128) ** 2, 0) / data.length);
-    const db = 20 * Math.log10(rms / 128);
+    const db = 20 * Math.log10(Math.max(rms, 1e-6) / 128);
 
     if (db < this.silenceThreshold) {
       if (this.silenceTimer === null) {
@@ -32,11 +39,9 @@ export class SilenceDetector {
           this.onSilence();
         }, this.silenceDuration);
       }
-    } else {
-      if (this.silenceTimer !== null) {
-        clearTimeout(this.silenceTimer);
-        this.silenceTimer = null;
-      }
+    } else if (this.silenceTimer !== null) {
+      clearTimeout(this.silenceTimer);
+      this.silenceTimer = null;
     }
     requestAnimationFrame(this.monitor);
   };
