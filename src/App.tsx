@@ -21,7 +21,9 @@ import StripeReturn from './pages/StripeReturn';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ResetPassword from './pages/auth/Password';
+import { PublicCoachWebsite } from './components/website-builder/PublicCoachWebsite';
 import PreviewWebsite from './pages/PreviewWebsite';
+import { CoachReportPage } from './components/website-builder/CoachReportPage';
 
 import { AuthProvider } from './contexts/AuthContext';
 import NavigationStateProvider from '@/contexts/NavigationStateContext';
@@ -62,7 +64,7 @@ const ConditionalAuth: React.FC<{ children: React.ReactNode }> = ({ children }) 
     );
   }
 
-  // All other pages (including 404/NotFound) need auth and navigation providers
+  // Public pages that still use auth-aware UI
   return (
     <NavigationStateProvider>
       <SettingsModalProvider>
@@ -94,7 +96,6 @@ function App() {
                 <Route path="/" element={<Index />} />
                 <Route path="/features" element={<Features />} />
                 <Route path="/report" element={<PublicReport />} />
-                <Route path="/reports" element={<PublicReport />} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/about" element={<About />} />
@@ -106,6 +107,8 @@ function App() {
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/auth/password" element={<ResetPassword />} />
                 <Route path="/preview/:previewId" element={<PreviewWebsite />} />
+                <Route path="/:slug/vibe" element={<CoachReportPage />} />
+                <Route path="/:slug" element={<PublicCoachWebsite />} />
 
                 {/* Authenticated Routes */}
                 <Route 
@@ -116,8 +119,7 @@ function App() {
                     </Suspense>
                   } 
                 />
-
-                {/* Slug routes temporarily removed */}
+                
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </div>
