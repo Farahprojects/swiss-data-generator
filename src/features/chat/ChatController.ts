@@ -45,36 +45,62 @@ class ChatController {
       }
     };
     
-    const userMessage = await appendMessage(userMessageData);
-    useChatStore.getState().addMessage(userMessage);
+    try {
+      console.log("[ChatController] Appending user message to DB:", userMessageData);
+      const userMessage = await appendMessage(userMessageData);
+      useChatStore.getState().addMessage(userMessage);
+    } catch (error) {
+      console.error("[ChatController] Failed to save user message:", error);
+      useChatStore.getState().setError("Failed to save your message.");
+      this.isTurnActive = false;
+      return;
+    }
 
     useChatStore.getState().setStatus('thinking');
 
-    const llmResponse = await llmService.chat({
-      conversationId,
-      messages: useChatStore.getState().messages,
-    });
-    
-    const audioUrl = await ttsService.speak(llmResponse);
-    
-    const assistantMessageData = {
-      conversationId,
-      role: 'assistant' as const,
-      text: llmResponse,
-      audioUrl,
-      meta: {
-        llm_provider: LLM_PROVIDER,
-        tts_provider: TTS_PROVIDER,
+    try {
+      console.log("[ChatController] Calling LLM service.");
+      const llmResponse = await llmService.chat({
+        conversationId,
+        messages: useChatStore.getState().messages,
+      });
+      console.log("[ChatController] Received LLM response:", llmResponse);
+      
+      console.log("[ChatController] Calling TTS service.");
+      const audioUrl = await ttsService.speak(llmResponse);
+      console.log("[ChatController] Received audio URL:", audioUrl);
+      
+      const assistantMessageData = {
+        conversationId,
+        role: 'assistant' as const,
+        text: llmResponse,
+        audioUrl,
+        meta: {
+          llm_provider: LLM_PROVIDER,
+          tts_provider: TTS_PROVIDER,
+        }
+      };
+      
+      try {
+        console.log("[ChatController] Appending assistant message to DB:", assistantMessageData);
+        const assistantMessage = await appendMessage(assistantMessageData);
+        useChatStore.getState().addMessage(assistantMessage);
+      } catch (error) {
+        console.error("[ChatController] Failed to save assistant message:", error);
+        useChatStore.getState().setError("Failed to save the AI's response.");
+        this.isTurnActive = false;
+        return;
       }
-    };
-    
-    const assistantMessage = await appendMessage(assistantMessageData);
-    useChatStore.getState().addMessage(assistantMessage);
 
-    audioPlayer.play(audioUrl, () => {
+      // Set status to idle and release turn lock *after* saving the message
       useChatStore.getState().setStatus('idle');
       this.isTurnActive = false;
-    });
+      
+    } catch (error) {
+      console.error("[ChatController] Error during AI turn:", error);
+      useChatStore.getState().setError("An error occurred while getting the AI's response.");
+      this.isTurnActive = false;
+    }
   }
   
   async loadConversation(id: string) {
@@ -122,38 +148,66 @@ class ChatController {
         }
       };
       
-      const userMessage = await appendMessage(userMessageData);
-      useChatStore.getState().addMessage(userMessage);
+      try {
+        console.log("[ChatController] Appending user (voice) message to DB:", userMessageData);
+        const userMessage = await appendMessage(userMessageData);
+        useChatStore.getState().addMessage(userMessage);
+      } catch (error) {
+        console.error("[ChatController] Failed to save user (voice) message:", error);
+        useChatStore.getState().setError("Failed to save your message.");
+        this.isTurnActive = false;
+        return;
+      }
 
       useChatStore.getState().setStatus('thinking');
 
-      const llmResponse = await llmService.chat({
-        conversationId: useChatStore.getState().conversationId || 'local',
-        messages: useChatStore.getState().messages,
-      });
+      try {
+        console.log("[ChatController] Calling LLM service (voice).");
+        const llmResponse = await llmService.chat({
+          conversationId: useChatStore.getState().conversationId || 'local',
+          messages: useChatStore.getState().messages,
+        });
+        console.log("[ChatController] Received LLM response (voice):", llmResponse);
 
-      const audioUrl = await ttsService.speak(llmResponse);
+        console.log("[ChatController] Calling TTS service (voice).");
+        const audioUrl = await ttsService.speak(llmResponse);
+        console.log("[ChatController] Received audio URL (voice):", audioUrl);
 
-      const assistantMessageData = {
-        conversationId: useChatStore.getState().conversationId!,
-        role: 'assistant' as const,
-        text: llmResponse,
-        audioUrl,
-        meta: {
-          llm_provider: LLM_PROVIDER,
-          tts_provider: TTS_PROVIDER,
+        const assistantMessageData = {
+          conversationId: useChatStore.getState().conversationId!,
+          role: 'assistant' as const,
+          text: llmResponse,
+          audioUrl,
+          meta: {
+            llm_provider: LLM_PROVIDER,
+            tts_provider: TTS_PROVIDER,
+          }
+        };
+        
+        try {
+          console.log("[ChatController] Appending assistant message to DB (voice):", assistantMessageData);
+          const assistantMessage = await appendMessage(assistantMessageData);
+          useChatStore.getState().addMessage(assistantMessage);
+        } catch (error) {
+          console.error("[ChatController] Failed to save assistant message (voice):", error);
+          useChatStore.getState().setError("Failed to save the AI's response.");
+          this.isTurnActive = false;
+          return;
         }
-      };
-      
-      const assistantMessage = await appendMessage(assistantMessageData);
-      useChatStore.getState().addMessage(assistantMessage);
 
-      audioPlayer.play(audioUrl, () => {
-        useChatStore.getState().setStatus('idle');
+        console.log("[ChatController] Playing audio response (voice).");
+        audioPlayer.play(audioUrl, () => {
+          useChatStore.getState().setStatus('idle');
+          this.isTurnActive = false;
+        });
+      } catch (error) {
+        console.error("[ChatController] Error during AI turn (voice):", error);
+        useChatStore.getState().setError("An error occurred while processing your request.");
         this.isTurnActive = false;
-      });
+      }
 
     } catch (error: any) {
+      console.error("[ChatController] Error processing voice input:", error);
       useChatStore.getState().setError('Failed to process audio.');
       this.isTurnActive = false;
     }
