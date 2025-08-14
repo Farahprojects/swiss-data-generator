@@ -35,7 +35,7 @@ export const ChatInput = () => {
   const isRecording = status === 'recording';
 
   return (
-    <div className="bg-white/80 backdrop-blur-lg border-t border-gray-100 p-4">
+    <div className="bg-white/80 backdrop-blur-lg border-t border-gray-100 p-4 pb-6">
       <div className="flex items-end gap-2 max-w-4xl mx-auto">
         <button 
           className="p-3 text-gray-500 hover:text-gray-900 transition-colors"
