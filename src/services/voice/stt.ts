@@ -1,22 +1,22 @@
 // src/services/voice/stt.ts
-
-import { ProviderName } from '@/core/types';
+import { supabase } from '@/integrations/supabase/client';
 
 class SttService {
-  async transcribe(audioBlob: Blob, provider: ProviderName = 'local'): Promise<string> {
-    console.log(`[STT] Transcribing with ${provider}...`);
-
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // In a real implementation, you would send the audioBlob to a service
-    // like OpenAI Whisper, Google Speech-to-Text, or Deepgram.
+  async transcribe(audioBlob: Blob): Promise<string> {
+    console.log(`[STT] Transcribing...`);
     
-    // For now, return a mock transcription.
-    const mockTranscription = "This is a test transcription of the recorded audio.";
-    console.log(`[STT] Transcription complete: "${mockTranscription}"`);
-    
-    return mockTranscription;
+    const { data, error } = await supabase.functions.invoke('stt-handler', {
+      body: audioBlob,
+      headers: {
+        'Content-Type': 'audio/webm',
+      },
+    });
+
+    if (error) {
+      throw new Error(`Error invoking stt-handler: ${error.message}`);
+    }
+
+    return data.transcription;
   }
 }
 
