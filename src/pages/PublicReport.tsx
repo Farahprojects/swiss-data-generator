@@ -350,7 +350,7 @@ const PublicReport = () => {
             {!isMobile && (
               <div id="report-form" ref={reportFormRef}>
                 <ReportForm onReportCreated={({ guestReportId, name, email, paymentStatus }) => {
-                  console.log("Desktop form submitted. Guest ID:", guestReportId, "Status:", paymentStatus);
+                  console.log("[PublicReport] Desktop form submission received.");
                   handleReportCreated(guestReportId, paymentStatus as ('paid' | 'pending'), name, email);
                 }} />
               </div>
@@ -381,7 +381,7 @@ const PublicReport = () => {
               isOpen={isMobileDrawerOpen}
               onOpenChange={setIsMobileDrawerOpen}
               onReportCreated={(guestReportId, paymentStatus, name, email) => {
-                console.log("Mobile form submitted. Guest ID:", guestReportId, "Status:", paymentStatus);
+                console.log("[PublicReport] Mobile form submission received.");
                 handleReportCreated(guestReportId, paymentStatus as ('paid' | 'pending'), name, email);
                 setIsMobileDrawerOpen(false); // Close the sheet on submit
               }}

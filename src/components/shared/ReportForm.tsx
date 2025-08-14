@@ -228,6 +228,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       const result = await submitReport(submissionData, trustedPricing);
       if (result.success && result.guestReportId && result.paymentStatus) {
         // Notify parent component about successful report creation
+        console.log('[ReportForm] Submission successful, notifying parent.');
         onReportCreated?.(result);
       }
     } catch (error) {
