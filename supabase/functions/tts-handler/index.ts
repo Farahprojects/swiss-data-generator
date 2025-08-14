@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { OPENAI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY } from "../_shared/config.ts";
 
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/audio/speech";
-const AUDIO_BUCKET = "message_audio";
+const AUDIO_BUCKET = "ChatAudio";
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
