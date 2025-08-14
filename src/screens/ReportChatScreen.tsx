@@ -9,7 +9,7 @@ const ReportChatScreen = () => {
   useChat(conversationId);
 
   return (
-    <div className="font-sans antialiased text-gray-800 bg-gray-50 h-screen flex flex-col">
+    <div className="font-sans antialiased text-gray-800 bg-gray-50 h-screen overflow-hidden flex flex-col">
       <div className="flex-1 flex min-h-0">
         <ChatBox />
       </div>
