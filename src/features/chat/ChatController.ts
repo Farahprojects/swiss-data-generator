@@ -12,6 +12,51 @@ import { appendMessage } from '@/services/api/messages';
 
 class ChatController {
   private isTurnActive = false;
+
+  async sendTextMessage(text: string) {
+    if (this.isTurnActive) return;
+    this.isTurnActive = true;
+
+    let { conversationId } = useChatStore.getState();
+    if (!conversationId) {
+      const newConversation = await createConversation();
+      conversationId = newConversation.id;
+      useChatStore.getState().startConversation(conversationId);
+    }
+    
+    const userMessageData = {
+      conversationId: conversationId!,
+      role: 'user' as const,
+      text,
+    };
+    
+    const userMessage = await appendMessage(userMessageData);
+    useChatStore.getState().addMessage(userMessage);
+
+    useChatStore.getState().setStatus('thinking');
+
+    const llmResponse = await llmService.chat({
+      conversationId,
+      messages: useChatStore.getState().messages,
+    });
+    
+    const audioUrl = await ttsService.speak(llmResponse);
+    
+    const assistantMessageData = {
+      conversationId,
+      role: 'assistant' as const,
+      text: llmResponse,
+      audioUrl,
+    };
+    
+    const assistantMessage = await appendMessage(assistantMessageData);
+    useChatStore.getState().addMessage(assistantMessage);
+
+    audioPlayer.play(audioUrl, () => {
+      useChatStore.getState().setStatus('idle');
+      this.isTurnActive = false;
+    });
+  }
   
   async loadConversation(id: string) {
     const conversation = await getConversation(id);

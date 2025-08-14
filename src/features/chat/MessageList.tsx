@@ -9,19 +9,19 @@ const MessageItem = ({ message }: { message: Message }) => {
   return (
     <div className={`flex items-end ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
       <div
-        className={`rounded-lg px-4 py-2 max-w-sm flex items-center gap-2 ${
+        className={`rounded-lg px-4 py-3 max-w-lg flex items-center gap-3 shadow-sm ${
           isUser
-            ? 'bg-blue-500 text-white'
-            : 'bg-gray-200 text-gray-800'
+            ? 'bg-blue-500 text-white' // User message style
+            : 'bg-purple-200 text-gray-800' // Assistant message style
         }`}
       >
-        <p className="text-sm">{message.text}</p>
+        <p className="text-base font-light leading-relaxed">{message.text}</p>
         {message.audioUrl && (
           <button
             onClick={() => audioPlayer.play(message.audioUrl!)}
-            className={isUser ? "text-white/80 hover:text-white" : "text-gray-600/80 hover:text-gray-800"}
+            className={isUser ? "text-white/70 hover:text-white" : "text-gray-600/70 hover:text-gray-800"}
           >
-            <PlayCircle size={20} />
+            <PlayCircle size={22} />
           </button>
         )}
       </div>
