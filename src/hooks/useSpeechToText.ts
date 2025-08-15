@@ -3,6 +3,7 @@ import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { log } from '@/utils/logUtils';
+import { sharedMicStream } from '@/services/voice/sharedMicStream';
 
 export const useSpeechToText = (
   onTranscriptReady?: (transcript: string) => void,
@@ -169,16 +170,9 @@ export const useSpeechToText = (
       
       log('debug', 'Starting recording');
       
-      // Enhanced audio constraints for better quality
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: 48000,
-          channelCount: 1
-        } 
-      });
+      // Get shared mic stream instead of creating our own
+      console.log('[useSpeechToText] Requesting shared mic stream');
+      const stream = await sharedMicStream.requestStream('text-area-mic');
       
       // Set up audio context for silence detection
       audioContextRef.current = new AudioContext({ sampleRate: 48000 });
@@ -264,8 +258,9 @@ export const useSpeechToText = (
 
       mediaRecorderRef.current.stop();
       
-      // Stop all tracks to release microphone
-      mediaRecorderRef.current.stream?.getTracks().forEach(track => track.stop());
+      // Release shared mic stream
+      console.log('[useSpeechToText] Releasing shared mic stream');
+      sharedMicStream.releaseStream('text-area-mic');
       
       setIsRecording(false);
       setAudioLevel(0);

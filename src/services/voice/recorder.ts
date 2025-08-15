@@ -1,4 +1,5 @@
 // src/services/voice/recorder.ts
+import { sharedMicStream } from './sharedMicStream';
 
 class AudioRecorder {
   private mediaRecorder: MediaRecorder | null = null;
@@ -11,12 +12,13 @@ class AudioRecorder {
 
   async start(): Promise<void> {
     if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
-      console.warn('Recorder is already recording.');
+      console.warn('[AudioRecorder] Already recording.');
       return;
     }
 
     try {
-      this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log('[AudioRecorder] Requesting shared mic stream');
+      this.stream = await sharedMicStream.requestStream('conversation-recorder');
       this.mediaRecorder = new MediaRecorder(this.stream);
       this.audioChunks = [];
 
@@ -29,9 +31,9 @@ class AudioRecorder {
       };
 
       this.mediaRecorder.start();
-      console.log('Recording started.');
+      console.log('[AudioRecorder] Recording started with shared stream.');
     } catch (error) {
-      console.error('Error starting recorder:', error);
+      console.error('[AudioRecorder] Error starting recorder:', error);
       throw new Error('Could not start audio recording. Please grant microphone permissions.');
     }
   }
@@ -44,10 +46,14 @@ class AudioRecorder {
 
       this.mediaRecorder.onstop = () => {
         const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
-        this.stream?.getTracks().forEach(track => track.stop());
+        
+        // Release shared stream instead of stopping tracks directly
+        console.log('[AudioRecorder] Releasing shared mic stream');
+        sharedMicStream.releaseStream('conversation-recorder');
+        
         this.mediaRecorder = null;
         this.stream = null;
-        console.log('Recording stopped. Blob created.');
+        console.log('[AudioRecorder] Recording stopped. Blob created.');
         resolve(audioBlob);
       };
       
@@ -62,11 +68,15 @@ class AudioRecorder {
   cancel(): void {
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
       this.mediaRecorder.stop();
-      this.stream?.getTracks().forEach(track => track.stop());
+      
+      // Release shared stream instead of stopping tracks directly
+      console.log('[AudioRecorder] Cancelling - releasing shared mic stream');
+      sharedMicStream.releaseStream('conversation-recorder');
+      
       this.mediaRecorder = null;
       this.stream = null;
       this.audioChunks = [];
-      console.log('Recording cancelled.');
+      console.log('[AudioRecorder] Recording cancelled.');
     }
   }
 }
