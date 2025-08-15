@@ -1,7 +1,7 @@
 // src/features/chat/ChatInput.tsx
 import React, { useState } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
-import { Mic, Volume2, VolumeX } from 'lucide-react';
+import { Mic, AudioLines } from 'lucide-react';
 import { useChatStore } from '@/core/store';
 import { chatController } from './ChatController';
 import { useConversationUIStore } from './conversation-ui-store';
@@ -41,7 +41,7 @@ export const ChatInput = () => {
           className="p-3 text-gray-500 hover:text-gray-900 transition-colors"
           onClick={handleSpeakerClick}
         >
-          {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
+          <AudioLines size={24} className={isRecording ? 'text-red-500' : ''} />
         </button>
         <div className="flex-1 relative">
           <TextareaAutosize
