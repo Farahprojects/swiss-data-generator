@@ -177,15 +177,21 @@ class ChatController {
         if (assistantMessage.audioUrl) {
           console.log('[ChatController] Using native Gemini audio');
           audioPlayer.play(assistantMessage.audioUrl, () => {
+            console.log('[ChatController] Audio ended - starting next turn');
             useChatStore.getState().setStatus('idle');
             this.isTurnActive = false;
+            // Automatically start next turn for continuous conversation
+            this.startTurn();
           });
         } else {
           console.log('[ChatController] Falling back to TTS');
           const audioUrl = await ttsService.speak(assistantMessage.id, assistantMessage.text);
           audioPlayer.play(audioUrl, () => {
+            console.log('[ChatController] TTS audio ended - starting next turn');
             useChatStore.getState().setStatus('idle');
             this.isTurnActive = false;
+            // Automatically start next turn for continuous conversation
+            this.startTurn();
           });
         }
       } else {
