@@ -22,14 +22,15 @@ export const useConversationFSM = () => {
     setState('processing');
 
     try {
-      // Add user message
-      console.log('[ConversationFSM] Adding user message to store...');
+      // Add user message (text only - no audio storage)
+      console.log('[ConversationFSM] Adding user message to store (text-only)...');
       addMessage({ 
         id: crypto.randomUUID(), 
         conversationId, 
         role: 'user', 
         text: transcript, 
-        createdAt: new Date().toISOString() 
+        createdAt: new Date().toISOString()
+        // Note: No audioUrl - we only persist text
       });
       
       // Get AI response
@@ -37,19 +38,23 @@ export const useConversationFSM = () => {
       const assistantMsg = await llmService.chat({ conversationId, userMessage: { text: transcript } });
       console.log('[ConversationFSM] LLM response received:', assistantMsg.text?.substring(0, 50) + '...');
       
-      // Add assistant message
-      console.log('[ConversationFSM] Adding assistant message to store...');
-      addMessage(assistantMsg);
+      // Add assistant message (text only - no audio URL stored)
+      console.log('[ConversationFSM] Adding assistant message to store (text-only)...');
+      addMessage({
+        ...assistantMsg,
+        // Explicitly remove audioUrl if present - we only persist text
+        audioUrl: undefined
+      });
       
-      // Generate and play TTS
+      // Generate and play TTS (live audio, not stored)
       console.log('[ConversationFSM] Transitioning to replying state');
       setState('replying');
       
-      console.log('[ConversationFSM] Starting TTS conversion...');
+      console.log('[ConversationFSM] Starting TTS conversion (live audio)...');
       const audioUrl = await ttsService.speak(assistantMsg.id, assistantMsg.text);
-      console.log('[ConversationFSM] TTS audio URL received:', audioUrl);
+      console.log('[ConversationFSM] TTS data URL received for immediate playback');
       
-      console.log('[ConversationFSM] Starting audio playback...');
+      console.log('[ConversationFSM] Starting live audio playback (no storage)...');
       audioPlayer.play(audioUrl, () => {
         console.log('[ConversationFSM] Audio playback completed');
         if (useConversationUIStore.getState().isConversationOpen) {

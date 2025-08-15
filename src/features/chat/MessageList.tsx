@@ -23,19 +23,7 @@ const MessageItem = ({ message, isLast, isFromHistory }: { message: Message; isL
         }`}
       >
         <p className="text-base font-light leading-relaxed text-left">{textContent}</p>
-        {message.audioUrl && (
-          <button
-            onClick={() => audioPlayer.play(message.audioUrl!)}
-            className={`mt-2 flex items-center gap-2 text-sm transition-colors ${
-              isUser 
-                ? 'text-gray-400 hover:text-white' 
-                : 'text-gray-500 hover:text-gray-900'
-            }`}
-          >
-            <PlayCircle size={18} />
-            <span>Play Audio</span>
-          </button>
-        )}
+        {/* Audio is played live during conversation mode - no stored audio to replay */}
       </div>
     </div>
   );
