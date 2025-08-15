@@ -5,6 +5,7 @@ import { audioPlayer } from '@/services/voice/audioPlayer';
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
 import { ttsService } from '@/services/voice/tts';
+import { getMessagesForConversation } from '@/services/api/messages';
 import { Message } from '@/core/types';
 import { v4 as uuidv4 } from 'uuid';
 // No longer need appendMessage from the client
@@ -25,6 +26,20 @@ class ChatController {
     
     console.log('[ChatController] Using existing conversationId:', conversationId);
     useChatStore.getState().startConversation(conversationId);
+    
+    // Load existing messages for this conversation (for page refresh)
+    try {
+      console.log('[ChatController] Loading existing messages for conversation:', conversationId);
+      const existingMessages = await getMessagesForConversation(conversationId);
+      console.log('[ChatController] Found', existingMessages.length, 'existing messages');
+      
+      if (existingMessages.length > 0) {
+        useChatStore.getState().loadMessages(existingMessages);
+      }
+    } catch (error) {
+      console.error('[ChatController] Error loading existing messages:', error);
+      // Don't throw - conversation should still work without history
+    }
   }
 
   async sendTextMessage(text: string) {

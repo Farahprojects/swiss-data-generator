@@ -16,6 +16,7 @@ interface ChatState {
   error: string | null;
 
   startConversation: (id: string) => void;
+  loadMessages: (messages: Message[]) => void;
   addMessage: (message: Message) => void;
   updateMessage: (id: string, updates: Partial<Message>) => void;
   setStatus: (status: ChatStatus) => void;
@@ -30,6 +31,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   error: null,
 
   startConversation: (id) => set({ conversationId: id, messages: [], status: 'idle', error: null }),
+
+  loadMessages: (messages) => set({ messages }),
 
   addMessage: (message) => set((state) => ({ messages: [...state.messages, message] })),
 

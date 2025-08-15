@@ -1,15 +1,17 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useChatStore } from '@/core/store';
 import { Message } from '@/core/types';
 import { PlayCircle } from 'lucide-react';
 import { audioPlayer } from '@/services/voice/audioPlayer';
 import { useTypewriter } from '@/hooks/useTypewriter';
 
-const MessageItem = ({ message, isLast }: { message: Message; isLast: boolean }) => {
+const MessageItem = ({ message, isLast, isFromHistory }: { message: Message; isLast: boolean; isFromHistory?: boolean }) => {
   const isUser = message.role === 'user';
   const displayText = useTypewriter(message.text || '', 30);
   
-  const textContent = isUser || !isLast ? message.text : displayText;
+  // Skip animation for existing messages from history or if it's not the last message
+  const shouldAnimate = !isUser && isLast && !isFromHistory;
+  const textContent = shouldAnimate ? displayText : message.text;
 
   return (
     <div className={`flex items-end gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -42,6 +44,14 @@ const MessageItem = ({ message, isLast }: { message: Message; isLast: boolean })
 export const MessageList = () => {
   const messages = useChatStore((state) => state.messages);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [initialMessageCount, setInitialMessageCount] = useState<number | null>(null);
+
+  // Track initial message count to determine which messages are from history
+  useEffect(() => {
+    if (initialMessageCount === null && messages.length > 0) {
+      setInitialMessageCount(messages.length);
+    }
+  }, [messages.length, initialMessageCount]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -61,9 +71,17 @@ export const MessageList = () => {
 
   return (
     <>
-      {messages.map((msg, index) => (
-        <MessageItem key={msg.id} message={msg} isLast={index === messages.length - 1} />
-      ))}
+      {messages.map((msg, index) => {
+        const isFromHistory = initialMessageCount !== null && index < initialMessageCount;
+        return (
+          <MessageItem 
+            key={msg.id} 
+            message={msg} 
+            isLast={index === messages.length - 1}
+            isFromHistory={isFromHistory}
+          />
+        );
+      })}
       <div ref={scrollRef} />
     </>
   );
