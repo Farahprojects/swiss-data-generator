@@ -174,7 +174,7 @@ class ChatController {
 
   cancelTurn() {
     if (!this.isTurnActive) return;
-    audioRecorder.cancel();
+    conversationMicrophoneService.forceCleanup();
     useChatStore.getState().setStatus('idle');
     this.isTurnActive = false;
   }

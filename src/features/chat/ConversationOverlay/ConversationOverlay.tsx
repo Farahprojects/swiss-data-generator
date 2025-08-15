@@ -2,11 +2,18 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { VoiceBubble } from './VoiceBubble';
-import { useConversationFSM } from './useConversationFSM';
+import { useChatStore } from '@/core/store';
 
 export const ConversationOverlay: React.FC = () => {
   const { isConversationOpen, closeConversation } = useConversationUIStore();
-  const { state, audioLevel } = useConversationFSM();
+  const status = useChatStore((state) => state.status);
+  
+  // Map chat status to conversation state for UI
+  const state = status === 'recording' ? 'listening' : 
+               status === 'transcribing' ? 'processing' : 
+               status === 'generating' ? 'processing' : 
+               status === 'speaking' ? 'replying' : 'listening';
+  const audioLevel = 0; // No audio level monitoring needed for display
 
   if (!isConversationOpen) return null;
 
