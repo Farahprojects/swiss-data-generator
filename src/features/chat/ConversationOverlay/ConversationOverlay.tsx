@@ -1,9 +1,11 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
+import { useSimpleMic } from '@/hooks/useSimpleMic';
 
 export const ConversationOverlay: React.FC = () => {
   const { isConversationOpen, closeConversation } = useConversationUIStore();
+  const mic = useSimpleMic();
 
   if (!isConversationOpen) return null;
 
@@ -15,11 +17,18 @@ export const ConversationOverlay: React.FC = () => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col items-center justify-center h-full gap-6">
-          {/* Simple placeholder - no complex state */}
-          <div className="flex items-center justify-center rounded-full w-40 h-40 md:w-56 md:h-56 shadow-lg bg-gradient-to-br from-purple-500 to-purple-600">
-            {/* Mic icon or simple indicator */}
+          {/* Mic status indicator - synced with MIC BOSS */}
+          <div className={`flex items-center justify-center rounded-full w-40 h-40 md:w-56 md:h-56 shadow-lg transition-all duration-300 ${
+            mic.isOn 
+              ? 'bg-gradient-to-br from-green-500 to-green-600 scale-100' 
+              : 'bg-gradient-to-br from-gray-400 to-gray-500 scale-95'
+          }`}>
+            {/* Mic icon */}
+            <div className="text-white text-4xl">🎤</div>
           </div>
-          <p className="text-gray-500 font-light">Mic Test</p>
+          <p className="text-gray-500 font-light">
+            {mic.isOn ? 'Mic ON - Listening...' : 'Mic OFF'}
+          </p>
         </div>
         {/* Close button */}
         <button onClick={closeConversation} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700">✕</button>
