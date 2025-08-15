@@ -44,8 +44,7 @@ export const ChatInput = () => {
   // Simple toggle for text area mic
   const toggleTextAreaMic = async () => {
     if (isMicRecording) {
-      // Stop recording and release mic
-      stopRecording();
+      // Just tell MIC BOSS to turn off - that's it
       textAreaMicBoss.releaseStream();
     } else {
       // Request mic and start recording
