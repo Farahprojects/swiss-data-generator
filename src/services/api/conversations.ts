@@ -135,7 +135,7 @@ export const getOrCreateConversation = async (uuid: string, token: string): Prom
 
 // Helper function to inject context from temp_report_data
 const injectContextMessages = async (conversationId: string, uuid: string, token: string): Promise<void> => {
-  console.log('[injectContextMessages] Fetching temp report data for uuid:', uuid, 'with secure token');
+  console.log('[injectContextMessages] Starting context injection for conversation:', conversationId);
   
   // Check if we've already injected context for this conversation
   const { data: existingMessages, error: checkError } = await supabase
@@ -155,75 +155,76 @@ const injectContextMessages = async (conversationId: string, uuid: string, token
     console.log('[injectContextMessages] Context already injected for this conversation, skipping');
     return;
   }
+
+  // Step 1: Try fetching temp data (failsafe approach)
+  let tempData = null;
   
   try {
-    // Use the retrieve-temp-report Edge Function with secure tokens
-    const { data: tempData, error: tempError } = await supabase.functions.invoke('retrieve-temp-report', {
+    console.log('[injectContextMessages] Fetching temp report data for uuid:', uuid);
+    const { data, error } = await supabase.functions.invoke('retrieve-temp-report', {
       body: { 
         uuid: uuid,
-        token: token // Now using the secure token
+        token: token
       }
     });
 
-    if (tempError) {
-      console.error('[injectContextMessages] Error calling retrieve-temp-report:', tempError);
-      // Don't throw - conversation should still work without context
-      return;
-    }
-
-    if (!tempData || tempData.error) {
-      console.log('[injectContextMessages] No temp_report_data found for uuid:', uuid, 'error:', tempData?.error);
-      return;
-    }
-  } catch (error) {
-    console.error('[injectContextMessages] Exception calling retrieve-temp-report:', error);
-    return;
-  }
-
-  // Build the user message content combining all available data
-  let userMessageContent = '';
-  
-  if (tempData.report_content) {
-    userMessageContent += `Here is my astrological report:\n\n${tempData.report_content}\n\n`;
-  }
-  
-  if (tempData.swiss_data) {
-    userMessageContent += `Here is my birth chart data:\n\n${JSON.stringify(tempData.swiss_data, null, 2)}\n\n`;
-  }
-  
-  if (tempData.metadata) {
-    userMessageContent += `Additional details: ${JSON.stringify(tempData.metadata, null, 2)}\n\n`;
-  }
-  
-  userMessageContent += `Please analyze this astrological information and help me understand what it means.`;
-
-  // Insert as a single user message if we have content
-  if (userMessageContent.trim()) {
-    console.log('[injectContextMessages] Creating user message with report context');
-    
-    const userMessage = {
-      conversation_id: conversationId,
-      role: 'user',
-      text: userMessageContent.trim(),
-      meta: { 
-        type: 'context_injection', 
-        injected_at: new Date().toISOString(),
-        has_report: !!tempData.report_content,
-        has_swiss_data: !!tempData.swiss_data,
-        has_metadata: !!tempData.metadata
-      }
-    };
-
-    const { error: insertError } = await supabase
-      .from('messages')
-      .insert([userMessage]);
-
-    if (insertError) {
-      console.error('[injectContextMessages] Error inserting user context message:', insertError);
+    if (error) {
+      console.warn('[injectContextMessages] Failed to fetch temp report:', error);
+    } else if (!data || data.error) {
+      console.warn('[injectContextMessages] No valid temp report returned:', data?.error);
     } else {
-      console.log('[injectContextMessages] Successfully inserted user context message');
+      tempData = data;
+      console.log('[injectContextMessages] Successfully fetched temp report data');
+    }
+  } catch (e) {
+    console.error('[injectContextMessages] Exception fetching temp report:', e);
+  }
+
+  // Step 2: If we have valid temp data, inject into messages table
+  if (tempData?.report_content || tempData?.swiss_data) {
+    console.log('[injectContextMessages] Building context message from temp data');
+    
+    let messageText = '';
+
+    if (tempData.report_content) {
+      messageText += `Here is my astrological report:\n\n${tempData.report_content}\n\n`;
+    }
+
+    if (tempData.swiss_data) {
+      messageText += `Here is my birth chart data:\n\n${JSON.stringify(tempData.swiss_data, null, 2)}\n\n`;
+    }
+
+    if (tempData.metadata) {
+      messageText += `Additional details: ${JSON.stringify(tempData.metadata, null, 2)}\n\n`;
+    }
+
+    messageText += `Please analyze this astrological information and help me understand what it means.`;
+
+    try {
+      const { error: insertError } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          role: 'user',
+          text: messageText.trim(),
+          meta: { 
+            type: 'context_injection', 
+            injected_at: new Date().toISOString(),
+            has_report: !!tempData.report_content,
+            has_swiss_data: !!tempData.swiss_data,
+            has_metadata: !!tempData.metadata
+          }
+        });
+
+      if (insertError) {
+        console.error('[injectContextMessages] Failed to insert report message:', insertError);
+      } else {
+        console.log('[injectContextMessages] ✅ Successfully injected report data into conversation');
+      }
+    } catch (insertErr) {
+      console.error('[injectContextMessages] Exception inserting message:', insertErr);
     }
   } else {
-    console.log('[injectContextMessages] No context data to inject');
+    console.log('[injectContextMessages] No report/swiss data to inject - conversation will proceed without context');
   }
 };
