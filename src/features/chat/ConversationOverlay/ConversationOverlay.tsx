@@ -1,14 +1,9 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
-import { VoiceBubble } from './VoiceBubble';
-import { useConversationFSM } from './useConversationFSM';
-import { useMicAuthorityContext } from '@/contexts/MicAuthorityContext';
 
 export const ConversationOverlay: React.FC = () => {
   const { isConversationOpen, closeConversation } = useConversationUIStore();
-  const { state } = useConversationFSM();
-  const { audioLevel } = useMicAuthorityContext();
 
   if (!isConversationOpen) return null;
 
@@ -20,14 +15,11 @@ export const ConversationOverlay: React.FC = () => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col items-center justify-center h-full gap-6">
-          <VoiceBubble state={state} audioLevel={audioLevel} />
-          {/* Placeholder captions */}
-          <p className="text-gray-500 font-light">
-            {state === 'listening' ? 'Listening…' : 
-             state === 'processing' ? 'Thinking…' : 
-             state === 'replying' ? 'Speaking…' :
-             'Ready'}
-          </p>
+          {/* Simple placeholder - no complex state */}
+          <div className="flex items-center justify-center rounded-full w-40 h-40 md:w-56 md:h-56 shadow-lg bg-gradient-to-br from-purple-500 to-purple-600">
+            {/* Mic icon or simple indicator */}
+          </div>
+          <p className="text-gray-500 font-light">Mic Test</p>
         </div>
         {/* Close button */}
         <button onClick={closeConversation} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700">✕</button>
