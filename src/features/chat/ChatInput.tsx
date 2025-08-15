@@ -19,7 +19,7 @@ export const ChatInput = () => {
     }
   };
 
-  const handleMicClick = () => {
+  const handleSpeakerClick = () => {
     if (!isConversationOpen) {
       openConversation();
       chatController.startTurn();
@@ -39,7 +39,7 @@ export const ChatInput = () => {
       <div className="flex items-end gap-2 max-w-4xl mx-auto">
         <button 
           className="p-3 text-gray-500 hover:text-gray-900 transition-colors"
-          onClick={() => setIsMuted(!isMuted)}
+          onClick={handleSpeakerClick}
         >
           {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
         </button>
@@ -59,9 +59,8 @@ export const ChatInput = () => {
           />
           <button 
             className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 text-gray-500 hover:text-gray-900 transition-colors"
-            onClick={handleMicClick}
           >
-            <Mic size={20} className={isRecording ? 'text-red-500' : ''} />
+            <Mic size={20} />
           </button>
         </div>
       </div>
