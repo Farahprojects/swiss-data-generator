@@ -6,12 +6,16 @@ import { useChatStore } from '@/core/store';
 import { chatController } from './ChatController';
 import { useConversationUIStore } from './conversation-ui-store';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
+import { useMicBoss } from '@/hooks/useMicBoss';
 
 export const ChatInput = () => {
   const [text, setText] = useState('');
   const status = useChatStore((state) => state.status);
   const [isMuted, setIsMuted] = useState(false);
   const { isConversationOpen, openConversation, closeConversation } = useConversationUIStore();
+
+  // MIC BOSS for text area recording
+  const textAreaMicBoss = useMicBoss('text-area-recording');
 
   // Handle transcript ready - add to text area
   const handleTranscriptReady = (transcript: string) => {
@@ -25,10 +29,25 @@ export const ChatInput = () => {
     // Optional: could add a processing indicator here
   };
 
-  const { isRecording: isMicRecording, isProcessing: isMicProcessing, toggleRecording: toggleMicRecording } = useSpeechToText(
+  const { isRecording: isMicRecording, isProcessing: isMicProcessing, startRecording, stopRecording } = useSpeechToText(
     handleTranscriptReady,
     handleSilenceDetected
   );
+
+  // Simple toggle for text area mic
+  const toggleTextAreaMic = async () => {
+    if (isMicRecording) {
+      // Stop recording and release mic
+      stopRecording();
+      textAreaMicBoss.releaseStream();
+    } else {
+      // Request mic and start recording
+      const stream = await textAreaMicBoss.requestStream();
+      if (stream) {
+        startRecording(stream);
+      }
+    }
+  };
 
   const handleSend = () => {
     if (text.trim()) {
@@ -78,7 +97,7 @@ export const ChatInput = () => {
             </button>
             <button 
               className="p-2 text-gray-500 hover:text-gray-900 transition-all duration-200 ease-in-out"
-              onClick={toggleMicRecording}
+              onClick={toggleTextAreaMic}
               disabled={isMicProcessing}
               title={isMicRecording ? 'Stop recording' : 'Start voice recording'}
             >
