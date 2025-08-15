@@ -162,39 +162,26 @@ class ChatController {
         meta: { stt_provider: STT_PROVIDER }
       };
 
-      const assistantMessage = await llmService.chat({
+      const assistantMessage = await llmService.conversationChat({
         conversationId: useChatStore.getState().conversationId!,
         userMessage: userMessageForApi,
-        requestAudio: true, // Request native audio from Gemini
       });
 
       // Add the final assistant message
       useChatStore.getState().addMessage(assistantMessage);
 
-      // For voice, we play the audio automatically
-      if (assistantMessage.text) {
-        // Check if Gemini provided native audio, otherwise fallback to TTS
-        if (assistantMessage.audioUrl) {
-          console.log('[ChatController] Using native Gemini audio');
-          audioPlayer.play(assistantMessage.audioUrl, () => {
-            console.log('[ChatController] Audio ended - starting next turn');
-            useChatStore.getState().setStatus('idle');
-            this.isTurnActive = false;
-            // Automatically start next turn for continuous conversation
-            this.startTurn();
-          });
-        } else {
-          console.log('[ChatController] Falling back to TTS');
-          const audioUrl = await ttsService.speak(assistantMessage.id, assistantMessage.text);
-          audioPlayer.play(audioUrl, () => {
-            console.log('[ChatController] TTS audio ended - starting next turn');
-            useChatStore.getState().setStatus('idle');
-            this.isTurnActive = false;
-            // Automatically start next turn for continuous conversation
-            this.startTurn();
-          });
-        }
+      // For conversation mode, audio is always included from combined LLM+TTS
+      if (assistantMessage.text && assistantMessage.audioUrl) {
+        console.log('[ChatController] Playing conversation audio (LLM+TTS combined)');
+        audioPlayer.play(assistantMessage.audioUrl, () => {
+          console.log('[ChatController] Conversation audio ended - starting next turn');
+          useChatStore.getState().setStatus('idle');
+          this.isTurnActive = false;
+          // Automatically start next turn for continuous conversation
+          this.startTurn();
+        });
       } else {
+        console.error('[ChatController] Conversation response missing text or audio');
         useChatStore.getState().setStatus('idle');
         this.isTurnActive = false;
       }
