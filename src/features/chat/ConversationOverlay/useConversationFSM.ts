@@ -18,7 +18,23 @@ export const useConversationFSM = () => {
   const handleTranscriptReady = async (transcript: string) => {
     if (!isConversationOpen) return;
     
-    console.log('[ConversationFSM] Transcript ready, processing AI response:', transcript);
+    console.log('[ConversationFSM] Transcript ready:', transcript);
+    
+    // Handle empty transcript - just continue listening
+    if (!transcript || transcript.trim().length === 0) {
+      console.log('[ConversationFSM] Empty transcript received - continuing to listen');
+      setState('listening');
+      // Start recording again immediately for next attempt
+      setTimeout(() => {
+        if (useConversationUIStore.getState().isConversationOpen && !speechToText.isRecording) {
+          console.log('[ConversationFSM] Restarting recording after empty transcript');
+          speechToText.startRecording();
+        }
+      }, 500);
+      return;
+    }
+    
+    console.log('[ConversationFSM] Processing AI response for transcript:', transcript);
     setState('processing');
 
     try {

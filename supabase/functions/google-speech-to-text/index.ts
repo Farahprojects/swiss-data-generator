@@ -105,10 +105,20 @@ serve(async (req) => {
     console.log('Extracted transcript:', transcript);
     console.log('Confidence score:', confidence);
     
-    // Handle empty transcription results
+    // Handle empty transcription results - return empty transcript instead of error
     if (!transcript || transcript.trim().length === 0) {
       console.warn('[google-stt] Empty transcript from Google API - audio may be unclear or silent');
-      throw new Error('No speech detected - please speak more clearly or try again');
+      console.log('[google-stt] Returning empty transcript for conversation mode to continue gracefully');
+      return new Response(
+        JSON.stringify({ 
+          transcript: '', // Empty transcript
+          confidence: 0,
+          note: 'No speech detected - conversation can continue'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
     }
     
     if (confidence < 0.3) {
