@@ -31,14 +31,7 @@ serve(async (req) => {
       throw new Error('Empty audio data - please try recording again');
     }
     
-    // Check if base64 data is too small (likely empty recording)
-    const estimatedBytes = (audioData.length * 3) / 4; // Base64 to bytes approximation
-    if (estimatedBytes < 1000) {
-      console.error('[google-stt] Audio data too small:', estimatedBytes, 'bytes estimated');
-      throw new Error('Audio recording too short - please speak for longer');
-    }
-    
-    console.log(`[google-stt] Audio data validated - estimated size: ${estimatedBytes} bytes`);
+    console.log(`[google-stt] Audio data received, proceeding with transcription.`);
     
     // Test base64 decode to catch invalid format early
     try {
