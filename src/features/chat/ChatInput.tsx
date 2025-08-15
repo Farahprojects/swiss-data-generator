@@ -1,7 +1,7 @@
 // src/features/chat/ChatInput.tsx
 import React, { useState } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
-import { Mic, AudioLines } from 'lucide-react';
+import { Mic, AudioLines, X } from 'lucide-react';
 import { useChatStore } from '@/core/store';
 import { chatController } from './ChatController';
 import { useConversationUIStore } from './conversation-ui-store';
@@ -77,12 +77,25 @@ export const ChatInput = () => {
               <AudioLines size={18} className={isRecording ? 'text-red-500' : ''} />
             </button>
             <button 
-              className="p-2 text-gray-500 hover:text-gray-900 transition-colors"
+              className="p-2 text-gray-500 hover:text-gray-900 transition-all duration-200 ease-in-out"
               onClick={toggleMicRecording}
               disabled={isMicProcessing}
               title={isMicRecording ? 'Stop recording' : 'Start voice recording'}
             >
-              <Mic size={18} className={isMicRecording ? 'text-red-500' : ''} />
+              <div className="relative w-[18px] h-[18px]">
+                <Mic 
+                  size={18} 
+                  className={`absolute inset-0 transition-all duration-200 ease-in-out ${
+                    isMicRecording ? 'opacity-0 scale-75' : 'opacity-100 scale-100'
+                  }`}
+                />
+                <X 
+                  size={18} 
+                  className={`absolute inset-0 text-red-500 transition-all duration-200 ease-in-out ${
+                    isMicRecording ? 'opacity-100 scale-100' : 'opacity-0 scale-75'
+                  }`}
+                />
+              </div>
             </button>
           </div>
         </div>
