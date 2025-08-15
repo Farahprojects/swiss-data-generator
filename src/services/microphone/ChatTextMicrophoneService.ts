@@ -371,6 +371,14 @@ class ChatTextMicrophoneServiceClass {
   }
 
   private log(message: string, ...args: any[]): void {
+    // Gate non-error logs behind a runtime flag to keep console clean by default.
+    // Enable by running in DevTools: localStorage.setItem('debugAudio', '1')
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const enabled = localStorage.getItem('debugAudio') === '1';
+        if (!enabled) return;
+      }
+    } catch {}
     // eslint-disable-next-line no-console
     console.log('[ChatTextMic]', this.prefix(), message, ...args);
   }
