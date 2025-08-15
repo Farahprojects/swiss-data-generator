@@ -11,7 +11,7 @@ export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
     'flex items-center justify-center rounded-full w-40 h-40 md:w-56 md:h-56 shadow-lg';
 
   // Enhanced visual feedback based on audio level (matches VAD threshold)
-  const isVoiceDetected = audioLevel > 0.02; // Level ~20 - matches actual speech
+  const isVoiceDetected = audioLevel > 0.05; // Level ~50 - matches VAD threshold
   const voiceIntensity = Math.min(audioLevel * 20, 1); // Scale for visual effect
 
   const styles: Record<typeof state, string> = {

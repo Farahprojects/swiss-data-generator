@@ -103,15 +103,6 @@ class ChatController {
   private initializeConversationService() {
     if (this.conversationServiceInitialized) return;
     
-    // Set up in-memory debug audio handler for STT failures
-    sttService.setDebugAudioHandler((audioBlob: Blob, reason: string) => {
-      console.log('[ChatController] STT failed - audio will appear in conversation modal');
-      // The debug audio will be handled by the DebugAudioContext in the app
-      window.dispatchEvent(new CustomEvent('debugAudio', { 
-        detail: { blob: audioBlob, reason } 
-      }));
-    });
-    
     conversationMicrophoneService.initialize({
       onSilenceDetected: () => {
         console.log('[ChatController] Silence detected - auto-ending turn');

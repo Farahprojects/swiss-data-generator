@@ -2,12 +2,6 @@
 import { supabase } from '@/integrations/supabase/client';
 
 class SttService {
-  private debugAudioHandler?: (blob: Blob, reason: string) => void;
-
-  setDebugAudioHandler(handler: (blob: Blob, reason: string) => void) {
-    this.debugAudioHandler = handler;
-  }
-
   async transcribe(audioBlob: Blob): Promise<string> {
     console.log(`[STT] Transcribing with Google Speech-to-Text...`);
     
@@ -45,13 +39,6 @@ class SttService {
 
     if (!data || !data.transcript) {
       console.error('[STT] No transcript in response:', data);
-      
-      // Send failed audio to debug player
-      if (this.debugAudioHandler) {
-        console.log('[STT] Sending failed audio to debug player');
-        this.debugAudioHandler(audioBlob, 'stt-no-transcript');
-      }
-      
       throw new Error('No transcript received from Google STT');
     }
 

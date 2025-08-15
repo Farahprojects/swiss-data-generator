@@ -1,29 +1,15 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { createPortal } from 'react-dom';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { VoiceBubble } from './VoiceBubble';
 import { useChatStore } from '@/core/store';
 import { chatController } from '../ChatController';
 import { useConversationAudioLevel } from '@/hooks/useConversationAudioLevel';
-import { useDebugAudio } from '@/contexts/DebugAudioContext';
 
 export const ConversationOverlay: React.FC = () => {
   const { isConversationOpen, closeConversation } = useConversationUIStore();
   const status = useChatStore((state) => state.status);
   const audioLevel = useConversationAudioLevel(); // Get real-time audio level
-  const { debugAudio, setDebugAudio, clearDebugAudio } = useDebugAudio();
-
-  // Listen for debug audio events from ChatController
-  useEffect(() => {
-    const handleDebugAudio = (event: CustomEvent) => {
-      const { blob, reason } = event.detail;
-      console.log('[ConversationOverlay] Received debug audio:', reason);
-      setDebugAudio({ blob, reason });
-    };
-
-    window.addEventListener('debugAudio', handleDebugAudio as EventListener);
-    return () => window.removeEventListener('debugAudio', handleDebugAudio as EventListener);
-  }, [setDebugAudio]);
   
   // PROPER MODAL CLOSE - Stop conversation and turn off mic
   const handleModalClose = () => {
@@ -65,43 +51,6 @@ export const ConversationOverlay: React.FC = () => {
           
           {/* Status caption */}
           <p className="text-gray-500 font-light">{state === 'listening' ? 'Listening…' : state === 'processing' ? 'Thinking…' : 'Speaking…'}</p>
-          
-          {/* IN-MEMORY DEBUG AUDIO PLAYER */}
-          {debugAudio && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 w-full max-w-sm">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm font-medium text-red-800">🔍 Debug Audio</h4>
-                <button 
-                  onClick={clearDebugAudio}
-                  className="text-red-400 hover:text-red-600 text-xs"
-                >
-                  ✕
-                </button>
-              </div>
-              <p className="text-xs text-red-600 mb-2">Reason: {debugAudio.reason}</p>
-              <audio 
-                controls 
-                preload="auto"
-                className="w-full h-8"
-                src={URL.createObjectURL(debugAudio.blob)}
-                style={{ height: '32px' }}
-                onLoadStart={() => console.log('[DebugAudio] Loading started')}
-                onCanPlay={() => console.log('[DebugAudio] Ready to play')}
-                onError={(e) => {
-                  console.error('[DebugAudio] Failed to load:', e);
-                  alert('Failed to load debug audio - blob may be corrupted');
-                }}
-              >
-                Your browser does not support audio playback.
-              </audio>
-              <p className="text-xs text-red-500 mt-1">
-                Size: {(debugAudio.blob.size / 1024).toFixed(1)}KB | Type: {debugAudio.blob.type || 'unknown'}
-              </p>
-              {debugAudio.blob.size === 0 && (
-                <p className="text-xs text-red-600 mt-1 font-semibold">⚠️ Empty audio blob - no audio to play</p>
-              )}
-            </div>
-          )}
         </div>
         {/* Close button */}
         <button onClick={handleModalClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700">✕</button>
