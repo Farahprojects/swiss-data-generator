@@ -4,163 +4,123 @@ import { ttsService } from '@/services/voice/tts';
 import { audioPlayer } from '@/services/voice/audioPlayer';
 import { useChatStore } from '@/core/store';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
-import { useSpeechToText } from '@/hooks/useSpeechToText';
+import { useMicAuthority } from '@/hooks/useMicAuthority';
 
 export type ConversationState = 'listening' | 'processing' | 'replying' | 'idle';
 
+/**
+ * SIMPLIFIED FSM - Reactive to Mic Authority
+ * 
+ * This FSM no longer manages microphone state directly.
+ * It simply reacts to the mic authority's decisions.
+ * 
+ * Principle: micAuthority.micIsOn is the single source of truth.
+ * Everything else is downstream consequences.
+ */
 export const useConversationFSM = () => {
-  const [state, setState] = useState<ConversationState>('listening');
+  const [state, setState] = useState<ConversationState>('idle');
   const conversationId = useChatStore((s) => s.conversationId)!;
   const addMessage = useChatStore((s) => s.addMessage);
   const isConversationOpen = useConversationUIStore((s) => s.isConversationOpen);
-
-  // Handle transcript ready - process AI response
+  
+  // Handle transcript from mic authority
   const handleTranscriptReady = async (transcript: string) => {
-    if (!isConversationOpen) return;
+    if (!isConversationOpen || !micAuthority.micIsOn) return;
     
     console.log('[ConversationFSM] Transcript ready:', transcript);
     
-    // Handle empty transcript - just continue listening
+    // Handle empty transcript - mic stays on, just wait
     if (!transcript || transcript.trim().length === 0) {
-      console.log('[ConversationFSM] Empty transcript received - continuing to listen');
-      setState('listening');
-      // Start recording again immediately for next attempt
-      setTimeout(() => {
-        if (useConversationUIStore.getState().isConversationOpen && !speechToText.isRecording) {
-          console.log('[ConversationFSM] Restarting recording after empty transcript');
-          speechToText.startRecording();
-        }
-      }, 500);
+      console.log('[ConversationFSM] Empty transcript - staying in listening mode');
       return;
     }
     
-    console.log('[ConversationFSM] Processing AI response for transcript:', transcript);
+    // Turn off mic during processing (authority decision)
+    await micAuthority.disengageMic();
     setState('processing');
 
     try {
-      // Add user message (text only - no audio storage)
-      console.log('[ConversationFSM] Adding user message to store (text-only)...');
+      // Add user message
       addMessage({ 
         id: crypto.randomUUID(), 
         conversationId, 
         role: 'user', 
         text: transcript, 
         createdAt: new Date().toISOString()
-        // Note: No audioUrl - we only persist text
       });
       
       // Get AI response
-      console.log('[ConversationFSM] Calling LLM service...');
-      const assistantMsg = await llmService.chat({ conversationId, userMessage: { text: transcript } });
-      console.log('[ConversationFSM] LLM response received:', assistantMsg.text?.substring(0, 50) + '...');
+      const assistantMsg = await llmService.chat({ 
+        conversationId, 
+        userMessage: { text: transcript } 
+      });
       
-      // Add assistant message (text only - no audio URL stored)
-      console.log('[ConversationFSM] Adding assistant message to store (text-only)...');
+      // Add assistant message
       addMessage({
         ...assistantMsg,
-        // Explicitly remove audioUrl if present - we only persist text
-        audioUrl: undefined
+        audioUrl: undefined // Only store text
       });
       
-      // Generate and play TTS (live audio, not stored)
-      console.log('[ConversationFSM] Transitioning to replying state');
+      // Play response
       setState('replying');
-      
-      console.log('[ConversationFSM] Starting TTS conversion (live audio)...');
       const audioUrl = await ttsService.speak(assistantMsg.id, assistantMsg.text);
-      console.log('[ConversationFSM] TTS data URL received for immediate playback');
       
-      console.log('[ConversationFSM] Starting live audio playback (no storage)...');
       audioPlayer.play(audioUrl, () => {
-        console.log('[ConversationFSM] 🔊 AI finished speaking - audio.onended triggered');
+        console.log('[ConversationFSM] AI finished speaking');
         
-        if (!useConversationUIStore.getState().isConversationOpen) {
-          console.log('[ConversationFSM] Overlay closed during playback - not restarting');
-          return;
-        }
-        
-        // Add 300ms debounce to prevent mic picking up tail end of TTS
-        console.log('[ConversationFSM] Adding 300ms debounce before restarting listening...');
+        // Return to listening with debounce
         setTimeout(() => {
-          if (useConversationUIStore.getState().isConversationOpen) {
-            console.log('[ConversationFSM] 🎤 Restarting listening mode after AI speech ended');
-            setState('listening');
-            // Note: useEffect will handle starting recording when state changes to 'listening'
-          } else {
-            console.log('[ConversationFSM] Conversation closed during debounce period');
+          if (isConversationOpen) {
+            setState('listening'); // This will trigger mic re-engagement
           }
-        }, 300); // 300ms debounce as recommended
+        }, 300);
       });
       
-    } catch (err) {
-      console.error('[ConversationFSM] Error in conversation flow:', err);
-      
-      // Return to listening with delay on error
-      setTimeout(() => {
-        if (useConversationUIStore.getState().isConversationOpen) {
-          console.log('[ConversationFSM] Error recovery - returning to listening');
-          setState('listening');
-        }
-      }, 2000);
+    } catch (error) {
+      console.error('[ConversationFSM] Error in AI flow:', error);
+      setState('listening'); // Return to listening on error
     }
   };
 
-  // Handle silence detected - just log it (useSpeechToText handles the auto-stop)
-  const handleSilenceDetected = () => {
-    console.log('[ConversationFSM] Silence detected, processing will start automatically');
-  };
+  // MIC AUTHORITY - Single source of truth
+  const micAuthority = useMicAuthority(handleTranscriptReady);
 
-  // Use the proven mic button STT logic
-  const speechToText = useSpeechToText(handleTranscriptReady, handleSilenceDetected);
-
-  // Start recording when conversation opens and in listening state
+  // CENTRALIZED AUTHORITY REACTION - Only one useEffect needed
   useEffect(() => {
-    console.log('[ConversationFSM] useEffect triggered - state:', state, 'isOpen:', isConversationOpen, 'isRecording:', speechToText.isRecording, 'isProcessing:', speechToText.isProcessing);
+    console.log('[ConversationFSM] Authority reaction - isOpen:', isConversationOpen, 'state:', state, 'micIsOn:', micAuthority.micIsOn);
     
-    if (state === 'listening' && isConversationOpen && !speechToText.isRecording && !speechToText.isProcessing) {
-      console.log('[ConversationFSM] ✅ All conditions met - starting recording for listening state');
-      speechToText.startRecording();
-    } else {
-      console.log('[ConversationFSM] ❌ Conditions not met for starting recording:', {
-        stateIsListening: state === 'listening',
-        conversationOpen: isConversationOpen,
-        notRecording: !speechToText.isRecording,
-        notProcessing: !speechToText.isProcessing
-      });
-    }
-  }, [state, isConversationOpen, speechToText.isRecording, speechToText.isProcessing]);
-
-  // Handle conversation open/close state changes
-  useEffect(() => {
     if (!isConversationOpen) {
-      console.log('[ConversationFSM] 🚨 CONVERSATION CLOSED - EMERGENCY SHUTDOWN');
+      // AUTHORITY DECISION: Conversation closed = mic OFF
+      console.log('[ConversationFSM] 🚨 CONVERSATION CLOSED - Disengaging mic authority');
+      micAuthority.disengageMic();
+      audioPlayer.stop();
+      setState('idle');
       
-      // 1. STOP RECORDING IMMEDIATELY (highest priority)
-      console.log('[ConversationFSM] 🎤 STOPPING RECORDING WITH PROPER SHUTDOWN');
-      if (speechToText.isRecording) {
-        speechToText.stopRecording(); // Proper shutdown sequence handles everything
-      }
+    } else if (state === 'listening' && !micAuthority.micIsOn) {
+      // AUTHORITY DECISION: Want to listen but mic is off = engage mic
+      console.log('[ConversationFSM] 🎤 LISTENING STATE - Engaging mic authority');
+      micAuthority.engageMic();
       
-      // 2. STOP AUDIO PLAYBACK IMMEDIATELY  
-      console.log('[ConversationFSM] 🔊 STOPPING AUDIO PLAYBACK IMMEDIATELY');
-      audioPlayer.stop(); // Use stop() instead of pause() for complete shutdown
-      
-      // 3. Reset state to prevent any pending operations
-      console.log('[ConversationFSM] 🔄 RESETTING STATE TO IDLE (NON-TRIGGERING)');
-      setState('idle'); // Safe idle state that won't trigger recording restart
-      
-      console.log('[ConversationFSM] ✅ EMERGENCY SHUTDOWN COMPLETE');
-    } else {
-      // Conversation opened - reset to listening state
-      console.log('[ConversationFSM] 🎤 CONVERSATION OPENED - RESETTING TO LISTENING');
+    } else if (state !== 'listening' && micAuthority.micIsOn) {
+      // AUTHORITY DECISION: Not listening but mic is on = disengage mic
+      console.log('[ConversationFSM] 🔇 NOT LISTENING - Disengaging mic authority');
+      micAuthority.disengageMic();
+    }
+    
+  }, [isConversationOpen, state, micAuthority.micIsOn]);
+
+  // Initialize conversation state when opened
+  useEffect(() => {
+    if (isConversationOpen && state === 'idle') {
+      console.log('[ConversationFSM] Conversation opened - transitioning to listening');
       setState('listening');
     }
-  }, [isConversationOpen]);
+  }, [isConversationOpen, state]);
 
   return { 
     state,
-    isRecording: speechToText.isRecording,
-    isProcessing: speechToText.isProcessing,
-    audioLevel: speechToText.audioLevel
+    isRecording: micAuthority.micIsOn, // Mic authority is the truth
+    isProcessing: micAuthority.isProcessing,
+    audioLevel: micAuthority.audioLevel
   };
 };
