@@ -1,10 +1,16 @@
 // supabase/functions/llm-handler/index.ts
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { OPENAI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY } from "../_shared/config.ts";
 
-const OPENAI_MODEL = "gpt-4o";
-const OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions";
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const GOOGLE_API_KEY = Deno.env.get("GOOGLE-API-ONE")
+  ?? Deno.env.get("GOOGLE_API_ONE")
+  ?? Deno.env.get("GOOGLE_API_KEY")
+  ?? "";
+
+const GOOGLE_MODEL = "gemini-2.5-flash";
+const GOOGLE_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GOOGLE_MODEL}:generateContent`;
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -64,10 +70,8 @@ serve(async (req) => {
       throw new Error(`Failed to fetch conversation history: ${historyError.message}`);
     }
 
-    // 3. Call OpenAI API
-    const systemPrompt = {
-      role: 'system',
-      content: `You are a psychologically insightful AI designed to interpret astrology reports and Swiss energetic data using a frequency-based model of human behavior.
+    // 3. Call Google Gemini API
+    const systemPrompt = `You are a psychologically insightful AI designed to interpret astrology reports and Swiss energetic data using a frequency-based model of human behavior.
 
 Immediately upon receiving a conversation, begin by generating:
 1. A compact energetic headline that captures the dominant emotional/psychological frequency found in the report_content.
@@ -86,34 +90,60 @@ Rules:
 - Each sentence must offer insight or guidance — keep it energetic, not technical.
 - If data is unavailable, respond: "Please refresh the link or try again with a valid report."
 
-Stay fully within the energetic-psychological lens at all times.`
-    };
-    const apiMessages = messages.map(msg => ({ role: msg.role, content: msg.text }));
+Stay fully within the energetic-psychological lens at all times.`;
+
+    // Convert conversation to Google Gemini format
+    const contents = [];
+    
+    // Add system prompt as first user message
+    contents.push({
+      role: "user",
+      parts: [{ text: systemPrompt }]
+    });
+    
+    // Add conversation messages
+    for (const msg of messages) {
+      contents.push({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.text }]
+      });
+    }
     
     const requestBody = {
-      model: OPENAI_MODEL,
-      messages: [systemPrompt, ...apiMessages],
-      temperature: 0.7,
+      contents: contents,
+      generationConfig: {
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 8192,
+        temperature: 0.7
+      }
     };
 
-    console.log(`[llm-handler] Sending request to OpenAI with ${apiMessages.length} messages.`);
-    const response = await fetch(OPENAI_ENDPOINT, {
+    const apiUrl = `${GOOGLE_ENDPOINT}?key=${GOOGLE_API_KEY}`;
+    console.log(`[llm-handler] Sending request to Google Gemini with ${contents.length} messages.`);
+    
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify(requestBody),
     });
     
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+      throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
     }
     
     const data = await response.json();
-    const assistantResponseText = data.choices[0].message.content;
-    console.log("[llm-handler] Received successful response from OpenAI.");
+    const assistantResponseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    
+    if (!assistantResponseText) {
+      console.error(`[llm-handler] Gemini response missing content:`, data);
+      throw new Error("Gemini response did not contain expected content");
+    }
+    
+    console.log("[llm-handler] Received successful response from Google Gemini.");
 
     // 4. Save the assistant's message
     console.log("[llm-handler] Inserting assistant message into DB with conversation_id:", conversationId);
@@ -121,7 +151,7 @@ Stay fully within the energetic-psychological lens at all times.`
       conversation_id: conversationId,
       role: 'assistant',
       text: assistantResponseText,
-      meta: { llm_provider: "openai", model: OPENAI_MODEL },
+      meta: { llm_provider: "google", model: GOOGLE_MODEL },
     };
     console.log("[llm-handler] Assistant message INSERT data:", JSON.stringify(assistantMessageInsertData));
     
