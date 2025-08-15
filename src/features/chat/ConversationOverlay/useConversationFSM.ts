@@ -72,19 +72,29 @@ export const useConversationFSM = () => {
       
       console.log('[ConversationFSM] Starting live audio playback (no storage)...');
       audioPlayer.play(audioUrl, () => {
-        console.log('[ConversationFSM] Audio playback completed');
-        if (useConversationUIStore.getState().isConversationOpen) {
-          console.log('[ConversationFSM] Starting next recording turn...');
-          setState('listening');
-          // Start recording again for next turn
-          setTimeout(() => {
-            if (useConversationUIStore.getState().isConversationOpen && !speechToText.isRecording) {
+        console.log('[ConversationFSM] 🔊 AI finished speaking - audio.onended triggered');
+        
+        if (!useConversationUIStore.getState().isConversationOpen) {
+          console.log('[ConversationFSM] Overlay closed during playback - not restarting');
+          return;
+        }
+        
+        // Add 300ms debounce to prevent mic picking up tail end of TTS
+        console.log('[ConversationFSM] Adding 300ms debounce before restarting listening...');
+        setTimeout(() => {
+          if (useConversationUIStore.getState().isConversationOpen) {
+            console.log('[ConversationFSM] 🎤 Restarting listening mode after AI speech ended');
+            setState('listening');
+            
+            // Ensure we start recording again for next user turn
+            if (!speechToText.isRecording) {
+              console.log('[ConversationFSM] Starting microphone for next user turn');
               speechToText.startRecording();
             }
-          }, 500); // Small delay to ensure clean transition
-        } else {
-          console.log('[ConversationFSM] Overlay closed during playback');
-        }
+          } else {
+            console.log('[ConversationFSM] Conversation closed during debounce period');
+          }
+        }, 300); // 300ms debounce as recommended
       });
       
     } catch (err) {

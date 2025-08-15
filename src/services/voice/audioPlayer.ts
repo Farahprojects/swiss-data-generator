@@ -40,8 +40,10 @@ class AudioPlayer {
   }
 
   private handlePlaybackEnd = () => {
+    console.log('[AudioPlayer] 🔊 Audio playback ended - onended event fired');
     useChatStore.getState().setStatus('idle');
     if (this.onPlaybackEnd) {
+      console.log('[AudioPlayer] Calling onPlaybackEnd callback');
       this.onPlaybackEnd();
     }
     this.cleanup();
