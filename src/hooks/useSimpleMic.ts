@@ -37,6 +37,11 @@ export const useSimpleMic = () => {
   const [isOn, setIsOn] = useState(false);
   const streamRef = useRef<MediaStream | null>(null);
 
+  // Expose the current stream for other services to use
+  const getActiveStream = useCallback((): MediaStream | null => {
+    return streamRef.current;
+  }, []);
+
   const turnOn = useCallback(async (): Promise<boolean> => {
     console.log('[SimpleMic] 🎤 turnOn() called - Current state:', {
       isOn,
@@ -182,6 +187,7 @@ export const useSimpleMic = () => {
   return {
     isOn,
     turnOn,
-    turnOff
+    turnOff,
+    getActiveStream // Expose stream for other services
   };
 };

@@ -19,6 +19,7 @@ export const useSpeechToText = (
   const mediaStreamSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const isRecordingRef = useRef(false);
   const monitoringRef = useRef(false);
+  const externalStreamRef = useRef(false); // Track if using external stream
   const { toast } = useToast();
 
   const processAudio = useCallback(async () => {
@@ -161,7 +162,7 @@ export const useSpeechToText = (
     checkSilence();
   }, [onSilenceDetected]);
 
-  const startRecording = useCallback(async () => {
+  const startRecording = useCallback(async (externalStream?: MediaStream) => {
     try {
       // Skip in SSR environment
       if (typeof navigator === 'undefined' || !navigator.mediaDevices) {
@@ -170,16 +171,24 @@ export const useSpeechToText = (
       
       log('debug', 'Starting recording');
       
-      // Enhanced audio constraints for better quality
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: 48000,
-          channelCount: 1
-        } 
-      });
+      let stream: MediaStream;
+      
+      if (externalStream && externalStream.active) {
+        console.log('[useSpeechToText] Using external stream:', externalStream.id);
+        stream = externalStream;
+      } else {
+        console.log('[useSpeechToText] Creating new stream (fallback)');
+        // Enhanced audio constraints for better quality
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            sampleRate: 48000,
+            channelCount: 1
+          } 
+        });
+      }
       
       // Set up audio context for silence detection
       audioContextRef.current = new AudioContext({ sampleRate: 48000 });
@@ -198,6 +207,7 @@ export const useSpeechToText = (
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
       isRecordingRef.current = true;
+      externalStreamRef.current = !!externalStream;
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -261,9 +271,10 @@ export const useSpeechToText = (
         }
       }
 
-      // 4. Stop all MediaStream tracks BEFORE stopping recorder
-      if (mediaRecorderRef.current?.stream) {
-        log('debug', 'Stopping MediaStream tracks');
+      // 4. Only stop tracks if we created the stream ourselves
+      // If using external stream, let the external manager handle cleanup
+      if (mediaRecorderRef.current?.stream && !externalStreamRef.current) {
+        log('debug', 'Stopping MediaStream tracks (internal stream)');
         mediaRecorderRef.current.stream.getTracks().forEach(track => {
           try {
             if (track.readyState === 'live') {
@@ -274,6 +285,8 @@ export const useSpeechToText = (
             console.warn('Track stop error:', e);
           }
         });
+      } else if (externalStreamRef.current) {
+        log('debug', 'Using external stream - skipping track cleanup');
       }
 
       // 5. Set up onstop handler for async processing
@@ -348,6 +361,7 @@ export const useSpeechToText = (
       // Reset all refs and state
       isRecordingRef.current = false;
       monitoringRef.current = false;
+      externalStreamRef.current = false;
       setIsRecording(false);
       setIsProcessing(false);
       setAudioLevel(0);
