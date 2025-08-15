@@ -19,9 +19,9 @@ serve(async (req) => {
       throw new Error('Audio data is required');
     }
 
-    const googleApiKey = Deno.env.get('GOOGLE_API_KEY');
+    const googleApiKey = Deno.env.get('GOOGLE-STT');
     if (!googleApiKey) {
-      throw new Error('Google API key not configured');
+      throw new Error('Google STT API key not configured');
     }
 
     // Simplified configuration using only supported fields
