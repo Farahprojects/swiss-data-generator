@@ -10,6 +10,8 @@ import { microphoneArbitrator } from './MicrophoneArbitrator';
 export interface ConversationMicrophoneOptions {
   onRecordingComplete?: (audioBlob: Blob) => void;
   onError?: (error: Error) => void;
+  onSilenceDetected?: () => void;
+  silenceTimeoutMs?: number;
 }
 
 class ConversationMicrophoneServiceClass {
@@ -17,6 +19,11 @@ class ConversationMicrophoneServiceClass {
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = [];
   private isRecording = false;
+  private audioContext: AudioContext | null = null;
+  private analyser: AnalyserNode | null = null;
+  private mediaStreamSource: MediaStreamAudioSourceNode | null = null;
+  private monitoringRef = { current: false };
+  private audioLevel = 0;
   
   private options: ConversationMicrophoneOptions = {};
   private listeners = new Set<() => void>();
@@ -25,7 +32,7 @@ class ConversationMicrophoneServiceClass {
    * INITIALIZE - Set up service with options
    */
   initialize(options: ConversationMicrophoneOptions): void {
-    console.log('[ConversationMic] 🔧 Initializing service');
+    this.log('🔧 Initializing service');
     this.options = options;
   }
 
@@ -35,7 +42,7 @@ class ConversationMicrophoneServiceClass {
   async startRecording(): Promise<boolean> {
     // Check permission from arbitrator
     if (!microphoneArbitrator.claim('conversation')) {
-      console.error('[ConversationMic] ❌ Cannot start - microphone in use by another domain');
+      this.error('❌ Cannot start - microphone in use by another domain');
       if (this.options.onError) {
         this.options.onError(new Error('Microphone is busy with another feature'));
       }
@@ -43,17 +50,29 @@ class ConversationMicrophoneServiceClass {
     }
 
     try {
-      console.log('[ConversationMic] 🎤 Starting conversation recording');
+      this.log('🎤 Starting conversation recording');
       
       // Create our own stream - no sharing
       this.stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
+          // Request raw, unprocessed audio similar to chat text mic
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
           sampleRate: 48000,
         } 
       });
+
+      const trackSettings = this.stream.getAudioTracks()[0]?.getSettings?.() || {};
+      this.log('🎛️ getUserMedia acquired. Track settings:', trackSettings);
+
+      // Configure audio analysis for optional silence detection
+      this.audioContext = new AudioContext({ sampleRate: 48000 });
+      this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
+      this.analyser = this.audioContext.createAnalyser();
+      this.analyser.fftSize = 2048;
+      this.analyser.smoothingTimeConstant = 0.8;
+      this.mediaStreamSource.connect(this.analyser);
 
       // Set up MediaRecorder for conversation
       this.mediaRecorder = new MediaRecorder(this.stream, {
@@ -75,7 +94,7 @@ class ConversationMicrophoneServiceClass {
       };
 
       this.mediaRecorder.onerror = (event) => {
-        console.error('[ConversationMic] ❌ MediaRecorder error:', event);
+        this.error('❌ MediaRecorder error:', event);
         if (this.options.onError) {
           this.options.onError(new Error('Recording failed'));
         }
@@ -85,11 +104,14 @@ class ConversationMicrophoneServiceClass {
       this.mediaRecorder.start();
       
       this.notifyListeners();
-      console.log('[ConversationMic] ✅ Recording started successfully');
+      this.log('✅ Recording started successfully');
+
+      // Start silence monitoring (optional)
+      this.startSilenceMonitoring();
       return true;
 
     } catch (error) {
-      console.error('[ConversationMic] ❌ Failed to start recording:', error);
+      this.error('❌ Failed to start recording:', error);
       microphoneArbitrator.release('conversation');
       
       if (this.options.onError) {
@@ -110,21 +132,21 @@ class ConversationMicrophoneServiceClass {
         return;
       }
 
-      console.log('[ConversationMic] 🛑 Stopping conversation recording');
+      this.log('🛑 Stopping conversation recording');
       
       this.isRecording = false;
 
       // Set up one-time handler for stop completion
       this.mediaRecorder.onstop = () => {
         const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
-        console.log('[ConversationMic] 📼 Recording completed - blob size:', audioBlob.size);
+        this.log('📼 Recording completed - blob size:', audioBlob.size);
         
         this.cleanup();
         resolve(audioBlob);
       };
 
       this.mediaRecorder.onerror = (event) => {
-        console.error('[ConversationMic] ❌ Stop recording error:', event);
+        this.error('❌ Stop recording error:', event);
         this.cleanup();
         reject(new Error('Failed to stop recording'));
       };
@@ -139,7 +161,7 @@ class ConversationMicrophoneServiceClass {
   cancelRecording(): void {
     if (!this.isRecording) return;
 
-    console.log('[ConversationMic] ❌ Cancelling conversation recording');
+    this.log('❌ Cancelling conversation recording');
     
     this.isRecording = false;
     
@@ -155,7 +177,7 @@ class ConversationMicrophoneServiceClass {
    */
   private handleRecordingComplete(): void {
     const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
-    console.log('[ConversationMic] 📼 Recording completed - blob size:', audioBlob.size);
+    this.log('📼 Recording completed - blob size:', audioBlob.size);
     
     if (this.options.onRecordingComplete) {
       this.options.onRecordingComplete(audioBlob);
@@ -168,12 +190,22 @@ class ConversationMicrophoneServiceClass {
    * CLEANUP - Complete domain cleanup
    */
   private cleanup(): void {
-    console.log('[ConversationMic] 🧹 Cleaning up conversation microphone');
+    this.log('🧹 Cleaning up conversation microphone');
+
+    // Disconnect audio nodes
+    if (this.mediaStreamSource) {
+      this.mediaStreamSource.disconnect();
+      this.mediaStreamSource = null;
+    }
+    if (this.audioContext && this.audioContext.state !== 'closed') {
+      this.audioContext.close();
+      this.audioContext = null;
+    }
 
     // Stop stream tracks
     if (this.stream) {
       this.stream.getTracks().forEach(track => {
-        console.log('[ConversationMic] Stopping track:', track.kind);
+        this.log('Stopping track:', track.kind);
         track.stop();
       });
       this.stream = null;
@@ -182,6 +214,9 @@ class ConversationMicrophoneServiceClass {
     // Clear refs
     this.mediaRecorder = null;
     this.audioChunks = [];
+    this.analyser = null;
+    this.audioLevel = 0;
+    this.monitoringRef.current = false;
 
     // Release arbitrator
     microphoneArbitrator.release('conversation');
@@ -195,7 +230,8 @@ class ConversationMicrophoneServiceClass {
   getState() {
     return {
       isRecording: this.isRecording,
-      hasStream: !!this.stream
+      hasStream: !!this.stream,
+      audioLevel: this.audioLevel
     };
   }
 
@@ -222,9 +258,81 @@ class ConversationMicrophoneServiceClass {
    * FORCE CLEANUP - Emergency cleanup
    */
   forceCleanup(): void {
-    console.log('[ConversationMic] 🚨 Force cleanup');
+    this.log('🚨 Force cleanup');
     this.isRecording = false;
     this.cleanup();
+  }
+
+  // ----- Silence monitoring (adaptive, optional) -----
+  private startSilenceMonitoring(): void {
+    if (!this.analyser || this.monitoringRef.current) return;
+    this.monitoringRef.current = true;
+
+    const bufferLength = this.analyser.fftSize;
+    const dataArray = new Uint8Array(bufferLength);
+    let silenceStart: number | null = null;
+    const timeoutMs = this.options.silenceTimeoutMs || 2000;
+    const calibrationWindowMs = 300;
+    const calibrationStart = Date.now();
+    let calibrationSum = 0;
+    let calibrationCount = 0;
+    let adaptiveThreshold = 0.02;
+
+    const check = () => {
+      if (!this.monitoringRef.current || !this.analyser) return;
+      this.analyser.getByteTimeDomainData(dataArray);
+
+      let sumSquares = 0;
+      for (let i = 0; i < bufferLength; i++) {
+        const centered = (dataArray[i] - 128) / 128;
+        sumSquares += centered * centered;
+      }
+      const rms = Math.sqrt(sumSquares / bufferLength);
+      this.audioLevel = rms;
+
+      const now = Date.now();
+      if (now - calibrationStart < calibrationWindowMs) {
+        calibrationSum += rms;
+        calibrationCount += 1;
+        adaptiveThreshold = Math.max(0.01, (calibrationSum / Math.max(1, calibrationCount)) + 0.01);
+      }
+
+      if (rms < adaptiveThreshold) {
+        if (silenceStart === null) {
+          silenceStart = now;
+        } else if (now - silenceStart >= timeoutMs) {
+          this.log(`⏰ ${timeoutMs}ms silence detected`);
+          this.monitoringRef.current = false;
+          if (this.options.onSilenceDetected) {
+            this.options.onSilenceDetected();
+          }
+          return;
+        }
+      } else {
+        silenceStart = null;
+      }
+
+      requestAnimationFrame(check);
+    };
+
+    check();
+  }
+
+  // ----- Logging helpers (gated) -----
+  private log(message: string, ...args: any[]): void {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const enabled = localStorage.getItem('debugAudio') === '1';
+        if (!enabled) return;
+      }
+    } catch {}
+    // eslint-disable-next-line no-console
+    console.log('[ConversationMic]', message, ...args);
+  }
+
+  private error(message: string, ...args: any[]): void {
+    // eslint-disable-next-line no-console
+    console.error('[ConversationMic]', message, ...args);
   }
 }
 
