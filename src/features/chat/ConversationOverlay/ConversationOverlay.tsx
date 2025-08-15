@@ -3,10 +3,12 @@ import { createPortal } from 'react-dom';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { VoiceBubble } from './VoiceBubble';
 import { useConversationFSM } from './useConversationFSM';
+import { useMicAuthorityContext } from '@/contexts/MicAuthorityContext';
 
 export const ConversationOverlay: React.FC = () => {
   const { isConversationOpen, closeConversation } = useConversationUIStore();
-  const { state, audioLevel } = useConversationFSM();
+  const { state } = useConversationFSM();
+  const { audioLevel } = useMicAuthorityContext();
 
   if (!isConversationOpen) return null;
 
