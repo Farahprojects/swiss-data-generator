@@ -74,7 +74,7 @@ export const ChatInput = () => {
               className="p-2 text-gray-500 hover:text-gray-900 transition-colors"
               onClick={handleSpeakerClick}
             >
-              <AudioLines size={18} className={isRecording ? 'text-red-500' : ''} />
+              <AudioLines size={18} className={isConversationOpen ? 'text-red-500' : ''} />
             </button>
             <button 
               className="p-2 text-gray-500 hover:text-gray-900 transition-all duration-200 ease-in-out"
