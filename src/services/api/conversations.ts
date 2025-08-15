@@ -132,16 +132,16 @@ const injectContextMessages = async (conversationId: string, guestId: string): P
   console.log('[injectContextMessages] Fetching temp report data for guestId:', guestId);
   
   try {
-    // Use the fetch-temp-report Edge Function
-    const { data: tempData, error: tempError } = await supabase.functions.invoke('fetch-temp-report', {
-      body: { uuid: guestId },
-      headers: {
-        'X-Report-Token': 'system-context-injection' // Placeholder token for system use
+    // Use the retrieve-temp-report Edge Function (without token for system access)
+    const { data: tempData, error: tempError } = await supabase.functions.invoke('retrieve-temp-report', {
+      body: { 
+        uuid: guestId
+        // No token - will get fresh token but we only need the data
       }
     });
 
     if (tempError) {
-      console.error('[injectContextMessages] Error calling fetch-temp-report:', tempError);
+      console.error('[injectContextMessages] Error calling retrieve-temp-report:', tempError);
       // Don't throw - conversation should still work without context
       return;
     }
@@ -151,7 +151,7 @@ const injectContextMessages = async (conversationId: string, guestId: string): P
       return;
     }
   } catch (error) {
-    console.error('[injectContextMessages] Exception calling fetch-temp-report:', error);
+    console.error('[injectContextMessages] Exception calling retrieve-temp-report:', error);
     return;
   }
 
