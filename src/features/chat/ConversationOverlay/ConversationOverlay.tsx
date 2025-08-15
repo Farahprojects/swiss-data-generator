@@ -4,10 +4,12 @@ import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { VoiceBubble } from './VoiceBubble';
 import { useChatStore } from '@/core/store';
 import { chatController } from '../ChatController';
+import { useConversationAudioLevel } from '@/hooks/useConversationAudioLevel';
 
 export const ConversationOverlay: React.FC = () => {
   const { isConversationOpen, closeConversation } = useConversationUIStore();
   const status = useChatStore((state) => state.status);
+  const audioLevel = useConversationAudioLevel(); // Get real-time audio level
   
   // PROPER MODAL CLOSE - Stop conversation and turn off mic
   const handleModalClose = () => {
@@ -21,7 +23,6 @@ export const ConversationOverlay: React.FC = () => {
                status === 'transcribing' ? 'processing' : 
                status === 'generating' ? 'processing' : 
                status === 'speaking' ? 'replying' : 'listening';
-  const audioLevel = 0; // No audio level monitoring needed for display
 
   if (!isConversationOpen) return null;
 

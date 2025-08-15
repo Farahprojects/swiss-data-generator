@@ -235,6 +235,11 @@ class ConversationMicrophoneServiceClass {
     };
   }
 
+  // Get current audio level for UI feedback
+  getCurrentAudioLevel(): number {
+    return this.audioLevel;
+  }
+
   /**
    * GET STREAM - For external access (if needed)
    */
