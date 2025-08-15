@@ -35,7 +35,21 @@ export const ConversationOverlay: React.FC = () => {
       >
         <div className="flex flex-col items-center justify-center h-full gap-6">
           <VoiceBubble state={state} audioLevel={audioLevel} />
-          {/* Placeholder captions */}
+          
+          {/* RAW AUDIO LEVEL DISPLAY - Simple mic input testing */}
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-64 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-green-400 via-yellow-400 to-red-500 transition-all duration-75"
+                style={{ width: `${Math.min(audioLevel * 1000, 100)}%` }}
+              />
+            </div>
+            <div className="text-xs text-gray-400 font-mono">
+              Level: {(audioLevel * 1000).toFixed(1)} | dB: {audioLevel > 0 ? (20 * Math.log10(audioLevel)).toFixed(1) : '-∞'}
+            </div>
+          </div>
+          
+          {/* Status caption */}
           <p className="text-gray-500 font-light">{state === 'listening' ? 'Listening…' : state === 'processing' ? 'Thinking…' : 'Speaking…'}</p>
         </div>
         {/* Close button */}
