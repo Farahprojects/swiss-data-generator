@@ -120,5 +120,73 @@ export const getOrCreateConversation = async (guestId: string, reportId: string)
   }
   
   console.log('[getOrCreateConversation] Created new conversation:', newConv.id);
+
+  // Inject context from temp_report_data
+  await injectContextMessages(newConv.id, guestId);
+  
   return { conversationId: newConv.id };
+};
+
+// Helper function to inject context from temp_report_data
+const injectContextMessages = async (conversationId: string, guestId: string): Promise<void> => {
+  console.log('[injectContextMessages] Querying temp_report_data for guestId:', guestId);
+  
+  // Query temp_report_data for Swiss data and report data
+  const { data: tempData, error: tempError } = await supabase
+    .from('temp_report_data')
+    .select('swiss_data, report_data')
+    .eq('guest_report_id', guestId)
+    .limit(1)
+    .maybeSingle();
+
+  if (tempError) {
+    console.error('[injectContextMessages] Error querying temp_report_data:', tempError);
+    // Don't throw - conversation should still work without context
+    return;
+  }
+
+  if (!tempData) {
+    console.log('[injectContextMessages] No temp_report_data found for guestId:', guestId);
+    return;
+  }
+
+  const systemMessages = [];
+
+  // Add Swiss data as first system message if present
+  if (tempData.swiss_data) {
+    console.log('[injectContextMessages] Adding Swiss data as system message');
+    systemMessages.push({
+      conversation_id: conversationId,
+      role: 'system',
+      text: `Swiss Ephemeris Data: ${JSON.stringify(tempData.swiss_data)}`,
+      meta: { type: 'swiss_data', injected_at: new Date().toISOString() }
+    });
+  }
+
+  // Add report data as second system message if present
+  if (tempData.report_data) {
+    console.log('[injectContextMessages] Adding report data as system message');
+    systemMessages.push({
+      conversation_id: conversationId,
+      role: 'system', 
+      text: `Astrological Report: ${JSON.stringify(tempData.report_data)}`,
+      meta: { type: 'report_data', injected_at: new Date().toISOString() }
+    });
+  }
+
+  // Insert system messages if we have any
+  if (systemMessages.length > 0) {
+    const { error: insertError } = await supabase
+      .from('messages')
+      .insert(systemMessages);
+
+    if (insertError) {
+      console.error('[injectContextMessages] Error inserting system messages:', insertError);
+      // Don't throw - conversation should still work
+    } else {
+      console.log(`[injectContextMessages] Successfully inserted ${systemMessages.length} system messages`);
+    }
+  } else {
+    console.log('[injectContextMessages] No context data to inject');
+  }
 };
