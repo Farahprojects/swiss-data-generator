@@ -3,9 +3,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { Conversation } from '@/core/types';
 import { getGuestId } from '../auth/session';
 
+// Legacy function - now replaced by secure token-based getOrCreateConversation
+// Keeping for backward compatibility but should not be used for new chat flows
 export const createConversation = async (reportId?: string): Promise<Conversation> => {
   const guestId = getGuestId();
-  console.log('[createConversation] Called with reportId:', reportId, 'using guestId from session:', guestId);
+  console.log('[createConversation] DEPRECATED: Called with reportId:', reportId, 'using guestId from session:', guestId);
+  console.warn('[createConversation] This function is deprecated. Use getOrCreateConversation with secure tokens instead.');
   
   // FAIL FAST: If no guestId, don't create a fallback
   if (!guestId) {
@@ -96,8 +99,8 @@ export const getOrCreateConversation = async (uuid: string, token: string): Prom
   // Create new conversation
   console.log('[getOrCreateConversation] Creating new conversation with uuid:', uuid);
   
-  // Log the exact values being inserted
-  const insertData = { guest_id: uuid, report_id: uuid }; // Using uuid for both since they're the same in our system
+  // Log the exact values being inserted - report_id is nullable now since we get report details from retrieve-temp-report
+  const insertData = { guest_id: uuid, report_id: null }; 
   console.log('[getOrCreateConversation] INSERT data:', JSON.stringify(insertData));
   
   const { data: newConv, error: createError } = await supabase

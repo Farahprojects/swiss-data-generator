@@ -8,9 +8,9 @@ const ReportChatScreen = () => {
   const { conversationId } = useParams<{ conversationId: string }>();
   const location = useLocation();
   const navigate = useNavigate();
-  const { uuid, token, guestId } = location.state || {};
+  const { uuid, token } = location.state || {};
 
-  console.log('[ReportChatScreen] On mount - uuid:', uuid, 'token:', !!token, 'guestId:', guestId);
+  console.log('[ReportChatScreen] On mount - uuid:', uuid, 'token:', !!token);
 
   // Validation - now requires secure tokens
   if (!uuid || !token) {

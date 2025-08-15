@@ -506,7 +506,7 @@ export const ReportViewer = ({
       
       // Navigate to chat with secure tokens
       console.log('[ReportViewer] Navigating to chat with secure tokens - uuid:', uuid, 'hasToken:', !!token);
-      navigate('/chat', { state: { uuid, token, guestId: guestReportId } });
+      navigate('/chat', { state: { uuid, token } });
       
     } catch (error) {
       console.error('[ReportViewer] Failed to prepare secure chat:', error);
