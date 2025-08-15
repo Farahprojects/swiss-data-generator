@@ -3,10 +3,32 @@ import { useState, useEffect } from 'react';
 
 export const useTypewriter = (text: string, speed: number = 50) => {
   const [displayText, setDisplayText] = useState('');
+  const [isReady, setIsReady] = useState(false);
+
+  // Wait for text to be available and stable before starting animation
+  useEffect(() => {
+    if (!text || text.length === 0) {
+      setDisplayText('');
+      setIsReady(false);
+      return;
+    }
+
+    // Add a small delay to ensure text is fully available
+    const readyTimer = setTimeout(() => {
+      setIsReady(true);
+    }, 50); // 50ms delay to ensure text is stable
+
+    return () => clearTimeout(readyTimer);
+  }, [text]);
 
   useEffect(() => {
+    if (!isReady || !text || text.length === 0) {
+      return;
+    }
+
     let i = 0;
-    setDisplayText(''); // Reset display text on new text
+    setDisplayText(''); // Reset display text when starting animation
+    
     const timer = setInterval(() => {
       if (i < text.length) {
         setDisplayText(prev => prev + text.charAt(i));
@@ -17,7 +39,7 @@ export const useTypewriter = (text: string, speed: number = 50) => {
     }, speed);
 
     return () => clearInterval(timer);
-  }, [text, speed]);
+  }, [isReady, text, speed]);
 
   return displayText;
 };
