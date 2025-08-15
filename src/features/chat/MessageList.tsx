@@ -16,7 +16,7 @@ const MessageItem = ({ message, isLast, isFromHistory }: { message: Message; isL
   return (
     <div className={`flex items-end gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
-        className={`px-4 py-3 rounded-2xl max-w-lg lg:max-w-xl ${
+        className={`px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl ${
           isUser
             ? 'bg-gray-200 text-black'
             : 'text-black'
