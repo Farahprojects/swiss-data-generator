@@ -12,7 +12,7 @@ const MessageItem = ({ message, isLast }: { message: Message; isLast: boolean })
   const textContent = isUser || !isLast ? message.text : displayText;
 
   return (
-    <div className="flex items-end gap-3 justify-start">
+    <div className={`flex items-end gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
         className={`px-4 py-3 rounded-2xl max-w-lg lg:max-w-xl ${
           isUser
