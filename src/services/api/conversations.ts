@@ -93,6 +93,10 @@ export const getOrCreateConversation = async (uuid: string, token: string): Prom
 
   if (existing) {
     console.log('[getOrCreateConversation] Found existing conversation:', existing.id);
+    
+    // Even for existing conversations, try to inject context if it hasn't been done
+    await injectContextMessages(existing.id, uuid, token);
+    
     return { conversationId: existing.id };
   }
 
@@ -133,6 +137,25 @@ export const getOrCreateConversation = async (uuid: string, token: string): Prom
 const injectContextMessages = async (conversationId: string, uuid: string, token: string): Promise<void> => {
   console.log('[injectContextMessages] Fetching temp report data for uuid:', uuid, 'with secure token');
   
+  // Check if we've already injected context for this conversation
+  const { data: existingMessages, error: checkError } = await supabase
+    .from('messages')
+    .select('id')
+    .eq('conversation_id', conversationId)
+    .eq('role', 'user')
+    .contains('meta', { type: 'context_injection' })
+    .limit(1);
+
+  if (checkError) {
+    console.error('[injectContextMessages] Error checking for existing context:', checkError);
+    return;
+  }
+
+  if (existingMessages && existingMessages.length > 0) {
+    console.log('[injectContextMessages] Context already injected for this conversation, skipping');
+    return;
+  }
+  
   try {
     // Use the retrieve-temp-report Edge Function with secure tokens
     const { data: tempData, error: tempError } = await supabase.functions.invoke('retrieve-temp-report', {
@@ -157,41 +180,48 @@ const injectContextMessages = async (conversationId: string, uuid: string, token
     return;
   }
 
-  const systemMessages = [];
-
-  // Add Swiss data as first system message if present
-  if (tempData.swiss_data) {
-    console.log('[injectContextMessages] Adding Swiss data as system message');
-    systemMessages.push({
-      conversation_id: conversationId,
-      role: 'system',
-      text: `Swiss Ephemeris Data: ${JSON.stringify(tempData.swiss_data)}`,
-      meta: { type: 'swiss_data', injected_at: new Date().toISOString() }
-    });
-  }
-
-  // Add report data as second system message if present (from report_content)
+  // Build the user message content combining all available data
+  let userMessageContent = '';
+  
   if (tempData.report_content) {
-    console.log('[injectContextMessages] Adding report content as system message');
-    systemMessages.push({
-      conversation_id: conversationId,
-      role: 'system', 
-      text: `Astrological Report: ${tempData.report_content}`,
-      meta: { type: 'report_content', injected_at: new Date().toISOString() }
-    });
+    userMessageContent += `Here is my astrological report:\n\n${tempData.report_content}\n\n`;
   }
+  
+  if (tempData.swiss_data) {
+    userMessageContent += `Here is my birth chart data:\n\n${JSON.stringify(tempData.swiss_data, null, 2)}\n\n`;
+  }
+  
+  if (tempData.metadata) {
+    userMessageContent += `Additional details: ${JSON.stringify(tempData.metadata, null, 2)}\n\n`;
+  }
+  
+  userMessageContent += `Please analyze this astrological information and help me understand what it means.`;
 
-  // Insert system messages if we have any
-  if (systemMessages.length > 0) {
+  // Insert as a single user message if we have content
+  if (userMessageContent.trim()) {
+    console.log('[injectContextMessages] Creating user message with report context');
+    
+    const userMessage = {
+      conversation_id: conversationId,
+      role: 'user',
+      text: userMessageContent.trim(),
+      meta: { 
+        type: 'context_injection', 
+        injected_at: new Date().toISOString(),
+        has_report: !!tempData.report_content,
+        has_swiss_data: !!tempData.swiss_data,
+        has_metadata: !!tempData.metadata
+      }
+    };
+
     const { error: insertError } = await supabase
       .from('messages')
-      .insert(systemMessages);
+      .insert([userMessage]);
 
     if (insertError) {
-      console.error('[injectContextMessages] Error inserting system messages:', insertError);
-      // Don't throw - conversation should still work
+      console.error('[injectContextMessages] Error inserting user context message:', insertError);
     } else {
-      console.log(`[injectContextMessages] Successfully inserted ${systemMessages.length} system messages`);
+      console.log('[injectContextMessages] Successfully inserted user context message');
     }
   } else {
     console.log('[injectContextMessages] No context data to inject');
