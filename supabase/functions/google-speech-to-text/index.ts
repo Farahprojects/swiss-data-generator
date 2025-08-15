@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { audioData, config } = await req.json();
+    const { audioData, config, traceId } = await req.json();
     
     // Comprehensive audio data validation
     if (!audioData) {
@@ -31,7 +31,7 @@ serve(async (req) => {
       throw new Error('Empty audio data - please try recording again');
     }
     
-    console.log(`[google-stt] Audio data received, proceeding with transcription.`);
+    console.log(`[google-stt]`, traceId ? `[trace:${traceId}]` : '', `Audio data received, proceeding with transcription.`);
     
     // Test base64 decode to catch invalid format early
     try {
@@ -68,8 +68,8 @@ serve(async (req) => {
       config: defaultConfig
     };
 
-    console.log('Sending request to Google Speech-to-Text API');
-    console.log('Config:', JSON.stringify(defaultConfig, null, 2));
+    console.log('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Sending request to Google Speech-to-Text API');
+    console.log('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Config:', JSON.stringify(defaultConfig, null, 2));
     
     const response = await fetch(
       `https://speech.googleapis.com/v1/speech:recognize?key=${googleApiKey}`,
@@ -84,24 +84,24 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Google API error:', errorText);
+      console.error('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Google API error:', errorText);
       throw new Error(`Google Speech-to-Text API error: ${response.status} - ${errorText}`);
     }
 
     const result = await response.json();
-    console.log('Google API response:', result);
+    console.log('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Google API response:', result);
 
     // Extract the transcript from the first result
     const transcript = result.results?.[0]?.alternatives?.[0]?.transcript || '';
     const confidence = result.results?.[0]?.alternatives?.[0]?.confidence || 0;
 
-    console.log('Extracted transcript:', transcript);
-    console.log('Confidence score:', confidence);
+    console.log('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Extracted transcript length:', transcript?.length || 0);
+    console.log('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Confidence score:', confidence);
     
     // Handle empty transcription results - return empty transcript instead of error
     if (!transcript || transcript.trim().length === 0) {
-      console.warn('[google-stt] Empty transcript from Google API - audio may be unclear or silent');
-      console.log('[google-stt] Returning empty transcript for conversation mode to continue gracefully');
+      console.warn('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Empty transcript from Google API - audio may be unclear or silent');
+      console.log('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Returning empty transcript for conversation mode to continue gracefully');
       return new Response(
         JSON.stringify({ 
           transcript: '', // Empty transcript

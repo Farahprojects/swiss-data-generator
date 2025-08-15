@@ -27,6 +27,8 @@ class ChatTextMicrophoneServiceClass {
   private audioLevel = 0;
   private silenceTimer: NodeJS.Timeout | null = null;
   private monitoringRef = { current: false };
+  private currentTraceId: string | null = null;
+  private recordingStartedAt: number | null = null;
   
   private options: ChatTextMicrophoneOptions = {};
   private listeners = new Set<() => void>();
@@ -35,7 +37,7 @@ class ChatTextMicrophoneServiceClass {
    * INITIALIZE - Set up service with options
    */
   initialize(options: ChatTextMicrophoneOptions): void {
-    console.log('[ChatTextMic] 🔧 Initializing service');
+    this.log('🔧 Initializing service with options', options);
     this.options = options;
   }
 
@@ -45,12 +47,14 @@ class ChatTextMicrophoneServiceClass {
   async startRecording(): Promise<boolean> {
     // Check permission from arbitrator
     if (!microphoneArbitrator.claim('chat-text')) {
-      console.error('[ChatTextMic] ❌ Cannot start - microphone in use by another domain');
+      this.error('❌ Cannot start - microphone in use by another domain');
       return false;
     }
 
     try {
-      console.log('[ChatTextMic] 🎤 Starting chat text voice recording');
+      this.currentTraceId = this.generateTraceId();
+      this.recordingStartedAt = Date.now();
+      this.log('🎤 Starting chat text voice recording');
       
       // Create our own stream - no sharing
       this.stream = await navigator.mediaDevices.getUserMedia({
@@ -65,6 +69,9 @@ class ChatTextMicrophoneServiceClass {
         }
       });
 
+      const trackSettings = this.stream.getAudioTracks()[0]?.getSettings?.() || {};
+      this.log('🎛️ getUserMedia acquired. Track settings:', trackSettings);
+
       // Set up audio analysis
       this.audioContext = new AudioContext({ sampleRate: 48000 });
       this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
@@ -72,11 +79,19 @@ class ChatTextMicrophoneServiceClass {
       this.analyser.fftSize = 2048;
       this.analyser.smoothingTimeConstant = 0.8;
       this.mediaStreamSource.connect(this.analyser);
+      this.log('🔍 AudioContext/analyser configured', {
+        analyserFftSize: this.analyser.fftSize,
+        smoothingTimeConstant: this.analyser.smoothingTimeConstant,
+      });
 
       // Set up MediaRecorder
       this.mediaRecorder = new MediaRecorder(this.stream, {
         mimeType: 'audio/webm;codecs=opus',
         audioBitsPerSecond: 128000
+      });
+      this.log('⏺️ MediaRecorder created', {
+        mimeType: 'audio/webm;codecs=opus',
+        audioBitsPerSecond: 128000,
       });
 
       this.audioChunks = [];
@@ -85,26 +100,29 @@ class ChatTextMicrophoneServiceClass {
       this.mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           this.audioChunks.push(event.data);
+          this.log('📥 ondataavailable', { size: event.data.size, totalChunks: this.audioChunks.length });
         }
       };
 
       this.mediaRecorder.onstop = async () => {
         // Ensure we finish processing the audio before cleaning up resources
+        this.log('🛑 mediaRecorder onstop fired');
         await this.processAudio();
         this.cleanup();
       };
 
       this.mediaRecorder.start(100);
+      this.log('▶️ mediaRecorder.start(timeslice=100ms)');
       
       // Start silence monitoring
       this.startSilenceMonitoring();
       
       this.notifyListeners();
-      console.log('[ChatTextMic] ✅ Recording started successfully');
+      this.log('✅ Recording started successfully');
       return true;
 
     } catch (error) {
-      console.error('[ChatTextMic] ❌ Failed to start recording:', error);
+      this.error('❌ Failed to start recording:', error);
       microphoneArbitrator.release('chat-text');
       return false;
     }
@@ -116,7 +134,7 @@ class ChatTextMicrophoneServiceClass {
   stopRecording(): void {
     if (!this.isRecording) return;
 
-    console.log('[ChatTextMic] 🛑 Stopping chat text voice recording');
+    this.log('🛑 Stopping chat text voice recording');
     
     this.isRecording = false;
     this.monitoringRef.current = false;
@@ -129,6 +147,7 @@ class ChatTextMicrophoneServiceClass {
 
     // Stop MediaRecorder
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      this.log('⏹️ Calling mediaRecorder.stop()');
       this.mediaRecorder.stop();
     }
     // NOTE: cleanup will be triggered in the mediaRecorder.onstop handler
@@ -166,7 +185,7 @@ class ChatTextMicrophoneServiceClass {
         if (silenceStart === null) {
           silenceStart = now;
         } else if (now - silenceStart >= timeoutMs) {
-          console.log(`[ChatTextMic] ⏰ ${timeoutMs}ms silence detected - stopping`);
+          this.log(`⏰ ${timeoutMs}ms silence detected - stopping`, { rms });
           this.monitoringRef.current = false;
           
           if (this.options.onSilenceDetected) {
@@ -195,20 +214,27 @@ class ChatTextMicrophoneServiceClass {
     try {
       this.isProcessing = true;
       this.notifyListeners();
-      
-      console.log('[ChatTextMic] 🔄 Processing chat text audio...');
+      const recordingDurationMs = this.recordingStartedAt ? Date.now() - this.recordingStartedAt : null;
+      this.log('🔄 Processing chat text audio...', {
+        chunks: this.audioChunks.length,
+        approxBlobSize: this.audioChunks.reduce((a, b) => a + b.size, 0),
+        recordingDurationMs,
+      });
       
       const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm;codecs=opus' });
+      this.log('📦 Built audio Blob', { blobSize: audioBlob.size, type: audioBlob.type });
       
       // Convert to base64
       const reader = new FileReader();
       reader.onloadend = async () => {
         try {
           const base64Audio = (reader.result as string).split(',')[1];
-          
+          this.log('🧮 Base64 ready', { base64Length: base64Audio?.length || 0 });
+
           const { data, error } = await supabase.functions.invoke('google-speech-to-text', {
             body: {
               audioData: base64Audio,
+              traceId: this.currentTraceId,
               config: {
                 encoding: 'WEBM_OPUS',
                 sampleRateHertz: 48000,
@@ -222,14 +248,14 @@ class ChatTextMicrophoneServiceClass {
           if (error) throw error;
           
           const transcript = data?.transcript || '';
-          console.log('[ChatTextMic] 📝 Transcript:', transcript);
+          this.log('📝 Transcript received', { length: transcript.length, preview: transcript.slice(0, 80) });
           
           if (this.options.onTranscriptReady && transcript) {
             this.options.onTranscriptReady(transcript);
           }
           
         } catch (error) {
-          console.error('[ChatTextMic] ❌ Transcription failed:', error);
+          this.error('❌ Transcription failed:', error);
         } finally {
           this.isProcessing = false;
           this.notifyListeners();
@@ -239,7 +265,7 @@ class ChatTextMicrophoneServiceClass {
       reader.readAsDataURL(audioBlob);
       
     } catch (error) {
-      console.error('[ChatTextMic] ❌ Audio processing failed:', error);
+      this.error('❌ Audio processing failed:', error);
       this.isProcessing = false;
       this.notifyListeners();
     }
@@ -249,7 +275,7 @@ class ChatTextMicrophoneServiceClass {
    * CLEANUP - Complete domain cleanup
    */
   private cleanup(): void {
-    console.log('[ChatTextMic] 🧹 Cleaning up chat text microphone');
+    this.log('🧹 Cleaning up chat text microphone');
 
     // Disconnect audio nodes
     if (this.mediaStreamSource) {
@@ -274,6 +300,8 @@ class ChatTextMicrophoneServiceClass {
     this.analyser = null;
     this.audioChunks = [];
     this.audioLevel = 0;
+    this.currentTraceId = null;
+    this.recordingStartedAt = null;
 
     // Release arbitrator
     microphoneArbitrator.release('chat-text');
@@ -319,11 +347,40 @@ class ChatTextMicrophoneServiceClass {
    * FORCE CLEANUP - Emergency cleanup
    */
   forceCleanup(): void {
-    console.log('[ChatTextMic] 🚨 Force cleanup');
+    this.log('🚨 Force cleanup');
     this.isRecording = false;
     this.isProcessing = false;
     this.monitoringRef.current = false;
     this.cleanup();
+  }
+
+  // ---------- Logging helpers ----------
+  private generateTraceId(): string {
+    try {
+      // @ts-ignore - crypto is available in browsers
+      if (typeof crypto !== 'undefined' && typeof (crypto as any).randomUUID === 'function') {
+        return (crypto as any).randomUUID();
+      }
+    } catch {}
+    return 'mic-' + Math.random().toString(36).slice(2);
+  }
+
+  private prefix(): string {
+    return this.currentTraceId ? `[trace:${this.currentTraceId}]` : '';
+  }
+
+  private log(message: string, ...args: any[]): void {
+    // eslint-disable-next-line no-console
+    console.log('[ChatTextMic]', this.prefix(), message, ...args);
+  }
+
+  private error(message: string, ...args: any[]): void {
+    // eslint-disable-next-line no-console
+    console.error('[ChatTextMic]', this.prefix(), message, ...args);
+  }
+
+  getTraceId(): string | null {
+    return this.currentTraceId;
   }
 }
 
