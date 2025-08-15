@@ -24,7 +24,7 @@ export const ChatBox = () => {
       console.log('[ChatBox] Conversation closed - turning mic OFF');
       mic.turnOff();
     }
-  }, [isConversationOpen, mic.turnOn, mic.turnOff]);
+  }, [isConversationOpen]); // Only depend on isConversationOpen
 
   useEffect(() => {
     if (scrollRef.current) {
