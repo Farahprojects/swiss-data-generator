@@ -8,7 +8,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { chatTextMicrophoneService, ChatTextMicrophoneOptions } from '@/services/microphone/ChatTextMicrophoneService';
 import { useToast } from '@/hooks/use-toast';
-import { AudioDebugSaver } from '@/services/debug/audioDebugSaver';
 
 export const useChatTextMicrophone = (options: ChatTextMicrophoneOptions = {}) => {
   const [state, setState] = useState(() => chatTextMicrophoneService.getState());
@@ -23,7 +22,7 @@ export const useChatTextMicrophone = (options: ChatTextMicrophoneOptions = {}) =
     return unsubscribe;
   }, []);
 
-  // Initialize service with options including debug audio saving
+  // Initialize service with options
   useEffect(() => {
     chatTextMicrophoneService.initialize({
       ...options,
@@ -31,13 +30,6 @@ export const useChatTextMicrophone = (options: ChatTextMicrophoneOptions = {}) =
         if (options.onTranscriptReady) {
           options.onTranscriptReady(transcript);
         }
-      },
-      onDebugAudioSave: (audioBlob: Blob, reason: string) => {
-        console.log('[useChatTextMicrophone] Saving debug audio:', reason);
-        AudioDebugSaver.saveFailedAudio(audioBlob, reason, {
-          service: 'chat-text-microphone',
-          timestamp: Date.now()
-        });
       },
       onSilenceDetected: () => {
         if (options.onSilenceDetected) {
