@@ -355,10 +355,10 @@ class ConversationMicrophoneServiceClass {
             if (this.options.onSilenceDetected) {
               this.options.onSilenceDetected();
             }
-            // Stop recording through the service method
-            if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-              this.mediaRecorder.stop();
-            }
+            // ❌ COMMENTED OUT - Let ChatController.endTurn() handle the stop to ensure proper STT flow
+            // if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+            //   this.mediaRecorder.stop();
+            // }
             return;
           }
         } else {

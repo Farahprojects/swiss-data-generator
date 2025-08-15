@@ -142,7 +142,20 @@ class ChatController {
     useChatStore.getState().setStatus('transcribing');
     try {
       const audioBlob = await conversationMicrophoneService.stopRecording();
+      console.log('[ChatController] Audio blob received:', { size: audioBlob.size, type: audioBlob.type });
+      
       const transcription = await sttService.transcribe(audioBlob);
+      console.log('[ChatController] STT transcription result:', { text: transcription, length: transcription.length });
+
+      // ✅ SAFETY CHECK - Only proceed to LLM if we have valid text from STT
+      if (!transcription || transcription.trim().length === 0) {
+        console.warn('[ChatController] Empty transcription - skipping LLM call and restarting turn');
+        useChatStore.getState().setStatus('idle');
+        this.isTurnActive = false;
+        // Restart the turn automatically for empty transcriptions
+        setTimeout(() => this.startTurn(), 500);
+        return;
+      }
 
       // Optimistically add user message to UI
       const tempUserMessage: Message = {
@@ -162,6 +175,7 @@ class ChatController {
         meta: { stt_provider: STT_PROVIDER }
       };
 
+      console.log('[ChatController] Calling conversation-llm-tts with valid transcription:', userMessageForApi);
       const assistantMessage = await llmService.conversationChat({
         conversationId: useChatStore.getState().conversationId!,
         userMessage: userMessageForApi,
