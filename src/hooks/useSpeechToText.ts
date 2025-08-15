@@ -16,6 +16,7 @@ export const useSpeechToText = (
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const mediaStreamSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const isRecordingRef = useRef(false);
   const monitoringRef = useRef(false);
   const { toast } = useToast();
@@ -182,11 +183,11 @@ export const useSpeechToText = (
       
       // Set up audio context for silence detection
       audioContextRef.current = new AudioContext({ sampleRate: 48000 });
-      const source = audioContextRef.current.createMediaStreamSource(stream);
+      mediaStreamSourceRef.current = audioContextRef.current.createMediaStreamSource(stream);
       analyserRef.current = audioContextRef.current.createAnalyser();
       analyserRef.current.fftSize = 2048;
       analyserRef.current.smoothingTimeConstant = 0.8;
-      source.connect(analyserRef.current);
+      mediaStreamSourceRef.current.connect(analyserRef.current);
       
       // Enhanced MediaRecorder options
       const mediaRecorder = new MediaRecorder(stream, {
@@ -235,22 +236,47 @@ export const useSpeechToText = (
         return;
       }
 
-      log('debug', 'Stopping recording');
+      log('debug', 'Stopping recording with proper shutdown sequence');
+      
+      // 1. Set flags immediately
       isRecordingRef.current = false;
       monitoringRef.current = false;
+      setIsRecording(false);
+      setAudioLevel(0);
 
-      // Clear silence timer
+      // 2. Clear silence timer
       if (silenceTimerRef.current) {
         clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = null;
       }
 
-      // Clean up audio context
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-        audioContextRef.current = null;
+      // 3. Disconnect audio nodes FIRST (critical for releasing mic)
+      if (mediaStreamSourceRef.current) {
+        try {
+          log('debug', 'Disconnecting MediaStreamSource');
+          mediaStreamSourceRef.current.disconnect();
+          mediaStreamSourceRef.current = null;
+        } catch (e) {
+          console.warn('AudioNode disconnect failed:', e);
+        }
       }
 
+      // 4. Stop all MediaStream tracks BEFORE stopping recorder
+      if (mediaRecorderRef.current?.stream) {
+        log('debug', 'Stopping MediaStream tracks');
+        mediaRecorderRef.current.stream.getTracks().forEach(track => {
+          try {
+            if (track.readyState === 'live') {
+              log('debug', `Stopping ${track.kind} track`);
+              track.stop();
+            }
+          } catch (e) {
+            console.warn('Track stop error:', e);
+          }
+        });
+      }
+
+      // 5. Set up onstop handler for async processing
       mediaRecorderRef.current.onstop = async () => {
         try {
           log('debug', 'Recording stopped, processing audio');
@@ -259,16 +285,34 @@ export const useSpeechToText = (
         } catch (error) {
           log('error', 'Error in onstop handler', error);
           reject(error);
+        } finally {
+          // 6. Clean up event listeners
+          if (mediaRecorderRef.current) {
+            mediaRecorderRef.current.onstop = null;
+            mediaRecorderRef.current.ondataavailable = null;
+          }
         }
       };
 
-      mediaRecorderRef.current.stop();
-      
-      // Stop all tracks to release microphone
-      mediaRecorderRef.current.stream?.getTracks().forEach(track => track.stop());
-      
-      setIsRecording(false);
-      setAudioLevel(0);
+      // 7. Stop the MediaRecorder (safe even though tracks are stopped)
+      try {
+        mediaRecorderRef.current.stop();
+      } catch (e) {
+        console.warn('MediaRecorder stop error:', e);
+        resolve(''); // Still resolve to prevent hanging
+      }
+
+      // 8. Close AudioContext last (after everything else is cleaned up)
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        try {
+          log('debug', 'Closing AudioContext');
+          await audioContextRef.current.close();
+          audioContextRef.current = null;
+          analyserRef.current = null;
+        } catch (e) {
+          console.warn('AudioContext close error:', e);
+        }
+      }
     });
   }, [processAudio]);
 
@@ -281,36 +325,56 @@ export const useSpeechToText = (
     }
   }, [startRecording, stopRecording]);
 
-  // Simple, safe cleanup for emergency shutdown (no promises, no async)
+  // EMERGENCY ONLY: For timeouts, crashes, or unrecoverable errors
   const forceCleanup = useCallback(() => {
-    console.log('[useSpeechToText] 🚨 FORCE CLEANUP - emergency shutdown');
+    console.log('[useSpeechToText] 🚨 EMERGENCY FORCE CLEANUP - last resort only');
     
-    // Stop tracks immediately if they exist
-    if (mediaRecorderRef.current?.stream) {
-      const tracks = mediaRecorderRef.current.stream.getTracks();
-      console.log('[useSpeechToText] 🎤 Force stopping', tracks.length, 'tracks');
-      tracks.forEach(track => {
-        if (track.readyState === 'live') {
-          track.stop();
-          console.log('[useSpeechToText] ✅ Force stopped track:', track.kind);
-        }
-      });
+    try {
+      // Disconnect audio nodes
+      if (mediaStreamSourceRef.current) {
+        mediaStreamSourceRef.current.disconnect();
+        mediaStreamSourceRef.current = null;
+      }
+      
+      // Stop tracks immediately
+      if (mediaRecorderRef.current?.stream) {
+        mediaRecorderRef.current.stream.getTracks().forEach(track => {
+          if (track.readyState === 'live') {
+            track.stop();
+          }
+        });
+      }
+      
+      // Reset all refs and state
+      isRecordingRef.current = false;
+      monitoringRef.current = false;
+      setIsRecording(false);
+      setIsProcessing(false);
+      setAudioLevel(0);
+      
+      // Clear timers
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
+      
+      // Clean up event listeners
+      if (mediaRecorderRef.current) {
+        mediaRecorderRef.current.onstop = null;
+        mediaRecorderRef.current.ondataavailable = null;
+      }
+      
+      // Close audio context synchronously (don't await)
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close(); // Don't await in emergency
+        audioContextRef.current = null;
+        analyserRef.current = null;
+      }
+      
+      console.log('[useSpeechToText] ✅ Emergency cleanup complete');
+    } catch (e) {
+      console.error('[useSpeechToText] ❌ Emergency cleanup failed:', e);
     }
-    
-    // Reset state flags immediately
-    isRecordingRef.current = false;
-    monitoringRef.current = false;
-    setIsRecording(false);
-    setIsProcessing(false);
-    setAudioLevel(0);
-    
-    // Clear timers
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = null;
-    }
-    
-    console.log('[useSpeechToText] ✅ Force cleanup complete');
   }, []);
 
   return {
