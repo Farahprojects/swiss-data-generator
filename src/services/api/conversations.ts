@@ -65,25 +65,24 @@ export const listConversations = async (): Promise<Partial<Conversation>[]> => {
   return data;
 };
 
-export const getOrCreateConversation = async (guestId: string, reportId: string): Promise<{ conversationId: string }> => {
-  console.log('[getOrCreateConversation] Called with guestId:', guestId, 'reportId:', reportId);
+export const getOrCreateConversation = async (uuid: string, token: string): Promise<{ conversationId: string }> => {
+  console.log('[getOrCreateConversation] Called with uuid:', uuid, 'hasToken:', !!token);
   
   // FAIL FAST: Validate inputs
-  if (!guestId) {
-    console.error('[getOrCreateConversation] FAIL FAST: guestId is required');
-    throw new Error('guestId is required for conversation creation');
+  if (!uuid) {
+    console.error('[getOrCreateConversation] FAIL FAST: uuid is required');
+    throw new Error('uuid is required for conversation creation');
   }
-  if (!reportId) {
-    console.error('[getOrCreateConversation] FAIL FAST: reportId is required');
-    throw new Error('reportId is required for conversation creation');
+  if (!token) {
+    console.error('[getOrCreateConversation] FAIL FAST: token is required');
+    throw new Error('token is required for conversation creation');
   }
   
-  // Try to find existing conversation
+  // Try to find existing conversation by uuid (which maps to guest_id in our system)
   const { data: existing, error: fetchError } = await supabase
     .from('conversations')
     .select('id')
-    .eq('guest_id', guestId)
-    .eq('report_id', reportId)
+    .eq('guest_id', uuid)
     .limit(1)
     .maybeSingle();
 
@@ -95,10 +94,10 @@ export const getOrCreateConversation = async (guestId: string, reportId: string)
   }
 
   // Create new conversation
-  console.log('[getOrCreateConversation] Creating new conversation with guestId:', guestId);
+  console.log('[getOrCreateConversation] Creating new conversation with uuid:', uuid);
   
   // Log the exact values being inserted
-  const insertData = { guest_id: guestId, report_id: reportId };
+  const insertData = { guest_id: uuid, report_id: uuid }; // Using uuid for both since they're the same in our system
   console.log('[getOrCreateConversation] INSERT data:', JSON.stringify(insertData));
   
   const { data: newConv, error: createError } = await supabase
@@ -121,22 +120,22 @@ export const getOrCreateConversation = async (guestId: string, reportId: string)
   
   console.log('[getOrCreateConversation] Created new conversation:', newConv.id);
 
-  // Inject context from temp_report_data
-  await injectContextMessages(newConv.id, guestId);
+  // Inject context from temp_report_data using secure tokens
+  await injectContextMessages(newConv.id, uuid, token);
   
   return { conversationId: newConv.id };
 };
 
 // Helper function to inject context from temp_report_data
-const injectContextMessages = async (conversationId: string, guestId: string): Promise<void> => {
-  console.log('[injectContextMessages] Fetching temp report data for guestId:', guestId);
+const injectContextMessages = async (conversationId: string, uuid: string, token: string): Promise<void> => {
+  console.log('[injectContextMessages] Fetching temp report data for uuid:', uuid, 'with secure token');
   
   try {
-    // Use the retrieve-temp-report Edge Function (without token for system access)
+    // Use the retrieve-temp-report Edge Function with secure tokens
     const { data: tempData, error: tempError } = await supabase.functions.invoke('retrieve-temp-report', {
       body: { 
-        uuid: guestId
-        // No token - will get fresh token but we only need the data
+        uuid: uuid,
+        token: token // Now using the secure token
       }
     });
 
@@ -147,7 +146,7 @@ const injectContextMessages = async (conversationId: string, guestId: string): P
     }
 
     if (!tempData || tempData.error) {
-      console.log('[injectContextMessages] No temp_report_data found for guestId:', guestId, 'error:', tempData?.error);
+      console.log('[injectContextMessages] No temp_report_data found for uuid:', uuid, 'error:', tempData?.error);
       return;
     }
   } catch (error) {

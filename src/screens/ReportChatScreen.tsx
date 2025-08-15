@@ -8,16 +8,16 @@ const ReportChatScreen = () => {
   const { conversationId } = useParams<{ conversationId: string }>();
   const location = useLocation();
   const navigate = useNavigate();
-  const { guestId, reportId } = location.state || {};
+  const { uuid, token, guestId } = location.state || {};
 
-  console.log('[ReportChatScreen] On mount - guestId:', guestId, 'reportId:', reportId);
+  console.log('[ReportChatScreen] On mount - uuid:', uuid, 'token:', !!token, 'guestId:', guestId);
 
-  // Validation
-  if (!guestId || !reportId) {
-    console.log('[ReportChatScreen] Missing context, showing error');
+  // Validation - now requires secure tokens
+  if (!uuid || !token) {
+    console.log('[ReportChatScreen] Missing secure tokens, showing error');
     return (
       <div className="flex flex-col items-center justify-center h-screen">
-        <p className="text-gray-600 mb-4">Missing report context</p>
+        <p className="text-gray-600 mb-4">Missing secure access tokens</p>
         <button onClick={() => navigate('/')} className="text-blue-600">
           Back to Home
         </button>
@@ -25,7 +25,7 @@ const ReportChatScreen = () => {
     );
   }
 
-  useChat(conversationId, guestId, reportId);
+  useChat(conversationId, uuid, token);
 
   return (
     <div className="font-sans antialiased text-gray-800 bg-gray-50 h-screen overflow-hidden flex flex-col">

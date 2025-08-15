@@ -475,10 +475,47 @@ export const ReportViewer = ({
   const navigate = useNavigate();
 
   const handleOpenChatGPTModal = async () => {
-    const guestId = reportData.guest_report?.id;
-    const reportId = reportData.guest_report?.id; // Same as guestId in this context
-    console.log('[ReportViewer] Before navigate - guestId:', guestId, 'reportId:', reportId);
-    navigate('/chat', { state: { guestId, reportId } });
+    try {
+      const guestReportId = reportData.guest_report?.id;
+      console.log('[ReportViewer] Starting secure chat navigation for guestId:', guestReportId);
+      
+      if (!guestReportId) {
+        throw new Error("Guest report ID not found");
+      }
+
+      // Call create-temp-report-data to get secure tokens
+      console.log('[ReportViewer] Fetching secure tokens...');
+      const createResponse = await fetch(
+        "https://wrvqqvqvwqmfdqvqmaar.functions.supabase.co/create-temp-report-data",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ guest_report_id: guestReportId }),
+        }
+      );
+      
+      if (!createResponse.ok) {
+        throw new Error("Failed to create temp report data");
+      }
+      
+      const createResult = await createResponse.json();
+      console.log('[ReportViewer] Got secure tokens:', createResult);
+      
+      const uuid = createResult.temp_data_id;
+      const token = createResult.plain_token;
+      
+      // Navigate to chat with secure tokens
+      console.log('[ReportViewer] Navigating to chat with secure tokens - uuid:', uuid, 'hasToken:', !!token);
+      navigate('/chat', { state: { uuid, token, guestId: guestReportId } });
+      
+    } catch (error) {
+      console.error('[ReportViewer] Failed to prepare secure chat:', error);
+      toast({
+        title: "Error",
+        description: "Failed to prepare chat. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handlePremiumFlow = async () => {
