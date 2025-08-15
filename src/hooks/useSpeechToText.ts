@@ -4,6 +4,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { log } from '@/utils/logUtils';
 
+// Utility to check for lingering media streams (for debugging)
+const checkBrowserMediaState = () => {
+  if (typeof navigator !== 'undefined' && navigator.mediaDevices) {
+    navigator.mediaDevices.enumerateDevices().then(devices => {
+      const audioInputs = devices.filter(device => device.kind === 'audioinput');
+      console.log('[MediaDebug] Available audio inputs:', audioInputs.length);
+    });
+  }
+};
+
 export const useSpeechToText = (
   onTranscriptReady?: (transcript: string) => void,
   onSilenceDetected?: () => void
@@ -275,33 +285,86 @@ export const useSpeechToText = (
   // EMERGENCY STOP - kills everything immediately for modal close
   const emergencyStop = useCallback(() => {
     console.log('[useSpeechToText] 🚨 EMERGENCY STOP - killing microphone immediately');
+    checkBrowserMediaState();
+    console.log('[useSpeechToText] 📊 PRE-CLEANUP STATE:', {
+      hasMediaRecorder: !!mediaRecorderRef.current,
+      mediaRecorderState: mediaRecorderRef.current?.state,
+      hasStream: !!mediaRecorderRef.current?.stream,
+      trackCount: mediaRecorderRef.current?.stream?.getTracks().length || 0,
+      hasAudioContext: !!audioContextRef.current,
+      audioContextState: audioContextRef.current?.state,
+      isRecording: isRecordingRef.current,
+      isMonitoring: monitoringRef.current
+    });
     
     // 1. STOP ALL MEDIA TRACKS IMMEDIATELY (highest priority)
     if (mediaRecorderRef.current?.stream) {
-      console.log('[useSpeechToText] 🎤 Stopping all media tracks immediately');
-      mediaRecorderRef.current.stream.getTracks().forEach(track => {
-        track.stop();
-        console.log('[useSpeechToText] ✅ Stopped track:', track.kind);
+      const tracks = mediaRecorderRef.current.stream.getTracks();
+      console.log('[useSpeechToText] 🎤 Found', tracks.length, 'media tracks to stop');
+      
+      tracks.forEach((track, index) => {
+        console.log(`[useSpeechToText] 🔍 Track ${index}:`, {
+          kind: track.kind,
+          label: track.label,
+          readyState: track.readyState,
+          enabled: track.enabled
+        });
+        
+        if (track.readyState === 'live') {
+          track.stop();
+          console.log(`[useSpeechToText] ✅ Stopped track ${index} (${track.kind})`);
+          
+          // Double-check the track stopped
+          setTimeout(() => {
+            console.log(`[useSpeechToText] 🔍 Track ${index} post-stop state:`, track.readyState);
+          }, 100);
+        } else {
+          console.log(`[useSpeechToText] ⚠️ Track ${index} was already ${track.readyState}`);
+        }
       });
+      
+      // Additional cleanup - clear the stream reference
+      console.log('[useSpeechToText] 🧹 Clearing stream reference');
+      if (mediaRecorderRef.current) {
+        mediaRecorderRef.current.stream = null;
+      }
+    } else {
+      console.log('[useSpeechToText] ⚠️ No stream found to stop');
     }
     
     // 2. STOP MEDIARECORDER IMMEDIATELY
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      console.log('[useSpeechToText] 🛑 Stopping MediaRecorder immediately');
-      mediaRecorderRef.current.stop();
+    if (mediaRecorderRef.current) {
+      console.log('[useSpeechToText] 🛑 MediaRecorder state before stop:', mediaRecorderRef.current.state);
+      
+      if (mediaRecorderRef.current.state !== 'inactive') {
+        try {
+          mediaRecorderRef.current.stop();
+          console.log('[useSpeechToText] ✅ MediaRecorder stop() called');
+        } catch (error) {
+          console.error('[useSpeechToText] ❌ Error stopping MediaRecorder:', error);
+        }
+      } else {
+        console.log('[useSpeechToText] ℹ️ MediaRecorder was already inactive');
+      }
     }
     
     // 3. CLOSE AUDIO CONTEXT IMMEDIATELY
     if (audioContextRef.current) {
-      console.log('[useSpeechToText] 🔊 Closing AudioContext immediately');
-      audioContextRef.current.close();
-      audioContextRef.current = null;
+      console.log('[useSpeechToText] 🔊 AudioContext state before close:', audioContextRef.current.state);
+      try {
+        audioContextRef.current.close();
+        console.log('[useSpeechToText] ✅ AudioContext close() called');
+        audioContextRef.current = null;
+      } catch (error) {
+        console.error('[useSpeechToText] ❌ Error closing AudioContext:', error);
+      }
     }
     
     // 4. CLEAR ALL TIMERS AND FLAGS
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = null;
+      console.log('[useSpeechToText] ✅ Cleared silence timer');
     }
     
     // 5. RESET ALL STATE
@@ -313,7 +376,20 @@ export const useSpeechToText = (
     setIsProcessing(false);
     setAudioLevel(0);
     
-    console.log('[useSpeechToText] ✅ EMERGENCY STOP COMPLETE - browser mic should be off');
+    console.log('[useSpeechToText] ✅ EMERGENCY STOP COMPLETE');
+    
+    // 6. DELAYED VERIFICATION - check if browser mic is actually off
+    setTimeout(() => {
+      console.log('[useSpeechToText] 🔍 POST-CLEANUP VERIFICATION (after 500ms):');
+      console.log('[useSpeechToText] 📊 All refs should be null/false:', {
+        mediaRecorderRef: mediaRecorderRef.current,
+        audioContextRef: audioContextRef.current,
+        isRecording: isRecordingRef.current,
+        isMonitoring: monitoringRef.current
+      });
+      console.log('[useSpeechToText] 🎤 Browser mic indicator should be OFF now');
+      checkBrowserMediaState();
+    }, 500);
   }, []);
 
   const toggleRecording = useCallback(async () => {
