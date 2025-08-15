@@ -47,8 +47,8 @@ export const ChatInput = () => {
       chatController.endTurn();
     } else {
       // Cancel any active conversation and close
-      console.log('[ChatInput] Closing conversation - cancelling active turn');
-      chatController.cancelTurn();
+      console.log('[ChatInput] Closing conversation - resetting conversation service');
+      chatController.resetConversationService();
       closeConversation();
     }
   };

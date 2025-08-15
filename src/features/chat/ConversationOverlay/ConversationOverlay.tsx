@@ -11,8 +11,8 @@ export const ConversationOverlay: React.FC = () => {
   
   // PROPER MODAL CLOSE - Stop conversation and turn off mic
   const handleModalClose = () => {
-    console.log('[ConversationOverlay] Modal closing - cancelling active conversation');
-    chatController.cancelTurn(); // This stops mic and resets state
+    console.log('[ConversationOverlay] Modal closing - resetting conversation service');
+    chatController.resetConversationService(); // This fully resets the service
     closeConversation(); // This closes the UI
   };
   

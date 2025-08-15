@@ -14,6 +14,7 @@ import { STT_PROVIDER, LLM_PROVIDER, TTS_PROVIDER } from '@/config/env';
 
 class ChatController {
   private isTurnActive = false;
+  private conversationServiceInitialized = false;
   
   async initializeConversation(conversationId: string) {
     console.log('[ChatController] initializeConversation called with conversationId:', conversationId);
@@ -99,6 +100,20 @@ class ChatController {
     console.warn("loadConversation by ID is not fully implemented yet.");
   }
 
+  private initializeConversationService() {
+    if (this.conversationServiceInitialized) return;
+    
+    conversationMicrophoneService.initialize({
+      onSilenceDetected: () => {
+        console.log('[ChatController] Silence detected - auto-ending turn');
+        this.endTurn();
+      },
+      silenceTimeoutMs: 2000
+    });
+    
+    this.conversationServiceInitialized = true;
+  }
+
   async startTurn() {
     if (this.isTurnActive) return;
     this.isTurnActive = true;
@@ -109,17 +124,11 @@ class ChatController {
       throw new Error('No conversation established. Cannot start turn.');
     }
     
+    // Initialize conversation service once
+    this.initializeConversationService();
+    
     useChatStore.getState().setStatus('recording');
     try {
-      // Initialize conversation mic service with silence detection
-      conversationMicrophoneService.initialize({
-        onSilenceDetected: () => {
-          console.log('[ChatController] Silence detected - auto-ending turn');
-          this.endTurn();
-        },
-        silenceTimeoutMs: 2000
-      });
-      
       await conversationMicrophoneService.startRecording();
     } catch (error: any) {
       useChatStore.getState().setError(error.message);
@@ -196,6 +205,14 @@ class ChatController {
     conversationMicrophoneService.forceCleanup();
     useChatStore.getState().setStatus('idle');
     this.isTurnActive = false;
+  }
+
+  // Reset conversation service when modal is closed
+  resetConversationService() {
+    conversationMicrophoneService.forceCleanup();
+    this.conversationServiceInitialized = false;
+    this.isTurnActive = false;
+    useChatStore.getState().setStatus('idle');
   }
 }
 
