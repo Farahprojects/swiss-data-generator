@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
-import { audioRecorder } from '@/services/voice/recorder';
-import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
 import { ttsService } from '@/services/voice/tts';
 import { audioPlayer } from '@/services/voice/audioPlayer';
 import { useChatStore } from '@/core/store';
-import { SilenceDetector } from './audioAnalyser';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
+import { useSpeechToText } from '@/hooks/useSpeechToText';
 
 export type ConversationState = 'listening' | 'processing' | 'replying';
 
@@ -14,83 +12,36 @@ export const useConversationFSM = () => {
   const [state, setState] = useState<ConversationState>('listening');
   const conversationId = useChatStore((s) => s.conversationId)!;
   const addMessage = useChatStore((s) => s.addMessage);
-  const [detector, setDetector] = useState<SilenceDetector | null>(null);
-  const [fallbackTimer, setFallbackTimer] = useState<number | null>(null);
   const isConversationOpen = useConversationUIStore((s) => s.isConversationOpen);
 
-  // start listening when entering listening state & overlay open
-  useEffect(() => {
-    if (state !== 'listening' || !isConversationOpen) return;
-    (async () => {
-      await audioRecorder.start();
-      // 20s hard cap fallback (Safari / permission quirks)
-      setFallbackTimer(window.setTimeout(() => handleSilence(), 20000));
-      const stream = audioRecorder.getStream();
-      if (stream) {
-        const det = new SilenceDetector(() => handleSilence());
-        await det.attachStream(stream);
-        setDetector(det);
-      }
-    })();
-    return () => {
-      if (fallbackTimer) clearTimeout(fallbackTimer);
-      detector?.cleanup();
-      setDetector(null);
-      // ensure mic is off when leaving listening or overlay closes
-      audioRecorder.cancel();
-    };
-  }, [state, isConversationOpen]);
-
-  const handleSilence = async () => {
-    console.log('[ConversationFSM] handleSilence called - state:', state, 'isOpen:', isConversationOpen);
+  // Handle transcript ready - process AI response
+  const handleTranscriptReady = async (transcript: string) => {
+    if (!isConversationOpen) return;
     
-    if (state !== 'listening' || !isConversationOpen) {
-      console.log('[ConversationFSM] Skipping silence handling - wrong state or overlay closed');
-      return;
-    }
-    
-    if (fallbackTimer) clearTimeout(fallbackTimer);
-    console.log('[ConversationFSM] Transitioning to processing state');
+    console.log('[ConversationFSM] Transcript ready, processing AI response:', transcript);
     setState('processing');
-    
-    let blob: Blob;
-    try {
-      console.log('[ConversationFSM] Stopping audio recorder...');
-      blob = await audioRecorder.stop();
-      console.log('[ConversationFSM] Audio blob created, size:', blob.size, 'bytes');
-    } catch (error) {
-      console.warn('[ConversationFSM] Audio recorder already stopped, creating empty blob:', error);
-      blob = new Blob();
-    }
-    detector?.cleanup();
 
     try {
-      console.log('[ConversationFSM] Starting STT transcription...');
-      const transcription = await sttService.transcribe(blob);
-      console.log('[ConversationFSM] STT transcription received:', transcription);
-      
-      if (!transcription || transcription.trim().length === 0) {
-        console.warn('[ConversationFSM] Empty transcription received, returning to listening');
-        setState('listening');
-        return;
-      }
-      
+      // Add user message
       console.log('[ConversationFSM] Adding user message to store...');
       addMessage({ 
         id: crypto.randomUUID(), 
         conversationId, 
         role: 'user', 
-        text: transcription, 
+        text: transcript, 
         createdAt: new Date().toISOString() 
       });
       
+      // Get AI response
       console.log('[ConversationFSM] Calling LLM service...');
-      const assistantMsg = await llmService.chat({ conversationId, userMessage: { text: transcription } });
+      const assistantMsg = await llmService.chat({ conversationId, userMessage: { text: transcript } });
       console.log('[ConversationFSM] LLM response received:', assistantMsg.text?.substring(0, 50) + '...');
       
+      // Add assistant message
       console.log('[ConversationFSM] Adding assistant message to store...');
       addMessage(assistantMsg);
       
+      // Generate and play TTS
       console.log('[ConversationFSM] Transitioning to replying state');
       setState('replying');
       
@@ -102,30 +53,60 @@ export const useConversationFSM = () => {
       audioPlayer.play(audioUrl, () => {
         console.log('[ConversationFSM] Audio playback completed');
         if (useConversationUIStore.getState().isConversationOpen) {
-          console.log('[ConversationFSM] Returning to listening state');
+          console.log('[ConversationFSM] Starting next recording turn...');
           setState('listening');
+          // Start recording again for next turn
+          setTimeout(() => {
+            if (useConversationUIStore.getState().isConversationOpen && !speechToText.isRecording) {
+              speechToText.startRecording();
+            }
+          }, 500); // Small delay to ensure clean transition
         } else {
-          console.log('[ConversationFSM] Overlay closed during playback, not returning to listening');
+          console.log('[ConversationFSM] Overlay closed during playback');
         }
       });
       
     } catch (err) {
       console.error('[ConversationFSM] Error in conversation flow:', err);
-      console.error('[ConversationFSM] Error details:', {
-        message: err.message,
-        stack: err.stack,
-        name: err.name
-      });
       
-      // brief cooldown to avoid tight error loops
+      // Return to listening with delay on error
       setTimeout(() => {
         if (useConversationUIStore.getState().isConversationOpen) {
-          console.log('[ConversationFSM] Error recovery - returning to listening state');
+          console.log('[ConversationFSM] Error recovery - returning to listening');
           setState('listening');
         }
       }, 2000);
     }
   };
 
-  return { state };
+  // Handle silence detected - just log it (useSpeechToText handles the auto-stop)
+  const handleSilenceDetected = () => {
+    console.log('[ConversationFSM] Silence detected, processing will start automatically');
+  };
+
+  // Use the proven mic button STT logic
+  const speechToText = useSpeechToText(handleTranscriptReady, handleSilenceDetected);
+
+  // Start recording when conversation opens and in listening state
+  useEffect(() => {
+    if (state === 'listening' && isConversationOpen && !speechToText.isRecording && !speechToText.isProcessing) {
+      console.log('[ConversationFSM] Starting recording for listening state');
+      speechToText.startRecording();
+    }
+  }, [state, isConversationOpen]);
+
+  // Stop recording when conversation closes
+  useEffect(() => {
+    if (!isConversationOpen && speechToText.isRecording) {
+      console.log('[ConversationFSM] Conversation closed, stopping recording');
+      speechToText.stopRecording();
+    }
+  }, [isConversationOpen]);
+
+  return { 
+    state,
+    isRecording: speechToText.isRecording,
+    isProcessing: speechToText.isProcessing,
+    audioLevel: speechToText.audioLevel
+  };
 };

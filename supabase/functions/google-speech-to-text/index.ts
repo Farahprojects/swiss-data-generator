@@ -15,8 +15,37 @@ serve(async (req) => {
   try {
     const { audioData, config } = await req.json();
     
+    // Comprehensive audio data validation
     if (!audioData) {
+      console.error('[google-stt] Missing audioData in request');
       throw new Error('Audio data is required');
+    }
+    
+    if (typeof audioData !== 'string') {
+      console.error('[google-stt] AudioData is not a string:', typeof audioData);
+      throw new Error('Audio data must be base64 encoded string');
+    }
+    
+    if (audioData.length === 0) {
+      console.error('[google-stt] Empty audioData string');
+      throw new Error('Empty audio data - please try recording again');
+    }
+    
+    // Check if base64 data is too small (likely empty recording)
+    const estimatedBytes = (audioData.length * 3) / 4; // Base64 to bytes approximation
+    if (estimatedBytes < 1000) {
+      console.error('[google-stt] Audio data too small:', estimatedBytes, 'bytes estimated');
+      throw new Error('Audio recording too short - please speak for longer');
+    }
+    
+    console.log(`[google-stt] Audio data validated - estimated size: ${estimatedBytes} bytes`);
+    
+    // Test base64 decode to catch invalid format early
+    try {
+      atob(audioData.substring(0, 100)); // Test decode first 100 chars
+    } catch (decodeError) {
+      console.error('[google-stt] Invalid base64 format:', decodeError);
+      throw new Error('Invalid audio data format - please try recording again');
     }
 
     const googleApiKey = Deno.env.get('GOOGLE-STT');
@@ -75,6 +104,17 @@ serve(async (req) => {
 
     console.log('Extracted transcript:', transcript);
     console.log('Confidence score:', confidence);
+    
+    // Handle empty transcription results
+    if (!transcript || transcript.trim().length === 0) {
+      console.warn('[google-stt] Empty transcript from Google API - audio may be unclear or silent');
+      throw new Error('No speech detected - please speak more clearly or try again');
+    }
+    
+    if (confidence < 0.3) {
+      console.warn('[google-stt] Low confidence transcript:', confidence, 'for:', transcript);
+      // Still return it but log the warning
+    }
 
     return new Response(
       JSON.stringify({ 

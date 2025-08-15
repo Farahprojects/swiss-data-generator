@@ -6,7 +6,7 @@ import { useConversationFSM } from './useConversationFSM';
 
 export const ConversationOverlay: React.FC = () => {
   const { isConversationOpen, closeConversation } = useConversationUIStore();
-  const { state } = useConversationFSM();
+  const { state, audioLevel } = useConversationFSM();
 
   if (!isConversationOpen) return null;
 
@@ -18,7 +18,7 @@ export const ConversationOverlay: React.FC = () => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col items-center justify-center h-full gap-6">
-          <VoiceBubble state={state} />
+          <VoiceBubble state={state} audioLevel={audioLevel} />
           {/* Placeholder captions */}
           <p className="text-gray-500 font-light">{state === 'listening' ? 'Listening…' : state === 'processing' ? 'Thinking…' : 'Speaking…'}</p>
         </div>

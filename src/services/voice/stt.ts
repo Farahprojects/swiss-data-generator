@@ -5,6 +5,19 @@ class SttService {
   async transcribe(audioBlob: Blob): Promise<string> {
     console.log(`[STT] Transcribing with Google Speech-to-Text...`);
     
+    // Validate audio blob before processing
+    if (!audioBlob || audioBlob.size === 0) {
+      console.warn('[STT] Empty or missing audio blob, skipping transcription');
+      throw new Error('Empty audio recording - please try speaking again');
+    }
+    
+    if (audioBlob.size < 1000) { // Less than 1KB is likely too short
+      console.warn('[STT] Audio blob too small:', audioBlob.size, 'bytes');
+      throw new Error('Recording too short - please speak for longer');
+    }
+    
+    console.log(`[STT] Audio blob validated - size: ${audioBlob.size} bytes`);
+    
     // Convert blob to base64 for Google STT
     const base64Audio = await this.blobToBase64(audioBlob);
     
