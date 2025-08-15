@@ -12,7 +12,7 @@ const MessageItem = ({ message, isLast }: { message: Message; isLast: boolean })
   const textContent = isUser || !isLast ? message.text : displayText;
 
   return (
-    <div className={`flex items-end gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}>
+    <div className="flex items-end gap-3 justify-start">
       <div
         className={`px-4 py-3 rounded-2xl max-w-lg lg:max-w-xl ${
           isUser
@@ -20,7 +20,7 @@ const MessageItem = ({ message, isLast }: { message: Message; isLast: boolean })
             : 'text-black'
         }`}
       >
-        <p className="text-base font-light leading-relaxed">{textContent}</p>
+        <p className="text-base font-light leading-relaxed text-left">{textContent}</p>
         {message.audioUrl && (
           <button
             onClick={() => audioPlayer.play(message.audioUrl!)}
@@ -53,7 +53,7 @@ export const MessageList = () => {
     return (
       <div className="flex-1 flex flex-col justify-end">
         <div className="p-4">
-          <h2 className="text-3xl font-light text-gray-800">Let's tune into the energy behind your chart</h2>
+          <h2 className="text-3xl font-light text-gray-800 text-left">Let's tune into the energy behind your chart</h2>
         </div>
       </div>
     );
