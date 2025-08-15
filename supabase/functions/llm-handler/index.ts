@@ -29,7 +29,7 @@ serve(async (req) => {
   }
 
   try {
-    const { conversationId, userMessage } = await req.json();
+    const { conversationId, userMessage, requestAudio } = await req.json();
 
     if (!conversationId || !userMessage) {
       throw new Error("Missing 'conversationId' or 'userMessage' in request body.");
@@ -115,7 +115,17 @@ Stay fully within the energetic-psychological lens at all times.`;
         topK: 40,
         topP: 0.95,
         maxOutputTokens: 8192,
-        temperature: 0.7
+        temperature: 0.7,
+        ...(requestAudio && {
+          responseModalities: ["TEXT", "AUDIO"],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: {
+                voiceName: "Aoede" // Gemini's natural female voice
+              }
+            }
+          }
+        })
       }
     };
 
@@ -136,11 +146,25 @@ Stay fully within the energetic-psychological lens at all times.`;
     }
     
     const data = await response.json();
-    const assistantResponseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const candidate = data.candidates?.[0];
+    const assistantResponseText = candidate?.content?.parts?.find(part => part.text)?.text;
     
     if (!assistantResponseText) {
-      console.error(`[llm-handler] Gemini response missing content:`, data);
-      throw new Error("Gemini response did not contain expected content");
+      console.error(`[llm-handler] Gemini response missing text content:`, data);
+      throw new Error("Gemini response did not contain expected text content");
+    }
+
+    // Extract audio data if present
+    let audioUrl = null;
+    const audioPart = candidate?.content?.parts?.find(part => part.inlineData?.mimeType?.startsWith('audio/'));
+    if (audioPart && requestAudio) {
+      // Convert base64 audio to blob URL or save to storage
+      const audioBase64 = audioPart.inlineData.data;
+      const mimeType = audioPart.inlineData.mimeType;
+      
+      // For now, we'll create a data URL - in production you might want to save to Supabase Storage
+      audioUrl = `data:${mimeType};base64,${audioBase64}`;
+      console.log(`[llm-handler] Generated audio response (${mimeType}, ${audioBase64.length} chars)`);
     }
     
     console.log("[llm-handler] Received successful response from Google Gemini.");
@@ -151,7 +175,12 @@ Stay fully within the energetic-psychological lens at all times.`;
       conversation_id: conversationId,
       role: 'assistant',
       text: assistantResponseText,
-      meta: { llm_provider: "google", model: GOOGLE_MODEL },
+      audio_url: audioUrl,
+      meta: { 
+        llm_provider: "google", 
+        model: GOOGLE_MODEL,
+        has_native_audio: !!audioUrl
+      },
     };
     console.log("[llm-handler] Assistant message INSERT data:", JSON.stringify(assistantMessageInsertData));
     

@@ -8,6 +8,7 @@ interface LlmRequest {
     text: string;
     meta?: Record<string, any>;
   };
+  requestAudio?: boolean; // Flag to request audio generation from Gemini
 }
 
 class LlmService {
@@ -18,6 +19,7 @@ class LlmService {
       body: {
         conversationId: request.conversationId,
         userMessage: request.userMessage,
+        requestAudio: request.requestAudio,
       },
     });
 

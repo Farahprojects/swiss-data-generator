@@ -156,6 +156,7 @@ class ChatController {
       const assistantMessage = await llmService.chat({
         conversationId: useChatStore.getState().conversationId!,
         userMessage: userMessageForApi,
+        requestAudio: true, // Request native audio from Gemini
       });
 
       // Add the final assistant message
@@ -163,12 +164,21 @@ class ChatController {
 
       // For voice, we play the audio automatically
       if (assistantMessage.text) {
-        const audioUrl = await ttsService.speak(assistantMessage.id, assistantMessage.text);
-        // Optionally update the message with the audioUrl
-        audioPlayer.play(audioUrl, () => {
-          useChatStore.getState().setStatus('idle');
-          this.isTurnActive = false;
-        });
+        // Check if Gemini provided native audio, otherwise fallback to TTS
+        if (assistantMessage.audioUrl) {
+          console.log('[ChatController] Using native Gemini audio');
+          audioPlayer.play(assistantMessage.audioUrl, () => {
+            useChatStore.getState().setStatus('idle');
+            this.isTurnActive = false;
+          });
+        } else {
+          console.log('[ChatController] Falling back to TTS');
+          const audioUrl = await ttsService.speak(assistantMessage.id, assistantMessage.text);
+          audioPlayer.play(audioUrl, () => {
+            useChatStore.getState().setStatus('idle');
+            this.isTurnActive = false;
+          });
+        }
       } else {
         useChatStore.getState().setStatus('idle');
         this.isTurnActive = false;
