@@ -177,17 +177,10 @@ export const useSpeechToText = (
         console.log('[useSpeechToText] Using external stream:', externalStream.id);
         stream = externalStream;
       } else {
-        console.log('[useSpeechToText] Creating new stream (fallback)');
-        // Enhanced audio constraints for better quality
-        stream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-            sampleRate: 48000,
-            channelCount: 1
-          } 
-        });
+        console.error('[useSpeechToText] ❌ NO EXTERNAL STREAM PROVIDED!');
+        console.error('useSpeechToText must receive stream from MIC BOSS');
+        console.error('Cannot create own stream - this bypasses centralized mic control');
+        throw new Error('useSpeechToText requires external stream from Mic Boss');
       }
       
       // Set up audio context for silence detection

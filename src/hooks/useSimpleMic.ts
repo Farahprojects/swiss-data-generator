@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 /**
  * 🎤 MIC BOSS - Centralized Microphone Authority
@@ -9,6 +9,29 @@ import { useState, useRef, useCallback } from 'react';
 export const useSimpleMic = () => {
   const [isOn, setIsOn] = useState(false);
   const streamRef = useRef<MediaStream | null>(null);
+  const originalGetUserMediaRef = useRef<typeof navigator.mediaDevices.getUserMedia | null>(null);
+
+  // ROGUE REQUEST DETECTOR - Catch anyone bypassing the Boss
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && navigator.mediaDevices) {
+      // Store original function
+      originalGetUserMediaRef.current = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+      
+      navigator.mediaDevices.getUserMedia = function(constraints) {
+        console.error('🚨 ROGUE MIC REQUEST DETECTED! 🚨');
+        console.error('Someone is bypassing the MIC BOSS!');
+        console.trace('ROGUE REQUEST CALL STACK:');
+        
+        return originalGetUserMediaRef.current!(constraints);
+      };
+
+      return () => {
+        if (originalGetUserMediaRef.current) {
+          navigator.mediaDevices.getUserMedia = originalGetUserMediaRef.current;
+        }
+      };
+    }
+  }, []);
 
   // Expose the current stream for other services to use
   const getActiveStream = useCallback((): MediaStream | null => {
@@ -21,7 +44,8 @@ export const useSimpleMic = () => {
     try {
       console.log('[MIC BOSS] 🎤 MIC ON');
       
-      const stream = await navigator.mediaDevices.getUserMedia({
+      // Use original function to bypass our own detector
+      const stream = await originalGetUserMediaRef.current!({
         audio: true
       });
       
