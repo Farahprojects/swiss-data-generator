@@ -88,8 +88,10 @@ class ChatTextMicrophoneServiceClass {
         }
       };
 
-      this.mediaRecorder.onstop = () => {
-        this.processAudio();
+      this.mediaRecorder.onstop = async () => {
+        // Ensure we finish processing the audio before cleaning up resources
+        await this.processAudio();
+        this.cleanup();
       };
 
       this.mediaRecorder.start(100);
@@ -129,8 +131,7 @@ class ChatTextMicrophoneServiceClass {
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
       this.mediaRecorder.stop();
     }
-
-    this.cleanup();
+    // NOTE: cleanup will be triggered in the mediaRecorder.onstop handler
   }
 
   /**
