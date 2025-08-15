@@ -81,13 +81,25 @@ export const ConversationOverlay: React.FC = () => {
               <p className="text-xs text-red-600 mb-2">Reason: {debugAudio.reason}</p>
               <audio 
                 controls 
+                preload="auto"
                 className="w-full h-8"
                 src={URL.createObjectURL(debugAudio.blob)}
                 style={{ height: '32px' }}
-              />
+                onLoadStart={() => console.log('[DebugAudio] Loading started')}
+                onCanPlay={() => console.log('[DebugAudio] Ready to play')}
+                onError={(e) => {
+                  console.error('[DebugAudio] Failed to load:', e);
+                  alert('Failed to load debug audio - blob may be corrupted');
+                }}
+              >
+                Your browser does not support audio playback.
+              </audio>
               <p className="text-xs text-red-500 mt-1">
-                Size: {(debugAudio.blob.size / 1024).toFixed(1)}KB | Duration: ~{(debugAudio.blob.size / 16000).toFixed(1)}s
+                Size: {(debugAudio.blob.size / 1024).toFixed(1)}KB | Type: {debugAudio.blob.type || 'unknown'}
               </p>
+              {debugAudio.blob.size === 0 && (
+                <p className="text-xs text-red-600 mt-1 font-semibold">⚠️ Empty audio blob - no audio to play</p>
+              )}
             </div>
           )}
         </div>
