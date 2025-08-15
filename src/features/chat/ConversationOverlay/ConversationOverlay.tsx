@@ -21,7 +21,7 @@ export const ConversationOverlay: React.FC = () => {
   // Map chat status to conversation state for UI
   const state = status === 'recording' ? 'listening' : 
                status === 'transcribing' ? 'processing' : 
-               status === 'generating' ? 'processing' : 
+               status === 'thinking' ? 'processing' : 
                status === 'speaking' ? 'replying' : 'listening';
 
   if (!isConversationOpen) return null;

@@ -162,11 +162,11 @@ class ConversationMicrophoneServiceClass {
 
       // Set up one-time handler for stop completion
       this.mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
-        this.log('📼 Recording completed - blob size:', audioBlob.size);
+        const finalBlob = this.createFinalBlobFromBuffer();
+        this.log('📼 Recording completed - blob size:', finalBlob.size);
         
         this.cleanup();
-        resolve(audioBlob);
+        resolve(finalBlob);
       };
 
       this.mediaRecorder.onerror = (event) => {
@@ -197,10 +197,14 @@ class ConversationMicrophoneServiceClass {
   }
 
   /**
-   * HANDLE RECORDING COMPLETE - Process finished recording
+   * CREATE FINAL BLOB FROM BUFFER - Build final audio with retroactive trimming
    */
-  private handleRecordingComplete(): void {
-    // Retroactive trimming based on voice confirmation
+  private createFinalBlobFromBuffer(): Blob {
+    if (this.circularBuffer.length === 0) {
+      this.log('⚠️ Empty circular buffer - returning empty blob');
+      return new Blob([], { type: 'audio/webm' });
+    }
+
     let finalBlob: Blob;
     
     if (this.voiceConfirmedAt && this.circularBuffer.length > 0) {
@@ -214,12 +218,21 @@ class ConversationMicrophoneServiceClass {
       
       finalBlob = new Blob(voiceChunks.map(c => c.blob), { type: 'audio/webm' });
     } else {
-      // No voice detected - return empty blob or minimal buffer
-      this.log('⚠️ No voice confirmation - returning minimal audio');
-      finalBlob = new Blob(this.circularBuffer.slice(-2).map(c => c.blob), { type: 'audio/webm' });
+      // No voice detected - return minimal buffer to avoid empty audio
+      this.log('⚠️ No voice confirmation - returning last few chunks');
+      const minimalChunks = this.circularBuffer.slice(-3); // Last 3 chunks (~300ms)
+      finalBlob = new Blob(minimalChunks.map(c => c.blob), { type: 'audio/webm' });
     }
     
     this.log(`📼 Final audio blob: ${finalBlob.size} bytes`);
+    return finalBlob;
+  }
+
+  /**
+   * HANDLE RECORDING COMPLETE - Process finished recording
+   */
+  private handleRecordingComplete(): void {
+    const finalBlob = this.createFinalBlobFromBuffer();
     
     if (this.options.onRecordingComplete) {
       this.options.onRecordingComplete(finalBlob);
@@ -255,7 +268,7 @@ class ConversationMicrophoneServiceClass {
 
     // Clear refs
     this.mediaRecorder = null;
-    this.audioChunks = [];
+    this.circularBuffer = [];
     this.analyser = null;
     this.audioLevel = 0;
     this.monitoringRef.current = false;
@@ -323,10 +336,13 @@ class ConversationMicrophoneServiceClass {
     let voiceStartTime: number | null = null;
     let silenceStartTime: number | null = null;
     
-    // Industry-standard thresholds
-    const VOICE_START_THRESHOLD = 0.05;  // ~-45dBFS - real voice detection
-    const VOICE_START_DURATION = 250;    // 250ms sustained voice to confirm
-    const SILENCE_THRESHOLD = 0.02;      // ~-55dBFS - silence detection
+    // Helper function to convert dB to RMS
+    const dbToRms = (dB: number): number => Math.pow(10, dB / 20);
+    
+    // Professional thresholds with proper dB conversion
+    const VOICE_START_THRESHOLD = dbToRms(-40);  // -40dBFS for voice detection
+    const VOICE_START_DURATION = 250;           // 250ms sustained voice to confirm
+    const SILENCE_THRESHOLD = dbToRms(-45);     // -45dBFS for silence detection
     const SILENCE_TIMEOUT = this.options.silenceTimeoutMs || 2000;
     
     this.log(`🧠 VAD started - waiting for voice (>${VOICE_START_THRESHOLD} RMS for ${VOICE_START_DURATION}ms)`);
@@ -344,6 +360,9 @@ class ConversationMicrophoneServiceClass {
       const rms = Math.sqrt(sumSquares / bufferLength);
       this.audioLevel = rms;
       
+      // Convert to dB for debugging
+      const dB = rms > 0 ? 20 * Math.log10(rms) : -100;
+      
       const now = Date.now();
       
       if (phase === 'waiting_for_voice') {
@@ -356,7 +375,7 @@ class ConversationMicrophoneServiceClass {
             this.voiceConfirmedAt = voiceStartTime; // Mark when voice actually started
             phase = 'monitoring_silence';
             voiceStartTime = null;
-            this.log(`🎤 Voice activity confirmed at ${this.voiceConfirmedAt} - now monitoring for ${SILENCE_TIMEOUT}ms silence`);
+            this.log(`🎤 Voice activity confirmed at ${this.voiceConfirmedAt} (RMS: ${rms.toFixed(4)}, dB: ${dB.toFixed(1)}) - now monitoring for ${SILENCE_TIMEOUT}ms silence`);
           }
         } else {
           voiceStartTime = null; // Reset if signal drops
@@ -369,10 +388,14 @@ class ConversationMicrophoneServiceClass {
             silenceStartTime = now;
           } else if (now - silenceStartTime >= SILENCE_TIMEOUT) {
             // Natural silence detected - stop recording
-            this.log(`🧘‍♂️ ${SILENCE_TIMEOUT}ms silence detected after voice - stopping naturally`);
+            this.log(`🧘‍♂️ ${SILENCE_TIMEOUT}ms silence detected after voice - stopping naturally (RMS: ${rms.toFixed(4)}, dB: ${dB.toFixed(1)})`);
             this.monitoringRef.current = false;
             if (this.options.onSilenceDetected) {
               this.options.onSilenceDetected();
+            }
+            // Stop recording through the service method
+            if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+              this.mediaRecorder.stop();
             }
             return;
           }
