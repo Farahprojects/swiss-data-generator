@@ -14,10 +14,18 @@ export interface ConversationMicrophoneOptions {
   silenceTimeoutMs?: number;
 }
 
+interface AudioChunk {
+  blob: Blob;
+  timestamp: number;
+}
+
 class ConversationMicrophoneServiceClass {
   private stream: MediaStream | null = null;
   private mediaRecorder: MediaRecorder | null = null;
-  private audioChunks: Blob[] = [];
+  private circularBuffer: AudioChunk[] = []; // Circular buffer for retroactive trimming
+  private bufferMaxDuration = 2000; // 2 seconds buffer
+  private voiceConfirmedAt: number | null = null; // Timestamp when voice was confirmed
+  private recordingStartedAt: number = 0; // When recording actually started
   private isRecording = false;
   private audioContext: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
@@ -74,18 +82,33 @@ class ConversationMicrophoneServiceClass {
       this.analyser.smoothingTimeConstant = 0.8;
       this.mediaStreamSource.connect(this.analyser);
 
-      // Set up MediaRecorder for conversation
+      // Set up MediaRecorder with circular buffering
       this.mediaRecorder = new MediaRecorder(this.stream, {
         mimeType: 'audio/webm;codecs=opus',
         audioBitsPerSecond: 128000
       });
 
-      this.audioChunks = [];
+      this.circularBuffer = [];
+      this.voiceConfirmedAt = null;
+      this.recordingStartedAt = Date.now();
       this.isRecording = true;
 
+      // Circular buffer with 100ms chunks for precise trimming
       this.mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          this.audioChunks.push(event.data);
+          const chunk: AudioChunk = {
+            blob: event.data,
+            timestamp: Date.now()
+          };
+          
+          // Add to circular buffer
+          this.circularBuffer.push(chunk);
+          
+          // Trim buffer to max duration (2s rolling window)
+          const cutoffTime = chunk.timestamp - this.bufferMaxDuration;
+          this.circularBuffer = this.circularBuffer.filter(c => c.timestamp > cutoffTime);
+          
+          this.log(`📦 Buffer chunk added (${this.circularBuffer.length} chunks, ${chunk.blob.size} bytes)`);
         }
       };
 
@@ -101,7 +124,8 @@ class ConversationMicrophoneServiceClass {
         this.cleanup();
       };
 
-      this.mediaRecorder.start();
+      // Start recording with 100ms chunks for precise circular buffering
+      this.mediaRecorder.start(100);
       
       this.notifyListeners();
       this.log('✅ Recording started successfully');
@@ -176,11 +200,29 @@ class ConversationMicrophoneServiceClass {
    * HANDLE RECORDING COMPLETE - Process finished recording
    */
   private handleRecordingComplete(): void {
-    const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
-    this.log('📼 Recording completed - blob size:', audioBlob.size);
+    // Retroactive trimming based on voice confirmation
+    let finalBlob: Blob;
+    
+    if (this.voiceConfirmedAt && this.circularBuffer.length > 0) {
+      // Trim buffer to include only audio from voice confirmation onwards
+      const voiceChunks = this.circularBuffer.filter(chunk => 
+        chunk.timestamp >= this.voiceConfirmedAt!
+      );
+      
+      this.log(`🎯 Voice-trimmed audio: ${voiceChunks.length}/${this.circularBuffer.length} chunks kept`);
+      this.log(`📊 Voice confirmed at: ${this.voiceConfirmedAt}, recording started at: ${this.recordingStartedAt}`);
+      
+      finalBlob = new Blob(voiceChunks.map(c => c.blob), { type: 'audio/webm' });
+    } else {
+      // No voice detected - return empty blob or minimal buffer
+      this.log('⚠️ No voice confirmation - returning minimal audio');
+      finalBlob = new Blob(this.circularBuffer.slice(-2).map(c => c.blob), { type: 'audio/webm' });
+    }
+    
+    this.log(`📼 Final audio blob: ${finalBlob.size} bytes`);
     
     if (this.options.onRecordingComplete) {
-      this.options.onRecordingComplete(audioBlob);
+      this.options.onRecordingComplete(finalBlob);
     }
     
     this.cleanup();
@@ -310,10 +352,11 @@ class ConversationMicrophoneServiceClass {
           if (voiceStartTime === null) {
             voiceStartTime = now;
           } else if (now - voiceStartTime >= VOICE_START_DURATION) {
-            // Voice confirmed! Switch to silence monitoring
+            // Voice confirmed! Mark timestamp and switch to silence monitoring
+            this.voiceConfirmedAt = voiceStartTime; // Mark when voice actually started
             phase = 'monitoring_silence';
             voiceStartTime = null;
-            this.log(`🎤 Voice activity confirmed - now monitoring for ${SILENCE_TIMEOUT}ms silence`);
+            this.log(`🎤 Voice activity confirmed at ${this.voiceConfirmedAt} - now monitoring for ${SILENCE_TIMEOUT}ms silence`);
           }
         } else {
           voiceStartTime = null; // Reset if signal drops
