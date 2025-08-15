@@ -79,23 +79,31 @@ serve(async (req) => {
         upsert: false
       });
 
+    let audioUrl: string;
+
     if (uploadError) {
       console.error("[google-tts] Storage upload error:", uploadError);
-      throw new Error(`Failed to upload audio: ${uploadError.message}`);
+      console.log("[google-tts] Falling back to data URL approach");
+      
+      // Fallback: create a data URL for direct audio playback
+      const base64DataUrl = `data:audio/mpeg;base64,${audioBase64}`;
+      audioUrl = base64DataUrl;
+      console.log("[google-tts] Using data URL fallback for audio");
+    } else {
+      // Get public URL from storage
+      const { data: { publicUrl } } = supabaseAdmin.storage
+        .from('ChatAudio')
+        .getPublicUrl(fileName);
+
+      audioUrl = publicUrl;
+      console.log(`[google-tts] Audio uploaded successfully: ${publicUrl}`);
     }
-
-    // Get public URL
-    const { data: { publicUrl } } = supabaseAdmin.storage
-      .from('ChatAudio')
-      .getPublicUrl(fileName);
-
-    console.log(`[google-tts] Audio uploaded successfully: ${publicUrl}`);
 
     // Update message with audio URL
     const { error: updateError } = await supabaseAdmin
       .from('messages')
       .update({ 
-        audio_url: publicUrl,
+        audio_url: audioUrl,
         meta: { 
           tts_provider: "google",
           voice: "en-US-Neural2-F",
@@ -111,7 +119,7 @@ serve(async (req) => {
 
     console.log("[google-tts] Successfully updated message with audio URL");
 
-    return new Response(JSON.stringify({ audioUrl: publicUrl }), {
+    return new Response(JSON.stringify({ audioUrl: audioUrl }), {
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
       status: 200,
     });
