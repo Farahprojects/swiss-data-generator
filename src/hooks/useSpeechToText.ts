@@ -272,6 +272,50 @@ export const useSpeechToText = (
     });
   }, [processAudio]);
 
+  // EMERGENCY STOP - kills everything immediately for modal close
+  const emergencyStop = useCallback(() => {
+    console.log('[useSpeechToText] 🚨 EMERGENCY STOP - killing microphone immediately');
+    
+    // 1. STOP ALL MEDIA TRACKS IMMEDIATELY (highest priority)
+    if (mediaRecorderRef.current?.stream) {
+      console.log('[useSpeechToText] 🎤 Stopping all media tracks immediately');
+      mediaRecorderRef.current.stream.getTracks().forEach(track => {
+        track.stop();
+        console.log('[useSpeechToText] ✅ Stopped track:', track.kind);
+      });
+    }
+    
+    // 2. STOP MEDIARECORDER IMMEDIATELY
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      console.log('[useSpeechToText] 🛑 Stopping MediaRecorder immediately');
+      mediaRecorderRef.current.stop();
+    }
+    
+    // 3. CLOSE AUDIO CONTEXT IMMEDIATELY
+    if (audioContextRef.current) {
+      console.log('[useSpeechToText] 🔊 Closing AudioContext immediately');
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+    
+    // 4. CLEAR ALL TIMERS AND FLAGS
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+    
+    // 5. RESET ALL STATE
+    isRecordingRef.current = false;
+    monitoringRef.current = false;
+    mediaRecorderRef.current = null;
+    audioChunksRef.current = [];
+    setIsRecording(false);
+    setIsProcessing(false);
+    setAudioLevel(0);
+    
+    console.log('[useSpeechToText] ✅ EMERGENCY STOP COMPLETE - browser mic should be off');
+  }, []);
+
   const toggleRecording = useCallback(async () => {
     if (isRecordingRef.current) {
       return stopRecording();
@@ -288,5 +332,6 @@ export const useSpeechToText = (
     startRecording,
     stopRecording,
     toggleRecording,
+    emergencyStop, // New emergency stop method
   };
 };

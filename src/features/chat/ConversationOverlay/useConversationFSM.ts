@@ -135,11 +135,9 @@ export const useConversationFSM = () => {
     if (!isConversationOpen) {
       console.log('[ConversationFSM] 🚨 CONVERSATION CLOSED - EMERGENCY SHUTDOWN');
       
-      // 1. STOP RECORDING IMMEDIATELY (highest priority)
-      if (speechToText.isRecording) {
-        console.log('[ConversationFSM] 🎤 STOPPING RECORDING IMMEDIATELY');
-        speechToText.stopRecording();
-      }
+      // 1. STOP RECORDING IMMEDIATELY (highest priority) - EMERGENCY STOP
+      console.log('[ConversationFSM] 🎤 EMERGENCY STOP RECORDING - KILL BROWSER MIC');
+      speechToText.emergencyStop(); // Use emergency stop instead of regular stop
       
       // 2. STOP AUDIO PLAYBACK IMMEDIATELY  
       console.log('[ConversationFSM] 🔊 STOPPING AUDIO PLAYBACK IMMEDIATELY');
