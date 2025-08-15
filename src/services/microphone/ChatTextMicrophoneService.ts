@@ -108,8 +108,8 @@ class ChatTextMicrophoneServiceClass {
       this.mediaRecorder.start(100);
       // minimal start log
       
-      // Start silence monitoring
-      this.startSilenceMonitoring();
+      // Start two-phase Voice Activity Detection
+      this.startVoiceActivityDetection();
       
       this.notifyListeners();
       this.log('✅ Recording started');
@@ -148,66 +148,84 @@ class ChatTextMicrophoneServiceClass {
   }
 
   /**
-   * SILENCE MONITORING - Domain-specific silence detection
+   * TWO-PHASE VOICE ACTIVITY DETECTION - Professional VAD system
    */
-  private startSilenceMonitoring(): void {
+  private startVoiceActivityDetection(): void {
     if (!this.analyser || this.monitoringRef.current) return;
-
     this.monitoringRef.current = true;
-    // Time-domain RMS with adaptive threshold calibration
+
     const bufferLength = this.analyser.fftSize;
     const dataArray = new Uint8Array(bufferLength);
-    let silenceStart: number | null = null;
-    const timeoutMs = this.options.silenceTimeoutMs || 3000;
-    const calibrationWindowMs = 300;
-    const calibrationStart = Date.now();
-    let calibrationSum = 0;
-    let calibrationCount = 0;
-    let adaptiveThreshold = 0.02; // default baseline
+    
+    // VAD State Machine
+    let phase: 'waiting_for_voice' | 'monitoring_silence' = 'waiting_for_voice';
+    let voiceStartTime: number | null = null;
+    let silenceStartTime: number | null = null;
+    
+    // Industry-standard thresholds (optimized for chat text input)
+    const VOICE_START_THRESHOLD = 0.05;  // ~-45dBFS - real voice detection
+    const VOICE_START_DURATION = 250;    // 250ms sustained voice to confirm
+    const SILENCE_THRESHOLD = 0.02;      // ~-55dBFS - silence detection
+    const SILENCE_TIMEOUT = this.options.silenceTimeoutMs || 2000;
+    
+    this.log(`🧠 VAD started - waiting for voice (>${VOICE_START_THRESHOLD} RMS for ${VOICE_START_DURATION}ms)`);
 
-    const checkSilence = () => {
+    const checkVAD = () => {
       if (!this.monitoringRef.current || !this.analyser) return;
-
+      
+      // Get current RMS audio level
       this.analyser.getByteTimeDomainData(dataArray);
-
-      // Calculate RMS in [-1,1]
       let sumSquares = 0;
       for (let i = 0; i < bufferLength; i++) {
         const centered = (dataArray[i] - 128) / 128;
         sumSquares += centered * centered;
       }
       const rms = Math.sqrt(sumSquares / bufferLength);
-      this.audioLevel = rms; // 0..~0.7 typically
-
+      this.audioLevel = rms;
+      
       const now = Date.now();
-      if (now - calibrationStart < calibrationWindowMs) {
-        calibrationSum += rms;
-        calibrationCount += 1;
-        adaptiveThreshold = Math.max(0.01, (calibrationSum / Math.max(1, calibrationCount)) + 0.01);
-      }
-
-      if (rms < adaptiveThreshold) {
-        if (silenceStart === null) {
-          silenceStart = now;
-        } else if (now - silenceStart >= timeoutMs) {
-          this.log(`⏰ ${timeoutMs}ms silence detected - stopping`);
-          this.monitoringRef.current = false;
-          
-          if (this.options.onSilenceDetected) {
-            this.options.onSilenceDetected();
+      
+      if (phase === 'waiting_for_voice') {
+        // Phase 1: Wait for real voice activity
+        if (rms > VOICE_START_THRESHOLD) {
+          if (voiceStartTime === null) {
+            voiceStartTime = now;
+          } else if (now - voiceStartTime >= VOICE_START_DURATION) {
+            // Voice confirmed! Switch to silence monitoring
+            phase = 'monitoring_silence';
+            voiceStartTime = null;
+            this.log(`🎤 Voice activity confirmed - now monitoring for ${SILENCE_TIMEOUT}ms silence`);
           }
-          
-          this.stopRecording();
-          return;
+        } else {
+          voiceStartTime = null; // Reset if signal drops
         }
-      } else {
-        silenceStart = null;
+        
+      } else if (phase === 'monitoring_silence') {
+        // Phase 2: Monitor for silence after voice detected
+        if (rms < SILENCE_THRESHOLD) {
+          if (silenceStartTime === null) {
+            silenceStartTime = now;
+          } else if (now - silenceStartTime >= SILENCE_TIMEOUT) {
+            // Natural silence detected - stop recording
+            this.log(`🧘‍♂️ ${SILENCE_TIMEOUT}ms silence detected after voice - stopping naturally`);
+            this.monitoringRef.current = false;
+            
+            if (this.options.onSilenceDetected) {
+              this.options.onSilenceDetected();
+            }
+            
+            this.stopRecording();
+            return;
+          }
+        } else {
+          silenceStartTime = null; // Reset silence timer - still speaking
+        }
       }
 
-      requestAnimationFrame(checkSilence);
+      requestAnimationFrame(checkVAD);
     };
 
-    checkSilence();
+    checkVAD();
   }
 
   /**
