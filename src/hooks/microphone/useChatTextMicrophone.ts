@@ -47,11 +47,9 @@ export const useChatTextMicrophone = (options: ChatTextMicrophoneOptions = {}) =
   }, []);
 
   const startRecording = useCallback(async (): Promise<boolean> => {
-    console.log('[ChatTextMicHook] ▶️ startRecording requested');
     const success = await chatTextMicrophoneService.startRecording();
     
     if (!success) {
-      console.log('[ChatTextMicHook] ❌ startRecording denied by arbitrator');
       toast({
         title: "Microphone Busy",
         description: "Another feature is currently using the microphone. Please try again.",
@@ -63,12 +61,10 @@ export const useChatTextMicrophone = (options: ChatTextMicrophoneOptions = {}) =
   }, [toast]);
 
   const stopRecording = useCallback(() => {
-    console.log('[ChatTextMicHook] ⏹️ stopRecording requested');
     chatTextMicrophoneService.stopRecording();
   }, []);
 
   const toggleRecording = useCallback(async () => {
-    console.log('[ChatTextMicHook] 🔁 toggleRecording', { isRecording: state.isRecording });
     if (state.isRecording) {
       stopRecording();
     } else {

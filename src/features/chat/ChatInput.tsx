@@ -27,7 +27,7 @@ export const ChatInput = () => {
     toggleRecording: toggleMicRecording 
   } = useChatTextMicrophone({
     onTranscriptReady: handleTranscriptReady,
-    silenceTimeoutMs: 3000
+    silenceTimeoutMs: 2000
   });
 
   const handleSend = () => {
@@ -81,10 +81,7 @@ export const ChatInput = () => {
             </button>
             <button 
               className="p-2 text-gray-500 hover:text-gray-900 transition-all duration-200 ease-in-out"
-              onClick={() => {
-                console.log('[ChatInput] 🎙️ Mic icon clicked (chat text input)');
-                toggleMicRecording();
-              }}
+              onClick={toggleMicRecording}
               disabled={isMicProcessing}
               title={isMicRecording ? 'Stop recording' : 'Start voice recording'}
             >

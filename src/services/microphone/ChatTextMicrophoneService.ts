@@ -79,20 +79,14 @@ class ChatTextMicrophoneServiceClass {
       this.analyser.fftSize = 2048;
       this.analyser.smoothingTimeConstant = 0.8;
       this.mediaStreamSource.connect(this.analyser);
-      this.log('🔍 AudioContext/analyser configured', {
-        analyserFftSize: this.analyser.fftSize,
-        smoothingTimeConstant: this.analyser.smoothingTimeConstant,
-      });
+      // reduced detailed analyser config logging
 
       // Set up MediaRecorder
       this.mediaRecorder = new MediaRecorder(this.stream, {
         mimeType: 'audio/webm;codecs=opus',
         audioBitsPerSecond: 128000
       });
-      this.log('⏺️ MediaRecorder created', {
-        mimeType: 'audio/webm;codecs=opus',
-        audioBitsPerSecond: 128000,
-      });
+      // reduced recorder config logging
 
       this.audioChunks = [];
       this.isRecording = true;
@@ -100,25 +94,25 @@ class ChatTextMicrophoneServiceClass {
       this.mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           this.audioChunks.push(event.data);
-          this.log('📥 ondataavailable', { size: event.data.size, totalChunks: this.audioChunks.length });
+          // minimized per-chunk logging to reduce noise
         }
       };
 
       this.mediaRecorder.onstop = async () => {
         // Ensure we finish processing the audio before cleaning up resources
-        this.log('🛑 mediaRecorder onstop fired');
+        // minimal onstop log
         await this.processAudio();
         this.cleanup();
       };
 
       this.mediaRecorder.start(100);
-      this.log('▶️ mediaRecorder.start(timeslice=100ms)');
+      // minimal start log
       
       // Start silence monitoring
       this.startSilenceMonitoring();
       
       this.notifyListeners();
-      this.log('✅ Recording started successfully');
+      this.log('✅ Recording started');
       return true;
 
     } catch (error) {
@@ -134,7 +128,7 @@ class ChatTextMicrophoneServiceClass {
   stopRecording(): void {
     if (!this.isRecording) return;
 
-    this.log('🛑 Stopping chat text voice recording');
+    this.log('🛑 Stopping recording');
     
     this.isRecording = false;
     this.monitoringRef.current = false;
@@ -185,7 +179,7 @@ class ChatTextMicrophoneServiceClass {
         if (silenceStart === null) {
           silenceStart = now;
         } else if (now - silenceStart >= timeoutMs) {
-          this.log(`⏰ ${timeoutMs}ms silence detected - stopping`, { rms });
+          this.log(`⏰ ${timeoutMs}ms silence detected - stopping`);
           this.monitoringRef.current = false;
           
           if (this.options.onSilenceDetected) {
@@ -215,21 +209,17 @@ class ChatTextMicrophoneServiceClass {
       this.isProcessing = true;
       this.notifyListeners();
       const recordingDurationMs = this.recordingStartedAt ? Date.now() - this.recordingStartedAt : null;
-      this.log('🔄 Processing chat text audio...', {
-        chunks: this.audioChunks.length,
-        approxBlobSize: this.audioChunks.reduce((a, b) => a + b.size, 0),
-        recordingDurationMs,
-      });
+      this.log('🔄 Processing audio', { durationMs: recordingDurationMs });
       
       const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm;codecs=opus' });
-      this.log('📦 Built audio Blob', { blobSize: audioBlob.size, type: audioBlob.type });
+      // minimal
       
       // Convert to base64
       const reader = new FileReader();
       reader.onloadend = async () => {
         try {
           const base64Audio = (reader.result as string).split(',')[1];
-          this.log('🧮 Base64 ready', { base64Length: base64Audio?.length || 0 });
+          // minimal
 
           const { data, error } = await supabase.functions.invoke('google-speech-to-text', {
             body: {
@@ -248,7 +238,7 @@ class ChatTextMicrophoneServiceClass {
           if (error) throw error;
           
           const transcript = data?.transcript || '';
-          this.log('📝 Transcript received', { length: transcript.length, preview: transcript.slice(0, 80) });
+          this.log('📝 Transcript received', { length: transcript.length });
           
           if (this.options.onTranscriptReady && transcript) {
             this.options.onTranscriptReady(transcript);
