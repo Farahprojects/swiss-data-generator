@@ -85,12 +85,7 @@ export const useConversationFSM = () => {
           if (useConversationUIStore.getState().isConversationOpen) {
             console.log('[ConversationFSM] 🎤 Restarting listening mode after AI speech ended');
             setState('listening');
-            
-            // Ensure we start recording again for next user turn
-            if (!speechToText.isRecording) {
-              console.log('[ConversationFSM] Starting microphone for next user turn');
-              speechToText.startRecording();
-            }
+            // Note: useEffect will handle starting recording when state changes to 'listening'
           } else {
             console.log('[ConversationFSM] Conversation closed during debounce period');
           }
@@ -120,11 +115,20 @@ export const useConversationFSM = () => {
 
   // Start recording when conversation opens and in listening state
   useEffect(() => {
+    console.log('[ConversationFSM] useEffect triggered - state:', state, 'isOpen:', isConversationOpen, 'isRecording:', speechToText.isRecording, 'isProcessing:', speechToText.isProcessing);
+    
     if (state === 'listening' && isConversationOpen && !speechToText.isRecording && !speechToText.isProcessing) {
-      console.log('[ConversationFSM] Starting recording for listening state');
+      console.log('[ConversationFSM] ✅ All conditions met - starting recording for listening state');
       speechToText.startRecording();
+    } else {
+      console.log('[ConversationFSM] ❌ Conditions not met for starting recording:', {
+        stateIsListening: state === 'listening',
+        conversationOpen: isConversationOpen,
+        notRecording: !speechToText.isRecording,
+        notProcessing: !speechToText.isProcessing
+      });
     }
-  }, [state, isConversationOpen]);
+  }, [state, isConversationOpen, speechToText.isRecording, speechToText.isProcessing]);
 
   // Stop recording when conversation closes
   useEffect(() => {
