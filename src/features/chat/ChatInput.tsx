@@ -5,6 +5,7 @@ import { Mic, AudioLines, X } from 'lucide-react';
 import { useChatStore } from '@/core/store';
 import { chatController } from './ChatController';
 import { useConversationUIStore } from './conversation-ui-store';
+import { useSpeechToText } from '@/hooks/useSpeechToText';
 
 export const ChatInput = () => {
   const [text, setText] = useState('');
@@ -12,7 +13,22 @@ export const ChatInput = () => {
   const [isMuted, setIsMuted] = useState(false);
   const { isConversationOpen, openConversation, closeConversation } = useConversationUIStore();
 
-  // Removed useSpeechToText - it was conflicting with our simple mic control
+  // Handle transcript ready - add to text area
+  const handleTranscriptReady = (transcript: string) => {
+    const currentText = text || '';
+    const newText = currentText ? `${currentText} ${transcript}` : transcript;
+    setText(newText);
+  };
+
+  // Handle silence detected - show processing state
+  const handleSilenceDetected = () => {
+    // Optional: could add a processing indicator here
+  };
+
+  const { isRecording: isMicRecording, isProcessing: isMicProcessing, toggleRecording: toggleMicRecording } = useSpeechToText(
+    handleTranscriptReady,
+    handleSilenceDetected
+  );
 
   const handleSend = () => {
     if (text.trim()) {
@@ -62,10 +78,24 @@ export const ChatInput = () => {
             </button>
             <button 
               className="p-2 text-gray-500 hover:text-gray-900 transition-all duration-200 ease-in-out"
-              onClick={openConversation}
-              title="Open voice conversation"
+              onClick={toggleMicRecording}
+              disabled={isMicProcessing}
+              title={isMicRecording ? 'Stop recording' : 'Start voice recording'}
             >
-              <Mic size={18} />
+              <div className="relative w-[18px] h-[18px]">
+                <Mic 
+                  size={18} 
+                  className={`absolute inset-0 transition-all duration-200 ease-in-out ${
+                    isMicRecording ? 'opacity-0 scale-75' : 'opacity-100 scale-100'
+                  }`}
+                />
+                <X 
+                  size={18} 
+                  className={`absolute inset-0 text-red-500 transition-all duration-200 ease-in-out ${
+                    isMicRecording ? 'opacity-100 scale-100' : 'opacity-0 scale-75'
+                  }`}
+                />
+              </div>
             </button>
           </div>
         </div>
