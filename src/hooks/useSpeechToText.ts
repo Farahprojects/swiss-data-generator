@@ -179,6 +179,19 @@ export const useSpeechToText = (
       if (externalStream && externalStream.active) {
         console.log('[useSpeechToText] Using external stream:', externalStream.id);
         stream = externalStream;
+        
+        // Listen for stream ending (when MIC BOSS turns it off)
+        stream.getTracks().forEach(track => {
+          track.addEventListener('ended', () => {
+            console.log('[useSpeechToText] 🔇 Track ended - MIC BOSS turned off mic');
+            // Update UI state immediately
+            setIsRecording(false);
+            setIsProcessing(false);
+            setAudioLevel(0);
+            isRecordingRef.current = false;
+            monitoringRef.current = false;
+          });
+        });
       } else {
         console.error('[useSpeechToText] ❌ NO EXTERNAL STREAM PROVIDED!');
         console.error('useSpeechToText must receive stream from MIC BOSS');
