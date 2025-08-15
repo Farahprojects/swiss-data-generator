@@ -111,6 +111,15 @@ class ChatController {
     
     useChatStore.getState().setStatus('recording');
     try {
+      // Initialize conversation mic service with silence detection
+      conversationMicrophoneService.initialize({
+        onSilenceDetected: () => {
+          console.log('[ChatController] Silence detected - auto-ending turn');
+          this.endTurn();
+        },
+        silenceTimeoutMs: 2000
+      });
+      
       await conversationMicrophoneService.startRecording();
     } catch (error: any) {
       useChatStore.getState().setError(error.message);
