@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { useChatStore } from '@/core/store';
 import { Message } from '@/core/types';
-import { PlayCircle, MessageCircle } from 'lucide-react';
+import { PlayCircle } from 'lucide-react';
 import { audioPlayer } from '@/services/voice/audioPlayer';
 import { useTypewriter } from '@/hooks/useTypewriter';
 
@@ -53,11 +53,7 @@ export const MessageList = () => {
     return (
       <div className="flex-1 flex flex-col justify-end">
         <div className="p-4">
-          <MessageCircle size={48} className="text-gray-300" />
-          <h2 className="mt-4 text-3xl font-light text-gray-800">Ready to talk?</h2>
-          <p className="mt-2 text-gray-500 font-light">
-            Your chat history will appear here.
-          </p>
+          <h2 className="text-3xl font-light text-gray-800">Let's tune into the energy behind your chart</h2>
         </div>
       </div>
     );
