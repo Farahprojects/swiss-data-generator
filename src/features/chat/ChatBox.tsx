@@ -3,7 +3,7 @@ import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
 import { useChatStore } from '@/core/store';
 import { ConversationOverlay } from './ConversationOverlay/ConversationOverlay';
-import { useSimpleMic } from '@/hooks/useSimpleMic';
+import { useMicBoss } from '@/hooks/useMicBoss';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 
 export const ChatBox = () => {
@@ -12,19 +12,19 @@ export const ChatBox = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const isConversationOpen = useConversationUIStore((s) => s.isConversationOpen);
   
-  // SIMPLE MIC CONTROL - Just on/off, no complexity
-  const mic = useSimpleMic();
+  // GLOBAL MIC BOSS - Request/release stream for conversation
+  const micBoss = useMicBoss('conversation-modal');
 
-  // SIMPLE MIC CONTROL - Turn on when conversation opens, off when closes
+  // Request mic when conversation opens, release when closes
   useEffect(() => {
     if (isConversationOpen) {
-      console.log('[ChatBox] Conversation opened - turning mic ON');
-      mic.turnOn();
+      console.log('[ChatBox] Conversation opened - requesting mic from BOSS');
+      micBoss.requestStream();
     } else {
-      console.log('[ChatBox] Conversation closed - turning mic OFF');
-      mic.turnOff();
+      console.log('[ChatBox] Conversation closed - releasing mic to BOSS');
+      micBoss.releaseStream();
     }
-  }, [isConversationOpen]); // Only depend on isConversationOpen
+  }, [isConversationOpen, micBoss.requestStream, micBoss.releaseStream]);
 
   useEffect(() => {
     if (scrollRef.current) {
