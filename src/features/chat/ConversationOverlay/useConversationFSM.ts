@@ -130,11 +130,26 @@ export const useConversationFSM = () => {
     }
   }, [state, isConversationOpen, speechToText.isRecording, speechToText.isProcessing]);
 
-  // Stop recording when conversation closes
+  // IMMEDIATE CLEANUP when conversation closes - stop EVERYTHING
   useEffect(() => {
-    if (!isConversationOpen && speechToText.isRecording) {
-      console.log('[ConversationFSM] Conversation closed, stopping recording');
-      speechToText.stopRecording();
+    if (!isConversationOpen) {
+      console.log('[ConversationFSM] 🚨 CONVERSATION CLOSED - EMERGENCY SHUTDOWN');
+      
+      // 1. STOP RECORDING IMMEDIATELY (highest priority)
+      if (speechToText.isRecording) {
+        console.log('[ConversationFSM] 🎤 STOPPING RECORDING IMMEDIATELY');
+        speechToText.stopRecording();
+      }
+      
+      // 2. STOP AUDIO PLAYBACK IMMEDIATELY  
+      console.log('[ConversationFSM] 🔊 STOPPING AUDIO PLAYBACK IMMEDIATELY');
+      audioPlayer.stop(); // Use stop() instead of pause() for complete shutdown
+      
+      // 3. Reset state to prevent any pending operations
+      console.log('[ConversationFSM] 🔄 RESETTING STATE');
+      setState('listening');
+      
+      console.log('[ConversationFSM] ✅ EMERGENCY SHUTDOWN COMPLETE');
     }
   }, [isConversationOpen]);
 

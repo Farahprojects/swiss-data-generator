@@ -33,10 +33,29 @@ class AudioPlayer {
   }
 
   pause() {
+    console.log('[AudioPlayer] 🚨 EMERGENCY PAUSE - stopping audio immediately');
     if (this.audio) {
       this.audio.pause();
+      this.audio.currentTime = 0; // Reset to beginning
       useChatStore.getState().setStatus('idle');
     }
+    // Clear any pending callbacks to prevent them from firing
+    this.onPlaybackEnd = null;
+    this.cleanup();
+  }
+
+  // Complete stop - more aggressive than pause
+  stop() {
+    console.log('[AudioPlayer] 🛑 EMERGENCY STOP - killing audio completely');
+    if (this.audio) {
+      this.audio.pause();
+      this.audio.currentTime = 0;
+      this.audio.src = ''; // Clear the source
+      this.audio.load(); // Force reload to clear buffer
+    }
+    this.onPlaybackEnd = null;
+    this.cleanup();
+    useChatStore.getState().setStatus('idle');
   }
 
   private handlePlaybackEnd = () => {
