@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 
 interface Props {
-  state: 'listening' | 'processing' | 'replying' | 'idle';
+  state: 'listening' | 'processing' | 'replying';
   audioLevel?: number;
 }
 
@@ -14,7 +14,6 @@ export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
     listening: 'bg-gradient-to-br from-purple-500 to-purple-600',
     processing: 'bg-gradient-to-br from-blue-500 to-blue-600',
     replying: 'bg-gradient-to-br from-green-500 to-green-600',
-    idle: 'bg-gradient-to-br from-gray-400 to-gray-500',
   };
 
   // Use audio level for dynamic scaling when listening
@@ -28,12 +27,10 @@ export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
           ? { scale: dynamicScale } // React to actual audio levels
           : state === 'processing'
           ? { opacity: [1, 0.7, 1] }
-          : state === 'replying'
-          ? { scale: [1, 1.02, 1], rotate: [0, 2, -2, 0] }
-          : {} // idle state - no animation
+          : { scale: [1, 1.02, 1], rotate: [0, 2, -2, 0] }
       }
       transition={{ 
-        repeat: state === 'listening' || state === 'idle' ? 0 : Infinity, 
+        repeat: state === 'listening' ? 0 : Infinity, 
         duration: state === 'listening' ? 0.1 : 2, 
         ease: 'easeInOut' 
       }}

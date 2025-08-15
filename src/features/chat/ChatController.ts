@@ -1,5 +1,6 @@
 // src/features/chat/ChatController.ts
 import { useChatStore } from '@/core/store';
+import { audioRecorder } from '@/services/voice/recorder';
 import { audioPlayer } from '@/services/voice/audioPlayer';
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
@@ -7,12 +8,12 @@ import { ttsService } from '@/services/voice/tts';
 import { getMessagesForConversation } from '@/services/api/messages';
 import { Message } from '@/core/types';
 import { v4 as uuidv4 } from 'uuid';
+// No longer need appendMessage from the client
+// import { appendMessage } from '@/services/api/messages';
 import { STT_PROVIDER, LLM_PROVIDER, TTS_PROVIDER } from '@/config/env';
-import { forceCleanupAllStreams } from '@/services/audio/centralizedMicManager';
 
 class ChatController {
   private isTurnActive = false;
-  private currentRecording: { stop: () => Promise<Blob> } | null = null;
   
   async initializeConversation(conversationId: string) {
     console.log('[ChatController] initializeConversation called with conversationId:', conversationId);
@@ -110,23 +111,19 @@ class ChatController {
     
     useChatStore.getState().setStatus('recording');
     try {
-      // Note: This now depends on external microphone management
-      // The actual recording should be handled by the component using useSimpleMic
-      console.log('[ChatController] Recording started (delegated to external mic management)');
+      await audioRecorder.start();
     } catch (error: any) {
       useChatStore.getState().setError(error.message);
       this.isTurnActive = false;
     }
   }
 
-  async endTurn(audioBlob?: Blob) {
+  async endTurn() {
     if (!this.isTurnActive) return;
     
     useChatStore.getState().setStatus('transcribing');
     try {
-      if (!audioBlob) {
-        throw new Error('No audio data provided for transcription');
-      }
+      const audioBlob = await audioRecorder.stop();
       const transcription = await sttService.transcribe(audioBlob);
 
       // Optimistically add user message to UI
@@ -177,8 +174,7 @@ class ChatController {
 
   cancelTurn() {
     if (!this.isTurnActive) return;
-    // Emergency cleanup - use centralized manager
-    forceCleanupAllStreams();
+    audioRecorder.cancel();
     useChatStore.getState().setStatus('idle');
     this.isTurnActive = false;
   }

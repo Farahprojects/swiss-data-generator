@@ -5,7 +5,7 @@ import { Mic, AudioLines, X } from 'lucide-react';
 import { useChatStore } from '@/core/store';
 import { chatController } from './ChatController';
 import { useConversationUIStore } from './conversation-ui-store';
-import { useMicrophone } from '@/hooks/useMicrophone';
+import { useSpeechToText } from '@/hooks/useSpeechToText';
 
 export const ChatInput = () => {
   const [text, setText] = useState('');
@@ -20,12 +20,15 @@ export const ChatInput = () => {
     setText(newText);
   };
 
-  // PROFESSIONAL MIC HOOK - Owns its own lifecycle
-  const textAreaMic = useMicrophone({
-    ownerId: 'text-area',
-    onTranscriptReady: handleTranscriptReady,
-    silenceTimeoutMs: 3000
-  });
+  // Handle silence detected - show processing state
+  const handleSilenceDetected = () => {
+    // Optional: could add a processing indicator here
+  };
+
+  const { isRecording: isMicRecording, isProcessing: isMicProcessing, toggleRecording: toggleMicRecording } = useSpeechToText(
+    handleTranscriptReady,
+    handleSilenceDetected
+  );
 
   const handleSend = () => {
     if (text.trim()) {
@@ -71,25 +74,25 @@ export const ChatInput = () => {
               className="p-2 text-gray-500 hover:text-gray-900 transition-colors"
               onClick={handleSpeakerClick}
             >
-              <AudioLines size={18} className={isConversationOpen ? 'text-red-500' : ''} />
+              <AudioLines size={18} className={isRecording ? 'text-red-500' : ''} />
             </button>
             <button 
               className="p-2 text-gray-500 hover:text-gray-900 transition-all duration-200 ease-in-out"
-              onClick={textAreaMic.toggleRecording}
-              disabled={textAreaMic.isProcessing}
-              title={textAreaMic.isRecording ? 'Stop recording' : 'Start voice recording'}
+              onClick={toggleMicRecording}
+              disabled={isMicProcessing}
+              title={isMicRecording ? 'Stop recording' : 'Start voice recording'}
             >
               <div className="relative w-[18px] h-[18px]">
                 <Mic 
                   size={18} 
                   className={`absolute inset-0 transition-all duration-200 ease-in-out ${
-                    textAreaMic.isRecording ? 'opacity-0 scale-75' : 'opacity-100 scale-100'
+                    isMicRecording ? 'opacity-0 scale-75' : 'opacity-100 scale-100'
                   }`}
                 />
                 <X 
                   size={18} 
                   className={`absolute inset-0 text-red-500 transition-all duration-200 ease-in-out ${
-                    textAreaMic.isRecording ? 'opacity-100 scale-100' : 'opacity-0 scale-75'
+                    isMicRecording ? 'opacity-100 scale-100' : 'opacity-0 scale-75'
                   }`}
                 />
               </div>
