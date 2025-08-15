@@ -281,6 +281,38 @@ export const useSpeechToText = (
     }
   }, [startRecording, stopRecording]);
 
+  // Simple, safe cleanup for emergency shutdown (no promises, no async)
+  const forceCleanup = useCallback(() => {
+    console.log('[useSpeechToText] 🚨 FORCE CLEANUP - emergency shutdown');
+    
+    // Stop tracks immediately if they exist
+    if (mediaRecorderRef.current?.stream) {
+      const tracks = mediaRecorderRef.current.stream.getTracks();
+      console.log('[useSpeechToText] 🎤 Force stopping', tracks.length, 'tracks');
+      tracks.forEach(track => {
+        if (track.readyState === 'live') {
+          track.stop();
+          console.log('[useSpeechToText] ✅ Force stopped track:', track.kind);
+        }
+      });
+    }
+    
+    // Reset state flags immediately
+    isRecordingRef.current = false;
+    monitoringRef.current = false;
+    setIsRecording(false);
+    setIsProcessing(false);
+    setAudioLevel(0);
+    
+    // Clear timers
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+    
+    console.log('[useSpeechToText] ✅ Force cleanup complete');
+  }, []);
+
   return {
     isRecording,
     isProcessing,
@@ -288,5 +320,6 @@ export const useSpeechToText = (
     startRecording,
     stopRecording,
     toggleRecording,
+    forceCleanup, // Safe emergency cleanup
   };
 };

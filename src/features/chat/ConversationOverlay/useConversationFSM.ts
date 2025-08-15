@@ -136,10 +136,11 @@ export const useConversationFSM = () => {
       console.log('[ConversationFSM] 🚨 CONVERSATION CLOSED - EMERGENCY SHUTDOWN');
       
       // 1. STOP RECORDING IMMEDIATELY (highest priority)
+      console.log('[ConversationFSM] 🎤 STOPPING RECORDING IMMEDIATELY');
       if (speechToText.isRecording) {
-        console.log('[ConversationFSM] 🎤 STOPPING RECORDING IMMEDIATELY');
-        speechToText.stopRecording();
+        speechToText.stopRecording(); // Regular stop for normal flow
       }
+      speechToText.forceCleanup(); // Additional force cleanup for emergency
       
       // 2. STOP AUDIO PLAYBACK IMMEDIATELY  
       console.log('[ConversationFSM] 🔊 STOPPING AUDIO PLAYBACK IMMEDIATELY');
