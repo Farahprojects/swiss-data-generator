@@ -55,11 +55,13 @@ class ChatTextMicrophoneServiceClass {
       // Create our own stream - no sharing
       this.stream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: 48000,
-          channelCount: 1
+          // By setting these to false, we ask the browser for a less processed, more raw audio stream.
+          // This can often improve quality on good hardware by avoiding overly aggressive browser algorithms.
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          sampleRate: 48000, // Keep high sample rate
+          channelCount: 1     // Keep mono
         }
       });
 
