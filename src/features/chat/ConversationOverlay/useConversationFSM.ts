@@ -6,7 +6,7 @@ import { useChatStore } from '@/core/store';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
 
-export type ConversationState = 'listening' | 'processing' | 'replying';
+export type ConversationState = 'listening' | 'processing' | 'replying' | 'idle';
 
 export const useConversationFSM = () => {
   const [state, setState] = useState<ConversationState>('listening');
@@ -130,7 +130,7 @@ export const useConversationFSM = () => {
     }
   }, [state, isConversationOpen, speechToText.isRecording, speechToText.isProcessing]);
 
-  // IMMEDIATE CLEANUP when conversation closes - stop EVERYTHING
+  // Handle conversation open/close state changes
   useEffect(() => {
     if (!isConversationOpen) {
       console.log('[ConversationFSM] 🚨 CONVERSATION CLOSED - EMERGENCY SHUTDOWN');
@@ -146,10 +146,14 @@ export const useConversationFSM = () => {
       audioPlayer.stop(); // Use stop() instead of pause() for complete shutdown
       
       // 3. Reset state to prevent any pending operations
-      console.log('[ConversationFSM] 🔄 RESETTING STATE');
-      setState('listening');
+      console.log('[ConversationFSM] 🔄 RESETTING STATE TO IDLE (NON-TRIGGERING)');
+      setState('idle'); // Safe idle state that won't trigger recording restart
       
       console.log('[ConversationFSM] ✅ EMERGENCY SHUTDOWN COMPLETE');
+    } else {
+      // Conversation opened - reset to listening state
+      console.log('[ConversationFSM] 🎤 CONVERSATION OPENED - RESETTING TO LISTENING');
+      setState('listening');
     }
   }, [isConversationOpen]);
 

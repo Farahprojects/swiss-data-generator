@@ -20,7 +20,12 @@ export const ConversationOverlay: React.FC = () => {
         <div className="flex flex-col items-center justify-center h-full gap-6">
           <VoiceBubble state={state} audioLevel={audioLevel} />
           {/* Placeholder captions */}
-          <p className="text-gray-500 font-light">{state === 'listening' ? 'Listening…' : state === 'processing' ? 'Thinking…' : 'Speaking…'}</p>
+          <p className="text-gray-500 font-light">
+            {state === 'listening' ? 'Listening…' : 
+             state === 'processing' ? 'Thinking…' : 
+             state === 'replying' ? 'Speaking…' :
+             'Ready'}
+          </p>
         </div>
         {/* Close button */}
         <button onClick={closeConversation} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700">✕</button>
