@@ -339,10 +339,10 @@ class ConversationMicrophoneServiceClass {
     // Helper function to convert dB to RMS
     const dbToRms = (dB: number): number => Math.pow(10, dB / 20);
     
-    // Professional thresholds with proper dB conversion
-    const VOICE_START_THRESHOLD = dbToRms(-40);  // -40dBFS for voice detection
-    const VOICE_START_DURATION = 250;           // 250ms sustained voice to confirm
-    const SILENCE_THRESHOLD = dbToRms(-45);     // -45dBFS for silence detection
+    // Tuned thresholds for real-world speech levels (Level 20-40 normal speech)
+    const VOICE_START_THRESHOLD = 0.02;  // Level ~20 - matches actual normal speech
+    const VOICE_START_DURATION = 250;    // 250ms sustained voice to confirm
+    const SILENCE_THRESHOLD = 0.01;      // Level ~10 - below normal speech
     const SILENCE_TIMEOUT = this.options.silenceTimeoutMs || 2000;
     
     this.log(`🧠 VAD started - waiting for voice (>${VOICE_START_THRESHOLD} RMS for ${VOICE_START_DURATION}ms)`);

@@ -179,10 +179,10 @@ class ChatTextMicrophoneServiceClass {
     let voiceStartTime: number | null = null;
     let silenceStartTime: number | null = null;
     
-    // Industry-standard thresholds (optimized for chat text input)
-    const VOICE_START_THRESHOLD = 0.05;  // ~-45dBFS - real voice detection
+    // Tuned thresholds for real-world speech levels (Level 20-40 normal speech)
+    const VOICE_START_THRESHOLD = 0.02;  // Level ~20 - matches actual normal speech
     const VOICE_START_DURATION = 250;    // 250ms sustained voice to confirm
-    const SILENCE_THRESHOLD = 0.02;      // ~-55dBFS - silence detection
+    const SILENCE_THRESHOLD = 0.01;      // Level ~10 - below normal speech
     const SILENCE_TIMEOUT = this.options.silenceTimeoutMs || 2000;
     
     this.log(`🧠 VAD started - waiting for voice (>${VOICE_START_THRESHOLD} RMS for ${VOICE_START_DURATION}ms)`);
