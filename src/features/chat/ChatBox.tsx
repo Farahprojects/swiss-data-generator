@@ -17,7 +17,7 @@ export const ChatBox = () => {
 
   return (
     <div className="flex flex-col flex-1 bg-white max-w-4xl w-full mx-auto border-x border-gray-100 pb-2">
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-6">
         <MessageList />
       </div>
       {error && <div className="p-3 text-sm font-medium text-red-700 bg-red-100 border-t border-red-200">{error}</div>}

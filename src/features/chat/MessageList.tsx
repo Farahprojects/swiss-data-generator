@@ -59,30 +59,30 @@ export const MessageList = () => {
     }
   }, [messages.length]);
 
-  if (messages.length === 0) {
-    return (
-      <div className="flex-1 flex flex-col justify-end">
-        <div className="p-4">
-          <h2 className="text-3xl font-light text-gray-800 text-left">Let's tune into the energy behind your chart</h2>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <>
-      {messages.map((msg, index) => {
-        const isFromHistory = initialMessageCount !== null && index < initialMessageCount;
-        return (
-          <MessageItem 
-            key={msg.id} 
-            message={msg} 
-            isLast={index === messages.length - 1}
-            isFromHistory={isFromHistory}
-          />
-        );
-      })}
+    <div className="flex flex-col min-h-full">
+      {messages.length === 0 ? (
+        <div className="flex-1 flex flex-col justify-end">
+          <div className="p-4">
+            <h2 className="text-3xl font-light text-gray-800 text-left">Let's tune into the energy behind your chart</h2>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col space-y-6">
+          {messages.map((msg, index) => {
+            const isFromHistory = initialMessageCount !== null && index < initialMessageCount;
+            return (
+              <MessageItem 
+                key={msg.id} 
+                message={msg} 
+                isLast={index === messages.length - 1}
+                isFromHistory={isFromHistory}
+              />
+            );
+          })}
+        </div>
+      )}
       <div ref={scrollRef} />
-    </>
+    </div>
   );
 };
