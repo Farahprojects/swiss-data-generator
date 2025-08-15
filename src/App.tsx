@@ -33,6 +33,7 @@ import NavigationStateProvider from '@/contexts/NavigationStateContext';
 import { SettingsModalProvider } from '@/contexts/SettingsModalContext';
 import { PricingProvider } from '@/contexts/PricingContext';
 import { ReportModalProvider } from '@/contexts/ReportModalContext';
+import { DebugAudioProvider } from '@/contexts/DebugAudioContext';
 
 // Lazy load the authenticated shell
 const AuthedAppShell = lazy(() => import('./AuthedAppShell'));
@@ -59,21 +60,25 @@ const ConditionalAuth: React.FC<{ children: React.ReactNode }> = ({ children }) 
   if (path.startsWith('/report')) {
     // Public report needs pricing and report modal, but no auth
     return (
-      <PricingProvider>
-        <ReportModalProvider>
-          {children}
-        </ReportModalProvider>
-      </PricingProvider>
+      <DebugAudioProvider>
+        <PricingProvider>
+          <ReportModalProvider>
+            {children}
+          </ReportModalProvider>
+        </PricingProvider>
+      </DebugAudioProvider>
     );
   }
 
   // Public pages that still use auth-aware UI
   return (
-    <NavigationStateProvider>
-      <SettingsModalProvider>
-        <AuthProvider>{children}</AuthProvider>
-      </SettingsModalProvider>
-    </NavigationStateProvider>
+    <DebugAudioProvider>
+      <NavigationStateProvider>
+        <SettingsModalProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </SettingsModalProvider>
+      </NavigationStateProvider>
+    </DebugAudioProvider>
   );
 };
 
