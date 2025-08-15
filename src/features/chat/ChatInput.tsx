@@ -29,9 +29,16 @@ export const ChatInput = () => {
     // Optional: could add a processing indicator here
   };
 
+  // Handle 3-second silence timeout - tell MIC BOSS to turn off
+  const handleSilenceTimeout = () => {
+    console.log('[ChatInput] 3-second silence timeout - releasing mic from BOSS');
+    textAreaMicBoss.releaseStream();
+  };
+
   const { isRecording: isMicRecording, isProcessing: isMicProcessing, startRecording, stopRecording } = useSpeechToText(
     handleTranscriptReady,
-    handleSilenceDetected
+    handleSilenceDetected,
+    handleSilenceTimeout
   );
 
   // Simple toggle for text area mic

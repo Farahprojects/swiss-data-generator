@@ -6,7 +6,8 @@ import { log } from '@/utils/logUtils';
 
 export const useSpeechToText = (
   onTranscriptReady?: (transcript: string) => void,
-  onSilenceDetected?: () => void
+  onSilenceDetected?: () => void,
+  onSilenceTimeout?: () => void // New callback for 3-second silence timeout
 ) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -135,7 +136,7 @@ export const useSpeechToText = (
           silenceStart = now;
           log('debug', 'Silence started');
         } else if (now - silenceStart >= 3000) { // 3 seconds of silence
-          log('debug', '3 seconds of silence detected, stopping recording');
+          log('debug', '3 seconds of silence detected, notifying MIC BOSS to turn off');
           monitoringRef.current = false;
           
           // Trigger silence detected callback immediately
@@ -143,9 +144,11 @@ export const useSpeechToText = (
             onSilenceDetected();
           }
           
-          if (isRecordingRef.current) {
-            stopRecording();
+          // Notify MIC BOSS to turn off mic (external control)
+          if (onSilenceTimeout) {
+            onSilenceTimeout();
           }
+          
           return;
         }
       } else {
