@@ -1,11 +1,11 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
-import { useMicBoss } from '@/hooks/useMicBoss';
+import { MicManager } from '@/services/MicManager';
 
 export const ConversationOverlay: React.FC = () => {
   const { isConversationOpen, closeConversation } = useConversationUIStore();
-  const micBoss = useMicBoss('conversation-ui'); // Just for reading status
+  const micStatus = MicManager.getStatus();
 
   if (!isConversationOpen) return null;
 
@@ -17,9 +17,9 @@ export const ConversationOverlay: React.FC = () => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col items-center justify-center h-full gap-6">
-          {/* Mic status indicator - synced with MIC BOSS */}
+          {/* Mic status indicator - synced with MIC MANAGER */}
           <div className={`flex items-center justify-center rounded-full w-40 h-40 md:w-56 md:h-56 shadow-lg transition-all duration-300 ${
-            micBoss.isOn 
+            micStatus.currentOwner === 'conversation'
               ? 'bg-gradient-to-br from-green-500 to-green-600 scale-100' 
               : 'bg-gradient-to-br from-gray-400 to-gray-500 scale-95'
           }`}>
@@ -27,7 +27,7 @@ export const ConversationOverlay: React.FC = () => {
             <div className="text-white text-4xl">🎤</div>
           </div>
           <p className="text-gray-500 font-light">
-            {micBoss.isOn ? `Mic ON - ${micBoss.activeRequests.length} active` : 'Mic OFF'}
+            {micStatus.currentOwner === 'conversation' ? 'Mic ON - Conversation' : 'Mic OFF'}
           </p>
         </div>
         {/* Close button */}

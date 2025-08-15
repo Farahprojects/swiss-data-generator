@@ -5,17 +5,13 @@ import { Mic, AudioLines, X } from 'lucide-react';
 import { useChatStore } from '@/core/store';
 import { chatController } from './ChatController';
 import { useConversationUIStore } from './conversation-ui-store';
-import { useSpeechToText } from '@/hooks/useSpeechToText';
-import { useMicBoss } from '@/hooks/useMicBoss';
+import { useMicrophone } from '@/hooks/useMicrophone';
 
 export const ChatInput = () => {
   const [text, setText] = useState('');
   const status = useChatStore((state) => state.status);
   const [isMuted, setIsMuted] = useState(false);
   const { isConversationOpen, openConversation, closeConversation } = useConversationUIStore();
-
-  // MIC BOSS for text area recording
-  const textAreaMicBoss = useMicBoss('text-area-recording');
 
   // Handle transcript ready - add to text area
   const handleTranscriptReady = (transcript: string) => {
@@ -24,36 +20,12 @@ export const ChatInput = () => {
     setText(newText);
   };
 
-  // Handle silence detected - show processing state
-  const handleSilenceDetected = () => {
-    // Optional: could add a processing indicator here
-  };
-
-  // Handle 3-second silence timeout - tell MIC BOSS to turn off
-  const handleSilenceTimeout = () => {
-    console.log('[ChatInput] 3-second silence timeout - releasing mic from BOSS');
-    textAreaMicBoss.releaseStream();
-  };
-
-  const { isRecording: isMicRecording, isProcessing: isMicProcessing, startRecording, stopRecording } = useSpeechToText(
-    handleTranscriptReady,
-    handleSilenceDetected,
-    handleSilenceTimeout
-  );
-
-  // Simple toggle for text area mic
-  const toggleTextAreaMic = async () => {
-    if (isMicRecording) {
-      // Just tell MIC BOSS to turn off - that's it
-      textAreaMicBoss.releaseStream();
-    } else {
-      // Request mic and start recording
-      const stream = await textAreaMicBoss.requestStream();
-      if (stream) {
-        startRecording(stream);
-      }
-    }
-  };
+  // PROFESSIONAL MIC HOOK - Owns its own lifecycle
+  const textAreaMic = useMicrophone({
+    ownerId: 'text-area',
+    onTranscriptReady: handleTranscriptReady,
+    silenceTimeoutMs: 3000
+  });
 
   const handleSend = () => {
     if (text.trim()) {
@@ -103,21 +75,21 @@ export const ChatInput = () => {
             </button>
             <button 
               className="p-2 text-gray-500 hover:text-gray-900 transition-all duration-200 ease-in-out"
-              onClick={toggleTextAreaMic}
-              disabled={isMicProcessing}
-              title={isMicRecording ? 'Stop recording' : 'Start voice recording'}
+              onClick={textAreaMic.toggleRecording}
+              disabled={textAreaMic.isProcessing}
+              title={textAreaMic.isRecording ? 'Stop recording' : 'Start voice recording'}
             >
               <div className="relative w-[18px] h-[18px]">
                 <Mic 
                   size={18} 
                   className={`absolute inset-0 transition-all duration-200 ease-in-out ${
-                    isMicRecording ? 'opacity-0 scale-75' : 'opacity-100 scale-100'
+                    textAreaMic.isRecording ? 'opacity-0 scale-75' : 'opacity-100 scale-100'
                   }`}
                 />
                 <X 
                   size={18} 
                   className={`absolute inset-0 text-red-500 transition-all duration-200 ease-in-out ${
-                    isMicRecording ? 'opacity-100 scale-100' : 'opacity-0 scale-75'
+                    textAreaMic.isRecording ? 'opacity-100 scale-100' : 'opacity-0 scale-75'
                   }`}
                 />
               </div>

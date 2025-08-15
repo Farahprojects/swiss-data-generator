@@ -3,8 +3,9 @@ import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
 import { useChatStore } from '@/core/store';
 import { ConversationOverlay } from './ConversationOverlay/ConversationOverlay';
-import { useMicBoss } from '@/hooks/useMicBoss';
+import { useMicrophone } from '@/hooks/useMicrophone';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
+import { useConversationFSM } from './ConversationOverlay/useConversationFSM';
 
 export const ChatBox = () => {
   const { error } = useChatStore();
@@ -12,19 +13,26 @@ export const ChatBox = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const isConversationOpen = useConversationUIStore((s) => s.isConversationOpen);
   
-  // GLOBAL MIC BOSS - Request/release stream for conversation
-  const micBoss = useMicBoss('conversation-modal');
+  // CONVERSATION FLOW - Handles AI chat logic
+  const conversationFSM = useConversationFSM();
+  
+  // CONVERSATION MIC - Owns its own lifecycle, connects to FSM
+  const conversationMic = useMicrophone({
+    ownerId: 'conversation',
+    onTranscriptReady: conversationFSM.handleTranscriptReady,
+    silenceTimeoutMs: 3000
+  });
 
-  // Request mic when conversation opens, release when closes
+  // Start/stop conversation recording based on modal state
   useEffect(() => {
-    if (isConversationOpen) {
-      console.log('[ChatBox] Conversation opened - requesting mic from BOSS');
-      micBoss.requestStream();
-    } else {
-      console.log('[ChatBox] Conversation closed - releasing mic to BOSS');
-      micBoss.releaseStream();
+    if (isConversationOpen && conversationFSM.state === 'listening' && !conversationMic.isRecording) {
+      console.log('[ChatBox] Conversation opened and FSM ready - starting recording');
+      conversationMic.startRecording();
+    } else if (!isConversationOpen && conversationMic.isRecording) {
+      console.log('[ChatBox] Conversation closed - stopping recording');
+      conversationMic.stopRecording();
     }
-  }, [isConversationOpen, micBoss.requestStream, micBoss.releaseStream]);
+  }, [isConversationOpen, conversationFSM.state, conversationMic.isRecording, conversationMic.startRecording, conversationMic.stopRecording]);
 
   useEffect(() => {
     if (scrollRef.current) {
