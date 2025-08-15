@@ -154,28 +154,39 @@ class ChatTextMicrophoneServiceClass {
     if (!this.analyser || this.monitoringRef.current) return;
 
     this.monitoringRef.current = true;
-    const bufferLength = this.analyser.frequencyBinCount;
+    // Time-domain RMS with adaptive threshold calibration
+    const bufferLength = this.analyser.fftSize;
     const dataArray = new Uint8Array(bufferLength);
     let silenceStart: number | null = null;
-    const silenceThreshold = 8;
     const timeoutMs = this.options.silenceTimeoutMs || 3000;
+    const calibrationWindowMs = 300;
+    const calibrationStart = Date.now();
+    let calibrationSum = 0;
+    let calibrationCount = 0;
+    let adaptiveThreshold = 0.02; // default baseline
 
     const checkSilence = () => {
       if (!this.monitoringRef.current || !this.analyser) return;
 
-      this.analyser.getByteFrequencyData(dataArray);
+      this.analyser.getByteTimeDomainData(dataArray);
 
-      // Calculate RMS (audio level)
-      let sum = 0;
+      // Calculate RMS in [-1,1]
+      let sumSquares = 0;
       for (let i = 0; i < bufferLength; i++) {
-        sum += dataArray[i] * dataArray[i];
+        const centered = (dataArray[i] - 128) / 128;
+        sumSquares += centered * centered;
       }
-      const rms = Math.sqrt(sum / bufferLength);
-      this.audioLevel = rms;
+      const rms = Math.sqrt(sumSquares / bufferLength);
+      this.audioLevel = rms; // 0..~0.7 typically
 
       const now = Date.now();
+      if (now - calibrationStart < calibrationWindowMs) {
+        calibrationSum += rms;
+        calibrationCount += 1;
+        adaptiveThreshold = Math.max(0.01, (calibrationSum / Math.max(1, calibrationCount)) + 0.01);
+      }
 
-      if (rms < silenceThreshold) {
+      if (rms < adaptiveThreshold) {
         if (silenceStart === null) {
           silenceStart = now;
         } else if (now - silenceStart >= timeoutMs) {
