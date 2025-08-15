@@ -11,6 +11,7 @@ import { microphoneArbitrator } from './MicrophoneArbitrator';
 export interface ChatTextMicrophoneOptions {
   onTranscriptReady?: (transcript: string) => void;
   onSilenceDetected?: () => void;
+  onDebugAudioSave?: (audioBlob: Blob, reason: string) => void;
   silenceTimeoutMs?: number;
 }
 
@@ -247,6 +248,44 @@ class ChatTextMicrophoneServiceClass {
   }
 
   /**
+   * SAVE DEBUG AUDIO - Upload failed audio to ChatAudio bucket for analysis
+   */
+  private async saveDebugAudio(audioBlob: Blob, metadata: {
+    service: string;
+    voiceDetected: boolean;
+    bufferChunks: number;
+    finalBlobSize: number;
+    reason: string;
+  }): Promise<void> {
+    try {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `debug-chat-text-${timestamp}.webm`;
+      
+      this.log(`🔍 Saving debug audio: ${filename} (${audioBlob.size} bytes)`);
+      
+      const { error } = await supabase.storage
+        .from('ChatAudio')
+        .upload(filename, audioBlob, {
+          contentType: 'audio/webm',
+          metadata: {
+            ...metadata,
+            timestamp,
+            debugType: 'chat-text-failure'
+          }
+        });
+
+      if (error) {
+        this.error('❌ Failed to save debug audio:', error);
+      } else {
+        this.log(`✅ Debug audio saved: ${filename}`);
+        console.log(`🔍 Debug audio metadata:`, metadata);
+      }
+    } catch (error) {
+      this.error('❌ Error saving debug audio:', error);
+    }
+  }
+
+  /**
    * PROCESS AUDIO - Domain-specific transcription
    */
   private async processAudio(): Promise<void> {
@@ -301,6 +340,24 @@ class ChatTextMicrophoneServiceClass {
           
           const transcript = data?.transcript || '';
           this.log('📝 Transcript received', { length: transcript.length });
+          
+          // Save debug audio if STT failed (empty transcript)
+          if (!transcript || transcript.trim().length === 0) {
+            this.log('⚠️ Empty transcript - saving debug audio');
+            
+            if (this.options.onDebugAudioSave) {
+              const debugMetadata = {
+                service: 'chat-text',
+                voiceDetected: !!this.voiceConfirmedAt,
+                bufferChunks: this.circularBuffer.length,
+                finalBlobSize: finalBlob.size,
+                reason: 'empty-transcript-from-stt'
+              };
+              
+              await this.saveDebugAudio(finalBlob, debugMetadata);
+              this.options.onDebugAudioSave(finalBlob, 'stt-empty-transcript');
+            }
+          }
           
           if (this.options.onTranscriptReady && transcript) {
             this.options.onTranscriptReady(transcript);

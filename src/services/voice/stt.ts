@@ -2,6 +2,12 @@
 import { supabase } from '@/integrations/supabase/client';
 
 class SttService {
+  private debugAudioSaver?: (audioBlob: Blob, reason: string) => void;
+
+  setDebugAudioSaver(saver: (audioBlob: Blob, reason: string) => void) {
+    this.debugAudioSaver = saver;
+  }
+
   async transcribe(audioBlob: Blob): Promise<string> {
     console.log(`[STT] Transcribing with Google Speech-to-Text...`);
     
@@ -39,6 +45,13 @@ class SttService {
 
     if (!data || !data.transcript) {
       console.error('[STT] No transcript in response:', data);
+      
+      // Save debug audio for failed STT
+      if (this.debugAudioSaver) {
+        console.log('[STT] Saving debug audio for failed transcription');
+        this.debugAudioSaver(audioBlob, 'stt-no-transcript');
+      }
+      
       throw new Error('No transcript received from Google STT');
     }
 

@@ -11,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 // No longer need appendMessage from the client
 // import { appendMessage } from '@/services/api/messages';
 import { STT_PROVIDER, LLM_PROVIDER, TTS_PROVIDER } from '@/config/env';
+import { AudioDebugSaver } from '@/services/debug/audioDebugSaver';
 
 class ChatController {
   private isTurnActive = false;
@@ -103,10 +104,20 @@ class ChatController {
   private initializeConversationService() {
     if (this.conversationServiceInitialized) return;
     
+    // Set up debug audio saving for STT failures
+    sttService.setDebugAudioSaver(AudioDebugSaver.createSaver('conversation-stt'));
+    
     conversationMicrophoneService.initialize({
       onSilenceDetected: () => {
         console.log('[ChatController] Silence detected - auto-ending turn');
         this.endTurn();
+      },
+      onDebugAudioSave: (audioBlob: Blob, reason: string) => {
+        console.log('[ChatController] Saving debug audio for conversation:', reason);
+        AudioDebugSaver.saveFailedAudio(audioBlob, reason, {
+          service: 'conversation-microphone',
+          timestamp: Date.now()
+        });
       },
       silenceTimeoutMs: 2000
     });

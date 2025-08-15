@@ -6,11 +6,13 @@
  */
 
 import { microphoneArbitrator } from './MicrophoneArbitrator';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface ConversationMicrophoneOptions {
   onRecordingComplete?: (audioBlob: Blob) => void;
   onError?: (error: Error) => void;
   onSilenceDetected?: () => void;
+  onDebugAudioSave?: (audioBlob: Blob, reason: string) => void;
   silenceTimeoutMs?: number;
 }
 
@@ -197,6 +199,44 @@ class ConversationMicrophoneServiceClass {
   }
 
   /**
+   * SAVE DEBUG AUDIO - Upload failed audio to ChatAudio bucket for analysis
+   */
+  private async saveDebugAudio(audioBlob: Blob, metadata: {
+    service: string;
+    voiceDetected: boolean;
+    bufferChunks: number;
+    finalBlobSize: number;
+    reason: string;
+  }): Promise<void> {
+    try {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `debug-conversation-${timestamp}.webm`;
+      
+      this.log(`🔍 Saving debug audio: ${filename} (${audioBlob.size} bytes)`);
+      
+      const { error } = await supabase.storage
+        .from('ChatAudio')
+        .upload(filename, audioBlob, {
+          contentType: 'audio/webm',
+          metadata: {
+            ...metadata,
+            timestamp,
+            debugType: 'conversation-failure'
+          }
+        });
+
+      if (error) {
+        this.error('❌ Failed to save debug audio:', error);
+      } else {
+        this.log(`✅ Debug audio saved: ${filename}`);
+        console.log(`🔍 Debug audio metadata:`, metadata);
+      }
+    } catch (error) {
+      this.error('❌ Error saving debug audio:', error);
+    }
+  }
+
+  /**
    * CREATE FINAL BLOB FROM BUFFER - Build final audio with retroactive trimming
    */
   private createFinalBlobFromBuffer(): Blob {
@@ -231,8 +271,24 @@ class ConversationMicrophoneServiceClass {
   /**
    * HANDLE RECORDING COMPLETE - Process finished recording
    */
-  private handleRecordingComplete(): void {
+  private async handleRecordingComplete(): Promise<void> {
     const finalBlob = this.createFinalBlobFromBuffer();
+    
+    // Save debug audio if callback provided (for STT failure analysis)
+    if (this.options.onDebugAudioSave && finalBlob.size > 0) {
+      const debugMetadata = {
+        service: 'conversation',
+        voiceDetected: !!this.voiceConfirmedAt,
+        bufferChunks: this.circularBuffer.length,
+        finalBlobSize: finalBlob.size,
+        reason: 'pre-stt-analysis'
+      };
+      
+      await this.saveDebugAudio(finalBlob, debugMetadata);
+      
+      // Also trigger the callback for additional processing
+      this.options.onDebugAudioSave(finalBlob, 'conversation-recording-complete');
+    }
     
     if (this.options.onRecordingComplete) {
       this.options.onRecordingComplete(finalBlob);
