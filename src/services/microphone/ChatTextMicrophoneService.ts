@@ -14,11 +14,6 @@ export interface ChatTextMicrophoneOptions {
   silenceTimeoutMs?: number;
 }
 
-interface AudioChunk {
-  blob: Blob;
-  timestamp: number;
-}
-
 class ChatTextMicrophoneServiceClass {
   private stream: MediaStream | null = null;
   private mediaRecorder: MediaRecorder | null = null;
@@ -26,9 +21,7 @@ class ChatTextMicrophoneServiceClass {
   private analyser: AnalyserNode | null = null;
   private mediaStreamSource: MediaStreamAudioSourceNode | null = null;
   
-  private circularBuffer: AudioChunk[] = []; // Circular buffer for retroactive trimming
-  private bufferMaxDuration = 2000; // 2 seconds buffer
-  private voiceConfirmedAt: number | null = null; // Timestamp when voice was confirmed
+  private audioChunks: Blob[] = []; // Simple chunk collection
   private isRecording = false;
   private isProcessing = false;
   private audioLevel = 0;
@@ -66,13 +59,11 @@ class ChatTextMicrophoneServiceClass {
       // Create our own stream - no sharing
       this.stream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          // By setting these to false, we ask the browser for a less processed, more raw audio stream.
-          // This can often improve quality on good hardware by avoiding overly aggressive browser algorithms.
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-          sampleRate: 48000, // Keep high sample rate
-          channelCount: 1     // Keep mono
+          channelCount: 1,           // Mono for efficiency
+          echoCancellation: true,    // Clean input
+          noiseSuppression: true,    // Remove background noise
+          autoGainControl: true,     // Consistent levels
+          sampleRate: 48000,         // High quality
         }
       });
 
@@ -88,41 +79,30 @@ class ChatTextMicrophoneServiceClass {
       this.mediaStreamSource.connect(this.analyser);
       // reduced detailed analyser config logging
 
-      // Set up MediaRecorder with circular buffering
+      // Set up MediaRecorder - simple and clean
       this.mediaRecorder = new MediaRecorder(this.stream, {
         mimeType: 'audio/webm;codecs=opus',
         audioBitsPerSecond: 128000
       });
 
-      this.circularBuffer = [];
-      this.voiceConfirmedAt = null;
-      this.recordingStartedAt = Date.now();
+      this.audioChunks = [];
       this.isRecording = true;
 
-      // Circular buffer with 100ms chunks for precise trimming
+      // Simple chunk collection - no manipulation
       this.mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          const chunk: AudioChunk = {
-            blob: event.data,
-            timestamp: Date.now()
-          };
-          
-          // Add to circular buffer
-          this.circularBuffer.push(chunk);
-          
-          // Trim buffer to max duration (2s rolling window)
-          const cutoffTime = chunk.timestamp - this.bufferMaxDuration;
-          this.circularBuffer = this.circularBuffer.filter(c => c.timestamp > cutoffTime);
+          this.audioChunks.push(event.data);
         }
       };
 
       this.mediaRecorder.onstop = async () => {
-        // Process with retroactive trimming before cleanup
+        // Process clean audio before cleanup
         await this.processAudio();
         this.cleanup();
       };
 
-      this.mediaRecorder.start(100);
+      // Start recording - let MediaRecorder handle chunking naturally
+      this.mediaRecorder.start();
       // minimal start log
       
       // Start two-phase Voice Activity Detection
@@ -208,11 +188,10 @@ class ChatTextMicrophoneServiceClass {
           if (voiceStartTime === null) {
             voiceStartTime = now;
           } else if (now - voiceStartTime >= VOICE_START_DURATION) {
-            // Voice confirmed! Mark timestamp and switch to silence monitoring
-            this.voiceConfirmedAt = voiceStartTime; // Mark when voice actually started
+            // Voice confirmed! Switch to silence monitoring
             phase = 'monitoring_silence';
             voiceStartTime = null;
-            this.log(`🎤 Voice activity confirmed at ${this.voiceConfirmedAt} - now monitoring for ${SILENCE_TIMEOUT}ms silence`);
+            this.log(`🎤 Voice activity confirmed - now monitoring for ${SILENCE_TIMEOUT}ms silence`);
           }
         } else {
           voiceStartTime = null; // Reset if signal drops
@@ -250,30 +229,15 @@ class ChatTextMicrophoneServiceClass {
    * PROCESS AUDIO - Domain-specific transcription
    */
   private async processAudio(): Promise<void> {
-    if (this.circularBuffer.length === 0) return;
+    if (this.audioChunks.length === 0) return;
 
     try {
       this.isProcessing = true;
       this.notifyListeners();
       
-      // Retroactive trimming based on voice confirmation
-      let finalBlob: Blob;
-      
-      if (this.voiceConfirmedAt && this.circularBuffer.length > 0) {
-        // Trim buffer to include only audio from voice confirmation onwards
-        const voiceChunks = this.circularBuffer.filter(chunk => 
-          chunk.timestamp >= this.voiceConfirmedAt!
-        );
-        
-        this.log(`🎯 Voice-trimmed audio: ${voiceChunks.length}/${this.circularBuffer.length} chunks kept`);
-        finalBlob = new Blob(voiceChunks.map(c => c.blob), { type: 'audio/webm;codecs=opus' });
-      } else {
-        // No voice detected - return minimal buffer to avoid empty transcription
-        this.log('⚠️ No voice confirmation - using last few chunks');
-        finalBlob = new Blob(this.circularBuffer.slice(-3).map(c => c.blob), { type: 'audio/webm;codecs=opus' });
-      }
-      
-      this.log('🔄 Processing trimmed audio', { finalBlobSize: finalBlob.size });
+      // Simple, professional approach - let MediaRecorder handle the format
+      const finalBlob = new Blob(this.audioChunks, { type: 'audio/webm;codecs=opus' });
+      this.log('🔄 Processing clean audio', { finalBlobSize: finalBlob.size });
       // minimal
       
       // Convert to base64
