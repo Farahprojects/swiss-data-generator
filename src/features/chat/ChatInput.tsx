@@ -5,7 +5,7 @@ import { Mic, AudioLines, X } from 'lucide-react';
 import { useChatStore } from '@/core/store';
 import { chatController } from './ChatController';
 import { useConversationUIStore } from './conversation-ui-store';
-import { useSpeechToText } from '@/hooks/useSpeechToText';
+import { useChatTextMicrophone } from '@/hooks/microphone/useChatTextMicrophone';
 
 export const ChatInput = () => {
   const [text, setText] = useState('');
@@ -20,15 +20,15 @@ export const ChatInput = () => {
     setText(newText);
   };
 
-  // Handle silence detected - show processing state
-  const handleSilenceDetected = () => {
-    // Optional: could add a processing indicator here
-  };
-
-  const { isRecording: isMicRecording, isProcessing: isMicProcessing, toggleRecording: toggleMicRecording } = useSpeechToText(
-    handleTranscriptReady,
-    handleSilenceDetected
-  );
+  // PROFESSIONAL DOMAIN-SPECIFIC MICROPHONE
+  const { 
+    isRecording: isMicRecording, 
+    isProcessing: isMicProcessing, 
+    toggleRecording: toggleMicRecording 
+  } = useChatTextMicrophone({
+    onTranscriptReady: handleTranscriptReady,
+    silenceTimeoutMs: 3000
+  });
 
   const handleSend = () => {
     if (text.trim()) {

@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { UseFormSetValue } from 'react-hook-form';
-import { useSpeechToText } from './useSpeechToText';
+import { useJournalMicrophone } from './microphone/useJournalMicrophone';
 import { useToast } from './use-toast';
 import { ReportFormData } from '@/types/public-report';
 
@@ -167,13 +167,14 @@ export const useSpeechOrchestrator = (setValue: UseFormSetValue<ReportFormData>)
     return results;
   }, []);
 
+  // PROFESSIONAL DOMAIN-SPECIFIC MICROPHONE FOR JOURNAL
   const {
     isRecording,
     isProcessing,
     audioLevel,
     toggleRecording,
-  } = useSpeechToText(
-    (transcript) => {
+  } = useJournalMicrophone({
+    onTranscriptReady: (transcript) => {
       pendingTranscript.current = transcript;
       setTranscript(transcript);
       
@@ -196,10 +197,8 @@ export const useSpeechOrchestrator = (setValue: UseFormSetValue<ReportFormData>)
         }
       }
     },
-    () => {
-      // Silence detected callback - could auto-process
-    }
-  );
+    silenceTimeoutMs: 3000
+  });
 
   const startFlow = useCallback((flowId: string) => {
     const flow = SPEECH_FLOWS[flowId];

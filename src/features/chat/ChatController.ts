@@ -1,6 +1,6 @@
 // src/features/chat/ChatController.ts
 import { useChatStore } from '@/core/store';
-import { audioRecorder } from '@/services/voice/recorder';
+import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
 import { audioPlayer } from '@/services/voice/audioPlayer';
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
@@ -111,7 +111,7 @@ class ChatController {
     
     useChatStore.getState().setStatus('recording');
     try {
-      await audioRecorder.start();
+      await conversationMicrophoneService.startRecording();
     } catch (error: any) {
       useChatStore.getState().setError(error.message);
       this.isTurnActive = false;
@@ -123,7 +123,7 @@ class ChatController {
     
     useChatStore.getState().setStatus('transcribing');
     try {
-      const audioBlob = await audioRecorder.stop();
+      const audioBlob = await conversationMicrophoneService.stopRecording();
       const transcription = await sttService.transcribe(audioBlob);
 
       // Optimistically add user message to UI
