@@ -6,12 +6,12 @@ interface Props {
 }
 
 export const SpeakingBars: React.FC<Props> = ({ audioLevel }) => {
-  // Create 4 bars with different heights based on audio level
+  // Create 4 bars with different heights - middle ones taller, sides shorter
   const bars = Array.from({ length: 4 }, (_, index) => {
-    // Each bar has a different base height and responsiveness
-    const baseHeight = 16 + index * 8; // 16px, 24px, 32px, 40px
+    // Middle bars (1, 2) are taller, side bars (0, 3) are shorter
+    const baseHeight = index === 1 || index === 2 ? 40 : 24; // Middle: 40px, Sides: 24px
     const responsiveness = 0.7 + index * 0.1; // Different sensitivity per bar
-    const audioHeight = audioLevel * 60 * responsiveness; // Scale audio level
+    const audioHeight = audioLevel * 80 * responsiveness; // Increased scale for taller bars
     const totalHeight = Math.max(baseHeight, baseHeight + audioHeight);
     
     return {
@@ -28,7 +28,7 @@ export const SpeakingBars: React.FC<Props> = ({ audioLevel }) => {
           key={bar.id}
           className="bg-black rounded-full"
           style={{
-            width: '6px',
+            width: '10px',
             height: `${bar.height}px`,
           }}
           animate={{

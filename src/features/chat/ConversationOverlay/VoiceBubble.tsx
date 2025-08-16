@@ -33,7 +33,7 @@ export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
   // Smoother pulsing animations with spring physics
   const pulseAnimation = state === 'listening' && isVoiceDetected
     ? { 
-        scale: [1, 1.15, 1], // Reduced dramatic pulse when voice detected
+        scale: [1, 1.2, 1], // Slightly bigger pulse when voice detected
         boxShadow: [
           '0 0 15px rgba(0, 0, 0, 0.3)',
           '0 0 25px rgba(0, 0, 0, 0.5)',
@@ -42,12 +42,12 @@ export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
       }
     : state === 'listening'
     ? { 
-        scale: [1, 1.05, 1], // Very gentle pulse when waiting
+        scale: [1, 1.08, 1], // Slightly bigger gentle pulse when waiting
         opacity: [0.9, 1, 0.9]
       }
     : state === 'processing'
     ? { 
-        scale: [1, 0.95, 1], // Subtle shrink for thinking mode
+        scale: [1, 0.92, 1], // Slightly bigger shrink for thinking mode
         opacity: [1, 0.85, 1]
       }
     : { scale: [1, 1.02, 1] };
