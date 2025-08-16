@@ -79,9 +79,6 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
         if (data && data.length > 0) {
           console.log(`[SuccessScreen] Polling found signal for ${guestId}. Navigating to chat.`);
           
-          // Prime the modal to be ready
-          openReportModal(guestId);
-
           // Get secure tokens for chat
           const { data: tokens, error: tokenError } = await supabase.functions.invoke('create-temp-report-data', {
             body: { guest_report_id: guestId },
@@ -93,19 +90,16 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
             return;
           }
 
-          // Navigate to chat, which will open immediately. The modal is ready for when the user clicks.
-          navigate('/chat', { state: { uuid: tokens.temp_data_id, token: tokens.plain_token } });
+          // Navigate to chat with the guestId (as uuid) and token.
+          navigate('/chat', { state: { uuid: guestId, token: tokens.plain_token } });
           
-          clearInterval(intervalId); // Stop polling once the signal is found
+          clearInterval(intervalId); // Stop polling
         }
-      }, 1000); // Poll every 1 second
+      }, POLLING_INTERVAL_MS);
 
-      // Cleanup function to clear the interval when the component unmounts
-      return () => {
-        console.log(`[SuccessScreen] Unmounting, clearing polling for guestId: ${guestId}`);
-        clearInterval(intervalId);
-      };
-    }, [guestId, openReportModal]);
+      // Cleanup
+      return () => clearInterval(intervalId);
+    }, [guestId, navigate]);
 
     const handleManualCheck = async () => {
       setIsChecking(true);
