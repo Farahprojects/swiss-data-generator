@@ -15,12 +15,13 @@ import { getGuestReportId, forceNavigationReset } from '@/utils/urlHelpers';
 import openaiLogo from '@/assets/openai-logo.png';
 import { ReportData, extractReportContent, getPersonName, getReportTitle } from '@/utils/reportContentExtraction';
 import { renderAstroDataAsText, renderUnifiedContentAsText } from '@/utils/componentToTextRenderer';
+import { useReportData } from '@/hooks/useReportData';
 
 interface ReportViewerProps {
-  reportData: ReportData;
+  guestReportId: string;
   onBack: () => void;
   onStateReset?: () => void;
-  isModal?: boolean; // Add this prop
+  isModal?: boolean;
 }
 
 const ReportViewerActions: React.FC<{ guestId: string }> = ({ guestId }) => {
@@ -129,11 +130,12 @@ type ModalType = 'chatgpt' | 'close' | 'ai-choice' | 'email' | null;
 type TransitionPhase = 'idle' | 'fading' | 'clearing' | 'transitioning' | 'complete';
 
 export const ReportViewer = ({ 
-  reportData, 
+  guestReportId, 
   onBack, 
   onStateReset,
-  isModal = false // Default to false
+  isModal = false 
 }: ReportViewerProps) => {
+  const { reportData, isLoading, error } = useReportData(guestReportId);
   const mountStartTime = performance.now();
   const isMobile = useIsMobile();
   const [activeModal, setActiveModal] = useState<ModalType>(null);
@@ -651,6 +653,26 @@ export const ReportViewer = ({
       });
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
+  if (error || !reportData) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-4 text-center">
+        <h3 className="text-lg font-semibold text-red-600">Error Loading Report</h3>
+        <p className="text-sm text-gray-600 mt-2">{error || 'The report could not be found.'}</p>
+        <button onClick={onBack} className="mt-4 px-4 py-2 text-sm bg-gray-200 rounded-md">
+          Close
+        </button>
+      </div>
+    );
+  }
 
   return (
     <>

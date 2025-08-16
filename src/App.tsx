@@ -85,8 +85,8 @@ function App() {
       disableTransitionOnChange
     >
       <QueryClientProvider client={queryClient}>
-        <ReportModalProvider>
-          <Router>
+        <Router>
+          <ReportModalProvider>
             <ConditionalAuth>
               <div className="min-h-screen bg-background overflow-hidden">
                 <Routes>
@@ -133,8 +133,8 @@ function App() {
               </div>
               <Toaster />
             </ConditionalAuth>
-          </Router>
-        </ReportModalProvider>
+          </ReportModalProvider>
+        </Router>
       </QueryClientProvider>
     </ThemeProvider>
   );
