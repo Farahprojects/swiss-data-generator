@@ -20,7 +20,6 @@ interface ReportViewerProps {
   reportData: ReportData;
   onBack: () => void;
   onStateReset?: () => void;
-  currentConversationId?: string | null;
 }
 
 const ReportViewerActions: React.FC<{ guestId: string }> = ({ guestId }) => {
@@ -131,8 +130,7 @@ type TransitionPhase = 'idle' | 'fading' | 'clearing' | 'transitioning' | 'compl
 export const ReportViewer = ({ 
   reportData, 
   onBack, 
-  onStateReset,
-  currentConversationId 
+  onStateReset 
 }: ReportViewerProps) => {
   const mountStartTime = performance.now();
   const isMobile = useIsMobile();
@@ -506,14 +504,9 @@ export const ReportViewer = ({
       const uuid = createResult.temp_data_id;
       const token = createResult.plain_token;
       
-      // If we already have a conversation, return to it
-      if (currentConversationId) {
-        navigate(`/chat/${currentConversationId}`);
-      } else {
-        // Otherwise start a new chat
-        console.log('[ReportViewer] Navigating to chat with secure tokens - uuid:', uuid, 'hasToken:', !!token);
-        navigate('/chat', { state: { uuid, token } });
-      }
+      // Navigate to chat with secure tokens
+      console.log('[ReportViewer] Navigating to chat with secure tokens - uuid:', uuid, 'hasToken:', !!token);
+      navigate('/chat', { state: { uuid, token } });
       
     } catch (error) {
       console.error('[ReportViewer] Failed to prepare secure chat:', error);

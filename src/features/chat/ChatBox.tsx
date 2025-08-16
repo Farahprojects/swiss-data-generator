@@ -1,23 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
 import { useChatStore } from '@/core/store';
 import { ConversationOverlay } from './ConversationOverlay/ConversationOverlay';
 import { Menu } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { ReportViewer } from '@/components/public-report/ReportViewer';
-import { useLocation } from 'react-router-dom';
 import { ChatSidebarControls } from './ChatSidebarControls';
 
 export const ChatBox = () => {
   const { error } = useChatStore();
   const messages = useChatStore((state) => state.messages);
-  const conversationId = useChatStore((state) => state.conversationId);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const location = useLocation();
-  const { uuid } = location.state || {};
-  const [isReportOpen, setIsReportOpen] = useState(false);
 
   useEffect(() => {
     // Scroll to the bottom of the message list when new messages are added
@@ -50,12 +43,6 @@ export const ChatBox = () => {
               <div className="mb-3">
                 <h2 className="text-lg font-light italic">Settings</h2>
               </div>
-              <button
-                onClick={() => setIsReportOpen(true)}
-                className="w-full text-left px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md mb-4"
-              >
-                View Report
-              </button>
               <ChatSidebarControls />
             </SheetContent>
           </Sheet>
@@ -83,19 +70,5 @@ export const ChatBox = () => {
         <ConversationOverlay />
       </div>
     </div>
-
-    {/* Report Modal */}
-    {uuid && (
-      <Dialog open={isReportOpen} onOpenChange={setIsReportOpen}>
-        <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
-          <ReportViewer
-            reportData={{ guest_report: { id: uuid } }}
-            onBack={() => setIsReportOpen(false)}
-            onStateReset={() => setIsReportOpen(false)}
-            currentConversationId={conversationId}
-          />
-        </DialogContent>
-      </Dialog>
-    )}
   );
 };
