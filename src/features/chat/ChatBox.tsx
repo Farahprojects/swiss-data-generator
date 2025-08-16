@@ -1,5 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { useEffect, useRef } from 'react';
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
 import { useChatStore } from '@/core/store';
@@ -7,20 +6,20 @@ import { ConversationOverlay } from './ConversationOverlay/ConversationOverlay';
 import { Menu } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { ChatSidebarControls } from './ChatSidebarControls';
-
+import { getChatTokens } from '@/services/auth/chatTokens';
 
 export const ChatBox = () => {
   const { error } = useChatStore();
   const messages = useChatStore((state) => state.messages);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const location = useLocation();
-  const { uuid } = location.state || {}; // This is the guest_report_id
+  const { uuid } = getChatTokens();
+
   useEffect(() => {
     console.log(`[Chat] guestReportId=${uuid}`); // Add precise log
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, uuid]); // Add uuid to dependency array
+  }, [messages, uuid]);
 
   return (
     <>

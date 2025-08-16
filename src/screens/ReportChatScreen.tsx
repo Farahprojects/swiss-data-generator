@@ -1,17 +1,17 @@
 // src/screens/ReportChatScreen.tsx
 import React from 'react';
-import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ChatBox } from '@/features/chat/ChatBox';
 import { useChat } from '@/features/chat/useChat';
 import { MobileViewportLock } from '@/features/chat/MobileViewportLock';
+import { getChatTokens } from '@/services/auth/chatTokens';
 
 const ReportChatScreen = () => {
   const { conversationId } = useParams<{ conversationId: string }>();
-  const location = useLocation();
   const navigate = useNavigate();
-  const { uuid, token } = location.state || {};
+  const { uuid, token } = getChatTokens();
 
-  // Validation - now requires secure tokens
+  // Validation - now requires secure tokens (uuid and token may be populated later)
   if (!uuid || !token) {
     console.log('[ReportChatScreen] Missing secure tokens, showing error');
     return (
