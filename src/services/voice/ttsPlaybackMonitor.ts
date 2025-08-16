@@ -10,12 +10,16 @@ class TtsPlaybackMonitor {
   private dataArray: Uint8Array | null = null;
   private animationFrame: number | null = null;
   private isMonitoring = false;
+  private sourceNode: MediaElementAudioSourceNode | null = null;
 
   /**
    * Attach monitor to an audio element and start tracking levels
    */
   attachToAudio(audioElement: HTMLAudioElement): void {
     try {
+      // Clean up any existing connections first
+      this.disconnectNodes();
+
       // Create audio context if needed
       if (!this.audioContext) {
         this.audioContext = new AudioContext();
@@ -25,8 +29,8 @@ class TtsPlaybackMonitor {
       }
 
       // Connect audio element to analyser
-      const source = this.audioContext.createMediaElementSource(audioElement);
-      source.connect(this.analyser);
+      this.sourceNode = this.audioContext.createMediaElementSource(audioElement);
+      this.sourceNode.connect(this.analyser);
       this.analyser.connect(this.audioContext.destination);
 
       // Start monitoring
@@ -76,7 +80,26 @@ class TtsPlaybackMonitor {
   };
 
   /**
-   * Stop monitoring and cleanup resources
+   * Disconnect AudioNodes to prevent connection conflicts
+   */
+  private disconnectNodes(): void {
+    try {
+      if (this.sourceNode) {
+        this.sourceNode.disconnect();
+        console.log('[TtsPlaybackMonitor] Disconnected source node');
+      }
+      if (this.analyser) {
+        this.analyser.disconnect();
+        console.log('[TtsPlaybackMonitor] Disconnected analyser node');
+      }
+    } catch (error) {
+      // Ignore disconnect errors - nodes might already be disconnected
+      console.log('[TtsPlaybackMonitor] Nodes already disconnected');
+    }
+  }
+
+  /**
+   * Stop monitoring and cleanup resources - now with proper disconnection!
    */
   cleanup(): void {
     this.isMonitoring = false;
@@ -87,11 +110,15 @@ class TtsPlaybackMonitor {
       this.animationFrame = null;
     }
 
-    // Keep audio context for reuse, just disconnect
+    // Properly disconnect AudioNodes before nullifying
+    this.disconnectNodes();
+
+    // Clear references (keep AudioContext for reuse)
+    this.sourceNode = null;
     this.analyser = null;
     this.dataArray = null;
     
-    console.log('[TtsPlaybackMonitor] Cleanup complete');
+    console.log('[TtsPlaybackMonitor] Cleanup complete with proper disconnection');
   }
 }
 
