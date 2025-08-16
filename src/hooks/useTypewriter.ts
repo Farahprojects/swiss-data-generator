@@ -29,16 +29,18 @@ export const useTypewriter = (text: string, speed: number = 50) => {
     let i = 0;
     setDisplayText(''); // Reset display text when starting animation
     
-    const timer = setInterval(() => {
+    const typeNextChar = () => {
       if (i < text.length) {
         setDisplayText(prev => prev + text.charAt(i));
         i++;
-      } else {
-        clearInterval(timer);
+        setTimeout(typeNextChar, speed);
       }
-    }, speed);
+    };
+    
+    // Start typing with a small initial delay
+    const timer = setTimeout(typeNextChar, speed);
 
-    return () => clearInterval(timer);
+    return () => clearTimeout(timer);
   }, [isReady, text, speed]);
 
   return displayText;

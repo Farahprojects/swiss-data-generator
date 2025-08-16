@@ -7,7 +7,7 @@ import { useTypewriter } from '@/hooks/useTypewriter';
 
 const MessageItem = ({ message, isLast, isFromHistory }: { message: Message; isLast: boolean; isFromHistory?: boolean }) => {
   const isUser = message.role === 'user';
-  const displayText = useTypewriter(message.text || '', 30);
+  const displayText = useTypewriter(message.text || '', 80);
   
   // Skip animation for existing messages from history or if it's not the last message
   const shouldAnimate = !isUser && isLast && !isFromHistory;
