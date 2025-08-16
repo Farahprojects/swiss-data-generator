@@ -43,7 +43,7 @@ export const ConversationOverlay: React.FC = () => {
       <button
         onClick={handleModalClose}
         aria-label="Close conversation"
-        className="absolute top-3 left-3 text-gray-500 hover:text-gray-900"
+        className="absolute top-3 left-3 w-10 h-10 bg-black rounded-full flex items-center justify-center text-white hover:bg-gray-800 transition-colors"
       >
         ✕
       </button>
