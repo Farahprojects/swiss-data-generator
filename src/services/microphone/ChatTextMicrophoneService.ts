@@ -30,6 +30,13 @@ class ChatTextMicrophoneServiceClass {
   private currentTraceId: string | null = null;
   private recordingStartedAt: number | null = null;
   
+  // Enhanced VAD state
+  private preRollBuffer: Float32Array[] = [];
+  private preRollBufferSize = 20; // ~400ms at 50fps
+  private noiseFloor: { mean: number; std: number } | null = null;
+  private vadThresholds: { voice: number; silence: number } | null = null;
+  private isCalibrating = false;
+  
   private options: ChatTextMicrophoneOptions = {};
   private listeners = new Set<() => void>();
 

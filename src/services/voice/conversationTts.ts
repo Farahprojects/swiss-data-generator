@@ -6,10 +6,11 @@ export interface SpeakAssistantOptions {
   conversationId: string;
   messageId: string;
   text: string;
+  useOpenAI?: boolean;
 }
 
 class ConversationTtsService {
-  async speakAssistant({ conversationId, messageId, text }: SpeakAssistantOptions): Promise<void> {
+  async speakAssistant({ conversationId, messageId, text, useOpenAI = false }: SpeakAssistantOptions): Promise<void> {
     
     try {
       // Use direct fetch instead of supabase.functions.invoke for binary data
@@ -19,7 +20,7 @@ class ConversationTtsService {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ conversationId, messageId, text })
+        body: JSON.stringify({ conversationId, messageId, text, useOpenAI })
       });
 
       if (!response.ok) {
@@ -63,9 +64,15 @@ class ConversationTtsService {
           reject(new Error(`Audio playback failed: ${audio.error?.message || 'Unknown audio error'}`));
         };
         
-        // Attach monitor before playing
-        audio.onloadeddata = () => {
-          ttsPlaybackMonitor.attachToAudio(audio);
+        // Attach monitor before playing - wait for loadeddata and attachToAudio
+        audio.onloadeddata = async () => {
+          try {
+            await ttsPlaybackMonitor.attachToAudio(audio);
+            console.log('[ConversationTTS] TTS monitor attached successfully');
+          } catch (attachError) {
+            console.error('[ConversationTTS] Failed to attach TTS monitor:', attachError);
+            // Continue playing even if monitor fails - don't block audio
+          }
         };
 
         audio.play().catch(playError => {

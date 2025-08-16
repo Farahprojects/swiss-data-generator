@@ -25,22 +25,17 @@ class ChatController {
   }
   
   async initializeConversation(conversationId: string) {
-    console.log('[ChatController] initializeConversation called with conversationId:', conversationId);
-    
     // FAIL FAST: conversationId is now required
     if (!conversationId) {
       console.error('[ChatController] initializeConversation: FAIL FAST - conversationId is required');
       throw new Error('conversationId is required for conversation initialization');
     }
     
-    console.log('[ChatController] Using existing conversationId:', conversationId);
     useChatStore.getState().startConversation(conversationId);
     
     // Load existing messages for this conversation (for page refresh)
     try {
-      console.log('[ChatController] Loading existing messages for conversation:', conversationId);
       const existingMessages = await getMessagesForConversation(conversationId);
-      console.log('[ChatController] Found', existingMessages.length, 'existing messages');
       
       if (existingMessages.length > 0) {
         useChatStore.getState().loadMessages(existingMessages);
@@ -207,7 +202,8 @@ class ChatController {
           await conversationTtsService.speakAssistant({
             conversationId: useChatStore.getState().conversationId!,
             messageId: assistantMessage.id,
-            text: assistantMessage.text
+            text: assistantMessage.text,
+            useOpenAI: false // Set to true to use OpenAI TTS instead of Google
           });
           
           // Check if we're in the middle of a reset (modal closed during audio)

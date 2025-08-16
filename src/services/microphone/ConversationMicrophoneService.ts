@@ -25,6 +25,13 @@ class ConversationMicrophoneServiceClass {
   private monitoringRef = { current: false };
   private audioLevel = 0;
   
+  // Enhanced VAD state
+  private preRollBuffer: Float32Array[] = [];
+  private preRollBufferSize = 20; // ~400ms at 50fps
+  private noiseFloor: { mean: number; std: number } | null = null;
+  private vadThresholds: { voice: number; silence: number } | null = null;
+  private isCalibrating = false;
+  
   private options: ConversationMicrophoneOptions = {};
   private listeners = new Set<() => void>();
 
@@ -109,8 +116,8 @@ class ConversationMicrophoneServiceClass {
       this.notifyListeners();
       this.log('✅ Recording started successfully');
 
-      // Start two-phase Voice Activity Detection
-      this.startVoiceActivityDetection();
+      // Enhanced VAD with warm-up and calibration
+      await this.initializeEnhancedVAD();
       return true;
 
     } catch (error) {
