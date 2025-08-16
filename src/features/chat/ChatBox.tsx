@@ -38,18 +38,32 @@ export const ChatBox = () => {
         </div>
         <div>
           <p className="text-xs uppercase tracking-wider text-gray-500 mb-2">Voice</p>
-          <select
-            className="w-full border rounded-md px-2 py-2 text-sm bg-white"
-            value={ttsVoice}
-            onChange={(e) => setTtsVoice(e.target.value)}
-          >
-            {/* Common OpenAI TTS voices; works for Google too as a placeholder mapping */}
-            <option value="alloy">Alloy</option>
-            <option value="verse">Verse</option>
-            <option value="aria">Aria</option>
-            <option value="nova">Nova</option>
-            <option value="orion">Orion</option>
-          </select>
+          {ttsProvider === 'openai' ? (
+            <select
+              className="w-full border rounded-md px-2 py-2 text-sm bg-white"
+              value={ttsVoice}
+              onChange={(e) => setTtsVoice(e.target.value)}
+            >
+              <option value="alloy">Alloy</option>
+              <option value="verse">Verse</option>
+              <option value="aria">Aria</option>
+              <option value="nova">Nova</option>
+              <option value="orion">Orion</option>
+            </select>
+          ) : (
+            <select
+              className="w-full border rounded-md px-2 py-2 text-sm bg-white"
+              value={ttsVoice}
+              onChange={(e) => setTtsVoice(e.target.value)}
+            >
+              {/* Google Cloud TTS sample voices (Neural2 family) */}
+              <option value="en-US-Neural2-F">en-US-Neural2-F (F)</option>
+              <option value="en-US-Neural2-G">en-US-Neural2-G (F)</option>
+              <option value="en-US-Neural2-C">en-US-Neural2-C (M)</option>
+              <option value="en-GB-Neural2-A">en-GB-Neural2-A (F)</option>
+              <option value="en-AU-Neural2-A">en-AU-Neural2-A (F)</option>
+            </select>
+          )}
         </div>
       </div>
 

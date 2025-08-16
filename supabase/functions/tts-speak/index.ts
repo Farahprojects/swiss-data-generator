@@ -11,8 +11,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   try {
-    const { conversationId, messageId, text } = await req.json();
-    console.log("[tts-speak] Request received:", { conversationId, messageId, textLength: text?.length });
+    const { conversationId, messageId, text, voice } = await req.json();
+    console.log("[tts-speak] Request received:", { conversationId, messageId, textLength: text?.length, voice });
     
     if (!conversationId || !messageId || !text) {
       console.error("[tts-speak] Missing required fields");
@@ -32,7 +32,16 @@ serve(async (req) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           input: { text },
-          voice: { languageCode: "en-US", name: "en-US-Neural2-F", ssmlGender: "FEMALE" },
+          voice: ((): any => {
+            const name: string = (voice && typeof voice === 'string' && voice.length > 0) ? voice : "en-US-Neural2-F";
+            // Derive languageCode from name prefix like en-US-...
+            let languageCode = "en-US";
+            try {
+              const parts = name.split("-");
+              if (parts.length >= 2) languageCode = `${parts[0]}-${parts[1]}`;
+            } catch (_) {}
+            return { languageCode, name };
+          })(),
           audioConfig: { audioEncoding: "MP3", speakingRate: 1.0, pitch: 0.0 },
         }),
       }
