@@ -70,7 +70,7 @@ class ConversationTtsService {
             await ttsPlaybackMonitor.attachToAudio(audio);
             console.log('[ConversationTTS] TTS monitor attached successfully');
           } catch (attachError) {
-            console.error('[ConversationTTS] Failed to attach TTS monitor:', attachError);
+            console.warn('[ConversationTTS] TTS monitor failed to attach, but audio will still play:', attachError);
             // Continue playing even if monitor fails - don't block audio
           }
         };

@@ -61,22 +61,29 @@ class TtsPlaybackMonitor {
         throw new Error('[TtsPlaybackMonitor] Source is not an AudioNode');
       }
 
-      // Connect to analyser for monitoring (but don't interfere with destination connection)
+      // For monitoring, we'll use a separate connection that doesn't interfere with the main audio
       if (!(audioElement as any)._analyserConnected) {
-        console.log('[TtsPlaybackMonitor] Connecting to analyser for monitoring...');
-        // Disconnect from destination first, then reconnect through analyser
-        src.disconnect();
-        src.connect(this.analyser);
-        this.analyser.connect(ctx.destination);
-        (audioElement as any)._analyserConnected = true;
-        console.log('[TtsPlaybackMonitor] Analyser connected for monitoring');
+        console.log('[TtsPlaybackMonitor] Setting up analyser for monitoring...');
+        try {
+          // Create a separate connection for monitoring that doesn't interfere with audio playback
+          // Don't disconnect the main audio - just tap into it for monitoring
+          src.connect(this.analyser);
+          (audioElement as any)._analyserConnected = true;
+          console.log('[TtsPlaybackMonitor] Analyser connected for monitoring (non-intrusive)');
+        } catch (connectError) {
+          console.warn('[TtsPlaybackMonitor] Failed to connect analyser for monitoring:', connectError);
+          console.warn('[TtsPlaybackMonitor] Audio will still play, but without visual monitoring');
+          // Don't throw - audio should still work even if monitoring fails
+        }
       } else {
         console.log('[TtsPlaybackMonitor] Analyser already connected, skipping');
       }
 
-      // Start monitoring
-      this.isMonitoring = true;
-      this.updateAudioLevel();
+      // Start monitoring if analyser is connected
+      if ((audioElement as any)._analyserConnected) {
+        this.isMonitoring = true;
+        this.updateAudioLevel();
+      }
       
       console.log('[TtsPlaybackMonitor] Successfully attached to audio element with global fix', {
         audioElementId: (audioElement as any).id || 'no-id',
@@ -84,7 +91,8 @@ class TtsPlaybackMonitor {
         audioContextState: ctx.state,
         sourceNodeReused: !!(audioElement as any)._srcNode,
         connectionsReused: !!(audioElement as any)._connected,
-        analyserConnected: !!(audioElement as any)._analyserConnected
+        analyserConnected: !!(audioElement as any)._analyserConnected,
+        monitoringActive: this.isMonitoring
       });
     } catch (error) {
       console.error('[TtsPlaybackMonitor] Failed to attach to audio:', error);
@@ -94,7 +102,9 @@ class TtsPlaybackMonitor {
         readyState: audioElement.readyState,
         networkState: audioElement.networkState
       });
-      throw error;
+      
+      // Don't throw the error - let audio play even if monitoring fails
+      console.warn('[TtsPlaybackMonitor] Continuing without monitoring to ensure audio plays');
     }
   }
 
