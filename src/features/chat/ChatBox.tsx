@@ -6,10 +6,8 @@ import { useChatStore } from '@/core/store';
 import { ConversationOverlay } from './ConversationOverlay/ConversationOverlay';
 import { Menu } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { ReportViewer } from '@/components/public-report/ReportViewer';
-import { useReportData } from '@/hooks/useReportData';
 import { ChatSidebarControls } from './ChatSidebarControls';
+import { useReportModal } from '@/contexts/ReportModalContext';
 
 export const ChatBox = () => {
   const { error } = useChatStore();
@@ -17,8 +15,8 @@ export const ChatBox = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const { uuid } = location.state || {}; // This is the guest_report_id
-  const { reportData, isLoading } = useReportData(uuid);
-  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isLoadingReport, setIsLoadingReport] = useState(false);
+  const { open } = useReportModal();
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -27,9 +25,10 @@ export const ChatBox = () => {
   }, [messages]);
 
   const openReport = () => {
-    if (reportData) {
-      setIsReportModalOpen(true);
-    }
+    console.log('[OpenReport] reportId=', uuid);
+    setIsLoadingReport(true);
+    // Pass a callback to be executed when the report viewer finishes loading
+    open(uuid, () => setIsLoadingReport(false));
   };
 
   return (
@@ -40,10 +39,10 @@ export const ChatBox = () => {
           <button
             type="button"
             onClick={openReport}
-            disabled={!reportData}
+            disabled={isLoadingReport}
             className="w-full text-left px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md border border-gray-200 disabled:opacity-50"
           >
-            {isLoading ? 'Loading Report...' : 'View Report'}
+            {isLoadingReport ? 'Loading Report...' : 'View Report'}
           </button>
           <ChatSidebarControls />
         </div>
@@ -68,10 +67,10 @@ export const ChatBox = () => {
                 <button
                   type="button"
                   onClick={openReport}
-                  disabled={!reportData}
+                  disabled={isLoadingReport}
                   className="w-full text-left px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md border border-gray-200 mb-3 disabled:opacity-50"
                 >
-                  {isLoading ? 'Loading Report...' : 'View Report'}
+                  {isLoadingReport ? 'Loading Report...' : 'View Report'}
                 </button>
                 <ChatSidebarControls />
               </SheetContent>
@@ -101,18 +100,7 @@ export const ChatBox = () => {
         </div>
       </div>
 
-      {/* Report Modal controlled by this component */}
-      <Dialog open={isReportModalOpen} onOpenChange={setIsReportModalOpen}>
-        <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
-          {reportData && (
-            <ReportViewer
-              reportData={reportData}
-              onBack={() => setIsReportModalOpen(false)}
-              isModal={true}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Report Modal is now rendered by the provider */}
     </>
   );
 };

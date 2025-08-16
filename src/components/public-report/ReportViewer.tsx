@@ -22,6 +22,7 @@ interface ReportViewerProps {
   onBack: () => void;
   onStateReset?: () => void;
   isModal?: boolean;
+  onLoad?: () => void;
 }
 
 const ReportViewerActions: React.FC<{ guestId: string }> = ({ guestId }) => {
@@ -133,9 +134,14 @@ export const ReportViewer = ({
   guestReportId, 
   onBack, 
   onStateReset,
-  isModal = false 
+  isModal = false,
+  onLoad,
 }: ReportViewerProps) => {
-  const { reportData, isLoading, error } = useReportData(guestReportId);
+  const { reportData, isLoading, error, fetchReport } = useReportData();
+
+  useEffect(() => {
+    fetchReport(guestReportId);
+  }, [guestReportId, fetchReport]);
   const mountStartTime = performance.now();
   const isMobile = useIsMobile();
   const [activeModal, setActiveModal] = useState<ModalType>(null);
@@ -653,6 +659,12 @@ export const ReportViewer = ({
       });
     }
   };
+
+  useEffect(() => {
+    if (!isLoading) {
+      onLoad?.();
+    }
+  }, [isLoading, onLoad]);
 
   if (isLoading) {
     return (

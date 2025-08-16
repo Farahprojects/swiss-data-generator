@@ -1,49 +1,52 @@
 import { supabase } from '@/integrations/supabase/client';
 import { ReportData } from '@/utils/reportContentExtraction';
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 
-export const useReportData = (guestReportId: string | null) => {
+export const useReportData = () => {
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchReport = useCallback(async (guestReportId: string | null) => {
     if (!guestReportId) {
-      setReportData(null);
+      setError("No report ID provided.");
       return;
     }
 
-    const fetchReportData = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const { data, error } = await supabase
-          .from('guest_reports')
-          .select('*, report_content:report_content(content), swiss_data:swiss_data(data)')
-          .eq('id', guestReportId)
-          .single();
+    setIsLoading(true);
+    setError(null);
+    setReportData(null);
+    try {
+      // 1. Check for a ready signal
+      const { data: signal, error: signalError } = await supabase
+        .from('report_ready_signals')
+        .select('guest_report_id')
+        .eq('guest_report_id', guestReportId)
+        .single();
 
-        if (error) throw error;
-
-        if (data) {
-          const formattedData: ReportData = {
-            ...data,
-            guest_report: { id: data.id, ...data },
-            report_content: (data.report_content as any)?.content || '',
-            swiss_data: (data.swiss_data as any)?.data || null,
-          };
-          setReportData(formattedData);
-        }
-      } catch (err: any) {
-        setError(err.message);
-        console.error('Error fetching report data:', err);
-      } finally {
-        setIsLoading(false);
+      if (signalError || !signal) {
+        throw new Error('Report not found or not yet ready.');
       }
-    };
 
-    fetchReportData();
-  }, [guestReportId]);
+      // 2. If signal exists, invoke the edge function
+      const { data: report, error: functionError } = await supabase.functions.invoke(
+        'get-report-data',
+        { body: { guest_report_id: guestReportId } }
+      );
 
-  return { reportData, isLoading, error };
+      if (functionError) {
+        throw new Error(functionError.message);
+      }
+
+      setReportData(report as ReportData);
+
+    } catch (err: any) {
+      setError(err.message);
+      console.error('Error fetching report data:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  return { reportData, isLoading, error, fetchReport };
 };
