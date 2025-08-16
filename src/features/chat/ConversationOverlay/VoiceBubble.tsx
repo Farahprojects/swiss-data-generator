@@ -31,41 +31,45 @@ export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
   };
 
   // Smoother pulsing animations with spring physics
-  const pulseAnimation = state === 'listening' && isVoiceDetected
-    ? { 
-        scale: [1, 1.2, 1], // Slightly bigger pulse when voice detected
-        boxShadow: [
-          '0 0 15px rgba(0, 0, 0, 0.3)',
-          '0 0 25px rgba(0, 0, 0, 0.5)',
-          '0 0 15px rgba(0, 0, 0, 0.3)'
-        ]
-      }
-    : state === 'listening'
-    ? { 
-        scale: [1, 1.08, 1], // Slightly bigger gentle pulse when waiting
-        opacity: [0.9, 1, 0.9]
-      }
-    : state === 'processing'
-    ? { 
-        scale: [1, 0.92, 1], // Slightly bigger shrink for thinking mode
-        opacity: [1, 0.85, 1]
-      }
-    : { scale: [1, 1.02, 1] };
+  const pulseAnimation =
+    isVoiceDetected
+      ? {
+          scale: [1, 1.35, 1], // Make the pulse significantly larger when voice is detected
+          boxShadow: [
+            '0 0 15px rgba(0, 0, 0, 0.3)',
+            '0 0 35px rgba(0, 0, 0, 0.6)', // More intense shadow
+            '0 0 15px rgba(0, 0, 0, 0.3)',
+          ],
+        }
+      : state === 'listening'
+      ? {
+          scale: [1, 1.15, 1], // A gentle, larger pulse when waiting
+          opacity: [0.9, 1, 0.9],
+        }
+      : state === 'processing'
+      ? {
+          scale: [1, 0.95, 1], // A subtle shrink for thinking
+        }
+      : { scale: [1, 1.02, 1] }; // Default fallback
 
   return (
     <motion.div
       className={`${baseClass} ${styles[state]}`}
       animate={pulseAnimation}
-      transition={{ 
-        repeat: Infinity, 
-        duration: state === 'listening' && isVoiceDetected ? 0.6 : // Smoother fast pulse
-                 state === 'listening' ? 2.5 : // Slower breathing when waiting
-                 state === 'processing' ? 1.8 : // Smoother thinking pulse
-                 2,
+      transition={{
+        repeat: Infinity,
+        duration:
+          state === 'listening' && isVoiceDetected
+            ? 0.5 // Faster, more responsive pulse
+            : state === 'listening'
+            ? 2.5 // Slower breathing when waiting
+            : state === 'processing'
+            ? 1.5 // A slightly faster thinking pulse
+            : 2,
         ease: 'easeInOut',
         type: 'spring',
         stiffness: 100,
-        damping: 15
+        damping: 15,
       }}
     />
   );

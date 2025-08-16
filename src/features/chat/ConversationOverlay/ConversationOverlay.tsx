@@ -5,6 +5,7 @@ import { VoiceBubble } from './VoiceBubble';
 import { useChatStore } from '@/core/store';
 import { chatController } from '../ChatController';
 import { useConversationAudioLevel } from '@/hooks/useConversationAudioLevel';
+import { AnimatePresence, motion } from 'framer-motion';
 
 export const ConversationOverlay: React.FC = () => {
   const { isConversationOpen, closeConversation } = useConversationUIStore();
@@ -37,20 +38,40 @@ export const ConversationOverlay: React.FC = () => {
   if (!isConversationOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/20 backdrop-blur-sm" onClick={handleModalClose}>
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      onClick={handleModalClose}
+    >
       <div
         className="relative w-full md:max-w-md bg-white rounded-t-3xl md:rounded-3xl shadow-xl p-8" 
         style={{ height: '80%' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col items-center justify-center h-full gap-6">
-                    <VoiceBubble state={state} audioLevel={audioLevel} />
-          
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={state}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+            >
+              <VoiceBubble state={state} audioLevel={audioLevel} />
+            </motion.div>
+          </AnimatePresence>
+
           {/* Status caption */}
-          <p className="text-gray-500 font-light">{state === 'listening' ? 'Listening…' : state === 'processing' ? 'Thinking…' : 'Speaking…'}</p>
+          <p className="text-gray-500 font-light">
+            {state === 'listening' ? 'Listening…' : state === 'processing' ? 'Thinking…' : 'Speaking…'}
+          </p>
         </div>
         {/* Close button */}
-        <button onClick={handleModalClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700">✕</button>
+        <button
+          onClick={handleModalClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700"
+        >
+          ✕
+        </button>
       </div>
     </div>,
     document.body
