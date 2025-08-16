@@ -1,17 +1,15 @@
 // src/services/voice/conversationTts.ts
 import { supabase, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '@/integrations/supabase/client';
 import { ttsPlaybackMonitor } from './ttsPlaybackMonitor';
-import { cleanupAudioElement } from '@/utils/audioContextUtils';
 
 export interface SpeakAssistantOptions {
   conversationId: string;
   messageId: string;
   text: string;
-  useOpenAI?: boolean;
 }
 
 class ConversationTtsService {
-  async speakAssistant({ conversationId, messageId, text, useOpenAI = false }: SpeakAssistantOptions): Promise<void> {
+  async speakAssistant({ conversationId, messageId, text }: SpeakAssistantOptions): Promise<void> {
     
     try {
       // Use direct fetch instead of supabase.functions.invoke for binary data
@@ -21,7 +19,7 @@ class ConversationTtsService {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ conversationId, messageId, text, useOpenAI })
+        body: JSON.stringify({ conversationId, messageId, text })
       });
 
       if (!response.ok) {
@@ -48,7 +46,6 @@ class ConversationTtsService {
       return new Promise((resolve, reject) => {
         audio.onended = () => {
           ttsPlaybackMonitor.cleanup();
-          cleanupAudioElement(audio);
           URL.revokeObjectURL(url);
           resolve();
         };
@@ -62,26 +59,18 @@ class ConversationTtsService {
             error: audio.error
           });
           ttsPlaybackMonitor.cleanup();
-          cleanupAudioElement(audio);
           URL.revokeObjectURL(url);
           reject(new Error(`Audio playback failed: ${audio.error?.message || 'Unknown audio error'}`));
         };
         
-        // Attach monitor before playing - wait for loadeddata and attachToAudio
-        audio.onloadeddata = async () => {
-          try {
-            await ttsPlaybackMonitor.attachToAudio(audio);
-            console.log('[ConversationTTS] TTS monitor attached successfully');
-          } catch (attachError) {
-            console.warn('[ConversationTTS] TTS monitor failed to attach, but audio will still play:', attachError);
-            // Continue playing even if monitor fails - don't block audio
-          }
+        // Attach monitor before playing
+        audio.onloadeddata = () => {
+          ttsPlaybackMonitor.attachToAudio(audio);
         };
 
         audio.play().catch(playError => {
           console.error('[ConversationTTS] Audio play() failed:', playError);
           ttsPlaybackMonitor.cleanup();
-          cleanupAudioElement(audio);
           URL.revokeObjectURL(url);
           reject(playError);
         });

@@ -6,37 +6,35 @@ import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
 import { ttsService } from '@/services/voice/tts';
 import { conversationTtsService } from '@/services/voice/conversationTts';
-import { cleanupGlobalAudioContext } from '@/utils/audioContextUtils';
 import { getMessagesForConversation } from '@/services/api/messages';
 import { Message } from '@/core/types';
 import { v4 as uuidv4 } from 'uuid';
 // No longer need appendMessage from the client
 // import { appendMessage } from '@/services/api/messages';
 import { STT_PROVIDER, LLM_PROVIDER, TTS_PROVIDER } from '@/config/env';
-import { useConversationUIStore } from './conversation-ui-store';
 
 class ChatController {
   private isTurnActive = false;
   private conversationServiceInitialized = false;
   private isResetting = false; // Flag to prevent race conditions during reset
   
-  // Helper method to check if conversation modal is open
-  private isConversationModalOpen(): boolean {
-    return useConversationUIStore.getState().isConversationOpen;
-  }
-  
   async initializeConversation(conversationId: string) {
+    console.log('[ChatController] initializeConversation called with conversationId:', conversationId);
+    
     // FAIL FAST: conversationId is now required
     if (!conversationId) {
       console.error('[ChatController] initializeConversation: FAIL FAST - conversationId is required');
       throw new Error('conversationId is required for conversation initialization');
     }
     
+    console.log('[ChatController] Using existing conversationId:', conversationId);
     useChatStore.getState().startConversation(conversationId);
     
     // Load existing messages for this conversation (for page refresh)
     try {
+      console.log('[ChatController] Loading existing messages for conversation:', conversationId);
       const existingMessages = await getMessagesForConversation(conversationId);
+      console.log('[ChatController] Found', existingMessages.length, 'existing messages');
       
       if (existingMessages.length > 0) {
         useChatStore.getState().loadMessages(existingMessages);
@@ -120,13 +118,6 @@ class ChatController {
 
   async startTurn() {
     if (this.isTurnActive) return;
-    
-    // SAFETY CHECK: Only start turn if conversation modal is open
-    if (!this.isConversationModalOpen()) {
-      console.warn('[ChatController] Attempted to start turn but conversation modal is closed');
-      return;
-    }
-    
     this.isTurnActive = true;
     
     let { conversationId } = useChatStore.getState();
@@ -203,8 +194,7 @@ class ChatController {
           await conversationTtsService.speakAssistant({
             conversationId: useChatStore.getState().conversationId!,
             messageId: assistantMessage.id,
-            text: assistantMessage.text,
-            useOpenAI: false // Set to true to use OpenAI TTS instead of Google
+            text: assistantMessage.text
           });
           
           // Check if we're in the middle of a reset (modal closed during audio)
@@ -216,8 +206,8 @@ class ChatController {
           useChatStore.getState().setStatus('idle');
           this.isTurnActive = false;
           
-          // Start next turn after audio completes (only if not resetting AND modal is open)
-          if (!this.isResetting && this.isConversationModalOpen()) {
+          // Start next turn after audio completes (only if not resetting)
+          if (!this.isResetting) {
             this.startTurn();
           }
           
@@ -226,10 +216,10 @@ class ChatController {
           useChatStore.getState().setStatus('idle');
           this.isTurnActive = false;
           
-          // Continue conversation even if TTS fails (only if not resetting AND modal is open)
-          if (!this.isResetting && this.isConversationModalOpen()) {
+          // Continue conversation even if TTS fails (only if not resetting)
+          if (!this.isResetting) {
             setTimeout(() => {
-              if (!this.isResetting && this.isConversationModalOpen()) {
+              if (!this.isResetting) {
                 this.startTurn();
               }
             }, 1000);
@@ -262,9 +252,6 @@ class ChatController {
     
     // Force cleanup microphone service
     conversationMicrophoneService.forceCleanup();
-    
-    // Clean up audio context and connections
-    cleanupGlobalAudioContext();
     
     // Reset all flags and state
     this.conversationServiceInitialized = false;

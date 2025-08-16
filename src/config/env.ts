@@ -28,4 +28,11 @@ export const isConfigured = () => {
   return !!SUPABASE_URL && !!SUPABASE_ANON_KEY;
 };
 
-
+console.log('Chat Config Loaded:', {
+  STT_PROVIDER,
+  LLM_PROVIDER,
+  TTS_PROVIDER,
+  ENABLE_VOICE_INPUT,
+  ENABLE_TEXT_INPUT,
+  isSupabaseConfigured: isConfigured(),
+});

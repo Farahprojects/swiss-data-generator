@@ -25,13 +25,6 @@ class ConversationMicrophoneServiceClass {
   private monitoringRef = { current: false };
   private audioLevel = 0;
   
-  // Enhanced VAD state
-  private preRollBuffer: Float32Array[] = [];
-  private preRollBufferSize = 20; // ~400ms at 50fps
-  private noiseFloor: { mean: number; std: number } | null = null;
-  private vadThresholds: { voice: number; silence: number } | null = null;
-  private isCalibrating = false;
-  
   private options: ConversationMicrophoneOptions = {};
   private listeners = new Set<() => void>();
 
@@ -116,8 +109,8 @@ class ConversationMicrophoneServiceClass {
       this.notifyListeners();
       this.log('✅ Recording started successfully');
 
-      // Enhanced VAD with warm-up and calibration
-      await this.initializeEnhancedVAD();
+      // Start two-phase Voice Activity Detection
+      this.startVoiceActivityDetection();
       return true;
 
     } catch (error) {
@@ -129,32 +122,6 @@ class ConversationMicrophoneServiceClass {
       }
       
       return false;
-    }
-  }
-
-  /**
-   * Initialize Enhanced Voice Activity Detection
-   */
-  private async initializeEnhancedVAD(): Promise<void> {
-    try {
-      this.log('🎙️ Initializing Enhanced VAD');
-      
-      // Reset VAD state
-      this.preRollBuffer = [];
-      this.noiseFloor = null;
-      this.vadThresholds = null;
-      this.isCalibrating = true;
-      
-      // Simple calibration - just mark as complete
-      // The actual VAD logic can be implemented later if needed
-      setTimeout(() => {
-        this.isCalibrating = false;
-        this.log('✅ Enhanced VAD initialized');
-      }, 100);
-      
-    } catch (error) {
-      this.error('❌ Failed to initialize Enhanced VAD:', error);
-      // Don't throw - VAD is optional, recording should still work
     }
   }
 
