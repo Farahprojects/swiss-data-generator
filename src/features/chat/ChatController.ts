@@ -175,11 +175,17 @@ class ChatController {
         meta: { stt_provider: STT_PROVIDER }
       };
 
-      console.log('[ChatController] Calling conversation-llm-tts with valid transcription:', userMessageForApi);
+      console.log('[ChatController] Calling conversation-llm with valid transcription:', userMessageForApi);
       const assistantMessage = await llmService.conversationChat({
         conversationId: useChatStore.getState().conversationId!,
         userMessage: userMessageForApi,
       });
+
+      console.log('[ChatController] 🎯 CONVERSATION-LLM RESPONSE RECEIVED:');
+      console.log('[ChatController] - Message ID:', assistantMessage.id);
+      console.log('[ChatController] - Text:', assistantMessage.text?.slice(0, 100) + '...');
+      console.log('[ChatController] - AudioURL:', assistantMessage.audioUrl ? 'Present' : 'NOT PRESENT');
+      console.log('[ChatController] - Meta:', assistantMessage.meta);
 
       // Add the final assistant message
       useChatStore.getState().addMessage(assistantMessage);
@@ -187,16 +193,21 @@ class ChatController {
       // For conversation mode, TTS is handled by fire-and-forget call
       // Just proceed to next turn after a brief pause
       if (assistantMessage.text) {
-        console.log('[ChatController] Assistant message received, TTS handled by fire-and-forget');
+        console.log('[ChatController] ✅ Assistant message received, TTS handled by fire-and-forget');
+        console.log('[ChatController] 🔊 AUDIO STATUS: No audioUrl in response (expected with fire-and-forget)');
+        console.log('[ChatController] 🔄 TTS should be processing in background...');
+        console.log('[ChatController] ❓ PROBLEM: UI has no way to receive audio from fire-and-forget TTS');
+        
         useChatStore.getState().setStatus('idle');
         this.isTurnActive = false;
+        
         // Brief pause before starting next turn (allow TTS to potentially play)
         setTimeout(() => {
-          console.log('[ChatController] Starting next turn after brief pause');
+          console.log('[ChatController] ⏰ Starting next turn after 1s pause (TTS should be ready)');
           this.startTurn();
         }, 1000);
       } else {
-        console.error('[ChatController] Conversation response missing text');
+        console.error('[ChatController] ❌ Conversation response missing text');
         useChatStore.getState().setStatus('idle');
         this.isTurnActive = false;
       }
