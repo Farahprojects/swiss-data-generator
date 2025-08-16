@@ -12,11 +12,17 @@ import { v4 as uuidv4 } from 'uuid';
 // No longer need appendMessage from the client
 // import { appendMessage } from '@/services/api/messages';
 import { STT_PROVIDER, LLM_PROVIDER, TTS_PROVIDER } from '@/config/env';
+import { useConversationUIStore } from './conversation-ui-store';
 
 class ChatController {
   private isTurnActive = false;
   private conversationServiceInitialized = false;
   private isResetting = false; // Flag to prevent race conditions during reset
+  
+  // Helper method to check if conversation modal is open
+  private isConversationModalOpen(): boolean {
+    return useConversationUIStore.getState().isConversationOpen;
+  }
   
   async initializeConversation(conversationId: string) {
     console.log('[ChatController] initializeConversation called with conversationId:', conversationId);
@@ -118,6 +124,13 @@ class ChatController {
 
   async startTurn() {
     if (this.isTurnActive) return;
+    
+    // SAFETY CHECK: Only start turn if conversation modal is open
+    if (!this.isConversationModalOpen()) {
+      console.warn('[ChatController] Attempted to start turn but conversation modal is closed');
+      return;
+    }
+    
     this.isTurnActive = true;
     
     let { conversationId } = useChatStore.getState();
@@ -206,8 +219,8 @@ class ChatController {
           useChatStore.getState().setStatus('idle');
           this.isTurnActive = false;
           
-          // Start next turn after audio completes (only if not resetting)
-          if (!this.isResetting) {
+          // Start next turn after audio completes (only if not resetting AND modal is open)
+          if (!this.isResetting && this.isConversationModalOpen()) {
             this.startTurn();
           }
           
@@ -216,10 +229,10 @@ class ChatController {
           useChatStore.getState().setStatus('idle');
           this.isTurnActive = false;
           
-          // Continue conversation even if TTS fails (only if not resetting)
-          if (!this.isResetting) {
+          // Continue conversation even if TTS fails (only if not resetting AND modal is open)
+          if (!this.isResetting && this.isConversationModalOpen()) {
             setTimeout(() => {
-              if (!this.isResetting) {
+              if (!this.isResetting && this.isConversationModalOpen()) {
                 this.startTurn();
               }
             }, 1000);
