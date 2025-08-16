@@ -7,17 +7,6 @@ import { ConversationOverlay } from './ConversationOverlay/ConversationOverlay';
 import { Menu } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { ChatSidebarControls } from './ChatSidebarControls';
-import { useReportModal } from '@/contexts/ReportModalContext';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 
 export const ChatBox = () => {
@@ -26,10 +15,6 @@ export const ChatBox = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const { uuid } = location.state || {}; // This is the guest_report_id
-  const [isLoadingReport, setIsLoadingReport] = useState(false);
-  const [reportError, setReportError] = useState<string | null>(null);
-  const { open } = useReportModal();
-
   useEffect(() => {
     console.log(`[Chat] guestReportId=${uuid}`); // Add precise log
     if (scrollRef.current) {
@@ -37,38 +22,11 @@ export const ChatBox = () => {
     }
   }, [messages, uuid]); // Add uuid to dependency array
 
-  const handleFetchCompletion = (error?: string | null) => {
-    setIsLoadingReport(false);
-    if (error) {
-      setReportError(error);
-    }
-  };
-
-  const openReport = () => {
-    console.log(`[ReportModal] open id=${uuid}`); // Add precise log
-    setIsLoadingReport(true);
-    setReportError(null); // Clear previous errors
-    open(uuid, handleFetchCompletion);
-  };
-  
-  const retryFetch = () => {
-    setReportError(null);
-    openReport();
-  }
-
   return (
     <>
       <div className="flex flex-row flex-1 bg-white max-w-6xl w-full mx-auto md:border-x border-gray-100 min-h-0">
         {/* Left Sidebar (Desktop) */}
         <div className="hidden md:flex w-64 border-r border-gray-100 p-4 flex-col gap-4 bg-gray-50/50">
-          <button
-            type="button"
-            onClick={openReport}
-            disabled={isLoadingReport}
-            className="w-full text-left px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md border border-gray-200 disabled:opacity-50"
-          >
-            {isLoadingReport ? 'Loading Report...' : 'View Report'}
-          </button>
           <ChatSidebarControls />
         </div>
 
@@ -89,14 +47,6 @@ export const ChatBox = () => {
                 <div className="mb-3">
                   <h2 className="text-lg font-light italic">Settings</h2>
                 </div>
-                <button
-                  type="button"
-                  onClick={openReport}
-                  disabled={isLoadingReport}
-                  className="w-full text-left px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md border border-gray-200 mb-3 disabled:opacity-50"
-                >
-                  {isLoadingReport ? 'Loading Report...' : 'View Report'}
-                </button>
                 <ChatSidebarControls />
               </SheetContent>
             </Sheet>
@@ -126,22 +76,6 @@ export const ChatBox = () => {
       </div>
 
       {/* Report Modal is now rendered by the provider */}
-      <AlertDialog open={!!reportError}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Error Fetching Report</AlertDialogTitle>
-            <AlertDialogDescription>
-              We're having issues fetching your data, please try again.
-              <br />
-              <small className="text-gray-500">{reportError}</small>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setReportError(null)}>Close</AlertDialogCancel>
-            <AlertDialogAction onClick={retryFetch}>Try Again</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 };
