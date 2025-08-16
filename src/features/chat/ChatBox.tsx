@@ -31,10 +31,11 @@ export const ChatBox = () => {
   const { open } = useReportModal();
 
   useEffect(() => {
+    console.log(`[Chat] guestReportId=${uuid}`); // Add precise log
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, uuid]); // Add uuid to dependency array
 
   const handleFetchCompletion = (error?: string | null) => {
     setIsLoadingReport(false);
@@ -44,7 +45,7 @@ export const ChatBox = () => {
   };
 
   const openReport = () => {
-    console.log('[OpenReport] reportId=', uuid);
+    console.log(`[ReportModal] open id=${uuid}`); // Add precise log
     setIsLoadingReport(true);
     setReportError(null); // Clear previous errors
     open(uuid, handleFetchCompletion);

@@ -104,7 +104,7 @@ export const getOrCreateConversation = async (uuid: string, token: string): Prom
   console.log('[getOrCreateConversation] Creating new conversation with uuid:', uuid);
   
   // Log the exact values being inserted - report_id is nullable now since we get report details from retrieve-temp-report
-  const insertData = { guest_id: uuid, report_id: null }; 
+  const insertData = { guest_id: uuid }; 
   console.log('[getOrCreateConversation] INSERT data:', JSON.stringify(insertData));
   
   const { data: newConv, error: createError } = await supabase
@@ -135,8 +135,8 @@ export const getOrCreateConversation = async (uuid: string, token: string): Prom
 
 // Helper function to inject context from temp_report_data
 const injectContextMessages = async (conversationId: string, uuid: string, token: string): Promise<void> => {
+  console.log(`[Context] fetch by guestReportId=${uuid}`); // Add precise log
 
-  
   // Check if we've already injected context for this conversation
   const { data: existingMessages, error: checkError } = await supabase
     .from('messages')

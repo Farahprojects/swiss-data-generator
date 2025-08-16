@@ -37,6 +37,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
     const [manualCheckFailed, setManualCheckFailed] = useState(false);
     const [modalOpened, setModalOpened] = useState(false);
     const [isTimedOut, setIsTimedOut] = useState(false);
+    const [isNavigating, setIsNavigating] = useState(false);
 
     const handleTimeout = () => {
       // Instead of showing an error, we now show the "View Report" button.
@@ -46,12 +47,17 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
     // --- Main Polling Mechanism ---
     useEffect(() => {
       if (!guestId) return;
-
+      
+      let isCancelled = false;
       const POLLING_INTERVAL_MS = 1000;
       const POLLING_TIMEOUT_MS = 14000;
       let elapsedTime = 0;
 
       const intervalId = setInterval(async () => {
+        if (isNavigating || isCancelled) {
+          clearInterval(intervalId);
+          return;
+        }
         elapsedTime += POLLING_INTERVAL_MS;
 
         // Check for timeout
@@ -76,9 +82,10 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
           return;
         }
 
-        if (data && data.length > 0) {
-          console.log(`[SuccessScreen] Polling found signal for ${guestId}. Navigating to chat.`);
-          
+        if (data && data.length > 0 && !isNavigating) {
+          setIsNavigating(true); // Prevent re-entry
+          clearInterval(intervalId); // Stop polling immediately
+
           // Get secure tokens for chat
           const { data: tokens, error: tokenError } = await supabase.functions.invoke('create-temp-report-data', {
             body: { guest_report_id: guestId },
@@ -86,23 +93,23 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
 
           if (tokenError || !tokens) {
             console.error('[SuccessScreen] Failed to get chat tokens:', tokenError);
-            setShowError(true);
+            setIsNavigating(false); // Reset on failure
             return;
           }
 
+          console.log(`[Success] navigating with guestReportId=${guestId}`); // Add precise log
           // Navigate to chat with the guestId (as uuid) and token.
           navigate('/chat', { state: { uuid: guestId, token: tokens.plain_token } });
-          
-          clearInterval(intervalId); // Stop polling once the signal is found
         }
       }, POLLING_INTERVAL_MS);
 
-      // Cleanup function to clear the interval when the component unmounts
+      // Cleanup function
       return () => {
         console.log(`[SuccessScreen] Unmounting, clearing polling for guestId: ${guestId}`);
+        isCancelled = true;
         clearInterval(intervalId);
       };
-    }, [guestId]);
+    }, [guestId, isNavigating]); // Add isNavigating to dependencies
 
     const handleManualCheck = async () => {
       setIsChecking(true);

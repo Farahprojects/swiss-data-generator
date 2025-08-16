@@ -178,12 +178,12 @@ export const ReportViewer = ({
   const [emailError, setEmailError] = useState<string | null>(null);
 
   // Determine view logic based on content type
-  const contentType = reportData.metadata.content_type;
+  const contentType = reportData?.metadata?.content_type;
   const showToggle = contentType === 'both';
   
   // Prioritize report content over astro data
-  const hasReportContent = !!reportData.report_content && reportData.report_content.trim().length > 20;
-  const hasAstroData = !!reportData.swiss_data;
+  const hasReportContent = !!reportData?.report_content && reportData.report_content.trim().length > 20;
+  const hasAstroData = !!reportData?.swiss_data;
   
   // Default to report if available, otherwise astro data
   const defaultView = hasReportContent ? 'report' : hasAstroData ? 'astro' : 'report';
@@ -210,7 +210,7 @@ export const ReportViewer = ({
     if (activeModal === 'email') {
       setEmailError(null);
       setEmailStatus('checking');
-      const guestReportId = reportData.guest_report?.id;
+      const guestReportId = reportData?.guest_report?.id;
       if (!guestReportId) {
         setEmailStatus('error');
         setEmailError('Report not found.');
@@ -240,7 +240,7 @@ export const ReportViewer = ({
       setEmailSentAt(null);
       setEmailError(null);
     }
-  }, [activeModal, reportData.guest_report?.id]);
+  }, [activeModal, reportData?.guest_report?.id]);
 
   const handleCopyToClipboard = async () => {
     try {
@@ -305,8 +305,8 @@ export const ReportViewer = ({
       setIsCopyCompleted(false);
       
       // Reset view state
-      setActiveView(reportData.metadata.content_type === 'ai' ? 'report' : 
-                   reportData.metadata.content_type === 'astro' ? 'astro' : 'report');
+      setActiveView(reportData?.metadata?.content_type === 'ai' ? 'report' : 
+                   reportData?.metadata?.content_type === 'astro' ? 'astro' : 'report');
       
       // Phase 3: Background cleanup with visual progress
       setTransitionPhase('transitioning');
@@ -356,7 +356,7 @@ export const ReportViewer = ({
       });
 
       /* 1. Get guest report ID from the current report data */
-      const guestReportId = reportData.guest_report?.id;
+      const guestReportId = reportData?.guest_report?.id;
       console.log('[ChatGPT] Guest report ID:', guestReportId);
       if (!guestReportId) throw new Error("Guest report ID not found");
 
@@ -498,7 +498,7 @@ export const ReportViewer = ({
 
   const handleOpenChatGPTModal = async () => {
     try {
-      const guestReportId = reportData.guest_report?.id;
+      const guestReportId = reportData?.guest_report?.id;
       console.log('[ReportViewer] Starting secure chat navigation for guestId:', guestReportId);
       
       if (!guestReportId) {
@@ -543,7 +543,7 @@ export const ReportViewer = ({
   const handlePremiumFlow = async () => {
     try {
       // Generate the message immediately when modal opens
-      const guestReportId = reportData.guest_report?.id;
+      const guestReportId = reportData?.guest_report?.id;
       if (!guestReportId) {
         toast({
           title: "Error",
@@ -592,12 +592,12 @@ export const ReportViewer = ({
       let genericData = '';
       
       // Add report content if available
-      if (reportData.report_content && reportData.report_content.trim().length > 20) {
+      if (reportData?.report_content && reportData.report_content.trim().length > 20) {
         genericData += `ASTROLOGY REPORT:\n\n${reportData.report_content}\n\n`;
       }
       
       // Add astro data if available
-      if (reportData.swiss_data) {
+      if (reportData?.swiss_data) {
         genericData += `ASTROLOGICAL DATA:\n${JSON.stringify(reportData.swiss_data, null, 2)}\n\n`;
       }
       
@@ -689,6 +689,9 @@ export const ReportViewer = ({
       </div>
     );
   }
+
+  // Safely get person's name
+  const personName = getPersonName(reportData?.metadata || null);
 
   return (
     <>
@@ -790,7 +793,7 @@ export const ReportViewer = ({
         <ScrollArea className="flex-1">
           <div className="px-6 py-6">
             <h1 className="text-xl font-light text-gray-900 mb-4">
-              Generated for {getPersonName(reportData)}
+              Generated for {personName}
             </h1>
             <ReportContent 
               reportData={reportData}
