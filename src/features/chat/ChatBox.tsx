@@ -4,7 +4,9 @@ import { ChatInput } from './ChatInput';
 import { useChatStore } from '@/core/store';
 import { ConversationOverlay } from './ConversationOverlay/ConversationOverlay';
 import { useState } from 'react';
-import { useChatStore } from '@/core/store';
+import { Menu } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { ChatSidebarControls } from './ChatSidebarControls';
 
 export const ChatBox = () => {
   const { error } = useChatStore();
@@ -23,57 +25,30 @@ export const ChatBox = () => {
 
   return (
     <div className="flex flex-row flex-1 bg-white max-w-6xl w-full mx-auto border-x border-gray-100">
-      {/* Left Sidebar */}
+      {/* Left Sidebar (Desktop) */}
       <div className="hidden md:flex w-64 border-r border-gray-100 p-4 flex-col gap-4 bg-gray-50/50">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-gray-500 mb-2">TTS Provider</p>
-          <select
-            className="w-full border rounded-md px-2 py-2 text-sm bg-white"
-            value={ttsProvider}
-            onChange={(e) => setTtsProvider(e.target.value as 'google' | 'openai')}
-          >
-            <option value="google">Google</option>
-            <option value="openai">OpenAI</option>
-          </select>
-        </div>
-        <div>
-          <p className="text-xs uppercase tracking-wider text-gray-500 mb-2">Voice</p>
-          {ttsProvider === 'openai' ? (
-            <select
-              className="w-full border rounded-md px-2 py-2 text-sm bg-white"
-              value={ttsVoice}
-              onChange={(e) => setTtsVoice(e.target.value)}
-            >
-              {/* OpenAI allowed voices per API */}
-              <option value="alloy">Alloy</option>
-              <option value="ash">Ash</option>
-              <option value="coral">Coral</option>
-              <option value="echo">Echo</option>
-              <option value="fable">Fable</option>
-              <option value="nova">Nova</option>
-              <option value="onyx">Onyx</option>
-              <option value="sage">Sage</option>
-              <option value="shimmer">Shimmer</option>
-            </select>
-          ) : (
-            <select
-              className="w-full border rounded-md px-2 py-2 text-sm bg-white"
-              value={ttsVoice}
-              onChange={(e) => setTtsVoice(e.target.value)}
-            >
-              {/* Google Cloud TTS sample voices (Neural2 family) */}
-              <option value="en-US-Neural2-F">en-US-Neural2-F (F)</option>
-              <option value="en-US-Neural2-G">en-US-Neural2-G (F)</option>
-              <option value="en-US-Neural2-C">en-US-Neural2-C (M)</option>
-              <option value="en-GB-Neural2-A">en-GB-Neural2-A (F)</option>
-              <option value="en-AU-Neural2-A">en-AU-Neural2-A (F)</option>
-            </select>
-          )}
-        </div>
+        <ChatSidebarControls />
       </div>
 
       {/* Main Chat */}
       <div className="flex flex-col flex-1">
+        {/* Mobile Top Bar with Burger */}
+        <div className="md:hidden flex items-center gap-2 p-3 border-b border-gray-100">
+          <Sheet>
+            <SheetTrigger asChild>
+              <button aria-label="Open menu" className="p-2 rounded-md border border-gray-200 bg-white">
+                <Menu className="w-5 h-5" />
+              </button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[85%] sm:max-w-xs p-4">
+              <div className="mb-3">
+                <h2 className="text-lg font-light italic">Settings</h2>
+              </div>
+              <ChatSidebarControls />
+            </SheetContent>
+          </Sheet>
+          <div className="flex-1" />
+        </div>
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-6">
           <MessageList />
         </div>
