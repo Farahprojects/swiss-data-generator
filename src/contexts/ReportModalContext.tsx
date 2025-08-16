@@ -4,6 +4,7 @@ import { ReportViewer } from '@/components/public-report/ReportViewer';
 import { ReportReference } from '@/types/reportReference';
 import { useReportCache } from '@/hooks/useReportCache';
 import { sessionManager } from '@/utils/sessionManager';
+import { useLocation } from 'react-router-dom';
 
 const SESSION_STORAGE_KEY = 'report_modal_guest_id';
 
@@ -22,18 +23,12 @@ export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
   const [currentReport, setCurrentReport] = useState<ReportReference | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const { fetchReportData, removeFromCache, clearCache, cacheSize } = useReportCache();
+  const location = useLocation();
 
   // On initial load, check session storage for a persisted report ID
   useEffect(() => {
-    try {
-      const persistedGuestId = sessionStorage.getItem(SESSION_STORAGE_KEY);
-      if (persistedGuestId) {
-        console.log(`[ModalCTX] Found persisted guestId: ${persistedGuestId}. Re-opening modal.`);
-        open(persistedGuestId);
-      }
-    } catch (error) {
-      console.warn('[ModalCTX] Could not access session storage for persistence.', error);
-    }
+    // This logic has been removed to prevent the modal from auto-opening on refresh.
+    // The modal is now only opened by explicit user action.
   }, []); // Empty dependency array ensures this runs only once on mount
 
   // Register with SessionManager for state reset
