@@ -13,21 +13,22 @@ export const ChatBox = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Scroll to the bottom of the message list when new messages are added
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
 
   return (
-    <div className="flex flex-row flex-1 bg-white max-w-6xl w-full mx-auto md:border-x border-gray-100">
+    <div className="flex flex-row flex-1 bg-white max-w-6xl w-full mx-auto md:border-x border-gray-100 min-h-0">
       {/* Left Sidebar (Desktop) */}
       <div className="hidden md:flex w-64 border-r border-gray-100 p-4 flex-col gap-4 bg-gray-50/50">
         <ChatSidebarControls />
       </div>
 
-      {/* Main Chat Area - This is a flex column that fills remaining space */}
+      {/* Main Chat Area: A flex column that fills the remaining space */}
       <div className="flex flex-col flex-1 w-full min-w-0">
-        {/* Mobile Header (Static, not sticky) */}
+        {/* Mobile Header (Static, takes its own space) */}
         <div className="md:hidden flex items-center gap-2 p-3 bg-white border-b border-gray-100 pt-safe">
           <Sheet>
             <SheetTrigger asChild>
@@ -48,24 +49,24 @@ export const ChatBox = () => {
           <div className="flex-1" />
         </div>
 
-        {/* Message List (Scrolling Content) */}
+        {/* Message List (This is the scrolling content area) */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-6">
           <MessageList />
         </div>
 
-        {/* Error Display */}
-        {error && (
-          <div className="p-3 text-sm font-medium text-red-700 bg-red-100 border-t border-red-200">
-            {error}
+        {/* Footer Area (Static, contains error and input) */}
+        <div className="pb-safe">
+          {error && (
+            <div className="p-3 text-sm font-medium text-red-700 bg-red-100 border-t border-red-200">
+              {error}
+            </div>
+          )}
+          <div className="border-t border-gray-100">
+            <ChatInput />
           </div>
-        )}
-
-        {/* Chat Input Area (with bottom safe area padding) */}
-        <div className="border-t border-gray-100 pb-safe">
-          <ChatInput />
         </div>
 
-        {/* Conversation Overlay (position: fixed, so doesn't affect layout) */}
+        {/* Conversation Overlay (fixed position, does not affect layout) */}
         <ConversationOverlay />
       </div>
     </div>
