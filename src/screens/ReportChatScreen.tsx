@@ -1,6 +1,6 @@
 // src/screens/ReportChatScreen.tsx
-import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { ChatBox } from '@/features/chat/ChatBox';
 import { useChat } from '@/features/chat/useChat';
 import { MobileViewportLock } from '@/features/chat/MobileViewportLock';
@@ -8,30 +8,46 @@ import { getChatTokens } from '@/services/auth/chatTokens';
 
 const ReportChatScreen = () => {
   const { conversationId } = useParams<{ conversationId: string }>();
-  const navigate = useNavigate();
-  const { uuid, token } = getChatTokens();
+  const [{ uuid, token }, setTokens] = useState(() => getChatTokens());
+  const [logged, setLogged] = useState(false);
 
-  // Validation - now requires secure tokens (uuid and token may be populated later)
-  if (!uuid || !token) {
-    console.log('[ReportChatScreen] Missing secure tokens, showing error');
-    return (
-      <div className="flex flex-col items-center justify-center h-screen">
-        <p className="text-gray-600 mb-4">Missing secure access tokens</p>
-        <button onClick={() => navigate('/')} className="text-blue-600">
-          Back to Home
-        </button>
-      </div>
-    );
-  }
+  // Poll storage until tokens are available
+  useEffect(() => {
+    if (uuid && token) return;
+    const id = setInterval(() => {
+      const next = getChatTokens();
+      if ((next.uuid && next.token) && (!uuid || !token)) {
+        setTokens(next);
+      }
+    }, 300);
+    return () => clearInterval(id);
+  }, [uuid, token]);
 
-  useChat(conversationId, uuid, token);
+  // Log once when tokens are ready
+  useEffect(() => {
+    if (uuid && token && !logged) {
+      console.log(`[ReportChatScreen] Tokens ready: uuid=${uuid}, hasToken=${!!token}`);
+      setLogged(true);
+    }
+  }, [uuid, token, logged]);
+
+  // Initialize chat when tokens are ready
+  useChat(conversationId, uuid || undefined, token || undefined);
 
   return (
     <MobileViewportLock active>
-      {/* This container now establishes a fixed, full-viewport context */}
       <div className="font-sans antialiased text-gray-800 bg-gray-50 fixed inset-0 flex flex-col">
-        {/* ChatBox is now the direct child and will fill this container */}
-        <ChatBox />
+        {/* If tokens not ready, show lightweight waiting state */}
+        {!uuid || !token ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="flex items-center gap-3 text-gray-600">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-700" />
+              <span>Preparing your chat…</span>
+            </div>
+          </div>
+        ) : (
+          <ChatBox />
+        )}
       </div>
     </MobileViewportLock>
   );
