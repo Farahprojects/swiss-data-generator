@@ -144,28 +144,7 @@ Stay fully within the energetic-psychological lens at all times.`;
       throw new Error(`Failed to save assistant message: ${assistantMessageError.message}`);
     }
 
-    // 4. Fire-and-forget call to TTS handler with real messageId
-    console.log("[conversation-llm] Making fire-and-forget call to TTS handler with messageId:", newAssistantMessage.id);
-    try {
-      // Don't await this - fire and forget
-      fetch(`${SUPABASE_URL}/functions/v1/google-text-to-speech`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${SUPABASE_SERVICE_KEY}`,
-        },
-        body: JSON.stringify({
-          messageId: newAssistantMessage.id,
-          text: assistantResponseText
-        })
-      }).catch(ttsError => {
-        console.warn("[conversation-llm] TTS fire-and-forget failed (non-blocking):", ttsError);
-      });
-    } catch (ttsError) {
-      console.warn("[conversation-llm] TTS fire-and-forget error (non-blocking):", ttsError);
-    }
-
-    // 5. Return the newly created assistant message
+    // 4. Return the newly created assistant message (TTS handled separately by client)
     console.log("[conversation-llm] Assistant message saved. Returning to client.");
     return new Response(JSON.stringify(newAssistantMessage), {
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },

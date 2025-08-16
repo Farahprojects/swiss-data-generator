@@ -5,6 +5,7 @@ import { audioPlayer } from '@/services/voice/audioPlayer';
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
 import { ttsService } from '@/services/voice/tts';
+import { conversationTtsService } from '@/services/voice/conversationTts';
 import { getMessagesForConversation } from '@/services/api/messages';
 import { Message } from '@/core/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -190,24 +191,41 @@ class ChatController {
       // Add the final assistant message
       useChatStore.getState().addMessage(assistantMessage);
 
-      // For conversation mode, TTS is handled by fire-and-forget call
-      // Just proceed to next turn after a brief pause
-      if (assistantMessage.text) {
-        console.log('[ChatController] ✅ Assistant message received, TTS handled by fire-and-forget');
-        console.log('[ChatController] 🔊 AUDIO STATUS: No audioUrl in response (expected with fire-and-forget)');
-        console.log('[ChatController] 🔄 TTS should be processing in background...');
-        console.log('[ChatController] ❓ PROBLEM: UI has no way to receive audio from fire-and-forget TTS');
+      // For conversation mode, call TTS and wait for audio to complete
+      if (assistantMessage.text && assistantMessage.id) {
+        console.log('[ChatController] ✅ Assistant message received, calling TTS service...');
+        console.log('[ChatController] 🔊 AUDIO: Requesting TTS for message:', assistantMessage.id);
         
-        useChatStore.getState().setStatus('idle');
-        this.isTurnActive = false;
+        useChatStore.getState().setStatus('speaking');
         
-        // Brief pause before starting next turn (allow TTS to potentially play)
-        setTimeout(() => {
-          console.log('[ChatController] ⏰ Starting next turn after 1s pause (TTS should be ready)');
+        try {
+          // Wait for TTS to complete
+          await conversationTtsService.speakAssistant({
+            conversationId: useChatStore.getState().conversationId!,
+            messageId: assistantMessage.id,
+            text: assistantMessage.text
+          });
+          
+          console.log('[ChatController] 🎵 Audio playback completed, starting next turn');
+          useChatStore.getState().setStatus('idle');
+          this.isTurnActive = false;
+          
+          // Start next turn after audio completes
           this.startTurn();
-        }, 1000);
+          
+        } catch (ttsError) {
+          console.error('[ChatController] ❌ TTS failed:', ttsError);
+          useChatStore.getState().setStatus('idle');
+          this.isTurnActive = false;
+          
+          // Continue conversation even if TTS fails
+          setTimeout(() => {
+            console.log('[ChatController] ⏰ Starting next turn after TTS failure');
+            this.startTurn();
+          }, 1000);
+        }
       } else {
-        console.error('[ChatController] ❌ Conversation response missing text');
+        console.error('[ChatController] ❌ Conversation response missing text or ID');
         useChatStore.getState().setStatus('idle');
         this.isTurnActive = false;
       }
