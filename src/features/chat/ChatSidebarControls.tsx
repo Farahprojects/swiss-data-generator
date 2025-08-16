@@ -9,6 +9,14 @@ export const ChatSidebarControls: React.FC = () => {
 
   return (
     <div className="w-full flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <button type="button" className="w-full text-left px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md border border-gray-200">
+          Report
+        </button>
+        <button type="button" className="w-full text-left px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md border border-gray-200">
+          Voice
+        </button>
+      </div>
       <div>
         <p className="text-xs uppercase tracking-wider text-gray-500 mb-2">TTS Provider</p>
         <select
