@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
 const CORS = {
@@ -33,7 +34,8 @@ serve(async (req) => {
         body: JSON.stringify({
           input: { text },
           voice: ((): any => {
-            const name: string = (voice && typeof voice === 'string' && voice.length > 0) ? voice : "en-US-Neural2-F";
+            // Prefer HD/Studio default when not provided
+            const name: string = (voice && typeof voice === 'string' && voice.length > 0) ? voice : "en-US-Studio-O";
             // Derive languageCode from name prefix like en-US-...
             let languageCode = "en-US";
             try {
