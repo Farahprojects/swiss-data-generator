@@ -1,5 +1,5 @@
 // src/services/voice/conversationTts.ts
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '@/integrations/supabase/client';
 
 export interface SpeakAssistantOptions {
   conversationId: string;
@@ -12,26 +12,38 @@ class ConversationTtsService {
     console.log('[ConversationTTS] Starting TTS for message:', messageId);
     
     try {
-      const { data, error } = await supabase.functions.invoke('tts-speak', {
-        body: { conversationId, messageId, text }
+      // Use direct fetch instead of supabase.functions.invoke for binary data
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/tts-speak`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ conversationId, messageId, text })
       });
 
-      if (error) {
-        console.error('[ConversationTTS] TTS function error:', error);
-        throw new Error(`TTS failed: ${error.message}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[ConversationTTS] TTS function error:', response.status, errorText);
+        throw new Error(`TTS failed: ${response.status} - ${errorText}`);
       }
 
-      // The response should be audio bytes
-      if (!data) {
-        console.error('[ConversationTTS] No audio data received');
-        throw new Error('No audio data received from TTS');
+      // Get the response as array buffer (binary audio data)
+      const audioBuffer = await response.arrayBuffer();
+      console.log('[ConversationTTS] Audio buffer received:', audioBuffer.byteLength, 'bytes');
+
+      if (audioBuffer.byteLength === 0) {
+        console.error('[ConversationTTS] Empty audio buffer received');
+        throw new Error('Empty audio data received from TTS');
       }
 
-      console.log('[ConversationTTS] Audio received, creating blob and playing...');
+      console.log('[ConversationTTS] Creating audio blob and playing...');
       
-      // Convert response to blob and play
-      const blob = new Blob([data], { type: 'audio/mpeg' });
+      // Convert array buffer to blob and play
+      const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
       const url = URL.createObjectURL(blob);
+      
+      console.log('[ConversationTTS] Blob created:', blob.size, 'bytes, type:', blob.type);
 
       const audio = new Audio(url);
       
@@ -45,8 +57,14 @@ class ConversationTtsService {
         
         audio.onerror = (error) => {
           console.error('[ConversationTTS] Audio playback error:', error);
+          console.error('[ConversationTTS] Audio element state:', {
+            src: audio.src,
+            readyState: audio.readyState,
+            networkState: audio.networkState,
+            error: audio.error
+          });
           URL.revokeObjectURL(url);
-          reject(new Error('Audio playback failed'));
+          reject(new Error(`Audio playback failed: ${audio.error?.message || 'Unknown audio error'}`));
         };
         
         audio.onloadstart = () => console.log('[ConversationTTS] Audio loading started');
