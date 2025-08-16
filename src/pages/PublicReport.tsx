@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import HeroSection from '@/components/public-report/HeroSection';
 import FeaturesSection from '@/components/public-report/FeaturesSection';
 import TestsSection from '@/components/public-report/TestsSection';
@@ -13,17 +13,19 @@ import { AlertTriangle, Loader2 } from "lucide-react";
 import { useIsMobile } from '@/hooks/use-mobile';
 import MobileReportSheet from '@/components/public-report/MobileReportSheet';
 import ReportFlowChecker from '@/components/public-report/ReportFlowChecker';
-import { SuccessScreen } from '@/components/public-report/SuccessScreen';
+// SuccessScreen removed in new flow
+import { setChatTokens } from '@/services/auth/chatTokens';
 import { PricingProvider } from '@/contexts/PricingContext';
 import { ReportModalProvider } from '@/contexts/ReportModalContext';
 
 const PublicReport = () => {
   const location = useLocation();
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const [showCancelledMessage, setShowCancelledMessage] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [activeGuest, setActiveGuest] = useState<{ guestId: string; name: string; email: string; isStripeReturn?: boolean } | null>(null);
-  const [paidGuest, setPaidGuest] = useState<{ guestId: string; name: string; email: string; isStripeReturn?: boolean } | null>(null);
+  // paidGuest overlay removed in new flow
   
   // Effect to detect and handle Stripe return
   useEffect(() => {
@@ -400,22 +402,15 @@ const PublicReport = () => {
                 name={activeGuest.name}
                 email={activeGuest.email}
                 onPaid={(paidData) => {
-                  setPaidGuest({
-                    guestId: paidData.guestId,
-                    name: paidData.name,
-                    email: paidData.email,
-                    isStripeReturn: activeGuest.isStripeReturn
-                  });
-                  setActiveGuest(null); // Stop checking once paid
+                  // New flow: store tokens for chat and navigate directly
+                  setChatTokens(paidData.guestId, '');
+                  setActiveGuest(null);
+                  navigate('/chat');
                 }}
               />
             )}
 
-            {paidGuest && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                <SuccessScreen guestId={paidGuest.guestId} name={paidGuest.name} email={paidGuest.email} isStripeReturn={paidGuest.isStripeReturn} />
-              </div>
-            )}
+            {/* SuccessScreen removed: navigation handled in ReportFlowChecker.onPaid */}
           </div>
         </PricingProvider>
     );
