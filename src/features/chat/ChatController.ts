@@ -209,7 +209,6 @@ class ChatController {
           
           // Check if we're in the middle of a reset (modal closed during audio)
           if (this.isResetting) {
-            console.log('[ChatController] 🚨 Reset in progress - not starting next turn');
             return;
           }
           
@@ -231,7 +230,6 @@ class ChatController {
           if (!this.isResetting) {
             setTimeout(() => {
               if (!this.isResetting) {
-                console.log('[ChatController] ⏰ Starting next turn after TTS failure');
                 this.startTurn();
               }
             }, 1000);
@@ -259,38 +257,21 @@ class ChatController {
 
   // BULLETPROOF RESET - Handle all edge cases when modal closes
   resetConversationService() {
-    console.log('[ChatController] 🚨 EMERGENCY RESET - Cleaning up all conversation resources');
-    
     // Set reset flag immediately to prevent race conditions
     this.isResetting = true;
     
-    console.log('[ChatController] Current state:', {
-      isTurnActive: this.isTurnActive,
-      conversationServiceInitialized: this.conversationServiceInitialized,
-      status: useChatStore.getState().status,
-      isResetting: this.isResetting
-    });
-
-    // 1. Force cleanup microphone service
-    console.log('[ChatController] 🎙️ Force cleaning up microphone service');
+    // Force cleanup microphone service
     conversationMicrophoneService.forceCleanup();
-
-    // 2. Stop any pending TTS operations - they will check isResetting flag
-    console.log('[ChatController] 🔇 Marking TTS operations for cancellation');
     
-    // 3. Reset all flags and state
-    console.log('[ChatController] 🔄 Resetting all internal state');
+    // Reset all flags and state
     this.conversationServiceInitialized = false;
     this.isTurnActive = false;
     useChatStore.getState().setStatus('idle');
 
-    // 4. Clear reset flag after a brief delay to ensure all operations see it
+    // Clear reset flag after a brief delay to ensure all operations see it
     setTimeout(() => {
       this.isResetting = false;
-      console.log('[ChatController] 🔓 Reset flag cleared - ready for new conversation');
     }, 100);
-
-    console.log('[ChatController] ✅ Emergency reset complete');
   }
 }
 

@@ -13,32 +13,19 @@ export const ConversationOverlay: React.FC = () => {
   
   // BULLETPROOF MODAL CLOSE - Handle all edge cases
   const handleModalClose = () => {
-    console.log('[ConversationOverlay] 🚨 Modal closing - emergency cleanup for all edge cases');
-    console.log('[ConversationOverlay] Current status:', status);
-    
     // Emergency stop all audio playback
-    console.log('[ConversationOverlay] 🔇 Emergency: Stopping all audio playback');
     const allAudioElements = document.querySelectorAll('audio');
-    allAudioElements.forEach((audio, index) => {
-      console.log(`[ConversationOverlay] Stopping audio element ${index + 1}`);
+    allAudioElements.forEach((audio) => {
       audio.pause();
       audio.currentTime = 0;
       audio.src = '';
     });
     
     // Force reset conversation service (handles mic cleanup)
-    console.log('[ConversationOverlay] 🎙️ Emergency: Resetting conversation service');
     chatController.resetConversationService();
     
-    // Force cleanup any pending timeouts/promises in ChatController
-    console.log('[ConversationOverlay] ⏰ Emergency: Clearing any pending operations');
-    // ChatController should handle this in resetConversationService, but let's be extra sure
-    
     // Close the UI
-    console.log('[ConversationOverlay] 🚪 Closing conversation UI');
     closeConversation();
-    
-    console.log('[ConversationOverlay] ✅ Emergency cleanup complete');
   };
   
   // Map chat status to conversation state for UI

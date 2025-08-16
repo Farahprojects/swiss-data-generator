@@ -18,7 +18,6 @@ class MicrophoneArbitratorService {
    */
   canUse(domainId: MicrophoneDomain): boolean {
     const canUse = this.currentOwner === null || this.currentOwner === domainId;
-    console.log(`[MicArbitrator] Can ${domainId} use mic? ${canUse} (current owner: ${this.currentOwner})`);
     return canUse;
   }
 
@@ -27,13 +26,11 @@ class MicrophoneArbitratorService {
    */
   claim(domainId: MicrophoneDomain): boolean {
     if (this.canUse(domainId)) {
-      console.log(`[MicArbitrator] ✅ ${domainId} claimed microphone`);
       this.currentOwner = domainId;
       this.notifyListeners();
       return true;
     }
     
-    console.log(`[MicArbitrator] ❌ ${domainId} DENIED - ${this.currentOwner} owns mic`);
     return false;
   }
 
@@ -42,10 +39,10 @@ class MicrophoneArbitratorService {
    */
   release(domainId: MicrophoneDomain): void {
     if (this.currentOwner === domainId) {
-      console.log(`[MicArbitrator] 📞 ${domainId} released microphone`);
       this.currentOwner = null;
       this.notifyListeners();
     } else {
+      // Keep this warning as it indicates a potential bug
       console.warn(`[MicArbitrator] ⚠️ ${domainId} tried to release but doesn't own mic`);
     }
   }
