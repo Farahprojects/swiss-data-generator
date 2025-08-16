@@ -50,7 +50,7 @@ export const ChatBox = () => {
       {/* Main Chat */}
       <div className="flex flex-col flex-1">
         {/* Mobile Top Bar with Burger */}
-        <div className={`md:hidden flex items-center gap-2 p-3 bg-white ${isAtTop ? '' : 'shadow-sm'}`}>
+        <div className={`md:hidden flex items-center gap-2 p-3 bg-white sticky top-0 z-10 pt-safe ${isAtTop ? '' : 'shadow-sm'}`}>
           <Sheet>
             <SheetTrigger asChild>
               <button aria-label="Open menu" className="p-2 rounded-md border border-gray-200 bg-white">
