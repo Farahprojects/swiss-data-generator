@@ -1,16 +1,25 @@
 import React from 'react';
 import { useChatStore } from '@/core/store';
+import { useReportModal } from '@/contexts/ReportModalContext';
+import { useLocation } from 'react-router-dom';
 
 export const ChatSidebarControls: React.FC = () => {
   const ttsProvider = useChatStore((s) => s.ttsProvider);
   const ttsVoice = useChatStore((s) => s.ttsVoice);
   const setTtsProvider = useChatStore((s) => s.setTtsProvider);
   const setTtsVoice = useChatStore((s) => s.setTtsVoice);
+  const { open: openReportModal } = useReportModal();
+  const location = useLocation();
+  const { uuid } = location.state || {};
 
   return (
     <div className="w-full flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <button type="button" className="w-full text-left px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md border border-gray-200">
+        <button
+          type="button"
+          onClick={() => uuid && openReportModal(uuid)}
+          className="w-full text-left px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md border border-gray-200"
+        >
           Report
         </button>
         <button type="button" className="w-full text-left px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md border border-gray-200">
