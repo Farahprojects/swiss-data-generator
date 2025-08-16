@@ -107,7 +107,7 @@ class ChatController {
     
     conversationMicrophoneService.initialize({
       onSilenceDetected: () => {
-        console.log('[ChatController] Silence detected - auto-ending turn');
+
         this.endTurn();
       },
       silenceTimeoutMs: 2000
@@ -144,10 +144,8 @@ class ChatController {
     useChatStore.getState().setStatus('transcribing');
     try {
       const audioBlob = await conversationMicrophoneService.stopRecording();
-      console.log('[ChatController] Audio blob received:', { size: audioBlob.size, type: audioBlob.type });
       
       const transcription = await sttService.transcribe(audioBlob, useChatStore.getState().conversationId!, { stt_provider: STT_PROVIDER });
-      console.log('[ChatController] STT transcription result:', { text: transcription, length: transcription.length });
 
       // ✅ SAFETY CHECK - Only proceed to LLM if we have valid text from STT
       if (!transcription || transcription.trim().length === 0) {
@@ -177,25 +175,17 @@ class ChatController {
         meta: { stt_provider: STT_PROVIDER }
       };
 
-      console.log('[ChatController] Calling conversation-llm with valid transcription:', userMessageForApi);
       const assistantMessage = await llmService.conversationChat({
         conversationId: useChatStore.getState().conversationId!,
         userMessage: userMessageForApi,
       });
-
-      console.log('[ChatController] 🎯 CONVERSATION-LLM RESPONSE RECEIVED:');
-      console.log('[ChatController] - Message ID:', assistantMessage.id);
-      console.log('[ChatController] - Text:', assistantMessage.text?.slice(0, 100) + '...');
-      console.log('[ChatController] - AudioURL:', assistantMessage.audioUrl ? 'Present' : 'NOT PRESENT');
-      console.log('[ChatController] - Meta:', assistantMessage.meta);
 
       // Add the final assistant message
       useChatStore.getState().addMessage(assistantMessage);
 
       // For conversation mode, call TTS and wait for audio to complete
       if (assistantMessage.text && assistantMessage.id) {
-        console.log('[ChatController] ✅ Assistant message received, calling TTS service...');
-        console.log('[ChatController] 🔊 AUDIO: Requesting TTS for message:', assistantMessage.id);
+
         
         useChatStore.getState().setStatus('speaking');
         
@@ -212,7 +202,7 @@ class ChatController {
             return;
           }
           
-          console.log('[ChatController] 🎵 Audio playback completed, starting next turn');
+
           useChatStore.getState().setStatus('idle');
           this.isTurnActive = false;
           

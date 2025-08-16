@@ -36,7 +36,7 @@ class LlmService {
 
     // Conversation-specific LLM call with fire-and-forget TTS
   async conversationChat(request: Omit<LlmRequest, 'requestAudio'>): Promise<Message> {
-    console.log(`[LLM] Sending conversation message for ${request.conversationId} (with fire-and-forget TTS)...`);
+
 
     const { data, error } = await supabase.functions.invoke('conversation-llm', {
       body: {

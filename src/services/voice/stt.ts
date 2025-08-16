@@ -3,8 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 
 class SttService {
   async transcribe(audioBlob: Blob, conversationId?: string, meta?: Record<string, any>): Promise<string> {
-    console.log(`[STT] Transcribing with Google Speech-to-Text...`);
-    
     // Validate audio blob before processing
     if (!audioBlob || audioBlob.size === 0) {
       console.warn('[STT] Empty or missing audio blob, skipping transcription');
@@ -15,8 +13,6 @@ class SttService {
       console.warn('[STT] Audio blob too small:', audioBlob.size, 'bytes');
       throw new Error('Recording too short - please speak for longer');
     }
-    
-    console.log(`[STT] Audio blob validated - size: ${audioBlob.size} bytes`);
     
     // Convert blob to base64 for Google STT
     const base64Audio = await this.blobToBase64(audioBlob);
@@ -44,7 +40,7 @@ class SttService {
       throw new Error('No transcript received from Google STT');
     }
 
-    console.log(`[STT] Transcription result: "${data.transcript}"`);
+
     return data.transcript;
   }
 

@@ -9,7 +9,6 @@ export interface SpeakAssistantOptions {
 
 class ConversationTtsService {
   async speakAssistant({ conversationId, messageId, text }: SpeakAssistantOptions): Promise<void> {
-    console.log('[ConversationTTS] Starting TTS for message:', messageId);
     
     try {
       // Use direct fetch instead of supabase.functions.invoke for binary data
@@ -30,27 +29,21 @@ class ConversationTtsService {
 
       // Get the response as array buffer (binary audio data)
       const audioBuffer = await response.arrayBuffer();
-      console.log('[ConversationTTS] Audio buffer received:', audioBuffer.byteLength, 'bytes');
 
       if (audioBuffer.byteLength === 0) {
         console.error('[ConversationTTS] Empty audio buffer received');
         throw new Error('Empty audio data received from TTS');
       }
 
-      console.log('[ConversationTTS] Creating audio blob and playing...');
-      
       // Convert array buffer to blob and play
       const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
       const url = URL.createObjectURL(blob);
-      
-      console.log('[ConversationTTS] Blob created:', blob.size, 'bytes, type:', blob.type);
 
       const audio = new Audio(url);
       
       // Return a promise that resolves when audio ends
       return new Promise((resolve, reject) => {
         audio.onended = () => {
-          console.log('[ConversationTTS] Audio playback ended');
           URL.revokeObjectURL(url);
           resolve();
         };
@@ -67,10 +60,7 @@ class ConversationTtsService {
           reject(new Error(`Audio playback failed: ${audio.error?.message || 'Unknown audio error'}`));
         };
         
-        audio.onloadstart = () => console.log('[ConversationTTS] Audio loading started');
-        audio.oncanplay = () => console.log('[ConversationTTS] Audio ready to play');
-        
-        console.log('[ConversationTTS] Starting audio playback');
+
         audio.play().catch(playError => {
           console.error('[ConversationTTS] Audio play() failed:', playError);
           URL.revokeObjectURL(url);

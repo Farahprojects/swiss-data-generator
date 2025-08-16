@@ -10,7 +10,7 @@ const ReportChatScreen = () => {
   const navigate = useNavigate();
   const { uuid, token } = location.state || {};
 
-  console.log('[ReportChatScreen] On mount - uuid:', uuid, 'token:', !!token);
+  
 
   // Validation - now requires secure tokens
   if (!uuid || !token) {
