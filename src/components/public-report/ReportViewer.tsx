@@ -20,6 +20,7 @@ interface ReportViewerProps {
   reportData: ReportData;
   onBack: () => void;
   onStateReset?: () => void;
+  isModal?: boolean; // Add this prop
 }
 
 const ReportViewerActions: React.FC<{ guestId: string }> = ({ guestId }) => {
@@ -130,7 +131,8 @@ type TransitionPhase = 'idle' | 'fading' | 'clearing' | 'transitioning' | 'compl
 export const ReportViewer = ({ 
   reportData, 
   onBack, 
-  onStateReset 
+  onStateReset,
+  isModal = false // Default to false
 }: ReportViewerProps) => {
   const mountStartTime = performance.now();
   const isMobile = useIsMobile();
@@ -175,13 +177,15 @@ export const ReportViewer = ({
     }
   }, [showToggle, defaultView]);
 
-  // Lock body scroll when component mounts
+  // Lock body scroll when component mounts, only if not in modal mode
   useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, []);
+    if (!isModal) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = 'unset';
+      };
+    }
+  }, [isModal]);
 
   // Check email status when opening the Email modal
   useEffect(() => {
@@ -677,7 +681,7 @@ export const ReportViewer = ({
       )}
       
       {/* Full-screen overlay */}
-      <div className={`fixed inset-0 bg-white z-50 flex flex-col transition-opacity duration-300 ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}>
+      <div className={`bg-white z-50 flex flex-col transition-opacity duration-300 ${isTransitioning ? 'opacity-50' : 'opacity-100'} ${isModal ? 'relative w-full h-full' : 'fixed inset-0'}`}>
         {/* Header - Desktop only */}
         <div className="flex items-center justify-between px-4 py-4 border-b bg-white shadow-sm">
           <div className="flex items-center gap-4">
@@ -760,7 +764,7 @@ export const ReportViewer = ({
 
         {/* Mobile Footer - Only visible on mobile */}
         {isMobile && (
-          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50 safe-area-pb">
+          <div className={`bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50 safe-area-pb ${isModal ? 'absolute' : 'fixed'}`}>
             <div className="flex gap-3">
               <Button
                 variant="outline"

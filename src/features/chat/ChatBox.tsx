@@ -108,6 +108,7 @@ export const ChatBox = () => {
             <ReportViewer
               reportData={reportData}
               onBack={() => setIsReportModalOpen(false)}
+              isModal={true}
             />
           )}
         </DialogContent>

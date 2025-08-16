@@ -93,13 +93,16 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
           // Navigate to chat with the guestId (as uuid) and token.
           navigate('/chat', { state: { uuid: guestId, token: tokens.plain_token } });
           
-          clearInterval(intervalId); // Stop polling
+          clearInterval(intervalId); // Stop polling once the signal is found
         }
       }, POLLING_INTERVAL_MS);
 
-      // Cleanup
-      return () => clearInterval(intervalId);
-    }, [guestId, navigate]);
+      // Cleanup function to clear the interval when the component unmounts
+      return () => {
+        console.log(`[SuccessScreen] Unmounting, clearing polling for guestId: ${guestId}`);
+        clearInterval(intervalId);
+      };
+    }, [guestId]);
 
     const handleManualCheck = async () => {
       setIsChecking(true);
