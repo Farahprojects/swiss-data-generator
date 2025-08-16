@@ -1,17 +1,15 @@
 // src/screens/ReportChatScreen.tsx
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { ChatBox } from '@/features/chat/ChatBox';
-import { MobileViewportLock } from '@/features/chat/MobileViewportLock';
 import { useChat } from '@/features/chat/useChat';
+import { MobileViewportLock } from '@/features/chat/MobileViewportLock';
 
 const ReportChatScreen = () => {
   const { conversationId } = useParams<{ conversationId: string }>();
   const location = useLocation();
   const navigate = useNavigate();
   const { uuid, token } = location.state || {};
-
-  
 
   // Validation - now requires secure tokens
   if (!uuid || !token) {
@@ -30,10 +28,10 @@ const ReportChatScreen = () => {
 
   return (
     <MobileViewportLock active>
-      <div className="font-sans antialiased text-gray-800 bg-gray-50 h-[100dvh] overflow-hidden flex flex-col">
-        <div className="flex-1 flex min-h-0">
-          <ChatBox />
-        </div>
+      {/* This container now establishes a fixed, full-viewport context */}
+      <div className="font-sans antialiased text-gray-800 bg-gray-50 fixed inset-0 flex flex-col">
+        {/* ChatBox is now the direct child and will fill this container */}
+        <ChatBox />
       </div>
     </MobileViewportLock>
   );
