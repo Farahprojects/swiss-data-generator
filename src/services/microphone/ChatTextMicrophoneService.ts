@@ -314,7 +314,6 @@ class ChatTextMicrophoneServiceClass {
     // Clear refs
     this.mediaRecorder = null;
     this.analyser = null;
-    this.circularBuffer = [];
     this.audioLevel = 0;
     this.currentTraceId = null;
     this.recordingStartedAt = null;

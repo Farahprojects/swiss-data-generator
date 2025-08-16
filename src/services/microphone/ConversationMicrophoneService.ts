@@ -231,7 +231,6 @@ class ConversationMicrophoneServiceClass {
 
     // Clear refs
     this.mediaRecorder = null;
-    this.circularBuffer = [];
     this.analyser = null;
     this.audioLevel = 0;
     this.monitoringRef.current = false;

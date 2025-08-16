@@ -1,5 +1,6 @@
 // src/services/voice/conversationTts.ts
 import { supabase, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '@/integrations/supabase/client';
+import { ttsPlaybackMonitor } from './ttsPlaybackMonitor';
 
 export interface SpeakAssistantOptions {
   conversationId: string;
@@ -44,6 +45,7 @@ class ConversationTtsService {
       // Return a promise that resolves when audio ends
       return new Promise((resolve, reject) => {
         audio.onended = () => {
+          ttsPlaybackMonitor.cleanup();
           URL.revokeObjectURL(url);
           resolve();
         };
@@ -56,13 +58,19 @@ class ConversationTtsService {
             networkState: audio.networkState,
             error: audio.error
           });
+          ttsPlaybackMonitor.cleanup();
           URL.revokeObjectURL(url);
           reject(new Error(`Audio playback failed: ${audio.error?.message || 'Unknown audio error'}`));
         };
         
+        // Attach monitor before playing
+        audio.onloadeddata = () => {
+          ttsPlaybackMonitor.attachToAudio(audio);
+        };
 
         audio.play().catch(playError => {
           console.error('[ConversationTTS] Audio play() failed:', playError);
+          ttsPlaybackMonitor.cleanup();
           URL.revokeObjectURL(url);
           reject(playError);
         });
