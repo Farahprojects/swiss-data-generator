@@ -4,6 +4,7 @@ import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY") ?? "";
 const GOOGLE_LLM_TTS = Deno.env.get("GOOGLE_LLM_TTS") ?? "";
 
 const GOOGLE_MODEL = "gemini-2.5-flash";
@@ -94,7 +95,7 @@ Stay fully within the energetic-psychological lens at all times.`;
       }
     };
 
-    const apiUrl = `${GOOGLE_ENDPOINT}?key=${GOOGLE_LLM_TTS}`;
+    const apiUrl = `${GOOGLE_ENDPOINT}?key=${GOOGLE_API_KEY}`;
     console.log(`[conversation-llm-tts] Sending request to Google Gemini with ${contents.length} messages.`);
     
     const llmResponse = await fetch(apiUrl, {
