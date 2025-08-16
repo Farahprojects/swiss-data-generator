@@ -23,9 +23,6 @@ export const ChatBox = () => {
     <div className="flex flex-row flex-1 bg-white max-w-6xl w-full mx-auto md:border-x border-gray-100 min-h-0">
       {/* Left Sidebar (Desktop) */}
       <div className="hidden md:flex w-64 border-r border-gray-100 p-4 flex-col gap-4 bg-gray-50/50">
-        <button type="button" className="w-full text-left px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md border border-gray-200">
-          Report
-        </button>
         <ChatSidebarControls />
       </div>
 
@@ -46,9 +43,6 @@ export const ChatBox = () => {
               <div className="mb-3">
                 <h2 className="text-lg font-light italic">Settings</h2>
               </div>
-              <button type="button" className="w-full text-left px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md border border-gray-200 mb-3">
-                Report
-              </button>
               <ChatSidebarControls />
             </SheetContent>
           </Sheet>
