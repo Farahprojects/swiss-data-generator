@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
 import { useChatStore } from '@/core/store';
@@ -9,36 +9,14 @@ import { ChatSidebarControls } from './ChatSidebarControls';
 
 export const ChatBox = () => {
   const { error } = useChatStore();
-  const ttsProvider = useChatStore((s) => s.ttsProvider);
-  const ttsVoice = useChatStore((s) => s.ttsVoice);
-  const setTtsProvider = useChatStore((s) => s.setTtsProvider);
-  const setTtsVoice = useChatStore((s) => s.setTtsVoice);
   const messages = useChatStore((state) => state.messages);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const topSentinelRef = useRef<HTMLDivElement>(null);
-  const [isAtTop, setIsAtTop] = useState(true);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
-
-  // Observe top sentinel to toggle subtle header shadow only when scrolled
-  useEffect(() => {
-    const rootEl = scrollRef.current;
-    const sentinel = topSentinelRef.current;
-    if (!rootEl || !sentinel) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        setIsAtTop(entry.isIntersecting);
-      },
-      { root: rootEl, threshold: 0.01 }
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, []);
 
   return (
     <div className="flex flex-row flex-1 bg-white max-w-6xl w-full mx-auto md:border-x border-gray-100">
@@ -47,40 +25,47 @@ export const ChatBox = () => {
         <ChatSidebarControls />
       </div>
 
-      {/* Main Chat */}
-      <div className="flex flex-col flex-1">
-        {/* Scroll container includes header and content so sticky works correctly on iOS */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto">
-          {/* Invisible top sentinel to detect scroll position for header shadow */}
-          <div ref={topSentinelRef} aria-hidden="true" className="h-0 w-0" />
-          {/* Mobile Top Bar with Burger (inside scroll container) */}
-          <div className={`md:hidden flex items-center gap-2 p-3 bg-white sticky top-0 z-10 pt-safe ${isAtTop ? '' : 'shadow-sm'}`}>
-            <Sheet>
-              <SheetTrigger asChild>
-                <button aria-label="Open menu" className="p-2 rounded-md border border-gray-200 bg-white">
-                  <Menu className="w-5 h-5" />
-                </button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-[85%] sm:max-w-xs p-4">
-                <div className="mb-3">
-                  <h2 className="text-lg font-light italic">Settings</h2>
-                </div>
-                <ChatSidebarControls />
-              </SheetContent>
-            </Sheet>
-            <div className="flex-1" />
-          </div>
-          <div className="p-6">
-            <MessageList />
-          </div>
+      {/* Main Chat Area - This is a flex column that fills remaining space */}
+      <div className="flex flex-col flex-1 w-full min-w-0">
+        {/* Mobile Header (Static, not sticky) */}
+        <div className="md:hidden flex items-center gap-2 p-3 bg-white border-b border-gray-100 pt-safe">
+          <Sheet>
+            <SheetTrigger asChild>
+              <button
+                aria-label="Open menu"
+                className="p-2 rounded-md border border-gray-200 bg-white"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[85%] sm:max-w-xs p-4">
+              <div className="mb-3">
+                <h2 className="text-lg font-light italic">Settings</h2>
+              </div>
+              <ChatSidebarControls />
+            </SheetContent>
+          </Sheet>
+          <div className="flex-1" />
         </div>
+
+        {/* Message List (Scrolling Content) */}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-6">
+          <MessageList />
+        </div>
+
+        {/* Error Display */}
         {error && (
-          <div className="p-3 text-sm font-medium text-red-700 bg-red-100 border-t border-red-200">{error}</div>
+          <div className="p-3 text-sm font-medium text-red-700 bg-red-100 border-t border-red-200">
+            {error}
+          </div>
         )}
-        {/* Ensure bottom safe area is covered under the input */}
-        <div className="bg-white pb-safe">
+
+        {/* Chat Input Area (with bottom safe area padding) */}
+        <div className="border-t border-gray-100 pb-safe">
           <ChatInput />
         </div>
+
+        {/* Conversation Overlay (position: fixed, so doesn't affect layout) */}
         <ConversationOverlay />
       </div>
     </div>
