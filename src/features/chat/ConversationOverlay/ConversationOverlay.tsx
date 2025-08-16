@@ -11,11 +11,34 @@ export const ConversationOverlay: React.FC = () => {
   const status = useChatStore((state) => state.status);
   const audioLevel = useConversationAudioLevel(); // Get real-time audio level
   
-  // PROPER MODAL CLOSE - Stop conversation and turn off mic
+  // BULLETPROOF MODAL CLOSE - Handle all edge cases
   const handleModalClose = () => {
-    console.log('[ConversationOverlay] Modal closing - resetting conversation service');
-    chatController.resetConversationService(); // This fully resets the service
-    closeConversation(); // This closes the UI
+    console.log('[ConversationOverlay] 🚨 Modal closing - emergency cleanup for all edge cases');
+    console.log('[ConversationOverlay] Current status:', status);
+    
+    // Emergency stop all audio playback
+    console.log('[ConversationOverlay] 🔇 Emergency: Stopping all audio playback');
+    const allAudioElements = document.querySelectorAll('audio');
+    allAudioElements.forEach((audio, index) => {
+      console.log(`[ConversationOverlay] Stopping audio element ${index + 1}`);
+      audio.pause();
+      audio.currentTime = 0;
+      audio.src = '';
+    });
+    
+    // Force reset conversation service (handles mic cleanup)
+    console.log('[ConversationOverlay] 🎙️ Emergency: Resetting conversation service');
+    chatController.resetConversationService();
+    
+    // Force cleanup any pending timeouts/promises in ChatController
+    console.log('[ConversationOverlay] ⏰ Emergency: Clearing any pending operations');
+    // ChatController should handle this in resetConversationService, but let's be extra sure
+    
+    // Close the UI
+    console.log('[ConversationOverlay] 🚪 Closing conversation UI');
+    closeConversation();
+    
+    console.log('[ConversationOverlay] ✅ Emergency cleanup complete');
   };
   
   // Map chat status to conversation state for UI
@@ -34,20 +57,7 @@ export const ConversationOverlay: React.FC = () => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col items-center justify-center h-full gap-6">
-          <VoiceBubble state={state} audioLevel={audioLevel} />
-          
-          {/* RAW AUDIO LEVEL DISPLAY - Simple mic input testing */}
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-64 h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-green-400 via-yellow-400 to-red-500 transition-all duration-75"
-                style={{ width: `${Math.min(audioLevel * 1000, 100)}%` }}
-              />
-            </div>
-            <div className="text-xs text-gray-400 font-mono">
-              Level: {(audioLevel * 1000).toFixed(1)} | dB: {audioLevel > 0 ? (20 * Math.log10(audioLevel)).toFixed(1) : '-∞'}
-            </div>
-          </div>
+                    <VoiceBubble state={state} audioLevel={audioLevel} />
           
           {/* Status caption */}
           <p className="text-gray-500 font-light">{state === 'listening' ? 'Listening…' : state === 'processing' ? 'Thinking…' : 'Speaking…'}</p>

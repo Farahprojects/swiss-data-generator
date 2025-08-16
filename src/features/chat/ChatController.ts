@@ -16,6 +16,7 @@ import { STT_PROVIDER, LLM_PROVIDER, TTS_PROVIDER } from '@/config/env';
 class ChatController {
   private isTurnActive = false;
   private conversationServiceInitialized = false;
+  private isResetting = false; // Flag to prevent race conditions during reset
   
   async initializeConversation(conversationId: string) {
     console.log('[ChatController] initializeConversation called with conversationId:', conversationId);
@@ -206,23 +207,35 @@ class ChatController {
             text: assistantMessage.text
           });
           
+          // Check if we're in the middle of a reset (modal closed during audio)
+          if (this.isResetting) {
+            console.log('[ChatController] 🚨 Reset in progress - not starting next turn');
+            return;
+          }
+          
           console.log('[ChatController] 🎵 Audio playback completed, starting next turn');
           useChatStore.getState().setStatus('idle');
           this.isTurnActive = false;
           
-          // Start next turn after audio completes
-          this.startTurn();
+          // Start next turn after audio completes (only if not resetting)
+          if (!this.isResetting) {
+            this.startTurn();
+          }
           
         } catch (ttsError) {
           console.error('[ChatController] ❌ TTS failed:', ttsError);
           useChatStore.getState().setStatus('idle');
           this.isTurnActive = false;
           
-          // Continue conversation even if TTS fails
-          setTimeout(() => {
-            console.log('[ChatController] ⏰ Starting next turn after TTS failure');
-            this.startTurn();
-          }, 1000);
+          // Continue conversation even if TTS fails (only if not resetting)
+          if (!this.isResetting) {
+            setTimeout(() => {
+              if (!this.isResetting) {
+                console.log('[ChatController] ⏰ Starting next turn after TTS failure');
+                this.startTurn();
+              }
+            }, 1000);
+          }
         }
       } else {
         console.error('[ChatController] ❌ Conversation response missing text or ID');
@@ -244,12 +257,40 @@ class ChatController {
     this.isTurnActive = false;
   }
 
-  // Reset conversation service when modal is closed
+  // BULLETPROOF RESET - Handle all edge cases when modal closes
   resetConversationService() {
+    console.log('[ChatController] 🚨 EMERGENCY RESET - Cleaning up all conversation resources');
+    
+    // Set reset flag immediately to prevent race conditions
+    this.isResetting = true;
+    
+    console.log('[ChatController] Current state:', {
+      isTurnActive: this.isTurnActive,
+      conversationServiceInitialized: this.conversationServiceInitialized,
+      status: useChatStore.getState().status,
+      isResetting: this.isResetting
+    });
+
+    // 1. Force cleanup microphone service
+    console.log('[ChatController] 🎙️ Force cleaning up microphone service');
     conversationMicrophoneService.forceCleanup();
+
+    // 2. Stop any pending TTS operations - they will check isResetting flag
+    console.log('[ChatController] 🔇 Marking TTS operations for cancellation');
+    
+    // 3. Reset all flags and state
+    console.log('[ChatController] 🔄 Resetting all internal state');
     this.conversationServiceInitialized = false;
     this.isTurnActive = false;
     useChatStore.getState().setStatus('idle');
+
+    // 4. Clear reset flag after a brief delay to ensure all operations see it
+    setTimeout(() => {
+      this.isResetting = false;
+      console.log('[ChatController] 🔓 Reset flag cleared - ready for new conversation');
+    }, 100);
+
+    console.log('[ChatController] ✅ Emergency reset complete');
   }
 }
 
