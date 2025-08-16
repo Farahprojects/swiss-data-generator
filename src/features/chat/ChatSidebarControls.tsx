@@ -9,44 +9,17 @@ export const ChatSidebarControls: React.FC = () => {
   const ttsVoice = useChatStore((s) => s.ttsVoice);
   const setTtsProvider = useChatStore((s) => s.setTtsProvider);
   const setTtsVoice = useChatStore((s) => s.setTtsVoice);
-  const conversationId = useChatStore((s) => s.conversationId);
-  const { reportData, isLoading, error } = useReportData(conversationId);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-
-  const handleOpenReport = () => {
-    if (reportData) {
-      setIsReportModalOpen(true);
-    }
-  };
-
-  useEffect(() => {
-    if (isReportModalOpen) {
-      document.body.classList.add('no-scroll-report-open');
-    } else {
-      document.body.classList.remove('no-scroll-report-open');
-    }
-
-    return () => {
-      document.body.classList.remove('no-scroll-report-open');
-    };
-  }, [isReportModalOpen]);
 
   return (
     <>
       <div className="w-full flex flex-col gap-4">
-        {conversationId && (
-          <button
-            onClick={handleOpenReport}
-            disabled={isLoading || !reportData}
-            className="w-full text-left px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md disabled:opacity-50"
-          >
-            {isLoading
-              ? 'Loading Report...'
-              : reportData
-              ? 'View Full Report'
-              : 'Report Not Available'}
-          </button>
-        )}
+        <button
+          onClick={() => setIsReportModalOpen(true)}
+          className="w-full text-left px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md"
+        >
+          View Report
+        </button>
         <div>
           <p className="text-xs uppercase tracking-wider text-gray-500 mb-2">TTS Provider</p>
           <select
