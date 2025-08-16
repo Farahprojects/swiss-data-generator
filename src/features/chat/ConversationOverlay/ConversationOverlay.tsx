@@ -38,40 +38,33 @@ export const ConversationOverlay: React.FC = () => {
   if (!isConversationOpen) return null;
 
   return createPortal(
-    <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-      onClick={handleModalClose}
-    >
-      <div
-        className="relative w-full md:max-w-md bg-white rounded-t-3xl md:rounded-3xl shadow-xl p-8" 
-        style={{ height: '80%' }}
-        onClick={(e) => e.stopPropagation()}
+    <div className="fixed inset-0 z-50 bg-white pt-safe pb-safe">
+      {/* Close button - top left */}
+      <button
+        onClick={handleModalClose}
+        aria-label="Close conversation"
+        className="absolute top-3 left-3 text-gray-500 hover:text-gray-900"
       >
-        <div className="flex flex-col items-center justify-center h-full gap-6">
+        ✕
+      </button>
+      {/* Centered content */}
+      <div className="h-full w-full flex items-center justify-center px-6">
+        <div className="flex flex-col items-center justify-center gap-6">
           <AnimatePresence mode="wait">
             <motion.div
               key={state}
-              initial={{ opacity: 0, scale: 0.8 }}
+              initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
             >
               <VoiceBubble state={state} audioLevel={audioLevel} />
             </motion.div>
           </AnimatePresence>
-
-          {/* Status caption */}
           <p className="text-gray-500 font-light">
             {state === 'listening' ? 'Listening…' : state === 'processing' ? 'Thinking…' : 'Speaking…'}
           </p>
         </div>
-        {/* Close button */}
-        <button
-          onClick={handleModalClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700"
-        >
-          ✕
-        </button>
       </div>
     </div>,
     document.body
