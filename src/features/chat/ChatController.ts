@@ -6,6 +6,7 @@ import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
 import { ttsService } from '@/services/voice/tts';
 import { conversationTtsService } from '@/services/voice/conversationTts';
+import { cleanupGlobalAudioContext } from '@/utils/audioContextUtils';
 import { getMessagesForConversation } from '@/services/api/messages';
 import { Message } from '@/core/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -261,6 +262,9 @@ class ChatController {
     
     // Force cleanup microphone service
     conversationMicrophoneService.forceCleanup();
+    
+    // Clean up audio context and connections
+    cleanupGlobalAudioContext();
     
     // Reset all flags and state
     this.conversationServiceInitialized = false;

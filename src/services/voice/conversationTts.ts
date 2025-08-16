@@ -1,6 +1,7 @@
 // src/services/voice/conversationTts.ts
 import { supabase, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '@/integrations/supabase/client';
 import { ttsPlaybackMonitor } from './ttsPlaybackMonitor';
+import { cleanupAudioElement } from '@/utils/audioContextUtils';
 
 export interface SpeakAssistantOptions {
   conversationId: string;
@@ -47,6 +48,7 @@ class ConversationTtsService {
       return new Promise((resolve, reject) => {
         audio.onended = () => {
           ttsPlaybackMonitor.cleanup();
+          cleanupAudioElement(audio);
           URL.revokeObjectURL(url);
           resolve();
         };
@@ -60,6 +62,7 @@ class ConversationTtsService {
             error: audio.error
           });
           ttsPlaybackMonitor.cleanup();
+          cleanupAudioElement(audio);
           URL.revokeObjectURL(url);
           reject(new Error(`Audio playback failed: ${audio.error?.message || 'Unknown audio error'}`));
         };
@@ -78,6 +81,7 @@ class ConversationTtsService {
         audio.play().catch(playError => {
           console.error('[ConversationTTS] Audio play() failed:', playError);
           ttsPlaybackMonitor.cleanup();
+          cleanupAudioElement(audio);
           URL.revokeObjectURL(url);
           reject(playError);
         });

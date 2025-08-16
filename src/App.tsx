@@ -1,9 +1,10 @@
 
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
+import { cleanupGlobalAudioContext } from '@/utils/audioContextUtils';
 import "./App.css";
 
 // Public pages
@@ -81,6 +82,23 @@ function App() {
   if (typeof window === 'undefined') {
     return <div>Loading...</div>;
   }
+
+  // Global cleanup on app unmount/refresh
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      console.log('[App] Cleaning up global AudioContext on page unload');
+      cleanupGlobalAudioContext();
+    };
+
+    // Add event listener for page unload
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Cleanup on component unmount
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      cleanupGlobalAudioContext();
+    };
+  }, []);
 
   return (
     <ThemeProvider 

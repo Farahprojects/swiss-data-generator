@@ -3,7 +3,7 @@
  * Attaches to audio elements to provide visual feedback during TTS playback
  */
 
-import { attachToAudio as attachToAudioContext, getGlobalAudioContext } from '@/utils/audioContextUtils';
+import { attachToAudio as attachToAudioContext, getGlobalAudioContext, cleanupAudioElement } from '@/utils/audioContextUtils';
 
 class TtsPlaybackMonitor {
   private currentAudioLevel = 0;
@@ -169,22 +169,8 @@ class TtsPlaybackMonitor {
   disconnectAudio(audioElement: HTMLAudioElement): void {
     if (!audioElement) return;
 
-    try {
-      const srcNode = (audioElement as any)._srcNode;
-      if (srcNode) {
-        srcNode.disconnect();
-        console.log('[TtsPlaybackMonitor] Disconnected audio element source node');
-      }
-      
-      // Clear flags so new connections can be made
-      (audioElement as any)._srcNode = null;
-      (audioElement as any)._connected = false;
-      (audioElement as any)._analyserConnected = false;
-      
-      console.log('[TtsPlaybackMonitor] Audio element cleaned up for reuse');
-    } catch (error) {
-      console.error('[TtsPlaybackMonitor] Error disconnecting audio element:', error);
-    }
+    console.log('[TtsPlaybackMonitor] Cleaning up audio element using global utility');
+    cleanupAudioElement(audioElement);
   }
 }
 

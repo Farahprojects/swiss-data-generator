@@ -19,3 +19,43 @@ export async function attachToAudio(el: HTMLAudioElement): Promise<void> {
 export function getGlobalAudioContext(): AudioContext | null {
   return ctx;
 }
+
+/**
+ * Clean up audio element connections and flags
+ */
+export function cleanupAudioElement(el: HTMLAudioElement): void {
+  if (!el) return;
+  
+  try {
+    const srcNode = (el as any)._srcNode;
+    if (srcNode) {
+      srcNode.disconnect();
+      console.log('[AudioContextUtils] Disconnected audio element source node');
+    }
+    
+    // Clear all flags
+    (el as any)._srcNode = null;
+    (el as any)._connected = false;
+    (el as any)._analyserConnected = false;
+    
+    console.log('[AudioContextUtils] Audio element cleaned up');
+  } catch (error) {
+    console.error('[AudioContextUtils] Error cleaning up audio element:', error);
+  }
+}
+
+/**
+ * Clean up all audio connections and close AudioContext
+ * Call this on app unmount or page refresh
+ */
+export function cleanupGlobalAudioContext(): void {
+  if (ctx) {
+    try {
+      ctx.close();
+      console.log('[AudioContextUtils] Global AudioContext closed');
+    } catch (error) {
+      console.error('[AudioContextUtils] Error closing AudioContext:', error);
+    }
+    ctx = null;
+  }
+}
