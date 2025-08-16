@@ -40,20 +40,19 @@ export async function initTtsAudio(): Promise<{ audioEl: HTMLAudioElement; ctx: 
     audioEl.onerror = handleAudioError;
     audioEl.onplay = handleAudioPlay;
     audioEl.onpause = handleAudioPause;
-    
-    console.log('[TtsAudio] Audio element created with single event handlers');
+    // console.log('[TtsAudio] Audio element created with single event handlers');
   }
 
   // Create AudioContext once
   if (!ctx || ctx.state === "closed") {
     ctx = new AudioContext();
-    console.log('[TtsAudio] AudioContext created');
+    // console.log('[TtsAudio] AudioContext created');
   }
   
   // Resume if suspended (autoplay policy)
   if (ctx.state === "suspended") {
     await ctx.resume();
-    console.log('[TtsAudio] AudioContext resumed');
+    // console.log('[TtsAudio] AudioContext resumed');
   }
 
   // Create and connect nodes ONCE per audio element
@@ -66,8 +65,7 @@ export async function initTtsAudio(): Promise<{ audioEl: HTMLAudioElement; ctx: 
     // Connect once: audio -> analyser -> destination
     srcNode.connect(analyser);
     analyser.connect(ctx.destination);
-    
-    console.log('[TtsAudio] MediaElementSource and Analyser created and connected ONCE');
+    // console.log('[TtsAudio] MediaElementSource and Analyser created and connected ONCE');
   }
 
   return { audioEl, ctx };
@@ -107,7 +105,7 @@ export async function playTtsAudio(
     URL.revokeObjectURL(oldUrl);
   }
 
-  console.log('[TtsAudio] Audio source swapped, starting playback');
+  // console.log('[TtsAudio] Audio source swapped, starting playback');
 
   // Start monitoring
   startAudioLevelMonitoring();
@@ -127,7 +125,7 @@ export async function playTtsAudio(
   // If a newer play started, quietly stop this one
   if (myToken !== playToken) {
     try { audioEl.pause(); } catch {}
-    console.log('[TtsAudio] Play cancelled by newer request');
+    // console.log('[TtsAudio] Play cancelled by newer request');
   }
 }
 
@@ -135,7 +133,7 @@ export async function playTtsAudio(
  * Single onended handler - manages all cleanup and events
  */
 function handleAudioEnded(): void {
-  console.log('[TtsAudio] Audio playback ended');
+  // console.log('[TtsAudio] Audio playback ended');
   
   // Cleanup current blob URL
   if (audioEl?.src?.startsWith("blob:")) {
@@ -180,7 +178,7 @@ function handleAudioError(event: Event): void {
  * Audio play event
  */
 function handleAudioPlay(): void {
-  console.log('[TtsAudio] Audio playback started');
+  // console.log('[TtsAudio] Audio playback started');
   startAudioLevelMonitoring();
 }
 
@@ -188,7 +186,7 @@ function handleAudioPlay(): void {
  * Audio pause event
  */
 function handleAudioPause(): void {
-  console.log('[TtsAudio] Audio playback paused');
+  // console.log('[TtsAudio] Audio playback paused');
   stopAudioLevelMonitoring();
 }
 
@@ -199,7 +197,7 @@ function startAudioLevelMonitoring(): void {
   if (!isMonitoring && analyser && dataArray) {
     isMonitoring = true;
     updateAudioLevel();
-    console.log('[TtsAudio] Audio level monitoring started');
+    // console.log('[TtsAudio] Audio level monitoring started');
   }
 }
 
@@ -215,7 +213,7 @@ function stopAudioLevelMonitoring(): void {
     animationFrame = null;
   }
   
-  console.log('[TtsAudio] Audio level monitoring stopped');
+  // console.log('[TtsAudio] Audio level monitoring stopped');
 }
 
 /**
@@ -262,7 +260,7 @@ export function stopTtsAudio(): void {
     } catch {}
   }
   stopAudioLevelMonitoring();
-  console.log('[TtsAudio] Playback stopped');
+  // console.log('[TtsAudio] Playback stopped');
 }
 
 /**
@@ -287,5 +285,5 @@ export function cleanupTtsAudio(): void {
   analyser = null;
   dataArray = null;
   
-  console.log('[TtsAudio] Complete cleanup finished');
+  // console.log('[TtsAudio] Complete cleanup finished');
 }

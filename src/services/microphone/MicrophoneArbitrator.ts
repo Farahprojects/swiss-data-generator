@@ -43,7 +43,7 @@ class MicrophoneArbitratorService {
       this.notifyListeners();
     } else {
       // Keep this warning as it indicates a potential bug
-      console.warn(`[MicArbitrator] ⚠️ ${domainId} tried to release but doesn't own mic`);
+      // console.warn(`[MicArbitrator] ⚠️ ${domainId} tried to release but doesn't own mic`);
     }
   }
 
@@ -73,7 +73,7 @@ class MicrophoneArbitratorService {
    * FORCE RELEASE - Emergency cleanup
    */
   forceRelease(): void {
-    console.log('[MicArbitrator] 🚨 FORCE RELEASE - Emergency cleanup');
+    // console.log('[MicArbitrator] 🚨 FORCE RELEASE - Emergency cleanup');
     this.currentOwner = null;
     this.notifyListeners();
   }
