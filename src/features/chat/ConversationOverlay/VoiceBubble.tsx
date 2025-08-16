@@ -55,7 +55,10 @@ export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
   return (
     <motion.div
       className={`${baseClass} ${styles[state]}`}
-      animate={pulseAnimation}
+      animate={{
+        scale: pulseAnimation.scale,
+        boxShadow: pulseAnimation.boxShadow || '0 0 15px rgba(0, 0, 0, 0.3)',
+      }}
       transition={{
         repeat: Infinity,
         duration:
