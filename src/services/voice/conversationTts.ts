@@ -18,8 +18,7 @@ class ConversationTtsService {
 
       const endpoint = provider === 'openai' ? 'ttss-openai' : 'tts-speak';
 
-      const body: Record<string, any> = { conversationId, messageId, text };
-      if (provider === 'openai') body.voice = voice;
+      const body: Record<string, any> = { conversationId, messageId, text, voice };
 
       // Use direct fetch for binary data
       const response = await fetch(`${SUPABASE_URL}/functions/v1/${endpoint}`, {

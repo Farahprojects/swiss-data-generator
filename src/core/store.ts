@@ -34,7 +34,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   status: 'idle',
   error: null,
   ttsProvider: 'google',
-  ttsVoice: 'alloy',
+  ttsVoice: 'en-US-Studio-O',
 
   startConversation: (id) => set({ conversationId: id, messages: [], status: 'idle', error: null }),
 
