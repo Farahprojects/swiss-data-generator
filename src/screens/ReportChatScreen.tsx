@@ -2,6 +2,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { ChatBox } from '@/features/chat/ChatBox';
+import { MobileViewportLock } from '@/features/chat/MobileViewportLock';
 import { useChat } from '@/features/chat/useChat';
 
 const ReportChatScreen = () => {
@@ -28,11 +29,13 @@ const ReportChatScreen = () => {
   useChat(conversationId, uuid, token);
 
   return (
-    <div className="font-sans antialiased text-gray-800 bg-gray-50 h-screen overflow-hidden flex flex-col">
-      <div className="flex-1 flex min-h-0">
-        <ChatBox />
+    <MobileViewportLock active>
+      <div className="font-sans antialiased text-gray-800 bg-gray-50 h-[100dvh] overflow-hidden flex flex-col">
+        <div className="flex-1 flex min-h-0">
+          <ChatBox />
+        </div>
       </div>
-    </div>
+    </MobileViewportLock>
   );
 };
 
