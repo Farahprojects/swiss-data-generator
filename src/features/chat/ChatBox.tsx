@@ -8,6 +8,17 @@ import { Menu } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { ChatSidebarControls } from './ChatSidebarControls';
 import { useReportModal } from '@/contexts/ReportModalContext';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 
 export const ChatBox = () => {
   const { error } = useChatStore();
@@ -16,6 +27,7 @@ export const ChatBox = () => {
   const location = useLocation();
   const { uuid } = location.state || {}; // This is the guest_report_id
   const [isLoadingReport, setIsLoadingReport] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
   const { open } = useReportModal();
 
   useEffect(() => {
@@ -24,12 +36,24 @@ export const ChatBox = () => {
     }
   }, [messages]);
 
+  const handleFetchCompletion = (error?: string | null) => {
+    setIsLoadingReport(false);
+    if (error) {
+      setReportError(error);
+    }
+  };
+
   const openReport = () => {
     console.log('[OpenReport] reportId=', uuid);
     setIsLoadingReport(true);
-    // Pass a callback to be executed when the report viewer finishes loading
-    open(uuid, () => setIsLoadingReport(false));
+    setReportError(null); // Clear previous errors
+    open(uuid, handleFetchCompletion);
   };
+  
+  const retryFetch = () => {
+    setReportError(null);
+    openReport();
+  }
 
   return (
     <>
@@ -101,6 +125,22 @@ export const ChatBox = () => {
       </div>
 
       {/* Report Modal is now rendered by the provider */}
+      <AlertDialog open={!!reportError}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Error Fetching Report</AlertDialogTitle>
+            <AlertDialogDescription>
+              We're having issues fetching your data, please try again.
+              <br />
+              <small className="text-gray-500">{reportError}</small>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setReportError(null)}>Close</AlertDialogCancel>
+            <AlertDialogAction onClick={retryFetch}>Try Again</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

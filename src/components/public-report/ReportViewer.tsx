@@ -22,7 +22,7 @@ interface ReportViewerProps {
   onBack: () => void;
   onStateReset?: () => void;
   isModal?: boolean;
-  onLoad?: () => void;
+  onLoad?: (error?: string | null) => void;
 }
 
 const ReportViewerActions: React.FC<{ guestId: string }> = ({ guestId }) => {
@@ -138,21 +138,31 @@ export const ReportViewer = ({
   onLoad,
 }: ReportViewerProps) => {
   const { reportData, isLoading, error, fetchReport } = useReportData();
+  
+  const [activeView, setActiveView] = useState<'report' | 'astro'>('report');
 
   useEffect(() => {
     fetchReport(guestReportId);
   }, [guestReportId, fetchReport]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      onLoad?.(error);
+    }
+  }, [isLoading, error, onLoad]);
+  
+  // Set activeView based on available data once loaded, safely
+  useEffect(() => {
+    if (reportData) {
+      const hasReportContent = !!reportData.report_content && reportData.report_content.trim().length > 20;
+      const hasAstroData = !!reportData.swiss_data;
+      setActiveView(hasReportContent ? 'report' : hasAstroData ? 'astro' : 'report');
+    }
+  }, [reportData]);
+
   const mountStartTime = performance.now();
   const isMobile = useIsMobile();
   const [activeModal, setActiveModal] = useState<ModalType>(null);
-  const [activeView, setActiveView] = useState<'report' | 'astro'>(() => {
-    // Prioritize report content over astro data from initial state
-    const hasReportContent = !!reportData.report_content && reportData.report_content.trim().length > 20;
-    const hasAstroData = !!reportData.swiss_data;
-    
-    // Default to report if available, otherwise astro data
-    return hasReportContent ? 'report' : hasAstroData ? 'astro' : 'report';
-  });
   const [isCopping, setIsCopping] = useState(false);
   const [isCopyCompleted, setIsCopyCompleted] = useState(false);
   const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>('idle');
@@ -659,12 +669,6 @@ export const ReportViewer = ({
       });
     }
   };
-
-  useEffect(() => {
-    if (!isLoading) {
-      onLoad?.();
-    }
-  }, [isLoading, onLoad]);
 
   if (isLoading) {
     return (

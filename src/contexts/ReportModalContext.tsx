@@ -6,7 +6,7 @@ interface ReportReference {
 }
 
 interface ModalContext {
-  open: (guestReportId: string, onLoad?: () => void) => void;
+  open: (guestReportId: string, onLoad?: (error?: string | null) => void) => void;
   close: () => void;
   isOpen: boolean;
   currentReport: ReportReference | null;
@@ -17,9 +17,9 @@ const ReportModalContext = createContext<ModalContext | null>(null);
 export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
   const [currentReport, setCurrentReport] = useState<ReportReference | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [onLoadCallback, setOnLoadCallback] = useState<(() => void) | null>(null);
+  const [onLoadCallback, setOnLoadCallback] = useState<((error?: string | null) => void) | null>(null);
 
-  const open = useCallback((guestReportId: string, onLoad?: () => void) => {
+  const open = useCallback((guestReportId: string, onLoad?: (error?: string | null) => void) => {
     if (!guestReportId) return;
     setCurrentReport({ guestReportId });
     if (onLoad) {
