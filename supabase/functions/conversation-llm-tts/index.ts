@@ -32,29 +32,7 @@ serve(async (req) => {
       throw new Error("Missing 'conversationId' or 'userMessage' in request body.");
     }
     
-    // 1. Save the user's message first
-    console.log("[conversation-llm-tts] Inserting user message into DB with conversation_id:", conversationId);
-    const messageInsertData = {
-      conversation_id: conversationId,
-      role: 'user',
-      text: userMessage.text,
-      meta: userMessage.meta || {},
-    };
-    console.log("[conversation-llm-tts] Message INSERT data:", JSON.stringify(messageInsertData));
-    
-    const { data: newUserMessage, error: userMessageError } = await supabaseAdmin
-      .from('messages')
-      .insert(messageInsertData)
-      .select()
-      .single();
-
-    if (userMessageError) {
-      console.error("[conversation-llm-tts] Error saving user message:", userMessageError);
-      throw new Error(`Failed to save user message: ${userMessageError.message}`);
-    }
-    console.log("[conversation-llm-tts] User message saved successfully.");
-
-    // 2. Fetch the conversation history
+    // 1. Fetch the conversation history (user message already saved by STT)
     console.log("[conversation-llm-tts] Fetching conversation history from DB.");
     const { data: messages, error: historyError } = await supabaseAdmin
       .from('messages')
@@ -142,7 +120,7 @@ Stay fully within the energetic-psychological lens at all times.`;
     
     console.log("[conversation-llm-tts] Received successful response from Google Gemini.");
 
-    // 4. Save the assistant's message
+    // 3. Save the assistant's message
     console.log("[conversation-llm-tts] Inserting assistant message into DB with conversation_id:", conversationId);
     const assistantMessageInsertData = {
       conversation_id: conversationId,
@@ -165,7 +143,7 @@ Stay fully within the energetic-psychological lens at all times.`;
 
     console.log("[conversation-llm-tts] Assistant message saved. Now generating TTS audio...");
 
-    // 5. Generate TTS audio using the same pattern as google-text-to-speech
+    // 4. Generate TTS audio using the same pattern as google-text-to-speech
     const ttsResponse = await fetch(
       `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_LLM_TTS}`,
       {
@@ -223,7 +201,7 @@ Stay fully within the energetic-psychological lens at all times.`;
       console.warn("[conversation-llm-tts] Warning: Could not update message with TTS metadata:", updateError);
     }
 
-    // 6. Return combined response with both message and audio
+    // 5. Return combined response with both message and audio
     const combinedResponse = {
       ...newAssistantMessage,
       audioUrl: audioDataUrl

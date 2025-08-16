@@ -1,10 +1,15 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -13,7 +18,7 @@ serve(async (req) => {
   }
 
   try {
-    const { audioData, config, traceId } = await req.json();
+    const { audioData, config, traceId, conversationId, meta } = await req.json();
     
     // Comprehensive audio data validation
     if (!audioData) {
@@ -119,10 +124,38 @@ serve(async (req) => {
       // Still return it but log the warning
     }
 
+    // Save user message to database if conversationId provided
+    let savedMessageId = null;
+    if (conversationId && transcript && transcript.trim().length > 0) {
+      console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Saving user message to DB`);
+      try {
+        const { data: savedMessage, error: saveError } = await supabaseAdmin
+          .from('messages')
+          .insert({
+            conversation_id: conversationId,
+            role: 'user',
+            text: transcript,
+            meta: meta || { stt_provider: 'google' }
+          })
+          .select()
+          .single();
+
+        if (saveError) {
+          console.error(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Error saving user message:`, saveError);
+        } else {
+          savedMessageId = savedMessage.id;
+          console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} User message saved with ID:`, savedMessageId);
+        }
+      } catch (dbError) {
+        console.error(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Database error:`, dbError);
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         transcript,
-        confidence
+        confidence,
+        savedMessageId
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

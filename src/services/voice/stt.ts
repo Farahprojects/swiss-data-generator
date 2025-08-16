@@ -2,7 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 
 class SttService {
-  async transcribe(audioBlob: Blob): Promise<string> {
+  async transcribe(audioBlob: Blob, conversationId?: string, meta?: Record<string, any>): Promise<string> {
     console.log(`[STT] Transcribing with Google Speech-to-Text...`);
     
     // Validate audio blob before processing
@@ -24,6 +24,8 @@ class SttService {
     const { data, error } = await supabase.functions.invoke('google-speech-to-text', {
       body: {
         audioData: base64Audio,
+        conversationId,
+        meta,
         config: {
           encoding: 'WEBM_OPUS',
           sampleRateHertz: 48000,

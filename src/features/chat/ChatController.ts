@@ -144,7 +144,7 @@ class ChatController {
       const audioBlob = await conversationMicrophoneService.stopRecording();
       console.log('[ChatController] Audio blob received:', { size: audioBlob.size, type: audioBlob.type });
       
-      const transcription = await sttService.transcribe(audioBlob);
+      const transcription = await sttService.transcribe(audioBlob, useChatStore.getState().conversationId!, { stt_provider: STT_PROVIDER });
       console.log('[ChatController] STT transcription result:', { text: transcription, length: transcription.length });
 
       // ✅ SAFETY CHECK - Only proceed to LLM if we have valid text from STT
