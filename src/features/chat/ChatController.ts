@@ -5,9 +5,11 @@ import { audioPlayer } from '@/services/voice/audioPlayer';
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
 import { ttsService } from '@/services/voice/tts';
-import { getMessagesForConversation, appendMessage } from '@/services/api/messages';
+import { getMessagesForConversation } from '@/services/api/messages';
 import { Message } from '@/core/types';
 import { v4 as uuidv4 } from 'uuid';
+// No longer need appendMessage from the client
+// import { appendMessage } from '@/services/api/messages';
 import { STT_PROVIDER, LLM_PROVIDER, TTS_PROVIDER } from '@/config/env';
 
 class ChatController {
@@ -155,19 +157,16 @@ class ChatController {
         return;
       }
 
-      // Save user message to database and add to UI
-      console.log('[ChatController] Saving user message to database...');
-      const savedUserMessage = await appendMessage({
+      // Optimistically add user message to UI
+      const tempUserMessage: Message = {
+        id: uuidv4(),
         conversationId: useChatStore.getState().conversationId!,
         role: 'user' as const,
         text: transcription,
         audioUrl: URL.createObjectURL(audioBlob),
-        meta: { stt_provider: STT_PROVIDER }
-      });
-      console.log('[ChatController] User message saved to DB:', savedUserMessage.id);
-      
-      // Add to UI store
-      useChatStore.getState().addMessage(savedUserMessage);
+        createdAt: new Date().toISOString(),
+      };
+      useChatStore.getState().addMessage(tempUserMessage);
 
       useChatStore.getState().setStatus('thinking');
 
