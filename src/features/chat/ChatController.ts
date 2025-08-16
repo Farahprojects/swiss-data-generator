@@ -6,6 +6,7 @@ import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
 import { ttsService } from '@/services/voice/tts';
 import { conversationTtsService } from '@/services/voice/conversationTts';
+import { initTtsAudio, stopTtsAudio } from '@/services/voice/ttsAudio';
 import { getMessagesForConversation } from '@/services/api/messages';
 import { Message } from '@/core/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -190,6 +191,9 @@ class ChatController {
         useChatStore.getState().setStatus('speaking');
         
         try {
+          // Initialize TTS audio system on first use (after user gesture)
+          await initTtsAudio();
+          
           // Wait for TTS to complete
           await conversationTtsService.speakAssistant({
             conversationId: useChatStore.getState().conversationId!,
@@ -252,6 +256,9 @@ class ChatController {
     
     // Force cleanup microphone service
     conversationMicrophoneService.forceCleanup();
+    
+    // Stop any TTS playback
+    stopTtsAudio();
     
     // Reset all flags and state
     this.conversationServiceInitialized = false;

@@ -1,6 +1,6 @@
 // src/services/voice/conversationTts.ts
 import { supabase, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '@/integrations/supabase/client';
-import { ttsPlaybackMonitor } from './ttsPlaybackMonitor';
+import { playTtsAudio } from './ttsAudio';
 
 export interface SpeakAssistantOptions {
   conversationId: string;
@@ -36,44 +36,18 @@ class ConversationTtsService {
         throw new Error('Empty audio data received from TTS');
       }
 
-      // Convert array buffer to blob and play
-      const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
-      const url = URL.createObjectURL(blob);
-
-      const audio = new Audio(url);
-      
-      // Return a promise that resolves when audio ends
+      // Use the robust single-audio-element system
       return new Promise((resolve, reject) => {
-        audio.onended = () => {
-          ttsPlaybackMonitor.cleanup();
-          URL.revokeObjectURL(url);
-          resolve();
-        };
-        
-        audio.onerror = (error) => {
-          console.error('[ConversationTTS] Audio playback error:', error);
-          console.error('[ConversationTTS] Audio element state:', {
-            src: audio.src,
-            readyState: audio.readyState,
-            networkState: audio.networkState,
-            error: audio.error
-          });
-          ttsPlaybackMonitor.cleanup();
-          URL.revokeObjectURL(url);
-          reject(new Error(`Audio playback failed: ${audio.error?.message || 'Unknown audio error'}`));
-        };
-        
-        // Attach monitor before playing
-        audio.onloadeddata = () => {
-          ttsPlaybackMonitor.attachToAudio(audio);
-        };
-
-        audio.play().catch(playError => {
-          console.error('[ConversationTTS] Audio play() failed:', playError);
-          ttsPlaybackMonitor.cleanup();
-          URL.revokeObjectURL(url);
-          reject(playError);
-        });
+        playTtsAudio(audioBuffer, {
+          onEnd: () => {
+            console.log('[ConversationTTS] TTS playback completed');
+            resolve();
+          },
+          onError: (error) => {
+            console.error('[ConversationTTS] TTS playback failed:', error);
+            reject(error);
+          }
+        }).catch(reject);
       });
       
     } catch (error) {
