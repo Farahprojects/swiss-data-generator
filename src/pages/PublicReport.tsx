@@ -46,7 +46,6 @@ const PublicReport = () => {
 
   const handleReportCreated = (guestId: string, _paymentStatus: 'paid' | 'pending', name: string, email: string) => {
     // Always use the checker to authoritatively verify status and handle the next step.
-    console.log(`[PublicReport] Report created for ${guestId}. Handing off to checker to verify status.`);
     setActiveGuest({ guestId, name, email, isStripeReturn: false });
   };
 
@@ -112,8 +111,7 @@ const PublicReport = () => {
   try {
     return (
       <PricingProvider>
-        <ReportModalProvider>
-          <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-background">
             {/* Show cancelled payment message */}
             {showCancelledMessage && (
               <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md px-4">
@@ -350,7 +348,6 @@ const PublicReport = () => {
             {!isMobile && (
               <div id="report-form" ref={reportFormRef}>
                 <ReportForm onReportCreated={({ guestReportId, name, email, paymentStatus }) => {
-                  console.log("[PublicReport] Desktop form submission received.");
                   handleReportCreated(guestReportId, paymentStatus as ('paid' | 'pending'), name, email);
                 }} />
               </div>
@@ -381,7 +378,6 @@ const PublicReport = () => {
               isOpen={isMobileDrawerOpen}
               onOpenChange={setIsMobileDrawerOpen}
               onReportCreated={(guestReportId, paymentStatus, name, email) => {
-                console.log("[PublicReport] Mobile form submission received.");
                 handleReportCreated(guestReportId, paymentStatus as ('paid' | 'pending'), name, email);
                 setIsMobileDrawerOpen(false); // Close the sheet on submit
               }}
@@ -404,7 +400,6 @@ const PublicReport = () => {
                 name={activeGuest.name}
                 email={activeGuest.email}
                 onPaid={(paidData) => {
-                  console.log(`Report ${paidData.guestId} is paid! Ready to show success screen.`);
                   setPaidGuest({
                     guestId: paidData.guestId,
                     name: paidData.name,
@@ -422,8 +417,7 @@ const PublicReport = () => {
               </div>
             )}
           </div>
-        </ReportModalProvider>
-      </PricingProvider>
+        </PricingProvider>
     );
   } catch (err: any) {
     return <div>Sorry, something went wrong.</div>;

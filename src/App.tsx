@@ -57,14 +57,8 @@ const ConditionalAuth: React.FC<{ children: React.ReactNode }> = ({ children }) 
   }
 
   if (path.startsWith('/report')) {
-    // Public report needs pricing and report modal, but no auth
-    return (
-      <PricingProvider>
-        <ReportModalProvider>
-          {children}
-        </ReportModalProvider>
-      </PricingProvider>
-    );
+    // Public report now gets its providers from the global wrapper
+    return <>{children}</>;
   }
 
   // Public pages that still use auth-aware UI
@@ -91,54 +85,56 @@ function App() {
       disableTransitionOnChange
     >
       <QueryClientProvider client={queryClient}>
-        <Router>
-<ConditionalAuth>
-            <div className="min-h-screen bg-background overflow-hidden">
-              <Routes>
-                {/* Public Routes */}
-                <Route path="/" element={<Index />} />
-                <Route path="/features" element={<Features />} />
-                <Route path="/report" element={<PublicReport />} />
-                <Route path="/pricing" element={<Pricing />} />
-                <Route path="/contact" element={<Contact />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/legal" element={<Legal />} />
-                <Route path="/blog" element={<Blog />} />
-                <Route path="/blog/:slug" element={<BlogPost />} />
-                <Route path="/stripe-return" element={<StripeReturn />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/signup" element={<Signup />} />
-                <Route path="/auth/password" element={<ResetPassword />} />
-                <Route path="/preview/:previewId" element={<PreviewWebsite />} />
-                <Route path="/:slug/vibe" element={<CoachReportPage />} />
-                <Route path="/:slug" element={<PublicCoachWebsite />} />
+        <ReportModalProvider>
+          <Router>
+            <ConditionalAuth>
+              <div className="min-h-screen bg-background overflow-hidden">
+                <Routes>
+                  {/* Public Routes */}
+                  <Route path="/" element={<Index />} />
+                  <Route path="/features" element={<Features />} />
+                  <Route path="/report" element={<PublicReport />} />
+                  <Route path="/pricing" element={<Pricing />} />
+                  <Route path="/contact" element={<Contact />} />
+                  <Route path="/about" element={<About />} />
+                  <Route path="/legal" element={<Legal />} />
+                  <Route path="/blog" element={<Blog />} />
+                  <Route path="/blog/:slug" element={<BlogPost />} />
+                  <Route path="/stripe-return" element={<StripeReturn />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/signup" element={<Signup />} />
+                  <Route path="/auth/password" element={<ResetPassword />} />
+                  <Route path="/preview/:previewId" element={<PreviewWebsite />} />
+                  <Route path="/:slug/vibe" element={<CoachReportPage />} />
+                  <Route path="/:slug" element={<PublicCoachWebsite />} />
 
-                {/* Chat Route */}
-                <Route 
-                  path="/chat/:conversationId?" 
-                  element={
-                    <Suspense fallback={<div>Loading Chat...</div>}>
-                      <ReportChatScreen />
-                    </Suspense>
-                  } 
-                />
+                  {/* Chat Route */}
+                  <Route 
+                    path="/chat/:conversationId?" 
+                    element={
+                      <Suspense fallback={<div>Loading Chat...</div>}>
+                        <ReportChatScreen />
+                      </Suspense>
+                    } 
+                  />
 
-                {/* Authenticated Routes */}
-                <Route 
-                  path="/dashboard/*"
-                  element={
-                    <Suspense fallback={<div>Loading Dashboard...</div>}>
-                      <AuthedAppShell />
-                    </Suspense>
-                  } 
-                />
-                
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </div>
-            <Toaster />
-          </ConditionalAuth>
-        </Router>
+                  {/* Authenticated Routes */}
+                  <Route 
+                    path="/dashboard/*"
+                    element={
+                      <Suspense fallback={<div>Loading Dashboard...</div>}>
+                        <AuthedAppShell />
+                      </Suspense>
+                    } 
+                  />
+                  
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </div>
+              <Toaster />
+            </ConditionalAuth>
+          </Router>
+        </ReportModalProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );

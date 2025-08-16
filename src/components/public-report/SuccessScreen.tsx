@@ -5,6 +5,7 @@ import { logUserError } from "@/services/errorService";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useSessionManager } from "@/hooks/useSessionManager";
+import { useNavigate } from "react-router-dom";
 
 interface SuccessScreenProps {
   guestId: string;
@@ -27,6 +28,7 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
       );
     }
 
+    const navigate = useNavigate();
     const { open: openReportModal } = useReportModal();
     const [showError, setShowError] = useState(false);
     const [caseNumber, setCaseNumber] = useState<string | null>(null);
@@ -75,8 +77,25 @@ export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
         }
 
         if (data && data.length > 0) {
-          console.log(`[SuccessScreen] Polling found signal for ${guestId}. Opening report.`);
+          console.log(`[SuccessScreen] Polling found signal for ${guestId}. Navigating to chat.`);
+          
+          // Prime the modal to be ready
           openReportModal(guestId);
+
+          // Get secure tokens for chat
+          const { data: tokens, error: tokenError } = await supabase.functions.invoke('create-temp-report-data', {
+            body: { guest_report_id: guestId },
+          });
+
+          if (tokenError || !tokens) {
+            console.error('[SuccessScreen] Failed to get chat tokens:', tokenError);
+            setShowError(true);
+            return;
+          }
+
+          // Navigate to chat, which will open immediately. The modal is ready for when the user clicks.
+          navigate('/chat', { state: { uuid: tokens.temp_data_id, token: tokens.plain_token } });
+          
           clearInterval(intervalId); // Stop polling once the signal is found
         }
       }, 1000); // Poll every 1 second
