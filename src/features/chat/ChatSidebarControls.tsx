@@ -1,7 +1,8 @@
 import React from 'react';
 import { useChatStore } from '@/core/store';
 import { useReportModal } from '@/contexts/ReportModalContext';
-import { useLocation } from 'react-router-dom';
+import { sessionManager } from '@/utils/sessionManager';
+import { getChatTokens } from '@/services/auth/chatTokens';
 
 export const ChatSidebarControls: React.FC = () => {
   const ttsProvider = useChatStore((s) => s.ttsProvider);
@@ -9,8 +10,11 @@ export const ChatSidebarControls: React.FC = () => {
   const setTtsProvider = useChatStore((s) => s.setTtsProvider);
   const setTtsVoice = useChatStore((s) => s.setTtsVoice);
   const { open: openReportModal } = useReportModal();
-  const location = useLocation();
-  const { uuid } = location.state || {};
+  const { uuid } = getChatTokens();
+
+  const handleClearSession = async () => {
+    await sessionManager.clearSession({ redirectTo: '/', preserveNavigation: false });
+  };
 
   return (
     <div className="w-full flex flex-col gap-4">
@@ -24,6 +28,13 @@ export const ChatSidebarControls: React.FC = () => {
         </button>
         <button type="button" className="w-full text-left px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md border border-gray-200">
           Voice
+        </button>
+        <button
+          type="button"
+          onClick={handleClearSession}
+          className="w-full text-left px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md border border-gray-200"
+        >
+          Clear session
         </button>
       </div>
       <div>
