@@ -49,32 +49,38 @@ export const ChatBox = () => {
 
       {/* Main Chat */}
       <div className="flex flex-col flex-1">
-        {/* Mobile Top Bar with Burger */}
-        <div className={`md:hidden flex items-center gap-2 p-3 bg-white sticky top-0 z-10 pt-safe ${isAtTop ? '' : 'shadow-sm'}`}>
-          <Sheet>
-            <SheetTrigger asChild>
-              <button aria-label="Open menu" className="p-2 rounded-md border border-gray-200 bg-white">
-                <Menu className="w-5 h-5" />
-              </button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-[85%] sm:max-w-xs p-4">
-              <div className="mb-3">
-                <h2 className="text-lg font-light italic">Settings</h2>
-              </div>
-              <ChatSidebarControls />
-            </SheetContent>
-          </Sheet>
-          <div className="flex-1" />
-        </div>
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-6">
+        {/* Scroll container includes header and content so sticky works correctly on iOS */}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto">
           {/* Invisible top sentinel to detect scroll position for header shadow */}
           <div ref={topSentinelRef} aria-hidden="true" className="h-0 w-0" />
-          <MessageList />
+          {/* Mobile Top Bar with Burger (inside scroll container) */}
+          <div className={`md:hidden flex items-center gap-2 p-3 bg-white sticky top-0 z-10 pt-safe ${isAtTop ? '' : 'shadow-sm'}`}>
+            <Sheet>
+              <SheetTrigger asChild>
+                <button aria-label="Open menu" className="p-2 rounded-md border border-gray-200 bg-white">
+                  <Menu className="w-5 h-5" />
+                </button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-[85%] sm:max-w-xs p-4">
+                <div className="mb-3">
+                  <h2 className="text-lg font-light italic">Settings</h2>
+                </div>
+                <ChatSidebarControls />
+              </SheetContent>
+            </Sheet>
+            <div className="flex-1" />
+          </div>
+          <div className="p-6">
+            <MessageList />
+          </div>
         </div>
         {error && (
           <div className="p-3 text-sm font-medium text-red-700 bg-red-100 border-t border-red-200">{error}</div>
         )}
-        <ChatInput />
+        {/* Ensure bottom safe area is covered under the input */}
+        <div className="bg-white pb-safe">
+          <ChatInput />
+        </div>
         <ConversationOverlay />
       </div>
     </div>
