@@ -44,12 +44,11 @@ export const ChatSidebarControls: React.FC = () => {
             value={ttsVoice}
             onChange={(e) => setTtsVoice(e.target.value)}
           >
-            {/* Google HD/Studio voices */}
-            <option value="en-US-Studio-O">en-US-Studio-O (F)</option>
-            <option value="en-US-Studio-Q">en-US-Studio-Q (F)</option>
-            <option value="en-US-Studio-K">en-US-Studio-K (M)</option>
-            <option value="en-US-Studio-J">en-US-Studio-J (M)</option>
-            <option value="en-US-Studio-M">en-US-Studio-M (M)</option>
+            <option value="en-US-Neural2-F">en-US-Neural2-F (F)</option>
+            <option value="en-US-Neural2-G">en-US-Neural2-G (F)</option>
+            <option value="en-US-Neural2-C">en-US-Neural2-C (M)</option>
+            <option value="en-GB-Neural2-A">en-GB-Neural2-A (F)</option>
+            <option value="en-AU-Neural2-A">en-AU-Neural2-A (F)</option>
           </select>
         )}
       </div>
