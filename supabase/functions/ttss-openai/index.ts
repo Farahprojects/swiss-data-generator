@@ -6,11 +6,16 @@ const CORS = {
 };
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY_THREE") ?? "";
+const ALLOWED_OPENAI_VOICES = new Set([
+  "alloy", "ash", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer",
+]);
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   try {
+    const start = Date.now();
+    console.log("[ttss-openai] START", new Date(start).toISOString());
     if (!OPENAI_API_KEY) {
       return new Response(JSON.stringify({ error: "Missing OPENAI_API_KEY_THREE" }), {
         status: 500,
@@ -19,6 +24,7 @@ serve(async (req) => {
     }
 
     const { conversationId, messageId, text, voice } = await req.json();
+    console.log("[ttss-openai] Payload", { conversationId, messageId, textLength: text?.length, voice });
 
     if (!text) {
       return new Response(JSON.stringify({ error: "missing text" }), {
@@ -27,8 +33,13 @@ serve(async (req) => {
       });
     }
 
-    const selectedVoice = (voice || "alloy").toString();
+    let selectedVoice = (voice || "alloy").toString();
+    if (!ALLOWED_OPENAI_VOICES.has(selectedVoice)) {
+      console.warn("[ttss-openai] Invalid voice for OpenAI:", selectedVoice, "→ falling back to 'alloy'");
+      selectedVoice = "alloy";
+    }
 
+    console.log("[ttss-openai] Calling OpenAI TTS with voice:", selectedVoice);
     const ttsRes = await fetch("https://api.openai.com/v1/audio/speech", {
       method: "POST",
       headers: {
@@ -43,8 +54,10 @@ serve(async (req) => {
       }),
     });
 
+    console.log("[ttss-openai] OpenAI response status:", ttsRes.status);
     if (!ttsRes.ok) {
       const err = await ttsRes.text();
+      console.error("[ttss-openai] OpenAI error:", ttsRes.status, err);
       return new Response(JSON.stringify({ error: `OpenAI TTS ${ttsRes.status}: ${err}` }), {
         status: 500,
         headers: { ...CORS, "Content-Type": "application/json" },
@@ -52,6 +65,7 @@ serve(async (req) => {
     }
 
     const bytes = new Uint8Array(await ttsRes.arrayBuffer());
+    console.log("[ttss-openai] Bytes length:", bytes.byteLength, "durationMs:", Date.now() - start);
 
     return new Response(bytes, {
       status: 200,
@@ -63,6 +77,7 @@ serve(async (req) => {
       },
     });
   } catch (e) {
+    console.error("[ttss-openai] Unexpected error:", e);
     return new Response(JSON.stringify({ error: e.message ?? String(e) }), {
       status: 500,
       headers: { ...CORS, "Content-Type": "application/json" },
