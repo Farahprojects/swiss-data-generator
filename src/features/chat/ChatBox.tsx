@@ -1,16 +1,18 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
 import { useChatStore } from '@/core/store';
 import { ConversationOverlay } from './ConversationOverlay/ConversationOverlay';
 import { Menu } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ChatSidebarControls } from './ChatSidebarControls';
 
 export const ChatBox = () => {
   const { error } = useChatStore();
   const messages = useChatStore((state) => state.messages);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [isReportOpen, setIsReportOpen] = useState(false);
 
   useEffect(() => {
     // Scroll to the bottom of the message list when new messages are added
@@ -23,6 +25,13 @@ export const ChatBox = () => {
     <div className="flex flex-row flex-1 bg-white max-w-6xl w-full mx-auto md:border-x border-gray-100 min-h-0">
       {/* Left Sidebar (Desktop) */}
       <div className="hidden md:flex w-64 border-r border-gray-100 p-4 flex-col gap-4 bg-gray-50/50">
+        <button
+          type="button"
+          onClick={() => setIsReportOpen(true)}
+          className="w-full text-left px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md"
+        >
+          View Report
+        </button>
         <ChatSidebarControls />
       </div>
 
@@ -43,6 +52,13 @@ export const ChatBox = () => {
               <div className="mb-3">
                 <h2 className="text-lg font-light italic">Settings</h2>
               </div>
+              <button
+                type="button"
+                onClick={() => setIsReportOpen(true)}
+                className="w-full text-left px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md mb-3"
+              >
+                View Report
+              </button>
               <ChatSidebarControls />
             </SheetContent>
           </Sheet>
@@ -70,5 +86,15 @@ export const ChatBox = () => {
         <ConversationOverlay />
       </div>
     </div>
+
+    {/* Report Modal - opens on demand, content handled by report viewer internally */}
+    <Dialog open={isReportOpen} onOpenChange={setIsReportOpen}>
+      <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
+        {/* Intentionally not wiring data here as per request; modal is invoked only */}
+        <div className="flex-1 flex items-center justify-center text-sm text-gray-500">
+          Report modal placeholder
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
