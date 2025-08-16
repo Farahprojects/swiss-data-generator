@@ -14,6 +14,8 @@ interface ChatState {
   messages: Message[];
   status: ChatStatus;
   error: string | null;
+  ttsProvider?: 'google' | 'openai';
+  ttsVoice?: string;
 
   startConversation: (id: string) => void;
   loadMessages: (messages: Message[]) => void;
@@ -21,6 +23,8 @@ interface ChatState {
   updateMessage: (id: string, updates: Partial<Message>) => void;
   setStatus: (status: ChatStatus) => void;
   setError: (error: string | null) => void;
+  setTtsProvider: (p: 'google' | 'openai') => void;
+  setTtsVoice: (v: string) => void;
   clearChat: () => void;
 }
 
@@ -29,6 +33,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   messages: [],
   status: 'idle',
   error: null,
+  ttsProvider: 'google',
+  ttsVoice: 'alloy',
 
   startConversation: (id) => set({ conversationId: id, messages: [], status: 'idle', error: null }),
 
@@ -46,6 +52,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setStatus: (status) => set({ status }),
   
   setError: (error) => set({ error, status: error ? 'error' : get().status }),
+
+  setTtsProvider: (p) => set({ ttsProvider: p }),
+  setTtsVoice: (v) => set({ ttsVoice: v }),
 
   clearChat: () => set({ conversationId: null, messages: [], status: 'idle', error: null }),
 }));

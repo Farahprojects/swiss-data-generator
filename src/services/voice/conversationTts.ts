@@ -1,6 +1,7 @@
 // src/services/voice/conversationTts.ts
 import { supabase, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '@/integrations/supabase/client';
 import { playTtsAudio } from './ttsAudio';
+import { useChatStore } from '@/core/store';
 
 export interface SpeakAssistantOptions {
   conversationId: string;
@@ -12,14 +13,22 @@ class ConversationTtsService {
   async speakAssistant({ conversationId, messageId, text }: SpeakAssistantOptions): Promise<void> {
     
     try {
-      // Use direct fetch instead of supabase.functions.invoke for binary data
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/tts-speak`, {
+      const provider = useChatStore.getState().ttsProvider || 'google';
+      const voice = useChatStore.getState().ttsVoice || 'alloy';
+
+      const endpoint = provider === 'openai' ? 'ttss-openai' : 'tts-speak';
+
+      const body: Record<string, any> = { conversationId, messageId, text };
+      if (provider === 'openai') body.voice = voice;
+
+      // Use direct fetch for binary data
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ conversationId, messageId, text })
+        body: JSON.stringify(body)
       });
 
       if (!response.ok) {
