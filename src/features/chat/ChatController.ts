@@ -184,18 +184,19 @@ class ChatController {
       // Add the final assistant message
       useChatStore.getState().addMessage(assistantMessage);
 
-      // For conversation mode, audio is always included from combined LLM+TTS
-      if (assistantMessage.text && assistantMessage.audioUrl) {
-        console.log('[ChatController] Playing conversation audio (LLM+TTS combined)');
-        audioPlayer.play(assistantMessage.audioUrl, () => {
-          console.log('[ChatController] Conversation audio ended - starting next turn');
-          useChatStore.getState().setStatus('idle');
-          this.isTurnActive = false;
-          // Automatically start next turn for continuous conversation
+      // For conversation mode, TTS is handled by fire-and-forget call
+      // Just proceed to next turn after a brief pause
+      if (assistantMessage.text) {
+        console.log('[ChatController] Assistant message received, TTS handled by fire-and-forget');
+        useChatStore.getState().setStatus('idle');
+        this.isTurnActive = false;
+        // Brief pause before starting next turn (allow TTS to potentially play)
+        setTimeout(() => {
+          console.log('[ChatController] Starting next turn after brief pause');
           this.startTurn();
-        });
+        }, 1000);
       } else {
-        console.error('[ChatController] Conversation response missing text or audio');
+        console.error('[ChatController] Conversation response missing text');
         useChatStore.getState().setStatus('idle');
         this.isTurnActive = false;
       }

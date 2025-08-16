@@ -34,11 +34,11 @@ class LlmService {
     return data as Message;
   }
 
-  // Conversation-specific LLM+TTS combined call
+    // Conversation-specific LLM call with fire-and-forget TTS
   async conversationChat(request: Omit<LlmRequest, 'requestAudio'>): Promise<Message> {
-    console.log(`[LLM] Sending conversation message for ${request.conversationId} (with auto-TTS)...`);
-    
-    const { data, error } = await supabase.functions.invoke('conversation-llm-tts', {
+    console.log(`[LLM] Sending conversation message for ${request.conversationId} (with fire-and-forget TTS)...`);
+
+    const { data, error } = await supabase.functions.invoke('conversation-llm', {
       body: {
         conversationId: request.conversationId,
         userMessage: request.userMessage,
@@ -46,11 +46,11 @@ class LlmService {
     });
 
     if (error) {
-      throw new Error(`Error invoking conversation-llm-tts: ${error.message}`);
+      throw new Error(`Error invoking conversation-llm: ${error.message}`);
     }
 
     if (data.error) {
-      throw new Error(`conversation-llm-tts returned an error: ${data.error}`);
+      throw new Error(`conversation-llm returned an error: ${data.error}`);
     }
 
     return data as Message;
