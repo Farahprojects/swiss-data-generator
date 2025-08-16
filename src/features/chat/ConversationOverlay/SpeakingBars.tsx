@@ -6,20 +6,18 @@ interface Props {
 }
 
 export const SpeakingBars: React.FC<Props> = ({ audioLevel }) => {
-  // Four bars with slightly different responsiveness for a subtle wave effect
+  // Four bars with slightly different responsiveness for a subtle variation
   const bars = Array.from({ length: 4 }, (_, index) => {
-    const responsiveness = 0.6 + index * 0.12; // 0.6, 0.72, 0.84, 0.96
+    const responsiveness = 0.7 + index * 0.1; // 0.7, 0.8, 0.9, 1.0
 
-    // Scale from center: keep it smaller at rest and grow with audio
-    // Half-size baseline so it feels compact ("not long candles")
-    const minScale = 0.45;
-    const extra = Math.min(0.75, audioLevel * responsiveness); // cap growth
-    const scaleY = minScale + extra; // 0.45 .. ~1.2
+    // Scale from center: compact baseline, grow with audio
+    const minScale = 0.5;
+    const extra = Math.min(0.7, audioLevel * responsiveness); // cap growth
+    const scaleY = minScale + extra; // ~0.5 .. 1.2
 
     return {
       id: index,
       scaleY,
-      delay: index * 0.06, // slight phase shift
     };
   });
 
@@ -31,19 +29,18 @@ export const SpeakingBars: React.FC<Props> = ({ audioLevel }) => {
           className="bg-black rounded-full"
           style={{
             width: '16px', // thicker bars
-            height: '56px', // shorter overall height; we animate from center
+            height: '56px', // center-anchored height
             transformOrigin: 'center',
           }}
           animate={{
             scaleY: bar.scaleY,
-            opacity: audioLevel > 0.02 ? 1 : 0.7,
+            opacity: audioLevel > 0.02 ? 1 : 0.75,
           }}
           transition={{
             scaleY: {
               type: 'spring',
               stiffness: 380,
-              damping: 26,
-              delay: bar.delay,
+              damping: 28,
             },
             opacity: { duration: 0.15 },
           }}

@@ -16,60 +16,46 @@ export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
     return <SpeakingBars audioLevel={ttsAudioLevel} />;
   }
 
-  // Smoother bubble for listening and processing
-  const baseClass =
-    'flex items-center justify-center rounded-full w-24 h-24 md:w-32 md:h-32 shadow-lg';
+  // Bubble base
+  const baseClass = 'flex items-center justify-center rounded-full w-24 h-24 md:w-32 md:h-32 shadow-lg';
 
-  // Enhanced visual feedback based on audio level (matches VAD threshold)
+  // Detect voice for a slightly more active pulse when user is speaking
   const isVoiceDetected = audioLevel > 0.05;
 
-  // Clean black styling for all states (needed for type checking even though replying returns early)
+  // Styles per state (visual only)
   const styles: Record<'listening' | 'processing' | 'replying', string> = {
     listening: 'bg-black shadow-gray-800/50',
-    processing: 'bg-black shadow-gray-800/50', 
+    processing: 'bg-black shadow-gray-800/50',
     replying: 'bg-black shadow-gray-800/50',
   };
 
-  // Smoother pulsing animations with spring physics
+  // Smooth, subtle pulse of the whole bubble (no shadow pulsing)
   const pulseAnimation =
-    isVoiceDetected
+    state === 'listening'
       ? {
-          scale: [1, 1.35, 1], // Make the pulse significantly larger when voice is detected
-          boxShadow: [
-            '0 0 15px rgba(0, 0, 0, 0.3)',
-            '0 0 35px rgba(0, 0, 0, 0.6)', // More intense shadow
-            '0 0 15px rgba(0, 0, 0, 0.3)',
-          ],
-        }
-      : state === 'listening'
-      ? {
-          scale: [1, 1.15, 1], // A gentle, larger pulse when waiting
-          opacity: [0.9, 1, 0.9],
+          scale: isVoiceDetected ? [1, 1.10, 1] : [1, 1.06, 1],
+          opacity: [0.96, 1, 0.96],
         }
       : state === 'processing'
       ? {
-          scale: [1, 0.95, 1], // A subtle shrink for thinking
+          scale: [1, 0.98, 1], // very subtle "thinking" contraction
+          opacity: [1, 0.98, 1],
         }
-      : { scale: [1, 1.02, 1] }; // Default fallback
+      : { scale: [1, 1, 1], opacity: [1, 1, 1] };
+
+  const duration = state === 'listening' ? (isVoiceDetected ? 1.0 : 1.6) : 1.2;
 
   return (
     <motion.div
       className={`${baseClass} ${styles[state]}`}
-      animate={pulseAnimation}
+      style={{ transformOrigin: 'center', willChange: 'transform, opacity' }}
+      animate={{ scale: pulseAnimation.scale, opacity: pulseAnimation.opacity }}
       transition={{
         repeat: Infinity,
-        duration:
-          state === 'listening' && isVoiceDetected
-            ? 0.5 // Faster, more responsive pulse
-            : state === 'listening'
-            ? 2.5 // Slower breathing when waiting
-            : state === 'processing'
-            ? 1.5 // A slightly faster thinking pulse
-            : 2,
+        repeatType: 'mirror',
+        duration,
         ease: 'easeInOut',
-        type: 'spring',
-        stiffness: 100,
-        damping: 15,
+        type: 'tween',
       }}
     />
   );
