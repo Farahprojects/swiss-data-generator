@@ -20,7 +20,7 @@ class ChatController {
   private isResetting = false; // Flag to prevent race conditions during reset
   
   async initializeConversation(conversationId: string) {
-    console.log('[ChatController] initializeConversation called with conversationId:', conversationId);
+
     
     // FAIL FAST: conversationId is now required
     if (!conversationId) {
@@ -28,14 +28,14 @@ class ChatController {
       throw new Error('conversationId is required for conversation initialization');
     }
     
-    console.log('[ChatController] Using existing conversationId:', conversationId);
+
     useChatStore.getState().startConversation(conversationId);
     
     // Load existing messages for this conversation (for page refresh)
     try {
-      console.log('[ChatController] Loading existing messages for conversation:', conversationId);
+
       const existingMessages = await getMessagesForConversation(conversationId);
-      console.log('[ChatController] Found', existingMessages.length, 'existing messages');
+
       
       if (existingMessages.length > 0) {
         useChatStore.getState().loadMessages(existingMessages);

@@ -69,7 +69,7 @@ export const listConversations = async (): Promise<Partial<Conversation>[]> => {
 };
 
 export const getOrCreateConversation = async (uuid: string, token: string): Promise<{ conversationId: string }> => {
-  console.log('[getOrCreateConversation] Called with uuid:', uuid, 'hasToken:', !!token);
+
   
   // FAIL FAST: Validate inputs
   if (!uuid) {
@@ -92,7 +92,7 @@ export const getOrCreateConversation = async (uuid: string, token: string): Prom
   if (fetchError) throw new Error(fetchError.message);
 
   if (existing) {
-    console.log('[getOrCreateConversation] Found existing conversation:', existing.id);
+
     
     // Even for existing conversations, try to inject context if it hasn't been done
     await injectContextMessages(existing.id, uuid, token);
@@ -135,7 +135,7 @@ export const getOrCreateConversation = async (uuid: string, token: string): Prom
 
 // Helper function to inject context from temp_report_data
 const injectContextMessages = async (conversationId: string, uuid: string, token: string): Promise<void> => {
-  console.log('[injectContextMessages] Starting context injection for conversation:', conversationId);
+
   
   // Check if we've already injected context for this conversation
   const { data: existingMessages, error: checkError } = await supabase
@@ -152,7 +152,7 @@ const injectContextMessages = async (conversationId: string, uuid: string, token
   }
 
   if (existingMessages && existingMessages.length > 0) {
-    console.log('[injectContextMessages] Context already injected for this conversation, skipping');
+
     return;
   }
 
