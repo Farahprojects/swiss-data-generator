@@ -39,10 +39,10 @@ export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
       }
     : state === 'processing'
     ? { 
-        scale: [1, 0.5, 1], // Half size pulse for thinking mode
-        opacity: [1, 0.7, 1]
+        scale: [1, 0.85, 1], // Subtle shrink for thinking mode
+        opacity: [1, 0.8, 1]
       }
-    : { scale: [1, 1.05, 1] }; // Minimal pulse for replying
+    : { scale: [1, 1.02, 1] }; // Very minimal pulse for replying
 
   return (
     <motion.div
