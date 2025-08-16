@@ -6,45 +6,46 @@ interface Props {
 }
 
 export const SpeakingBars: React.FC<Props> = ({ audioLevel }) => {
-  // Create 4 bars with different heights - middle ones taller, sides shorter
+  // Four bars with slightly different responsiveness for a subtle wave effect
   const bars = Array.from({ length: 4 }, (_, index) => {
-    // Middle bars (1, 2) are taller, side bars (0, 3) are shorter
-    const baseHeight = index === 1 || index === 2 ? 40 : 24; // Middle: 40px, Sides: 24px
-    const responsiveness = 0.7 + index * 0.1; // Different sensitivity per bar
-    const audioHeight = audioLevel * 80 * responsiveness; // Increased scale for taller bars
-    const totalHeight = Math.max(baseHeight, baseHeight + audioHeight);
-    
+    const responsiveness = 0.6 + index * 0.12; // 0.6, 0.72, 0.84, 0.96
+
+    // Scale from center: keep it smaller at rest and grow with audio
+    // Half-size baseline so it feels compact ("not long candles")
+    const minScale = 0.45;
+    const extra = Math.min(0.75, audioLevel * responsiveness); // cap growth
+    const scaleY = minScale + extra; // 0.45 .. ~1.2
+
     return {
       id: index,
-      height: totalHeight,
-      delay: index * 0.05, // Slight delay for wave effect
+      scaleY,
+      delay: index * 0.06, // slight phase shift
     };
   });
 
   return (
-    <div className="flex items-end justify-center gap-2 h-16 w-24">
+    <div className="flex items-center justify-center gap-3 h-16 w-28">
       {bars.map((bar) => (
         <motion.div
           key={bar.id}
           className="bg-black rounded-full"
           style={{
-            width: '10px',
-            height: `${bar.height}px`,
+            width: '16px', // thicker bars
+            height: '56px', // shorter overall height; we animate from center
+            transformOrigin: 'center',
           }}
           animate={{
-            height: `${bar.height}px`,
-            opacity: audioLevel > 0.01 ? 1 : 0.6, // Dim when no audio
+            scaleY: bar.scaleY,
+            opacity: audioLevel > 0.02 ? 1 : 0.7,
           }}
           transition={{
-            height: {
+            scaleY: {
               type: 'spring',
-              stiffness: 300,
-              damping: 30,
+              stiffness: 380,
+              damping: 26,
               delay: bar.delay,
             },
-            opacity: {
-              duration: 0.2,
-            },
+            opacity: { duration: 0.15 },
           }}
         />
       ))}
