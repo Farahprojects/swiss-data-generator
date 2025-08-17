@@ -9,18 +9,26 @@ const isSynastryReport = (reportData: ReportData): boolean => {
 };
 
 export const renderAstroDataAsText = (reportData: ReportData): string => {
+  console.log('🔍 [renderAstroDataAsText] Starting with reportData.swiss_data:', reportData.swiss_data);
+  
   if (!reportData.swiss_data) {
+    console.warn('❌ [renderAstroDataAsText] No swiss_data available');
     return 'No astronomical data available.';
   }
 
   try {
-    if (isSynastryReport(reportData)) {
+    const isSynastry = isSynastryReport(reportData);
+    console.log('🔍 [renderAstroDataAsText] isSynastryReport:', isSynastry);
+    
+    if (isSynastry) {
+      console.log('🔍 [renderAstroDataAsText] Routing to renderSynastryAsText');
       return renderSynastryAsText(reportData);
     } else {
+      console.log('🔍 [renderAstroDataAsText] Routing to renderIndividualAsText');
       return renderIndividualAsText(reportData);
     }
   } catch (error) {
-    console.error('Error rendering astro data as text:', error);
+    console.error('❌ [renderAstroDataAsText] Error rendering astro data as text:', error);
     return 'Error: Unable to process astronomical data.';
   }
 };
@@ -74,10 +82,18 @@ const renderIndividualAsText = (reportData: ReportData): string => {
 };
 
 const renderSynastryAsText = (reportData: ReportData): string => {
+  console.log('🔍 [renderSynastryAsText] Raw swiss_data:', reportData.swiss_data);
   const data = parseAstroData(reportData.swiss_data);
+  console.log('🔍 [renderSynastryAsText] Parsed data:', data);
+  console.log('🔍 [renderSynastryAsText] Data keys:', Object.keys(data));
   const { natal_set, synastry_aspects } = data;
+  console.log('🔍 [renderSynastryAsText] natal_set:', natal_set);
+  console.log('🔍 [renderSynastryAsText] synastry_aspects:', synastry_aspects);
 
-  if (!natal_set) return 'Synastry data is incomplete.';
+  if (!natal_set) {
+    console.warn('❌ [renderSynastryAsText] natal_set is missing - returning incomplete message');
+    return 'Synastry data is incomplete.';
+  }
 
   const personA = natal_set.personA;
   const personB = natal_set.personB;
