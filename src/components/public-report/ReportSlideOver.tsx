@@ -201,7 +201,7 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
                 />
               ) : (
                 <div className="space-y-6">
-                  <AstroDataRenderer reportData={reportData} />
+                  <AstroDataRenderer swissData={reportData.swiss_data} reportData={reportData} />
                 </div>
               )}
             </div>
