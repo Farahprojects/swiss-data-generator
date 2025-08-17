@@ -18,18 +18,20 @@ export const ChatSidebarControls: React.FC = () => {
   const attemptRef = useRef<number>(0);
   const startRef = useRef<number>(0);
   const timeoutRef = useRef<any>(null);
+  const startedRef = useRef<boolean>(false);
 
   // Start polling for report_ready_signals when we have no hasReport flag
   useEffect(() => {
     if (!uuid) return;
     if (hasReport) return; // already have it
-    if (isPolling) return;
+    if (startedRef.current) return; // prevent duplicate starts across re-renders
 
     setIsPolling(true);
     let cancelled = false;
     attemptRef.current = 0;
     startRef.current = Date.now();
     // Start logs
+    startedRef.current = true;
     console.log('[ReportPolling] start');
     console.log('[ReportPolling] 0 0');
 
@@ -49,6 +51,7 @@ export const ChatSidebarControls: React.FC = () => {
           const elapsedSec = Math.round((Date.now() - startRef.current) / 1000);
           // Log only two numbers: elapsed seconds and attempts
           console.log(`[ReportPolling] ${elapsedSec} ${attemptRef.current}`);
+          startedRef.current = false;
           // Optionally inject context as soon as ready if conversation exists
           const conversationId = useChatStore.getState().conversationId;
           if (conversationId) {
@@ -78,6 +81,7 @@ export const ChatSidebarControls: React.FC = () => {
             setHasReport(true);
             setHasReportFlag(true);
             setIsPolling(false);
+            startedRef.current = false;
             const conversationId = useChatStore.getState().conversationId;
             if (conversationId) {
               injectContextMessages(conversationId, uuid).catch(() => {});
@@ -85,12 +89,14 @@ export const ChatSidebarControls: React.FC = () => {
           } else {
             console.warn('[ReportPolling] no report on the ask');
             setIsPolling(false);
+            startedRef.current = false;
           }
         } catch (_) {
           const elapsedSec = Math.round((Date.now() - startRef.current) / 1000);
           console.log(`[ReportPolling] ${elapsedSec} ${attemptRef.current}`);
           console.warn('[ReportPolling] no report on the ask');
           setIsPolling(false);
+          startedRef.current = false;
         }
         return;
       }
@@ -108,8 +114,9 @@ export const ChatSidebarControls: React.FC = () => {
         console.log(`[ReportPolling] ${elapsedSec} ${attemptRef.current}`);
       }
       setIsPolling(false); 
+      startedRef.current = false;
     };
-  }, [uuid, hasReport, isPolling]);
+  }, [uuid, hasReport]);
 
   const handleClearSession = async () => {
     await sessionManager.clearSession({ redirectTo: '/', preserveNavigation: false });
