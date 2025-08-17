@@ -1,6 +1,6 @@
 // supabase/functions/llm-handler/index.ts
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -19,6 +19,49 @@ const CORS_HEADERS = {
 
 // Initialize Supabase client with service role key
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+
+function buildCompactContext(d: any): string {
+  const summary = (d?.report_content || "").slice(0, 1200);
+  const swissThemes = d?.swiss_data ? JSON.stringify(d.swiss_data).slice(0, 1200) : "";
+  const meta = d?.metadata ? JSON.stringify(d.metadata).slice(0, 600) : "";
+  const parts: string[] = [];
+  if (summary) parts.push(`Report Summary:\n${summary}`);
+  if (swissThemes) parts.push(`Swiss Themes:\n${swissThemes}`);
+  if (meta) parts.push(`Metadata:\n${meta}`);
+  return parts.join("\n\n").trim();
+}
+
+async function pollReportReady(guestId: string): Promise<boolean> {
+  let attempts = 0;
+  const started = Date.now();
+  console.log("[llm-handler][Polling] start");
+  console.log("[llm-handler][Polling] 0 0");
+  while (Date.now() - started < 12000) {
+    attempts += 1;
+    const { data, error } = await supabaseAdmin
+      .from('report_ready_signals')
+      .select('guest_report_id')
+      .eq('guest_report_id', guestId)
+      .limit(1);
+    const elapsedSec = Math.round((Date.now() - started) / 1000);
+    console.log(`[llm-handler][Polling] ${elapsedSec} ${attempts}`);
+    if (!error && data && data.length > 0) return true;
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  console.log("[llm-handler][Polling] final");
+  // Final single ask
+  attempts += 1;
+  const { data, error } = await supabaseAdmin
+    .from('report_ready_signals')
+    .select('guest_report_id')
+    .eq('guest_report_id', guestId)
+    .limit(1);
+  const elapsedSec = Math.round((Date.now() - started) / 1000);
+  console.log(`[llm-handler][Polling] ${elapsedSec} ${attempts}`);
+  if (!error && data && data.length > 0) return true;
+  console.warn("[llm-handler][Polling] no report on the ask");
+  return false;
+}
 
 serve(async (req) => {
   console.log("[llm-handler] Received request");
@@ -57,7 +100,39 @@ serve(async (req) => {
     }
     console.log("[llm-handler] User message saved successfully.");
 
-    // 2. Fetch the conversation history
+    // 2. Fetch conversation meta (guest_id + context_injected)
+    const { data: conv, error: convError } = await supabaseAdmin
+      .from('conversations')
+      .select('guest_id, context_injected')
+      .eq('id', conversationId)
+      .single();
+    if (convError) {
+      throw new Error(`Failed to fetch conversation: ${convError.message}`);
+    }
+
+    const guestId = conv?.guest_id as string | undefined;
+    let contextInjected = !!conv?.context_injected;
+
+    // Try to attach compact context once if not yet injected
+    let compactContext = "";
+    if (!contextInjected && guestId) {
+      const ready = await pollReportReady(guestId);
+      if (ready) {
+        const getResp = await supabaseAdmin.functions.invoke('get-report-data', {
+          body: { guest_report_id: guestId }
+        });
+        if (!getResp.error && getResp.data?.ok && getResp.data?.ready) {
+          compactContext = buildCompactContext(getResp.data.data);
+          await supabaseAdmin
+            .from('conversations')
+            .update({ context_injected: true })
+            .eq('id', conversationId);
+          contextInjected = true;
+        }
+      }
+    }
+
+    // 3. Fetch the conversation history
     console.log("[llm-handler] Fetching conversation history from DB.");
     const { data: messages, error: historyError } = await supabaseAdmin
       .from('messages')
@@ -70,7 +145,7 @@ serve(async (req) => {
       throw new Error(`Failed to fetch conversation history: ${historyError.message}`);
     }
 
-    // 3. Call Google Gemini API
+    // 4. Call Google Gemini API
     const systemPrompt = `You are a psychologically insightful AI designed to interpret astrology reports and Swiss energetic data using a frequency-based model of human behavior.
 
 Immediately upon receiving a conversation, begin by generating:
@@ -101,6 +176,14 @@ Stay fully within the energetic-psychological lens at all times.`;
       parts: [{ text: systemPrompt }]
     });
     
+    // Add compact context if available
+    if (compactContext) {
+      contents.push({
+        role: "user",
+        parts: [{ text: `Context (report):\n${compactContext}` }]
+      });
+    }
+
     // Add conversation messages
     for (const msg of messages) {
       contents.push({

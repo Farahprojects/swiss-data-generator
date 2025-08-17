@@ -66,7 +66,7 @@ export const ReportViewer = ({ onBack, isModal = false, onLoad, shouldFetch = fa
       const { uuid } = getChatTokens();
       if (uuid) {
         fetchReport(uuid);
-      } else {
+          } else {
         console.warn('[ReportViewer] No persisted guest ID found');
       }
     }
