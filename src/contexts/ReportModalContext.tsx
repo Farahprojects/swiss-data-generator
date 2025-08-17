@@ -1,9 +1,8 @@
 import { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 import { ReportSlideOver } from '@/components/public-report/ReportSlideOver';
-import { getChatTokens } from '@/services/auth/chatTokens';
 
 interface ModalContext {
-  open: (onLoad?: (error?: string | null) => void) => void;
+  open: (guestReportId: string, onLoad?: (error?: string | null) => void) => void;
   close: () => void;
   isOpen: boolean;
 }
@@ -14,13 +13,14 @@ export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [onLoadCallback, setOnLoadCallback] = useState<((error?: string | null) => void) | null>(null);
   const [shouldFetch, setShouldFetch] = useState(false);
+  const [guestReportId, setGuestReportId] = useState<string>('');
 
-  const open = useCallback((onLoad?: (error?: string | null) => void) => {
-    const { uuid } = getChatTokens();
-    if (!uuid) {
-      console.warn('[ReportModal] No persisted guest ID found');
+  const open = useCallback((guestReportId: string, onLoad?: (error?: string | null) => void) => {
+    if (!guestReportId) {
+      console.warn('[ReportModal] No guest report ID provided');
       return;
     }
+    setGuestReportId(guestReportId);
     if (onLoad) {
       setOnLoadCallback(() => onLoad);
     }
@@ -32,6 +32,7 @@ export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
     setIsOpen(false);
     setOnLoadCallback(null); // Clear callback on close
     setShouldFetch(false); // Reset fetch trigger
+    setGuestReportId(''); // Clear guest report ID
   }, []);
 
   return (
@@ -42,6 +43,7 @@ export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
         onClose={close}
         onLoad={onLoadCallback || undefined}
         shouldFetch={shouldFetch}
+        guestReportId={guestReportId}
       />
     </ReportModalContext.Provider>
   );

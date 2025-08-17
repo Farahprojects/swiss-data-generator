@@ -10,34 +10,33 @@ import { supabase } from '@/integrations/supabase/client';
 import { ReportData, extractReportContent, getPersonName } from '@/utils/reportContentExtraction';
 import { renderAstroDataAsText, renderUnifiedContentAsText } from '@/utils/componentToTextRenderer';
 import { useReportData } from '@/hooks/useReportData';
-import { getChatTokens } from '@/services/auth/chatTokens';
 
 interface ReportSlideOverProps {
   isOpen: boolean;
   onClose: () => void;
   onLoad?: (error?: string | null) => void;
   shouldFetch?: boolean;
+  guestReportId?: string;
 }
 
-const ReportViewerActions: React.FC = () => {
+const ReportViewerActions: React.FC<{ guestReportId?: string }> = ({ guestReportId }) => {
   const { toast } = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
   
   const handleDownload = async () => {
-    const { uuid } = getChatTokens();
-    if (!uuid) {
+    if (!guestReportId) {
       toast({ variant: 'destructive', title: 'Download Failed', description: 'Report ID is missing.' });
       return;
     }
     setIsDownloading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('download-report-pdf', { body: { guest_report_id: uuid } });
+      const { data, error } = await supabase.functions.invoke('download-report-pdf', { body: { guest_report_id: guestReportId } });
       if (error || !data) throw new Error(error?.message || 'No data');
       const blob = new Blob([data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Therai-Report-${uuid.substring(0, 8)}.pdf`;
+      a.download = `Therai-Report-${guestReportId.substring(0, 8)}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -50,13 +49,12 @@ const ReportViewerActions: React.FC = () => {
   };
 
   const handleCopy = async () => {
-    const { uuid } = getChatTokens();
-    if (!uuid) {
+    if (!guestReportId) {
       toast({ variant: 'destructive', title: 'Copy Failed', description: 'Report ID is missing.' });
       return;
     }
     try {
-      const { data, error } = await supabase.functions.invoke('get-report-data', { body: { guest_report_id: uuid } });
+      const { data, error } = await supabase.functions.invoke('get-report-data', { body: { guest_report_id: guestReportId } });
       if (error || !data?.ready) throw new Error('Report not available');
       
       const reportData = data.data as ReportData;
@@ -88,7 +86,8 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
   isOpen, 
   onClose, 
   onLoad, 
-  shouldFetch = false 
+  shouldFetch = false,
+  guestReportId 
 }) => {
   const { reportData, isLoading, error, fetchReport } = useReportData();
   const [activeView, setActiveView] = useState<'report' | 'astro'>('report');
@@ -96,15 +95,12 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
 
   // Fetch when explicitly told to via shouldFetch prop
   useEffect(() => {
-    if (shouldFetch) {
-      const { uuid } = getChatTokens();
-      if (uuid) {
-        fetchReport(uuid);
-      } else {
-        console.warn('[ReportSlideOver] No persisted guest ID found');
-      }
+    if (shouldFetch && guestReportId) {
+      fetchReport(guestReportId);
+    } else if (shouldFetch && !guestReportId) {
+      console.warn('[ReportSlideOver] No guest report ID provided');
     }
-  }, [shouldFetch, fetchReport]);
+  }, [shouldFetch, guestReportId, fetchReport]);
 
   useEffect(() => {
     if (!isLoading) {
@@ -134,7 +130,7 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
               <p className="text-red-600 mb-4">Error loading report: {error}</p>
-              <Button onClick={() => fetchReport(getChatTokens().uuid || '')}>
+              <Button onClick={() => guestReportId && fetchReport(guestReportId)}>
                 Try Again
               </Button>
             </div>
@@ -168,7 +164,7 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
               {personName ? `${personName}'s Report` : 'Your Report'}
             </SheetTitle>
             <div className="flex items-center gap-3">
-              <ReportViewerActions />
+              <ReportViewerActions guestReportId={guestReportId} />
             </div>
           </SheetHeader>
 

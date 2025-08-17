@@ -23,10 +23,10 @@ export const ChatSidebarControls: React.FC = () => {
       <div className="flex flex-col gap-2">
         <button
           type="button"
-          onClick={() => openReportModal()}
-          disabled={!isReportReady}
+          onClick={() => uuid && openReportModal(uuid)}
+          disabled={!isReportReady || !uuid}
           className={`w-full text-left px-3 py-2 text-sm rounded-md border ${
-            isReportReady 
+            isReportReady && uuid
               ? 'bg-gray-100 hover:bg-gray-200 border-gray-200' 
               : 'bg-gray-100/60 border-gray-200/60 text-gray-400 cursor-not-allowed'
           } ${isPolling ? 'animate-pulse' : ''}`}
