@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { useChatStore } from '@/core/store';
+import { useReportReadyStore } from './reportReadyStore';
 
 // Guards to ensure single polling instance per UUID
 const activePolls: Record<string, { timer: any; startedAt: number; attempts: number }> = {};
@@ -40,11 +41,17 @@ export function startReportReadyOrchestration(guestReportId: string): void {
   // Prevent duplicate starts
   if (activePolls[guestReportId]) return;
 
+  // Check if report is already ready
+  if (useReportReadyStore.getState().isReportReady) {
+    return;
+  }
+
   // First, ask the DB if row exists and seen=true
   checkReportSeen(guestReportId)
     .then(({ hasRow, seen }) => {
       if (hasRow && seen) {
-        // Already handled; nothing to do
+        // Already handled; mark as ready
+        useReportReadyStore.getState().setReportReady(true);
         return;
       }
 
@@ -52,6 +59,7 @@ export function startReportReadyOrchestration(guestReportId: string): void {
       const startedAt = Date.now();
       const pollState = { timer: null as any, startedAt, attempts: 0 };
       activePolls[guestReportId] = pollState;
+      useReportReadyStore.getState().startPolling();
       console.log('[ReportPolling] start');
       console.log('[ReportPolling] 0 0');
 
@@ -70,6 +78,7 @@ export function startReportReadyOrchestration(guestReportId: string): void {
           if (!error && data && data.length > 0) {
             // Found ready signal: mark seen, stop polling (server-side inject)
             await markReportSeen(guestReportId);
+            useReportReadyStore.getState().setReportReady(true);
             stopReportReadyOrchestration(guestReportId);
             return;
           }
@@ -103,6 +112,7 @@ export function startReportReadyOrchestration(guestReportId: string): void {
             .limit(1);
           if (data && data.length > 0) {
             await markReportSeen(guestReportId);
+            useReportReadyStore.getState().setReportReady(true);
             stopReportReadyOrchestration(guestReportId);
             return;
           }
@@ -122,6 +132,7 @@ export function stopReportReadyOrchestration(guestReportId: string): void {
     const elapsedSec = Math.round((Date.now() - ref.startedAt) / 1000);
     console.log(`[ReportPolling] ${elapsedSec} ${ref.attempts}`);
     console.log('[ReportPolling] stop');
+    useReportReadyStore.getState().stopPolling();
   }
 }
 

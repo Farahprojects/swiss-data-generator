@@ -3,6 +3,7 @@ import { useChatStore } from '@/core/store';
 import { useReportModal } from '@/contexts/ReportModalContext';
 import { sessionManager } from '@/utils/sessionManager';
 import { getChatTokens } from '@/services/auth/chatTokens';
+import { useReportReadyStore } from '@/services/report/reportReadyStore';
 
 export const ChatSidebarControls: React.FC = () => {
   const ttsProvider = useChatStore((s) => s.ttsProvider);
@@ -11,7 +12,7 @@ export const ChatSidebarControls: React.FC = () => {
   const setTtsVoice = useChatStore((s) => s.setTtsVoice);
   const { open: openReportModal } = useReportModal();
   const { uuid } = getChatTokens();
-  // Polling removed; handled by reportReadyOrchestrator
+  const { isPolling, isReportReady } = useReportReadyStore();
 
   const handleClearSession = async () => {
     await sessionManager.clearSession({ redirectTo: '/', preserveNavigation: false });
@@ -23,7 +24,12 @@ export const ChatSidebarControls: React.FC = () => {
         <button
           type="button"
           onClick={() => openReportModal()}
-          className={`w-full text-left px-3 py-2 text-sm rounded-md border bg-gray-100 hover:bg-gray-200 border-gray-200`}
+          disabled={!isReportReady}
+          className={`w-full text-left px-3 py-2 text-sm rounded-md border ${
+            isReportReady 
+              ? 'bg-gray-100 hover:bg-gray-200 border-gray-200' 
+              : 'bg-gray-100/60 border-gray-200/60 text-gray-400 cursor-not-allowed'
+          } ${isPolling ? 'animate-pulse' : ''}`}
         >
           Report
         </button>
