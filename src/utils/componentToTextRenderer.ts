@@ -5,28 +5,28 @@ import { isSynastryData, parseAstroData } from '@/lib/synastryFormatter';
 
 const isSynastryReport = (reportData: ReportData): boolean => {
   if (!reportData.swiss_data) return false;
-  
-  // Use report_type from metadata for accurate routing
-  const reportType = reportData.metadata?.report_type || reportData.guest_report?.report_type;
+
+  // Use report_type from metadata/guest_report for accurate routing
+  const reportTypeRaw = reportData.metadata?.report_type || reportData.guest_report?.report_type || '';
+  const reportType = String(reportTypeRaw).toLowerCase();
   console.log('🔍 [isSynastryReport] report_type:', reportType);
-  
-  // Route based on report type:
-  // - 'essence' = single person (individual parser)
-  // - 'sync' = dual person (synastry parser) 
-  // - 'monthly' = monthly parser
-  if (reportType === 'sync') {
-    console.log('🔍 [isSynastryReport] Routing to SYNASTRY (sync report)');
+
+  // Route based on explicit type first
+  if (reportType.includes('sync') || reportType.includes('synastry')) {
+    console.log('🔍 [isSynastryReport] Routing to SYNASTRY (type contains sync/synastry)');
     return true;
-  } else if (reportType === 'essence') {
-    console.log('🔍 [isSynastryReport] Routing to INDIVIDUAL (essence report)');
-    return false;
-  } else if (reportType === 'monthly') {
-    console.log('🔍 [isSynastryReport] Should route to MONTHLY parser (but using individual for now)');
+  }
+  if (reportType.startsWith('essence') || reportType.includes('personal') || reportType === 'essence') {
+    console.log('🔍 [isSynastryReport] Routing to INDIVIDUAL (essence)');
     return false;
   }
-  
-  // Fallback to data structure analysis if report_type is missing
-  console.log('🔍 [isSynastryReport] No report_type found, falling back to data structure analysis');
+  if (reportType === 'monthly' || reportType.startsWith('month')) {
+    console.log('🔍 [isSynastryReport] Routing to MONTHLY (handled by individual text renderer for now)');
+    return false;
+  }
+
+  // Fallback to structural detection
+  console.log('🔍 [isSynastryReport] No decisive report_type, falling back to data structure analysis');
   return isSynastryData(reportData.swiss_data);
 };
 
