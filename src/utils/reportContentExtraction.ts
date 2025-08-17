@@ -5,19 +5,18 @@ export interface ReportData {
     id: string;
     email: string;
     report_type: string | null;
-    swiss_boolean: boolean | null;
     is_ai_report: boolean;
     payment_status: string;
     created_at: string;
-    promo_code_used: string | null;
     report_data: any;
   };
   report_content: string | null;
   swiss_data: any | null;
   metadata: {
-    is_astro_report: boolean;
-    is_ai_report: boolean;
     content_type: 'astro' | 'ai' | 'both' | 'none';
+    has_ai_report: boolean;
+    has_swiss_data: boolean;
+    is_ready: boolean;
   };
 }
 
@@ -25,7 +24,8 @@ export const extractReportContent = (reportData: ReportData): string => {
   return reportData.report_content || '';
 };
 
-export const getPersonName = (reportData: ReportData): string => {
+export const getPersonName = (reportData: ReportData | null): string => {
+  if (!reportData) return 'Report';
   const reportDataObj = reportData.guest_report?.report_data;
   return reportDataObj?.person_a?.name || reportDataObj?.name || 'Unknown';
 };
