@@ -13,7 +13,6 @@ interface ReportFlowCheckerProps {
 
 export const ReportFlowChecker = ({ guestId, name, email, onPaid, onReportReady, onProcessingStateChange }: ReportFlowCheckerProps) => {
   const hasTriggeredGenerationRef = useRef(false);
-  const [isProcessingReport, setIsProcessingReport] = useState(false);
 
   useEffect(() => {
     if (!guestId) return;
@@ -35,7 +34,6 @@ export const ReportFlowChecker = ({ guestId, name, email, onPaid, onReportReady,
     };
 
     let pollingInterval: NodeJS.Timeout | undefined;
-    let reportPollingInterval: NodeJS.Timeout | undefined;
 
     const pollPaymentStatus = async () => {
       console.log('[ReportFlowChecker] Polling payment status for:', guestId);
@@ -59,16 +57,8 @@ export const ReportFlowChecker = ({ guestId, name, email, onPaid, onReportReady,
           // Trigger report generation
           supabase.functions.invoke('trigger-report-generation', { body: { guest_report_id: guestId } });
           
-          // Call onPaid but don't navigate yet
+          // Navigate directly to chat - let chat page handle report readiness polling
           onPaid({ guestId, name: data.name || name, email: data.email || email });
-          
-          // Start processing state and poll for report readiness
-          setIsProcessingReport(true);
-          onProcessingStateChange(true);
-          
-          // Start polling for report readiness every 3 seconds
-          reportPollingInterval = setInterval(pollReportReadiness, 3000);
-          pollReportReadiness(); // Check immediately
         }
       }
       else if (data?.payment_status === 'pending') {
@@ -86,29 +76,7 @@ export const ReportFlowChecker = ({ guestId, name, email, onPaid, onReportReady,
       }
     };
 
-    const pollReportReadiness = async () => {
-      console.log('[ReportFlowChecker] Polling report readiness for:', guestId);
-      
-      const { data: reportSignal, error } = await supabase
-        .from('report_ready_signals')
-        .select('guest_report_id')
-        .eq('guest_report_id', guestId)
-        .limit(1);
-
-      if (error) {
-        console.error('[ReportFlowChecker] Report polling error:', error);
-        return;
-      }
-
-      if (reportSignal && reportSignal.length > 0) {
-        console.log('[ReportFlowChecker] Report ready! Enabling chat navigation');
-        if (reportPollingInterval) clearInterval(reportPollingInterval);
-        
-        setIsProcessingReport(false);
-        onProcessingStateChange(false);
-        onReportReady({ guestId, name, email });
-      }
-    };
+    // Report readiness polling removed - chat page handles this
 
     // Check if report already exists first
     checkExistingReport().then((hasExisting) => {
@@ -121,7 +89,6 @@ export const ReportFlowChecker = ({ guestId, name, email, onPaid, onReportReady,
 
     return () => {
       if (pollingInterval) clearInterval(pollingInterval);
-      if (reportPollingInterval) clearInterval(reportPollingInterval);
     };
 
   }, [guestId, name, email, onPaid, onReportReady, onProcessingStateChange]);
