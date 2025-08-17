@@ -123,6 +123,25 @@ serve(async (req) => {
         });
         if (!getResp.error && getResp.data?.ok && getResp.data?.ready) {
           compactContext = buildCompactContext(getResp.data.data);
+          // Persist context into messages table once (dedupe by meta.type)
+          try {
+            const { data: existingCtx, error: checkCtxErr } = await supabaseAdmin
+              .from('messages')
+              .select('id')
+              .eq('conversation_id', conversationId)
+              .contains('meta', { type: 'context_injection' })
+              .limit(1);
+            if (!checkCtxErr && (!existingCtx || existingCtx.length === 0)) {
+              await supabaseAdmin.from('messages').insert({
+                conversation_id: conversationId,
+                role: 'user',
+                text: compactContext,
+                meta: { type: 'context_injection', source: 'server', injected_at: new Date().toISOString() },
+              });
+            }
+          } catch (_e) {
+            // non-fatal
+          }
           await supabaseAdmin
             .from('conversations')
             .update({ context_injected: true })
