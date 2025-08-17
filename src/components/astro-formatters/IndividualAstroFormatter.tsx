@@ -7,6 +7,7 @@ import { HouseCusps } from './shared/HouseCusps';
 import { ChartAngles } from './shared/ChartAngles';
 import { PlanetaryPositions } from './shared/PlanetaryPositions';
 import { parseAstroData } from '@/lib/synastryFormatter';
+import { TransitMetadata } from './shared/TransitMetadata';
 
 interface IndividualAstroFormatterProps {
   swissData: any;
@@ -67,6 +68,7 @@ export const IndividualAstroFormatter: React.FC<IndividualAstroFormatterProps> =
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-8">
+              <TransitMetadata transits={transits} />
               <PlanetaryPositions planets={transits.planets} title="Current Transit Positions" />
               <AspectTable aspects={transits.aspects_to_natal} title="Transit Aspects to Natal" />
             </CardContent>
