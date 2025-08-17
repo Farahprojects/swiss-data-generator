@@ -1,0 +1,222 @@
+import React, { useState, useEffect } from 'react';
+import { X, Download, Copy } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ReportContent } from './ReportContent';
+import { supabase } from '@/integrations/supabase/client';
+import { ReportData, extractReportContent, getPersonName } from '@/utils/reportContentExtraction';
+import { renderAstroDataAsText, renderUnifiedContentAsText } from '@/utils/componentToTextRenderer';
+import { useReportData } from '@/hooks/useReportData';
+import { getChatTokens } from '@/services/auth/chatTokens';
+
+interface ReportSlideOverProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onLoad?: (error?: string | null) => void;
+  shouldFetch?: boolean;
+}
+
+const ReportViewerActions: React.FC = () => {
+  const { toast } = useToast();
+  const [isDownloading, setIsDownloading] = useState(false);
+  
+  const handleDownload = async () => {
+    const { uuid } = getChatTokens();
+    if (!uuid) {
+      toast({ variant: 'destructive', title: 'Download Failed', description: 'Report ID is missing.' });
+      return;
+    }
+    setIsDownloading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('download-report-pdf', { body: { guest_report_id: uuid } });
+      if (error || !data) throw new Error(error?.message || 'No data');
+      const blob = new Blob([data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Therai-Report-${uuid.substring(0, 8)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Download Failed', description: e.message || 'Please try again.' });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    const { uuid } = getChatTokens();
+    if (!uuid) {
+      toast({ variant: 'destructive', title: 'Copy Failed', description: 'Report ID is missing.' });
+      return;
+    }
+    try {
+      const { data, error } = await supabase.functions.invoke('get-report-data', { body: { guest_report_id: uuid } });
+      if (error || !data?.ready) throw new Error('Report not available');
+      
+      const reportData = data.data as ReportData;
+      const reportContent = extractReportContent(reportData);
+      const textContent = renderUnifiedContentAsText(reportContent);
+      
+      await navigator.clipboard.writeText(textContent);
+      toast({ title: 'Copied!', description: 'Report copied to clipboard.' });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Copy Failed', description: e.message || 'Please try again.' });
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <Button variant="outline" size="sm" onClick={handleDownload} disabled={isDownloading} className="text-gray-700 border-gray-200">
+        <Download className="w-4 h-4 mr-1" />
+        PDF
+      </Button>
+      <Button variant="outline" size="sm" onClick={handleCopy} className="text-gray-700 border-gray-200">
+        <Copy className="w-4 h-4 mr-1" />
+        Copy
+      </Button>
+    </div>
+  );
+};
+
+export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({ 
+  isOpen, 
+  onClose, 
+  onLoad, 
+  shouldFetch = false 
+}) => {
+  const { reportData, isLoading, error, fetchReport } = useReportData();
+  const [activeView, setActiveView] = useState<'report' | 'astro'>('report');
+  const isMobile = useIsMobile();
+
+  // Fetch when explicitly told to via shouldFetch prop
+  useEffect(() => {
+    if (shouldFetch) {
+      const { uuid } = getChatTokens();
+      if (uuid) {
+        fetchReport(uuid);
+      } else {
+        console.warn('[ReportSlideOver] No persisted guest ID found');
+      }
+    }
+  }, [shouldFetch, fetchReport]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      onLoad?.(error);
+    }
+  }, [isLoading, error, onLoad]);
+
+  if (isLoading) {
+    return (
+      <Sheet open={isOpen} onOpenChange={onClose}>
+        <SheetContent side="right" className="w-full sm:max-w-2xl">
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading your report...</p>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  if (error) {
+    return (
+      <Sheet open={isOpen} onOpenChange={onClose}>
+        <SheetContent side="right" className="w-full sm:max-w-2xl">
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <p className="text-red-600 mb-4">Error loading report: {error}</p>
+              <Button onClick={() => fetchReport(getChatTokens().uuid || '')}>
+                Try Again
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  if (!reportData) {
+    return (
+      <Sheet open={isOpen} onOpenChange={onClose}>
+        <SheetContent side="right" className="w-full sm:max-w-2xl">
+          <div className="flex items-center justify-center h-full">
+            <p className="text-gray-600">No report data available.</p>
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  const reportContent = extractReportContent(reportData);
+  const personName = getPersonName(reportData.metadata);
+
+  return (
+    <Sheet open={isOpen} onOpenChange={onClose}>
+      <SheetContent side="right" className="w-full sm:max-w-2xl p-0">
+        <div className="flex flex-col h-full">
+          <SheetHeader className="flex flex-row items-center justify-between px-6 py-4 border-b bg-white">
+            <SheetTitle className="text-lg font-light italic">
+              {personName ? `${personName}'s Report` : 'Your Report'}
+            </SheetTitle>
+            <div className="flex items-center gap-3">
+              <ReportViewerActions />
+            </div>
+          </SheetHeader>
+
+          {/* View Toggle */}
+          <div className="flex border-b bg-gray-50">
+            <button
+              onClick={() => setActiveView('report')}
+              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                activeView === 'report'
+                  ? 'bg-white text-gray-900 border-b-2 border-gray-900'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Report
+            </button>
+            <button
+              onClick={() => setActiveView('astro')}
+              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                activeView === 'astro'
+                  ? 'bg-white text-gray-900 border-b-2 border-gray-900'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Astro Data
+            </button>
+          </div>
+
+          {/* Content */}
+          <ScrollArea className="flex-1">
+            <div className="p-6">
+              {activeView === 'report' ? (
+                <ReportContent reportContent={reportContent} />
+              ) : (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-light italic text-gray-900 mb-4">Raw Astronomical Data</h3>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono">
+                        {renderAstroDataAsText(reportData)}
+                      </pre>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+};

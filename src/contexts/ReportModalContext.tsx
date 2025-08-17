@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useCallback } from 'react';
-import { ReportViewer } from '@/components/public-report/ReportViewer';
+import { ReportSlideOver } from '@/components/public-report/ReportSlideOver';
 import { getChatTokens } from '@/services/auth/chatTokens';
 
 interface ModalContext {
@@ -37,14 +37,12 @@ export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
   return (
     <ReportModalContext.Provider value={{ open, close, isOpen }}>
       {children}
-      {isOpen && (
-        <ReportViewer
-          onBack={close}
-          isModal={true}
-          onLoad={onLoadCallback || undefined}
-          shouldFetch={shouldFetch}
-        />
-      )}
+      <ReportSlideOver
+        isOpen={isOpen}
+        onClose={close}
+        onLoad={onLoadCallback || undefined}
+        shouldFetch={shouldFetch}
+      />
     </ReportModalContext.Provider>
   );
 };
