@@ -9,48 +9,37 @@ const isSynastryReport = (reportData: ReportData): boolean => {
   // Use report_type from metadata/guest_report for accurate routing
   const reportTypeRaw = reportData.metadata?.report_type || reportData.guest_report?.report_type || '';
   const reportType = String(reportTypeRaw).toLowerCase();
-  console.log('🔍 [isSynastryReport] report_type:', reportType);
 
   // Route based on explicit type first
   if (reportType.includes('sync') || reportType.includes('synastry')) {
-    console.log('🔍 [isSynastryReport] Routing to SYNASTRY (type contains sync/synastry)');
     return true;
   }
   if (reportType.startsWith('essence') || reportType.includes('personal') || reportType === 'essence') {
-    console.log('🔍 [isSynastryReport] Routing to INDIVIDUAL (essence)');
     return false;
   }
   if (reportType === 'monthly' || reportType.startsWith('month')) {
-    console.log('🔍 [isSynastryReport] Routing to MONTHLY (handled by individual text renderer for now)');
     return false;
   }
 
   // Fallback to structural detection
-  console.log('🔍 [isSynastryReport] No decisive report_type, falling back to data structure analysis');
   return isSynastryData(reportData.swiss_data);
 };
 
 export const renderAstroDataAsText = (reportData: ReportData): string => {
-  console.log('🔍 [renderAstroDataAsText] Starting with reportData.swiss_data:', reportData.swiss_data);
-  
   if (!reportData.swiss_data) {
-    console.warn('❌ [renderAstroDataAsText] No swiss_data available');
     return 'No astronomical data available.';
   }
 
   try {
     const isSynastry = isSynastryReport(reportData);
-    console.log('🔍 [renderAstroDataAsText] isSynastryReport:', isSynastry);
     
     if (isSynastry) {
-      console.log('🔍 [renderAstroDataAsText] Routing to renderSynastryAsText');
       return renderSynastryAsText(reportData);
     } else {
-      console.log('🔍 [renderAstroDataAsText] Routing to renderIndividualAsText');
       return renderIndividualAsText(reportData);
     }
   } catch (error) {
-    console.error('❌ [renderAstroDataAsText] Error rendering astro data as text:', error);
+    console.error('Error rendering astro data as text:', error);
     return 'Error: Unable to process astronomical data.';
   }
 };
@@ -104,16 +93,10 @@ const renderIndividualAsText = (reportData: ReportData): string => {
 };
 
 const renderSynastryAsText = (reportData: ReportData): string => {
-  console.log('🔍 [renderSynastryAsText] Raw swiss_data:', reportData.swiss_data);
   const data = parseAstroData(reportData.swiss_data);
-  console.log('🔍 [renderSynastryAsText] Parsed data:', data);
-  console.log('🔍 [renderSynastryAsText] Data keys:', Object.keys(data));
   const { natal_set, synastry_aspects } = data;
-  console.log('🔍 [renderSynastryAsText] natal_set:', natal_set);
-  console.log('🔍 [renderSynastryAsText] synastry_aspects:', synastry_aspects);
 
   if (!natal_set) {
-    console.warn('❌ [renderSynastryAsText] natal_set is missing - returning incomplete message');
     return 'Synastry data is incomplete.';
   }
 
