@@ -17,18 +17,7 @@ export const useReportData = () => {
     setError(null);
     setReportData(null);
     try {
-      // 1. Check for a ready signal
-      const { data: signal, error: signalError } = await supabase
-        .from('report_ready_signals')
-        .select('guest_report_id')
-        .eq('guest_report_id', guestReportId)
-        .single();
-
-      if (signalError || !signal) {
-        throw new Error('Report not found or not yet ready.');
-      }
-
-      // 2. If signal exists, invoke the edge function
+      // Directly invoke the edge function without checking report_ready_signals
       const { data: report, error: functionError } = await supabase.functions.invoke(
         'get-report-data',
         { body: { guest_report_id: guestReportId } }
