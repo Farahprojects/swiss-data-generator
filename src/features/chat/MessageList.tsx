@@ -3,17 +3,15 @@ import { useChatStore } from '@/core/store';
 import { Message } from '@/core/types';
 import { PlayCircle } from 'lucide-react';
 import { audioPlayer } from '@/services/voice/audioPlayer';
-import { useTypewriter } from '@/hooks/useTypewriter';
 import { useConversationUIStore } from './conversation-ui-store';
+import { TypewriterText } from '@/components/ui/TypewriterText';
 
 const MessageItem = ({ message, isLast, isFromHistory }: { message: Message; isLast: boolean; isFromHistory?: boolean }) => {
   const isUser = message.role === 'user';
   const isConversationOpen = useConversationUIStore((state) => state.isConversationOpen);
-  const displayText = useTypewriter(message.text || '', 80);
   
   // Skip animation for existing messages from history, if it's not the last message, or if conversation mode is active
   const shouldAnimate = !isUser && isLast && !isFromHistory && !isConversationOpen;
-  const textContent = shouldAnimate ? displayText : message.text;
 
   return (
     <div className={`flex items-end gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -24,7 +22,13 @@ const MessageItem = ({ message, isLast, isFromHistory }: { message: Message; isL
             : 'text-black'
         }`}
       >
-        <p className="text-base font-light leading-relaxed text-left">{textContent}</p>
+        <p className="text-base font-light leading-relaxed text-left">
+          {shouldAnimate ? (
+            <TypewriterText text={message.text || ''} msPerChar={40} />
+          ) : (
+            message.text
+          )}
+        </p>
         {/* Audio is played live during conversation mode - no stored audio to replay */}
       </div>
     </div>

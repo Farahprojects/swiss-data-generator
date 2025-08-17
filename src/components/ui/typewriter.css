@@ -1,0 +1,10 @@
+@keyframes type-reveal {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+.typewriter {
+  display: inline-block;
+  white-space: pre-wrap;
+  overflow: hidden;
+}
