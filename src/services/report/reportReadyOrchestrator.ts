@@ -1,5 +1,4 @@
 import { supabase } from '@/integrations/supabase/client';
-import { injectContextMessages } from '@/services/api/conversations';
 import { useChatStore } from '@/core/store';
 
 // Guards to ensure single polling instance per UUID
@@ -69,11 +68,7 @@ export function startReportReadyOrchestration(guestReportId: string): void {
           console.log(`[ReportPolling] ${elapsedSec} ${pollState.attempts}`);
 
           if (!error && data && data.length > 0) {
-            // Found ready signal: inject context, mark seen, stop polling
-            const conversationId = useChatStore.getState().conversationId;
-            if (conversationId) {
-              injectContextMessages(conversationId, guestReportId).catch(() => {});
-            }
+            // Found ready signal: mark seen, stop polling (server-side inject)
             await markReportSeen(guestReportId);
             stopReportReadyOrchestration(guestReportId);
             return;
@@ -107,10 +102,6 @@ export function startReportReadyOrchestration(guestReportId: string): void {
             .eq('guest_report_id', guestReportId)
             .limit(1);
           if (data && data.length > 0) {
-            const conversationId = useChatStore.getState().conversationId;
-            if (conversationId) {
-              injectContextMessages(conversationId, guestReportId).catch(() => {});
-            }
             await markReportSeen(guestReportId);
             stopReportReadyOrchestration(guestReportId);
             return;
