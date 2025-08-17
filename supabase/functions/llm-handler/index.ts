@@ -20,13 +20,13 @@ const CORS_HEADERS = {
 // Initialize Supabase client with service role key
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-function buildCompactContext(d: any): string {
-  const summary = (d?.report_content || "").slice(0, 1200);
-  const swissThemes = d?.swiss_data ? JSON.stringify(d.swiss_data).slice(0, 1200) : "";
-  const meta = d?.metadata ? JSON.stringify(d.metadata).slice(0, 600) : "";
+function buildFullContext(d: any): string {
+  const report = d?.report_content || "";
+  const swiss = d?.swiss_data ? JSON.stringify(d.swiss_data) : "";
+  const meta = d?.metadata ? JSON.stringify(d.metadata) : "";
   const parts: string[] = [];
-  if (summary) parts.push(`Report Summary:\n${summary}`);
-  if (swissThemes) parts.push(`Swiss Themes:\n${swissThemes}`);
+  if (report) parts.push(`Report:\n${report}`);
+  if (swiss) parts.push(`SwissData:\n${swiss}`);
   if (meta) parts.push(`Metadata:\n${meta}`);
   return parts.join("\n\n").trim();
 }
@@ -122,7 +122,7 @@ serve(async (req) => {
           body: { guest_report_id: guestId }
         });
         if (!getResp.error && getResp.data?.ok && getResp.data?.ready) {
-          compactContext = buildCompactContext(getResp.data.data);
+          compactContext = buildFullContext(getResp.data.data);
           // Persist context into messages table once (dedupe by meta.type)
           try {
             const { data: existingCtx, error: checkCtxErr } = await supabaseAdmin
