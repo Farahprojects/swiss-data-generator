@@ -22,8 +22,8 @@ serve(async req => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
 
   try {
-    const { uuid, token } = await req.json();
-    console.log("⇢  incoming", { uuid, tokenPresent: !!token });
+    const { uuid, token, source } = await req.json();
+    console.log("⇢  incoming", { uuid, tokenPresent: !!token, source });
     
     if (!uuid) {
       return new Response(JSON.stringify({ error: "UUID required" }), {
@@ -49,7 +49,23 @@ serve(async req => {
       });
     }
 
-    /* -------- TOKEN FLOW -------- */
+    // If request comes from chat page, skip token validation
+    if (source === "chat") {
+      console.log("⇠  success (chat bypass)", { uuid });
+      return new Response(
+        JSON.stringify({
+          report_content: data.report_content,
+          swiss_data: data.swiss_data,
+          metadata: data.metadata,
+          uuid,
+          chat_hash: data.chat_hash,
+          success: true,
+        }),
+        { headers: { ...cors, "Content-Type": "application/json" } },
+      );
+    }
+
+    /* -------- TOKEN FLOW (for non-chat requests) -------- */
 if (!token) {
   // Always generate a fresh token when the caller has none
   const newToken = genToken();

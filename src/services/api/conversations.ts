@@ -164,7 +164,8 @@ const injectContextMessages = async (conversationId: string, uuid: string, token
     const { data, error } = await supabase.functions.invoke('retrieve-temp-report', {
       body: { 
         uuid: uuid,
-        token: token
+        token: token,
+        source: "chat"
       }
     });
 
