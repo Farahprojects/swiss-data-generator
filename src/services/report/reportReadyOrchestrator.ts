@@ -1,8 +1,9 @@
 import { supabase } from '@/integrations/supabase/client';
+import { useChatStore } from '@/core/store';
 import { useReportReadyStore } from './reportReadyStore';
 
-// Guards to ensure single listener instance per UUID
-const activeChannels: Record<string, { channel: any; startedAt: number }> = {};
+// Guards to ensure single polling instance per UUID
+const activePolls: Record<string, { timer: any; startedAt: number; attempts: number }> = {};
 
 export async function checkReportSeen(guestReportId: string): Promise<{ hasRow: boolean; seen: boolean }>{
   console.log('[ReportReady] ask', guestReportId);
@@ -38,7 +39,7 @@ export async function markReportSeen(guestReportId: string): Promise<void> {
 export function startReportReadyOrchestration(guestReportId: string): void {
   if (!guestReportId) return;
   // Prevent duplicate starts
-  if (activeChannels[guestReportId]) return;
+  if (activePolls[guestReportId]) return;
 
   // Check if report is already ready
   if (useReportReadyStore.getState().isReportReady) {
@@ -50,82 +51,87 @@ export function startReportReadyOrchestration(guestReportId: string): void {
     .then(({ hasRow, seen }) => {
       if (hasRow && seen) {
         // Already handled; mark as ready
-        console.log('[ReportListener] already ready');
         useReportReadyStore.getState().setReportReady(true);
         return;
       }
 
-      // If no row yet, start realtime listener until an insert appears
+      // If no row yet, start polling until it appears
       const startedAt = Date.now();
+      const pollState = { timer: null as any, startedAt, attempts: 0 };
+      activePolls[guestReportId] = pollState;
       useReportReadyStore.getState().startPolling();
-      console.log('[ReportListener] start');
-      const channel = supabase
-        .channel(`report_ready_signals_${guestReportId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'report_ready_signals',
-            filter: `guest_report_id=eq.${guestReportId}`,
-          },
-          async (_payload) => {
-            try {
-              await markReportSeen(guestReportId);
-            } catch {}
-            const elapsedSec = Math.round((Date.now() - startedAt) / 1000);
-            console.log(`[ReportListener] received after ${elapsedSec}s`);
+      console.log('[ReportPolling] start');
+      console.log('[ReportPolling] 0 0');
+
+      const tick = async () => {
+        pollState.attempts += 1;
+        try {
+          const { data, error } = await supabase
+            .from('report_ready_signals')
+            .select('guest_report_id')
+            .eq('guest_report_id', guestReportId)
+            .limit(1);
+
+          const elapsedSec = Math.round((Date.now() - pollState.startedAt) / 1000);
+          console.log(`[ReportPolling] ${elapsedSec} ${pollState.attempts}`);
+
+          if (!error && data && data.length > 0) {
+            // Found ready signal: mark seen, stop polling (server-side inject)
+            await markReportSeen(guestReportId);
             useReportReadyStore.getState().setReportReady(true);
             stopReportReadyOrchestration(guestReportId);
-          },
-        )
-        .subscribe();
-      console.log('[ReportListener] subscribed');
-      activeChannels[guestReportId] = { channel, startedAt };
+            return;
+          }
+        } catch (_e) {
+          // ignore and continue
+        }
+
+        // schedule next tick
+        const ref = activePolls[guestReportId];
+        if (ref) ref.timer = setTimeout(tick, 1000);
+      };
+
+      tick();
     })
     .catch(() => {
-      // If ask failed for any reason, still start listener
-      useReportReadyStore.getState().startPolling();
-      console.log('[ReportListener] start');
-      const channel = supabase
-        .channel(`report_ready_signals_${guestReportId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'report_ready_signals',
-            filter: `guest_report_id=eq.${guestReportId}`,
-          },
-          async (_payload) => {
-            try {
-              await markReportSeen(guestReportId);
-            } catch {}
-            const startedAt = activeChannels[guestReportId]?.startedAt || Date.now();
-            const elapsedSec = Math.round((Date.now() - startedAt) / 1000);
-            console.log(`[ReportListener] received after ${elapsedSec}s`);
+      // If ask failed for any reason, start polling anyway
+      const startedAt = Date.now();
+      const pollState = { timer: null as any, startedAt, attempts: 0 };
+      activePolls[guestReportId] = pollState;
+      console.log('[ReportPolling] start');
+      console.log('[ReportPolling] 0 0');
+      const tick = async () => {
+        pollState.attempts += 1;
+        const elapsedSec = Math.round((Date.now() - pollState.startedAt) / 1000);
+        console.log(`[ReportPolling] ${elapsedSec} ${pollState.attempts}`);
+        try {
+          const { data } = await supabase
+            .from('report_ready_signals')
+            .select('guest_report_id')
+            .eq('guest_report_id', guestReportId)
+            .limit(1);
+          if (data && data.length > 0) {
+            await markReportSeen(guestReportId);
             useReportReadyStore.getState().setReportReady(true);
             stopReportReadyOrchestration(guestReportId);
-          },
-        )
-        .subscribe();
-      console.log('[ReportListener] subscribed');
-      activeChannels[guestReportId] = { channel, startedAt: Date.now() };
+            return;
+          }
+        } catch (_e) {}
+        const ref = activePolls[guestReportId];
+        if (ref) ref.timer = setTimeout(tick, 1000);
+      };
+      tick();
     });
 }
 
 export function stopReportReadyOrchestration(guestReportId: string): void {
-  const ref = activeChannels[guestReportId];
+  const ref = activePolls[guestReportId];
   if (ref) {
-    try {
-      ref.channel?.unsubscribe?.();
-      // For older clients
-      // @ts-ignore
-      if (supabase.removeChannel && ref.channel) supabase.removeChannel(ref.channel);
-    } catch {}
-    delete activeChannels[guestReportId];
+    if (ref.timer) clearTimeout(ref.timer);
+    delete activePolls[guestReportId];
     const elapsedSec = Math.round((Date.now() - ref.startedAt) / 1000);
-    console.log(`[ReportListener] stop after ${elapsedSec}s`);
+    console.log(`[ReportPolling] ${elapsedSec} ${ref.attempts}`);
+    console.log('[ReportPolling] stop');
     useReportReadyStore.getState().stopPolling();
   }
 }
