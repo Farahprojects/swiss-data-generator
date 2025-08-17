@@ -13,6 +13,7 @@ const ReportModalContext = createContext<ModalContext | null>(null);
 export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [onLoadCallback, setOnLoadCallback] = useState<((error?: string | null) => void) | null>(null);
+  const [shouldFetch, setShouldFetch] = useState(false);
 
   const open = useCallback((onLoad?: (error?: string | null) => void) => {
     const { uuid } = getChatTokens();
@@ -24,11 +25,13 @@ export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
       setOnLoadCallback(() => onLoad);
     }
     setIsOpen(true);
+    setShouldFetch(true); // Trigger fetch when modal opens
   }, []);
 
   const close = useCallback(() => {
     setIsOpen(false);
     setOnLoadCallback(null); // Clear callback on close
+    setShouldFetch(false); // Reset fetch trigger
   }, []);
 
   return (
@@ -39,6 +42,7 @@ export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
           onBack={close}
           isModal={true}
           onLoad={onLoadCallback || undefined}
+          shouldFetch={shouldFetch}
         />
       )}
     </ReportModalContext.Provider>

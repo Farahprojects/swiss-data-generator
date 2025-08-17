@@ -15,6 +15,7 @@ interface ReportViewerProps {
   onStateReset?: () => void;
   isModal?: boolean;
   onLoad?: (error?: string | null) => void;
+  shouldFetch?: boolean;
 }
 
 const ReportViewerActions: React.FC = () => {
@@ -54,20 +55,23 @@ const ReportViewerActions: React.FC = () => {
 
 type TransitionPhase = 'idle' | 'fading' | 'clearing' | 'transitioning' | 'complete';
 
-export const ReportViewer = ({ onBack, isModal = false, onLoad }: ReportViewerProps) => {
+export const ReportViewer = ({ onBack, isModal = false, onLoad, shouldFetch = false }: ReportViewerProps) => {
   const { reportData, isLoading, error, fetchReport } = useReportData();
   const [activeView, setActiveView] = useState<'report' | 'astro'>('report');
   const isMobile = useIsMobile();
 
-  useEffect(() => { 
-    // Get guest ID from persisted storage
-    const { uuid } = getChatTokens();
-    if (uuid) {
-      fetchReport(uuid);
-    } else {
-      console.warn('[ReportViewer] No persisted guest ID found');
+  // Only fetch when explicitly told to via shouldFetch prop
+  useEffect(() => {
+    if (shouldFetch) {
+      const { uuid } = getChatTokens();
+      if (uuid) {
+        fetchReport(uuid);
+      } else {
+        console.warn('[ReportViewer] No persisted guest ID found');
+      }
     }
-  }, [fetchReport]);
+  }, [shouldFetch, fetchReport]);
+
   useEffect(() => { if (!isLoading) onLoad?.(error); }, [isLoading, error, onLoad]);
   useEffect(() => {
     if (reportData) {
