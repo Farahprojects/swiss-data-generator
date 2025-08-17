@@ -1191,18 +1191,21 @@ export type Database = {
           guest_report_id: string
           id: string
           is_ai_report: boolean | null
+          seen?: boolean | null
         }
         Insert: {
           created_at?: string | null
           guest_report_id: string
           id?: string
           is_ai_report?: boolean | null
+          seen?: boolean | null
         }
         Update: {
           created_at?: string | null
           guest_report_id?: string
           id?: string
           is_ai_report?: boolean | null
+          seen?: boolean | null
         }
         Relationships: []
       }

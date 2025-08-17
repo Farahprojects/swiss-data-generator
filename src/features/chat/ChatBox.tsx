@@ -7,6 +7,7 @@ import { Menu } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { ChatSidebarControls } from './ChatSidebarControls';
 import { getChatTokens } from '@/services/auth/chatTokens';
+import { startReportReadyOrchestration } from '@/services/report/reportReadyOrchestrator';
 
 export const ChatBox = () => {
   const { error } = useChatStore();
@@ -16,6 +17,9 @@ export const ChatBox = () => {
 
   useEffect(() => {
     console.log(`[Chat] guestReportId=${uuid}`); // Add precise log
+    if (uuid) {
+      startReportReadyOrchestration(uuid);
+    }
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
