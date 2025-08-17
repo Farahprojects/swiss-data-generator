@@ -8,12 +8,15 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { ChatSidebarControls } from './ChatSidebarControls';
 import { getChatTokens } from '@/services/auth/chatTokens';
 import { startReportReadyOrchestration } from '@/services/report/reportReadyOrchestrator';
+import { MotionConfig } from 'framer-motion';
+import { useConversationUIStore } from './conversation-ui-store';
 
 export const ChatBox = () => {
   const { error } = useChatStore();
   const messages = useChatStore((state) => state.messages);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { uuid } = getChatTokens();
+  const isConversationOpen = useConversationUIStore((s) => s.isConversationOpen);
 
   useEffect(() => {
     console.log(`[Chat] guestReportId=${uuid}`); // Add precise log
@@ -27,6 +30,7 @@ export const ChatBox = () => {
 
   return (
     <>
+      <MotionConfig reducedMotion={isConversationOpen ? 'always' : 'never'}>
       <div className="flex flex-row flex-1 bg-white max-w-6xl w-full mx-auto md:border-x border-gray-100 min-h-0">
         {/* Left Sidebar (Desktop) */}
         <div className="hidden md:flex w-64 border-r border-gray-100 p-4 flex-col gap-4 bg-gray-50/50">
@@ -77,6 +81,7 @@ export const ChatBox = () => {
           <ConversationOverlay />
         </div>
       </div>
+      </MotionConfig>
 
       {/* Report Modal is now rendered by the provider */}
     </>
