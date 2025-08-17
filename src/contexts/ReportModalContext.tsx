@@ -1,27 +1,25 @@
 import { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 import { ReportViewer } from '@/components/public-report/ReportViewer';
-
-interface ReportReference {
-  guestReportId: string;
-}
+import { getChatTokens } from '@/services/auth/chatTokens';
 
 interface ModalContext {
-  open: (guestReportId: string, onLoad?: (error?: string | null) => void) => void;
+  open: (onLoad?: (error?: string | null) => void) => void;
   close: () => void;
   isOpen: boolean;
-  currentReport: ReportReference | null;
 }
 
 const ReportModalContext = createContext<ModalContext | null>(null);
 
 export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
-  const [currentReport, setCurrentReport] = useState<ReportReference | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [onLoadCallback, setOnLoadCallback] = useState<((error?: string | null) => void) | null>(null);
 
-  const open = useCallback((guestReportId: string, onLoad?: (error?: string | null) => void) => {
-    if (!guestReportId) return;
-    setCurrentReport({ guestReportId });
+  const open = useCallback((onLoad?: (error?: string | null) => void) => {
+    const { uuid } = getChatTokens();
+    if (!uuid) {
+      console.warn('[ReportModal] No persisted guest ID found');
+      return;
+    }
     if (onLoad) {
       setOnLoadCallback(() => onLoad);
     }
@@ -29,17 +27,15 @@ export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const close = useCallback(() => {
-    setCurrentReport(null);
     setIsOpen(false);
     setOnLoadCallback(null); // Clear callback on close
   }, []);
 
   return (
-    <ReportModalContext.Provider value={{ open, close, isOpen, currentReport }}>
+    <ReportModalContext.Provider value={{ open, close, isOpen }}>
       {children}
-      {isOpen && currentReport && (
+      {isOpen && (
         <ReportViewer
-          guestReportId={currentReport.guestReportId}
           onBack={close}
           isModal={true}
           onLoad={onLoadCallback || undefined}

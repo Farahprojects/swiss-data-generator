@@ -8,32 +8,33 @@ import { supabase } from '@/integrations/supabase/client';
 import { ReportData, extractReportContent, getPersonName } from '@/utils/reportContentExtraction';
 import { renderAstroDataAsText, renderUnifiedContentAsText } from '@/utils/componentToTextRenderer';
 import { useReportData } from '@/hooks/useReportData';
+import { getChatTokens } from '@/services/auth/chatTokens';
 
 interface ReportViewerProps {
-  guestReportId: string;
   onBack: () => void;
   onStateReset?: () => void;
   isModal?: boolean;
   onLoad?: (error?: string | null) => void;
 }
 
-const ReportViewerActions: React.FC<{ guestId: string }> = ({ guestId }) => {
+const ReportViewerActions: React.FC = () => {
   const { toast } = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
   const handleDownload = async () => {
-    if (!guestId) {
+    const { uuid } = getChatTokens();
+    if (!uuid) {
       toast({ variant: 'destructive', title: 'Download Failed', description: 'Report ID is missing.' });
       return;
     }
     setIsDownloading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('download-report-pdf', { body: { guest_report_id: guestId } });
+      const { data, error } = await supabase.functions.invoke('download-report-pdf', { body: { guest_report_id: uuid } });
       if (error || !data) throw new Error(error?.message || 'No data');
       const blob = new Blob([data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Therai-Report-${guestId.substring(0, 8)}.pdf`;
+      a.download = `Therai-Report-${uuid.substring(0, 8)}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -53,12 +54,20 @@ const ReportViewerActions: React.FC<{ guestId: string }> = ({ guestId }) => {
 
 type TransitionPhase = 'idle' | 'fading' | 'clearing' | 'transitioning' | 'complete';
 
-export const ReportViewer = ({ guestReportId, onBack, isModal = false, onLoad }: ReportViewerProps) => {
+export const ReportViewer = ({ onBack, isModal = false, onLoad }: ReportViewerProps) => {
   const { reportData, isLoading, error, fetchReport } = useReportData();
   const [activeView, setActiveView] = useState<'report' | 'astro'>('report');
   const isMobile = useIsMobile();
 
-  useEffect(() => { fetchReport(guestReportId); }, [guestReportId, fetchReport]);
+  useEffect(() => { 
+    // Get guest ID from persisted storage
+    const { uuid } = getChatTokens();
+    if (uuid) {
+      fetchReport(uuid);
+    } else {
+      console.warn('[ReportViewer] No persisted guest ID found');
+    }
+  }, [fetchReport]);
   useEffect(() => { if (!isLoading) onLoad?.(error); }, [isLoading, error, onLoad]);
   useEffect(() => {
     if (reportData) {
@@ -92,7 +101,7 @@ export const ReportViewer = ({ guestReportId, onBack, isModal = false, onLoad }:
         <div className="flex items-center justify-between px-4 py-4 border-b bg-white shadow-sm">
           <div />
           <div className="flex items-center gap-3">
-            <ReportViewerActions guestId={reportData.guest_report?.id} />
+            <ReportViewerActions />
           </div>
         </div>
 
