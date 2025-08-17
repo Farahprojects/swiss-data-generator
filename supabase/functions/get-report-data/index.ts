@@ -172,7 +172,8 @@ serve(async (req) => {
         content_type: isAIReport ? (hasSwissData ? 'both' : 'ai') : 'astro',
         has_ai_report: isAIReport,
         has_swiss_data: hasSwissData,
-        is_ready: true
+        is_ready: true,
+        report_type: guestReport.report_type // Add report_type for parser routing
       }
     };
 

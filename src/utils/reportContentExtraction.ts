@@ -17,6 +17,7 @@ export interface ReportData {
     has_ai_report: boolean;
     has_swiss_data: boolean;
     is_ready: boolean;
+    report_type: string | null;
   };
 }
 

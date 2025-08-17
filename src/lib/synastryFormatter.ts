@@ -203,6 +203,9 @@ const parseSynastryAspects = (block: any) => {
  * It dispatches parsing to dedicated functions based on `block_type`.
  */
 export const parseAstroData = (raw: any): any => {
+  console.log('🔍 [parseAstroData] Raw input:', raw);
+  console.log('🔍 [parseAstroData] Raw input keys:', raw ? Object.keys(raw) : 'null');
+  
   if (!raw || typeof raw !== 'object') {
     console.warn('⚠️ [parseAstroData] received invalid or empty data');
     return {};
@@ -212,6 +215,8 @@ export const parseAstroData = (raw: any): any => {
     meta: raw.meta ?? {},
     subject: raw.subject ?? {} // Carry over subject info
   };
+  
+  console.log('🔍 [parseAstroData] Initial parsedData:', parsedData);
 
   // Handle single-block, top-level report types like 'monthly'
   if (raw.block_type) {
@@ -229,10 +234,14 @@ export const parseAstroData = (raw: any): any => {
 
   // Continue with existing logic for multi-block reports (natal, synastry)
   const dataRoot = raw.blocks || raw;
+  console.log('🔍 [parseAstroData] dataRoot:', dataRoot);
+  console.log('🔍 [parseAstroData] dataRoot keys:', dataRoot ? Object.keys(dataRoot) : 'null');
 
   for (const key in dataRoot) {
+    console.log(`🔍 [parseAstroData] Processing key: ${key}`, dataRoot[key]);
     if (dataRoot.hasOwnProperty(key) && typeof dataRoot[key] === 'object' && dataRoot[key]?.block_type) {
       const block = dataRoot[key];
+      console.log(`🔍 [parseAstroData] Found block with type: ${block.block_type}`);
       switch (block.block_type) {
         case 'natal':
           parsedData.natal = parseNatal(block);
@@ -256,6 +265,8 @@ export const parseAstroData = (raw: any): any => {
     }
   }
 
+  console.log('🔍 [parseAstroData] Final parsedData:', parsedData);
+  console.log('🔍 [parseAstroData] Final parsedData keys:', Object.keys(parsedData));
   return parsedData;
 };
 
