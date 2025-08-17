@@ -16,6 +16,8 @@ export const ChatSidebarControls: React.FC = () => {
   const [hasReport, setHasReport] = useState<boolean>(() => getHasReportFlag());
   const [isPolling, setIsPolling] = useState<boolean>(false);
   const attemptRef = useRef<number>(0);
+  const startRef = useRef<number>(0);
+  const timeoutRef = useRef<any>(null);
 
   // Start polling for report_ready_signals when we have no hasReport flag
   useEffect(() => {
@@ -26,7 +28,7 @@ export const ChatSidebarControls: React.FC = () => {
     setIsPolling(true);
     let cancelled = false;
     attemptRef.current = 0;
-    console.log(`[ReportPolling] start guest=${uuid}`);
+    startRef.current = Date.now();
 
     const poll = async () => {
       try {
@@ -41,7 +43,9 @@ export const ChatSidebarControls: React.FC = () => {
           setHasReport(true);
           setHasReportFlag(true);
           setIsPolling(false);
-          console.log(`[ReportPolling] stop guest=${uuid} reason=found attempts=${attemptRef.current}`);
+          const elapsedSec = Math.round((Date.now() - startRef.current) / 1000);
+          // Log only two numbers: elapsed seconds and attempts
+          console.log(`[ReportPolling] ${elapsedSec} ${attemptRef.current}`);
           // Optionally inject context as soon as ready if conversation exists
           const conversationId = useChatStore.getState().conversationId;
           if (conversationId) {
@@ -53,15 +57,51 @@ export const ChatSidebarControls: React.FC = () => {
         // ignore transient errors
       }
 
-      if (!cancelled) setTimeout(poll, 1000);
+      // Check cutoff (12s)
+      const elapsedMs = Date.now() - startRef.current;
+      if (elapsedMs >= 12000) {
+        // Final single ask (no further polling)
+        try {
+          attemptRef.current += 1;
+          const { data, error } = await supabase
+            .from('report_ready_signals')
+            .select('guest_report_id')
+            .eq('guest_report_id', uuid)
+            .limit(1);
+          const elapsedSec = Math.round((Date.now() - startRef.current) / 1000);
+          console.log(`[ReportPolling] ${elapsedSec} ${attemptRef.current}`);
+          if (!cancelled && !error && data && data.length > 0) {
+            setHasReport(true);
+            setHasReportFlag(true);
+            setIsPolling(false);
+            const conversationId = useChatStore.getState().conversationId;
+            if (conversationId) {
+              injectContextMessages(conversationId, uuid).catch(() => {});
+            }
+          } else {
+            console.warn('[ReportPolling] no report on the ask');
+            setIsPolling(false);
+          }
+        } catch (_) {
+          const elapsedSec = Math.round((Date.now() - startRef.current) / 1000);
+          console.log(`[ReportPolling] ${elapsedSec} ${attemptRef.current}`);
+          console.warn('[ReportPolling] no report on the ask');
+          setIsPolling(false);
+        }
+        return;
+      }
+
+      if (!cancelled) timeoutRef.current = setTimeout(poll, 1000);
     };
 
     poll();
 
     return () => { 
       cancelled = true; 
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       if (isPolling) {
-        console.log(`[ReportPolling] stop guest=${uuid} reason=unmount attempts=${attemptRef.current}`);
+        const elapsedSec = Math.round((Date.now() - startRef.current) / 1000);
+        console.log(`[ReportPolling] ${elapsedSec} ${attemptRef.current}`);
       }
       setIsPolling(false); 
     };
