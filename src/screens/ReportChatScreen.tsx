@@ -10,7 +10,7 @@ const ReportChatScreen = () => {
   const { conversationId } = useParams<{ conversationId: string }>();
   const { uuid } = getChatTokens(); // Only need uuid, not token
 
-  console.log('[ReportChatScreen] Retrieved from storage - conversationId:', conversationId, 'uuid:', uuid);
+
   
   // Always initialize chat - let ChatBox handle edge cases
   useChat(conversationId, uuid || undefined);

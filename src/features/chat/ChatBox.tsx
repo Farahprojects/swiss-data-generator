@@ -19,7 +19,7 @@ export const ChatBox = () => {
   const isConversationOpen = useConversationUIStore((s) => s.isConversationOpen);
 
   useEffect(() => {
-    console.log(`[Chat] guestReportId=${uuid}`); // Add precise log
+
     if (uuid) {
       startReportReadyOrchestration(uuid);
     }

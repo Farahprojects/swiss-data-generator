@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Download, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ReportContent } from './ReportContent';
@@ -134,6 +134,8 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
       <SheetContent side="right" className="w-full sm:max-w-2xl p-0">
         <div className="flex flex-col h-full">
           <SheetHeader className="flex flex-row items-center justify-between px-6 py-4 border-b bg-white">
+            <SheetTitle className="sr-only">Report</SheetTitle>
+            <SheetDescription className="sr-only">Astrological report data</SheetDescription>
             <div className="flex items-center gap-3">
               <ReportViewerActions guestReportId={guestReportId} />
             </div>
