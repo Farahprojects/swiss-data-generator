@@ -174,13 +174,13 @@ const parseTransits = (block: any) => {
       datetime_utc: block.datetime_utc,
       timezone: block.timezone,
       personA: {
-        name: block.person_a?.name || 'Person A',
+        name: block.person_a?.name || null, // Name is optional
         planets: enrichPlanets(block.person_a?.planets ?? {}),
         aspects_to_natal: enrichAspects(block.person_a?.aspects_to_natal ?? [])
       },
       personB: block.person_b
         ? {
-            name: block.person_b?.name || 'Person B',
+            name: block.person_b?.name || null, // Name is optional
             planets: enrichPlanets(block.person_b?.planets ?? {}),
             aspects_to_natal: enrichAspects(block.person_b?.aspects_to_natal ?? [])
           }

@@ -113,16 +113,16 @@ export const SynastryAstroFormatter: React.FC<SynastryAstroFormatterProps> = ({
               <TransitMetadata transits={transits} />
               {transits.personA && (
                 <div>
-                  <h4 className="text-lg font-semibold text-gray-700 mb-4">{transits.personA.name}'s Transits</h4>
+                  {transits.personA.name && <h4 className="text-lg font-semibold text-gray-700 mb-4">{transits.personA.name}'s Transits</h4>}
                   <PlanetaryPositions planets={transits.personA.planets} title="Current Transit Positions" />
-                  <AspectTable aspects={transits.personA.aspects_to_natal} title={`Transit Aspects to ${transits.personA.name}'s Natal`} />
+                  <AspectTable aspects={transits.personA.aspects_to_natal} title={`Transit Aspects to ${transits.personA.name || 'Natal'}`} />
                 </div>
               )}
               {transits.personB && (
                 <div className="mt-8">
-                  <h4 className="text-lg font-semibold text-gray-700 mb-4">{transits.personB.name}'s Transits</h4>
+                  {transits.personB.name && <h4 className="text-lg font-semibold text-gray-700 mb-4">{transits.personB.name}'s Transits</h4>}
                   <PlanetaryPositions planets={transits.personB.planets} title="Current Transit Positions" />
-                  <AspectTable aspects={transits.personB.aspects_to_natal} title={`Transit Aspects to ${transits.personB.name}'s Natal`} />
+                  <AspectTable aspects={transits.personB.aspects_to_natal} title={`Transit Aspects to ${transits.personB.name || 'Natal'}`} />
                 </div>
               )}
             </CardContent>
