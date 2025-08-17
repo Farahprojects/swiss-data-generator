@@ -152,8 +152,7 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
     );
   }
 
-  const reportContent = extractReportContent(reportData);
-  const personName = getPersonName(reportData.metadata);
+  const personName = getPersonName(reportData);
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -196,7 +195,12 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
           <ScrollArea className="flex-1">
             <div className="p-6">
               {activeView === 'report' ? (
-                <ReportContent reportContent={reportContent} />
+                <ReportContent
+                  reportData={reportData}
+                  activeView={activeView}
+                  setActiveView={setActiveView}
+                  isMobile={isMobile}
+                />
               ) : (
                 <div className="space-y-6">
                   <div>
