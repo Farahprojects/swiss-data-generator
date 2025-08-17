@@ -29,6 +29,9 @@ export const ChatSidebarControls: React.FC = () => {
     let cancelled = false;
     attemptRef.current = 0;
     startRef.current = Date.now();
+    // Start logs
+    console.log('[ReportPolling] start');
+    console.log('[ReportPolling] 0 0');
 
     const poll = async () => {
       try {
@@ -61,6 +64,7 @@ export const ChatSidebarControls: React.FC = () => {
       const elapsedMs = Date.now() - startRef.current;
       if (elapsedMs >= 12000) {
         // Final single ask (no further polling)
+        console.log('[ReportPolling] final');
         try {
           attemptRef.current += 1;
           const { data, error } = await supabase
