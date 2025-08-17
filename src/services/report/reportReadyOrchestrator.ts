@@ -50,6 +50,7 @@ export function startReportReadyOrchestration(guestReportId: string): void {
     .then(({ hasRow, seen }) => {
       if (hasRow && seen) {
         // Already handled; mark as ready
+        console.log('[ReportListener] already ready');
         useReportReadyStore.getState().setReportReady(true);
         return;
       }
@@ -72,11 +73,14 @@ export function startReportReadyOrchestration(guestReportId: string): void {
             try {
               await markReportSeen(guestReportId);
             } catch {}
+            const elapsedSec = Math.round((Date.now() - startedAt) / 1000);
+            console.log(`[ReportListener] received after ${elapsedSec}s`);
             useReportReadyStore.getState().setReportReady(true);
             stopReportReadyOrchestration(guestReportId);
           },
         )
         .subscribe();
+      console.log('[ReportListener] subscribed');
       activeChannels[guestReportId] = { channel, startedAt };
     })
     .catch(() => {
@@ -97,11 +101,15 @@ export function startReportReadyOrchestration(guestReportId: string): void {
             try {
               await markReportSeen(guestReportId);
             } catch {}
+            const startedAt = activeChannels[guestReportId]?.startedAt || Date.now();
+            const elapsedSec = Math.round((Date.now() - startedAt) / 1000);
+            console.log(`[ReportListener] received after ${elapsedSec}s`);
             useReportReadyStore.getState().setReportReady(true);
             stopReportReadyOrchestration(guestReportId);
           },
         )
         .subscribe();
+      console.log('[ReportListener] subscribed');
       activeChannels[guestReportId] = { channel, startedAt: Date.now() };
     });
 }
