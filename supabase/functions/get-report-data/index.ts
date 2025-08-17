@@ -179,15 +179,6 @@ serve(async (req) => {
     const processingTime = Date.now() - startTime;
     console.log(`[get-report-data][${requestId}] ✅ Report data retrieved in ${processingTime}ms: ${guest_report_id}`);
     
-    // Call create-temp-report-data after successfully preparing the data
-    // This creates the temporary folder for the report (fire-and-forget)
-    console.log(`[get-report-data][${requestId}] 🔄 Calling create-temp-report-data for: ${guest_report_id}`);
-    supabase.functions.invoke('create-temp-report-data', {
-      body: { guest_report_id: guest_report_id }
-    }).catch(error => {
-      console.warn(`[get-report-data][${requestId}] ⚠️ create-temp-report-data failed:`, error);
-    });
-    
     // Return report data
     return new Response(
       JSON.stringify({ 
