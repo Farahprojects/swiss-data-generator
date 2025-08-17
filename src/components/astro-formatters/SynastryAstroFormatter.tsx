@@ -2,10 +2,16 @@ import React from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Table, TableBody, TableCell, TableHeader, TableHead, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { parseAstroData } from '@/lib/astroFormatter';
+import { normalizeSync } from '@/lib/astro/normalizeSync';
 import { ChartHeader } from './shared/ChartHeader';
 import { AspectTable } from './shared/AspectTable';
 import { ChartAngles } from './shared/ChartAngles';
+import { HouseCusps } from './shared/HouseCusps';
+import { PlanetaryPositions } from './shared/PlanetaryPositions';
+import { TransitMetadata } from './shared/TransitMetadata';
+import { formatPos } from '@/lib/astro/format';
 
 interface SynastryAstroFormatterProps {
   swissData: any;
@@ -28,20 +34,20 @@ export const SynastryAstroFormatter: React.FC<SynastryAstroFormatterProps> = ({
 
   // Use the new dynamic parser
   const astroData = parseAstroData(swissData);
-
-  const { meta, natal_set, synastry_aspects, composite_chart, transits } = astroData;
-
-  const personA = natal_set?.personA;
-  const personB = natal_set?.personB;
+  
+  // Normalize for UI consumption
+  const vm = normalizeSync(astroData);
+  
+  const { synastry_aspects, composite_chart } = astroData;
 
   return (
     <div className={`font-inter max-w-4xl mx-auto py-8 ${className}`}>
-      {meta && (
-        <ChartHeader
-          title="Relationship Chart"
-          name={personA && personB ? `${personA.name} & ${personB.name}` : 'Synastry Analysis'}
-        />
-      )}
+      <ChartHeader
+        title="Relationship Chart"
+        name={vm.subjects.map(s => s.name).join(' & ') || 'Synastry Analysis'}
+        date={vm.analysisDate}
+        subtitle={vm.timeBasis === 'per_subject_local' ? 'Times shown per subject\'s local timezone' : undefined}
+      />
 
       <div className="space-y-8 mt-8">
         {/* Synastry Aspects */}
@@ -97,64 +103,85 @@ export const SynastryAstroFormatter: React.FC<SynastryAstroFormatterProps> = ({
           </Card>
         )}
 
-        {/* Natal Charts as Accordion */}
-        {natal_set && (
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="natal-charts">
-              <AccordionTrigger className="text-2xl font-light text-gray-800 hover:no-underline">
-                Natal Charts: The Foundation
-              </AccordionTrigger>
-              <AccordionContent className="space-y-6">
-                {personA && (
-                  <div>
-                    <h4 className="text-xl font-light text-gray-700 mb-2">{personA.name}</h4>
-                    <ChartAngles angles={personA.angles} />
-                    <AspectTable aspects={personA.aspects} title="Natal Aspects" />
-                  </div>
-                )}
-                {personB && (
-                  <div>
-                    <h4 className="text-xl font-light text-gray-700 mt-6 mb-2">{personB.name}</h4>
-                    <ChartAngles angles={personB.angles} />
-                    <AspectTable aspects={personB.aspects} title="Natal Aspects" />
-                  </div>
-                )}
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        )}
-
-        {/* Transits */}
-        {transits && (
+        {/* Individual Charts */}
+        {vm.subjects.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle className="text-2xl font-light text-gray-800">
-                Current Transits: The Present Moment
+                Individual Charts: Natal & Current Transits
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {transits.personA && (
-                <div>
-                  <h4 className="text-xl font-light text-gray-700 mb-2">
-                    Transits to {transits.personA.name}'s Chart
-                  </h4>
-                  <AspectTable
-                    aspects={transits.personA.aspects_to_natal}
-                    title="Current Influences"
-                  />
-                </div>
-              )}
-              {transits.personB && (
-                <div className="mt-6">
-                  <h4 className="text-xl font-light text-gray-700 mb-2">
-                    Transits to {transits.personB.name}'s Chart
-                  </h4>
-                  <AspectTable
-                    aspects={transits.personB.aspects_to_natal}
-                    title="Current Influences"
-                  />
-                </div>
-              )}
+              <Tabs defaultValue={vm.subjects[0]?.key} className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  {vm.subjects.map((subject) => (
+                    <TabsTrigger key={subject.key} value={subject.key}>
+                      {subject.name}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                
+                {vm.subjects.map((subject) => (
+                  <TabsContent key={subject.key} value={subject.key} className="space-y-6">
+                    {/* Natal Section */}
+                    <div>
+                      <h4 className="text-xl font-light text-gray-700 mb-4">Natal Chart</h4>
+                      <div className="grid gap-6">
+                        {subject.natal?.angles && (
+                          <ChartAngles angles={subject.natal.angles} title="Chart Angles" />
+                        )}
+                        {subject.natal?.houses && (
+                          <HouseCusps houses={subject.natal.houses} title="House Cusps" />
+                        )}
+                        {subject.natal?.planets && (
+                          <PlanetaryPositions planets={subject.natal.planets} title="Planetary Positions" />
+                        )}
+                        {subject.natal?.aspects && subject.natal.aspects.length > 0 && (
+                          <AspectTable aspects={subject.natal.aspects} title="Natal Aspects" />
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Current Transits Section */}
+                    {subject.transits && (
+                      <div>
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="text-xl font-light text-gray-700">Current Transits</h4>
+                          {subject.tzDisplay && (
+                            <span className="text-sm text-gray-500">
+                              Timezone: {subject.tzDisplay}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {subject.transits.datetime_utc && (
+                          <TransitMetadata 
+                            transits={{
+                              datetime_utc: subject.transits.datetime_utc,
+                              timezone: subject.transits.timezone
+                            }}
+                          />
+                        )}
+                        
+                        <div className="grid gap-6">
+                          {subject.transits?.planets && (
+                            <PlanetaryPositions 
+                              planets={subject.transits.planets} 
+                              title="Transit Positions" 
+                            />
+                          )}
+                          {subject.transits?.aspects_to_natal && subject.transits.aspects_to_natal.length > 0 && (
+                            <AspectTable 
+                              aspects={subject.transits.aspects_to_natal} 
+                              title="Transits to Natal" 
+                            />
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </TabsContent>
+                ))}
+              </Tabs>
             </CardContent>
           </Card>
         )}

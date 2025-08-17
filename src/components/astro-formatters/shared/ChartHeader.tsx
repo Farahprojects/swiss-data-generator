@@ -8,6 +8,8 @@ interface ChartHeaderProps {
   latitude?: number;
   longitude?: number;
   title?: string;
+  date?: string;       // Analysis date for sync reports
+  subtitle?: string;   // Additional subtitle text
 }
 
 export const ChartHeader: React.FC<ChartHeaderProps> = ({
@@ -16,7 +18,9 @@ export const ChartHeader: React.FC<ChartHeaderProps> = ({
   birthLocation,
   latitude,
   longitude,
-  title
+  title,
+  date,
+  subtitle
 }) => {
   const coordinates = latitude && longitude ? `${latitude}°, ${longitude}°` : '';
   const displayTitle = title || `${name}'s Astro Data`;
@@ -31,9 +35,17 @@ export const ChartHeader: React.FC<ChartHeaderProps> = ({
         {birthDate && <div className="text-sm">Born: {birthDate}</div>}
         {birthLocation && <div className="text-sm">{birthLocation}</div>}
         {coordinates && <div className="text-xs text-gray-500">{coordinates}</div>}
-        <div className="text-xs text-gray-500 pt-2 border-t border-gray-100">
-          Analysis: July 19, 2025
-        </div>
+        {(date || subtitle) && (
+          <div className="text-xs text-gray-500 pt-2 border-t border-gray-100 space-y-1">
+            {date && <div>Analysis: {date}</div>}
+            {subtitle && <div>{subtitle}</div>}
+          </div>
+        )}
+        {!date && !subtitle && (
+          <div className="text-xs text-gray-500 pt-2 border-t border-gray-100">
+            Analysis: July 19, 2025
+          </div>
+        )}
       </div>
     </div>
   );
