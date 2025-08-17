@@ -6,7 +6,7 @@ import { AspectTable } from './shared/AspectTable';
 import { HouseCusps } from './shared/HouseCusps';
 import { ChartAngles } from './shared/ChartAngles';
 import { PlanetaryPositions } from './shared/PlanetaryPositions';
-import { parseAstroData } from '@/lib/synastryFormatter';
+import { parseAstroData } from '@/lib/astroFormatter';
 import { TransitMetadata } from './shared/TransitMetadata';
 
 interface IndividualAstroFormatterProps {

@@ -1,6 +1,6 @@
 
 import React from "react";
-import { parseAstroData } from "@/lib/synastryFormatter";
+import { parseAstroData } from "@/lib/astroFormatter";
 
 interface Props {
   rawSwissJSON: any;

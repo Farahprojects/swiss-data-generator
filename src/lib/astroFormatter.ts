@@ -1,4 +1,4 @@
-// lib/synastryFormatter.ts - Synastry data formatter for Swiss Ephemeris sync v1.1+
+// lib/astroFormatter.ts - Astrological data formatter for Swiss Ephemeris sync v1.1+
 import { ZODIAC_SIGNS } from './astroUtils';
 
 type PlanetDetail = {

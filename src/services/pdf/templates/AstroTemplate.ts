@@ -1,6 +1,6 @@
 import { BaseTemplate } from './BaseTemplate';
 import { PdfGenerationOptions, PdfMetadata } from '../types';
-import { isSynastryData, parseAstroData } from '@/lib/synastryFormatter';
+import { isSynastryData, parseAstroData } from '@/lib/astroFormatter';
 
 
 export interface AstroPdfData {

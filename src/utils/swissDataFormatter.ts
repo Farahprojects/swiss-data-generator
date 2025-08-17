@@ -1,6 +1,6 @@
 // @DEPRECATED: REDUNDANT PARSER - Mark for deletion
 // This file contains a legacy Swiss data parser.
-// The unified and correct parser is now located in src/lib/synastryFormatter.ts
+// The unified and correct parser is now located in src/lib/astroFormatter.ts
 // This entire file can be removed in a future cleanup.
 
 // Swiss Astrological Data Formatter

@@ -1,6 +1,6 @@
 // components/public-report/SynastrySnapshot.tsx
 import React from "react";
-import { parseAstroData } from "@/lib/synastryFormatter";
+import { parseAstroData } from "@/lib/astroFormatter";
 
 const SectionTitle: React.FC<{ children: string }> = ({ children }) => (
   <h3 className="mt-8 mb-2 text-center font-semibold tracking-wider text-xs text-neutral-500 uppercase border-b pb-1">

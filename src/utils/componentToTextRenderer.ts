@@ -1,7 +1,7 @@
 
 import { ReportData } from './reportContentExtraction';
 
-import { isSynastryData, parseAstroData } from '@/lib/synastryFormatter';
+import { isSynastryData, parseAstroData } from '@/lib/astroFormatter';
 
 const isSynastryReport = (reportData: ReportData): boolean => {
   if (!reportData.swiss_data) return false;

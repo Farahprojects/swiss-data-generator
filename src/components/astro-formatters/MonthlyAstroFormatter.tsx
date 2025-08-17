@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHeader, TableHead, TableRow } from '@
 import { ChartHeader } from './shared/ChartHeader';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { parseAstroData } from '@/lib/synastryFormatter';
+import { parseAstroData } from '@/lib/astroFormatter';
 
 interface MonthlyAstroFormatterProps {
   swissData: any;

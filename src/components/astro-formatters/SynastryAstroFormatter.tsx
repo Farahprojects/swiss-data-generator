@@ -2,7 +2,7 @@ import React from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Table, TableBody, TableCell, TableHeader, TableHead, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { parseAstroData } from '@/lib/synastryFormatter';
+import { parseAstroData } from '@/lib/astroFormatter';
 import { ChartHeader } from './shared/ChartHeader';
 import { AspectTable } from './shared/AspectTable';
 import { ChartAngles } from './shared/ChartAngles';

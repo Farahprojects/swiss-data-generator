@@ -5,7 +5,7 @@ import { SynastryAstroFormatter } from '@/components/astro-formatters/SynastryAs
 import { MonthlyAstroFormatter } from '@/components/astro-formatters/MonthlyAstroFormatter';
 import { ReportData } from '@/utils/reportContentExtraction';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { parseAstroData } from '@/lib/synastryFormatter';
+import { parseAstroData } from '@/lib/astroFormatter';
 
 interface AstroDataRendererProps {
   swissData: any;
