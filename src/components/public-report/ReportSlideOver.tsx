@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ReportContent } from './ReportContent';
 import { supabase } from '@/integrations/supabase/client';
-import { ReportData, GetReportDataResponse, extractReportContent, getPersonName } from '@/utils/reportContentExtraction';
+import { ReportData, extractReportContent, getPersonName } from '@/utils/reportContentExtraction';
 import { renderAstroDataAsText, renderUnifiedContentAsText } from '@/utils/componentToTextRenderer';
 import { useReportData } from '@/hooks/useReportData';
 
@@ -57,10 +57,8 @@ const ReportViewerActions: React.FC<{ guestReportId?: string }> = ({ guestReport
       const { data, error } = await supabase.functions.invoke('get-report-data', { body: { guest_report_id: guestReportId } });
       if (error || !data?.ready) throw new Error('Report not available');
       
-      const typedResponse = data as GetReportDataResponse;
-      if (!typedResponse.data) throw new Error('Invalid response structure');
-      
-      const reportContent = extractReportContent(typedResponse.data);
+      const reportData = data.data as ReportData;
+      const reportContent = extractReportContent(reportData);
       const textContent = renderUnifiedContentAsText(reportContent);
       
       await navigator.clipboard.writeText(textContent);
@@ -98,7 +96,6 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
   // Fetch when explicitly told to via shouldFetch prop
   useEffect(() => {
     if (shouldFetch && guestReportId) {
-      console.log('[ReportSlideOver] Starting fetch for guestReportId:', guestReportId);
       fetchReport(guestReportId);
     } else if (shouldFetch && !guestReportId) {
       console.warn('[ReportSlideOver] No guest report ID provided');
@@ -107,20 +104,9 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
 
   useEffect(() => {
     if (!isLoading) {
-      console.log('[ReportSlideOver] Fetch completed. Error:', error, 'ReportData:', reportData ? 'Present' : 'Null');
-      if (reportData) {
-        console.log('[ReportSlideOver] ReportData structure:', {
-          hasGuestReport: !!reportData.guest_report,
-          hasReportContent: !!reportData.report_content,
-          hasSwissData: !!reportData.swiss_data,
-          hasMetadata: !!reportData.metadata,
-          guestReportKeys: reportData.guest_report ? Object.keys(reportData.guest_report) : 'N/A',
-          metadataKeys: reportData.metadata ? Object.keys(reportData.metadata) : 'N/A'
-        });
-      }
       onLoad?.(error);
     }
-  }, [isLoading, error, onLoad, reportData]);
+  }, [isLoading, error, onLoad]);
 
   if (isLoading) {
     return (
@@ -166,9 +152,8 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
     );
   }
 
-  console.log('[ReportSlideOver] About to extract content. ReportData:', reportData);
   const reportContent = extractReportContent(reportData);
-  const personName = getPersonName(reportData);
+  const personName = getPersonName(reportData.metadata);
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
