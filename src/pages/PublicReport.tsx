@@ -454,8 +454,11 @@ const PublicReport = () => {
                 name={activeGuest.name}
                 email={activeGuest.email}
                 onPaid={(paidData) => {
-                  // Payment confirmed, but don't navigate yet - wait for report
-                  console.log('[PublicReport] Payment confirmed, waiting for report generation:', paidData.guestId);
+                  // Payment confirmed, navigate to chat immediately - let chat page handle report polling
+                  console.log('[PublicReport] Payment confirmed, navigating to chat:', paidData.guestId);
+                  setChatTokens(paidData.guestId, '');
+                  setActiveGuest(null);
+                  navigate('/chat');
                 }}
                 onReportReady={(readyData) => {
                   // Report is ready, show the ready modal
