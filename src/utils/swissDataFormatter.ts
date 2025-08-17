@@ -1,7 +1,11 @@
 // @DEPRECATED: REDUNDANT PARSER - Mark for deletion
 // This file contains a legacy Swiss data parser.
 // The unified and correct parser is now located in src/lib/astroFormatter.ts
+// Position formatting has been moved to src/lib/astro/format.ts
 // This entire file can be removed in a future cleanup.
+
+// @DEPRECATED: Use formatDegMin from src/lib/astro/format.ts instead
+// This degreesToZodiac function is deprecated and should not be used
 
 // Swiss Astrological Data Formatter
 // Modular formatting functions for astrological chart data
@@ -104,6 +108,7 @@ export const ASPECT_NAMES: { [key: string]: string } = {
 };
 
 /**
+ * @DEPRECATED: Use formatDegMin from src/lib/astro/format.ts instead
  * Convert decimal degrees to zodiac sign and degree
  */
 export const degreesToZodiac = (longitude: number): { sign: string; degree: number; minute: number } => {

@@ -1,11 +1,11 @@
 
 import React from 'react';
+import { formatPos } from '@/lib/astro/format';
 
 interface Angle {
   name: string;
   sign: string;
   deg: number;
-  min: number;
 }
 
 interface ChartAnglesProps {
@@ -47,7 +47,7 @@ export const ChartAngles: React.FC<ChartAnglesProps> = ({
           </thead>
           <tbody>
             {angleArray.map((angle) => {
-              const position = `${String(angle.deg).padStart(2, "0")}°${String(angle.min).padStart(2, "0")}' in ${angle.sign}`;
+              const position = formatPos(angle);
               
               return (
                 <tr key={angle.name} className="border-b border-gray-100 hover:bg-gray-50/30">

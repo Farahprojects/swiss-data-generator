@@ -1,6 +1,7 @@
 // components/public-report/SynastrySnapshot.tsx
 import React from "react";
 import { parseAstroData } from "@/lib/astroFormatter";
+import { formatPos } from "@/lib/astro/format";
 
 const SectionTitle: React.FC<{ children: string }> = ({ children }) => (
   <h3 className="mt-8 mb-2 text-center font-semibold tracking-wider text-xs text-neutral-500 uppercase border-b pb-1">
@@ -21,7 +22,7 @@ const PlanetTable: React.FC<{ planets: { name: string; deg: number; sign: string
         <tr key={p.name}>
           <td className="py-1 pr-2 text-left">{p.name}</td>
           <td className="py-1 text-left">
-            {String(Math.floor(p.deg)).padStart(2, "0")}°{String(Math.round((p.deg - Math.floor(p.deg)) * 60)).padStart(2, "0")}' in {p.sign}
+            {formatPos(p)}
             {p.retrograde && <span className="italic text-sm ml-1">Retrograde</span>}
           </td>
         </tr>

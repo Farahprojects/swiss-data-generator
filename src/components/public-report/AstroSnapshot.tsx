@@ -1,6 +1,7 @@
 
 import React from "react";
 import { parseAstroData } from "@/lib/astroFormatter";
+import { formatPos, formatPosWithHouse } from "@/lib/astro/format";
 
 interface Props {
   rawSwissJSON: any;
@@ -79,10 +80,7 @@ const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON, reportData }) => {
       lon: parsed.meta?.lon,
     },
     angles: Array.isArray(natal.angles)
-      ? natal.angles.map((a: any) => ({
-          ...a,
-          min: typeof a.min === 'number' ? a.min : Math.round((a.deg - Math.floor(a.deg)) * 60),
-        }))
+      ? natal.angles
       : [],
     houses: Array.isArray(natal.houses)
       ? natal.houses
@@ -91,7 +89,6 @@ const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON, reportData }) => {
         : [],
     planets: (natal.planets || []).map((p: any) => ({
       ...p,
-      min: Math.round((p.deg - Math.floor(p.deg)) * 60),
       retro: p.retrograde,
     })),
     aspects: (natal.aspects || []).map((a: any) => ({
@@ -101,10 +98,7 @@ const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON, reportData }) => {
     })),
     transits: parsed.transits?.personA
       ? {
-          planets: (parsed.transits.personA.planets || []).map((p: any) => ({
-            ...p,
-            min: Math.round((p.deg - Math.floor(p.deg)) * 60),
-          })),
+          planets: (parsed.transits.personA.planets || []),
           aspects: (parsed.transits.personA.aspects_to_natal || []).map((a: any) => ({
             ...a,
             orbDeg: Math.floor(a.orb ?? 0),
@@ -174,7 +168,7 @@ const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON, reportData }) => {
                 <tr key={angle.name}>
                   <td className="py-1 pr-2 text-left font-medium">{angle.name}</td>
                   <td className="py-1 text-left">
-                    {String(angle.deg).padStart(2, "0")}°{String(angle.min).padStart(2, "0")}' {angle.sign}
+                    {formatPos(angle)}
                   </td>
                 </tr>
               ))}
@@ -193,7 +187,7 @@ const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON, reportData }) => {
                 <tr key={house.number}>
                   <td className="py-1 pr-2 text-left">House {house.number}</td>
                   <td className="py-1 text-left">
-                    {String(house.deg).padStart(2, "0")}°{String(house.min).padStart(2, "0")}' {house.sign}
+                    {formatPos(house)}
                   </td>
                 </tr>
               ))}
@@ -211,8 +205,7 @@ const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON, reportData }) => {
               <tr key={p.name}>
                 <td className="py-1 pr-2 text-left">{p.name}</td>
                 <td className="py-1 text-left">
-                  {String(p.deg).padStart(2, "0")}°{String(p.min).padStart(2, "0")}' {p.sign}
-                  {p.house && <span className="text-neutral-500 ml-1">(House {p.house})</span>}
+                  {formatPosWithHouse(p)}
                   {p.retro && <span className="italic text-sm ml-1">Retrograde</span>}
                 </td>
               </tr>
@@ -282,7 +275,7 @@ const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON, reportData }) => {
                     <tr key={p.name}>
                       <td className="py-1 pr-2 text-left">{p.name}</td>
                       <td className="py-1 text-left">
-                        {String(p.deg).padStart(2, "0")}°{String(p.min).padStart(2, "0")}' {p.sign}
+                        {formatPos(p)}
                         {p.retro && <span className="italic text-sm ml-1">Retrograde</span>}
                       </td>
                     </tr>

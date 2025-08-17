@@ -1,11 +1,11 @@
 
 import React from 'react';
+import { formatPos } from '@/lib/astro/format';
 
 interface House {
   number: number;
   sign: string;
   deg: number;
-  min: number;
 }
 
 interface HouseCuspsProps {
@@ -47,7 +47,7 @@ export const HouseCusps: React.FC<HouseCuspsProps> = ({
           </thead>
           <tbody>
             {houseArray.map((house) => {
-              const cusp = `${String(house.deg).padStart(2, "0")}°${String(house.min).padStart(2, "0")}' in ${house.sign}`;
+              const cusp = formatPos(house);
               
               return (
                 <tr key={house.number} className="border-b border-gray-100 hover:bg-gray-50/30">

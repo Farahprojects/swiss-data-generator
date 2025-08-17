@@ -1,11 +1,11 @@
 
 import React from 'react';
+import { formatPosWithHouse } from '@/lib/astro/format';
 
 interface Planet {
   name: string;
   sign: string;
   deg: number;
-  min: number;
   house?: number;
   retro?: boolean;
 }
@@ -51,10 +51,7 @@ export const PlanetaryPositions: React.FC<PlanetaryPositionsProps> = ({
           </thead>
           <tbody>
             {planetArray.map((planet) => {
-              let position = `${String(planet.deg).padStart(2, "0")}°${String(planet.min).padStart(2, "0")}' in ${planet.sign}`;
-              if (planet.house) {
-                position += ` (House ${planet.house})`;
-              }
+              const position = formatPosWithHouse(planet);
               
               return (
                 <tr key={planet.name} className="border-b border-gray-100 hover:bg-gray-50/30">

@@ -13,6 +13,7 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SharedReportParser } from "../_shared/reportParser.ts";
 import { parseAstroData, isSynastryData } from "../_shared/astroFormatter.ts";
+import { formatDegMin } from "../_shared/astroFormat.ts";
 
 
 // ─── ENV VARS ────────────────────────────────────────────────────────────────
@@ -261,10 +262,9 @@ class ServerPdfGenerator {
 
       if (isPlanetTable) {
         const sign = (item.sign || '').padEnd(12);
-        const deg = String(Math.floor(item.deg || 0)).padStart(2, '0');
-        const min = String(Math.round((item.deg - Math.floor(item.deg)) * 60)).padStart(2, '0');
+        const degMin = formatDegMin(item.deg);
         const house = item.house ? `(H${item.house})` : '';
-        const position = `${deg}° ${sign} ${min}' ${house}`;
+        const position = `${degMin} ${sign} ${house}`;
 
         doc.text(item.name || 'Unknown', margins.left, y);
         doc.text(position, margins.left + 80, y);
