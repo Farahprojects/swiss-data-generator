@@ -19,7 +19,7 @@ let playToken = 0;
 let currentAudioLevel = 0;
 let isMonitoring = false;
 let animationFrame: number | null = null;
-let dataArray: Uint8Array | null = null;
+let dataArray: Uint8Array<ArrayBuffer> | null = null;
 
 // Event handlers
 type AudioEventHandler = () => void;

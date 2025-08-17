@@ -156,24 +156,29 @@ export const injectContextMessages = async (conversationId: string, uuid: string
   let tempData = null;
   
   try {
-    console.log('[injectContextMessages] Fetching temp report data for uuid:', uuid);
-    const { data, error } = await supabase.functions.invoke('retrieve-temp-report', {
+    console.log('[injectContextMessages] Fetching report data for guest_report_id:', uuid);
+    const { data, error } = await supabase.functions.invoke('get-report-data', {
       body: { 
-        uuid: uuid,
-        source: "chat"
+        guest_report_id: uuid
       }
     });
 
     if (error) {
-      console.warn('[injectContextMessages] Failed to fetch temp report:', error);
-    } else if (!data || data.error) {
-      console.warn('[injectContextMessages] No valid temp report returned:', data?.error);
+      console.warn('[injectContextMessages] Failed to fetch report data:', error);
+    } else if (!data?.ready) {
+      console.warn('[injectContextMessages] Report not ready yet:', data?.error || 'Report still processing');
+    } else if (data?.ok && data?.data) {
+      tempData = {
+        report_content: data.data.report_content,
+        swiss_data: data.data.swiss_data,
+        metadata: data.data.metadata
+      };
+      console.log('[injectContextMessages] Successfully fetched report data');
     } else {
-      tempData = data;
-      console.log('[injectContextMessages] Successfully fetched temp report data');
+      console.warn('[injectContextMessages] Invalid response format:', data);
     }
   } catch (e) {
-    console.error('[injectContextMessages] Exception fetching temp report:', e);
+    console.error('[injectContextMessages] Exception fetching report data:', e);
   }
 
   // Step 2: If we have valid temp data, inject into messages table
