@@ -8,8 +8,9 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { ReportContent } from './ReportContent';
 import { supabase } from '@/integrations/supabase/client';
 import { ReportData, extractReportContent, getPersonName } from '@/utils/reportContentExtraction';
-import { renderAstroDataAsText, renderUnifiedContentAsText } from '@/utils/componentToTextRenderer';
+import { renderUnifiedContentAsText } from '@/utils/componentToTextRenderer';
 import { useReportData } from '@/hooks/useReportData';
+import { AstroDataRenderer } from './AstroDataRenderer';
 
 interface ReportSlideOverProps {
   isOpen: boolean;
@@ -200,14 +201,7 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
                 />
               ) : (
                 <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-light italic text-gray-900 mb-4">Raw Astronomical Data</h3>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono">
-                        {renderAstroDataAsText(reportData)}
-                      </pre>
-                    </div>
-                  </div>
+                  <AstroDataRenderer reportData={reportData} />
                 </div>
               )}
             </div>
