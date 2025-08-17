@@ -38,7 +38,7 @@ export const useReportData = () => {
         throw new Error(functionError.message);
       }
 
-      setReportData(report as ReportData);
+      setReportData(report.data as ReportData);
 
     } catch (err: any) {
       setError(err.message);
