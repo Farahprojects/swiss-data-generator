@@ -25,6 +25,8 @@ const PublicReport = () => {
   const [showCancelledMessage, setShowCancelledMessage] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [activeGuest, setActiveGuest] = useState<{ guestId: string; name: string; email: string; isStripeReturn?: boolean } | null>(null);
+  const [isReportProcessing, setIsReportProcessing] = useState(false);
+  const [isReportReady, setIsReportReady] = useState(false);
   // paidGuest overlay removed in new flow
   
   // Effect to detect and handle Stripe return
@@ -395,6 +397,56 @@ const PublicReport = () => {
               </div>
             )}
 
+            {/* Report processing status */}
+            {isReportProcessing && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-gray-700 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Generating Your Report</h3>
+                  <p className="text-gray-600 mb-6">This usually takes 10-14 seconds. Please wait...</p>
+                  <div className="space-y-3">
+                    <Button
+                      disabled
+                      className="w-full bg-gray-300 text-gray-500 cursor-not-allowed"
+                    >
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Processing...
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Report ready modal */}
+            {isReportReady && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Report Ready!</h3>
+                  <p className="text-gray-600 mb-6">Your personalized report has been generated and is ready to explore.</p>
+                  <Button
+                    onClick={() => {
+                      if (activeGuest) {
+                        console.log('[PublicReport] Setting chat tokens with guest ID:', activeGuest.guestId);
+                        setChatTokens(activeGuest.guestId, '');
+                        console.log('[PublicReport] Chat tokens set, navigating to chat');
+                        setActiveGuest(null);
+                        setIsReportReady(false);
+                        navigate('/chat');
+                      }
+                    }}
+                    className="w-full bg-gray-900 text-white hover:bg-gray-800"
+                  >
+                    View Report
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* The checker component itself is invisible, but it's now the main orchestrator */}
             {activeGuest && (
               <ReportFlowChecker 
@@ -402,12 +454,17 @@ const PublicReport = () => {
                 name={activeGuest.name}
                 email={activeGuest.email}
                 onPaid={(paidData) => {
-                  // New flow: store tokens for chat and navigate directly
-                  console.log('[PublicReport] Setting chat tokens with guest ID:', paidData.guestId);
-                  setChatTokens(paidData.guestId, '');
-                  console.log('[PublicReport] Chat tokens set, navigating to chat');
-                  setActiveGuest(null);
-                  navigate('/chat');
+                  // Payment confirmed, but don't navigate yet - wait for report
+                  console.log('[PublicReport] Payment confirmed, waiting for report generation:', paidData.guestId);
+                }}
+                onReportReady={(readyData) => {
+                  // Report is ready, show the ready modal
+                  console.log('[PublicReport] Report ready:', readyData.guestId);
+                  setIsReportProcessing(false);
+                  setIsReportReady(true);
+                }}
+                onProcessingStateChange={(isProcessing) => {
+                  setIsReportProcessing(isProcessing);
                 }}
               />
             )}
