@@ -14,10 +14,10 @@ export const useChat = (conversationId?: string, uuid?: string, token?: string) 
       // Existing logic for direct conversationId
 
       chatController.initializeConversation(conversationId);
-    } else if (uuid && token) {
-      // New secure logic: get-or-create by uuid + token
+    } else if (uuid) {
+      // New logic: get-or-create by uuid only (no token needed for chat)
 
-      getOrCreateConversation(uuid, token)
+      getOrCreateConversation(uuid)
         .then(({ conversationId }) => {
 
           chatController.initializeConversation(conversationId);
@@ -27,7 +27,7 @@ export const useChat = (conversationId?: string, uuid?: string, token?: string) 
           // Handle error appropriately
         });
     } else {
-      console.log('[useChat] No conversationId or secure tokens provided');
+      console.log('[useChat] No conversationId or uuid provided');
     }
   }, [conversationId, uuid, token]);
 

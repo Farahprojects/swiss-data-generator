@@ -68,17 +68,13 @@ export const listConversations = async (): Promise<Partial<Conversation>[]> => {
   return data;
 };
 
-export const getOrCreateConversation = async (uuid: string, token: string): Promise<{ conversationId: string }> => {
+export const getOrCreateConversation = async (uuid: string): Promise<{ conversationId: string }> => {
 
   
   // FAIL FAST: Validate inputs
   if (!uuid) {
     console.error('[getOrCreateConversation] FAIL FAST: uuid is required');
     throw new Error('uuid is required for conversation creation');
-  }
-  if (!token) {
-    console.error('[getOrCreateConversation] FAIL FAST: token is required');
-    throw new Error('token is required for conversation creation');
   }
   
   // Try to find existing conversation by uuid (which maps to guest_id in our system)
@@ -95,7 +91,7 @@ export const getOrCreateConversation = async (uuid: string, token: string): Prom
 
     
     // Even for existing conversations, try to inject context if it hasn't been done
-    await injectContextMessages(existing.id, uuid, token);
+    await injectContextMessages(existing.id, uuid);
     
     return { conversationId: existing.id };
   }
@@ -127,14 +123,14 @@ export const getOrCreateConversation = async (uuid: string, token: string): Prom
   
   console.log('[getOrCreateConversation] Created new conversation:', newConv.id);
 
-  // Inject context from temp_report_data using secure tokens
-  await injectContextMessages(newConv.id, uuid, token);
+  // Inject context from temp_report_data (no token needed for chat)
+  await injectContextMessages(newConv.id, uuid);
   
   return { conversationId: newConv.id };
 };
 
 // Helper function to inject context from temp_report_data
-const injectContextMessages = async (conversationId: string, uuid: string, token: string): Promise<void> => {
+const injectContextMessages = async (conversationId: string, uuid: string): Promise<void> => {
   console.log(`[Context] fetch by guestReportId=${uuid}`); // Add precise log
 
   // Check if we've already injected context for this conversation
@@ -164,7 +160,6 @@ const injectContextMessages = async (conversationId: string, uuid: string, token
     const { data, error } = await supabase.functions.invoke('retrieve-temp-report', {
       body: { 
         uuid: uuid,
-        token: token,
         source: "chat"
       }
     });
