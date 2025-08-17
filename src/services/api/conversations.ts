@@ -130,7 +130,7 @@ export const getOrCreateConversation = async (uuid: string): Promise<{ conversat
 };
 
 // Helper function to inject context from temp_report_data
-const injectContextMessages = async (conversationId: string, uuid: string): Promise<void> => {
+export const injectContextMessages = async (conversationId: string, uuid: string): Promise<void> => {
   console.log(`[Context] fetch by guestReportId=${uuid}`); // Add precise log
 
   // Check if we've already injected context for this conversation

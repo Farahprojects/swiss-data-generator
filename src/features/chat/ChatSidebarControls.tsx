@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useChatStore } from '@/core/store';
 import { useReportModal } from '@/contexts/ReportModalContext';
 import { sessionManager } from '@/utils/sessionManager';
-import { getChatTokens } from '@/services/auth/chatTokens';
+import { getChatTokens, getHasReportFlag, setHasReportFlag } from '@/services/auth/chatTokens';
+import { supabase } from '@/integrations/supabase/client';
+import { injectContextMessages } from '@/services/api/conversations';
 
 export const ChatSidebarControls: React.FC = () => {
   const ttsProvider = useChatStore((s) => s.ttsProvider);
@@ -11,6 +13,48 @@ export const ChatSidebarControls: React.FC = () => {
   const setTtsVoice = useChatStore((s) => s.setTtsVoice);
   const { open: openReportModal } = useReportModal();
   const { uuid } = getChatTokens();
+  const [hasReport, setHasReport] = useState<boolean>(() => getHasReportFlag());
+  const [isPolling, setIsPolling] = useState<boolean>(false);
+
+  // Start polling for report_ready_signals when we have no hasReport flag
+  useEffect(() => {
+    if (!uuid) return;
+    if (hasReport) return; // already have it
+    if (isPolling) return;
+
+    setIsPolling(true);
+    let cancelled = false;
+
+    const poll = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('report_ready_signals')
+          .select('guest_report_id')
+          .eq('guest_report_id', uuid)
+          .limit(1);
+
+        if (!cancelled && !error && data && data.length > 0) {
+          setHasReport(true);
+          setHasReportFlag(true);
+          setIsPolling(false);
+          // Optionally inject context as soon as ready if conversation exists
+          const conversationId = useChatStore.getState().conversationId;
+          if (conversationId) {
+            injectContextMessages(conversationId, uuid).catch(() => {});
+          }
+          return; // stop polling
+        }
+      } catch (_) {
+        // ignore transient errors
+      }
+
+      if (!cancelled) setTimeout(poll, 1000);
+    };
+
+    poll();
+
+    return () => { cancelled = true; setIsPolling(false); };
+  }, [uuid, hasReport, isPolling]);
 
   const handleClearSession = async () => {
     await sessionManager.clearSession({ redirectTo: '/', preserveNavigation: false });
@@ -21,8 +65,9 @@ export const ChatSidebarControls: React.FC = () => {
       <div className="flex flex-col gap-2">
         <button
           type="button"
-          onClick={() => openReportModal()}
-          className="w-full text-left px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md border border-gray-200"
+          onClick={() => hasReport && openReportModal()}
+          disabled={!hasReport}
+          className={`w-full text-left px-3 py-2 text-sm rounded-md border ${hasReport ? 'bg-gray-100 hover:bg-gray-200 border-gray-200' : 'bg-gray-100/60 border-gray-200/60 text-gray-400 cursor-not-allowed'}`}
         >
           Report
         </button>
