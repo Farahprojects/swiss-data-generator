@@ -2,12 +2,10 @@ import React from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Table, TableBody, TableCell, TableHeader, TableHead, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { parseAstroData } from '@/lib/synastryFormatter';
 import { ChartHeader } from './shared/ChartHeader';
 import { AspectTable } from './shared/AspectTable';
 import { ChartAngles } from './shared/ChartAngles';
-import { PlanetaryPositions } from './shared/PlanetaryPositions';
-import { parseAstroData } from '@/lib/synastryFormatter';
-import { TransitMetadata } from './shared/TransitMetadata';
 
 interface SynastryAstroFormatterProps {
   swissData: any;
@@ -30,7 +28,8 @@ export const SynastryAstroFormatter: React.FC<SynastryAstroFormatterProps> = ({
 
   // Use the new dynamic parser
   const astroData = parseAstroData(swissData);
-  const { subject, natal_set, synastry_aspects, composite_chart, transits } = astroData;
+
+  const { meta, natal_set, synastry_aspects, composite_chart, transits } = astroData;
 
   const personA = natal_set?.personA;
   const personB = natal_set?.personB;
@@ -66,10 +65,34 @@ export const SynastryAstroFormatter: React.FC<SynastryAstroFormatterProps> = ({
         {composite_chart && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-2xl font-light text-gray-800">Composite Chart: The Relationship's Essence</CardTitle>
+              <CardTitle className="text-2xl font-light text-gray-800">
+                Composite Chart: The Relationship's Identity
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <PlanetaryPositions planets={composite_chart} title="Composite Planets" />
+              <p className="text-gray-600 mb-4">
+                This chart represents the relationship itself as a third entity.
+              </p>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Planet</TableHead>
+                    <TableHead>Degree</TableHead>
+                    <TableHead>Sign</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {composite_chart?.map((planet: any) => (
+                    <TableRow key={planet.name}>
+                      <TableCell className="font-medium">
+                        <span className="mr-2">{planet.unicode}</span> {planet.name}
+                      </TableCell>
+                      <TableCell>{`${Math.floor(planet.deg)}°`}</TableCell>
+                      <TableCell>{planet.sign}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         )}
@@ -109,20 +132,27 @@ export const SynastryAstroFormatter: React.FC<SynastryAstroFormatterProps> = ({
                 Current Transits: The Present Moment
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-8">
-              <TransitMetadata transits={transits} />
+            <CardContent>
               {transits.personA && (
                 <div>
-                  {transits.personA.name && <h4 className="text-lg font-semibold text-gray-700 mb-4">{transits.personA.name}'s Transits</h4>}
-                  <PlanetaryPositions planets={transits.personA.planets} title="Current Transit Positions" />
-                  <AspectTable aspects={transits.personA.aspects_to_natal} title={`Transit Aspects to ${transits.personA.name || 'Natal'}`} />
+                  <h4 className="text-xl font-light text-gray-700 mb-2">
+                    Transits to {transits.personA.name}'s Chart
+                  </h4>
+                  <AspectTable
+                    aspects={transits.personA.aspects_to_natal}
+                    title="Current Influences"
+                  />
                 </div>
               )}
               {transits.personB && (
-                <div className="mt-8">
-                  {transits.personB.name && <h4 className="text-lg font-semibold text-gray-700 mb-4">{transits.personB.name}'s Transits</h4>}
-                  <PlanetaryPositions planets={transits.personB.planets} title="Current Transit Positions" />
-                  <AspectTable aspects={transits.personB.aspects_to_natal} title={`Transit Aspects to ${transits.personB.name || 'Natal'}`} />
+                <div className="mt-6">
+                  <h4 className="text-xl font-light text-gray-700 mb-2">
+                    Transits to {transits.personB.name}'s Chart
+                  </h4>
+                  <AspectTable
+                    aspects={transits.personB.aspects_to_natal}
+                    title="Current Influences"
+                  />
                 </div>
               )}
             </CardContent>
