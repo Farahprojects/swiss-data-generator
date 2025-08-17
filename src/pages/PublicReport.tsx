@@ -403,7 +403,9 @@ const PublicReport = () => {
                 email={activeGuest.email}
                 onPaid={(paidData) => {
                   // New flow: store tokens for chat and navigate directly
+                  console.log('[PublicReport] Setting chat tokens with guest ID:', paidData.guestId);
                   setChatTokens(paidData.guestId, '');
+                  console.log('[PublicReport] Chat tokens set, navigating to chat');
                   setActiveGuest(null);
                   navigate('/chat');
                 }}

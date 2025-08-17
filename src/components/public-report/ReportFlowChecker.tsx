@@ -34,10 +34,11 @@ export const ReportFlowChecker = ({ guestId, name, email, onPaid }: ReportFlowCh
         if (!hasTriggeredGenerationRef.current) {
           hasTriggeredGenerationRef.current = true;
           console.log('[ReportFlowChecker] "Paid" status confirmed. Triggering report generation...');
+          console.log('[ReportFlowChecker] Guest ID for persistence:', guestId);
           supabase.functions.invoke('trigger-report-generation', { body: { guest_report_id: guestId } });
           onPaid({ guestId, name: data.name || name, email: data.email || email });
         }
-      } 
+      }
       else if (data?.payment_status === 'pending') {
         if(pollingInterval) clearInterval(pollingInterval);
         console.log('[ReportFlowChecker] "Pending" status confirmed. Creating payment session...');
