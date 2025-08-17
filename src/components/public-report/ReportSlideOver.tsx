@@ -55,13 +55,10 @@ const ReportViewerActions: React.FC<{ guestReportId?: string }> = ({ guestReport
     }
     try {
       const { data, error } = await supabase.functions.invoke('get-report-data', { body: { guest_report_id: guestReportId } });
-      if (error || !data?.ready) throw new Error('Report not available');
-      
-      const reportData = data.data as ReportData;
-      const reportContent = extractReportContent(reportData);
-      const textContent = renderUnifiedContentAsText(reportContent);
-      
-      await navigator.clipboard.writeText(textContent);
+      if (error || !data?.ready || !data?.data) throw new Error('Report not available');
+
+      const fullText = renderUnifiedContentAsText(data.data as ReportData);
+      await navigator.clipboard.writeText(fullText);
       toast({ title: 'Copied!', description: 'Report copied to clipboard.' });
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Copy Failed', description: e.message || 'Please try again.' });
