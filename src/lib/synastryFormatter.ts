@@ -227,19 +227,19 @@ export const parseAstroData = (raw: any): any => {
 
   // Handle single-block, top-level report types like 'monthly'
   if (raw.block_type) {
-    switch(raw.block_type) {
+    switch (raw.block_type) {
       case 'monthly':
         // The core data is in the 'components' object for monthly reports
         parsedData.monthly = raw.components;
         // Also attach the top-level block type for easy identification
         if (parsedData.monthly) {
-            parsedData.monthly.block_type = 'monthly';
+          parsedData.monthly.block_type = 'monthly';
         }
         return parsedData;
     }
   }
 
-  // Continue with existing logic for multi-block reports (natal, synastry)
+  // Use a single data root to handle both flat and nested (`blocks`) structures
   const dataRoot = raw.blocks || raw;
 
   for (const key in dataRoot) {
@@ -247,9 +247,11 @@ export const parseAstroData = (raw: any): any => {
       const block = dataRoot[key];
       switch (block.block_type) {
         case 'natal':
+          // This handles single-person natal charts
           parsedData.natal = parseNatal(block);
           break;
         case 'natal_set':
+          // This handles the two-person structure in sync reports
           parsedData.natal_set = parseNatalSet(block);
           break;
         case 'transits':
