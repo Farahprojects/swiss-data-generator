@@ -21,6 +21,12 @@ export interface ReportData {
 }
 
 export const extractReportContent = (reportData: ReportData): string => {
+  console.log('[extractReportContent] Input reportData:', reportData);
+  if (!reportData) {
+    console.error('[extractReportContent] reportData is null/undefined');
+    return '';
+  }
+  console.log('[extractReportContent] Extracting report_content:', reportData.report_content);
   return reportData.report_content || '';
 };
 

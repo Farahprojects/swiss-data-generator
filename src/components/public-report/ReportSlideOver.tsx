@@ -96,6 +96,7 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
   // Fetch when explicitly told to via shouldFetch prop
   useEffect(() => {
     if (shouldFetch && guestReportId) {
+      console.log('[ReportSlideOver] Starting fetch for guestReportId:', guestReportId);
       fetchReport(guestReportId);
     } else if (shouldFetch && !guestReportId) {
       console.warn('[ReportSlideOver] No guest report ID provided');
@@ -104,9 +105,20 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
 
   useEffect(() => {
     if (!isLoading) {
+      console.log('[ReportSlideOver] Fetch completed. Error:', error, 'ReportData:', reportData ? 'Present' : 'Null');
+      if (reportData) {
+        console.log('[ReportSlideOver] ReportData structure:', {
+          hasGuestReport: !!reportData.guest_report,
+          hasReportContent: !!reportData.report_content,
+          hasSwissData: !!reportData.swiss_data,
+          hasMetadata: !!reportData.metadata,
+          guestReportKeys: reportData.guest_report ? Object.keys(reportData.guest_report) : 'N/A',
+          metadataKeys: reportData.metadata ? Object.keys(reportData.metadata) : 'N/A'
+        });
+      }
       onLoad?.(error);
     }
-  }, [isLoading, error, onLoad]);
+  }, [isLoading, error, onLoad, reportData]);
 
   if (isLoading) {
     return (
@@ -152,8 +164,9 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
     );
   }
 
+  console.log('[ReportSlideOver] About to extract content. ReportData:', reportData);
   const reportContent = extractReportContent(reportData);
-  const personName = getPersonName(reportData.metadata);
+  const personName = getPersonName(reportData);
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
