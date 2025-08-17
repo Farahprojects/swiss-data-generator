@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useChatStore } from '@/core/store';
 import { useReportModal } from '@/contexts/ReportModalContext';
 import { sessionManager } from '@/utils/sessionManager';
@@ -15,6 +15,7 @@ export const ChatSidebarControls: React.FC = () => {
   const { uuid } = getChatTokens();
   const [hasReport, setHasReport] = useState<boolean>(() => getHasReportFlag());
   const [isPolling, setIsPolling] = useState<boolean>(false);
+  const attemptRef = useRef<number>(0);
 
   // Start polling for report_ready_signals when we have no hasReport flag
   useEffect(() => {
@@ -24,9 +25,12 @@ export const ChatSidebarControls: React.FC = () => {
 
     setIsPolling(true);
     let cancelled = false;
+    attemptRef.current = 0;
+    console.log(`[ReportPolling] start guest=${uuid}`);
 
     const poll = async () => {
       try {
+        attemptRef.current += 1;
         const { data, error } = await supabase
           .from('report_ready_signals')
           .select('guest_report_id')
@@ -37,6 +41,7 @@ export const ChatSidebarControls: React.FC = () => {
           setHasReport(true);
           setHasReportFlag(true);
           setIsPolling(false);
+          console.log(`[ReportPolling] stop guest=${uuid} reason=found attempts=${attemptRef.current}`);
           // Optionally inject context as soon as ready if conversation exists
           const conversationId = useChatStore.getState().conversationId;
           if (conversationId) {
@@ -53,7 +58,13 @@ export const ChatSidebarControls: React.FC = () => {
 
     poll();
 
-    return () => { cancelled = true; setIsPolling(false); };
+    return () => { 
+      cancelled = true; 
+      if (isPolling) {
+        console.log(`[ReportPolling] stop guest=${uuid} reason=unmount attempts=${attemptRef.current}`);
+      }
+      setIsPolling(false); 
+    };
   }, [uuid, hasReport, isPolling]);
 
   const handleClearSession = async () => {
