@@ -32,12 +32,18 @@ export const SynastryAstroFormatter: React.FC<SynastryAstroFormatterProps> = ({
     );
   }
 
-  // Use the new dynamic parser
+  // Normalize raw payload first for UI consumption
+  const vm = normalizeSync(swissData);
+  
+  console.log('[SynastryAstroFormatter] Normalized VM:', {
+    subjectCount: vm.subjects.length,
+    subjectNames: vm.subjects.map(s => s.name),
+    analysisDate: vm.analysisDate,
+    timeBasis: vm.timeBasis
+  });
+  
+  // Use the dynamic parser for synastry/composite sections
   const astroData = parseAstroData(swissData);
-  
-  // Normalize for UI consumption
-  const vm = normalizeSync(astroData);
-  
   const { synastry_aspects, composite_chart } = astroData;
 
   return (
@@ -121,12 +127,23 @@ export const SynastryAstroFormatter: React.FC<SynastryAstroFormatterProps> = ({
                   ))}
                 </TabsList>
                 
-                {vm.subjects.map((subject) => (
-                  <TabsContent key={subject.key} value={subject.key} className="space-y-6">
-                    {/* Natal Section */}
-                    <div>
-                      <h4 className="text-xl font-light text-gray-700 mb-4">Natal Chart</h4>
-                      <div className="grid gap-6">
+                {vm.subjects.map((subject) => {
+                  console.log(`[SynastryAstroFormatter] Rendering ${subject.key} (${subject.name}):`, {
+                    hasNatalAngles: !!subject.natal?.angles,
+                    hasNatalHouses: !!subject.natal?.houses,
+                    hasNatalPlanets: !!subject.natal?.planets,
+                    hasNatalAspects: !!subject.natal?.aspects,
+                    hasTransits: !!subject.transits,
+                    hasTransitPlanets: !!subject.transits?.planets,
+                    hasTransitAspects: !!subject.transits?.aspects_to_natal
+                  });
+                  
+                  return (
+                    <TabsContent key={subject.key} value={subject.key} className="space-y-6">
+                      {/* Natal Section */}
+                      <div>
+                        <h4 className="text-xl font-light text-gray-700 mb-4">Natal Chart</h4>
+                        <div className="grid gap-6">
                         {subject.natal?.angles && (
                           <ChartAngles angles={subject.natal.angles} title="Chart Angles" />
                         )}
@@ -180,7 +197,8 @@ export const SynastryAstroFormatter: React.FC<SynastryAstroFormatterProps> = ({
                       </div>
                     )}
                   </TabsContent>
-                ))}
+                  );
+                })}
               </Tabs>
             </CardContent>
           </Card>
