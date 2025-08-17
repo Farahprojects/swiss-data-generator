@@ -49,34 +49,11 @@ const ReportViewerActions: React.FC<{ guestReportId?: string }> = ({ guestReport
     }
   };
 
-  const handleCopy = async () => {
-    if (!guestReportId) {
-      toast({ variant: 'destructive', title: 'Copy Failed', description: 'Report ID is missing.' });
-      return;
-    }
-    try {
-      const { data, error } = await supabase.functions.invoke('get-report-data', { body: { guest_report_id: guestReportId } });
-      if (error || !data?.ready || !data?.data) throw new Error('Report not available');
-
-      const fullText = renderUnifiedContentAsText(data.data as ReportData);
-      await navigator.clipboard.writeText(fullText);
-      toast({ title: 'Copied!', description: 'Report copied to clipboard.' });
-    } catch (e: any) {
-      toast({ variant: 'destructive', title: 'Copy Failed', description: e.message || 'Please try again.' });
-    }
-  };
-
   return (
-    <div className="flex items-center gap-2">
-      <Button variant="outline" size="sm" onClick={handleDownload} disabled={isDownloading} className="text-gray-700 border-gray-200">
-        <Download className="w-4 h-4 mr-1" />
-        PDF
-      </Button>
-      <Button variant="outline" size="sm" onClick={handleCopy} className="text-gray-700 border-gray-200">
-        <Copy className="w-4 h-4 mr-1" />
-        Copy
-      </Button>
-    </div>
+    <Button variant="outline" size="sm" onClick={handleDownload} disabled={isDownloading} className="text-gray-700 border-gray-200">
+      <Download className="w-4 h-4 mr-1" />
+      PDF
+    </Button>
   );
 };
 
@@ -157,12 +134,10 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
       <SheetContent side="right" className="w-full sm:max-w-2xl p-0">
         <div className="flex flex-col h-full">
           <SheetHeader className="flex flex-row items-center justify-between px-6 py-4 border-b bg-white">
-            <SheetTitle className="text-lg font-light italic">
-              {personName ? `${personName}'s Report` : 'Your Report'}
-            </SheetTitle>
             <div className="flex items-center gap-3">
               <ReportViewerActions guestReportId={guestReportId} />
             </div>
+            <div></div>
           </SheetHeader>
 
           {/* View Toggle */}
