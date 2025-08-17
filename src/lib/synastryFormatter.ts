@@ -166,22 +166,14 @@ const parseNatalSet = (block: any) => {
 
 const parseTransits = (block: any) => {
   if (!block) return null;
-  const personA = block.person_a;
-  const personB = block.person_b;
 
+  // For single-person transits, the data is at the root of the block.
+  // The old implementation incorrectly looked for person_a/person_b.
   return {
-    personA: {
-      name: personA?.name || 'Person A',
-      planets: enrichPlanets(personA?.planets ?? {}),
-      aspects_to_natal: enrichAspects(personA?.aspects_to_natal ?? [])
-    },
-    personB: personB
-      ? {
-          name: personB?.name || 'Person B',
-          planets: enrichPlanets(personB?.planets ?? {}),
-          aspects_to_natal: enrichAspects(personB?.aspects_to_natal ?? [])
-        }
-      : undefined
+    datetime_utc: block.datetime_utc,
+    timezone: block.timezone,
+    planets: enrichPlanets(block.planets ?? {}),
+    aspects_to_natal: enrichAspects(block.aspects_to_natal ?? [])
   };
 };
 
