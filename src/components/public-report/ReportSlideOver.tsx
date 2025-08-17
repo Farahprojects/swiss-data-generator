@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ReportContent } from './ReportContent';
 import { supabase } from '@/integrations/supabase/client';
-import { ReportData, extractReportContent, getPersonName } from '@/utils/reportContentExtraction';
+import { ReportData, GetReportDataResponse, extractReportContent, getPersonName } from '@/utils/reportContentExtraction';
 import { renderAstroDataAsText, renderUnifiedContentAsText } from '@/utils/componentToTextRenderer';
 import { useReportData } from '@/hooks/useReportData';
 
@@ -57,8 +57,10 @@ const ReportViewerActions: React.FC<{ guestReportId?: string }> = ({ guestReport
       const { data, error } = await supabase.functions.invoke('get-report-data', { body: { guest_report_id: guestReportId } });
       if (error || !data?.ready) throw new Error('Report not available');
       
-      const reportData = data.data as ReportData;
-      const reportContent = extractReportContent(reportData);
+      const typedResponse = data as GetReportDataResponse;
+      if (!typedResponse.data) throw new Error('Invalid response structure');
+      
+      const reportContent = extractReportContent(typedResponse.data);
       const textContent = renderUnifiedContentAsText(reportContent);
       
       await navigator.clipboard.writeText(textContent);

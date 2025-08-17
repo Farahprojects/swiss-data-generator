@@ -1,13 +1,14 @@
 
 // Content extraction helpers for raw report data
+// This matches the exact structure returned by get-report-data edge function
 export interface ReportData {
   guest_report: {
     id: string;
     email: string;
     report_type: string | null;
-    is_ai_report: boolean;
-    payment_status: string;
+    is_ai_report: boolean | null;
     created_at: string;
+    payment_status: string;
     report_data: any;
   };
   report_content: string | null;
@@ -18,6 +19,13 @@ export interface ReportData {
     has_swiss_data: boolean;
     is_ready: boolean;
   };
+}
+
+// Type for the complete get-report-data edge function response
+export interface GetReportDataResponse {
+  ok: boolean;
+  ready: boolean;
+  data: ReportData;
 }
 
 export const extractReportContent = (reportData: ReportData): string => {

@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { ReportData } from '@/utils/reportContentExtraction';
+import { ReportData, GetReportDataResponse } from '@/utils/reportContentExtraction';
 import { useState, useCallback } from 'react';
 
 export const useReportData = () => {
@@ -43,7 +43,14 @@ export const useReportData = () => {
         dataKeys: report.data ? Object.keys(report.data) : 'N/A'
       });
 
-      setReportData(report.data as ReportData);
+      // Type the response properly
+      const typedResponse = report as GetReportDataResponse;
+      if (!typedResponse.data) {
+        console.error('[useReportData] Response missing data property');
+        throw new Error('Invalid response structure: missing data property');
+      }
+
+      setReportData(typedResponse.data);
 
     } catch (err: any) {
       setError(err.message);
