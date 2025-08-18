@@ -26,29 +26,25 @@ export class ChatController {
     if (this.isTurnActive) return;
     this.isTurnActive = true;
     
-    // CRITICAL: Get chatId from the CENTRALIZED getChatTokens function
-    const { chatId } = getChatTokens(); 
+    const { chatId } = getChatTokens();
     if (!chatId) {
-      console.error('[ChatController] sendTextMessage FATAL: No chatId found in session storage. Aborting.');
+      console.error('[ChatController] sendTextMessage: No chatId found in session.');
       this.isTurnActive = false;
       return;
     }
     
-    console.log(`[ChatController] Retrieved chatId: ${chatId}. Proceeding to create message.`);
-
     useChatStore.getState().setStatus('thinking');
     const client_msg_id = uuidv4();
 
     try {
-      console.log(`[ChatController] Calling llmService.createMessage with chatId: ${chatId}`);
+      // Step 1: Create the user message and wait for it to be in the DB
       const { message_id } = await llmService.createMessage({
         chat_id: chatId,
         text,
         client_msg_id,
       });
-      console.log(`[ChatController] Successfully created message with ID: ${message_id}. Triggering UI refresh.`);
 
-      // Trigger a refresh. The UI (MessageList) will see the new user message
+      // Step 2: Trigger a refresh. The UI (MessageList) will see the new user message
       // and will automatically start the SSE stream because its dependency `lastMessageId` changes.
       useChatStore.getState().setLastMessageId(message_id);
 
@@ -56,6 +52,8 @@ export class ChatController {
       console.error("[ChatController] Error during sendTextMessage:", error);
       useChatStore.getState().setError("An error occurred while sending your message.");
     } finally {
+      // The status will be managed by the streaming component now
+      // useChatStore.getState().setStatus('idle'); 
       this.isTurnActive = false;
     }
   }
