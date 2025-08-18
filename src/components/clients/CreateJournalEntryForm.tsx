@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -15,7 +15,7 @@ import {
 import { ProcessingIndicator } from '@/components/ui/ProcessingIndicator';
 import { TypingCursor } from '@/components/ui/TypingCursor';
 import { useJournalMicrophone } from '@/hooks/microphone/useJournalMicrophone';
-import { useTypeAnimation } from '@/hooks/useTypeAnimation';
+import { useTypewriter } from '@/components/ui/TypewriterText';
 import { useToast } from '@/hooks/use-toast';
 import { X, Mic } from 'lucide-react';
 import { CreateJournalEntryData, JournalEntry } from '@/types/database';
@@ -93,40 +93,54 @@ const CreateJournalEntryForm = ({
   };
 
   // Type animation configuration
-  const { displayText, isTyping, showCursor, stopTyping } = useTypeAnimation(
+  const { displayedText, isTyping, start, stop } = useTypewriter(
     newTranscriptToType,
-    startTyping,
     {
-      speed: 50,
-      punctuationDelay: 200,
-      onComplete: () => {
-        log('debug', 'Type animation complete');
-        const finalText = existingText + newTranscriptToType;
-        setValue('entry_text', finalText, { 
-          shouldDirty: true, 
-          shouldTouch: true, 
-          shouldValidate: true 
-        });
-        setProcessingState('idle');
-        setStartTyping(false);
-        setNewTranscriptToType('');
-        setExistingText('');
-      },
-      onInterrupt: () => {
-        log('debug', 'Type animation interrupted by user');
-        const finalText = existingText + newTranscriptToType;
-        setValue('entry_text', finalText, { 
-          shouldDirty: true, 
-          shouldTouch: true, 
-          shouldValidate: true 
-        });
-        setProcessingState('idle');
-        setStartTyping(false);
-        setNewTranscriptToType('');
-        setExistingText('');
-      }
+      msPerChar: 50,
+      autoStart: false,
+      disabled: !startTyping
     }
   );
+
+  // Handle typing completion and interruption
+  useEffect(() => {
+    if (startTyping && newTranscriptToType && !isTyping && displayedText === newTranscriptToType) {
+      // Animation completed
+      log('debug', 'Type animation complete');
+      const finalText = existingText + newTranscriptToType;
+      setValue('entry_text', finalText, { 
+        shouldDirty: true, 
+        shouldTouch: true, 
+        shouldValidate: true 
+      });
+      setProcessingState('idle');
+      setStartTyping(false);
+      setNewTranscriptToType('');
+      setExistingText('');
+    }
+  }, [startTyping, newTranscriptToType, isTyping, displayedText, existingText, setValue]);
+
+  // Start typing when ready
+  useEffect(() => {
+    if (startTyping && newTranscriptToType) {
+      start();
+    }
+  }, [startTyping, newTranscriptToType, start]);
+
+  const stopTyping = useCallback(() => {
+    log('debug', 'Type animation interrupted by user');
+    stop();
+    const finalText = existingText + newTranscriptToType;
+    setValue('entry_text', finalText, { 
+      shouldDirty: true, 
+      shouldTouch: true, 
+      shouldValidate: true 
+    });
+    setProcessingState('idle');
+    setStartTyping(false);
+    setNewTranscriptToType('');
+    setExistingText('');
+  }, [stop, existingText, newTranscriptToType, setValue]);
 
   const { isRecording, isProcessing, toggleRecording } = useJournalMicrophone({
     onTranscriptReady: handleTranscriptReady,
@@ -211,7 +225,7 @@ const CreateJournalEntryForm = ({
   // Compute the display value for the textarea
   const getTextareaDisplayValue = () => {
     if (processingState === 'typing') {
-      return existingText + displayText;
+      return existingText + displayedText;
     }
     return getValues('entry_text') || '';
   };
@@ -258,7 +272,7 @@ const CreateJournalEntryForm = ({
               {/* Typing cursor overlay */}
               {processingState === 'typing' && (
                 <div className="absolute bottom-3 left-3 pointer-events-none">
-                  <TypingCursor visible={showCursor} />
+                  <TypingCursor visible={isTyping} />
                 </div>
               )}
             </div>
@@ -278,7 +292,7 @@ const CreateJournalEntryForm = ({
             {processingState === 'typing' && (
               <div className="flex items-center gap-2 text-sm text-indigo-600 mt-2">
                 <span>Adding text...</span>
-                <TypingCursor visible={showCursor} />
+                <TypingCursor visible={isTyping} />
               </div>
             )}
             

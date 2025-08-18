@@ -23,11 +23,12 @@ const MessageItem = ({ message, isLast, isFromHistory }: { message: Message; isL
         }`}
       >
         <p className="text-base font-light leading-relaxed text-left">
-          {shouldAnimate ? (
-            <TypewriterText text={message.text || ''} msPerChar={40} />
-          ) : (
-            message.text
-          )}
+          <TypewriterText 
+            text={message.text || ''} 
+            msPerChar={40}
+            disabled={!shouldAnimate}
+            className="whitespace-pre-wrap"
+          />
         </p>
         {/* Audio is played live during conversation mode - no stored audio to replay */}
       </div>
