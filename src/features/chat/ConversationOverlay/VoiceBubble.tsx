@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { SpeakingBars } from './SpeakingBars';
-import { ListeningWaveform } from './ListeningWaveform';
 import { useTtsAudioLevel } from '@/hooks/useTtsAudioLevel';
 
 interface Props {
@@ -12,18 +11,9 @@ interface Props {
 export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
   const ttsAudioLevel = useTtsAudioLevel();
 
-  // Show speaking bars for replying state
+  // Show speaking bars for replying state, bubble for others
   if (state === 'replying') {
     return <SpeakingBars audioLevel={ttsAudioLevel} />;
-  }
-
-  // Show waveform for listening state
-  if (state === 'listening') {
-    return (
-      <div className="flex items-center justify-center rounded-full w-28 h-28 md:w-36 md:h-36 bg-black shadow-lg">
-        <ListeningWaveform audioLevel={audioLevel} barCount={5} />
-      </div>
-    );
   }
 
   // Bubble base
@@ -39,16 +29,21 @@ export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
     replying: 'bg-black shadow-gray-800/50',
   };
 
-  // Smooth, subtle pulse of the whole bubble (processing only)
+  // Smooth, subtle pulse of the whole bubble (no shadow pulsing)
   const pulseAnimation =
-    state === 'processing'
+    state === 'listening'
+      ? {
+          scale: isVoiceDetected ? [1, 1.10, 1] : [1, 1.06, 1],
+          opacity: [0.96, 1, 0.96],
+        }
+      : state === 'processing'
       ? {
           scale: [1, 0.98, 1], // very subtle "thinking" contraction
           opacity: [1, 0.98, 1],
         }
       : { scale: [1, 1, 1], opacity: [1, 1, 1] };
 
-  const duration = 1.2;
+  const duration = state === 'listening' ? (isVoiceDetected ? 1.0 : 1.6) : 1.2;
 
   return (
     <motion.div
