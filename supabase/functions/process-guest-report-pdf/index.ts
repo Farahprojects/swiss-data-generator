@@ -13,7 +13,7 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SharedReportParser } from "../_shared/reportParser.ts";
 import { parseAstroData, isSynastryData } from "../_shared/astroFormatter.ts";
-import { formatDegMin } from "../_shared/astroFormat.ts";
+import { formatDegDecimal } from "../_shared/astroFormat.ts";
 
 
 // ─── ENV VARS ────────────────────────────────────────────────────────────────
@@ -262,9 +262,9 @@ class ServerPdfGenerator {
 
       if (isPlanetTable) {
         const sign = (item.sign || '').padEnd(12);
-        const degMin = formatDegMin(item.deg);
+        const degDecimal = formatDegDecimal(item.deg);
         const house = item.house ? `(H${item.house})` : '';
-        const position = `${degMin} ${sign} ${house}`;
+        const position = `${degDecimal} ${sign} ${house}`;
 
         doc.text(item.name || 'Unknown', margins.left, y);
         doc.text(position, margins.left + 80, y);
@@ -306,7 +306,7 @@ class ServerPdfGenerator {
 
     doc.setFontSize(9).setFont('helvetica', 'normal').setTextColor(40);
     Object.entries(angles).forEach(([name, data]: [string, any]) => {
-      const position = `${Math.floor(data.deg)}° in ${data.sign}`;
+      const position = `${data.deg.toFixed(2)}° in ${data.sign}`;
       doc.text(name, margins.left, y);
       doc.text(position, margins.left + 80, y);
       y += 7;
@@ -342,7 +342,7 @@ class ServerPdfGenerator {
       }
       
       doc.text(`House ${number}`, margins.left, y);
-      const position = `${Math.floor(data.deg)}° in ${data.sign}`;
+      const position = `${data.deg.toFixed(2)}° in ${data.sign}`;
       doc.text(position, margins.left + 80, y);
       y += 7;
     });

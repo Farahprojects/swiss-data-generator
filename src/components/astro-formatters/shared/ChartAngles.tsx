@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { formatPos } from '@/lib/astro/format';
+import { formatPosDecimal } from '@/lib/astro/format';
 
 interface Angle {
   name: string;
@@ -25,8 +25,7 @@ export const ChartAngles: React.FC<ChartAnglesProps> = ({
     : Object.entries(angles).map(([name, data]: [string, any]) => ({
         name,
         sign: data.sign || '',
-        deg: Math.floor(data.degree || data.deg || 0),
-        min: Math.round(((data.degree || data.deg || 0) - Math.floor(data.degree || data.deg || 0)) * 60)
+        deg: data.degree || data.deg || 0
       }));
 
   if (angleArray.length === 0) return null;
@@ -47,7 +46,7 @@ export const ChartAngles: React.FC<ChartAnglesProps> = ({
           </thead>
           <tbody>
             {angleArray.map((angle) => {
-              const position = formatPos(angle);
+              const position = formatPosDecimal(angle);
               
               return (
                 <tr key={angle.name} className="border-b border-gray-100 hover:bg-gray-50/30">

@@ -1,7 +1,7 @@
 
 import React from "react";
 import { parseAstroData } from "@/lib/astroFormatter";
-import { formatPos, formatPosWithHouse } from "@/lib/astro/format";
+import { formatPosDecimal, formatPosDecimalWithHouse } from "@/lib/astro/format";
 
 interface Props {
   rawSwissJSON: any;
@@ -91,19 +91,11 @@ const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON, reportData }) => {
       ...p,
       retro: p.retrograde,
     })),
-    aspects: (natal.aspects || []).map((a: any) => ({
-      ...a,
-      orbDeg: Math.floor(a.orb ?? 0),
-      orbMin: Math.round(((a.orb ?? 0) - Math.floor(a.orb ?? 0)) * 60),
-    })),
+    aspects: (natal.aspects || []),
     transits: parsed.transits?.personA
       ? {
           planets: (parsed.transits.personA.planets || []),
-          aspects: (parsed.transits.personA.aspects_to_natal || []).map((a: any) => ({
-            ...a,
-            orbDeg: Math.floor(a.orb ?? 0),
-            orbMin: Math.round(((a.orb ?? 0) - Math.floor(a.orb ?? 0)) * 60),
-          })),
+          aspects: (parsed.transits.personA.aspects_to_natal || []),
         }
       : { planets: [], aspects: [] },
   };
@@ -168,7 +160,7 @@ const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON, reportData }) => {
                 <tr key={angle.name}>
                   <td className="py-1 pr-2 text-left font-medium">{angle.name}</td>
                   <td className="py-1 text-left">
-                    {formatPos(angle)}
+                    {formatPosDecimal(angle)}
                   </td>
                 </tr>
               ))}
@@ -187,7 +179,7 @@ const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON, reportData }) => {
                 <tr key={house.number}>
                   <td className="py-1 pr-2 text-left">House {house.number}</td>
                   <td className="py-1 text-left">
-                    {formatPos(house)}
+                    {formatPosDecimal(house)}
                   </td>
                 </tr>
               ))}
@@ -205,7 +197,7 @@ const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON, reportData }) => {
               <tr key={p.name}>
                 <td className="py-1 pr-2 text-left">{p.name}</td>
                 <td className="py-1 text-left">
-                  {formatPosWithHouse(p)}
+                  {formatPosDecimalWithHouse(p)}
                   {p.retro && <span className="italic text-sm ml-1">Retrograde</span>}
                 </td>
               </tr>
@@ -245,7 +237,7 @@ const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON, reportData }) => {
                 <td className="py-1 pr-2 text-left">{a.type}</td>
                 <td className="py-1 pr-2 text-left">{a.b}</td>
                 <td className="py-1 text-left">
-                  {a.orbDeg}°{String(a.orbMin).padStart(2, "0")}'
+                  {a.orb.toFixed(2)}°
                 </td>
               </tr>
             ))}
@@ -275,7 +267,7 @@ const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON, reportData }) => {
                     <tr key={p.name}>
                       <td className="py-1 pr-2 text-left">{p.name}</td>
                       <td className="py-1 text-left">
-                        {formatPos(p)}
+                        {formatPosDecimal(p)}
                         {p.retro && <span className="italic text-sm ml-1">Retrograde</span>}
                       </td>
                     </tr>
@@ -305,7 +297,7 @@ const AstroSnapshot: React.FC<Props> = ({ rawSwissJSON, reportData }) => {
                       <td className="py-1 pr-2 text-left">{a.type}</td>
                       <td className="py-1 pr-2 text-left">{a.natalPlanet}</td>
                       <td className="py-1 text-left">
-                        {a.orbDeg}°{String(a.orbMin).padStart(2, "0")}'
+                        {a.orb.toFixed(2)}°
                       </td>
                     </tr>
                   ))}

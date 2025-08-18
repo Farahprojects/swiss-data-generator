@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { formatPosWithHouse } from '@/lib/astro/format';
+import { formatPosDecimalWithHouse } from '@/lib/astro/format';
 
 interface Planet {
   name: string;
@@ -27,8 +27,7 @@ export const PlanetaryPositions: React.FC<PlanetaryPositionsProps> = ({
     : Object.entries(planets).map(([name, data]: [string, any]) => ({
         name,
         sign: data.sign || '',
-        deg: Math.floor(data.degree || data.deg || 0),
-        min: Math.round(((data.degree || data.deg || 0) - Math.floor(data.degree || data.deg || 0)) * 60),
+        deg: data.degree || data.deg || 0,
         house: data.house,
         retro: data.retrograde || data.retro
       }));
@@ -51,7 +50,7 @@ export const PlanetaryPositions: React.FC<PlanetaryPositionsProps> = ({
           </thead>
           <tbody>
             {planetArray.map((planet) => {
-              const position = formatPosWithHouse(planet);
+              const position = formatPosDecimalWithHouse(planet);
               
               return (
                 <tr key={planet.name} className="border-b border-gray-100 hover:bg-gray-50/30">

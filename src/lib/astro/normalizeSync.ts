@@ -83,7 +83,9 @@ export function normalizeSync(payload: any): SyncVM {
       (key === "person_a" ? "Person A" : "Person B");
 
     const tzDisplay =
-      transits?.timezone || natal?.meta?.tz || undefined;
+      (transits?.timezone && transits.timezone !== 'UTC') 
+        ? transits.timezone 
+        : natal?.meta?.tz || undefined;
 
     console.log(`[normalizeSync] Created subject ${key}:`, { name, tzDisplay });
 

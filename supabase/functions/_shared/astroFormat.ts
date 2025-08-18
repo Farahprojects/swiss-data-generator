@@ -1,5 +1,6 @@
 // Unified astrological position formatting utilities for Supabase functions
 // Handles positions with {deg: number (0-30), sign: string} format
+// DECIMAL-ONLY: No minutes conversion, displays exact decimal degrees
 
 export type ZodiacPos = { 
   deg?: number; 
@@ -7,22 +8,40 @@ export type ZodiacPos = {
 };
 
 /**
- * Format decimal degrees as degrees and minutes (e.g., 11.83 → "11°49'")
- * Uses Math.floor for minutes to avoid 60' carry-over and 30°00' edge cases
+ * Format decimal degrees as exact decimal (e.g., 11.83 → "11.83°", 27.06 → "27.06°")
+ * No minutes conversion - displays positions exactly as provided by Swiss payload
+ */
+export function formatDegDecimal(dec?: number): string {
+  if (typeof dec !== "number" || !isFinite(dec)) return "—";
+  
+  return `${dec.toFixed(2)}°`;
+}
+
+/**
+ * Format a zodiac position as decimal degrees in sign (e.g., "11.83° in Gemini")
+ * Returns "—" for invalid/missing data to avoid undefined/NaN display
+ */
+export function formatPosDecimal(p?: ZodiacPos): string {
+  if (!p || typeof p.deg !== "number" || !p.sign) return "—";
+  
+  return `${formatDegDecimal(p.deg)} in ${p.sign}`;
+}
+
+// DEPRECATED: Legacy minutes-based formatters - use decimal versions instead
+/**
+ * @deprecated Use formatDegDecimal instead - this adds unnecessary minutes conversion
  */
 export function formatDegMin(dec?: number): string {
   if (typeof dec !== "number" || !isFinite(dec)) return "—";
   
   const d = Math.floor(dec);
-  // Use FLOOR for minutes to avoid 60' carry and 30°00' edge cases
   const m = Math.floor((dec - d) * 60);
   
   return `${d}°${String(m).padStart(2, "0")}'`;
 }
 
 /**
- * Format a zodiac position as "degrees°minutes' in Sign" (e.g., "11°49' in Gemini")
- * Returns "—" for invalid/missing data to avoid undefined/NaN display
+ * @deprecated Use formatPosDecimal instead - this adds unnecessary minutes conversion
  */
 export function formatPos(p?: ZodiacPos): string {
   if (!p || typeof p.deg !== "number" || !p.sign) return "—";
@@ -31,8 +50,7 @@ export function formatPos(p?: ZodiacPos): string {
 }
 
 /**
- * Format a position with house information appended
- * e.g., "11°49' in Gemini (House 7)" or "11°49' in Gemini (Natal House 1)"
+ * @deprecated Use formatPosDecimal instead - this adds unnecessary minutes conversion
  */
 export function formatPosWithHouse(p?: ZodiacPos & { house?: number; natal_house?: number }): string {
   const basePos = formatPos(p);

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { formatPos } from '@/lib/astro/format';
+import { formatPosDecimal } from '@/lib/astro/format';
 
 interface House {
   number: number;
@@ -25,8 +25,7 @@ export const HouseCusps: React.FC<HouseCuspsProps> = ({
     : Object.entries(houses).map(([houseNum, data]: [string, any]) => ({
         number: parseInt(houseNum),
         sign: data.sign || '',
-        deg: Math.floor(data.degree || data.deg || 0),
-        min: Math.round(((data.degree || data.deg || 0) - Math.floor(data.degree || data.deg || 0)) * 60)
+        deg: data.degree || data.deg || 0
       })).sort((a, b) => a.number - b.number);
 
   if (houseArray.length === 0) return null;
@@ -47,7 +46,7 @@ export const HouseCusps: React.FC<HouseCuspsProps> = ({
           </thead>
           <tbody>
             {houseArray.map((house) => {
-              const cusp = formatPos(house);
+              const cusp = formatPosDecimal(house);
               
               return (
                 <tr key={house.number} className="border-b border-gray-100 hover:bg-gray-50/30">

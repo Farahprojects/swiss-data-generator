@@ -11,7 +11,7 @@ import { ChartAngles } from './shared/ChartAngles';
 import { HouseCusps } from './shared/HouseCusps';
 import { PlanetaryPositions } from './shared/PlanetaryPositions';
 import { TransitMetadata } from './shared/TransitMetadata';
-import { formatPos } from '@/lib/astro/format';
+import { formatPosDecimal } from '@/lib/astro/format';
 
 interface SynastryAstroFormatterProps {
   swissData: any;
@@ -99,7 +99,7 @@ export const SynastryAstroFormatter: React.FC<SynastryAstroFormatterProps> = ({
                       <TableCell className="font-medium">
                         <span className="mr-2">{planet.unicode}</span> {planet.name}
                       </TableCell>
-                      <TableCell>{`${Math.floor(planet.deg)}°`}</TableCell>
+                      <TableCell>{`${planet.deg.toFixed(2)}°`}</TableCell>
                       <TableCell>{planet.sign}</TableCell>
                     </TableRow>
                   ))}
