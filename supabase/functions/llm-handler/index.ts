@@ -67,27 +67,23 @@ serve(async (req) => {
       throw new Error("Missing 'conversationId' or 'userMessage' in request body.");
     }
     
-    // 1. Save the user's message first
-    console.log("[llm-handler] Inserting user message into DB with conversation_id:", conversationId);
+    // 1. Fire-and-forget insert of the user's message (do not await)
+    console.log("[llm-handler] Queueing user message INSERT for conversation:", conversationId);
     const messageInsertData = {
       conversation_id: conversationId,
       role: 'user',
       text: userMessage.text,
       meta: userMessage.meta || {},
     };
-    console.log("[llm-handler] Message INSERT data:", JSON.stringify(messageInsertData));
-    
-    const { data: newUserMessage, error: userMessageError } = await supabase
-      .from('messages')
-      .insert(messageInsertData)
-      .select()
-      .single();
-
-    if (userMessageError) {
-      console.error("[llm-handler] Error saving user message:", userMessageError);
-      throw new Error(`Failed to save user message: ${userMessageError.message}`);
-    }
-    console.log("[llm-handler] User message saved successfully.");
+    EdgeRuntime?.waitUntil?.(
+      supabase
+        .from('messages')
+        .insert(messageInsertData)
+        .then(
+          () => console.log('[llm-handler] User message insert completed.'),
+          (err) => console.error('[llm-handler] User message insert failed:', err)
+        )
+    );
 
     // 2. Fetch pre-seeded context (if any) and the recent tail of messages
     // Context is stored as a message with meta.type of 'context_preseeded' or 'context_injection'
@@ -113,9 +109,11 @@ serve(async (req) => {
     if (tailErr) {
       throw new Error(`Failed to fetch conversation messages: ${tailErr.message}`);
     }
-    const tail = (tailDesc || [])
+    const tailBase = (tailDesc || [])
       .filter((m: any) => m?.meta?.type !== 'context_injection' && m?.meta?.type !== 'context_preseeded')
       .reverse();
+    // Append the current user message explicitly to ensure it is in the turn even if DB insert lags
+    const tail = [...tailBase, { role: 'user', text: userMessage.text }];
 
     // 3. Prepare the minimal message context
     const messages = tail;
@@ -210,30 +208,37 @@ Remember: Always be transparent about your analytical process and maintain a bal
     
     console.log("[llm-handler] Received successful response from Google Gemini.");
 
-    // 4. Save the assistant's message
-    console.log("[llm-handler] Inserting assistant message into DB with conversation_id:", conversationId);
+    // 4. Fire-and-forget insert of the assistant's message and return immediately
+    console.log("[llm-handler] Queueing assistant message INSERT for conversation:", conversationId);
+    const provisionalId = crypto.randomUUID();
+    const createdAt = new Date().toISOString();
     const assistantMessageInsertData = {
       conversation_id: conversationId,
       role: 'assistant',
       text: assistantResponseText,
       meta: { llm_provider: "google", model: GOOGLE_MODEL },
     };
-    console.log("[llm-handler] Assistant message INSERT data:", JSON.stringify(assistantMessageInsertData));
-    
-    const { data: newAssistantMessage, error: assistantMessageError } = await supabase
-      .from('messages')
-      .insert(assistantMessageInsertData)
-      .select()
-      .single();
+    EdgeRuntime?.waitUntil?.(
+      supabase
+        .from('messages')
+        .insert(assistantMessageInsertData)
+        .then(
+          () => console.log('[llm-handler] Assistant message insert completed.'),
+          (err) => console.error('[llm-handler] Assistant message insert failed:', err)
+        )
+    );
 
-    if (assistantMessageError) {
-      console.error("[llm-handler] Error saving assistant message:", assistantMessageError);
-      throw new Error(`Failed to save assistant message: ${assistantMessageError.message}`);
-    }
-
-    // 5. Return the newly created assistant message
-    console.log("[llm-handler] Assistant message saved. Returning to client.");
-    return new Response(JSON.stringify(newAssistantMessage), {
+    // Return a provisional message immediately without waiting for DB roundtrip
+    console.log("[llm-handler] Returning provisional assistant message to client.");
+    const provisionalMessage = {
+      id: provisionalId,
+      conversation_id: conversationId,
+      role: 'assistant',
+      text: assistantResponseText,
+      meta: { llm_provider: 'google', model: GOOGLE_MODEL, provisional: true },
+      created_at: createdAt,
+    };
+    return new Response(JSON.stringify(provisionalMessage), {
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
       status: 200,
     });
