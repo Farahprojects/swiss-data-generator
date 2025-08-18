@@ -36,7 +36,7 @@ interface ModalStateProviderProps {
 export const ModalStateProvider = ({ children }: ModalStateProviderProps) => {
   const [modalState, setModalStateInternal] = useState<ModalState>(defaultModalState);
 
-  // Restore modal state from session storage on mount
+  // Restore modal state from session storage on mount (tab-scoped)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedState = sessionStorage.getItem('modalState');
@@ -54,7 +54,7 @@ export const ModalStateProvider = ({ children }: ModalStateProviderProps) => {
   const setModalState = useCallback((key: keyof ModalState, value: boolean | string | null) => {
     setModalStateInternal(prevState => {
       const newState = { ...prevState, [key]: value };
-      // Save to session storage for persistence
+      // Save to session storage (tab-scoped) for persistence
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('modalState', JSON.stringify(newState));
       }

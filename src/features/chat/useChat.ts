@@ -8,23 +8,33 @@ export const useChat = (conversationId?: string, uuid?: string, token?: string) 
   const state = useChatStore();
 
   useEffect(() => {
+    const ss = typeof window !== 'undefined' ? window.sessionStorage : null;
+    const SESSION_KEY = 'therai_conversation_id';
 
-    
+    // If conversationId provided via route, persist it for this tab
     if (conversationId) {
+      try { ss?.setItem(SESSION_KEY, conversationId); } catch (_e) {}
       // Existing logic for direct conversationId
-
       chatController.initializeConversation(conversationId);
-    } else if (uuid) {
-      // New logic: get-or-create by uuid only (no token needed for chat)
+      return;
+    }
 
+    // If we have a cached conversation for this tab, use it
+    const cachedConv = ss?.getItem(SESSION_KEY);
+    if (cachedConv) {
+      chatController.initializeConversation(cachedConv);
+      return;
+    }
+
+    if (uuid) {
+      // Get-or-create by uuid only (no token needed). Cache per-tab once resolved.
       getOrCreateConversation(uuid)
-        .then(({ conversationId }) => {
-
-          chatController.initializeConversation(conversationId);
+        .then(({ conversationId: newId }) => {
+          try { ss?.setItem(SESSION_KEY, newId); } catch (_e) {}
+          chatController.initializeConversation(newId);
         })
         .catch(err => {
           console.error('[useChat] Failed to get/create conversation:', err);
-          // Handle error appropriately
         });
     } else {
       console.log('[useChat] No conversationId or uuid provided');

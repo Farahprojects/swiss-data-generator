@@ -12,7 +12,8 @@ interface ReportReadyState {
 
 const getInitialReportReady = (): boolean => {
   try {
-    return localStorage.getItem(REPORT_READY_KEY) === 'true';
+    if (typeof sessionStorage === 'undefined') return false;
+    return sessionStorage.getItem(REPORT_READY_KEY) === 'true';
   } catch (e) {
     return false;
   }
@@ -25,7 +26,9 @@ export const useReportReadyStore = create<ReportReadyState>((set) => ({
   stopPolling: () => set({ isPolling: false }),
   setReportReady: (isReady) => {
     try {
-      localStorage.setItem(REPORT_READY_KEY, String(isReady));
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem(REPORT_READY_KEY, String(isReady));
+      }
     } catch (e) {
       // ignore
     }
