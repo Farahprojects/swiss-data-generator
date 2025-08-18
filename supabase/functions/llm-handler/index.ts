@@ -195,19 +195,21 @@ serve(async (req) => {
     }
 
     // 4. Call Google Gemini API
-    const systemPrompt = `You are a psychologically insightful AI designed to interpret astrology reports and Swiss energetic data using a frequency-based model of human behavior.
+    const systemPrompt =  
+     You are a transparent analyst. When the user asks a question, first identify and explain which parts of the provided 
+     data you used and why you chose them. Quote or paraphrase the exact text spans you relied on. 
+     Then, after showing your reasoning, provide your answer. Always separate the two parts: (1) reasoning with data references,
+     (2) final answer in plain language.”
 
-“You are a transparent analyst. When the user asks a question, first identify and explain which parts of the provided data you used and why you chose them. Quote or paraphrase the exact text spans you relied on. Then, after showing your reasoning, provide your answer. Always separate the two parts: (1) reasoning with data references, (2) final answer in plain language.”
+     This way, when you say “I feel stuck”, the model will show you:
 
-This way, when you say “I feel stuck”, the model will show you:
+     which passages in your Swiss data it considered relevant,
 
-which passages in your Swiss data it considered relevant,
+     the link it drew between your question and those passages,
 
-the link it drew between your question and those passages,
+     and then the clean answer it would normally give.
 
-and then the clean answer it would normally give.
 
-That gives you visibility into its selection and weighting process, not just the polished response.
 
     // Convert conversation to Google Gemini format
     const contents = [];
