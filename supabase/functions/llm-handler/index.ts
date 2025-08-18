@@ -14,7 +14,9 @@ const GOOGLE_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-request-id, x-trace-id',
+  'Vary': 'Origin',
 };
 
 // Initialize Supabase client with service role key
@@ -56,7 +58,15 @@ async function checkReportReady(guestId: string): Promise<boolean> {
 }
 
 serve(async (req) => {
-  console.log("[llm-handler] Received request");
+  const reqHeaders: Record<string, string> = {};
+  req.headers.forEach((value, key) => { reqHeaders[key.toLowerCase()] = value; });
+  console.log("[llm-handler] Received request", {
+    origin: reqHeaders['origin'] || null,
+    referer: reqHeaders['referer'] || null,
+    contentType: reqHeaders['content-type'] || null,
+    xRequestId: reqHeaders['x-request-id'] || null,
+    xTraceId: reqHeaders['x-trace-id'] || null,
+  });
 
   if (req.method === "OPTIONS") {
     console.log("[llm-handler] Handling OPTIONS request");
