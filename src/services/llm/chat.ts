@@ -17,15 +17,15 @@ class LlmService {
   async createMessage(request: CreateMessageRequest): Promise<{ message_id: string; chat_id: string; created_at: string }> {
     console.log(`[LLM] Creating user message for chat ${request.chat_id}...`);
     
-    const { data, error } = await supabase.functions.invoke('messages.create', {
+    const { data, error } = await supabase.functions.invoke('messages-create', {
       body: request,
     });
 
     if (error) {
-      throw new Error(`Error invoking messages.create: ${error.message}`);
+      throw new Error(`Error invoking messages-create: ${error.message}`);
     }
     if (data.error) {
-      throw new Error(`messages.create returned an error: ${data.error}`);
+      throw new Error(`messages-create returned an error: ${data.error}`);
     }
     return data;
   }
