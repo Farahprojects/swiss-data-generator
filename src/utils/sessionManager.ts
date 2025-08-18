@@ -139,6 +139,7 @@ export class SessionManager {
       'cached_uuid',
       // Chat and chat-ui isolation keys (tab-scoped)
       'message_ids',
+      'chat_id',
       'therai_chat_uuid',
       'therai_chat_token',
       // Report ready isolation key (tab-scoped)

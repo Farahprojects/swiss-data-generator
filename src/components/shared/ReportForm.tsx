@@ -87,6 +87,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       }
 
       const guestReportId = resp?.guestReportId || null;
+      const chatId = resp?.chatId || null;
       const paymentStatus = resp?.paymentStatus || 'pending';
       const name = resp?.name || '';
       const email = resp?.email || '';
@@ -96,7 +97,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
         window.location.href = checkoutUrl;
       }
 
-      return { success: !!guestReportId, guestReportId, paymentStatus, name, email };
+      return { success: !!guestReportId, guestReportId, chatId, paymentStatus, name, email };
 
     } catch (error) {
       console.error("Submission failed with exception", error);

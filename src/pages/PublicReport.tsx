@@ -29,7 +29,7 @@ const PublicReport = () => {
   const [showCancelNudge, setShowCancelNudge] = useState(false);
   const [cancelNudgeGuestId, setCancelNudgeGuestId] = useState<string>('');
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
-  const [activeGuest, setActiveGuest] = useState<{ guestId: string; name: string; email: string; isStripeReturn?: boolean } | null>(null);
+  const [activeGuest, setActiveGuest] = useState<{ guestId: string; name: string; email: string; chatId?: string; isStripeReturn?: boolean } | null>(null);
   const [isReportProcessing, setIsReportProcessing] = useState(false);
   const [isReportReady, setIsReportReady] = useState(false);
   // paidGuest overlay removed in new flow
@@ -99,9 +99,9 @@ const PublicReport = () => {
     }
   }, []); // Run only once on component mount
 
-  const handleReportCreated = (guestId: string, _paymentStatus: 'paid' | 'pending', name: string, email: string) => {
+  const handleReportCreated = (guestId: string, _paymentStatus: 'paid' | 'pending', name: string, email: string, chatId?: string) => {
     // Always use the checker to authoritatively verify status and handle the next step.
-    setActiveGuest({ guestId, name, email, isStripeReturn: false });
+    setActiveGuest({ guestId, name, email, chatId, isStripeReturn: false });
   };
 
   const reportFormRef = useRef<HTMLDivElement>(null);
@@ -490,7 +490,7 @@ const PublicReport = () => {
                     onClick={() => {
                       if (activeGuest) {
                         console.log('[PublicReport] Setting chat tokens with guest ID:', activeGuest.guestId);
-                        setChatTokens(activeGuest.guestId, '');
+                        setChatTokens(activeGuest.guestId, '', activeGuest.chatId);
                         console.log('[PublicReport] Chat tokens set, navigating to chat');
                         setActiveGuest(null);
                         setIsReportReady(false);
@@ -514,7 +514,7 @@ const PublicReport = () => {
                 onPaid={(paidData) => {
                   // Payment confirmed, navigate to chat immediately - let chat page handle report polling
                   console.log('[PublicReport] Payment confirmed, navigating to chat:', paidData.guestId);
-                  setChatTokens(paidData.guestId, '');
+                  setChatTokens(paidData.guestId, '', activeGuest?.chatId);
                   setActiveGuest(null);
                   navigate('/chat');
                 }}

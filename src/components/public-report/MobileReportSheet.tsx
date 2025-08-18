@@ -106,6 +106,7 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
       }
       
       const guestReportId = data?.guestReportId || null;
+      const chatId = data?.chatId || null;
       const paymentStatus = data?.paymentStatus || 'pending';
       const name = data?.name || '';
       const email = data?.email || '';
@@ -116,9 +117,9 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
         return; // Redirecting, so no need to proceed
       }
 
-      if (guestReportId) {
+      if (guestReportId && chatId) {
         onOpenChange(false);
-        onReportCreated?.(guestReportId, paymentStatus, name, email);
+        onReportCreated?.(guestReportId, paymentStatus, name, email, chatId);
       } else {
         console.error('❌ [MOBILE] Invalid response from server:', data);
       }

@@ -198,10 +198,15 @@ serve(async (req) => {
       is_ai_report: isAI
     };
 
-    const { error: insertError } = await supabaseAdmin
+    const { data: insertedData, error: insertError } = await supabaseAdmin
       .from("guest_reports")
-      .upsert(guestReportData, { onConflict: 'id', returning: 'minimal' });
+      .upsert(guestReportData, { onConflict: 'id' })
+      .select('id, chat_id')
+      .single();
     if (insertError) return oops('Failed to create report record');
+    
+    const chatId = insertedData?.chat_id;
+    if (!chatId) return oops('Failed to get chat_id from database trigger');
 
     const ms = Date.now() - start;
 
@@ -215,6 +220,7 @@ serve(async (req) => {
 
       return ok({
         guestReportId,
+        chatId,
         paymentStatus: 'paid',
         name: reportData.name,
         email: reportData.email,
@@ -257,6 +263,7 @@ serve(async (req) => {
 
       return ok({
         guestReportId,
+        chatId,
         paymentStatus: 'pending',
         checkoutUrl: checkoutData.url,
         name: reportData.name,
