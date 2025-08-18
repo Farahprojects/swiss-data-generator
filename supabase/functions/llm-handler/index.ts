@@ -61,16 +61,16 @@ serve(async (req) => {
           : {},
       },
     });
-    const { conversationId, userMessage } = await req.json();
+    const { chatId, userMessage } = await req.json();
 
-    if (!conversationId || !userMessage) {
-      throw new Error("Missing 'conversationId' or 'userMessage' in request body.");
+    if (!chatId || !userMessage) {
+      throw new Error("Missing 'chatId' or 'userMessage' in request body.");
     }
     
     // 1. Fire-and-forget insert of the user's message (do not await)
-    console.log("[llm-handler] Queueing user message INSERT for conversation:", conversationId);
+    console.log("[llm-handler] Queueing user message INSERT for chat_id:", chatId);
     const messageInsertData = {
-      conversation_id: conversationId,
+      chat_id: chatId,
       role: 'user',
       text: userMessage.text,
       meta: userMessage.meta || {},

@@ -13,11 +13,11 @@ interface LlmRequest {
 
 class LlmService {
   async chat(request: LlmRequest): Promise<Message> {
-    console.log(`[LLM] Sending message for conversation ${request.conversationId}...`);
+    console.log(`[LLM] Sending message for chat ${request.conversationId}...`);
     
     const { data, error } = await supabase.functions.invoke('llm-handler', {
       body: {
-        conversationId: request.conversationId,
+        chatId: request.conversationId, // conversationId is actually the chat_id
         userMessage: request.userMessage,
         requestAudio: request.requestAudio,
       },
@@ -40,7 +40,7 @@ class LlmService {
 
     const { data, error } = await supabase.functions.invoke('conversation-llm', {
       body: {
-        conversationId: request.conversationId,
+        conversationId: request.conversationId, // Keep as conversationId for conversation-llm compatibility
         userMessage: request.userMessage,
       },
     });

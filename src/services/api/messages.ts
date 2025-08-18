@@ -7,7 +7,7 @@ export const appendMessage = async (message: Omit<Message, 'id' | 'createdAt'>):
   const { data, error } = await supabase
     .from('messages')
     .insert({
-      conversation_id: conversationId,
+      chat_id: conversationId, // conversationId is actually the chat_id
       ...rest
     })
     .select()

@@ -132,7 +132,7 @@ serve(async (req) => {
         const { data: savedMessage, error: saveError } = await supabaseAdmin
           .from('messages')
           .insert({
-            conversation_id: conversationId,
+            chat_id: conversationId, // conversationId is actually the chat_id
             role: 'user',
             text: transcript,
             meta: meta || { stt_provider: 'google' }

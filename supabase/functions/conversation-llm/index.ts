@@ -40,7 +40,7 @@ serve(async (req) => {
     const { data: messages, error: historyError } = await supabaseAdmin
       .from('messages')
       .select('role, text')
-      .eq('conversation_id', conversationId)
+      .eq('chat_id', conversationId) // conversationId is actually the chat_id
       .order('created_at', { ascending: true });
 
     if (historyError) {
@@ -124,9 +124,9 @@ Stay fully within the energetic-psychological lens at all times.`;
     console.log("[conversation-llm] Received successful response from Google Gemini.");
 
     // 3. Save the assistant's message first
-    console.log("[conversation-llm] Inserting assistant message into DB with conversation_id:", conversationId);
+    console.log("[conversation-llm] Inserting assistant message into DB with chat_id:", conversationId);
     const assistantMessageInsertData = {
-      conversation_id: conversationId,
+      chat_id: conversationId, // conversationId is actually the chat_id
       role: 'assistant',
       text: assistantResponseText,
       meta: { llm_provider: "google", model: GOOGLE_MODEL },
