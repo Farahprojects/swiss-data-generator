@@ -3,11 +3,7 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-// Use anon key for least privilege; caller's Authorization will be forwarded per-request
-const SUPABASE_ANON_KEY =
-  Deno.env.get("SUPABASE_ANON_KEY") ??
-  Deno.env.get("PUBLIC_SUPABASE_ANON_KEY") ??
-  "";
+const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const GOOGLE_API_KEY = Deno.env.get("GOOGLE-API-ONE")
   ?? Deno.env.get("GOOGLE_API_ONE")
   ?? Deno.env.get("GOOGLE_API_KEY")
@@ -18,12 +14,11 @@ const GOOGLE_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-request-id, x-trace-id',
-  'Vary': 'Origin',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Defer client creation to each request so we can forward caller Authorization
+// Initialize Supabase client with service role key
+const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 function buildFullContext(d: any): string {
   const report = d?.report_content || "";
@@ -61,15 +56,7 @@ async function checkReportReady(guestId: string): Promise<boolean> {
 }
 
 serve(async (req) => {
-  const reqHeaders: Record<string, string> = {};
-  req.headers.forEach((value, key) => { reqHeaders[key.toLowerCase()] = value; });
-  console.log("[llm-handler] Received request", {
-    origin: reqHeaders['origin'] || null,
-    referer: reqHeaders['referer'] || null,
-    contentType: reqHeaders['content-type'] || null,
-    xRequestId: reqHeaders['x-request-id'] || null,
-    xTraceId: reqHeaders['x-trace-id'] || null,
-  });
+  console.log("[llm-handler] Received request");
 
   if (req.method === "OPTIONS") {
     console.log("[llm-handler] Handling OPTIONS request");
@@ -77,14 +64,6 @@ serve(async (req) => {
   }
 
   try {
-    // Build a per-request Supabase client using anon key and forward Authorization if present
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: {
-        headers: reqHeaders['authorization']
-          ? { Authorization: reqHeaders['authorization'] }
-          : {},
-      },
-    });
     const { conversationId, userMessage } = await req.json();
 
     if (!conversationId || !userMessage) {
@@ -101,7 +80,7 @@ serve(async (req) => {
     };
     console.log("[llm-handler] Message INSERT data:", JSON.stringify(messageInsertData));
     
-    const { data: newUserMessage, error: userMessageError } = await supabase
+    const { data: newUserMessage, error: userMessageError } = await supabaseAdmin
       .from('messages')
       .insert(messageInsertData)
       .select()
@@ -114,7 +93,7 @@ serve(async (req) => {
     console.log("[llm-handler] User message saved successfully.");
 
     // 2. Fetch conversation meta (guest_id + context_injected)
-    const { data: conv, error: convError } = await supabase
+    const { data: conv, error: convError } = await supabaseAdmin
       .from('conversations')
       .select('guest_id, context_injected')
       .eq('id', conversationId)
@@ -132,7 +111,7 @@ serve(async (req) => {
       const ready = await checkReportReady(guestId);
       if (ready) {
         console.log("[llm-handler] Report ready, fetching report data for context injection");
-        const getResp = await supabase.functions.invoke('get-report-data', {
+        const getResp = await supabaseAdmin.functions.invoke('get-report-data', {
           body: { guest_report_id: guestId }
         });
         
@@ -148,14 +127,14 @@ serve(async (req) => {
           console.log("[llm-handler] Built context, length:", compactContext.length);
           // Persist context into messages table once (dedupe by meta.type)
           try {
-            const { data: existingCtx, error: checkCtxErr } = await supabase
+            const { data: existingCtx, error: checkCtxErr } = await supabaseAdmin
               .from('messages')
               .select('id')
               .eq('conversation_id', conversationId)
               .contains('meta', { type: 'context_injection' })
               .limit(1);
             if (!checkCtxErr && (!existingCtx || existingCtx.length === 0)) {
-              await supabase.from('messages').insert({
+              await supabaseAdmin.from('messages').insert({
                 conversation_id: conversationId,
                 role: 'user',
                 text: compactContext,
@@ -166,14 +145,14 @@ serve(async (req) => {
             // non-fatal
           }
           // Mark conversation as having context injected
-          await supabase
+          await supabaseAdmin
             .from('conversations')
             .update({ context_injected: true })
             .eq('id', conversationId);
           
           // Mark report as seen now that context has been successfully injected
           try {
-            await supabase
+            await supabaseAdmin
               .from('report_ready_signals')
               .update({ seen: true })
               .eq('guest_report_id', guestId);
@@ -204,7 +183,7 @@ serve(async (req) => {
 
     // 3. Fetch the conversation history
     console.log("[llm-handler] Fetching conversation history from DB.");
-    const { data: messages, error: historyError } = await supabase
+    const { data: messages, error: historyError } = await supabaseAdmin
       .from('messages')
       .select('role, text')
       .eq('conversation_id', conversationId)
@@ -318,7 +297,7 @@ Remember: Always be transparent about your analytical process and maintain a bal
     };
     console.log("[llm-handler] Assistant message INSERT data:", JSON.stringify(assistantMessageInsertData));
     
-    const { data: newAssistantMessage, error: assistantMessageError } = await supabase
+    const { data: newAssistantMessage, error: assistantMessageError } = await supabaseAdmin
       .from('messages')
       .insert(assistantMessageInsertData)
       .select()
