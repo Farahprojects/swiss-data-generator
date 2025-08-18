@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const GOOGLE_API_KEY = Deno.env.get("GOOGLE-API-ONE")
   ?? Deno.env.get("GOOGLE_API_ONE")
   ?? Deno.env.get("GOOGLE_API_KEY")
@@ -17,8 +17,7 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Initialize Supabase client with service role key
-const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+// We'll create the Supabase client per-request with forwarded auth
 
 function buildFullContext(d: any): string {
   const report = d?.report_content || "";
@@ -31,11 +30,11 @@ function buildFullContext(d: any): string {
   return parts.join("\n\n").trim();
 }
 
-async function checkReportReady(guestId: string): Promise<boolean> {
+async function checkReportReady(guestId: string, supabaseClient: any): Promise<boolean> {
   console.log("[llm-handler] Checking if report is ready for:", guestId);
   
   try {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabaseClient
       .from('report_ready_signals')
       .select('guest_report_id')
       .eq('guest_report_id', guestId)
@@ -64,6 +63,14 @@ serve(async (req) => {
   }
 
   try {
+    // Create per-request Supabase client with forwarded auth
+    const authHeader = req.headers.get('authorization');
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: {
+        headers: authHeader ? { Authorization: authHeader } : {},
+      },
+    });
+
     const { conversationId, userMessage } = await req.json();
 
     if (!conversationId || !userMessage) {
@@ -104,7 +111,7 @@ serve(async (req) => {
     // Try to attach compact context once if not yet injected
     let compactContext = "";
     if (!contextInjected && guestId) {
-      const ready = await checkReportReady(guestId);
+      const ready = await checkReportReady(guestId, supabaseAdmin);
       if (ready) {
         console.log("[llm-handler] Report ready, fetching report data for context injection");
         const getResp = await supabaseAdmin.functions.invoke('get-report-data', {
