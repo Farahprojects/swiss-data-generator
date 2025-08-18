@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.131.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders } from '../_shared/cors.ts';
-import { Gemini } from "../_shared/gemini.ts";
+import { corsHeaders } from '_shared/cors.ts';
+import { Gemini } from "_shared/gemini.ts";
 
 const GEMINI_API_KEY = Deno.env.get("GOOGLE_API_KEY")!;
 const CHAT_MODEL = Deno.env.get("CHAT_MODEL") || 'gemini-1.5-flash';
