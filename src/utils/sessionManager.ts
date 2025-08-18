@@ -11,8 +11,6 @@ export class SessionManager {
   private static instance: SessionManager;
   private stateResetCallbacks: Map<string, () => void> = new Map();
   private isClearing = false;
-  private intervalIds: Set<number> = new Set();
-  private timeoutIds: Set<number> = new Set();
 
   private constructor() {}
 
@@ -61,7 +59,6 @@ export class SessionManager {
       await this.clearReportCache();
       await this.clearModalStates();
       this.clearUrlParameters();
-      await this.clearAllTimers();
 
       // Phase 2: Navigation reset
       if (!preserveNavigation) {
@@ -135,23 +132,69 @@ export class SessionManager {
       'temp_report_data',
       'chat_token',
       'cached_uuid',
+      // Chat and chat-ui isolation keys (tab-scoped)
+      'therai_conversation_id',
+      'therai_chat_uuid',
+      'therai_chat_token',
+      // Report ready isolation key (tab-scoped)
+      'therai_report_ready',
 
       // Misc
       'countdown_shown', // Added to catch all countdown keys
 
       // Stripe and flow state
+      'stripe_return_location',
+      'pendingFlow',
+      'report:oneTimeCleanDone',
+
+      // Legacy/test flags
+      'success'
     ];
 
     storageKeys.forEach(key => {
       try {
-      // Clear keys that are exact matches
+        // Clear keys that are exact matches
         localStorage.removeItem(key);
         sessionStorage.removeItem(key);
+        
+      // Clear keys that start with the given string (for dynamic keys like seen: and countdown_shown:)
+      // We need to collect keys first, then remove them to avoid iteration issues
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const a_key = localStorage.key(i);
+        if (a_key && a_key.startsWith(key + ':')) {
+          keysToRemove.push(a_key);
+        }
+      }
+      
+      // Also check for exact prefix matches without ':' for keys like 'seen'
+      for (let i = 0; i < localStorage.length; i++) {
+        const a_key = localStorage.key(i);
+        if (a_key && key === 'seen' && a_key.startsWith('seen:')) {
+          keysToRemove.push(a_key);
+        }
+      }
+        
+        // Now remove all collected keys
+        keysToRemove.forEach(keyToRemove => {
+          localStorage.removeItem(keyToRemove);
+        });
 
       } catch (error) {
         console.error(`Error removing ${key}:`, error);
       }
     });
+
+    // Explicitly remove navigation keys shown in logs
+    try {
+      localStorage.removeItem('last_route');
+      localStorage.removeItem('last_route_params');
+    } catch {}
+
+    // Explicitly remove legacy success flag from sessionStorage
+    try {
+      sessionStorage.removeItem('success');
+    } catch {}
   }
 
   /**
@@ -243,55 +286,6 @@ export class SessionManager {
       console.error('❌ Navigation failed:', error);
       // Ultimate fallback
       window.location.href = '/';
-    }
-  }
-
-  /**
-   * Timer management
-   */
-  registerInterval(id: number) {
-    try {
-      this.intervalIds.add(id);
-    } catch {}
-  }
-
-  registerTimeout(id: number) {
-    try {
-      this.timeoutIds.add(id);
-    } catch {}
-  }
-
-  unregisterInterval(id: number) {
-    try {
-      this.intervalIds.delete(id);
-      clearInterval(id);
-    } catch {}
-  }
-
-  unregisterTimeout(id: number) {
-    try {
-      this.timeoutIds.delete(id);
-      clearTimeout(id);
-    } catch {}
-  }
-
-  private async clearAllTimers(): Promise<void> {
-    try {
-      this.intervalIds.forEach((id) => {
-        try { clearInterval(id); } catch {}
-      });
-      this.timeoutIds.forEach((id) => {
-        try { clearTimeout(id); } catch {}
-      });
-      this.intervalIds.clear();
-      this.timeoutIds.clear();
-      
-      // Best-effort clear of possible stray timers in dev tools overrides
-      if (typeof window !== 'undefined') {
-        // No reliable way to enumerate all timers; we rely on registration API
-      }
-    } catch (error) {
-      console.warn('Timer cleanup encountered an issue:', error);
     }
   }
 
