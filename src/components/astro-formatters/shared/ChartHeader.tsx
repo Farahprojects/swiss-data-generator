@@ -41,11 +41,6 @@ export const ChartHeader: React.FC<ChartHeaderProps> = ({
             {subtitle && <div>{subtitle}</div>}
           </div>
         )}
-        {!date && !subtitle && (
-          <div className="text-xs text-gray-500 pt-2 border-t border-gray-100">
-            Analysis: July 19, 2025
-          </div>
-        )}
       </div>
     </div>
   );

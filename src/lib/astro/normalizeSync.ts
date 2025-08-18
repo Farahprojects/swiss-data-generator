@@ -18,6 +18,7 @@ type TransitBlock = {
   houses?: Houses; 
   planets?: Planets; 
   aspects_to_natal?: any[]; 
+  requested_local_datetime?: string;
   requested_local_time?: string; 
   datetime_utc?: string; 
   timezone?: string 
@@ -51,11 +52,17 @@ export function normalizeSync(payload: any): SyncVM {
   });
   
   const meta = payload?.meta ?? {};
-  const analysisDate = [meta.date, meta.time].filter(Boolean).join(" ");
+  let analysisDate = [meta.date, meta.time].filter(Boolean).join(" ");
   const timeBasis = meta.time_basis;
 
   const natalSubjects = payload?.natal?.subjects ?? {};
   const trans = payload?.transits ?? {};
+
+  // Prefer subject-specific local datetime if provided by Swiss payload
+  const rlA = trans?.person_a?.requested_local_datetime || trans?.person_a?.requested_local_time;
+  const rlB = trans?.person_b?.requested_local_datetime || trans?.person_b?.requested_local_time;
+  if (rlA) analysisDate = rlA;
+  else if (rlB) analysisDate = rlB;
 
   const makeSubject = (key: PersonKey): SubjectVM | null => {
     const natal = natalSubjects?.[key] ?? {};
