@@ -1,82 +1,61 @@
 // src/features/chat/ChatController.ts
 import { useChatStore } from '@/core/store';
 import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
-import { audioPlayer } from '@/services/voice/audioPlayer';
-import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
-import { ttsService } from '@/services/voice/tts';
-import { conversationTtsService } from '@/services/voice/conversationTts';
 import { initTtsAudio, stopTtsAudio } from '@/services/voice/ttsAudio';
-import { Message } from '@/core/types';
-import { STT_PROVIDER, LLM_PROVIDER, TTS_PROVIDER } from '@/config/env';
+import { getChatTokens } from '@/services/auth/chatTokens';
+import { v4 as uuidv4 } from 'uuid';
 
-class ChatController {
+// This is a conceptual change, assuming llmService.streamChat is called from the UI layer (e.g., MessageList)
+// The controller's job is just to create the user message and notify the UI to refresh.
+export class ChatController {
   private isTurnActive = false;
   private conversationServiceInitialized = false;
-  private isResetting = false; // Flag to prevent race conditions during reset
-  
-  async initializeConversation(conversationId: string) {
+  private isResetting = false;
+  private currentStreamController: AbortController | null = null;
 
-    
-    // In the new model, conversationId is actually guest uuid
-    if (!conversationId) {
-      console.error('[ChatController] initializeConversation: FAIL FAST - conversationId is required');
-      throw new Error('conversationId is required for conversation initialization');
+  async initializeConversation(chatId: string) {
+    if (!chatId) {
+      console.error('[ChatController] initializeConversation: FAIL FAST - chatId is required');
+      return;
     }
-    
-
-    useChatStore.getState().startConversation(conversationId);
-    
-    // Messages are now loaded via useChat from guest_reports.messages
+    useChatStore.getState().startConversation(chatId);
   }
 
   async sendTextMessage(text: string) {
     if (this.isTurnActive) return;
     this.isTurnActive = true;
     
-    let { conversationId } = useChatStore.getState();
-    if (!conversationId) {
-      console.error('[ChatController] sendTextMessage: FAIL FAST - No conversationId in store. This should be set by useChat hook.');
-      throw new Error('No conversation established. Cannot send message.');
+    // CRITICAL: Get chatId from the CENTRALIZED getChatTokens function
+    const { chatId } = getChatTokens(); 
+    if (!chatId) {
+      console.error('[ChatController] sendTextMessage FATAL: No chatId found in session storage. Aborting.');
+      this.isTurnActive = false;
+      return;
     }
     
+    console.log(`[ChatController] Retrieved chatId: ${chatId}. Proceeding to create message.`);
+
     useChatStore.getState().setStatus('thinking');
+    const client_msg_id = uuidv4();
 
     try {
-      const userMessageForApi = {
+      console.log(`[ChatController] Calling llmService.createMessage with chatId: ${chatId}`);
+      const { message_id } = await llmService.createMessage({
+        chat_id: chatId,
         text,
-        meta: { stt_provider: 'text_input' }
-      };
-
-      console.log("[ChatController] Calling LLM service - no optimistic UI");
-      const response = await llmService.chat({
-        conversationId,
-        userMessage: userMessageForApi,
+        client_msg_id,
       });
-      
-      // Trigger message list refresh by updating lastMessageId
-      // The actual message content will be fetched from DB
-      if (response && typeof response === 'object' && 'queued' in response) {
-        // For fire-and-forget responses, we don't get a message ID back
-        // Just trigger a refresh after a short delay
-        setTimeout(() => {
-          const refreshId = Date.now().toString();
-          useChatStore.getState().setLastMessageId(refreshId);
-          this.persistMessageIdsToSession();
-        }, 1000);
-      } else {
-        console.log("[ChatController] Received response:", response);
-        // If we get a message back, use its ID to trigger refresh
-        const refreshId = Date.now().toString();
-        useChatStore.getState().setLastMessageId(refreshId);
-        this.persistMessageIdsToSession();
-      }
+      console.log(`[ChatController] Successfully created message with ID: ${message_id}. Triggering UI refresh.`);
+
+      // Trigger a refresh. The UI (MessageList) will see the new user message
+      // and will automatically start the SSE stream because its dependency `lastMessageId` changes.
+      useChatStore.getState().setLastMessageId(message_id);
 
     } catch (error) {
-      console.error("[ChatController] Error during AI turn:", error);
-      useChatStore.getState().setError("An error occurred while getting the AI's response.");
+      console.error("[ChatController] Error during sendTextMessage:", error);
+      useChatStore.getState().setError("An error occurred while sending your message.");
     } finally {
-      useChatStore.getState().setStatus('idle');
       this.isTurnActive = false;
     }
   }
@@ -218,6 +197,10 @@ class ChatController {
   }
 
   cancelTurn() {
+    if (this.currentStreamController) {
+      this.currentStreamController.abort();
+      this.currentStreamController = null;
+    }
     if (!this.isTurnActive) return;
     conversationMicrophoneService.forceCleanup();
     useChatStore.getState().setStatus('idle');
@@ -238,24 +221,14 @@ class ChatController {
 
   // BULLETPROOF RESET - Handle all edge cases when modal closes
   resetConversationService() {
-    // Set reset flag immediately to prevent race conditions
     this.isResetting = true;
-    
-    // Force cleanup microphone service
+    this.cancelTurn();
     conversationMicrophoneService.forceCleanup();
-    
-    // Stop any TTS playback
     stopTtsAudio();
-    
-    // Reset all flags and state
     this.conversationServiceInitialized = false;
     this.isTurnActive = false;
     useChatStore.getState().setStatus('idle');
-
-    // Clear reset flag after a brief delay to ensure all operations see it
-    setTimeout(() => {
-      this.isResetting = false;
-    }, 100);
+    setTimeout(() => { this.isResetting = false; }, 100);
   }
 }
 

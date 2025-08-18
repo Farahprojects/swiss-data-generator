@@ -2,58 +2,83 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Message } from '@/core/types';
 
-interface LlmRequest {
-  conversationId: string;
-  userMessage: {
-    text: string;
-    meta?: Record<string, any>;
-  };
-  requestAudio?: boolean; // Flag to request audio generation from Gemini
+interface CreateMessageRequest {
+  chat_id: string;
+  text: string;
+  client_msg_id: string;
+}
+
+interface StreamRequest {
+  chat_id: string;
+  k?: number;
 }
 
 class LlmService {
-  async chat(request: LlmRequest): Promise<Message> {
-    console.log(`[LLM] Sending message for chat ${request.conversationId}...`);
+  async createMessage(request: CreateMessageRequest): Promise<{ message_id: string; chat_id: string; created_at: string }> {
+    console.log(`[LLM] Creating user message for chat ${request.chat_id}...`);
     
-    const { data, error } = await supabase.functions.invoke('llm-handler', {
-      body: {
-        chatId: request.conversationId, // conversationId is actually the chat_id
-        userMessage: request.userMessage,
-        requestAudio: request.requestAudio,
-      },
+    const { data, error } = await supabase.functions.invoke('messages.create', {
+      body: request,
     });
 
     if (error) {
-      throw new Error(`Error invoking llm-handler: ${error.message}`);
+      throw new Error(`Error invoking messages.create: ${error.message}`);
     }
-
     if (data.error) {
-      throw new Error(`llm-handler returned an error: ${data.error}`);
+      throw new Error(`messages.create returned an error: ${data.error}`);
     }
-
-    return data as Message;
+    return data;
   }
 
-    // Conversation-specific LLM call with fire-and-forget TTS
-  async conversationChat(request: Omit<LlmRequest, 'requestAudio'>): Promise<Message> {
+  streamChat(request: StreamRequest, onStream: (chunk: any) => void): AbortController {
+    const abortController = new AbortController();
 
+    const stream = async () => {
+      const response = await fetch(`${supabase.functionsUrl}/llm-handler`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabase.auth.session()?.access_token}`,
+          'apikey': supabase.anonKey,
+          'Accept': 'text/event-stream',
+        },
+        body: JSON.stringify(request),
+        signal: abortController.signal,
+      });
 
-    const { data, error } = await supabase.functions.invoke('conversation-llm', {
-      body: {
-        conversationId: request.conversationId, // Keep as conversationId for conversation-llm compatibility
-        userMessage: request.userMessage,
-      },
+      if (!response.body) {
+        throw new Error("Response body is null");
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const raw = decoder.decode(value);
+        const chunks = raw.split('\n\n').filter(Boolean);
+
+        for (const chunk of chunks) {
+          if (chunk.startsWith('data: ')) {
+            const json = JSON.parse(chunk.substring(6));
+            onStream(json);
+            if (json.event === 'done') {
+              return;
+            }
+          }
+        }
+      }
+    };
+
+    stream().catch(error => {
+      if (error.name !== 'AbortError') {
+        console.error('SSE stream error:', error);
+      }
     });
 
-    if (error) {
-      throw new Error(`Error invoking conversation-llm: ${error.message}`);
-    }
-
-    if (data.error) {
-      throw new Error(`conversation-llm returned an error: ${data.error}`);
-    }
-
-    return data as Message;
+    return abortController;
   }
 }
 

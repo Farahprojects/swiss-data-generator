@@ -6,6 +6,8 @@ import { audioPlayer } from '@/services/voice/audioPlayer';
 import { useConversationUIStore } from './conversation-ui-store';
 import { TypewriterText } from '@/components/ui/TypewriterText';
 import { getMessagesForConversation } from '@/services/api/messages';
+import { getChatTokens } from '@/services/auth/chatTokens';
+import { llmService } from '@/services/llm/llmService';
 
 const MessageItem = ({ message, isLast, isFromHistory }: { message: Message; isLast: boolean; isFromHistory?: boolean }) => {
   const isUser = message.role === 'user';
@@ -38,16 +40,17 @@ const MessageItem = ({ message, isLast, isFromHistory }: { message: Message; isL
 };
 
 export const MessageList = () => {
-  const conversationId = useChatStore((state) => state.conversationId);
+  const { chatId } = getChatTokens();
   const lastMessageId = useChatStore((state) => state.lastMessageId);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [streamingMessage, setStreamingMessage] = useState<Partial<Message> | null>(null);
   const [loading, setLoading] = useState(false);
   const [initialMessageCount, setInitialMessageCount] = useState<number | null>(null);
 
-  // Fetch messages from database whenever conversation changes or new message is added
+  // Effect to fetch initial and updated messages from DB
   useEffect(() => {
-    if (!conversationId) {
+    if (!chatId) {
       setMessages([]);
       return;
     }
@@ -55,23 +58,46 @@ export const MessageList = () => {
     const fetchMessages = async () => {
       setLoading(true);
       try {
-        const fetchedMessages = await getMessagesForConversation(conversationId);
+        const fetchedMessages = await getMessagesForConversation(chatId);
         setMessages(fetchedMessages);
         
-        // Track initial message count for history detection
         if (initialMessageCount === null && fetchedMessages.length > 0) {
           setInitialMessageCount(fetchedMessages.length);
         }
       } catch (error) {
         console.error('[MessageList] Error fetching messages:', error);
-        setMessages([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchMessages();
-  }, [conversationId, lastMessageId]); // Re-fetch when lastMessageId changes
+  }, [chatId, lastMessageId]);
+
+  // Effect to handle the SSE stream
+  useEffect(() => {
+    if (!chatId) return;
+
+    const handleStream = (chunk: any) => {
+      if (chunk.event === 'done') {
+        setStreamingMessage(null); // Clear streaming message on completion
+        // The final message will be loaded by the fetchMessages effect
+      } else {
+        setStreamingMessage(prev => ({
+          id: prev?.id || 'streaming-msg',
+          role: 'assistant',
+          text: (prev?.text || "") + chunk.text,
+          createdAt: prev?.createdAt || new Date().toISOString(),
+        }));
+      }
+    };
+
+    const abortController = llmService.streamChat({ chat_id: chatId }, handleStream);
+
+    return () => {
+      abortController.abort();
+    };
+  }, [chatId]); // This effect should probably be controlled more granularly
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -87,9 +113,11 @@ export const MessageList = () => {
     );
   }
 
+  const displayedMessages = [...messages, ...(streamingMessage ? [streamingMessage as Message] : [])];
+
   return (
     <div className="flex flex-col min-h-full">
-      {messages.length === 0 ? (
+      {displayedMessages.length === 0 ? (
         <div className="flex-1 flex flex-col justify-end">
           <div className="p-4">
             <h2 className="text-3xl font-light text-gray-800 text-left">Let's tune into the energy behind your chart</h2>
@@ -97,13 +125,13 @@ export const MessageList = () => {
         </div>
       ) : (
         <div className="flex flex-col space-y-6">
-          {messages.map((msg, index) => {
+          {displayedMessages.map((msg, index) => {
             const isFromHistory = initialMessageCount !== null && index < initialMessageCount;
             return (
               <MessageItem 
                 key={msg.id} 
                 message={msg} 
-                isLast={index === messages.length - 1}
+                isLast={index === displayedMessages.length - 1}
                 isFromHistory={isFromHistory}
               />
             );
