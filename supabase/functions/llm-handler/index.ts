@@ -36,30 +36,6 @@ function buildFullContext(d: any): string {
   return parts.join("\n\n").trim();
 }
 
-async function checkReportReady(guestId: string): Promise<boolean> {
-  console.log("[llm-handler] Checking if report is ready for:", guestId);
-  
-  try {
-    const { data, error } = await supabaseAdmin
-      .from('report_ready_signals')
-      .select('guest_report_id')
-      .eq('guest_report_id', guestId)
-      .limit(1);
-    
-    if (error) {
-      console.warn("[llm-handler] Error checking report ready:", error);
-      return false;
-    }
-    
-    const isReady = !!(data && data.length > 0);
-    console.log(`[llm-handler] Report ready status: ${isReady}`);
-    return isReady;
-  } catch (error) {
-    console.warn("[llm-handler] Exception checking report ready:", error);
-    return false;
-  }
-}
-
 serve(async (req) => {
   const reqHeaders: Record<string, string> = {};
   req.headers.forEach((value, key) => { reqHeaders[key.toLowerCase()] = value; });
@@ -113,107 +89,27 @@ serve(async (req) => {
     }
     console.log("[llm-handler] User message saved successfully.");
 
-    // 2. Fetch conversation meta (guest_id + context_injected)
-    const { data: conv, error: convError } = await supabase
+    // 2. Fetch the minimal turn bundle (context + summary + last N messages)
+    // Assumes `conversations` has optional `context_json` and `conversation_summary` columns.
+    // If not present, this SELECT will still work with nulls.
+    const { data: turnBundle, error: turnError } = await supabase
       .from('conversations')
-      .select('guest_id, context_injected')
+      .select(`
+        context_json,
+        conversation_summary,
+        messages:messages!inner(role, text)
+      `)
       .eq('id', conversationId)
-      .single();
-    if (convError) {
-      throw new Error(`Failed to fetch conversation: ${convError.message}`);
+      .order('created_at', { foreignTable: 'messages', ascending: true })
+      .limit(1000);
+    if (turnError) {
+      throw new Error(`Failed to fetch turn bundle: ${turnError.message}`);
     }
 
-    const guestId = conv?.guest_id as string | undefined;
-    let contextInjected = !!conv?.context_injected;
-
-    // Try to attach compact context once if not yet injected
-    let compactContext = "";
-    if (!contextInjected && guestId) {
-      const ready = await checkReportReady(guestId);
-      if (ready) {
-        console.log("[llm-handler] Report ready, fetching report data for context injection");
-        const getResp = await supabase.functions.invoke('get-report-data', {
-          body: { guest_report_id: guestId }
-        });
-        
-        console.log("[llm-handler] get-report-data response:", {
-          hasError: !!getResp.error,
-          dataOk: getResp.data?.ok,
-          dataReady: getResp.data?.ready,
-          hasData: !!getResp.data?.data
-        });
-        
-        if (!getResp.error && getResp.data?.ok && getResp.data?.ready) {
-          compactContext = buildFullContext(getResp.data.data);
-          console.log("[llm-handler] Built context, length:", compactContext.length);
-          // Persist context into messages table once (dedupe by meta.type)
-          try {
-            const { data: existingCtx, error: checkCtxErr } = await supabase
-              .from('messages')
-              .select('id')
-              .eq('conversation_id', conversationId)
-              .contains('meta', { type: 'context_injection' })
-              .limit(1);
-            if (!checkCtxErr && (!existingCtx || existingCtx.length === 0)) {
-              await supabase.from('messages').insert({
-                conversation_id: conversationId,
-                role: 'user',
-                text: compactContext,
-                meta: { type: 'context_injection', source: 'server', injected_at: new Date().toISOString() },
-              });
-            }
-          } catch (_e) {
-            // non-fatal
-          }
-          // Mark conversation as having context injected
-          await supabase
-            .from('conversations')
-            .update({ context_injected: true })
-            .eq('id', conversationId);
-          
-          // Mark report as seen now that context has been successfully injected
-          try {
-            await supabase
-              .from('report_ready_signals')
-              .update({ seen: true })
-              .eq('guest_report_id', guestId);
-            console.log("[llm-handler] Marked report as seen after context injection");
-          } catch (seenError) {
-            console.warn("[llm-handler] Failed to mark report as seen:", seenError);
-          }
-          
-          contextInjected = true;
-          console.log("[llm-handler] Context injection completed successfully");
-        } else {
-          console.log("[llm-handler] Report data not ready or invalid:", {
-            error: getResp.error,
-            ok: getResp.data?.ok,
-            ready: getResp.data?.ready
-          });
-        }
-      } else {
-        console.log("[llm-handler] Report not ready, skipping context injection");
-      }
-    } else {
-      if (contextInjected) {
-        console.log("[llm-handler] Context already injected for this conversation");
-      } else {
-        console.log("[llm-handler] No guestId available for context injection");
-      }
-    }
-
-    // 3. Fetch the conversation history
-    console.log("[llm-handler] Fetching conversation history from DB.");
-    const { data: messages, error: historyError } = await supabase
-      .from('messages')
-      .select('role, text')
-      .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true });
-
-    if (historyError) {
-      console.error("[llm-handler] Error fetching conversation history:", historyError);
-      throw new Error(`Failed to fetch conversation history: ${historyError.message}`);
-    }
+    // 3. Prepare the minimal message context
+    const contextJson = turnBundle?.[0]?.context_json || null;
+    const conversationSummary = turnBundle?.[0]?.conversation_summary || null;
+    const messages = Array.isArray(turnBundle?.[0]?.messages) ? turnBundle![0]!.messages : [];
 
     // 4. Call Google Gemini API
     const systemPrompt = `You are an expert astrological analyst and interpreter. Your role is to help users understand their astrological data and reports.
@@ -256,12 +152,12 @@ Remember: Always be transparent about your analytical process and maintain a bal
       parts: [{ text: systemPrompt }]
     });
     
-    // Add compact context if available
-    if (compactContext) {
-      contents.push({
-        role: "user",
-        parts: [{ text: `Context (report):\n${compactContext}` }]
-      });
+    // Add pre-seeded context if available
+    if (contextJson) {
+      contents.push({ role: 'user', parts: [{ text: `Context (preseeded):\n${JSON.stringify(contextJson)}` }] });
+    }
+    if (conversationSummary) {
+      contents.push({ role: 'user', parts: [{ text: `Summary:\n${conversationSummary}` }] });
     }
 
     // Add conversation messages
