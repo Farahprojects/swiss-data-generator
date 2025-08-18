@@ -88,7 +88,7 @@ function App() {
         <Router>
           <ReportModalProvider>
             <ConditionalAuth>
-              <div className="min-h-screen bg-background overflow-hidden">
+              <div className="min-h-screen bg-background">
                 <Routes>
                   {/* Public Routes */}
                   <Route path="/" element={<Index />} />

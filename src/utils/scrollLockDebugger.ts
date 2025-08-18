@@ -176,8 +176,8 @@ class ScrollLockDebugger {
 // Export singleton instance
 export const scrollLockDebugger = ScrollLockDebugger.getInstance();
 
-// Auto-add debug button in development
-if (process.env.NODE_ENV === 'development') {
+// Auto-add debug button in development only (guarded for SSR)
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
   // Wait for DOM to be ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {

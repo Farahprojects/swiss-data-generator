@@ -200,7 +200,7 @@ const PublicReport = () => {
             />
 
             {/* Animated header with logo */}
-            <header className={`fixed top-0 left-0 z-50 p-6 transition-opacity duration-500 ease-out ${
+            <header className={`absolute top-0 left-0 z-40 p-6 transition-opacity duration-500 ease-out ${
               showHeader ? 'opacity-100' : 'opacity-0'
             }`}>
               <div>
