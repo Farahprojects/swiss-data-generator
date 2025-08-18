@@ -36,6 +36,30 @@ function buildFullContext(d: any): string {
   return parts.join("\n\n").trim();
 }
 
+async function checkReportReady(guestId: string): Promise<boolean> {
+  console.log("[llm-handler] Checking if report is ready for:", guestId);
+  
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('report_ready_signals')
+      .select('guest_report_id')
+      .eq('guest_report_id', guestId)
+      .limit(1);
+    
+    if (error) {
+      console.warn("[llm-handler] Error checking report ready:", error);
+      return false;
+    }
+    
+    const isReady = !!(data && data.length > 0);
+    console.log(`[llm-handler] Report ready status: ${isReady}`);
+    return isReady;
+  } catch (error) {
+    console.warn("[llm-handler] Exception checking report ready:", error);
+    return false;
+  }
+}
+
 serve(async (req) => {
   const reqHeaders: Record<string, string> = {};
   req.headers.forEach((value, key) => { reqHeaders[key.toLowerCase()] = value; });
@@ -67,56 +91,129 @@ serve(async (req) => {
       throw new Error("Missing 'conversationId' or 'userMessage' in request body.");
     }
     
-    // 1. Fire-and-forget insert of the user's message (do not await)
-    console.log("[llm-handler] Queueing user message INSERT for conversation:", conversationId);
+    // 1. Save the user's message first
+    console.log("[llm-handler] Inserting user message into DB with conversation_id:", conversationId);
     const messageInsertData = {
       conversation_id: conversationId,
       role: 'user',
       text: userMessage.text,
       meta: userMessage.meta || {},
     };
-    EdgeRuntime?.waitUntil?.(
-      supabase
-        .from('messages')
-        .insert(messageInsertData)
-        .then(
-          () => console.log('[llm-handler] User message insert completed.'),
-          (err) => console.error('[llm-handler] User message insert failed:', err)
-        )
-    );
-
-    // 2. Fetch pre-seeded context (if any) and the recent tail of messages
-    // Context is stored as a message with meta.type of 'context_preseeded' or 'context_injection'
-    const { data: ctxRows, error: ctxErr } = await supabase
+    console.log("[llm-handler] Message INSERT data:", JSON.stringify(messageInsertData));
+    
+    const { data: newUserMessage, error: userMessageError } = await supabase
       .from('messages')
-      .select('text, created_at, meta')
-      .eq('conversation_id', conversationId)
-      .or("meta->>type.eq.context_preseeded,meta->>type.eq.context_injection")
-      .order('created_at', { ascending: false })
-      .limit(1);
-    if (ctxErr) {
-      throw new Error(`Failed to fetch context message: ${ctxErr.message}`);
-    }
-    const contextText = ctxRows && ctxRows.length > 0 ? ctxRows[0].text : null;
+      .insert(messageInsertData)
+      .select()
+      .single();
 
-    // Get the last 12 non-context messages (user/assistant only)
-    const { data: tailDesc, error: tailErr } = await supabase
+    if (userMessageError) {
+      console.error("[llm-handler] Error saving user message:", userMessageError);
+      throw new Error(`Failed to save user message: ${userMessageError.message}`);
+    }
+    console.log("[llm-handler] User message saved successfully.");
+
+    // 2. Fetch conversation meta (guest_id + context_injected)
+    const { data: conv, error: convError } = await supabase
+      .from('conversations')
+      .select('guest_id, context_injected')
+      .eq('id', conversationId)
+      .single();
+    if (convError) {
+      throw new Error(`Failed to fetch conversation: ${convError.message}`);
+    }
+
+    const guestId = conv?.guest_id as string | undefined;
+    let contextInjected = !!conv?.context_injected;
+
+    // Try to attach compact context once if not yet injected
+    let compactContext = "";
+    if (!contextInjected && guestId) {
+      const ready = await checkReportReady(guestId);
+      if (ready) {
+        console.log("[llm-handler] Report ready, fetching report data for context injection");
+        const getResp = await supabase.functions.invoke('get-report-data', {
+          body: { guest_report_id: guestId }
+        });
+        
+        console.log("[llm-handler] get-report-data response:", {
+          hasError: !!getResp.error,
+          dataOk: getResp.data?.ok,
+          dataReady: getResp.data?.ready,
+          hasData: !!getResp.data?.data
+        });
+        
+        if (!getResp.error && getResp.data?.ok && getResp.data?.ready) {
+          compactContext = buildFullContext(getResp.data.data);
+          console.log("[llm-handler] Built context, length:", compactContext.length);
+          // Persist context into messages table once (dedupe by meta.type)
+          try {
+            const { data: existingCtx, error: checkCtxErr } = await supabase
+              .from('messages')
+              .select('id')
+              .eq('conversation_id', conversationId)
+              .contains('meta', { type: 'context_injection' })
+              .limit(1);
+            if (!checkCtxErr && (!existingCtx || existingCtx.length === 0)) {
+              await supabase.from('messages').insert({
+                conversation_id: conversationId,
+                role: 'user',
+                text: compactContext,
+                meta: { type: 'context_injection', source: 'server', injected_at: new Date().toISOString() },
+              });
+            }
+          } catch (_e) {
+            // non-fatal
+          }
+          // Mark conversation as having context injected
+          await supabase
+            .from('conversations')
+            .update({ context_injected: true })
+            .eq('id', conversationId);
+          
+          // Mark report as seen now that context has been successfully injected
+          try {
+            await supabase
+              .from('report_ready_signals')
+              .update({ seen: true })
+              .eq('guest_report_id', guestId);
+            console.log("[llm-handler] Marked report as seen after context injection");
+          } catch (seenError) {
+            console.warn("[llm-handler] Failed to mark report as seen:", seenError);
+          }
+          
+          contextInjected = true;
+          console.log("[llm-handler] Context injection completed successfully");
+        } else {
+          console.log("[llm-handler] Report data not ready or invalid:", {
+            error: getResp.error,
+            ok: getResp.data?.ok,
+            ready: getResp.data?.ready
+          });
+        }
+      } else {
+        console.log("[llm-handler] Report not ready, skipping context injection");
+      }
+    } else {
+      if (contextInjected) {
+        console.log("[llm-handler] Context already injected for this conversation");
+      } else {
+        console.log("[llm-handler] No guestId available for context injection");
+      }
+    }
+
+    // 3. Fetch the conversation history
+    console.log("[llm-handler] Fetching conversation history from DB.");
+    const { data: messages, error: historyError } = await supabase
       .from('messages')
-      .select('role, text, created_at, meta')
+      .select('role, text')
       .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: false })
-      .limit(12);
-    if (tailErr) {
-      throw new Error(`Failed to fetch conversation messages: ${tailErr.message}`);
-    }
-    const tailBase = (tailDesc || [])
-      .filter((m: any) => m?.meta?.type !== 'context_injection' && m?.meta?.type !== 'context_preseeded')
-      .reverse();
-    // Append the current user message explicitly to ensure it is in the turn even if DB insert lags
-    const tail = [...tailBase, { role: 'user', text: userMessage.text }];
+      .order('created_at', { ascending: true });
 
-    // 3. Prepare the minimal message context
-    const messages = tail;
+    if (historyError) {
+      console.error("[llm-handler] Error fetching conversation history:", historyError);
+      throw new Error(`Failed to fetch conversation history: ${historyError.message}`);
+    }
 
     // 4. Call Google Gemini API
     const systemPrompt = `You are an expert astrological analyst and interpreter. Your role is to help users understand their astrological data and reports.
@@ -159,9 +256,12 @@ Remember: Always be transparent about your analytical process and maintain a bal
       parts: [{ text: systemPrompt }]
     });
     
-    // Add pre-seeded context if available (stored as a context message)
-    if (contextText) {
-      contents.push({ role: 'user', parts: [{ text: `Context:\n${contextText}` }] });
+    // Add compact context if available
+    if (compactContext) {
+      contents.push({
+        role: "user",
+        parts: [{ text: `Context (report):\n${compactContext}` }]
+      });
     }
 
     // Add conversation messages
@@ -208,37 +308,30 @@ Remember: Always be transparent about your analytical process and maintain a bal
     
     console.log("[llm-handler] Received successful response from Google Gemini.");
 
-    // 4. Fire-and-forget insert of the assistant's message and return immediately
-    console.log("[llm-handler] Queueing assistant message INSERT for conversation:", conversationId);
-    const provisionalId = crypto.randomUUID();
-    const createdAt = new Date().toISOString();
+    // 4. Save the assistant's message
+    console.log("[llm-handler] Inserting assistant message into DB with conversation_id:", conversationId);
     const assistantMessageInsertData = {
       conversation_id: conversationId,
       role: 'assistant',
       text: assistantResponseText,
       meta: { llm_provider: "google", model: GOOGLE_MODEL },
     };
-    EdgeRuntime?.waitUntil?.(
-      supabase
-        .from('messages')
-        .insert(assistantMessageInsertData)
-        .then(
-          () => console.log('[llm-handler] Assistant message insert completed.'),
-          (err) => console.error('[llm-handler] Assistant message insert failed:', err)
-        )
-    );
+    console.log("[llm-handler] Assistant message INSERT data:", JSON.stringify(assistantMessageInsertData));
+    
+    const { data: newAssistantMessage, error: assistantMessageError } = await supabase
+      .from('messages')
+      .insert(assistantMessageInsertData)
+      .select()
+      .single();
 
-    // Return a provisional message immediately without waiting for DB roundtrip
-    console.log("[llm-handler] Returning provisional assistant message to client.");
-    const provisionalMessage = {
-      id: provisionalId,
-      conversation_id: conversationId,
-      role: 'assistant',
-      text: assistantResponseText,
-      meta: { llm_provider: 'google', model: GOOGLE_MODEL, provisional: true },
-      created_at: createdAt,
-    };
-    return new Response(JSON.stringify(provisionalMessage), {
+    if (assistantMessageError) {
+      console.error("[llm-handler] Error saving assistant message:", assistantMessageError);
+      throw new Error(`Failed to save assistant message: ${assistantMessageError.message}`);
+    }
+
+    // 5. Return the newly created assistant message
+    console.log("[llm-handler] Assistant message saved. Returning to client.");
+    return new Response(JSON.stringify(newAssistantMessage), {
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
       status: 200,
     });
