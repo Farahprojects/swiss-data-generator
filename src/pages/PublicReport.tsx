@@ -19,6 +19,7 @@ import { PricingProvider } from '@/contexts/PricingContext';
 import { ReportModalProvider } from '@/contexts/ReportModalContext';
 import { CancelNudgeModal } from '@/components/public-report/CancelNudgeModal';
 import { shouldShowCancelNudge } from '@/utils/cancelNudgeStorage';
+import { scrollLockDebugger } from '@/utils/scrollLockDebugger';
 
 const PublicReport = () => {
   const location = useLocation();
@@ -33,6 +34,33 @@ const PublicReport = () => {
   const [isReportReady, setIsReportReady] = useState(false);
   // paidGuest overlay removed in new flow
   
+  // Cleanup scroll locks on unmount or when issues are detected
+  useEffect(() => {
+    // Check for stuck scroll locks periodically
+    const checkScrollLocks = () => {
+      if (scrollLockDebugger.isScrollLocked()) {
+        const state = scrollLockDebugger.getState();
+        if (state.lockSources.length === 0) {
+          console.warn('[PublicReport] Detected stuck scroll lock with no registered sources, forcing reset');
+          scrollLockDebugger.forceReset();
+        }
+      }
+    };
+
+    // Check immediately and then every 5 seconds
+    checkScrollLocks();
+    const interval = setInterval(checkScrollLocks, 5000);
+
+    return () => {
+      clearInterval(interval);
+      // Force reset on unmount to ensure clean state
+      if (scrollLockDebugger.isScrollLocked()) {
+        console.log('[PublicReport] Component unmounting, resetting any remaining scroll locks');
+        scrollLockDebugger.forceReset();
+      }
+    };
+  }, []);
+
   // Effect to detect and handle Stripe return
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
