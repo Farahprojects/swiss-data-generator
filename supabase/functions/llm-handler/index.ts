@@ -89,27 +89,36 @@ serve(async (req) => {
     }
     console.log("[llm-handler] User message saved successfully.");
 
-    // 2. Fetch the minimal turn bundle (context + summary + last N messages)
-    // Assumes `conversations` has optional `context_json` and `conversation_summary` columns.
-    // If not present, this SELECT will still work with nulls.
-    const { data: turnBundle, error: turnError } = await supabase
-      .from('conversations')
-      .select(`
-        context_json,
-        conversation_summary,
-        messages:messages!inner(role, text)
-      `)
-      .eq('id', conversationId)
-      .order('created_at', { foreignTable: 'messages', ascending: true })
-      .limit(1000);
-    if (turnError) {
-      throw new Error(`Failed to fetch turn bundle: ${turnError.message}`);
+    // 2. Fetch pre-seeded context (if any) and the recent tail of messages
+    // Context is stored as a message with meta.type of 'context_preseeded' or 'context_injection'
+    const { data: ctxRows, error: ctxErr } = await supabase
+      .from('messages')
+      .select('text, created_at, meta')
+      .eq('conversation_id', conversationId)
+      .or("meta->>type.eq.context_preseeded,meta->>type.eq.context_injection")
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if (ctxErr) {
+      throw new Error(`Failed to fetch context message: ${ctxErr.message}`);
     }
+    const contextText = ctxRows && ctxRows.length > 0 ? ctxRows[0].text : null;
+
+    // Get the last 12 non-context messages (user/assistant only)
+    const { data: tailDesc, error: tailErr } = await supabase
+      .from('messages')
+      .select('role, text, created_at, meta')
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: false })
+      .limit(12);
+    if (tailErr) {
+      throw new Error(`Failed to fetch conversation messages: ${tailErr.message}`);
+    }
+    const tail = (tailDesc || [])
+      .filter((m: any) => m?.meta?.type !== 'context_injection' && m?.meta?.type !== 'context_preseeded')
+      .reverse();
 
     // 3. Prepare the minimal message context
-    const contextJson = turnBundle?.[0]?.context_json || null;
-    const conversationSummary = turnBundle?.[0]?.conversation_summary || null;
-    const messages = Array.isArray(turnBundle?.[0]?.messages) ? turnBundle![0]!.messages : [];
+    const messages = tail;
 
     // 4. Call Google Gemini API
     const systemPrompt = `You are an expert astrological analyst and interpreter. Your role is to help users understand their astrological data and reports.
@@ -152,12 +161,9 @@ Remember: Always be transparent about your analytical process and maintain a bal
       parts: [{ text: systemPrompt }]
     });
     
-    // Add pre-seeded context if available
-    if (contextJson) {
-      contents.push({ role: 'user', parts: [{ text: `Context (preseeded):\n${JSON.stringify(contextJson)}` }] });
-    }
-    if (conversationSummary) {
-      contents.push({ role: 'user', parts: [{ text: `Summary:\n${conversationSummary}` }] });
+    // Add pre-seeded context if available (stored as a context message)
+    if (contextText) {
+      contents.push({ role: 'user', parts: [{ text: `Context:\n${contextText}` }] });
     }
 
     // Add conversation messages
