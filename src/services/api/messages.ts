@@ -52,3 +52,25 @@ export const getMessagesForConversation = async (conversationId: string): Promis
       meta: msg.meta
     }));
 };
+
+export const getMessagesByIds = async (messageIds: (string | number)[]): Promise<Message[]> => {
+  if (!messageIds || messageIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from('messages')
+    .select('*')
+    .in('id', messageIds)
+    .order('created_at', { ascending: true });
+
+  if (error) throw new Error(error.message);
+
+  return (data || []).map(msg => ({
+    id: msg.id,
+    conversationId: msg.conversation_id,
+    role: msg.role,
+    text: msg.text,
+    audioUrl: msg.audio_url,
+    timings: msg.timings,
+    createdAt: msg.created_at,
+    meta: msg.meta
+  }));
+};

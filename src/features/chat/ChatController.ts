@@ -22,7 +22,7 @@ class ChatController {
   async initializeConversation(conversationId: string) {
 
     
-    // FAIL FAST: conversationId is now required
+    // In the new model, conversationId is actually guest uuid
     if (!conversationId) {
       console.error('[ChatController] initializeConversation: FAIL FAST - conversationId is required');
       throw new Error('conversationId is required for conversation initialization');
@@ -31,19 +31,7 @@ class ChatController {
 
     useChatStore.getState().startConversation(conversationId);
     
-    // Load existing messages for this conversation (for page refresh)
-    try {
-
-      const existingMessages = await getMessagesForConversation(conversationId);
-
-      
-      if (existingMessages.length > 0) {
-        useChatStore.getState().loadMessages(existingMessages);
-      }
-    } catch (error) {
-      console.error('[ChatController] Error loading existing messages:', error);
-      // Don't throw - conversation should still work without history
-    }
+    // Messages are now loaded via useChat from guest_reports.messages
   }
 
   async sendTextMessage(text: string) {

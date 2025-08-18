@@ -2,7 +2,8 @@
 import { useEffect } from 'react';
 import { useChatStore } from '@/core/store';
 import { chatController } from './ChatController';
-import { getOrCreateConversation } from '@/services/api/conversations';
+import { getGuestReportMessageIds } from '@/services/api/guestReports';
+import { getMessagesByIds } from '@/services/api/messages';
 
 export const useChat = (conversationId?: string, uuid?: string, token?: string) => {
   const state = useChatStore();
@@ -11,34 +12,27 @@ export const useChat = (conversationId?: string, uuid?: string, token?: string) 
     const ss = typeof window !== 'undefined' ? window.sessionStorage : null;
     const SESSION_KEY = 'therai_conversation_id';
 
-    // If conversationId provided via route, persist it for this tab
-    if (conversationId) {
-      try { ss?.setItem(SESSION_KEY, conversationId); } catch (_e) {}
-      // Existing logic for direct conversationId
-      chatController.initializeConversation(conversationId);
+    // New model: conversations table removed. Use uuid (guest id) as key.
+    if (!uuid) {
+      console.log('[useChat] No uuid provided');
       return;
     }
 
-    // If we have a cached conversation for this tab, use it
-    const cachedConv = ss?.getItem(SESSION_KEY);
-    if (cachedConv) {
-      chatController.initializeConversation(cachedConv);
-      return;
-    }
+    // Persist uuid as the session-scoped conversation key
+    try { ss?.setItem(SESSION_KEY, uuid); } catch (_e) {}
+    chatController.initializeConversation(uuid);
 
-    if (uuid) {
-      // Get-or-create by uuid only (no token needed). Cache per-tab once resolved.
-      getOrCreateConversation(uuid)
-        .then(({ conversationId: newId }) => {
-          try { ss?.setItem(SESSION_KEY, newId); } catch (_e) {}
-          chatController.initializeConversation(newId);
-        })
-        .catch(err => {
-          console.error('[useChat] Failed to get/create conversation:', err);
-        });
-    } else {
-      console.log('[useChat] No conversationId or uuid provided');
-    }
+    // Preload messages by IDs from guest_reports.messages
+    getGuestReportMessageIds(uuid)
+      .then(async (ids) => {
+        const msgs = await getMessagesByIds(ids);
+        if (msgs.length > 0) {
+          state.loadMessages(msgs);
+        }
+      })
+      .catch((err) => {
+        console.warn('[useChat] No pre-seeded messages found for guest uuid:', uuid, err?.message || err);
+      });
   }, [conversationId, uuid, token]);
 
   return {
