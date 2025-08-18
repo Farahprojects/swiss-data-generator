@@ -15,44 +15,15 @@ const GOOGLE_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Max-Age': '86400',
+  'Vary': 'Origin'
 };
 
 // We'll create the Supabase client per-request with forwarded auth
 
-function buildFullContext(d: any): string {
-  const report = d?.report_content || "";
-  const swiss = d?.swiss_data ? JSON.stringify(d.swiss_data) : "";
-  const meta = d?.metadata ? JSON.stringify(d.metadata) : "";
-  const parts: string[] = [];
-  if (report) parts.push(`Report:\n${report}`);
-  if (swiss) parts.push(`SwissData:\n${swiss}`);
-  if (meta) parts.push(`Metadata:\n${meta}`);
-  return parts.join("\n\n").trim();
-}
-
-async function checkReportReady(guestId: string, supabaseClient: any): Promise<boolean> {
-  console.log("[llm-handler] Checking if report is ready for:", guestId);
-  
-  try {
-    const { data, error } = await supabaseClient
-      .from('report_ready_signals')
-      .select('guest_report_id')
-      .eq('guest_report_id', guestId)
-      .limit(1);
-    
-    if (error) {
-      console.warn("[llm-handler] Error checking report ready:", error);
-      return false;
-    }
-    
-    const isReady = !!(data && data.length > 0);
-    console.log(`[llm-handler] Report ready status: ${isReady}`);
-    return isReady;
-  } catch (error) {
-    console.warn("[llm-handler] Exception checking report ready:", error);
-    return false;
-  }
-}
+// No inline context injection here. Context should be pre-seeded as a message
+// with meta.type = 'context_injection' or 'context_preseeded'.
 
 serve(async (req) => {
   console.log("[llm-handler] Received request");
@@ -95,107 +66,32 @@ serve(async (req) => {
         )
     );
 
-    // 2. Fetch conversation meta (guest_id + context_injected)
-    const { data: conv, error: convError } = await supabaseAdmin
-      .from('conversations')
-      .select('guest_id, context_injected')
-      .eq('id', conversationId)
-      .single();
-    if (convError) {
-      throw new Error(`Failed to fetch conversation: ${convError.message}`);
+    // 2. Fetch compact turn bundle: latest context + last 12 non-context messages
+    console.log("[llm-handler] Fetching compact conversation bundle from DB.");
+    const [{ data: contextMsg }, { data: recentMsgs, error: recentErr }] = await Promise.all([
+      supabaseAdmin
+        .from('messages')
+        .select('role, text, created_at')
+        .eq('conversation_id', conversationId)
+        .in('meta->>type', ['context_injection', 'context_preseeded'])
+        .order('created_at', { ascending: false })
+        .limit(1),
+      supabaseAdmin
+        .from('messages')
+        .select('role, text, created_at, meta')
+        .eq('conversation_id', conversationId)
+        .or("meta->>type.is.null,not(meta->>type).in.(context_injection,context_preseeded)")
+        .order('created_at', { ascending: false })
+        .limit(12)
+    ]);
+
+    if (recentErr) {
+      console.error("[llm-handler] Error fetching compact bundle:", recentErr);
+      throw new Error(`Failed to fetch compact bundle: ${recentErr.message}`);
     }
 
-    const guestId = conv?.guest_id as string | undefined;
-    let contextInjected = !!conv?.context_injected;
-
-    // Try to attach compact context once if not yet injected
-    let compactContext = "";
-    if (!contextInjected && guestId) {
-      const ready = await checkReportReady(guestId, supabaseAdmin);
-      if (ready) {
-        console.log("[llm-handler] Report ready, fetching report data for context injection");
-        const getResp = await supabaseAdmin.functions.invoke('get-report-data', {
-          body: { guest_report_id: guestId }
-        });
-        
-        console.log("[llm-handler] get-report-data response:", {
-          hasError: !!getResp.error,
-          dataOk: getResp.data?.ok,
-          dataReady: getResp.data?.ready,
-          hasData: !!getResp.data?.data
-        });
-        
-        if (!getResp.error && getResp.data?.ok && getResp.data?.ready) {
-          compactContext = buildFullContext(getResp.data.data);
-          console.log("[llm-handler] Built context, length:", compactContext.length);
-          // Persist context into messages table once (dedupe by meta.type)
-          try {
-            const { data: existingCtx, error: checkCtxErr } = await supabaseAdmin
-              .from('messages')
-              .select('id')
-              .eq('conversation_id', conversationId)
-              .contains('meta', { type: 'context_injection' })
-              .limit(1);
-            if (!checkCtxErr && (!existingCtx || existingCtx.length === 0)) {
-              await supabaseAdmin.from('messages').insert({
-                conversation_id: conversationId,
-                role: 'user',
-                text: compactContext,
-                meta: { type: 'context_injection', source: 'server', injected_at: new Date().toISOString() },
-              });
-            }
-          } catch (_e) {
-            // non-fatal
-          }
-          // Mark conversation as having context injected
-          await supabaseAdmin
-            .from('conversations')
-            .update({ context_injected: true })
-            .eq('id', conversationId);
-          
-          // Mark report as seen now that context has been successfully injected
-          try {
-            await supabaseAdmin
-              .from('report_ready_signals')
-              .update({ seen: true })
-              .eq('guest_report_id', guestId);
-            console.log("[llm-handler] Marked report as seen after context injection");
-          } catch (seenError) {
-            console.warn("[llm-handler] Failed to mark report as seen:", seenError);
-          }
-          
-          contextInjected = true;
-          console.log("[llm-handler] Context injection completed successfully");
-        } else {
-          console.log("[llm-handler] Report data not ready or invalid:", {
-            error: getResp.error,
-            ok: getResp.data?.ok,
-            ready: getResp.data?.ready
-          });
-        }
-      } else {
-        console.log("[llm-handler] Report not ready, skipping context injection");
-      }
-    } else {
-      if (contextInjected) {
-        console.log("[llm-handler] Context already injected for this conversation");
-      } else {
-        console.log("[llm-handler] No guestId available for context injection");
-      }
-    }
-
-    // 3. Fetch the conversation history
-    console.log("[llm-handler] Fetching conversation history from DB.");
-    const { data: messages, error: historyError } = await supabaseAdmin
-      .from('messages')
-      .select('role, text')
-      .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true });
-
-    if (historyError) {
-      console.error("[llm-handler] Error fetching conversation history:", historyError);
-      throw new Error(`Failed to fetch conversation history: ${historyError.message}`);
-    }
+    const messages = (recentMsgs ?? []).reverse();
+    const compactContext = contextMsg && contextMsg.length > 0 ? contextMsg[0].text : "";
 
     // 4. Call Google Gemini API
     const systemPrompt = `You are an expert astrological analyst and interpreter. Your role is to help users understand their astrological data and reports.
@@ -230,7 +126,7 @@ Remember: Always be transparent about your analytical process and maintain a bal
 
 
     // Convert conversation to Google Gemini format
-    const contents = [];
+    const contents = [] as any[];
     
     // Add system prompt as first user message
     contents.push({
@@ -239,7 +135,7 @@ Remember: Always be transparent about your analytical process and maintain a bal
     });
     
     // Add compact context if available
-    if (compactContext) {
+    if (compactContext && compactContext.trim().length > 0) {
       contents.push({
         role: "user",
         parts: [{ text: `Context (report):\n${compactContext}` }]
