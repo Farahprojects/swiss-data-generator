@@ -1,5 +1,0 @@
-{
-  "imports": {
-    "_shared/": "./functions/_shared/"
-  }
-}
