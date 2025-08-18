@@ -17,12 +17,16 @@ import ReportFlowChecker from '@/components/public-report/ReportFlowChecker';
 import { setChatTokens } from '@/services/auth/chatTokens';
 import { PricingProvider } from '@/contexts/PricingContext';
 import { ReportModalProvider } from '@/contexts/ReportModalContext';
+import { CancelNudgeModal } from '@/components/public-report/CancelNudgeModal';
+import { shouldShowCancelNudge } from '@/utils/cancelNudgeStorage';
 
 const PublicReport = () => {
   const location = useLocation();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const [showCancelledMessage, setShowCancelledMessage] = useState(false);
+  const [showCancelNudge, setShowCancelNudge] = useState(false);
+  const [cancelNudgeGuestId, setCancelNudgeGuestId] = useState<string>('');
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [activeGuest, setActiveGuest] = useState<{ guestId: string; name: string; email: string; isStripeReturn?: boolean } | null>(null);
   const [isReportProcessing, setIsReportProcessing] = useState(false);
@@ -40,6 +44,25 @@ const PublicReport = () => {
       console.log(`[PublicReport] Stripe return detected for guestId: ${guestId}. Starting checker.`);
       // The checker will handle polling for the 'paid' status from the webhook.
       setActiveGuest({ guestId: guestId, name: '', email: '', isStripeReturn: true });
+
+      // Clean the URL to avoid re-triggering on refresh
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete('payment_status');
+      window.history.replaceState({}, '', newUrl.toString());
+    } else if (guestId && paymentStatusParam === 'cancelled') {
+      // Handle cancelled payment - show nudge modal if appropriate
+      console.log(`[PublicReport] Cancelled payment detected for guestId: ${guestId}`);
+      
+      if (shouldShowCancelNudge(guestId)) {
+        console.log('[PublicReport] Showing cancel nudge modal');
+        setCancelNudgeGuestId(guestId);
+        setShowCancelNudge(true);
+        
+        // Track the event
+        console.log('[CancelNudge] cancel_nudge_shown', { guestId });
+      } else {
+        console.log('[PublicReport] Cancel nudge already shown recently, skipping');
+      }
 
       // Clean the URL to avoid re-triggering on refresh
       const newUrl = new URL(window.location.href);
@@ -140,6 +163,13 @@ const PublicReport = () => {
                 </Card>
               </div>
             )}
+
+            {/* Cancel Nudge Modal */}
+            <CancelNudgeModal
+              isOpen={showCancelNudge}
+              guestId={cancelNudgeGuestId}
+              onClose={() => setShowCancelNudge(false)}
+            />
 
             {/* Animated header with logo */}
             <header className={`fixed top-0 left-0 z-50 p-6 transition-opacity duration-500 ease-out ${
