@@ -7,7 +7,7 @@ import { Menu } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { ChatSidebarControls } from './ChatSidebarControls';
 import { getChatTokens } from '@/services/auth/chatTokens';
-import { startReportReadyOrchestration } from '@/services/report/reportReadyOrchestrator';
+import { startReportReadyListener, stopReportReadyListener } from '@/services/report/reportReadyListener';
 import { MotionConfig } from 'framer-motion';
 import { useConversationUIStore } from './conversation-ui-store';
 
@@ -19,14 +19,23 @@ export const ChatBox = () => {
   const isConversationOpen = useConversationUIStore((s) => s.isConversationOpen);
 
   useEffect(() => {
-
     if (uuid) {
-      startReportReadyOrchestration(uuid);
+      startReportReadyListener(uuid);
     }
+
+    // Cleanup listener on unmount or uuid change
+    return () => {
+      if (uuid) {
+        stopReportReadyListener(uuid);
+      }
+    };
+  }, [uuid]);
+
+  useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, uuid]);
+  }, [messages]);
 
   return (
     <>

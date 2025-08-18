@@ -3,11 +3,15 @@ import { create } from 'zustand';
 const REPORT_READY_KEY = 'therai_report_ready';
 
 interface ReportReadyState {
-  isPolling: boolean;
+  isPolling: boolean; // Kept for backward compatibility, represents "listening" state
   isReportReady: boolean;
-  startPolling: () => void;
-  stopPolling: () => void;
+  startPolling: () => void; // Now starts listening instead of polling
+  stopPolling: () => void;  // Now stops listening instead of polling
   setReportReady: (isReady: boolean) => void;
+  // New aliases for clarity
+  isListening: boolean;
+  startListening: () => void;
+  stopListening: () => void;
 }
 
 const getInitialReportReady = (): boolean => {
@@ -19,7 +23,7 @@ const getInitialReportReady = (): boolean => {
   }
 };
 
-export const useReportReadyStore = create<ReportReadyState>((set) => ({
+export const useReportReadyStore = create<ReportReadyState>((set, get) => ({
   isPolling: false,
   isReportReady: getInitialReportReady(),
   startPolling: () => set({ isPolling: true }),
@@ -34,5 +38,9 @@ export const useReportReadyStore = create<ReportReadyState>((set) => ({
     }
     set({ isReportReady: isReady });
   },
+  // New aliases for clarity (reference the same state)
+  get isListening() { return get().isPolling; },
+  startListening: () => set({ isPolling: true }),
+  stopListening: () => set({ isPolling: false }),
 }));
 

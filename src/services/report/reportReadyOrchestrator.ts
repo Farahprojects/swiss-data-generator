@@ -1,3 +1,8 @@
+/**
+ * @deprecated This file contains the old polling-based system.
+ * Use reportReadyListener.ts for new implementations with real-time listeners.
+ * Kept for backward compatibility only.
+ */
 import { supabase } from '@/integrations/supabase/client';
 import { useChatStore } from '@/core/store';
 import { useReportReadyStore } from './reportReadyStore';

@@ -1,3 +1,5 @@
+import { cleanupAllListeners } from '@/services/report/reportReadyListener';
+
 // Logger function for session manager
 const log = (level: 'log' | 'warn' | 'error' | 'info', message: string, data?: any, context?: string) => {
   console[level](`[${context || 'SessionManager'}] ${message}`, data);
@@ -59,6 +61,9 @@ export class SessionManager {
       await this.clearReportCache();
       await this.clearModalStates();
       this.clearUrlParameters();
+      
+      // Cleanup real-time listeners
+      cleanupAllListeners();
 
       // Phase 2: Navigation reset
       if (!preserveNavigation) {
