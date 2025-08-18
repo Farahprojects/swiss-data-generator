@@ -5,6 +5,7 @@ import { PlayCircle } from 'lucide-react';
 import { audioPlayer } from '@/services/voice/audioPlayer';
 import { useConversationUIStore } from './conversation-ui-store';
 import { TypewriterText } from '@/components/ui/TypewriterText';
+import { getMessagesForConversation } from '@/services/api/messages';
 
 const MessageItem = ({ message, isLast, isFromHistory }: { message: Message; isLast: boolean; isFromHistory?: boolean }) => {
   const isUser = message.role === 'user';
@@ -37,22 +38,54 @@ const MessageItem = ({ message, isLast, isFromHistory }: { message: Message; isL
 };
 
 export const MessageList = () => {
-  const messages = useChatStore((state) => state.messages);
+  const conversationId = useChatStore((state) => state.conversationId);
+  const lastMessageId = useChatStore((state) => state.lastMessageId);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(false);
   const [initialMessageCount, setInitialMessageCount] = useState<number | null>(null);
 
-  // Track initial message count to determine which messages are from history
+  // Fetch messages from database whenever conversation changes or new message is added
   useEffect(() => {
-    if (initialMessageCount === null && messages.length > 0) {
-      setInitialMessageCount(messages.length);
+    if (!conversationId) {
+      setMessages([]);
+      return;
     }
-  }, [messages.length, initialMessageCount]);
+
+    const fetchMessages = async () => {
+      setLoading(true);
+      try {
+        const fetchedMessages = await getMessagesForConversation(conversationId);
+        setMessages(fetchedMessages);
+        
+        // Track initial message count for history detection
+        if (initialMessageCount === null && fetchedMessages.length > 0) {
+          setInitialMessageCount(fetchedMessages.length);
+        }
+      } catch (error) {
+        console.error('[MessageList] Error fetching messages:', error);
+        setMessages([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMessages();
+  }, [conversationId, lastMessageId]); // Re-fetch when lastMessageId changes
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages.length]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col min-h-full justify-center items-center">
+        <div className="text-gray-500">Loading messages...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-full">

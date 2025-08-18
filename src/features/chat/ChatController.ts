@@ -7,11 +7,7 @@ import { llmService } from '@/services/llm/chat';
 import { ttsService } from '@/services/voice/tts';
 import { conversationTtsService } from '@/services/voice/conversationTts';
 import { initTtsAudio, stopTtsAudio } from '@/services/voice/ttsAudio';
-import { getMessagesForConversation } from '@/services/api/messages';
 import { Message } from '@/core/types';
-import { v4 as uuidv4 } from 'uuid';
-// No longer need appendMessage from the client
-// import { appendMessage } from '@/services/api/messages';
 import { STT_PROVIDER, LLM_PROVIDER, TTS_PROVIDER } from '@/config/env';
 
 class ChatController {
@@ -38,21 +34,11 @@ class ChatController {
     if (this.isTurnActive) return;
     this.isTurnActive = true;
     
-    let { conversationId, messages } = useChatStore.getState();
+    let { conversationId } = useChatStore.getState();
     if (!conversationId) {
       console.error('[ChatController] sendTextMessage: FAIL FAST - No conversationId in store. This should be set by useChat hook.');
       throw new Error('No conversation established. Cannot send message.');
     }
-    
-    // Optimistically add user message to UI
-    const tempUserMessage: Message = {
-      id: uuidv4(),
-      conversationId,
-      role: 'user' as const,
-      text,
-      createdAt: new Date().toISOString(),
-    };
-    useChatStore.getState().addMessage(tempUserMessage);
     
     useChatStore.getState().setStatus('thinking');
 
@@ -62,19 +48,29 @@ class ChatController {
         meta: { stt_provider: 'text_input' }
       };
 
-      console.log("[ChatController] Calling new LLM service.");
-      const assistantMessage = await llmService.chat({
+      console.log("[ChatController] Calling LLM service - no optimistic UI");
+      const response = await llmService.chat({
         conversationId,
         userMessage: userMessageForApi,
       });
-      console.log("[ChatController] Received complete assistant message:", assistantMessage);
       
-      // Replace temp user message with the real one from the DB later if needed, for now this is fine.
-      // We get the final assistant message from the handler.
-      useChatStore.getState().addMessage(assistantMessage);
-
-      // For text messages, we don't generate audio automatically
-      // Audio can be generated on-demand when user clicks the speaker button
+      // Trigger message list refresh by updating lastMessageId
+      // The actual message content will be fetched from DB
+      if (response && typeof response === 'object' && 'queued' in response) {
+        // For fire-and-forget responses, we don't get a message ID back
+        // Just trigger a refresh after a short delay
+        setTimeout(() => {
+          const refreshId = Date.now().toString();
+          useChatStore.getState().setLastMessageId(refreshId);
+          this.persistMessageIdsToSession();
+        }, 1000);
+      } else {
+        console.log("[ChatController] Received response:", response);
+        // If we get a message back, use its ID to trigger refresh
+        const refreshId = Date.now().toString();
+        useChatStore.getState().setLastMessageId(refreshId);
+        this.persistMessageIdsToSession();
+      }
 
     } catch (error) {
       console.error("[ChatController] Error during AI turn:", error);
@@ -146,17 +142,6 @@ class ChatController {
         return;
       }
 
-      // Optimistically add user message to UI
-      const tempUserMessage: Message = {
-        id: uuidv4(),
-        conversationId: useChatStore.getState().conversationId!,
-        role: 'user' as const,
-        text: transcription,
-        audioUrl: URL.createObjectURL(audioBlob),
-        createdAt: new Date().toISOString(),
-      };
-      useChatStore.getState().addMessage(tempUserMessage);
-
       useChatStore.getState().setStatus('thinking');
 
       const userMessageForApi = {
@@ -169,8 +154,10 @@ class ChatController {
         userMessage: userMessageForApi,
       });
 
-      // Add the final assistant message
-      useChatStore.getState().addMessage(assistantMessage);
+      // Trigger message list refresh - messages will be fetched from DB
+      const messageId = assistantMessage.id || Date.now().toString();
+      useChatStore.getState().setLastMessageId(messageId);
+      this.persistMessageIdsToSession();
 
       // For conversation mode, call TTS and wait for audio to complete
       if (assistantMessage.text && assistantMessage.id) {
@@ -235,6 +222,18 @@ class ChatController {
     conversationMicrophoneService.forceCleanup();
     useChatStore.getState().setStatus('idle');
     this.isTurnActive = false;
+  }
+
+  // Persist message IDs to session storage
+  private persistMessageIdsToSession() {
+    try {
+      const { messageIds } = useChatStore.getState();
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        window.sessionStorage.setItem('message_ids', JSON.stringify(messageIds));
+      }
+    } catch (error) {
+      console.warn('[ChatController] Failed to persist message IDs to session:', error);
+    }
   }
 
   // BULLETPROOF RESET - Handle all edge cases when modal closes

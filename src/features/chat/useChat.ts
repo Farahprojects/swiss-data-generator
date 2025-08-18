@@ -8,7 +8,7 @@ export const useChat = (conversationId?: string, uuid?: string, token?: string) 
 
   useEffect(() => {
     const ss = typeof window !== 'undefined' ? window.sessionStorage : null;
-    const SESSION_KEY = 'therai_conversation_id';
+    const MESSAGE_IDS_KEY = 'message_ids';
 
     // Use uuid (guest id) as the conversation key
     if (!uuid) {
@@ -16,8 +16,8 @@ export const useChat = (conversationId?: string, uuid?: string, token?: string) 
       return;
     }
 
-    // Persist uuid as the session-scoped conversation key
-    try { ss?.setItem(SESSION_KEY, uuid); } catch (_e) {}
+    // Initialize with empty message IDs array for this session
+    try { ss?.setItem(MESSAGE_IDS_KEY, JSON.stringify([])); } catch (_e) {}
     chatController.initializeConversation(uuid);
   }, [conversationId, uuid, token]);
 

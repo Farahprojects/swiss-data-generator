@@ -11,16 +11,19 @@ export type ChatStatus =
 
 interface ChatState {
   conversationId: string | null;
-  messages: Message[];
   status: ChatStatus;
   error: string | null;
   ttsProvider?: 'google' | 'openai';
   ttsVoice?: string;
+  
+  // Lightweight view flags only - no message content stored
+  messageIds: string[];
+  lastMessageId: string | null;
 
   startConversation: (id: string) => void;
-  loadMessages: (messages: Message[]) => void;
-  addMessage: (message: Message) => void;
-  updateMessage: (id: string, updates: Partial<Message>) => void;
+  setMessageIds: (ids: string[]) => void;
+  addMessageId: (id: string) => void;
+  setLastMessageId: (id: string | null) => void;
   setStatus: (status: ChatStatus) => void;
   setError: (error: string | null) => void;
   setTtsProvider: (p: 'google' | 'openai') => void;
@@ -30,24 +33,29 @@ interface ChatState {
 
 export const useChatStore = create<ChatState>((set, get) => ({
   conversationId: null,
-  messages: [],
+  messageIds: [],
+  lastMessageId: null,
   status: 'idle',
   error: null,
   ttsProvider: 'google',
   ttsVoice: 'en-US-Studio-O',
 
-  startConversation: (id) => set({ conversationId: id, messages: [], status: 'idle', error: null }),
+  startConversation: (id) => set({ 
+    conversationId: id, 
+    messageIds: [], 
+    lastMessageId: null,
+    status: 'idle', 
+    error: null 
+  }),
 
-  loadMessages: (messages) => set({ messages }),
+  setMessageIds: (ids) => set({ messageIds: ids }),
 
-  addMessage: (message) => set((state) => ({ messages: [...state.messages, message] })),
+  addMessageId: (id) => set((state) => ({ 
+    messageIds: [...state.messageIds, id],
+    lastMessageId: id
+  })),
 
-  updateMessage: (id, updates) =>
-    set((state) => ({
-      messages: state.messages.map((msg) =>
-        msg.id === id ? { ...msg, ...updates } : msg
-      ),
-    })),
+  setLastMessageId: (id) => set({ lastMessageId: id }),
 
   setStatus: (status) => set({ status }),
   
@@ -56,5 +64,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setTtsProvider: (p) => set({ ttsProvider: p }),
   setTtsVoice: (v) => set({ ttsVoice: v }),
 
-  clearChat: () => set({ conversationId: null, messages: [], status: 'idle', error: null }),
+  clearChat: () => set({ 
+    conversationId: null, 
+    messageIds: [], 
+    lastMessageId: null,
+    status: 'idle', 
+    error: null 
+  }),
 }));
