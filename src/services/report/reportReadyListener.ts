@@ -158,11 +158,12 @@ function handleReportReady(guestReportId: string, startedAt: number): void {
   const elapsedSec = Math.round((Date.now() - startedAt) / 1000);
   console.log(`[ReportReady] Report ready detected after ${elapsedSec}s for:`, guestReportId);
   
-  // Mark as seen and ready
-  markReportSeen(guestReportId).then(() => {
-    useReportReadyStore.getState().setReportReady(true);
-    stopReportReadyListener(guestReportId);
-  });
+  // Set report as ready first (for UI), but don't mark as seen yet
+  // Let the LLM handler mark it as seen after context injection
+  useReportReadyStore.getState().setReportReady(true);
+  stopReportReadyListener(guestReportId);
+  
+  console.log('[ReportReady] Report marked as ready in UI, context injection will handle seen flag');
 }
 
 function fallbackToPolling(guestReportId: string, startedAt: number): void {
@@ -182,6 +183,7 @@ function fallbackToPolling(guestReportId: string, startedAt: number): void {
       console.log(`[ReportReady] Polling attempt ${attempts} after ${elapsedSec}s`);
 
       if (!error && data && data.length > 0) {
+        console.log(`[ReportReady] Polling detected report ready after ${elapsedSec}s`);
         handleReportReady(guestReportId, startedAt);
         return;
       }

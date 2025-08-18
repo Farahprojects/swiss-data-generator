@@ -31,36 +31,28 @@ function buildFullContext(d: any): string {
   return parts.join("\n\n").trim();
 }
 
-async function pollReportReady(guestId: string): Promise<boolean> {
-  let attempts = 0;
-  const started = Date.now();
-  console.log("[llm-handler][Polling] start");
-  console.log("[llm-handler][Polling] 0 0");
-  while (Date.now() - started < 12000) {
-    attempts += 1;
+async function checkReportReady(guestId: string): Promise<boolean> {
+  console.log("[llm-handler] Checking if report is ready for:", guestId);
+  
+  try {
     const { data, error } = await supabaseAdmin
       .from('report_ready_signals')
       .select('guest_report_id')
       .eq('guest_report_id', guestId)
       .limit(1);
-    const elapsedSec = Math.round((Date.now() - started) / 1000);
-    console.log(`[llm-handler][Polling] ${elapsedSec} ${attempts}`);
-    if (!error && data && data.length > 0) return true;
-    await new Promise(r => setTimeout(r, 1000));
+    
+    if (error) {
+      console.warn("[llm-handler] Error checking report ready:", error);
+      return false;
+    }
+    
+    const isReady = !!(data && data.length > 0);
+    console.log(`[llm-handler] Report ready status: ${isReady}`);
+    return isReady;
+  } catch (error) {
+    console.warn("[llm-handler] Exception checking report ready:", error);
+    return false;
   }
-  console.log("[llm-handler][Polling] final");
-  // Final single ask
-  attempts += 1;
-  const { data, error } = await supabaseAdmin
-    .from('report_ready_signals')
-    .select('guest_report_id')
-    .eq('guest_report_id', guestId)
-    .limit(1);
-  const elapsedSec = Math.round((Date.now() - started) / 1000);
-  console.log(`[llm-handler][Polling] ${elapsedSec} ${attempts}`);
-  if (!error && data && data.length > 0) return true;
-  console.warn("[llm-handler][Polling] no report on the ask");
-  return false;
 }
 
 serve(async (req) => {
@@ -116,13 +108,23 @@ serve(async (req) => {
     // Try to attach compact context once if not yet injected
     let compactContext = "";
     if (!contextInjected && guestId) {
-      const ready = await pollReportReady(guestId);
+      const ready = await checkReportReady(guestId);
       if (ready) {
+        console.log("[llm-handler] Report ready, fetching report data for context injection");
         const getResp = await supabaseAdmin.functions.invoke('get-report-data', {
           body: { guest_report_id: guestId }
         });
+        
+        console.log("[llm-handler] get-report-data response:", {
+          hasError: !!getResp.error,
+          dataOk: getResp.data?.ok,
+          dataReady: getResp.data?.ready,
+          hasData: !!getResp.data?.data
+        });
+        
         if (!getResp.error && getResp.data?.ok && getResp.data?.ready) {
           compactContext = buildFullContext(getResp.data.data);
+          console.log("[llm-handler] Built context, length:", compactContext.length);
           // Persist context into messages table once (dedupe by meta.type)
           try {
             const { data: existingCtx, error: checkCtxErr } = await supabaseAdmin
@@ -142,12 +144,40 @@ serve(async (req) => {
           } catch (_e) {
             // non-fatal
           }
+          // Mark conversation as having context injected
           await supabaseAdmin
             .from('conversations')
             .update({ context_injected: true })
             .eq('id', conversationId);
+          
+          // Mark report as seen now that context has been successfully injected
+          try {
+            await supabaseAdmin
+              .from('report_ready_signals')
+              .update({ seen: true })
+              .eq('guest_report_id', guestId);
+            console.log("[llm-handler] Marked report as seen after context injection");
+          } catch (seenError) {
+            console.warn("[llm-handler] Failed to mark report as seen:", seenError);
+          }
+          
           contextInjected = true;
+          console.log("[llm-handler] Context injection completed successfully");
+        } else {
+          console.log("[llm-handler] Report data not ready or invalid:", {
+            error: getResp.error,
+            ok: getResp.data?.ok,
+            ready: getResp.data?.ready
+          });
         }
+      } else {
+        console.log("[llm-handler] Report not ready, skipping context injection");
+      }
+    } else {
+      if (contextInjected) {
+        console.log("[llm-handler] Context already injected for this conversation");
+      } else {
+        console.log("[llm-handler] No guestId available for context injection");
       }
     }
 
