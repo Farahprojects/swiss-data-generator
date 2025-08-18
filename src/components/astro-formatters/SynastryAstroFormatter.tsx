@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Table, TableBody, TableCell, TableHeader, TableHead, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -118,28 +118,35 @@ export const SynastryAstroFormatter: React.FC<SynastryAstroFormatterProps> = ({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue={vm.subjects[0]?.key} className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  {vm.subjects.map((subject) => (
-                    <TabsTrigger key={subject.key} value={subject.key}>
-                      {subject.name}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
+              {(() => {
+                const [activeTab, setActiveTab] = useState<string>(vm.subjects[0]?.key ?? 'person_a');
                 
-                {vm.subjects.map((subject) => {
-                  console.log(`[SynastryAstroFormatter] Rendering ${subject.key} (${subject.name}):`, {
-                    hasNatalAngles: !!subject.natal?.angles,
-                    hasNatalHouses: !!subject.natal?.houses,
-                    hasNatalPlanets: !!subject.natal?.planets,
-                    hasNatalAspects: !!subject.natal?.aspects,
-                    hasTransits: !!subject.transits,
-                    hasTransitPlanets: !!subject.transits?.planets,
-                    hasTransitAspects: !!subject.transits?.aspects_to_natal
-                  });
-                  
-                  return (
-                    <TabsContent key={subject.key} value={subject.key} className="space-y-6">
+                return (
+                  <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value)} className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                      {vm.subjects.map((subject) => (
+                        <TabsTrigger key={`tab-${subject.key}`} value={subject.key}>
+                          {subject.name}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                
+                    {vm.subjects.map((subject) => {
+                      console.log(`[Panel Mount] ${subject.key} (${subject.name}):`, {
+                        angles: !!subject.natal?.angles,
+                        houses: !!subject.natal?.houses,
+                        planets: !!subject.natal?.planets,
+                        transits: !!subject.transits,
+                        tzDisplay: subject.tzDisplay
+                      });
+                      
+                      // Compute final timezone display
+                      const tzDisplay = (subject.transits?.timezone && subject.transits.timezone !== 'UTC')
+                        ? subject.transits.timezone
+                        : subject.natal?.meta?.tz ?? '—';
+                      
+                      return (
+                        <TabsContent key={`panel-${subject.key}`} value={subject.key} className="space-y-6">
                       {/* Natal Section */}
                       <div>
                         <h4 className="text-xl font-light text-gray-700 mb-4">Natal Chart</h4>
@@ -159,26 +166,23 @@ export const SynastryAstroFormatter: React.FC<SynastryAstroFormatterProps> = ({
                       </div>
                     </div>
                     
-                    {/* Current Transits Section */}
-                    {subject.transits && (
-                      <div>
-                        <div className="flex items-center justify-between mb-4">
-                          <h4 className="text-xl font-light text-gray-700">Current Transits</h4>
-                          {subject.tzDisplay && (
-                            <span className="text-sm text-gray-500">
-                              Timezone: {subject.tzDisplay}
-                            </span>
-                          )}
-                        </div>
-                        
-                        {subject.transits.datetime_utc && (
-                          <TransitMetadata 
-                            transits={{
-                              datetime_utc: subject.transits.datetime_utc,
-                              timezone: subject.transits.timezone
-                            }}
-                          />
-                        )}
+                                            {/* Current Transits Section */}
+                        {subject.transits && (
+                          <div>
+                            <div className="flex items-center justify-between mb-4">
+                              <h4 className="text-xl font-light text-gray-700">Current Transits</h4>
+                              <span className="text-sm text-gray-500">
+                                Timezone: {tzDisplay}
+                              </span>
+                            </div>
+                            
+                            {(subject.transits.datetime_utc || subject.transits.requested_local_time) && (
+                              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                                <p className="text-sm text-gray-600">
+                                  Transit Time: {subject.transits.requested_local_time || 'N/A'} ({tzDisplay})
+                                </p>
+                              </div>
+                            )}
                         
                         <div className="grid gap-6">
                           {subject.transits?.planets && (
@@ -197,9 +201,11 @@ export const SynastryAstroFormatter: React.FC<SynastryAstroFormatterProps> = ({
                       </div>
                     )}
                   </TabsContent>
+                        );
+                      })}
+                    </Tabs>
                   );
-                })}
-              </Tabs>
+                })()}
             </CardContent>
           </Card>
         )}
