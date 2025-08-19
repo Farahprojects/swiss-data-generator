@@ -18,7 +18,7 @@ serve(async (req) => {
   }
 
   try {
-    const { audioData, config, traceId, conversationId, meta } = await req.json();
+    const { audioData, config, traceId, chat_id, meta } = await req.json();
     
     // Comprehensive audio data validation
     if (!audioData) {
@@ -124,15 +124,15 @@ serve(async (req) => {
       // Still return it but log the warning
     }
 
-    // Save user message to database if conversationId provided
+    // Save user message to database if chat_id provided
     let savedMessageId = null;
-    if (conversationId && transcript && transcript.trim().length > 0) {
+    if (chat_id && transcript && transcript.trim().length > 0) {
       console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Saving user message to DB`);
       try {
         const { data: savedMessage, error: saveError } = await supabaseAdmin
           .from('messages')
           .insert({
-            conversation_id: conversationId,
+            chat_id: chat_id,
             role: 'user',
             text: transcript,
             meta: meta || { stt_provider: 'google' }
