@@ -5,6 +5,25 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 // Track active listeners to prevent duplicates
 const activeListeners: Record<string, { channel: RealtimeChannel; startedAt: number }> = {};
 
+// Trigger context injection for chat when report is ready
+async function triggerContextInjection(guestReportId: string): Promise<void> {
+  try {
+    console.log(`[ReportReady] Triggering context injection for guest: ${guestReportId}`);
+    
+    const response = await supabase.functions.invoke('context-injector', {
+      body: { guest_report_id: guestReportId }
+    });
+
+    if (response.error) {
+      console.error('[ReportReady] Context injection failed:', response.error);
+    } else {
+      console.log('[ReportReady] Context injection successful:', response.data);
+    }
+  } catch (error) {
+    console.error('[ReportReady] Error triggering context injection:', error);
+  }
+}
+
 export async function checkReportSeen(guestReportId: string): Promise<{ hasRow: boolean; seen: boolean }> {
   console.log('[ReportReady] Checking existing report:', guestReportId);
   const { data, error } = await supabase
@@ -158,12 +177,14 @@ function handleReportReady(guestReportId: string, startedAt: number): void {
   const elapsedSec = Math.round((Date.now() - startedAt) / 1000);
   console.log(`[ReportReady] Report ready detected after ${elapsedSec}s for:`, guestReportId);
   
-  // Set report as ready first (for UI), but don't mark as seen yet
-  // Let the LLM handler mark it as seen after context injection
+  // Set report as ready first (for UI)
   useReportReadyStore.getState().setReportReady(true);
   stopReportReadyListener(guestReportId);
   
-  console.log('[ReportReady] Report marked as ready in UI, context injection will handle seen flag');
+  // Trigger context injection for chat
+  triggerContextInjection(guestReportId);
+  
+  console.log('[ReportReady] Report marked as ready in UI, context injection triggered');
 }
 
 function fallbackToPolling(guestReportId: string, startedAt: number): void {
