@@ -68,4 +68,5 @@ serve(async (req) => {
   }
 });
 
+// Reinstating edge function
 console.log("[stt-handler] Edge function ready and listening for requests...");
