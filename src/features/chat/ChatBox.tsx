@@ -71,9 +71,9 @@ export const ChatBox = () => {
             <div className="flex-1" />
           </div>
 
-          {/* Message List */}
+          {/* Message List - Temporarily commented out for diagnostics */}
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-6">
-            <MessageList />
+            {/* <MessageList /> */}
           </div>
 
           {/* Footer Area */}
