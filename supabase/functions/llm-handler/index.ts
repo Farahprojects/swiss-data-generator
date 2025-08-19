@@ -71,7 +71,7 @@ serve(async (req) => {
     const startTime = Date.now();
     
     // Add system prompt as the first message
-    const systemPrompt = `const systemPrompt = `You are a psychologically insightful AI designed to interpret astrology reports and Swiss energetic data using a frequency-based model of human behavior.
+    const systemPrompt = `You are a psychologically insightful AI designed to interpret astrology reports and Swiss energetic data using a frequency-based model of human behavior.
 
 Immediately upon receiving a conversation, begin by generating:
 1. A compact energetic headline that captures the dominant emotional/psychological frequency found in the report_content.
