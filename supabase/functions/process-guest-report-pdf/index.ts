@@ -1,4 +1,3 @@
-
 // ============================================================================
 //  process-guest-report-pdf.ts
 //  Generates a PDF for a guest report and forwards a full email payload
@@ -11,9 +10,6 @@ import jsPDF from "https://esm.sh/jspdf@2.5.1";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { parseAstroData, isSynastryData } from "../_shared/astroFormatter.ts";
-import { formatDegDecimal } from "../_shared/astroFormat.ts";
-
 
 // ─── ENV VARS ────────────────────────────────────────────────────────────────
 const SUPABASE_URL           = Deno.env.get("SUPABASE_URL")              ?? "";
@@ -27,7 +23,7 @@ const corsHeaders = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  PDF-generation helpers using shared parser
+//  PDF-generation helpers
 // ─────────────────────────────────────────────────────────────────────────────
 class ServerPdfGenerator {
   static generateReportPdf(reportData: any, logPrefix: string): string {
@@ -39,9 +35,9 @@ class ServerPdfGenerator {
 
     // ── metadata + header
     doc.setProperties({
-      title: "Therai Astro Report",
+      title: "Therai Report",
       subject: "Client Energetic Insight",
-      author: "Therai Astro",
+      author: "Therai",
       creator: "PDF Generator Service",
     });
 
@@ -67,7 +63,7 @@ class ServerPdfGenerator {
     doc.setFont("helvetica", "bold").text(reportData.generatedAt, margins.left+40, y);
     y += 12;
     
-    // ── body using shared parser (AI Content)
+    // ── body content
     if (reportData.content) {
         doc.setFontSize(13).setFont("helvetica", "bold").setTextColor(75,63,114);
         doc.text("Client Energetic Insight", margins.left, y);
@@ -87,18 +83,6 @@ class ServerPdfGenerator {
           doc.text(line, margins.left, lineY);
           lineY += lineH;
         });
-    }
-
-    // --- Render Astro Data ---
-    if (reportData.astroData) {
-        doc.addPage();
-        let astroY = margins.top;
-
-        if (isSynastryData(reportData.astroData)) {
-            astroY = this.renderSynastryData(reportData.astroData, astroY, doc, margins);
-        } else {
-            astroY = this.renderEssenceData(reportData.astroData, astroY, doc, margins);
-        }
     }
 
     // ── return base-64
@@ -123,217 +107,7 @@ class ServerPdfGenerator {
     
     return reportTitles[reportType.toLowerCase()] || reportTitles['default'];
   }
-
-  static renderSynastryData(swissData: any, startY: number, doc: any, margins: any): number {
-    const data = parseAstroData(swissData);
-    let y = startY;
-
-    const { meta, natal_set, synastry_aspects, composite_chart, transits } = data;
-
-    // Header
-    doc.setFontSize(16).setFont('helvetica', 'bold').setTextColor(40, 40, 60);
-    const personAName = natal_set?.personA?.name || 'Person A';
-    const personBName = natal_set?.personB?.name || 'Person B';
-    doc.text(`${personAName} & ${personBName} - Compatibility Astro Data`, margins.left, y);
-    y += 20;
-
-    if (natal_set?.personA) {
-      y = this.renderPersonSection(natal_set.personA, 'Natal Data', y, doc, margins);
-      y += 10;
-    }
-    
-    if (natal_set?.personB) {
-      const pageWidth = doc.internal.pageSize.getWidth();
-      doc.setDrawColor(200).line(margins.left, y, pageWidth - margins.right, y);
-      y += 15;
-      y = this.renderPersonSection(natal_set.personB, 'Natal Data', y, doc, margins);
-    }
-    
-    if (synastry_aspects?.aspects) {
-      y += 15;
-      y = this.renderSection(`SYNASTRY ASPECTS (${personAName} ↔ ${personBName})`, synastry_aspects.aspects, y, false, doc, margins);
-    }
-
-    if (composite_chart) {
-      y += 15;
-      y = this.renderSection("COMPOSITE CHART - MIDPOINTS", composite_chart, y, true, doc, margins);
-    }
-
-    return y;
-  }
-
-  static renderEssenceData(swissData: any, startY: number, doc: any, margins: any): number {
-    const parsed = parseAstroData(swissData);
-    const natal = parsed?.natal;
-    let y = startY;
-
-    // Header
-    doc.setFontSize(16).setFont('helvetica', 'bold').setTextColor(40, 40, 60);
-    doc.text('Astro Data', margins.left, y);
-    y += 20;
-
-    if (natal?.name) {
-      doc.setFontSize(14).setFont('helvetica', 'bold').setTextColor(60);
-      doc.text(natal.name, margins.left, y);
-      y += 15;
-    }
-
-    if (natal?.angles && natal.angles.length > 0) {
-      y += 10;
-      const anglesMap: Record<string, any> = {};
-      natal.angles.forEach((a: any) => { anglesMap[a.name] = a; });
-      y = this.renderAnglesSection(anglesMap as any, y, doc, margins);
-    }
-
-    if (natal?.houses && (Array.isArray(natal.houses) ? natal.houses.length > 0 : Object.keys(natal.houses || {}).length > 0)) {
-      y += 15;
-      const housesMap: Record<string, any> = Array.isArray(natal.houses)
-        ? natal.houses.reduce((acc: any, h: any) => { acc[String(h.number ?? '')] = h; return acc; }, {})
-        : natal.houses;
-      y = this.renderHousesSection(housesMap as any, y, doc, margins);
-    }
-
-    y += 10;
-    y = this.renderSection("NATAL PLANETARY POSITIONS", natal?.planets || [], y, true, doc, margins);
-
-    y += 15;
-    y = this.renderSection("NATAL ASPECTS", natal?.aspects || [], y, false, doc, margins);
-
-    return y;
-  }
-
-  static renderPersonSection(person: any, title: string, startY: number, doc: any, margins: any): number {
-    let y = startY;
-    y = this.renderSection(`${person.name} - Planets`, person.planets, y, true, doc, margins);
-    y += 10;
-    y = this.renderSection(`${person.name} - Natal Aspects`, person.aspects, y, false, doc, margins);
-    return y;
-  }
-
-  static renderSection(title: string, data: any[], startY: number, isPlanetTable: boolean, doc: any, margins: any): number {
-    const pageHeight = doc.internal.pageSize.getHeight();
-    let y = startY;
-    
-    doc.setFontSize(10).setFont('helvetica', 'bold').setTextColor(120);
-    doc.text(title, margins.left, y);
-    y += 8;
-
-    if (!data || data.length === 0) {
-      doc.setFontSize(9).setFont('helvetica', 'italic').setTextColor(150);
-      doc.text(isPlanetTable ? 'No planetary data available.' : 'No significant aspects detected.', margins.left, y);
-      return y + 7;
-    }
-
-    doc.setFontSize(9).setFont('helvetica', 'bold').setTextColor(120);
-    if (isPlanetTable) {
-      doc.text('Planet', margins.left, y);
-      doc.text('Position', margins.left + 80, y);
-    } else {
-      doc.text('Planet', margins.left, y);
-      doc.text('Aspect', margins.left + 60, y);
-      doc.text('To', margins.left + 100, y);
-      doc.text('Orb', margins.left + 130, y);
-    }
-    y += 7;
-
-    doc.setFontSize(9).setFont('helvetica', 'normal').setTextColor(40);
-    data.forEach((item: any) => {
-      if (y > pageHeight - 25) {
-        doc.addPage();
-        y = margins.top;
-      }
-
-      if (isPlanetTable) {
-        const sign = (item.sign || '').padEnd(12);
-        const degDecimal = formatDegDecimal(item.deg);
-        const house = item.house ? `(H${item.house})` : '';
-        const position = `${degDecimal} ${sign} ${house}`;
-
-        doc.text(item.name || 'Unknown', margins.left, y);
-        doc.text(position, margins.left + 80, y);
-        
-        if (item.retrograde) {
-          doc.setFont('helvetica', 'italic');
-          doc.text('R', margins.left + 170, y);
-          doc.setFont('helvetica', 'normal');
-        }
-      } else {
-        doc.text(item.a || 'Unknown', margins.left, y);
-        doc.text(item.type || 'Unknown', margins.left + 60, y);
-        doc.text(item.b || 'Unknown', margins.left + 100, y);
-        doc.text(`${item.orb?.toFixed(2) ?? '0.00'}°`, margins.left + 130, y);
-      }
-      y += 7;
-    });
-
-    return y;
-  }
-
-  static renderAnglesSection(angles: any[], startY: number, doc: any, margins: any): number {
-    let y = startY;
-    
-    doc.setFontSize(10).setFont('helvetica', 'bold').setTextColor(120);
-    doc.text('CHART ANGLES', margins.left, y);
-    y += 8;
-
-    if (!angles || angles.length === 0) {
-      doc.setFontSize(9).setFont('helvetica', 'italic').setTextColor(150);
-      doc.text('No angle data available.', margins.left, y);
-      return y + 7;
-    }
-
-    doc.setFontSize(9).setFont('helvetica', 'bold').setTextColor(120);
-    doc.text('Angle', margins.left, y);
-    doc.text('Position', margins.left + 80, y);
-    y += 7;
-
-    doc.setFontSize(9).setFont('helvetica', 'normal').setTextColor(40);
-    Object.entries(angles).forEach(([name, data]: [string, any]) => {
-      const position = `${data.deg.toFixed(2)}° in ${data.sign}`;
-      doc.text(name, margins.left, y);
-      doc.text(position, margins.left + 80, y);
-      y += 7;
-    });
-
-    return y;
-  }
-
-  static renderHousesSection(houses: any[], startY: number, doc: any, margins: any): number {
-    const pageHeight = doc.internal.pageSize.getHeight();
-    let y = startY;
-    
-    doc.setFontSize(10).setFont('helvetica', 'bold').setTextColor(120);
-    doc.text('HOUSE CUSPS', margins.left, y);
-    y += 8;
-
-    if (!houses || houses.length === 0) {
-      doc.setFontSize(9).setFont('helvetica', 'italic').setTextColor(150);
-      doc.text('No house data available.', margins.left, y);
-      return y + 7;
-    }
-
-    doc.setFontSize(9).setFont('helvetica', 'bold').setTextColor(120);
-    doc.text('House', margins.left, y);
-    doc.text('Cusp Position', margins.left + 80, y);
-    y += 7;
-
-    doc.setFontSize(9).setFont('helvetica', 'normal').setTextColor(40);
-    Object.entries(houses).forEach(([number, data]: [string, any]) => {
-      if (y > pageHeight - 25) {
-        doc.addPage();
-        y = margins.top;
-      }
-      
-      doc.text(`House ${number}`, margins.left, y);
-      const position = `${data.deg.toFixed(2)}° in ${data.sign}`;
-      doc.text(position, margins.left + 80, y);
-      y += 7;
-    });
-
-    return y;
-  }
 }
-
 
 // ─── SUPABASE CLIENT ──────────────────────────────────────────────────────────
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
@@ -369,27 +143,13 @@ async function processGuestReportPdf(guestReportId: string, requestId: string, r
     .single();
   
   if (reportLogError) {
-    log(`Report content not found for ${guestReportId}, proceeding with astro-only PDF.`);
-  }
-
-  // 3. fetch astro data from translator_logs
-  const { data: astroLog, error: astroLogError } = await supabase
-    .from("translator_logs")
-    .select("swiss_data")
-    .eq("user_id", guestReportId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
-
-  if (astroLogError) {
-    log(`Astro data not found for ${guestReportId}, proceeding with text-only PDF.`);
+    log(`Report content not found for ${guestReportId}, proceeding with empty PDF.`);
   }
   
   const reportContent = reportLog?.report_text;
-  const astroData = astroLog?.swiss_data;
 
-  if (!reportContent && !astroData) {
-      throw new Error("No content available to generate PDF (neither AI text nor Astro data found).");
+  if (!reportContent) {
+      throw new Error("No content available to generate PDF (no AI text found).");
   }
   if (gr.email_sent) { log("Email already sent – skipping"); return { skipped:true, sentAt: gr.email_sent_at }; }
 
@@ -397,7 +157,6 @@ async function processGuestReportPdf(guestReportId: string, requestId: string, r
   const pdfBase64 = ServerPdfGenerator.generateReportPdf({
     id: gr.id,
     content: reportContent,
-    astroData: astroData,
     generatedAt: new Date(gr.created_at).toLocaleDateString(),
     reportType: gr.report_type,
     customerName: gr.report_data?.name || gr.report_data?.person_a?.name || gr.email,
