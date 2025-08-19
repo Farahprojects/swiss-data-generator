@@ -5,7 +5,7 @@ import { useConversationUIStore } from './conversation-ui-store';
 import { TypewriterText } from '@/components/ui/TypewriterText';
 import { getMessagesForConversation } from '@/services/api/messages';
 import { getSessionIds } from '@/services/auth/sessionIds';
-import { useChatHistory } from '@/hooks/useChatHistory';
+import { useChatHistory } from '@/features/chat/useChatHistory';
 
 const MessageItem = ({ message, isLast, isFromHistory }: { message: Message; isLast: boolean; isFromHistory?: boolean }) => {
   const isUser = message.role === 'user';
