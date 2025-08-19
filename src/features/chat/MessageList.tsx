@@ -1,13 +1,10 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useChatStore } from '@/core/store';
 import { Message } from '@/core/types';
-import { PlayCircle } from 'lucide-react';
-import { audioPlayer } from '@/services/voice/audioPlayer';
 import { useConversationUIStore } from './conversation-ui-store';
 import { TypewriterText } from '@/components/ui/TypewriterText';
 import { getMessagesForConversation } from '@/services/api/messages';
 import { getSessionIds } from '@/services/auth/sessionIds';
-import { llmService } from '@/services/llm/llmService';
 
 const MessageItem = ({ message, isLast, isFromHistory }: { message: Message; isLast: boolean; isFromHistory?: boolean }) => {
   const isUser = message.role === 'user';
@@ -41,14 +38,17 @@ const MessageItem = ({ message, isLast, isFromHistory }: { message: Message; isL
 
 export const MessageList = () => {
   const { chatId } = getSessionIds();
-  const lastMessageId = useChatStore((state) => state.lastMessageId);
+  const { lastMessageId, streamingText, isStreaming } = useChatStore((state) => ({
+    lastMessageId: state.lastMessageId,
+    streamingText: state.streamingText,
+    isStreaming: state.isStreaming
+  }));
   const scrollRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [streamingMessage, setStreamingMessage] = useState<Partial<Message> | null>(null);
   const [loading, setLoading] = useState(false);
   const [initialMessageCount, setInitialMessageCount] = useState<number | null>(null);
 
-  // Effect to fetch initial and updated messages from DB
+  // Effect to fetch messages from DB
   useEffect(() => {
     if (!chatId) {
       setMessages([]);
@@ -74,21 +74,6 @@ export const MessageList = () => {
     fetchMessages();
   }, [chatId, lastMessageId]);
 
-  // Refresh messages when lastMessageId changes  
-  useEffect(() => {
-    if (lastMessageId && chatId) {
-      const refetchMessages = async () => {
-        try {
-          const fetchedMessages = await getMessagesForConversation(chatId);
-          setMessages(fetchedMessages);
-        } catch (error) {
-          console.error('[MessageList] Error refetching messages:', error);
-        }
-      };
-      refetchMessages();
-    }
-  }, [lastMessageId, chatId]);
-
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -103,7 +88,16 @@ export const MessageList = () => {
     );
   }
 
-  const displayedMessages = [...messages, ...(streamingMessage ? [streamingMessage as Message] : [])];
+  const displayedMessages = [
+    ...messages,
+    ...(isStreaming ? [{
+      id: 'streaming',
+      role: 'assistant',
+      text: streamingText || '',
+      created_at: new Date().toISOString(),
+      status: 'streaming'
+    } as Message] : [])
+  ];
 
   return (
     <div className="flex flex-col min-h-full">

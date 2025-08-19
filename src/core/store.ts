@@ -13,8 +13,10 @@ interface ChatState {
   conversationId: string | null;
   status: ChatStatus;
   error: string | null;
-  ttsProvider?: 'google' | 'openai';
-  ttsVoice?: string;
+  
+  // Streaming state
+  isStreaming: boolean;
+  streamingText: string;
   
   // Lightweight view flags only - no message content stored
   messageIds: string[];
@@ -26,8 +28,12 @@ interface ChatState {
   setLastMessageId: (id: string | null) => void;
   setStatus: (status: ChatStatus) => void;
   setError: (error: string | null) => void;
-  setTtsProvider: (p: 'google' | 'openai') => void;
-  setTtsVoice: (v: string) => void;
+  
+  // Streaming actions
+  startStreaming: () => void;
+  appendStreamingText: (text: string) => void;
+  endStreaming: () => void;
+  
   clearChat: () => void;
 }
 
@@ -37,15 +43,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
   lastMessageId: null,
   status: 'idle',
   error: null,
-  ttsProvider: 'google',
-  ttsVoice: 'en-US-Studio-O',
+  isStreaming: false,
+  streamingText: '',
 
   startConversation: (id) => set({ 
     conversationId: id, 
     messageIds: [], 
     lastMessageId: null,
     status: 'idle', 
-    error: null 
+    error: null,
+    isStreaming: false,
+    streamingText: ''
   }),
 
   setMessageIds: (ids) => set({ messageIds: ids }),
@@ -61,14 +69,29 @@ export const useChatStore = create<ChatState>((set, get) => ({
   
   setError: (error) => set({ error, status: error ? 'error' : get().status }),
 
-  setTtsProvider: (p) => set({ ttsProvider: p }),
-  setTtsVoice: (v) => set({ ttsVoice: v }),
+  startStreaming: () => set({ 
+    isStreaming: true, 
+    streamingText: '',
+    status: 'thinking'
+  }),
+
+  appendStreamingText: (text) => set((state) => ({
+    streamingText: state.streamingText + text
+  })),
+
+  endStreaming: () => set({ 
+    isStreaming: false, 
+    streamingText: '',
+    status: 'idle'
+  }),
 
   clearChat: () => set({ 
     conversationId: null, 
     messageIds: [], 
     lastMessageId: null,
     status: 'idle', 
-    error: null 
+    error: null,
+    isStreaming: false,
+    streamingText: ''
   }),
 }));

@@ -54,28 +54,47 @@ export function useChatController(): UseChatControllerReturn {
     }
 
     try {
-      setStatus('thinking');
+      const client_msg_id = crypto.randomUUID();
+      useChatStore.getState().startStreaming();
 
-      const response = await llmService.sendMessage({
+      const abortController = await llmService.sendMessageStream({
         chat_id: chatId,
         guest_id: guestId,
         text,
-        client_msg_id: crypto.randomUUID()
+        client_msg_id,
+      }, 
+      // Handle streaming deltas
+      (delta) => {
+        useChatStore.getState().appendStreamingText(delta);
+      },
+      // Handle completion
+      (response) => {
+        useChatStore.getState().endStreaming();
+        useChatStore.getState().setLastMessageId(response.assistant_message_id);
+      },
+      // Handle errors
+      (error) => {
+        console.error('Stream error:', error);
+        useChatStore.getState().endStreaming();
+        useChatStore.getState().setError(error.message);
+        toast({
+          title: "Message Error",
+          description: error.message,
+          variant: "destructive",
+        });
       });
-
-      setLastMessageId(response.assistant_message_id);
-      setStatus('idle');
 
     } catch (error) {
       console.error('Failed to send message:', error);
-      setStatus('error');
+      useChatStore.getState().endStreaming();
+      useChatStore.getState().setError('Failed to send message');
       toast({
         title: "Message Error",
         description: "Failed to send message",
         variant: "destructive",
       });
     }
-  }, [chatId, guestId, setStatus, setLastMessageId, toast, llmService]);
+  }, [chatId, guestId, toast]);
 
   return {
     // State
