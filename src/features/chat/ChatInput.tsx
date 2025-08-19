@@ -1,113 +1,62 @@
-// src/features/chat/ChatInput.tsx
-import React, { useState } from 'react';
-import TextareaAutosize from 'react-textarea-autosize';
-import { Mic, AudioLines, X } from 'lucide-react';
-import { useChatStore } from '@/core/store';
-import { chatController } from './ChatController';
-import { useConversationUIStore } from './conversation-ui-store';
-import { useChatTextMicrophone } from '@/hooks/microphone/useChatTextMicrophone';
+import React, { useState, useRef, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { useChatController } from './ChatController';
+import { Send } from 'lucide-react';
 
-export const ChatInput = () => {
-  const [text, setText] = useState('');
-  const status = useChatStore((state) => state.status);
-  const [isMuted, setIsMuted] = useState(false);
-  const { isConversationOpen, openConversation, closeConversation } = useConversationUIStore();
+export const ChatInput: React.FC = () => {
+  const [message, setMessage] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  const { sendTextMessage, status } = useChatController();
 
-  // Handle transcript ready - add to text area
-  const handleTranscriptReady = (transcript: string) => {
-    const currentText = text || '';
-    const newText = currentText ? `${currentText} ${transcript}` : transcript;
-    setText(newText);
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [message]);
+
+  const handleSend = async () => {
+    if (!message.trim() || status === 'thinking') return;
+    
+    await sendTextMessage(message.trim());
+    setMessage('');
   };
 
-  // PROFESSIONAL DOMAIN-SPECIFIC MICROPHONE
-  const { 
-    isRecording: isMicRecording, 
-    isProcessing: isMicProcessing, 
-    toggleRecording: toggleMicRecording 
-  } = useChatTextMicrophone({
-    onTranscriptReady: handleTranscriptReady,
-    silenceTimeoutMs: 2000
-  });
-
-  const handleSend = () => {
-    if (text.trim()) {
-      chatController.sendTextMessage(text);
-      setText('');
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
     }
   };
 
-  const handleSpeakerClick = () => {
-    if (!isConversationOpen) {
-      openConversation();
-      chatController.startTurn();
-      return;
-    }
-    if (status === 'recording') {
-      chatController.endTurn();
-    } else {
-      // Cancel any active conversation and close
-      console.log('[ChatInput] Closing conversation - resetting conversation service');
-      chatController.resetConversationService();
-      closeConversation();
-    }
-  };
-
-  const isRecording = status === 'recording';
+  const isDisabled = status === 'thinking';
 
   return (
-    <div className="bg-white/80 backdrop-blur-lg border-t border-gray-100 p-2">
-      <div className="flex items-end gap-2 max-w-4xl mx-auto">
-        <div className="flex-1 relative">
-          <TextareaAutosize
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Share your thoughts..."
-            className="w-full px-4 py-2.5 pr-24 text-base font-light bg-white border-2 border-black rounded-3xl focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-black resize-none text-black placeholder-gray-500 overflow-y-auto"
-            maxRows={4}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-          />
-          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex gap-1">
-            <button 
-              className="p-2 text-gray-500 hover:text-gray-900 transition-colors"
-              onClick={handleSpeakerClick}
-            >
-              <AudioLines size={18} className={isRecording ? 'text-red-500' : ''} />
-            </button>
-            <button 
-              className="p-2 text-gray-500 hover:text-gray-900 transition-all duration-200 ease-in-out"
-              onClick={toggleMicRecording}
-              disabled={isMicProcessing}
-              title={isMicRecording ? 'Stop recording' : 'Start voice recording'}
-            >
-              <div className="relative w-[18px] h-[18px]">
-                <Mic 
-                  size={18} 
-                  className={`absolute inset-0 transition-all duration-200 ease-in-out ${
-                    isMicRecording ? 'opacity-0 scale-75' : 'opacity-100 scale-100'
-                  }`}
-                />
-                <X 
-                  size={18} 
-                  className={`absolute inset-0 text-red-500 transition-all duration-200 ease-in-out ${
-                    isMicRecording ? 'opacity-100 scale-100' : 'opacity-0 scale-75'
-                  }`}
-                />
-              </div>
-            </button>
-          </div>
-        </div>
+    <div className="flex items-end gap-2 p-4 border-t border-border bg-background">
+      <div className="flex-1 relative">
+        <Textarea
+          ref={textareaRef}
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyPress={handleKeyPress}
+          placeholder="Type your message..."
+          disabled={isDisabled}
+          className="min-h-[44px] max-h-32 resize-none pr-12"
+          rows={1}
+        />
       </div>
-      <div className="max-w-4xl mx-auto mt-2">
-        <p className="text-xs text-gray-400 font-light text-center">
-          Therai can make mistakes. Check important info.
-        </p>
-      </div>
+      
+      <Button
+        onClick={handleSend}
+        size="sm"
+        disabled={!message.trim() || isDisabled}
+        className="shrink-0 h-11 w-11 p-0"
+      >
+        <Send className="h-4 w-4" />
+      </Button>
     </div>
   );
 };

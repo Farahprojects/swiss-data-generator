@@ -133,6 +133,9 @@ verify_jwt = false
 [functions.verify-guest-payment]
 verify_jwt = false
 
+[functions.chat-send]
+verify_jwt = false
+
 [functions.llm-handler]
 enabled = true
 verify_jwt = true

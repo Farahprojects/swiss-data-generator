@@ -230,7 +230,13 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       if (result.success && result.guestReportId && result.paymentStatus) {
         // Notify parent component about successful report creation
         console.log('[ReportForm] Submission successful, notifying parent.');
-        onReportCreated?.(result);
+        onReportCreated({
+          guestReportId: result.guestReportId,
+          paymentStatus: result.paymentStatus,
+          name: result.name,
+          email: result.email,
+          chatId: result.chatId || ''
+        });
       }
     } catch (error) {
       console.error('Report submission failed:', error);

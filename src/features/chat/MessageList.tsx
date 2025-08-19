@@ -74,30 +74,20 @@ export const MessageList = () => {
     fetchMessages();
   }, [chatId, lastMessageId]);
 
-  // Effect to handle the SSE stream
+  // Refresh messages when lastMessageId changes  
   useEffect(() => {
-    if (!chatId) return;
-
-    const handleStream = (chunk: any) => {
-      if (chunk.event === 'done') {
-        setStreamingMessage(null); // Clear streaming message on completion
-        // The final message will be loaded by the fetchMessages effect
-      } else {
-        setStreamingMessage(prev => ({
-          id: prev?.id || 'streaming-msg',
-          role: 'assistant',
-          text: (prev?.text || "") + chunk.text,
-          createdAt: prev?.createdAt || new Date().toISOString(),
-        }));
-      }
-    };
-
-    const abortController = llmService.streamChat({ chat_id: chatId }, handleStream);
-
-    return () => {
-      abortController.abort();
-    };
-  }, [chatId]); // This effect should probably be controlled more granularly
+    if (lastMessageId && chatId) {
+      const refetchMessages = async () => {
+        try {
+          const fetchedMessages = await getMessagesForConversation(chatId);
+          setMessages(fetchedMessages);
+        } catch (error) {
+          console.error('[MessageList] Error refetching messages:', error);
+        }
+      };
+      refetchMessages();
+    }
+  }, [lastMessageId, chatId]);
 
   useEffect(() => {
     if (scrollRef.current) {

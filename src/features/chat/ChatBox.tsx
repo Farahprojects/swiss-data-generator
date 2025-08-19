@@ -13,7 +13,7 @@ import { useConversationUIStore } from './conversation-ui-store';
 
 export const ChatBox = () => {
   const { error } = useChatStore();
-  const messages = useChatStore((state) => state.messages);
+  const lastMessageId = useChatStore((state) => state.lastMessageId);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { guestId } = getSessionIds();
   const isConversationOpen = useConversationUIStore((s) => s.isConversationOpen);
@@ -32,10 +32,12 @@ export const ChatBox = () => {
   }, [guestId]);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (lastMessageId) {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
     }
-  }, [messages]);
+  }, [lastMessageId]);
 
   return (
     <>
