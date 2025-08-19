@@ -89,7 +89,8 @@ serve(async (req) => {
     }
     console.log('[chat-send] User message inserted');
 
-    // Call llm-handler (fire and forget)
+    // Call llm-handler and wait for response (for immediate UI update)
+    console.log('[chat-send] Calling llm-handler for immediate response');
     const llmResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/llm-handler`, {
       method: 'POST',
       headers: {
@@ -102,14 +103,26 @@ serve(async (req) => {
     });
 
     if (!llmResponse.ok) {
-      console.error('[chat-send] Failed to trigger llm-handler:', await llmResponse.text());
-    } else {
-      console.log('[chat-send] Successfully triggered llm-handler');
+      const errorText = await llmResponse.text();
+      console.error('[chat-send] llm-handler failed:', errorText);
+      return new Response(JSON.stringify({
+        error: "Failed to get AI response"
+      }), {
+        status: 500,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json"
+        }
+      });
     }
 
-    // Return success response immediately
+    const assistantMessage = await llmResponse.json();
+    console.log('[chat-send] Got response from llm-handler');
+
+    // Return both success status and assistant message for immediate UI update
     return new Response(JSON.stringify({
-      message: "Message sent"
+      message: "Message sent",
+      assistantMessage: assistantMessage
     }), {
       headers: {
         ...corsHeaders,

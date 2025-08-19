@@ -67,16 +67,21 @@ class ChatController {
     useChatStore.getState().setStatus('thinking');
 
     try {
-      // Fire-and-forget: chat-send handles user message saving + LLM trigger
-      console.log("[ChatController] Sending message via chat-send (fire-and-forget)");
-      await llmService.sendMessage({
+      // Send message and get immediate assistant response
+      console.log("[ChatController] Sending message via chat-send");
+      const assistantMessage = await llmService.sendMessage({
         chat_id,
         text,
         client_msg_id,
       });
       
-      console.log("[ChatController] Message sent successfully - UI updated, backend processing");
-      // Note: Assistant response will come via real-time updates or polling
+      console.log("[ChatController] Message sent successfully");
+      
+      // Add assistant response to UI immediately if available
+      if (assistantMessage) {
+        console.log("[ChatController] Adding assistant response to UI");
+        useChatStore.getState().addMessage(assistantMessage);
+      }
 
     } catch (error) {
       console.error("[ChatController] Error sending message:", error);

@@ -13,14 +13,14 @@ interface LlmRequest {
 
 class LlmService {
   /**
-   * Fire-and-forget message sending via chat-send edge function
-   * User message appears immediately in UI, backend handles saving + LLM response
+   * Send message via chat-send and get immediate assistant response
+   * User message appears immediately in UI, then assistant response follows quickly
    * Note: chat_id is already verified by verify-chat-access, no guest_id needed
    */
-  async sendMessage(request: { chat_id: string; text: string; client_msg_id?: string }): Promise<void> {
-    console.log(`[LLM] Fire-and-forget message send for chat ${request.chat_id}...`);
+  async sendMessage(request: { chat_id: string; text: string; client_msg_id?: string }): Promise<Message | null> {
+    console.log(`[LLM] Sending message for chat ${request.chat_id}...`);
     
-    const { error } = await supabase.functions.invoke('chat-send', {
+    const { data, error } = await supabase.functions.invoke('chat-send', {
       body: {
         chat_id: request.chat_id,
         text: request.text,
@@ -33,7 +33,20 @@ class LlmService {
       throw new Error(`Error invoking chat-send: ${error.message}`);
     }
 
-    console.log(`[LLM] Message sent successfully (fire-and-forget)`);
+    if (data?.error) {
+      console.error(`[LLM] chat-send returned error:`, data.error);
+      throw new Error(`chat-send error: ${data.error}`);
+    }
+
+    console.log(`[LLM] Message sent successfully`);
+    
+    // Return assistant message if available for immediate UI update
+    if (data?.assistantMessage) {
+      console.log(`[LLM] Got assistant response immediately`);
+      return data.assistantMessage as Message;
+    }
+
+    return null;
   }
 
   // Legacy method - kept for compatibility if needed

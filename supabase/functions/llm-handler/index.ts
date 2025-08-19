@@ -21,7 +21,7 @@ serve(async (req) => {
   try {
     const body = await req.json();
     console.log("[llm-handler] Body:", body);
-    const { chat_id, k = 30 } = body || {};
+    const { chat_id } = body || {};
 
     if (!chat_id) {
       return new Response(JSON.stringify({ error: "Missing required field: chat_id" }), {
@@ -37,13 +37,14 @@ serve(async (req) => {
     );
     console.log("[llm-handler] Supabase client created");
 
-    // Fetch recent messages for context
+    // Fetch conversation history for context
+    console.log("[llm-handler] Fetching conversation history");
     const { data: history, error: historyError } = await supabase
       .from("messages")
       .select("role, text")
       .eq("chat_id", chat_id)
       .order("created_at", { ascending: true })
-      .limit(k);
+      .limit(30);
 
     if (historyError) {
       console.error("[llm-handler] History fetch error:", historyError);
@@ -53,28 +54,9 @@ serve(async (req) => {
       });
     }
 
-    // Create provisional assistant message
-    const { data: assistantMessage, error: insertError } = await supabase
-      .from("messages")
-      .insert({
-        chat_id,
-        role: "assistant",
-        text: "",
-        status: "streaming",
-        model: "gemini-2.5-flash",
-        meta: {},
-      })
-      .select("id")
-      .single();
+    console.log(`[llm-handler] Found ${history?.length || 0} messages in history`);
 
-    if (insertError || !assistantMessage) {
-      console.error("[llm-handler] Failed to create provisional assistant message:", insertError);
-      return new Response(JSON.stringify({ error: "Failed to create assistant message" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
+    // Get Google API key
     const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY");
     if (!GOOGLE_API_KEY) {
       console.error("[llm-handler] Missing GOOGLE_API_KEY");
@@ -84,146 +66,94 @@ serve(async (req) => {
       });
     }
 
-    const acceptHeader = req.headers.get("accept") || "";
-    const wantsStream = acceptHeader.includes("text/event-stream");
-
+    // Call Gemini API (non-streaming)
+    console.log("[llm-handler] Calling Gemini API");
     const startTime = Date.now();
-    let accumulatedText = "";
+    
+    const contents = (history || []).map((m) => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.text }],
+    }));
 
-    const makeGeminiRequest = async () => {
-      const contents = (history || []).map((m) => ({
-        role: m.role === "assistant" ? "model" : "user",
-        parts: [{ text: m.text }],
-      }));
-
-      const resp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key=${GOOGLE_API_KEY}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents,
-            generationConfig: { maxOutputTokens: 2048, temperature: 0.7 },
-          }),
-        }
-      );
-
-      if (!resp.ok || !resp.body) {
-        const t = await resp.text().catch(() => "");
-        throw new Error(`Gemini error: ${resp.status} ${t}`);
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents,
+          generationConfig: { 
+            maxOutputTokens: 2048, 
+            temperature: 0.7 
+          },
+        }),
       }
-      return resp.body.getReader();
-    };
+    );
 
-    if (wantsStream) {
-      const stream = new ReadableStream({
-        start(controller) {
-          (async () => {
-            try {
-              const reader = await makeGeminiRequest();
-              const decoder = new TextDecoder();
-              while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                const chunk = decoder.decode(value);
-                const lines = chunk.split("\n").filter((l) => l.trim());
-                for (const line of lines) {
-                  if (line.startsWith("data: ")) {
-                    try {
-                      const data = JSON.parse(line.slice(6));
-                      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                      if (text) {
-                        accumulatedText += text;
-                        controller.enqueue(`data: ${JSON.stringify({ delta: text })}\n\n`);
-                      }
-                    } catch (e) {
-                      // ignore parse errors for keep-alive
-                    }
-                  }
-                }
-              }
-
-              const latency_ms = Date.now() - startTime;
-              const { error: finalizeError } = await supabase
-                .from("messages")
-                .update({ text: accumulatedText, status: "complete", latency_ms })
-                .eq("id", assistantMessage.id);
-              if (finalizeError) {
-                console.error("[llm-handler] Finalize error:", finalizeError);
-              }
-
-              controller.enqueue(
-                `data: ${JSON.stringify({ done: true, assistant_message_id: assistantMessage.id, latency_ms })}\n\n`
-              );
-              controller.close();
-            } catch (e) {
-              console.error("[llm-handler] Stream error:", e);
-              controller.enqueue(`data: ${JSON.stringify({ error: String(e?.message ?? e) })}\n\n`);
-              controller.close();
-              // Mark message as failed
-              await supabase
-                .from("messages")
-                .update({ status: "failed", error: { message: String(e?.message ?? e) } })
-                .eq("id", assistantMessage.id);
-            }
-          })();
-        },
-      });
-
-      return new Response(stream, {
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
-          Connection: "keep-alive",
-        },
-      });
+    if (!resp.ok) {
+      const errorText = await resp.text();
+      console.error("[llm-handler] Gemini API error:", errorText);
+      throw new Error(`Gemini API error: ${resp.status} - ${errorText}`);
     }
 
-    // Non-streaming: aggregate, then respond
-    try {
-      const reader = await makeGeminiRequest();
-      const decoder = new TextDecoder();
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value);
-        const lines = chunk.split("\n").filter((l) => l.trim());
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-              if (text) accumulatedText += text;
-            } catch {}
-          }
-        }
-      }
-      const latency_ms = Date.now() - startTime;
-      const { error: finalizeError } = await supabase
-        .from("messages")
-        .update({ text: accumulatedText, status: "complete", latency_ms })
-        .eq("id", assistantMessage.id);
-      if (finalizeError) console.error("[llm-handler] Finalize error:", finalizeError);
+    const data = await resp.json();
+    const assistantText = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
-      return new Response(
-        JSON.stringify({ text: accumulatedText, assistant_message_id: assistantMessage.id, latency_ms }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    } catch (e) {
-      console.error("[llm-handler] Non-stream error:", e);
-      await supabase
-        .from("messages")
-        .update({ status: "failed", error: { message: String(e?.message ?? e) } })
-        .eq("id", assistantMessage.id);
-      return new Response(JSON.stringify({ error: String(e?.message ?? e) }), {
+    if (!assistantText) {
+      console.error("[llm-handler] No text in Gemini response:", data);
+      throw new Error("No response text from Gemini");
+    }
+
+    const latency_ms = Date.now() - startTime;
+    console.log(`[llm-handler] Got response from Gemini in ${latency_ms}ms`);
+
+    // Save assistant message to database
+    console.log("[llm-handler] Saving assistant message to database");
+    const { data: savedMessage, error: saveError } = await supabase
+      .from("messages")
+      .insert({
+        chat_id,
+        role: "assistant",
+        text: assistantText,
+        status: "complete",
+        latency_ms,
+        model: "gemini-2.5-flash",
+        meta: { 
+          llm_provider: "google", 
+          model: "gemini-2.5-flash",
+          latency_ms 
+        },
+      })
+      .select()
+      .single();
+
+    if (saveError) {
+      console.error("[llm-handler] Failed to save assistant message:", saveError);
+      return new Response(JSON.stringify({ error: "Failed to save response" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    console.log("[llm-handler] Assistant message saved successfully");
+
+    // Return the saved message for immediate UI update
+    return new Response(JSON.stringify({
+      id: savedMessage.id,
+      conversationId: savedMessage.chat_id, // Map for client compatibility
+      role: savedMessage.role,
+      text: savedMessage.text,
+      createdAt: savedMessage.created_at,
+      meta: savedMessage.meta,
+    }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+
   } catch (error) {
-    console.error("[llm-handler] Handler error:", error);
-    return new Response(JSON.stringify({ error: error?.message ?? String(error) }), {
+    console.error("[llm-handler] Error:", error);
+    return new Response(JSON.stringify({ 
+      error: error?.message ?? String(error) 
+    }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
