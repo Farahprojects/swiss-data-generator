@@ -61,3 +61,43 @@ export const getChatIdForGuest = async (guestId: string): Promise<string | null>
   const verification = await verifyGuestAndGetChatId(guestId);
   return verification.isValid ? verification.chat_id : null;
 };
+
+/**
+ * Verify that a persisted chat_id is still valid and belongs to the correct guest
+ */
+export const verifyChatIdIntegrity = async (chat_id: string): Promise<{ isValid: boolean; guestId?: string }> => {
+  console.log('[verifyChatIdIntegrity] Verifying persisted chat_id:', chat_id);
+  
+  if (!chat_id) {
+    console.warn('[verifyChatIdIntegrity] No chat_id provided for verification');
+    return { isValid: false };
+  }
+
+  try {
+    const { data: guestReport, error } = await supabase
+      .from('guest_reports')
+      .select('id, chat_id')
+      .eq('chat_id', chat_id)
+      .single();
+
+    if (error) {
+      console.error('[verifyChatIdIntegrity] Database error during verification:', error);
+      return { isValid: false };
+    }
+
+    if (!guestReport) {
+      console.warn('[verifyChatIdIntegrity] No guest report found for chat_id:', chat_id, '- possible tampering detected');
+      return { isValid: false };
+    }
+
+    console.log('[verifyChatIdIntegrity] ✅ chat_id verified successfully for guest:', guestReport.id);
+    return { 
+      isValid: true, 
+      guestId: guestReport.id 
+    };
+
+  } catch (error) {
+    console.error('[verifyChatIdIntegrity] Unexpected error during verification:', error);
+    return { isValid: false };
+  }
+};
