@@ -3,15 +3,15 @@ import React, { useState } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 import { Mic, AudioLines, X } from 'lucide-react';
 import { useChatStore } from '@/core/store';
-import { chatController } from './ChatController';
-import { useConversationUIStore } from './conversation-ui-store';
-import { useSpeechToText } from '@/hooks/useSpeechToText';
+import { useChatController } from './ChatController';
+// import { useConversationUIStore } from './conversation-ui-store';
+// import { useSpeechToText } from '@/hooks/useSpeechToText';
 
 export const ChatInput = () => {
   const [text, setText] = useState('');
   const status = useChatStore((state) => state.status);
   const [isMuted, setIsMuted] = useState(false);
-  const { isConversationOpen, openConversation, closeConversation } = useConversationUIStore();
+  // const { isConversationOpen, openConversation, closeConversation } = useConversationUIStore();
 
   // Handle transcript ready - add to text area
   const handleTranscriptReady = (transcript: string) => {
@@ -30,25 +30,27 @@ export const ChatInput = () => {
     handleSilenceDetected
   );
 
+  const { sendTextMessage } = useChatController();
+  
   const handleSend = () => {
     if (text.trim()) {
-      chatController.sendTextMessage(text);
+      sendTextMessage(text);
       setText('');
     }
   };
 
-  const handleSpeakerClick = () => {
-    if (!isConversationOpen) {
-      openConversation();
-      chatController.startTurn();
-      return;
-    }
-    if (status === 'recording') {
-      chatController.endTurn();
-    } else {
-      closeConversation();
-    }
-  };
+  // const handleSpeakerClick = () => {
+  //   if (!isConversationOpen) {
+  //     openConversation();
+  //     chatController.startTurn();
+  //     return;
+  //   }
+  //   if (status === 'recording') {
+  //     chatController.endTurn();
+  //   } else {
+  //     closeConversation();
+  //   }
+  // };
 
   const isRecording = status === 'recording';
 
@@ -70,12 +72,6 @@ export const ChatInput = () => {
             }}
           />
           <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex gap-1">
-            <button 
-              className="p-2 text-gray-500 hover:text-gray-900 transition-colors"
-              onClick={handleSpeakerClick}
-            >
-              <AudioLines size={18} className={isConversationOpen ? 'text-red-500' : ''} />
-            </button>
             <button 
               className="p-2 text-gray-500 hover:text-gray-900 transition-all duration-200 ease-in-out"
               onClick={toggleMicRecording}
