@@ -72,7 +72,7 @@ export const ChatInput = () => {
               }
             }}
           />
-          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex gap-1">
+          <div className="absolute right-1 top-1/2 transform -translate-y-1/2 flex gap-1 items-center">
             <button 
               className="p-2 text-gray-500 hover:text-gray-900 transition-all duration-200 ease-in-out"
               onClick={toggleMicRecording}
@@ -95,15 +95,15 @@ export const ChatInput = () => {
               </div>
             </button>
             <button 
-              className={`p-2 transition-colors ${
+              className={`transition-colors ${
                 text.trim() 
-                  ? 'bg-white border border-black rounded-full text-black hover:bg-gray-50' 
-                  : 'text-gray-500 hover:text-gray-900'
+                  ? 'w-8 h-8 bg-white border border-black rounded-full text-black hover:bg-gray-50 flex items-center justify-center' 
+                  : 'p-2 text-gray-500 hover:text-gray-900'
               }`}
               onClick={text.trim() ? handleSend : handleSpeakerClick}
             >
               {text.trim() ? (
-                <ArrowRight size={18} className="text-black" />
+                <ArrowRight size={16} className="text-black" />
               ) : (
                 <AudioLines size={18} className={isRecording ? 'text-red-500' : ''} />
               )}
