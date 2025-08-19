@@ -161,6 +161,9 @@ entrypoint = "./functions/tts-handler/index.ts"
 [functions.chat-send]
 verify_jwt = false
 
+[functions.context-injector]
+verify_jwt = false
+
 [functions.verify-chat-access]
 verify_jwt = false
 

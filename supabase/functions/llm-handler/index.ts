@@ -140,6 +140,13 @@ Stay fully within the energetic-psychological lens at all times.`;
       throw new Error("No response text from Gemini");
     }
 
+    // Extract token usage from Gemini response
+    const tokenCount = data.usageMetadata?.totalTokenCount || null;
+    const inputTokens = data.usageMetadata?.promptTokenCount || null;
+    const outputTokens = data.usageMetadata?.candidatesTokenCount || null;
+    
+    console.log(`[llm-handler] Token usage - Total: ${tokenCount}, Input: ${inputTokens}, Output: ${outputTokens}`);
+
     const latency_ms = Date.now() - startTime;
     console.log(`[llm-handler] Got response from Gemini in ${latency_ms}ms`);
 
@@ -154,10 +161,14 @@ Stay fully within the energetic-psychological lens at all times.`;
         status: "complete",
         latency_ms,
         model: "gemini-2.5-flash",
+        token_count: tokenCount,
         meta: { 
           llm_provider: "google", 
           model: "gemini-2.5-flash",
-          latency_ms 
+          latency_ms,
+          input_tokens: inputTokens,
+          output_tokens: outputTokens,
+          total_tokens: tokenCount
         },
       })
       .select()
