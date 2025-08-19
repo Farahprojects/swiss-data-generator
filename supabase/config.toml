@@ -165,3 +165,21 @@ entrypoint = "./functions/tts-handler/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/tts-handler/*.html" ]
+
+[functions.chat-send]
+verify_jwt = false
+
+[functions.verify-chat-access]
+verify_jwt = false
+
+[functions.conversation-llm]
+verify_jwt = false
+
+[functions.tts-speak]
+verify_jwt = false
+
+[functions.ttss-openai]
+verify_jwt = false
+
+[functions.google-text-to-speech]
+verify_jwt = false
