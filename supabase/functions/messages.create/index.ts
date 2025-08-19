@@ -9,13 +9,20 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log(`[messages.create] Received ${req.method} request`);
+
   if (req.method === 'OPTIONS') {
+    console.log('[messages.create] Handling OPTIONS request');
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const { chat_id, text, client_msg_id } = await req.json();
+    const body = await req.json();
+    console.log('[messages.create] Request body:', body);
+    const { chat_id, text, client_msg_id } = body;
+    
     if (!chat_id || !text || !client_msg_id) {
+      console.error('[messages.create] Missing required fields');
       return new Response(JSON.stringify({ error: "Missing required fields: chat_id, text, client_msg_id" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -27,17 +34,21 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
       { auth: { persistSession: false } }
     );
+    console.log('[messages.create] Supabase client created');
+
+    const messageData = {
+      chat_id,
+      role: "user",
+      text,
+      client_msg_id,
+      status: "complete",
+      meta: {}
+    };
+    console.log('[messages.create] Upserting message:', messageData);
 
     const { data, error } = await supabase
       .from("messages")
-      .upsert({
-        chat_id,
-        role: "user",
-        text,
-        client_msg_id,
-        status: "complete",
-        meta: {}
-      }, { onConflict: "client_msg_id" })
+      .upsert(messageData, { onConflict: "client_msg_id" })
       .select("id, chat_id, created_at")
       .single();
 
@@ -45,6 +56,8 @@ serve(async (req) => {
       console.error('Error upserting user message:', error);
       throw error;
     }
+
+    console.log('[messages.create] Message upserted successfully:', data);
 
     return new Response(JSON.stringify({ message_id: data.id, chat_id: data.chat_id, created_at: data.created_at }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
