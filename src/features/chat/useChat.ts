@@ -79,11 +79,6 @@ export const useChat = (chat_id?: string, guestId?: string) => {
     } else {
       console.log('[useChat] No chat_id or guestId provided');
     }
-
-    // Cleanup subscription on component unmount
-    return () => {
-      chatController.resetConversationService();
-    };
   }, [chat_id, guestId]);
 
   return {

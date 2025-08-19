@@ -1,6 +1,4 @@
 // src/features/chat/ChatController.ts
-import { RealtimeChannel } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
 import { useChatStore } from '@/core/store';
 import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
 import { audioPlayer } from '@/services/voice/audioPlayer';
@@ -20,7 +18,6 @@ class ChatController {
   private isTurnActive = false;
   private conversationServiceInitialized = false;
   private isResetting = false; // Flag to prevent race conditions during reset
-  private realtimeChannel: RealtimeChannel | null = null;
   
   async initializeConversation(chat_id: string) {
     // FAIL FAST: chat_id is now required and should already be verified by edge function
@@ -32,8 +29,6 @@ class ChatController {
     console.log('[ChatController] Initializing chat with verified chat_id:', chat_id);
     useChatStore.getState().startConversation(chat_id);
     
-    this.subscribeToNewMessages(chat_id);
-
     // Load existing messages for this conversation (for page refresh)
     try {
       const existingMessages = await getMessagesForConversation(chat_id);
@@ -72,19 +67,26 @@ class ChatController {
     useChatStore.getState().setStatus('thinking');
 
     try {
-      // TRUE FIRE-AND-FORGET: Send message and don't wait
-      console.log("[ChatController] Sending message via chat-send (fire-and-forget)");
-      await llmService.sendMessage({
+      // Send message and get immediate assistant response
+      console.log("[ChatController] Sending message via chat-send");
+      const assistantMessage = await llmService.sendMessage({
         chat_id,
         text,
         client_msg_id,
       });
       
-      console.log("[ChatController] Message dispatched successfully (fire-and-forget)");
+      console.log("[ChatController] Message sent successfully");
+      
+      // Add assistant response to UI immediately if available
+      if (assistantMessage) {
+        console.log("[ChatController] Adding assistant response to UI");
+        useChatStore.getState().addMessage(assistantMessage);
+      }
 
     } catch (error) {
       console.error("[ChatController] Error sending message:", error);
       useChatStore.getState().setError("Failed to send message. Please try again.");
+    } finally {
       useChatStore.getState().setStatus('idle');
       this.isTurnActive = false;
     }
@@ -249,77 +251,10 @@ class ChatController {
     this.isTurnActive = false;
   }
 
-  private subscribeToNewMessages(chat_id: string) {
-    // Clean up any existing channel subscription first
-    this.unsubscribeFromMessages();
-
-    console.log(`[Realtime] Subscribing to messages for chat_id: ${chat_id}`);
-
-    this.realtimeChannel = supabase
-      .channel(`messages:chat_id=eq.${chat_id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `chat_id=eq.${chat_id}`,
-        },
-        (payload) => {
-          console.log('[Realtime] New message received:', payload);
-          const newMessage = payload.new as any;
-
-          // Ensure it's an assistant message and not already in the store
-          const { messages } = useChatStore.getState();
-          if (
-            newMessage &&
-            newMessage.role === 'assistant' &&
-            !messages.find((msg) => msg.id === newMessage.id)
-          ) {
-            console.log('[Realtime] Adding new assistant message to the store.');
-            
-            // Map db record to client-side Message type
-            const formattedMessage: Message = {
-              id: newMessage.id,
-              conversationId: newMessage.chat_id,
-              role: newMessage.role,
-              text: newMessage.text,
-              audioUrl: newMessage.audio_url,
-              timings: newMessage.timings,
-              createdAt: newMessage.created_at,
-              meta: newMessage.meta,
-            };
-
-            useChatStore.getState().addMessage(formattedMessage);
-            useChatStore.getState().setStatus('idle');
-            this.isTurnActive = false;
-          }
-        }
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log(`[Realtime] Successfully subscribed to channel: messages:chat_id=eq.${chat_id}`);
-        }
-        if (status === 'CHANNEL_ERROR') {
-          console.error('[Realtime] Subscription failed.');
-        }
-      });
-  }
-
-  private unsubscribeFromMessages() {
-    if (this.realtimeChannel) {
-      console.log("[Realtime] Unsubscribing from messages channel.");
-      this.realtimeChannel.unsubscribe();
-      this.realtimeChannel = null;
-    }
-  }
-
   // BULLETPROOF RESET - Handle all edge cases when modal closes
   resetConversationService() {
     // Set reset flag immediately to prevent race conditions
     this.isResetting = true;
-    
-    this.unsubscribeFromMessages();
     
     // Force cleanup microphone service
     conversationMicrophoneService.forceCleanup();
