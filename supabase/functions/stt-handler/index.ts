@@ -1,7 +1,7 @@
 // supabase/functions/stt-handler/index.ts
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { OPENAI_API_KEY } from "../_shared/config.ts";
 
+const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY")!;
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/audio/transcriptions";
 
 const CORS_HEADERS = {
@@ -67,3 +67,5 @@ serve(async (req) => {
     });
   }
 });
+
+console.log("[stt-handler] Edge function ready and listening for requests...");
