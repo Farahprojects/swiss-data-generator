@@ -11,7 +11,6 @@ import jsPDF from "https://esm.sh/jspdf@2.5.1";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { SharedReportParser } from "../_shared/reportParser.ts";
 import { parseAstroData, isSynastryData } from "../_shared/astroFormatter.ts";
 import { formatDegDecimal } from "../_shared/astroFormat.ts";
 
@@ -72,38 +71,22 @@ class ServerPdfGenerator {
     if (reportData.content) {
         doc.setFontSize(13).setFont("helvetica", "bold").setTextColor(75,63,114);
         doc.text("Client Energetic Insight", margins.left, y);
+        y += 12;
 
-        const blocks = SharedReportParser.parseReport(reportData.content);
         doc.setFontSize(11).setFont("helvetica", "normal").setTextColor(33);
-        let lineY = y + 12;
-        const lineH = 7.2, headingGap = 10, footerPad = 20;
+        const reportText = doc.splitTextToSize(reportData.content, pageW - margins.left - margins.right);
+        
+        let lineY = y;
+        const lineH = 7.2;
+        const footerPad = 20;
         const newPage = () => { doc.addPage(); lineY = margins.top; };
-        const ensure = (extra=0) => (lineY + extra > pageH - footerPad) && newPage();
+        const ensure = (extra = 0) => (lineY + extra > pageH - footerPad) && newPage();
 
-        for (const b of blocks) {
-          switch (b.type) {
-            case "heading":
-              lineY += headingGap; ensure(lineH);
-              doc.setFont("helvetica", "bold").setTextColor(40,40,60)
-                 .text(b.text, margins.left, lineY);
-              doc.setFont("helvetica", "normal").setTextColor(33);
-              lineY += lineH; break;
-            case "action": {
-              const wrap = doc.splitTextToSize(b.text, pageW - margins.left - margins.right - 5);
-              wrap.forEach(l => { ensure(lineH); doc.text(l, margins.left+5, lineY); lineY+=lineH; });
-              lineY += 2; break;
-            }
-            case "tag":
-              ensure(lineH); doc.setTextColor(60).text(b.text, margins.left+5, lineY);
-              doc.setTextColor(33); lineY += lineH; break;
-            case "spacer": lineY += lineH; break;
-            default: {
-              const wrap = doc.splitTextToSize(b.text, pageW - margins.left - margins.right);
-              wrap.forEach(l => { ensure(lineH); doc.text(l, margins.left, lineY); lineY+=lineH; });
-              lineY += 2; break;
-            }
-          }
-        }
+        reportText.forEach((line: string) => {
+          ensure(lineH);
+          doc.text(line, margins.left, lineY);
+          lineY += lineH;
+        });
     }
 
     // --- Render Astro Data ---
