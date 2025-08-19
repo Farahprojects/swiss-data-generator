@@ -509,4 +509,4 @@ serve(async (req) => {
   }
 });
 
-console.log("[process-guest-report-pdf] Ready");
+console.log("[process-guest-report-pdf] Edge function ready and listening for requests...");
