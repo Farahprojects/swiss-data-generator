@@ -41,6 +41,11 @@ export function useChatController(): UseChatControllerReturn {
 
   // Initialize conversation with historical messages
   const initializeConversation = useCallback(async (newChatId: string, initialMessages: Message[]) => {
+    // Prevent initialization if chatId is missing
+    if (!newChatId) {
+      console.warn('[ChatController] Initialize conversation called without a chatId.');
+      return;
+    }
     try {
       startConversation(newChatId, initialMessages);
       console.log('Conversation initialized with chatId:', newChatId);
@@ -60,7 +65,7 @@ export function useChatController(): UseChatControllerReturn {
     if (!chatId || !guestId) {
       toast({
         title: "Session Error",
-        description: "Chat session not properly initialized",
+        description: "Chat session not properly initialized. No chatId found.",
         variant: "destructive",
       });
       return;
