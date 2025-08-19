@@ -47,15 +47,16 @@ class ChatController {
     if (this.isTurnActive) return;
     this.isTurnActive = true;
     
-    let { chat_id, messages } = useChatStore.getState();
+    let { chat_id } = useChatStore.getState();
     if (!chat_id) {
-      console.error('[ChatController] sendTextMessage: FAIL FAST - No chat_id in store. This should be set by useChat hook.');
+      console.error('[ChatController] sendTextMessage: FAIL FAST - No chat_id in store.');
       throw new Error('No conversation established. Cannot send message.');
     }
     
-    // Optimistically add user message to UI
+    // Optimistically add user message to UI immediately
+    const client_msg_id = uuidv4();
     const tempUserMessage: Message = {
-      id: uuidv4(),
+      id: client_msg_id,
       conversationId: chat_id,
       role: 'user' as const,
       text,
@@ -66,28 +67,20 @@ class ChatController {
     useChatStore.getState().setStatus('thinking');
 
     try {
-      const userMessageForApi = {
-        text,
-        meta: { stt_provider: 'text_input' }
-      };
-
-      console.log("[ChatController] Calling new LLM service.");
-      const assistantMessage = await llmService.chat({
+      // Fire-and-forget: chat-send handles user message saving + LLM trigger
+      console.log("[ChatController] Sending message via chat-send (fire-and-forget)");
+      await llmService.sendMessage({
         chat_id,
-        userMessage: userMessageForApi,
+        text,
+        client_msg_id,
       });
-      console.log("[ChatController] Received complete assistant message:", assistantMessage);
       
-      // Replace temp user message with the real one from the DB later if needed, for now this is fine.
-      // We get the final assistant message from the handler.
-      useChatStore.getState().addMessage(assistantMessage);
-
-      // For text messages, we don't generate audio automatically
-      // Audio can be generated on-demand when user clicks the speaker button
+      console.log("[ChatController] Message sent successfully - UI updated, backend processing");
+      // Note: Assistant response will come via real-time updates or polling
 
     } catch (error) {
-      console.error("[ChatController] Error during AI turn:", error);
-      useChatStore.getState().setError("An error occurred while getting the AI's response.");
+      console.error("[ChatController] Error sending message:", error);
+      useChatStore.getState().setError("Failed to send message. Please try again.");
     } finally {
       useChatStore.getState().setStatus('idle');
       this.isTurnActive = false;
@@ -169,6 +162,12 @@ class ChatController {
 
       useChatStore.getState().setStatus('thinking');
 
+      // Fire-and-forget: Let backend handle LLM response
+      // STT function already saved the user message, now just trigger LLM
+      console.log("[ChatController] Voice message transcribed, triggering LLM (fire-and-forget)");
+      
+      // For now, we'll use the existing conversation-llm call
+      // TODO: Update STT function to trigger LLM directly like chat-send does
       const userMessageForApi = {
         text: transcription,
         meta: { stt_provider: STT_PROVIDER }

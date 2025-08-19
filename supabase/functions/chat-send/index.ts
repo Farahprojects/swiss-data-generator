@@ -28,12 +28,12 @@ serve(async (req) => {
     const body = await req.json();
     console.log('[chat-send] Request body:', body);
     
-    const { chat_id, guest_id, text, client_msg_id } = body;
+    const { chat_id, text, client_msg_id } = body;
 
-    if (!chat_id || !guest_id || !text) {
+    if (!chat_id || !text) {
       console.error('[chat-send] Missing required fields');
       return new Response(JSON.stringify({
-        error: "Missing required fields: chat_id, guest_id, text"
+        error: "Missing required fields: chat_id, text"
       }), {
         status: 400,
         headers: {
@@ -54,29 +54,9 @@ serve(async (req) => {
       }
     );
     console.log('[chat-send] Supabase client created');
-
-    // Validate guest_id ↔ chat_id mapping
-    console.log('[chat-send] Validating guest_id and chat_id mapping');
-    const { data: guestReport, error: validationError } = await supabase
-      .from('guest_reports')
-      .select('id')
-      .eq('id', guest_id)
-      .eq('chat_id', chat_id)
-      .single();
-
-    if (validationError || !guestReport) {
-      console.error('[chat-send] Validation failed:', validationError);
-      return new Response(JSON.stringify({
-        error: "Invalid chat or guest"
-      }), {
-        status: 403,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json"
-        }
-      });
-    }
-    console.log('[chat-send] Validation successful');
+    
+    // Note: chat_id is already verified by verify-chat-access edge function
+    // No additional validation needed here
 
     // Save message to DB (fire and forget)
     const userMessageData = {

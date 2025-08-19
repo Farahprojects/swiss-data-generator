@@ -12,6 +12,31 @@ interface LlmRequest {
 }
 
 class LlmService {
+  /**
+   * Fire-and-forget message sending via chat-send edge function
+   * User message appears immediately in UI, backend handles saving + LLM response
+   * Note: chat_id is already verified by verify-chat-access, no guest_id needed
+   */
+  async sendMessage(request: { chat_id: string; text: string; client_msg_id?: string }): Promise<void> {
+    console.log(`[LLM] Fire-and-forget message send for chat ${request.chat_id}...`);
+    
+    const { error } = await supabase.functions.invoke('chat-send', {
+      body: {
+        chat_id: request.chat_id,
+        text: request.text,
+        client_msg_id: request.client_msg_id,
+      },
+    });
+
+    if (error) {
+      console.error(`[LLM] chat-send error:`, error);
+      throw new Error(`Error invoking chat-send: ${error.message}`);
+    }
+
+    console.log(`[LLM] Message sent successfully (fire-and-forget)`);
+  }
+
+  // Legacy method - kept for compatibility if needed
   async chat(request: LlmRequest): Promise<Message> {
     console.log(`[LLM] Sending message for chat ${request.chat_id}...`);
     

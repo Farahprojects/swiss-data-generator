@@ -56,5 +56,5 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setTtsProvider: (p) => set({ ttsProvider: p }),
   setTtsVoice: (v) => set({ ttsVoice: v }),
 
-  clearChat: () => set({ chat_id: null, messages: [], status: 'idle', error: null }),
+  clearChat: () => set({ chat_id: null, guest_id: null, messages: [], status: 'idle', error: null }),
 }));

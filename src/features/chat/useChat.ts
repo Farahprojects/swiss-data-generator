@@ -68,7 +68,7 @@ export const useChat = (chat_id?: string, guestId?: string) => {
           if (verifiedChatId) {
             console.log('[useChat] ✅ Found chat_id for guest, saving for persistence:', verifiedChatId);
             try { ss?.setItem(SESSION_KEY, verifiedChatId); } catch (_e) {}
-            chatController.initializeConversation(verifiedChatId);
+            chatController.initializeConversation(verifiedChatId, guestId);
           } else {
             console.error('[useChat] ❌ Failed to get chat_id for guest:', guestId);
           }
