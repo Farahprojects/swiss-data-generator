@@ -6,7 +6,7 @@ import { audioPlayer } from '@/services/voice/audioPlayer';
 import { useConversationUIStore } from './conversation-ui-store';
 import { TypewriterText } from '@/components/ui/TypewriterText';
 import { getMessagesForConversation } from '@/services/api/messages';
-import { getChatTokens } from '@/services/auth/chatTokens';
+import { getSessionIds } from '@/services/auth/sessionIds';
 import { llmService } from '@/services/llm/llmService';
 
 const MessageItem = ({ message, isLast, isFromHistory }: { message: Message; isLast: boolean; isFromHistory?: boolean }) => {
@@ -40,7 +40,7 @@ const MessageItem = ({ message, isLast, isFromHistory }: { message: Message; isL
 };
 
 export const MessageList = () => {
-  const { chatId } = getChatTokens();
+  const { chatId } = getSessionIds();
   const lastMessageId = useChatStore((state) => state.lastMessageId);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<Message[]>([]);

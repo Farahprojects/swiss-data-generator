@@ -14,7 +14,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import MobileReportSheet from '@/components/public-report/MobileReportSheet';
 import ReportFlowChecker from '@/components/public-report/ReportFlowChecker';
 // SuccessScreen removed in new flow
-import { setChatTokens } from '@/services/auth/chatTokens';
+import { setSessionIds } from '@/services/auth/sessionIds';
 import { PricingProvider } from '@/contexts/PricingContext';
 import { ReportModalProvider } from '@/contexts/ReportModalContext';
 import { CancelNudgeModal } from '@/components/public-report/CancelNudgeModal';
@@ -490,7 +490,11 @@ const PublicReport = () => {
                     onClick={() => {
                       if (activeGuest) {
                         console.log('[PublicReport] Setting chat tokens with guest ID:', activeGuest.guestId);
-                        setChatTokens(activeGuest.guestId, '', activeGuest.chatId);
+                        if (!activeGuest.chatId) {
+                          console.error('[PublicReport] Missing chatId for guest:', activeGuest.guestId);
+                          return;
+                        }
+                        setSessionIds(activeGuest.guestId, activeGuest.chatId);
                         console.log('[PublicReport] Chat tokens set, navigating to chat');
                         setActiveGuest(null);
                         setIsReportReady(false);
@@ -514,7 +518,11 @@ const PublicReport = () => {
                 onPaid={(paidData) => {
                   // Payment confirmed, navigate to chat immediately - let chat page handle report polling
                   console.log('[PublicReport] Payment confirmed, navigating to chat:', paidData.guestId);
-                  setChatTokens(paidData.guestId, '', activeGuest?.chatId);
+                  if (!activeGuest?.chatId) {
+                    console.error('[PublicReport] Missing chatId for paid guest:', paidData.guestId);
+                    return;
+                  }
+                  setSessionIds(paidData.guestId, activeGuest.chatId);
                   setActiveGuest(null);
                   navigate('/chat');
                 }}

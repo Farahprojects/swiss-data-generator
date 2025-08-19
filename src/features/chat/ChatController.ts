@@ -3,7 +3,7 @@ import { useChatStore } from '@/core/store';
 import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
 import { llmService } from '@/services/llm/llmService';
 import { initTtsAudio, stopTtsAudio } from '@/services/voice/ttsAudio';
-import { getChatTokens } from '@/services/auth/chatTokens';
+import { getSessionIds } from '@/services/auth/sessionIds';
 import { v4 as uuidv4 } from 'uuid';
 
 // This is a conceptual change, assuming llmService.streamChat is called from the UI layer (e.g., MessageList)
@@ -26,7 +26,7 @@ export class ChatController {
     if (this.isTurnActive) return;
     this.isTurnActive = true;
     
-    const { chatId } = getChatTokens();
+    const { chatId } = getSessionIds();
     if (!chatId) {
       console.error('[ChatController] sendTextMessage: No chatId found in session.');
       this.isTurnActive = false;
