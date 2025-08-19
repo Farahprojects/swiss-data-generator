@@ -119,7 +119,6 @@ Stay fully within the energetic-psychological lens at all times.`;
         body: JSON.stringify({
           contents,
           generationConfig: { 
-            maxOutputTokens: 2048, 
             temperature: 0.7 
           },
         }),
