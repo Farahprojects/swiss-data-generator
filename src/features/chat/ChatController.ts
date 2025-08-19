@@ -9,7 +9,7 @@ export interface UseChatControllerReturn {
   // Chat state
   chatId: string | null;
   guestId: string | null;
-  status: 'idle' | 'thinking' | 'error';
+  status: 'idle' | 'error';
   lastMessageId: string | null;
   messages: Message[]; // Expose messages from the store
   
@@ -29,8 +29,6 @@ export function useChatController(): UseChatControllerReturn {
     messages,
     startConversation, 
     addMessage,
-    updateAssistantMessage,
-    endStreaming,
     setError,
   } = useChatStore();
   
@@ -83,41 +81,17 @@ export function useChatController(): UseChatControllerReturn {
     // Optimistically add user message to the store
     addMessage(userMessage);
 
-    // Prepare for streaming assistant message
-    const assistantMessageId = uuidv4();
-    const assistantMessage: Message = {
-      id: assistantMessageId,
-      role: 'assistant',
-      text: '',
-      createdAt: new Date().toISOString(),
-      status: 'streaming',
-    };
-    addMessage(assistantMessage);
-
     try {
-      await llmService.sendMessageStream({
+      await llmService.sendMessage({
         chat_id: chatId,
         guest_id: guestId,
         text,
         client_msg_id,
-      }, 
-      // Handle streaming deltas
-      (delta) => {
-        updateAssistantMessage(assistantMessageId, delta);
-      },
-      // Handle completion
-      (response) => {
-        endStreaming(assistantMessageId, response.assistant_message_id);
-      },
-      // Handle errors
-      (error) => {
-        console.error('Stream error:', error);
-        setError(error.message);
-        toast({
-          title: "Message Error",
-          description: error.message,
-          variant: "destructive",
-        });
+      });
+
+      toast({
+        title: "Message Sent",
+        description: "Your message has been sent successfully.",
       });
 
     } catch (error) {
@@ -129,7 +103,7 @@ export function useChatController(): UseChatControllerReturn {
         variant: "destructive",
       });
     }
-  }, [chatId, guestId, toast, addMessage, updateAssistantMessage, endStreaming, setError]);
+  }, [chatId, guestId, toast, addMessage, setError]);
 
   return {
     // State
