@@ -13,6 +13,7 @@ import { ReportFormData } from '@/types/public-report';
 import { supabase } from '@/integrations/supabase/client';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { usePricing } from '@/contexts/PricingContext';
+import { PreparingSpaceModal } from '@/components/ui/PreparingSpaceModal';
 
 interface MobileReportSheetProps {
   isOpen: boolean;
@@ -61,6 +62,7 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
   const [currentStep, setCurrentStep] = React.useState(1);
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [hasTimedOut, setHasTimedOut] = React.useState(false);
+  const [showPreparingModal, setShowPreparingModal] = React.useState(false);
 
   const nextStep = () => { if (currentStep < totalSteps) setCurrentStep(s => s + 1); };
   const prevStep = () => { if (currentStep > 1) setCurrentStep(s => s - 1); };
@@ -71,6 +73,8 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
 
   // Direct submission to initiate-report-flow
   const handleDirectSubmission = async (formData: ReportFormData, trustedPricing: TrustedPricingObject) => {
+    // Show preparing modal immediately
+    setShowPreparingModal(true);
     setIsProcessing(true);
     try {
       const transformedReportData = {
@@ -333,6 +337,7 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
   return <>
     {createPortal(sheet, document.body)}
     {createPortal(footer, document.body)}
+    <PreparingSpaceModal isOpen={showPreparingModal} />
   </>;
 };
 
