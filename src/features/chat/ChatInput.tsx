@@ -72,7 +72,7 @@ export const ChatInput = () => {
               }
             }}
           />
-          <div className="absolute right-1 top-1/2 transform -translate-y-1/2 flex gap-1 items-center">
+          <div className="absolute right-1 inset-y-0 flex items-center gap-1">
             <button 
               className="w-8 h-8 text-gray-500 hover:text-gray-900 transition-all duration-200 ease-in-out flex items-center justify-center"
               onClick={toggleMicRecording}
