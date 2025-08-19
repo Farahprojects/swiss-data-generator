@@ -1,10 +1,15 @@
 import { serve } from "https://deno.land/std@0.131.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders } from '../_shared/cors.ts';
 import { Gemini } from "../_shared/gemini.ts";
 
 const GEMINI_API_KEY = Deno.env.get("GOOGLE_API_KEY")!;
 const CHAT_MODEL = Deno.env.get("CHAT_MODEL") || 'gemini-1.5-flash';
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS"
+};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -90,8 +95,6 @@ serve(async (req) => {
     })();
 
     if (req.headers.get("accept") === "text/event-stream") {
-      // Deno specific EdgeRuntime is not needed for this approach.
-      // Deno.waitUntil(finalizePromise);
       return new Response(readableStream, {
         headers: {
           ...corsHeaders,
