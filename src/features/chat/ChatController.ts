@@ -1,7 +1,7 @@
 // src/features/chat/ChatController.ts
 import { useChatStore } from '@/core/store';
 import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
-import { llmService } from '@/services/llm/chat';
+import { llmService } from '@/services/llm/llmService';
 import { initTtsAudio, stopTtsAudio } from '@/services/voice/ttsAudio';
 import { getChatTokens } from '@/services/auth/chatTokens';
 import { v4 as uuidv4 } from 'uuid';
