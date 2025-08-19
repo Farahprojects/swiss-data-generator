@@ -45,7 +45,7 @@ export const getMessagesForConversation = async (chat_id: string): Promise<Messa
   
   // Filter out context injection messages from UI display
   return (data || [])
-    .filter(msg => msg.meta?.type !== 'context_injection')
+    .filter(msg => !msg.context_injected)
     .map(msg => ({
       id: msg.id,
       conversationId: msg.chat_id, // Map to client interface for compatibility
