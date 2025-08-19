@@ -1,6 +1,6 @@
 import React, { forwardRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { setChatTokens } from '@/services/auth/chatTokens';
+import { setSessionIds } from '@/services/auth/sessionIds';
 
 interface SuccessScreenProps {
   guestId: string;
@@ -13,10 +13,16 @@ interface SuccessScreenProps {
 export const SuccessScreen = forwardRef<HTMLDivElement, SuccessScreenProps>(
   ({ guestId, chatId }, ref) => {
     const navigate = useNavigate();
-    // Store tokens minimally; token acquisition is assumed handled elsewhere per new flow
-    // For now, just persist the guestId; token can be set when obtained
-    setChatTokens(guestId, '', chatId);
+    
+    if (!chatId) {
+      console.error('[SuccessScreen] Missing chatId for guest:', guestId);
+      return null;
+    }
+
+    // Store both IDs and navigate to chat
+    setSessionIds(guestId, chatId);
     navigate('/chat');
+    
     return (
       <div ref={ref} />
     );

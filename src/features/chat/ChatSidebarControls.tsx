@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useChatStore } from '@/core/store';
 import { useReportModal } from '@/contexts/ReportModalContext';
 import { sessionManager } from '@/utils/sessionManager';
-import { getChatTokens } from '@/services/auth/chatTokens';
+import { getSessionIds } from '@/services/auth/sessionIds';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
 
 export const ChatSidebarControls: React.FC = () => {
@@ -11,7 +11,7 @@ export const ChatSidebarControls: React.FC = () => {
   const setTtsProvider = useChatStore((s) => s.setTtsProvider);
   const setTtsVoice = useChatStore((s) => s.setTtsVoice);
   const { open: openReportModal } = useReportModal();
-  const { uuid } = getChatTokens();
+  const { guestId } = getSessionIds();
   const { isPolling, isReportReady } = useReportReadyStore();
 
   const handleClearSession = async () => {
@@ -23,10 +23,10 @@ export const ChatSidebarControls: React.FC = () => {
       <div className="flex flex-col gap-2">
         <button
           type="button"
-          onClick={() => uuid && openReportModal(uuid)}
-          disabled={!isReportReady || !uuid}
+          onClick={() => guestId && openReportModal(guestId)}
+          disabled={!isReportReady || !guestId}
           className={`w-full text-left px-3 py-2 text-sm rounded-md border ${
-            isReportReady && uuid
+            isReportReady && guestId
               ? 'bg-gray-100 hover:bg-gray-200 border-gray-200' 
               : 'bg-gray-100/60 border-gray-200/60 text-gray-400 cursor-not-allowed'
           } ${isPolling ? 'animate-pulse' : ''}`}
@@ -91,5 +91,3 @@ export const ChatSidebarControls: React.FC = () => {
     </div>
   );
 };
-
-
