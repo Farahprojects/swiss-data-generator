@@ -532,13 +532,6 @@ const PublicReport = () => {
                   // Store both IDs in session
                   setSessionIds(paidData.guestId, activeGuest.chatId);
 
-                  // Verify storage was successful
-                  const stored = getSessionIds();
-                  if (!stored.guestId || !stored.chatId) {
-                    console.error('[PublicReport] Failed to verify stored IDs:', stored);
-                    return;
-                  }
-                  console.log('[PublicReport] Successfully stored and verified IDs');
                   setActiveGuest(null);
                   navigate('/chat');
                 }}
