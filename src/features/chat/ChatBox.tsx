@@ -6,7 +6,7 @@ import { ConversationOverlay } from './ConversationOverlay/ConversationOverlay';
 import { Menu } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { ChatSidebarControls } from './ChatSidebarControls';
-import { getChatTokens } from '@/services/auth/chatTokens';
+import { getSessionIds } from '@/services/auth/sessionIds';
 import { startReportReadyListener, stopReportReadyListener } from '@/services/report/reportReadyListener';
 import { MotionConfig } from 'framer-motion';
 import { useConversationUIStore } from './conversation-ui-store';
@@ -15,21 +15,21 @@ export const ChatBox = () => {
   const { error } = useChatStore();
   const messages = useChatStore((state) => state.messages);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { uuid } = getChatTokens();
+  const { guestId } = getSessionIds();
   const isConversationOpen = useConversationUIStore((s) => s.isConversationOpen);
 
   useEffect(() => {
-    if (uuid) {
-      startReportReadyListener(uuid);
+    if (guestId) {
+      startReportReadyListener(guestId);
     }
 
-    // Cleanup listener on unmount or uuid change
+    // Cleanup listener on unmount or guestId change
     return () => {
-      if (uuid) {
-        stopReportReadyListener(uuid);
+      if (guestId) {
+        stopReportReadyListener(guestId);
       }
     };
-  }, [uuid]);
+  }, [guestId]);
 
   useEffect(() => {
     if (scrollRef.current) {
