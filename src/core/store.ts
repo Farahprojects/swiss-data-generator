@@ -10,7 +10,7 @@ export type ChatStatus =
   | 'error';
 
 interface ChatState {
-  conversationId: string | null;
+  chat_id: string | null;
   messages: Message[];
   status: ChatStatus;
   error: string | null;
@@ -29,14 +29,14 @@ interface ChatState {
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
-  conversationId: null,
+  chat_id: null,
   messages: [],
   status: 'idle',
   error: null,
   ttsProvider: 'google',
   ttsVoice: 'en-US-Studio-O',
 
-  startConversation: (id) => set({ conversationId: id, messages: [], status: 'idle', error: null }),
+  startConversation: (id) => set({ chat_id: id, messages: [], status: 'idle', error: null }),
 
   loadMessages: (messages) => set({ messages }),
 
@@ -56,5 +56,5 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setTtsProvider: (p) => set({ ttsProvider: p }),
   setTtsVoice: (v) => set({ ttsVoice: v }),
 
-  clearChat: () => set({ conversationId: null, messages: [], status: 'idle', error: null }),
+  clearChat: () => set({ chat_id: null, messages: [], status: 'idle', error: null }),
 }));

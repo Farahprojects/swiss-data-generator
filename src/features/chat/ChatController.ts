@@ -50,7 +50,7 @@ class ChatController {
     if (this.isTurnActive) return;
     this.isTurnActive = true;
     
-    let { conversationId: chat_id, messages } = useChatStore.getState();
+    let { chat_id, messages } = useChatStore.getState();
     if (!chat_id) {
       console.error('[ChatController] sendTextMessage: FAIL FAST - No chat_id in store. This should be set by useChat hook.');
       throw new Error('No conversation established. Cannot send message.');
@@ -121,7 +121,7 @@ class ChatController {
     if (this.isTurnActive) return;
     this.isTurnActive = true;
     
-    let { conversationId: chat_id } = useChatStore.getState();
+    let { chat_id } = useChatStore.getState();
     if (!chat_id) {
       console.error('[ChatController] startTurn: FAIL FAST - No chat_id in store. This should be set by useChat hook.');
       throw new Error('No conversation established. Cannot start turn.');
@@ -146,7 +146,7 @@ class ChatController {
     try {
       const audioBlob = await conversationMicrophoneService.stopRecording();
       
-      const transcription = await sttService.transcribe(audioBlob, useChatStore.getState().conversationId!, { stt_provider: STT_PROVIDER });
+      const transcription = await sttService.transcribe(audioBlob, useChatStore.getState().chat_id!, { stt_provider: STT_PROVIDER });
 
       // ✅ SAFETY CHECK - Only proceed to LLM if we have valid text from STT
       if (!transcription || transcription.trim().length === 0) {
@@ -159,7 +159,7 @@ class ChatController {
       }
 
       // Optimistically add user message to UI
-      const chat_id = useChatStore.getState().conversationId!;
+      const chat_id = useChatStore.getState().chat_id!;
       const tempUserMessage: Message = {
         id: uuidv4(),
         conversationId: chat_id,
@@ -197,7 +197,7 @@ class ChatController {
           
           // Wait for TTS to complete
           await conversationTtsService.speakAssistant({
-            conversationId: useChatStore.getState().conversationId!,
+            conversationId: useChatStore.getState().chat_id!,
             messageId: assistantMessage.id,
             text: assistantMessage.text
           });

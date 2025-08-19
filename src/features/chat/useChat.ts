@@ -2,44 +2,47 @@
 import { useEffect } from 'react';
 import { useChatStore } from '@/core/store';
 import { chatController } from './ChatController';
-import { getOrCreateConversation } from '@/services/api/conversations';
+import { getChatIdForGuest } from '@/services/api/guestReports';
 
-export const useChat = (conversationId?: string, uuid?: string, token?: string) => {
+export const useChat = (chat_id?: string, guestId?: string) => {
   const state = useChatStore();
 
   useEffect(() => {
     const ss = typeof window !== 'undefined' ? window.sessionStorage : null;
-    const SESSION_KEY = 'therai_conversation_id';
+    const SESSION_KEY = 'therai_chat_id';
 
-    // If conversationId provided via route, persist it for this tab
-    if (conversationId) {
-      try { ss?.setItem(SESSION_KEY, conversationId); } catch (_e) {}
-      // Existing logic for direct conversationId
-      chatController.initializeConversation(conversationId);
+    // If chat_id provided directly, persist it for this tab
+    if (chat_id) {
+      try { ss?.setItem(SESSION_KEY, chat_id); } catch (_e) {}
+      chatController.initializeConversation(chat_id);
       return;
     }
 
-    // If we have a cached conversation for this tab, use it
-    const cachedConv = ss?.getItem(SESSION_KEY);
-    if (cachedConv) {
-      chatController.initializeConversation(cachedConv);
+    // If we have a cached chat_id for this tab, use it
+    const cachedChatId = ss?.getItem(SESSION_KEY);
+    if (cachedChatId) {
+      chatController.initializeConversation(cachedChatId);
       return;
     }
 
-    if (uuid) {
-      // Get-or-create by uuid only (no token needed). Cache per-tab once resolved.
-      getOrCreateConversation(uuid)
-        .then(({ conversationId: newId }) => {
-          try { ss?.setItem(SESSION_KEY, newId); } catch (_e) {}
-          chatController.initializeConversation(newId);
+    if (guestId) {
+      // Verify guest and get their chat_id
+      getChatIdForGuest(guestId)
+        .then((verifiedChatId) => {
+          if (verifiedChatId) {
+            try { ss?.setItem(SESSION_KEY, verifiedChatId); } catch (_e) {}
+            chatController.initializeConversation(verifiedChatId);
+          } else {
+            console.error('[useChat] Failed to get chat_id for guest:', guestId);
+          }
         })
         .catch(err => {
-          console.error('[useChat] Failed to get/create conversation:', err);
+          console.error('[useChat] Failed to verify guest and get chat_id:', err);
         });
     } else {
-      console.log('[useChat] No conversationId or uuid provided');
+      console.log('[useChat] No chat_id or guestId provided');
     }
-  }, [conversationId, uuid, token]);
+  }, [chat_id, guestId]);
 
   return {
     ...state,
