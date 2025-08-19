@@ -188,7 +188,7 @@ serve(async (req) => {
       user_id: null, // anonymous
       stripe_session_id: guestReportId,
       email: reportData.email,
-      report_type: reportData.reportType || 'essence_personal',
+      report_type: reportData.reportType || normalizedReportData.request || trustedPricing.report_type,
       amount_paid: final,
       report_data: normalizedReportData,
       payment_status: isFreeReport ? "paid" : "pending",
