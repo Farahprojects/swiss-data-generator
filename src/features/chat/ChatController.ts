@@ -141,98 +141,71 @@ class ChatController {
     try {
       const audioBlob = await conversationMicrophoneService.stopRecording();
       
-      const transcription = await sttService.transcribe(audioBlob, useChatStore.getState().chat_id!, { stt_provider: STT_PROVIDER });
+      const { transcript, assistantMessage } = await sttService.transcribe(audioBlob, useChatStore.getState().chat_id!, { stt_provider: STT_PROVIDER });
 
-      // ✅ SAFETY CHECK - Only proceed to LLM if we have valid text from STT
-      if (!transcription || transcription.trim().length === 0) {
-        console.warn('[ChatController] Empty transcription - skipping LLM call and restarting turn');
+      // If the transcription is empty, the AI part was skipped.
+      if (!transcript || transcript.trim().length === 0) {
+        console.warn('[ChatController] Empty transcription - ending turn gracefully.');
         useChatStore.getState().setStatus('idle');
         this.isTurnActive = false;
-        // Restart the turn automatically for empty transcriptions
+        // Restart the turn automatically for a smoother experience
         setTimeout(() => this.startTurn(), 500);
         return;
       }
 
-      // Optimistically add user message to UI
+      // Optimistically add the user's transcribed message to the UI
       const chat_id = useChatStore.getState().chat_id!;
-      const tempUserMessage: Message = {
+      const userMessage: Message = {
         id: uuidv4(),
         conversationId: chat_id,
         role: 'user' as const,
-        text: transcription,
+        text: transcript,
         audioUrl: URL.createObjectURL(audioBlob),
         createdAt: new Date().toISOString(),
       };
-      useChatStore.getState().addMessage(tempUserMessage);
+      useChatStore.getState().addMessage(userMessage);
 
       useChatStore.getState().setStatus('thinking');
 
-      // Fire-and-forget: Let backend handle LLM response
-      // STT function already saved the user message, now just trigger LLM
-      console.log("[ChatController] Voice message transcribed, triggering LLM (fire-and-forget)");
-      
-      // For now, we'll use the existing conversation-llm call
-      // TODO: Update STT function to trigger LLM directly like chat-send does
-      const userMessageForApi = {
-        text: transcription,
-        meta: { stt_provider: STT_PROVIDER }
-      };
-
-      const assistantMessage = await llmService.conversationChat({
-        chat_id,
-        userMessage: userMessageForApi,
-      });
-
-      // Add the final assistant message
-      useChatStore.getState().addMessage(assistantMessage);
-
-      // For conversation mode, call TTS and wait for audio to complete
-      if (assistantMessage.text && assistantMessage.id) {
-
+      // Now, add the assistant message that we received directly from the STT function
+      if (assistantMessage) {
+        useChatStore.getState().addMessage(assistantMessage);
         
-        useChatStore.getState().setStatus('speaking');
-        
-        try {
-          // Initialize TTS audio system on first use (after user gesture)
-          await initTtsAudio();
-          
-          // Wait for TTS to complete
-          await conversationTtsService.speakAssistant({
-            conversationId: useChatStore.getState().chat_id!, // Keep interface name for TTS service compatibility
-            messageId: assistantMessage.id,
-            text: assistantMessage.text
-          });
-          
-          // Check if we're in the middle of a reset (modal closed during audio)
-          if (this.isResetting) {
-            return;
+        // Proceed to play the audio for the assistant's response
+        if (assistantMessage.text && assistantMessage.id) {
+          useChatStore.getState().setStatus('speaking');
+          try {
+            await initTtsAudio();
+            await conversationTtsService.speakAssistant({
+              conversationId: chat_id,
+              messageId: assistantMessage.id,
+              text: assistantMessage.text
+            });
+            
+            if (this.isResetting) return;
+            
+            useChatStore.getState().setStatus('idle');
+            this.isTurnActive = false;
+            
+            if (!this.isResetting) {
+              this.startTurn();
+            }
+          } catch (ttsError) {
+            console.error('[ChatController] ❌ TTS failed:', ttsError);
+            useChatStore.getState().setStatus('idle');
+            this.isTurnActive = false;
+            if (!this.isResetting) {
+              setTimeout(() => { if (!this.isResetting) this.startTurn(); }, 1000);
+            }
           }
-          
-
+        } else {
+          // If assistant message is missing text or ID, end the turn.
           useChatStore.getState().setStatus('idle');
           this.isTurnActive = false;
-          
-          // Start next turn after audio completes (only if not resetting)
-          if (!this.isResetting) {
-            this.startTurn();
-          }
-          
-        } catch (ttsError) {
-          console.error('[ChatController] ❌ TTS failed:', ttsError);
-          useChatStore.getState().setStatus('idle');
-          this.isTurnActive = false;
-          
-          // Continue conversation even if TTS fails (only if not resetting)
-          if (!this.isResetting) {
-            setTimeout(() => {
-              if (!this.isResetting) {
-                this.startTurn();
-              }
-            }, 1000);
-          }
         }
       } else {
-        console.error('[ChatController] ❌ Conversation response missing text or ID');
+        // If no assistant message was returned, something went wrong. End the turn.
+        console.error('[ChatController] ❌ No assistant message received from STT/LLM pipeline');
         useChatStore.getState().setStatus('idle');
         this.isTurnActive = false;
       }

@@ -2,7 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 
 class SttService {
-  async transcribe(audioBlob: Blob, conversationId?: string, meta?: Record<string, any>): Promise<string> {
+  async transcribe(audioBlob: Blob, chat_id?: string, meta?: Record<string, any>): Promise<{ transcript: string; assistantMessage: Message | null }> {
     // Validate audio blob before processing
     if (!audioBlob || audioBlob.size === 0) {
       console.warn('[STT] Empty or missing audio blob, skipping transcription');
@@ -20,7 +20,7 @@ class SttService {
     const { data, error } = await supabase.functions.invoke('google-speech-to-text', {
       body: {
         audioData: base64Audio,
-        conversationId,
+        chat_id,
         meta,
         config: {
           encoding: 'WEBM_OPUS',
@@ -35,13 +35,16 @@ class SttService {
       throw new Error(`Error invoking google-speech-to-text: ${error.message}`);
     }
 
-    if (!data || !data.transcript) {
-      console.error('[STT] No transcript in response:', data);
-      throw new Error('No transcript received from Google STT');
+    if (!data) {
+      console.error('[STT] No data in response');
+      throw new Error('No data received from Google STT');
     }
 
-
-    return data.transcript;
+    // Return the full response object
+    return {
+      transcript: data.transcript || '',
+      assistantMessage: data.assistantMessage || null
+    };
   }
 
   private async blobToBase64(blob: Blob): Promise<string> {
