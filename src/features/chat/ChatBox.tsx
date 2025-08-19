@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { Suspense, useEffect, useRef } from 'react';
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
 import { useChatStore } from '@/core/store';
@@ -88,8 +88,10 @@ export const ChatBox = () => {
             </div>
           </div>
 
-          {/* Conversation Overlay */}
-          <ConversationOverlay />
+          {/* Conversation Overlay (kept, but safely wrapped in Suspense) */}
+          <Suspense fallback={null}>
+            <ConversationOverlay />
+          </Suspense>
         </div>
       </div>
       </MotionConfig>
