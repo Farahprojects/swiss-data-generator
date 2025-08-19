@@ -7,14 +7,19 @@ export const appendMessage = async (message: Omit<Message, 'id' | 'createdAt'>):
   const { data, error } = await supabase
     .from('messages')
     .insert({
-      conversation_id: conversationId,
+      chat_id: conversationId, // Use chat_id column in database
       ...rest
     })
     .select()
     .single();
 
   if (error) throw new Error(error.message);
-  return data as Message;
+  
+  // Map back to client interface
+  return {
+    ...data,
+    conversationId: data.chat_id
+  } as Message;
 };
 
 export const updateMessage = async (id: string, updates: Partial<Message>): Promise<Message> => {
@@ -29,11 +34,11 @@ export const updateMessage = async (id: string, updates: Partial<Message>): Prom
   return data as Message;
 };
 
-export const getMessagesForConversation = async (conversationId: string): Promise<Message[]> => {
+export const getMessagesForConversation = async (chat_id: string): Promise<Message[]> => {
   const { data, error } = await supabase
     .from('messages')
     .select('*')
-    .eq('conversation_id', conversationId)
+    .eq('chat_id', chat_id)
     .order('created_at', { ascending: true });
 
   if (error) throw new Error(error.message);
@@ -43,7 +48,7 @@ export const getMessagesForConversation = async (conversationId: string): Promis
     .filter(msg => msg.meta?.type !== 'context_injection')
     .map(msg => ({
       id: msg.id,
-      conversationId: msg.conversation_id,
+      conversationId: msg.chat_id, // Map to client interface for compatibility
       role: msg.role,
       text: msg.text,
       audioUrl: msg.audio_url,

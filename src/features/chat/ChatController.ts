@@ -20,24 +20,21 @@ class ChatController {
   private isResetting = false; // Flag to prevent race conditions during reset
   
   async initializeConversation(chat_id: string) {
-
-    
-    // FAIL FAST: chat_id is now required
+    // FAIL FAST: chat_id is now required and should already be verified by edge function
     if (!chat_id) {
       console.error('[ChatController] initializeConversation: FAIL FAST - chat_id is required');
       throw new Error('chat_id is required for conversation initialization');
     }
     
-
+    console.log('[ChatController] Initializing chat with verified chat_id:', chat_id);
     useChatStore.getState().startConversation(chat_id);
     
     // Load existing messages for this conversation (for page refresh)
     try {
-
       const existingMessages = await getMessagesForConversation(chat_id);
-
       
       if (existingMessages.length > 0) {
+        console.log('[ChatController] Loaded', existingMessages.length, 'existing messages');
         useChatStore.getState().loadMessages(existingMessages);
       }
     } catch (error) {
@@ -197,7 +194,7 @@ class ChatController {
           
           // Wait for TTS to complete
           await conversationTtsService.speakAssistant({
-            conversationId: useChatStore.getState().chat_id!,
+            conversationId: useChatStore.getState().chat_id!, // Keep interface name for TTS service compatibility
             messageId: assistantMessage.id,
             text: assistantMessage.text
           });
