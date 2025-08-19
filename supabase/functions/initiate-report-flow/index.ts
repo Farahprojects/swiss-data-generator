@@ -132,6 +132,8 @@ serve(async (req) => {
 
     // 2) Do cheap CPU work (normalization) while network calls are running
     const guestReportId = crypto.randomUUID();
+    console.log('🆔 [initiate-report-flow] Generated guestReportId:', guestReportId);
+    
     const smartRequest = reportData.reportType?.split('_')[0] || (reportData as any).request || 'essence';
     const rqLower = String(smartRequest).toLowerCase();
 
@@ -198,34 +200,48 @@ serve(async (req) => {
       is_ai_report: isAI
     };
 
+    console.log('📝 [initiate-report-flow] Inserting guest report:', { 
+      guestReportId,
+      email: reportData.email,
+      reportType: reportData.reportType
+    });
+
     const { data: insertedData, error: insertError } = await supabaseAdmin
       .from("guest_reports")
       .upsert(guestReportData, { onConflict: 'id' })
       .select('id, chat_id')
       .single();
-    if (insertError) return oops('Failed to create report record');
+    if (insertError) {
+      console.error('❌ [initiate-report-flow] Failed to insert guest report:', insertError);
+      return oops('Failed to create report record');
+    }
     
+    console.log('✅ [initiate-report-flow] Guest report inserted:', { 
+      guestReportId: insertedData.id,
+      chatId: insertedData.chat_id
+    });
+
     const chatId = insertedData?.chat_id;
-    if (!chatId) return oops('Failed to get chat_id from database trigger');
+    if (!chatId) {
+      console.error('❌ [initiate-report-flow] No chat_id returned from database trigger');
+      return oops('Failed to get chat_id from database trigger');
+    }
 
     const ms = Date.now() - start;
 
     if (isFreeReport) {
-      console.log('✅ [PERF] Free report initiated', {
-        timestamp: new Date().toISOString(),
-        guestReportId,
-        processing_time_ms: ms,
-        reportType: reportData.reportType
-      });
-
-      return ok({
+      const response = {
         guestReportId,
         chatId,
         paymentStatus: 'paid',
         name: reportData.name,
         email: reportData.email,
         processing_time_ms: ms
-      });
+      };
+
+      console.log('🎁 [initiate-report-flow] Returning free report response:', response);
+
+      return ok(response);
     } else {
       // For paid reports, create the checkout session immediately.
       const checkoutPayload = {
@@ -253,15 +269,7 @@ serve(async (req) => {
         return oops('Failed to create checkout session');
       }
 
-      console.log('💳 [PERF] Paid report checkout created', {
-        timestamp: new Date().toISOString(),
-        guestReportId,
-        processing_time_ms: ms,
-        finalPrice: final,
-        reportType: reportData.reportType
-      });
-
-      return ok({
+      const response = {
         guestReportId,
         chatId,
         paymentStatus: 'pending',
@@ -269,11 +277,17 @@ serve(async (req) => {
         name: reportData.name,
         email: reportData.email,
         processing_time_ms: ms
+      };
+
+      console.log('💳 [initiate-report-flow] Returning paid report response:', {
+        ...response,
+        checkoutUrl: '(url hidden)'
       });
+
+      return ok(response);
     }
   } catch (err: any) {
-    debug('Unhandled flow error:', err?.message || err);
+    console.error('❌ [initiate-report-flow] Unhandled error:', err?.message || err);
     return oops(err?.message || 'Internal server error');
   }
 });
-
