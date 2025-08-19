@@ -141,6 +141,7 @@ export class SessionManager {
       'therai_conversation_id',
       'therai_chat_uuid',
       'therai_chat_token',
+      'therai_chat_id',
       // Report ready isolation key (tab-scoped)
       'therai_report_ready',
 
