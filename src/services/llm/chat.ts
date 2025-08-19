@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Message } from '@/core/types';
 
 interface LlmRequest {
-  conversationId: string;
+  chat_id: string;
   userMessage: {
     text: string;
     meta?: Record<string, any>;
@@ -13,11 +13,11 @@ interface LlmRequest {
 
 class LlmService {
   async chat(request: LlmRequest): Promise<Message> {
-    console.log(`[LLM] Sending message for conversation ${request.conversationId}...`);
+    console.log(`[LLM] Sending message for chat ${request.chat_id}...`);
     
     const { data, error } = await supabase.functions.invoke('llm-handler', {
       body: {
-        conversationId: request.conversationId,
+        chat_id: request.chat_id,
         userMessage: request.userMessage,
         requestAudio: request.requestAudio,
       },
@@ -40,7 +40,7 @@ class LlmService {
 
     const { data, error } = await supabase.functions.invoke('conversation-llm', {
       body: {
-        conversationId: request.conversationId,
+        chat_id: request.chat_id,
         userMessage: request.userMessage,
       },
     });

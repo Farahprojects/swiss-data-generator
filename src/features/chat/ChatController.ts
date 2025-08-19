@@ -19,22 +19,22 @@ class ChatController {
   private conversationServiceInitialized = false;
   private isResetting = false; // Flag to prevent race conditions during reset
   
-  async initializeConversation(conversationId: string) {
+  async initializeConversation(chat_id: string) {
 
     
-    // FAIL FAST: conversationId is now required
-    if (!conversationId) {
-      console.error('[ChatController] initializeConversation: FAIL FAST - conversationId is required');
-      throw new Error('conversationId is required for conversation initialization');
+    // FAIL FAST: chat_id is now required
+    if (!chat_id) {
+      console.error('[ChatController] initializeConversation: FAIL FAST - chat_id is required');
+      throw new Error('chat_id is required for conversation initialization');
     }
     
 
-    useChatStore.getState().startConversation(conversationId);
+    useChatStore.getState().startConversation(chat_id);
     
     // Load existing messages for this conversation (for page refresh)
     try {
 
-      const existingMessages = await getMessagesForConversation(conversationId);
+      const existingMessages = await getMessagesForConversation(chat_id);
 
       
       if (existingMessages.length > 0) {
@@ -50,16 +50,16 @@ class ChatController {
     if (this.isTurnActive) return;
     this.isTurnActive = true;
     
-    let { conversationId, messages } = useChatStore.getState();
-    if (!conversationId) {
-      console.error('[ChatController] sendTextMessage: FAIL FAST - No conversationId in store. This should be set by useChat hook.');
+    let { conversationId: chat_id, messages } = useChatStore.getState();
+    if (!chat_id) {
+      console.error('[ChatController] sendTextMessage: FAIL FAST - No chat_id in store. This should be set by useChat hook.');
       throw new Error('No conversation established. Cannot send message.');
     }
     
     // Optimistically add user message to UI
     const tempUserMessage: Message = {
       id: uuidv4(),
-      conversationId,
+      conversationId: chat_id,
       role: 'user' as const,
       text,
       createdAt: new Date().toISOString(),
@@ -76,7 +76,7 @@ class ChatController {
 
       console.log("[ChatController] Calling new LLM service.");
       const assistantMessage = await llmService.chat({
-        conversationId,
+        chat_id,
         userMessage: userMessageForApi,
       });
       console.log("[ChatController] Received complete assistant message:", assistantMessage);
@@ -121,9 +121,9 @@ class ChatController {
     if (this.isTurnActive) return;
     this.isTurnActive = true;
     
-    let { conversationId } = useChatStore.getState();
-    if (!conversationId) {
-      console.error('[ChatController] startTurn: FAIL FAST - No conversationId in store. This should be set by useChat hook.');
+    let { conversationId: chat_id } = useChatStore.getState();
+    if (!chat_id) {
+      console.error('[ChatController] startTurn: FAIL FAST - No chat_id in store. This should be set by useChat hook.');
       throw new Error('No conversation established. Cannot start turn.');
     }
     
@@ -159,9 +159,10 @@ class ChatController {
       }
 
       // Optimistically add user message to UI
+      const chat_id = useChatStore.getState().conversationId!;
       const tempUserMessage: Message = {
         id: uuidv4(),
-        conversationId: useChatStore.getState().conversationId!,
+        conversationId: chat_id,
         role: 'user' as const,
         text: transcription,
         audioUrl: URL.createObjectURL(audioBlob),
@@ -177,7 +178,7 @@ class ChatController {
       };
 
       const assistantMessage = await llmService.conversationChat({
-        conversationId: useChatStore.getState().conversationId!,
+        chat_id,
         userMessage: userMessageForApi,
       });
 
