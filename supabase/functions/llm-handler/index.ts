@@ -57,9 +57,9 @@ serve(async (req) => {
     console.log(`[llm-handler] Found ${history?.length || 0} messages in history`);
 
     // Get Google API key
-    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY");
+    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_LLM_TTS");
     if (!GOOGLE_API_KEY) {
-      console.error("[llm-handler] Missing GOOGLE_API_KEY");
+      console.error("[llm-handler] Missing GOOGLE_LLM_TTS");
       return new Response(JSON.stringify({ error: "LLM service unavailable" }), {
         status: 503,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
