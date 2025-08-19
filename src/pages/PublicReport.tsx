@@ -518,11 +518,27 @@ const PublicReport = () => {
                 onPaid={(paidData) => {
                   // Payment confirmed, navigate to chat immediately - let chat page handle report polling
                   console.log('[PublicReport] Payment confirmed, navigating to chat:', paidData.guestId);
+                  console.log('[PublicReport] Processing paid guest data:', { 
+                    guestId: paidData.guestId,
+                    chatId: activeGuest?.chatId,
+                    activeGuest
+                  });
+
                   if (!activeGuest?.chatId) {
                     console.error('[PublicReport] Missing chatId for paid guest:', paidData.guestId);
                     return;
                   }
+
+                  // Store both IDs in session
                   setSessionIds(paidData.guestId, activeGuest.chatId);
+
+                  // Verify storage was successful
+                  const stored = getSessionIds();
+                  if (!stored.guestId || !stored.chatId) {
+                    console.error('[PublicReport] Failed to verify stored IDs:', stored);
+                    return;
+                  }
+                  console.log('[PublicReport] Successfully stored and verified IDs');
                   setActiveGuest(null);
                   navigate('/chat');
                 }}

@@ -26,9 +26,17 @@ export class ChatController {
     if (this.isTurnActive) return;
     this.isTurnActive = true;
     
-    const { chatId } = getSessionIds();
+    const { guestId, chatId } = getSessionIds();
+    console.log('[ChatController] Retrieved session IDs:', { guestId, chatId });
+
     if (!chatId) {
       console.error('[ChatController] sendTextMessage: No chatId found in session.');
+      this.isTurnActive = false;
+      return;
+    }
+
+    if (!guestId) {
+      console.error('[ChatController] sendTextMessage: No guestId found in session.');
       this.isTurnActive = false;
       return;
     }
