@@ -1,103 +1,75 @@
 // src/services/api/guestReports.ts
 import { supabase } from '@/integrations/supabase/client';
 
-export interface GuestReportVerification {
-  guestId: string;
-  chat_id: string;
-  isValid: boolean;
+export interface ChatAccessVerification {
+  valid: boolean;
+  chat_id?: string;
+  guest_id?: string;
+  reason?: string;
+  message?: string;
 }
 
 /**
- * Verify guest exists in Guest Reports table and get their chat_id
+ * Securely verify chat access using edge function
+ * Supports both chat_id verification (tampering check) and guest_id lookup
  */
-export const verifyGuestAndGetChatId = async (guestId: string): Promise<GuestReportVerification> => {
-  console.log('[verifyGuestAndGetChatId] Verifying guest:', guestId);
+export const verifyChatAccess = async (params: { chat_id?: string; guest_id?: string }): Promise<ChatAccessVerification> => {
+  console.log('[verifyChatAccess] Verifying access with:', params);
   
-  if (!guestId) {
-    console.error('[verifyGuestAndGetChatId] No guestId provided');
-    return { guestId: '', chat_id: '', isValid: false };
+  if (!params.chat_id && !params.guest_id) {
+    console.error('[verifyChatAccess] No chat_id or guest_id provided');
+    return { valid: false, reason: 'missing_params', message: 'No parameters provided' };
   }
 
   try {
-    const { data: guestReport, error } = await supabase
-      .from('guest_reports')
-      .select('id, chat_id')
-      .eq('id', guestId)
-      .single();
+    const { data, error } = await supabase.functions.invoke('verify-chat-access', {
+      body: params,
+    });
 
     if (error) {
-      console.error('[verifyGuestAndGetChatId] Database error:', error);
-      return { guestId, chat_id: '', isValid: false };
+      console.error('[verifyChatAccess] Edge function error:', error);
+      return { valid: false, reason: 'function_error', message: error.message };
     }
 
-    if (!guestReport) {
-      console.warn('[verifyGuestAndGetChatId] No guest report found for:', guestId);
-      return { guestId, chat_id: '', isValid: false };
-    }
-
-    if (!guestReport.chat_id) {
-      console.warn('[verifyGuestAndGetChatId] Guest report has no chat_id:', guestId);
-      return { guestId, chat_id: '', isValid: false };
-    }
-
-    console.log('[verifyGuestAndGetChatId] Successfully verified guest:', guestId, 'with chat_id:', guestReport.chat_id);
-    
-    return {
-      guestId,
-      chat_id: guestReport.chat_id,
-      isValid: true
-    };
+    console.log('[verifyChatAccess] Edge function response:', data);
+    return data as ChatAccessVerification;
 
   } catch (error) {
-    console.error('[verifyGuestAndGetChatId] Unexpected error:', error);
-    return { guestId, chat_id: '', isValid: false };
+    console.error('[verifyChatAccess] Unexpected error:', error);
+    return { valid: false, reason: 'network_error', message: 'Network or parsing error' };
   }
 };
 
 /**
- * Get chat_id for a verified guest
+ * Get chat_id for a verified guest (secure)
  */
 export const getChatIdForGuest = async (guestId: string): Promise<string | null> => {
-  const verification = await verifyGuestAndGetChatId(guestId);
-  return verification.isValid ? verification.chat_id : null;
+  console.log('[getChatIdForGuest] Getting chat_id for guest:', guestId);
+  
+  const result = await verifyChatAccess({ guest_id: guestId });
+  
+  if (result.valid && result.chat_id) {
+    console.log('[getChatIdForGuest] ✅ Successfully got chat_id:', result.chat_id);
+    return result.chat_id;
+  } else {
+    console.warn('[getChatIdForGuest] ❌ Failed to get chat_id:', result.reason);
+    return null;
+  }
 };
 
 /**
- * Verify that a persisted chat_id is still valid and belongs to the correct guest
+ * Verify that a persisted chat_id is still valid (secure)
  */
 export const verifyChatIdIntegrity = async (chat_id: string): Promise<{ isValid: boolean; guestId?: string }> => {
-  console.log('[verifyChatIdIntegrity] Verifying persisted chat_id:', chat_id);
+  console.log('[verifyChatIdIntegrity] Verifying chat_id integrity:', chat_id);
   
-  if (!chat_id) {
-    console.warn('[verifyChatIdIntegrity] No chat_id provided for verification');
-    return { isValid: false };
-  }
-
-  try {
-    const { data: guestReport, error } = await supabase
-      .from('guest_reports')
-      .select('id, chat_id')
-      .eq('chat_id', chat_id)
-      .single();
-
-    if (error) {
-      console.error('[verifyChatIdIntegrity] Database error during verification:', error);
-      return { isValid: false };
-    }
-
-    if (!guestReport) {
-      console.warn('[verifyChatIdIntegrity] No guest report found for chat_id:', chat_id, '- possible tampering detected');
-      return { isValid: false };
-    }
-
-    console.log('[verifyChatIdIntegrity] ✅ chat_id verified successfully for guest:', guestReport.id);
-    return { 
-      isValid: true, 
-      guestId: guestReport.id 
-    };
-
-  } catch (error) {
-    console.error('[verifyChatIdIntegrity] Unexpected error during verification:', error);
+  const result = await verifyChatAccess({ chat_id });
+  
+  if (result.valid && result.guest_id) {
+    console.log('[verifyChatIdIntegrity] ✅ chat_id verified for guest:', result.guest_id);
+    return { isValid: true, guestId: result.guest_id };
+  } else {
+    console.warn('[verifyChatIdIntegrity] ❌ chat_id verification failed:', result.reason);
     return { isValid: false };
   }
 };
