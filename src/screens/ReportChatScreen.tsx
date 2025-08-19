@@ -4,16 +4,14 @@ import { useParams } from 'react-router-dom';
 import { ChatBox } from '@/features/chat/ChatBox';
 import { useChat } from '@/features/chat/useChat';
 import { MobileViewportLock } from '@/features/chat/MobileViewportLock';
-import { getChatTokens } from '@/services/auth/chatTokens';
+import { getSessionIds } from '@/services/auth/sessionIds';
 
 const ReportChatScreen = () => {
   const { conversationId } = useParams<{ conversationId: string }>();
-  const { uuid } = getChatTokens(); // Only need uuid, not token
+  const { guestId } = getSessionIds();
 
-
-  
   // Always initialize chat - let ChatBox handle edge cases
-  useChat(conversationId, uuid || undefined);
+  useChat(conversationId, guestId || undefined);
 
   return (
     <MobileViewportLock active>
