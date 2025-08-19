@@ -34,15 +34,17 @@ const ReportChatScreen = () => {
   useChat(conversationId, guestId || undefined);
 
   return (
-    <MobileViewportLock active>
-      <ChatErrorBoundary>
-        <div className="font-sans antialiased text-gray-800 bg-gray-50 fixed inset-0 flex flex-col">
-          <Suspense fallback={null}>
-            <ChatBox />
-          </Suspense>
-        </div>
-      </ChatErrorBoundary>
-    </MobileViewportLock>
+    <Suspense fallback={null}>
+      <MobileViewportLock active>
+        <ChatErrorBoundary>
+          <div className="font-sans antialiased text-gray-800 bg-gray-50 fixed inset-0 flex flex-col">
+            <Suspense fallback={null}>
+              <ChatBox />
+            </Suspense>
+          </div>
+        </ChatErrorBoundary>
+      </MobileViewportLock>
+    </Suspense>
   );
 };
 
