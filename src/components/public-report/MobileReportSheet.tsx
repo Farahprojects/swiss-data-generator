@@ -18,7 +18,7 @@ import { scrollLockDebugger } from '@/utils/scrollLockDebugger';
 interface MobileReportSheetProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onReportCreated?: (guestReportId: string, paymentStatus: string, name: string, email: string) => void;
+  onReportCreated?: (guestReportId: string, paymentStatus: string, name: string, email: string, chatId: string) => void;
 }
 
 const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenChange, onReportCreated }) => {

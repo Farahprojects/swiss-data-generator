@@ -409,8 +409,8 @@ const PublicReport = () => {
             <TestsSection />
             {!isMobile && (
               <div id="report-form" ref={reportFormRef}>
-                <ReportForm onReportCreated={({ guestReportId, name, email, paymentStatus }) => {
-                  handleReportCreated(guestReportId, paymentStatus as ('paid' | 'pending'), name, email);
+                <ReportForm onReportCreated={({ guestReportId, name, email, paymentStatus, chatId }) => {
+                  handleReportCreated(guestReportId, paymentStatus as ('paid' | 'pending'), name, email, chatId);
                 }} />
               </div>
             )}
@@ -439,8 +439,8 @@ const PublicReport = () => {
             <MobileReportSheet
               isOpen={isMobileDrawerOpen}
               onOpenChange={setIsMobileDrawerOpen}
-              onReportCreated={(guestReportId, paymentStatus, name, email) => {
-                handleReportCreated(guestReportId, paymentStatus as ('paid' | 'pending'), name, email);
+              onReportCreated={(guestReportId, paymentStatus, name, email, chatId) => {
+                handleReportCreated(guestReportId, paymentStatus as ('paid' | 'pending'), name, email, chatId);
                 setIsMobileDrawerOpen(false); // Close the sheet on submit
               }}
             />

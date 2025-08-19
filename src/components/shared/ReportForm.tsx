@@ -22,7 +22,7 @@ interface ReportFormProps {
   themeColor?: string;
   fontFamily?: string;
   onFormStateChange?: (isValid: boolean, hasSelectedType: boolean) => void;
-  onReportCreated?: (result: { guestReportId: string; name: string; email: string; paymentStatus: string }) => void;
+  onReportCreated?: (result: { guestReportId: string; name: string; email: string; paymentStatus: string; chatId: string; }) => void;
 }
 
 export const ReportForm: React.FC<ReportFormProps> = ({ 
