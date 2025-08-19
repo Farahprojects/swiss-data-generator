@@ -23,8 +23,8 @@ serve(async (req) => {
       });
     }
 
-    const { conversationId, messageId, text, voice } = await req.json();
-    console.log("[ttss-openai] Payload", { conversationId, messageId, textLength: text?.length, voice });
+    const { conversationId, messageId, text, voice } = await req.json(); // Keep conversationId for client compatibility  
+    console.log("[ttss-openai] Payload", { chat_id: conversationId, messageId, textLength: text?.length, voice });
 
     if (!text) {
       return new Response(JSON.stringify({ error: "missing text" }), {

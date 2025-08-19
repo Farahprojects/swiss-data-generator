@@ -11,8 +11,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   try {
-    const { conversationId, messageId, text, voice } = await req.json();
-    console.log("[tts-speak] Request received:", { conversationId, messageId, textLength: text?.length, voice });
+    const { conversationId, messageId, text, voice } = await req.json(); // Keep conversationId for client compatibility
+    console.log("[tts-speak] Request received:", { chat_id: conversationId, messageId, textLength: text?.length, voice });
     
     if (!conversationId || !messageId || !text) {
       console.error("[tts-speak] Missing required fields");

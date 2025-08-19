@@ -7,13 +7,11 @@ import { MobileViewportLock } from '@/features/chat/MobileViewportLock';
 import { getChatTokens } from '@/services/auth/chatTokens';
 
 const ReportChatScreen = () => {
-  const { conversationId } = useParams<{ conversationId: string }>();
+  const { chat_id } = useParams<{ chat_id: string }>();
   const { uuid } = getChatTokens(); // Only need uuid, not token
 
-
-  
   // Always initialize chat - let ChatBox handle edge cases
-  useChat(conversationId, uuid || undefined);
+  useChat(chat_id, uuid || undefined);
 
   return (
     <MobileViewportLock active>
