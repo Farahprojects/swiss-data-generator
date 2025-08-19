@@ -1,4 +1,6 @@
 // src/features/chat/ChatController.ts
+import { RealtimeChannel } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 import { useChatStore } from '@/core/store';
 import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
 import { audioPlayer } from '@/services/voice/audioPlayer';
@@ -18,7 +20,7 @@ class ChatController {
   private isTurnActive = false;
   private conversationServiceInitialized = false;
   private isResetting = false; // Flag to prevent race conditions during reset
-  private pollingInterval: number | null = null;
+  private realtimeChannel: RealtimeChannel | null = null;
   
   async initializeConversation(chat_id: string) {
     // FAIL FAST: chat_id is now required and should already be verified by edge function
@@ -30,6 +32,8 @@ class ChatController {
     console.log('[ChatController] Initializing chat with verified chat_id:', chat_id);
     useChatStore.getState().startConversation(chat_id);
     
+    this.subscribeToNewMessages(chat_id);
+
     // Load existing messages for this conversation (for page refresh)
     try {
       const existingMessages = await getMessagesForConversation(chat_id);
@@ -77,9 +81,6 @@ class ChatController {
       });
       
       console.log("[ChatController] Message dispatched successfully (fire-and-forget)");
-      
-      // Start polling for new assistant messages
-      this.startPollingForNewMessages();
 
     } catch (error) {
       console.error("[ChatController] Error sending message:", error);
@@ -248,62 +249,68 @@ class ChatController {
     this.isTurnActive = false;
   }
 
-  // Start polling for new messages (for fire-and-forget responses)
-  private startPollingForNewMessages() {
-    // Clear any existing polling
-    this.stopPollingForNewMessages();
-    
-    const { chat_id, messages } = useChatStore.getState();
-    if (!chat_id) return;
-    
-    const currentMessageCount = messages.length;
-    let attempts = 0;
-    const maxAttempts = 30; // Poll for up to 30 seconds
-    
-    console.log("[ChatController] Starting to poll for new assistant message");
-    
-    this.pollingInterval = setInterval(async () => {
-      attempts++;
-      
-      try {
-        const newMessages = await getMessagesForConversation(chat_id);
-        
-        // Check if we got a new assistant message
-        if (newMessages.length > currentMessageCount) {
-          const latestMessage = newMessages[newMessages.length - 1];
-          
-          if (latestMessage.role === 'assistant' && 
-              !messages.find(m => m.id === latestMessage.id)) {
+  private subscribeToNewMessages(chat_id: string) {
+    // Clean up any existing channel subscription first
+    this.unsubscribeFromMessages();
+
+    console.log(`[Realtime] Subscribing to messages for chat_id: ${chat_id}`);
+
+    this.realtimeChannel = supabase
+      .channel(`messages:chat_id=eq.${chat_id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `chat_id=eq.${chat_id}`,
+        },
+        (payload) => {
+          console.log('[Realtime] New message received:', payload);
+          const newMessage = payload.new as any;
+
+          // Ensure it's an assistant message and not already in the store
+          const { messages } = useChatStore.getState();
+          if (
+            newMessage &&
+            newMessage.role === 'assistant' &&
+            !messages.find((msg) => msg.id === newMessage.id)
+          ) {
+            console.log('[Realtime] Adding new assistant message to the store.');
             
-            console.log("[ChatController] Found new assistant message via polling");
-            useChatStore.getState().addMessage(latestMessage);
+            // Map db record to client-side Message type
+            const formattedMessage: Message = {
+              id: newMessage.id,
+              conversationId: newMessage.chat_id,
+              role: newMessage.role,
+              text: newMessage.text,
+              audioUrl: newMessage.audio_url,
+              timings: newMessage.timings,
+              createdAt: newMessage.created_at,
+              meta: newMessage.meta,
+            };
+
+            useChatStore.getState().addMessage(formattedMessage);
             useChatStore.getState().setStatus('idle');
             this.isTurnActive = false;
-            this.stopPollingForNewMessages();
-            return;
           }
         }
-        
-        // Stop polling after max attempts
-        if (attempts >= maxAttempts) {
-          console.warn("[ChatController] Polling timeout - no assistant response received");
-          useChatStore.getState().setStatus('idle');
-          this.isTurnActive = false;
-          this.stopPollingForNewMessages();
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(`[Realtime] Successfully subscribed to channel: messages:chat_id=eq.${chat_id}`);
         }
-        
-      } catch (error) {
-        console.error("[ChatController] Error during polling:", error);
-        attempts = maxAttempts; // Stop polling on error
-      }
-    }, 1000); // Poll every second
+        if (status === 'CHANNEL_ERROR') {
+          console.error('[Realtime] Subscription failed.');
+        }
+      });
   }
-  
-  private stopPollingForNewMessages() {
-    if (this.pollingInterval) {
-      clearInterval(this.pollingInterval);
-      this.pollingInterval = null;
-      console.log("[ChatController] Stopped polling for new messages");
+
+  private unsubscribeFromMessages() {
+    if (this.realtimeChannel) {
+      console.log("[Realtime] Unsubscribing from messages channel.");
+      this.realtimeChannel.unsubscribe();
+      this.realtimeChannel = null;
     }
   }
 
@@ -312,8 +319,7 @@ class ChatController {
     // Set reset flag immediately to prevent race conditions
     this.isResetting = true;
     
-    // Stop polling
-    this.stopPollingForNewMessages();
+    this.unsubscribeFromMessages();
     
     // Force cleanup microphone service
     conversationMicrophoneService.forceCleanup();
