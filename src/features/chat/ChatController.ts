@@ -18,6 +18,7 @@ class ChatController {
   private isTurnActive = false;
   private conversationServiceInitialized = false;
   private isResetting = false; // Flag to prevent race conditions during reset
+  private pollingInterval: number | null = null;
   
   async initializeConversation(chat_id: string) {
     // FAIL FAST: chat_id is now required and should already be verified by edge function
@@ -67,26 +68,22 @@ class ChatController {
     useChatStore.getState().setStatus('thinking');
 
     try {
-      // Send message and get immediate assistant response
-      console.log("[ChatController] Sending message via chat-send");
-      const assistantMessage = await llmService.sendMessage({
+      // TRUE FIRE-AND-FORGET: Send message and don't wait
+      console.log("[ChatController] Sending message via chat-send (fire-and-forget)");
+      await llmService.sendMessage({
         chat_id,
         text,
         client_msg_id,
       });
       
-      console.log("[ChatController] Message sent successfully");
+      console.log("[ChatController] Message dispatched successfully (fire-and-forget)");
       
-      // Add assistant response to UI immediately if available
-      if (assistantMessage) {
-        console.log("[ChatController] Adding assistant response to UI");
-        useChatStore.getState().addMessage(assistantMessage);
-      }
+      // Start polling for new assistant messages
+      this.startPollingForNewMessages();
 
     } catch (error) {
       console.error("[ChatController] Error sending message:", error);
       useChatStore.getState().setError("Failed to send message. Please try again.");
-    } finally {
       useChatStore.getState().setStatus('idle');
       this.isTurnActive = false;
     }
@@ -251,10 +248,72 @@ class ChatController {
     this.isTurnActive = false;
   }
 
+  // Start polling for new messages (for fire-and-forget responses)
+  private startPollingForNewMessages() {
+    // Clear any existing polling
+    this.stopPollingForNewMessages();
+    
+    const { chat_id, messages } = useChatStore.getState();
+    if (!chat_id) return;
+    
+    const currentMessageCount = messages.length;
+    let attempts = 0;
+    const maxAttempts = 30; // Poll for up to 30 seconds
+    
+    console.log("[ChatController] Starting to poll for new assistant message");
+    
+    this.pollingInterval = setInterval(async () => {
+      attempts++;
+      
+      try {
+        const newMessages = await getMessagesForConversation(chat_id);
+        
+        // Check if we got a new assistant message
+        if (newMessages.length > currentMessageCount) {
+          const latestMessage = newMessages[newMessages.length - 1];
+          
+          if (latestMessage.role === 'assistant' && 
+              !messages.find(m => m.id === latestMessage.id)) {
+            
+            console.log("[ChatController] Found new assistant message via polling");
+            useChatStore.getState().addMessage(latestMessage);
+            useChatStore.getState().setStatus('idle');
+            this.isTurnActive = false;
+            this.stopPollingForNewMessages();
+            return;
+          }
+        }
+        
+        // Stop polling after max attempts
+        if (attempts >= maxAttempts) {
+          console.warn("[ChatController] Polling timeout - no assistant response received");
+          useChatStore.getState().setStatus('idle');
+          this.isTurnActive = false;
+          this.stopPollingForNewMessages();
+        }
+        
+      } catch (error) {
+        console.error("[ChatController] Error during polling:", error);
+        attempts = maxAttempts; // Stop polling on error
+      }
+    }, 1000); // Poll every second
+  }
+  
+  private stopPollingForNewMessages() {
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+      this.pollingInterval = null;
+      console.log("[ChatController] Stopped polling for new messages");
+    }
+  }
+
   // BULLETPROOF RESET - Handle all edge cases when modal closes
   resetConversationService() {
     // Set reset flag immediately to prevent race conditions
     this.isResetting = true;
+    
+    // Stop polling
+    this.stopPollingForNewMessages();
     
     // Force cleanup microphone service
     conversationMicrophoneService.forceCleanup();

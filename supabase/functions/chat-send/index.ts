@@ -89,9 +89,10 @@ serve(async (req) => {
     }
     console.log('[chat-send] User message inserted');
 
-    // Call llm-handler and wait for response (for immediate UI update)
-    console.log('[chat-send] Calling llm-handler for immediate response');
-    const llmResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/llm-handler`, {
+    // TRUE FIRE-AND-FORGET: Trigger llm-handler in background, don't wait
+    console.log('[chat-send] Triggering llm-handler (fire-and-forget)');
+    
+    fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/llm-handler`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -100,29 +101,21 @@ serve(async (req) => {
       body: JSON.stringify({
         chat_id
       })
+    }).then(async (response) => {
+      if (response.ok) {
+        console.log('[chat-send] llm-handler completed successfully (background)');
+      } else {
+        const errorText = await response.text();
+        console.error('[chat-send] llm-handler failed (background):', errorText);
+      }
+    }).catch((error) => {
+      console.error('[chat-send] llm-handler error (background):', error);
     });
 
-    if (!llmResponse.ok) {
-      const errorText = await llmResponse.text();
-      console.error('[chat-send] llm-handler failed:', errorText);
-      return new Response(JSON.stringify({
-        error: "Failed to get AI response"
-      }), {
-        status: 500,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json"
-        }
-      });
-    }
-
-    const assistantMessage = await llmResponse.json();
-    console.log('[chat-send] Got response from llm-handler');
-
-    // Return both success status and assistant message for immediate UI update
+    // Return success immediately without waiting for LLM
+    console.log('[chat-send] User message saved, LLM processing in background');
     return new Response(JSON.stringify({
-      message: "Message sent",
-      assistantMessage: assistantMessage
+      message: "Message sent (fire-and-forget)"
     }), {
       headers: {
         ...corsHeaders,
