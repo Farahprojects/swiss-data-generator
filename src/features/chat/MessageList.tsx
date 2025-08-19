@@ -10,8 +10,9 @@ const MessageItem = ({ message, isLast, isFromHistory }: { message: Message; isL
   const isUser = message.role === 'user';
   const isConversationOpen = useConversationUIStore((state) => state.isConversationOpen);
   
-  // Skip animation for existing messages from history, if it's not the last message, or if conversation mode is active
-  const shouldAnimate = !isUser && isLast && !isFromHistory && !isConversationOpen;
+  // Skip animation for existing messages from history or if it's not the last message
+  // Allow animation during conversation mode for better UX
+  const shouldAnimate = !isUser && isLast && !isFromHistory;
 
   return (
     <div className={`flex items-end gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}>
