@@ -3,7 +3,6 @@ import { X, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
-import { scrollLockDebugger } from '@/utils/scrollLockDebugger';
 
 interface CancelNudgeModalProps {
   isOpen: boolean;
@@ -52,21 +51,11 @@ export const CancelNudgeModal = ({ isOpen, guestId, onClose }: CancelNudgeModalP
     setTimeout(() => firstFocusableRef.current?.focus(), 100);
     
     // Prevent background scroll
-    scrollLockDebugger.registerLock('CancelNudgeModal');
     document.body.style.overflow = 'hidden';
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'unset';
-      scrollLockDebugger.unregisterLock('CancelNudgeModal');
-      
-      // Force cleanup if styles are still stuck
-      setTimeout(() => {
-        if (document.body.style.overflow === 'hidden') {
-          console.warn('[CancelNudgeModal] Scroll lock cleanup may have failed, forcing reset');
-          document.body.style.overflow = '';
-        }
-      }, 100);
     };
   }, [isOpen]);
 

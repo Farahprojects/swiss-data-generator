@@ -1,10 +1,7 @@
 // supabase/functions/tts-handler/index.ts
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY")!;
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+import { OPENAI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY } from "../_shared/config.ts";
 
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/audio/speech";
 const AUDIO_BUCKET = "ChatAudio";
@@ -95,5 +92,3 @@ serve(async (req) => {
     });
   }
 });
-
-console.log("[tts-handler] Edge function ready and listening for requests...");

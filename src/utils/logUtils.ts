@@ -1,3 +1,4 @@
+
 /**
  * Simple logger utility that controls logging output based on environment
  * and provides different log levels
@@ -11,6 +12,7 @@ interface LogConfig {
   level: LogLevel;
   components: {
     ReportForm: boolean;
+    SuccessScreen: boolean;
     orchestrator: boolean;
     [key: string]: boolean;
   };
@@ -22,6 +24,7 @@ const defaultConfig: LogConfig = {
   level: 'info',
   components: {
     ReportForm: process.env.NODE_ENV === 'development', // Enable ReportForm logs only in development
+    SuccessScreen: false, // Disable verbose SuccessScreen logs
     orchestrator: true, // Keep orchestrator logs for debugging
     swissFormatter: false, // Disable verbose Swiss formatter logs
     pricing: false, // Disable verbose pricing logs
@@ -100,6 +103,10 @@ export const logReportForm = (level: LogLevel, message: string, data?: any) => {
   log(level, message, data, 'ReportForm');
 };
 
+export const logSuccessScreen = (level: LogLevel, message: string, data?: any) => {
+  log(level, message, data, 'SuccessScreen');
+};
+
 export const logOrchestrator = (level: LogLevel, message: string, data?: any) => {
   log(level, message, data, 'orchestrator');
 };
@@ -110,6 +117,7 @@ export const enableVerboseLogging = () => {
     enabled: true,
     components: {
       ReportForm: true,
+      SuccessScreen: true,
       orchestrator: true,
       swissFormatter: true,
       pricing: true,
@@ -126,6 +134,7 @@ export const disableVerboseLogging = () => {
     enabled: true,
     components: {
       ReportForm: false,
+      SuccessScreen: false,
       orchestrator: true,
       swissFormatter: false,
       pricing: false,
@@ -149,7 +158,7 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
   // Add a simple toggle function for quick testing
   (window as any).toggleLogs = () => {
     const config = getLogConfig();
-    if (config.components.ReportForm) {
+    if (config.components.ReportForm || config.components.SuccessScreen) {
       disableVerboseLogging();
       console.log('🔇 Verbose logs disabled. Run toggleLogs() again to enable.');
     } else {

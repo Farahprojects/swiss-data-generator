@@ -1,12 +1,17 @@
 // src/features/chat/ChatInput.tsx
 import React, { useState } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
-import { Mic, X } from 'lucide-react';
-import { useChatController } from './ChatController';
+import { Mic, AudioLines, X } from 'lucide-react';
+import { useChatStore } from '@/core/store';
+import { chatController } from './ChatController';
+import { useConversationUIStore } from './conversation-ui-store';
 import { useChatTextMicrophone } from '@/hooks/microphone/useChatTextMicrophone';
 
 export const ChatInput = () => {
   const [text, setText] = useState('');
+  const status = useChatStore((state) => state.status);
+  const [isMuted, setIsMuted] = useState(false);
+  const { isConversationOpen, openConversation, closeConversation } = useConversationUIStore();
 
   // Handle transcript ready - add to text area
   const handleTranscriptReady = (transcript: string) => {
@@ -15,37 +20,38 @@ export const ChatInput = () => {
     setText(newText);
   };
 
-  // Handle silence detected - show processing state
-  const handleSilenceDetected = () => {
-    // Optional: could add a processing indicator here
-  };
-
-  const { isRecording: isMicRecording, isProcessing: isMicProcessing, toggleRecording: toggleMicRecording } = useChatTextMicrophone({
+  // PROFESSIONAL DOMAIN-SPECIFIC MICROPHONE
+  const { 
+    isRecording: isMicRecording, 
+    isProcessing: isMicProcessing, 
+    toggleRecording: toggleMicRecording 
+  } = useChatTextMicrophone({
     onTranscriptReady: handleTranscriptReady,
-    onSilenceDetected: handleSilenceDetected
+    silenceTimeoutMs: 2000
   });
 
-  const { sendTextMessage } = useChatController();
-  
   const handleSend = () => {
     if (text.trim()) {
-      sendTextMessage(text);
+      chatController.sendTextMessage(text);
       setText('');
     }
   };
 
-  // const handleSpeakerClick = () => {
-  //   if (!isConversationOpen) {
-  //     openConversation();
-  //     chatController.startTurn();
-  //     return;
-  //   }
-  //   if (status === 'recording') {
-  //     chatController.endTurn();
-  //   } else {
-  //     closeConversation();
-  //   }
-  // };
+  const handleSpeakerClick = () => {
+    if (!isConversationOpen) {
+      openConversation();
+      chatController.startTurn();
+      return;
+    }
+    if (status === 'recording') {
+      chatController.endTurn();
+    } else {
+      // Cancel any active conversation and close
+      console.log('[ChatInput] Closing conversation - resetting conversation service');
+      chatController.resetConversationService();
+      closeConversation();
+    }
+  };
 
   const isRecording = status === 'recording';
 
@@ -57,7 +63,7 @@ export const ChatInput = () => {
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Share your thoughts..."
-            className="w-full px-4 py-2.5 pr-12 text-base font-light bg-white border-2 border-black rounded-3xl focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-black resize-none text-black placeholder-gray-500 overflow-y-auto"
+            className="w-full px-4 py-2.5 pr-24 text-base font-light bg-white border-2 border-black rounded-3xl focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-black resize-none text-black placeholder-gray-500 overflow-y-auto"
             maxRows={4}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
@@ -66,7 +72,13 @@ export const ChatInput = () => {
               }
             }}
           />
-          <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex gap-1">
+            <button 
+              className="p-2 text-gray-500 hover:text-gray-900 transition-colors"
+              onClick={handleSpeakerClick}
+            >
+              <AudioLines size={18} className={isRecording ? 'text-red-500' : ''} />
+            </button>
             <button 
               className="p-2 text-gray-500 hover:text-gray-900 transition-all duration-200 ease-in-out"
               onClick={toggleMicRecording}

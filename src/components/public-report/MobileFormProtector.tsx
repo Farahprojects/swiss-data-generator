@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { scrollLockDebugger } from '@/utils/scrollLockDebugger';
 
 interface MobileFormProtectorProps {
   children: React.ReactNode;
@@ -28,21 +27,11 @@ const MobileFormProtector: React.FC<MobileFormProtectorProps> = ({ children, isO
 
     const preventBodyScroll = () => {
       // Only prevent body scroll, don't fix position
-      scrollLockDebugger.registerLock('MobileFormProtector');
       document.body.style.overflow = 'hidden';
     };
 
     const restoreBodyScroll = () => {
       document.body.style.overflow = '';
-      scrollLockDebugger.unregisterLock('MobileFormProtector');
-      
-      // Force cleanup if styles are still stuck
-      setTimeout(() => {
-        if (document.body.style.overflow === 'hidden') {
-          console.warn('[MobileFormProtector] Scroll lock cleanup may have failed, forcing reset');
-          document.body.style.overflow = '';
-        }
-      }, 100);
     };
 
     const lockViewport = () => {

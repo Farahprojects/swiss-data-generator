@@ -1,42 +1,41 @@
-import React, { Suspense, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
+import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
 import { useChatStore } from '@/core/store';
 import { ConversationOverlay } from './ConversationOverlay/ConversationOverlay';
 import { Menu } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { ChatSidebarControls } from './ChatSidebarControls';
-import { getSessionIds } from '@/services/auth/sessionIds';
+import { getChatTokens } from '@/services/auth/chatTokens';
 import { startReportReadyListener, stopReportReadyListener } from '@/services/report/reportReadyListener';
 import { MotionConfig } from 'framer-motion';
 import { useConversationUIStore } from './conversation-ui-store';
 
 export const ChatBox = () => {
   const { error } = useChatStore();
-  const lastMessageId = useChatStore((state) => state.lastMessageId);
+  const messages = useChatStore((state) => state.messages);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { guestId } = getSessionIds();
+  const { uuid } = getChatTokens();
   const isConversationOpen = useConversationUIStore((s) => s.isConversationOpen);
 
   useEffect(() => {
-    if (guestId) {
-      startReportReadyListener(guestId);
+    if (uuid) {
+      startReportReadyListener(uuid);
     }
 
-    // Cleanup listener on unmount or guestId change
+    // Cleanup listener on unmount or uuid change
     return () => {
-      if (guestId) {
-        stopReportReadyListener(guestId);
+      if (uuid) {
+        stopReportReadyListener(uuid);
       }
     };
-  }, [guestId]);
+  }, [uuid]);
 
   useEffect(() => {
-    if (lastMessageId) {
-      if (scrollRef.current) {
-        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-      }
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [lastMessageId]);
+  }, [messages]);
 
   return (
     <>
@@ -72,7 +71,7 @@ export const ChatBox = () => {
 
           {/* Message List */}
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-6">
-            {/* MessageList component removed */}
+            <MessageList />
           </div>
 
           {/* Footer Area */}
@@ -87,8 +86,8 @@ export const ChatBox = () => {
             </div>
           </div>
 
-          {/* Conversation Overlay - Temporarily commented out for diagnostics */}
-          {/* <ConversationOverlay /> */}
+          {/* Conversation Overlay */}
+          <ConversationOverlay />
         </div>
       </div>
       </MotionConfig>

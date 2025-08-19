@@ -104,7 +104,6 @@ serve(async (req) => {
     console.log('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Confidence score:', confidence);
     
     // Handle empty transcription results - return empty transcript instead of error
-// Reinstating edge function
     if (!transcript || transcript.trim().length === 0) {
       console.warn('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Empty transcript from Google API - audio may be unclear or silent');
       console.log('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Returning empty transcript for conversation mode to continue gracefully');
@@ -133,7 +132,7 @@ serve(async (req) => {
         const { data: savedMessage, error: saveError } = await supabaseAdmin
           .from('messages')
           .insert({
-            chat_id: conversationId, // conversationId is actually the chat_id
+            conversation_id: conversationId,
             role: 'user',
             text: transcript,
             meta: meta || { stt_provider: 'google' }

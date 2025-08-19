@@ -7,6 +7,7 @@ interface StripeSuccessState {
   sessionId: string | null;
   status: string | null;
   isProcessing: boolean;
+  showOriginalSuccessScreen: boolean;
 }
 
 interface StripeSuccessContextType {
@@ -36,8 +37,11 @@ export const StripeSuccessProvider: React.FC<StripeSuccessProviderProps> = ({ ch
     guestId: null,
     sessionId: null,
     status: null,
-    isProcessing: false
+    isProcessing: false,
+    showOriginalSuccessScreen: false
   });
+
+
 
   const clearStripeSuccess = () => {
     log('info', '🔄 Clearing Stripe success state', null, 'stripeSuccess');
@@ -46,16 +50,18 @@ export const StripeSuccessProvider: React.FC<StripeSuccessProviderProps> = ({ ch
       guestId: null,
       sessionId: null,
       status: null,
-      isProcessing: false
+      isProcessing: false,
+      showOriginalSuccessScreen: false
     });
   };
 
   const proceedToReport = () => {
-    log('info', '🔄 Proceeding to report', { guestId: stripeSuccess.guestId }, 'stripeSuccess');
+    log('info', '🔄 Proceeding to original success screen', { guestId: stripeSuccess.guestId }, 'stripeSuccess');
     setStripeSuccess(prev => ({
       ...prev,
       showSuccessModal: false,
-      isProcessing: false
+      isProcessing: false,
+      showOriginalSuccessScreen: true
     }));
   };
 
@@ -69,4 +75,4 @@ export const StripeSuccessProvider: React.FC<StripeSuccessProviderProps> = ({ ch
       {children}
     </StripeSuccessContext.Provider>
   );
-};
+}; 

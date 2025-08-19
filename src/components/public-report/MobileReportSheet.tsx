@@ -13,12 +13,11 @@ import { ReportFormData } from '@/types/public-report';
 import { supabase } from '@/integrations/supabase/client';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { usePricing } from '@/contexts/PricingContext';
-import { scrollLockDebugger } from '@/utils/scrollLockDebugger';
 
 interface MobileReportSheetProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onReportCreated?: (guestReportId: string, paymentStatus: string, name: string, email: string, chatId: string) => void;
+  onReportCreated?: (guestReportId: string, paymentStatus: string, name: string, email: string) => void;
 }
 
 const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenChange, onReportCreated }) => {
@@ -106,7 +105,6 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
       }
       
       const guestReportId = data?.guestReportId || null;
-      const chatId = data?.chatId || null;
       const paymentStatus = data?.paymentStatus || 'pending';
       const name = data?.name || '';
       const email = data?.email || '';
@@ -117,9 +115,9 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
         return; // Redirecting, so no need to proceed
       }
 
-      if (guestReportId && chatId) {
+      if (guestReportId) {
         onOpenChange(false);
-        onReportCreated?.(guestReportId, paymentStatus, name, email, chatId);
+        onReportCreated?.(guestReportId, paymentStatus, name, email);
       } else {
         console.error('❌ [MOBILE] Invalid response from server:', data);
       }
@@ -207,10 +205,6 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
   const footerRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (!isOpen) return;
-    
-    // Register scroll lock for debugging
-    scrollLockDebugger.registerLock('MobileReportSheet');
-    
     const html = document.documentElement;
     const body = document.body;
     const prevHtmlOverflow = html.style.overflow;
@@ -261,25 +255,11 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
       document.documentElement.style.removeProperty('--footer-h');
       window.removeEventListener('resize', onResize);
       document.removeEventListener('focusin', onFocusIn);
-      
-      // Improved scroll lock cleanup
       if (scrollLockCount.current > 0) scrollLockCount.current -= 1;
       if (scrollLockCount.current === 0) {
         html.style.overflow = prevHtmlOverflow;
         body.style.overflow = prevBodyOverflow;
       }
-      
-      // Unregister scroll lock for debugging
-      scrollLockDebugger.unregisterLock('MobileReportSheet');
-      
-      // Force cleanup if styles are still stuck
-      setTimeout(() => {
-        if (html.style.overflow === 'hidden' && body.style.overflow === 'hidden') {
-          console.warn('[MobileReportSheet] Scroll lock cleanup may have failed, forcing reset');
-          html.style.overflow = '';
-          body.style.overflow = '';
-        }
-      }, 100);
     };
   }, [isOpen]);
 

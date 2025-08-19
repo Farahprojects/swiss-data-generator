@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Message } from './types';
+import { Conversation, Message } from './types';
 
 export type ChatStatus =
   | 'idle'
@@ -11,57 +11,50 @@ export type ChatStatus =
 
 interface ChatState {
   conversationId: string | null;
+  messages: Message[];
   status: ChatStatus;
   error: string | null;
-  messages: Message[]; // Master list of all messages
+  ttsProvider?: 'google' | 'openai';
+  ttsVoice?: string;
 
-  startConversation: (id: string, initialMessages: Message[]) => void;
+  startConversation: (id: string) => void;
+  loadMessages: (messages: Message[]) => void;
   addMessage: (message: Message) => void;
-  updateAssistantMessage: (id: string, textDelta: string) => void;
-  endStreaming: (tempId: string, finalId: string) => void;
+  updateMessage: (id: string, updates: Partial<Message>) => void;
   setStatus: (status: ChatStatus) => void;
   setError: (error: string | null) => void;
+  setTtsProvider: (p: 'google' | 'openai') => void;
+  setTtsVoice: (v: string) => void;
   clearChat: () => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
   conversationId: null,
+  messages: [],
   status: 'idle',
   error: null,
-  messages: [],
+  ttsProvider: 'google',
+  ttsVoice: 'en-US-Studio-O',
 
-  startConversation: (id, initialMessages) => set({ 
-    conversationId: id, 
-    messages: initialMessages,
-    status: 'idle', 
-    error: null 
-  }),
-  
-  addMessage: (message) => set((state) => ({
-    messages: [...state.messages, message]
-  })),
+  startConversation: (id) => set({ conversationId: id, messages: [], status: 'idle', error: null }),
 
-  updateAssistantMessage: (id, textDelta) => set((state) => ({
-    messages: state.messages.map(m => 
-      m.id === id ? { ...m, text: m.text + textDelta } : m
-    )
-  })),
+  loadMessages: (messages) => set({ messages }),
 
-  endStreaming: (tempId, finalId) => set((state) => ({
-    messages: state.messages.map(m => 
-      m.id === tempId ? { ...m, id: finalId, status: 'complete' } : m
-    ),
-    status: 'idle'
-  })),
+  addMessage: (message) => set((state) => ({ messages: [...state.messages, message] })),
+
+  updateMessage: (id, updates) =>
+    set((state) => ({
+      messages: state.messages.map((msg) =>
+        msg.id === id ? { ...msg, ...updates } : msg
+      ),
+    })),
 
   setStatus: (status) => set({ status }),
   
   setError: (error) => set({ error, status: error ? 'error' : get().status }),
 
-  clearChat: () => set({ 
-    conversationId: null, 
-    messages: [], 
-    status: 'idle', 
-    error: null 
-  }),
+  setTtsProvider: (p) => set({ ttsProvider: p }),
+  setTtsVoice: (v) => set({ ttsVoice: v }),
+
+  clearChat: () => set({ conversationId: null, messages: [], status: 'idle', error: null }),
 }));

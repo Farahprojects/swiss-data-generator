@@ -14,12 +14,11 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import MobileReportSheet from '@/components/public-report/MobileReportSheet';
 import ReportFlowChecker from '@/components/public-report/ReportFlowChecker';
 // SuccessScreen removed in new flow
-import { setSessionIds } from '@/services/auth/sessionIds';
+import { setChatTokens } from '@/services/auth/chatTokens';
 import { PricingProvider } from '@/contexts/PricingContext';
 import { ReportModalProvider } from '@/contexts/ReportModalContext';
 import { CancelNudgeModal } from '@/components/public-report/CancelNudgeModal';
 import { shouldShowCancelNudge } from '@/utils/cancelNudgeStorage';
-import { scrollLockDebugger } from '@/utils/scrollLockDebugger';
 
 const PublicReport = () => {
   const location = useLocation();
@@ -29,38 +28,11 @@ const PublicReport = () => {
   const [showCancelNudge, setShowCancelNudge] = useState(false);
   const [cancelNudgeGuestId, setCancelNudgeGuestId] = useState<string>('');
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
-  const [activeGuest, setActiveGuest] = useState<{ guestId: string; name: string; email: string; chatId?: string; isStripeReturn?: boolean } | null>(null);
+  const [activeGuest, setActiveGuest] = useState<{ guestId: string; name: string; email: string; isStripeReturn?: boolean } | null>(null);
   const [isReportProcessing, setIsReportProcessing] = useState(false);
   const [isReportReady, setIsReportReady] = useState(false);
   // paidGuest overlay removed in new flow
   
-  // Cleanup scroll locks on unmount or when issues are detected
-  useEffect(() => {
-    // Check for stuck scroll locks periodically
-    const checkScrollLocks = () => {
-      if (scrollLockDebugger.isScrollLocked()) {
-        const state = scrollLockDebugger.getState();
-        if (state.lockSources.length === 0) {
-          console.warn('[PublicReport] Detected stuck scroll lock with no registered sources, forcing reset');
-          scrollLockDebugger.forceReset();
-        }
-      }
-    };
-
-    // Check immediately and then every 5 seconds
-    checkScrollLocks();
-    const interval = setInterval(checkScrollLocks, 5000);
-
-    return () => {
-      clearInterval(interval);
-      // Force reset on unmount to ensure clean state
-      if (scrollLockDebugger.isScrollLocked()) {
-        console.log('[PublicReport] Component unmounting, resetting any remaining scroll locks');
-        scrollLockDebugger.forceReset();
-      }
-    };
-  }, []);
-
   // Effect to detect and handle Stripe return
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -99,9 +71,9 @@ const PublicReport = () => {
     }
   }, []); // Run only once on component mount
 
-  const handleReportCreated = (guestId: string, _paymentStatus: 'paid' | 'pending', name: string, email: string, chatId?: string) => {
+  const handleReportCreated = (guestId: string, _paymentStatus: 'paid' | 'pending', name: string, email: string) => {
     // Always use the checker to authoritatively verify status and handle the next step.
-    setActiveGuest({ guestId, name, email, chatId, isStripeReturn: false });
+    setActiveGuest({ guestId, name, email, isStripeReturn: false });
   };
 
   const reportFormRef = useRef<HTMLDivElement>(null);
@@ -200,7 +172,7 @@ const PublicReport = () => {
             />
 
             {/* Animated header with logo */}
-            <header className={`absolute top-0 left-0 z-40 p-6 transition-opacity duration-500 ease-out ${
+            <header className={`fixed top-0 left-0 z-50 p-6 transition-opacity duration-500 ease-out ${
               showHeader ? 'opacity-100' : 'opacity-0'
             }`}>
               <div>
@@ -409,8 +381,8 @@ const PublicReport = () => {
             <TestsSection />
             {!isMobile && (
               <div id="report-form" ref={reportFormRef}>
-                <ReportForm onReportCreated={({ guestReportId, name, email, paymentStatus, chatId }) => {
-                  handleReportCreated(guestReportId, paymentStatus as ('paid' | 'pending'), name, email, chatId);
+                <ReportForm onReportCreated={({ guestReportId, name, email, paymentStatus }) => {
+                  handleReportCreated(guestReportId, paymentStatus as ('paid' | 'pending'), name, email);
                 }} />
               </div>
             )}
@@ -439,8 +411,8 @@ const PublicReport = () => {
             <MobileReportSheet
               isOpen={isMobileDrawerOpen}
               onOpenChange={setIsMobileDrawerOpen}
-              onReportCreated={(guestReportId, paymentStatus, name, email, chatId) => {
-                handleReportCreated(guestReportId, paymentStatus as ('paid' | 'pending'), name, email, chatId);
+              onReportCreated={(guestReportId, paymentStatus, name, email) => {
+                handleReportCreated(guestReportId, paymentStatus as ('paid' | 'pending'), name, email);
                 setIsMobileDrawerOpen(false); // Close the sheet on submit
               }}
             />
@@ -490,11 +462,7 @@ const PublicReport = () => {
                     onClick={() => {
                       if (activeGuest) {
                         console.log('[PublicReport] Setting chat tokens with guest ID:', activeGuest.guestId);
-                        if (!activeGuest.chatId) {
-                          console.error('[PublicReport] Missing chatId for guest:', activeGuest.guestId);
-                          return;
-                        }
-                        setSessionIds(activeGuest.guestId, activeGuest.chatId);
+                        setChatTokens(activeGuest.guestId, '');
                         console.log('[PublicReport] Chat tokens set, navigating to chat');
                         setActiveGuest(null);
                         setIsReportReady(false);
@@ -518,20 +486,7 @@ const PublicReport = () => {
                 onPaid={(paidData) => {
                   // Payment confirmed, navigate to chat immediately - let chat page handle report polling
                   console.log('[PublicReport] Payment confirmed, navigating to chat:', paidData.guestId);
-                  console.log('[PublicReport] Processing paid guest data:', { 
-                    guestId: paidData.guestId,
-                    chatId: activeGuest?.chatId,
-                    activeGuest
-                  });
-
-                  if (!activeGuest?.chatId) {
-                    console.error('[PublicReport] Missing chatId for paid guest:', paidData.guestId);
-                    return;
-                  }
-
-                  // Store both IDs in session
-                  setSessionIds(paidData.guestId, activeGuest.chatId);
-
+                  setChatTokens(paidData.guestId, '');
                   setActiveGuest(null);
                   navigate('/chat');
                 }}

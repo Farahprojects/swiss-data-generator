@@ -7,7 +7,7 @@ export const appendMessage = async (message: Omit<Message, 'id' | 'createdAt'>):
   const { data, error } = await supabase
     .from('messages')
     .insert({
-      chat_id: conversationId, // conversationId is actually the chat_id
+      conversation_id: conversationId,
       ...rest
     })
     .select()
@@ -29,11 +29,11 @@ export const updateMessage = async (id: string, updates: Partial<Message>): Prom
   return data as Message;
 };
 
-export const getMessagesForConversation = async (chatId: string): Promise<Message[]> => {
+export const getMessagesForConversation = async (conversationId: string): Promise<Message[]> => {
   const { data, error } = await supabase
     .from('messages')
     .select('*')
-    .eq('chat_id', chatId)
+    .eq('conversation_id', conversationId)
     .order('created_at', { ascending: true });
 
   if (error) throw new Error(error.message);
@@ -43,7 +43,7 @@ export const getMessagesForConversation = async (chatId: string): Promise<Messag
     .filter(msg => msg.meta?.type !== 'context_injection')
     .map(msg => ({
       id: msg.id,
-      conversationId: msg.chat_id, // Keep the interface consistent
+      conversationId: msg.conversation_id,
       role: msg.role,
       text: msg.text,
       audioUrl: msg.audio_url,
@@ -52,5 +52,3 @@ export const getMessagesForConversation = async (chatId: string): Promise<Messag
       meta: msg.meta
     }));
 };
-
-
