@@ -1,7 +1,6 @@
 // src/features/chat/useChat.ts
 import { useEffect } from 'react';
 import { useChatStore } from '@/core/store';
-import { chatController } from './ChatController';
 import { getSessionIds } from '@/services/auth/sessionIds';
 
 export const useChat = (conversationId?: string, guestId?: string) => {
@@ -31,14 +30,10 @@ export const useChat = (conversationId?: string, guestId?: string) => {
     try { ss?.setItem(MESSAGE_IDS_KEY, JSON.stringify([])); } catch (_e) {}
     
     // Use chatId as the conversation key for message loading
-    chatController.initializeConversation(chatId);
+    state.startConversation(chatId);
   }, [conversationId, guestId]);
 
   return {
     ...state,
-    startTurn: chatController.startTurn,
-    sendTextMessage: chatController.sendTextMessage,
-    endTurn: chatController.endTurn,
-    cancelTurn: chatController.cancelTurn,
   };
 };

@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { VoiceBubble } from './VoiceBubble';
 import { useChatStore } from '@/core/store';
-import { chatController } from '../ChatController';
 import { useConversationAudioLevel } from '@/hooks/useConversationAudioLevel';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -22,8 +21,7 @@ export const ConversationOverlay: React.FC = () => {
       audio.src = '';
     });
     
-    // Force reset conversation service (handles mic cleanup)
-    chatController.resetConversationService();
+    // Conversation reset is out of scope for current refactor; no-op for now
     
     // Close the UI
     closeConversation();
