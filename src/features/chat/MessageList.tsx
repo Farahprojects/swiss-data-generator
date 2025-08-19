@@ -5,12 +5,13 @@ import { useConversationUIStore } from './conversation-ui-store';
 import { TypewriterText } from '@/components/ui/TypewriterText';
 import { getMessagesForConversation } from '@/services/api/messages';
 import { getSessionIds } from '@/services/auth/sessionIds';
+import { useChatHistory } from '@/hooks/useChatHistory';
 
 const MessageItem = ({ message, isLast, isFromHistory }: { message: Message; isLast: boolean; isFromHistory?: boolean }) => {
   const isUser = message.role === 'user';
   const isConversationOpen = useConversationUIStore((state) => state.isConversationOpen);
   
-  // Skip animation for existing messages from history, if it's not the last message, or if conversation mode is active
+  // Animate only if it's the very last message, not from history, and conversation mode is off.
   const shouldAnimate = !isUser && isLast && !isFromHistory && !isConversationOpen;
 
   return (
@@ -37,48 +38,20 @@ const MessageItem = ({ message, isLast, isFromHistory }: { message: Message; isL
 };
 
 export const MessageList = () => {
-  const { chatId } = getSessionIds();
-  const { lastMessageId, streamingText, isStreaming } = useChatStore((state) => ({
-    lastMessageId: state.lastMessageId,
+  const { messages: historicalMessages, loading, error } = useChatHistory();
+  const { streamingText, isStreaming, lastMessageId } = useChatStore((state) => ({
     streamingText: state.streamingText,
-    isStreaming: state.isStreaming
+    isStreaming: state.isStreaming,
+    lastMessageId: state.lastMessageId,
   }));
+
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [initialMessageCount, setInitialMessageCount] = useState<number | null>(null);
-
-  // Effect to fetch messages from DB
-  useEffect(() => {
-    if (!chatId) {
-      setMessages([]);
-      return;
-    }
-
-    const fetchMessages = async () => {
-      setLoading(true);
-      try {
-        const fetchedMessages = await getMessagesForConversation(chatId);
-        setMessages(fetchedMessages);
-        
-        if (initialMessageCount === null && fetchedMessages.length > 0) {
-          setInitialMessageCount(fetchedMessages.length);
-        }
-      } catch (error) {
-        console.error('[MessageList] Error fetching messages:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchMessages();
-  }, [chatId, lastMessageId]);
-
+  
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages.length]);
+  }, [historicalMessages.length, streamingText]); // Scroll on new messages or new text
 
   if (loading) {
     return (
@@ -88,15 +61,23 @@ export const MessageList = () => {
     );
   }
 
-  const displayedMessages = [
-    ...messages,
+  if (error) {
+    return (
+      <div className="flex flex-col min-h-full justify-center items-center">
+        <div className="text-red-500">{error}</div>
+      </div>
+    );
+  }
+
+  const displayedMessages: Message[] = [
+    ...historicalMessages,
     ...(isStreaming ? [{
-      id: 'streaming',
+      id: 'streaming-message',
       role: 'assistant',
-      text: streamingText || '',
-      created_at: new Date().toISOString(),
+      text: streamingText,
+      createdAt: new Date().toISOString(),
       status: 'streaming'
-    } as Message] : [])
+    } as any] : [])
   ];
 
   return (
@@ -110,12 +91,15 @@ export const MessageList = () => {
       ) : (
         <div className="flex flex-col space-y-6">
           {displayedMessages.map((msg, index) => {
-            const isFromHistory = initialMessageCount !== null && index < initialMessageCount;
+            const isLastMessage = index === displayedMessages.length - 1;
+            // A message is "from history" if it's not the last one while we are streaming.
+            const isFromHistory = isStreaming ? !isLastMessage : false;
+
             return (
               <MessageItem 
                 key={msg.id} 
                 message={msg} 
-                isLast={index === displayedMessages.length - 1}
+                isLast={isLastMessage}
                 isFromHistory={isFromHistory}
               />
             );

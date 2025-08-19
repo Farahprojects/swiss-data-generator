@@ -1,11 +1,8 @@
 // src/screens/ReportChatScreen.tsx
 import React from 'react';
 import { Suspense } from 'react';
-import { useParams } from 'react-router-dom';
 import { ChatBox } from '@/features/chat/ChatBox';
-import { useChat } from '@/features/chat/useChat';
 import { MobileViewportLock } from '@/features/chat/MobileViewportLock';
-import { getSessionIds } from '@/services/auth/sessionIds';
 
 class ChatErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error?: any }>{
   constructor(props: { children: React.ReactNode }) {
@@ -27,12 +24,6 @@ class ChatErrorBoundary extends React.Component<{ children: React.ReactNode }, {
 }
 
 const ReportChatScreen = () => {
-  const { conversationId } = useParams<{ conversationId: string }>();
-  const { guestId } = getSessionIds();
-
-  // Always initialize chat - let ChatBox handle edge cases
-  useChat(conversationId, guestId || undefined);
-
   return (
     <Suspense fallback={null}>
       <MobileViewportLock active>

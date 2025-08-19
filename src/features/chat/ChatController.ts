@@ -3,6 +3,7 @@ import { LlmService } from '@/services/llm/llmService';
 import { useToast } from '@/hooks/use-toast';
 import { getSessionIds } from '@/services/auth/sessionIds';
 import { useCallback } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface UseChatControllerReturn {
   // Chat state
@@ -10,37 +11,49 @@ export interface UseChatControllerReturn {
   guestId: string | null;
   status: 'idle' | 'thinking' | 'error';
   lastMessageId: string | null;
+  messages: Message[]; // Expose messages from the store
   
   // Actions
-  initializeConversation: (chatId: string) => Promise<void>;
+  initializeConversation: (chatId: string, initialMessages: Message[]) => Promise<void>;
   sendTextMessage: (text: string) => Promise<void>;
 }
 
 export function useChatController(): UseChatControllerReturn {
   const { toast } = useToast();
   
-  // Get state from store
-  const { conversationId: chatId, status, lastMessageId, startConversation, setStatus, setLastMessageId } = useChatStore();
+  // Get state and actions from store
+  const { 
+    conversationId: chatId, 
+    status, 
+    lastMessageId, 
+    messages,
+    startConversation, 
+    addMessage,
+    updateAssistantMessage,
+    endStreaming,
+    setError,
+  } = useChatStore();
+  
   const { guestId } = getSessionIds();
   
   // Services
   const llmService = new LlmService();
 
-  // Initialize conversation
-  const initializeConversation = useCallback(async (newChatId: string) => {
+  // Initialize conversation with historical messages
+  const initializeConversation = useCallback(async (newChatId: string, initialMessages: Message[]) => {
     try {
-      startConversation(newChatId);
+      startConversation(newChatId, initialMessages);
       console.log('Conversation initialized with chatId:', newChatId);
     } catch (error) {
       console.error('Failed to initialize conversation:', error);
-      setStatus('error');
+      setError('Failed to initialize conversation');
       toast({
         title: "Initialization Error",
         description: "Failed to initialize conversation",
         variant: "destructive",
       });
     }
-  }, [startConversation, setStatus, toast]);
+  }, [startConversation, setError, toast]);
 
   // Send text message
   const sendTextMessage = useCallback(async (text: string) => {
@@ -53,11 +66,31 @@ export function useChatController(): UseChatControllerReturn {
       return;
     }
 
-    try {
-      const client_msg_id = crypto.randomUUID();
-      useChatStore.getState().startStreaming();
+    const client_msg_id = uuidv4();
+    const userMessage: Message = {
+      id: client_msg_id,
+      role: 'user',
+      text,
+      createdAt: new Date().toISOString(),
+      status: 'complete',
+    };
 
-      const abortController = await llmService.sendMessageStream({
+    // Optimistically add user message to the store
+    addMessage(userMessage);
+
+    // Prepare for streaming assistant message
+    const assistantMessageId = uuidv4();
+    const assistantMessage: Message = {
+      id: assistantMessageId,
+      role: 'assistant',
+      text: '',
+      createdAt: new Date().toISOString(),
+      status: 'streaming',
+    };
+    addMessage(assistantMessage);
+
+    try {
+      await llmService.sendMessageStream({
         chat_id: chatId,
         guest_id: guestId,
         text,
@@ -65,18 +98,16 @@ export function useChatController(): UseChatControllerReturn {
       }, 
       // Handle streaming deltas
       (delta) => {
-        useChatStore.getState().appendStreamingText(delta);
+        updateAssistantMessage(assistantMessageId, delta);
       },
       // Handle completion
       (response) => {
-        useChatStore.getState().endStreaming();
-        useChatStore.getState().setLastMessageId(response.assistant_message_id);
+        endStreaming(assistantMessageId, response.assistant_message_id);
       },
       // Handle errors
       (error) => {
         console.error('Stream error:', error);
-        useChatStore.getState().endStreaming();
-        useChatStore.getState().setError(error.message);
+        setError(error.message);
         toast({
           title: "Message Error",
           description: error.message,
@@ -86,15 +117,14 @@ export function useChatController(): UseChatControllerReturn {
 
     } catch (error) {
       console.error('Failed to send message:', error);
-      useChatStore.getState().endStreaming();
-      useChatStore.getState().setError('Failed to send message');
+      setError('Failed to send message');
       toast({
         title: "Message Error",
         description: "Failed to send message",
         variant: "destructive",
       });
     }
-  }, [chatId, guestId, toast]);
+  }, [chatId, guestId, toast, addMessage, updateAssistantMessage, endStreaming, setError]);
 
   return {
     // State
@@ -102,6 +132,7 @@ export function useChatController(): UseChatControllerReturn {
     guestId,
     status,
     lastMessageId,
+    messages,
     
     // Actions
     initializeConversation,

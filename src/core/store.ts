@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Conversation, Message } from './types';
+import { Message } from './types';
 
 export type ChatStatus =
   | 'idle'
@@ -13,85 +13,55 @@ interface ChatState {
   conversationId: string | null;
   status: ChatStatus;
   error: string | null;
-  
-  // Streaming state
-  isStreaming: boolean;
-  streamingText: string;
-  
-  // Lightweight view flags only - no message content stored
-  messageIds: string[];
-  lastMessageId: string | null;
+  messages: Message[]; // Master list of all messages
 
-  startConversation: (id: string) => void;
-  setMessageIds: (ids: string[]) => void;
-  addMessageId: (id: string) => void;
-  setLastMessageId: (id: string | null) => void;
+  startConversation: (id: string, initialMessages: Message[]) => void;
+  addMessage: (message: Message) => void;
+  updateAssistantMessage: (id: string, textDelta: string) => void;
+  endStreaming: (tempId: string, finalId: string) => void;
   setStatus: (status: ChatStatus) => void;
   setError: (error: string | null) => void;
-  
-  // Streaming actions
-  startStreaming: () => void;
-  appendStreamingText: (text: string) => void;
-  endStreaming: () => void;
-  
   clearChat: () => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
   conversationId: null,
-  messageIds: [],
-  lastMessageId: null,
   status: 'idle',
   error: null,
-  isStreaming: false,
-  streamingText: '',
+  messages: [],
 
-  startConversation: (id) => set({ 
+  startConversation: (id, initialMessages) => set({ 
     conversationId: id, 
-    messageIds: [], 
-    lastMessageId: null,
+    messages: initialMessages,
     status: 'idle', 
-    error: null,
-    isStreaming: false,
-    streamingText: ''
+    error: null 
   }),
-
-  setMessageIds: (ids) => set({ messageIds: ids }),
-
-  addMessageId: (id) => set((state) => ({ 
-    messageIds: [...state.messageIds, id],
-    lastMessageId: id
+  
+  addMessage: (message) => set((state) => ({
+    messages: [...state.messages, message]
   })),
 
-  setLastMessageId: (id) => set({ lastMessageId: id }),
+  updateAssistantMessage: (id, textDelta) => set((state) => ({
+    messages: state.messages.map(m => 
+      m.id === id ? { ...m, text: m.text + textDelta } : m
+    )
+  })),
+
+  endStreaming: (tempId, finalId) => set((state) => ({
+    messages: state.messages.map(m => 
+      m.id === tempId ? { ...m, id: finalId, status: 'complete' } : m
+    ),
+    status: 'idle'
+  })),
 
   setStatus: (status) => set({ status }),
   
   setError: (error) => set({ error, status: error ? 'error' : get().status }),
 
-  startStreaming: () => set({ 
-    isStreaming: true, 
-    streamingText: '',
-    status: 'thinking'
-  }),
-
-  appendStreamingText: (text) => set((state) => ({
-    streamingText: state.streamingText + text
-  })),
-
-  endStreaming: () => set({ 
-    isStreaming: false, 
-    streamingText: '',
-    status: 'idle'
-  }),
-
   clearChat: () => set({ 
     conversationId: null, 
-    messageIds: [], 
-    lastMessageId: null,
+    messages: [], 
     status: 'idle', 
-    error: null,
-    isStreaming: false,
-    streamingText: ''
+    error: null 
   }),
 }));
