@@ -74,7 +74,7 @@ export const ChatInput = () => {
           />
           <div className="absolute right-1 top-1/2 transform -translate-y-1/2 flex gap-1 items-center">
             <button 
-              className="p-2 text-gray-500 hover:text-gray-900 transition-all duration-200 ease-in-out"
+              className="w-8 h-8 text-gray-500 hover:text-gray-900 transition-all duration-200 ease-in-out flex items-center justify-center"
               onClick={toggleMicRecording}
               disabled={isMicProcessing}
               title={isMicRecording ? 'Stop recording' : 'Start voice recording'}
@@ -98,7 +98,7 @@ export const ChatInput = () => {
               className={`transition-colors ${
                 text.trim() 
                   ? 'w-8 h-8 bg-white border border-black rounded-full text-black hover:bg-gray-50 flex items-center justify-center' 
-                  : 'p-2 text-gray-500 hover:text-gray-900'
+                  : 'w-8 h-8 text-gray-500 hover:text-gray-900 flex items-center justify-center'
               }`}
               onClick={text.trim() ? handleSend : handleSpeakerClick}
             >
