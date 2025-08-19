@@ -1,5 +1,4 @@
 import React, { Suspense, useEffect, useRef } from 'react';
-import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
 import { useChatStore } from '@/core/store';
 import { ConversationOverlay } from './ConversationOverlay/ConversationOverlay';
@@ -73,7 +72,7 @@ export const ChatBox = () => {
 
           {/* Message List */}
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-6">
-            <MessageList />
+            {/* MessageList component removed */}
           </div>
 
           {/* Footer Area */}
