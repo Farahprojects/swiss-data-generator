@@ -38,7 +38,13 @@ const MessageItem = ({ message, isLast, isFromHistory }: { message: Message; isL
 };
 
 export const MessageList = () => {
-  const { messages: historicalMessages, loading, error } = useChatHistory();
+  // --- DIAGNOSTIC STEP ---
+  // Temporarily disable the history hook and use static data to isolate the crash source.
+  const historicalMessages: Message[] = [];
+  const loading = false;
+  const error = null;
+  // const { messages: historicalMessages, loading, error } = useChatHistory();
+  
   const { streamingText, isStreaming, lastMessageId } = useChatStore((state) => ({
     streamingText: state.streamingText,
     isStreaming: state.isStreaming,
