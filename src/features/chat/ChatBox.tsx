@@ -88,10 +88,8 @@ export const ChatBox = () => {
             </div>
           </div>
 
-          {/* Conversation Overlay (kept, but safely wrapped in Suspense) */}
-          <Suspense fallback={null}>
-            <ConversationOverlay />
-          </Suspense>
+          {/* Conversation Overlay - Temporarily commented out for diagnostics */}
+          {/* <ConversationOverlay /> */}
         </div>
       </div>
       </MotionConfig>
