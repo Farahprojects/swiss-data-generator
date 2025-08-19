@@ -1,7 +1,7 @@
 // src/features/chat/ChatInput.tsx
 import React, { useState } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
-import { Mic, AudioLines, X, Send } from 'lucide-react';
+import { Mic, AudioLines, X, ArrowRight } from 'lucide-react';
 import { useChatStore } from '@/core/store';
 import { chatController } from './ChatController';
 import { useConversationUIStore } from './conversation-ui-store';
@@ -95,11 +95,15 @@ export const ChatInput = () => {
               </div>
             </button>
             <button 
-              className="p-2 text-gray-500 hover:text-gray-900 transition-colors"
+              className={`p-2 transition-colors ${
+                text.trim() 
+                  ? 'bg-white border border-black rounded-full text-black hover:bg-gray-50' 
+                  : 'text-gray-500 hover:text-gray-900'
+              }`}
               onClick={text.trim() ? handleSend : handleSpeakerClick}
             >
               {text.trim() ? (
-                <Send size={18} className="text-gray-900" />
+                <ArrowRight size={18} className="text-black" />
               ) : (
                 <AudioLines size={18} className={isRecording ? 'text-red-500' : ''} />
               )}
