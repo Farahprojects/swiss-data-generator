@@ -6,6 +6,7 @@ import { useChatStore } from '@/core/store';
 import { chatController } from './ChatController';
 import { useConversationUIStore } from './conversation-ui-store';
 import { useChatTextMicrophone } from '@/hooks/microphone/useChatTextMicrophone';
+import { VoiceWaveform } from './VoiceWaveform';
 
 export const ChatInput = () => {
   const [text, setText] = useState('');
@@ -23,7 +24,8 @@ export const ChatInput = () => {
   // PROFESSIONAL DOMAIN-SPECIFIC MICROPHONE
   const { 
     isRecording: isMicRecording, 
-    isProcessing: isMicProcessing, 
+    isProcessing: isMicProcessing,
+    audioLevel,
     toggleRecording: toggleMicRecording 
   } = useChatTextMicrophone({
     onTranscriptReady: handleTranscriptReady,
@@ -59,19 +61,25 @@ export const ChatInput = () => {
     <div className="bg-white/80 backdrop-blur-lg border-t border-gray-100 p-2">
       <div className="flex items-end gap-2 max-w-4xl mx-auto">
         <div className="flex-1 relative">
-          <TextareaAutosize
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Share your thoughts..."
-            className="w-full px-4 py-2.5 pr-24 text-base font-light bg-white border-2 border-black rounded-3xl focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-black resize-none text-black placeholder-gray-500 overflow-y-auto"
-            maxRows={4}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-          />
+          {isMicRecording ? (
+            <div className="w-full h-[46px] flex items-center justify-center bg-white border-2 border-black rounded-3xl">
+              <VoiceWaveform audioLevel={audioLevel} />
+            </div>
+          ) : (
+            <TextareaAutosize
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Share your thoughts..."
+              className="w-full px-4 py-2.5 pr-24 text-base font-light bg-white border-2 border-black rounded-3xl focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-black resize-none text-black placeholder-gray-500 overflow-y-auto"
+              maxRows={4}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+            />
+          )}
           <div className="absolute right-1 inset-y-0 flex items-center gap-1" style={{ transform: 'translateY(-4px) translateX(2px)' }}>
             <button 
               className="w-8 h-8 text-gray-500 hover:text-gray-900 transition-all duration-200 ease-in-out flex items-center justify-center"
