@@ -68,7 +68,6 @@ function callEngineFireAndForget(engine: string, payload: ReportPayload): void {
     chartData: payload.chartData,
     is_guest: payload.is_guest,
     // Add any other fields that are explicitly needed by the engines
-    system_prompt_type: payload.system_prompt_type,
     selectedEngine: engine,
     engine_used: engine,
   };
@@ -109,45 +108,11 @@ serve(async (req) => {
     
     console.log(`[report-orchestrator] Processing request for report type: ${payload.report_type}`);
     
-    // Default system prompt type
-    let systemPromptType = 'adult';
-
-    // Age check for child-specific prompt
-    if (payload.is_guest && payload.user_id) {
-      try {
-        const { data: guestReport, error: guestError } = await sb
-          .from('guest_reports')
-          .select('report_data')
-          .eq('id', payload.user_id)
-          .single();
-
-        if (guestError) {
-          console.warn(`[report-orchestrator] Could not fetch guest report for age check:`, guestError.message);
-        } else if (guestReport?.report_data?.birthDate) {
-          const birthDate = new Date(guestReport.report_data.birthDate);
-          const today = new Date();
-          let age = today.getFullYear() - birthDate.getFullYear();
-          const m = today.getMonth() - birthDate.getMonth();
-          if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-            age--;
-          }
-          
-          if (age < 12) {
-            systemPromptType = 'child';
-            console.log(`[report-orchestrator] Child under 12 detected (age: ${age}). Using child prompt.`);
-          }
-        }
-      } catch (e) {
-        console.error(`[report-orchestrator] Error during age check:`, e.message);
-      }
-    }
-    
     // Step 1: Select next engine using DB-driven selection from report_logs
     const selectedEngine = await getNextEngine();
     
-    // Step 2: Call the engine (fire-and-forget), passing the system prompt type
-    const enginePayload = { ...payload, system_prompt_type: systemPromptType };
-    callEngineFireAndForget(selectedEngine, enginePayload);
+    // Step 2: Call the engine (fire-and-forget)
+    callEngineFireAndForget(selectedEngine, payload);
     
     // Return immediately - don't wait for engine response
     return new Response(JSON.stringify({ 

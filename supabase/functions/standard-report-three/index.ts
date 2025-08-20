@@ -310,7 +310,6 @@ serve(async (req) => {
     
     // Extract the report type from the payload (either reportType or report_type)
     const reportType = reportData.reportType || reportData.report_type || "standard";
-    const systemPromptType = reportData.system_prompt_type || 'adult'; // Default to 'adult'
     const selectedEngine = reportData.selectedEngine || "standard-report-three";
 
     // ✅ LOGGING: Initial request received
@@ -330,11 +329,8 @@ serve(async (req) => {
       );
     }
 
-    // Determine the prompt name based on the system_prompt_type
-    const promptName = systemPromptType === 'child' ? `${reportType}_child` : reportType;
-
     // Fetch the system prompt using the dynamic report type
-    const systemPrompt = await getSystemPrompt(promptName, requestId);
+    const systemPrompt = await getSystemPrompt(reportType, requestId);
 
     // Generate the report
     const { report, metadata } = await generateReport(systemPrompt, reportData, requestId);
