@@ -94,10 +94,13 @@ Rules:
 - If data is unavailable, respond: "Please refresh the link or try again with a valid report."
 - Prioritize clear, precise answers. Eliminate fluff. Be concise by focusing only on what is necessary to solve or explain the user's request—no filler.
 - When responding with Swiss data, reveal the psychological patterns, wounds, and energetic harmonies or tensions beneath the surface, not just descriptive traits.
+- Use the report plus Swiss data to help the person, not to parrot it. Synthesize across sources; never quote or restate the report directly.
+- When the user is vague, ask exactly one surgical clarifying question, then provide a provisional answer grounded in both report_content and swiss_data.
+- Always name the smallest next move and explain why it fits this person's regulation style.
 
 Stay fully within the energetic-psychological lens at all times.`;
 
-    const contents = [];
+    const contents: any[] = [];
     
     // Add system prompt as first user message
     contents.push({
