@@ -291,47 +291,44 @@ const PaymentStep = ({
               <div className="space-y-4">
                 <Collapsible open={showPromoCode} onOpenChange={setShowPromoCode}>
                   <CollapsibleTrigger asChild>
-                    <Button
+                    <button
                       type="button"
-                      variant="outline"
-                      className="w-full justify-between text-left font-normal"
+                      className="w-full bg-gray-100 text-gray-700 px-6 py-2.5 rounded-xl text-sm font-light hover:bg-gray-200 transition-all duration-300 flex items-center justify-center"
                     >
-                      <span className="flex items-center gap-2">
-                        <Tag className="h-4 w-4" />
-                        Have a promo code?
-                      </span>
-                      <svg
-                        className={`h-4 w-4 transition-transform ${showPromoCode ? 'rotate-180' : ''}`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </Button>
+                      <Tag className="h-4 w-4 mr-2" />
+                      <span>Have a promo code?</span>
+                    </button>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="space-y-4 pt-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="promoCode" className="text-sm font-medium text-gray-700">
-                        Promo Code
-                      </Label>
-                      <div className="flex gap-2">
-                        <Input
-                          id="promoCode"
-                          {...register('promoCode')}
-                          placeholder="Enter promo code"
-                          className="flex-1"
-                          disabled={isValidatingPromo}
-                        />
-                        {isValidatingPromo && (
-                          <div className="flex items-center justify-center w-10">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          </div>
-                        )}
+                  <CollapsibleContent className="mt-4">
+                    <div className="space-y-4">
+                      <div className="space-y-3">
+                        <Label htmlFor="promoCode" className="text-base font-light text-gray-700">Promo Code</Label>
+                        
+                        <div className="relative">
+                          <Input
+                            id="promoCode"
+                            {...register('promoCode')}
+                            placeholder="Enter promo code"
+                            className={`h-12 rounded-xl text-base font-light border-gray-200 focus:border-gray-400 transition-all duration-200 ${
+                              promoError ? 'border-red-400 ring-1 ring-red-400' : ''
+                            }`}
+                            disabled={isValidatingPromo}
+                          />
+                          
+                          {isValidatingPromo && (
+                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            </div>
+                          )}
+                          
+                          {/* Clean text error message */}
+                          {promoError && (
+                            <p className="mt-2 text-sm text-red-600 font-light leading-relaxed">
+                              {promoError}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      {promoError && (
-                        <p className="text-sm text-red-600">{promoError}</p>
-                      )}
                     </div>
                   </CollapsibleContent>
                 </Collapsible>
