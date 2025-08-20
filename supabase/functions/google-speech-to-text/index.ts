@@ -148,10 +148,10 @@ serve(async (req) => {
       }
     }
 
-    // After saving, trigger the llm-handler to get an immediate AI response
+    // Only trigger LLM for conversation mode, not for mic icon
     let assistantMessage = null;
-    if (chat_id && transcript && transcript.trim().length > 0) {
-      console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Triggering llm-handler`);
+    if (chat_id && transcript && transcript.trim().length > 0 && meta?.conversation_mode) {
+      console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Triggering llm-handler for conversation mode`);
       try {
         const llmResponse = await fetch(`${SUPABASE_URL}/functions/v1/llm-handler`, {
           method: 'POST',
@@ -172,6 +172,8 @@ serve(async (req) => {
       } catch (llmError) {
         console.error(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Error calling llm-handler:`, llmError);
       }
+    } else if (chat_id && transcript && transcript.trim().length > 0) {
+      console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Mic icon mode - returning transcript only`);
     }
 
     return new Response(
