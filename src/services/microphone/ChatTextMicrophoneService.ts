@@ -32,7 +32,6 @@ class ChatTextMicrophoneServiceClass {
   
   private options: ChatTextMicrophoneOptions = {};
   private listeners = new Set<() => void>();
-  private debugListeners = new Set<(data: any) => void>();
 
   /**
    * INITIALIZE - Set up service with options
@@ -40,14 +39,6 @@ class ChatTextMicrophoneServiceClass {
   initialize(options: ChatTextMicrophoneOptions): void {
     this.log('🔧 Initializing service with options', options);
     this.options = options;
-  }
-
-  /**
-   * DEBUG - Subscribe to debug data
-   */
-  subscribeToDebug(listener: (data: any) => void): () => void {
-    this.debugListeners.add(listener);
-    return () => this.debugListeners.delete(listener);
   }
 
   /**
@@ -72,7 +63,7 @@ class ChatTextMicrophoneServiceClass {
           echoCancellation: true,    // Clean input
           noiseSuppression: true,    // Remove background noise
           autoGainControl: true,     // Consistent levels
-          sampleRate: 48000,         // Match MediaRecorder output
+          sampleRate: 48000,         // High quality
         }
       });
 
@@ -88,10 +79,10 @@ class ChatTextMicrophoneServiceClass {
       this.mediaStreamSource.connect(this.analyser);
       // reduced detailed analyser config logging
 
-      // Set up MediaRecorder - optimized for 16kHz STT
+      // Set up MediaRecorder - simple and clean
       this.mediaRecorder = new MediaRecorder(this.stream, {
         mimeType: 'audio/webm;codecs=opus',
-        audioBitsPerSecond: 128000  // Standard bitrate for 48kHz
+        audioBitsPerSecond: 128000
       });
 
       this.audioChunks = [];
@@ -250,15 +241,6 @@ class ChatTextMicrophoneServiceClass {
       // Simple, professional approach - let MediaRecorder handle the format
       const finalBlob = new Blob(this.audioChunks, { type: 'audio/webm;codecs=opus' });
       this.log('🔄 Processing clean audio', { finalBlobSize: finalBlob.size });
-      
-      // Capture debug data
-      const debugData = {
-        sampleRate: this.stream?.getAudioTracks()[0]?.getSettings()?.sampleRate || 0,
-        payloadSizeKB: finalBlob.size / 1024,
-        startTime: Date.now(),
-        timestamp: new Date().toISOString()
-      };
-      
       // minimal
       
       // Convert to base64
@@ -277,7 +259,7 @@ class ChatTextMicrophoneServiceClass {
                 sampleRateHertz: 48000,
                 languageCode: 'en-US',
                 enableAutomaticPunctuation: true,
-                model: 'latest_short'
+                model: 'latest_long'
               }
             }
           });
@@ -286,16 +268,6 @@ class ChatTextMicrophoneServiceClass {
           
           const transcript = data?.transcript || '';
           this.log('📝 Transcript received', { length: transcript.length });
-          
-          // Calculate latency and emit debug data
-          const latencyMs = Date.now() - debugData.startTime;
-          const finalDebugData = {
-            ...debugData,
-            latencyMs
-          };
-          
-          // Emit debug data to listeners
-          this.debugListeners.forEach(listener => listener(finalDebugData));
           
           if (this.options.onTranscriptReady && transcript) {
             this.options.onTranscriptReady(transcript);

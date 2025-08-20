@@ -57,7 +57,7 @@ serve(async (req) => {
       sampleRateHertz: 48000,
       languageCode: 'en-US',
       enableAutomaticPunctuation: true,
-      model: 'latest_short',
+      model: 'latest_long',
       useEnhanced: true,
       speechContexts: [{
         phrases: ["therapy", "session", "client", "feelings", "emotions", "breakthrough", "progress"],
@@ -190,17 +190,9 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[google-stt] Detailed error in google-speech-to-text function:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
-    });
+    console.error('Error in google-speech-to-text function:', error);
     return new Response(
-      JSON.stringify({ 
-        error: error.message,
-        details: error.stack,
-        timestamp: new Date().toISOString()
-      }),
+      JSON.stringify({ error: error.message }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -7,14 +7,12 @@ import { chatController } from './ChatController';
 import { useConversationUIStore } from './conversation-ui-store';
 import { useChatTextMicrophone } from '@/hooks/microphone/useChatTextMicrophone';
 import { VoiceWaveform } from './VoiceWaveform';
-import { SttDebugPopup } from '@/components/debug/SttDebugPopup';
 
 export const ChatInput = () => {
   const [text, setText] = useState('');
   const status = useChatStore((state) => state.status);
   const [isMuted, setIsMuted] = useState(false);
   const { isConversationOpen, openConversation, closeConversation } = useConversationUIStore();
-  const [debugData, setDebugData] = useState<any>(null);
 
   // Handle transcript ready - add to text area
   const handleTranscriptReady = (transcript: string) => {
@@ -28,22 +26,11 @@ export const ChatInput = () => {
     isRecording: isMicRecording, 
     isProcessing: isMicProcessing,
     audioLevel,
-    toggleRecording: toggleMicRecording,
-    service
+    toggleRecording: toggleMicRecording 
   } = useChatTextMicrophone({
     onTranscriptReady: handleTranscriptReady,
     silenceTimeoutMs: 2000
   });
-
-  // Subscribe to debug data
-  React.useEffect(() => {
-    if (service) {
-      const unsubscribe = service.subscribeToDebug((data) => {
-        setDebugData(data);
-      });
-      return unsubscribe;
-    }
-  }, [service]);
 
   const handleSend = () => {
     if (text.trim()) {
@@ -129,12 +116,6 @@ export const ChatInput = () => {
           Therai can make mistakes. Check important info.
         </p>
       </div>
-      
-      {/* Debug Popup */}
-      <SttDebugPopup 
-        data={debugData} 
-        onClose={() => setDebugData(null)} 
-      />
     </div>
   );
 };
