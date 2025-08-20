@@ -1,11 +1,8 @@
 
 import React from 'react';
 import { ReportRenderer } from '@/components/shared/ReportRenderer';
-import { IndividualAstroFormatter } from '@/components/astro-formatters/IndividualAstroFormatter';
-import { SynastryAstroFormatter } from '@/components/astro-formatters/SynastryAstroFormatter';
-import { MonthlyAstroFormatter } from '@/components/astro-formatters/MonthlyAstroFormatter';
 import { ReportData } from '@/utils/reportContentExtraction';
-import { getAstroReportType } from './AstroDataRenderer';
+import { AstroDataRenderer, getAstroReportType } from './AstroDataRenderer';
 
 interface ReportContentProps {
   reportData: ReportData;
@@ -26,16 +23,7 @@ export const ReportContent: React.FC<ReportContentProps> = ({
 
   const renderAstroContent = () => {
     if (!hasAstroContent) return null;
-
-    switch (astroReportType) {
-      case 'monthly':
-        return <MonthlyAstroFormatter swissData={reportData.swiss_data} reportData={reportData} />;
-      case 'synastry':
-        return <SynastryAstroFormatter swissData={reportData.swiss_data} reportData={reportData} />;
-      case 'individual':
-      default:
-        return <IndividualAstroFormatter swissData={reportData.swiss_data} reportData={reportData} />;
-    }
+    return <AstroDataRenderer swissData={reportData.swiss_data} reportData={reportData} />;
   };
 
   const renderContent = () => {
