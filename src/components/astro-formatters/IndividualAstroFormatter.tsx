@@ -34,7 +34,7 @@ export const IndividualAstroFormatter: React.FC<IndividualAstroFormatterProps> =
   const birthDate = reportData.guest_report?.report_data?.birthDate;
   
   return (
-    <div className={`font-inter max-w-4xl mx-auto py-8 ${className}`}>
+    <div className={`font-inter max-w-4xl mx-auto py-4 md:py-8 px-4 md:px-0 ${className}`}>
       <ChartHeader
         name={subject?.name || natal?.name || 'Unknown'}
         birthDate={birthDate}
@@ -43,7 +43,7 @@ export const IndividualAstroFormatter: React.FC<IndividualAstroFormatterProps> =
         longitude={subject?.lon}
       />
 
-      <div className="space-y-8 mt-8">
+      <div className="space-y-4 md:space-y-8 mt-4 md:mt-8">
         {natal && (
           <Card>
             <CardHeader>
@@ -51,7 +51,7 @@ export const IndividualAstroFormatter: React.FC<IndividualAstroFormatterProps> =
                 Natal Chart: Your Core Blueprint
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-8">
+            <CardContent className="space-y-4 md:space-y-8">
               <ChartAngles angles={natal.angles} />
               <HouseCusps houses={natal.houses} title="House Cusps" />
               <PlanetaryPositions planets={natal.planets} title="Natal Planetary Positions" />
@@ -67,7 +67,7 @@ export const IndividualAstroFormatter: React.FC<IndividualAstroFormatterProps> =
                 Current Transits: The Present Moment
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-8">
+            <CardContent className="space-y-4 md:space-y-8">
               <TransitMetadata transits={transits} />
               <PlanetaryPositions planets={transits.planets} title="Current Transit Positions" />
               <AspectTable aspects={transits.aspects_to_natal} title="Transit Aspects to Natal" />
