@@ -137,9 +137,9 @@ If the user is vague, ask exactly one clarifying question and then give a provis
     const latency_ms = Date.now() - startTime;
     console.log(`[llm-handler] Got response from Gemini in ${latency_ms}ms`);
 
-    // Save assistant message to database
-    console.log("[llm-handler] Saving assistant message to database");
-    const { data: savedMessage, error: saveError } = await supabase
+    // Save assistant message to database (fire-and-forget)
+    console.log("[llm-handler] Saving assistant message to database (fire-and-forget)");
+    supabase
       .from("messages")
       .insert({
         chat_id,
@@ -158,27 +158,29 @@ If the user is vague, ask exactly one clarifying question and then give a provis
           total_tokens: tokenCount
         },
       })
-      .select()
-      .single();
-
-    if (saveError) {
-      console.error("[llm-handler] Failed to save assistant message:", saveError);
-      return new Response(JSON.stringify({ error: "Failed to save response" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      .then(() => {
+        console.log("[llm-handler] Assistant message saved successfully");
+      })
+      .catch((error) => {
+        console.error("[llm-handler] Failed to save assistant message:", error);
+        // Don't fail the request, just log the error
       });
-    }
 
-    console.log("[llm-handler] Assistant message saved successfully");
-
-    // Return the saved message for immediate UI update
+    // Return the response immediately without waiting for database save
     return new Response(JSON.stringify({
-      id: savedMessage.id,
-      conversationId: savedMessage.chat_id, // Map for client compatibility
-      role: savedMessage.role,
-      text: savedMessage.text,
-      createdAt: savedMessage.created_at,
-      meta: savedMessage.meta,
+      id: `temp-${Date.now()}`, // Temporary ID since we don't have the saved message
+      conversationId: chat_id,
+      role: "assistant",
+      text: assistantText,
+      createdAt: new Date().toISOString(),
+      meta: { 
+        llm_provider: "google", 
+        model: "gemini-2.5-flash",
+        latency_ms,
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+        total_tokens: tokenCount
+      },
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
