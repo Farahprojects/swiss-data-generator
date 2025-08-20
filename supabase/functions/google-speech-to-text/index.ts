@@ -18,7 +18,7 @@ serve(async (req) => {
   }
 
   try {
-    const { audioData, config, traceId, chat_id, meta } = await req.json();
+    const { audioData, config, traceId, chat_id, meta, conversation_mode } = await req.json();
     
     // Comprehensive audio data validation
     if (!audioData) {
@@ -152,26 +152,62 @@ serve(async (req) => {
     let assistantMessage = null;
     if (chat_id && transcript && transcript.trim().length > 0) {
       console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Triggering llm-handler`);
-      try {
-        const llmResponse = await fetch(`${SUPABASE_URL}/functions/v1/llm-handler`, {
+      
+      const llmPayload = {
+        chat_id,
+        conversation_mode
+      };
+
+      if (conversation_mode) {
+        // Fire-and-forget for conversation mode, UI will connect via SSE
+        fetch(`${SUPABASE_URL}/functions/v1/llm-handler`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`
           },
-          body: JSON.stringify({ chat_id })
-        });
+          body: JSON.stringify(llmPayload)
+        }).catch(e => console.error('[google-stt] Non-blocking llm-handler call failed:', e));
+        
+        console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Fired non-blocking call to llm-handler`);
 
-        if (!llmResponse.ok) {
-          const errorText = await llmResponse.text();
-          console.error(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} llm-handler call failed:`, errorText);
-        } else {
-          assistantMessage = await llmResponse.json();
-          console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Received response from llm-handler`);
+      } else {
+        // Standard blocking call for non-conversation mode
+        try {
+          const llmResponse = await fetch(`${SUPABASE_URL}/functions/v1/llm-handler`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`
+            },
+            body: JSON.stringify(llmPayload)
+          });
+  
+          if (!llmResponse.ok) {
+            const errorText = await llmResponse.text();
+            console.error(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} llm-handler call failed:`, errorText);
+          } else {
+            assistantMessage = await llmResponse.json();
+            console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Received response from llm-handler`);
+          }
+        } catch (llmError) {
+          console.error(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Error calling llm-handler:`, llmError);
         }
-      } catch (llmError) {
-        console.error(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Error calling llm-handler:`, llmError);
       }
+    }
+
+    // For conversation mode, we send a specific response so the client knows to open an SSE connection
+    if (conversation_mode) {
+      return new Response(
+        JSON.stringify({ 
+          status: 'pending_sse',
+          transcript,
+          confidence
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
     }
 
     return new Response(
