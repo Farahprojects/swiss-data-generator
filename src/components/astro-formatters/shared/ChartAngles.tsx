@@ -36,8 +36,7 @@ export const ChartAngles: React.FC<ChartAnglesProps> = ({
         {title}
       </h2>
       
-      {/* Desktop Table */}
-      <div className="hidden md:block max-w-2xl mx-auto">
+      <div className="max-w-2xl mx-auto">
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-b border-gray-200">
@@ -58,26 +57,6 @@ export const ChartAngles: React.FC<ChartAnglesProps> = ({
             })}
           </tbody>
         </table>
-      </div>
-
-      {/* Mobile Grid */}
-      <div className="md:hidden px-4">
-        <div className="grid grid-cols-2 gap-3">
-          {angleArray.map((angle) => {
-            const position = formatPosDecimal(angle);
-            
-            return (
-              <div key={angle.name} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                <div className="text-center">
-                  <h3 className="font-medium text-gray-900 text-base mb-1">
-                    {angle.name}
-                  </h3>
-                  <span className="text-gray-700 text-sm">{position}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
       </div>
     </div>
   );
