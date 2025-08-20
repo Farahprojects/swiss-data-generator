@@ -32,7 +32,7 @@ export const ChartAngles: React.FC<ChartAnglesProps> = ({
 
   return (
     <div className="mb-12">
-      <h2 className="text-lg md:text-xl font-light text-gray-900 mb-8 text-center tracking-wide uppercase">
+      <h2 className="text-lg md:text-xl font-light text-gray-900 mb-4 md:mb-8 text-center tracking-wide uppercase">
         {title}
       </h2>
       

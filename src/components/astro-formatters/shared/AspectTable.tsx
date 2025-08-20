@@ -37,7 +37,7 @@ export const AspectTable: React.FC<AspectTableProps> = ({
   if (aspectArray.length === 0) {
     return (
       <div className="mb-12">
-        <h2 className="text-lg md:text-xl font-light text-gray-900 mb-8 text-center tracking-wide uppercase">
+        <h2 className="text-lg md:text-xl font-light text-gray-900 mb-4 md:mb-8 text-center tracking-wide uppercase">
           {title}
         </h2>
         <div className="text-center text-gray-500 italic text-sm">
@@ -49,7 +49,7 @@ export const AspectTable: React.FC<AspectTableProps> = ({
 
   return (
     <div className="mb-12">
-      <h2 className="text-lg md:text-xl font-light text-gray-900 mb-8 text-center tracking-wide uppercase">
+      <h2 className="text-lg md:text-xl font-light text-gray-900 mb-4 md:mb-8 text-center tracking-wide uppercase">
         {title}
       </h2>
       
