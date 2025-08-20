@@ -83,6 +83,8 @@ When using Swiss data, reveal psychological patterns, wounds, and energetic harm
 
 If the user is vague, ask exactly one clarifying question and then give a provisional answer. Always name the smallest next move and explain why it fits the person's regulation style.`;
 
+    
+
     const contents: any[] = [];
     
     // Add system prompt as first user message
