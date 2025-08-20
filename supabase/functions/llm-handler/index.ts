@@ -18,7 +18,18 @@ serve(async (req) => {
   }
 
   try {
-    const { chat_id, conversation_mode } = await req.json();
+    let chat_id, conversation_mode;
+
+    // Handle GET for SSE and POST for standard requests
+    if (req.method === 'GET') {
+      const url = new URL(req.url);
+      chat_id = url.searchParams.get('chat_id');
+      conversation_mode = url.searchParams.get('conversation_mode') === 'true';
+    } else {
+      const body = await req.json();
+      chat_id = body.chat_id;
+      conversation_mode = body.conversation_mode;
+    }
 
     if (!chat_id) {
       throw new Error("Missing chat_id");
