@@ -1,5 +1,6 @@
 // src/services/voice/stt.ts
 import { supabase } from '@/integrations/supabase/client';
+import type { Message } from '@/core/types';
 
 class SttService {
   async transcribe(audioBlob: Blob, chat_id?: string, meta?: Record<string, any>): Promise<{ transcript: string; assistantMessage: Message | null }> {
