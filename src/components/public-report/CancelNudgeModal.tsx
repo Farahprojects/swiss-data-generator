@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 
 interface CancelNudgeModalProps {
@@ -11,8 +10,6 @@ interface CancelNudgeModalProps {
 }
 
 export const CancelNudgeModal = ({ isOpen, guestId, onClose }: CancelNudgeModalProps) => {
-  const [showPromoInput, setShowPromoInput] = useState(false);
-  const [promoCode, setPromoCode] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const firstFocusableRef = useRef<HTMLButtonElement>(null);
@@ -102,10 +99,7 @@ export const CancelNudgeModal = ({ isOpen, guestId, onClose }: CancelNudgeModalP
     }
   };
 
-  const handlePromoClick = () => {
-    trackEvent('cancel_nudge_promo_clicked');
-    setShowPromoInput(true);
-  };
+
 
   if (!isOpen) return null;
 
@@ -120,7 +114,7 @@ export const CancelNudgeModal = ({ isOpen, guestId, onClose }: CancelNudgeModalP
       {/* Modal */}
       <div 
         ref={modalRef}
-        className="relative bg-white rounded-2xl shadow-xl max-w-md w-full mx-auto"
+        className="relative bg-white rounded-2xl shadow-xl max-w-lg w-full mx-auto"
         role="dialog"
         aria-modal="true"
         aria-labelledby="cancel-nudge-title"
@@ -129,43 +123,25 @@ export const CancelNudgeModal = ({ isOpen, guestId, onClose }: CancelNudgeModalP
         <button
           ref={firstFocusableRef}
           onClick={handleClose}
-          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-lg hover:bg-gray-50"
+          className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-lg hover:bg-gray-50"
           aria-label="Close modal"
         >
           <X className="w-5 h-5" />
         </button>
 
-        <div className="p-8">
+        <div className="p-10">
           {/* Title */}
           <h2 
             id="cancel-nudge-title"
-            className="text-2xl font-light text-gray-900 mb-4 tracking-tight"
+            className="text-2xl font-light text-gray-900 mb-6 tracking-tight pr-8"
           >
             Looks like you didn't finish checking out.
           </h2>
 
           {/* Body */}
-          <p className="text-gray-600 mb-8 leading-relaxed">
+          <p className="text-gray-600 mb-10 leading-relaxed">
             We put a lot of care into building this app to make self-discovery simple and enjoyable. Why not give it a try?
           </p>
-
-          {/* Promo code input */}
-          {showPromoInput && (
-            <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
-              <label htmlFor="promo-code" className="block text-sm font-medium text-gray-700 mb-2">
-                Promo Code
-              </label>
-              <Input
-                id="promo-code"
-                type="text"
-                value={promoCode}
-                onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                placeholder="Enter code"
-                className="text-center font-mono"
-                maxLength={20}
-              />
-            </div>
-          )}
 
           {/* Actions */}
           <div className="space-y-4">
@@ -184,16 +160,6 @@ export const CancelNudgeModal = ({ isOpen, guestId, onClose }: CancelNudgeModalP
                 </>
               )}
             </Button>
-
-            {/* Secondary link */}
-            {!showPromoInput && (
-              <button
-                onClick={handlePromoClick}
-                className="w-full text-sm text-gray-500 hover:text-gray-700 transition-colors py-2"
-              >
-                Have a promo code?
-              </button>
-            )}
           </div>
         </div>
       </div>
