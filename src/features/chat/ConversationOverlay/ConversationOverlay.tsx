@@ -37,10 +37,21 @@ export const ConversationOverlay: React.FC = () => {
       hasStartedListening.current = true;
       console.log('[ConversationOverlay] Auto-starting listening on mount');
       
-      // Start listening immediately
-      chatController.startTurn().catch(error => {
-        console.error('[ConversationOverlay] Failed to auto-start listening:', error);
+      // Ensure clean state before starting
+      chatController.resetConversationService();
+      
+      // Force release microphone arbitrator to ensure clean state
+      import('@/services/microphone/MicrophoneArbitrator').then(({ microphoneArbitrator }) => {
+        microphoneArbitrator.forceRelease();
       });
+      
+      // Small delay to ensure reset is complete
+      setTimeout(() => {
+        // Start listening immediately
+        chatController.startTurn().catch(error => {
+          console.error('[ConversationOverlay] Failed to auto-start listening:', error);
+        });
+      }, 100);
     }
   }, [isConversationOpen]);
 
