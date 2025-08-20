@@ -61,6 +61,11 @@ const ConditionalAuth: React.FC<{ children: React.ReactNode }> = ({ children }) 
     return <>{children}</>;
   }
 
+  if (path.startsWith('/chat')) {
+    // Chat routes need minimal providers since ReportModalProvider is at app level
+    return <>{children}</>;
+  }
+
   // Public pages that still use auth-aware UI
   return (
     <NavigationStateProvider>
