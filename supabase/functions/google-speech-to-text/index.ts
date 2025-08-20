@@ -36,7 +36,7 @@ serve(async (req) => {
       throw new Error('Empty audio data - please try recording again');
     }
     
-    console.log(`[google-stt]`, traceId ? `[trace:${traceId}]` : '', `Audio data received, proceeding with transcription.`);
+    // Log only important info for production
     
     // Test base64 decode to catch invalid format early
     try {
@@ -51,14 +51,12 @@ serve(async (req) => {
       throw new Error('Google STT API key not configured');
     }
 
-    // Simplified configuration using only supported fields
+    // Simplified configuration - let Google handle resampling automatically
     const defaultConfig = {
       encoding: 'WEBM_OPUS',
-      sampleRateHertz: 48000,
       languageCode: 'en-US',
       enableAutomaticPunctuation: true,
-      model: 'latest_long',
-      useEnhanced: true,
+      model: 'latest_short',
       speechContexts: [{
         phrases: ["therapy", "session", "client", "feelings", "emotions", "breakthrough", "progress"],
         boost: 10
@@ -73,8 +71,7 @@ serve(async (req) => {
       config: defaultConfig
     };
 
-    console.log('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Sending request to Google Speech-to-Text API');
-    console.log('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Config:', JSON.stringify(defaultConfig, null, 2));
+    // Send request to Google STT API
     
     const response = await fetch(
       `https://speech.googleapis.com/v1/speech:recognize?key=${googleApiKey}`,
@@ -94,7 +91,7 @@ serve(async (req) => {
     }
 
     const result = await response.json();
-    console.log('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Google API response:', result);
+    // Extract transcript from response
 
     // Extract the transcript from the first result
     const transcript = result.results?.[0]?.alternatives?.[0]?.transcript || '';

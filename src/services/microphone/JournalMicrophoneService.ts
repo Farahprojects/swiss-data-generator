@@ -207,10 +207,9 @@ class JournalMicrophoneServiceClass {
               audioData: base64Audio,
               config: {
                 encoding: 'WEBM_OPUS',
-                sampleRateHertz: 48000,
                 languageCode: 'en-US',
                 enableAutomaticPunctuation: true,
-                model: 'latest_long'
+                model: 'latest_short'
               }
             }
           });

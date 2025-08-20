@@ -256,10 +256,9 @@ class ChatTextMicrophoneServiceClass {
               traceId: this.currentTraceId,
               config: {
                 encoding: 'WEBM_OPUS',
-                sampleRateHertz: 48000,
                 languageCode: 'en-US',
                 enableAutomaticPunctuation: true,
-                model: 'latest_long'
+                model: 'latest_short'
               }
             }
           });
