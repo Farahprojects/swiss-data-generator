@@ -54,10 +54,10 @@ serve(async (req) => {
     // Simplified configuration using only supported fields
     const defaultConfig = {
       encoding: 'WEBM_OPUS',
-      sampleRateHertz: 48000,
+      sampleRateHertz: 16000,
       languageCode: 'en-US',
       enableAutomaticPunctuation: true,
-      model: 'latest_long',
+      model: 'latest_short',
       useEnhanced: true,
       speechContexts: [{
         phrases: ["therapy", "session", "client", "feelings", "emotions", "breakthrough", "progress"],
