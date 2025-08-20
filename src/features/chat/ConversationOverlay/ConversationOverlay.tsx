@@ -16,6 +16,8 @@ export const ConversationOverlay: React.FC = () => {
   
   // BULLETPROOF MODAL CLOSE - Handle all edge cases
   const handleModalClose = () => {
+    console.log('[ConversationOverlay] Closing conversation - stopping all audio');
+    
     // Emergency stop all audio playback
     const allAudioElements = document.querySelectorAll('audio');
     allAudioElements.forEach((audio) => {
@@ -24,8 +26,29 @@ export const ConversationOverlay: React.FC = () => {
       audio.src = '';
     });
     
+    // Stop TTS audio playback
+    import('@/services/voice/ttsAudio').then(({ stopTtsAudio }) => {
+      stopTtsAudio();
+    });
+    
+    // Force cleanup conversation microphone service
+    import('@/services/microphone/ConversationMicrophoneService').then(({ conversationMicrophoneService }) => {
+      conversationMicrophoneService.forceCleanup();
+    });
+    
+    // Force release microphone arbitrator
+    import('@/services/microphone/MicrophoneArbitrator').then(({ microphoneArbitrator }) => {
+      microphoneArbitrator.forceRelease();
+    });
+    
     // Force reset conversation service (handles mic cleanup)
     chatController.resetConversationService();
+    
+    // Clear any timers
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
     
     // Close the UI
     closeConversation();
@@ -58,11 +81,21 @@ export const ConversationOverlay: React.FC = () => {
   // Reset flag when conversation closes
   useEffect(() => {
     if (!isConversationOpen) {
+      console.log('[ConversationOverlay] Conversation closed - cleaning up');
       hasStartedListening.current = false;
+      
+      // Clear timers
       if (silenceTimerRef.current) {
         clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = null;
       }
+      
+      // Ensure all audio is stopped when modal closes
+      const allAudioElements = document.querySelectorAll('audio');
+      allAudioElements.forEach((audio) => {
+        audio.pause();
+        audio.currentTime = 0;
+      });
     }
   }, [isConversationOpen]);
 
