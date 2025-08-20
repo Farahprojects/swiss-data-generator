@@ -107,7 +107,7 @@ If the user is vague, ask exactly one clarifying question and then give a provis
         body: JSON.stringify({
           contents,
           generationConfig: { 
-            temperature: 0.7 
+            temperature: 0.4 
           },
         }),
       }
