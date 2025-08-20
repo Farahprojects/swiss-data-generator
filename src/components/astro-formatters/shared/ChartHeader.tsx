@@ -27,18 +27,22 @@ export const ChartHeader: React.FC<ChartHeaderProps> = ({
   
   return (
     <div className="text-center mb-12 pb-8 border-b border-gray-200">
-      <h1 className="text-4xl font-light text-gray-900 mb-8 tracking-tight">
+      <h1 className="text-3xl md:text-4xl font-light text-gray-900 mb-6 md:mb-8 tracking-tight">
         {displayTitle}
       </h1>
-      <div className="space-y-3 text-gray-700 max-w-md mx-auto">
-        <div className="text-lg font-medium">{name}</div>
-        {birthDate && <div className="text-sm">Born: {birthDate}</div>}
-        {birthLocation && <div className="text-sm">{birthLocation}</div>}
-        {coordinates && <div className="text-xs text-gray-500">{coordinates}</div>}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm text-gray-700 max-w-lg mx-auto">
+        <div className="md:text-right">
+          <p className="font-medium text-gray-900">{name}</p>
+          {birthDate && <p className="text-gray-600">{birthDate}</p>}
+        </div>
+        <div className="md:text-left">
+          {birthLocation && <p className="font-medium text-gray-900">{birthLocation}</p>}
+          {coordinates && <p className="text-xs text-gray-500">{coordinates}</p>}
+        </div>
         {(date || subtitle) && (
-          <div className="text-xs text-gray-500 pt-2 border-t border-gray-100 space-y-1">
-            {date && <div>Analysis: {date}</div>}
-            {subtitle && <div>{subtitle}</div>}
+          <div className="md:col-span-2 text-xs text-gray-500 pt-3 mt-3 border-t border-gray-100">
+            {date && <p>Analysis: {date}</p>}
+            {subtitle && <p>{subtitle}</p>}
           </div>
         )}
       </div>
