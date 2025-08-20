@@ -5,13 +5,12 @@
  * Handles all React-specific concerns for chat text voice input.
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { chatTextMicrophoneService, ChatTextMicrophoneOptions } from '@/services/microphone/ChatTextMicrophoneService';
 import { useToast } from '@/hooks/use-toast';
 
 export const useChatTextMicrophone = (options: ChatTextMicrophoneOptions = {}) => {
   const [state, setState] = useState(() => chatTextMicrophoneService.getState());
-  const rafIdRef = useRef<number | null>(null);
   const { toast } = useToast();
 
   // Subscribe to service state changes
@@ -22,34 +21,6 @@ export const useChatTextMicrophone = (options: ChatTextMicrophoneOptions = {}) =
 
     return unsubscribe;
   }, []);
-
-  // Lightweight polling via RAF while recording for smooth meters
-  useEffect(() => {
-    // Cancel any prior loop
-    if (rafIdRef.current !== null) {
-      cancelAnimationFrame(rafIdRef.current);
-      rafIdRef.current = null;
-    }
-
-    if (!state.isRecording) {
-      return;
-    }
-
-    const tick = () => {
-      // Pull latest level directly for smooth UI, independent of service notifications
-      setState(chatTextMicrophoneService.getState());
-      rafIdRef.current = requestAnimationFrame(tick);
-    };
-
-    rafIdRef.current = requestAnimationFrame(tick);
-
-    return () => {
-      if (rafIdRef.current !== null) {
-        cancelAnimationFrame(rafIdRef.current);
-        rafIdRef.current = null;
-      }
-    };
-  }, [state.isRecording]);
 
   // Initialize service with options
   useEffect(() => {
@@ -71,10 +42,6 @@ export const useChatTextMicrophone = (options: ChatTextMicrophoneOptions = {}) =
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (rafIdRef.current !== null) {
-        cancelAnimationFrame(rafIdRef.current);
-        rafIdRef.current = null;
-      }
       chatTextMicrophoneService.forceCleanup();
     };
   }, []);
