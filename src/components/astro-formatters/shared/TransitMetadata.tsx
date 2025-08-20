@@ -24,9 +24,17 @@ export const TransitMetadata: React.FC<TransitMetadataProps> = ({ transits }) =>
     : 'N/A';
 
   return (
-    <div className="text-sm text-gray-500 mt-2 mb-4 bg-gray-50 p-3 rounded-md border">
-      <p><strong>Transit Date:</strong> {formattedDate}</p>
-      {timezone && <p><strong>Timezone:</strong> {timezone}</p>}
+    <div className="text-xs md:text-sm text-gray-600 mb-6 bg-gray-50 p-3 rounded-lg border">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center">
+        <p className="mb-1 md:mb-0">
+          <span className="font-semibold text-gray-800">Transit Date:</span> {formattedDate}
+        </p>
+        {timezone && (
+          <p>
+            <span className="font-semibold text-gray-800">Timezone:</span> {timezone}
+          </p>
+        )}
+      </div>
     </div>
   );
 };
