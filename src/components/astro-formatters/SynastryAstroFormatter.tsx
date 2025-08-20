@@ -85,26 +85,28 @@ export const SynastryAstroFormatter: React.FC<SynastryAstroFormatterProps> = ({
               <p className="text-gray-600 mb-4">
                 This chart represents the relationship itself as a third entity.
               </p>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Planet</TableHead>
-                    <TableHead>Degree</TableHead>
-                    <TableHead>Sign</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {composite_chart?.map((planet: any) => (
-                    <TableRow key={planet.name}>
-                      <TableCell className="font-medium">
-                        <span className="mr-2">{planet.unicode}</span> {planet.name}
-                      </TableCell>
-                      <TableCell>{`${planet.deg.toFixed(2)}°`}</TableCell>
-                      <TableCell>{planet.sign}</TableCell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs md:text-sm">Planet</TableHead>
+                      <TableHead className="text-xs md:text-sm">Degree</TableHead>
+                      <TableHead className="text-xs md:text-sm">Sign</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {composite_chart?.map((planet: any) => (
+                      <TableRow key={planet.name}>
+                        <TableCell className="font-medium whitespace-nowrap text-xs md:text-sm">
+                          <span className="mr-2">{planet.unicode}</span> {planet.name}
+                        </TableCell>
+                        <TableCell className="text-xs md:text-sm">{`${planet.deg.toFixed(2)}°`}</TableCell>
+                        <TableCell className="text-xs md:text-sm">{planet.sign}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         )}

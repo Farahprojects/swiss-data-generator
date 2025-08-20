@@ -81,24 +81,26 @@ export const MonthlyAstroFormatter: React.FC<MonthlyAstroFormatterProps> = ({
               <CardTitle className="text-2xl font-light text-gray-800">Top 5 Astrological Events</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Event</TableHead>
-                    <TableHead className="text-right">Orb</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {top_events.items.map((event: any, index: number) => (
-                    <TableRow key={index}>
-                      <TableCell>{new Date(event.date).toLocaleDateString('default', { month: 'short', day: 'numeric' })}</TableCell>
-                      <TableCell>{`${event.transit} ${event.aspect} ${event.natal_target}`}</TableCell>
-                      <TableCell className="text-right">{event.orb.toFixed(1)}°</TableCell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs md:text-sm">Date</TableHead>
+                      <TableHead className="text-xs md:text-sm">Event</TableHead>
+                      <TableHead className="text-right text-xs md:text-sm">Orb</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {top_events.items.map((event: any, index: number) => (
+                      <TableRow key={index}>
+                        <TableCell className="whitespace-nowrap text-xs md:text-sm">{new Date(event.date).toLocaleDateString('default', { month: 'short', day: 'numeric' })}</TableCell>
+                        <TableCell className="text-xs md:text-sm">{`${event.transit} ${event.aspect} ${event.natal_target}`}</TableCell>
+                        <TableCell className="text-right text-xs md:text-sm">{event.orb.toFixed(1)}°</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         )}

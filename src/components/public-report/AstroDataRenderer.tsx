@@ -41,10 +41,8 @@ export const AstroDataRenderer = ({ swissData, reportData }: AstroDataRendererPr
   };
 
   return (
-    <div className={isMobile ? "overflow-x-auto -mx-4 px-4" : ""}>
-      <div className={isMobile ? "min-w-[768px]" : ""}>
-        {renderContent()}
-      </div>
+    <div>
+      {renderContent()}
     </div>
   );
 };
