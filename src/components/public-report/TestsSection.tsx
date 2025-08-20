@@ -82,10 +82,10 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
   },
   {
     id: "SnapShot",
-    name: `SnapShot ${getReportPrice('SnapShot', getPriceById)}`,
+    name: `Monthly ${getReportPrice('SnapShot', getPriceById)}`,
     description: "Your personalized forecast and timing guidance",
     subDescriptions: [
-      "Current flow",
+      "Month ahead, daily energy swings",
       "Focus – Mindset – Monthly"
     ],
     slug: "Monthly",
@@ -163,7 +163,7 @@ export default function TestsSection() {
     {
       type: 'SnapShot',
       icon: <CalendarDays className="h-5 w-5 text-primary inline-block mr-1" />,
-      title: 'SnapShot Report',
+      title: 'Monthly Report',
       price: getBasePrice('SnapShot'),
       bestFor: 'Timing insights',
       description: 'Your personalized forecast and timing guidance',
@@ -251,7 +251,7 @@ export default function TestsSection() {
                          <div className="w-full h-full bg-white rounded-xl flex items-center justify-center">
                            <img 
                              src={test.imageSrc} 
-                             alt="SnapShot Report" 
+                             alt="Monthly Report" 
                              className="w-full h-full object-cover rounded-xl"
                            />
                          </div>
