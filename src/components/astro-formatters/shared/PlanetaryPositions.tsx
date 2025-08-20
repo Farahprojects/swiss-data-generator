@@ -40,7 +40,8 @@ export const PlanetaryPositions: React.FC<PlanetaryPositionsProps> = ({
         {title}
       </h2>
       
-      <div className="max-w-2xl mx-auto">
+      {/* Desktop Table */}
+      <div className="hidden md:block max-w-2xl mx-auto">
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-b border-gray-200">
@@ -64,6 +65,31 @@ export const PlanetaryPositions: React.FC<PlanetaryPositionsProps> = ({
             })}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-3 px-4">
+        {planetArray.map((planet) => {
+          const position = formatPosDecimalWithHouse(planet);
+          
+          return (
+            <div key={planet.name} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <h3 className="font-medium text-gray-900 text-base">
+                    {planet.name}
+                  </h3>
+                  {planet.retro && (
+                    <span className="text-xs italic text-gray-600 mt-1 block">Retrograde</span>
+                  )}
+                </div>
+                <div className="text-right ml-4">
+                  <span className="text-gray-700 font-medium">{position}</span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

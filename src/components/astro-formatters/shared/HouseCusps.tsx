@@ -36,7 +36,8 @@ export const HouseCusps: React.FC<HouseCuspsProps> = ({
         {title}
       </h2>
       
-      <div className="max-w-2xl mx-auto">
+      {/* Desktop Table */}
+      <div className="hidden md:block max-w-2xl mx-auto">
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-b border-gray-200">
@@ -57,6 +58,26 @@ export const HouseCusps: React.FC<HouseCuspsProps> = ({
             })}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Grid */}
+      <div className="md:hidden px-4">
+        <div className="grid grid-cols-2 gap-3">
+          {houseArray.map((house) => {
+            const cusp = formatPosDecimal(house);
+            
+            return (
+              <div key={house.number} className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+                <div className="text-center">
+                  <h3 className="font-medium text-gray-900 text-sm mb-1">
+                    House {house.number}
+                  </h3>
+                  <span className="text-gray-700 text-sm">{cusp}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
