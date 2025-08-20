@@ -53,18 +53,20 @@ export const ConversationOverlay: React.FC = () => {
               <VoiceBubble state={state} audioLevel={audioLevel} />
             </motion.div>
           </AnimatePresence>
-          <p className="text-gray-500 font-light">
-            {state === 'listening' ? 'Listening…' : state === 'processing' ? 'Thinking…' : 'Speaking…'}
-          </p>
-          
-          {/* Close button - positioned under the bubble on the left */}
-          <button
-            onClick={handleModalClose}
-            aria-label="Close conversation"
-            className="absolute -left-16 top-1/2 -translate-y-1/2 w-10 h-10 bg-black rounded-full flex items-center justify-center text-white hover:bg-gray-800 transition-colors"
-          >
-            ✕
-          </button>
+          <div className="flex items-center gap-4">
+            <p className="text-gray-500 font-light">
+              {state === 'listening' ? 'Listening…' : state === 'processing' ? 'Thinking…' : 'Speaking…'}
+            </p>
+            
+            {/* Close button - positioned to the right of the status text */}
+            <button
+              onClick={handleModalClose}
+              aria-label="Close conversation"
+              className="w-10 h-10 bg-black rounded-full flex items-center justify-center text-white hover:bg-gray-800 transition-colors"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       </div>
     </div>,
