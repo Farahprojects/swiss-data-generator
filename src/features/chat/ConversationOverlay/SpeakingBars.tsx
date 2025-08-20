@@ -6,14 +6,19 @@ interface Props {
 }
 
 export const SpeakingBars: React.FC<Props> = ({ audioLevel }) => {
-  // Four bars with slightly different responsiveness for a subtle variation
+  // Create a wave-like pattern where middle bars are bigger
   const bars = Array.from({ length: 4 }, (_, index) => {
-    const responsiveness = 0.7 + index * 0.1; // 0.7, 0.8, 0.9, 1.0
-
-    // Scale from center: compact baseline, grow with audio
-    const minScale = 0.5;
-    const extra = Math.min(0.7, audioLevel * responsiveness); // cap growth
-    const scaleY = minScale + extra; // ~0.5 .. 1.2
+    // Create a bell curve effect - middle bars are more responsive
+    const centerDistance = Math.abs(index - 1.5); // Distance from center (0.5, 1.5, 1.5, 0.5)
+    const responsiveness = Math.max(0.3, 1 - centerDistance * 0.4); // 0.8, 1.0, 1.0, 0.8
+    
+    // Add some randomness for more natural movement
+    const randomFactor = 0.8 + Math.sin(Date.now() * 0.01 + index) * 0.2;
+    
+    // Base height with wave pattern
+    const baseHeight = 0.4 + (1 - centerDistance * 0.3); // 0.55, 0.85, 0.85, 0.55
+    const audioResponse = Math.min(0.6, audioLevel * responsiveness * randomFactor);
+    const scaleY = baseHeight + audioResponse; // 0.55-1.15, 0.85-1.45, 0.85-1.45, 0.55-1.15
 
     return {
       id: index,
