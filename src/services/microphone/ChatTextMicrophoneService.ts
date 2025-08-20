@@ -30,6 +30,10 @@ class ChatTextMicrophoneServiceClass {
   private currentTraceId: string | null = null;
   private recordingStartedAt: number | null = null;
   
+  // Throttled UI notifications for waveform rendering
+  private lastNotifyAt = 0;
+  private lastAudioLevel = 0;
+  
   private options: ChatTextMicrophoneOptions = {};
   private listeners = new Set<() => void>();
 
@@ -179,15 +183,24 @@ class ChatTextMicrophoneServiceClass {
       }
       const rms = Math.sqrt(sumSquares / bufferLength);
       this.audioLevel = rms;
-      
+
+      // Throttled UI updates for waveform (every ~50ms or when level changes significantly)
       const now = Date.now();
+      const levelDiff = Math.abs(this.audioLevel - this.lastAudioLevel);
+      if ((now - this.lastNotifyAt > 50) || levelDiff > 0.02) {
+        this.lastNotifyAt = now;
+        this.lastAudioLevel = this.audioLevel;
+        this.notifyListeners();
+      }
+      
+      const nowTs = now;
       
       if (phase === 'waiting_for_voice') {
         // Phase 1: Wait for real voice activity
         if (rms > VOICE_START_THRESHOLD) {
           if (voiceStartTime === null) {
-            voiceStartTime = now;
-          } else if (now - voiceStartTime >= VOICE_START_DURATION) {
+            voiceStartTime = nowTs;
+          } else if (nowTs - voiceStartTime >= VOICE_START_DURATION) {
             // Voice confirmed! Switch to silence monitoring
             phase = 'monitoring_silence';
             voiceStartTime = null;
@@ -201,8 +214,8 @@ class ChatTextMicrophoneServiceClass {
         // Phase 2: Monitor for silence after voice detected
         if (rms < SILENCE_THRESHOLD) {
           if (silenceStartTime === null) {
-            silenceStartTime = now;
-          } else if (now - silenceStartTime >= SILENCE_TIMEOUT) {
+            silenceStartTime = nowTs;
+          } else if (nowTs - silenceStartTime >= SILENCE_TIMEOUT) {
             // Natural silence detected - stop recording
             this.log(`🧘‍♂️ ${SILENCE_TIMEOUT}ms silence detected after voice - stopping naturally`);
             this.monitoringRef.current = false;
