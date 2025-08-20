@@ -63,7 +63,7 @@ class ChatTextMicrophoneServiceClass {
           echoCancellation: true,    // Clean input
           noiseSuppression: true,    // Remove background noise
           autoGainControl: true,     // Consistent levels
-          sampleRate: 48000,         // High quality
+          sampleRate: 16000,         // Optimized for STT
         }
       });
 
@@ -71,7 +71,7 @@ class ChatTextMicrophoneServiceClass {
       this.log('🎛️ getUserMedia acquired. Track settings:', trackSettings);
 
       // Set up audio analysis
-      this.audioContext = new AudioContext({ sampleRate: 48000 });
+      this.audioContext = new AudioContext({ sampleRate: 16000 });
       this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
       this.analyser = this.audioContext.createAnalyser();
       this.analyser.fftSize = 2048;
@@ -256,10 +256,10 @@ class ChatTextMicrophoneServiceClass {
               traceId: this.currentTraceId,
               config: {
                 encoding: 'WEBM_OPUS',
-                sampleRateHertz: 48000,
+                sampleRateHertz: 16000,
                 languageCode: 'en-US',
                 enableAutomaticPunctuation: true,
-                model: 'latest_long'
+                model: 'latest_short'
               }
             }
           });

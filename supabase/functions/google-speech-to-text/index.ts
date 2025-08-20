@@ -190,9 +190,17 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in google-speech-to-text function:', error);
+    console.error('[google-stt] Detailed error in google-speech-to-text function:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: error.stack,
+        timestamp: new Date().toISOString()
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
