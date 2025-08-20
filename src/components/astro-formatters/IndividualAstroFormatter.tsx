@@ -47,7 +47,7 @@ export const IndividualAstroFormatter: React.FC<IndividualAstroFormatterProps> =
         {natal && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-2xl font-light text-gray-800">
+              <CardTitle className="text-xl md:text-2xl font-light text-gray-800">
                 Natal Chart: Your Core Blueprint
               </CardTitle>
             </CardHeader>
@@ -63,7 +63,7 @@ export const IndividualAstroFormatter: React.FC<IndividualAstroFormatterProps> =
         {transits && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-2xl font-light text-gray-800">
+              <CardTitle className="text-xl md:text-2xl font-light text-gray-800">
                 Current Transits: The Present Moment
               </CardTitle>
             </CardHeader>
