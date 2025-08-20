@@ -14,11 +14,11 @@ export const ConversationOverlay: React.FC = () => {
   const hasStartedListening = useRef(false);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   
-  // BULLETPROOF MODAL CLOSE - Handle all edge cases
+  // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = () => {
-    console.log('[ConversationOverlay] Closing conversation - stopping all audio');
+    console.log('[ConversationOverlay] X button pressed - shutting everything off immediately');
     
-    // Emergency stop all audio playback
+    // 1. Stop all audio playback immediately (synchronous)
     const allAudioElements = document.querySelectorAll('audio');
     allAudioElements.forEach((audio) => {
       audio.pause();
@@ -26,76 +26,47 @@ export const ConversationOverlay: React.FC = () => {
       audio.src = '';
     });
     
-    // Stop TTS audio playback
-    import('@/services/voice/ttsAudio').then(({ stopTtsAudio }) => {
-      stopTtsAudio();
-    });
+    // 2. Tell browser to stop all microphone access (synchronous)
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      // This will stop any active microphone streams
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+          stream.getTracks().forEach(track => track.stop());
+        })
+        .catch(() => {}); // Ignore errors, just ensure mic is released
+    }
     
-    // Force cleanup conversation microphone service
-    import('@/services/microphone/ConversationMicrophoneService').then(({ conversationMicrophoneService }) => {
-      conversationMicrophoneService.forceCleanup();
-    });
-    
-    // Force release microphone arbitrator
-    import('@/services/microphone/MicrophoneArbitrator').then(({ microphoneArbitrator }) => {
-      microphoneArbitrator.forceRelease();
-    });
-    
-    // Force reset conversation service (handles mic cleanup)
+    // 3. Reset all conversation state (synchronous)
     chatController.resetConversationService();
     
-    // Clear any timers
+    // 4. Clear any timers (synchronous)
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = null;
     }
     
-    // Close the UI
+    // 5. Close the UI (synchronous)
     closeConversation();
   };
   
-  // Auto-start listening when conversation opens
+  // Simple mount - just start listening when conversation opens
   useEffect(() => {
     if (isConversationOpen && !hasStartedListening.current) {
       hasStartedListening.current = true;
-      console.log('[ConversationOverlay] Auto-starting listening on mount');
+      console.log('[ConversationOverlay] Conversation opened - starting listening');
       
-      // Ensure clean state before starting
-      chatController.resetConversationService();
-      
-      // Force release microphone arbitrator to ensure clean state
-      import('@/services/microphone/MicrophoneArbitrator').then(({ microphoneArbitrator }) => {
-        microphoneArbitrator.forceRelease();
+      // Simple: just start listening
+      chatController.startTurn().catch(error => {
+        console.error('[ConversationOverlay] Failed to start listening:', error);
       });
-      
-      // Small delay to ensure reset is complete
-      setTimeout(() => {
-        // Start listening immediately
-        chatController.startTurn().catch(error => {
-          console.error('[ConversationOverlay] Failed to auto-start listening:', error);
-        });
-      }, 100);
     }
   }, [isConversationOpen]);
 
-  // Reset flag when conversation closes
+  // Simple cleanup when conversation closes
   useEffect(() => {
     if (!isConversationOpen) {
-      console.log('[ConversationOverlay] Conversation closed - cleaning up');
+      console.log('[ConversationOverlay] Conversation closed - resetting flag');
       hasStartedListening.current = false;
-      
-      // Clear timers
-      if (silenceTimerRef.current) {
-        clearTimeout(silenceTimerRef.current);
-        silenceTimerRef.current = null;
-      }
-      
-      // Ensure all audio is stopped when modal closes
-      const allAudioElements = document.querySelectorAll('audio');
-      allAudioElements.forEach((audio) => {
-        audio.pause();
-        audio.currentTime = 0;
-      });
     }
   }, [isConversationOpen]);
 
