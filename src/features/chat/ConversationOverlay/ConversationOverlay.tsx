@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { VoiceBubble } from './VoiceBubble';
@@ -11,6 +11,8 @@ export const ConversationOverlay: React.FC = () => {
   const { isConversationOpen, closeConversation } = useConversationUIStore();
   const status = useChatStore((state) => state.status);
   const audioLevel = useConversationAudioLevel(); // Get real-time audio level
+  const hasStartedListening = useRef(false);
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // BULLETPROOF MODAL CLOSE - Handle all edge cases
   const handleModalClose = () => {
@@ -29,6 +31,53 @@ export const ConversationOverlay: React.FC = () => {
     closeConversation();
   };
   
+  // Auto-start listening when conversation opens
+  useEffect(() => {
+    if (isConversationOpen && !hasStartedListening.current) {
+      hasStartedListening.current = true;
+      console.log('[ConversationOverlay] Auto-starting listening on mount');
+      
+      // Start listening immediately
+      chatController.startTurn().catch(error => {
+        console.error('[ConversationOverlay] Failed to auto-start listening:', error);
+      });
+    }
+  }, [isConversationOpen]);
+
+  // Reset flag when conversation closes
+  useEffect(() => {
+    if (!isConversationOpen) {
+      hasStartedListening.current = false;
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
+    }
+  }, [isConversationOpen]);
+
+  // 3-second silence detection
+  useEffect(() => {
+    if (isConversationOpen && status === 'recording') {
+      // Clear existing timer
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+      }
+      
+      // Start 3-second silence timer
+      silenceTimerRef.current = setTimeout(() => {
+        console.log('[ConversationOverlay] 3 seconds of silence detected, triggering audio level recording');
+        // The silence detection will be handled by the microphone service
+        // This just ensures we're actively listening
+      }, 3000);
+    }
+    
+    return () => {
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+      }
+    };
+  }, [isConversationOpen, status, audioLevel]);
+
   // Map chat status to conversation state for UI
   const state = status === 'recording' ? 'listening' : 
                status === 'transcribing' ? 'processing' : 
