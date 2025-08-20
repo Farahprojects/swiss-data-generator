@@ -85,8 +85,8 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
     name: `Monthly ${getReportPrice('SnapShot', getPriceById)}`,
     description: "Your personalized forecast and timing guidance",
     subDescriptions: [
-      "Month ahead, daily energy swings",
-      "Focus – Mindset – Monthly"
+      "Month ahead",
+      "daily energy swings"
     ],
     slug: "Monthly",
     time: "12 min",
@@ -196,7 +196,7 @@ export default function TestsSection() {
         <div className="max-w-7xl mx-auto">
           <div className="mb-16 text-center">
             <h2 className="text-2xl xs:text-3xl sm:text-4xl md:text-4xl lg:text-5xl font-light text-gray-900 mb-6 tracking-tight md:mb-6 sm:mb-4 xs:mb-3">
-              AI insights into your mind generated in 2 min
+              AI insights into your mind generated in seconds
             </h2>
             <p className="text-base xs:text-lg sm:text-lg md:text-xl text-gray-500 max-w-3xl mx-auto leading-relaxed">
               Unlock the deeper patterns behind how you think, lead, and evolve
@@ -297,7 +297,7 @@ export default function TestsSection() {
                         <img 
                           src={test.imageSrc} 
                           alt={`${test.name} Report`} 
-                          className="w-full h-full object-cover rounded-lg"
+                          className="w-[110%] h-[110%] object-cover rounded-lg"
                         />
                       </div>
                       <div className="flex-1">
@@ -336,7 +336,7 @@ export default function TestsSection() {
                         <img 
                           src={test.imageSrc} 
                           alt={`${test.name} Report`} 
-                          className="w-full h-full object-cover rounded-lg"
+                          className="w-[110%] h-[110%] object-cover rounded-lg"
                         />
                       </div>
                     </div>

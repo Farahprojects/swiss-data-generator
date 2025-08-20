@@ -23,10 +23,10 @@ const TheraiChatGPTSection = () => {
               <div>
                 <h2 className="text-4xl md:text-5xl font-light text-gray-900 mb-6 tracking-tight">
                   Insights with 
-                  <span className="block text-gray-700">Therai ChatGPT</span>
+                  <span className="block text-gray-700">Therai</span>
                 </h2>
                 <p className="text-lg text-gray-600 leading-relaxed mb-8">
-                  Take your reports even further. Copy and paste any report or astro data into our specialized ChatGPT wrapper to unlock instant, deeper analysis and personalized guidance.
+                  Take your reports even further with our deep thinking AI model to unlock instant, deeper analysis and personalized guidance. Talk with your report today.
                 </p>
               </div>
 
@@ -47,17 +47,7 @@ const TheraiChatGPTSection = () => {
                 </div>
               </div>
 
-              <div className="pt-6">
-                <a 
-                  href="https://chatgpt.com/g/g-68636dbe19588191b04b0a60bcbf3df3-therai"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-3 bg-gray-900 text-white px-8 py-4 rounded-xl text-lg font-normal hover:bg-gray-800 transition-all duration-300 hover:scale-105 border border-gray-800/20 shadow-lg hover:shadow-xl"
-                >
-                  Try Therai ChatGPT
-                  <ExternalLink className="h-5 w-5" />
-                </a>
-              </div>
+
             </div>
           </div>
         </div>
