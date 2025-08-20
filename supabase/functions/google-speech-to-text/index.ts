@@ -54,7 +54,7 @@ serve(async (req) => {
     // Simplified configuration using only supported fields
     const defaultConfig = {
       encoding: 'WEBM_OPUS',
-      sampleRateHertz: 16000,
+      sampleRateHertz: 48000,
       languageCode: 'en-US',
       enableAutomaticPunctuation: true,
       model: 'latest_short',

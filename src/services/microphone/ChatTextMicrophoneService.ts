@@ -63,7 +63,7 @@ class ChatTextMicrophoneServiceClass {
           echoCancellation: true,    // Clean input
           noiseSuppression: true,    // Remove background noise
           autoGainControl: true,     // Consistent levels
-          sampleRate: 16000,         // Optimized for STT
+          sampleRate: 48000,         // Match MediaRecorder output
         }
       });
 
@@ -71,7 +71,7 @@ class ChatTextMicrophoneServiceClass {
       this.log('🎛️ getUserMedia acquired. Track settings:', trackSettings);
 
       // Set up audio analysis
-      this.audioContext = new AudioContext({ sampleRate: 16000 });
+      this.audioContext = new AudioContext({ sampleRate: 48000 });
       this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
       this.analyser = this.audioContext.createAnalyser();
       this.analyser.fftSize = 2048;
@@ -79,10 +79,10 @@ class ChatTextMicrophoneServiceClass {
       this.mediaStreamSource.connect(this.analyser);
       // reduced detailed analyser config logging
 
-      // Set up MediaRecorder - simple and clean
+      // Set up MediaRecorder - optimized for 16kHz STT
       this.mediaRecorder = new MediaRecorder(this.stream, {
         mimeType: 'audio/webm;codecs=opus',
-        audioBitsPerSecond: 128000
+        audioBitsPerSecond: 128000  // Standard bitrate for 48kHz
       });
 
       this.audioChunks = [];
@@ -256,7 +256,7 @@ class ChatTextMicrophoneServiceClass {
               traceId: this.currentTraceId,
               config: {
                 encoding: 'WEBM_OPUS',
-                sampleRateHertz: 16000,
+                sampleRateHertz: 48000,
                 languageCode: 'en-US',
                 enableAutomaticPunctuation: true,
                 model: 'latest_short'

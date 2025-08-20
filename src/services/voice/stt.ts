@@ -25,7 +25,7 @@ class SttService {
         meta,
         config: {
           encoding: 'WEBM_OPUS',
-          sampleRateHertz: 16000,
+          sampleRateHertz: 48000,
           languageCode: 'en-US',
         }
       },

@@ -58,12 +58,12 @@ class JournalMicrophoneServiceClass {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
-          sampleRate: 16000,
+          sampleRate: 48000,
         }
       });
 
       // Set up audio analysis
-      this.audioContext = new AudioContext({ sampleRate: 16000 });
+      this.audioContext = new AudioContext({ sampleRate: 48000 });
       this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
       this.analyser = this.audioContext.createAnalyser();
       this.analyser.fftSize = 2048;
@@ -207,7 +207,7 @@ class JournalMicrophoneServiceClass {
               audioData: base64Audio,
               config: {
                 encoding: 'WEBM_OPUS',
-                sampleRateHertz: 16000,
+                sampleRateHertz: 48000,
                 languageCode: 'en-US',
                 enableAutomaticPunctuation: true,
                 model: 'latest_long'

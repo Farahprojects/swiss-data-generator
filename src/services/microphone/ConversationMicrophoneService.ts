@@ -59,7 +59,7 @@ class ConversationMicrophoneServiceClass {
           echoCancellation: true,    // Clean input
           noiseSuppression: true,    // Remove background noise
           autoGainControl: true,     // Consistent levels
-          sampleRate: 16000,
+          sampleRate: 48000,
         } 
       });
 
@@ -67,7 +67,7 @@ class ConversationMicrophoneServiceClass {
       this.log('🎛️ getUserMedia acquired. Track settings:', trackSettings);
 
       // Configure audio analysis for optional silence detection
-      this.audioContext = new AudioContext({ sampleRate: 16000 });
+      this.audioContext = new AudioContext({ sampleRate: 48000 });
       this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
       this.analyser = this.audioContext.createAnalyser();
       this.analyser.fftSize = 2048;
