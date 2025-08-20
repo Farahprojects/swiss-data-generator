@@ -137,6 +137,14 @@ class ChatController {
 
   async endTurn() {
     if (!this.isTurnActive) return;
+
+    const { chat_id } = useChatStore.getState();
+    if (!chat_id) {
+      console.error('[ChatController] endTurn: FAIL FAST - No chat_id in store.');
+      this.isTurnActive = false;
+      useChatStore.getState().setStatus('idle');
+      return;
+    }
     
     useChatStore.getState().setStatus('transcribing');
     try {
