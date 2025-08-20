@@ -39,17 +39,9 @@ export const ConversationOverlay: React.FC = () => {
 
   return createPortal(
     <div className="fixed inset-0 z-50 bg-white pt-safe pb-safe">
-      {/* Close button - top left */}
-      <button
-        onClick={handleModalClose}
-        aria-label="Close conversation"
-        className="absolute top-3 left-3 w-10 h-10 bg-black rounded-full flex items-center justify-center text-white hover:bg-gray-800 transition-colors"
-      >
-        ✕
-      </button>
       {/* Centered content */}
       <div className="h-full w-full flex items-center justify-center px-6">
-        <div className="flex flex-col items-center justify-center gap-6">
+        <div className="flex flex-col items-center justify-center gap-6 relative">
           <AnimatePresence mode="wait">
             <motion.div
               key={state}
@@ -64,6 +56,15 @@ export const ConversationOverlay: React.FC = () => {
           <p className="text-gray-500 font-light">
             {state === 'listening' ? 'Listening…' : state === 'processing' ? 'Thinking…' : 'Speaking…'}
           </p>
+          
+          {/* Close button - positioned under the bubble on the left */}
+          <button
+            onClick={handleModalClose}
+            aria-label="Close conversation"
+            className="absolute -left-16 top-1/2 -translate-y-1/2 w-10 h-10 bg-black rounded-full flex items-center justify-center text-white hover:bg-gray-800 transition-colors"
+          >
+            ✕
+          </button>
         </div>
       </div>
     </div>,
