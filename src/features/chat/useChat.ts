@@ -1,20 +1,36 @@
 // src/features/chat/useChat.ts
 import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useChatStore } from '@/core/store';
 import { chatController } from './ChatController';
 import { getChatIdForGuest, verifyChatIdIntegrity } from '@/services/api/guestReports';
 
 export const useChat = (chat_id?: string, guestId?: string) => {
   const state = useChatStore();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const ss = typeof window !== 'undefined' ? window.sessionStorage : null;
     const SESSION_KEY = 'therai_chat_id';
 
-    // If chat_id provided directly, persist it for this tab
+    // If chat_id provided directly, verify it first
     if (chat_id) {
-      try { ss?.setItem(SESSION_KEY, chat_id); } catch (_e) {}
-      chatController.initializeConversation(chat_id);
+      console.log('[useChat] Verifying URL chat_id:', chat_id);
+      verifyChatIdIntegrity(chat_id)
+        .then(({ isValid }) => {
+          if (isValid) {
+            console.log('[useChat] ✅ URL chat_id verified, initializing conversation');
+            try { ss?.setItem(SESSION_KEY, chat_id); } catch (_e) {}
+            chatController.initializeConversation(chat_id);
+          } else {
+            console.warn('[useChat] ❌ URL chat_id invalid, redirecting to report page');
+            navigate('/report');
+          }
+        })
+        .catch(err => {
+          console.error('[useChat] Error verifying URL chat_id:', err);
+          navigate('/report');
+        });
       return;
     }
 
@@ -44,11 +60,16 @@ export const useChat = (chat_id?: string, guestId?: string) => {
                     chatController.initializeConversation(validChatId);
                   } else {
                     console.error('[useChat] ❌ No valid chat_id found for guest:', guestId);
+                    navigate('/report');
                   }
                 })
                 .catch(err => {
                   console.error('[useChat] Error fetching valid chat_id:', err);
+                  navigate('/report');
                 });
+            } else {
+              console.warn('[useChat] No guestId available, redirecting to report page');
+              navigate('/report');
             }
           }
         })
@@ -56,6 +77,7 @@ export const useChat = (chat_id?: string, guestId?: string) => {
           console.error('[useChat] Error during chat_id verification:', err);
           // Clear potentially corrupted cache
           try { ss?.removeItem(SESSION_KEY); } catch (_e) {}
+          navigate('/report');
         });
       return;
     }
@@ -71,15 +93,18 @@ export const useChat = (chat_id?: string, guestId?: string) => {
             chatController.initializeConversation(verifiedChatId);
           } else {
             console.error('[useChat] ❌ Failed to get chat_id for guest:', guestId);
+            navigate('/report');
           }
         })
         .catch(err => {
           console.error('[useChat] Failed to verify guest and get chat_id:', err);
+          navigate('/report');
         });
     } else {
-      console.log('[useChat] No chat_id or guestId provided');
+      console.log('[useChat] No chat_id or guestId provided, redirecting to report page');
+      navigate('/report');
     }
-  }, [chat_id, guestId]);
+  }, [chat_id, guestId, navigate]);
 
   return {
     ...state,
