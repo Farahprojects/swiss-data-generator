@@ -36,12 +36,12 @@ export const HouseCusps: React.FC<HouseCuspsProps> = ({
         {title}
       </h2>
       
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-2xl mx-auto overflow-x-auto">
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-b border-gray-200">
-              <th className="text-left py-3 px-4 font-medium text-gray-900 text-sm">House</th>
-              <th className="text-right py-3 px-4 font-medium text-gray-900 text-sm">Cusp</th>
+              <th className="text-left py-2 px-2 md:py-3 md:px-4 font-medium text-gray-900 text-xs md:text-sm">House</th>
+              <th className="text-right py-2 px-2 md:py-3 md:px-4 font-medium text-gray-900 text-xs md:text-sm">Cusp</th>
             </tr>
           </thead>
           <tbody>
@@ -50,8 +50,8 @@ export const HouseCusps: React.FC<HouseCuspsProps> = ({
               
               return (
                 <tr key={house.number} className="border-b border-gray-100 hover:bg-gray-50/30">
-                  <td className="py-3 px-4 font-medium text-gray-900">House {house.number}</td>
-                  <td className="py-3 px-4 text-gray-700 text-right">{cusp}</td>
+                  <td className="py-2 px-2 md:py-3 md:px-4 font-medium text-gray-900 text-xs md:text-sm">House {house.number}</td>
+                  <td className="py-2 px-2 md:py-3 md:px-4 text-gray-700 text-right text-xs md:text-sm whitespace-nowrap">{cusp}</td>
                 </tr>
               );
             })}

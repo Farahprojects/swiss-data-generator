@@ -36,12 +36,12 @@ export const ChartAngles: React.FC<ChartAnglesProps> = ({
         {title}
       </h2>
       
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-2xl mx-auto overflow-x-auto">
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-b border-gray-200">
-              <th className="text-left py-3 px-4 font-medium text-gray-900 text-sm">Angle</th>
-              <th className="text-right py-3 px-4 font-medium text-gray-900 text-sm">Position</th>
+              <th className="text-left py-2 px-2 md:py-3 md:px-4 font-medium text-gray-900 text-xs md:text-sm">Angle</th>
+              <th className="text-right py-2 px-2 md:py-3 md:px-4 font-medium text-gray-900 text-xs md:text-sm">Position</th>
             </tr>
           </thead>
           <tbody>
@@ -50,8 +50,8 @@ export const ChartAngles: React.FC<ChartAnglesProps> = ({
               
               return (
                 <tr key={angle.name} className="border-b border-gray-100 hover:bg-gray-50/30">
-                  <td className="py-3 px-4 font-medium text-gray-900">{angle.name}</td>
-                  <td className="py-3 px-4 text-gray-700 text-right">{position}</td>
+                  <td className="py-2 px-2 md:py-3 md:px-4 font-medium text-gray-900 text-xs md:text-sm">{angle.name}</td>
+                  <td className="py-2 px-2 md:py-3 md:px-4 text-gray-700 text-right text-xs md:text-sm whitespace-nowrap">{position}</td>
                 </tr>
               );
             })}

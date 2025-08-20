@@ -40,12 +40,12 @@ export const PlanetaryPositions: React.FC<PlanetaryPositionsProps> = ({
         {title}
       </h2>
       
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-2xl mx-auto overflow-x-auto">
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-b border-gray-200">
-              <th className="text-left py-3 px-4 font-medium text-gray-900 text-sm">Planet</th>
-              <th className="text-right py-3 px-4 font-medium text-gray-900 text-sm">Position</th>
+              <th className="text-left py-2 px-2 md:py-3 md:px-4 font-medium text-gray-900 text-xs md:text-sm">Planet</th>
+              <th className="text-right py-2 px-2 md:py-3 md:px-4 font-medium text-gray-900 text-xs md:text-sm">Position</th>
             </tr>
           </thead>
           <tbody>
@@ -54,11 +54,11 @@ export const PlanetaryPositions: React.FC<PlanetaryPositionsProps> = ({
               
               return (
                 <tr key={planet.name} className="border-b border-gray-100 hover:bg-gray-50/30">
-                  <td className="py-3 px-4 font-medium text-gray-900 text-left">
+                  <td className="py-2 px-2 md:py-3 md:px-4 font-medium text-gray-900 text-left text-xs md:text-sm">
                     {planet.name}
-                    {planet.retro && <span className="ml-2 text-xs italic text-gray-600">Retrograde</span>}
+                    {planet.retro && <span className="ml-1 text-gray-600">(R)</span>}
                   </td>
-                  <td className="py-3 px-4 text-gray-700 text-right">{position}</td>
+                  <td className="py-2 px-2 md:py-3 md:px-4 text-gray-700 text-right text-xs md:text-sm whitespace-nowrap">{position}</td>
                 </tr>
               );
             })}
