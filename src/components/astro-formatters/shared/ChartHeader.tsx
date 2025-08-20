@@ -32,7 +32,6 @@ export const ChartHeader: React.FC<ChartHeaderProps> = ({
       </h1>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm text-gray-700 max-w-lg mx-auto">
         <div className="md:text-right">
-          <p className="font-medium text-gray-900">{name}</p>
           {birthDate && <p className="text-gray-600">{birthDate}</p>}
         </div>
         <div className="md:text-left">
