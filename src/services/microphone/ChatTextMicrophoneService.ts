@@ -159,10 +159,10 @@ class ChatTextMicrophoneServiceClass {
     let voiceStartTime: number | null = null;
     let silenceStartTime: number | null = null;
     
-    // Professional thresholds - less sensitive for clean audio
-    const VOICE_START_THRESHOLD = 0.05;  // Level ~50 - clear voice detection
-    const VOICE_START_DURATION = 250;    // 250ms sustained voice to confirm
-    const SILENCE_THRESHOLD = 0.02;      // Level ~20 - clear silence detection
+    // More sensitive thresholds for immediate voice detection
+    const VOICE_START_THRESHOLD = 0.03;  // Lower threshold for faster detection
+    const VOICE_START_DURATION = 150;    // Shorter duration to start recording faster
+    const SILENCE_THRESHOLD = 0.015;     // Lower silence threshold
     const SILENCE_TIMEOUT = this.options.silenceTimeoutMs || 2000;
     
     this.log(`🧠 VAD started - waiting for voice (>${VOICE_START_THRESHOLD} RMS for ${VOICE_START_DURATION}ms)`);
