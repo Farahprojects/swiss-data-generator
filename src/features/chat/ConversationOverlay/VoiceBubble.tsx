@@ -29,34 +29,39 @@ export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
     replying: 'bg-black shadow-gray-800/50',
   };
 
-  // Smooth, subtle pulse of the whole bubble (no shadow pulsing)
-  const pulseAnimation =
-    state === 'listening'
-      ? {
-          scale: isVoiceDetected ? [1, 1.15, 1] : [1, 1.12, 1],
-          opacity: [0.94, 1, 0.94],
+  // Simple, clear pulse animation
+  const getAnimationProps = () => {
+    if (state === 'listening') {
+      return {
+        animate: {
+          scale: isVoiceDetected ? [1, 1.2, 1] : [1, 1.15, 1],
+        },
+        transition: {
+          repeat: Infinity,
+          duration: isVoiceDetected ? 0.8 : 1.2,
+          ease: "easeInOut"
         }
-      : state === 'processing'
-      ? {
-          scale: [1, 0.98, 1], // very subtle "thinking" contraction
-          opacity: [1, 0.98, 1],
+      };
+    } else if (state === 'processing') {
+      return {
+        animate: {
+          scale: [1, 0.95, 1],
+        },
+        transition: {
+          repeat: Infinity,
+          duration: 1.5,
+          ease: "easeInOut"
         }
-      : { scale: [1, 1, 1], opacity: [1, 1, 1] };
-
-  const duration = state === 'listening' ? (isVoiceDetected ? 1.0 : 1.6) : 1.2;
+      };
+    }
+    return {};
+  };
 
   return (
     <motion.div
       className={`${baseClass} ${styles[state]}`}
-      style={{ transformOrigin: 'center', willChange: 'transform, opacity' }}
-      animate={{ scale: pulseAnimation.scale, opacity: pulseAnimation.opacity }}
-      transition={{
-        repeat: Infinity,
-        repeatType: 'mirror',
-        duration,
-        ease: 'easeInOut',
-        type: 'tween',
-      }}
+      style={{ transformOrigin: 'center' }}
+      {...getAnimationProps()}
     />
   );
 };
