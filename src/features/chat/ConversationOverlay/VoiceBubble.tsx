@@ -33,8 +33,8 @@ export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
   const pulseAnimation =
     state === 'listening'
       ? {
-          scale: isVoiceDetected ? [1, 1.10, 1] : [1, 1.06, 1],
-          opacity: [0.96, 1, 0.96],
+          scale: isVoiceDetected ? [1, 1.15, 1] : [1, 1.12, 1],
+          opacity: [0.94, 1, 0.94],
         }
       : state === 'processing'
       ? {
