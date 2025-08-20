@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Message } from '@/core/types';
 
 class SttService {
-  async transcribe(audioBlob: Blob, chat_id?: string, meta?: Record<string, any>): Promise<{ transcript: string; assistantMessage: Message | null; status: string }> {
+  async transcribe(audioBlob: Blob, chat_id?: string, meta?: Record<string, any>): Promise<{ transcript: string; assistantMessage: Message | null }> {
     // Validate audio blob before processing
     if (!audioBlob || audioBlob.size === 0) {
       console.warn('[STT] Empty or missing audio blob, skipping transcription');
@@ -23,7 +23,6 @@ class SttService {
         audioData: base64Audio,
         chat_id,
         meta,
-        conversation_mode: meta?.conversation_mode || false,
         config: {
           encoding: 'WEBM_OPUS',
           languageCode: 'en-US',
@@ -44,8 +43,7 @@ class SttService {
     // Return the full response object
     return {
       transcript: data.transcript || '',
-      assistantMessage: data.assistantMessage || null,
-      status: data.status || 'complete'
+      assistantMessage: data.assistantMessage || null
     };
   }
 

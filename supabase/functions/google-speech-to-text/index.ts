@@ -18,7 +18,7 @@ serve(async (req) => {
   }
 
   try {
-    const { audioData, config, traceId, chat_id, meta, conversation_mode } = await req.json();
+    const { audioData, config, traceId, chat_id, meta } = await req.json();
     
     // Comprehensive audio data validation
     if (!audioData) {
@@ -151,27 +151,35 @@ serve(async (req) => {
     // After saving, trigger the llm-handler to get an immediate AI response
     let assistantMessage = null;
     if (chat_id && transcript && transcript.trim().length > 0) {
-      console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Triggering llm-tts-pipeline`);
-      
-      // Fire-and-forget call to the new pipeline function
-      fetch(`${SUPABASE_URL}/functions/v1/llm-tts-pipeline`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`
-        },
-        body: JSON.stringify({ chat_id, transcript })
-      }).catch(e => console.error('[google-stt] Non-blocking llm-tts-pipeline call failed:', e));
-      
-      console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Fired non-blocking call to llm-tts-pipeline`);
+      console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Triggering llm-handler`);
+      try {
+        const llmResponse = await fetch(`${SUPABASE_URL}/functions/v1/llm-handler`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`
+          },
+          body: JSON.stringify({ chat_id })
+        });
+
+        if (!llmResponse.ok) {
+          const errorText = await llmResponse.text();
+          console.error(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} llm-handler call failed:`, errorText);
+        } else {
+          assistantMessage = await llmResponse.json();
+          console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Received response from llm-handler`);
+        }
+      } catch (llmError) {
+        console.error(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Error calling llm-handler:`, llmError);
+      }
     }
 
-    // Always return a consistent response to the client
     return new Response(
       JSON.stringify({ 
         transcript,
         confidence,
-        status: 'pending_realtime' // Signal to client that the backend process has started
+        savedMessageId,
+        assistantMessage // Include the full assistant message in the response
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
