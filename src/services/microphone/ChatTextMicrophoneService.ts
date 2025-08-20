@@ -180,6 +180,9 @@ class ChatTextMicrophoneServiceClass {
       const rms = Math.sqrt(sumSquares / bufferLength);
       this.audioLevel = rms;
       
+      // Notify UI of audio level changes for waveform animation
+      this.notifyListeners();
+      
       const now = Date.now();
       
       if (phase === 'waiting_for_voice') {

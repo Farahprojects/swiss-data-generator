@@ -11,6 +11,9 @@ const MAX_BAR_HEIGHT = 28;
 const BASE_BAR_HEIGHT = 2;
 
 export const VoiceWaveform: React.FC<VoiceWaveformProps> = ({ audioLevel }) => {
+  // Debug: log audio level changes
+  console.log('VoiceWaveform audioLevel:', audioLevel);
+  
   return (
     <div className="flex items-center justify-center gap-1 w-full h-full px-4">
       {Array.from({ length: NUM_BARS }).map((_, i) => {
