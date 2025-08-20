@@ -79,15 +79,12 @@ export const CancelNudgeModal = ({ isOpen, guestId, onClose }: CancelNudgeModalP
     setIsProcessing(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('create-payment-session', {
-        body: { 
-          guest_report_id: guestId,
-          ...(promoCode && { promo_code: promoCode })
-        },
+      const { data, error } = await supabase.functions.invoke('get-checkout-url', {
+        body: { guest_id: guestId },
       });
 
       if (error || !data?.checkoutUrl) {
-        console.error('Failed to create payment session:', error);
+        console.error('Failed to get checkout URL:', error);
         alert('Unable to resume checkout. Please try again.');
         return;
       }

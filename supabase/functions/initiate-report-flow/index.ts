@@ -247,6 +247,17 @@ serve(async (req) => {
         return oops('Failed to create checkout session');
       }
 
+      // Save the checkout URL to the database for resuming sessions
+      const { error: updateError } = await supabaseAdmin
+        .from("guest_reports")
+        .update({ checkout_url: checkoutData.url })
+        .eq('id', guestReportId);
+
+      if (updateError) {
+        console.error('❌ [ERROR] Failed to save checkout URL:', updateError);
+        // Don't fail the whole flow, just log the error
+      }
+
       console.log('💳 [PERF] Paid report checkout created', {
         timestamp: new Date().toISOString(),
         guestReportId,
