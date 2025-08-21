@@ -89,7 +89,7 @@ class JournalMicrophoneServiceClass {
         this.processAudio();
       };
 
-      this.mediaRecorder.start(1000); // 1-second chunks for better WebM structure
+      this.mediaRecorder.start(); // Let MediaRecorder create complete WebM files
       
       // Start silence monitoring
       this.startSilenceMonitoring();

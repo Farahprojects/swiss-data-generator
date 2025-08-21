@@ -96,13 +96,19 @@ class ChatTextMicrophoneServiceClass {
       };
 
       this.mediaRecorder.onstop = async () => {
+        // Ensure MediaRecorder has finished creating the complete WebM file
+        this.log('⏹️ MediaRecorder stopped - processing complete WebM file');
+        
+        // Small delay to ensure all chunks are finalized
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         // Process clean audio before cleanup
         await this.processAudio();
         this.cleanup();
       };
 
-      // Start recording with explicit chunking for complete WebM files
-      this.mediaRecorder.start(1000); // 1-second chunks for better WebM structure
+      // Start recording - let MediaRecorder create complete WebM files
+      this.mediaRecorder.start(); // No chunking - let MediaRecorder handle it naturally
       // minimal start log
       
       // Start two-phase Voice Activity Detection
@@ -241,9 +247,15 @@ class ChatTextMicrophoneServiceClass {
       // Create complete WebM file from all chunks
       const finalBlob = new Blob(this.audioChunks, { type: 'audio/webm;codecs=opus' });
       
-      // Validate we have a complete WebM file
+      // Validate we have a complete WebM file with proper headers
       if (finalBlob.size < 1000) {
         this.error('❌ Audio file too small - incomplete WebM data');
+        return;
+      }
+      
+      // Check if we have enough chunks for a complete WebM structure
+      if (this.audioChunks.length < 2) {
+        this.error('❌ Not enough chunks for complete WebM structure');
         return;
       }
       
