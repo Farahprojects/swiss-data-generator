@@ -13,11 +13,11 @@ interface LlmRequest {
 
 class LlmService {
   /**
-   * Send message via chat-send and get immediate assistant response
-   * User message appears immediately in UI, then assistant response follows quickly
+   * Send message via chat-send (fire and forget)
+   * User message is saved to DB, llm-handler is notified but no immediate response
    * Note: chat_id is already verified by verify-chat-access, no guest_id needed
    */
-  async sendMessage(request: { chat_id: string; text: string; client_msg_id?: string }): Promise<Message | null> {
+  async sendMessage(request: { chat_id: string; text: string; client_msg_id?: string }): Promise<void> {
     console.log(`[LLM] Sending message for chat ${request.chat_id}...`);
     
     const { data, error } = await supabase.functions.invoke('chat-send', {
@@ -38,15 +38,7 @@ class LlmService {
       throw new Error(`chat-send error: ${data.error}`);
     }
 
-    console.log(`[LLM] Message sent successfully`);
-    
-    // Return assistant message if available for immediate UI update
-    if (data?.assistantMessage) {
-      console.log(`[LLM] Got assistant response immediately`);
-      return data.assistantMessage as Message;
-    }
-
-    return null;
+    console.log(`[LLM] Message sent successfully (fire and forget)`);
   }
 
   // Legacy method - kept for compatibility if needed

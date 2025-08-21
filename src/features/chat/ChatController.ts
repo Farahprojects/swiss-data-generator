@@ -67,21 +67,15 @@ class ChatController {
     useChatStore.getState().setStatus('thinking');
 
     try {
-      // Send message and get immediate assistant response
+      // Send message via chat-send (fire and forget)
       console.log("[ChatController] Sending message via chat-send");
-      const assistantMessage = await llmService.sendMessage({
+      await llmService.sendMessage({
         chat_id,
         text,
         client_msg_id,
       });
       
-      console.log("[ChatController] Message sent successfully");
-      
-      // Add assistant response to UI immediately if available
-      if (assistantMessage) {
-        console.log("[ChatController] Adding assistant response to UI");
-        useChatStore.getState().addMessage(assistantMessage);
-      }
+      console.log("[ChatController] Message sent successfully (fire and forget)");
 
     } catch (error) {
       console.error("[ChatController] Error sending message:", error);
