@@ -46,7 +46,10 @@ export const ChatInput = () => {
       return;
     }
     if (status === 'recording') {
-      chatController.endTurn();
+      // 🚨 CONVERSATION MODE: Only silence detection should end turns
+      // Manual end turn is disabled to ensure proper flow control
+      console.log('[ChatInput] Manual end turn blocked in conversation mode - only silence detection can end turns');
+      return;
     } else {
       // Cancel any active conversation and close
       console.log('[ChatInput] Closing conversation - resetting conversation service');
