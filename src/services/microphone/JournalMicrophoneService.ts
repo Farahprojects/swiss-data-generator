@@ -205,13 +205,12 @@ class JournalMicrophoneServiceClass {
           const { data, error } = await supabase.functions.invoke('google-speech-to-text', {
             body: {
               audioData: base64Audio,
-                      config: {
-          encoding: 'OGG_OPUS',
-          sampleRateHertz: 48000,
-          languageCode: 'en-US',
-          enableAutomaticPunctuation: true,
-          model: 'latest_short'
-        }
+                                             config: {
+           encoding: 'WEBM_OPUS',
+           languageCode: 'en-US',
+           enableAutomaticPunctuation: true,
+           model: 'latest_short'
+         }
             }
           });
 

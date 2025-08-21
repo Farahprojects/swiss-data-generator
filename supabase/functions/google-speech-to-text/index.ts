@@ -74,16 +74,15 @@ serve(async (req) => {
         hasWebMHeader: decodedAudio.slice(0, 4).toString() === 'EBML',
         hasOpusHeader: decodedAudio.includes('OpusHead'),
         estimatedDurationFromSize: Math.round((decodedAudio.length / 128000) * 8 * 1000), // ms
-        usingOGGOpus: true,
+        usingWebMOpus: true,
       });
     } catch (decodeError) {
       console.error(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Error analyzing audio data:`, decodeError);
     }
 
-    // Build Google STT configuration - Use OGG_OPUS to bypass WebM container issues
+    // Build Google STT configuration - Tell Google the truth about WebM container
     const defaultConfig = {
-      encoding: 'OGG_OPUS',
-      sampleRateHertz: 48000,
+      encoding: 'WEBM_OPUS',
       languageCode: 'en-US',
       enableAutomaticPunctuation: true,
       model: 'latest_short',
