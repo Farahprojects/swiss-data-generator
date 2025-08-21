@@ -74,32 +74,49 @@ class StreamPlayerService {
       const { done, value } = await this.streamReader.read();
 
       if (done) {
-        if (this.mediaSource && this.mediaSource.readyState === 'open') {
-          this.mediaSource.endOfStream();
-        }
+        this.endStreamSafely();
         return;
       }
 
-      if (this.sourceBuffer && !this.sourceBuffer.updating) {
-        try {
-          this.sourceBuffer.appendBuffer(value);
-        } catch (error) {
-          console.error("Error appending buffer:", error);
-        }
-      } else if (this.sourceBuffer) {
-        this.sourceBuffer.addEventListener('updateend', () => {
-          if (this.sourceBuffer && !this.sourceBuffer.updating) {
-             this.sourceBuffer.appendBuffer(value);
-          }
-        }, { once: true });
-      }
-
-      processNextChunk();
+      this.appendBuffer(value, () => {
+        processNextChunk();
+      });
     };
     
     this.audio?.play().catch(e => console.error("Audio play failed:", e));
     this.startAudioAnalysis();
     processNextChunk();
+  }
+
+  private appendBuffer(buffer: Uint8Array, callback: () => void) {
+    if (this.sourceBuffer && !this.sourceBuffer.updating) {
+      try {
+        this.sourceBuffer.appendBuffer(buffer);
+        callback();
+      } catch (error) {
+        console.error("Error appending buffer:", error);
+      }
+    } else if (this.sourceBuffer) {
+      const handleUpdateEnd = () => {
+        this.appendBuffer(buffer, callback);
+      };
+      this.sourceBuffer.addEventListener('updateend', handleUpdateEnd, { once: true });
+    }
+  }
+
+  private endStreamSafely() {
+    if (this.sourceBuffer?.updating) {
+      const onUpdateEnd = () => {
+        if (this.mediaSource && this.mediaSource.readyState === 'open') {
+          this.mediaSource.endOfStream();
+        }
+      };
+      this.sourceBuffer.addEventListener('updateend', onUpdateEnd, { once: true });
+    } else {
+      if (this.mediaSource && this.mediaSource.readyState === 'open') {
+        this.mediaSource.endOfStream();
+      }
+    }
   }
 
   private handlePlaybackEnded() {

@@ -2,6 +2,7 @@
 import { supabase, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '@/integrations/supabase/client';
 import { streamPlayerService } from './StreamPlayerService';
 import { useChatStore } from '@/core/store';
+import { getGoogleVoiceCode } from '@/utils/voiceUtils';
 
 export interface SpeakAssistantOptions {
   conversationId: string;
@@ -15,7 +16,8 @@ class ConversationTtsService {
     return new Promise(async (resolve, reject) => {
       try {
         const { data: { session } } = await supabase.auth.getSession(); // Get session if available, don't fail if not.
-        const selectedVoice = useChatStore.getState().ttsVoice || 'en-US-Neural2-F'; // Get voice from store
+        const selectedVoiceName = useChatStore.getState().ttsVoice || 'nova'; // Get friendly name from store
+        const googleVoiceCode = getGoogleVoiceCode(selectedVoiceName); // Convert to Google's required code
 
         const headers: HeadersInit = {
           'Content-Type': 'application/json',
@@ -29,7 +31,7 @@ class ConversationTtsService {
         const response = await fetch(`${SUPABASE_URL}/functions/v1/google-text-to-speech`, {
           method: 'POST',
           headers,
-          body: JSON.stringify({ messageId, text, voice: selectedVoice })
+          body: JSON.stringify({ messageId, text, voice: googleVoiceCode })
         });
 
         if (!response.ok || !response.body) {
