@@ -87,11 +87,23 @@ class ConversationMicrophoneServiceClass {
       this.mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           this.audioChunks.push(event.data);
-          this.log(`📦 Audio chunk collected (${event.data.size} bytes)`);
+          this.log('📦 Chunk received', { 
+            chunkSize: event.data.size, 
+            totalChunks: this.audioChunks.length,
+            totalSizeSoFar: this.audioChunks.reduce((sum, chunk) => sum + chunk.size, 0)
+          });
+        } else {
+          this.log('⚠️ Empty chunk received - skipping');
         }
       };
 
       this.mediaRecorder.onstop = () => {
+        this.log('⏹️ MediaRecorder stopped - processing complete WebM file');
+        this.log('📊 Final chunk summary', {
+          totalChunks: this.audioChunks.length,
+          totalSize: this.audioChunks.reduce((sum, chunk) => sum + chunk.size, 0),
+          chunkSizes: this.audioChunks.map(chunk => chunk.size)
+        });
         this.handleRecordingComplete();
       };
 
@@ -184,9 +196,21 @@ class ConversationMicrophoneServiceClass {
       return new Blob([], { type: 'audio/webm' });
     }
 
-    // Simple, professional approach - let MediaRecorder handle the format
+    // Create complete WebM file from all chunks
+    this.log('🔧 Creating final Blob from chunks', {
+      chunkCount: this.audioChunks.length,
+      individualChunkSizes: this.audioChunks.map(chunk => chunk.size),
+      totalChunkSize: this.audioChunks.reduce((sum, chunk) => sum + chunk.size, 0)
+    });
+    
     const finalBlob = new Blob(this.audioChunks, { type: 'audio/webm;codecs=opus' });
-    this.log(`📼 Clean audio blob created: ${finalBlob.size} bytes from ${this.audioChunks.length} chunks`);
+    
+    this.log('📁 Final Blob created', {
+      blobSize: finalBlob.size,
+      blobType: finalBlob.type,
+      expectedSize: this.audioChunks.reduce((sum, chunk) => sum + chunk.size, 0),
+      sizeMatch: finalBlob.size === this.audioChunks.reduce((sum, chunk) => sum + chunk.size, 0)
+    });
     
     return finalBlob;
   }
