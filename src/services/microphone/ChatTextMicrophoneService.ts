@@ -259,20 +259,11 @@ class ChatTextMicrophoneServiceClass {
         measuredDurationMs,
       });
       
-      // Send raw binary audio directly using fetch to bypass invoke() helper issues with Blobs
-      try {
-        const { data: { session } } = await supabase.auth.getSession(); // Get session if available, but don't fail if not
-        
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-        if (!supabaseUrl || !anonKey) {
-          throw new Error("Supabase URL or Anon Key is not configured in environment variables.");
-        }
-        const functionUrl = `${supabaseUrl}/functions/v1/google-speech-to-text`;
-
-        const headers: HeadersInit = {
-          'Content-Type': 'audio/webm;codecs=opus',
-          'apikey': anonKey,
+      // Use supabase.functions.invoke, which handles auth transparently and now works
+      // because the edge function is fixed to accept raw binary data.
+      const { data, error } = await supabase.functions.invoke('google-speech-to-text', {
+        body: finalBlob,
+        headers: {
           'X-Trace-Id': this.currentTraceId || '',
           'X-Meta': JSON.stringify({
             measuredDurationMs,
@@ -284,41 +275,21 @@ class ChatTextMicrophoneServiceClass {
               model: 'latest_long'
             }
           })
-        };
-
-        // Add Authorization header only if a session exists
-        if (session) {
-          headers['Authorization'] = `Bearer ${session.access_token}`;
         }
+      });
 
-        const response = await fetch(functionUrl, {
-          method: 'POST',
-          body: finalBlob,
-          headers,
-        });
-
-        if (!response.ok) {
-          const errorBody = await response.json();
-          throw new Error(`Function returned an error: ${response.status} ${JSON.stringify(errorBody)}`);
-        }
-        
-        const data = await response.json();
-        const transcript = data?.transcript || '';
-        this.log('📝 Transcript received', { length: transcript.length });
-        
-        if (this.options.onTranscriptReady && transcript) {
-          this.options.onTranscriptReady(transcript);
-        }
-        
-      } catch (error) {
-        this.error('❌ Transcription failed:', error);
-      } finally {
-        this.isProcessing = false;
-        this.notifyListeners();
+      if (error) throw error;
+      
+      const transcript = data?.transcript || '';
+      this.log('📝 Transcript received', { length: transcript.length });
+      
+      if (this.options.onTranscriptReady && transcript) {
+        this.options.onTranscriptReady(transcript);
       }
       
     } catch (error) {
-      this.error('❌ Audio processing failed:', error);
+      this.error('❌ Transcription failed:', error);
+    } finally {
       this.isProcessing = false;
       this.notifyListeners();
     }
