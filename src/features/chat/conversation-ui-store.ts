@@ -14,9 +14,6 @@ export const useConversationUIStore = create<ConversationUIState>((set) => ({
     document.documentElement.classList.add('no-anim');
     // Lock scroll
     document.body.style.overflow = 'hidden';
-    
-    // Log conversation opening
-    console.log('🎯 [FLOW MONITOR] 🚪 Conversation UI: Opening conversation modal');
   },
   closeConversation: () => {
     set({ isConversationOpen: false });
@@ -24,8 +21,5 @@ export const useConversationUIStore = create<ConversationUIState>((set) => ({
     document.documentElement.classList.remove('no-anim');
     // Unlock scroll
     document.body.style.overflow = '';
-    
-    // Log conversation closing
-    console.log('🎯 [FLOW MONITOR] 🚪 Conversation UI: Closing conversation modal');
   },
 }));

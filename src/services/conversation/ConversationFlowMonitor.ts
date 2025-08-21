@@ -127,10 +127,26 @@ class ConversationFlowMonitorClass {
     
     const flowStep = mapStatusToStep(reactStatus);
     
-    // Only log if it's a different step
+    // Update current step based on React state (this is the source of truth)
     if (flowStep !== this.currentStep) {
-      console.log(`🎯 [FLOW MONITOR] 🔄 React State Changed: ${reactStatus} → ${flowStep}`);
-      this.observeStep(flowStep);
+      const now = Date.now();
+      const previousStep = this.currentStep;
+      const previousStartTime = this.stepStartTime;
+      
+      // Log step completion if we have a previous step
+      if (previousStep !== 'idle' && previousStartTime > 0) {
+        const duration = now - previousStartTime;
+        console.log(`🎯 [FLOW MONITOR] ✅ Step: ${previousStep} completed (duration: ${duration}ms)`);
+      }
+      
+      // Update to new step from React state
+      this.currentStep = flowStep;
+      this.stepStartTime = now;
+      
+      console.log(`🎯 [FLOW MONITOR] 📝 Step: ${flowStep} (from React state: ${reactStatus})`);
+      
+      // Notify subscribers of the state change
+      this.notifyListeners();
     }
   }
 
