@@ -3,9 +3,9 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, accept",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
@@ -44,7 +44,7 @@ serve(async (req) => {
   });
 
   // Log the entire payload being sent to Google STT
-  const requestBody = {
+  const logRequestBody = {
     config: {
       encoding: "WEBM_OPUS",
       languageCode: "en-US",
@@ -60,7 +60,7 @@ serve(async (req) => {
     }
   };
 
-  console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Full Google STT request payload:`, JSON.stringify(requestBody, null, 2));
+  console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Full Google STT request payload:`, JSON.stringify(logRequestBody, null, 2));
     
     // Test base64 decode to catch invalid format early
     try {
