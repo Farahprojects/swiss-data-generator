@@ -378,7 +378,9 @@ class ConversationMicrophoneServiceClass {
         const enabled = localStorage.getItem('debugAudio') === '1';
         if (!enabled) return;
       }
-    } catch {}
+    } catch (error) {
+      // Ignore localStorage errors in SSR environments
+    }
     // eslint-disable-next-line no-console
     console.log('[ConversationMic]', message, ...args);
   }

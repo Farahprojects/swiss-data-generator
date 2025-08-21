@@ -205,8 +205,9 @@ class ChatController {
       // For turn transitions, just stop the current recording gracefully
       // The microphone service will be re-initialized in startTurn()
       if (conversationMicrophoneService.getState().isRecording) {
-        conversationMicrophoneService.stopRecording().catch(() => {
+        conversationMicrophoneService.stopRecording().catch((error) => {
           // Ignore errors during graceful stop
+          console.warn('[ChatController] Graceful stop error (ignored):', error);
         });
       }
     }
