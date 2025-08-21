@@ -64,6 +64,21 @@ serve(async (req) => {
       traceId
     });
 
+    // Analyze WebM container structure
+    try {
+      const decodedAudio = atob(audioData);
+      console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} WebM container analysis:`, {
+        decodedLength: decodedAudio.length,
+        decodedSizeKB: Math.round(decodedAudio.length / 1024),
+        firstBytes: Array.from(decodedAudio.slice(0, 20)).map(b => b.toString(16).padStart(2, '0')).join(' '),
+        hasWebMHeader: decodedAudio.slice(0, 4).toString() === 'EBML',
+        hasOpusHeader: decodedAudio.includes('OpusHead'),
+        estimatedDurationFromSize: Math.round((decodedAudio.length / 128000) * 8 * 1000), // ms
+      });
+    } catch (decodeError) {
+      console.error(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Error analyzing WebM container:`, decodeError);
+    }
+
     // Build Google STT configuration
     const defaultConfig = {
       encoding: 'WEBM_OPUS',
