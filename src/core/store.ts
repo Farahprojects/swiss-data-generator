@@ -49,7 +49,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
       ),
     })),
 
-  setStatus: (status) => set({ status }),
+  setStatus: (status) => {
+    set({ status });
+    // Log React state changes
+    console.log('🎯 [FLOW MONITOR] 🔄 Chat Store: Status changed to', status);
+  },
   
   setError: (error) => set({ error, status: error ? 'error' : get().status }),
 

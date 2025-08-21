@@ -6,6 +6,7 @@
 
 import { useState, useEffect } from 'react';
 import { conversationFlowMonitor, FlowStepInfo } from '@/services/conversation/ConversationFlowMonitor';
+import { useChatStore } from '@/core/store';
 
 export const useConversationFlowMonitor = () => {
   const [flowInfo, setFlowInfo] = useState<FlowStepInfo>({
@@ -14,6 +15,9 @@ export const useConversationFlowMonitor = () => {
   });
   const [isMonitoring, setIsMonitoring] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'failed'>('disconnected');
+  
+  // Monitor React state changes
+  const reactStatus = useChatStore((state) => state.status);
 
   useEffect(() => {
     const unsubscribe = conversationFlowMonitor.subscribe((info: FlowStepInfo) => {
@@ -27,6 +31,13 @@ export const useConversationFlowMonitor = () => {
 
     return unsubscribe;
   }, []);
+
+  // Monitor React status changes
+  useEffect(() => {
+    if (isMonitoring) {
+      conversationFlowMonitor.observeReactStateChange(reactStatus);
+    }
+  }, [reactStatus, isMonitoring]);
 
   return {
     flowInfo,

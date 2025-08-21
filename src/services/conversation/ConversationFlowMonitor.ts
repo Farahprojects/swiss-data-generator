@@ -14,6 +14,18 @@ export interface FlowStepInfo {
   error?: string;
 }
 
+// Map React status to flow steps
+const mapStatusToStep = (status: string): FlowStep => {
+  switch (status) {
+    case 'recording': return 'listening';
+    case 'transcribing': return 'transcribing';
+    case 'thinking': return 'thinking';
+    case 'speaking': return 'speaking';
+    case 'error': return 'error';
+    default: return 'idle';
+  }
+};
+
 class ConversationFlowMonitorClass {
   private isMonitoring = false;
   private currentStep: FlowStep = 'idle';
@@ -105,6 +117,21 @@ class ConversationFlowMonitorClass {
     
     this.currentStep = 'error';
     this.notifyListeners();
+  }
+
+  /**
+   * OBSERVE REACT STATE CHANGE - Monitor React status changes
+   */
+  observeReactStateChange(reactStatus: string): void {
+    if (!this.isMonitoring) return;
+    
+    const flowStep = mapStatusToStep(reactStatus);
+    
+    // Only log if it's a different step
+    if (flowStep !== this.currentStep) {
+      console.log(`🎯 [FLOW MONITOR] 🔄 React State Changed: ${reactStatus} → ${flowStep}`);
+      this.observeStep(flowStep);
+    }
   }
 
   /**
