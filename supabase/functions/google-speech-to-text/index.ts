@@ -36,11 +36,30 @@ serve(async (req) => {
       throw new Error('Empty audio data - please try recording again');
     }
     
-    console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Audio data received`, {
-      audioDataLength: audioData.length,
-      estimatedSizeKB: Math.round(audioData.length * 0.75 / 1024), // Base64 to binary estimate
-      traceId
-    });
+      console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Audio data received`, {
+    audioDataLength: audioData.length,
+    estimatedSizeKB: Math.round(audioData.length * 0.75 / 1024), // Base64 to binary estimate
+    traceId
+  });
+
+  // Log the entire payload being sent to Google STT
+  const requestBody = {
+    config: {
+      encoding: "WEBM_OPUS",
+      languageCode: "en-US",
+      model: "latest_short",
+      enableAutomaticPunctuation: true,
+      enableWordTimeOffsets: false,
+      enableWordConfidence: false,
+      useEnhanced: true,
+      ...defaultConfig
+    },
+    audio: {
+      content: audioData
+    }
+  };
+
+  console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Full Google STT request payload:`, JSON.stringify(requestBody, null, 2));
     
     // Test base64 decode to catch invalid format early
     try {
