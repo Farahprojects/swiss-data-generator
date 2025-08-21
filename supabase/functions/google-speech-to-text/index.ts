@@ -200,7 +200,7 @@ serve(async (req) => {
         if (saveError) {
           console.error(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Error saving user message:`, saveError);
         } else {
-          savedMessageId = savedMessage.id;
+          const savedMessageId = savedMessage.id;
           console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} User message saved with ID:`, savedMessageId);
         }
       } catch (dbError) {
@@ -238,7 +238,6 @@ serve(async (req) => {
       JSON.stringify({ 
         transcript,
         confidence,
-        savedMessageId,
         assistantMessage // Include the full assistant message in the response
       }),
       {

@@ -38,8 +38,7 @@ export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
         },
         transition: {
           repeat: Infinity,
-          duration: isVoiceDetected ? 0.8 : 1.2,
-          ease: [0.42, 0, 0.58, 1]
+          duration: isVoiceDetected ? 0.8 : 1.2
         }
       };
     } else if (state === 'processing') {
@@ -49,8 +48,7 @@ export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
         },
         transition: {
           repeat: Infinity,
-          duration: 1.5,
-          ease: [0.42, 0, 0.58, 1]
+          duration: 1.5
         }
       };
     }
