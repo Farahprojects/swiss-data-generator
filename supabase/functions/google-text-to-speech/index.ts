@@ -71,8 +71,8 @@ serve(async (req) => {
     console.log("[google-tts] Audio generated successfully - returning data URL for immediate playback");
     console.log("[google-tts] No storage needed - audio will be played live and discarded");
 
-    // Update message with TTS metadata only (no audio URL storage)
-    const { error: updateError } = await supabaseAdmin
+    // Fire-and-forget metadata update (don't await - return audio immediately)
+    supabaseAdmin
       .from('messages')
       .update({ 
         meta: { 
@@ -82,14 +82,13 @@ serve(async (req) => {
           tts_generated: true
         }
       })
-      .eq('id', messageId);
-
-    if (updateError) {
-      console.error("[google-tts] Database update error:", updateError);
-      throw new Error(`Failed to update message: ${updateError.message}`);
-    }
-
-    console.log("[google-tts] Successfully updated message metadata (text-only persistence)");
+      .eq('id', messageId)
+      .then(() => {
+        console.log("[google-tts] Successfully updated message metadata (fire-and-forget)");
+      })
+      .catch((error) => {
+        console.error("[google-tts] Database update error (non-blocking):", error);
+      });
 
     return new Response(JSON.stringify({ audioUrl: audioDataUrl }), {
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
