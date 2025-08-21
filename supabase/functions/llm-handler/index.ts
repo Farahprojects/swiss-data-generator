@@ -154,7 +154,7 @@ If the user is vague, ask exactly one clarifying question and then give a provis
       conversationId: chat_id,
       role: "assistant",
       text: assistantText,
-      createdAt: new Date().toISOString(),
+      created_at: new Date().toISOString(),
       meta: { 
         llm_provider: "google", 
         model: "gemini-1.5-flash",
