@@ -16,5 +16,19 @@ export const GOOGLE_VOICE_MAP: Record<string, string> = {
 };
 
 export const getGoogleVoiceCode = (voiceName: string): string => {
-  return GOOGLE_VOICE_MAP[voiceName.toLowerCase()] || 'en-US-Studio-O'; // Default to Studio-O (Female)
+  const lowerVoiceName = voiceName.toLowerCase();
+  const mappedVoice = GOOGLE_VOICE_MAP[lowerVoiceName];
+  const finalVoice = mappedVoice || 'en-US-Studio-O'; // Default to Studio-O (Female)
+  
+  // COMPREHENSIVE MAPPING LOGGING
+  console.log('🗺️ [VOICE MAPPING DEBUG] ==========================================');
+  console.log('🗺️ [VOICE MAPPING DEBUG] Input voice name:', voiceName);
+  console.log('🗺️ [VOICE MAPPING DEBUG] Lowercase lookup key:', lowerVoiceName);
+  console.log('🗺️ [VOICE MAPPING DEBUG] Found in map?', !!mappedVoice);
+  console.log('🗺️ [VOICE MAPPING DEBUG] Mapped voice:', mappedVoice);
+  console.log('🗺️ [VOICE MAPPING DEBUG] Final voice code:', finalVoice);
+  console.log('🗺️ [VOICE MAPPING DEBUG] Available keys in map:', Object.keys(GOOGLE_VOICE_MAP));
+  console.log('🗺️ [VOICE MAPPING DEBUG] ==========================================');
+  
+  return finalVoice;
 };

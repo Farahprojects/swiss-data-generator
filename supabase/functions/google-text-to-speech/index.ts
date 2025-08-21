@@ -29,6 +29,15 @@ serve(async (req) => {
     }
     
     const voiceName = voice || "en-US-Studio-O"; // Default to Studio-O (Female)
+    
+    // COMPREHENSIVE EDGE FUNCTION LOGGING
+    console.log("🎯 [EDGE TTS DEBUG] ==========================================");
+    console.log("🎯 [EDGE TTS DEBUG] 1. Received voice parameter:", voice);
+    console.log("🎯 [EDGE TTS DEBUG] 2. Final voice name being used:", voiceName);
+    console.log("🎯 [EDGE TTS DEBUG] 3. Message ID:", messageId);
+    console.log("🎯 [EDGE TTS DEBUG] 4. Text length:", text.length);
+    console.log("🎯 [EDGE TTS DEBUG] ==========================================");
+    
     console.log(`[google-tts] Processing TTS for messageId: ${messageId} with voice: ${voiceName}`);
 
     // Call Google Text-to-Speech API
@@ -43,4 +52,76 @@ serve(async (req) => {
           input: { text },
           voice: {
             languageCode: "en-US",
-            name:
+            name: voiceName,
+          },
+          audioConfig: {
+            audioEncoding: "MP3",
+            speakingRate: 1.0,
+            pitch: 0.0,
+          },
+        }),
+      }
+    );
+
+    // COMPREHENSIVE GOOGLE API LOGGING
+    console.log("🎯 [GOOGLE API DEBUG] ==========================================");
+    console.log("🎯 [GOOGLE API DEBUG] 1. Google API Response Status:", ttsResponse.status);
+    console.log("🎯 [GOOGLE API DEBUG] 2. Google API Response Headers:", Object.fromEntries(ttsResponse.headers.entries()));
+    console.log("🎯 [GOOGLE API DEBUG] 3. Voice sent to Google:", voiceName);
+    console.log("🎯 [GOOGLE API DEBUG] ==========================================");
+
+    if (!ttsResponse.ok) {
+      const errorText = await ttsResponse.text();
+      console.error("[google-tts] Google TTS API error:", ttsResponse.status, errorText);
+      throw new Error(`Google TTS API error: ${ttsResponse.status} - ${errorText}`);
+    }
+
+    const ttsData = await ttsResponse.json();
+    const audioContent = ttsData.audioContent;
+
+    if (!audioContent) {
+      throw new Error("No audio content received from Google TTS API");
+    }
+
+    // Decode base64 audio to binary
+    const audioBytes = Uint8Array.from(atob(audioContent), c => c.charCodeAt(0));
+
+    // Fire-and-forget database update for message metadata
+    supabaseAdmin
+      .from('messages')
+      .update({ 
+        tts_voice: voiceName,
+        tts_provider: 'google',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', messageId)
+      .then(() => console.log(`[google-tts] Updated message ${messageId} with TTS metadata`))
+      .catch(err => console.error(`[google-tts] Failed to update message metadata:`, err));
+
+    // Return streaming response
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(audioBytes);
+        controller.close();
+      }
+    });
+
+    return new Response(stream, {
+      headers: {
+        ...CORS_HEADERS,
+        'Content-Type': 'audio/mpeg',
+        'Content-Length': audioBytes.length.toString(),
+      },
+    });
+
+  } catch (error) {
+    console.error("[google-tts] Error:", error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        status: 500,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      }
+    );
+  }
+});

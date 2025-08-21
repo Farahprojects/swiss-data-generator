@@ -24,6 +24,16 @@ export const ChatSidebarControls: React.FC = () => {
     await sessionManager.clearSession({ redirectTo: '/', preserveNavigation: false });
   };
 
+  const handleVoiceChange = (voice: string) => {
+    console.log('🎛️ [UI VOICE DEBUG] ==========================================');
+    console.log('🎛️ [UI VOICE DEBUG] User selected voice from dropdown:', voice);
+    console.log('🎛️ [UI VOICE DEBUG] Previous voice in store:', ttsVoice);
+    console.log('🎛️ [UI VOICE DEBUG] Setting new voice in store...');
+    console.log('🎛️ [UI VOICE DEBUG] ==========================================');
+    
+    setTtsVoice(voice);
+  };
+
   return (
     <div className="w-full flex flex-col gap-4">
       <div className="flex flex-col gap-2">
@@ -67,7 +77,7 @@ export const ChatSidebarControls: React.FC = () => {
           <select
             className="w-full border rounded-md px-2 py-2 text-sm bg-white"
             value={ttsVoice}
-            onChange={(e) => setTtsVoice(e.target.value)}
+            onChange={(e) => handleVoiceChange(e.target.value)}
           >
             <option value="alloy">Alloy</option>
             <option value="ash">Ash</option>
@@ -83,7 +93,7 @@ export const ChatSidebarControls: React.FC = () => {
           <select
             className="w-full border rounded-md px-2 py-2 text-sm bg-white"
             value={ttsVoice}
-            onChange={(e) => setTtsVoice(e.target.value)}
+            onChange={(e) => handleVoiceChange(e.target.value)}
           >
             {/* Google HD/Studio voices */}
             <option value="en-US-Studio-O">en-US-Studio-O (F)</option>
