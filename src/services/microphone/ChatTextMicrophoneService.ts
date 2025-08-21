@@ -26,6 +26,7 @@ class ChatTextMicrophoneServiceClass {
   private isProcessing = false;
   private audioLevel = 0;
   private silenceTimer: NodeJS.Timeout | null = null;
+  private recordingTimeout: NodeJS.Timeout | null = null;
   private monitoringRef = { current: false };
   private currentTraceId: string | null = null;
   private recordingStartedAt: number | null = null;
@@ -105,6 +106,12 @@ class ChatTextMicrophoneServiceClass {
       this.mediaRecorder.start();
       // minimal start log
       
+      // Set 45-second timeout to automatically stop recording
+      this.recordingTimeout = setTimeout(() => {
+        this.log('⏰ 45-second recording timeout reached - stopping automatically');
+        this.stopRecording();
+      }, 45000);
+      
       // Start two-phase Voice Activity Detection
       this.startVoiceActivityDetection();
       
@@ -134,6 +141,12 @@ class ChatTextMicrophoneServiceClass {
     if (this.silenceTimer) {
       clearTimeout(this.silenceTimer);
       this.silenceTimer = null;
+    }
+
+    // Clear recording timeout
+    if (this.recordingTimeout) {
+      clearTimeout(this.recordingTimeout);
+      this.recordingTimeout = null;
     }
 
     // Stop MediaRecorder
@@ -324,6 +337,12 @@ class ChatTextMicrophoneServiceClass {
     this.audioLevel = 0;
     this.currentTraceId = null;
     this.recordingStartedAt = null;
+
+    // Clear any remaining timers
+    if (this.recordingTimeout) {
+      clearTimeout(this.recordingTimeout);
+      this.recordingTimeout = null;
+    }
 
     // Release arbitrator
     microphoneArbitrator.release('chat-text');
