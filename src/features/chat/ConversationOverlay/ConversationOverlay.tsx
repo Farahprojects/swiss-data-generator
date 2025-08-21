@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { VoiceBubble } from './VoiceBubble';
@@ -7,6 +7,7 @@ import { chatController } from '../ChatController';
 import { useConversationAudioLevel } from '@/hooks/useConversationAudioLevel';
 import { useConversationFlowMonitor } from '@/hooks/useConversationFlowMonitor';
 import { FlowMonitorIndicator } from './FlowMonitorIndicator';
+import { ConnectionErrorFallback } from './ConnectionErrorFallback';
 import { AnimatePresence, motion } from 'framer-motion';
 
 export const ConversationOverlay: React.FC = () => {
@@ -15,6 +16,24 @@ export const ConversationOverlay: React.FC = () => {
   const audioLevel = useConversationAudioLevel(); // Get real-time audio level
   const { startMonitoring, stopMonitoring } = useConversationFlowMonitor();
   const hasStartedListening = useRef(false);
+  const [showConnectionError, setShowConnectionError] = useState(false);
+  const [recoveryAttempts, setRecoveryAttempts] = useState(0);
+  
+  // Handle retry from error UI
+  const handleRetry = () => {
+    setShowConnectionError(false);
+    setRecoveryAttempts(0);
+    hasStartedListening.current = false; // Reset flag to trigger restart
+    console.log('[ConversationOverlay] Manual retry triggered');
+  };
+  
+  // Reset recovery attempts when conversation is working
+  const resetRecoveryAttempts = () => {
+    if (recoveryAttempts > 0) {
+      setRecoveryAttempts(0);
+      console.log('[ConversationOverlay] Recovery attempts reset - conversation working');
+    }
+  };
   
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = () => {
@@ -49,10 +68,33 @@ export const ConversationOverlay: React.FC = () => {
   useEffect(() => {
     if (isConversationOpen && !hasStartedListening.current) {
       hasStartedListening.current = true;
+      setShowConnectionError(false); // Reset error state
+      setRecoveryAttempts(0); // Reset recovery attempts
       console.log('[ConversationOverlay] Conversation opened - starting listening');
       
-      // Start flow monitoring
+      // Start flow monitoring with auto-recovery
       startMonitoring();
+      
+      // Setup auto-recovery system
+      import('@/services/conversation/ConversationFlowMonitor').then(({ conversationFlowMonitor }) => {
+        conversationFlowMonitor.setupAutoRecovery(
+          // Auto-recovery trigger: try to restart conversation
+          () => {
+            setRecoveryAttempts(prev => prev + 1);
+            console.log('[ConversationOverlay] Auto-recovery triggered - restarting conversation');
+            chatController.startTurn().catch(error => {
+              console.error('[ConversationOverlay] Auto-recovery failed:', error);
+            });
+          },
+          // Max attempts reached: show error UI
+          () => {
+            console.log('[ConversationOverlay] Max recovery attempts reached - showing error UI');
+            setShowConnectionError(true);
+          }
+        );
+      });
+      
+
       
       // Simple: just start listening
       chatController.startTurn().catch(error => {
@@ -72,15 +114,31 @@ export const ConversationOverlay: React.FC = () => {
     }
   }, [isConversationOpen, stopMonitoring]);
 
+  // Reset recovery attempts when conversation starts working
+  useEffect(() => {
+    if (status === 'recording' && recoveryAttempts > 0) {
+      resetRecoveryAttempts();
+    }
+  }, [status, recoveryAttempts]);
+
 
 
   // Map chat status to conversation state for UI
-  const state = status === 'recording' ? 'listening' : 
+  const state = recoveryAttempts > 0 ? 'connecting' :
+               status === 'recording' ? 'listening' : 
                status === 'transcribing' ? 'processing' : 
                status === 'thinking' ? 'processing' : 
                status === 'speaking' ? 'replying' : 'listening';
 
   if (!isConversationOpen) return null;
+
+  // Show connection error UI if auto-recovery failed
+  if (showConnectionError) {
+    return createPortal(
+      <ConnectionErrorFallback onRetry={handleRetry} />,
+      document.body
+    );
+  }
 
   return createPortal(
     <div className="fixed inset-0 z-50 bg-white pt-safe pb-safe">
@@ -102,7 +160,9 @@ export const ConversationOverlay: React.FC = () => {
             </motion.div>
           </AnimatePresence>
           <p className="text-gray-500 font-light">
-            {state === 'listening' ? 'Listening…' : state === 'processing' ? 'Thinking…' : 'Speaking…'}
+            {state === 'connecting' ? `Connecting... (${recoveryAttempts}/2)` : 
+             state === 'listening' ? 'Listening…' : 
+             state === 'processing' ? 'Thinking…' : 'Speaking…'}
           </p>
           {/* Close button - positioned under the status text */}
           <button

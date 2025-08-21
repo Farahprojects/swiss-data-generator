@@ -4,7 +4,7 @@ import { SpeakingBars } from './SpeakingBars';
 import { useTtsStreamLevel } from '@/hooks/useTtsStreamLevel';
 
 interface Props {
-  state: 'listening' | 'processing' | 'replying';
+  state: 'listening' | 'processing' | 'replying' | 'connecting';
   audioLevel?: number;
 }
 
@@ -23,10 +23,11 @@ export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
   const isVoiceDetected = audioLevel > 0.05;
 
   // Styles per state (visual only)
-  const styles: Record<'listening' | 'processing' | 'replying', string> = {
+  const styles: Record<'listening' | 'processing' | 'replying' | 'connecting', string> = {
     listening: 'bg-black shadow-gray-800/50',
     processing: 'bg-black shadow-gray-800/50',
     replying: 'bg-black shadow-gray-800/50',
+    connecting: 'bg-gray-500 shadow-gray-600/50', // Grey for connecting state
   };
 
   // Simple, clear pulse animation
@@ -49,6 +50,16 @@ export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
         transition: {
           repeat: Infinity,
           duration: 1.5
+        }
+      };
+    } else if (state === 'connecting') {
+      return {
+        animate: {
+          scale: [1, 1.1, 1],
+        },
+        transition: {
+          repeat: Infinity,
+          duration: 1.0
         }
       };
     }

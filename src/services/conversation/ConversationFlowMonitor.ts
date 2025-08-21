@@ -32,6 +32,13 @@ class ConversationFlowMonitorClass {
   private stepStartTime = 0;
   private listeners = new Set<(info: FlowStepInfo) => void>();
   private connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'failed' = 'disconnected';
+  
+  // Auto-recovery properties
+  private autoRecoveryAttempts = 0;
+  private maxAutoRecoveryAttempts = 2; // Reduced to 2 attempts
+  private autoRecoveryInterval: NodeJS.Timeout | null = null;
+  private onAutoRecoveryTrigger?: () => void;
+  private onMaxAttemptsReached?: () => void;
 
   /**
    * START MONITORING - Called when conversation opens
@@ -41,6 +48,7 @@ class ConversationFlowMonitorClass {
     
     this.isMonitoring = true;
     this.connectionStatus = 'connecting';
+    this.autoRecoveryAttempts = 0; // Reset attempts
     this.notifyListeners();
     
     console.log('🎯 [FLOW MONITOR] 🟢 Started monitoring conversation flow');
@@ -62,6 +70,8 @@ class ConversationFlowMonitorClass {
     this.isMonitoring = false;
     this.connectionStatus = 'disconnected';
     this.currentStep = 'idle';
+    this.autoRecoveryAttempts = 0; // Reset attempts
+    this.stopAutoRecoveryCheck(); // Clean up auto-recovery
     this.notifyListeners();
     
     console.log('🎯 [FLOW MONITOR] 🔴 Stopped monitoring conversation flow');
@@ -178,6 +188,80 @@ class ConversationFlowMonitorClass {
     });
     
     return () => this.listeners.delete(listener);
+  }
+
+  /**
+   * AUTO-RECOVERY SYSTEM
+   */
+  
+  /**
+   * SETUP AUTO-RECOVERY - Configure recovery callbacks
+   */
+  setupAutoRecovery(
+    onAutoRecoveryTrigger: () => void,
+    onMaxAttemptsReached: () => void
+  ): void {
+    this.onAutoRecoveryTrigger = onAutoRecoveryTrigger;
+    this.onMaxAttemptsReached = onMaxAttemptsReached;
+    this.startAutoRecoveryCheck();
+  }
+
+  /**
+   * START AUTO-RECOVERY CHECK - Monitor for stuck idle states
+   */
+  private startAutoRecoveryCheck(): void {
+    if (this.autoRecoveryInterval) {
+      clearInterval(this.autoRecoveryInterval);
+    }
+
+    this.autoRecoveryInterval = setInterval(() => {
+      if (!this.isMonitoring) return;
+
+      // Check if we're stuck in idle for more than 2 seconds (first attempt) or 3 seconds (second attempt)
+      if (this.currentStep === 'idle' && this.stepStartTime > 0) {
+        const idleDuration = Date.now() - this.stepStartTime;
+        const timeoutMs = this.autoRecoveryAttempts === 0 ? 2000 : 3000; // 2s, then 3s
+        
+        if (idleDuration > timeoutMs) {
+          this.triggerAutoRecovery();
+        }
+      }
+    }, 1000); // Check every second
+  }
+
+  /**
+   * TRIGGER AUTO-RECOVERY - Attempt to restart conversation
+   */
+  private triggerAutoRecovery(): void {
+    if (this.autoRecoveryAttempts >= this.maxAutoRecoveryAttempts) {
+      console.log(`🔄 [FLOW MONITOR] Max recovery attempts (${this.maxAutoRecoveryAttempts}) reached - giving up`);
+      this.onMaxAttemptsReached?.();
+      this.stopAutoRecoveryCheck();
+      return;
+    }
+
+    this.autoRecoveryAttempts++;
+    console.log(`🔄 [FLOW MONITOR] Auto-recovery attempt ${this.autoRecoveryAttempts}/${this.maxAutoRecoveryAttempts} - restarting conversation`);
+    
+    this.onAutoRecoveryTrigger?.();
+  }
+
+  /**
+   * STOP AUTO-RECOVERY CHECK - Clean up interval
+   */
+  private stopAutoRecoveryCheck(): void {
+    if (this.autoRecoveryInterval) {
+      clearInterval(this.autoRecoveryInterval);
+      this.autoRecoveryInterval = null;
+    }
+  }
+
+  /**
+   * RESET AUTO-RECOVERY - Reset attempt counter (called on successful turn)
+   */
+  resetAutoRecovery(): void {
+    this.autoRecoveryAttempts = 0;
+    console.log('🔄 [FLOW MONITOR] Auto-recovery reset - conversation working normally');
   }
 
   private notifyListeners(): void {

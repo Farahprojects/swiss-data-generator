@@ -127,6 +127,8 @@ class ChatController {
     
     try {
       await conversationMicrophoneService.startRecording();
+      // Reset auto-recovery on successful start
+      conversationFlowMonitor.resetAutoRecovery();
     } catch (error: any) {
       conversationFlowMonitor.observeError('listening', error);
       useChatStore.getState().setError(error.message);
@@ -159,6 +161,9 @@ class ChatController {
       conversationFlowMonitor.observeStep('thinking');
       const finalMessage = await llmService.sendMessage({ chat_id, text: transcript, client_msg_id });
       this.reconcileOptimisticMessage(finalMessage);
+      
+      // Reset auto-recovery on successful turn completion
+      conversationFlowMonitor.resetAutoRecovery();
 
     } catch (error: any) {
       conversationFlowMonitor.observeError('transcribing', error);
