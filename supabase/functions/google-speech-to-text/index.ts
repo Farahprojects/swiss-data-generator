@@ -18,64 +18,53 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Validate request method
+  if (req.method !== 'POST') {
+    return new Response(
+      JSON.stringify({ error: 'Method not allowed' }),
+      { 
+        status: 405, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
+  }
+
   try {
+    // Parse and validate request body
     const { audioData, config, traceId, chat_id, meta } = await req.json();
     
-    // Comprehensive audio data validation
-    if (!audioData) {
-      console.error('[google-stt] Missing audioData in request');
-      throw new Error('Audio data is required');
+    // Validate audio data
+    if (!audioData || typeof audioData !== 'string' || audioData.length === 0) {
+      console.error('[google-stt] Invalid audio data:', { 
+        hasData: !!audioData, 
+        type: typeof audioData, 
+        length: audioData?.length 
+      });
+      throw new Error('Valid audio data is required');
     }
-    
-    if (typeof audioData !== 'string') {
-      console.error('[google-stt] AudioData is not a string:', typeof audioData);
-      throw new Error('Audio data must be base64 encoded string');
-    }
-    
-    if (audioData.length === 0) {
-      console.error('[google-stt] Empty audioData string');
-      throw new Error('Empty audio data - please try recording again');
-    }
-    
-      console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Audio data received`, {
-    audioDataLength: audioData.length,
-    estimatedSizeKB: Math.round(audioData.length * 0.75 / 1024), // Base64 to binary estimate
-    traceId
-  });
-
-  // Log the entire payload being sent to Google STT
-  const logRequestBody = {
-    config: {
-      encoding: "WEBM_OPUS",
-      languageCode: "en-US",
-      model: "latest_short",
-      enableAutomaticPunctuation: true,
-      enableWordTimeOffsets: false,
-      enableWordConfidence: false,
-      useEnhanced: true,
-      ...defaultConfig
-    },
-    audio: {
-      content: audioData
-    }
-  };
-
-  console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Full Google STT request payload:`, JSON.stringify(logRequestBody, null, 2));
     
     // Test base64 decode to catch invalid format early
     try {
-      atob(audioData.substring(0, 100)); // Test decode first 100 chars
+      atob(audioData.substring(0, 100));
     } catch (decodeError) {
       console.error('[google-stt] Invalid base64 format:', decodeError);
       throw new Error('Invalid audio data format - please try recording again');
     }
 
+    // Validate API key
     const googleApiKey = Deno.env.get('GOOGLE-STT');
     if (!googleApiKey) {
       throw new Error('Google STT API key not configured');
     }
 
-    // Simplified configuration - let Google handle resampling automatically
+    // Log audio data info
+    console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Audio data received`, {
+      audioDataLength: audioData.length,
+      estimatedSizeKB: Math.round(audioData.length * 0.75 / 1024),
+      traceId
+    });
+
+    // Build Google STT configuration
     const defaultConfig = {
       encoding: 'WEBM_OPUS',
       languageCode: 'en-US',
@@ -88,6 +77,7 @@ serve(async (req) => {
       ...config
     };
 
+    // Build request payload
     const requestBody = {
       audio: {
         content: audioData
@@ -95,8 +85,12 @@ serve(async (req) => {
       config: defaultConfig
     };
 
-    // Send request to Google STT API
-    
+    // Log the full request payload for debugging
+    console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Full Google STT request payload:`, 
+      JSON.stringify(requestBody, null, 2)
+    );
+
+    // Call Google STT API
     const response = await fetch(
       `https://speech.googleapis.com/v1/speech:recognize?key=${googleApiKey}`,
       {
@@ -114,23 +108,20 @@ serve(async (req) => {
       throw new Error(`Google Speech-to-Text API error: ${response.status} - ${errorText}`);
     }
 
+    // Parse Google STT response
     const result = await response.json();
-    // Extract transcript from response
-
-    // Extract the transcript from the first result
     const transcript = result.results?.[0]?.alternatives?.[0]?.transcript || '';
     const confidence = result.results?.[0]?.alternatives?.[0]?.confidence || 0;
 
     console.log('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Extracted transcript length:', transcript?.length || 0);
     console.log('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Confidence score:', confidence);
     
-    // Handle empty transcription results - return empty transcript instead of error
+    // Handle empty transcription results
     if (!transcript || transcript.trim().length === 0) {
-      console.warn('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Empty transcript from Google API - audio may be unclear or silent');
-      console.log('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Returning empty transcript for conversation mode to continue gracefully');
+      console.warn('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Empty transcript from Google API');
       return new Response(
         JSON.stringify({ 
-          transcript: '', // Empty transcript
+          transcript: '',
           confidence: 0,
           note: 'No speech detected - conversation can continue'
         }),
@@ -140,9 +131,9 @@ serve(async (req) => {
       );
     }
     
+    // Log low confidence warnings
     if (confidence < 0.3) {
       console.warn('[google-stt] Low confidence transcript:', confidence, 'for:', transcript);
-      // Still return it but log the warning
     }
 
     // Save user message to database if chat_id provided
@@ -172,7 +163,7 @@ serve(async (req) => {
       }
     }
 
-    // Only trigger LLM for conversation mode, not for mic icon
+    // Handle LLM processing for conversation mode
     let assistantMessage = null;
     if (chat_id && transcript && transcript.trim().length > 0 && meta?.conversation_mode) {
       console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Triggering llm-handler for conversation mode`);
@@ -200,12 +191,13 @@ serve(async (req) => {
       console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Mic icon mode - returning transcript only`);
     }
 
+    // Return successful response
     return new Response(
       JSON.stringify({ 
         transcript,
         confidence,
         savedMessageId,
-        assistantMessage // Include the full assistant message in the response
+        assistantMessage
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
