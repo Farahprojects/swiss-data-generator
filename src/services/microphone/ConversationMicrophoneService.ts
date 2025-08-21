@@ -104,7 +104,7 @@ class ConversationMicrophoneServiceClass {
       };
 
       // Start recording - let MediaRecorder handle chunking naturally
-      this.mediaRecorder.start(); // Let MediaRecorder create complete WebM files
+      this.mediaRecorder.start(500); // 500ms chunks to ensure we get multiple chunks
       
       this.notifyListeners();
       this.log('✅ Recording started successfully');

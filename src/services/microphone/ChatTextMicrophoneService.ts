@@ -92,12 +92,24 @@ class ChatTextMicrophoneServiceClass {
       this.mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           this.audioChunks.push(event.data);
+          this.log('📦 Chunk received', { 
+            chunkSize: event.data.size, 
+            totalChunks: this.audioChunks.length,
+            totalSizeSoFar: this.audioChunks.reduce((sum, chunk) => sum + chunk.size, 0)
+          });
+        } else {
+          this.log('⚠️ Empty chunk received - skipping');
         }
       };
 
       this.mediaRecorder.onstop = async () => {
         // Ensure MediaRecorder has finished creating the complete WebM file
         this.log('⏹️ MediaRecorder stopped - processing complete WebM file');
+        this.log('📊 Final chunk summary', {
+          totalChunks: this.audioChunks.length,
+          totalSize: this.audioChunks.reduce((sum, chunk) => sum + chunk.size, 0),
+          chunkSizes: this.audioChunks.map(chunk => chunk.size)
+        });
         
         // Small delay to ensure all chunks are finalized
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -107,8 +119,8 @@ class ChatTextMicrophoneServiceClass {
         this.cleanup();
       };
 
-      // Start recording - let MediaRecorder create complete WebM files
-      this.mediaRecorder.start(); // No chunking - let MediaRecorder handle it naturally
+      // Start recording with minimal chunking to ensure multiple chunks
+      this.mediaRecorder.start(500); // 500ms chunks to ensure we get multiple chunks
       // minimal start log
       
       // Start two-phase Voice Activity Detection
@@ -245,7 +257,20 @@ class ChatTextMicrophoneServiceClass {
       this.notifyListeners();
       
       // Create complete WebM file from all chunks
+      this.log('🔧 Creating final Blob from chunks', {
+        chunkCount: this.audioChunks.length,
+        individualChunkSizes: this.audioChunks.map(chunk => chunk.size),
+        totalChunkSize: this.audioChunks.reduce((sum, chunk) => sum + chunk.size, 0)
+      });
+      
       const finalBlob = new Blob(this.audioChunks, { type: 'audio/webm;codecs=opus' });
+      
+      this.log('📁 Final Blob created', {
+        blobSize: finalBlob.size,
+        blobType: finalBlob.type,
+        expectedSize: this.audioChunks.reduce((sum, chunk) => sum + chunk.size, 0),
+        sizeMatch: finalBlob.size === this.audioChunks.reduce((sum, chunk) => sum + chunk.size, 0)
+      });
       
       // Validate we have a complete WebM file with proper headers
       if (finalBlob.size < 1000) {
@@ -269,6 +294,7 @@ class ChatTextMicrophoneServiceClass {
       // minimal
       
       // Convert to base64
+      this.log('🔄 Starting base64 conversion of final Blob');
       const reader = new FileReader();
       reader.onloadend = async () => {
         try {
@@ -276,7 +302,9 @@ class ChatTextMicrophoneServiceClass {
           this.log('📤 Sending to Google STT', { 
             base64Length: base64Audio.length,
             estimatedDurationMs: Math.round((finalBlob.size / 128000) * 8 * 1000), // Rough estimate based on bitrate
-            mimeType: finalBlob.type
+            mimeType: finalBlob.type,
+            originalBlobSize: finalBlob.size,
+            conversionRatio: base64Audio.length / finalBlob.size
           });
           // minimal
 
