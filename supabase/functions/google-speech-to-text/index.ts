@@ -182,33 +182,12 @@ serve(async (req) => {
       // Still return it but log the warning
     }
 
-    // Save user message to database if chat_id provided
-    if (chat_id && transcript && transcript.trim().length > 0) {
-      console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Saving user message to DB`);
-      try {
-        const { data: savedMessage, error: saveError } = await supabaseAdmin
-          .from('messages')
-          .insert({
-            chat_id: chat_id,
-            role: 'user',
-            text: transcript,
-            meta: { ...(meta || {}), stt_provider }
-          })
-          .select()
-          .single();
+    // Return transcript immediately - no DB save needed
+    // Mic button: transcript goes to chat bar, user hits send → final message saved
+    // Conversation mode: LLM handler will save the conversation when it processes
+    console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Returning transcript immediately (no DB save)`);
 
-        if (saveError) {
-          console.error(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Error saving user message:`, saveError);
-        } else {
-          const savedMessageId = savedMessage.id;
-          console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} User message saved with ID:`, savedMessageId);
-        }
-      } catch (dbError) {
-        console.error(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Database error:`, dbError);
-      }
-    }
-
-    // After saving, trigger the llm-handler to get an immediate AI response
+    // Trigger the llm-handler to get an immediate AI response (for conversation mode)
     let assistantMessage = null;
     if (chat_id && transcript && transcript.trim().length > 0) {
       console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Triggering llm-handler`);
