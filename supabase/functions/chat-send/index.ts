@@ -89,9 +89,9 @@ serve(async (req) => {
     }
     console.log('[chat-send] User message inserted');
 
-    // Fire and forget call to llm-handler to generate the assistant's response
-    console.log('[chat-send] Notifying llm-handler of new message (fire and forget)');
-    fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/llm-handler`, {
+    // Await the response from llm-handler to get the assistant's message
+    console.log('[chat-send] Awaiting response from llm-handler');
+    const llmResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/llm-handler`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -99,18 +99,22 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         chat_id,
-        text, // Pass the user's text to the llm-handler
+        text,
         client_msg_id: client_msg_id || userMessageData.client_msg_id,
       })
-    }).catch(error => {
-      console.error('[chat-send] llm-handler notification failed (non-blocking):', error);
     });
 
-    // Return immediate success response
-    return new Response(JSON.stringify({
-      message: "Message sent and processing initiated",
-      client_msg_id: client_msg_id || userMessageData.client_msg_id
-    }), {
+    if (!llmResponse.ok) {
+      const errorText = await llmResponse.text();
+      console.error('[chat-send] llm-handler failed:', errorText);
+      throw new Error(`LLM handler failed: ${errorText}`);
+    }
+
+    const assistantMessage = await llmResponse.json();
+    console.log('[chat-send] Received assistant message from llm-handler');
+
+    // Return the assistant's message directly to the client
+    return new Response(JSON.stringify(assistantMessage), {
       headers: {
         ...corsHeaders,
         "Content-Type": "application/json"

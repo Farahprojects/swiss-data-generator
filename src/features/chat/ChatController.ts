@@ -15,7 +15,6 @@ class ChatController {
   private isTurnActive = false;
   private conversationServiceInitialized = false;
   private isResetting = false;
-  private realtimeChannel: RealtimeChannel | null = null;
   
   async initializeConversation(chat_id: string) {
     if (!chat_id) {
@@ -25,7 +24,6 @@ class ChatController {
     
     console.log('[ChatController] Initializing chat with verified chat_id:', chat_id);
     useChatStore.getState().startConversation(chat_id);
-    this.subscribeToChannel(chat_id);
     
     try {
       const existingMessages = await getMessagesForConversation(chat_id);
@@ -48,7 +46,8 @@ class ChatController {
     this.addOptimisticMessages(chat_id, text, client_msg_id);
     
     try {
-      await llmService.sendMessage({ chat_id, text, client_msg_id });
+      const finalMessage = await llmService.sendMessage({ chat_id, text, client_msg_id });
+      this.reconcileOptimisticMessage(finalMessage);
     } catch (error) {
       console.error("[ChatController] Error sending message:", error);
       useChatStore.getState().setError("Failed to send message. Please try again.");
@@ -80,45 +79,21 @@ class ChatController {
     useChatStore.getState().setStatus('thinking');
   }
 
-  private subscribeToChannel(chat_id: string) {
-    if (this.realtimeChannel && this.realtimeChannel.topic === `chat:${chat_id}`) {
-      return; // Already subscribed
+  private reconcileOptimisticMessage(finalMessage: Message) {
+    if (!finalMessage.client_msg_id) {
+      console.error('[ChatController] Finalized message is missing client_msg_id, cannot reconcile UI.');
+      return;
     }
-    if (this.realtimeChannel) {
-      this.unsubscribe();
-    }
+
+    useChatStore.getState().updateMessage(
+      `thinking-${finalMessage.client_msg_id}`, 
+      { ...finalMessage, id: finalMessage.id || uuidv4(), status: 'complete' }
+    );
     
-    console.log(`[ChatController] Subscribing to Realtime channel: chat:${chat_id}`);
-    this.realtimeChannel = supabase.channel(`chat:${chat_id}`);
-    
-    this.realtimeChannel.on('broadcast', { event: 'message.finalized' }, ({ payload }) => {
-      console.log('[ChatController] Received message.finalized event:', payload);
-      const finalMessage = payload as Message;
-      const client_msg_id = payload.client_msg_id;
-
-      if (!client_msg_id) {
-        console.error('[ChatController] Finalized message is missing client_msg_id, cannot reconcile UI.');
-        return;
-      }
-
-      useChatStore.getState().updateMessage(
-        `thinking-${client_msg_id}`, 
-        { ...finalMessage, id: finalMessage.id || uuidv4(), status: 'complete' }
-      );
-      
-      if (this.isTurnActive) {
-        this.playAssistantAudioAndContinue(finalMessage, chat_id);
-      } else {
-        useChatStore.getState().setStatus('idle');
-      }
-    }).subscribe();
-  }
-
-  private unsubscribe() {
-    if (this.realtimeChannel) {
-      console.log('[ChatController] Unsubscribing from Realtime channel');
-      supabase.removeChannel(this.realtimeChannel);
-      this.realtimeChannel = null;
+    if (this.isTurnActive) {
+      this.playAssistantAudioAndContinue(finalMessage, finalMessage.conversationId);
+    } else {
+      useChatStore.getState().setStatus('idle');
     }
   }
 
@@ -175,7 +150,8 @@ class ChatController {
 
       this.addOptimisticMessages(chat_id, transcript, client_msg_id, audioUrl);
       
-      await llmService.sendMessage({ chat_id, text: transcript, client_msg_id });
+      const finalMessage = await llmService.sendMessage({ chat_id, text: transcript, client_msg_id });
+      this.reconcileOptimisticMessage(finalMessage);
 
     } catch (error: any) {
       console.error("[ChatController] Error processing voice input:", error);
@@ -224,7 +200,6 @@ class ChatController {
 
   resetConversationService() {
     this.isResetting = true;
-    this.unsubscribe();
     conversationMicrophoneService.forceCleanup();
     stopTtsAudio();
     this.conversationServiceInitialized = false;

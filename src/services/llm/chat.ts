@@ -17,8 +17,8 @@ class LlmService {
    * User message is saved to DB, llm-handler is notified but no immediate response
    * Note: chat_id is already verified by verify-chat-access, no guest_id needed
    */
-  async sendMessage(request: { chat_id: string; text: string; client_msg_id?: string }): Promise<void> {
-    console.log(`[LLM] Sending message for chat ${request.chat_id}...`);
+  async sendMessage(request: { chat_id: string; text: string; client_msg_id?: string }): Promise<Message> {
+    console.log(`[LLM] Sending message for chat ${request.chat_id} and awaiting direct response...`);
     
     const { data, error } = await supabase.functions.invoke('chat-send', {
       body: {
@@ -38,7 +38,8 @@ class LlmService {
       throw new Error(`chat-send error: ${data.error}`);
     }
 
-    console.log(`[LLM] Message sent successfully (fire and forget)`);
+    console.log(`[LLM] Direct response received from chat-send`);
+    return data as Message;
   }
 
   // Legacy method - kept for compatibility if needed

@@ -188,21 +188,8 @@ Rules:
         }
       });
 
-    // Broadcast the final message over the Realtime channel
-    const channel = supabase.channel(`chat:${chat_id}`);
-    channel.send({
-      type: 'broadcast',
-      event: 'message.finalized',
-      payload: {
-        ...assistantMessage,
-        client_msg_id, // Include for UI reconciliation
-      },
-    }).catch(err => {
-      console.error('[llm-handler] Realtime broadcast error:', err);
-    });
-
-    // Return a simple success response; the UI will get the message via Realtime
-    return new Response(JSON.stringify({ success: true, message: "LLM processing initiated" }), {
+    // Return the final assistant message directly
+    return new Response(JSON.stringify({ ...assistantMessage, client_msg_id }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
