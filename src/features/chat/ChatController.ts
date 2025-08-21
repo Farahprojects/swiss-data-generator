@@ -197,8 +197,19 @@ class ChatController {
     useChatStore.getState().setStatus('idle');
     this.isTurnActive = false;
     
-    // Always clean up microphone service between turns
-    conversationMicrophoneService.forceCleanup();
+    // Only force cleanup if we're ending the conversation flow
+    // Don't cleanup if we're just transitioning between turns
+    if (endConversationFlow) {
+      conversationMicrophoneService.forceCleanup();
+    } else {
+      // For turn transitions, just stop the current recording gracefully
+      // The microphone service will be re-initialized in startTurn()
+      if (conversationMicrophoneService.getState().isRecording) {
+        conversationMicrophoneService.stopRecording().catch(() => {
+          // Ignore errors during graceful stop
+        });
+      }
+    }
     
     if (!endConversationFlow && !this.isResetting) {
       // Short delay before starting next turn
