@@ -5,6 +5,8 @@ import { PlayCircle } from 'lucide-react';
 import { audioPlayer } from '@/services/voice/audioPlayer';
 import { useConversationUIStore } from './conversation-ui-store';
 import { TypewriterText } from '@/components/ui/TypewriterText';
+import { useReportReadyStore } from '@/services/report/reportReadyStore';
+import { Loader2 } from 'lucide-react';
 
 const MessageItem = ({ message, isLast, isFromHistory }: { message: Message; isLast: boolean; isFromHistory?: boolean }) => {
   const isUser = message.role === 'user';
@@ -37,10 +39,28 @@ const MessageItem = ({ message, isLast, isFromHistory }: { message: Message; isL
   );
 };
 
+// Temporary message component for "Generating your report..."
+const GeneratingReportMessage = () => {
+  return (
+    <div className="flex items-end gap-3 justify-start">
+      <div className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black">
+        <div className="flex items-center gap-3 text-base font-light leading-relaxed">
+          <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
+          <span className="text-gray-700">Generating your report...</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const MessageList = () => {
   const messages = useChatStore((state) => state.messages);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [initialMessageCount, setInitialMessageCount] = useState<number | null>(null);
+  
+  // Get report generation state
+  const isPolling = useReportReadyStore((state) => state.isPolling);
+  const isReportReady = useReportReadyStore((state) => state.isReportReady);
 
   // Track initial message count to determine which messages are from history
   useEffect(() => {
@@ -53,11 +73,14 @@ export const MessageList = () => {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages.length]);
+  }, [messages.length, isPolling]); // Also scroll when generating message appears/disappears
+
+  // Show generating message when polling and report is not ready
+  const showGeneratingMessage = isPolling && !isReportReady;
 
   return (
     <div className="flex flex-col min-h-full">
-      {messages.length === 0 ? (
+      {messages.length === 0 && !showGeneratingMessage ? (
         <div className="flex-1 flex flex-col justify-end">
           <div className="p-4">
             <h2 className="text-3xl font-light text-gray-800 text-left">Let's tune into the energy behind your chart</h2>
@@ -71,11 +94,16 @@ export const MessageList = () => {
               <MessageItem 
                 key={msg.id} 
                 message={msg} 
-                isLast={index === messages.length - 1}
+                isLast={index === messages.length - 1 && !showGeneratingMessage}
                 isFromHistory={isFromHistory}
               />
             );
           })}
+          
+          {/* Show generating message at the end when report is being generated */}
+          {showGeneratingMessage && (
+            <GeneratingReportMessage />
+          )}
         </div>
       )}
       <div ref={scrollRef} />
