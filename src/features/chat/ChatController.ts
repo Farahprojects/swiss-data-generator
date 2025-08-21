@@ -5,7 +5,7 @@ import { conversationMicrophoneService } from '@/services/microphone/Conversatio
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
 import { conversationTtsService } from '@/services/voice/conversationTts';
-import { initTtsAudio, stopTtsAudio } from '@/services/voice/ttsAudio';
+import { streamPlayerService } from '@/services/voice/StreamPlayerService';
 import { getMessagesForConversation } from '@/services/api/messages';
 import { Message } from '@/core/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -164,7 +164,6 @@ class ChatController {
     if (assistantMessage.text && assistantMessage.id) {
       useChatStore.getState().setStatus('speaking');
       try {
-        await initTtsAudio();
         await conversationTtsService.speakAssistant({
           conversationId: chat_id,
           messageId: assistantMessage.id,
@@ -201,7 +200,7 @@ class ChatController {
   resetConversationService() {
     this.isResetting = true;
     conversationMicrophoneService.forceCleanup();
-    stopTtsAudio();
+    streamPlayerService.stop();
     this.conversationServiceInitialized = false;
     this.isTurnActive = false;
     useChatStore.getState().setStatus('idle');
