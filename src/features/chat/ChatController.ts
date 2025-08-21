@@ -185,6 +185,10 @@ class ChatController {
   private resetTurn(endConversationFlow = true) {
     useChatStore.getState().setStatus('idle');
     this.isTurnActive = false;
+    
+    // Always clean up microphone service between turns
+    conversationMicrophoneService.forceCleanup();
+    
     if (!endConversationFlow && !this.isResetting) {
       // Short delay before starting next turn
       setTimeout(() => { if (!this.isResetting) this.startTurn(); }, 500);
