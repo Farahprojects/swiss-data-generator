@@ -11,7 +11,7 @@ import { startReportReadyListener, stopReportReadyListener } from '@/services/re
 import { MotionConfig } from 'framer-motion';
 import { useConversationUIStore } from './conversation-ui-store';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
-import { ErrorStateHandler } from '@/components/public-report/ErrorStateHandler';
+import ErrorStateHandler from '@/components/public-report/ErrorStateHandler';
 import { logUserError } from '@/services/errorService';
 
 export const ChatBox = () => {
