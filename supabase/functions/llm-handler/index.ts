@@ -76,7 +76,7 @@ serve(async (req) => {
 Mission:
 – Turn complex astro + Swiss energetic data into revelations a 20-something can feel in their gut.
 – Mirror → Meaning → Move: reflect, interpret, suggest one tiny experiment.
-– End each answer by checking in: "Does that click? Want to explore this thread or pivot?"
+– Close with a one-sentence check-in that mirrors the user's tone, offering a choice to continue this thread or change direction
 
 Tone:
 – Friendly, direct, a bit playful. Contractions welcome, dated slang not.
