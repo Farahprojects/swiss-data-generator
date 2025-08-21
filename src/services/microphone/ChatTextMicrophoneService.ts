@@ -29,6 +29,7 @@ class ChatTextMicrophoneServiceClass {
   private monitoringRef = { current: false };
   private currentTraceId: string | null = null;
   private recordingStartedAt: number | null = null;
+  private lastNotificationTime = 0; // For throttling UI updates
   
   private options: ChatTextMicrophoneOptions = {};
   private listeners = new Set<() => void>();
@@ -198,8 +199,12 @@ class ChatTextMicrophoneServiceClass {
       const rms = Math.sqrt(sumSquares / bufferLength);
       this.audioLevel = rms;
       
-      // Notify UI of audio level changes for waveform animation
-      this.notifyListeners();
+      // Throttle UI notifications to 10fps to avoid interfering with MediaRecorder
+      const currentTime = Date.now();
+      if (currentTime - this.lastNotificationTime >= 100) { // 100ms = 10fps
+        this.notifyListeners();
+        this.lastNotificationTime = currentTime;
+      }
       
       const now = Date.now();
       
