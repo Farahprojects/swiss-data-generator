@@ -172,11 +172,11 @@ class ChatTextMicrophoneServiceClass {
     let voiceStartTime: number | null = null;
     let silenceStartTime: number | null = null;
     
-    // More sensitive thresholds for immediate voice detection
-    const VOICE_START_THRESHOLD = 0.03;  // Lower threshold for faster detection
-    const VOICE_START_DURATION = 150;    // Shorter duration to start recording faster
-    const SILENCE_THRESHOLD = 0.015;     // Lower silence threshold
-    const SILENCE_TIMEOUT = this.options.silenceTimeoutMs || 2000;
+    // Optimized thresholds for faster response
+    const VOICE_START_THRESHOLD = 0.012;  // Slightly lower for faster detection
+    const VOICE_START_DURATION = 300;     // Keep 300ms for accuracy
+    const SILENCE_THRESHOLD = 0.01;       // Keep at 0.01
+    const SILENCE_TIMEOUT = this.options.silenceTimeoutMs || 400;  // Reduced from 2000ms to 400ms
     
     this.log(`🧠 VAD started - waiting for voice (>${VOICE_START_THRESHOLD} RMS for ${VOICE_START_DURATION}ms)`);
 
@@ -259,46 +259,41 @@ class ChatTextMicrophoneServiceClass {
         measuredDurationMs,
       });
       
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        try {
-          const base64Audio = (reader.result as string).split(',')[1];
-
-          const { data, error } = await supabase.functions.invoke('google-speech-to-text', {
-            body: {
-              audioData: base64Audio,
-              traceId: this.currentTraceId,
-              meta: {
-                measuredDurationMs,
-                blobSize: finalBlob.size,
-              },
+            // Send raw binary audio directly - no base64 encoding
+      try {
+        const { data, error } = await supabase.functions.invoke('google-speech-to-text', {
+          body: finalBlob, // Send raw Blob directly
+          headers: {
+            'Content-Type': 'audio/webm;codecs=opus',
+            'X-Trace-Id': this.currentTraceId || '',
+            'X-Meta': JSON.stringify({
+              measuredDurationMs,
+              blobSize: finalBlob.size,
               config: {
                 encoding: 'WEBM_OPUS',
                 languageCode: 'en-US',
                 enableAutomaticPunctuation: true,
                 model: 'latest_long'
               }
-            }
-          });
-
-          if (error) throw error;
-          
-          const transcript = data?.transcript || '';
-          this.log('📝 Transcript received', { length: transcript.length });
-          
-          if (this.options.onTranscriptReady && transcript) {
-            this.options.onTranscriptReady(transcript);
+            })
           }
-          
-        } catch (error) {
-          this.error('❌ Transcription failed:', error);
-        } finally {
-          this.isProcessing = false;
-          this.notifyListeners();
+        });
+
+        if (error) throw error;
+        
+        const transcript = data?.transcript || '';
+        this.log('📝 Transcript received', { length: transcript.length });
+        
+        if (this.options.onTranscriptReady && transcript) {
+          this.options.onTranscriptReady(transcript);
         }
-      };
-      
-      reader.readAsDataURL(finalBlob);
+        
+      } catch (error) {
+        this.error('❌ Transcription failed:', error);
+      } finally {
+        this.isProcessing = false;
+        this.notifyListeners();
+      }
       
     } catch (error) {
       this.error('❌ Audio processing failed:', error);

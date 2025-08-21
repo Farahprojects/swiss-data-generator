@@ -18,35 +18,25 @@ serve(async (req) => {
   }
 
   try {
-    const { audioData, config, traceId, chat_id, meta } = await req.json();
+    // Get raw binary audio data
+    const arrayBuffer = await req.arrayBuffer();
+    const audioBuffer = new Uint8Array(arrayBuffer);
     
-    // Comprehensive audio data validation
-    if (!audioData) {
-      console.error('[google-stt] Missing audioData in request');
-      throw new Error('Audio data is required');
-    }
+    // Get metadata from headers
+    const traceId = req.headers.get('X-Trace-Id') || null;
+    const metaHeader = req.headers.get('X-Meta');
+    const meta = metaHeader ? JSON.parse(metaHeader) : {};
+    const config = meta.config || {};
     
-    if (typeof audioData !== 'string') {
-      console.error('[google-stt] AudioData is not a string:', typeof audioData);
-      throw new Error('Audio data must be base64 encoded string');
-    }
-    
-    if (audioData.length === 0) {
-      console.error('[google-stt] Empty audioData string');
-      throw new Error('Empty audio data - please try recording again');
-    }
-    
-    console.log(`[google-stt]`, traceId ? `[trace:${traceId}]` : '', `Audio data received.`, {
-      base64Length: audioData.length,
+    console.log(`[google-stt]`, traceId ? `[trace:${traceId}]` : '', `Raw audio data received.`, {
+      audioSize: audioBuffer.length,
       clientMeta: meta,
     });
     
-    // Test base64 decode to catch invalid format early
-    try {
-      atob(audioData.substring(0, 100)); // Test decode first 100 chars
-    } catch (decodeError) {
-      console.error('[google-stt] Invalid base64 format:', decodeError);
-      throw new Error('Invalid audio data format - please try recording again');
+    // Validate audio data
+    if (!audioBuffer || audioBuffer.length === 0) {
+      console.error('[google-stt] Empty audio buffer');
+      throw new Error('Empty audio data - please try recording again');
     }
 
     const googleApiKey = Deno.env.get('GOOGLE-STT');
@@ -68,9 +58,12 @@ serve(async (req) => {
       ...config
     };
 
+    // Convert raw binary to base64 for Google API (required format)
+    const base64Audio = btoa(String.fromCharCode(...audioBuffer));
+    
     const requestBody = {
       audio: {
-        content: audioData
+        content: base64Audio
       },
       config: defaultConfig
     };
@@ -109,13 +102,8 @@ serve(async (req) => {
         }
 
         try {
-          // Deno doesn't have Buffer, so we convert base64 to Uint8Array
-          const binaryString = atob(audioData);
-          const binaryData = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            binaryData[i] = binaryString.charCodeAt(i);
-          }
-          const audioBlob = new Blob([binaryData], { type: 'audio/webm' });
+          // Use the raw audio buffer directly for Whisper
+          const audioBlob = new Blob([audioBuffer], { type: 'audio/webm' });
 
           const formData = new FormData();
           formData.append('file', audioBlob, 'audio.webm');
