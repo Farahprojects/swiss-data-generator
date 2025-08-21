@@ -103,7 +103,7 @@ class ChatController {
     
     conversationMicrophoneService.initialize({
       onSilenceDetected: () => this.endTurn(),
-      silenceTimeoutMs: 400 // Aligned with ChatTextMicrophoneService for faster response
+      silenceTimeoutMs: 2000 // 2 seconds for natural conversation pauses
     });
     
     this.conversationServiceInitialized = true;
