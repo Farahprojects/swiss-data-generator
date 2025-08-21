@@ -6,7 +6,7 @@ import { useChatStore } from '@/core/store';
 import { chatController } from '../ChatController';
 import { useConversationAudioLevel } from '@/hooks/useConversationAudioLevel';
 import { useConversationFlowMonitor } from '@/hooks/useConversationFlowMonitor';
-import { FlowMonitorIndicator } from './FlowMonitorIndicator';
+// import { FlowMonitorIndicator } from './FlowMonitorIndicator'; // Hidden for production
 import { ConnectionErrorFallback } from './ConnectionErrorFallback';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -142,8 +142,8 @@ export const ConversationOverlay: React.FC = () => {
 
   return createPortal(
     <div className="fixed inset-0 z-50 bg-white pt-safe pb-safe">
-      {/* Flow Monitor Indicator */}
-      <FlowMonitorIndicator />
+      {/* Flow Monitor Indicator - Hidden for production */}
+      {/* <FlowMonitorIndicator /> */}
       
       {/* Centered content */}
       <div className="h-full w-full flex items-center justify-center px-6">
