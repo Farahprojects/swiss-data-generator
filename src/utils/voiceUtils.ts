@@ -9,10 +9,12 @@ export const GOOGLE_VOICE_MAP: Record<string, string> = {
   'nova':    'en-US-Wavenet-F',
   'shimmer': 'en-US-Wavenet-H',
   
-  // Male HD Voices
-  'en-us-studio-m': 'en-US-Studio-M',
+  // Google Studio HD Voices (from UI dropdown)
+  'en-us-studio-o': 'en-US-Studio-O', // Female
+  'en-us-studio-q': 'en-US-Studio-Q', // Female
+  'en-us-studio-m': 'en-US-Studio-M', // Male
 };
 
 export const getGoogleVoiceCode = (voiceName: string): string => {
-  return GOOGLE_VOICE_MAP[voiceName.toLowerCase()] || 'en-US-Neural2-F'; // Default to a high-quality female voice
+  return GOOGLE_VOICE_MAP[voiceName.toLowerCase()] || 'en-US-Studio-O'; // Default to Studio-O (Female)
 };
