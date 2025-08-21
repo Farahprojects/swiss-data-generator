@@ -59,7 +59,14 @@ serve(async (req) => {
     };
 
     // Convert raw binary to base64 for Google API (required format)
-    const base64Audio = btoa(String.fromCharCode(...audioBuffer));
+    // CRITICAL: Handle large audio buffers without stack overflow
+    let binaryString = '';
+    const chunkSize = 8192; // Process in chunks to avoid stack overflow
+    for (let i = 0; i < audioBuffer.length; i += chunkSize) {
+      const chunk = audioBuffer.slice(i, i + chunkSize);
+      binaryString += String.fromCharCode(...chunk);
+    }
+    const base64Audio = btoa(binaryString);
     
     const requestBody = {
       audio: {

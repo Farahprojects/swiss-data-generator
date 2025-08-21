@@ -310,7 +310,11 @@ class ConversationMicrophoneServiceClass {
     this.log(`🧠 VAD started - waiting for voice (>${VOICE_START_THRESHOLD} RMS for ${VOICE_START_DURATION}ms)`);
 
     const checkVAD = () => {
-      if (!this.monitoringRef.current || !this.analyser) return;
+      // CRITICAL: Check monitoring state first to prevent infinite recursion
+      if (!this.monitoringRef.current || !this.analyser) {
+        this.log(`🛑 VAD loop terminated (monitoring: ${this.monitoringRef.current}, analyser: ${!!this.analyser})`);
+        return;
+      }
       
       // Get current RMS audio level
       this.analyser.getByteTimeDomainData(dataArray);
@@ -358,14 +362,20 @@ class ConversationMicrophoneServiceClass {
             // if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
             //   this.mediaRecorder.stop();
             // }
-            return;
+            this.log(`🛑 VAD loop terminated after silence detection`);
+            return; // CRITICAL: Don't schedule next frame after silence detected
           }
         } else {
           silenceStartTime = null; // Reset silence timer - still speaking
         }
       }
 
-      requestAnimationFrame(checkVAD);
+      // Only continue the loop if we're still monitoring
+      if (this.monitoringRef.current) {
+        requestAnimationFrame(checkVAD);
+      } else {
+        this.log(`🛑 VAD loop terminated (monitoring flag changed during execution)`);
+      }
     };
 
     checkVAD();
