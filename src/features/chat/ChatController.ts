@@ -145,8 +145,8 @@ class ChatController {
       const { transcript } = await sttService.transcribe(audioBlob, useChatStore.getState().chat_id!);
 
       if (!transcript || transcript.trim().length === 0) {
-        console.warn('[ChatController] Empty transcription - ending turn gracefully.');
-        this.resetTurn(true); // Don't restart turn on empty
+        console.warn('[ChatController] Empty transcription - restarting turn for retry.');
+        this.resetTurn(false); // Restart turn to give user another chance
         return;
       }
 
@@ -197,18 +197,19 @@ class ChatController {
     useChatStore.getState().setStatus('idle');
     this.isTurnActive = false;
     
-    // Only force cleanup if we're ending the conversation flow
-    // Don't cleanup if we're just transitioning between turns
     if (endConversationFlow) {
+      // End conversation completely - full cleanup
       conversationMicrophoneService.forceCleanup();
     } else {
-      // For turn transitions, just stop the current recording gracefully
-      // The microphone service will be re-initialized in startTurn()
+      // Turn transition - stop current recording and VAD, but keep stream for next turn
       if (conversationMicrophoneService.getState().isRecording) {
         conversationMicrophoneService.stopRecording().catch((error) => {
           // Ignore errors during graceful stop
           console.warn('[ChatController] Graceful stop error (ignored):', error);
         });
+      } else {
+        // Even if not recording, we need to stop any running VAD loop
+        conversationMicrophoneService.forceCleanup();
       }
     }
     
