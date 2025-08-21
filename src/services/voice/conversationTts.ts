@@ -13,17 +13,20 @@ class ConversationTtsService {
     
     return new Promise(async (resolve, reject) => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          throw new Error("User not authenticated for TTS.");
+        const { data: { session } } = await supabase.auth.getSession(); // Get session if available, don't fail if not.
+
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_PUBLISHABLE_KEY,
+        };
+
+        if (session) {
+          headers['Authorization'] = `Bearer ${session.access_token}`;
         }
 
         const response = await fetch(`${SUPABASE_URL}/functions/v1/google-text-to-speech`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-          },
+          headers,
           body: JSON.stringify({ messageId, text })
         });
 
