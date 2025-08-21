@@ -24,7 +24,8 @@ class SttService {
         chat_id,
         meta,
         config: {
-          encoding: 'WEBM_OPUS',
+          encoding: 'OGG_OPUS',
+          sampleRateHertz: 48000,
           languageCode: 'en-US',
         }
       },

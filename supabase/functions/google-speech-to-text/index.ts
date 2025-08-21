@@ -79,9 +79,10 @@ serve(async (req) => {
       console.error(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Error analyzing WebM container:`, decodeError);
     }
 
-    // Build Google STT configuration
+    // Build Google STT configuration - Use OGG_OPUS to bypass WebM container issues
     const defaultConfig = {
-      encoding: 'WEBM_OPUS',
+      encoding: 'OGG_OPUS',
+      sampleRateHertz: 48000,
       languageCode: 'en-US',
       enableAutomaticPunctuation: true,
       model: 'latest_short',

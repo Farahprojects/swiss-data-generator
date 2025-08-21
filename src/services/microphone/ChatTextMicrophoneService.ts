@@ -265,7 +265,8 @@ class ChatTextMicrophoneServiceClass {
               audioData: base64Audio,
               traceId: this.currentTraceId,
               config: {
-                encoding: 'WEBM_OPUS',
+                encoding: 'OGG_OPUS',
+                sampleRateHertz: 48000,
                 languageCode: 'en-US',
                 enableAutomaticPunctuation: true,
                 model: 'latest_short'
