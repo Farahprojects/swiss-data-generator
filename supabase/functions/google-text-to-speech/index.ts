@@ -64,12 +64,13 @@ serve(async (req) => {
     const ttsData = await ttsResponse.json();
     console.log("[google-tts] Successfully received audio from Google TTS");
 
-    // Convert base64 audio to data URL for immediate playback
+    // The audio comes as a base64 string, so we need to decode it to binary first.
     const audioBase64 = ttsData.audioContent;
-    const audioDataUrl = `data:audio/mpeg;base64,${audioBase64}`;
-    
-    console.log("[google-tts] Audio generated successfully - returning data URL for immediate playback");
-    console.log("[google-tts] No storage needed - audio will be played live and discarded");
+    const binaryString = atob(audioBase64);
+    const audioBuffer = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      audioBuffer[i] = binaryString.charCodeAt(i);
+    }
 
     // Fire-and-forget metadata update (don't await - return audio immediately)
     supabaseAdmin
@@ -90,8 +91,16 @@ serve(async (req) => {
         console.error("[google-tts] Database update error (non-blocking):", error);
       });
 
-    return new Response(JSON.stringify({ audioUrl: audioDataUrl }), {
-      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    // Create a ReadableStream to send the audio data back in chunks.
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(audioBuffer);
+        controller.close();
+      },
+    });
+
+    return new Response(stream, {
+      headers: { ...CORS_HEADERS, "Content-Type": "audio/mpeg" },
       status: 200,
     });
 

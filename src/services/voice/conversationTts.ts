@@ -1,7 +1,6 @@
 // src/services/voice/conversationTts.ts
 import { supabase, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '@/integrations/supabase/client';
-import { playTtsAudio } from './ttsAudio';
-import { useChatStore } from '@/core/store';
+import { streamPlayerService } from './StreamPlayerService';
 
 export interface SpeakAssistantOptions {
   conversationId: string;
@@ -12,56 +11,39 @@ export interface SpeakAssistantOptions {
 class ConversationTtsService {
   async speakAssistant({ conversationId, messageId, text }: SpeakAssistantOptions): Promise<void> {
     
-    try {
-      const provider = useChatStore.getState().ttsProvider || 'google';
-      const voice = useChatStore.getState().ttsVoice || 'alloy';
+    return new Promise(async (resolve, reject) => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          throw new Error("User not authenticated for TTS.");
+        }
 
-      const endpoint = provider === 'openai' ? 'ttss-openai' : 'tts-speak';
-
-      const body: Record<string, any> = { conversationId, messageId, text, voice };
-
-      // Use direct fetch for binary data
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/${endpoint}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify(body)
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[ConversationTTS] TTS function error:', response.status, errorText);
-        throw new Error(`TTS failed: ${response.status} - ${errorText}`);
-      }
-
-      // Get the response as array buffer (binary audio data)
-      const audioBuffer = await response.arrayBuffer();
-
-      if (audioBuffer.byteLength === 0) {
-        console.error('[ConversationTTS] Empty audio buffer received');
-        throw new Error('Empty audio data received from TTS');
-      }
-
-      // Use the robust single-audio-element system
-      return new Promise((resolve, reject) => {
-        playTtsAudio(audioBuffer, {
-          onEnd: () => {
-            console.log('[ConversationTTS] TTS playback completed');
-            resolve();
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/google-text-to-speech`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
           },
-          onError: (error) => {
-            console.error('[ConversationTTS] TTS playback failed:', error);
-            reject(error);
-          }
-        }).catch(reject);
-      });
-      
-    } catch (error) {
-      console.error('[ConversationTTS] speakAssistant failed:', error);
-      throw error;
-    }
+          body: JSON.stringify({ messageId, text })
+        });
+
+        if (!response.ok || !response.body) {
+          const errorText = await response.text();
+          console.error('[ConversationTTS] TTS function error:', response.status, errorText);
+          throw new Error(`TTS failed: ${response.status} - ${errorText}`);
+        }
+
+        // Pass the stream directly to the player
+        await streamPlayerService.playStream(response.body, () => {
+          console.log('[ConversationTTS] TTS streaming playback completed');
+          resolve();
+        });
+        
+      } catch (error) {
+        console.error('[ConversationTTS] speakAssistant failed:', error);
+        reject(error);
+      }
+    });
   }
 }
 
