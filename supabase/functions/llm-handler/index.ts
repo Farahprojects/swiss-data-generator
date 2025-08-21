@@ -21,7 +21,7 @@ serve(async (req) => {
   try {
     const body = await req.json();
     console.log("[llm-handler] Body:", body);
-    const { chat_id, text, callback_url, client_msg_id } = body || {};
+    const { chat_id, text, client_msg_id } = body || {};
 
     if (!chat_id) {
       return new Response(JSON.stringify({ error: "Missing required field: chat_id" }), {
@@ -103,8 +103,16 @@ If the user is vague, ask exactly one clarifying question and then give a provis
       });
     });
 
+    // Add current user message if provided (from STT transcript or text input)
+    if (text) {
+      contents.push({
+        role: "user",
+        parts: [{ text: text }],
+      });
+    }
+
     const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GOOGLE_API_KEY}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -141,36 +149,6 @@ If the user is vague, ask exactly one clarifying question and then give a provis
     const latency_ms = Date.now() - startTime;
     console.log(`[llm-handler] Got response from Gemini in ${latency_ms}ms`);
 
-    // Save assistant message to database (fire-and-forget)
-    console.log("[llm-handler] Saving assistant message to database (fire-and-forget)");
-    supabase
-      .from("messages")
-      .insert({
-        chat_id,
-        role: "assistant",
-        text: assistantText,
-        status: "complete",
-        latency_ms,
-        model: "gemini-2.5-flash",
-        token_count: tokenCount,
-        meta: { 
-          llm_provider: "google", 
-          model: "gemini-2.5-flash",
-          latency_ms,
-          input_tokens: inputTokens,
-          output_tokens: outputTokens,
-          total_tokens: tokenCount
-        },
-      })
-      .then(() => {
-        console.log("[llm-handler] Assistant message saved successfully");
-      })
-      .catch((error) => {
-        console.error("[llm-handler] Failed to save assistant message:", error);
-        // Don't fail the request, just log the error
-      });
-
-    // Prepare assistant message for callback
     const assistantMessage = {
       id: `temp-${Date.now()}`,
       conversationId: chat_id,
@@ -179,7 +157,7 @@ If the user is vague, ask exactly one clarifying question and then give a provis
       createdAt: new Date().toISOString(),
       meta: { 
         llm_provider: "google", 
-        model: "gemini-2.5-flash",
+        model: "gemini-1.5-flash",
         latency_ms,
         input_tokens: inputTokens,
         output_tokens: outputTokens,
@@ -187,27 +165,38 @@ If the user is vague, ask exactly one clarifying question and then give a provis
       },
     };
 
-    // Fire-and-forget callback to chat-send-callback if URL provided
-    if (callback_url) {
-      console.log("[llm-handler] Calling back to:", callback_url);
-      fetch(callback_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
-        },
-        body: JSON.stringify({
-          chat_id,
-          assistantMessage,
-          client_msg_id
-        })
-      }).catch(error => {
-        console.error("[llm-handler] Callback failed (non-blocking):", error);
+    // Save assistant message to database (fire-and-forget)
+    supabase
+      .from("messages")
+      .insert({
+        ...assistantMessage,
+        chat_id: chat_id, // ensure chat_id is there
+        id: undefined, // let db generate id
+        conversationId: undefined, // remove redundant field
+      })
+      .then(({ error }) => {
+        if (error) {
+          console.error("[llm-handler] Failed to save assistant message:", error);
+        } else {
+          console.log("[llm-handler] Assistant message saved successfully");
+        }
       });
-    }
 
-    // Return the response immediately without waiting for database save or callback
-    return new Response(JSON.stringify(assistantMessage), {
+    // Broadcast the final message over the Realtime channel
+    const channel = supabase.channel(`chat:${chat_id}`);
+    channel.send({
+      type: 'broadcast',
+      event: 'message.finalized',
+      payload: {
+        ...assistantMessage,
+        client_msg_id, // Include for UI reconciliation
+      },
+    }).catch(err => {
+      console.error('[llm-handler] Realtime broadcast error:', err);
+    });
+
+    // Return a simple success response; the UI will get the message via Realtime
+    return new Response(JSON.stringify({ success: true, message: "LLM processing initiated" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 

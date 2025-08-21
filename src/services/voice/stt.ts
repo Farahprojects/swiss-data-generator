@@ -1,9 +1,8 @@
 // src/services/voice/stt.ts
 import { supabase } from '@/integrations/supabase/client';
-import type { Message } from '@/core/types';
 
 class SttService {
-  async transcribe(audioBlob: Blob, chat_id?: string, meta?: Record<string, any>): Promise<{ transcript: string; assistantMessage: Message | null }> {
+  async transcribe(audioBlob: Blob, chat_id?: string, meta?: Record<string, any>): Promise<{ transcript: string }> {
     // Validate audio blob before processing
     if (!audioBlob || audioBlob.size === 0) {
       console.warn('[STT] Empty or missing audio blob, skipping transcription');
@@ -25,7 +24,6 @@ class SttService {
         meta,
         config: {
           encoding: 'WEBM_OPUS',
-          sampleRateHertz: 48000,
           languageCode: 'en-US',
         }
       },
@@ -41,10 +39,9 @@ class SttService {
       throw new Error('No data received from Google STT');
     }
 
-    // Return the full response object
+    // Return the transcript
     return {
       transcript: data.transcript || '',
-      assistantMessage: data.assistantMessage || null
     };
   }
 

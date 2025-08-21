@@ -1,26 +1,23 @@
 // src/features/chat/ChatController.ts
+import { supabase } from '@/integrations/supabase/client';
 import { useChatStore } from '@/core/store';
 import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
-import { audioPlayer } from '@/services/voice/audioPlayer';
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
-import { ttsService } from '@/services/voice/tts';
 import { conversationTtsService } from '@/services/voice/conversationTts';
 import { initTtsAudio, stopTtsAudio } from '@/services/voice/ttsAudio';
 import { getMessagesForConversation } from '@/services/api/messages';
 import { Message } from '@/core/types';
 import { v4 as uuidv4 } from 'uuid';
-// No longer need appendMessage from the client
-// import { appendMessage } from '@/services/api/messages';
-import { STT_PROVIDER, LLM_PROVIDER, TTS_PROVIDER } from '@/config/env';
+import { RealtimeChannel } from '@supabase/supabase-js';
 
 class ChatController {
   private isTurnActive = false;
   private conversationServiceInitialized = false;
-  private isResetting = false; // Flag to prevent race conditions during reset
+  private isResetting = false;
+  private realtimeChannel: RealtimeChannel | null = null;
   
   async initializeConversation(chat_id: string) {
-    // FAIL FAST: chat_id is now required and should already be verified by edge function
     if (!chat_id) {
       console.error('[ChatController] initializeConversation: FAIL FAST - chat_id is required');
       throw new Error('chat_id is required for conversation initialization');
@@ -28,78 +25,108 @@ class ChatController {
     
     console.log('[ChatController] Initializing chat with verified chat_id:', chat_id);
     useChatStore.getState().startConversation(chat_id);
+    this.subscribeToChannel(chat_id);
     
-    // Load existing messages for this conversation (for page refresh)
     try {
       const existingMessages = await getMessagesForConversation(chat_id);
-      
       if (existingMessages.length > 0) {
-        console.log('[ChatController] Loaded', existingMessages.length, 'existing messages');
         useChatStore.getState().loadMessages(existingMessages);
       }
     } catch (error) {
       console.error('[ChatController] Error loading existing messages:', error);
-      // Don't throw - conversation should still work without history
     }
   }
 
   async sendTextMessage(text: string) {
-    if (this.isTurnActive) return;
-    this.isTurnActive = true;
-    
-    let { chat_id } = useChatStore.getState();
+    const { chat_id } = useChatStore.getState();
     if (!chat_id) {
-      console.error('[ChatController] sendTextMessage: FAIL FAST - No chat_id in store.');
-      throw new Error('No conversation established. Cannot send message.');
+      console.error('[ChatController] sendTextMessage: No chat_id in store.');
+      return;
     }
     
-    // Optimistically add user message to UI immediately
     const client_msg_id = uuidv4();
-    const tempUserMessage: Message = {
-      id: client_msg_id,
-      conversationId: chat_id,
-      role: 'user' as const,
-      text,
-      createdAt: new Date().toISOString(),
-    };
-    useChatStore.getState().addMessage(tempUserMessage);
+    this.addOptimisticMessages(chat_id, text, client_msg_id);
     
-    useChatStore.getState().setStatus('thinking');
-
     try {
-      // Send message via chat-send (fire and forget)
-      console.log("[ChatController] Sending message via chat-send");
-      await llmService.sendMessage({
-        chat_id,
-        text,
-        client_msg_id,
-      });
-      
-      console.log("[ChatController] Message sent successfully (fire and forget)");
-
+      await llmService.sendMessage({ chat_id, text, client_msg_id });
     } catch (error) {
       console.error("[ChatController] Error sending message:", error);
       useChatStore.getState().setError("Failed to send message. Please try again.");
-    } finally {
-      useChatStore.getState().setStatus('idle');
-      this.isTurnActive = false;
+      // Here you might want to remove the optimistic messages
     }
   }
-  
-  async loadConversation(id: string) {
-    // This function can be used to load a conversation by its direct ID.
-    // I'll implement this properly later if needed.
-    console.warn("loadConversation by ID is not fully implemented yet.");
+
+  private addOptimisticMessages(chat_id: string, text: string, client_msg_id: string, audioUrl?: string) {
+    const tempUserMessage: Message = {
+      id: client_msg_id,
+      conversationId: chat_id,
+      role: 'user',
+      text,
+      audioUrl,
+      createdAt: new Date().toISOString(),
+    };
+    useChatStore.getState().addMessage(tempUserMessage);
+
+    const tempAssistantMessage: Message = {
+      id: `thinking-${client_msg_id}`,
+      client_msg_id,
+      conversationId: chat_id,
+      role: 'assistant',
+      text: '...',
+      status: 'thinking',
+      createdAt: new Date().toISOString(),
+    };
+    useChatStore.getState().addMessage(tempAssistantMessage);
+    useChatStore.getState().setStatus('thinking');
+  }
+
+  private subscribeToChannel(chat_id: string) {
+    if (this.realtimeChannel && this.realtimeChannel.topic === `chat:${chat_id}`) {
+      return; // Already subscribed
+    }
+    if (this.realtimeChannel) {
+      this.unsubscribe();
+    }
+    
+    console.log(`[ChatController] Subscribing to Realtime channel: chat:${chat_id}`);
+    this.realtimeChannel = supabase.channel(`chat:${chat_id}`);
+    
+    this.realtimeChannel.on('broadcast', { event: 'message.finalized' }, ({ payload }) => {
+      console.log('[ChatController] Received message.finalized event:', payload);
+      const finalMessage = payload as Message;
+      const client_msg_id = payload.client_msg_id;
+
+      if (!client_msg_id) {
+        console.error('[ChatController] Finalized message is missing client_msg_id, cannot reconcile UI.');
+        return;
+      }
+
+      useChatStore.getState().updateMessage(
+        `thinking-${client_msg_id}`, 
+        { ...finalMessage, id: finalMessage.id || uuidv4(), status: 'complete' }
+      );
+      
+      if (this.isTurnActive) {
+        this.playAssistantAudioAndContinue(finalMessage, chat_id);
+      } else {
+        useChatStore.getState().setStatus('idle');
+      }
+    }).subscribe();
+  }
+
+  private unsubscribe() {
+    if (this.realtimeChannel) {
+      console.log('[ChatController] Unsubscribing from Realtime channel');
+      supabase.removeChannel(this.realtimeChannel);
+      this.realtimeChannel = null;
+    }
   }
 
   private initializeConversationService() {
     if (this.conversationServiceInitialized) return;
     
     conversationMicrophoneService.initialize({
-      onSilenceDetected: () => {
-
-        this.endTurn();
-      },
+      onSilenceDetected: () => this.endTurn(),
       silenceTimeoutMs: 2000
     });
     
@@ -110,13 +137,13 @@ class ChatController {
     if (this.isTurnActive) return;
     this.isTurnActive = true;
     
-    let { chat_id } = useChatStore.getState();
+    const { chat_id } = useChatStore.getState();
     if (!chat_id) {
-      console.error('[ChatController] startTurn: FAIL FAST - No chat_id in store. This should be set by useChat hook.');
-      throw new Error('No conversation established. Cannot start turn.');
+      console.error('[ChatController] startTurn: No chat_id in store.');
+      this.isTurnActive = false;
+      return;
     }
     
-    // Initialize conversation service once
     this.initializeConversationService();
     
     useChatStore.getState().setStatus('recording');
@@ -134,107 +161,76 @@ class ChatController {
     useChatStore.getState().setStatus('transcribing');
     try {
       const audioBlob = await conversationMicrophoneService.stopRecording();
-      
-      const { transcript, assistantMessage } = await sttService.transcribe(audioBlob, useChatStore.getState().chat_id!, { stt_provider: STT_PROVIDER });
+      const { transcript } = await sttService.transcribe(audioBlob, useChatStore.getState().chat_id!);
 
-      // If the transcription is empty, the AI part was skipped.
       if (!transcript || transcript.trim().length === 0) {
         console.warn('[ChatController] Empty transcription - ending turn gracefully.');
-        useChatStore.getState().setStatus('idle');
-        this.isTurnActive = false;
-        // Restart the turn automatically for a smoother experience
-        setTimeout(() => this.startTurn(), 500);
+        this.resetTurn(true); // Don't restart turn on empty
         return;
       }
 
-      // Optimistically add the user's transcribed message to the UI
       const chat_id = useChatStore.getState().chat_id!;
-      const userMessage: Message = {
-        id: uuidv4(),
-        conversationId: chat_id,
-        role: 'user' as const,
-        text: transcript,
-        audioUrl: URL.createObjectURL(audioBlob),
-        createdAt: new Date().toISOString(),
-      };
-      useChatStore.getState().addMessage(userMessage);
+      const client_msg_id = uuidv4();
+      const audioUrl = URL.createObjectURL(audioBlob);
 
-      useChatStore.getState().setStatus('thinking');
-
-      // Now, add the assistant message that we received directly from the STT function
-      if (assistantMessage) {
-        useChatStore.getState().addMessage(assistantMessage);
-        
-        // Proceed to play the audio for the assistant's response
-        if (assistantMessage.text && assistantMessage.id) {
-          useChatStore.getState().setStatus('speaking');
-          try {
-            await initTtsAudio();
-            await conversationTtsService.speakAssistant({
-              conversationId: chat_id,
-              messageId: assistantMessage.id,
-              text: assistantMessage.text
-            });
-            
-            if (this.isResetting) return;
-            
-            useChatStore.getState().setStatus('idle');
-            this.isTurnActive = false;
-            
-            if (!this.isResetting) {
-              this.startTurn();
-            }
-          } catch (ttsError) {
-            console.error('[ChatController] ❌ TTS failed:', ttsError);
-            useChatStore.getState().setStatus('idle');
-            this.isTurnActive = false;
-            if (!this.isResetting) {
-              setTimeout(() => { if (!this.isResetting) this.startTurn(); }, 1000);
-            }
-          }
-        } else {
-          // If assistant message is missing text or ID, end the turn.
-          useChatStore.getState().setStatus('idle');
-          this.isTurnActive = false;
-        }
-      } else {
-        // If no assistant message was returned, something went wrong. End the turn.
-        console.error('[ChatController] ❌ No assistant message received from STT/LLM pipeline');
-        useChatStore.getState().setStatus('idle');
-        this.isTurnActive = false;
-      }
+      this.addOptimisticMessages(chat_id, transcript, client_msg_id, audioUrl);
+      
+      await llmService.sendMessage({ chat_id, text: transcript, client_msg_id });
 
     } catch (error: any) {
       console.error("[ChatController] Error processing voice input:", error);
       useChatStore.getState().setError('Failed to process audio.');
-      this.isTurnActive = false;
+      this.resetTurn();
+    }
+  }
+
+  private async playAssistantAudioAndContinue(assistantMessage: Message, chat_id: string) {
+    if (assistantMessage.text && assistantMessage.id) {
+      useChatStore.getState().setStatus('speaking');
+      try {
+        await initTtsAudio();
+        await conversationTtsService.speakAssistant({
+          conversationId: chat_id,
+          messageId: assistantMessage.id,
+          text: assistantMessage.text
+        });
+        
+        if (this.isResetting) return;
+        
+        this.resetTurn(false); // Restart turn after speaking
+      } catch (ttsError) {
+        console.error('[ChatController] ❌ TTS failed:', ttsError);
+        this.resetTurn(true); // Don't restart if TTS fails
+      }
+    } else {
+      this.resetTurn(true); // Don't restart if no text
+    }
+  }
+
+  private resetTurn(endConversationFlow = true) {
+    useChatStore.getState().setStatus('idle');
+    this.isTurnActive = false;
+    if (!endConversationFlow && !this.isResetting) {
+      // Short delay before starting next turn
+      setTimeout(() => { if (!this.isResetting) this.startTurn(); }, 500);
     }
   }
 
   cancelTurn() {
     if (!this.isTurnActive) return;
     conversationMicrophoneService.forceCleanup();
-    useChatStore.getState().setStatus('idle');
-    this.isTurnActive = false;
+    this.resetTurn(true);
   }
 
-  // BULLETPROOF RESET - Handle all edge cases when modal closes
   resetConversationService() {
-    // Set reset flag immediately to prevent race conditions
     this.isResetting = true;
-    
-    // Force cleanup microphone service
+    this.unsubscribe();
     conversationMicrophoneService.forceCleanup();
-    
-    // Stop any TTS playback
     stopTtsAudio();
-    
-    // Reset all flags and state
     this.conversationServiceInitialized = false;
     this.isTurnActive = false;
     useChatStore.getState().setStatus('idle');
 
-    // Clear reset flag after a brief delay to ensure all operations see it
     setTimeout(() => {
       this.isResetting = false;
     }, 100);

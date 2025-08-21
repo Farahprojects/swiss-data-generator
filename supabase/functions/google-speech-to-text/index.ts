@@ -182,45 +182,12 @@ serve(async (req) => {
       // Still return it but log the warning
     }
 
-    // Return transcript immediately - no DB save needed
-    // Mic button: transcript goes to chat bar, user hits send → final message saved
-    // Conversation mode: LLM handler will save the conversation when it processes
-    console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Returning transcript immediately (no DB save)`);
-
-    // Trigger the llm-handler to get an immediate AI response (for conversation mode)
-    let assistantMessage = null;
-    if (chat_id && transcript && transcript.trim().length > 0) {
-      console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Triggering llm-handler`);
-      try {
-        const llmResponse = await fetch(`${SUPABASE_URL}/functions/v1/llm-handler`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`
-          },
-          body: JSON.stringify({ 
-            chat_id,
-            text: transcript // Include the transcript so LLM can respond to it
-          })
-        });
-
-        if (!llmResponse.ok) {
-          const errorText = await llmResponse.text();
-          console.error(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} llm-handler call failed:`, errorText);
-        } else {
-          assistantMessage = await llmResponse.json();
-          console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Received response from llm-handler`);
-        }
-      } catch (llmError) {
-        console.error(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Error calling llm-handler:`, llmError);
-      }
-    }
-
+    // This function's only job is to return the transcript.
+    // The client (ChatController) will orchestrate the next steps.
     return new Response(
       JSON.stringify({ 
         transcript,
         confidence,
-        assistantMessage // Include the full assistant message in the response
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

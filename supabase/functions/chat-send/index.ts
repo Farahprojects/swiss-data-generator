@@ -89,7 +89,7 @@ serve(async (req) => {
     }
     console.log('[chat-send] User message inserted');
 
-    // Fire and forget call to llm-handler with callback URL
+    // Fire and forget call to llm-handler to generate the assistant's response
     console.log('[chat-send] Notifying llm-handler of new message (fire and forget)');
     fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/llm-handler`, {
       method: 'POST',
@@ -99,8 +99,8 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         chat_id,
-        callback_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/chat-send-callback`,
-        client_msg_id: client_msg_id || crypto.randomUUID()
+        text, // Pass the user's text to the llm-handler
+        client_msg_id: client_msg_id || userMessageData.client_msg_id,
       })
     }).catch(error => {
       console.error('[chat-send] llm-handler notification failed (non-blocking):', error);
@@ -108,8 +108,8 @@ serve(async (req) => {
 
     // Return immediate success response
     return new Response(JSON.stringify({
-      message: "Message sent",
-      client_msg_id: client_msg_id || crypto.randomUUID()
+      message: "Message sent and processing initiated",
+      client_msg_id: client_msg_id || userMessageData.client_msg_id
     }), {
       headers: {
         ...corsHeaders,
