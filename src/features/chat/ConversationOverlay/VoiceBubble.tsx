@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { SpeakingBars } from './SpeakingBars';
+import { ThinkingCloud } from './ThinkingCloud';
 import { useTtsStreamLevel } from '@/hooks/useTtsStreamLevel';
 
 interface Props {
@@ -11,9 +12,13 @@ interface Props {
 export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
   const ttsAudioLevel = useTtsStreamLevel();
 
-  // Show speaking bars for replying state, bubble for others
+  // Show speaking bars for replying state, thinking cloud for processing, bubble for others
   if (state === 'replying') {
     return <SpeakingBars audioLevel={ttsAudioLevel} />;
+  }
+  
+  if (state === 'processing') {
+    return <ThinkingCloud />;
   }
 
   // Bubble base
@@ -25,8 +30,8 @@ export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
   // Styles per state (visual only)
   const styles: Record<'listening' | 'processing' | 'replying' | 'connecting', string> = {
     listening: 'bg-black shadow-gray-800/50',
-    processing: 'bg-black shadow-gray-800/50',
-    replying: 'bg-black shadow-gray-800/50',
+    processing: 'bg-black shadow-gray-800/50', // Not used - ThinkingCloud handles this
+    replying: 'bg-black shadow-gray-800/50', // Not used - SpeakingBars handles this
     connecting: 'bg-gray-500 shadow-gray-600/50', // Grey for connecting state
   };
 
@@ -40,16 +45,6 @@ export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
         transition: {
           repeat: Infinity,
           duration: isVoiceDetected ? 0.8 : 1.2
-        }
-      };
-    } else if (state === 'processing') {
-      return {
-        animate: {
-          scale: [1, 0.95, 1],
-        },
-        transition: {
-          repeat: Infinity,
-          duration: 1.5
         }
       };
     } else if (state === 'connecting') {
