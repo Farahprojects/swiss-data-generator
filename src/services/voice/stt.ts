@@ -14,19 +14,21 @@ class SttService {
       throw new Error('Recording too short - please speak for longer');
     }
     
-    // Convert blob to base64 for Google STT
-    const base64Audio = await this.blobToBase64(audioBlob);
-    
+    // Send raw binary audio directly, with config in headers. This mirrors the
+    // ChatTextMicrophoneService and aligns both STT pathways.
     const { data, error } = await supabase.functions.invoke('google-speech-to-text', {
-      body: {
-        audioData: base64Audio,
-        chat_id,
-        meta,
-        config: {
-          encoding: 'WEBM_OPUS',
-          languageCode: 'en-US',
-        }
-      },
+      body: audioBlob,
+      headers: {
+        'X-Meta': JSON.stringify({
+          ...(meta || {}), // Pass along any additional meta from the controller
+          config: {
+            encoding: 'WEBM_OPUS',
+            languageCode: 'en-US',
+            enableAutomaticPunctuation: true,
+            model: 'latest_long'
+          }
+        })
+      }
     });
 
     if (error) {
