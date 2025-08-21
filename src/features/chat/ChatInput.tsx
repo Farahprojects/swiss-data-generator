@@ -1,7 +1,7 @@
 // src/features/chat/ChatInput.tsx
 import React, { useState } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
-import { Mic, AudioLines, ArrowRight } from 'lucide-react';
+import { Mic, AudioLines, ArrowRight, Loader2 } from 'lucide-react';
 import { useChatStore } from '@/core/store';
 import { chatController } from './ChatController';
 import { useConversationUIStore } from './conversation-ui-store';
@@ -57,6 +57,27 @@ export const ChatInput = () => {
 
   const isRecording = status === 'recording';
 
+  // Determine mic button state and content
+  const getMicButtonContent = () => {
+    if (isMicProcessing) {
+      return <Loader2 size={18} className="animate-spin text-gray-500" />;
+    }
+    if (isMicRecording) {
+      return null; // Don't show mic button during recording (waveform is shown)
+    }
+    return <Mic size={18} className="text-gray-500" />;
+  };
+
+  const getMicButtonTitle = () => {
+    if (isMicProcessing) {
+      return 'Processing audio...';
+    }
+    if (isMicRecording) {
+      return 'Recording...';
+    }
+    return 'Start voice recording';
+  };
+
   return (
     <div className="bg-white/80 backdrop-blur-lg border-t border-gray-100 p-2">
       <div className="flex items-end gap-2 max-w-4xl mx-auto">
@@ -81,19 +102,16 @@ export const ChatInput = () => {
             />
           )}
           <div className="absolute right-1 inset-y-0 flex items-center gap-1" style={{ transform: 'translateY(-4px) translateX(-4px)' }}>
-            <button 
-              className="w-8 h-8 text-gray-500 hover:text-gray-900 transition-all duration-200 ease-in-out flex items-center justify-center"
-              onClick={toggleMicRecording}
-              disabled={isMicProcessing}
-              title={isMicRecording ? 'Stop recording' : 'Start voice recording'}
-            >
-              <Mic 
-                size={18} 
-                className={`transition-all duration-200 ease-in-out ${
-                  isMicRecording ? 'text-red-500' : 'text-gray-500'
-                }`}
-              />
-            </button>
+            {!isMicRecording && (
+              <button 
+                className="w-8 h-8 text-gray-500 hover:text-gray-900 transition-all duration-200 ease-in-out flex items-center justify-center"
+                onClick={toggleMicRecording}
+                disabled={isMicProcessing}
+                title={getMicButtonTitle()}
+              >
+                {getMicButtonContent()}
+              </button>
+            )}
             <button 
               className={`transition-colors ${
                 text.trim() 
