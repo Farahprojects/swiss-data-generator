@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { SpeakingBars } from './SpeakingBars';
+import { useTtsStreamLevel } from '@/hooks/useTtsStreamLevel';
 
 interface Props {
   state: 'listening' | 'processing' | 'replying';
@@ -8,11 +9,11 @@ interface Props {
 }
 
 export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
+  const ttsAudioLevel = useTtsStreamLevel();
+
   // Show speaking bars for replying state, bubble for others
   if (state === 'replying') {
-    // Since we stream audio directly, we don't have a live audio level for the TTS.
-    // We'll show a generic "speaking" animation instead.
-    return <SpeakingBars audioLevel={0.5} />;
+    return <SpeakingBars audioLevel={ttsAudioLevel} />;
   }
 
   // Bubble base

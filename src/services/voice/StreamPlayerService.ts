@@ -7,6 +7,14 @@ class StreamPlayerService {
   private onPlaybackComplete: (() => void) | null = null;
   private streamReader: ReadableStreamDefaultReader<Uint8Array> | null = null;
 
+  // Audio analysis properties
+  private audioContext: AudioContext | null = null;
+  private analyser: AnalyserNode | null = null;
+  private sourceNode: MediaElementAudioSourceNode | null = null;
+  private audioLevel = 0;
+  private analysisFrameId: number | null = null;
+  private listeners = new Set<() => void>();
+
   constructor() {
     this.initializeAudioElement();
   }
@@ -31,6 +39,7 @@ class StreamPlayerService {
     this.audio.src = URL.createObjectURL(this.mediaSource);
 
     this.mediaSource.addEventListener('sourceopen', this.handleSourceOpen.bind(this, stream));
+    this.setupAudioAnalysis();
   }
 
   public stop() {
@@ -38,6 +47,7 @@ class StreamPlayerService {
       this.streamReader.cancel();
       this.streamReader = null;
     }
+    this.stopAudioAnalysis();
     if (this.audio) {
       this.audio.pause();
       if (this.audio.src) {
@@ -88,6 +98,7 @@ class StreamPlayerService {
     };
     
     this.audio?.play().catch(e => console.error("Audio play failed:", e));
+    this.startAudioAnalysis();
     processNextChunk();
   }
 
@@ -96,6 +107,63 @@ class StreamPlayerService {
       this.onPlaybackComplete();
     }
     this.stop();
+  }
+
+  // --- Audio Analysis Methods ---
+
+  private setupAudioAnalysis() {
+    if (typeof window === 'undefined' || !this.audio) return;
+    if (this.audioContext) return; // Already setup
+
+    this.audioContext = new AudioContext();
+    this.analyser = this.audioContext.createAnalyser();
+    this.analyser.fftSize = 256;
+    this.sourceNode = this.audioContext.createMediaElementSource(this.audio);
+    this.sourceNode.connect(this.analyser);
+    this.analyser.connect(this.audioContext.destination);
+  }
+  
+  private startAudioAnalysis() {
+    if (!this.analyser || this.analysisFrameId) return;
+
+    const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+
+    const updateLevel = () => {
+      if (!this.analyser) return;
+      this.analyser.getByteTimeDomainData(dataArray);
+      let sumSquares = 0.0;
+      for (const amplitude of dataArray) {
+        const normalized = (amplitude - 128) / 128;
+        sumSquares += normalized * normalized;
+      }
+      this.audioLevel = Math.sqrt(sumSquares / dataArray.length);
+      this.notifyListeners();
+      this.analysisFrameId = requestAnimationFrame(updateLevel);
+    };
+
+    this.analysisFrameId = requestAnimationFrame(updateLevel);
+  }
+
+  private stopAudioAnalysis() {
+    if (this.analysisFrameId) {
+      cancelAnimationFrame(this.analysisFrameId);
+      this.analysisFrameId = null;
+    }
+    this.audioLevel = 0;
+    this.notifyListeners();
+  }
+
+  public getCurrentAudioLevel(): number {
+    return this.audioLevel;
+  }
+
+  public subscribe(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  private notifyListeners(): void {
+    this.listeners.forEach(l => l());
   }
 }
 
