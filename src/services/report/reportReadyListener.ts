@@ -1,9 +1,10 @@
 import { supabase } from '@/integrations/supabase/client';
 import { useReportReadyStore } from './reportReadyStore';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { logUserError } from '@/services/errorService';
 
 // Track active listeners to prevent duplicates
-const activeListeners: Record<string, { channel: RealtimeChannel; startedAt: number }> = {};
+const activeListeners: Record<string, { channel: RealtimeChannel; startedAt: number; timeoutId?: NodeJS.Timeout }> = {};
 
 // Trigger context injection for chat when report is ready
 async function triggerContextInjection(guestReportId: string): Promise<void> {
@@ -24,35 +25,106 @@ async function triggerContextInjection(guestReportId: string): Promise<void> {
   }
 }
 
+// Check if report exists in report_ready_signals table
 export async function checkReportSeen(guestReportId: string): Promise<{ hasRow: boolean; seen: boolean }> {
-  console.log('[ReportReady] Checking existing report:', guestReportId);
-  const { data, error } = await supabase
-    .from('report_ready_signals')
-    .select('guest_report_id, seen')
-    .eq('guest_report_id', guestReportId)
-    .limit(1);
+  try {
+    const { data, error } = await supabase
+      .from('report_ready_signals')
+      .select('guest_report_id, seen')
+      .eq('guest_report_id', guestReportId)
+      .limit(1);
 
-  if (error) {
-    console.warn('[ReportReady] Error checking report:', error);
+    if (error) {
+      console.error('[ReportReady] Error checking report seen:', error);
+      return { hasRow: false, seen: false };
+    }
+
+    const hasRow = data && data.length > 0;
+    const seen = hasRow && data[0].seen;
+    
+    return { hasRow, seen };
+  } catch (error) {
+    console.error('[ReportReady] Exception checking report seen:', error);
     return { hasRow: false, seen: false };
   }
-
-  if (data && data.length > 0) {
-    const row: any = data[0];
-    return { hasRow: true, seen: !!row.seen };
-  }
-  return { hasRow: false, seen: false };
 }
 
+// Mark report as seen in database
 export async function markReportSeen(guestReportId: string): Promise<void> {
-  console.log('[ReportReady] Marking report as seen:', guestReportId);
   try {
-    await supabase
+    const { error } = await supabase
       .from('report_ready_signals')
       .update({ seen: true })
       .eq('guest_report_id', guestReportId);
+
+    if (error) {
+      console.error('[ReportReady] Error marking report seen:', error);
+    } else {
+      console.log('[ReportReady] Report marked as seen:', guestReportId);
+    }
   } catch (error) {
-    console.warn('[ReportReady] Error marking report as seen:', error);
+    console.error('[ReportReady] Exception marking report seen:', error);
+  }
+}
+
+// Check report_logs for error status
+async function checkReportLogsForError(guestReportId: string): Promise<{ hasError: boolean; errorMessage?: string }> {
+  try {
+    const { data, error } = await supabase
+      .from('report_logs')
+      .select('status, error_message')
+      .eq('client_id', guestReportId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.error('[ReportReady] Error checking report_logs:', error);
+      return { hasError: false };
+    }
+
+    if (data && data.length > 0) {
+      const latestLog = data[0];
+      if (latestLog.status === 'error') {
+        return { 
+          hasError: true, 
+          errorMessage: latestLog.error_message || 'Report generation failed'
+        };
+      }
+    }
+
+    return { hasError: false };
+  } catch (error) {
+    console.error('[ReportReady] Exception checking report_logs:', error);
+    return { hasError: false };
+  }
+}
+
+// Trigger error handler with popup
+async function triggerErrorHandler(guestReportId: string, errorMessage: string): Promise<void> {
+  try {
+    console.log('[ReportReady] Triggering error handler for:', guestReportId);
+    
+    // Log the error using existing error service
+    const caseNumber = await logUserError({
+      guestReportId,
+      errorType: 'report_generation_timeout',
+      errorMessage: `Report generation timed out after 13 seconds. ${errorMessage}`,
+      timestamp: new Date().toISOString()
+    });
+
+    // Set error state in store to trigger popup
+    useReportReadyStore.getState().setErrorState({
+      type: 'report_generation_timeout',
+      case_number: caseNumber || `CASE-${Date.now()}`,
+      message: 'Your report is taking longer than expected. We\'ve logged this issue and our team will investigate.',
+      logged_at: new Date().toISOString(),
+      requires_cleanup: true,
+      requires_error_logging: false, // Already logged above
+      guest_report_id: guestReportId
+    });
+
+  } catch (error) {
+    console.error('[ReportReady] Error triggering error handler:', error);
   }
 }
 
@@ -95,7 +167,7 @@ export function startReportReadyListener(guestReportId: string): void {
         return;
       }
 
-      // Report doesn't exist yet, set up real-time listener
+      // Report doesn't exist yet, set up real-time listener with 13-second timeout
       console.log('[ReportReady] Setting up real-time listener for new report');
       setupRealtimeListener(guestReportId);
     })
@@ -109,7 +181,7 @@ function setupRealtimeListener(guestReportId: string): void {
   const startedAt = Date.now();
   
   // Set listening state
-  useReportReadyStore.getState().startPolling(); // Keep using same state prop name for compatibility
+  useReportReadyStore.getState().startPolling();
 
   // Create real-time channel
   const channel = supabase
@@ -160,17 +232,38 @@ function setupRealtimeListener(guestReportId: string): void {
   // Store the active listener
   activeListeners[guestReportId] = { channel, startedAt };
 
-  // Set up a timeout fallback in case real-time doesn't work
-  setTimeout(() => {
+  // Set up 13-second timeout for intelligent error handling
+  const timeoutId = setTimeout(async () => {
     if (activeListeners[guestReportId] && !useReportReadyStore.getState().isReportReady) {
-      console.log('[ReportReady] Timeout reached, checking report status manually');
-      checkReportSeen(guestReportId).then(({ hasRow }) => {
-        if (hasRow) {
-          handleReportReady(guestReportId, startedAt);
-        }
-      });
+      console.log('[ReportReady] 13-second timeout reached, checking report status');
+      
+      // First check if report is ready
+      const { hasRow } = await checkReportSeen(guestReportId);
+      
+      if (hasRow) {
+        console.log('[ReportReady] Report found after timeout, marking ready');
+        handleReportReady(guestReportId, startedAt);
+        return;
+      }
+
+      // Report not ready, check report_logs for error status
+      const { hasError, errorMessage } = await checkReportLogsForError(guestReportId);
+      
+      if (hasError) {
+        console.log('[ReportReady] Error found in report_logs, triggering error handler');
+        await triggerErrorHandler(guestReportId, errorMessage || 'Unknown error');
+        stopReportReadyListener(guestReportId);
+        return;
+      }
+
+      // No error found, continue with polling as fallback
+      console.log('[ReportReady] No error found, continuing with polling fallback');
+      fallbackToPolling(guestReportId, startedAt);
     }
-  }, 30000); // 30 second timeout
+  }, 13000); // 13 seconds
+
+  // Store timeout ID for cleanup
+  activeListeners[guestReportId].timeoutId = timeoutId;
 }
 
 function handleReportReady(guestReportId: string, startedAt: number): void {
@@ -212,9 +305,23 @@ function fallbackToPolling(guestReportId: string, startedAt: number): void {
       console.warn('[ReportReady] Polling error:', error);
     }
 
-    // Continue polling if still active
-    if (activeListeners[guestReportId] && !useReportReadyStore.getState().isReportReady) {
+    // Continue polling if still active and under 13 seconds total
+    const totalElapsed = Date.now() - startedAt;
+    if (activeListeners[guestReportId] && !useReportReadyStore.getState().isReportReady && totalElapsed < 13000) {
       setTimeout(poll, 2000); // Poll every 2 seconds
+    } else if (totalElapsed >= 13000) {
+      // 13 seconds reached, check for errors
+      console.log('[ReportReady] Polling reached 13-second limit, checking for errors');
+      const { hasError, errorMessage } = await checkReportLogsForError(guestReportId);
+      
+      if (hasError) {
+        console.log('[ReportReady] Error found during polling, triggering error handler');
+        await triggerErrorHandler(guestReportId, errorMessage || 'Unknown error');
+        stopReportReadyListener(guestReportId);
+      } else {
+        console.log('[ReportReady] No error found, continuing to poll');
+        setTimeout(poll, 2000); // Continue polling
+      }
     }
   };
 
@@ -227,6 +334,11 @@ export function stopReportReadyListener(guestReportId: string): void {
   if (listener) {
     const elapsedSec = Math.round((Date.now() - listener.startedAt) / 1000);
     console.log(`[ReportReady] Stopping listener after ${elapsedSec}s for:`, guestReportId);
+    
+    // Clear timeout if exists
+    if (listener.timeoutId) {
+      clearTimeout(listener.timeoutId);
+    }
     
     // Unsubscribe from real-time channel
     listener.channel.unsubscribe();
@@ -248,6 +360,6 @@ export function cleanupAllListeners(): void {
 }
 
 // Export for debugging
-export function getActiveListeners(): Record<string, { channel: RealtimeChannel; startedAt: number }> {
+export function getActiveListeners(): Record<string, { channel: RealtimeChannel; startedAt: number; timeoutId?: NodeJS.Timeout }> {
   return activeListeners;
 }
