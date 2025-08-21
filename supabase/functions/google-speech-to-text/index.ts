@@ -36,7 +36,10 @@ serve(async (req) => {
       throw new Error('Empty audio data - please try recording again');
     }
     
-    console.log(`[google-stt]`, traceId ? `[trace:${traceId}]` : '', `Audio data received, proceeding with transcription.`);
+    console.log(`[google-stt]`, traceId ? `[trace:${traceId}]` : '', `Audio data received.`, {
+      base64Length: audioData.length,
+      clientMeta: meta,
+    });
     
     // Test base64 decode to catch invalid format early
     try {
@@ -54,7 +57,6 @@ serve(async (req) => {
     // Simplified configuration using only supported fields
     const defaultConfig = {
       encoding: 'WEBM_OPUS',
-      sampleRateHertz: 48000,
       languageCode: 'en-US',
       enableAutomaticPunctuation: true,
       model: 'latest_long',
@@ -76,7 +78,7 @@ serve(async (req) => {
     console.log('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Sending request to Google Speech-to-Text API');
     console.log('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Config:', JSON.stringify(defaultConfig, null, 2));
     
-    const response = await fetch(
+    let response = await fetch(
       `https://speech.googleapis.com/v1/speech:recognize?key=${googleApiKey}`,
       {
         method: 'POST',
@@ -87,25 +89,81 @@ serve(async (req) => {
       }
     );
 
+    let result;
+    let transcript;
+    let confidence = 0;
+    let stt_provider = 'google';
+
     if (!response.ok) {
       const errorText = await response.text();
       console.error('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Google API error:', errorText);
-      throw new Error(`Google Speech-to-Text API error: ${response.status} - ${errorText}`);
+
+      // Whisper Fallback Logic
+      if (response.status === 400 && errorText.includes("Sync input too long")) {
+        console.warn(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Google rejected for duration, falling back to Whisper`);
+        stt_provider = 'openai_whisper_fallback';
+
+        const openAiApiKey = Deno.env.get('OPENAI_API_KEY');
+        if (!openAiApiKey) {
+          throw new Error('OpenAI API key not configured for fallback');
+        }
+
+        try {
+          // Deno doesn't have Buffer, so we convert base64 to Uint8Array
+          const binaryString = atob(audioData);
+          const binaryData = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            binaryData[i] = binaryString.charCodeAt(i);
+          }
+          const audioBlob = new Blob([binaryData], { type: 'audio/webm' });
+
+          const formData = new FormData();
+          formData.append('file', audioBlob, 'audio.webm');
+          formData.append('model', 'whisper-1');
+
+          const whisperResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${openAiApiKey}`,
+            },
+            body: formData,
+          });
+
+          if (!whisperResponse.ok) {
+            const whisperErrorText = await whisperResponse.text();
+            console.error(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Whisper fallback failed:`, whisperErrorText);
+            throw new Error(`Whisper fallback failed: ${whisperResponse.status} - ${whisperErrorText}`);
+          }
+
+          const whisperResult = await whisperResponse.json();
+          transcript = whisperResult.text || '';
+          confidence = 1; // Whisper doesn't provide confidence, assume 1
+
+          console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Whisper fallback successful. Transcript length: ${transcript.length}`);
+
+        } catch (fallbackError) {
+          console.error(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Error during Whisper fallback execution:`, fallbackError);
+          // Re-throw original Google error if fallback fails critically
+          throw new Error(`Google Speech-to-Text API error: ${response.status} - ${errorText}`);
+        }
+
+      } else {
+        // Not a duration error, so throw it
+        throw new Error(`Google Speech-to-Text API error: ${response.status} - ${errorText}`);
+      }
+    } else {
+      result = await response.json();
+      console.log('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Google API response:', result);
+      transcript = result.results?.[0]?.alternatives?.[0]?.transcript || '';
+      confidence = result.results?.[0]?.alternatives?.[0]?.confidence || 0;
     }
-
-    const result = await response.json();
-    console.log('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Google API response:', result);
-
-    // Extract the transcript from the first result
-    const transcript = result.results?.[0]?.alternatives?.[0]?.transcript || '';
-    const confidence = result.results?.[0]?.alternatives?.[0]?.confidence || 0;
 
     console.log('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Extracted transcript length:', transcript?.length || 0);
     console.log('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Confidence score:', confidence);
     
     // Handle empty transcription results - return empty transcript instead of error
     if (!transcript || transcript.trim().length === 0) {
-      console.warn('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Empty transcript from Google API - audio may be unclear or silent');
+      console.warn('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Empty transcript from API - audio may be unclear or silent');
       console.log('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Returning empty transcript for conversation mode to continue gracefully');
       return new Response(
         JSON.stringify({ 
@@ -125,7 +183,6 @@ serve(async (req) => {
     }
 
     // Save user message to database if chat_id provided
-    let savedMessageId = null;
     if (chat_id && transcript && transcript.trim().length > 0) {
       console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Saving user message to DB`);
       try {
@@ -135,7 +192,7 @@ serve(async (req) => {
             chat_id: chat_id,
             role: 'user',
             text: transcript,
-            meta: meta || { stt_provider: 'google' }
+            meta: { ...(meta || {}), stt_provider }
           })
           .select()
           .single();

@@ -238,25 +238,29 @@ class ChatTextMicrophoneServiceClass {
       this.isProcessing = true;
       this.notifyListeners();
       
-      // Simple, professional approach - let MediaRecorder handle the format
       const finalBlob = new Blob(this.audioChunks, { type: 'audio/webm;codecs=opus' });
-      this.log('🔄 Processing clean audio', { finalBlobSize: finalBlob.size });
-      // minimal
+      const measuredDurationMs = this.recordingStartedAt ? Date.now() - this.recordingStartedAt : 0;
+
+      this.log('🔄 Processing clean audio', { 
+        finalBlobSize: finalBlob.size,
+        measuredDurationMs,
+      });
       
-      // Convert to base64
       const reader = new FileReader();
       reader.onloadend = async () => {
         try {
           const base64Audio = (reader.result as string).split(',')[1];
-          // minimal
 
           const { data, error } = await supabase.functions.invoke('google-speech-to-text', {
             body: {
               audioData: base64Audio,
               traceId: this.currentTraceId,
+              meta: {
+                measuredDurationMs,
+                blobSize: finalBlob.size,
+              },
               config: {
                 encoding: 'WEBM_OPUS',
-                sampleRateHertz: 48000,
                 languageCode: 'en-US',
                 enableAutomaticPunctuation: true,
                 model: 'latest_long'
