@@ -5,12 +5,15 @@ import { VoiceBubble } from './VoiceBubble';
 import { useChatStore } from '@/core/store';
 import { chatController } from '../ChatController';
 import { useConversationAudioLevel } from '@/hooks/useConversationAudioLevel';
+import { useConversationFlowMonitor } from '@/hooks/useConversationFlowMonitor';
+import { FlowMonitorIndicator } from './FlowMonitorIndicator';
 import { AnimatePresence, motion } from 'framer-motion';
 
 export const ConversationOverlay: React.FC = () => {
   const { isConversationOpen, closeConversation } = useConversationUIStore();
   const status = useChatStore((state) => state.status);
   const audioLevel = useConversationAudioLevel(); // Get real-time audio level
+  const { startMonitoring, stopMonitoring } = useConversationFlowMonitor();
   const hasStartedListening = useRef(false);
   
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
@@ -48,20 +51,26 @@ export const ConversationOverlay: React.FC = () => {
       hasStartedListening.current = true;
       console.log('[ConversationOverlay] Conversation opened - starting listening');
       
+      // Start flow monitoring
+      startMonitoring();
+      
       // Simple: just start listening
       chatController.startTurn().catch(error => {
         console.error('[ConversationOverlay] Failed to start listening:', error);
       });
     }
-  }, [isConversationOpen]);
+  }, [isConversationOpen, startMonitoring]);
 
   // Simple cleanup when conversation closes
   useEffect(() => {
     if (!isConversationOpen) {
       console.log('[ConversationOverlay] Conversation closed - resetting flag');
       hasStartedListening.current = false;
+      
+      // Stop flow monitoring
+      stopMonitoring();
     }
-  }, [isConversationOpen]);
+  }, [isConversationOpen, stopMonitoring]);
 
 
 
@@ -75,6 +84,9 @@ export const ConversationOverlay: React.FC = () => {
 
   return createPortal(
     <div className="fixed inset-0 z-50 bg-white pt-safe pb-safe">
+      {/* Flow Monitor Indicator */}
+      <FlowMonitorIndicator />
+      
       {/* Centered content */}
       <div className="h-full w-full flex items-center justify-center px-6">
         <div className="flex flex-col items-center justify-center gap-6">

@@ -6,6 +6,7 @@ import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
 import { conversationTtsService } from '@/services/voice/conversationTts';
 import { streamPlayerService } from '@/services/voice/StreamPlayerService';
+import { conversationFlowMonitor } from '@/services/conversation/ConversationFlowMonitor';
 import { getMessagesForConversation } from '@/services/api/messages';
 import { Message } from '@/core/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -122,9 +123,12 @@ class ChatController {
     this.initializeConversationService();
     
     useChatStore.getState().setStatus('recording');
+    conversationFlowMonitor.observeStep('listening');
+    
     try {
       await conversationMicrophoneService.startRecording();
     } catch (error: any) {
+      conversationFlowMonitor.observeError('listening', error);
       useChatStore.getState().setError(error.message);
       this.isTurnActive = false;
     }
@@ -134,6 +138,8 @@ class ChatController {
     if (!this.isTurnActive) return;
     
     useChatStore.getState().setStatus('transcribing');
+    conversationFlowMonitor.observeStep('transcribing');
+    
     try {
       const audioBlob = await conversationMicrophoneService.stopRecording();
       const { transcript } = await sttService.transcribe(audioBlob, useChatStore.getState().chat_id!);
@@ -150,10 +156,12 @@ class ChatController {
 
       this.addOptimisticMessages(chat_id, transcript, client_msg_id, audioUrl);
       
+      conversationFlowMonitor.observeStep('thinking');
       const finalMessage = await llmService.sendMessage({ chat_id, text: transcript, client_msg_id });
       this.reconcileOptimisticMessage(finalMessage);
 
     } catch (error: any) {
+      conversationFlowMonitor.observeError('transcribing', error);
       console.error("[ChatController] Error processing voice input:", error);
       useChatStore.getState().setError('Failed to process audio.');
       this.resetTurn();
@@ -163,6 +171,8 @@ class ChatController {
   private async playAssistantAudioAndContinue(assistantMessage: Message, chat_id: string) {
     if (assistantMessage.text && assistantMessage.id) {
       useChatStore.getState().setStatus('speaking');
+      conversationFlowMonitor.observeStep('speaking');
+      
       try {
         await conversationTtsService.speakAssistant({
           conversationId: chat_id,
@@ -174,6 +184,7 @@ class ChatController {
         
         this.resetTurn(false); // Restart turn after speaking
       } catch (ttsError) {
+        conversationFlowMonitor.observeError('speaking', ttsError);
         console.error('[ChatController] ❌ TTS failed:', ttsError);
         this.resetTurn(true); // Don't restart if TTS fails
       }
