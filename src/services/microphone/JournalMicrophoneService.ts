@@ -89,7 +89,7 @@ class JournalMicrophoneServiceClass {
         this.processAudio();
       };
 
-      this.mediaRecorder.start(500); // 500ms chunks to ensure we get multiple chunks
+      this.mediaRecorder.start(100);
       
       // Start silence monitoring
       this.startSilenceMonitoring();
@@ -205,12 +205,13 @@ class JournalMicrophoneServiceClass {
           const { data, error } = await supabase.functions.invoke('google-speech-to-text', {
             body: {
               audioData: base64Audio,
-                                             config: {
-           encoding: 'WEBM_OPUS',
-           languageCode: 'en-US',
-           enableAutomaticPunctuation: true,
-           model: 'latest_short'
-         }
+              config: {
+                encoding: 'WEBM_OPUS',
+                sampleRateHertz: 48000,
+                languageCode: 'en-US',
+                enableAutomaticPunctuation: true,
+                model: 'latest_long'
+              }
             }
           });
 

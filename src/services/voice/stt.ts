@@ -22,9 +22,10 @@ class SttService {
       body: {
         audioData: base64Audio,
         chat_id,
-        meta: { ...meta, conversation_mode: false }, // Never trigger LLM from sttService
+        meta,
         config: {
           encoding: 'WEBM_OPUS',
+          sampleRateHertz: 48000,
           languageCode: 'en-US',
         }
       },
