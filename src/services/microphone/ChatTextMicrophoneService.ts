@@ -259,12 +259,26 @@ class ChatTextMicrophoneServiceClass {
         measuredDurationMs,
       });
       
-            // Send raw binary audio directly - no base64 encoding
+      // Send raw binary audio directly using fetch to bypass invoke() helper issues with Blobs
       try {
-        const { data, error } = await supabase.functions.invoke('google-speech-to-text', {
-          body: finalBlob, // Send raw Blob directly
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+        if (!session) throw new Error("User not authenticated for function call");
+
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        if (!supabaseUrl || !anonKey) {
+          throw new Error("Supabase URL or Anon Key is not configured in environment variables.");
+        }
+        const functionUrl = `${supabaseUrl}/functions/v1/google-speech-to-text`;
+
+        const response = await fetch(functionUrl, {
+          method: 'POST',
+          body: finalBlob,
           headers: {
             'Content-Type': 'audio/webm;codecs=opus',
+            'Authorization': `Bearer ${session.access_token}`,
+            'apikey': anonKey,
             'X-Trace-Id': this.currentTraceId || '',
             'X-Meta': JSON.stringify({
               measuredDurationMs,
@@ -279,8 +293,12 @@ class ChatTextMicrophoneServiceClass {
           }
         });
 
-        if (error) throw error;
+        if (!response.ok) {
+          const errorBody = await response.json();
+          throw new Error(`Function returned an error: ${response.status} ${JSON.stringify(errorBody)}`);
+        }
         
+        const data = await response.json();
         const transcript = data?.transcript || '';
         this.log('📝 Transcript received', { length: transcript.length });
         
