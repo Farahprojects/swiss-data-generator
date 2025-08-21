@@ -172,13 +172,13 @@ class ChatTextMicrophoneServiceClass {
     let voiceStartTime: number | null = null;
     let silenceStartTime: number | null = null;
     
-    // Optimized thresholds for faster response
-    const VOICE_START_THRESHOLD = 0.012;  // Slightly lower for faster detection
-    const VOICE_START_DURATION = 300;     // Keep 300ms for accuracy
-    const SILENCE_THRESHOLD = 0.01;       // Keep at 0.01
-    const SILENCE_TIMEOUT = this.options.silenceTimeoutMs || 400;  // Reduced from 2000ms to 400ms
+    // Optimized thresholds for natural conversation flow
+    const VOICE_START_THRESHOLD = 0.012;  // RMS threshold to detect voice start
+    const VOICE_START_DURATION = 300;     // Duration to confirm voice (300ms)
+    const SILENCE_THRESHOLD = 0.008;      // Lower threshold for silence (hysteresis)
+    const SILENCE_TIMEOUT = this.options.silenceTimeoutMs || 2000; // 2 seconds for natural pauses
     
-    this.log(`🧠 VAD started - waiting for voice (>${VOICE_START_THRESHOLD} RMS for ${VOICE_START_DURATION}ms)`);
+    this.log(`🧠 VAD started - waiting for voice (>${VOICE_START_THRESHOLD} RMS for ${VOICE_START_DURATION}ms, silence <${SILENCE_THRESHOLD} RMS for ${SILENCE_TIMEOUT}ms)`);
 
     const checkVAD = () => {
       if (!this.monitoringRef.current || !this.analyser) return;
