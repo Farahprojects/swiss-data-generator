@@ -21,7 +21,7 @@ serve(async (req) => {
   try {
     const body = await req.json();
     console.log("[llm-handler] Body:", body);
-    const { chat_id } = body || {};
+    const { chat_id, text } = body || {};
 
     if (!chat_id) {
       return new Response(JSON.stringify({ error: "Missing required field: chat_id" }), {

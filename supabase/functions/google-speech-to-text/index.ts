@@ -198,7 +198,10 @@ serve(async (req) => {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`
           },
-          body: JSON.stringify({ chat_id })
+          body: JSON.stringify({ 
+            chat_id,
+            text: transcript // Include the transcript so LLM can respond to it
+          })
         });
 
         if (!llmResponse.ok) {
