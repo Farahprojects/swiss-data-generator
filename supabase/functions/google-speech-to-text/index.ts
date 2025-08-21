@@ -36,7 +36,11 @@ serve(async (req) => {
       throw new Error('Empty audio data - please try recording again');
     }
     
-    // Log only important info for production
+    console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Audio data received`, {
+      audioDataLength: audioData.length,
+      estimatedSizeKB: Math.round(audioData.length * 0.75 / 1024), // Base64 to binary estimate
+      traceId
+    });
     
     // Test base64 decode to catch invalid format early
     try {

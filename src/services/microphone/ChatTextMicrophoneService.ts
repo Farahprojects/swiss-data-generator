@@ -240,7 +240,12 @@ class ChatTextMicrophoneServiceClass {
       
       // Simple, professional approach - let MediaRecorder handle the format
       const finalBlob = new Blob(this.audioChunks, { type: 'audio/webm;codecs=opus' });
-      this.log('🔄 Processing clean audio', { finalBlobSize: finalBlob.size });
+      this.log('🔄 Processing clean audio', { 
+        finalBlobSize: finalBlob.size,
+        numberOfChunks: this.audioChunks.length,
+        chunkSizes: this.audioChunks.map(chunk => chunk.size),
+        totalChunkSize: this.audioChunks.reduce((sum, chunk) => sum + chunk.size, 0)
+      });
       // minimal
       
       // Convert to base64
@@ -248,6 +253,11 @@ class ChatTextMicrophoneServiceClass {
       reader.onloadend = async () => {
         try {
           const base64Audio = (reader.result as string).split(',')[1];
+          this.log('📤 Sending to Google STT', { 
+            base64Length: base64Audio.length,
+            estimatedDurationMs: Math.round((finalBlob.size / 128000) * 8 * 1000), // Rough estimate based on bitrate
+            mimeType: finalBlob.type
+          });
           // minimal
 
           const { data, error } = await supabase.functions.invoke('google-speech-to-text', {
