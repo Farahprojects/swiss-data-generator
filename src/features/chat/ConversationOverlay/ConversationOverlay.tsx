@@ -12,7 +12,6 @@ export const ConversationOverlay: React.FC = () => {
   const status = useChatStore((state) => state.status);
   const audioLevel = useConversationAudioLevel(); // Get real-time audio level
   const hasStartedListening = useRef(false);
-  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = () => {
@@ -39,13 +38,7 @@ export const ConversationOverlay: React.FC = () => {
     // 3. Reset all conversation state (synchronous)
     chatController.resetConversationService();
     
-    // 4. Clear any timers (synchronous)
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = null;
-    }
-    
-    // 5. Close the UI (synchronous)
+    // 4. Close the UI (synchronous)
     closeConversation();
   };
   
@@ -70,28 +63,7 @@ export const ConversationOverlay: React.FC = () => {
     }
   }, [isConversationOpen]);
 
-  // 3-second silence detection
-  useEffect(() => {
-    if (isConversationOpen && status === 'recording') {
-      // Clear existing timer
-      if (silenceTimerRef.current) {
-        clearTimeout(silenceTimerRef.current);
-      }
-      
-      // Start 3-second silence timer
-      silenceTimerRef.current = setTimeout(() => {
-        console.log('[ConversationOverlay] 3 seconds of silence detected, triggering audio level recording');
-        // The silence detection will be handled by the microphone service
-        // This just ensures we're actively listening
-      }, 3000);
-    }
-    
-    return () => {
-      if (silenceTimerRef.current) {
-        clearTimeout(silenceTimerRef.current);
-      }
-    };
-  }, [isConversationOpen, status, audioLevel]);
+
 
   // Map chat status to conversation state for UI
   const state = status === 'recording' ? 'listening' : 
