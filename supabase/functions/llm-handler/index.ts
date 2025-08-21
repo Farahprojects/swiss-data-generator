@@ -21,7 +21,7 @@ serve(async (req) => {
   try {
     const body = await req.json();
     console.log("[llm-handler] Body:", body);
-    const { chat_id, text } = body || {};
+    const { chat_id, text, callback_url, client_msg_id } = body || {};
 
     if (!chat_id) {
       return new Response(JSON.stringify({ error: "Missing required field: chat_id" }), {
@@ -170,9 +170,9 @@ If the user is vague, ask exactly one clarifying question and then give a provis
         // Don't fail the request, just log the error
       });
 
-    // Return the response immediately without waiting for database save
-    return new Response(JSON.stringify({
-      id: `temp-${Date.now()}`, // Temporary ID since we don't have the saved message
+    // Prepare assistant message for callback
+    const assistantMessage = {
+      id: `temp-${Date.now()}`,
       conversationId: chat_id,
       role: "assistant",
       text: assistantText,
@@ -185,7 +185,29 @@ If the user is vague, ask exactly one clarifying question and then give a provis
         output_tokens: outputTokens,
         total_tokens: tokenCount
       },
-    }), {
+    };
+
+    // Fire-and-forget callback to chat-send-callback if URL provided
+    if (callback_url) {
+      console.log("[llm-handler] Calling back to:", callback_url);
+      fetch(callback_url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
+        },
+        body: JSON.stringify({
+          chat_id,
+          assistantMessage,
+          client_msg_id
+        })
+      }).catch(error => {
+        console.error("[llm-handler] Callback failed (non-blocking):", error);
+      });
+    }
+
+    // Return the response immediately without waiting for database save or callback
+    return new Response(JSON.stringify(assistantMessage), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
