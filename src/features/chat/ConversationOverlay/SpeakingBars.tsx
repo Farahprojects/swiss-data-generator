@@ -6,19 +6,13 @@ interface Props {
 }
 
 export const SpeakingBars: React.FC<Props> = ({ audioLevel }) => {
-  // Create a wave-like pattern where middle bars are bigger
+  // Simple visual feedback - just respond to audio level
   const bars = Array.from({ length: 4 }, (_, index) => {
-    // Create a bell curve effect - middle bars are more responsive
-    const centerDistance = Math.abs(index - 1.5); // Distance from center (0.5, 1.5, 1.5, 0.5)
-    const responsiveness = Math.max(0.3, 1 - centerDistance * 0.4); // 0.8, 1.0, 1.0, 0.8
-    
-    // Add some randomness for more natural movement
-    const randomFactor = 0.8 + Math.sin(Date.now() * 0.01 + index) * 0.2;
-    
-    // Base height with wave pattern
-    const baseHeight = 0.4 + (1 - centerDistance * 0.3); // 0.55, 0.85, 0.85, 0.55
-    const audioResponse = Math.min(0.6, audioLevel * responsiveness * randomFactor);
-    const scaleY = baseHeight + audioResponse; // 0.55-1.15, 0.85-1.45, 0.85-1.45, 0.55-1.15
+    // Simple: middle bars slightly taller, all respond to audio
+    const isMiddleBar = index === 1 || index === 2;
+    const baseHeight = isMiddleBar ? 0.8 : 0.6;
+    const audioResponse = Math.min(0.4, audioLevel * 2); // Simple multiplier
+    const scaleY = baseHeight + audioResponse;
 
     return {
       id: index,
