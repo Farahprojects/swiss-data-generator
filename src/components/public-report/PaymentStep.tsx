@@ -11,7 +11,6 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { usePricing } from '@/contexts/PricingContext';
 import FormStep from './FormStep';
-import { PreparingSpaceModal } from '@/components/ui/PreparingSpaceModal';
 
 interface PaymentStepProps {
   register: UseFormRegister<ReportFormData>;
@@ -47,7 +46,6 @@ const PaymentStep = ({
   const [promoError, setPromoError] = useState<string>('');
   const [isValidatingPromo, setIsValidatingPromo] = useState(false);
   const [trustedPricing, setTrustedPricing] = useState<TrustedPricingObject | null>(null);
-  const [showPreparingModal, setShowPreparingModal] = useState(false);
   
   const { toast } = useToast();
   const { getPriceById, isLoading: pricesLoading } = usePricing();
@@ -159,9 +157,6 @@ const PaymentStep = ({
   const handleButtonClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    // Show preparing modal immediately
-    setShowPreparingModal(true);
     
     setHasTimedOut(false);
     setPromoError('');
@@ -370,7 +365,6 @@ const PaymentStep = ({
       <FormStep stepNumber={3} title="Payment">
         {content}
       </FormStep>
-      <PreparingSpaceModal isOpen={showPreparingModal} />
     </>
   );
 };

@@ -13,7 +13,7 @@ import { ReportFormData } from '@/types/public-report';
 import { supabase } from '@/integrations/supabase/client';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
 import { usePricing } from '@/contexts/PricingContext';
-import { PreparingSpaceModal } from '@/components/ui/PreparingSpaceModal';
+import { useToast } from '@/components/ui/use-toast';
 
 interface MobileReportSheetProps {
   isOpen: boolean;
@@ -22,226 +22,247 @@ interface MobileReportSheetProps {
 }
 
 const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenChange, onReportCreated }) => {
-  const form = useForm<ReportFormData>({
-    mode: 'onBlur',
-    defaultValues: {
-      reportType: '',
-      reportSubCategory: '',
-      relationshipType: '',
-      essenceType: '',
-      name: '',
-      email: '',
-      birthDate: '',
-      birthTime: '',
-      birthLocation: '',
-      birthLatitude: undefined,
-      birthLongitude: undefined,
-      birthPlaceId: '',
-      secondPersonName: '',
-      secondPersonBirthDate: '',
-      secondPersonBirthTime: '',
-      secondPersonBirthLocation: '',
-      secondPersonLatitude: undefined,
-      secondPersonLongitude: undefined,
-      secondPersonPlaceId: '',
-      returnYear: '',
-      notes: '',
-      promoCode: '',
-      request: '',
-    },
-  });
-
-  const { register, setValue, control, watch, formState: { errors, isValid } } = form;
+  const form = useForm<ReportFormData>();
+  const { control, register, setValue, watch, handleSubmit, formState: { errors } } = form;
   const formValues = watch();
-  const reportCategory = watch('reportCategory');
-  const reportType = watch('reportType');
-  const request = watch('request');
-
-  const requiresSecondPerson = reportCategory === 'compatibility' || reportType?.startsWith('sync_') || request === 'sync';
-  const totalSteps = requiresSecondPerson ? 5 : 4;
+  
   const [currentStep, setCurrentStep] = React.useState(1);
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [hasTimedOut, setHasTimedOut] = React.useState(false);
-  const [showPreparingModal, setShowPreparingModal] = React.useState(false);
-
-  const nextStep = () => { if (currentStep < totalSteps) setCurrentStep(s => s + 1); };
-  const prevStep = () => { if (currentStep > 1) setCurrentStep(s => s - 1); };
-  const resetForm = () => { form.reset(); setCurrentStep(1); };
-
-  const { getReportPrice } = usePriceFetch();
-  const { getPriceById } = usePricing();
-
-  // Direct submission to initiate-report-flow
-  const handleDirectSubmission = async (formData: ReportFormData, trustedPricing: TrustedPricingObject) => {
-    // Show preparing modal immediately
-    setShowPreparingModal(true);
-    setIsProcessing(true);
-    try {
-      const transformedReportData = {
-        ...formData,
-        birth_date: formData.birthDate,
-        birth_time: formData.birthTime,
-        location: formData.birthLocation,
-        latitude: formData.birthLatitude,
-        longitude: formData.birthLongitude,
-        second_person_birth_date: formData.secondPersonBirthDate,
-        second_person_birth_time: formData.secondPersonBirthTime,
-        second_person_location: formData.secondPersonBirthLocation,
-        second_person_latitude: formData.secondPersonLatitude,
-        second_person_longitude: formData.secondPersonLongitude,
-        request: formData.request || (formData.reportType?.includes('sync') ? 'sync' : 'essence'),
-        is_guest: true,
-      } as any;
-      
-      const payloadBody = {
-        reportData: transformedReportData,
-        trustedPricing,
-        is_guest: true
-      };
-
-      const { data, error } = await supabase.functions.invoke('initiate-report-flow', {
-        body: payloadBody
-      });
-
-      if (error) {
-        console.error('❌ [MOBILE] Submission failed:', error);
-        return;
-      }
-      
-      const guestReportId = data?.guestReportId || null;
-      const paymentStatus = data?.paymentStatus || 'pending';
-      const name = data?.name || '';
-      const email = data?.email || '';
-      const checkoutUrl = data?.checkoutUrl || null;
-
-      if (checkoutUrl) {
-        window.location.href = checkoutUrl;
-        return; // Redirecting, so no need to proceed
-      }
-
-      if (guestReportId) {
-        onOpenChange(false);
-        onReportCreated?.(guestReportId, paymentStatus, name, email);
-      } else {
-        console.error('❌ [MOBILE] Invalid response from server:', data);
-      }
-
-    } catch (err) {
-      console.error('❌ [MOBILE] Submission exception:', err);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const getPriceIdentifier = () => {
-    const data = form.getValues();
-    if (data.reportType) return data.reportType;
-    if (data.request) return data.request;
-    if (data.reportSubCategory) return data.reportSubCategory;
-    return null;
-  };
-
+  const [guestReportId, setGuestReportId] = React.useState<string | null>(null);
+  const [paymentStatus, setPaymentStatus] = React.useState<string | null>(null);
+  const [userName, setUserName] = React.useState<string>('');
+  const [userEmail, setUserEmail] = React.useState<string>('');
+  
+  const { toast } = useToast();
+  const { getPriceById, isLoading: pricesLoading } = usePricing();
+  
+  // Get base price from cached data
   const getBasePrice = () => {
-    const id = getPriceIdentifier();
-    if (!id) return 0;
-    const pd = getPriceById(id);
-    return pd ? Number(pd.unit_price_usd) : 0;
+    const priceIdentifier = getPriceIdentifier();
+    if (!priceIdentifier) return 0;
+    
+    const priceData = getPriceById(priceIdentifier);
+    return priceData ? Number(priceData.unit_price_usd) : 0;
   };
 
-  type TrustedPricingObject = { valid: boolean; discount_usd: number; trusted_base_price_usd: number; final_price_usd: number; report_type: string; reason?: string };
+  // Add timeout mechanism to prevent stuck processing state
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
+    if (isProcessing) {
+      setHasTimedOut(false);
+      timeoutId = setTimeout(() => {
+        console.warn('Processing timeout - this may indicate a server issue');
+        setHasTimedOut(true);
+        toast({
+          title: "Request Timeout",
+          description: "The request took too long. Please try again.",
+          variant: "destructive",
+        });
+      }, 15000);
+    }
 
-  const validatePromoCode = async (promoCode: string): Promise<TrustedPricingObject> => {
-    const id = getPriceIdentifier();
-    if (!id) {
-      return { valid: false, discount_usd: 0, trusted_base_price_usd: 0, final_price_usd: 0, report_type: '', reason: 'Invalid report type' };
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [isProcessing, toast]);
+
+  const reportCategory = watch('reportCategory');
+  const reportSubCategory = watch('reportSubCategory');
+  const reportType = watch('reportType');
+  const essenceType = watch('essenceType');
+  const relationshipType = watch('relationshipType');
+  const requestField = watch('request');
+  const name = watch('name');
+  const email = watch('email');
+  const promoCode = watch('promoCode') || '';
+
+  // Get price identifier from form data
+  const getPriceIdentifier = () => {
+    // Prioritize direct reportType for unified mobile/desktop behavior
+    if (reportType) {
+      return reportType;
     }
-    try {
-      const { data, error } = await supabase.functions.invoke('validate-promo-code', {
-        body: { promoCode, basePrice: getBasePrice(), reportType: id }
-      });
-      if (error) return { valid: false, discount_usd: 0, trusted_base_price_usd: getBasePrice(), final_price_usd: getBasePrice(), report_type: id, reason: 'Failed to validate promo code' };
-      return data as TrustedPricingObject;
-    } catch {
-      return { valid: false, discount_usd: 0, trusted_base_price_usd: getBasePrice(), final_price_usd: getBasePrice(), report_type: id, reason: 'Network error' };
+    
+    // Fallback to request field for astro data
+    if (requestField) {
+      return requestField;
     }
+    
+    // Legacy fallback for form combinations (desktop compatibility)
+    if (essenceType && reportCategory === 'the-self') {
+      return `essence_${essenceType}`;
+    }
+    
+    if (relationshipType && reportCategory === 'compatibility') {
+      return `sync_${relationshipType}`;
+    }
+    
+    return '';
   };
-
-  const canGoNext = useMemo(() => {
-    const step1Valid = !!reportCategory;
-    const step1_5Valid = reportCategory === 'astro-data' ? !!formValues.request : !!formValues.reportSubCategory;
-    const step2Done = Boolean(formValues.name && formValues.email && formValues.birthDate && formValues.birthTime && formValues.birthLocation);
-    const step3Done = step2Done && (!requiresSecondPerson || (formValues.secondPersonName && formValues.secondPersonBirthDate && formValues.secondPersonBirthTime && formValues.secondPersonBirthLocation));
-    switch (currentStep) {
-      case 1: return step1Valid;
-      case 2: return step1_5Valid;
-      case 3: return step2Done;
-      case 4: return requiresSecondPerson ? step3Done : isValid;
-      case 5: return requiresSecondPerson ? isValid : false;
-      default: return false;
-    }
-  }, [currentStep, formValues, isValid, reportCategory, requiresSecondPerson]);
-
-  const handleClose = () => { resetForm(); onOpenChange(false); };
 
   const handleButtonClick = async () => {
+    setHasTimedOut(false);
+    
+    const currentPromoCode = promoCode.trim();
+    let pricingResult: any;
+
     try {
-      const formData = form.getValues();
-      const code = formData.promoCode?.trim() || '';
-      let pricing: TrustedPricingObject;
-      if (code) {
-        pricing = await validatePromoCode(code);
-        if (!pricing.valid) { form.setError('promoCode', { type: 'manual', message: pricing.reason || 'Invalid Promo Code' }); return; }
+      // Only validate promo code if one is provided
+      if (currentPromoCode) {
+        const { data, error } = await supabase.functions.invoke('validate-promo-code', {
+          body: { promoCode: currentPromoCode, basePrice: getBasePrice(), reportType: getPriceIdentifier() }
+        });
+
+        if (error || !data.valid) {
+          toast({
+            title: "Invalid Promo Code",
+            description: data?.reason || 'Please check your promo code and try again.',
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        pricingResult = data;
       } else {
-        const id = getPriceIdentifier();
-        if (!id) { form.setError('promoCode', { type: 'manual', message: 'Invalid report type' }); return; }
-        pricing = { valid: true, discount_usd: 0, trusted_base_price_usd: getBasePrice(), final_price_usd: getBasePrice(), report_type: id };
+        // No promo code provided - use base pricing
+        const priceIdentifier = getPriceIdentifier();
+        if (!priceIdentifier) {
+          toast({
+            title: "Invalid Report Type",
+            description: "Please select a valid report type.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        pricingResult = {
+          valid: true,
+          discount_usd: 0,
+          trusted_base_price_usd: getBasePrice(),
+          final_price_usd: getBasePrice(),
+          report_type: priceIdentifier,
+        };
       }
-      form.clearErrors('promoCode');
-      await handleDirectSubmission(formData, pricing);
-    } catch (e) {
-      form.setError('promoCode', { type: 'manual', message: 'Failed to validate pricing. Please try again.' });
+
+      // Submit the form with trusted pricing
+      await handleSubmit(async (data) => {
+        setIsProcessing(true);
+        
+        try {
+          const { data: result, error } = await supabase.functions.invoke('create-checkout', {
+            body: {
+              ...data,
+              trustedPricing: pricingResult
+            }
+          });
+
+          if (error) {
+            throw new Error(error.message);
+          }
+
+          if (result?.guestReportId) {
+            setGuestReportId(result.guestReportId);
+            setPaymentStatus(result.paymentStatus);
+            setUserName(data.name);
+            setUserEmail(data.email);
+            
+            if (onReportCreated) {
+              onReportCreated(result.guestReportId, result.paymentStatus, data.name, data.email);
+            }
+          }
+
+        } catch (error) {
+          console.error('❌ Mobile report creation error:', error);
+          toast({
+            title: "Payment Failed",
+            description: error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.',
+            variant: "destructive",
+          });
+        } finally {
+          setIsProcessing(false);
+        }
+      })();
+
+    } catch (error) {
+      console.error('❌ Mobile button click error:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
-  // Scroll lock html+body and visualViewport keyboard padding
+  const requiresSecondPerson = reportCategory === 'compatibility' && relationshipType !== 'synastry';
+
+  const totalSteps = requiresSecondPerson ? 5 : 4;
+  const canGoNext = currentStep < totalSteps;
+
+  const nextStep = () => {
+    if (currentStep < totalSteps) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const handleClose = () => {
+    onOpenChange(false);
+  };
+
+  // Mobile-specific scroll and keyboard handling
   const scrollLockCount = useRef(0);
-  const scrollRef = useRef<HTMLDivElement | null>(null);
-  const footerRef = useRef<HTMLDivElement | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const footerRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!isOpen) return;
+
     const html = document.documentElement;
     const body = document.body;
     const prevHtmlOverflow = html.style.overflow;
     const prevBodyOverflow = body.style.overflow;
+
+    // Lock scroll on body
     html.style.overflow = 'hidden';
     body.style.overflow = 'hidden';
     scrollLockCount.current += 1;
 
-    const vv = (window as any).visualViewport as VisualViewport | undefined;
-    let raf = 0;
-    const updateKB = () => {
-      raf = 0;
-      const height = window.innerHeight;
-      const vvHeight = vv?.height ?? height;
-      const kb = Math.max(0, height - vvHeight);
-      document.documentElement.style.setProperty('--kb', `${kb}px`);
-      // Also measure footer height dynamically
-      const fh = footerRef.current?.offsetHeight ?? 0;
-      document.documentElement.style.setProperty('--footer-h', `${fh}px`);
+    // Handle virtual keyboard
+    const vv = window.visualViewport;
+    let raf: number;
+
+    const onVV = () => {
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        if (vv) {
+          const h = Math.round(vv.height);
+          document.documentElement.style.setProperty('--kb', `${h}px`);
+        }
+      });
     };
-    const onVV = () => { if (raf) return; raf = requestAnimationFrame(updateKB); };
-    vv?.addEventListener('resize', onVV);
-    vv?.addEventListener('scroll', onVV);
-    updateKB();
 
-    // Recalculate footer height on resize/orientation changes
-    const onResize = () => { requestAnimationFrame(() => {
-      const fh = footerRef.current?.offsetHeight ?? 0;
-      document.documentElement.style.setProperty('--footer-h', `${fh}px`);
-    }); };
+    const onResize = () => {
+      const h = Math.round(window.innerHeight);
+      document.documentElement.style.setProperty('--vh', `${h}px`);
+    };
+
+    if (vv) {
+      vv.addEventListener('resize', onVV);
+      vv.addEventListener('scroll', onVV);
+    }
     window.addEventListener('resize', onResize);
+    onResize();
 
-    // Focusin handler to ensure inputs are visible
+    // Handle focus scrolling
     const onFocusIn = (e: FocusEvent) => {
       const target = e.target as HTMLElement | null;
       if (!target) return;
@@ -337,7 +358,6 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
   return <>
     {createPortal(sheet, document.body)}
     {createPortal(footer, document.body)}
-    <PreparingSpaceModal isOpen={showPreparingModal} />
   </>;
 };
 
