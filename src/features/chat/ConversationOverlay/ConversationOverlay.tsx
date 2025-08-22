@@ -5,7 +5,7 @@ import { VoiceBubble } from './VoiceBubble';
 import { useChatStore } from '@/core/store';
 import { chatController } from '../ChatController';
 import { useConversationAudioLevel } from '@/hooks/useConversationAudioLevel';
-import { useConversationFlowMonitor } from '@/hooks/useConversationFlowMonitor';
+// import { useConversationFlowMonitor } from '@/hooks/useConversationFlowMonitor';
 // import { FlowMonitorIndicator } from './FlowMonitorIndicator'; // Hidden for production
 import { ConnectionErrorFallback } from './ConnectionErrorFallback';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -16,7 +16,7 @@ export const ConversationOverlay: React.FC = () => {
   const status = useChatStore((state) => state.status);
   const chat_id = useChatStore((state) => state.chat_id);
   const audioLevel = useConversationAudioLevel(); // Get real-time audio level
-  const { startMonitoring, stopMonitoring } = useConversationFlowMonitor();
+  // const { startMonitoring, stopMonitoring } = useConversationFlowMonitor();
   const hasStartedListening = useRef(false);
   const [showConnectionError, setShowConnectionError] = useState(false);
   const [recoveryAttempts, setRecoveryAttempts] = useState(0);
@@ -88,24 +88,24 @@ export const ConversationOverlay: React.FC = () => {
           console.log('[ConversationOverlay] Conversation mode set - sessionId:', sessionResponse.sessionId);
           
           // Start flow monitoring with auto-recovery
-          startMonitoring();
+          // startMonitoring();
           
           // Setup auto-recovery system
-          import('@/services/conversation/ConversationFlowMonitor').then(({ conversationFlowMonitor }) => {
-            conversationFlowMonitor.setupAutoRecovery(
-              // Auto-recovery trigger: try to restart conversation
-              () => {
-                setRecoveryAttempts(prev => prev + 1);
-                chatController.startTurn().catch(error => {
-                  console.error('[ConversationOverlay] Auto-recovery failed:', error);
-                });
-              },
-              // Max attempts reached: show error UI
-              () => {
-                setShowConnectionError(true);
-              }
-            );
-          });
+          // import('@/services/conversation/ConversationFlowMonitor').then(({ conversationFlowMonitor }) => {
+          //   conversationFlowMonitor.setupAutoRecovery(
+          //     // Auto-recovery trigger: try to restart conversation
+          //     () => {
+          //       setRecoveryAttempts(prev => prev + 1);
+          //       chatController.startTurn().catch(error => {
+          //         console.error('[ConversationOverlay] Auto-recovery failed:', error);
+          //       });
+          //     },
+          //     // Max attempts reached: show error UI
+          //     () => {
+          //       setShowConnectionError(true);
+          //     }
+          //   );
+          // });
           
           // Simple: just start listening
           chatController.startTurn().catch(error => {
@@ -120,7 +120,7 @@ export const ConversationOverlay: React.FC = () => {
       
       startConversationSession();
     }
-  }, [isConversationOpen, startMonitoring, chat_id]);
+  }, [isConversationOpen, chat_id]);
 
   // Simple cleanup when conversation closes
   useEffect(() => {
@@ -139,12 +139,12 @@ export const ConversationOverlay: React.FC = () => {
       chatController.setConversationMode('normal', null);
       
       // Stop monitoring
-      stopMonitoring();
+      // stopMonitoring();
       
       // Cleanup ChatController
       chatController.cleanup();
     }
-  }, [isConversationOpen, stopMonitoring, currentSessionId]);
+  }, [isConversationOpen, currentSessionId]);
 
   // Reset recovery attempts when conversation starts working
   useEffect(() => {

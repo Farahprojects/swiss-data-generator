@@ -6,7 +6,7 @@ import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
 import { conversationTtsService } from '@/services/voice/conversationTts';
 import { streamPlayerService } from '@/services/voice/StreamPlayerService';
-import { conversationFlowMonitor } from '@/services/conversation/ConversationFlowMonitor';
+// import { conversationFlowMonitor } from '@/services/conversation/ConversationFlowMonitor';
 import { getMessagesForConversation } from '@/services/api/messages';
 import { Message } from '@/core/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -157,14 +157,14 @@ class ChatController {
     this.initializeConversationService();
     
     useChatStore.getState().setStatus('recording');
-    conversationFlowMonitor.observeStep('listening');
+    // conversationFlowMonitor.observeStep('listening');
     
     try {
       await conversationMicrophoneService.startRecording();
       // Reset auto-recovery on successful start
-      conversationFlowMonitor.resetAutoRecovery();
+      // conversationFlowMonitor.resetAutoRecovery();
     } catch (error: any) {
-      conversationFlowMonitor.observeError('listening', error);
+      // conversationFlowMonitor.observeError('listening', error);
       useChatStore.getState().setError(error.message);
       this.isTurnActive = false;
     }
@@ -174,7 +174,7 @@ class ChatController {
     if (!this.isTurnActive) return;
     
     useChatStore.getState().setStatus('transcribing');
-    conversationFlowMonitor.observeStep('transcribing');
+    // conversationFlowMonitor.observeStep('transcribing');
     
     try {
       const audioBlob = await conversationMicrophoneService.stopRecording();
@@ -197,7 +197,7 @@ class ChatController {
 
       this.addOptimisticMessages(chat_id, transcript, client_msg_id, audioUrl);
       
-      conversationFlowMonitor.observeStep('thinking');
+      // conversationFlowMonitor.observeStep('thinking');
       const finalMessage = await llmService.sendMessage({ 
         chat_id, 
         text: transcript, 
@@ -208,10 +208,10 @@ class ChatController {
       this.reconcileOptimisticMessage(finalMessage);
       
       // Reset auto-recovery on successful turn completion
-      conversationFlowMonitor.resetAutoRecovery();
+      // conversationFlowMonitor.resetAutoRecovery();
 
     } catch (error: any) {
-      conversationFlowMonitor.observeError('transcribing', error);
+      // conversationFlowMonitor.observeError('transcribing', error);
       console.error("[ChatController] Error processing voice input:", error);
       useChatStore.getState().setError('Failed to process audio.');
       this.resetTurn();
@@ -221,20 +221,20 @@ class ChatController {
   private async playAssistantAudioAndContinue(assistantMessage: Message, chat_id: string) {
     if (assistantMessage.text && assistantMessage.id) {
       // Set TTS context in the flow monitor for automatic streaming
-      conversationFlowMonitor.setTtsContext(
-        assistantMessage.chat_id, 
-        assistantMessage.id, 
-        assistantMessage.text,
-        () => {
-          // TTS completion callback
-          if (this.isResetting) return;
-          this.resetTurn(false); // Restart turn after speaking
-        }
-      );
+      // conversationFlowMonitor.setTtsContext(
+      //   assistantMessage.chat_id, 
+      //   assistantMessage.id, 
+      //   assistantMessage.text,
+      //   () => {
+      //     // TTS completion callback
+      //     if (this.isResetting) return;
+      //     this.resetTurn(false); // Restart turn after speaking
+      //   }
+      // );
       
       // Trigger speaking step - TTS will be handled automatically by the monitor
       useChatStore.getState().setStatus('speaking');
-      conversationFlowMonitor.observeStep('speaking');
+      // conversationFlowMonitor.observeStep('speaking');
       
     } else {
       this.resetTurn(true); // Don't restart if no text
