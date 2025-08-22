@@ -24,10 +24,10 @@ const MessageItem = ({ message, isLast, isFromHistory }: { message: Message; isL
       className={`flex items-end gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}
     >
       <div
-        className={`px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl ${
+        className={`px-4 py-3 rounded-2xl ${
           isUser
-            ? 'bg-gray-200 text-black'
-            : 'text-black'
+            ? 'bg-gray-200 text-black max-w-[75%]'
+            : 'text-black max-w-2xl lg:max-w-4xl'
         }`}
       >
         <p className="text-base font-light leading-relaxed text-left">
@@ -77,29 +77,7 @@ export const MessageList = () => {
     }
   }, [messages.length, initialMessageCount]);
 
-  // Snap to user message when send button is pressed
-  useEffect(() => {
-    if (lastSendTime && messages.length > 0) {
-      const latestMessage = messages[messages.length - 1];
-      
-      // Only snap if the latest message is from user (just sent)
-      if (latestMessage.role === 'user') {
-        requestAnimationFrame(() => {
-          if (containerRef.current) {
-            const container = containerRef.current;
-            const messageElement = container.querySelector(`[data-message-id="${latestMessage.id}"]`);
-            
-            if (messageElement) {
-              messageElement.scrollIntoView({ 
-                behavior: 'smooth',
-                block: 'start'
-              });
-            }
-          }
-        });
-      }
-    }
-  }, [lastSendTime, messages.length]);
+
 
   // Show generating message when polling and report is not ready
   const showGeneratingMessage = isPolling && !isReportReady;
