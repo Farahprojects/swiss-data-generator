@@ -18,8 +18,6 @@ class LlmService {
    * Note: chat_id is already verified by verify-chat-access, no guest_id needed
    */
   async sendMessage(request: { chat_id: string; text: string; client_msg_id?: string }): Promise<Message> {
-    console.log(`[LLM] Sending message for chat ${request.chat_id} and awaiting direct response...`);
-    
     const { data, error } = await supabase.functions.invoke('chat-send', {
       body: {
         chat_id: request.chat_id,
@@ -38,14 +36,11 @@ class LlmService {
       throw new Error(`chat-send error: ${data.error}`);
     }
 
-    console.log(`[LLM] Direct response received from chat-send`);
     return data as Message;
   }
 
   // Legacy method - kept for compatibility if needed
   async chat(request: LlmRequest): Promise<Message> {
-    console.log(`[LLM] Sending message for chat ${request.chat_id}...`);
-    
     const { data, error } = await supabase.functions.invoke('llm-handler', {
       body: {
         chat_id: request.chat_id,

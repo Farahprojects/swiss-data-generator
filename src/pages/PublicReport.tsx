@@ -41,7 +41,6 @@ const PublicReport = () => {
 
     if (guestId && paymentStatusParam === 'success') {
       // This is a return from a successful Stripe payment.
-      console.log(`[PublicReport] Stripe return detected for guestId: ${guestId}. Starting checker.`);
       // The checker will handle polling for the 'paid' status from the webhook.
       setActiveGuest({ guestId: guestId, name: '', email: '', isStripeReturn: true });
 
@@ -51,17 +50,13 @@ const PublicReport = () => {
       window.history.replaceState({}, '', newUrl.toString());
     } else if (guestId && paymentStatusParam === 'cancelled') {
       // Handle cancelled payment - show nudge modal if appropriate
-      console.log(`[PublicReport] Cancelled payment detected for guestId: ${guestId}`);
       
       if (shouldShowCancelNudge(guestId)) {
-        console.log('[PublicReport] Showing cancel nudge modal');
         setCancelNudgeGuestId(guestId);
         setShowCancelNudge(true);
         
         // Track the event
         console.log('[CancelNudge] cancel_nudge_shown', { guestId });
-      } else {
-        console.log('[PublicReport] Cancel nudge already shown recently, skipping');
       }
 
       // Clean the URL to avoid re-triggering on refresh
@@ -426,9 +421,7 @@ const PublicReport = () => {
                   <Button
                     onClick={() => {
                       if (activeGuest) {
-                        console.log('[PublicReport] Setting chat tokens with guest ID:', activeGuest.guestId);
                         setChatTokens(activeGuest.guestId, '');
-                        console.log('[PublicReport] Chat tokens set, navigating to chat');
                         setActiveGuest(null);
                         setIsReportReady(false);
                         navigate('/chat');
@@ -450,14 +443,12 @@ const PublicReport = () => {
                 email={activeGuest.email}
                 onPaid={(paidData) => {
                   // Payment confirmed, navigate to chat immediately - let chat page handle report polling
-                  console.log('[PublicReport] Payment confirmed, navigating to chat:', paidData.guestId);
                   setChatTokens(paidData.guestId, '');
                   setActiveGuest(null);
                   navigate('/chat');
                 }}
                 onReportReady={(readyData) => {
                   // Report is ready, show the ready modal
-                  console.log('[PublicReport] Report ready:', readyData.guestId);
                   setIsReportProcessing(false);
                   setIsReportReady(true);
                 }}

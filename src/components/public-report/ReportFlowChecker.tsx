@@ -26,7 +26,6 @@ export const ReportFlowChecker = ({ guestId, name, email, onPaid, onReportReady,
         .limit(1);
       
       if (existingSignal && existingSignal.length > 0) {
-        console.log('[ReportFlowChecker] Report already ready, skipping polling');
         onReportReady({ guestId, name, email });
         return true;
       }
@@ -36,7 +35,6 @@ export const ReportFlowChecker = ({ guestId, name, email, onPaid, onReportReady,
     let pollingInterval: NodeJS.Timeout | undefined;
 
     const pollPaymentStatus = async () => {
-      console.log('[ReportFlowChecker] Polling payment status for:', guestId);
       const { data, error } = await supabase.functions.invoke('get-payment-status', {
         body: { guest_id: guestId },
       });
@@ -51,8 +49,6 @@ export const ReportFlowChecker = ({ guestId, name, email, onPaid, onReportReady,
         
         if (!hasTriggeredGenerationRef.current) {
           hasTriggeredGenerationRef.current = true;
-          console.log('[ReportFlowChecker] "Paid" status confirmed. Triggering report generation...');
-          console.log('[ReportFlowChecker] Guest ID for persistence:', guestId);
           
           // Trigger report generation
           supabase.functions.invoke('trigger-report-generation', { body: { guest_report_id: guestId } });
@@ -63,7 +59,6 @@ export const ReportFlowChecker = ({ guestId, name, email, onPaid, onReportReady,
       }
       else if (data?.payment_status === 'pending') {
         if(pollingInterval) clearInterval(pollingInterval);
-        console.log('[ReportFlowChecker] "Pending" status confirmed. Creating payment session...');
         const { data: sessionData, error: sessionError } = await supabase.functions.invoke('create-payment-session', {
           body: { guest_report_id: guestId },
         });
