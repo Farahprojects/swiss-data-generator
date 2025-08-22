@@ -60,9 +60,9 @@ class ChatController {
       // Stop the listener since we got the response
       this.stopAssistantMessageListener();
       
-      // Update the optimistic message with the real one
-      useChatStore.getState().updateAssistantMessage(chat_id, finalMessage);
-      console.log(`[ChatController] Updated assistant message for chat_id: ${chat_id}, turnId: ${client_msg_id}`);
+      // Add the assistant message to the store
+      useChatStore.getState().addMessage(finalMessage);
+      console.log(`[ChatController] Added assistant message with ID: ${finalMessage.id}, turnId: ${client_msg_id}`);
       
     } catch (error) {
       console.error("[ChatController] Error sending message:", error);
@@ -83,19 +83,9 @@ class ChatController {
       status: "thinking",
     };
 
-    const optimisticAssistantMessage: Message = {
-      id: `temp-${Date.now()}`,
-      chat_id: chat_id,
-      role: "assistant",
-      text: "thinking...",
-      createdAt: new Date().toISOString(),
-      status: "thinking",
-    };
-
-    console.log(`[ChatController] Creating optimistic messages - User ID: ${client_msg_id}, Assistant placeholder ID: ${optimisticAssistantMessage.id}`);
+    console.log(`[ChatController] Creating optimistic user message - ID: ${client_msg_id}`);
 
     useChatStore.getState().addMessage(optimisticUserMessage);
-    useChatStore.getState().addMessage(optimisticAssistantMessage);
   }
 
   private reconcileOptimisticMessage(finalMessage: Message) {
@@ -313,14 +303,14 @@ class ChatController {
           console.log('[ChatController] LISTENER_HIT=true - Assistant message received via realtime:', payload);
           const assistantMessage = payload.new as Message;
           
-          // Update the optimistic message with the real one using chat_id
-          useChatStore.getState().updateAssistantMessage(assistantMessage.chat_id, assistantMessage);
-          console.log(`[ChatController] Updated assistant message via listener for chat_id: ${assistantMessage.chat_id}`);
+          // Add the assistant message to the store
+          useChatStore.getState().addMessage(assistantMessage);
+          console.log(`[ChatController] Added assistant message via listener with ID: ${assistantMessage.id}`);
           
           // Stop listening once we get the assistant message
           this.stopAssistantMessageListener();
           
-          // For text-only chat, just update the message - no TTS
+          // For text-only chat, just add the message - no TTS
           // this.playAssistantAudioAndContinue(assistantMessage, chat_id);
         }
       )

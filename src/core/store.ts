@@ -20,7 +20,6 @@ interface ChatState {
   loadMessages: (messages: Message[]) => void;
   addMessage: (message: Message) => void;
   updateMessage: (id: string, updates: Partial<Message>) => void;
-  updateAssistantMessage: (chat_id: string, updates: Partial<Message>) => void;
   setStatus: (status: ChatStatus) => void;
   setError: (error: string | null) => void;
   setTtsVoice: (v: string) => void;
@@ -47,23 +46,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
         msg.id === id ? { ...msg, ...updates } : msg
       );
       console.log(`[ChatStore] Message updated - Before: ${state.messages.find(m => m.id === id)?.text}, After: ${newMessages.find(m => m.id === id)?.text}`);
-      return { messages: newMessages };
-    });
-  },
-
-  updateAssistantMessage: (chat_id, updates) => {
-    console.log(`[ChatStore] updateAssistantMessage called - chat_id: ${chat_id}, Updates:`, updates);
-    set((state) => {
-      const newMessages = state.messages.map((msg) => {
-        if (msg.chat_id === chat_id && msg.role === 'assistant') {
-          // Replace the entire message with the real one, including the real ID
-          return { ...msg, ...updates };
-        }
-        return msg;
-      });
-      const beforeText = state.messages.find(m => m.chat_id === chat_id && m.role === 'assistant')?.text;
-      const afterText = newMessages.find(m => m.chat_id === chat_id && m.role === 'assistant')?.text;
-      console.log(`[ChatStore] Assistant message updated - Before: ${beforeText}, After: ${afterText}`);
       return { messages: newMessages };
     });
   },
