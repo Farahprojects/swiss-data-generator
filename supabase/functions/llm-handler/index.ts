@@ -157,7 +157,7 @@ Rules:
 
     const assistantMessage = {
       id: `temp-${Date.now()}`,
-      conversationId: chat_id,
+      chat_id: chat_id,
       role: "assistant",
       text: assistantText,
       created_at: new Date().toISOString(),
@@ -189,7 +189,10 @@ Rules:
       });
 
     // Return the final assistant message directly
-    return new Response(JSON.stringify({ ...assistantMessage, client_msg_id }), {
+    return new Response(JSON.stringify({ 
+      ...assistantMessage, 
+      client_msg_id
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 

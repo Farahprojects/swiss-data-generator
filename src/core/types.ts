@@ -10,7 +10,7 @@ export type MessageRole = 'user' | 'assistant' | 'system';
 
 export interface Message {
   id: string;
-  conversationId: string;
+  chat_id: string;
   role: MessageRole;
   text: string;
   audioUrl?: string;

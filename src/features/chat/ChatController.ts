@@ -58,45 +58,32 @@ class ChatController {
   }
 
   private addOptimisticMessages(chat_id: string, text: string, client_msg_id: string, audioUrl?: string) {
-    const tempUserMessage: Message = {
+    const optimisticUserMessage: Message = {
       id: client_msg_id,
-      conversationId: chat_id,
-      role: 'user',
+      chat_id: chat_id,
+      role: "user",
       text,
       audioUrl,
       createdAt: new Date().toISOString(),
+      status: "thinking",
     };
-    useChatStore.getState().addMessage(tempUserMessage);
 
-    const tempAssistantMessage: Message = {
-      id: `thinking-${client_msg_id}`,
-      client_msg_id,
-      conversationId: chat_id,
-      role: 'assistant',
-      text: '...',
-      status: 'thinking',
+    const optimisticAssistantMessage: Message = {
+      id: `temp-${Date.now()}`,
+      chat_id: chat_id,
+      role: "assistant",
+      text: "",
       createdAt: new Date().toISOString(),
+      status: "thinking",
     };
-    useChatStore.getState().addMessage(tempAssistantMessage);
-    useChatStore.getState().setStatus('thinking');
+
+    useChatStore.getState().addMessage(optimisticUserMessage);
+    useChatStore.getState().addMessage(optimisticAssistantMessage);
   }
 
   private reconcileOptimisticMessage(finalMessage: Message) {
-    if (!finalMessage.client_msg_id) {
-      console.error('[ChatController] Finalized message is missing client_msg_id, cannot reconcile UI.');
-      return;
-    }
-
-    useChatStore.getState().updateMessage(
-      `thinking-${finalMessage.client_msg_id}`, 
-      { ...finalMessage, id: finalMessage.id || uuidv4(), status: 'complete' }
-    );
-    
-    if (this.isTurnActive) {
-      this.playAssistantAudioAndContinue(finalMessage, finalMessage.conversationId);
-    } else {
-      useChatStore.getState().setStatus('idle');
-    }
+    useChatStore.getState().updateMessage(finalMessage.id, finalMessage);
+    this.playAssistantAudioAndContinue(finalMessage, finalMessage.chat_id);
   }
 
   private initializeConversationService() {
@@ -177,7 +164,7 @@ class ChatController {
     if (assistantMessage.text && assistantMessage.id) {
       // Set TTS context in the flow monitor for automatic streaming
       conversationFlowMonitor.setTtsContext(
-        chat_id, 
+        assistantMessage.chat_id, 
         assistantMessage.id, 
         assistantMessage.text,
         () => {
