@@ -7,7 +7,8 @@ const GOOGLE_TTS_API_KEY = Deno.env.get("GOOGLE-TTS") ?? "";
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, accept',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 // Only need Supabase for message metadata updates (text-only persistence)
@@ -18,7 +19,10 @@ serve(async (req) => {
 
   if (req.method === "OPTIONS") {
     console.log("[google-tts] Handling OPTIONS request");
-    return new Response("ok", { headers: CORS_HEADERS });
+    return new Response(null, { 
+      status: 204,
+      headers: CORS_HEADERS 
+    });
   }
 
   try {
