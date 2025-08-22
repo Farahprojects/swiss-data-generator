@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 interface TypewriterTextProps {
   text: string;
-  msPerChar?: number;
+  msPerWord?: number;
   onComplete?: () => void;
   onInterrupt?: () => void;
   className?: string;
@@ -13,7 +13,7 @@ interface TypewriterTextProps {
 
 export const TypewriterText: React.FC<TypewriterTextProps> = ({
   text,
-  msPerChar = 40,
+  msPerWord = 120,
   onComplete,
   onInterrupt,
   className = '',
@@ -73,22 +73,25 @@ export const TypewriterText: React.FC<TypewriterTextProps> = ({
     currentIndexRef.current = 0;
     setCursorVisible(true);
 
-    const typeNextChar = () => {
+    // Split text into words, preserving spaces
+    const words = text.split(/(\s+)/);
+
+    const typeNextWord = () => {
       if (isInterruptedRef.current) {
         setIsTyping(false);
         onInterrupt?.();
         return;
       }
 
-      if (currentIndexRef.current < text.length) {
-        // Add next character
-        const nextChar = text[currentIndexRef.current];
-        setDisplayedText(text.slice(0, currentIndexRef.current + 1));
+      if (currentIndexRef.current < words.length) {
+        // Add next word
+        const nextWord = words[currentIndexRef.current];
+        setDisplayedText(prev => prev + nextWord);
         currentIndexRef.current++;
 
-        // Variable delay for punctuation
-        const delay = /[.!?,:;]/.test(nextChar) ? msPerChar * 3 : msPerChar;
-        typeTimeoutRef.current = setTimeout(typeNextChar, delay);
+        // Variable delay for punctuation at end of words
+        const delay = /[.!?,:;]$/.test(nextWord) ? msPerWord * 2 : msPerWord;
+        typeTimeoutRef.current = setTimeout(typeNextWord, delay);
       } else {
         // Animation complete
         setIsTyping(false);
@@ -99,8 +102,8 @@ export const TypewriterText: React.FC<TypewriterTextProps> = ({
       }
     };
 
-    typeNextChar();
-  }, [text, msPerChar, onComplete, onInterrupt, showCursor, disabled]);
+    typeNextWord();
+  }, [text, msPerWord, onComplete, onInterrupt, showCursor, disabled]);
 
   // Stop typing (for interruptions)
   const stopTyping = useCallback(() => {
@@ -166,12 +169,12 @@ export const TypewriterText: React.FC<TypewriterTextProps> = ({
 export const useTypewriter = (
   text: string,
   options: {
-    msPerChar?: number;
+    msPerWord?: number;
     autoStart?: boolean;
     disabled?: boolean;
   } = {}
 ) => {
-  const { msPerChar = 40, autoStart = true, disabled = false } = options;
+  const { msPerWord = 120, autoStart = true, disabled = false } = options;
   const [displayedText, setDisplayedText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   
@@ -193,15 +196,18 @@ export const useTypewriter = (
     setDisplayedText('');
     currentIndexRef.current = 0;
 
+    // Split text into words, preserving spaces
+    const words = text.split(/(\s+)/);
+
     const typeNext = () => {
       if (isInterruptedRef.current) return;
 
-      if (currentIndexRef.current < text.length) {
-        const nextChar = text[currentIndexRef.current];
-        setDisplayedText(text.slice(0, currentIndexRef.current + 1));
+      if (currentIndexRef.current < words.length) {
+        const nextWord = words[currentIndexRef.current];
+        setDisplayedText(prev => prev + nextWord);
         currentIndexRef.current++;
 
-        const delay = /[.!?,:;]/.test(nextChar) ? msPerChar * 3 : msPerChar;
+        const delay = /[.!?,:;]$/.test(nextWord) ? msPerWord * 2 : msPerWord;
         timeoutRef.current = setTimeout(typeNext, delay);
       } else {
         setIsTyping(false);
@@ -209,7 +215,7 @@ export const useTypewriter = (
     };
 
     typeNext();
-  }, [text, msPerChar, disabled]);
+  }, [text, msPerWord, disabled]);
 
   const stop = useCallback(() => {
     isInterruptedRef.current = true;
