@@ -33,7 +33,8 @@ class LlmService {
 
     if (data?.error) {
       console.error(`[LLM] chat-send returned error:`, data.error);
-      throw new Error(`chat-send error: ${data.error}`);
+      const errorMessage = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
+      throw new Error(`chat-send error: ${errorMessage}`);
     }
 
     return data as Message;

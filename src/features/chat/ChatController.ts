@@ -305,8 +305,8 @@ class ChatController {
           // Stop listening once we get the assistant message
           this.stopAssistantMessageListener();
           
-          // Play audio and continue
-          this.playAssistantAudioAndContinue(assistantMessage, chat_id);
+          // For text-only chat, just update the message - no TTS
+          // this.playAssistantAudioAndContinue(assistantMessage, chat_id);
         }
       )
       .subscribe();
