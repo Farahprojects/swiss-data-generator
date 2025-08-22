@@ -46,20 +46,20 @@ const NotFound = () => {
           <Link to={user ? getSafeRedirectPath() : "/"} className="block">
             <Button className="w-full">
               <Home className="mr-2 h-4 w-4" />
-              {user ? "Return to Dashboard" : "Return to Home"}
+              {user ? "Return to Calendar" : "Return to Home"}
             </Button>
           </Link>
           
           {user && (
             <div className="space-y-2 pt-2">
               <p className="text-sm text-gray-500">Or navigate to:</p>
-              <Link to="/dashboard" className="block">
+              <Link to="/calendar" className="block">
                 <Button variant="ghost" className="w-full">
                   <LayoutDashboard className="mr-2 h-4 w-4" />
-                  Dashboard
+                  Calendar
                 </Button>
               </Link>
-              <Link to="/dashboard/settings" className="block">
+              <Link to="/settings" className="block">
                 <Button variant="ghost" className="w-full">
                   <Settings className="mr-2 h-4 w-4" />
                   Account Settings

@@ -45,7 +45,7 @@ export const storeStripeReturnPath = (path: string): void => {
  * Gets the stored return location for Stripe redirect
  * @param defaultPath Default path to return to if no stored location
  */
-export const getStripeReturnLocation = (defaultPath: string = '/dashboard/billing'): string => {
+export const getStripeReturnLocation = (defaultPath: string = '/settings'): string => {
   try {
     const storedLocation = localStorage.getItem('stripe_return_location');
     if (storedLocation) {
@@ -56,6 +56,6 @@ export const getStripeReturnLocation = (defaultPath: string = '/dashboard/billin
   } catch (e) {
     console.error('Error retrieving Stripe return location:', e);
   }
-  // Default to billing page instead of dashboard root
+  // Default to settings page
   return defaultPath;
 };

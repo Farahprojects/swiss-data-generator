@@ -61,7 +61,7 @@ const Login = () => {
   const passwordValid = password.length >= 6;
 
   // ————————————————————————————————————————————————
-  // Redirect to dashboard once fully authenticated
+  // Redirect to calendar once fully authenticated
   // ————————————————————————————————————————————————
   useEffect(() => {
     if (!authLoading && user && !showVerificationModal && !isPendingEmailCheck) {

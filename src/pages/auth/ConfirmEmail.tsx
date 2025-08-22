@@ -38,7 +38,7 @@ const ConfirmEmail: React.FC = () => {
     toast({ variant: 'success', title: 'Success', description: msg });
 
     window.history.replaceState({}, '', '/auth/email');
-    setTimeout(() => navigate('/dashboard'), 2800);
+    setTimeout(() => navigate('/calendar'), 2800);
   };
 
   useEffect(() => {
@@ -254,10 +254,10 @@ const ConfirmEmail: React.FC = () => {
               {status === 'success' ? (
                 <Button
                   style={{ background: BRAND_PURPLE }}
-                  onClick={() => navigate('/dashboard')}
+                  onClick={() => navigate('/calendar')}
                   className="w-full sm:w-auto text-white hover:opacity-90"
                 >
-                  Go to Dashboard
+                  Go to Calendar
                 </Button>
               ) : (
                 <>

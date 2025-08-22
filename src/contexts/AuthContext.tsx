@@ -206,8 +206,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password,
         options: { 
           emailRedirectTo: typeof window !== 'undefined' 
-            ? `${window.location.origin}/dashboard` 
-            : '/dashboard'
+            ? `${window.location.origin}/calendar` 
+            : '/calendar'
         },
       });
       
@@ -232,7 +232,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       // Create popup window
       const popup = window.open(
-        `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(`${baseUrl}/dashboard`)}`,
+        `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(`${baseUrl}/calendar`)}`,
         'googleSignIn',
         'width=500,height=600,scrollbars=yes,resizable=yes'
       );
@@ -272,7 +272,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Create popup window
       const popup = window.open(
-        `${SUPABASE_URL}/auth/v1/authorize?provider=apple&redirect_to=${encodeURIComponent(`${baseUrl}/dashboard`)}`,
+        `${SUPABASE_URL}/auth/v1/authorize?provider=apple&redirect_to=${encodeURIComponent(`${baseUrl}/calendar`)}`,
         'appleSignIn',
         'width=500,height=600,scrollbars=yes,resizable=yes'
       );
@@ -336,8 +336,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email,
         options: { 
           emailRedirectTo: typeof window !== 'undefined' 
-            ? `${window.location.origin}/dashboard` 
-            : '/dashboard'
+            ? `${window.location.origin}/calendar` 
+            : '/calendar'
         },
       });
       return { error };

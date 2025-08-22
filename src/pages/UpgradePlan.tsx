@@ -447,7 +447,7 @@ const UpgradePlan = () => {
                               variant="outline" 
                               size="sm" 
                               className="mt-3 border-primary/30 hover:bg-primary/10"
-                              onClick={() => window.location.href = "/dashboard/settings?panel=billing"}
+                              onClick={() => window.location.href = "/settings"}
                             >
                               Top Up AI Balance
                             </Button>

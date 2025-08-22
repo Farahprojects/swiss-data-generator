@@ -90,8 +90,8 @@ export function usePasswordManagement() {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: typeof window !== 'undefined' 
-          ? `${window.location.origin}/dashboard/settings`
-          : '/dashboard/settings',
+          ? `${window.location.origin}/settings`
+          : '/settings',
       });
       
       if (error) {
