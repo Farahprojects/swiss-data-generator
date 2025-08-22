@@ -6,6 +6,7 @@ import { CalendarHeader } from "@/components/calendar/CalendarHeader";
 import CalendarView from "@/components/calendar/CalendarView";
 import { EventModal } from "@/components/calendar/EventModal";
 import { DaySessionsModal } from "@/components/calendar/DaySessionsModal"; // NEW
+import UnifiedNavigation from "@/components/UnifiedNavigation";
 
 const CalendarPage: React.FC = () => {
   const [view, setView] = useState<"month" | "week" | "day">("week");
@@ -111,8 +112,10 @@ const CalendarPage: React.FC = () => {
   // ------------------------
 
   return (
-    <div className="max-w-6xl mx-auto p-2 py-6 flex flex-col">
-      <CalendarHeader
+    <>
+      <UnifiedNavigation />
+      <div className="max-w-6xl mx-auto p-2 py-6 flex flex-col mt-16">
+        <CalendarHeader
         view={view}
         setView={setView}
         onAddSession={() => {
@@ -168,7 +171,8 @@ const CalendarPage: React.FC = () => {
           onAddSession={handleOpenAddSessionFromDayModal}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 };
 export default CalendarPage;
