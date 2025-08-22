@@ -73,19 +73,11 @@ export const MessageList = () => {
     }
   }, [messages.length, initialMessageCount]);
 
-  // Simple auto-scroll: always scroll to bottom when new messages arrive
   useEffect(() => {
-    if (messages.length > 0 || isPolling) {
-      requestAnimationFrame(() => {
-        if (scrollRef.current) {
-          scrollRef.current.scrollIntoView({ 
-            behavior: 'smooth',
-            block: 'end'
-          });
-        }
-      });
+    if (scrollRef.current) {
+      scrollRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages.length, isPolling]); // Scroll on any message change
+  }, [messages.length, isPolling]); // Also scroll when generating message appears/disappears
 
   // Show generating message when polling and report is not ready
   const showGeneratingMessage = isPolling && !isReportReady;
