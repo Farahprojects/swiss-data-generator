@@ -18,6 +18,7 @@ class ChatController {
   private isResetting = false;
   private turnRestartTimeout: NodeJS.Timeout | null = null;
   private resetTimeout: NodeJS.Timeout | null = null;
+  private assistantMessageListener: RealtimeChannel | null = null;
   
   async initializeConversation(chat_id: string) {
     if (!chat_id) {
@@ -47,13 +48,17 @@ class ChatController {
     const client_msg_id = uuidv4();
     this.addOptimisticMessages(chat_id, text, client_msg_id);
     
+    // Start listening for assistant message
+    this.startAssistantMessageListener(chat_id);
+    
     try {
       const finalMessage = await llmService.sendMessage({ chat_id, text, client_msg_id });
       this.reconcileOptimisticMessage(finalMessage);
     } catch (error) {
       console.error("[ChatController] Error sending message:", error);
       useChatStore.getState().setError("Failed to send message. Please try again.");
-      // Here you might want to remove the optimistic messages
+      // Stop listener on error
+      this.stopAssistantMessageListener();
     }
   }
 
@@ -72,7 +77,7 @@ class ChatController {
       id: `temp-${Date.now()}`,
       chat_id: chat_id,
       role: "assistant",
-      text: "",
+      text: "thinking...",
       createdAt: new Date().toISOString(),
       status: "thinking",
     };
@@ -83,7 +88,8 @@ class ChatController {
 
   private reconcileOptimisticMessage(finalMessage: Message) {
     useChatStore.getState().updateMessage(finalMessage.id, finalMessage);
-    this.playAssistantAudioAndContinue(finalMessage, finalMessage.chat_id);
+    // Audio playback will be handled by the real-time listener
+    // this.playAssistantAudioAndContinue(finalMessage, finalMessage.chat_id);
   }
 
   private initializeConversationService() {
@@ -267,7 +273,50 @@ class ChatController {
     }
     
     // Stop any active conversation
-    this.cancelTurn();
+    conversationMicrophoneService.forceCleanup();
+    streamPlayerService.stop();
+    
+    // Stop assistant message listener
+    this.stopAssistantMessageListener();
+  }
+
+  private startAssistantMessageListener(chat_id: string) {
+    // Stop any existing listener
+    this.stopAssistantMessageListener();
+    
+    // Start new listener for assistant messages
+    this.assistantMessageListener = supabase
+      .channel(`assistant-message-${chat_id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `chat_id=eq.${chat_id} AND role=eq.assistant`
+        },
+        (payload) => {
+          console.log('[ChatController] Assistant message received via realtime:', payload);
+          const assistantMessage = payload.new as Message;
+          
+          // Update the optimistic message with the real one
+          useChatStore.getState().updateMessage(assistantMessage.id, assistantMessage);
+          
+          // Stop listening once we get the assistant message
+          this.stopAssistantMessageListener();
+          
+          // Play audio and continue
+          this.playAssistantAudioAndContinue(assistantMessage, chat_id);
+        }
+      )
+      .subscribe();
+  }
+
+  private stopAssistantMessageListener() {
+    if (this.assistantMessageListener) {
+      supabase.removeChannel(this.assistantMessageListener);
+      this.assistantMessageListener = null;
+    }
   }
 }
 
