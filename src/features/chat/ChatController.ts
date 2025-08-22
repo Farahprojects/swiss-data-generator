@@ -53,7 +53,13 @@ class ChatController {
     
     try {
       const finalMessage = await llmService.sendMessage({ chat_id, text, client_msg_id });
-      this.reconcileOptimisticMessage(finalMessage);
+      
+      // Stop the listener since we got the response
+      this.stopAssistantMessageListener();
+      
+      // Update the optimistic message with the real one
+      useChatStore.getState().updateMessage(finalMessage.id, finalMessage);
+      
     } catch (error) {
       console.error("[ChatController] Error sending message:", error);
       useChatStore.getState().setError("Failed to send message. Please try again.");

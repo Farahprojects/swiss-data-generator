@@ -111,7 +111,7 @@ serve(async (req) => {
     }
 
     const assistantMessage = await llmResponse.json();
-    console.log('[chat-send] Received assistant message from llm-handler');
+    console.log('[chat-send] Received assistant message from llm-handler:', assistantMessage);
 
     // Return the assistant's message directly to the client
     return new Response(JSON.stringify(assistantMessage), {
