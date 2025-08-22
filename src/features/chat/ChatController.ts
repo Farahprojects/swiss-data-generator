@@ -5,12 +5,10 @@ import { conversationMicrophoneService } from '@/services/microphone/Conversatio
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
 import { conversationTtsService } from '@/services/voice/conversationTts';
-import { streamPlayerService } from '@/services/voice/StreamPlayerService';
 // import { conversationFlowMonitor } from '@/services/conversation/ConversationFlowMonitor';
 import { getMessagesForConversation } from '@/services/api/messages';
 import { Message } from '@/core/types';
 import { v4 as uuidv4 } from 'uuid';
-import { realtimeAudioPlayer } from '@/services/voice/RealtimeAudioPlayer';
 import { audioPlaybackService } from '@/services/voice/AudioPlaybackService';
 
 class ChatController {
@@ -222,28 +220,29 @@ class ChatController {
   }
 
   private async playAssistantAudioAndContinue(assistantMessage: Message, chat_id: string) {
-    if (assistantMessage.text && assistantMessage.id && this.sessionId) {
+    if (assistantMessage.text && assistantMessage.id) {
       
       useChatStore.getState().setStatus('speaking');
       // conversationFlowMonitor.observeStep('speaking');
       
-      await realtimeAudioPlayer.play(
-        this.sessionId, 
-        assistantMessage.id, 
-        () => {
-          // TTS completion callback
-          if (this.isResetting) return;
-          this.resetTurn(false); // Restart turn after speaking
-        },
-        (error: string) => {
-          // TTS error callback (fallback)
-          console.warn(`[ChatController] Realtime streaming failed: ${error}. Falling back to audio clip.`);
-          this.handleTtsFallback(assistantMessage);
-        }
-      );
+      try {
+        await conversationTtsService.speakAssistant({
+          chat_id,
+          messageId: assistantMessage.id,
+          text: assistantMessage.text
+        });
+        
+        // TTS completion callback
+        if (this.isResetting) return;
+        this.resetTurn(false); // Restart turn after speaking
+        
+      } catch (error) {
+        console.warn(`[ChatController] TTS failed: ${error}. Falling back to audio clip.`);
+        this.handleTtsFallback(assistantMessage);
+      }
       
     } else {
-      console.warn('[ChatController] Could not play audio. Missing text, messageId, or sessionId.');
+      console.warn('[ChatController] Could not play audio. Missing text or messageId.');
       this.resetTurn(true); // Don't restart if no text
     }
   }
@@ -327,7 +326,6 @@ class ChatController {
     }
     
     conversationMicrophoneService.forceCleanup();
-    streamPlayerService.stop();
     this.conversationServiceInitialized = false;
     this.isTurnActive = false;
     useChatStore.getState().setStatus('idle');
@@ -351,7 +349,6 @@ class ChatController {
     
     // Stop any active conversation
     conversationMicrophoneService.forceCleanup();
-    streamPlayerService.stop();
     
     // Stop assistant message listener
     // this.stopAssistantMessageListener(); // Removed real-time listener
