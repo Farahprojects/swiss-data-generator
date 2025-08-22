@@ -28,7 +28,7 @@ serve(async (req) => {
       throw new Error("Missing 'messageId' or 'text' in request body.");
     }
     
-    const voiceName = voice || "en-US-Studio-O"; // Default to Studio-O (Female)
+    const voiceName = voice || "en-US-Studio-O"; // Default to Studio-O (Female) - will be mapped from friendly name
     
     console.log(`[google-tts] Processing TTS for messageId: ${messageId} with voice: ${voiceName}`);
 

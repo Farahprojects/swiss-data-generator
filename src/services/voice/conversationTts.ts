@@ -16,7 +16,7 @@ class ConversationTtsService {
     return new Promise(async (resolve, reject) => {
       try {
         const { data: { session } } = await supabase.auth.getSession(); // Get session if available, don't fail if not.
-        const selectedVoiceName = useChatStore.getState().ttsVoice || 'en-US-Studio-O'; // Get voice from store, default to Studio-O
+        const selectedVoiceName = useChatStore.getState().ttsVoice || 'Aria'; // Get voice from store, default to Aria
         const googleVoiceCode = getGoogleVoiceCode(selectedVoiceName); // Convert to Google's required code
 
 

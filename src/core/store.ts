@@ -31,7 +31,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   messages: [],
   status: 'idle',
   error: null,
-  ttsVoice: 'en-US-Studio-O',
+  ttsVoice: 'Aria',
 
   startConversation: (id) => set({ chat_id: id, messages: [], status: 'idle', error: null }),
 

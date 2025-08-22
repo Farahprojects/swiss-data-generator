@@ -59,10 +59,22 @@ export const ChatSidebarControls: React.FC = () => {
           value={ttsVoice}
           onChange={(e) => handleVoiceChange(e.target.value)}
         >
-          {/* Google HD/Studio voices */}
-          <option value="en-US-Studio-O">en-US-Studio-O (F)</option>
-          <option value="en-US-Studio-Q">en-US-Studio-Q (F)</option>
-          <option value="en-US-Studio-M">en-US-Studio-M (M)</option>
+          {/* Google Studio HD voices - Female */}
+          <option value="Aria">Aria (Female)</option>
+          <option value="Bella">Bella (Female)</option>
+          <option value="Echo">Echo (Female)</option>
+          <option value="Grace">Grace (Female)</option>
+          <option value="Iris">Iris (Female)</option>
+          <option value="Jade">Jade (Female)</option>
+          <option value="Luna">Luna (Female)</option>
+          
+          {/* Google Studio HD voices - Male */}
+          <option value="Charlie">Charlie (Male)</option>
+          <option value="Puck">Puck (Male)</option>
+          <option value="Duke">Duke (Male)</option>
+          <option value="Fable">Fable (Male)</option>
+          <option value="Hawk">Hawk (Male)</option>
+          <option value="Kai">Kai (Male)</option>
         </select>
       </div>
     </div>

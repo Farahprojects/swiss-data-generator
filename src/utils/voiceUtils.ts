@@ -1,18 +1,20 @@
 // src/utils/voiceUtils.ts
 
 export const GOOGLE_VOICE_MAP: Record<string, string> = {
-  // Female HD Voices
-  'alloy':   'en-US-Neural2-A',
-  'echo':    'en-US-Neural2-C',
-  'fable':   'en-US-Wavenet-B',
-  'onyx':    'en-US-Wavenet-D',
-  'nova':    'en-US-Wavenet-F',
-  'shimmer': 'en-US-Wavenet-H',
-  
-  // Google Studio HD Voices (from UI dropdown)
-  'en-us-studio-o': 'en-US-Studio-O', // Female
-  'en-us-studio-q': 'en-US-Studio-Q', // Female
-  'en-us-studio-m': 'en-US-Studio-M', // Male
+  // Google Studio HD Voices - Friendly names to Google codes
+  'Aria': 'en-US-Studio-O',      // Female
+  'Bella': 'en-US-Studio-Q',     // Female  
+  'Charlie': 'en-US-Studio-M',   // Male
+  'Puck': 'en-US-Studio-P',      // Male
+  'Duke': 'en-US-Studio-R',      // Male
+  'Echo': 'en-US-Studio-S',      // Female
+  'Fable': 'en-US-Studio-T',     // Male
+  'Grace': 'en-US-Studio-U',     // Female
+  'Hawk': 'en-US-Studio-V',      // Male
+  'Iris': 'en-US-Studio-W',      // Female
+  'Jade': 'en-US-Studio-X',      // Female
+  'Kai': 'en-US-Studio-Y',       // Male
+  'Luna': 'en-US-Studio-Z',      // Female
 };
 
 export const getGoogleVoiceCode = (voiceName: string): string => {
