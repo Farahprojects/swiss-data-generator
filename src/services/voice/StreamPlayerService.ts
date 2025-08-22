@@ -8,6 +8,8 @@ class StreamPlayerService {
   private isPlaying: boolean = false;
   private onCompleteCallback: (() => void) | null = null;
   private streamController: ReadableStreamDefaultController<Uint8Array> | null = null;
+  private hasStartedPlayback: boolean = false;
+  private readonly BUFFER_THRESHOLD = 16000; // Approx 0.5-1 second of audio data
 
   // Audio analysis properties
   private audioContext: AudioContext | null = null;
@@ -18,7 +20,8 @@ class StreamPlayerService {
   private listeners = new Set<() => void>();
 
   constructor() {
-    this.initializeAudioElement();
+    this.audioElement = new Audio();
+    this.audioElement.addEventListener('ended', this.handlePlaybackEnded.bind(this));
   }
 
   private initializeAudioElement() {
@@ -39,6 +42,7 @@ class StreamPlayerService {
     this.onCompleteCallback = onComplete;
     this.isPlaying = false;
     this.queue = [];
+    this.hasStartedPlayback = false;
 
     const stream = new ReadableStream({
       start: (controller) => {
@@ -152,17 +156,22 @@ class StreamPlayerService {
 
   private appendBuffer(buffer: Uint8Array, callback: () => void) {
     if (this.sourceBuffer && !this.sourceBuffer.updating) {
-      try {
-        this.sourceBuffer.appendBuffer(buffer as BufferSource);
-        callback();
-      } catch (error) {
-        console.error("Error appending buffer:", error);
+      const chunk = this.queue.shift();
+      if (chunk) {
+        if (!this.hasStartedPlayback) {
+          const bufferedAmount = this.queue.reduce((acc, val) => acc + val.length, chunk.length);
+          if (bufferedAmount >= this.BUFFER_THRESHOLD) {
+            this.hasStartedPlayback = true;
+            this.audioElement.play().catch(e => console.error("Audio play failed:", e));
+            this.sourceBuffer.appendBuffer(chunk);
+          } else {
+            // Put it back and wait for more data
+            this.queue.unshift(chunk);
+          }
+        } else {
+          this.sourceBuffer.appendBuffer(chunk);
+        }
       }
-    } else if (this.sourceBuffer) {
-      const handleUpdateEnd = () => {
-        this.appendBuffer(buffer, callback);
-      };
-      this.sourceBuffer.addEventListener('updateend', handleUpdateEnd, { once: true });
     }
   }
 

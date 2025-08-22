@@ -50,6 +50,41 @@ class ConversationTtsService {
       }
     });
   }
+
+  async getFallbackAudio(chat_id: string, text: string): Promise<string> {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const selectedVoiceName = useChatStore.getState().ttsVoice || 'Puck';
+      const googleVoiceCode = `en-US-Chirp3-HD-${selectedVoiceName}`;
+
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_PUBLISHABLE_KEY,
+      };
+
+      if (session) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/google-text-to-speech`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ chat_id, text, voice: googleVoiceCode, stream: false }) // Add stream: false
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`TTS fallback failed: ${response.status} - ${errorText}`);
+      }
+      
+      const audioBlob = await response.blob();
+      return URL.createObjectURL(audioBlob);
+
+    } catch (error) {
+      console.error('[ConversationTTS] getFallbackAudio failed:', error);
+      throw error;
+    }
+  }
 }
 
 export const conversationTtsService = new ConversationTtsService();

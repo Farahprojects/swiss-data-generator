@@ -11,6 +11,7 @@ import { getMessagesForConversation } from '@/services/api/messages';
 import { Message } from '@/core/types';
 import { v4 as uuidv4 } from 'uuid';
 import { realtimeAudioPlayer } from '@/services/voice/RealtimeAudioPlayer';
+import { audioPlaybackService } from '@/services/voice/AudioPlaybackService';
 
 class ChatController {
   private isTurnActive = false;
@@ -226,11 +227,20 @@ class ChatController {
       useChatStore.getState().setStatus('speaking');
       // conversationFlowMonitor.observeStep('speaking');
       
-      await realtimeAudioPlayer.play(this.sessionId, assistantMessage.id, () => {
-        // TTS completion callback
-        if (this.isResetting) return;
-        this.resetTurn(false); // Restart turn after speaking
-      });
+      await realtimeAudioPlayer.play(
+        this.sessionId, 
+        assistantMessage.id, 
+        () => {
+          // TTS completion callback
+          if (this.isResetting) return;
+          this.resetTurn(false); // Restart turn after speaking
+        },
+        (error: string) => {
+          // TTS error callback (fallback)
+          console.warn(`[ChatController] Realtime streaming failed: ${error}. Falling back to audio clip.`);
+          this.handleTtsFallback(assistantMessage);
+        }
+      );
       
     } else {
       console.warn('[ChatController] Could not play audio. Missing text, messageId, or sessionId.');
@@ -238,7 +248,25 @@ class ChatController {
     }
   }
 
-  private resetTurn(endConversationFlow = true) {
+  private async handleTtsFallback(assistantMessage: Message) {
+    try {
+      const audioUrl = await conversationTtsService.getFallbackAudio(assistantMessage.chat_id, assistantMessage.text);
+      
+      audioPlaybackService.play(audioUrl, () => {
+        // TTS completion callback
+        if (this.isResetting) return;
+        this.resetTurn(false); // Restart turn after speaking
+      });
+
+    } catch (error) {
+      console.error('[ChatController] TTS fallback failed:', error);
+      // If even the fallback fails, just move on.
+      this.resetTurn(true);
+    }
+  }
+
+  private resetTurn(endConversationFlow: boolean = true) {
+    console.log(`[ChatController] resetTurn called. endConversationFlow: ${endConversationFlow}`);
     useChatStore.getState().setStatus('idle');
     this.isTurnActive = false;
     

@@ -6,19 +6,21 @@ class RealtimeAudioPlayer {
   private streamPlayer: StreamPlayerService;
   private currentMessageId: string | null = null;
   private onPlaybackComplete: (() => void) | null = null;
+  private onError: ((error: string) => void) | null = null;
   private audioBuffer: string = '';
 
   constructor(streamPlayer: StreamPlayerService) {
     this.streamPlayer = streamPlayer;
   }
 
-  public async play(sessionId: string, messageId: string, onPlaybackComplete: () => void) {
+  public async play(sessionId: string, messageId: string, onPlaybackComplete: () => void, onError: (error: string) => void) {
     if (this.channel) {
       this.stop();
     }
     
     this.currentMessageId = messageId;
     this.onPlaybackComplete = onPlaybackComplete;
+    this.onError = onError;
 
     // Start the player immediately, it will wait for data.
     const streamController = this.streamPlayer.getStreamController(onPlaybackComplete);
@@ -47,8 +49,8 @@ class RealtimeAudioPlayer {
         if (payload.messageId === this.currentMessageId) {
           console.error('TTS Streaming Error:', payload.error);
           this.stop();
-          if (this.onPlaybackComplete) {
-            this.onPlaybackComplete();
+          if (this.onError) {
+            this.onError(payload.error);
           }
         }
       })
@@ -69,6 +71,7 @@ class RealtimeAudioPlayer {
     // this.streamPlayer.stop(); 
     this.currentMessageId = null;
     this.onPlaybackComplete = null;
+    this.onError = null;
   }
 }
 

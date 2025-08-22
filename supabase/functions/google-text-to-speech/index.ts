@@ -22,7 +22,7 @@ serve(async (req) => {
   }
 
   try {
-    const { chat_id, text, voice } = await req.json();
+    const { chat_id, text, voice, stream = true } = await req.json(); // Default to streaming
 
     if (!chat_id || !text) {
       throw new Error("Missing 'chat_id' or 'text' in request body.");
@@ -74,6 +74,18 @@ serve(async (req) => {
 
     // Decode base64 audio to binary
     const audioBytes = Uint8Array.from(atob(audioContent), c => c.charCodeAt(0));
+
+    if (stream === false) {
+      // Return the entire file at once
+      console.log(`[google-tts] Returning full audio file (${audioBytes.length} bytes) for chat_id: ${chat_id}`);
+      return new Response(audioBytes, {
+        headers: {
+          ...CORS_HEADERS,
+          'Content-Type': 'audio/mpeg',
+          'Content-Length': audioBytes.length.toString(),
+        },
+      });
+    }
 
     // Return streaming response with chunked processing for better performance
     const CHUNK_SIZE = 16384; // 16KB chunks for optimal streaming
