@@ -1,23 +1,23 @@
-import React, { useEffect, useRef } from 'react';
-import { MessageList } from './MessageList';
+import React, { useEffect, useRef, Suspense, lazy } from 'react';
 import { ChatInput } from './ChatInput';
 import { useChatStore } from '@/core/store';
-import { ConversationOverlay } from './ConversationOverlay/ConversationOverlay';
 import { Menu } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { ChatSidebarControls } from './ChatSidebarControls';
 import { getChatTokens } from '@/services/auth/chatTokens';
 import { startReportReadyListener, stopReportReadyListener } from '@/services/report/reportReadyListener';
 import { MotionConfig } from 'framer-motion';
 import { useConversationUIStore } from './conversation-ui-store';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
-import ErrorStateHandler from '@/components/public-report/ErrorStateHandler';
 import { logUserError } from '@/services/errorService';
+
+// Lazy load components for better performance
+const MessageList = lazy(() => import('./MessageList').then(module => ({ default: module.MessageList })));
+const ConversationOverlay = lazy(() => import('./ConversationOverlay/ConversationOverlay').then(module => ({ default: module.ConversationOverlay })));
+const ErrorStateHandler = lazy(() => import('@/components/public-report/ErrorStateHandler').then(module => ({ default: module.default })));
+const ChatSidebarControls = lazy(() => import('./ChatSidebarControls').then(module => ({ default: module.ChatSidebarControls })));
 
 export const ChatBox = () => {
   const { error } = useChatStore();
-  const messages = useChatStore((state) => state.messages);
-  const scrollRef = useRef<HTMLDivElement>(null);
   const { uuid } = getChatTokens();
   const isConversationOpen = useConversationUIStore((s) => s.isConversationOpen);
   
@@ -47,11 +47,7 @@ export const ChatBox = () => {
     };
   }, []);
 
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
+
 
   // Handle error logging
   const handleTriggerErrorLogging = async (guestReportId: string, email: string) => {
@@ -102,6 +98,30 @@ export const ChatBox = () => {
     }
   };
 
+  // Loading skeleton for message area
+  const MessageListSkeleton = () => (
+    <div className="h-full overflow-y-auto p-6">
+      <div className="flex flex-col space-y-6">
+        {/* Welcome message skeleton */}
+        <div className="flex-1 flex flex-col justify-end">
+          <div className="p-4">
+            <div className="h-8 bg-gray-200 rounded-lg w-3/4 animate-pulse"></div>
+          </div>
+        </div>
+        {/* Message skeleton */}
+        <div className="flex items-end gap-3 justify-start">
+          <div className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl">
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-full animate-pulse"></div>
+              <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+              <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <>
       <MotionConfig
@@ -114,7 +134,9 @@ export const ChatBox = () => {
         <div className="flex flex-row flex-1 bg-white max-w-6xl w-full mx-auto md:border-x border-gray-100 min-h-0">
           {/* Left Sidebar (Desktop) */}
           <div className="hidden md:flex w-64 border-r border-gray-100 p-4 flex-col gap-4 bg-gray-50/50">
-            <ChatSidebarControls />
+            <Suspense fallback={<div className="space-y-4"><div className="h-8 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div></div>}>
+              <ChatSidebarControls />
+            </Suspense>
           </div>
 
           {/* Main Chat Area */}
@@ -134,15 +156,19 @@ export const ChatBox = () => {
                   <div className="mb-3">
                     <h2 className="text-lg font-light italic">Settings</h2>
                   </div>
-                  <ChatSidebarControls />
+                  <Suspense fallback={<div className="space-y-4"><div className="h-8 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div></div>}>
+                    <ChatSidebarControls />
+                  </Suspense>
                 </SheetContent>
               </Sheet>
               <div className="flex-1" />
             </div>
 
-            {/* Message List */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-6">
-              <MessageList />
+            {/* Message List - Lazy Loaded */}
+            <div className="flex-1 overflow-hidden">
+              <Suspense fallback={<MessageListSkeleton />}>
+                <MessageList />
+              </Suspense>
             </div>
 
             {/* Footer Area */}
@@ -158,18 +184,22 @@ export const ChatBox = () => {
             </div>
 
             {/* Conversation Overlay */}
-            <ConversationOverlay />
+            <Suspense fallback={null}>
+              <ConversationOverlay />
+            </Suspense>
           </div>
         </div>
       </MotionConfig>
 
       {/* Error Handler Popup */}
       {errorState && (
-        <ErrorStateHandler
-          errorState={errorState}
-          onTriggerErrorLogging={handleTriggerErrorLogging}
-          onCleanupSession={handleCleanupSession}
-        />
+        <Suspense fallback={null}>
+          <ErrorStateHandler
+            errorState={errorState}
+            onTriggerErrorLogging={handleTriggerErrorLogging}
+            onCleanupSession={handleCleanupSession}
+          />
+        </Suspense>
       )}
 
       {/* Report Modal is now rendered by the provider */}

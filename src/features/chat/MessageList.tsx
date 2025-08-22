@@ -1,12 +1,14 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, Suspense, lazy } from 'react';
 import { useChatStore } from '@/core/store';
 import { Message } from '@/core/types';
 import { PlayCircle } from 'lucide-react';
 import { audioPlayer } from '@/services/voice/audioPlayer';
 import { useConversationUIStore } from './conversation-ui-store';
-import { TypewriterText } from '@/components/ui/TypewriterText';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { Loader2 } from 'lucide-react';
+
+// Lazy load TypewriterText for better performance
+const TypewriterText = lazy(() => import('@/components/ui/TypewriterText').then(module => ({ default: module.TypewriterText })));
 
 const MessageItem = ({ message, isLast, isFromHistory }: { message: Message; isLast: boolean; isFromHistory?: boolean }) => {
   const isUser = message.role === 'user';
@@ -26,12 +28,14 @@ const MessageItem = ({ message, isLast, isFromHistory }: { message: Message; isL
         }`}
       >
         <p className="text-base font-light leading-relaxed text-left">
-          <TypewriterText 
-            text={message.text || ''} 
-            msPerChar={40}
-            disabled={!shouldAnimate}
-            className="whitespace-pre-wrap"
-          />
+          <Suspense fallback={<span className="whitespace-pre-wrap">{message.text || ''}</span>}>
+            <TypewriterText 
+              text={message.text || ''} 
+              msPerChar={40}
+              disabled={!shouldAnimate}
+              className="whitespace-pre-wrap"
+            />
+          </Suspense>
         </p>
         {/* Audio is played live during conversation mode - no stored audio to replay */}
       </div>
@@ -79,7 +83,7 @@ export const MessageList = () => {
   const showGeneratingMessage = isPolling && !isReportReady;
 
   return (
-    <div className="flex flex-col min-h-full">
+    <div className="flex flex-col h-full overflow-y-auto">
       {messages.length === 0 && !showGeneratingMessage ? (
         <div className="flex-1 flex flex-col justify-end">
           <div className="p-4">
