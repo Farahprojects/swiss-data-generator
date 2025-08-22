@@ -30,6 +30,8 @@ serve(async (req) => {
     
     const voiceName = voice || "en-US-Studio-O"; // Default to Studio-O (Female) - will be mapped from friendly name
     
+    // Debug: Log the received voice parameter
+    console.log(`[google-tts] Received voice parameter: "${voice}"`);
     console.log(`[google-tts] Processing TTS for messageId: ${messageId} with voice: ${voiceName}`);
 
     // Call Google Text-to-Speech API
