@@ -61,8 +61,8 @@ class ChatController {
       this.stopAssistantMessageListener();
       
       // Update the optimistic message with the real one
-      useChatStore.getState().updateMessage(finalMessage.id, finalMessage);
-      console.log(`[ChatController] Updated message with ID: ${finalMessage.id}, turnId: ${client_msg_id}`);
+      useChatStore.getState().updateAssistantMessage(chat_id, finalMessage);
+      console.log(`[ChatController] Updated assistant message for chat_id: ${chat_id}, turnId: ${client_msg_id}`);
       
     } catch (error) {
       console.error("[ChatController] Error sending message:", error);
@@ -313,9 +313,9 @@ class ChatController {
           console.log('[ChatController] LISTENER_HIT=true - Assistant message received via realtime:', payload);
           const assistantMessage = payload.new as Message;
           
-          // Update the optimistic message with the real one
-          useChatStore.getState().updateMessage(assistantMessage.id, assistantMessage);
-          console.log(`[ChatController] Updated message with ID: ${assistantMessage.id}`);
+          // Update the optimistic message with the real one using chat_id
+          useChatStore.getState().updateAssistantMessage(assistantMessage.chat_id, assistantMessage);
+          console.log(`[ChatController] Updated assistant message via listener for chat_id: ${assistantMessage.chat_id}`);
           
           // Stop listening once we get the assistant message
           this.stopAssistantMessageListener();
