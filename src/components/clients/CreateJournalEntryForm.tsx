@@ -96,7 +96,7 @@ const CreateJournalEntryForm = ({
   const { displayedText, isTyping, start, stop } = useTypewriter(
     newTranscriptToType,
     {
-      msPerWord: 150,
+      msPerWord: 100,
       autoStart: false,
       disabled: !startTyping
     }

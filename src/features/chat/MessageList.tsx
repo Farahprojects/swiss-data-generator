@@ -31,7 +31,7 @@ const MessageItem = ({ message, isLast, isFromHistory }: { message: Message; isL
           <Suspense fallback={<span className="whitespace-pre-wrap">{message.text || ''}</span>}>
             <TypewriterText 
               text={message.text || ''} 
-              msPerWord={120}
+              msPerWord={80}
               disabled={!shouldAnimate}
               className="whitespace-pre-wrap"
             />
