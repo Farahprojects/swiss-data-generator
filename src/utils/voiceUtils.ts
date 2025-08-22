@@ -18,9 +18,10 @@ export const GOOGLE_VOICE_MAP: Record<string, string> = {
 };
 
 export const getGoogleVoiceCode = (voiceName: string): string => {
-  const lowerVoiceName = voiceName.toLowerCase();
-  const mappedVoice = GOOGLE_VOICE_MAP[lowerVoiceName];
-  const finalVoice = mappedVoice || 'en-US-Studio-O'; // Default to Studio-O (Female)
+  // The bug was here: .toLowerCase() was used when the map keys are capitalized.
+  // By using voiceName directly, we ensure a correct lookup.
+  const mappedVoice = GOOGLE_VOICE_MAP[voiceName];
+  const finalVoice = mappedVoice || 'en-US-Studio-O'; // Default to Studio-O (Aria)
 
   return finalVoice;
 };

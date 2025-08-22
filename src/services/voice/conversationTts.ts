@@ -19,9 +19,6 @@ class ConversationTtsService {
         const selectedVoiceName = useChatStore.getState().ttsVoice || 'Aria'; // Get voice from store, default to Aria
         const googleVoiceCode = getGoogleVoiceCode(selectedVoiceName); // Convert to Google's required code
 
-        // Debug: Log the voice mapping
-        console.log('[ConversationTTS] Voice mapping:', { selectedVoiceName, googleVoiceCode });
-
         const headers: HeadersInit = {
           'Content-Type': 'application/json',
           'apikey': SUPABASE_PUBLISHABLE_KEY,
