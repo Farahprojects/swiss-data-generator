@@ -51,13 +51,10 @@ class ConversationFlowMonitorClass {
     this.autoRecoveryAttempts = 0; // Reset attempts
     this.notifyListeners();
     
-    console.log('🎯 [FLOW MONITOR] 🟢 Started monitoring conversation flow');
-    
     // Simulate connection process
     setTimeout(() => {
       this.connectionStatus = 'connected';
       this.notifyListeners();
-      console.log('🎯 [FLOW MONITOR] ✅ Connection established');
     }, 100);
   }
 
@@ -73,8 +70,6 @@ class ConversationFlowMonitorClass {
     this.autoRecoveryAttempts = 0; // Reset attempts
     this.stopAutoRecoveryCheck(); // Clean up auto-recovery
     this.notifyListeners();
-    
-    console.log('🎯 [FLOW MONITOR] 🔴 Stopped monitoring conversation flow');
   }
 
   /**
@@ -87,17 +82,9 @@ class ConversationFlowMonitorClass {
     const previousStep = this.currentStep;
     const previousStartTime = this.stepStartTime;
     
-    // Log step completion if we have a previous step
-    if (previousStep !== 'idle' && previousStartTime > 0) {
-      const duration = now - previousStartTime;
-      console.log(`🎯 [FLOW MONITOR] ✅ Step: ${previousStep} completed (duration: ${duration}ms)`);
-    }
-    
     // Start new step
     this.currentStep = step;
     this.stepStartTime = now;
-    
-    console.log(`🎯 [FLOW MONITOR] 📝 Step: ${step} (started at ${now})`);
     
     this.notifyListeners();
   }
@@ -108,11 +95,6 @@ class ConversationFlowMonitorClass {
   observeError(step: FlowStep, error: Error): void {
     if (!this.isMonitoring) return;
     
-    const now = Date.now();
-    const duration = this.stepStartTime > 0 ? now - this.stepStartTime : 0;
-    
-    console.log(`🎯 [FLOW MONITOR] ❌ Step: ${step} failed after ${duration}ms - ${error.message}`);
-    
     this.currentStep = 'error';
     this.notifyListeners();
   }
@@ -122,8 +104,6 @@ class ConversationFlowMonitorClass {
    */
   observeTimeout(step: FlowStep, timeoutMs: number): void {
     if (!this.isMonitoring) return;
-    
-    console.log(`🎯 [FLOW MONITOR] ⏰ Step: ${step} timed out after ${timeoutMs}ms`);
     
     this.currentStep = 'error';
     this.notifyListeners();
@@ -143,17 +123,9 @@ class ConversationFlowMonitorClass {
       const previousStep = this.currentStep;
       const previousStartTime = this.stepStartTime;
       
-      // Log step completion if we have a previous step
-      if (previousStep !== 'idle' && previousStartTime > 0) {
-        const duration = now - previousStartTime;
-        console.log(`🎯 [FLOW MONITOR] ✅ Step: ${previousStep} completed (duration: ${duration}ms)`);
-      }
-      
       // Update to new step from React state
       this.currentStep = flowStep;
       this.stepStartTime = now;
-      
-      console.log(`🎯 [FLOW MONITOR] 📝 Step: ${flowStep} (from React state: ${reactStatus})`);
       
       // Notify subscribers of the state change
       this.notifyListeners();
@@ -234,14 +206,12 @@ class ConversationFlowMonitorClass {
    */
   private triggerAutoRecovery(): void {
     if (this.autoRecoveryAttempts >= this.maxAutoRecoveryAttempts) {
-      console.log(`🔄 [FLOW MONITOR] Max recovery attempts (${this.maxAutoRecoveryAttempts}) reached - giving up`);
       this.onMaxAttemptsReached?.();
       this.stopAutoRecoveryCheck();
       return;
     }
 
     this.autoRecoveryAttempts++;
-    console.log(`🔄 [FLOW MONITOR] Auto-recovery attempt ${this.autoRecoveryAttempts}/${this.maxAutoRecoveryAttempts} - restarting conversation`);
     
     this.onAutoRecoveryTrigger?.();
   }
@@ -261,7 +231,6 @@ class ConversationFlowMonitorClass {
    */
   resetAutoRecovery(): void {
     this.autoRecoveryAttempts = 0;
-    console.log('🔄 [FLOW MONITOR] Auto-recovery reset - conversation working normally');
   }
 
   private notifyListeners(): void {

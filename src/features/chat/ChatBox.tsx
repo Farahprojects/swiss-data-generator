@@ -67,7 +67,7 @@ export const ChatBox = () => {
       setErrorState(null);
       
       // Additional cleanup can be added here if needed
-      console.log('Session cleanup completed');
+  
     }
   };
 

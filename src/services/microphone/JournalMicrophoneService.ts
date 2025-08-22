@@ -35,7 +35,6 @@ class JournalMicrophoneServiceClass {
    * INITIALIZE - Set up service with options
    */
   initialize(options: JournalMicrophoneOptions): void {
-    console.log('[JournalMic] 🔧 Initializing service');
     this.options = options;
   }
 
@@ -50,8 +49,6 @@ class JournalMicrophoneServiceClass {
     }
 
     try {
-      console.log('[JournalMic] 🎤 Starting journal voice recording');
-      
       // Create our own stream - no sharing
       this.stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -95,7 +92,6 @@ class JournalMicrophoneServiceClass {
       this.startSilenceMonitoring();
       
       this.notifyListeners();
-      console.log('[JournalMic] ✅ Recording started successfully');
       return true;
 
     } catch (error) {
@@ -111,8 +107,6 @@ class JournalMicrophoneServiceClass {
   stopRecording(): void {
     if (!this.isRecording) return;
 
-    console.log('[JournalMic] 🛑 Stopping journal voice recording');
-    
     this.isRecording = false;
     this.monitoringRef.current = false;
     
@@ -162,7 +156,6 @@ class JournalMicrophoneServiceClass {
         if (silenceStart === null) {
           silenceStart = now;
         } else if (now - silenceStart >= timeoutMs) {
-          console.log(`[JournalMic] ⏰ ${timeoutMs}ms silence detected - stopping`);
           this.monitoringRef.current = false;
           
           if (this.options.onSilenceDetected) {
@@ -192,8 +185,6 @@ class JournalMicrophoneServiceClass {
       this.isProcessing = true;
       this.notifyListeners();
       
-      console.log('[JournalMic] 🔄 Processing journal audio...');
-      
       const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm;codecs=opus' });
       
       // Convert to base64
@@ -217,7 +208,6 @@ class JournalMicrophoneServiceClass {
           if (error) throw error;
           
           const transcript = data?.transcript || '';
-          console.log('[JournalMic] 📝 Transcript:', transcript);
           
           if (this.options.onTranscriptReady && transcript) {
             this.options.onTranscriptReady(transcript);
@@ -244,8 +234,6 @@ class JournalMicrophoneServiceClass {
    * CLEANUP - Complete domain cleanup
    */
   private cleanup(): void {
-    console.log('[JournalMic] 🧹 Cleaning up journal microphone');
-
     // Disconnect audio nodes
     if (this.mediaStreamSource) {
       this.mediaStreamSource.disconnect();
@@ -303,7 +291,6 @@ class JournalMicrophoneServiceClass {
    * FORCE CLEANUP - Emergency cleanup
    */
   forceCleanup(): void {
-    console.log('[JournalMic] 🚨 Force cleanup');
     this.isRecording = false;
     this.isProcessing = false;
     this.monitoringRef.current = false;

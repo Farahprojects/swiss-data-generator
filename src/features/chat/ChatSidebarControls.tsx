@@ -25,12 +25,6 @@ export const ChatSidebarControls: React.FC = () => {
   };
 
   const handleVoiceChange = (voice: string) => {
-    console.log('🎛️ [UI VOICE DEBUG] ==========================================');
-    console.log('🎛️ [UI VOICE DEBUG] User selected voice from dropdown:', voice);
-    console.log('🎛️ [UI VOICE DEBUG] Previous voice in store:', ttsVoice);
-    console.log('🎛️ [UI VOICE DEBUG] Setting new voice in store...');
-    console.log('🎛️ [UI VOICE DEBUG] ==========================================');
-    
     setTtsVoice(voice);
   };
 

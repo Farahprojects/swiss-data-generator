@@ -24,21 +24,17 @@ export const ConversationOverlay: React.FC = () => {
     setShowConnectionError(false);
     setRecoveryAttempts(0);
     hasStartedListening.current = false; // Reset flag to trigger restart
-    console.log('[ConversationOverlay] Manual retry triggered');
   };
   
   // Reset recovery attempts when conversation is working
   const resetRecoveryAttempts = () => {
     if (recoveryAttempts > 0) {
       setRecoveryAttempts(0);
-      console.log('[ConversationOverlay] Recovery attempts reset - conversation working');
     }
   };
   
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = () => {
-    console.log('[ConversationOverlay] X button pressed - shutting everything off immediately');
-    
     // 1. Stop all audio playback immediately (synchronous)
     const allAudioElements = document.querySelectorAll('audio');
     allAudioElements.forEach((audio) => {
@@ -70,7 +66,6 @@ export const ConversationOverlay: React.FC = () => {
       hasStartedListening.current = true;
       setShowConnectionError(false); // Reset error state
       setRecoveryAttempts(0); // Reset recovery attempts
-      console.log('[ConversationOverlay] Conversation opened - starting listening');
       
       // Start flow monitoring with auto-recovery
       startMonitoring();
@@ -81,14 +76,12 @@ export const ConversationOverlay: React.FC = () => {
           // Auto-recovery trigger: try to restart conversation
           () => {
             setRecoveryAttempts(prev => prev + 1);
-            console.log('[ConversationOverlay] Auto-recovery triggered - restarting conversation');
             chatController.startTurn().catch(error => {
               console.error('[ConversationOverlay] Auto-recovery failed:', error);
             });
           },
           // Max attempts reached: show error UI
           () => {
-            console.log('[ConversationOverlay] Max recovery attempts reached - showing error UI');
             setShowConnectionError(true);
           }
         );
@@ -106,7 +99,6 @@ export const ConversationOverlay: React.FC = () => {
   // Simple cleanup when conversation closes
   useEffect(() => {
     if (!isConversationOpen) {
-      console.log('[ConversationOverlay] Conversation closed - resetting flag');
       hasStartedListening.current = false;
       
       // Stop flow monitoring
