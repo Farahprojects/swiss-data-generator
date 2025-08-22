@@ -14,9 +14,7 @@ export const ConversationOverlay: React.FC = () => {
   const status = useChatStore((state) => state.status);
   const chat_id = useChatStore((state) => state.chat_id);
   const audioLevel = useConversationAudioLevel(); // Get real-time audio level
-  // const { startMonitoring, stopMonitoring } = useConversationFlowMonitor();
   const hasStartedListening = useRef(false);
-  const [hasBegunSession, setHasBegunSession] = useState(false);
   
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = () => {
@@ -43,30 +41,26 @@ export const ConversationOverlay: React.FC = () => {
     
     // 4. Close the UI (synchronous)
     closeConversation();
-    setHasBegunSession(false); // Reset for next time
   };
 
-  const handleBeginSession = () => {
-    // This user gesture is required by browsers to enable audio playback.
-    setHasBegunSession(true);
-    console.log('[ConversationOverlay] User has begun session. Starting turn.');
-    chatController.startTurn().catch(error => {
-      console.error('[ConversationOverlay] Failed to start listening:', error);
-    });
-  }
+
   
-  // Simple mount - set conversation mode, but wait for user to start.
+  // Simple mount - set conversation mode and start listening immediately
   useEffect(() => {
     if (isConversationOpen && !hasStartedListening.current) {
       hasStartedListening.current = true;
       
       if (chat_id) {
-        // Set conversation mode immediately when modal opens
+        // Set conversation mode and start listening immediately
         chatController.setConversationMode('convo', chat_id);
         console.log(`[ConversationOverlay] Conversation mode set for chat_id: ${chat_id}`);
+        
+        // Start listening immediately - no need for persistent connection
+        chatController.startTurn().catch(error => {
+          console.error('[ConversationOverlay] Failed to start listening:', error);
+        });
       } else {
         console.error('[ConversationOverlay] Cannot start conversation mode without a chat_id.');
-        // Optionally, close the overlay or show an error
         closeConversation();
         return;
       }
@@ -86,16 +80,8 @@ export const ConversationOverlay: React.FC = () => {
     }
   }, [isConversationOpen]);
 
-  // Reset recovery attempts when conversation starts working
-  useEffect(() => {
-    if (status === 'recording') {
-      // Conversation is working normally
-    }
-  }, [status]);
-
   // Map chat status to conversation state for UI
-  const state = !hasBegunSession ? 'connecting' :
-               status === 'recording' ? 'listening' : 
+  const state = status === 'recording' ? 'listening' : 
                status === 'transcribing' ? 'processing' : 
                status === 'thinking' ? 'processing' : 
                status === 'speaking' ? 'replying' : 'listening';
@@ -122,22 +108,8 @@ export const ConversationOverlay: React.FC = () => {
             </motion.div>
           </AnimatePresence>
           
-          {!hasBegunSession && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <button 
-                onClick={handleBeginSession}
-                onTouchEnd={handleBeginSession}
-                className="px-8 py-4 bg-black text-white text-xl font-light rounded-full hover:bg-gray-800 active:bg-gray-900 transition-colors cursor-pointer select-none"
-                style={{ touchAction: 'manipulation' }}
-              >
-                Start
-              </button>
-            </div>
-          )}
-
           <p className="text-gray-500 font-light">
-            {state === 'connecting' ? 'Tap to begin' :
-             state === 'listening' ? 'Listening…' : 
+            {state === 'listening' ? 'Listening…' : 
              state === 'processing' ? 'Thinking…' : 'Speaking…'}
           </p>
           {/* Close button - positioned under the status text */}
