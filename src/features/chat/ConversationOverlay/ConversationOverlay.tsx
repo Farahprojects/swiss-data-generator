@@ -8,7 +8,6 @@ import { useConversationAudioLevel } from '@/hooks/useConversationAudioLevel';
 // import { useConversationFlowMonitor } from '@/hooks/useConversationFlowMonitor';
 // import { FlowMonitorIndicator } from './FlowMonitorIndicator'; // Hidden for production
 import { AnimatePresence, motion } from 'framer-motion';
-import { sessionService } from '@/services/conversation/sessionService';
 
 export const ConversationOverlay: React.FC = () => {
   const { isConversationOpen, closeConversation } = useConversationUIStore();
@@ -17,7 +16,6 @@ export const ConversationOverlay: React.FC = () => {
   const audioLevel = useConversationAudioLevel(); // Get real-time audio level
   // const { startMonitoring, stopMonitoring } = useConversationFlowMonitor();
   const hasStartedListening = useRef(false);
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = () => {
@@ -51,80 +49,29 @@ export const ConversationOverlay: React.FC = () => {
     if (isConversationOpen && !hasStartedListening.current) {
       hasStartedListening.current = true;
       
-      // Start conversation session and set mode
-      const startConversationSession = async () => {
-        try {
-          if (!chat_id) {
-            console.error('[ConversationOverlay] No chat_id available for session start');
-            return;
-          }
-
-          console.log('[ConversationOverlay] Starting conversation session for chat_id:', chat_id);
-          const sessionResponse = await sessionService.startSession(chat_id, 'convo');
-          
-          // Set conversation mode in ChatController
-          chatController.setConversationMode('convo', sessionResponse.sessionId);
-          setCurrentSessionId(sessionResponse.sessionId);
-          
-          console.log('[ConversationOverlay] Conversation mode set - sessionId:', sessionResponse.sessionId);
-          
-          // Start flow monitoring with auto-recovery
-          // startMonitoring();
-          
-          // Setup auto-recovery system
-          // import('@/services/conversation/ConversationFlowMonitor').then(({ conversationFlowMonitor }) => {
-          //   conversationFlowMonitor.setupAutoRecovery(
-          //     // Auto-recovery trigger: try to restart conversation
-          //     () => {
-          //       setRecoveryAttempts(prev => prev + 1);
-          //       chatController.startTurn().catch(error => {
-          //         console.error('[ConversationOverlay] Auto-recovery failed:', error);
-          //       });
-          //     },
-          //     // Max attempts reached: show error UI
-          //     () => {
-          //       setShowConnectionError(true);
-          //     }
-          //   );
-          // });
-          
-          // Simple: just start listening
-          chatController.startTurn().catch(error => {
-            console.error('[ConversationOverlay] Failed to start listening:', error);
-          });
-          
-        } catch (error) {
-          console.error('[ConversationOverlay] Failed to start conversation session:', error);
-        }
-      };
+      // Set conversation mode immediately when modal opens
+      chatController.setConversationMode('convo', 'conversation-session');
+      console.log('[ConversationOverlay] Conversation mode set - modal opened');
       
-      startConversationSession();
+      // Start listening
+      chatController.startTurn().catch(error => {
+        console.error('[ConversationOverlay] Failed to start listening:', error);
+      });
     }
-  }, [isConversationOpen, chat_id]);
-
+  }, [isConversationOpen]);
+  
   // Simple cleanup when conversation closes
   useEffect(() => {
     if (!isConversationOpen && hasStartedListening.current) {
       hasStartedListening.current = false;
       
-      // End conversation session
-      if (currentSessionId) {
-        sessionService.endSession(currentSessionId).catch(error => {
-          console.error('[ConversationOverlay] Error ending session:', error);
-        });
-        setCurrentSessionId(null);
-      }
-      
       // Reset conversation mode
       chatController.setConversationMode('normal', null);
-      
-      // Stop monitoring
-      // stopMonitoring();
       
       // Cleanup ChatController
       chatController.cleanup();
     }
-  }, [isConversationOpen, currentSessionId]);
+  }, [isConversationOpen]);
 
   // Reset recovery attempts when conversation starts working
   useEffect(() => {
