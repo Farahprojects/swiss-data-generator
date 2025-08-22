@@ -94,7 +94,7 @@ export const ConversationOverlay: React.FC = () => {
   }, [status]);
 
   // Map chat status to conversation state for UI
-  const state = !hasBegunSession ? 'waiting' :
+  const state = !hasBegunSession ? 'connecting' :
                status === 'recording' ? 'listening' : 
                status === 'transcribing' ? 'processing' : 
                status === 'thinking' ? 'processing' : 
@@ -126,7 +126,9 @@ export const ConversationOverlay: React.FC = () => {
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <button 
                 onClick={handleBeginSession}
-                className="text-white text-2xl font-light z-10"
+                onTouchEnd={handleBeginSession}
+                className="px-8 py-4 bg-black text-white text-xl font-light rounded-full hover:bg-gray-800 active:bg-gray-900 transition-colors cursor-pointer select-none"
+                style={{ touchAction: 'manipulation' }}
               >
                 Start
               </button>
@@ -134,7 +136,7 @@ export const ConversationOverlay: React.FC = () => {
           )}
 
           <p className="text-gray-500 font-light">
-            {state === 'waiting' ? 'Tap to begin' :
+            {state === 'connecting' ? 'Tap to begin' :
              state === 'listening' ? 'Listening…' : 
              state === 'processing' ? 'Thinking…' : 'Speaking…'}
           </p>
