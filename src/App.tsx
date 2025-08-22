@@ -14,7 +14,7 @@ import Contact from './pages/Contact';
 import About from './pages/About';
 import Legal from './pages/Legal';
 import NotFound from './pages/NotFound';
-import Features from './pages/Features';
+
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import StripeReturn from './pages/StripeReturn';
@@ -99,7 +99,7 @@ function App() {
                 <Routes>
                   {/* Public Routes */}
                   <Route path="/" element={<Index />} />
-                  <Route path="/features" element={<Features />} />
+
                   <Route path="/report" element={<PublicReport />} />
                   <Route path="/pricing" element={<Pricing />} />
                   <Route path="/contact" element={<Contact />} />

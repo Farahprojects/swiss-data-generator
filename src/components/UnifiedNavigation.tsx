@@ -187,15 +187,7 @@ const UnifiedNavigation = ({
             <div className="hidden md:flex items-center space-x-8">
               {!isLoggedIn && (
                 <>
-                  <Link 
-                    to="/features" 
-                    className="text-gray-700 hover:text-gray-900 transition-all duration-300 ease-out hover:translate-y-[-1px] transform text-sm font-medium group relative"
-                  >
-                    <span className="relative">
-                      Features
-                      <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gray-900 transition-all duration-300 ease-out group-hover:w-full"></span>
-                    </span>
-                  </Link>
+
                   <Link 
                     to="/pricing" 
                     className="text-gray-700 hover:text-gray-900 transition-all duration-300 ease-out hover:translate-y-[-1px] transform text-sm font-medium group relative"
@@ -348,15 +340,7 @@ const UnifiedNavigation = ({
         {isMenuOpen && !isLoggedIn && (
           <div className="absolute top-full left-0 right-0 md:hidden bg-white border-t shadow-lg z-40">
             <div className="px-4 py-4 space-y-2">
-              <Link 
-                to="/features" 
-                className="block text-gray-700 hover:text-gray-900 transition-all duration-300 ease-out py-2 group relative"
-              >
-                <span className="relative">
-                  Features
-                  <span className="absolute -bottom-0.5 left-0 w-0 h-0.5 bg-gray-900 transition-all duration-300 ease-out group-hover:w-full"></span>
-                </span>
-              </Link>
+
               <Link 
                 to="/pricing" 
                 className="block text-gray-700 hover:text-gray-900 transition-all duration-300 ease-out py-2 group relative"

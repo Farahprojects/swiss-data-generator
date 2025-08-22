@@ -13,7 +13,7 @@ import Pricing from './pages/Pricing';
 import Contact from './pages/Contact';
 import About from './pages/About';
 import Legal from './pages/Legal';
-import Features from './pages/Features';
+
 import CalendarPage from './pages/dashboard/CalendarPage';
 import { PublicCoachWebsite } from './components/website-builder/PublicCoachWebsite';
 import PreviewWebsite from './pages/PreviewWebsite';
@@ -43,7 +43,7 @@ const AuthedAppShell: React.FC = () => {
               {/* Public routes */}
               <Route path="/" element={<Index />} />
               <Route path="/pricing" element={<Pricing />} />
-              <Route path="/features" element={<Features />} />
+
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/legal" element={<Legal />} />
