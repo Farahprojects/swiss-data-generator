@@ -17,7 +17,25 @@ class ChatController {
   private isResetting = false;
   private turnRestartTimeout: NodeJS.Timeout | null = null;
   private resetTimeout: NodeJS.Timeout | null = null;
-  
+  private mode: string = 'normal';
+  private sessionId: string | null = null;
+
+  constructor() {
+    this.loadExistingMessages();
+  }
+
+  private async loadExistingMessages() {
+    const { chat_id } = useChatStore.getState();
+    if (!chat_id) return;
+
+    try {
+      const messages = await getMessagesForConversation(chat_id);
+      useChatStore.getState().loadMessages(messages);
+    } catch (error) {
+      console.error('[ChatController] Error loading existing messages:', error);
+    }
+  }
+
   async initializeConversation(chat_id: string) {
     if (!chat_id) {
       console.error('[ChatController] initializeConversation: FAIL FAST - chat_id is required');
@@ -36,6 +54,12 @@ class ChatController {
     }
   }
 
+  setConversationMode(mode: string, sessionId: string) {
+    this.mode = mode;
+    this.sessionId = sessionId;
+    console.log(`[ChatController] Set conversation mode: ${mode}, sessionId: ${sessionId}`);
+  }
+
   async sendTextMessage(text: string) {
     const { chat_id } = useChatStore.getState();
     if (!chat_id) {
@@ -44,7 +68,7 @@ class ChatController {
     }
     
     const client_msg_id = uuidv4();
-    console.log(`[ChatController] Sending message with client_msg_id: ${client_msg_id}`);
+    console.log(`[ChatController] Sending message with client_msg_id: ${client_msg_id}, mode: ${this.mode}, sessionId: ${this.sessionId}`);
     this.addOptimisticMessages(chat_id, text, client_msg_id);
     
     // Start listening for assistant message
@@ -52,7 +76,13 @@ class ChatController {
     
     try {
       console.log('[ChatController] Calling llmService.sendMessage...');
-      const finalMessage = await llmService.sendMessage({ chat_id, text, client_msg_id });
+      const finalMessage = await llmService.sendMessage({ 
+        chat_id, 
+        text, 
+        client_msg_id,
+        mode: this.mode,
+        sessionId: this.sessionId
+      });
       console.log('[ChatController] BACKUP_FETCH_USED=true - Received response from chat-send:', finalMessage);
       
       // Stop the listener since we got the response
@@ -148,7 +178,13 @@ class ChatController {
     
     try {
       const audioBlob = await conversationMicrophoneService.stopRecording();
-      const { transcript } = await sttService.transcribe(audioBlob, useChatStore.getState().chat_id!);
+      const { transcript } = await sttService.transcribe(
+        audioBlob, 
+        useChatStore.getState().chat_id!,
+        undefined,
+        this.mode,
+        this.sessionId
+      );
 
       if (!transcript || transcript.trim().length === 0) {
         this.resetTurn(false); // Restart turn to give user another chance
@@ -162,7 +198,13 @@ class ChatController {
       this.addOptimisticMessages(chat_id, transcript, client_msg_id, audioUrl);
       
       conversationFlowMonitor.observeStep('thinking');
-      const finalMessage = await llmService.sendMessage({ chat_id, text: transcript, client_msg_id });
+      const finalMessage = await llmService.sendMessage({ 
+        chat_id, 
+        text: transcript, 
+        client_msg_id,
+        mode: this.mode,
+        sessionId: this.sessionId
+      });
       this.reconcileOptimisticMessage(finalMessage);
       
       // Reset auto-recovery on successful turn completion

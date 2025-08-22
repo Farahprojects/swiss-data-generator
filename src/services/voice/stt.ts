@@ -2,7 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 
 class SttService {
-  async transcribe(audioBlob: Blob, chat_id?: string, meta?: Record<string, any>): Promise<{ transcript: string }> {
+  async transcribe(audioBlob: Blob, chat_id?: string, meta?: Record<string, any>, mode?: string, sessionId?: string): Promise<{ transcript: string }> {
     // Validate audio blob before processing
     if (!audioBlob || audioBlob.size === 0) {
       console.warn('[STT] Empty or missing audio blob, skipping transcription');
@@ -21,6 +21,8 @@ class SttService {
       headers: {
         'X-Meta': JSON.stringify({
           ...(meta || {}), // Pass along any additional meta from the controller
+          mode,
+          sessionId,
           config: {
             encoding: 'WEBM_OPUS',
             languageCode: 'en-US',

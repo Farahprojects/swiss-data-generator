@@ -27,10 +27,14 @@ serve(async (req) => {
     const metaHeader = req.headers.get('X-Meta');
     const meta = metaHeader ? JSON.parse(metaHeader) : {};
     const config = meta.config || {};
+    const mode = meta.mode || 'normal';
+    const sessionId = meta.sessionId || null;
     
     console.log(`[google-stt]`, traceId ? `[trace:${traceId}]` : '', `Raw audio data received.`, {
       audioSize: audioBuffer.length,
       clientMeta: meta,
+      mode,
+      sessionId
     });
     
     // Validate audio data
@@ -164,6 +168,8 @@ serve(async (req) => {
         JSON.stringify({ 
           transcript: '', // Empty transcript
           confidence: 0,
+          mode,
+          sessionId,
           note: 'No speech detected - conversation can continue'
         }),
         {
@@ -183,6 +189,8 @@ serve(async (req) => {
       JSON.stringify({ 
         transcript,
         confidence,
+        mode,
+        sessionId
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
