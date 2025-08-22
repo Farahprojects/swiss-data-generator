@@ -22,7 +22,7 @@ serve(async (req) => {
   }
 
   try {
-    const { chat_id, text, voice, stream = true } = await req.json(); // Default to streaming
+    const { chat_id, text, voice } = await req.json();
 
     if (!chat_id || !text) {
       throw new Error("Missing 'chat_id' or 'text' in request body.");
@@ -57,8 +57,6 @@ serve(async (req) => {
       }
     );
 
-
-
     if (!ttsResponse.ok) {
       const errorText = await ttsResponse.text();
       console.error("[google-tts] Google TTS API error:", ttsResponse.status, errorText);
@@ -75,38 +73,15 @@ serve(async (req) => {
     // Decode base64 audio to binary
     const audioBytes = Uint8Array.from(atob(audioContent), c => c.charCodeAt(0));
 
-    if (stream === false) {
-      // Return the entire file at once
-      console.log(`[google-tts] Returning full audio file (${audioBytes.length} bytes) for chat_id: ${chat_id}`);
-      return new Response(audioBytes, {
-        headers: {
-          ...CORS_HEADERS,
-          'Content-Type': 'audio/mpeg',
-          'Content-Length': audioBytes.length.toString(),
-        },
-      });
-    }
-
-    // Return streaming response with chunked processing for better performance
-    const CHUNK_SIZE = 16384; // 16KB chunks for optimal streaming
-    const stream = new ReadableStream({
-      start(controller) {
-        // Send audio in chunks for better memory management and progressive loading
-        for (let i = 0; i < audioBytes.length; i += CHUNK_SIZE) {
-          const chunk = audioBytes.slice(i, i + CHUNK_SIZE);
-          controller.enqueue(chunk);
-        }
-        controller.close();
-      }
-    });
-
-    return new Response(stream, {
+    // Always return the full MP3 as fast as possible
+    console.log(`[google-tts] Returning full audio file (${audioBytes.length} bytes) for chat_id: ${chat_id}`);
+    return new Response(audioBytes, {
       headers: {
         ...CORS_HEADERS,
         'Content-Type': 'audio/mpeg',
         'Content-Length': audioBytes.length.toString(),
-        'Cache-Control': 'no-cache', // Prevent caching for real-time TTS
-        'Transfer-Encoding': 'chunked', // Enable chunked transfer
+        'Cache-Control': 'no-store',
+        'Accept-Ranges': 'bytes',
       },
     });
 

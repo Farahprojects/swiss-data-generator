@@ -1,6 +1,5 @@
 // src/services/voice/conversationTts.ts
 import { supabase, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '@/integrations/supabase/client';
-import { streamPlayerService } from './StreamPlayerService';
 import { useChatStore } from '@/core/store';
 
 export interface SpeakAssistantOptions {
@@ -14,9 +13,9 @@ class ConversationTtsService {
     
     return new Promise(async (resolve, reject) => {
       try {
-        const { data: { session } } = await supabase.auth.getSession(); // Get session if available, don't fail if not.
-        const selectedVoiceName = useChatStore.getState().ttsVoice || 'Puck'; // Get voice from store, default to Puck
-        const googleVoiceCode = `en-US-Chirp3-HD-${selectedVoiceName}`; // Construct the voice code directly
+        const { data: { session } } = await supabase.auth.getSession();
+        const selectedVoiceName = useChatStore.getState().ttsVoice || 'Puck';
+        const googleVoiceCode = `en-US-Chirp3-HD-${selectedVoiceName}`;
 
         const headers: HeadersInit = {
           'Content-Type': 'application/json',
@@ -33,16 +32,28 @@ class ConversationTtsService {
           body: JSON.stringify({ chat_id, text, voice: googleVoiceCode })
         });
 
-        if (!response.ok || !response.body) {
+        if (!response.ok) {
           const errorText = await response.text();
           console.error('[ConversationTTS] TTS function error:', response.status, errorText);
           throw new Error(`TTS failed: ${response.status} - ${errorText}`);
         }
 
-        // Pass the stream directly to the player
-        await streamPlayerService.playStream(response.body, () => {
+        // Simple blob-based approach - no streaming, no MediaSource
+        const blob = await response.blob();
+        const audio = new Audio(URL.createObjectURL(blob));
+        
+        audio.addEventListener('ended', () => {
+          URL.revokeObjectURL(audio.src); // Clean up the object URL
           resolve();
         });
+        
+        audio.addEventListener('error', (error) => {
+          console.error('[ConversationTTS] Audio playback error:', error);
+          URL.revokeObjectURL(audio.src);
+          reject(error);
+        });
+        
+        await audio.play();
         
       } catch (error) {
         console.error('[ConversationTTS] speakAssistant failed:', error);
@@ -69,7 +80,7 @@ class ConversationTtsService {
       const response = await fetch(`${SUPABASE_URL}/functions/v1/google-text-to-speech`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ chat_id, text, voice: googleVoiceCode, stream: false }) // Add stream: false
+        body: JSON.stringify({ chat_id, text, voice: googleVoiceCode })
       });
 
       if (!response.ok) {
