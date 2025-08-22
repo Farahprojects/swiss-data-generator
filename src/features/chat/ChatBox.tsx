@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback, useMemo } from 'react';
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
 import { useChatStore } from '@/core/store';
@@ -13,9 +13,12 @@ import { useConversationUIStore } from './conversation-ui-store';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import ErrorStateHandler from '@/components/public-report/ErrorStateHandler';
 import { logUserError } from '@/services/errorService';
+import { useChatChannel } from '@/hooks/useChatChannel';
+import { useMemoryLeakDetection } from '@/utils/memoryLeakDetector';
+import { VirtualizedMessageList } from '@/components/chat/VirtualizedMessageList';
 
 export const ChatBox = () => {
-  const { error } = useChatStore();
+  const { error, chat_id } = useChatStore();
   const messages = useChatStore((state) => state.messages);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { uuid } = getChatTokens();
@@ -24,6 +27,25 @@ export const ChatBox = () => {
   // Get error state from report ready store
   const errorState = useReportReadyStore((state) => state.errorState);
   const setErrorState = useReportReadyStore((state) => state.setErrorState);
+
+  // Memory leak detection
+  const memoryDetection = useMemoryLeakDetection();
+
+  // Chat channel subscription with memory leak prevention
+  const { isConnected, isConnecting, error: channelError, channelId } = useChatChannel(chat_id, {
+    enabled: !!chat_id,
+    onMessageReceived: useCallback((message) => {
+      // Handle new messages from realtime subscription
+      console.log('[ChatBox] Received message via realtime:', message.id);
+    }, []),
+    onMessageUpdated: useCallback((message) => {
+      // Handle message updates from realtime subscription
+      console.log('[ChatBox] Message updated via realtime:', message.id);
+    }, []),
+    onError: useCallback((error) => {
+      console.error('[ChatBox] Chat channel error:', error);
+    }, [])
+  });
 
   useEffect(() => {
     if (uuid) {
@@ -38,11 +60,23 @@ export const ChatBox = () => {
     };
   }, [uuid]);
 
-  useEffect(() => {
+  // Debounced scroll to bottom to prevent excessive scrolling
+  const debouncedScrollToBottom = useCallback(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      requestAnimationFrame(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+      });
     }
-  }, [messages]);
+  }, []);
+
+  useEffect(() => {
+    debouncedScrollToBottom();
+  }, [messages.length, debouncedScrollToBottom]);
+
+  // Performance optimization: memoize messages to prevent unnecessary re-renders
+  const memoizedMessages = useMemo(() => messages, [messages]);
 
   // Handle error logging
   const handleTriggerErrorLogging = async (guestReportId: string, email: string) => {
@@ -109,9 +143,18 @@ export const ChatBox = () => {
               <div className="flex-1" />
             </div>
 
-            {/* Message List */}
+            {/* Message List - Use virtualization for large lists */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-6">
-              <MessageList />
+              {memoizedMessages.length > 200 ? (
+                <VirtualizedMessageList
+                  messages={memoizedMessages}
+                  height={600}
+                  width={scrollRef.current?.clientWidth || 800}
+                  autoScrollToBottom={true}
+                />
+              ) : (
+                <MessageList />
+              )}
             </div>
 
             {/* Footer Area */}
@@ -121,10 +164,24 @@ export const ChatBox = () => {
                   {error}
                 </div>
               )}
+              {channelError && (
+                <div className="p-3 text-sm font-medium text-orange-700 bg-orange-100 border-t border-orange-200">
+                  Connection issue: {channelError.message}
+                </div>
+              )}
               <div className="border-t border-gray-100">
                 <ChatInput />
               </div>
             </div>
+
+            {/* Performance Monitor (Development Only) */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="fixed bottom-4 right-4 bg-black/80 text-white p-3 rounded-lg text-xs font-mono z-50">
+                <div>Messages: {memoizedMessages.length}</div>
+                <div>Channel: {isConnected ? '✅' : isConnecting ? '🔄' : '❌'}</div>
+                <div>Memory: {Math.round(memoryDetection.getMetrics().averageMemoryUsage / (1024 * 1024))}MB</div>
+              </div>
+            )}
 
             {/* Conversation Overlay */}
             <ConversationOverlay />
