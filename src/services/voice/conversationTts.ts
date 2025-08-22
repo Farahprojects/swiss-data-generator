@@ -30,7 +30,7 @@ class ConversationTtsService {
         const response = await fetch(`${SUPABASE_URL}/functions/v1/google-text-to-speech`, {
           method: 'POST',
           headers,
-          body: JSON.stringify({ messageId, text, voice: googleVoiceCode })
+          body: JSON.stringify({ chat_id, text, voice: googleVoiceCode })
         });
 
         if (!response.ok || !response.body) {

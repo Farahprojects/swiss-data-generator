@@ -22,17 +22,17 @@ serve(async (req) => {
   }
 
   try {
-    const { messageId, text, voice } = await req.json();
+    const { chat_id, text, voice } = await req.json();
 
-    if (!messageId || !text) {
-      throw new Error("Missing 'messageId' or 'text' in request body.");
+    if (!chat_id || !text) {
+      throw new Error("Missing 'chat_id' or 'text' in request body.");
     }
     
     // The voice parameter should be the full name e.g., en-US-Chirp3-HD-Puck
     // This default is a fallback in case the client sends an empty voice parameter.
     const voiceName = voice || "en-US-Chirp3-HD-Puck";
     
-    console.log(`[google-tts] Processing TTS for messageId: ${messageId} with voice: ${voiceName}`);
+    console.log(`[google-tts] Processing TTS for chat_id: ${chat_id} with voice: ${voiceName}`);
 
     // Call Google Text-to-Speech API
     const ttsResponse = await fetch(

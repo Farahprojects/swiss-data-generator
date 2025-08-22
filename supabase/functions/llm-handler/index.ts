@@ -155,41 +155,36 @@ Rules:
     const latency_ms = Date.now() - startTime;
     console.log(`[llm-handler] Got response from Gemini in ${latency_ms}ms`);
 
-    const assistantMessage = {
-      id: `temp-${Date.now()}`,
-      chat_id: chat_id,
-      role: "assistant",
-      text: assistantText,
-      created_at: new Date().toISOString(),
-      meta: { 
-        llm_provider: "google", 
-        model: "gemini-1.5-flash",
-        latency_ms,
-        input_tokens: inputTokens,
-        output_tokens: outputTokens,
-        total_tokens: tokenCount
-      },
-    };
-
-    // Save assistant message to database (fire-and-forget)
-    supabase
+    // Save assistant message to database and get the real ID
+    const { data: savedMessage, error } = await supabase
       .from("messages")
       .insert({
-        ...assistantMessage,
-        chat_id: chat_id, // ensure chat_id is there
-        id: undefined, // let db generate id
+        chat_id: chat_id,
+        role: "assistant",
+        text: assistantText,
+        created_at: new Date().toISOString(),
+        meta: { 
+          llm_provider: "google", 
+          model: "gemini-1.5-flash",
+          latency_ms,
+          input_tokens: inputTokens,
+          output_tokens: outputTokens,
+          total_tokens: tokenCount
+        },
       })
-      .then(({ error }) => {
-        if (error) {
-          console.error("[llm-handler] Failed to save assistant message:", error);
-        } else {
-          console.log("[llm-handler] Assistant message saved successfully");
-        }
-      });
+      .select()
+      .single();
 
-    // Return the final assistant message directly
+    if (error) {
+      console.error("[llm-handler] Failed to save assistant message:", error);
+      throw new Error(`Failed to save message: ${error.message}`);
+    }
+
+    console.log("[llm-handler] Assistant message saved successfully with ID:", savedMessage.id);
+
+    // Return the saved message with the real ID
     return new Response(JSON.stringify({ 
-      ...assistantMessage, 
+      ...savedMessage,
       client_msg_id
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
