@@ -58,9 +58,9 @@ class ChatController {
       // Stop the listener since we got the response
       // this.stopAssistantMessageListener(); // Removed real-time listener
       
-      // Add the assistant message to the store
-      useChatStore.getState().addMessage(finalMessage);
-      console.log(`[ChatController] Added assistant message with ID: ${finalMessage.id}, turnId: ${client_msg_id}`);
+      // Replace the "Thinking..." message with the real assistant message
+      useChatStore.getState().updateMessage(`thinking-${client_msg_id}`, finalMessage);
+      console.log(`[ChatController] Replaced thinking message with real assistant message - ID: ${finalMessage.id}, turnId: ${client_msg_id}`);
       
     } catch (error) {
       console.error("[ChatController] Error sending message:", error);
@@ -81,9 +81,19 @@ class ChatController {
       status: "thinking",
     };
 
-    console.log(`[ChatController] Creating optimistic user message - ID: ${client_msg_id}`);
+    const optimisticAssistantMessage: Message = {
+      id: `thinking-${client_msg_id}`,
+      chat_id: chat_id,
+      role: "assistant",
+      text: "Thinking...",
+      createdAt: new Date().toISOString(),
+      status: "thinking",
+    };
+
+    console.log(`[ChatController] Creating optimistic messages - User ID: ${client_msg_id}, Thinking ID: ${optimisticAssistantMessage.id}`);
 
     useChatStore.getState().addMessage(optimisticUserMessage);
+    useChatStore.getState().addMessage(optimisticAssistantMessage);
   }
 
   private reconcileOptimisticMessage(finalMessage: Message) {
