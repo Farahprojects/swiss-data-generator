@@ -156,8 +156,7 @@ verify_jwt = false
 [functions.tts-speak]
 verify_jwt = false
 
-[functions.ttss-openai]
-verify_jwt = false
+
 
 [functions.google-text-to-speech]
 verify_jwt = false
