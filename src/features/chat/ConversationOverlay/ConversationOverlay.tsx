@@ -9,15 +9,18 @@ import { useConversationFlowMonitor } from '@/hooks/useConversationFlowMonitor';
 // import { FlowMonitorIndicator } from './FlowMonitorIndicator'; // Hidden for production
 import { ConnectionErrorFallback } from './ConnectionErrorFallback';
 import { AnimatePresence, motion } from 'framer-motion';
+import { sessionService } from '@/services/conversation/sessionService';
 
 export const ConversationOverlay: React.FC = () => {
   const { isConversationOpen, closeConversation } = useConversationUIStore();
   const status = useChatStore((state) => state.status);
+  const chat_id = useChatStore((state) => state.chat_id);
   const audioLevel = useConversationAudioLevel(); // Get real-time audio level
   const { startMonitoring, stopMonitoring } = useConversationFlowMonitor();
   const hasStartedListening = useRef(false);
   const [showConnectionError, setShowConnectionError] = useState(false);
   const [recoveryAttempts, setRecoveryAttempts] = useState(0);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   
   // Handle retry from error UI
   const handleRetry = () => {
@@ -67,52 +70,81 @@ export const ConversationOverlay: React.FC = () => {
       setShowConnectionError(false); // Reset error state
       setRecoveryAttempts(0); // Reset recovery attempts
       
-      // Start flow monitoring with auto-recovery
-      startMonitoring();
-      
-      // Setup auto-recovery system
-      import('@/services/conversation/ConversationFlowMonitor').then(({ conversationFlowMonitor }) => {
-        conversationFlowMonitor.setupAutoRecovery(
-          // Auto-recovery trigger: try to restart conversation
-          () => {
-            setRecoveryAttempts(prev => prev + 1);
-            chatController.startTurn().catch(error => {
-              console.error('[ConversationOverlay] Auto-recovery failed:', error);
-            });
-          },
-          // Max attempts reached: show error UI
-          () => {
-            setShowConnectionError(true);
+      // Start conversation session and set mode
+      const startConversationSession = async () => {
+        try {
+          if (!chat_id) {
+            console.error('[ConversationOverlay] No chat_id available for session start');
+            return;
           }
-        );
-      });
-      
 
+          console.log('[ConversationOverlay] Starting conversation session for chat_id:', chat_id);
+          const sessionResponse = await sessionService.startSession(chat_id, 'convo');
+          
+          // Set conversation mode in ChatController
+          chatController.setConversationMode('convo', sessionResponse.sessionId);
+          setCurrentSessionId(sessionResponse.sessionId);
+          
+          console.log('[ConversationOverlay] Conversation mode set - sessionId:', sessionResponse.sessionId);
+          
+          // Start flow monitoring with auto-recovery
+          startMonitoring();
+          
+          // Setup auto-recovery system
+          import('@/services/conversation/ConversationFlowMonitor').then(({ conversationFlowMonitor }) => {
+            conversationFlowMonitor.setupAutoRecovery(
+              // Auto-recovery trigger: try to restart conversation
+              () => {
+                setRecoveryAttempts(prev => prev + 1);
+                chatController.startTurn().catch(error => {
+                  console.error('[ConversationOverlay] Auto-recovery failed:', error);
+                });
+              },
+              // Max attempts reached: show error UI
+              () => {
+                setShowConnectionError(true);
+              }
+            );
+          });
+          
+          // Simple: just start listening
+          chatController.startTurn().catch(error => {
+            console.error('[ConversationOverlay] Failed to start listening:', error);
+          });
+          
+        } catch (error) {
+          console.error('[ConversationOverlay] Failed to start conversation session:', error);
+          setShowConnectionError(true);
+        }
+      };
       
-      // Simple: just start listening
-      chatController.startTurn().catch(error => {
-        console.error('[ConversationOverlay] Failed to start listening:', error);
-      });
+      startConversationSession();
     }
-  }, [isConversationOpen, startMonitoring]);
+  }, [isConversationOpen, startMonitoring, chat_id]);
 
   // Simple cleanup when conversation closes
   useEffect(() => {
-    if (!isConversationOpen) {
+    if (!isConversationOpen && hasStartedListening.current) {
       hasStartedListening.current = false;
       
-      // Stop flow monitoring
+      // End conversation session
+      if (currentSessionId) {
+        sessionService.endSession(currentSessionId).catch(error => {
+          console.error('[ConversationOverlay] Error ending session:', error);
+        });
+        setCurrentSessionId(null);
+      }
+      
+      // Reset conversation mode
+      chatController.setConversationMode('normal', null);
+      
+      // Stop monitoring
       stopMonitoring();
-    }
-  }, [isConversationOpen, stopMonitoring]);
-
-  // Cleanup on component unmount
-  useEffect(() => {
-    return () => {
-      // Cleanup ChatController timeouts when component unmounts
+      
+      // Cleanup ChatController
       chatController.cleanup();
-    };
-  }, []);
+    }
+  }, [isConversationOpen, stopMonitoring, currentSessionId]);
 
   // Reset recovery attempts when conversation starts working
   useEffect(() => {
