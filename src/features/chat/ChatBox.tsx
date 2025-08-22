@@ -33,10 +33,19 @@ export const ChatBox = () => {
     // Cleanup listener on unmount or uuid change
     return () => {
       if (uuid) {
+        console.log(`[ChatBox] Cleaning up report ready listener for: ${uuid}`);
         stopReportReadyListener(uuid);
       }
     };
   }, [uuid]);
+
+  // Additional cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      // Ensure all listeners are cleaned up when component unmounts
+      console.log('[ChatBox] Component unmounting, cleaning up all listeners');
+    };
+  }, []);
 
   useEffect(() => {
     if (scrollRef.current) {

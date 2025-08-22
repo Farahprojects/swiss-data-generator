@@ -4,7 +4,12 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { logUserError } from '@/services/errorService';
 
 // Track active listeners to prevent duplicates
-const activeListeners: Record<string, { channel: RealtimeChannel; startedAt: number; timeoutId?: NodeJS.Timeout }> = {};
+const activeListeners: Record<string, { 
+  channel: RealtimeChannel; 
+  startedAt: number; 
+  timeoutId?: NodeJS.Timeout;
+  pollingTimeoutId?: NodeJS.Timeout; // Track polling timeouts separately
+}> = {};
 
 // Trigger context injection for chat when report is ready
 async function triggerContextInjection(guestReportId: string): Promise<void> {
@@ -130,7 +135,8 @@ export function startReportReadyListener(guestReportId: string): void {
 
   // Prevent duplicate listeners
   if (activeListeners[guestReportId]) {
-    return;
+    console.log(`[ReportReady] Listener already exists for: ${guestReportId}, stopping existing one`);
+    stopReportReadyListener(guestReportId);
   }
 
   // Check if report is already ready in store
@@ -254,6 +260,12 @@ function handleReportReady(guestReportId: string, startedAt: number): void {
 function fallbackToPolling(guestReportId: string, startedAt: number): void {
   let attempts = 0;
   const poll = async () => {
+    // Check if listener is still active before proceeding
+    if (!activeListeners[guestReportId]) {
+      console.log('[ReportReady] Polling stopped - listener no longer active');
+      return;
+    }
+
     attempts++;
     try {
       const { data, error } = await supabase
@@ -273,7 +285,9 @@ function fallbackToPolling(guestReportId: string, startedAt: number): void {
     // Continue polling if still active and under 13 seconds total
     const totalElapsed = Date.now() - startedAt;
     if (activeListeners[guestReportId] && !useReportReadyStore.getState().isReportReady && totalElapsed < 13000) {
-      setTimeout(poll, 2000); // Poll every 2 seconds
+      // Store polling timeout ID for cleanup
+      const pollingTimeoutId = setTimeout(poll, 2000); // Poll every 2 seconds
+      activeListeners[guestReportId].pollingTimeoutId = pollingTimeoutId;
     } else if (totalElapsed >= 13000) {
       // 13 seconds reached, check for errors
       const { hasError, errorMessage } = await checkReportLogsForError(guestReportId);
@@ -281,8 +295,10 @@ function fallbackToPolling(guestReportId: string, startedAt: number): void {
       if (hasError) {
         await triggerErrorHandler(guestReportId, errorMessage || 'Unknown error');
         stopReportReadyListener(guestReportId);
-      } else {
-        setTimeout(poll, 2000); // Continue polling
+      } else if (activeListeners[guestReportId]) {
+        // Continue polling only if still active
+        const pollingTimeoutId = setTimeout(poll, 2000);
+        activeListeners[guestReportId].pollingTimeoutId = pollingTimeoutId;
       }
     }
   };
@@ -294,19 +310,32 @@ function fallbackToPolling(guestReportId: string, startedAt: number): void {
 export function stopReportReadyListener(guestReportId: string): void {
   const listener = activeListeners[guestReportId];
   if (listener) {
-    // Clear timeout if exists
+    console.log(`[ReportReady] Stopping listener for: ${guestReportId}`);
+    
+    // Clear main timeout if exists
     if (listener.timeoutId) {
       clearTimeout(listener.timeoutId);
     }
     
+    // Clear polling timeout if exists
+    if (listener.pollingTimeoutId) {
+      clearTimeout(listener.pollingTimeoutId);
+    }
+    
     // Unsubscribe from real-time channel
-    listener.channel.unsubscribe();
+    try {
+      listener.channel.unsubscribe();
+    } catch (error) {
+      console.warn('[ReportReady] Error unsubscribing from channel:', error);
+    }
     
     // Remove from active listeners
     delete activeListeners[guestReportId];
     
     // Update store state
     useReportReadyStore.getState().stopPolling();
+    
+    console.log(`[ReportReady] Listener stopped for: ${guestReportId}`);
   }
 }
 
