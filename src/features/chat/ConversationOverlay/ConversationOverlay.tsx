@@ -7,7 +7,6 @@ import { chatController } from '../ChatController';
 import { useConversationAudioLevel } from '@/hooks/useConversationAudioLevel';
 // import { useConversationFlowMonitor } from '@/hooks/useConversationFlowMonitor';
 // import { FlowMonitorIndicator } from './FlowMonitorIndicator'; // Hidden for production
-import { ConnectionErrorFallback } from './ConnectionErrorFallback';
 import { AnimatePresence, motion } from 'framer-motion';
 import { sessionService } from '@/services/conversation/sessionService';
 
@@ -18,23 +17,7 @@ export const ConversationOverlay: React.FC = () => {
   const audioLevel = useConversationAudioLevel(); // Get real-time audio level
   // const { startMonitoring, stopMonitoring } = useConversationFlowMonitor();
   const hasStartedListening = useRef(false);
-  const [showConnectionError, setShowConnectionError] = useState(false);
-  const [recoveryAttempts, setRecoveryAttempts] = useState(0);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-  
-  // Handle retry from error UI
-  const handleRetry = () => {
-    setShowConnectionError(false);
-    setRecoveryAttempts(0);
-    hasStartedListening.current = false; // Reset flag to trigger restart
-  };
-  
-  // Reset recovery attempts when conversation is working
-  const resetRecoveryAttempts = () => {
-    if (recoveryAttempts > 0) {
-      setRecoveryAttempts(0);
-    }
-  };
   
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = () => {
@@ -67,8 +50,6 @@ export const ConversationOverlay: React.FC = () => {
   useEffect(() => {
     if (isConversationOpen && !hasStartedListening.current) {
       hasStartedListening.current = true;
-      setShowConnectionError(false); // Reset error state
-      setRecoveryAttempts(0); // Reset recovery attempts
       
       // Start conversation session and set mode
       const startConversationSession = async () => {
@@ -114,7 +95,6 @@ export const ConversationOverlay: React.FC = () => {
           
         } catch (error) {
           console.error('[ConversationOverlay] Failed to start conversation session:', error);
-          setShowConnectionError(true);
         }
       };
       
@@ -148,29 +128,18 @@ export const ConversationOverlay: React.FC = () => {
 
   // Reset recovery attempts when conversation starts working
   useEffect(() => {
-    if (status === 'recording' && recoveryAttempts > 0) {
-      resetRecoveryAttempts();
+    if (status === 'recording') {
+      // Conversation is working normally
     }
-  }, [status, recoveryAttempts]);
-
-
+  }, [status]);
 
   // Map chat status to conversation state for UI
-  const state = recoveryAttempts > 0 ? 'connecting' :
-               status === 'recording' ? 'listening' : 
+  const state = status === 'recording' ? 'listening' : 
                status === 'transcribing' ? 'processing' : 
                status === 'thinking' ? 'processing' : 
                status === 'speaking' ? 'replying' : 'listening';
 
   if (!isConversationOpen) return null;
-
-  // Show connection error UI if auto-recovery failed
-  if (showConnectionError) {
-    return createPortal(
-      <ConnectionErrorFallback onRetry={handleRetry} />,
-      document.body
-    );
-  }
 
   return createPortal(
     <div className="fixed inset-0 z-50 bg-white pt-safe pb-safe">
@@ -192,8 +161,7 @@ export const ConversationOverlay: React.FC = () => {
             </motion.div>
           </AnimatePresence>
           <p className="text-gray-500 font-light">
-            {state === 'connecting' ? `Connecting... (${recoveryAttempts}/2)` : 
-             state === 'listening' ? 'Listening…' : 
+            {state === 'listening' ? 'Listening…' : 
              state === 'processing' ? 'Thinking…' : 'Speaking…'}
           </p>
           {/* Close button - positioned under the status text */}
