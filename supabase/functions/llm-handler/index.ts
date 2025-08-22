@@ -187,17 +187,16 @@ Rules:
       console.log(`[llm-handler] CONVERSATION MODE DETECTED - Starting fire-and-forget TTS for sessionId: ${sessionId}`);
       
       // Fire-and-forget TTS call
-      fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/conversation-tts`, {
+      fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
         },
         body: JSON.stringify({
-          sessionId,
-          messageId: savedMessage.id,
+          chat_id,
           text: assistantText,
-          chat_id
+          voice: 'en-US-Chirp3-HD-Puck'
         })
       }).then(() => {
         console.log(`[llm-handler] TTS fire-and-forget initiated for sessionId: ${sessionId}`);
