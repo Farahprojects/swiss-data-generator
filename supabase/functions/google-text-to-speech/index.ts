@@ -30,14 +30,6 @@ serve(async (req) => {
     
     const voiceName = voice || "en-US-Studio-O"; // Default to Studio-O (Female)
     
-    // COMPREHENSIVE EDGE FUNCTION LOGGING
-    console.log("🎯 [EDGE TTS DEBUG] ==========================================");
-    console.log("🎯 [EDGE TTS DEBUG] 1. Received voice parameter:", voice);
-    console.log("🎯 [EDGE TTS DEBUG] 2. Final voice name being used:", voiceName);
-    console.log("🎯 [EDGE TTS DEBUG] 3. Message ID:", messageId);
-    console.log("🎯 [EDGE TTS DEBUG] 4. Text length:", text.length);
-    console.log("🎯 [EDGE TTS DEBUG] ==========================================");
-    
     console.log(`[google-tts] Processing TTS for messageId: ${messageId} with voice: ${voiceName}`);
 
     // Call Google Text-to-Speech API
@@ -63,12 +55,7 @@ serve(async (req) => {
       }
     );
 
-    // COMPREHENSIVE GOOGLE API LOGGING
-    console.log("🎯 [GOOGLE API DEBUG] ==========================================");
-    console.log("🎯 [GOOGLE API DEBUG] 1. Google API Response Status:", ttsResponse.status);
-    console.log("🎯 [GOOGLE API DEBUG] 2. Google API Response Headers:", Object.fromEntries(ttsResponse.headers.entries()));
-    console.log("🎯 [GOOGLE API DEBUG] 3. Voice sent to Google:", voiceName);
-    console.log("🎯 [GOOGLE API DEBUG] ==========================================");
+
 
     if (!ttsResponse.ok) {
       const errorText = await ttsResponse.text();

@@ -3,8 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 
 class TtsService {
   async speak(messageId: string, text: string): Promise<string> {
-    console.log(`[TTS] Converting text to speech with Google TTS for message ${messageId}...`);
-
     const { data, error } = await supabase.functions.invoke('google-text-to-speech', {
       body: { messageId, text },
     });
@@ -24,7 +22,6 @@ class TtsService {
       throw new Error("Response from google-text-to-speech was invalid.");
     }
 
-    console.log(`[TTS] Received Google TTS audio URL: ${data.audioUrl}`);
     return data.audioUrl;
   }
 }

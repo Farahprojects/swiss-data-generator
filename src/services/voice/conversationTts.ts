@@ -19,12 +19,7 @@ class ConversationTtsService {
         const selectedVoiceName = useChatStore.getState().ttsVoice || 'en-US-Studio-O'; // Get voice from store, default to Studio-O
         const googleVoiceCode = getGoogleVoiceCode(selectedVoiceName); // Convert to Google's required code
 
-        // COMPREHENSIVE LOGGING
-        console.log('🔊 [TTS FLOW DEBUG] ==========================================');
-        console.log('🔊 [TTS FLOW DEBUG] 1. Voice from UI Store:', selectedVoiceName);
-        console.log('🔊 [TTS FLOW DEBUG] 2. Mapped Google Voice Code:', googleVoiceCode);
-        console.log('🔊 [TTS FLOW DEBUG] 3. Sending to edge function:', { messageId, text: text.substring(0, 50) + '...', voice: googleVoiceCode });
-        console.log('🔊 [TTS FLOW DEBUG] ==========================================');
+
 
         const headers: HeadersInit = {
           'Content-Type': 'application/json',
@@ -49,7 +44,6 @@ class ConversationTtsService {
 
         // Pass the stream directly to the player
         await streamPlayerService.playStream(response.body, () => {
-          console.log('[ConversationTTS] TTS streaming playback completed');
           resolve();
         });
         
