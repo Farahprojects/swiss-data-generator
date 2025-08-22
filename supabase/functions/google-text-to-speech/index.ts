@@ -7,8 +7,7 @@ const GOOGLE_TTS_API_KEY = Deno.env.get("GOOGLE-TTS") ?? "";
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, accept',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 // Only need Supabase for message metadata updates (text-only persistence)
@@ -19,10 +18,7 @@ serve(async (req) => {
 
   if (req.method === "OPTIONS") {
     console.log("[google-tts] Handling OPTIONS request");
-    return new Response(null, { 
-      status: 204,
-      headers: CORS_HEADERS 
-    });
+    return new Response("ok", { headers: CORS_HEADERS });
   }
 
   try {
@@ -93,7 +89,7 @@ serve(async (req) => {
 
     // Return streaming response with chunked processing for better performance
     const CHUNK_SIZE = 16384; // 16KB chunks for optimal streaming
-    const audioStream = new ReadableStream({
+    const stream = new ReadableStream({
       start(controller) {
         // Send audio in chunks for better memory management and progressive loading
         for (let i = 0; i < audioBytes.length; i += CHUNK_SIZE) {
@@ -104,7 +100,7 @@ serve(async (req) => {
       }
     });
 
-    return new Response(audioStream, {
+    return new Response(stream, {
       headers: {
         ...CORS_HEADERS,
         'Content-Type': 'audio/mpeg',
