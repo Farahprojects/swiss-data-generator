@@ -175,24 +175,22 @@ class ChatController {
 
   private async playAssistantAudioAndContinue(assistantMessage: Message, chat_id: string) {
     if (assistantMessage.text && assistantMessage.id) {
+      // Set TTS context in the flow monitor for automatic streaming
+      conversationFlowMonitor.setTtsContext(
+        chat_id, 
+        assistantMessage.id, 
+        assistantMessage.text,
+        () => {
+          // TTS completion callback
+          if (this.isResetting) return;
+          this.resetTurn(false); // Restart turn after speaking
+        }
+      );
+      
+      // Trigger speaking step - TTS will be handled automatically by the monitor
       useChatStore.getState().setStatus('speaking');
       conversationFlowMonitor.observeStep('speaking');
       
-      try {
-        await conversationTtsService.speakAssistant({
-          conversationId: chat_id,
-          messageId: assistantMessage.id,
-          text: assistantMessage.text
-        });
-        
-        if (this.isResetting) return;
-        
-        this.resetTurn(false); // Restart turn after speaking
-      } catch (ttsError) {
-        conversationFlowMonitor.observeError('speaking', ttsError);
-        console.error('[ChatController] ❌ TTS failed:', ttsError);
-        this.resetTurn(true); // Don't restart if TTS fails
-      }
     } else {
       this.resetTurn(true); // Don't restart if no text
     }

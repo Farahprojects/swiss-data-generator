@@ -1,8 +1,8 @@
 /**
- * 🎯 CONVERSATION FLOW MONITOR - Pure Observer
+ * 🎯 CONVERSATION FLOW MONITOR - Pure Observer with TTS Integration
  * 
- * Monitors conversation flow without interfering with existing logic.
- * Just watches, logs, and provides visual feedback.
+ * Monitors conversation flow and handles TTS streaming automatically.
+ * Piggybacks on existing conversation state to optimize audio delivery.
  */
 
 export type FlowStep = 'idle' | 'listening' | 'transcribing' | 'thinking' | 'speaking' | 'error';
@@ -12,6 +12,9 @@ export interface FlowStepInfo {
   startTime: number;
   duration?: number;
   error?: string;
+  chatId?: string;
+  messageId?: string;
+  text?: string;
 }
 
 // Map React status to flow steps
@@ -32,6 +35,13 @@ class ConversationFlowMonitorClass {
   private stepStartTime = 0;
   private listeners = new Set<(info: FlowStepInfo) => void>();
   private connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'failed' = 'disconnected';
+  
+  // TTS Integration properties
+  private currentChatId: string | null = null;
+  private currentMessageId: string | null = null;
+  private currentText: string | null = null;
+  private ttsStreamActive = false;
+  private onTtsComplete?: () => void;
   
   // Auto-recovery properties
   private autoRecoveryAttempts = 0;
@@ -86,6 +96,11 @@ class ConversationFlowMonitorClass {
     this.currentStep = step;
     this.stepStartTime = now;
     
+    // Handle TTS streaming when speaking step is detected
+    if (step === 'speaking' && this.currentChatId && this.currentMessageId && this.currentText) {
+      this.startTtsStreaming();
+    }
+    
     this.notifyListeners();
   }
 
@@ -130,6 +145,61 @@ class ConversationFlowMonitorClass {
       // Notify subscribers of the state change
       this.notifyListeners();
     }
+  }
+
+  /**
+   * SET TTS CONTEXT - Called by ChatController when assistant message is ready
+   */
+  setTtsContext(chatId: string, messageId: string, text: string, onComplete?: () => void): void {
+    this.currentChatId = chatId;
+    this.currentMessageId = messageId;
+    this.currentText = text;
+    this.onTtsComplete = onComplete;
+  }
+
+  /**
+   * START TTS STREAMING - Automatically triggered when speaking step is detected
+   */
+  private async startTtsStreaming(): Promise<void> {
+    if (this.ttsStreamActive || !this.currentChatId || !this.currentMessageId || !this.currentText) {
+      return;
+    }
+
+    this.ttsStreamActive = true;
+    
+    try {
+      // Import TTS service dynamically to avoid circular dependencies
+      const { conversationTtsService } = await import('@/services/voice/conversationTts');
+      
+      await conversationTtsService.speakAssistant({
+        conversationId: this.currentChatId,
+        messageId: this.currentMessageId,
+        text: this.currentText
+      });
+      
+      // Call completion callback
+      this.onTtsComplete?.();
+      
+      // Clear TTS context after successful streaming
+      this.clearTtsContext();
+      
+    } catch (error) {
+      console.error('[ConversationFlowMonitor] TTS streaming failed:', error);
+      this.observeError('speaking', error as Error);
+      this.clearTtsContext();
+    } finally {
+      this.ttsStreamActive = false;
+    }
+  }
+
+  /**
+   * CLEAR TTS CONTEXT - Clean up after TTS streaming
+   */
+  private clearTtsContext(): void {
+    this.currentChatId = null;
+    this.currentMessageId = null;
+    this.currentText = null;
+    this.onTtsComplete = undefined;
   }
 
   /**
