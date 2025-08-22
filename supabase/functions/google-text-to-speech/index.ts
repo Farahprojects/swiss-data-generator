@@ -1,24 +1,23 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const GOOGLE_TTS_API_KEY = Deno.env.get("GOOGLE-TTS") ?? "";
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, accept',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-// Only need Supabase for message metadata updates (text-only persistence)
-const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-
 serve(async (req) => {
-  console.log("[google-tts] Received request");
+  const t0 = Date.now();
+  console.log(`[google-tts] Received request at ${t0}`);
 
   if (req.method === "OPTIONS") {
     console.log("[google-tts] Handling OPTIONS request");
-    return new Response("ok", { headers: CORS_HEADERS });
+    return new Response(null, { 
+      status: 204,
+      headers: CORS_HEADERS 
+    });
   }
 
   try {
@@ -34,6 +33,9 @@ serve(async (req) => {
     
     console.log(`[google-tts] Processing TTS for chat_id: ${chat_id} with voice: ${voiceName}`);
 
+    const t1 = Date.now();
+    console.log(`[google-tts] About to call Google TTS API at ${t1} (t0→t1: ${t1 - t0}ms)`);
+
     // Call Google Text-to-Speech API
     const ttsResponse = await fetch(
       `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
@@ -41,6 +43,8 @@ serve(async (req) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Accept": "application/json",
+          "User-Agent": "TheRAI-TTS/1.0",
         },
         body: JSON.stringify({
           input: { text },
@@ -56,6 +60,9 @@ serve(async (req) => {
         }),
       }
     );
+
+    const t2 = Date.now();
+    console.log(`[google-tts] Google TTS API returned at ${t2} (t1→t2: ${t2 - t1}ms)`);
 
     if (!ttsResponse.ok) {
       const errorText = await ttsResponse.text();
@@ -73,8 +80,15 @@ serve(async (req) => {
     // Decode base64 audio to binary
     const audioBytes = Uint8Array.from(atob(audioContent), c => c.charCodeAt(0));
 
+    const t3 = Date.now();
+    console.log(`[google-tts] Base64 decoded at ${t3} (t2→t3: ${t3 - t2}ms)`);
+
     // Always return the full MP3 as fast as possible
     console.log(`[google-tts] Returning full audio file (${audioBytes.length} bytes) for chat_id: ${chat_id}`);
+    
+    const t4 = Date.now();
+    console.log(`[google-tts] Response sent at ${t4} (t3→t4: ${t4 - t3}ms, total: ${t4 - t0}ms)`);
+    
     return new Response(audioBytes, {
       headers: {
         ...CORS_HEADERS,
