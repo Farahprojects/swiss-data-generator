@@ -23,7 +23,6 @@ class ChatController {
       throw new Error('chat_id is required for conversation initialization');
     }
     
-    console.log('[ChatController] Initializing chat with verified chat_id:', chat_id);
     useChatStore.getState().startConversation(chat_id);
     
     try {

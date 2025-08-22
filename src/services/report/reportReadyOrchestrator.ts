@@ -11,7 +11,6 @@ import { useReportReadyStore } from './reportReadyStore';
 const activePolls: Record<string, { timer: any; startedAt: number; attempts: number }> = {};
 
 export async function checkReportSeen(guestReportId: string): Promise<{ hasRow: boolean; seen: boolean }>{
-  console.log('[ReportReady] ask', guestReportId);
   const { data, error } = await supabase
     .from('report_ready_signals')
     .select('guest_report_id, seen')
