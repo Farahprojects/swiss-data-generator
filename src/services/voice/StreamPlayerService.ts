@@ -91,7 +91,7 @@ class StreamPlayerService {
   private appendBuffer(buffer: Uint8Array, callback: () => void) {
     if (this.sourceBuffer && !this.sourceBuffer.updating) {
       try {
-        this.sourceBuffer.appendBuffer(buffer);
+        this.sourceBuffer.appendBuffer(buffer as BufferSource);
         callback();
       } catch (error) {
         console.error("Error appending buffer:", error);

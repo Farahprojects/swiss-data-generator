@@ -17,6 +17,8 @@ export interface Message {
   timings?: Timings;
   createdAt: string;
   meta?: Record<string, any>;
+  client_msg_id?: string;
+  status?: 'thinking' | 'complete' | 'error';
 }
 
 export interface Conversation {
