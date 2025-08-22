@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState, Suspense, lazy } from 'react';
 import { useChatStore } from '@/core/store';
 import { Message } from '@/core/types';
-import { PlayCircle } from 'lucide-react';
+import { PlayCircle, ChevronDown } from 'lucide-react';
 import { audioPlayer } from '@/services/voice/audioPlayer';
 import { useConversationUIStore } from './conversation-ui-store';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
@@ -60,7 +60,9 @@ const GeneratingReportMessage = () => {
 export const MessageList = () => {
   const messages = useChatStore((state) => state.messages);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [initialMessageCount, setInitialMessageCount] = useState<number | null>(null);
+  const [showScrollButton, setShowScrollButton] = useState(false);
   
   // Get report generation state
   const isPolling = useReportReadyStore((state) => state.isPolling);
@@ -73,17 +75,63 @@ export const MessageList = () => {
     }
   }, [messages.length, initialMessageCount]);
 
+  // Enhanced auto-scroll logic
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (!containerRef.current) return;
+
+    const container = containerRef.current;
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+    
+    // Get the latest message to determine scroll behavior
+    const latestMessage = messages[messages.length - 1];
+    const isLatestMessageAI = latestMessage?.role === 'assistant';
+    
+    // Scroll behavior:
+    // 1. Always scroll for new AI messages (to show the reply)
+    // 2. Scroll for user messages if near bottom
+    // 3. Scroll when generating report
+    const shouldScroll = isLatestMessageAI || isNearBottom || isPolling;
+    
+    if (shouldScroll && messages.length > 0) {
+      // Use requestAnimationFrame for smooth scrolling
+      requestAnimationFrame(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'end'
+          });
+        }
+      });
     }
-  }, [messages.length, isPolling]); // Also scroll when generating message appears/disappears
+    
+    // Show/hide scroll button based on scroll position
+    setShowScrollButton(!isNearBottom && messages.length > 0);
+  }, [messages.length, isPolling, messages]); // Scroll on any message change
+
+  // Handle scroll events to show/hide scroll button
+  const handleScroll = () => {
+    if (!containerRef.current) return;
+    
+    const container = containerRef.current;
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+    setShowScrollButton(!isNearBottom && messages.length > 0);
+  };
+
+  // Scroll to bottom function
+  const scrollToBottom = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'end'
+      });
+    }
+  };
 
   // Show generating message when polling and report is not ready
   const showGeneratingMessage = isPolling && !isReportReady;
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
+    <div ref={containerRef} className="flex flex-col h-full overflow-y-auto relative" onScroll={handleScroll}>
       {messages.length === 0 && !showGeneratingMessage ? (
         <div className="flex-1 flex flex-col justify-end">
           <div className="p-4">
@@ -111,6 +159,17 @@ export const MessageList = () => {
         </div>
       )}
       <div ref={scrollRef} />
+      
+      {/* Scroll to bottom button */}
+      {showScrollButton && (
+        <button
+          onClick={scrollToBottom}
+          className="absolute bottom-4 right-4 w-10 h-10 bg-black text-white rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors shadow-lg"
+          aria-label="Scroll to bottom"
+        >
+          <ChevronDown className="w-5 h-5" />
+        </button>
+      )}
     </div>
   );
 };
