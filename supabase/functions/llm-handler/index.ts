@@ -20,15 +20,15 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    console.log("[llm-handler] Body:", body);
-    const { chat_id, text, client_msg_id } = body || {};
+    console.log("[llm-handler] Request body:", body);
+    
+    const { chat_id, text, client_msg_id, mode, sessionId } = body;
 
-    if (!chat_id) {
-      return new Response(JSON.stringify({ error: "Missing required field: chat_id" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (!chat_id || !text) {
+      throw new Error("Missing 'chat_id' or 'text' in request body.");
     }
+
+    console.log(`[llm-handler] Processing request - chat_id: ${chat_id}, mode: ${mode || 'normal'}, sessionId: ${sessionId || 'none'}`);
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -181,6 +181,30 @@ Rules:
     }
 
     console.log("[llm-handler] Assistant message saved successfully with ID:", savedMessage.id);
+
+    // Handle conversation mode - fire-and-forget TTS
+    if (mode === 'convo' && sessionId) {
+      console.log(`[llm-handler] CONVERSATION MODE DETECTED - Starting fire-and-forget TTS for sessionId: ${sessionId}`);
+      
+      // Fire-and-forget TTS call
+      fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/conversation-tts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
+        },
+        body: JSON.stringify({
+          sessionId,
+          messageId: savedMessage.id,
+          text: assistantText,
+          chat_id
+        })
+      }).then(() => {
+        console.log(`[llm-handler] TTS fire-and-forget initiated for sessionId: ${sessionId}`);
+      }).catch((error) => {
+        console.error(`[llm-handler] TTS fire-and-forget failed for sessionId: ${sessionId}:`, error);
+      });
+    }
 
     // Return the saved message with the real ID
     return new Response(JSON.stringify({ 
