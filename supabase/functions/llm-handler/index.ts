@@ -178,7 +178,6 @@ Rules:
         ...assistantMessage,
         chat_id: chat_id, // ensure chat_id is there
         id: undefined, // let db generate id
-        conversationId: undefined, // remove redundant field
       })
       .then(({ error }) => {
         if (error) {

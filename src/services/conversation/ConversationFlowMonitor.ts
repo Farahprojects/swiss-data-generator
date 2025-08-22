@@ -172,7 +172,7 @@ class ConversationFlowMonitorClass {
       const { conversationTtsService } = await import('@/services/voice/conversationTts');
       
       await conversationTtsService.speakAssistant({
-        conversationId: this.currentChatId,
+        chat_id: this.currentChatId,
         messageId: this.currentMessageId,
         text: this.currentText
       });

@@ -29,16 +29,16 @@ serve(async (req) => {
       });
     }
 
-    const { conversationId, messageId, text, voice } = await req.json();
+    const { chat_id, messageId, text, voice } = await req.json();
     console.log("[tts-speak] Request:", {
-      chat_id: conversationId,
+      chat_id,
       messageId,
       textLength: text?.length ?? 0,
       voice,
     });
 
-    if (!conversationId || !messageId || !text) {
-      return new Response(JSON.stringify({ error: "missing fields: conversationId, messageId, text" }), {
+    if (!chat_id || !messageId || !text) {
+      return new Response(JSON.stringify({ error: "missing fields: chat_id, messageId, text" }), {
         status: 400,
         headers: { ...CORS, "Content-Type": "application/json" },
       });

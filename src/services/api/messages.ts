@@ -3,12 +3,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { Message } from '@/core/types';
 
 export const appendMessage = async (message: Omit<Message, 'id' | 'createdAt'>): Promise<Message> => {
-  const { conversationId, ...rest } = message;
   const { data, error } = await supabase
     .from('messages')
     .insert({
-      chat_id: conversationId, // Use chat_id column in database
-      ...rest
+      chat_id: message.chat_id,
+      role: message.role,
+      text: message.text,
+      audio_url: message.audioUrl,
+      timings: message.timings,
+      meta: message.meta,
+      client_msg_id: message.client_msg_id,
+      status: message.status
     })
     .select()
     .single();
@@ -17,8 +22,16 @@ export const appendMessage = async (message: Omit<Message, 'id' | 'createdAt'>):
   
   // Map back to client interface
   return {
-    ...data,
-    conversationId: data.chat_id
+    id: data.id,
+    chat_id: data.chat_id,
+    role: data.role,
+    text: data.text,
+    audioUrl: data.audio_url,
+    timings: data.timings,
+    createdAt: data.created_at,
+    meta: data.meta,
+    client_msg_id: data.client_msg_id,
+    status: data.status
   } as Message;
 };
 
@@ -48,12 +61,14 @@ export const getMessagesForConversation = async (chat_id: string): Promise<Messa
     .filter(msg => !msg.context_injected)
     .map(msg => ({
       id: msg.id,
-      conversationId: msg.chat_id, // Map to client interface for compatibility
+      chat_id: msg.chat_id,
       role: msg.role,
       text: msg.text,
       audioUrl: msg.audio_url,
       timings: msg.timings,
       createdAt: msg.created_at,
-      meta: msg.meta
+      meta: msg.meta,
+      client_msg_id: msg.client_msg_id,
+      status: msg.status
     }));
 };

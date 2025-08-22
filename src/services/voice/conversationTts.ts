@@ -4,13 +4,13 @@ import { streamPlayerService } from './StreamPlayerService';
 import { useChatStore } from '@/core/store';
 
 export interface SpeakAssistantOptions {
-  conversationId: string;
+  chat_id: string;
   messageId: string;
   text: string;
 }
 
 class ConversationTtsService {
-  async speakAssistant({ conversationId, messageId, text }: SpeakAssistantOptions): Promise<void> {
+  async speakAssistant({ chat_id, messageId, text }: SpeakAssistantOptions): Promise<void> {
     
     return new Promise(async (resolve, reject) => {
       try {
