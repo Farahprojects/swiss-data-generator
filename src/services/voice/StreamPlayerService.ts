@@ -67,6 +67,10 @@ class StreamPlayerService {
 
     this.sourceBuffer = this.mediaSource.addSourceBuffer('audio/mpeg');
     this.streamReader = stream.getReader();
+    
+    // Buffer to accumulate audio data
+    let audioBuffer = new Uint8Array(0);
+    const MIN_BUFFER_SIZE = 32768; // 32KB minimum before starting playback
 
     const processNextChunk = async () => {
       if (!this.streamReader) return;
@@ -74,17 +78,44 @@ class StreamPlayerService {
       const { done, value } = await this.streamReader.read();
 
       if (done) {
-        this.endStreamSafely();
+        // Flush any remaining audio data
+        if (audioBuffer.length > 0) {
+          this.appendBuffer(audioBuffer, () => {
+            this.endStreamSafely();
+          });
+        } else {
+          this.endStreamSafely();
+        }
         return;
       }
 
-      this.appendBuffer(value, () => {
+      // Accumulate audio data
+      const newBuffer = new Uint8Array(audioBuffer.length + value.length);
+      newBuffer.set(audioBuffer);
+      newBuffer.set(value, audioBuffer.length);
+      audioBuffer = newBuffer;
+
+      // Start playback once we have enough data
+      if (audioBuffer.length >= MIN_BUFFER_SIZE && this.audio?.paused) {
+        this.audio?.play().catch(e => console.error("Audio play failed:", e));
+        this.startAudioAnalysis();
+      }
+
+      // Process accumulated data in chunks
+      const CHUNK_SIZE = 16384; // 16KB chunks
+      if (audioBuffer.length >= CHUNK_SIZE) {
+        const chunk = audioBuffer.slice(0, CHUNK_SIZE);
+        audioBuffer = audioBuffer.slice(CHUNK_SIZE);
+        
+        this.appendBuffer(chunk, () => {
+          processNextChunk();
+        });
+      } else {
+        // Continue reading if we don't have enough data yet
         processNextChunk();
-      });
+      }
     };
     
-    this.audio?.play().catch(e => console.error("Audio play failed:", e));
-    this.startAudioAnalysis();
     processNextChunk();
   }
 

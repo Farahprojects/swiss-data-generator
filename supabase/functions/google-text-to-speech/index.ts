@@ -75,22 +75,15 @@ serve(async (req) => {
     // Decode base64 audio to binary
     const audioBytes = Uint8Array.from(atob(audioContent), c => c.charCodeAt(0));
 
-    // Fire-and-forget database update for message metadata
-    supabaseAdmin
-      .from('messages')
-      .update({ 
-        tts_voice: voiceName,
-        tts_provider: 'google',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', messageId)
-      .then(() => console.log(`[google-tts] Updated message ${messageId} with TTS metadata`))
-      .catch(err => console.error(`[google-tts] Failed to update message metadata:`, err));
-
-    // Return streaming response
+    // Return streaming response with chunked processing for better performance
+    const CHUNK_SIZE = 16384; // 16KB chunks for optimal streaming
     const stream = new ReadableStream({
       start(controller) {
-        controller.enqueue(audioBytes);
+        // Send audio in chunks for better memory management and progressive loading
+        for (let i = 0; i < audioBytes.length; i += CHUNK_SIZE) {
+          const chunk = audioBytes.slice(i, i + CHUNK_SIZE);
+          controller.enqueue(chunk);
+        }
         controller.close();
       }
     });
@@ -100,6 +93,8 @@ serve(async (req) => {
         ...CORS_HEADERS,
         'Content-Type': 'audio/mpeg',
         'Content-Length': audioBytes.length.toString(),
+        'Cache-Control': 'no-cache', // Prevent caching for real-time TTS
+        'Transfer-Encoding': 'chunked', // Enable chunked transfer
       },
     });
 
