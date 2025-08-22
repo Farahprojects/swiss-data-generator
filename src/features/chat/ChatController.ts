@@ -101,33 +101,39 @@ class ChatController {
   }
 
   private addOptimisticMessages(chat_id: string, text: string, client_msg_id: string, audioUrl?: string) {
-    const optimisticUserMessage: Message = {
-      id: client_msg_id,
-      chat_id: chat_id,
-      role: "user",
+    const userMessage: Message = {
+      id: `user-${client_msg_id}`,
+      chat_id,
+      client_msg_id,
+      role: 'user',
       text,
-      audioUrl,
-      createdAt: new Date().toISOString(),
-      status: "thinking",
+      createdAt: new Date().toISOString(), // Corrected from created_at
+      audio_url: audioUrl,
     };
+    
+    // Set this message ID as the one to scroll to.
+    useChatStore.getState().setScrollToMessageId(userMessage.id);
 
-    const optimisticAssistantMessage: Message = {
+    const assistantMessage: Message = {
       id: `thinking-${client_msg_id}`,
-      chat_id: chat_id,
-      role: "assistant",
-      text: "Thinking...",
-      createdAt: new Date().toISOString(),
-      status: "thinking",
+      chat_id,
+      role: 'assistant',
+      text: 'Thinking...',
+      createdAt: new Date().toISOString(), // Corrected from created_at
+      client_msg_id: `thinking-${client_msg_id}`,
     };
 
-    console.log(`[ChatController] Creating optimistic messages - User ID: ${client_msg_id}, Thinking ID: ${optimisticAssistantMessage.id}`);
+    console.log(`[ChatController] Creating optimistic messages - User ID: ${userMessage.id}, Thinking ID: ${assistantMessage.id}`);
 
-    useChatStore.getState().addMessage(optimisticUserMessage);
-    useChatStore.getState().addMessage(optimisticAssistantMessage);
+    useChatStore.getState().addMessage(userMessage);
+    useChatStore.getState().addMessage(assistantMessage);
   }
 
   private reconcileOptimisticMessage(finalMessage: Message) {
-    // The thinking message ID is `thinking-${client_msg_id}`
+    if (!finalMessage.client_msg_id) {
+      console.error('[ChatController] reconcileOptimisticMessage: finalMessage.client_msg_id is missing');
+      return;
+    }
     const thinkingMessageId = `thinking-${finalMessage.client_msg_id}`;
     useChatStore.getState().updateMessage(thinkingMessageId, finalMessage);
     this.playAssistantAudioAndContinue(finalMessage, finalMessage.chat_id);

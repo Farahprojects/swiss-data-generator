@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 interface TypewriterTextProps {
   text: string;
-  msPerChar?: number;
+  msPerWord?: number; // Changed from msPerChar
   onComplete?: () => void;
   onInterrupt?: () => void;
   className?: string;
@@ -13,7 +13,7 @@ interface TypewriterTextProps {
 
 export const TypewriterText: React.FC<TypewriterTextProps> = ({
   text,
-  msPerChar = 40,
+  msPerWord = 120, // Default to 120ms per word
   onComplete,
   onInterrupt,
   className = '',
@@ -73,22 +73,22 @@ export const TypewriterText: React.FC<TypewriterTextProps> = ({
     currentIndexRef.current = 0;
     setCursorVisible(true);
 
-    const typeNextChar = () => {
+    const words = text.split(/(\s+)/); // Split by spaces, keeping them in the array
+
+    const typeNextWord = () => {
       if (isInterruptedRef.current) {
         setIsTyping(false);
         onInterrupt?.();
         return;
       }
 
-      if (currentIndexRef.current < text.length) {
-        // Add next character
-        const nextChar = text[currentIndexRef.current];
-        setDisplayedText(text.slice(0, currentIndexRef.current + 1));
+      if (currentIndexRef.current < words.length) {
+        const nextWord = words[currentIndexRef.current];
+        setDisplayedText(prev => prev + nextWord);
         currentIndexRef.current++;
-
-        // Variable delay for punctuation
-        const delay = /[.!?,:;]/.test(nextChar) ? msPerChar * 3 : msPerChar;
-        typeTimeoutRef.current = setTimeout(typeNextChar, delay);
+        
+        // Use a consistent delay per word
+        typeTimeoutRef.current = setTimeout(typeNextWord, msPerWord);
       } else {
         // Animation complete
         setIsTyping(false);
@@ -99,8 +99,8 @@ export const TypewriterText: React.FC<TypewriterTextProps> = ({
       }
     };
 
-    typeNextChar();
-  }, [text, msPerChar, onComplete, onInterrupt, showCursor, disabled]);
+    typeNextWord();
+  }, [text, msPerWord, onComplete, onInterrupt, showCursor, disabled]);
 
   // Stop typing (for interruptions)
   const stopTyping = useCallback(() => {

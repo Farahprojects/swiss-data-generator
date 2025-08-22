@@ -34,7 +34,7 @@ const MessageItem = ({ message, isLast, isFromHistory }: { message: Message; isL
           <Suspense fallback={<span className="whitespace-pre-wrap">{message.text || ''}</span>}>
             <TypewriterText 
               text={message.text || ''} 
-              msPerChar={40}
+              msPerWord={120} // Use the new msPerWord prop
               disabled={!shouldAnimate}
               className="whitespace-pre-wrap"
             />
@@ -62,10 +62,12 @@ const GeneratingReportMessage = () => {
 
 export const MessageList = () => {
   const messages = useChatStore((state) => state.messages);
-  const lastSendTime = useChatStore((state) => state.lastSendTime);
+  const { scrollToMessageId, setScrollToMessageId } = useChatStore(
+    (state) => ({ scrollToMessageId: state.scrollToMessageId, setScrollToMessageId: state.setScrollToMessageId }),
+  );
   const containerRef = useRef<HTMLDivElement>(null);
   const [initialMessageCount, setInitialMessageCount] = useState<number | null>(null);
-  
+
   // Get report generation state
   const isPolling = useReportReadyStore((state) => state.isPolling);
   const isReportReady = useReportReadyStore((state) => state.isReportReady);
@@ -77,7 +79,61 @@ export const MessageList = () => {
     }
   }, [messages.length, initialMessageCount]);
 
+  // This robust effect handles the "snap-to-top" logic.
+  // It watches for a `scrollToMessageId` and ensures the element exists in the DOM before scrolling.
+  useEffect(() => {
+    if (!scrollToMessageId || !containerRef.current) return;
 
+    const container = containerRef.current;
+    let observer: MutationObserver | undefined;
+
+    const scrollAndCleanup = () => {
+      const messageElement = container.querySelector(`[data-message-id="${scrollToMessageId}"]`);
+      if (messageElement) {
+        // Use requestAnimationFrame to sync with the browser's paint cycle for a smooth, jank-free scroll.
+        requestAnimationFrame(() => {
+          messageElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start',
+          });
+          // Reset the trigger in the store so we don't scroll again.
+          setScrollToMessageId(null);
+        });
+      }
+      if (observer) {
+        observer.disconnect();
+      }
+    };
+
+    // First, check if the element is already in the DOM.
+    const element = container.querySelector(`[data-message-id="${scrollToMessageId}"]`);
+    if (element) {
+      scrollAndCleanup();
+    } else {
+      // If not, set up an observer to watch for when it gets added.
+      observer = new MutationObserver((mutationsList) => {
+        for (const mutation of mutationsList) {
+          if (mutation.type === 'childList') {
+            // Check if our target element has been added.
+            const targetAdded = container.querySelector(`[data-message-id="${scrollToMessageId}"]`);
+            if (targetAdded) {
+              scrollAndCleanup();
+              return; // We're done.
+            }
+          }
+        }
+      });
+
+      observer.observe(container, { childList: true, subtree: true });
+    }
+
+    // Cleanup function to disconnect the observer if the component unmounts or dependencies change.
+    return () => {
+      if (observer) {
+        observer.disconnect();
+      }
+    };
+  }, [scrollToMessageId, setScrollToMessageId, messages]);
 
   // Show generating message when polling and report is not ready
   const showGeneratingMessage = isPolling && !isReportReady;
