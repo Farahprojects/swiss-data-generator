@@ -16,7 +16,6 @@ class ChatController {
   private isTurnActive = false;
   private conversationServiceInitialized = false;
   private isResetting = false;
-  private abortController: AbortController | null = null;
   
   async initializeConversation(chat_id: string) {
     if (!chat_id) {
@@ -43,33 +42,16 @@ class ChatController {
       return;
     }
     
-    // Abort any existing request
-    this.abortInFlightRequests();
-    
-    // Create new abort controller for this request
-    this.abortController = new AbortController();
-    
     const client_msg_id = uuidv4();
     this.addOptimisticMessages(chat_id, text, client_msg_id);
     
     try {
-      const finalMessage = await llmService.sendMessage({ 
-        chat_id, 
-        text, 
-        client_msg_id,
-        signal: this.abortController.signal 
-      });
+      const finalMessage = await llmService.sendMessage({ chat_id, text, client_msg_id });
       this.reconcileOptimisticMessage(finalMessage);
     } catch (error) {
-      if (error.name === 'AbortError') {
-        console.log('[ChatController] Request was aborted');
-        return;
-      }
       console.error("[ChatController] Error sending message:", error);
       useChatStore.getState().setError("Failed to send message. Please try again.");
       // Here you might want to remove the optimistic messages
-    } finally {
-      this.abortController = null;
     }
   }
 
@@ -240,27 +222,14 @@ class ChatController {
     }
   }
 
-  private abortInFlightRequests() {
-    if (this.abortController) {
-      console.log('[ChatController] Aborting in-flight requests');
-      this.abortController.abort();
-      this.abortController = null;
-    }
-  }
-
   cancelTurn() {
     if (!this.isTurnActive) return;
-    this.abortInFlightRequests();
     conversationMicrophoneService.forceCleanup();
     this.resetTurn(true);
   }
 
   resetConversationService() {
     this.isResetting = true;
-    
-    // Abort any in-flight requests
-    this.abortInFlightRequests();
-    
     conversationMicrophoneService.forceCleanup();
     streamPlayerService.stop();
     this.conversationServiceInitialized = false;
