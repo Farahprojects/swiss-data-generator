@@ -239,7 +239,7 @@ function setupRealtimeListener(guestReportId: string): void {
         return;
       }
 
-      // No error found, continue with polling as fallback
+      // No error found, continue with polling as fallback (will stop at 15 seconds total)
       fallbackToPolling(guestReportId, startedAt);
     }
   }, 13000); // 13 seconds
@@ -282,21 +282,31 @@ function fallbackToPolling(guestReportId: string, startedAt: number): void {
       console.warn('[ReportReady] Polling error:', error);
     }
 
-    // Continue polling if still active and under 13 seconds total
+    // Check total elapsed time (15-second hard limit)
     const totalElapsed = Date.now() - startedAt;
-    if (activeListeners[guestReportId] && !useReportReadyStore.getState().isReportReady && totalElapsed < 13000) {
+    
+    if (totalElapsed >= 15000) {
+      // 15 seconds total reached - show error popup
+      console.log('[ReportReady] 15-second total timeout reached, showing error popup');
+      await triggerErrorHandler(guestReportId, 'Report generation is taking longer than expected. Please try again later.');
+      stopReportReadyListener(guestReportId);
+      return;
+    }
+
+    // Continue polling if still active and under 15 seconds total
+    if (activeListeners[guestReportId] && !useReportReadyStore.getState().isReportReady && totalElapsed < 15000) {
       // Store polling timeout ID for cleanup
       const pollingTimeoutId = setTimeout(poll, 2000); // Poll every 2 seconds
       activeListeners[guestReportId].pollingTimeoutId = pollingTimeoutId;
-    } else if (totalElapsed >= 13000) {
-      // 13 seconds reached, check for errors
+    } else if (totalElapsed >= 13000 && totalElapsed < 15000) {
+      // 13-15 seconds: check for errors but continue if no error
       const { hasError, errorMessage } = await checkReportLogsForError(guestReportId);
       
       if (hasError) {
         await triggerErrorHandler(guestReportId, errorMessage || 'Unknown error');
         stopReportReadyListener(guestReportId);
       } else if (activeListeners[guestReportId]) {
-        // Continue polling only if still active
+        // Continue polling only if still active and under 15 seconds
         const pollingTimeoutId = setTimeout(poll, 2000);
         activeListeners[guestReportId].pollingTimeoutId = pollingTimeoutId;
       }
