@@ -2,7 +2,6 @@
 import { supabase, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '@/integrations/supabase/client';
 import { streamPlayerService } from './StreamPlayerService';
 import { useChatStore } from '@/core/store';
-import { getGoogleVoiceCode } from '@/utils/voiceUtils';
 
 export interface SpeakAssistantOptions {
   conversationId: string;
@@ -16,8 +15,8 @@ class ConversationTtsService {
     return new Promise(async (resolve, reject) => {
       try {
         const { data: { session } } = await supabase.auth.getSession(); // Get session if available, don't fail if not.
-        const selectedVoiceName = useChatStore.getState().ttsVoice || 'Aria'; // Get voice from store, default to Aria
-        const googleVoiceCode = getGoogleVoiceCode(selectedVoiceName); // Convert to Google's required code
+        const selectedVoiceName = useChatStore.getState().ttsVoice || 'Puck'; // Get voice from store, default to Puck
+        const googleVoiceCode = `en-US-Chirp3-HD-${selectedVoiceName}`; // Construct the voice code directly
 
         const headers: HeadersInit = {
           'Content-Type': 'application/json',

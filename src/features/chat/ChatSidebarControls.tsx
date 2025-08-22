@@ -59,22 +59,29 @@ export const ChatSidebarControls: React.FC = () => {
           value={ttsVoice}
           onChange={(e) => handleVoiceChange(e.target.value)}
         >
-          {/* Google Studio HD voices - Female */}
-          <option value="Aria">Aria (Female)</option>
-          <option value="Bella">Bella (Female)</option>
-          <option value="Echo">Echo (Female)</option>
-          <option value="Grace">Grace (Female)</option>
-          <option value="Iris">Iris (Female)</option>
-          <option value="Jade">Jade (Female)</option>
-          <option value="Luna">Luna (Female)</option>
-          
-          {/* Google Studio HD voices - Male */}
-          <option value="Charlie">Charlie (Male)</option>
-          <option value="Puck">Puck (Male)</option>
-          <option value="Duke">Duke (Male)</option>
-          <option value="Fable">Fable (Male)</option>
-          <option value="Hawk">Hawk (Male)</option>
-          <option value="Kai">Kai (Male)</option>
+          {/* Google Chirp 3 HD Voices - Male */}
+          <optgroup label="Male">
+            <option value="Puck">Puck</option>
+            <option value="Achird">Achird</option>
+            <option value="Algenib">Algenib</option>
+            <option value="Charon">Charon</option>
+            <option value="Enceladus">Enceladus</option>
+            <option value="Fenrir">Fenrir</option>
+            <option value="Orus">Orus</option>
+            <option value="Rasalgethi">Rasalgethi</option>
+          </optgroup>
+          {/* Google Chirp 3 HD Voices - Female */}
+          <optgroup label="Female">
+            <option value="Achernar">Achernar</option>
+            <option value="Aoede">Aoede</option>
+            <option value="Callirrhoe">Callirrhoe</option>
+            <option value="Despina">Despina</option>
+            <option value="Gacrux">Gacrux</option>
+            <option value="Kore">Kore</option>
+            <option value="Leda">Leda</option>
+            <option value="Sulafat">Sulafat</option>
+            <option value="Zephyr">Zephyr</option>
+          </optgroup>
         </select>
       </div>
     </div>
