@@ -39,12 +39,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   addMessage: (message) => set((state) => ({ messages: [...state.messages, message] })),
 
-  updateMessage: (id, updates) =>
-    set((state) => ({
-      messages: state.messages.map((msg) =>
+  updateMessage: (id, updates) => {
+    console.log(`[ChatStore] updateMessage called - ID: ${id}, Updates:`, updates);
+    set((state) => {
+      const newMessages = state.messages.map((msg) =>
         msg.id === id ? { ...msg, ...updates } : msg
-      ),
-    })),
+      );
+      console.log(`[ChatStore] Message updated - Before: ${state.messages.find(m => m.id === id)?.text}, After: ${newMessages.find(m => m.id === id)?.text}`);
+      return { messages: newMessages };
+    });
+  },
 
   setStatus: (status) => set({ status }),
   

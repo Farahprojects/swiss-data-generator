@@ -46,19 +46,23 @@ class ChatController {
     }
     
     const client_msg_id = uuidv4();
+    console.log(`[ChatController] Sending message with client_msg_id: ${client_msg_id}`);
     this.addOptimisticMessages(chat_id, text, client_msg_id);
     
     // Start listening for assistant message
     this.startAssistantMessageListener(chat_id);
     
     try {
+      console.log('[ChatController] Calling llmService.sendMessage...');
       const finalMessage = await llmService.sendMessage({ chat_id, text, client_msg_id });
+      console.log('[ChatController] BACKUP_FETCH_USED=true - Received response from chat-send:', finalMessage);
       
       // Stop the listener since we got the response
       this.stopAssistantMessageListener();
       
       // Update the optimistic message with the real one
       useChatStore.getState().updateMessage(finalMessage.id, finalMessage);
+      console.log(`[ChatController] Updated message with ID: ${finalMessage.id}, turnId: ${client_msg_id}`);
       
     } catch (error) {
       console.error("[ChatController] Error sending message:", error);
@@ -87,6 +91,8 @@ class ChatController {
       createdAt: new Date().toISOString(),
       status: "thinking",
     };
+
+    console.log(`[ChatController] Creating optimistic messages - User ID: ${client_msg_id}, Assistant placeholder ID: ${optimisticAssistantMessage.id}`);
 
     useChatStore.getState().addMessage(optimisticUserMessage);
     useChatStore.getState().addMessage(optimisticAssistantMessage);
@@ -290,6 +296,8 @@ class ChatController {
     // Stop any existing listener
     this.stopAssistantMessageListener();
     
+    console.log(`[ChatController] Starting real-time listener for chat_id: ${chat_id}`);
+    
     // Start new listener for assistant messages
     this.assistantMessageListener = supabase
       .channel(`assistant-message-${chat_id}`)
@@ -302,11 +310,12 @@ class ChatController {
           filter: `chat_id=eq.${chat_id} AND role=eq.assistant`
         },
         (payload) => {
-          console.log('[ChatController] Assistant message received via realtime:', payload);
+          console.log('[ChatController] LISTENER_HIT=true - Assistant message received via realtime:', payload);
           const assistantMessage = payload.new as Message;
           
           // Update the optimistic message with the real one
           useChatStore.getState().updateMessage(assistantMessage.id, assistantMessage);
+          console.log(`[ChatController] Updated message with ID: ${assistantMessage.id}`);
           
           // Stop listening once we get the assistant message
           this.stopAssistantMessageListener();
@@ -315,7 +324,9 @@ class ChatController {
           // this.playAssistantAudioAndContinue(assistantMessage, chat_id);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`[ChatController] Real-time listener status: ${status}`);
+      });
   }
 
   private stopAssistantMessageListener() {
