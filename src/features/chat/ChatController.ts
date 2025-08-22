@@ -10,7 +10,6 @@ import { conversationFlowMonitor } from '@/services/conversation/ConversationFlo
 import { getMessagesForConversation } from '@/services/api/messages';
 import { Message } from '@/core/types';
 import { v4 as uuidv4 } from 'uuid';
-import { RealtimeChannel } from '@supabase/supabase-js';
 
 class ChatController {
   private isTurnActive = false;
@@ -18,7 +17,6 @@ class ChatController {
   private isResetting = false;
   private turnRestartTimeout: NodeJS.Timeout | null = null;
   private resetTimeout: NodeJS.Timeout | null = null;
-  private assistantMessageListener: RealtimeChannel | null = null;
   
   async initializeConversation(chat_id: string) {
     if (!chat_id) {
@@ -50,7 +48,7 @@ class ChatController {
     this.addOptimisticMessages(chat_id, text, client_msg_id);
     
     // Start listening for assistant message
-    this.startAssistantMessageListener(chat_id);
+    // this.startAssistantMessageListener(chat_id); // Removed real-time listener
     
     try {
       console.log('[ChatController] Calling llmService.sendMessage...');
@@ -58,7 +56,7 @@ class ChatController {
       console.log('[ChatController] BACKUP_FETCH_USED=true - Received response from chat-send:', finalMessage);
       
       // Stop the listener since we got the response
-      this.stopAssistantMessageListener();
+      // this.stopAssistantMessageListener(); // Removed real-time listener
       
       // Add the assistant message to the store
       useChatStore.getState().addMessage(finalMessage);
@@ -68,7 +66,7 @@ class ChatController {
       console.error("[ChatController] Error sending message:", error);
       useChatStore.getState().setError("Failed to send message. Please try again.");
       // Stop listener on error
-      this.stopAssistantMessageListener();
+      // this.stopAssistantMessageListener(); // Removed real-time listener
     }
   }
 
@@ -279,52 +277,10 @@ class ChatController {
     streamPlayerService.stop();
     
     // Stop assistant message listener
-    this.stopAssistantMessageListener();
+    // this.stopAssistantMessageListener(); // Removed real-time listener
   }
 
-  private startAssistantMessageListener(chat_id: string) {
-    // Stop any existing listener
-    this.stopAssistantMessageListener();
-    
-    console.log(`[ChatController] Starting real-time listener for chat_id: ${chat_id}`);
-    
-    // Start new listener for assistant messages
-    this.assistantMessageListener = supabase
-      .channel(`assistant-message-${chat_id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `chat_id=eq.${chat_id} AND role=eq.assistant`
-        },
-        (payload) => {
-          console.log('[ChatController] LISTENER_HIT=true - Assistant message received via realtime:', payload);
-          const assistantMessage = payload.new as Message;
-          
-          // Add the assistant message to the store
-          useChatStore.getState().addMessage(assistantMessage);
-          console.log(`[ChatController] Added assistant message via listener with ID: ${assistantMessage.id}`);
-          
-          // Stop listening once we get the assistant message
-          this.stopAssistantMessageListener();
-          
-          // For text-only chat, just add the message - no TTS
-          // this.playAssistantAudioAndContinue(assistantMessage, chat_id);
-        }
-      )
-      .subscribe((status) => {
-        console.log(`[ChatController] Real-time listener status: ${status}`);
-      });
-  }
-
-  private stopAssistantMessageListener() {
-    if (this.assistantMessageListener) {
-      supabase.removeChannel(this.assistantMessageListener);
-      this.assistantMessageListener = null;
-    }
-  }
+  // Removed private startAssistantMessageListener and stopAssistantMessageListener
 }
 
 export const chatController = new ChatController();
