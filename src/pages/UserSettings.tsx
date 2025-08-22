@@ -15,8 +15,8 @@ const UserSettings = () => {
     // Open the settings modal with the panel from URL or default to general
     openSettings(panel);
     
-    // Redirect to dashboard
-    navigate('/dashboard', { replace: true });
+    // Redirect to calendar
+    navigate('/calendar', { replace: true });
   }, [navigate, openSettings]);
   
   // This component will not render anything as it immediately redirects

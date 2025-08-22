@@ -327,7 +327,7 @@ const Pricing = () => {
           Get started in minutes — provide world-class analysis and stand out as a modern coach. 
           No astrological knowledge needed.
         </p>
-        <Link to={user ? "/dashboard" : "/login"}>
+        <Link to={user ? "/calendar" : "/login"}>
           <Button className="bg-gradient-to-r from-blue-600 to-indigo-500 px-8 py-6 text-lg text-white font-light rounded-xl shadow-lg transition-all duration-300 hover:from-blue-700 hover:to-indigo-600 hover:scale-105 hover:shadow-xl focus-visible:ring-2 focus-visible:ring-blue-400">
             {user ? "Get API Access" : "Start Now"}
           </Button>

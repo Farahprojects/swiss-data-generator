@@ -11,7 +11,7 @@ type LogoProps = {
 
 const Logo = ({ className, linkClassName, size = 'md', asLink = true }: LogoProps) => {
   const { user } = useAuth();
-  const homePath = user ? '/dashboard' : '/';
+  const homePath = user ? '/calendar' : '/';
   
   const sizeClasses = {
     sm: 'text-xl',

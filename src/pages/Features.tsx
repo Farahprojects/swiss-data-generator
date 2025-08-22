@@ -292,12 +292,12 @@ const Features = () => {
                 Join professionals creating breakthrough moments with their clients
               </p>
               
-              <Link to={user ? "/dashboard" : "/login"}>
+              <Link to={user ? "/calendar" : "/login"}>
                 <Button 
                   size="lg" 
                   className="bg-gray-900 text-white hover:bg-gray-800 font-light py-6 px-12 rounded-xl text-xl transition-all duration-300"
                 >
-                  {user ? "Go to Dashboard" : "Start for Free"}
+                  {user ? "Go to Calendar" : "Start for Free"}
                 </Button>
               </Link>
             </motion.div>

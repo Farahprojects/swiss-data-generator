@@ -3,16 +3,6 @@ import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ModalStateProvider } from '@/contexts/ModalStateProvider';
 import { SettingsModalProvider } from '@/contexts/SettingsModalContext';
-import { PricingProvider } from '@/contexts/PricingContext';
-import { ReportModalProvider } from '@/contexts/ReportModalContext';
-import { StripeSuccessProvider } from '@/contexts/StripeSuccessContext';
-import DashboardLayout from './components/dashboard/DashboardLayout';
-import DashboardHome from './pages/dashboard/DashboardHome';
-import ClientsPage from './pages/dashboard/ClientsPage';
-import ClientDetailPage from './pages/dashboard/ClientDetailPage';
-import ReportsPage from './pages/dashboard/ReportsPage';
-import MessagesPage from './pages/dashboard/MessagesPage';
-import CreateReportPage from './pages/dashboard/CreateReportPage';
 import UserSettings from './pages/UserSettings';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -24,7 +14,6 @@ import Contact from './pages/Contact';
 import About from './pages/About';
 import Legal from './pages/Legal';
 import Features from './pages/Features';
-import WebsiteBuilder from './pages/dashboard/WebsiteBuilder';
 import CalendarPage from './pages/dashboard/CalendarPage';
 import { PublicCoachWebsite } from './components/website-builder/PublicCoachWebsite';
 import PreviewWebsite from './pages/PreviewWebsite';
@@ -48,30 +37,39 @@ const AuthedAppShell: React.FC = () => {
   return (
     <NavigationStateProvider>
       <AuthProvider>
-        <PricingProvider>
-          <ModalStateProvider>
-            <SettingsModalProvider>
-              <ReportModalProvider>
-                <StripeSuccessProvider>
-                  <Routes>
-                    <Route path="/" element={<AuthGuard><DashboardLayout /></AuthGuard>}>
-                      <Route index element={<DashboardHome />} />
-                      <Route path="calendar" element={<CalendarPage />} />
-                      <Route path="clients" element={<ClientsPage />} />
-                      <Route path="clients/:clientId" element={<ClientDetailPage />} />
-                      <Route path="reports" element={<ReportsPage />} />
-                      <Route path="reports/create" element={<CreateReportPage />} />
-                      <Route path="messages" element={<MessagesPage />} />
-                      <Route path="settings" element={<UserSettings />} />
-                      <Route path="website-builder" element={<WebsiteBuilder />} />
-                    </Route>
-                    {/* The root App.tsx will handle the NotFound case for all other routes */}
-                  </Routes>
-                </StripeSuccessProvider>
-              </ReportModalProvider>
-            </SettingsModalProvider>
-          </ModalStateProvider>
-        </PricingProvider>
+        <ModalStateProvider>
+          <SettingsModalProvider>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/" element={<Index />} />
+              <Route path="/pricing" element={<Pricing />} />
+              <Route path="/features" element={<Features />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/legal" element={<Legal />} />
+              <Route path="/blog" element={<Blog />} />
+              <Route path="/blog/:slug" element={<BlogPost />} />
+              
+              {/* Auth routes */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/auth/password" element={<ResetPassword />} />
+              <Route path="/stripe/return" element={<StripeReturn />} />
+              
+              {/* Protected routes */}
+              <Route path="/calendar" element={<AuthGuard><CalendarPage /></AuthGuard>} />
+              <Route path="/settings" element={<AuthGuard><UserSettings /></AuthGuard>} />
+              
+              {/* Website preview routes */}
+              <Route path="/coach/:username" element={<PublicCoachWebsite />} />
+              <Route path="/coach/:username/report/:reportId" element={<CoachReportPage />} />
+              <Route path="/preview" element={<PreviewWebsite />} />
+              
+              {/* 404 */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </SettingsModalProvider>
+        </ModalStateProvider>
       </AuthProvider>
     </NavigationStateProvider>
   );

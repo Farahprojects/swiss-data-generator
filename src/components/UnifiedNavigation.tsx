@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { useSettingsModal } from '@/contexts/SettingsModalContext';
-import { SimpleSidebarMenu } from '@/components/dashboard/DashboardSidebar';
+// Dashboard sidebar removed
 import { Sheet, SheetContent, SheetPortal } from '@/components/ui/sheet';
 import * as SheetPrimitive from "@radix-ui/react-dialog";
 import { Input } from '@/components/ui/input';
@@ -65,21 +65,13 @@ const UnifiedNavigation = ({
   const { openSettings } = useSettingsModal();
   
   const isLoggedIn = !!user;
-  const isMainDashboard = location.pathname === '/dashboard';
-  const isDashboardClientsPage = location.pathname === '/dashboard/clients';
-  const isDashboardReportsPage = location.pathname === '/dashboard/reports';
-  // UPDATE burger menu pages to include create report
-  const isDashboardPageWithBurgerMenu = (
-    location.pathname === '/dashboard/website-builder' ||
-    location.pathname === '/dashboard/messages' ||
-    location.pathname === '/dashboard/clients' ||
-    location.pathname === '/dashboard/reports' ||
-    location.pathname === '/dashboard/reports/create' ||
-    location.pathname === '/dashboard/calendar'
-  );
-  const isDashboardPage = location.pathname.startsWith('/dashboard');
-  const isMessagesPage = location.pathname === '/dashboard/messages';
-  const isWebsiteBuilderPage = location.pathname === '/dashboard/website-builder';
+  const isCalendarPage = location.pathname === '/calendar';
+  
+  // Dashboard pages are now cleaned up - only calendar remains
+  const isDashboardPageWithBurgerMenu = isCalendarPage;
+  const isDashboardPage = isCalendarPage;
+  const isMessagesPage = false; // Messages removed
+  const isWebsiteBuilderPage = false; // Website builder removed
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -115,10 +107,7 @@ const UnifiedNavigation = ({
     }
   };
 
-  const showHeaderSearch =
-    isLoggedIn &&
-    isMessagesPage &&
-    isMobile;
+  const showHeaderSearch = false; // Messages page removed
 
   // For global header search: only on mobile, only for /dashboard/messages
   const headerSearch = searchParams.get('search') || '';
@@ -134,13 +123,7 @@ const UnifiedNavigation = ({
   };
 
   // Show burger menu for website builder on BOTH mobile AND desktop
-  const showDashboardBurgerMenu =
-    isLoggedIn &&
-    (
-      isDashboardClientsPage ||
-      (isDashboardPageWithBurgerMenu) ||
-      (isMainDashboard && isMobile)
-    );
+  const showDashboardBurgerMenu = isLoggedIn && isDashboardPageWithBurgerMenu;
 
   // Determine nav wrapper padding
   // - Remove horizontal px-4 padding for mobile burger-menu dashboard pages
@@ -317,9 +300,7 @@ const UnifiedNavigation = ({
                       
                       <DropdownMenuSeparator />
                       
-                      <DropdownMenuItem onClick={() => navigate('/dashboard/api-keys')}>
-                        API Keys
-                      </DropdownMenuItem>
+                      {/* API Keys removed */}
                       
                       <DropdownMenuSeparator />
                       
@@ -422,17 +403,10 @@ const UnifiedNavigation = ({
               className="fixed inset-y-0 left-0 z-50 h-full w-[240px] border-r bg-white p-0 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left data-[state=closed]:duration-300 data-[state=open]:duration-500"
             >
               <div onClick={closeSidebar}>
-                <SimpleSidebarMenu
-                  isMessagesPageMobile={isMessagesPageMobile && location.pathname === '/dashboard/messages'}
-                  activeFilter={activeFilter}
-                  unreadCount={unreadCount}
-                  onFilterChange={onFilterChange}
-                  isWebsiteBuilderPageMobile={location.pathname === '/dashboard/website-builder'}
-                  onOpenModal={onOpenModal}
-                  onChangeTemplate={onChangeTemplate}
-                  onPublish={onPublish}
-                  isPublishing={isPublishing}
-                />
+                {/* Sidebar content removed - dashboard cleaned up */}
+                <div className="p-4 text-center text-gray-500">
+                  Navigation removed
+                </div>
               </div>
             </SheetPrimitive.Content>
           </SheetPortal>

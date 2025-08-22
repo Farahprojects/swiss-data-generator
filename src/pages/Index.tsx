@@ -62,9 +62,9 @@ const Index = () => {
   const { user, loading } = useAuth();
   const { data: imageConfig } = useLandingPageImages();
 
-  // Redirect authenticated users to dashboard
+  // Redirect authenticated users to calendar
   if (!loading && user) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/calendar" replace />;
   }
 
   // Get image for feature by index, with fallback to default
