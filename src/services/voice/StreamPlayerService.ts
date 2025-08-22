@@ -1,11 +1,13 @@
 // src/services/voice/StreamPlayerService.ts
 
 class StreamPlayerService {
-  private audio: HTMLAudioElement | null = null;
-  private mediaSource: MediaSource | null = null;
+  private audioElement: HTMLAudioElement;
+  private mediaSource: MediaSource;
   private sourceBuffer: SourceBuffer | null = null;
-  private onPlaybackComplete: (() => void) | null = null;
-  private streamReader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+  private queue: Uint8Array[] = [];
+  private isPlaying: boolean = false;
+  private onCompleteCallback: (() => void) | null = null;
+  private streamController: ReadableStreamDefaultController<Uint8Array> | null = null;
 
   // Audio analysis properties
   private audioContext: AudioContext | null = null;
@@ -24,6 +26,35 @@ class StreamPlayerService {
       this.audio = new Audio();
       this.audio.addEventListener('ended', this.handlePlaybackEnded.bind(this));
     }
+  }
+
+  public getStreamController(onComplete: () => void): ReadableStreamDefaultController<Uint8Array> {
+    if (this.mediaSource && this.mediaSource.readyState !== 'ended') {
+      this.mediaSource.endOfStream();
+    }
+    this.audioElement.src = '';
+    this.mediaSource = new MediaSource();
+    this.audioElement.src = URL.createObjectURL(this.mediaSource);
+    this.sourceBuffer = null;
+    this.onCompleteCallback = onComplete;
+    this.isPlaying = false;
+    this.queue = [];
+
+    const stream = new ReadableStream({
+      start: (controller) => {
+        this.streamController = controller;
+        this.mediaSource.addEventListener('sourceopen', () => {
+          this.initializeSourceBuffer();
+          this.processQueue();
+        });
+      }
+    });
+    
+    // This is a bit of a workaround to get the controller
+    // without starting the stream reading immediately.
+    this.playStream(stream, onComplete);
+
+    return this.streamController;
   }
 
   public async playStream(stream: ReadableStream<Uint8Array>, onComplete: () => void) {

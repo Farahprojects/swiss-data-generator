@@ -10,6 +10,7 @@ import { streamPlayerService } from '@/services/voice/StreamPlayerService';
 import { getMessagesForConversation } from '@/services/api/messages';
 import { Message } from '@/core/types';
 import { v4 as uuidv4 } from 'uuid';
+import { realtimeAudioPlayer } from '@/services/voice/RealtimeAudioPlayer';
 
 class ChatController {
   private isTurnActive = false;
@@ -127,9 +128,10 @@ class ChatController {
   }
 
   private reconcileOptimisticMessage(finalMessage: Message) {
-    useChatStore.getState().updateMessage(finalMessage.id, finalMessage);
-    // Audio playback will be handled by the real-time listener
-    // this.playAssistantAudioAndContinue(finalMessage, finalMessage.chat_id);
+    // The thinking message ID is `thinking-${client_msg_id}`
+    const thinkingMessageId = `thinking-${finalMessage.client_msg_id}`;
+    useChatStore.getState().updateMessage(thinkingMessageId, finalMessage);
+    this.playAssistantAudioAndContinue(finalMessage, finalMessage.chat_id);
   }
 
   private initializeConversationService() {
@@ -219,24 +221,19 @@ class ChatController {
   }
 
   private async playAssistantAudioAndContinue(assistantMessage: Message, chat_id: string) {
-    if (assistantMessage.text && assistantMessage.id) {
-      // Set TTS context in the flow monitor for automatic streaming
-      // conversationFlowMonitor.setTtsContext(
-      //   assistantMessage.chat_id, 
-      //   assistantMessage.id, 
-      //   assistantMessage.text,
-      //   () => {
-      //     // TTS completion callback
-      //     if (this.isResetting) return;
-      //     this.resetTurn(false); // Restart turn after speaking
-      //   }
-      // );
+    if (assistantMessage.text && assistantMessage.id && this.sessionId) {
       
-      // Trigger speaking step - TTS will be handled automatically by the monitor
       useChatStore.getState().setStatus('speaking');
       // conversationFlowMonitor.observeStep('speaking');
       
+      await realtimeAudioPlayer.play(this.sessionId, assistantMessage.id, () => {
+        // TTS completion callback
+        if (this.isResetting) return;
+        this.resetTurn(false); // Restart turn after speaking
+      });
+      
     } else {
+      console.warn('[ChatController] Could not play audio. Missing text, messageId, or sessionId.');
       this.resetTurn(true); // Don't restart if no text
     }
   }

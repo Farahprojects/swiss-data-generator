@@ -184,25 +184,11 @@ Rules:
 
     // Handle conversation mode - fire-and-forget TTS
     if (mode === 'convo' && sessionId) {
-      console.log(`[llm-handler] CONVERSATION MODE DETECTED - Starting fire-and-forget TTS for sessionId: ${sessionId}`);
+      console.log(`[llm-handler] CONVERSATION MODE DETECTED - Starting TTS stream for sessionId: ${sessionId}`);
       
-      // Fire-and-forget TTS call
-      fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
-        },
-        body: JSON.stringify({
-          chat_id,
-          text: assistantText,
-          voice: 'en-US-Chirp3-HD-Puck'
-        })
-      }).then(() => {
-        console.log(`[llm-handler] TTS fire-and-forget initiated for sessionId: ${sessionId}`);
-      }).catch((error) => {
-        console.error(`[llm-handler] TTS fire-and-forget failed for sessionId: ${sessionId}:`, error);
-      });
+      // Don't wait for this to finish.
+      streamTtsToClient(supabase, sessionId, savedMessage.id, assistantText, chat_id);
+
     }
 
     // Return the saved message with the real ID
@@ -223,3 +209,76 @@ Rules:
     });
   }
 });
+
+async function streamTtsToClient(supabase: any, sessionId: string, messageId: string, text: string, chat_id: string) {
+  try {
+    const googleApiKey = Deno.env.get('GOOGLE_TTS_API_KEY');
+    if (!googleApiKey) {
+      throw new Error("Missing GOOGLE_TTS_API_KEY");
+    }
+
+    const ttsResponse = await fetch(
+      `https://texttospeech.googleapis.com/v1beta1/text:synthesize`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": googleApiKey,
+        },
+        body: JSON.stringify({
+          input: { text },
+          voice: { languageCode: "en-US", name: "en-US-Studio-O" },
+          audioConfig: {
+            audioEncoding: "MP3",
+            speakingRate: 1.05,
+          },
+          enableTimePointing: ["SSML_MARK"],
+        }),
+      }
+    );
+
+    if (!ttsResponse.ok) {
+      const errorBody = await ttsResponse.text();
+      throw new Error(`Google TTS API Error: ${ttsResponse.status} ${errorBody}`);
+    }
+
+    const ttsData = await ttsResponse.json();
+    const audioContent = ttsData.audioContent; // This is a base64 string
+
+    if (!audioContent) {
+      throw new Error("No audio content from Google TTS");
+    }
+
+    const channel = supabase.channel(`tts-audio-${sessionId}`);
+    
+    // Broadcasting in chunks to avoid message size limits
+    const chunkSize = 8000; // Supabase Realtime has a 10KB limit, this is safe.
+    for (let i = 0; i < audioContent.length; i += chunkSize) {
+      const chunk = audioContent.substring(i, i + chunkSize);
+      await channel.send({
+        type: 'broadcast',
+        event: 'audio-chunk',
+        payload: {
+          messageId,
+          chunk,
+          isLast: (i + chunkSize) >= audioContent.length
+        },
+      });
+    }
+
+    console.log(`[llm-handler] Finished streaming ${audioContent.length} bytes for message ${messageId}`);
+
+  } catch (error) {
+    console.error(`[llm-handler] Error during TTS streaming for session ${sessionId}:`, error);
+    // Optionally, send an error message over the channel
+    const channel = supabase.channel(`tts-audio-${sessionId}`);
+    await channel.send({
+      type: 'broadcast',
+      event: 'audio-error',
+      payload: {
+        messageId,
+        error: error.message,
+      },
+    });
+  }
+}

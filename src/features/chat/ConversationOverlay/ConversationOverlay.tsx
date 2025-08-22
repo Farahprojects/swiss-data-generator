@@ -16,6 +16,7 @@ export const ConversationOverlay: React.FC = () => {
   const audioLevel = useConversationAudioLevel(); // Get real-time audio level
   // const { startMonitoring, stopMonitoring } = useConversationFlowMonitor();
   const hasStartedListening = useRef(false);
+  const [hasBegunSession, setHasBegunSession] = useState(false);
   
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = () => {
@@ -42,23 +43,35 @@ export const ConversationOverlay: React.FC = () => {
     
     // 4. Close the UI (synchronous)
     closeConversation();
+    setHasBegunSession(false); // Reset for next time
   };
+
+  const handleBeginSession = () => {
+    // This user gesture is required by browsers to enable audio playback.
+    setHasBegunSession(true);
+    console.log('[ConversationOverlay] User has begun session. Starting turn.');
+    chatController.startTurn().catch(error => {
+      console.error('[ConversationOverlay] Failed to start listening:', error);
+    });
+  }
   
-  // Simple mount - just start listening when conversation opens
+  // Simple mount - set conversation mode, but wait for user to start.
   useEffect(() => {
     if (isConversationOpen && !hasStartedListening.current) {
       hasStartedListening.current = true;
       
-      // Set conversation mode immediately when modal opens
-      chatController.setConversationMode('convo', 'conversation-session');
-      console.log('[ConversationOverlay] Conversation mode set - modal opened');
-      
-      // Start listening
-      chatController.startTurn().catch(error => {
-        console.error('[ConversationOverlay] Failed to start listening:', error);
-      });
+      if (chat_id) {
+        // Set conversation mode immediately when modal opens
+        chatController.setConversationMode('convo', chat_id);
+        console.log(`[ConversationOverlay] Conversation mode set for chat_id: ${chat_id}`);
+      } else {
+        console.error('[ConversationOverlay] Cannot start conversation mode without a chat_id.');
+        // Optionally, close the overlay or show an error
+        closeConversation();
+        return;
+      }
     }
-  }, [isConversationOpen]);
+  }, [isConversationOpen, chat_id, closeConversation]);
   
   // Simple cleanup when conversation closes
   useEffect(() => {
@@ -81,7 +94,8 @@ export const ConversationOverlay: React.FC = () => {
   }, [status]);
 
   // Map chat status to conversation state for UI
-  const state = status === 'recording' ? 'listening' : 
+  const state = !hasBegunSession ? 'waiting' :
+               status === 'recording' ? 'listening' : 
                status === 'transcribing' ? 'processing' : 
                status === 'thinking' ? 'processing' : 
                status === 'speaking' ? 'replying' : 'listening';
@@ -95,7 +109,7 @@ export const ConversationOverlay: React.FC = () => {
       
       {/* Centered content */}
       <div className="h-full w-full flex items-center justify-center px-6">
-        <div className="flex flex-col items-center justify-center gap-6">
+        <div className="flex flex-col items-center justify-center gap-6 relative">
           <AnimatePresence mode="wait">
             <motion.div
               key={state}
@@ -107,8 +121,21 @@ export const ConversationOverlay: React.FC = () => {
               <VoiceBubble state={state} audioLevel={audioLevel} />
             </motion.div>
           </AnimatePresence>
+          
+          {!hasBegunSession && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <button 
+                onClick={handleBeginSession}
+                className="text-white text-2xl font-light z-10"
+              >
+                Start
+              </button>
+            </div>
+          )}
+
           <p className="text-gray-500 font-light">
-            {state === 'listening' ? 'Listening…' : 
+            {state === 'waiting' ? 'Tap to begin' :
+             state === 'listening' ? 'Listening…' : 
              state === 'processing' ? 'Thinking…' : 'Speaking…'}
           </p>
           {/* Close button - positioned under the status text */}
