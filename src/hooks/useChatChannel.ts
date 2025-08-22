@@ -32,12 +32,12 @@ export const useChatChannel = (chatId: string | null, options: ChatChannelOption
   const isMountedRef = useRef(true);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  const [state, setState] = useRef<ChatChannelState>({
+  const [state, setState] = useState<ChatChannelState>({
     isConnected: false,
     isConnecting: false,
     error: null,
     channelId: null
-  }).current;
+  });
 
   // Memoized event handlers to prevent unnecessary re-subscriptions
   const handleMessageReceived = useCallback((payload: any) => {
@@ -128,11 +128,13 @@ export const useChatChannel = (chatId: string | null, options: ChatChannelOption
     }
     
     // Reset state
-    state.isConnected = false;
-    state.isConnecting = false;
-    state.error = null;
-    state.channelId = null;
-  }, [chatId, state]);
+    setState({
+      isConnected: false,
+      isConnecting: false,
+      error: null,
+      channelId: null
+    });
+  }, [chatId, state.channelId]);
 
   // Create and subscribe to channel
   const subscribe = useCallback(async () => {
@@ -147,8 +149,11 @@ export const useChatChannel = (chatId: string | null, options: ChatChannelOption
     abortControllerRef.current = new AbortController();
     
     const channelId = `chat:${chatId}`;
-    state.channelId = channelId;
-    state.isConnecting = true;
+    setState(prev => ({
+      ...prev,
+      channelId,
+      isConnecting: true
+    }));
     
     console.log(`[useChatChannel] Creating channel: ${channelId}`);
     
@@ -194,14 +199,20 @@ export const useChatChannel = (chatId: string | null, options: ChatChannelOption
           console.log(`[useChatChannel] Channel ${channelId} status:`, status);
           
           if (status === 'SUBSCRIBED') {
-            state.isConnected = true;
-            state.isConnecting = false;
-            state.error = null;
+            setState(prev => ({
+              ...prev,
+              isConnected: true,
+              isConnecting: false,
+              error: null
+            }));
             console.log(`[useChatChannel] Successfully subscribed to ${channelId}`);
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            state.isConnected = false;
-            state.isConnecting = false;
-            state.error = new Error(`Channel subscription failed: ${status}`);
+            setState(prev => ({
+              ...prev,
+              isConnected: false,
+              isConnecting: false,
+              error: new Error(`Channel subscription failed: ${status}`)
+            }));
             console.error(`[useChatChannel] Channel ${channelId} failed:`, status);
             
             // Attempt reconnection after delay
@@ -220,11 +231,14 @@ export const useChatChannel = (chatId: string | null, options: ChatChannelOption
       
     } catch (error) {
       console.error(`[useChatChannel] Error creating channel ${channelId}:`, error);
-      state.error = error as Error;
-      state.isConnecting = false;
+      setState(prev => ({
+        ...prev,
+        error: error as Error,
+        isConnecting: false
+      }));
       options.onError?.(error as Error);
     }
-  }, [chatId, options.enabled, cleanup, handleMessageReceived, handleMessageUpdated, handleMessageDeleted, options.onError, state]);
+  }, [chatId, options.enabled, cleanup, handleMessageReceived, handleMessageUpdated, handleMessageDeleted, options.onError, setState]);
 
   // Effect to manage subscription lifecycle
   useEffect(() => {
