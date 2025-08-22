@@ -19,7 +19,10 @@ const MessageItem = ({ message, isLast, isFromHistory }: { message: Message; isL
   const shouldAnimate = !isUser && isLast && !isFromHistory;
 
   return (
-    <div className={`flex items-end gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}>
+    <div 
+      data-message-id={message.id}
+      className={`flex items-end gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}
+    >
       <div
         className={`px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl ${
           isUser
@@ -59,8 +62,9 @@ const GeneratingReportMessage = () => {
 
 export const MessageList = () => {
   const messages = useChatStore((state) => state.messages);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [initialMessageCount, setInitialMessageCount] = useState<number | null>(null);
+  const [lastUserMessageId, setLastUserMessageId] = useState<string | null>(null);
   
   // Get report generation state
   const isPolling = useReportReadyStore((state) => state.isPolling);
@@ -73,17 +77,58 @@ export const MessageList = () => {
     }
   }, [messages.length, initialMessageCount]);
 
+  // Snap to user message when they send a new message
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (messages.length === 0) return;
+    
+    const latestMessage = messages[messages.length - 1];
+    const isNewUserMessage = latestMessage.role === 'user' && latestMessage.id !== lastUserMessageId;
+    
+    if (isNewUserMessage) {
+      setLastUserMessageId(latestMessage.id);
+      
+      // Snap to show the user message at the top
+      requestAnimationFrame(() => {
+        if (containerRef.current) {
+          const container = containerRef.current;
+          const messageElement = container.querySelector(`[data-message-id="${latestMessage.id}"]`);
+          
+          if (messageElement) {
+            messageElement.scrollIntoView({ 
+              behavior: 'smooth',
+              block: 'start'
+            });
+          }
+        }
+      });
     }
-  }, [messages.length, isPolling]); // Also scroll when generating message appears/disappears
+  }, [messages.length, lastUserMessageId]);
+
+  // Handle layout shifts (keyboard, etc.) to re-snap to user message
+  useEffect(() => {
+    if (lastUserMessageId && containerRef.current) {
+      const container = containerRef.current;
+      const messageElement = container.querySelector(`[data-message-id="${lastUserMessageId}"]`);
+      
+      if (messageElement) {
+        // Small delay to let layout settle
+        const timeoutId = setTimeout(() => {
+          messageElement.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }, 100);
+        
+        return () => clearTimeout(timeoutId);
+      }
+    }
+  }, [lastUserMessageId]);
 
   // Show generating message when polling and report is not ready
   const showGeneratingMessage = isPolling && !isReportReady;
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
+    <div ref={containerRef} className="flex flex-col h-full overflow-y-auto">
       {messages.length === 0 && !showGeneratingMessage ? (
         <div className="flex-1 flex flex-col justify-end">
           <div className="p-4">
@@ -110,7 +155,6 @@ export const MessageList = () => {
           )}
         </div>
       )}
-      <div ref={scrollRef} />
     </div>
   );
 };
