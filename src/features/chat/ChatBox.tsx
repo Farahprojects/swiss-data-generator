@@ -71,12 +71,34 @@ export const ChatBox = () => {
 
   // Handle session cleanup
   const handleCleanupSession = async () => {
-    if (errorState?.requires_cleanup) {
+    console.log('[ChatBox] Starting comprehensive session cleanup');
+    
+    try {
       // Clear error state
       setErrorState(null);
       
-      // Additional cleanup can be added here if needed
-  
+      // Clear chat store
+      const { clearChat } = useChatStore.getState();
+      clearChat();
+      
+      // Stop any active report ready listeners
+      if (uuid) {
+        stopReportReadyListener(uuid);
+      }
+      
+      // Clear conversation UI store
+      const { closeConversation } = useConversationUIStore.getState();
+      closeConversation();
+      
+      // Clear session storage
+      const sessionKeys = ['therai_chat_id', 'report_generation_status'];
+      sessionKeys.forEach(key => {
+        sessionStorage.removeItem(key);
+      });
+      
+      console.log('[ChatBox] Session cleanup completed');
+    } catch (error) {
+      console.error('[ChatBox] Error during session cleanup:', error);
     }
   };
 
