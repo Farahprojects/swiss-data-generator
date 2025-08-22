@@ -89,7 +89,7 @@ serve(async (req) => {
 
     // Return streaming response with chunked processing for better performance
     const CHUNK_SIZE = 16384; // 16KB chunks for optimal streaming
-    const stream = new ReadableStream({
+    const audioStream = new ReadableStream({
       start(controller) {
         // Send audio in chunks for better memory management and progressive loading
         for (let i = 0; i < audioBytes.length; i += CHUNK_SIZE) {
@@ -100,7 +100,7 @@ serve(async (req) => {
       }
     });
 
-    return new Response(stream, {
+    return new Response(audioStream, {
       headers: {
         ...CORS_HEADERS,
         'Content-Type': 'audio/mpeg',
