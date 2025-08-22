@@ -16,6 +16,8 @@ class ChatController {
   private isTurnActive = false;
   private conversationServiceInitialized = false;
   private isResetting = false;
+  private turnRestartTimeout: NodeJS.Timeout | null = null;
+  private resetTimeout: NodeJS.Timeout | null = null;
   
   async initializeConversation(chat_id: string) {
     if (!chat_id) {
@@ -200,6 +202,12 @@ class ChatController {
     useChatStore.getState().setStatus('idle');
     this.isTurnActive = false;
     
+    // Clear any existing turn restart timeout
+    if (this.turnRestartTimeout) {
+      clearTimeout(this.turnRestartTimeout);
+      this.turnRestartTimeout = null;
+    }
+    
     if (endConversationFlow) {
       // End conversation completely - full cleanup
       conversationMicrophoneService.forceCleanup();
@@ -218,27 +226,63 @@ class ChatController {
     
     if (!endConversationFlow && !this.isResetting) {
       // Short delay before starting next turn
-      setTimeout(() => { if (!this.isResetting) this.startTurn(); }, 500);
+      this.turnRestartTimeout = setTimeout(() => { 
+        if (!this.isResetting) this.startTurn(); 
+      }, 500);
     }
   }
 
   cancelTurn() {
     if (!this.isTurnActive) return;
+    
+    // Clear any pending timeouts
+    if (this.turnRestartTimeout) {
+      clearTimeout(this.turnRestartTimeout);
+      this.turnRestartTimeout = null;
+    }
+    
     conversationMicrophoneService.forceCleanup();
     this.resetTurn(true);
   }
 
   resetConversationService() {
     this.isResetting = true;
+    
+    // Clear any existing timeouts
+    if (this.turnRestartTimeout) {
+      clearTimeout(this.turnRestartTimeout);
+      this.turnRestartTimeout = null;
+    }
+    if (this.resetTimeout) {
+      clearTimeout(this.resetTimeout);
+      this.resetTimeout = null;
+    }
+    
     conversationMicrophoneService.forceCleanup();
     streamPlayerService.stop();
     this.conversationServiceInitialized = false;
     this.isTurnActive = false;
     useChatStore.getState().setStatus('idle');
 
-    setTimeout(() => {
+    this.resetTimeout = setTimeout(() => {
       this.isResetting = false;
     }, 100);
+  }
+
+  // Add cleanup method for component unmount
+  cleanup() {
+    // Clear all timeouts
+    if (this.turnRestartTimeout) {
+      clearTimeout(this.turnRestartTimeout);
+      this.turnRestartTimeout = null;
+    }
+    if (this.resetTimeout) {
+      clearTimeout(this.resetTimeout);
+      this.resetTimeout = null;
+    }
+    
+    // Stop any active conversation
+    this.cancelTurn();
   }
 }
 

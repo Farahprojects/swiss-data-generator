@@ -106,6 +106,14 @@ export const ConversationOverlay: React.FC = () => {
     }
   }, [isConversationOpen, stopMonitoring]);
 
+  // Cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      // Cleanup ChatController timeouts when component unmounts
+      chatController.cleanup();
+    };
+  }, []);
+
   // Reset recovery attempts when conversation starts working
   useEffect(() => {
     if (status === 'recording' && recoveryAttempts > 0) {

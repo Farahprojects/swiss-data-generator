@@ -54,6 +54,7 @@ export function useUserPreferences() {
   const lastUpdateTimestampRef = useRef<number>(0);
   // Track if component is mounted
   const isMountedRef = useRef(true);
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Function to check if a component is still mounted
   const isMounted = useCallback(() => {
@@ -121,7 +122,13 @@ export function useUserPreferences() {
 
           if (retryCount < 3) {
             const retryDelay = Math.min(2000 * (retryCount + 1), 6000);
-            setTimeout(() => {
+            
+            // Clear any existing retry timeout
+            if (retryTimeoutRef.current) {
+              clearTimeout(retryTimeoutRef.current);
+            }
+            
+            retryTimeoutRef.current = setTimeout(() => {
               setRetryCount((prev) => prev + 1);
               loadUserPreferences();
             }, retryDelay);
@@ -198,8 +205,15 @@ export function useUserPreferences() {
     return () => {
       isMountedRef.current = false;
       clearTimeout(loadTimeout);
-      if (channel) {
-        supabase.removeChannel(channel);
+      
+      // Clear retry timeout
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
+      
+      if (channel.current) {
+        supabase.removeChannel(channel.current);
       }
     };
   }, [user, toast, isMounted, retryCount]);
