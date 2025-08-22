@@ -24,6 +24,8 @@ import ResetPassword from './pages/auth/Password';
 import { PublicCoachWebsite } from './components/website-builder/PublicCoachWebsite';
 import PreviewWebsite from './pages/PreviewWebsite';
 import { CoachReportPage } from './components/website-builder/CoachReportPage';
+import CalendarPage from './pages/dashboard/CalendarPage';
+import { AuthGuard } from './components/auth/AuthGuard';
 
 // Lazy load chat screen
 const ReportChatScreen = lazy(() => import('./screens/ReportChatScreen'));
@@ -110,6 +112,17 @@ function App() {
                   <Route path="/signup" element={<Signup />} />
                   <Route path="/auth/password" element={<ResetPassword />} />
                   <Route path="/preview/:previewId" element={<PreviewWebsite />} />
+                  
+                  {/* Protected Calendar Route - must come before catch-all */}
+                  <Route 
+                    path="/calendar" 
+                    element={
+                      <AuthGuard>
+                        <CalendarPage />
+                      </AuthGuard>
+                    } 
+                  />
+                  
                   <Route path="/:slug/vibe" element={<CoachReportPage />} />
                   <Route path="/:slug" element={<PublicCoachWebsite />} />
 

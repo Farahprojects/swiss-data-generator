@@ -57,7 +57,6 @@ const AuthedAppShell: React.FC = () => {
               <Route path="/stripe/return" element={<StripeReturn />} />
               
               {/* Protected routes */}
-              <Route path="/calendar" element={<AuthGuard><CalendarPage /></AuthGuard>} />
               <Route path="/settings" element={<AuthGuard><UserSettings /></AuthGuard>} />
               
               {/* Website preview routes */}
