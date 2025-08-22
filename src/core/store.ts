@@ -15,6 +15,7 @@ interface ChatState {
   status: ChatStatus;
   error: string | null;
   ttsVoice?: string;
+  lastSendTime?: number;
 
   startConversation: (id: string) => void;
   loadMessages: (messages: Message[]) => void;
@@ -24,6 +25,7 @@ interface ChatState {
   setError: (error: string | null) => void;
   setTtsVoice: (v: string) => void;
   clearChat: () => void;
+  triggerSend: () => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -57,4 +59,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setTtsVoice: (v) => set({ ttsVoice: v }),
 
   clearChat: () => set({ chat_id: null, messages: [], status: 'idle', error: null }),
+  
+  triggerSend: () => set({ lastSendTime: Date.now() }),
 }));
