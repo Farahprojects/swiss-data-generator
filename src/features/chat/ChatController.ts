@@ -146,7 +146,6 @@ class ChatController {
       const { transcript } = await sttService.transcribe(audioBlob, useChatStore.getState().chat_id!);
 
       if (!transcript || transcript.trim().length === 0) {
-        console.warn('[ChatController] Empty transcription - restarting turn for retry.');
         this.resetTurn(false); // Restart turn to give user another chance
         return;
       }
