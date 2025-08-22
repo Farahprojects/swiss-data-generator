@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X, Settings, User, Bell, LifeBuoy, LogOut, CreditCard, Eye, Globe } from 'lucide-react';
+import { Menu, X, Settings, User, Bell, LifeBuoy, LogOut, CreditCard, Eye, Globe, Calendar } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserAvatar } from '@/components/settings/UserAvatar';
 import Logo from '@/components/Logo';
@@ -300,7 +300,10 @@ const UnifiedNavigation = ({
                       
                       <DropdownMenuSeparator />
                       
-                      {/* API Keys removed */}
+                      <DropdownMenuItem onClick={() => navigate('/calendar')}>
+                        <Calendar className="mr-2 h-4 w-4" />
+                        Calendar
+                      </DropdownMenuItem>
                       
                       <DropdownMenuSeparator />
                       
