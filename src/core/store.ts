@@ -15,8 +15,6 @@ interface ChatState {
   status: ChatStatus;
   error: string | null;
   ttsVoice?: string;
-  lastSendTime?: number;
-  scrollToMessageId: string | null;
 
   startConversation: (id: string) => void;
   loadMessages: (messages: Message[]) => void;
@@ -26,8 +24,6 @@ interface ChatState {
   setError: (error: string | null) => void;
   setTtsVoice: (v: string) => void;
   clearChat: () => void;
-  triggerSend: () => void;
-  setScrollToMessageId: (id: string | null) => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -36,7 +32,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
   status: 'idle',
   error: null,
   ttsVoice: 'Puck',
-  scrollToMessageId: null,
 
   startConversation: (id) => set({ chat_id: id, messages: [], status: 'idle', error: null }),
 
@@ -62,8 +57,4 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setTtsVoice: (v) => set({ ttsVoice: v }),
 
   clearChat: () => set({ chat_id: null, messages: [], status: 'idle', error: null }),
-  
-  triggerSend: () => set({ lastSendTime: Date.now() }),
-
-  setScrollToMessageId: (id) => set({ scrollToMessageId: id }),
 }));

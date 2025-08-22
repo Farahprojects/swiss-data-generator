@@ -34,7 +34,6 @@ export const ChatInput = () => {
 
   const handleSend = () => {
     if (text.trim()) {
-      useChatStore.getState().triggerSend(); // Trigger send event
       chatController.sendTextMessage(text);
       setText('');
     }
