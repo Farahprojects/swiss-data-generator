@@ -41,9 +41,6 @@ export const ChatSidebarControls: React.FC = () => {
         >
           {isPolling ? 'Generating...' : 'Report'}
         </button>
-        <button type="button" className="w-full text-left px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md border border-gray-200">
-          Voice
-        </button>
         <button
           type="button"
           onClick={handleClearSession}
