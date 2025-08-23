@@ -18,14 +18,25 @@ class ConversationTtsService {
 
   private setupAudioAnalysis(audioElement: HTMLAudioElement) {
     if (typeof window === 'undefined' || !audioElement) return;
-    if (this.audioContext) return; // Already setup
-
+    
+    // Clean up any existing audio context
+    if (this.audioContext) {
+      this.audioContext.close();
+      this.audioContext = null;
+    }
+    
+    // Create fresh audio context
     this.audioContext = new AudioContext();
     this.analyser = this.audioContext.createAnalyser();
     this.analyser.fftSize = 256;
     this.sourceNode = this.audioContext.createMediaElementSource(audioElement);
     this.sourceNode.connect(this.analyser);
     this.analyser.connect(this.audioContext.destination);
+    
+    // Ensure audio context is resumed (required for iOS)
+    if (this.audioContext.state === 'suspended') {
+      this.audioContext.resume();
+    }
   }
   
   private startAudioAnalysis() {
@@ -35,17 +46,29 @@ class ConversationTtsService {
 
     const updateLevel = () => {
       if (!this.analyser) return;
-      this.analyser.getByteTimeDomainData(dataArray);
-      let sumSquares = 0.0;
-      for (const amplitude of dataArray) {
-        const normalized = (amplitude - 128) / 128;
-        sumSquares += normalized * normalized;
+      
+      try {
+        this.analyser.getByteTimeDomainData(dataArray);
+        let sumSquares = 0.0;
+        for (const amplitude of dataArray) {
+          const normalized = (amplitude - 128) / 128;
+          sumSquares += normalized * normalized;
+        }
+        this.audioLevel = Math.sqrt(sumSquares / dataArray.length);
+        this.notifyListeners();
+      } catch (error) {
+        console.warn('[ConversationTTS] Audio analysis error:', error);
+        this.audioLevel = 0;
+        this.notifyListeners();
       }
-      this.audioLevel = Math.sqrt(sumSquares / dataArray.length);
-      this.notifyListeners();
+      
       this.analysisFrameId = requestAnimationFrame(updateLevel);
     };
 
+    // Start immediately with a small initial level to trigger animation
+    this.audioLevel = 0.1;
+    this.notifyListeners();
+    
     this.analysisFrameId = requestAnimationFrame(updateLevel);
   }
 
@@ -127,12 +150,25 @@ class ConversationTtsService {
         const blob = await response.blob();
         const audio = new Audio(URL.createObjectURL(blob));
         
-        // Setup audio analysis for speaking animation
+        // Setup audio analysis for speaking animation IMMEDIATELY
         this.setupAudioAnalysis(audio);
         
+        // Start audio analysis as soon as we have the audio ready
+        // Don't wait for play event - start immediately
+        this.startAudioAnalysis();
+        
+        audio.addEventListener('canplaythrough', () => {
+          // Audio is ready to play - ensure analysis is running
+          if (!this.analysisFrameId) {
+            this.startAudioAnalysis();
+          }
+        });
+        
         audio.addEventListener('play', () => {
-          // Start audio analysis when playback begins
-          this.startAudioAnalysis();
+          // Ensure audio analysis is running when playback begins
+          if (!this.analysisFrameId) {
+            this.startAudioAnalysis();
+          }
         });
         
         audio.addEventListener('ended', () => {
@@ -149,6 +185,8 @@ class ConversationTtsService {
           reject(error);
         });
         
+        // Load and play audio immediately
+        audio.load();
         await audio.play();
         
       } catch (error) {
