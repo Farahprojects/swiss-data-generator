@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, Suspense, lazy } from 'react';
+import React, { useEffect, useRef, Suspense, lazy, useState } from 'react';
 import { ChatInput } from './ChatInput';
 import { useChatStore } from '@/core/store';
-import { Menu } from 'lucide-react';
+import { Menu, Calendar, MessageSquare } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { getChatTokens } from '@/services/auth/chatTokens';
 import { startReportReadyListener, stopReportReadyListener } from '@/services/report/reportReadyListener';
@@ -15,8 +15,10 @@ const MessageList = lazy(() => import('./MessageList').then(module => ({ default
 const ConversationOverlay = lazy(() => import('./ConversationOverlay/ConversationOverlay').then(module => ({ default: module.ConversationOverlay })));
 const ErrorStateHandler = lazy(() => import('@/components/public-report/ErrorStateHandler').then(module => ({ default: module.default })));
 const ChatSidebarControls = lazy(() => import('./ChatSidebarControls').then(module => ({ default: module.ChatSidebarControls })));
+const CalendarPage = lazy(() => import('@/pages/dashboard/CalendarPage').then(module => ({ default: module.default })));
 
 export const ChatBox = () => {
+  const [activeTab, setActiveTab] = useState<'chat' | 'calendar'>('chat');
   const { error } = useChatStore();
   const { uuid } = getChatTokens();
   const isConversationOpen = useConversationUIStore((s) => s.isConversationOpen);
@@ -133,10 +135,49 @@ export const ChatBox = () => {
       >
         <div className="flex flex-row flex-1 bg-white max-w-6xl w-full mx-auto md:border-x border-gray-100 min-h-0">
           {/* Left Sidebar (Desktop) */}
-          <div className="hidden md:flex w-64 border-r border-gray-100 p-4 flex-col gap-4 bg-gray-50/50">
-            <Suspense fallback={<div className="space-y-4"><div className="h-8 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div></div>}>
-              <ChatSidebarControls />
-            </Suspense>
+          <div className="hidden md:flex w-80 border-r border-gray-100 flex-col bg-gray-50/50">
+            {/* Tab Navigation */}
+            <div className="flex border-b border-gray-200 bg-white">
+              <button
+                onClick={() => setActiveTab('chat')}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+                  activeTab === 'chat'
+                    ? 'text-primary border-b-2 border-primary bg-primary/5'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <MessageSquare className="w-4 h-4" />
+                Chat
+              </button>
+              <button
+                onClick={() => setActiveTab('calendar')}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+                  activeTab === 'calendar'
+                    ? 'text-primary border-b-2 border-primary bg-primary/5'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Calendar className="w-4 h-4" />
+                Calendar
+              </button>
+            </div>
+            
+            {/* Tab Content */}
+            <div className="flex-1 overflow-hidden">
+              {activeTab === 'chat' ? (
+                <div className="p-4 h-full">
+                  <Suspense fallback={<div className="space-y-4"><div className="h-8 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div></div>}>
+                    <ChatSidebarControls />
+                  </Suspense>
+                </div>
+              ) : (
+                <div className="h-full overflow-hidden">
+                  <Suspense fallback={<div className="p-4 space-y-4"><div className="h-8 bg-gray-200 rounded animate-pulse"></div><div className="h-20 bg-gray-200 rounded animate-pulse"></div></div>}>
+                    <CalendarPage />
+                  </Suspense>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Main Chat Area */}
@@ -152,13 +193,52 @@ export const ChatBox = () => {
                     <Menu className="w-5 h-5" />
                   </button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-[85%] sm:max-w-xs p-4">
-                  <div className="mb-3">
-                    <h2 className="text-lg font-light italic">Settings</h2>
+                <SheetContent side="left" className="w-[85%] sm:max-w-xs p-0">
+                  {/* Mobile Tab Navigation */}
+                  <div className="flex border-b border-gray-200 bg-white">
+                    <button
+                      onClick={() => setActiveTab('chat')}
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+                        activeTab === 'chat'
+                          ? 'text-primary border-b-2 border-primary bg-primary/5'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      Chat
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('calendar')}
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+                        activeTab === 'calendar'
+                          ? 'text-primary border-b-2 border-primary bg-primary/5'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      <Calendar className="w-4 h-4" />
+                      Calendar
+                    </button>
                   </div>
-                  <Suspense fallback={<div className="space-y-4"><div className="h-8 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div></div>}>
-                    <ChatSidebarControls />
-                  </Suspense>
+                  
+                  {/* Mobile Tab Content */}
+                  <div className="flex-1 overflow-hidden">
+                    {activeTab === 'chat' ? (
+                      <div className="p-4">
+                        <div className="mb-3">
+                          <h2 className="text-lg font-light italic">Settings</h2>
+                        </div>
+                        <Suspense fallback={<div className="space-y-4"><div className="h-8 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div></div>}>
+                          <ChatSidebarControls />
+                        </Suspense>
+                      </div>
+                    ) : (
+                      <div className="h-full overflow-hidden">
+                        <Suspense fallback={<div className="p-4 space-y-4"><div className="h-8 bg-gray-200 rounded animate-pulse"></div><div className="h-20 bg-gray-200 rounded animate-pulse"></div></div>}>
+                          <CalendarPage />
+                        </Suspense>
+                      </div>
+                    )}
+                  </div>
                 </SheetContent>
               </Sheet>
               <div className="flex-1" />

@@ -1,6 +1,6 @@
 
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
@@ -106,6 +106,16 @@ function App() {
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />
                   <Route path="/auth/password" element={<ResetPassword />} />
+                  
+                  {/* Default authenticated route - redirect to chat */}
+                  <Route 
+                    path="/dashboard" 
+                    element={
+                      <AuthGuard>
+                        <Navigate to="/chat" replace />
+                      </AuthGuard>
+                    } 
+                  />
                   
                   {/* Protected Calendar Route */}
                   <Route 
