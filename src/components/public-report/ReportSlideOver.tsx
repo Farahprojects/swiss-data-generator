@@ -21,40 +21,7 @@ interface ReportSlideOverProps {
 }
 
 const ReportViewerActions: React.FC<{ guestReportId?: string }> = ({ guestReportId }) => {
-  const { toast } = useToast();
-  const [isDownloading, setIsDownloading] = useState(false);
-  
-  const handleDownload = async () => {
-    if (!guestReportId) {
-      toast({ variant: 'destructive', title: 'Download Failed', description: 'Report ID is missing.' });
-      return;
-    }
-    setIsDownloading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('download-report-pdf', { body: { guest_report_id: guestReportId } });
-      if (error || !data) throw new Error(error?.message || 'No data');
-      const blob = new Blob([data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Therai-Report-${guestReportId.substring(0, 8)}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    } catch (e: any) {
-      toast({ variant: 'destructive', title: 'Download Failed', description: e.message || 'Please try again.' });
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
-  return (
-    <Button variant="outline" size="sm" onClick={handleDownload} disabled={isDownloading} className="text-gray-700 border-gray-200">
-      <Download className="w-4 h-4 mr-1" />
-      PDF
-    </Button>
-  );
+  return null;
 };
 
 export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({ 

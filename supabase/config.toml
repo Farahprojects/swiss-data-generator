@@ -15,8 +15,7 @@ verify_jwt = false
 [functions.create-checkout]
 verify_jwt = false
 
-[functions.download-report-pdf]
-verify_jwt = false
+
 
 [functions.create-report]
 verify_jwt = false

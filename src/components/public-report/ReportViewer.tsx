@@ -19,38 +19,7 @@ interface ReportViewerProps {
 }
 
 const ReportViewerActions: React.FC = () => {
-  const { toast } = useToast();
-  const [isDownloading, setIsDownloading] = useState(false);
-  const handleDownload = async () => {
-    const { uuid } = getChatTokens();
-    if (!uuid) {
-      toast({ variant: 'destructive', title: 'Download Failed', description: 'Report ID is missing.' });
-      return;
-    }
-    setIsDownloading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('download-report-pdf', { body: { guest_report_id: uuid } });
-      if (error || !data) throw new Error(error?.message || 'No data');
-      const blob = new Blob([data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Therai-Report-${uuid.substring(0, 8)}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    } catch (e: any) {
-      toast({ variant: 'destructive', title: 'Download Failed', description: e.message || 'Please try again.' });
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-  return (
-    <Button variant="outline" size="sm" onClick={handleDownload} disabled={isDownloading} className="text-gray-700 border-gray-200">
-      {isDownloading ? 'Downloading...' : 'PDF'}
-    </Button>
-  );
+  return null;
 };
 
 type TransitionPhase = 'idle' | 'fading' | 'clearing' | 'transitioning' | 'complete';
