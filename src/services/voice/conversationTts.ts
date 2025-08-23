@@ -12,11 +12,27 @@ class ConversationTtsService {
   private audioLevel = 0;
   private listeners = new Set<() => void>();
 
-  // ✅ SIMPLIFIED: Removed complex audio analysis - just use simple level control
+  // ✅ REAL AUDIO ANALYSIS: Fields for amplitude-driven animation
+  private audioContext?: AudioContext;
+  private analyser?: AnalyserNode;
+  private dataArray?: Uint8Array;
+  private rafId?: number;
+  private currentNodes?: { source: MediaElementAudioSourceNode; gain: GainNode };
 
   // Stop all audio playback and cleanup
   public stopAllAudio(): void {
-    // ✅ SIMPLIFIED: Just reset audio level and stop all audio elements
+    // ✅ REAL AUDIO ANALYSIS: Cleanup analyser and RAF
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = undefined;
+    }
+    
+    if (this.currentNodes) {
+      this.currentNodes.source.disconnect();
+      this.currentNodes.gain.disconnect();
+      this.currentNodes = undefined;
+    }
+    
     this.audioLevel = 0;
     this.notifyListeners();
     
@@ -75,42 +91,23 @@ class ConversationTtsService {
         const blob = await response.blob();
         const audioUrl = URL.createObjectURL(blob);
         const audio = new Audio(audioUrl);
-        
-        // ✅ ANIMATED: Start with low level and animate during playback
-        this.audioLevel = 0.1;
-        this.notifyListeners();
-        
-        // ✅ SIMPLE: Animate based on actual audio playback
-        const animateAudio = () => {
-          if (audio.ended || audio.paused) {
-            this.audioLevel = 0;
-            this.notifyListeners();
-            return;
-          }
-          
-          // Simple animation: just move with the audio progress
-          const progress = audio.currentTime / audio.duration;
-          this.audioLevel = 0.3 + (progress * 0.4); // 0.3 to 0.7 range
-          this.notifyListeners();
-          
-          requestAnimationFrame(animateAudio);
-        };
-        
-        // Start animation loop
-        requestAnimationFrame(animateAudio);
-        
-        // ✅ ANIMATED: Single event listener for completion
+
+        // ✅ REAL AUDIO ANALYSIS: Setup audio context and analyser
+        await this.setupAudioAnalysis(audio);
+
+        // Start real-time amplitude analysis
+        this.startAmplitudeAnalysis();
+
+        // ✅ REAL AUDIO ANALYSIS: Event listeners with cleanup
         audio.addEventListener('ended', () => {
-          this.audioLevel = 0;
-          this.notifyListeners();
+          this.cleanupAnalysis();
           URL.revokeObjectURL(audioUrl);
           resolve();
         });
         
         audio.addEventListener('error', (error) => {
           console.error('[ConversationTTS] Audio playback error:', error);
-          this.audioLevel = 0;
-          this.notifyListeners();
+          this.cleanupAnalysis();
           URL.revokeObjectURL(audioUrl);
           reject(error);
         });
@@ -158,6 +155,102 @@ class ConversationTtsService {
       console.error('[ConversationTTS] getFallbackAudio failed:', error);
       throw error;
     }
+  }
+
+  // ✅ REAL AUDIO ANALYSIS: Setup audio context and analyser
+  private async setupAudioAnalysis(audio: HTMLAudioElement): Promise<void> {
+    try {
+      // Create AudioContext with fallback
+      if (!this.audioContext) {
+        const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
+        if (!AudioContextClass) {
+          console.warn('[ConversationTTS] AudioContext not supported - using static animation');
+          this.audioLevel = 0.5;
+          this.notifyListeners();
+          return;
+        }
+        this.audioContext = new AudioContextClass();
+      }
+
+      // Resume context if suspended
+      if (this.audioContext.state === 'suspended') {
+        await this.audioContext.resume();
+      }
+
+      // Setup analyser
+      if (!this.analyser) {
+        this.analyser = this.audioContext.createAnalyser();
+        this.analyser.fftSize = 2048;
+        this.analyser.smoothingTimeConstant = 0.85;
+        this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+      }
+
+      // Create source and gain nodes
+      const source = this.audioContext.createMediaElementSource(audio);
+      const gain = this.audioContext.createGain();
+      gain.gain.value = 0; // Zero gain to prevent echo while keeping context active
+
+      // Connect: source -> analyser -> gain -> destination
+      source.connect(this.analyser);
+      this.analyser.connect(gain);
+      gain.connect(this.audioContext.destination);
+
+      this.currentNodes = { source, gain };
+
+    } catch (error) {
+      console.warn('[ConversationTTS] Audio analysis setup failed - using static animation:', error);
+      this.audioLevel = 0.5;
+      this.notifyListeners();
+    }
+  }
+
+  // ✅ REAL AUDIO ANALYSIS: Start amplitude analysis loop
+  private startAmplitudeAnalysis(): void {
+    if (!this.analyser || !this.dataArray) return;
+
+    const analyzeAmplitude = () => {
+      if (!this.analyser || !this.dataArray) return;
+
+      // Get time-domain data
+      this.analyser.getByteTimeDomainData(this.dataArray);
+
+      // Compute RMS amplitude
+      let sum = 0;
+      for (let i = 0; i < this.dataArray.length; i++) {
+        const v = (this.dataArray[i] - 128) / 128; // Convert to -1..1
+        sum += v * v;
+      }
+      const rms = Math.sqrt(sum / this.dataArray.length);
+
+      // Map RMS to 0..1 with threshold and smoothing
+      const level = Math.max(0, Math.min(1, (rms - 0.02) / 0.3));
+      
+      // Smooth the level changes
+      this.audioLevel = this.audioLevel * 0.8 + level * 0.2;
+      this.notifyListeners();
+
+      // Continue analysis
+      this.rafId = requestAnimationFrame(analyzeAmplitude);
+    };
+
+    this.rafId = requestAnimationFrame(analyzeAmplitude);
+  }
+
+  // ✅ REAL AUDIO ANALYSIS: Cleanup analysis
+  private cleanupAnalysis(): void {
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = undefined;
+    }
+    
+    if (this.currentNodes) {
+      this.currentNodes.source.disconnect();
+      this.currentNodes.gain.disconnect();
+      this.currentNodes = undefined;
+    }
+    
+    this.audioLevel = 0;
+    this.notifyListeners();
   }
 }
 
