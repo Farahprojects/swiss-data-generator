@@ -306,9 +306,8 @@ function fallbackToPolling(guestReportId: string, startedAt: number): void {
     const totalElapsed = Date.now() - startedAt;
     
     if (totalElapsed >= 15000) {
-      // 15 seconds total reached - show error popup
-      console.log('[ReportReady] 15-second total timeout reached, showing error popup');
-      await triggerErrorHandler(guestReportId, 'Report generation is taking longer than expected. Please try again later.');
+      // 15 seconds total reached - stop listener and let 8-second polling fallback handle errors
+      console.log('[ReportReady] 15-second total timeout reached, stopping listener for polling fallback');
       stopReportReadyListener(guestReportId);
       return;
     }
@@ -323,6 +322,7 @@ function fallbackToPolling(guestReportId: string, startedAt: number): void {
       const { hasError, errorMessage } = await checkReportLogsForError(guestReportId);
       
       if (hasError) {
+        // Only trigger error handler for actual errors, not timeouts
         await triggerErrorHandler(guestReportId, errorMessage || 'Unknown error');
         stopReportReadyListener(guestReportId);
       } else if (activeListeners[guestReportId]) {
@@ -378,6 +378,12 @@ async function startPollingFallback(guestReportId: string): Promise<void> {
   const pollingStartTime = Date.now();
   console.log(`[ReportReady] 🔄 STARTING POLLING FALLBACK at ${new Date(pollingStartTime).toISOString()} for: ${guestReportId}`);
   
+  // Check if report is already ready before starting polling
+  if (useReportReadyStore.getState().isReportReady) {
+    console.log(`[ReportReady] ⏭️ Skipping polling fallback - report already ready for: ${guestReportId}`);
+    return;
+  }
+  
   let attempts = 0;
   const maxAttempts = 8; // Poll for 8 seconds
   
@@ -385,6 +391,12 @@ async function startPollingFallback(guestReportId: string): Promise<void> {
     attempts++;
     const attemptTime = Date.now();
     console.log(`[ReportReady] 🔍 POLLING ATTEMPT ${attempts}/${maxAttempts} at ${new Date(attemptTime).toISOString()} for: ${guestReportId}`);
+    
+    // Check if report became ready between attempts
+    if (useReportReadyStore.getState().isReportReady) {
+      console.log(`[ReportReady] ⏭️ Stopping polling - report became ready for: ${guestReportId}`);
+      return;
+    }
     
     try {
       const { data, error } = await supabase
