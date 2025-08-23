@@ -32,8 +32,6 @@ import { SettingsModalProvider } from '@/contexts/SettingsModalContext';
 import { PricingProvider } from '@/contexts/PricingContext';
 import { ReportModalProvider } from '@/contexts/ReportModalContext';
 
-// Lazy load the authenticated shell
-const AuthedAppShell = lazy(() => import('./AuthedAppShell'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -49,10 +47,6 @@ const ConditionalAuth: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const location = useLocation();
   const path = location.pathname;
 
-  if (path.startsWith('/dashboard')) {
-    // Dashboard shell provides its own providers
-    return <>{children}</>;
-  }
 
   if (path.startsWith('/report')) {
     // Public report now needs auth-aware UI with navigation
@@ -133,15 +127,6 @@ function App() {
                     } 
                   />
 
-                  {/* Authenticated Routes */}
-                  <Route 
-                    path="/dashboard/*"
-                    element={
-                      <Suspense fallback={<div>Loading Dashboard...</div>}>
-                        <AuthedAppShell />
-                      </Suspense>
-                    } 
-                  />
                   
                   <Route path="*" element={<NotFound />} />
                 </Routes>
