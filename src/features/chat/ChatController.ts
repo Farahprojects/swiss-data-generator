@@ -326,6 +326,9 @@ class ChatController {
   cancelTurn() {
     if (!this.isTurnActive) return;
     
+    // ✅ ADDED: Stop all TTS audio immediately
+    conversationTtsService.stopAllAudio();
+    
     // Clear any pending timeouts
     if (this.turnRestartTimeout) {
       clearTimeout(this.turnRestartTimeout);
@@ -338,6 +341,9 @@ class ChatController {
 
   resetConversationService() {
     this.isResetting = true;
+    
+    // ✅ ADDED: Stop all TTS audio immediately
+    conversationTtsService.stopAllAudio();
     
     // Clear any existing timeouts
     if (this.turnRestartTimeout) {
@@ -361,6 +367,9 @@ class ChatController {
 
   // Add cleanup method for component unmount
   cleanup() {
+    // ✅ ADDED: Stop all TTS audio immediately
+    conversationTtsService.stopAllAudio();
+    
     // Clear all timeouts
     if (this.turnRestartTimeout) {
       clearTimeout(this.turnRestartTimeout);
