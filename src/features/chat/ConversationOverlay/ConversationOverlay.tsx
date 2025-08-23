@@ -19,10 +19,13 @@ export const ConversationOverlay: React.FC = () => {
   
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = () => {
-    // Kill all audio immediately
+    // 1. Kill all audio immediately
     conversationTtsService.stopAllAudio();
     
-    // Close the UI
+    // 2. Stop microphone and tell listener we're done
+    chatController.resetConversationService();
+    
+    // 3. Close the UI
     closeConversation();
   };
 
