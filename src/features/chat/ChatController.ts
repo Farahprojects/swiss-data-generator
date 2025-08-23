@@ -170,6 +170,7 @@ class ChatController {
     
     this.initializeConversationService();
     
+    console.log('[ChatController] Setting status to recording...');
     useChatStore.getState().setStatus('recording');
     // conversationFlowMonitor.observeStep('listening');
     
@@ -290,7 +291,14 @@ class ChatController {
 
   private resetTurn(endConversationFlow: boolean = true) {
     console.log(`[ChatController] resetTurn called. endConversationFlow: ${endConversationFlow}`);
-    useChatStore.getState().setStatus('idle');
+    
+    if (endConversationFlow) {
+      useChatStore.getState().setStatus('idle');
+    } else {
+      // Keep status as 'idle' briefly before starting next turn
+      useChatStore.getState().setStatus('idle');
+    }
+    
     this.isTurnActive = false;
     
     // Clear any existing turn restart timeout
@@ -317,8 +325,12 @@ class ChatController {
     
     if (!endConversationFlow && !this.isResetting) {
       // Short delay before starting next turn
+      console.log('[ChatController] Scheduling next turn in 500ms...');
       this.turnRestartTimeout = setTimeout(() => { 
-        if (!this.isResetting) this.startTurn(); 
+        if (!this.isResetting) {
+          console.log('[ChatController] Starting next turn...');
+          this.startTurn(); 
+        }
       }, 500);
     }
   }

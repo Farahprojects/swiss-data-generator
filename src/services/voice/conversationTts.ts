@@ -76,11 +76,31 @@ class ConversationTtsService {
         const audioUrl = URL.createObjectURL(blob);
         const audio = new Audio(audioUrl);
         
-        // ✅ SIMPLIFIED: Start animation immediately without complex analysis setup
+        // ✅ ANIMATED: Start with low level and animate during playback
         this.audioLevel = 0.1;
         this.notifyListeners();
         
-        // ✅ SIMPLIFIED: Single event listener for completion
+        // ✅ ANIMATED: Create animation loop during playback
+        const animateAudio = () => {
+          if (audio.ended || audio.paused) {
+            this.audioLevel = 0;
+            this.notifyListeners();
+            return;
+          }
+          
+          // Simulate audio level animation (0.1 to 0.8)
+          const progress = audio.currentTime / audio.duration;
+          const wave = Math.sin(progress * Math.PI * 8) * 0.3 + 0.5;
+          this.audioLevel = Math.max(0.1, Math.min(0.8, wave));
+          this.notifyListeners();
+          
+          requestAnimationFrame(animateAudio);
+        };
+        
+        // Start animation loop
+        requestAnimationFrame(animateAudio);
+        
+        // ✅ ANIMATED: Single event listener for completion
         audio.addEventListener('ended', () => {
           this.audioLevel = 0;
           this.notifyListeners();
