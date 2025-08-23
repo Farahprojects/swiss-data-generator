@@ -5,6 +5,7 @@ import { VoiceBubble } from './VoiceBubble';
 import { useChatStore } from '@/core/store';
 import { chatController } from '../ChatController';
 import { useConversationAudioLevel } from '@/hooks/useConversationAudioLevel';
+import { conversationTtsService } from '@/services/voice/conversationTts';
 // import { useConversationFlowMonitor } from '@/hooks/useConversationFlowMonitor';
 // import { FlowMonitorIndicator } from './FlowMonitorIndicator'; // Hidden for production
 import { AnimatePresence, motion } from 'framer-motion';
@@ -18,7 +19,10 @@ export const ConversationOverlay: React.FC = () => {
   
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = () => {
-    // 1. Stop all audio playback immediately (synchronous)
+    // 1. Stop conversation TTS audio immediately (synchronous)
+    conversationTtsService.stopAllAudio();
+    
+    // 2. Stop all other audio playback immediately (synchronous)
     const allAudioElements = document.querySelectorAll('audio');
     allAudioElements.forEach((audio) => {
       audio.pause();
@@ -26,7 +30,7 @@ export const ConversationOverlay: React.FC = () => {
       audio.src = '';
     });
     
-    // 2. Tell browser to stop all microphone access (synchronous)
+    // 3. Tell browser to stop all microphone access (synchronous)
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       // This will stop any active microphone streams
       navigator.mediaDevices.getUserMedia({ audio: true })
@@ -36,10 +40,10 @@ export const ConversationOverlay: React.FC = () => {
         .catch(() => {}); // Ignore errors, just ensure mic is released
     }
     
-    // 3. Reset all conversation state (synchronous)
+    // 4. Reset all conversation state (synchronous)
     chatController.resetConversationService();
     
-    // 4. Close the UI (synchronous)
+    // 5. Close the UI (synchronous)
     closeConversation();
   };
 

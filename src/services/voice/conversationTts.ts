@@ -58,6 +58,29 @@ class ConversationTtsService {
     this.notifyListeners();
   }
 
+  // Stop all audio playback and cleanup
+  public stopAllAudio(): void {
+    // Stop audio analysis
+    this.stopAudioAnalysis();
+    
+    // Stop any playing audio elements
+    const allAudioElements = document.querySelectorAll('audio');
+    allAudioElements.forEach((audio) => {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.src = '';
+    });
+    
+    // Cleanup audio context
+    if (this.audioContext) {
+      this.audioContext.close();
+      this.audioContext = null;
+    }
+    
+    this.analyser = null;
+    this.sourceNode = null;
+  }
+
   public getCurrentAudioLevel(): number {
     return this.audioLevel;
   }
