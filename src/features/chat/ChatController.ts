@@ -68,14 +68,12 @@ class ChatController {
     }
     
     const client_msg_id = uuidv4();
-    console.log(`[ChatController] Sending message with client_msg_id: ${client_msg_id}, mode: ${this.mode}, sessionId: ${this.sessionId}`);
     this.addOptimisticMessages(chat_id, text, client_msg_id);
     
     // Start listening for assistant message
     // this.startAssistantMessageListener(chat_id); // Removed real-time listener
     
     try {
-      console.log('[ChatController] Calling llmService.sendMessage...');
       const finalMessage = await llmService.sendMessage({ 
         chat_id, 
         text, 
@@ -83,14 +81,12 @@ class ChatController {
         mode: this.mode,
         sessionId: this.sessionId
       });
-      console.log('[ChatController] BACKUP_FETCH_USED=true - Received response from chat-send:', finalMessage);
       
       // Stop the listener since we got the response
       // this.stopAssistantMessageListener(); // Removed real-time listener
       
       // Replace the "Thinking..." message with the real assistant message
       useChatStore.getState().updateMessage(`thinking-${client_msg_id}`, finalMessage);
-      console.log(`[ChatController] Replaced thinking message with real assistant message - ID: ${finalMessage.id}, turnId: ${client_msg_id}`);
       
     } catch (error) {
       console.error("[ChatController] Error sending message:", error);
@@ -119,8 +115,6 @@ class ChatController {
       createdAt: new Date().toISOString(),
       status: "thinking",
     };
-
-    console.log(`[ChatController] Creating optimistic messages - User ID: ${client_msg_id}, Thinking ID: ${optimisticAssistantMessage.id}`);
 
     useChatStore.getState().addMessage(optimisticUserMessage);
     useChatStore.getState().addMessage(optimisticAssistantMessage);
