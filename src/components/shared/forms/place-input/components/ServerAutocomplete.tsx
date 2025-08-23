@@ -180,6 +180,12 @@ export const ServerAutocomplete: React.FC<ServerAutocompleteProps> = ({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck="false"
+          data-lpignore="true"
+          data-form-type="other"
           className="h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400"
           style={{ fontSize: '16px' }} // Prevent zoom on iOS
         />

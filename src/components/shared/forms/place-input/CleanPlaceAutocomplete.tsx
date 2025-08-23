@@ -236,6 +236,11 @@ export const CleanPlaceAutocomplete = ({
               placeholder={placeholder}
               disabled={disabled}
               autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
+              data-lpignore="true"
+              data-form-type="other"
               className="h-12 pl-10"
             />
             <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -298,6 +303,11 @@ export const CleanPlaceAutocomplete = ({
                     placeholder={placeholder}
                     autoFocus
                     autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck="false"
+                    data-lpignore="true"
+                    data-form-type="other"
                     className="h-12 pl-10 text-base"
                     style={{ fontSize: '16px' }}
                   />
