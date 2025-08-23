@@ -190,12 +190,6 @@ class ChatController {
     useChatStore.getState().setStatus('transcribing');
     // conversationFlowMonitor.observeStep('transcribing');
     
-    // ✅ ADDED: Timeout to prevent getting stuck in transcribing state
-    const timeoutId = setTimeout(() => {
-      console.warn('[ChatController] Transcription timeout - restarting turn');
-      this.resetTurn(false);
-    }, 10000); // 10 second timeout
-    
     try {
       const audioBlob = await conversationMicrophoneService.stopRecording();
       
@@ -240,18 +234,11 @@ class ChatController {
       
       // Reset auto-recovery on successful turn completion
       // conversationFlowMonitor.resetAutoRecovery();
-      
-      // ✅ ADDED: Clear timeout on successful completion
-      clearTimeout(timeoutId);
 
     } catch (error: any) {
       // conversationFlowMonitor.observeError('transcribing', error);
       console.error("[ChatController] Error processing voice input:", error);
       useChatStore.getState().setError('Failed to process audio.');
-      
-      // ✅ ADDED: Clear timeout on error
-      clearTimeout(timeoutId);
-      
       this.resetTurn();
     }
   }
