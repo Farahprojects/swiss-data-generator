@@ -13,9 +13,6 @@ const activeListeners: Record<string, {
 
 // Trigger context injection for chat when report is ready
 async function triggerContextInjection(guestReportId: string): Promise<void> {
-  const injectionStartTime = Date.now();
-  console.log(`[ReportReady] 📥 STARTING CONTEXT INJECTION at ${new Date(injectionStartTime).toISOString()} for: ${guestReportId}`);
-  
   try {
     const response = await supabase.functions.invoke('context-injector', {
       body: { guest_report_id: guestReportId }
@@ -23,10 +20,6 @@ async function triggerContextInjection(guestReportId: string): Promise<void> {
 
     if (response.error) {
       console.error('[ReportReady] Context injection failed:', response.error);
-    } else {
-      const injectionEndTime = Date.now();
-      const injectionDuration = injectionEndTime - injectionStartTime;
-      console.log(`[ReportReady] ✅ CONTEXT INJECTION COMPLETED at ${new Date(injectionEndTime).toISOString()} after ${injectionDuration}ms for: ${guestReportId}`);
     }
   } catch (error) {
     console.error('[ReportReady] Error triggering context injection:', error);
@@ -135,9 +128,6 @@ async function triggerErrorHandler(guestReportId: string, errorMessage: string):
 }
 
 export function startReportReadyListener(guestReportId: string): void {
-  const startTime = Date.now();
-  console.log(`[ReportReady] 🚀 STARTING LISTENER at ${new Date(startTime).toISOString()} for: ${guestReportId}`);
-  
   if (!guestReportId) {
     console.warn('[ReportReady] No guestReportId provided');
     return;
@@ -145,13 +135,11 @@ export function startReportReadyListener(guestReportId: string): void {
 
   // Prevent duplicate listeners
   if (activeListeners[guestReportId]) {
-    console.log(`[ReportReady] Listener already exists for: ${guestReportId}, stopping existing one`);
     stopReportReadyListener(guestReportId);
   }
 
   // Check if report is already ready in store
   if (useReportReadyStore.getState().isReportReady) {
-    console.log(`[ReportReady] Report already ready in store for: ${guestReportId}`);
     return;
   }
 
@@ -160,14 +148,12 @@ export function startReportReadyListener(guestReportId: string): void {
     .then(({ hasRow, seen }) => {
       if (hasRow && seen) {
         // Already handled; mark as ready
-        console.log(`[ReportReady] ✅ Report already exists and seen for: ${guestReportId}`);
         useReportReadyStore.getState().setReportReady(true);
         return;
       }
 
       if (hasRow && !seen) {
         // Report exists but not marked as seen yet, mark it and set ready
-        console.log(`[ReportReady] 📝 Report exists but not seen, marking as seen for: ${guestReportId}`);
         markReportSeen(guestReportId).then(() => {
           useReportReadyStore.getState().setReportReady(true);
         });
@@ -175,7 +161,6 @@ export function startReportReadyListener(guestReportId: string): void {
       }
 
       // Report doesn't exist yet, set up real-time listener with 13-second timeout
-      console.log(`[ReportReady] 🔄 Setting up real-time listener for: ${guestReportId}`);
       setupRealtimeListener(guestReportId);
     })
     .catch((error) => {
@@ -186,7 +171,6 @@ export function startReportReadyListener(guestReportId: string): void {
 
 function setupRealtimeListener(guestReportId: string): void {
   const startedAt = Date.now();
-  console.log(`[ReportReady] 📡 SETTING UP REALTIME LISTENER at ${new Date(startedAt).toISOString()} for: ${guestReportId}`);
   
   // Set listening state
   useReportReadyStore.getState().startPolling();
@@ -203,7 +187,6 @@ function setupRealtimeListener(guestReportId: string): void {
         filter: `guest_report_id=eq.${guestReportId}`
       },
       (payload) => {
-        console.log(`[ReportReady] 📨 REALTIME SIGNAL RECEIVED at ${new Date().toISOString()} for: ${guestReportId}`, payload);
         handleReportReady(guestReportId, startedAt);
       }
     )
@@ -265,15 +248,11 @@ function setupRealtimeListener(guestReportId: string): void {
 }
 
 function handleReportReady(guestReportId: string, startedAt: number): void {
-  const duration = Date.now() - startedAt;
-  console.log(`[ReportReady] ✅ REPORT READY at ${new Date().toISOString()} for ${guestReportId} after ${duration}ms`);
-  
   // Set report as ready first (for UI)
   useReportReadyStore.getState().setReportReady(true);
   stopReportReadyListener(guestReportId);
   
   // Trigger context injection for chat
-  console.log(`[ReportReady] 🔄 Triggering context injection for: ${guestReportId}`);
   triggerContextInjection(guestReportId);
 }
 
@@ -340,9 +319,6 @@ function fallbackToPolling(guestReportId: string, startedAt: number): void {
 export function stopReportReadyListener(guestReportId: string): void {
   const listener = activeListeners[guestReportId];
   if (listener) {
-    const stopTime = Date.now();
-    console.log(`[ReportReady] 🛑 STOPPING LISTENER at ${new Date(stopTime).toISOString()} for: ${guestReportId}`);
-    
     // Clear main timeout if exists
     if (listener.timeoutId) {
       clearTimeout(listener.timeoutId);
@@ -366,8 +342,6 @@ export function stopReportReadyListener(guestReportId: string): void {
     // Update store state
     useReportReadyStore.getState().stopPolling();
     
-    console.log(`[ReportReady] 🛑 LISTENER STOPPED at ${new Date().toISOString()} for: ${guestReportId}`);
-    
     // Start polling fallback for 8 seconds before triggering error handler
     startPollingFallback(guestReportId);
   }
@@ -375,12 +349,8 @@ export function stopReportReadyListener(guestReportId: string): void {
 
 // Polling fallback function that checks signal table every second for 8 seconds
 async function startPollingFallback(guestReportId: string): Promise<void> {
-  const pollingStartTime = Date.now();
-  console.log(`[ReportReady] 🔄 STARTING POLLING FALLBACK at ${new Date(pollingStartTime).toISOString()} for: ${guestReportId}`);
-  
   // Check if report is already ready before starting polling
   if (useReportReadyStore.getState().isReportReady) {
-    console.log(`[ReportReady] ⏭️ Skipping polling fallback - report already ready for: ${guestReportId}`);
     return;
   }
   
@@ -389,12 +359,9 @@ async function startPollingFallback(guestReportId: string): Promise<void> {
   
   const poll = async () => {
     attempts++;
-    const attemptTime = Date.now();
-    console.log(`[ReportReady] 🔍 POLLING ATTEMPT ${attempts}/${maxAttempts} at ${new Date(attemptTime).toISOString()} for: ${guestReportId}`);
     
     // Check if report became ready between attempts
     if (useReportReadyStore.getState().isReportReady) {
-      console.log(`[ReportReady] ⏭️ Stopping polling - report became ready for: ${guestReportId}`);
       return;
     }
     
@@ -406,12 +373,8 @@ async function startPollingFallback(guestReportId: string): Promise<void> {
         .limit(1);
 
       if (!error && data && data.length > 0) {
-        const foundTime = Date.now();
-        console.log(`[ReportReady] ✅ SIGNAL FOUND during polling at ${new Date(foundTime).toISOString()} for: ${guestReportId}`);
         handleReportReady(guestReportId, Date.now());
         return;
-      } else {
-        console.log(`[ReportReady] ❌ No signal found in attempt ${attempts} for: ${guestReportId}`);
       }
     } catch (error) {
       console.warn('[ReportReady] Polling fallback error:', error);
@@ -422,10 +385,6 @@ async function startPollingFallback(guestReportId: string): Promise<void> {
       setTimeout(poll, 1000); // Poll every 1 second
     } else {
       // After 8 seconds of polling, trigger error handler
-      const pollingEndTime = Date.now();
-      const totalPollingTime = pollingEndTime - pollingStartTime;
-      console.log(`[ReportReady] ⏰ POLLING FALLBACK COMPLETED at ${new Date(pollingEndTime).toISOString()} after ${totalPollingTime}ms for: ${guestReportId}`);
-      console.log(`[ReportReady] 🚨 Triggering error handler for: ${guestReportId}`);
       await triggerErrorHandler(guestReportId, 'Report generation is taking longer than expected. Please try again later.');
     }
   };
