@@ -20,9 +20,6 @@ import StripeReturn from './pages/StripeReturn';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ResetPassword from './pages/auth/Password';
-import { PublicCoachWebsite } from './components/website-builder/PublicCoachWebsite';
-import PreviewWebsite from './pages/PreviewWebsite';
-import { CoachReportPage } from './components/website-builder/CoachReportPage';
 import CalendarPage from './pages/dashboard/CalendarPage';
 import { AuthGuard } from './components/auth/AuthGuard';
 
@@ -115,9 +112,8 @@ function App() {
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />
                   <Route path="/auth/password" element={<ResetPassword />} />
-                  <Route path="/preview/:previewId" element={<PreviewWebsite />} />
                   
-                  {/* Protected Calendar Route - must come before catch-all */}
+                  {/* Protected Calendar Route */}
                   <Route 
                     path="/calendar" 
                     element={
@@ -126,9 +122,6 @@ function App() {
                       </AuthGuard>
                     } 
                   />
-                  
-                  <Route path="/:slug/vibe" element={<CoachReportPage />} />
-                  <Route path="/:slug" element={<PublicCoachWebsite />} />
 
                   {/* Chat Route */}
                   <Route 

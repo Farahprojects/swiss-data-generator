@@ -15,9 +15,6 @@ import About from './pages/About';
 import Legal from './pages/Legal';
 
 import CalendarPage from './pages/dashboard/CalendarPage';
-import { PublicCoachWebsite } from './components/website-builder/PublicCoachWebsite';
-import PreviewWebsite from './pages/PreviewWebsite';
-import { CoachReportPage } from './components/website-builder/CoachReportPage';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import StripeReturn from './pages/StripeReturn';
@@ -58,11 +55,6 @@ const AuthedAppShell: React.FC = () => {
               
               {/* Protected routes */}
               <Route path="/settings" element={<AuthGuard><UserSettings /></AuthGuard>} />
-              
-              {/* Website preview routes */}
-              <Route path="/coach/:username" element={<PublicCoachWebsite />} />
-              <Route path="/coach/:username/report/:reportId" element={<CoachReportPage />} />
-              <Route path="/preview" element={<PreviewWebsite />} />
               
               {/* 404 */}
               <Route path="*" element={<NotFound />} />
