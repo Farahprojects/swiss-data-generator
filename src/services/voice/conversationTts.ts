@@ -9,82 +9,16 @@ export interface SpeakAssistantOptions {
 }
 
 class ConversationTtsService {
-  private audioContext: AudioContext | null = null;
-  private analyser: AnalyserNode | null = null;
-  private sourceNode: MediaElementAudioSourceNode | null = null;
   private audioLevel = 0;
-  private analysisFrameId: number | null = null;
   private listeners = new Set<() => void>();
 
-  private setupAudioAnalysis(audioElement: HTMLAudioElement) {
-    if (typeof window === 'undefined' || !audioElement) return;
-    
-    // Clean up any existing audio context
-    if (this.audioContext) {
-      this.audioContext.close();
-      this.audioContext = null;
-    }
-    
-    // Create fresh audio context
-    this.audioContext = new AudioContext();
-    this.analyser = this.audioContext.createAnalyser();
-    this.analyser.fftSize = 256;
-    this.sourceNode = this.audioContext.createMediaElementSource(audioElement);
-    this.sourceNode.connect(this.analyser);
-    this.analyser.connect(this.audioContext.destination);
-    
-    // Ensure audio context is resumed (required for iOS)
-    if (this.audioContext.state === 'suspended') {
-      this.audioContext.resume();
-    }
-  }
-  
-  private startAudioAnalysis() {
-    if (!this.analyser || this.analysisFrameId) return;
-
-    const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
-
-    const updateLevel = () => {
-      if (!this.analyser) return;
-      
-      try {
-        this.analyser.getByteTimeDomainData(dataArray);
-        let sumSquares = 0.0;
-        for (const amplitude of dataArray) {
-          const normalized = (amplitude - 128) / 128;
-          sumSquares += normalized * normalized;
-        }
-        this.audioLevel = Math.sqrt(sumSquares / dataArray.length);
-        this.notifyListeners();
-      } catch (error) {
-        console.warn('[ConversationTTS] Audio analysis error:', error);
-        this.audioLevel = 0;
-        this.notifyListeners();
-      }
-      
-      this.analysisFrameId = requestAnimationFrame(updateLevel);
-    };
-
-    // Start immediately with a small initial level to trigger animation
-    this.audioLevel = 0.1;
-    this.notifyListeners();
-    
-    this.analysisFrameId = requestAnimationFrame(updateLevel);
-  }
-
-  private stopAudioAnalysis() {
-    if (this.analysisFrameId) {
-      cancelAnimationFrame(this.analysisFrameId);
-      this.analysisFrameId = null;
-    }
-    this.audioLevel = 0;
-    this.notifyListeners();
-  }
+  // ✅ SIMPLIFIED: Removed complex audio analysis - just use simple level control
 
   // Stop all audio playback and cleanup
   public stopAllAudio(): void {
-    // Stop audio analysis
-    this.stopAudioAnalysis();
+    // ✅ SIMPLIFIED: Just reset audio level and stop all audio elements
+    this.audioLevel = 0;
+    this.notifyListeners();
     
     // Stop any playing audio elements
     const allAudioElements = document.querySelectorAll('audio');
@@ -93,15 +27,6 @@ class ConversationTtsService {
       audio.currentTime = 0;
       audio.src = '';
     });
-    
-    // Cleanup audio context
-    if (this.audioContext) {
-      this.audioContext.close();
-      this.audioContext = null;
-    }
-    
-    this.analyser = null;
-    this.sourceNode = null;
   }
 
   public getCurrentAudioLevel(): number {
@@ -146,47 +71,32 @@ class ConversationTtsService {
           throw new Error(`TTS failed: ${response.status} - ${errorText}`);
         }
 
-        // Blob-based approach with audio analysis for speaking animation
+        // ✅ SIMPLIFIED: Direct blob to audio with minimal setup
         const blob = await response.blob();
-        const audio = new Audio(URL.createObjectURL(blob));
+        const audioUrl = URL.createObjectURL(blob);
+        const audio = new Audio(audioUrl);
         
-        // Setup audio analysis for speaking animation IMMEDIATELY
-        this.setupAudioAnalysis(audio);
+        // ✅ SIMPLIFIED: Start animation immediately without complex analysis setup
+        this.audioLevel = 0.1;
+        this.notifyListeners();
         
-        // Start audio analysis as soon as we have the audio ready
-        // Don't wait for play event - start immediately
-        this.startAudioAnalysis();
-        
-        audio.addEventListener('canplaythrough', () => {
-          // Audio is ready to play - ensure analysis is running
-          if (!this.analysisFrameId) {
-            this.startAudioAnalysis();
-          }
-        });
-        
-        audio.addEventListener('play', () => {
-          // Ensure audio analysis is running when playback begins
-          if (!this.analysisFrameId) {
-            this.startAudioAnalysis();
-          }
-        });
-        
+        // ✅ SIMPLIFIED: Single event listener for completion
         audio.addEventListener('ended', () => {
-          // Stop audio analysis and clean up
-          this.stopAudioAnalysis();
-          URL.revokeObjectURL(audio.src);
+          this.audioLevel = 0;
+          this.notifyListeners();
+          URL.revokeObjectURL(audioUrl);
           resolve();
         });
         
         audio.addEventListener('error', (error) => {
           console.error('[ConversationTTS] Audio playback error:', error);
-          this.stopAudioAnalysis();
-          URL.revokeObjectURL(audio.src);
+          this.audioLevel = 0;
+          this.notifyListeners();
+          URL.revokeObjectURL(audioUrl);
           reject(error);
         });
         
-        // Load and play audio immediately
-        audio.load();
+        // ✅ SIMPLIFIED: Play immediately without load() call
         await audio.play();
         
       } catch (error) {
