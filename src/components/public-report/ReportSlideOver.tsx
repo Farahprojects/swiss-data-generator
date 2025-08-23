@@ -20,9 +20,7 @@ interface ReportSlideOverProps {
   guestReportId?: string;
 }
 
-const ReportViewerActions: React.FC<{ guestReportId?: string }> = ({ guestReportId }) => {
-  return null;
-};
+
 
 export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({ 
   isOpen, 
@@ -104,7 +102,6 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
             <SheetTitle className="sr-only">Report</SheetTitle>
             <SheetDescription className="sr-only">Astrological report data</SheetDescription>
             <div className="flex items-center gap-3">
-              <ReportViewerActions guestReportId={guestReportId} />
             </div>
             <div></div>
           </SheetHeader>
