@@ -59,8 +59,14 @@ const ConditionalAuth: React.FC<{ children: React.ReactNode }> = ({ children }) 
   }
 
   if (path.startsWith('/report')) {
-    // Public report now gets its providers from the global wrapper
-    return <>{children}</>;
+    // Public report now needs auth-aware UI with navigation
+    return (
+      <NavigationStateProvider>
+        <SettingsModalProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </SettingsModalProvider>
+      </NavigationStateProvider>
+    );
   }
 
   if (path.startsWith('/chat')) {

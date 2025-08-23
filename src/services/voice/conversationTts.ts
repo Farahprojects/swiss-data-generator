@@ -17,7 +17,7 @@ class ConversationTtsService {
   private analyser?: AnalyserNode;
   private dataArray?: Uint8Array;
   private rafId?: number;
-  private currentNodes?: { source: MediaElementAudioSourceNode; gain: GainNode };
+  private currentNodes?: { source: MediaElementAudioSourceNode; gain: GainNode | null };
 
   // Stop all audio playback and cleanup
   public stopAllAudio(): void {
@@ -184,6 +184,8 @@ class ConversationTtsService {
         this.analyser = this.audioContext.createAnalyser();
         this.analyser.fftSize = 2048;
         this.analyser.smoothingTimeConstant = 0.85;
+        
+        // Initialize data array for frequency analysis
         this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
       }
 
@@ -211,7 +213,13 @@ class ConversationTtsService {
       if (!this.analyser || !this.dataArray) return;
 
       // Get time-domain data
-      this.analyser.getByteTimeDomainData(this.dataArray);
+      const tempArray = new Uint8Array(this.analyser.frequencyBinCount);
+      this.analyser.getByteTimeDomainData(tempArray);
+      
+      // Copy to our instance array for processing
+      for (let i = 0; i < tempArray.length; i++) {
+        this.dataArray[i] = tempArray[i];
+      }
 
       // Compute RMS amplitude
       let sum = 0;
