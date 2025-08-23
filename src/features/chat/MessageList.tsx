@@ -57,8 +57,8 @@ const TurnItem = ({ turn, isLastTurn, isFromHistory }: { turn: Turn; isLastTurn:
   );
 };
 
-// Temporary message component for "Generating your report..."
-const GeneratingReportMessage = () => {
+// Message component for "Report is Ready"
+const ReportReadyMessage = () => {
   return (
     <div className="flex items-end gap-3 justify-start mb-8">
       <div 
@@ -66,8 +66,10 @@ const GeneratingReportMessage = () => {
         style={{ overflowAnchor: 'none' }}
       >
         <div className="flex items-center gap-3 text-base font-light leading-relaxed">
-          <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
-          <span className="text-gray-700">Generating your report...</span>
+          <div className="h-4 w-4 rounded-full bg-green-500 flex items-center justify-center">
+            <div className="h-2 w-2 rounded-full bg-white"></div>
+          </div>
+          <span className="text-gray-700">Report is Ready</span>
         </div>
       </div>
     </div>
@@ -108,6 +110,7 @@ export const MessageList = () => {
   const messages = useChatStore((state) => state.messages);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [initialMessageCount, setInitialMessageCount] = useState<number | null>(null);
+  const [hasUserSentMessage, setHasUserSentMessage] = useState(false);
   
   // Get report generation state
   const isPolling = useReportReadyStore((state) => state.isPolling);
@@ -120,8 +123,16 @@ export const MessageList = () => {
     }
   }, [messages.length, initialMessageCount]);
 
-  // Show generating message when polling and report is not ready
-  const showGeneratingMessage = isPolling && !isReportReady;
+  // Check if user has sent a message
+  React.useEffect(() => {
+    const userMessages = messages.filter(m => m.role === 'user');
+    if (userMessages.length > 0) {
+      setHasUserSentMessage(true);
+    }
+  }, [messages]);
+
+  // Show report ready message when report is ready and user hasn't sent a message yet
+  const showReportReadyMessage = isReportReady && !hasUserSentMessage;
   
   // Group messages into turns
   const turns = groupMessagesIntoTurns(messages);
@@ -143,7 +154,7 @@ export const MessageList = () => {
       ref={scrollRef}
       id="chat-scroll-container"
     >
-      {messages.length === 0 && !showGeneratingMessage ? (
+      {messages.length === 0 && !showReportReadyMessage ? (
         <div className="flex-1 flex flex-col justify-end">
           <div className="p-4">
             <h2 className="text-3xl font-light text-gray-800 text-left">Let's tune into the energy behind your chart</h2>
@@ -153,7 +164,7 @@ export const MessageList = () => {
         <div className="flex flex-col p-4">
           {turns.map((turn, index) => {
             const isFromHistory = getIsFromHistory(turn);
-            const isLastTurn = index === turns.length - 1 && !showGeneratingMessage;
+            const isLastTurn = index === turns.length - 1 && !showReportReadyMessage;
             
             return (
               <TurnItem 
@@ -165,9 +176,9 @@ export const MessageList = () => {
             );
           })}
           
-          {/* Show generating message at the end when report is being generated */}
-          {showGeneratingMessage && (
-            <GeneratingReportMessage />
+          {/* Show report ready message when report is ready and user hasn't sent a message yet */}
+          {showReportReadyMessage && (
+            <ReportReadyMessage />
           )}
           
           {/* Bottom padding to prevent content from being hidden behind fixed elements */}

@@ -39,7 +39,7 @@ export const ChatSidebarControls: React.FC = () => {
               : 'bg-gray-100/60 border-gray-200/60 text-gray-400 cursor-not-allowed'
           } ${isPolling ? 'animate-pulse' : ''}`}
         >
-          Report
+          {isPolling ? 'Generating...' : 'Report'}
         </button>
         <button type="button" className="w-full text-left px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md border border-gray-200">
           Voice
