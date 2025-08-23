@@ -56,13 +56,7 @@ const subCategoryOptions = {
     },
   ],
   'snapshot': [
-    {
-      value: 'monthly',
-      title: 'Monthly Energy',
-      description: 'Your personal energy forecast and monthly momentum guide',
-      icon: Calendar,
-      reportType: 'monthly',
-    },
+    // Monthly removed - no longer available for selection
   ],
 };
 

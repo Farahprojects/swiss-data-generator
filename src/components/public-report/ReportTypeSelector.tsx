@@ -110,7 +110,6 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
   const subStepComplete =
     (watchedCategory === 'the-self' && !!watchedEssence) ||
     (watchedCategory === 'compatibility' && !!watchedRelationship) ||
-    (watchedCategory === 'snapshot' && !!watchedSnapshot) ||
     (watchedCategory === 'astro-data' && !!watchedAstroData);
 
   /* ──────────────────────────
@@ -140,7 +139,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
         // Astro data uses the `request` field instead of reportType
         setValue?.('reportType', '', { shouldValidate: true });
       } else {
-        // Set reportType directly for all other categories (including Monthly Energy)
+        // Set reportType directly for all other categories
         setValue?.('reportType', reportType, { shouldValidate: true });
       }
     },
@@ -171,7 +170,7 @@ const ReportTypeSelector: React.FC<ReportTypeSelectorProps> = ({
   /* ──────────────────────────
    * Derived UI helpers
    * ────────────────────────── */
-  const showSnapshotSubCategories = watchedCategory === 'snapshot' && snapshotSubCategories.length > 0;
+  const showSnapshotSubCategories = false; // Monthly removed
   const showAstroDataSubCategories = watchedCategory === 'astro-data';
   const showEssenceOptions = watchedCategory === 'the-self';
   const showRelationshipOptions = watchedCategory === 'compatibility';

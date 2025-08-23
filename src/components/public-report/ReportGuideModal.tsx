@@ -55,7 +55,7 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
       switch (subcategory.toLowerCase()) {
         case 'focus': priceId = 'focus'; break;
         case 'mindset': priceId = 'mindset'; break;
-        case 'monthly': priceId = 'monthly'; break;
+        // monthly priceId removed
         default: priceId = 'focus';
       }
     }
@@ -129,7 +129,7 @@ const ReportGuideModal = ({ isOpen, onClose, targetReportType }: ReportGuideModa
       subTypes: [
         `Focus (${getSubcategoryPrice('SnapShot', 'focus')}) – A quick energetic check-in on where your attention naturally flows.`,
         `Mindset (${getSubcategoryPrice('SnapShot', 'mindset')}) – See how your thinking patterns are currently influenced.`,
-        `Monthly (${getSubcategoryPrice('SnapShot', 'monthly')}) – A real-time look at how the stars are shaping your month.`
+        // Monthly removed - no longer available
       ]
     }
   ];

@@ -1,5 +1,5 @@
 import { ReportTypeOption } from '@/types/public-report';
-import { User, Heart, Target, Calendar, Brain, Briefcase, Camera } from 'lucide-react';
+import { User, Heart, Target, Brain, Briefcase, Camera } from 'lucide-react';
 
 export const reportTypes: ReportTypeOption[] = [
   { value: 'sync', label: 'Compatibility Report' },
@@ -42,13 +42,6 @@ export const reportCategories = [
     description: 'Raw astrological data - instant ephemeris calculations',
     icon: Target,
     reportType: 'astro-data', // used only for category selection, will be cleared later
-  },
-  {
-    value: 'snapshot',
-    title: 'Monthly Energy',
-    description: 'Your personal energy forecast and monthly momentum guide',
-    icon: Calendar,
-    reportType: 'monthly',
   },
 ];
 

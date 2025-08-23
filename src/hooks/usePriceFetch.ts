@@ -133,7 +133,7 @@ export const usePriceFetch = () => {
     if (reportCategory === 'snapshot') {
       switch (reportSubCategory) {
         case 'focus': return 'Focus Snapshot Report';
-        case 'monthly': return 'Monthly Energy Report';
+        // monthly removed from selection
         case 'mindset': return 'Mindset Report';
         default: return 'Focus Snapshot Report';
       }
