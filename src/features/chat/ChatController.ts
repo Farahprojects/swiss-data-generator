@@ -124,6 +124,25 @@ class ChatController {
 
     useChatStore.getState().addMessage(optimisticUserMessage);
     useChatStore.getState().addMessage(optimisticAssistantMessage);
+    
+    // Imperative scroll alignment after DOM update
+    this.scrollToNewTurn(client_msg_id);
+  }
+
+  private scrollToNewTurn(userMessageId: string) {
+    // Use double requestAnimationFrame to ensure DOM is fully updated
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const container = document.getElementById('chat-scroll-container');
+        const turn = document.querySelector(`[data-turn-id="${userMessageId}"]`) as HTMLElement;
+        
+        if (container && turn) {
+          const containerTop = container.offsetTop;
+          const turnTop = turn.offsetTop;
+          container.scrollTop = turnTop - containerTop;
+        }
+      });
+    });
   }
 
   private reconcileOptimisticMessage(finalMessage: Message) {
