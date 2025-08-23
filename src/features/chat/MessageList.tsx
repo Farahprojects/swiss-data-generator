@@ -20,13 +20,12 @@ const TurnItem = ({ turn, isLastTurn, isFromHistory }: { turn: Turn; isLastTurn:
 
   return (
     <div 
-      className="turn scroll-snap-align-start" 
-      style={{ scrollSnapAlign: 'start', scrollMarginTop: 'var(--header-h, 0px)' }}
+      className="turn" 
       data-turn-id={userMessage.id}
     >
       {/* User Message */}
       <div className="flex items-end gap-3 justify-end mb-4">
-        <div className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl bg-gray-200 text-black">
+        <div className="px-4 py-3 rounded-2xl max-w-[75%] bg-gray-200 text-black">
           <p className="text-base font-light leading-relaxed text-left whitespace-pre-wrap">
             {userMessage.text || ''}
           </p>
@@ -148,8 +147,7 @@ export const MessageList = () => {
     <div 
       className="chat-scroll-container flex flex-col overflow-y-auto"
       style={{ 
-        height: '100dvh',
-        scrollSnapType: 'y proximity'
+        height: '100dvh'
       }}
       ref={scrollRef}
       id="chat-scroll-container"
