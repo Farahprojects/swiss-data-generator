@@ -152,16 +152,81 @@ serve(async (req) => {
       .eq("user_id", guest_report_id)
       .single();
 
-    // Build context with whatever data we have
+    // Helper function to extract user-relevant content from report text
+    function extractUserContent(reportText: string): string {
+      // Remove technical metadata and calculation engine info
+      let cleanText = reportText;
+      
+      // Remove common technical prefixes and metadata
+      const technicalPatterns = [
+        /^.*?calculation engine.*?$/gmi,
+        /^.*?time basis.*?$/gmi,
+        /^.*?processing time.*?$/gmi,
+        /^.*?token count.*?$/gmi,
+        /^.*?model.*?$/gmi,
+        /^.*?temperature.*?$/gmi,
+        /^.*?max tokens.*?$/gmi,
+        /^.*?engine used.*?$/gmi,
+        /^.*?metadata.*?$/gmi,
+        /^.*?duration.*?$/gmi,
+        /^.*?latency.*?$/gmi,
+        /^.*?cost.*?$/gmi,
+        /^.*?status.*?$/gmi
+      ];
+      
+      technicalPatterns.forEach(pattern => {
+        cleanText = cleanText.replace(pattern, '');
+      });
+      
+      // Remove empty lines and clean up
+      cleanText = cleanText.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
+      
+      return cleanText;
+    }
+    
+    // Helper function to extract user-relevant data from Swiss data
+    function extractUserSwissData(swissData: any): any {
+      if (!swissData || typeof swissData !== 'object') {
+        return swissData;
+      }
+      
+      // Create a clean copy without technical metadata
+      const cleanData: any = {};
+      
+      // Only include user-relevant fields
+      const userRelevantFields = [
+        'report', 'content', 'narrative', 'text', 'title',
+        'subjects', 'person_a', 'person_b', 'natal', 'transits',
+        'compatibility', 'synastry', 'essence', 'flow', 'mindset'
+      ];
+      
+      for (const [key, value] of Object.entries(swissData)) {
+        if (userRelevantFields.includes(key) || 
+            (typeof value === 'string' && value.length > 50) ||
+            (typeof value === 'object' && value !== null)) {
+          cleanData[key] = value;
+        }
+      }
+      
+      return cleanData;
+    }
+    
+    // Build context with filtered user-relevant data only
     let contextContent = "";
     
     if (reportLogs?.report_text) {
-      contextContent += `REPORT CONTENT:\n${reportLogs.report_text}`;
+      const userContent = extractUserContent(reportLogs.report_text);
+      if (userContent.trim()) {
+        contextContent += `REPORT CONTENT:\n${userContent}`;
+      }
     }
     
     if (translatorLogs?.swiss_data) {
-      if (contextContent) contextContent += "\n\n";
-      contextContent += `SWISS ENERGETIC DATA:\n${JSON.stringify(translatorLogs.swiss_data, null, 2)}`;
+      const userSwissData = extractUserSwissData(translatorLogs.swiss_data);
+      if (Object.keys(userSwissData).length > 0) {
+        if (contextContent) contextContent += "\n\n";
+        contextContent += `SWISS ENERGETIC DATA:\n${JSON.stringify(userSwissData, null, 2)}`;
+      }
     }
 
     console.log(`[context-injector][${requestId}] 💉 Injecting context message (${contextContent.length} chars)...`);
