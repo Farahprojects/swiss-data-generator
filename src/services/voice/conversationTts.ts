@@ -80,7 +80,7 @@ class ConversationTtsService {
         this.audioLevel = 0.1;
         this.notifyListeners();
         
-        // ✅ ANIMATED: Create animation loop during playback
+        // ✅ SIMPLE: Animate based on actual audio playback
         const animateAudio = () => {
           if (audio.ended || audio.paused) {
             this.audioLevel = 0;
@@ -88,10 +88,9 @@ class ConversationTtsService {
             return;
           }
           
-          // Simulate audio level animation (0.1 to 0.8)
+          // Simple animation: just move with the audio progress
           const progress = audio.currentTime / audio.duration;
-          const wave = Math.sin(progress * Math.PI * 8) * 0.3 + 0.5;
-          this.audioLevel = Math.max(0.1, Math.min(0.8, wave));
+          this.audioLevel = 0.3 + (progress * 0.4); // 0.3 to 0.7 range
           this.notifyListeners();
           
           requestAnimationFrame(animateAudio);
