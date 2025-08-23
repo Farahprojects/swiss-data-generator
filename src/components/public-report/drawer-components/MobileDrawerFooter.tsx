@@ -53,7 +53,7 @@ const MobileDrawerFooter = ({
         >
           <span>
             {isProcessing 
-              ? 'Processing...' 
+              ? (isLastStep ? 'Processing payment...' : 'Processing...') 
               : hasTimedOut
                 ? 'Try Again'
                 : isLastStep 

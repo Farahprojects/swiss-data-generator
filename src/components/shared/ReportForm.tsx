@@ -83,6 +83,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
 
       if (error) {
         console.error("Submission failed", error);
+        setIsProcessing(false);
         return { success: false, guestReportId: null, paymentStatus: 'error', name: '', email: '' };
       }
 
@@ -93,16 +94,20 @@ export const ReportForm: React.FC<ReportFormProps> = ({
       const checkoutUrl = resp?.checkoutUrl || null;
 
       if (checkoutUrl) {
+        // Keep processing state active during redirect
         window.location.href = checkoutUrl;
+        // Don't set processing to false here - the redirect will handle the state change
+        return { success: !!guestReportId, guestReportId, paymentStatus, name, email };
       }
 
+      // Only clear processing if no redirect happens
+      setIsProcessing(false);
       return { success: !!guestReportId, guestReportId, paymentStatus, name, email };
 
     } catch (error) {
       console.error("Submission failed with exception", error);
-      return { success: false, guestReportId: null, paymentStatus: 'error', name: '', email: '' };
-    } finally {
       setIsProcessing(false);
+      return { success: false, guestReportId: null, paymentStatus: 'error', name: '', email: '' };
     }
   };
 

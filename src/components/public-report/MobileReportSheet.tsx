@@ -173,17 +173,21 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
             if (onReportCreated) {
               onReportCreated(result.guestReportId, result.paymentStatus, data.name, data.email);
             }
+            // Keep processing state active - the ReportFlowChecker will handle the redirect
+            // Don't set processing to false here as it will show in the UI until redirect
+          } else {
+            // Only clear processing if no report was created
+            setIsProcessing(false);
           }
 
         } catch (error) {
           console.error('❌ Mobile report creation error:', error);
+          setIsProcessing(false);
           toast({
             title: "Payment Failed",
             description: error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.',
             variant: "destructive",
           });
-        } finally {
-          setIsProcessing(false);
         }
       })();
 

@@ -339,12 +339,21 @@ const PaymentStep = ({
                 {isProcessing ? (
                   <div className="flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Processing...
+                    Processing payment...
                   </div>
                 ) : (
                   "Get Your Report"
                 )}
               </Button>
+
+              {/* Processing feedback for user */}
+              {isProcessing && (
+                <div className="text-center pt-2">
+                  <p className="text-sm text-gray-600">
+                    Redirecting to secure payment...
+                  </p>
+                </div>
+              )}
 
               {hasTimedOut && (
                 <div className="text-center">
