@@ -358,10 +358,10 @@ class ConversationMicrophoneServiceClass {
             if (this.options.onSilenceDetected) {
               this.options.onSilenceDetected();
             }
-            // ❌ COMMENTED OUT - Let ChatController.endTurn() handle the stop to ensure proper STT flow
-            // if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-            //   this.mediaRecorder.stop();
-            // }
+            // ✅ FIXED: Actually stop the recording to trigger audio processing
+            if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+              this.mediaRecorder.stop();
+            }
             this.log(`🛑 VAD loop terminated after silence detection`);
             return; // CRITICAL: Don't schedule next frame after silence detected
           }
