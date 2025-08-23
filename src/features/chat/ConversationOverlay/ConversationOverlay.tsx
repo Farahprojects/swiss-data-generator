@@ -19,31 +19,10 @@ export const ConversationOverlay: React.FC = () => {
   
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = () => {
-    // 1. Stop conversation TTS audio immediately (synchronous)
+    // Kill all audio immediately
     conversationTtsService.stopAllAudio();
     
-    // 2. Stop all other audio playback immediately (synchronous)
-    const allAudioElements = document.querySelectorAll('audio');
-    allAudioElements.forEach((audio) => {
-      audio.pause();
-      audio.currentTime = 0;
-      audio.src = '';
-    });
-    
-    // 3. Tell browser to stop all microphone access (synchronous)
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      // This will stop any active microphone streams
-      navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(stream => {
-          stream.getTracks().forEach(track => track.stop());
-        })
-        .catch(() => {}); // Ignore errors, just ensure mic is released
-    }
-    
-    // 4. Reset all conversation state (synchronous)
-    chatController.resetConversationService();
-    
-    // 5. Close the UI (synchronous)
+    // Close the UI
     closeConversation();
   };
 
