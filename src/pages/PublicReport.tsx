@@ -19,7 +19,7 @@ import { PricingProvider } from '@/contexts/PricingContext';
 import { ReportModalProvider } from '@/contexts/ReportModalContext';
 import { CancelNudgeModal } from '@/components/public-report/CancelNudgeModal';
 import { shouldShowCancelNudge } from '@/utils/cancelNudgeStorage';
-import UnifiedNavigation from '@/components/UnifiedNavigation';
+import UnifiedNavigation from '../components/UnifiedNavigation';
 
 const PublicReport = () => {
   const location = useLocation();
