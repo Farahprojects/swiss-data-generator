@@ -33,10 +33,11 @@ export const PerformanceBasedPlaceAutocomplete = ({
     const startTime = performance.now();
     
     try {
-      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/google-places-autocomplete`, {
+      const base = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+      const response = await fetch(`${base}/google-places-autocomplete`, {
         method: 'HEAD',
         headers: {
-          'Authorization': `Bearer ${supabase.supabaseKey}`,
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           'Content-Type': 'application/json',
         }
       });

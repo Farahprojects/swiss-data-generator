@@ -2,12 +2,13 @@
 
 class StreamPlayerService {
   private audioElement: HTMLAudioElement;
-  private mediaSource: MediaSource;
+  private mediaSource: MediaSource | null = null;
   private sourceBuffer: SourceBuffer | null = null;
   private queue: Uint8Array[] = [];
   private isPlaying: boolean = false;
-  private onCompleteCallback: (() => void) | null = null;
+  private onPlaybackComplete: (() => void) | null = null;
   private streamController: ReadableStreamDefaultController<Uint8Array> | null = null;
+  private streamReader: ReadableStreamDefaultReader<Uint8Array> | null = null;
   private hasStartedPlayback: boolean = false;
   private readonly BUFFER_THRESHOLD = 16000; // Approx 0.5-1 second of audio data
 
@@ -24,13 +25,6 @@ class StreamPlayerService {
     this.audioElement.addEventListener('ended', this.handlePlaybackEnded.bind(this));
   }
 
-  private initializeAudioElement() {
-    if (typeof window !== 'undefined' && !this.audio) {
-      this.audio = new Audio();
-      this.audio.addEventListener('ended', this.handlePlaybackEnded.bind(this));
-    }
-  }
-
   public getStreamController(onComplete: () => void): ReadableStreamDefaultController<Uint8Array> {
     if (this.mediaSource && this.mediaSource.readyState !== 'ended') {
       this.mediaSource.endOfStream();
@@ -39,7 +33,7 @@ class StreamPlayerService {
     this.mediaSource = new MediaSource();
     this.audioElement.src = URL.createObjectURL(this.mediaSource);
     this.sourceBuffer = null;
-    this.onCompleteCallback = onComplete;
+    this.onPlaybackComplete = onComplete;
     this.isPlaying = false;
     this.queue = [];
     this.hasStartedPlayback = false;
@@ -47,7 +41,7 @@ class StreamPlayerService {
     const stream = new ReadableStream({
       start: (controller) => {
         this.streamController = controller;
-        this.mediaSource.addEventListener('sourceopen', () => {
+        this.mediaSource!.addEventListener('sourceopen', () => {
           this.initializeSourceBuffer();
           this.processQueue();
         });
@@ -58,11 +52,43 @@ class StreamPlayerService {
     // without starting the stream reading immediately.
     this.playStream(stream, onComplete);
 
-    return this.streamController;
+    return this.streamController!;
+  }
+
+  private initializeSourceBuffer() {
+    if (this.mediaSource && this.mediaSource.readyState === 'open') {
+      this.sourceBuffer = this.mediaSource.addSourceBuffer('audio/mpeg');
+      this.sourceBuffer.addEventListener('updateend', () => {
+        this.processQueue();
+      });
+    }
+  }
+
+  private processQueue() {
+    if (this.sourceBuffer && !this.sourceBuffer.updating && this.queue.length > 0) {
+      const chunk = this.queue.shift();
+      if (chunk) {
+        if (!this.hasStartedPlayback) {
+          const bufferedAmount = this.queue.reduce((acc, val) => acc + val.length, chunk.length);
+          if (bufferedAmount >= this.BUFFER_THRESHOLD) {
+            this.hasStartedPlayback = true;
+            this.audioElement.play().catch(e => console.error("Audio play failed:", e));
+          } else {
+            // Put it back and wait for more data
+            this.queue.unshift(chunk);
+            return;
+          }
+        }
+        const arrayBuffer = new ArrayBuffer(chunk.length);
+        const view = new Uint8Array(arrayBuffer);
+        view.set(chunk);
+        this.sourceBuffer.appendBuffer(arrayBuffer);
+      }
+    }
   }
 
   public async playStream(stream: ReadableStream<Uint8Array>, onComplete: () => void) {
-    if (!this.audio || !window.MediaSource) {
+    if (!this.audioElement || !window.MediaSource) {
       console.error("Streaming not supported or audio element not initialized.");
       onComplete();
       return;
@@ -71,9 +97,9 @@ class StreamPlayerService {
     this.stop(); // Stop any previous playback
     this.onPlaybackComplete = onComplete;
     this.mediaSource = new MediaSource();
-    this.audio.src = URL.createObjectURL(this.mediaSource);
+    this.audioElement.src = URL.createObjectURL(this.mediaSource);
 
-    this.mediaSource.addEventListener('sourceopen', this.handleSourceOpen.bind(this, stream));
+    this.mediaSource.addEventListener('sourceopen', () => this.handleSourceOpen(stream));
     this.setupAudioAnalysis();
   }
 
@@ -83,11 +109,11 @@ class StreamPlayerService {
       this.streamReader = null;
     }
     this.stopAudioAnalysis();
-    if (this.audio) {
-      this.audio.pause();
-      if (this.audio.src) {
-        URL.revokeObjectURL(this.audio.src);
-        this.audio.removeAttribute('src');
+    if (this.audioElement) {
+      this.audioElement.pause();
+      if (this.audioElement.src) {
+        URL.revokeObjectURL(this.audioElement.src);
+        this.audioElement.removeAttribute('src');
       }
     }
     if (this.mediaSource && this.mediaSource.readyState === 'open') {
@@ -131,8 +157,8 @@ class StreamPlayerService {
       audioBuffer = newBuffer;
 
       // Start playback once we have enough data
-      if (audioBuffer.length >= MIN_BUFFER_SIZE && this.audio?.paused) {
-        this.audio?.play().catch(e => console.error("Audio play failed:", e));
+      if (audioBuffer.length >= MIN_BUFFER_SIZE && this.audioElement?.paused) {
+        this.audioElement?.play().catch(e => console.error("Audio play failed:", e));
         this.startAudioAnalysis();
       }
 
@@ -156,22 +182,11 @@ class StreamPlayerService {
 
   private appendBuffer(buffer: Uint8Array, callback: () => void) {
     if (this.sourceBuffer && !this.sourceBuffer.updating) {
-      const chunk = this.queue.shift();
-      if (chunk) {
-        if (!this.hasStartedPlayback) {
-          const bufferedAmount = this.queue.reduce((acc, val) => acc + val.length, chunk.length);
-          if (bufferedAmount >= this.BUFFER_THRESHOLD) {
-            this.hasStartedPlayback = true;
-            this.audioElement.play().catch(e => console.error("Audio play failed:", e));
-            this.sourceBuffer.appendBuffer(chunk);
-          } else {
-            // Put it back and wait for more data
-            this.queue.unshift(chunk);
-          }
-        } else {
-          this.sourceBuffer.appendBuffer(chunk);
-        }
-      }
+      this.sourceBuffer.addEventListener('updateend', callback, { once: true });
+      const arrayBuffer = new ArrayBuffer(buffer.length);
+      const view = new Uint8Array(arrayBuffer);
+      view.set(buffer);
+      this.sourceBuffer.appendBuffer(arrayBuffer);
     }
   }
 
@@ -200,13 +215,13 @@ class StreamPlayerService {
   // --- Audio Analysis Methods ---
 
   private setupAudioAnalysis() {
-    if (typeof window === 'undefined' || !this.audio) return;
+    if (typeof window === 'undefined' || !this.audioElement) return;
     if (this.audioContext) return; // Already setup
 
     this.audioContext = new AudioContext();
     this.analyser = this.audioContext.createAnalyser();
     this.analyser.fftSize = 256;
-    this.sourceNode = this.audioContext.createMediaElementSource(this.audio);
+    this.sourceNode = this.audioContext.createMediaElementSource(this.audioElement);
     this.sourceNode.connect(this.analyser);
     this.analyser.connect(this.audioContext.destination);
   }

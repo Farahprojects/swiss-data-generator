@@ -1,15 +1,15 @@
 import { supabase } from '@/integrations/supabase/client';
-import { streamPlayerService, StreamPlayerService } from '@/services/voice/StreamPlayerService';
+import { streamPlayerService } from '@/services/voice/StreamPlayerService';
 
 class RealtimeAudioPlayer {
   private channel: any | null = null;
-  private streamPlayer: StreamPlayerService;
+  private streamPlayer: any;
   private currentMessageId: string | null = null;
   private onPlaybackComplete: (() => void) | null = null;
   private onError: ((error: string) => void) | null = null;
   private audioBuffer: string = '';
 
-  constructor(streamPlayer: StreamPlayerService) {
+  constructor(streamPlayer: any) {
     this.streamPlayer = streamPlayer;
   }
 
