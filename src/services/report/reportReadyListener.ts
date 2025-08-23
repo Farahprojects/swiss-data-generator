@@ -346,7 +346,51 @@ export function stopReportReadyListener(guestReportId: string): void {
     useReportReadyStore.getState().stopPolling();
     
     console.log(`[ReportReady] Listener stopped for: ${guestReportId}`);
+    
+    // Start polling fallback for 3 seconds before triggering error handler
+    startPollingFallback(guestReportId);
   }
+}
+
+// Polling fallback function that checks signal table every second for 3 seconds
+async function startPollingFallback(guestReportId: string): Promise<void> {
+  console.log(`[ReportReady] Starting polling fallback for: ${guestReportId}`);
+  
+  let attempts = 0;
+  const maxAttempts = 3; // Poll for 3 seconds
+  
+  const poll = async () => {
+    attempts++;
+    console.log(`[ReportReady] Polling fallback attempt ${attempts}/${maxAttempts} for: ${guestReportId}`);
+    
+    try {
+      const { data, error } = await supabase
+        .from('report_ready_signals')
+        .select('guest_report_id')
+        .eq('guest_report_id', guestReportId)
+        .limit(1);
+
+      if (!error && data && data.length > 0) {
+        console.log(`[ReportReady] Signal found during polling fallback for: ${guestReportId}`);
+        handleReportReady(guestReportId, Date.now());
+        return;
+      }
+    } catch (error) {
+      console.warn('[ReportReady] Polling fallback error:', error);
+    }
+
+    // If we haven't found the signal and haven't reached max attempts, continue polling
+    if (attempts < maxAttempts) {
+      setTimeout(poll, 1000); // Poll every 1 second
+    } else {
+      // After 3 seconds of polling, trigger error handler
+      console.log(`[ReportReady] Polling fallback completed, triggering error handler for: ${guestReportId}`);
+      await triggerErrorHandler(guestReportId, 'Report generation is taking longer than expected. Please try again later.');
+    }
+  };
+
+  // Start polling
+  poll();
 }
 
 // Cleanup function for when component unmounts or user navigates away
