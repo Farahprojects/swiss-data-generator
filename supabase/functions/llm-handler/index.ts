@@ -182,8 +182,26 @@ Rules:
 
     console.log("[llm-handler] Assistant message saved successfully with ID:", savedMessage.id);
 
-    // ✅ REMOVED: Server-side TTS - keeping client-side TTS flow only
-    // ChatController already calls conversationTtsService.speakAssistant
+    // Handle conversation mode - fire-and-forget TTS
+    if (mode === 'convo' && sessionId) {
+      console.log(`[llm-handler] CONVERSATION MODE DETECTED - Starting TTS for sessionId: ${sessionId}`);
+      
+      // Fire-and-forget call to google-text-to-speech
+      fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+        },
+        body: JSON.stringify({
+          chat_id,
+          text: assistantText,
+          voice: "en-US-Studio-O"
+        })
+      }).catch(error => {
+        console.error(`[llm-handler] TTS call failed:`, error);
+      });
+    }
 
     // Return the saved message with the real ID
     return new Response(JSON.stringify({ 
