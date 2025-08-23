@@ -29,7 +29,9 @@ class ConversationTtsService {
     
     if (this.currentNodes) {
       this.currentNodes.source.disconnect();
-      this.currentNodes.gain.disconnect();
+      if (this.currentNodes.gain) {
+        this.currentNodes.gain.disconnect();
+      }
       this.currentNodes = undefined;
     }
     
@@ -185,17 +187,14 @@ class ConversationTtsService {
         this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
       }
 
-      // Create source and gain nodes
+      // Create source node
       const source = this.audioContext.createMediaElementSource(audio);
-      const gain = this.audioContext.createGain();
-      gain.gain.value = 0; // Zero gain to prevent echo while keeping context active
 
-      // Connect: source -> analyser -> gain -> destination
+      // Connect: source -> analyser (for analysis) AND source -> destination (for audio)
       source.connect(this.analyser);
-      this.analyser.connect(gain);
-      gain.connect(this.audioContext.destination);
+      source.connect(this.audioContext.destination);
 
-      this.currentNodes = { source, gain };
+      this.currentNodes = { source, gain: null };
 
     } catch (error) {
       console.warn('[ConversationTTS] Audio analysis setup failed - using static animation:', error);
@@ -245,7 +244,9 @@ class ConversationTtsService {
     
     if (this.currentNodes) {
       this.currentNodes.source.disconnect();
-      this.currentNodes.gain.disconnect();
+      if (this.currentNodes.gain) {
+        this.currentNodes.gain.disconnect();
+      }
       this.currentNodes = undefined;
     }
     
