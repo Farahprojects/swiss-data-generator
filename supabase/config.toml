@@ -153,8 +153,7 @@ verify_jwt = false
 [functions.conversation-llm]
 verify_jwt = false
 
-[functions.tts-speak]
-verify_jwt = false
+
 
 
 
