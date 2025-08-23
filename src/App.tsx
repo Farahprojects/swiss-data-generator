@@ -7,7 +7,6 @@ import { Toaster } from "@/components/ui/toaster";
 import "./App.css";
 
 // Public pages
-import Index from './pages/Index';
 import PublicReport from './pages/PublicReport';
 import Pricing from './pages/Pricing';
 import Contact from './pages/Contact';
@@ -103,9 +102,8 @@ function App() {
             <ConditionalAuth>
               <div className="min-h-screen bg-background">
                 <Routes>
-                  {/* Public Routes */}
-                  <Route path="/" element={<Index />} />
-
+                  {/* Main Routes */}
+                  <Route path="/" element={<PublicReport />} />
                   <Route path="/report" element={<PublicReport />} />
                   <Route path="/pricing" element={<Pricing />} />
                   <Route path="/contact" element={<Contact />} />
