@@ -83,7 +83,7 @@ export const PerformanceBasedPlaceAutocomplete = ({
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="off"
-          spellCheck="false"
+          spellCheck={false}
           data-lpignore="true"
           data-form-type="other"
         />
@@ -93,7 +93,7 @@ export const PerformanceBasedPlaceAutocomplete = ({
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="off"
-          spellCheck="false"
+          spellCheck={false}
           data-lpignore="true"
           data-form-type="other"
         />

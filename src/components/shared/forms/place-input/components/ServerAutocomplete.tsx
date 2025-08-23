@@ -12,6 +12,12 @@ interface ServerAutocompleteProps {
   placeholder: string;
   disabled: boolean;
   className?: string;
+  autoComplete?: string;
+  autoCorrect?: string;
+  autoCapitalize?: string;
+  spellCheck?: boolean;
+  'data-lpignore'?: string;
+  'data-form-type'?: string;
 }
 
 interface Prediction {
@@ -30,7 +36,13 @@ export const ServerAutocomplete: React.FC<ServerAutocompleteProps> = ({
   onPlaceSelect,
   placeholder,
   disabled,
-  className = ''
+  className = '',
+  autoComplete = "off",
+  autoCorrect = "off", 
+  autoCapitalize = "off",
+  spellCheck = false,
+  'data-lpignore': dataLpIgnore = "true",
+  'data-form-type': dataFormType = "other"
 }) => {
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -180,12 +192,12 @@ export const ServerAutocomplete: React.FC<ServerAutocompleteProps> = ({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}
-          autoComplete="off"
-          autoCorrect="off"
-          autoCapitalize="off"
-          spellCheck="false"
-          data-lpignore="true"
-          data-form-type="other"
+          autoComplete={autoComplete}
+          autoCorrect={autoCorrect}
+          autoCapitalize={autoCapitalize}
+          spellCheck={spellCheck}
+          data-lpignore={dataLpIgnore}
+          data-form-type={dataFormType}
           className="h-14 rounded-xl text-lg font-light border-gray-200 focus:border-gray-400"
           style={{ fontSize: '16px' }} // Prevent zoom on iOS
         />
