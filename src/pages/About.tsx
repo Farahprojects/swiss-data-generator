@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Star, Award, Rocket, Linkedin } from "lucide-react";
+import { normalizeStorageUrl } from "@/utils/storageUtils";
 
 const About = () => {
   return (
@@ -49,7 +50,7 @@ const About = () => {
               <div className="backdrop-blur-sm bg-white/50 rounded-2xl p-10 shadow-lg border border-white/20 hover:shadow-xl transition-all flex flex-col justify-between">
                 <div className="flex flex-col items-center text-center">
                   <div className="w-24 h-24 mb-6 rounded-full overflow-hidden flex items-center justify-center">
-                    <img src="https://auth.theraiastro.com/storage/v1/object/public/therai-assets//me.png" alt="Peter Farah" className="object-cover w-24 h-24" />
+                    <img src={normalizeStorageUrl("https://auth.theraiastro.com/storage/v1/object/public/therai-assets//me.png")} alt="Peter Farah" className="object-cover w-24 h-24" loading="lazy" />
                   </div>
                   <h3 className="text-2xl font-light mb-2 text-gray-900 tracking-tight">Peter Farah</h3>
                   <p className="text-lg font-light text-gray-700 mb-2">Founder and Creator</p>
@@ -87,7 +88,7 @@ const About = () => {
               <div className="backdrop-blur-sm bg-white/50 rounded-2xl p-10 shadow-lg border border-white/20 hover:shadow-xl transition-all flex flex-col justify-between">
                 <div className="flex flex-col items-center text-center">
                   <div className="w-24 h-24 mb-6 rounded-full overflow-hidden flex items-center justify-center">
-                    <img src="https://auth.theraiastro.com/storage/v1/object/public/therai-assets//OpenAI-black-monoblossom.png" alt="OpenAI Logo" className="object-contain w-20 h-20" />
+                    <img src={normalizeStorageUrl("https://auth.theraiastro.com/storage/v1/object/public/therai-assets//OpenAI-black-monoblossom.png")} alt="OpenAI Logo" className="object-contain w-20 h-20" loading="lazy" />
                   </div>
                   <h3 className="text-2xl font-light mb-2 text-gray-900 tracking-tight">OpenAI</h3>
                   <p className="text-lg font-light text-gray-700 mb-2">AI Platform Partner</p>
