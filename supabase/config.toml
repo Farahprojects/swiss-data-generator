@@ -30,8 +30,7 @@ verify_jwt = false
 [functions.email-verification]
 verify_jwt = false
 
-[functions.fetch-temp-report]
-verify_jwt = false
+
 
 [functions.generate-insights]
 verify_jwt = false
