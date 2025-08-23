@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { UseFormRegister, UseFormSetValue, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CleanPlaceAutocomplete } from '@/components/shared/forms/place-input/CleanPlaceAutocomplete';
+import { PerformanceBasedPlaceAutocomplete } from '@/components/shared/forms/place-input/PerformanceBasedPlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import { ReportFormData } from '@/types/public-report';
 import FormStep from './FormStep';
@@ -81,7 +81,7 @@ const BirthDetailsForm = ({ register, setValue, watch, errors }: BirthDetailsFor
           </div>
         </div>
         <div className="space-y-2">
-          <CleanPlaceAutocomplete
+          <PerformanceBasedPlaceAutocomplete
             label="Birth Location *"
             value={birthLocation}
             onChange={(value) => {
@@ -91,6 +91,10 @@ const BirthDetailsForm = ({ register, setValue, watch, errors }: BirthDetailsFor
               }
             }}
             onPlaceSelect={handlePlaceSelect}
+            onNameEntry={(name) => {
+              // This will trigger performance test on name entry
+              console.log('[BirthDetailsForm] Name entered:', name);
+            }}
             placeholder="Enter birth city, state, country"
             id="birthLocation"
             error={shouldShowError('birthLocation', errors.birthLocation) ? errors.birthLocation?.message : undefined}

@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { UseFormRegister, UseFormSetValue, UseFormWatch, FieldErrors } from 'react-hook-form';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { CleanPlaceAutocomplete } from '@/components/shared/forms/place-input/CleanPlaceAutocomplete';
+import { PerformanceBasedPlaceAutocomplete } from '@/components/shared/forms/place-input/PerformanceBasedPlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import { ReportFormData } from '@/types/public-report';
 import { useFieldFocusHandler } from '@/hooks/useFieldFocusHandler';
@@ -119,7 +119,7 @@ const SecondPersonForm = ({ register, setValue, watch, errors, onPlaceSelected }
         </div>
         
         <div className="space-y-2">
-          <CleanPlaceAutocomplete
+          <PerformanceBasedPlaceAutocomplete
             label="Birth Location *"
             value={secondPersonBirthLocation}
             onChange={(value) => {
@@ -129,6 +129,10 @@ const SecondPersonForm = ({ register, setValue, watch, errors, onPlaceSelected }
               }
             }}
             onPlaceSelect={handlePlaceSelect}
+            onNameEntry={(name) => {
+              // This will trigger performance test on name entry
+              console.log('[SecondPersonForm] Name entered:', name);
+            }}
             placeholder="Enter birth city, state, country"
             id="secondPersonBirthLocation"
             error={shouldShowError('birthLocation', errors.secondPersonBirthLocation) ? errors.secondPersonBirthLocation?.message : undefined}
