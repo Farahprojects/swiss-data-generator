@@ -9,6 +9,68 @@ export interface SpeakAssistantOptions {
 }
 
 class ConversationTtsService {
+  private audioContext: AudioContext | null = null;
+  private analyser: AnalyserNode | null = null;
+  private sourceNode: MediaElementAudioSourceNode | null = null;
+  private audioLevel = 0;
+  private analysisFrameId: number | null = null;
+  private listeners = new Set<() => void>();
+
+  private setupAudioAnalysis(audioElement: HTMLAudioElement) {
+    if (typeof window === 'undefined' || !audioElement) return;
+    if (this.audioContext) return; // Already setup
+
+    this.audioContext = new AudioContext();
+    this.analyser = this.audioContext.createAnalyser();
+    this.analyser.fftSize = 256;
+    this.sourceNode = this.audioContext.createMediaElementSource(audioElement);
+    this.sourceNode.connect(this.analyser);
+    this.analyser.connect(this.audioContext.destination);
+  }
+  
+  private startAudioAnalysis() {
+    if (!this.analyser || this.analysisFrameId) return;
+
+    const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+
+    const updateLevel = () => {
+      if (!this.analyser) return;
+      this.analyser.getByteTimeDomainData(dataArray);
+      let sumSquares = 0.0;
+      for (const amplitude of dataArray) {
+        const normalized = (amplitude - 128) / 128;
+        sumSquares += normalized * normalized;
+      }
+      this.audioLevel = Math.sqrt(sumSquares / dataArray.length);
+      this.notifyListeners();
+      this.analysisFrameId = requestAnimationFrame(updateLevel);
+    };
+
+    this.analysisFrameId = requestAnimationFrame(updateLevel);
+  }
+
+  private stopAudioAnalysis() {
+    if (this.analysisFrameId) {
+      cancelAnimationFrame(this.analysisFrameId);
+      this.analysisFrameId = null;
+    }
+    this.audioLevel = 0;
+    this.notifyListeners();
+  }
+
+  public getCurrentAudioLevel(): number {
+    return this.audioLevel;
+  }
+
+  public subscribe(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  private notifyListeners(): void {
+    this.listeners.forEach(l => l());
+  }
+
   async speakAssistant({ chat_id, messageId, text }: SpeakAssistantOptions): Promise<void> {
     
     return new Promise(async (resolve, reject) => {
@@ -38,17 +100,28 @@ class ConversationTtsService {
           throw new Error(`TTS failed: ${response.status} - ${errorText}`);
         }
 
-        // Simple blob-based approach - no streaming, no MediaSource
+        // Blob-based approach with audio analysis for speaking animation
         const blob = await response.blob();
         const audio = new Audio(URL.createObjectURL(blob));
         
+        // Setup audio analysis for speaking animation
+        this.setupAudioAnalysis(audio);
+        
+        audio.addEventListener('play', () => {
+          // Start audio analysis when playback begins
+          this.startAudioAnalysis();
+        });
+        
         audio.addEventListener('ended', () => {
-          URL.revokeObjectURL(audio.src); // Clean up the object URL
+          // Stop audio analysis and clean up
+          this.stopAudioAnalysis();
+          URL.revokeObjectURL(audio.src);
           resolve();
         });
         
         audio.addEventListener('error', (error) => {
           console.error('[ConversationTTS] Audio playback error:', error);
+          this.stopAudioAnalysis();
           URL.revokeObjectURL(audio.src);
           reject(error);
         });
