@@ -1,77 +1,81 @@
-import { supabase } from '@/integrations/supabase/client';
+// MARKED FOR DELETION - No longer used in conversation mode
+// We switched to blob-based TTS approach instead of streaming
+// This file can be safely deleted
+
 import { streamPlayerService } from '@/services/voice/StreamPlayerService';
+import { supabase } from '@/integrations/supabase/client';
 
 class RealtimeAudioPlayer {
-  private channel: any | null = null;
-  private streamPlayer: any;
-  private currentMessageId: string | null = null;
-  private onPlaybackComplete: (() => void) | null = null;
-  private onError: ((error: string) => void) | null = null;
-  private audioBuffer: string = '';
+  private sessionId: string | null = null;
+  private channel: any = null;
+  private isPlaying: boolean = false;
 
-  constructor(streamPlayer: any) {
-    this.streamPlayer = streamPlayer;
+  constructor(private streamPlayer: any) {}
+
+  async startSession(sessionId: string): Promise<void> {
+    if (this.sessionId === sessionId) {
+      console.log(`[RealtimeAudioPlayer] Session ${sessionId} already active`);
+      return;
+    }
+
+    await this.stopSession();
+
+    this.sessionId = sessionId;
+    this.isPlaying = false;
+
+    // Subscribe to real-time TTS audio channel
+    this.channel = supabase
+      .channel(`tts-audio-${sessionId}`)
+      .on('broadcast', { event: 'tts-audio-chunk' }, (payload) => {
+        this.handleAudioChunk(payload.payload);
+      })
+      .on('broadcast', { event: 'tts-audio-end' }, () => {
+        this.handleAudioEnd();
+      })
+      .subscribe();
+
+    console.log(`[RealtimeAudioPlayer] Subscribed to channel tts-audio-${sessionId}`);
   }
 
-  public async play(sessionId: string, messageId: string, onPlaybackComplete: () => void, onError: (error: string) => void) {
-    if (this.channel) {
-      this.stop();
-    }
-    
-    this.currentMessageId = messageId;
-    this.onPlaybackComplete = onPlaybackComplete;
-    this.onError = onError;
-
-    // Start the player immediately, it will wait for data.
-    const streamController = this.streamPlayer.getStreamController(onPlaybackComplete);
-
-    this.channel = supabase.channel(`tts-audio-${sessionId}`);
-    
-    this.channel
-      .on('broadcast', { event: 'audio-chunk' }, ({ payload }: { payload: any }) => {
-        if (payload.messageId === this.currentMessageId) {
-          // Decode base64 chunk and push to the stream player
-          const byteCharacters = atob(payload.chunk);
-          const byteNumbers = new Array(byteCharacters.length);
-          for (let i = 0; i < byteCharacters.length; i++) {
-              byteNumbers[i] = byteCharacters.charCodeAt(i);
-          }
-          const byteArray = new Uint8Array(byteNumbers);
-          streamController.enqueue(byteArray);
-
-          if (payload.isLast) {
-            streamController.close();
-            this.stop();
-          }
-        }
-      })
-      .on('broadcast', { event: 'audio-error' }, ({ payload }: { payload: any }) => {
-        if (payload.messageId === this.currentMessageId) {
-          console.error('TTS Streaming Error:', payload.error);
-          this.stop();
-          if (this.onError) {
-            this.onError(payload.error);
-          }
-        }
-      })
-      .subscribe((status: string) => {
-        if (status === 'SUBSCRIBED') {
-          console.log(`[RealtimeAudioPlayer] Subscribed to channel tts-audio-${sessionId}`);
+  private handleAudioChunk(chunk: Uint8Array): void {
+    if (!this.isPlaying) {
+      this.isPlaying = true;
+      const stream = new ReadableStream({
+        start: (controller) => {
+          // Store controller for later use
+          this.streamPlayer.getStreamController(() => {
+            this.isPlaying = false;
+          });
         }
       });
-  }
-  
-  public stop() {
-    if (this.channel) {
-      supabase.removeChannel(this.channel);
-      this.channel = null;
-      console.log('[RealtimeAudioPlayer] Unsubscribed and channel removed.');
     }
-    // The stream player is managed by its own lifecycle now.
-    // this.streamPlayer.stop(); 
-    this.currentMessageId = null;
-    this.onPlaybackComplete = null;
-    this.onError = null;
+
+    // Send chunk to stream player
+    // Note: This would need to be implemented based on the stream player's API
+  }
+
+  private handleAudioEnd(): void {
+    this.isPlaying = false;
+    console.log('[RealtimeAudioPlayer] Audio stream ended');
+  }
+
+  async stopSession(): Promise<void> {
+    if (this.channel) {
+      await supabase.removeChannel(this.channel);
+      this.channel = null;
+    }
+
+    if (this.sessionId) {
+      this.streamPlayer.stop();
+      this.sessionId = null;
+      this.isPlaying = false;
+    }
+
+    console.log('[RealtimeAudioPlayer] Unsubscribed and channel removed.');
+  }
+
+  isActive(): boolean {
+    return this.sessionId !== null && this.isPlaying;
   }
 }
 

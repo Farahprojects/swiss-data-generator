@@ -1,3 +1,7 @@
+// MARKED FOR DELETION - No longer used in conversation mode
+// We switched to blob-based TTS approach instead of streaming
+// This file can be safely deleted
+
 // src/services/voice/StreamPlayerService.ts
 
 class StreamPlayerService {
@@ -98,29 +102,41 @@ class StreamPlayerService {
     this.onPlaybackComplete = onComplete;
     this.mediaSource = new MediaSource();
     this.audioElement.src = URL.createObjectURL(this.mediaSource);
+    this.sourceBuffer = null;
+    this.isPlaying = false;
+    this.queue = [];
+    this.hasStartedPlayback = false;
 
     this.mediaSource.addEventListener('sourceopen', () => this.handleSourceOpen(stream));
-    this.setupAudioAnalysis();
   }
 
   public stop() {
+    this.isPlaying = false;
+    this.hasStartedPlayback = false;
+    
     if (this.streamReader) {
       this.streamReader.cancel();
       this.streamReader = null;
     }
-    this.stopAudioAnalysis();
+    
+    if (this.streamController) {
+      this.streamController.close();
+      this.streamController = null;
+    }
+
     if (this.audioElement) {
       this.audioElement.pause();
-      if (this.audioElement.src) {
-        URL.revokeObjectURL(this.audioElement.src);
-        this.audioElement.removeAttribute('src');
-      }
+      this.audioElement.currentTime = 0;
     }
+
     if (this.mediaSource && this.mediaSource.readyState === 'open') {
       this.mediaSource.endOfStream();
     }
     this.sourceBuffer = null;
     this.mediaSource = null;
+
+    this.queue = [];
+    this.stopAudioAnalysis();
   }
 
   private async handleSourceOpen(stream: ReadableStream<Uint8Array>) {
@@ -128,52 +144,39 @@ class StreamPlayerService {
 
     this.sourceBuffer = this.mediaSource.addSourceBuffer('audio/mpeg');
     this.streamReader = stream.getReader();
-    
-    // Buffer to accumulate audio data
-    let audioBuffer = new Uint8Array(0);
-    const MIN_BUFFER_SIZE = 32768; // 32KB minimum before starting playback
 
     const processNextChunk = async () => {
       if (!this.streamReader) return;
 
-      const { done, value } = await this.streamReader.read();
-
-      if (done) {
-        // Flush any remaining audio data
-        if (audioBuffer.length > 0) {
-          this.appendBuffer(audioBuffer, () => {
-            this.endStreamSafely();
-          });
-        } else {
-          this.endStreamSafely();
-        }
-        return;
-      }
-
-      // Accumulate audio data
-      const newBuffer = new Uint8Array(audioBuffer.length + value.length);
-      newBuffer.set(audioBuffer);
-      newBuffer.set(value, audioBuffer.length);
-      audioBuffer = newBuffer;
-
-      // Start playback once we have enough data
-      if (audioBuffer.length >= MIN_BUFFER_SIZE && this.audioElement?.paused) {
-        this.audioElement?.play().catch(e => console.error("Audio play failed:", e));
-        this.startAudioAnalysis();
-      }
-
-      // Process accumulated data in chunks
-      const CHUNK_SIZE = 16384; // 16KB chunks
-      if (audioBuffer.length >= CHUNK_SIZE) {
-        const chunk = audioBuffer.slice(0, CHUNK_SIZE);
-        audioBuffer = audioBuffer.slice(CHUNK_SIZE);
+      try {
+        const { done, value } = await this.streamReader.read();
         
-        this.appendBuffer(chunk, () => {
-          processNextChunk();
-        });
-      } else {
-        // Continue reading if we don't have enough data yet
+        if (done) {
+          this.endStreamSafely();
+          return;
+        }
+
+        if (value) {
+          this.queue.push(value);
+          
+          if (!this.hasStartedPlayback) {
+            const totalBuffered = this.queue.reduce((acc, chunk) => acc + chunk.length, 0);
+            if (totalBuffered >= this.BUFFER_THRESHOLD) {
+              this.hasStartedPlayback = true;
+              this.setupAudioAnalysis();
+              this.startAudioAnalysis();
+              await this.audioElement.play();
+            }
+          }
+          
+          this.processQueue();
+        }
+        
+        // Continue reading
         processNextChunk();
+      } catch (error) {
+        console.error('Error reading stream:', error);
+        this.endStreamSafely();
       }
     };
     

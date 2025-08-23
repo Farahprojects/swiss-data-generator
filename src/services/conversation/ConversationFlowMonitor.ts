@@ -157,6 +157,8 @@ class ConversationFlowMonitorClass {
     this.onTtsComplete = onComplete;
   }
 
+  // MARKED FOR DELETION - TTS streaming functionality no longer used
+  // We switched to blob-based TTS approach instead of streaming
   /**
    * START TTS STREAMING - Automatically triggered when speaking step is detected
    */

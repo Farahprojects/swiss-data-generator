@@ -1,4 +1,6 @@
-
+// MARKED FOR DELETION - No longer used in conversation mode
+// We switched to blob-based TTS approach instead of streaming
+// This file can be safely deleted
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 
@@ -105,16 +107,16 @@ serve(async (req) => {
     console.log("[tts-speak] OK, bytes:", bytes.byteLength);
 
     return new Response(bytes, {
-      status: 200,
       headers: {
         ...CORS,
         "Content-Type": "audio/mpeg",
-        "Cache-Control": "no-store",
+        "Content-Length": bytes.byteLength.toString(),
       },
     });
-  } catch (e: any) {
+
+  } catch (e) {
     console.error("[tts-speak] Unexpected error:", e);
-    return new Response(JSON.stringify({ error: e?.message || String(e) }), {
+    return new Response(JSON.stringify({ error: "internal_server_error" }), {
       status: 500,
       headers: { ...CORS, "Content-Type": "application/json" },
     });
