@@ -33,7 +33,7 @@ export const useLandingPageImages = () => {
           },
           features_images: {
             "0": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=600&fit=crop",
-            "1": "https://wrvqqvqvwqmfdqvqmaar.supabase.co/storage/v1/object/public/feature-images/Imagine2/Screenshot%202025-06-10%20at%206.57.31%20PM.png",
+            "1": "https://auth.theraiastro.com/storage/v1/object/public/feature-images/Imagine2/Screenshot%202025-06-10%20at%206.57.31%20PM.png",
             "2": "https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?w=800&h=600&fit=crop",
             "3": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=600&fit=crop"
           },
