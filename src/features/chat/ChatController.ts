@@ -57,7 +57,7 @@ class ChatController {
   setConversationMode(mode: string, sessionId: string) {
     this.mode = mode;
     this.sessionId = sessionId;
-    console.log(`[ChatController] Set conversation mode: ${mode}, sessionId: ${sessionId}`);
+
   }
 
   async sendTextMessage(text: string) {
@@ -178,7 +178,7 @@ class ChatController {
     
     this.initializeConversationService();
     
-    console.log('[ChatController] Setting status to recording...');
+
     useChatStore.getState().setStatus('recording');
     // conversationFlowMonitor.observeStep('listening');
     
@@ -209,7 +209,7 @@ class ChatController {
         return;
       }
       
-      console.log(`[ChatController] Processing audio blob: ${audioBlob.size} bytes`);
+  
       
       const { transcript } = await sttService.transcribe(
         audioBlob, 
@@ -309,7 +309,7 @@ class ChatController {
   }
 
   private resetTurn(endConversationFlow: boolean = true) {
-    console.log(`[ChatController] resetTurn called. endConversationFlow: ${endConversationFlow}`);
+
     
     if (endConversationFlow) {
       useChatStore.getState().setStatus('idle');
@@ -344,10 +344,10 @@ class ChatController {
     
     if (!endConversationFlow && !this.isResetting) {
       // Short delay before starting next turn
-      console.log('[ChatController] Scheduling next turn in 500ms...');
+  
       this.turnRestartTimeout = setTimeout(() => { 
         if (!this.isResetting) {
-          console.log('[ChatController] Starting next turn...');
+      
           this.startTurn(); 
         }
       }, 500);
