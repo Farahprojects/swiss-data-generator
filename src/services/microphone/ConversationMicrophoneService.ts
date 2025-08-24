@@ -65,10 +65,19 @@ class ConversationMicrophoneServiceClass {
       });
 
       const trackSettings = this.stream.getAudioTracks()[0]?.getSettings?.() || {};
+      console.log('[MIC-LOG] getUserMedia resolved', trackSettings);
       this.log('🎛️ getUserMedia acquired. Track settings:', trackSettings);
 
       // Configure audio analysis for optional silence detection
       this.audioContext = new AudioContext({ sampleRate: 48000 });
+      
+      // Defensively resume AudioContext if suspended (helps on iOS)
+      if (this.audioContext.state === 'suspended') {
+        console.log('[MIC-LOG] AudioContext suspended, resuming...');
+        await this.audioContext.resume();
+        console.log('[MIC-LOG] AudioContext resumed, state:', this.audioContext.state);
+      }
+      
       this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
       this.analyser = this.audioContext.createAnalyser();
       this.analyser.fftSize = 2048;
@@ -88,7 +97,6 @@ class ConversationMicrophoneServiceClass {
       this.mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           this.audioChunks.push(event.data);
-          this.log(`📦 Audio chunk collected (${event.data.size} bytes)`);
         }
       };
 
@@ -104,24 +112,20 @@ class ConversationMicrophoneServiceClass {
         this.cleanup();
       };
 
-      // Start recording - let MediaRecorder handle chunking naturally
-      this.mediaRecorder.start();
+      // Start recording and VAD
+      this.mediaRecorder.start(100); // 100ms chunks
+      this.startVoiceActivityDetection();
       
       this.notifyListeners();
-      this.log('✅ Recording started successfully');
-
-      // Start two-phase Voice Activity Detection
-      this.startVoiceActivityDetection();
+      console.log('[MIC-LOG] Recording started successfully');
       return true;
 
-    } catch (error) {
-      this.error('❌ Failed to start recording:', error);
-      microphoneArbitrator.release('conversation');
-      
+    } catch (error: any) {
+      console.error('[MIC-LOG] getUserMedia error:', error.name, error);
+      this.error('❌ getUserMedia failed:', error);
       if (this.options.onError) {
-        this.options.onError(error instanceof Error ? error : new Error('Recording failed'));
+        this.options.onError(error);
       }
-      
       return false;
     }
   }

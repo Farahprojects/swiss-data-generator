@@ -185,19 +185,27 @@ class ChatController {
     }
     
     this.initializeConversationService();
-    
 
     useChatStore.getState().setStatus('recording');
     // conversationFlowMonitor.observeStep('listening');
     
     try {
-      await conversationMicrophoneService.startRecording();
+      const ok = await conversationMicrophoneService.startRecording();
+      if (!ok) {
+        // Fail fast if microphone doesn't start
+        useChatStore.getState().setStatus('idle');
+        this.isTurnActive = false;
+        throw new Error('Failed to start microphone');
+      }
+      console.log('[MIC-LOG] Microphone started successfully');
       // Reset auto-recovery on successful start
       // conversationFlowMonitor.resetAutoRecovery();
     } catch (error: any) {
       // conversationFlowMonitor.observeError('listening', error);
-      useChatStore.getState().setError(error.message);
+      useChatStore.getState().setStatus('idle');
       this.isTurnActive = false;
+      useChatStore.getState().setError(error.message);
+      throw error; // Re-throw so overlay can catch and handle UI
     }
   }
 

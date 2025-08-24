@@ -10,6 +10,7 @@ import { conversationTtsService } from '@/services/voice/conversationTts';
 // import { FlowMonitorIndicator } from './FlowMonitorIndicator'; // Hidden for production
 import { AnimatePresence, motion } from 'framer-motion';
 import { Mic } from 'lucide-react';
+import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
 
 export const ConversationOverlay: React.FC = () => {
   const { isConversationOpen, closeConversation } = useConversationUIStore();
@@ -19,6 +20,7 @@ export const ConversationOverlay: React.FC = () => {
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [isStarting, setIsStarting] = useState(false); // Guard against double taps
   const hasStarted = useRef(false); // One-shot guard to prevent double invocation
+  const [showPermissionHint, setShowPermissionHint] = useState(false); // Show hint if waiting too long
   
   useEffect(() => {
     if (isConversationOpen) {
@@ -39,6 +41,7 @@ export const ConversationOverlay: React.FC = () => {
     setPermissionGranted(false); // Reset permission on close
     setIsStarting(false); // Reset guard on close
     hasStarted.current = false; // Reset one-shot guard
+    setShowPermissionHint(false); // Reset permission hint
   };
 
   const handleStart = async () => {
@@ -57,21 +60,41 @@ export const ConversationOverlay: React.FC = () => {
     // Set flags immediately for instant UI feedback
     setPermissionGranted(true);
     
-    // First, unlock the audio systems. This is synchronous or very fast.
+    // First, unlock the controller (synchronous)
     chatController.unlock();
-    await conversationTtsService.unlockAudio();
+    console.log('[MIC-LOG] Calling ChatController.startTurn immediately (gesture preserved)');
+    
+    // Start TTS unlock in background without awaiting (don't break gesture chain)
+    conversationTtsService.unlockAudio().catch(error => {
+      console.warn('[MIC-LOG] Background TTS unlock failed:', error);
+    });
     
     if (chat_id) {
       chatController.setConversationMode('convo', chat_id);
 
-      // Now, start the turn in the background. This might trigger a permission prompt.
+      // Call startTurn immediately on the same tick as user gesture
       chatController.startTurn().catch(error => {
-        console.error('[ConversationOverlay] Failed to start turn, likely permission denied:', error);
+        console.error('[MIC-LOG] Failed to start turn, likely permission denied:', error);
         // If it fails (e.g., user denies permission), revert the UI.
         setPermissionGranted(false);
         setIsStarting(false);
         hasStarted.current = false;
       });
+
+      // Add watchdog timer to detect microphone failures
+      setTimeout(() => {
+        const status = useChatStore.getState().status;
+        const hasStream = conversationMicrophoneService.getState().hasStream;
+        
+        if (status !== 'recording' && !hasStream) {
+          console.warn('[MIC-LOG] Watchdog: No recording status or stream after 1.5s, re-attempting startTurn()');
+          setShowPermissionHint(true); // Show hint to user
+          chatController.startTurn().catch(error => {
+            console.error('[MIC-LOG] Watchdog re-attempt failed:', error);
+          });
+        }
+      }, 1500);
+
     } else {
       console.error("[ConversationOverlay] Cannot start conversation without a chat_id");
       closeConversation();
@@ -139,6 +162,14 @@ export const ConversationOverlay: React.FC = () => {
               {state === 'listening' ? 'Listening…' : 
                state === 'processing' ? 'Thinking…' : 'Speaking…'}
             </p>
+            
+            {/* Permission hint - shows if waiting too long for microphone */}
+            {showPermissionHint && (
+              <p className="text-sm text-orange-600 font-light text-center max-w-xs">
+                Waiting for microphone permission… tap 'Allow' in the browser prompt.
+              </p>
+            )}
+            
             {/* Close button - positioned under the status text */}
             <button
               onClick={handleModalClose}
