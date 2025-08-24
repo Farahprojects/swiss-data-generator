@@ -21,6 +21,7 @@ class ConversationTtsService {
   private currentNodes?: { source: MediaElementAudioSourceNode; gain: GainNode | null };
   private isAudioUnlocked = false;
   private masterAudioElement: HTMLAudioElement | null = null;
+  private cachedMediaElementSource?: MediaElementAudioSourceNode; // Cache for reuse
 
   /**
    * Unlocks audio playback after a user gesture. This is the single entry point
@@ -84,6 +85,12 @@ class ConversationTtsService {
       this.currentNodes = undefined;
     }
     
+    // Clear cached MediaElementSourceNode
+    if (this.cachedMediaElementSource) {
+      this.cachedMediaElementSource.disconnect();
+      this.cachedMediaElementSource = undefined;
+    }
+    
     this.audioLevel = 0;
     this.notifyListeners();
     
@@ -99,48 +106,6 @@ class ConversationTtsService {
       audio.currentTime = 0;
       audio.src = '';
     });
-  }
-
-  /**
-   * Initializes the AudioContext after a user gesture.
-   * This is crucial for iOS audio playback.
-   */
-  public async initializeAudioContext(): Promise<void> {
-    if (this.isAudioContextInitialized) return;
-
-    try {
-      if (!this.audioContext) {
-        const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
-        if (AudioContextClass) {
-          this.audioContext = new AudioContextClass();
-          console.log('[TTS-LOG] AudioContext created.');
-        } else {
-          console.warn('[TTS-LOG] AudioContext not supported.');
-          return;
-        }
-      }
-
-      if (this.audioContext.state === 'suspended') {
-        console.log('[TTS-LOG] Resuming suspended AudioContext...');
-        await this.audioContext.resume();
-      }
-      
-      this.playSilentSound();
-      this.isAudioContextInitialized = true;
-      console.log(`[TTS-LOG] AudioContext initialized and unlocked. State: ${this.audioContext.state}`);
-      
-    } catch (error) {
-      console.error('[TTS-LOG] Error initializing AudioContext:', error);
-    }
-  }
-
-  private playSilentSound(): void {
-    if (!this.audioContext) return;
-    const buffer = this.audioContext.createBuffer(1, 1, 22050);
-    const source = this.audioContext.createBufferSource();
-    source.buffer = buffer;
-    source.connect(this.audioContext.destination);
-    source.start(0);
   }
 
   public getCurrentAudioLevel(): number {
@@ -300,8 +265,27 @@ class ConversationTtsService {
         this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
       }
 
-      // Create source node
-      const source = this.audioContext.createMediaElementSource(audio);
+      // Create or reuse MediaElementSourceNode to avoid InvalidStateError
+      let source: MediaElementAudioSourceNode;
+      if (this.cachedMediaElementSource) {
+        // Reuse existing source if it's still valid
+        try {
+          // Test if the cached source is still connected to the same audio element
+          source = this.cachedMediaElementSource;
+          console.log('[TTS-LOG] Reusing cached MediaElementSourceNode');
+        } catch (error) {
+          // If reuse fails, create a new one
+          console.log('[TTS-LOG] Cached MediaElementSourceNode invalid, creating new one');
+          this.cachedMediaElementSource?.disconnect();
+          source = this.audioContext.createMediaElementSource(audio);
+          this.cachedMediaElementSource = source;
+        }
+      } else {
+        // Create new MediaElementSourceNode
+        console.log('[TTS-LOG] Creating new MediaElementSourceNode');
+        source = this.audioContext.createMediaElementSource(audio);
+        this.cachedMediaElementSource = source;
+      }
 
       // Connect: source -> analyser (for analysis) AND source -> destination (for audio)
       source.connect(this.analyser);

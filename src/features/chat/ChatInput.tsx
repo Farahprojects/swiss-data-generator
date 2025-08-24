@@ -42,7 +42,7 @@ export const ChatInput = () => {
   const handleSpeakerClick = () => {
     if (!isConversationOpen) {
       openConversation();
-      chatController.startTurn();
+      // Removed: chatController.startTurn(); - microphone will be activated after user taps "Start"
       return;
     }
     if (status === 'recording') {

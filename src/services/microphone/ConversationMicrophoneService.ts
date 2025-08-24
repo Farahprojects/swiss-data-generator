@@ -127,34 +127,42 @@ class ConversationMicrophoneServiceClass {
   }
 
   /**
-   * STOP RECORDING - Clean domain-specific stop
+   * STOP RECORDING - Complete domain-specific recording
    */
-  stopRecording(): Promise<Blob> {
-    return new Promise((resolve, reject) => {
-      if (!this.isRecording || !this.mediaRecorder) {
-        reject(new Error('No active recording to stop'));
-        return;
-      }
+  async stopRecording(): Promise<Blob | null> {
+    if (!this.isRecording || !this.mediaRecorder) {
+      this.log('❌ Cannot stop - not recording');
+      return null;
+    }
 
-      this.log('🛑 Stopping conversation recording');
-      
-      this.isRecording = false;
+    this.log('🛑 Stopping conversation recording');
+    this.isRecording = false;
 
-      // Set up one-time handler for stop completion
+    return new Promise((resolve) => {
+      // Set up the data handler before stopping
       this.mediaRecorder.onstop = () => {
-        const finalBlob = this.createFinalBlobFromBuffer();
-        this.log('📼 Recording completed - blob size:', finalBlob.size);
+        this.log('📦 MediaRecorder stopped, creating blob...');
         
-        this.cleanup();
-        resolve(finalBlob);
+        if (this.audioChunks.length === 0) {
+          this.log('⚠️ No audio chunks collected');
+          resolve(null);
+          return;
+        }
+
+        const blob = new Blob(this.audioChunks, { type: 'audio/webm;codecs=opus' });
+        this.log(`✅ Recording complete: ${blob.size} bytes`);
+        
+        // Clear chunks for next recording
+        this.audioChunks = [];
+        
+        // IMPORTANT: Do NOT call cleanup here - keep stream and analyser alive
+        // Cleanup should only be called on cancel/reset/overlay close
+        this.log('🎤 Stream and analyser kept alive for next turn');
+        
+        resolve(blob);
       };
 
-      this.mediaRecorder.onerror = (event) => {
-        this.error('❌ Stop recording error:', event);
-        this.cleanup();
-        reject(new Error('Failed to stop recording'));
-      };
-
+      // Stop the recorder
       this.mediaRecorder.stop();
     });
   }
@@ -202,44 +210,57 @@ class ConversationMicrophoneServiceClass {
       this.options.onRecordingComplete(finalBlob);
     }
     
-    this.cleanup();
+    // IMPORTANT: Do NOT call cleanup here - keep stream and analyser alive
+    // Cleanup should only be called on cancel/reset/overlay close
+    this.log('🎤 Recording complete - stream and analyser kept alive for next turn');
   }
 
   /**
-   * CLEANUP - Complete domain cleanup
+   * CLEANUP - Only call this when conversation is completely done
+   * (cancel, reset, or overlay close)
    */
-  private cleanup(): void {
-    this.log('🧹 Cleaning up conversation microphone');
+  cleanup(): void {
+    this.log('🧹 Cleaning up conversation microphone service');
+    
+    // Stop recording if active
+    if (this.isRecording && this.mediaRecorder) {
+      this.mediaRecorder.stop();
+      this.isRecording = false;
+    }
 
-    // Disconnect audio nodes
+    // Release microphone stream
+    if (this.stream) {
+      this.stream.getTracks().forEach(track => {
+        track.stop();
+        this.log(`🎤 Stopped track: ${track.kind}`);
+      });
+      this.stream = null;
+    }
+
+    // Cleanup audio analysis
     if (this.mediaStreamSource) {
       this.mediaStreamSource.disconnect();
       this.mediaStreamSource = null;
     }
+
+    if (this.analyser) {
+      this.analyser.disconnect();
+      this.analyser = null;
+    }
+
     if (this.audioContext && this.audioContext.state !== 'closed') {
       this.audioContext.close();
       this.audioContext = null;
     }
 
-    // Stop stream tracks
-    if (this.stream) {
-      this.stream.getTracks().forEach(track => {
-        this.log('Stopping track:', track.kind);
-        track.stop();
-      });
-      this.stream = null;
-    }
-
-    // Clear refs
+    // Clear data
+    this.audioChunks = [];
     this.mediaRecorder = null;
-    this.analyser = null;
-    this.audioLevel = 0;
-    this.monitoringRef.current = false;
-
-    // Release arbitrator
+    
+    // Release microphone from arbitrator
     microphoneArbitrator.release('conversation');
     
-    this.notifyListeners();
+    this.log('✅ Conversation microphone service cleaned up');
   }
 
   /**
@@ -298,9 +319,6 @@ class ConversationMicrophoneServiceClass {
     let phase: 'waiting_for_voice' | 'monitoring_silence' = 'waiting_for_voice';
     let voiceStartTime: number | null = null;
     let silenceStartTime: number | null = null;
-    
-    // Helper function to convert dB to RMS
-    const dbToRms = (dB: number): number => Math.pow(10, dB / 20);
     
     // Optimized thresholds for natural conversation flow
     const VOICE_START_THRESHOLD = 0.012;  // RMS threshold to detect voice start
