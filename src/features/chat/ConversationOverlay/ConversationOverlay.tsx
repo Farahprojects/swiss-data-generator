@@ -23,9 +23,28 @@ export const ConversationOverlay: React.FC = () => {
   const [showPermissionHint, setShowPermissionHint] = useState(false); // Show hint if waiting too long
   
   useEffect(() => {
-    if (isConversationOpen) {
-      console.log('[MIC-LOG] ConversationOverlay opened. Waiting for user tap...');
+    if (isConversationOpen && !hasStarted.current) {
+      console.log('[voice] ConversationOverlay opened. Probing for permissions...');
+      const probeAndStart = async () => {
+        try {
+          // Probe if a user gesture is required.
+          const gestureRequired = await conversationTtsService.probeAudioPermissions();
+          if (!gestureRequired) {
+            // If no gesture is needed, start the conversation automatically.
+            console.log('[voice] Gesture not required, starting automatically.');
+            handleStart(); // This will handle the full start sequence.
+          } else {
+            // Otherwise, wait for the user to tap.
+            console.log('[voice] Gesture required, waiting for user tap.');
+          }
+        } catch (error) {
+          console.error('[voice] Error during permission probe:', error);
+          // Fallback to requiring a tap if probing fails.
+        }
+      };
+      probeAndStart();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isConversationOpen]);
 
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything

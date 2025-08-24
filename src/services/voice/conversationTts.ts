@@ -230,6 +230,45 @@ class ConversationTtsService {
   }
 
   /**
+   * Probes the browser's audio system to determine if a user gesture is required.
+   * This should be called before starting a voice session to decide whether to show a "Tap to Start" screen.
+   * @returns {Promise<boolean>} - True if a gesture is required, false otherwise.
+   */
+  public async probeAudioPermissions(): Promise<boolean> {
+    console.log('[voice] probe: Probing audio permissions...');
+    await this.ensureAudioContext();
+    if (this.audioContext) {
+      const gestureRequired = this.audioContext.state === 'suspended';
+      console.log(`[voice] probe-result: AudioContext state is '${this.audioContext.state}'. Gesture required: ${gestureRequired}`);
+      return gestureRequired;
+    }
+    console.error('[voice] probe-error: AudioContext could not be initialized.');
+    return true; // Assume gesture is required if context fails
+  }
+
+  /**
+   * Ensures the master AudioContext is initialized.
+   * @private
+   */
+  private async ensureAudioContext(): Promise<void> {
+    if (this.audioContext) {
+      return;
+    }
+    try {
+      console.log('[voice] ctx: Creating new master AudioContext.');
+      // @ts-ignore
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      this.audioContext = new AudioContext();
+      this.contextId = `ctx-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      this.contextCreatedAt = Date.now();
+      console.log(`[voice] ctx-created: ID ${this.contextId}, State: ${this.audioContext.state}`);
+    } catch (e) {
+      console.error('[voice] ctx-error: Failed to create AudioContext.', e);
+      this.audioContext = null;
+    }
+  }
+
+  /**
    * Get cached microphone stream
    */
   public getCachedMicStream(): MediaStream | null {
