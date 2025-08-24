@@ -44,7 +44,7 @@ export const ConversationOverlay: React.FC = () => {
     setShowPermissionHint(false); // Reset permission hint
   };
 
-  const handleStart = async () => {
+  const handleStart = () => { // No longer async
     // One-shot guard to prevent double invocation
     if (hasStarted.current) {
       console.log('[MIC-LOG] handleStart already invoked, ignoring duplicate call');
@@ -60,19 +60,16 @@ export const ConversationOverlay: React.FC = () => {
     // Set flags immediately for instant UI feedback
     setPermissionGranted(true);
     
-    // First, unlock the controller (synchronous)
+    // Unlock both audio and microphone systems synchronously within the user gesture.
+    conversationTtsService.unlockAudio();
     chatController.unlock();
-    console.log('[MIC-LOG] Calling ChatController.startTurn immediately (gesture preserved)');
     
-    // Start TTS unlock in background without awaiting (don't break gesture chain)
-    conversationTtsService.unlockAudio().catch(error => {
-      console.warn('[MIC-LOG] Background TTS unlock failed:', error);
-    });
+    console.log('[MIC-LOG] Calling ChatController.startTurn immediately (gesture preserved)');
     
     if (chat_id) {
       chatController.setConversationMode('convo', chat_id);
 
-      // Call startTurn immediately on the same tick as user gesture
+      // Call startTurn in the background. It will request microphone permission.
       chatController.startTurn().catch(error => {
         console.error('[MIC-LOG] Failed to start turn, likely permission denied:', error);
         // If it fails (e.g., user denies permission), revert the UI.
@@ -81,17 +78,14 @@ export const ConversationOverlay: React.FC = () => {
         hasStarted.current = false;
       });
 
-      // Add watchdog timer to detect microphone failures
+      // Watchdog timer remains to detect if the user denies permission or the mic fails silently.
       setTimeout(() => {
         const status = useChatStore.getState().status;
         const hasStream = conversationMicrophoneService.getState().hasStream;
         
         if (status !== 'recording' && !hasStream) {
-          console.warn('[MIC-LOG] Watchdog: No recording status or stream after 1.5s, re-attempting startTurn()');
-          setShowPermissionHint(true); // Show hint to user
-          chatController.startTurn().catch(error => {
-            console.error('[MIC-LOG] Watchdog re-attempt failed:', error);
-          });
+          console.warn('[MIC-LOG] Watchdog: No recording status or stream after 1.5s, showing hint.');
+          setShowPermissionHint(true);
         }
       }, 1500);
 

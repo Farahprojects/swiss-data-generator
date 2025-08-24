@@ -26,9 +26,10 @@ class ConversationTtsService {
   /**
    * Unlocks audio playback after a user gesture. This is the single entry point
    * for preparing all audio systems (AudioContext and the master audio element).
-   * It's crucial for iOS compatibility.
+   * It's crucial for iOS compatibility and MUST be called synchronously from a
+   * user interaction event handler (e.g., onClick).
    */
-  public async unlockAudio(): Promise<void> {
+  public unlockAudio(): void {
     if (this.isAudioUnlocked) return;
 
     try {
@@ -44,23 +45,26 @@ class ConversationTtsService {
         }
       }
 
+      // This can be called multiple times, it's safe.
       if (this.audioContext.state === 'suspended') {
-        console.log('[TTS-LOG] Resuming suspended AudioContext...');
-        await this.audioContext.resume();
+        this.audioContext.resume().catch(err => console.error('[TTS-LOG] Failed to resume AudioContext', err));
       }
 
       // 2. Create and "prime" the master audio element
       if (!this.masterAudioElement) {
         this.masterAudioElement = new Audio();
-        this.masterAudioElement.muted = true; // Mute for the unlock play
+        this.masterAudioElement.muted = true;
         
-        // This play call is inside the user gesture, which is key for iOS.
-        // It will likely throw an empty-source error, which we can safely ignore.
-        await this.masterAudioElement.play().catch(() => {});
+        // Call play() to unlock it. We don't need to await. The call itself is the key.
+        // This will likely throw an empty-source error, which we safely ignore.
+        this.masterAudioElement.play().catch(() => {
+          // This catch is to prevent unhandled promise rejection warnings.
+        });
         
         console.log('[TTS-LOG] Master audio element created and primed.');
       }
       
+      // Set the flag synchronously. From this point on, audio is considered unlocked.
       this.isAudioUnlocked = true;
       console.log(`[TTS-LOG] Audio systems unlocked. AudioContext state: ${this.audioContext.state}`);
       
