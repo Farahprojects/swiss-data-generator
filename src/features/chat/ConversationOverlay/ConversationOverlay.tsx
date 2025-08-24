@@ -17,7 +17,6 @@ export const ConversationOverlay: React.FC = () => {
   const chat_id = useChatStore((state) => state.chat_id);
   const audioLevel = useConversationAudioLevel(); // Get real-time audio level
   const [permissionGranted, setPermissionGranted] = useState(false);
-  const [isStarting, setIsStarting] = useState(false); // Guard against double taps
   
   useEffect(() => {
     if (isConversationOpen) {
@@ -36,32 +35,17 @@ export const ConversationOverlay: React.FC = () => {
     // 3. Close the UI
     closeConversation();
     setPermissionGranted(false); // Reset permission on close
-    setIsStarting(false); // Reset guard on close
   };
 
   const handleStart = async () => {
-    if (isStarting) return; // Prevent double taps
-    setIsStarting(true);
-
     console.log('[MIC-LOG] User tapped start. Unlocking controller and requesting microphone...');
-    
-    // First, unlock the audio systems. This is synchronous or very fast.
-    chatController.unlock();
+    chatController.unlock(); // Unlock the controller first
     await conversationTtsService.unlockAudio();
     
     if (chat_id) {
       chatController.setConversationMode('convo', chat_id);
-
-      // Immediately update the UI to show the conversation view.
+      await chatController.startTurn();
       setPermissionGranted(true);
-
-      // Now, start the turn in the background. This might trigger a permission prompt.
-      chatController.startTurn().catch(error => {
-        console.error('[ConversationOverlay] Failed to start turn, likely permission denied:', error);
-        // If it fails (e.g., user denies permission), revert the UI.
-        setPermissionGranted(false);
-        setIsStarting(false);
-      });
     } else {
       console.error("[ConversationOverlay] Cannot start conversation without a chat_id");
       closeConversation();
