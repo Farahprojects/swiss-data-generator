@@ -28,7 +28,7 @@ class ConversationMicrophoneServiceClass {
   private monitoringRef = { current: false };
   private audioLevel = 0;
   private silenceStartTime: number | null = null;
-  private vadRafId: number | null = null;
+  private vadRafId: number | NodeJS.Timeout | null = null;
   
   private options: ConversationMicrophoneOptions = {
     silenceThreshold: 0.01,
@@ -187,9 +187,9 @@ class ConversationMicrophoneServiceClass {
     this.cleanup();
   }
 
-  // ----- Two-Phase Voice Activity Detection (VAD) -----
+  // ----- Non-Blocking Voice Activity Detection (VAD) -----
   private startVoiceActivityDetection(): void {
-    this.log('🎯 Starting VAD loop...');
+    this.log('🎯 Starting VAD loop (non-blocking)...');
     
     const checkVAD = () => {
       if (!this.isRecording || !this.analyser) {
@@ -198,16 +198,18 @@ class ConversationMicrophoneServiceClass {
       }
 
       try {
-        // Get audio data
+        // Get audio data (simplified analysis)
         const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
         this.analyser.getByteFrequencyData(dataArray);
         
-        // Calculate RMS amplitude
+        // Simplified RMS calculation (sample every 4th value to reduce computation)
         let sum = 0;
-        for (let i = 0; i < dataArray.length; i++) {
+        let count = 0;
+        for (let i = 0; i < dataArray.length; i += 4) {
           sum += dataArray[i] * dataArray[i];
+          count++;
         }
-        const rms = Math.sqrt(sum / dataArray.length);
+        const rms = Math.sqrt(sum / count);
         const level = Math.min(rms / 128, 1); // Normalize to 0-1
         
         // Update audio level
@@ -236,8 +238,8 @@ class ConversationMicrophoneServiceClass {
           }
         }
         
-        // Continue the loop
-        this.vadRafId = requestAnimationFrame(checkVAD);
+        // Continue the loop with setTimeout (yields control to browser)
+        this.vadRafId = setTimeout(checkVAD, 100); // 100ms instead of 16ms
         
       } catch (error) {
         this.error('❌ Error in VAD loop:', error);
@@ -246,8 +248,8 @@ class ConversationMicrophoneServiceClass {
       }
     };
     
-    this.log('🚀 Starting first VAD frame...');
-    this.vadRafId = requestAnimationFrame(checkVAD);
+    this.log('🚀 Starting first VAD frame (100ms intervals)...');
+    this.vadRafId = setTimeout(checkVAD, 100);
   }
 
   /**
@@ -256,7 +258,7 @@ class ConversationMicrophoneServiceClass {
   private stopVoiceActivityDetection(): void {
     this.log('🛑 Stopping VAD loop...');
     if (this.vadRafId) {
-      cancelAnimationFrame(this.vadRafId);
+      clearTimeout(this.vadRafId); // Changed from cancelAnimationFrame to clearTimeout
       this.vadRafId = null;
       this.log('✅ VAD loop stopped');
     }
