@@ -153,32 +153,73 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
         setIsProcessing(true);
         
         try {
-          const { data: result, error } = await supabase.functions.invoke('create-checkout', {
-            body: {
-              ...data,
-              trustedPricing: pricingResult
-            }
+          // Transform form data to match translator edge function field names (same as desktop)
+          const transformedReportData = {
+            // Keep original form fields for compatibility
+            ...data,
+            
+            // Add translator field names for birth data
+            birth_date: data.birthDate,
+            birth_time: data.birthTime,
+            location: data.birthLocation,
+            latitude: data.birthLatitude,
+            longitude: data.birthLongitude,
+            
+            // Second person fields with translator names
+            second_person_birth_date: data.secondPersonBirthDate,
+            second_person_birth_time: data.secondPersonBirthTime,
+            second_person_location: data.secondPersonBirthLocation,
+            second_person_latitude: data.secondPersonLatitude,
+            second_person_longitude: data.secondPersonLongitude,
+            
+            // Ensure request field is set
+            request: data.request || (data.reportType?.includes('sync') ? 'sync' : 'essence'),
+            
+            // Guest flags
+            is_guest: true
+          };
+
+          const payloadBody = {
+            reportData: transformedReportData,
+            trustedPricing: pricingResult,
+            is_guest: true
+          };
+          
+          // Use initiate-report-flow like desktop (not create-checkout directly)
+          const { data: result, error } = await supabase.functions.invoke('initiate-report-flow', {
+            body: payloadBody
           });
 
           if (error) {
             throw new Error(error.message);
           }
 
-          if (result?.guestReportId) {
-            setGuestReportId(result.guestReportId);
-            setPaymentStatus(result.paymentStatus);
-            setUserName(data.name);
-            setUserEmail(data.email);
+          const guestReportId = result?.guestReportId || null;
+          const paymentStatus = result?.paymentStatus || 'pending';
+          const name = result?.name || '';
+          const email = result?.email || '';
+          const checkoutUrl = result?.checkoutUrl || null;
+
+          if (guestReportId) {
+            setGuestReportId(guestReportId);
+            setPaymentStatus(paymentStatus);
+            setUserName(name);
+            setUserEmail(email);
             
             if (onReportCreated) {
-              onReportCreated(result.guestReportId, result.paymentStatus, data.name, data.email);
+              onReportCreated(guestReportId, paymentStatus, name, email);
             }
-            // Keep processing state active - the ReportFlowChecker will handle the redirect
-            // Don't set processing to false here as it will show in the UI until redirect
-          } else {
-            // Only clear processing if no report was created
-            setIsProcessing(false);
           }
+
+          if (checkoutUrl) {
+            // Keep processing state active during redirect (same as desktop)
+            window.location.href = checkoutUrl;
+            // Don't set processing to false here - the redirect will handle the state change
+            return;
+          }
+
+          // Only clear processing if no redirect happens
+          setIsProcessing(false);
 
         } catch (error) {
           console.error('❌ Mobile report creation error:', error);
