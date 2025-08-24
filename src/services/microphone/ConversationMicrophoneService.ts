@@ -40,6 +40,7 @@ class ConversationMicrophoneServiceClass {
    * START RECORDING - Complete domain-specific recording
    */
   async startRecording(): Promise<boolean> {
+    console.log('[MIC-LOG] ConversationMicrophoneService.startRecording() called. Requesting getUserMedia...');
     // Check permission from arbitrator
     if (!microphoneArbitrator.claim('conversation')) {
       this.error('❌ Cannot start - microphone in use by another domain');

@@ -161,6 +161,7 @@ class ChatController {
   }
 
   async startTurn() {
+    console.log('[MIC-LOG] ChatController.startTurn() called.');
     if (this.isTurnActive) return;
     this.isTurnActive = true;
     

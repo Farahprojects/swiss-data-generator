@@ -18,6 +18,12 @@ export const ConversationOverlay: React.FC = () => {
   const audioLevel = useConversationAudioLevel(); // Get real-time audio level
   const [permissionGranted, setPermissionGranted] = useState(false);
   
+  useEffect(() => {
+    if (isConversationOpen) {
+      console.log('[MIC-LOG] ConversationOverlay opened. Waiting for user tap...');
+    }
+  }, [isConversationOpen]);
+
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = () => {
     // 1. Kill all audio immediately
@@ -32,6 +38,7 @@ export const ConversationOverlay: React.FC = () => {
   };
 
   const handleStart = async () => {
+    console.log('[MIC-LOG] User tapped start. Requesting microphone...');
     console.log('[CONVERSATION] User tapped to start. Unlocking audio...');
     await conversationTtsService.unlockAudio();
     
