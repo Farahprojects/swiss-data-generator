@@ -75,8 +75,9 @@ class ConversationTtsService {
         // Sanitize and normalize text before TTS
         const sanitizedText = this.sanitizeTtsText(text);
         const selectedVoiceName = useChatStore.getState().ttsVoice || 'Puck';
+        // Use known working Google TTS voice names
         const hdVoice = `en-US-Chirp3-HD-${selectedVoiceName}`;
-        const fastVoice = `en-US-Chirp3-${selectedVoiceName}`; // non-HD fallback
+        const fastVoice = 'en-US-Standard-C'; // Use a known fast fallback voice
 
         const headers: HeadersInit = {
           'Content-Type': 'application/json',
@@ -208,7 +209,7 @@ class ConversationTtsService {
   async getFallbackAudio(chat_id: string, text: string, sessionId?: string | null): Promise<string> {
     try {
       const selectedVoiceName = useChatStore.getState().ttsVoice || 'Puck';
-      const googleVoiceCode = `en-US-Chirp3-${selectedVoiceName}`; // use faster non-HD in fallback
+      const googleVoiceCode = 'en-US-Standard-C'; // Use a known working fallback voice
 
       const headers: HeadersInit = {
         'Content-Type': 'application/json',

@@ -37,7 +37,7 @@ serve(async (req) => {
     
     // The voice parameter should be the full name e.g., en-US-Chirp3-HD-Puck
     // This default is a fallback in case the client sends an empty voice parameter.
-    const voiceName = voice || "en-US-Chirp3-HD-Puck";
+    const voiceName = voice || "en-US-Standard-C";
     
     console.log(`[google-tts] Processing TTS for chat_id: ${chat_id} with voice: ${voiceName}`);
     
