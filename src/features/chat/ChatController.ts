@@ -19,6 +19,7 @@ class ChatController {
   private resetTimeout: NodeJS.Timeout | null = null;
   private mode: string = 'normal';
   private sessionId: string | null = null;
+  private isUnlocked = false; // New flag to control microphone access
 
   constructor() {
     this.loadExistingMessages();
@@ -160,7 +161,18 @@ class ChatController {
     this.conversationServiceInitialized = true;
   }
 
+  public unlock() {
+    console.log('[MIC-LOG] ChatController unlocked by user gesture.');
+    this.isUnlocked = true;
+  }
+
   async startTurn() {
+    // ✅ GUARD: Prevent premature microphone activation
+    if (!this.isUnlocked) {
+      console.warn('[MIC-LOG] startTurn() called before unlocked. Aborting.');
+      return;
+    }
+
     console.log('[MIC-LOG] ChatController.startTurn() called.');
     if (this.isTurnActive) return;
     this.isTurnActive = true;
@@ -378,6 +390,7 @@ class ChatController {
     
     conversationMicrophoneService.forceCleanup();
     this.conversationServiceInitialized = false;
+    this.isUnlocked = false; // Lock on reset
     this.isTurnActive = false;
     useChatStore.getState().setStatus('idle');
 
@@ -403,6 +416,8 @@ class ChatController {
     
     // Stop assistant message listener
     // this.stopAssistantMessageListener(); // Removed real-time listener
+    this.isResetting = false;
+    this.isUnlocked = false; // Lock on cleanup
   }
 
   // Removed private startAssistantMessageListener and stopAssistantMessageListener

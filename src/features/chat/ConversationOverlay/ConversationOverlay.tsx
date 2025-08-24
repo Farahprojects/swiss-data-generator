@@ -38,8 +38,8 @@ export const ConversationOverlay: React.FC = () => {
   };
 
   const handleStart = async () => {
-    console.log('[MIC-LOG] User tapped start. Requesting microphone...');
-    console.log('[CONVERSATION] User tapped to start. Unlocking audio...');
+    console.log('[MIC-LOG] User tapped start. Unlocking controller and requesting microphone...');
+    chatController.unlock(); // Unlock the controller first
     await conversationTtsService.unlockAudio();
     
     if (chat_id) {
