@@ -9,81 +9,88 @@ export interface SpeakAssistantOptions {
   sessionId?: string | null;
 }
 
-class ConversationTtsService {
+export class ConversationTtsServiceClass {
+  private audioContext: AudioContext | undefined;
+  private analyser: AnalyserNode | undefined;
+  private masterAudioElement: HTMLAudioElement | null = null;
+  private persistentMediaSource: MediaElementAudioSourceNode | undefined;
   private audioLevel = 0;
   private listeners = new Set<() => void>();
-  
-  // ✅ REAL AUDIO ANALYSIS: Fields for amplitude-driven animation
-  private audioContext?: AudioContext;
-  private analyser?: AnalyserNode;
-  private dataArray?: Float32Array;
-  private rafId?: number;
-  private currentNodes?: { source: MediaElementAudioSourceNode; gain: GainNode | null };
+  private rafId: number | undefined;
   private isAudioUnlocked = false;
-  private masterAudioElement: HTMLAudioElement | null = null;
-
-  // ✅ VOICE SESSION MANAGEMENT
-  private voiceSessionStarted = false;
   private cachedMicStream: MediaStream | null = null;
+  private voiceSessionStarted = false;
   private contextId: string | null = null;
-  private contextCreatedAt: number | null = null;
+  private contextCreatedAt: string | null = null;
   private audioElementId: string | null = null;
-  private persistentMediaSource: MediaElementAudioSourceNode | null = null;
+  private playbackUnlocked = false;
+  private micGranted = false;
+
+  private generateId(prefix: string): string {
+    return `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  private log(message: string, data?: any): void {
+    console.log(`[voice] ${message}`, data);
+  }
+
+  private error(message: string, error?: any): void {
+    console.error(`[voice] ${message}`, error);
+  }
 
   /**
-   * Idempotent voice session starter - handles both mic access and audio playback permission
-   * together on the first user gesture. Guards against double-start.
+   * Main session entry point, called on first user gesture.
+   * Attempts to open both playback and microphone gates in parallel.
    */
   public async startVoiceSession(): Promise<void> {
-    // Guard against double-start
     if (this.voiceSessionStarted) {
-      console.log('[voice] session already started, returning early');
+      this.log('[voice] session-start-skipped: Session already started.');
       return;
     }
+    this.log('[voice] session-start: Opening mic and playback gates in parallel...');
 
+    const unlockPlayback = async () => {
+        await this.ensureAudioContext();
+        if (this.audioContext && this.audioContext.state === 'suspended') {
+            await this.audioContext.resume();
+        }
+        if (this.audioContext?.state !== 'running') {
+            throw new Error(`AudioContext did not resume. State: ${this.audioContext?.state}`);
+        }
+    };
+
+    const grantMic = async () => {
+        const stream = await this.getMicOnce();
+        if (!stream || stream.getAudioTracks().length === 0) {
+            throw new Error('Microphone stream not available or has no tracks.');
+        }
+    };
+    
+    const [playbackResult, micResult] = await Promise.allSettled([unlockPlayback(), grantMic()]);
+    
+    if (playbackResult.status === 'fulfilled') {
+        this.playbackUnlocked = true;
+        this.log('[voice] playbackUnlocked: AudioContext is running.');
+    } else {
+        this.error('[voice] playback-unlock-failed:', playbackResult.reason);
+    }
+
+    if (micResult.status === 'fulfilled') {
+        this.micGranted = true;
+        this.log('[voice] micGranted: Microphone access is granted.');
+    } else {
+        this.error('[voice] mic-grant-failed:', micResult.reason);
+    }
+    
     this.voiceSessionStarted = true;
 
-    try {
-      const results = await Promise.allSettled([
-        this.getMicOnce(),
-        this.startAudioSession()
-      ]);
-
-      // Structured logging for session status
-      const micResult = results[0];
-      const audioResult = results[1];
-      
-      const micGranted = micResult.status === 'fulfilled' && !!this.cachedMicStream;
-      const trackCount = this.cachedMicStream?.getAudioTracks().length || 0;
-      const ctxState = this.audioContext?.state || 'unknown';
-
-      console.log('[voice] session-start', {
-        contextId: this.contextId,
-        micGranted,
-        trackCount,
-        ctxState
-      });
-
-      // Log any rejections
-      results.forEach((result, index) => {
-        if (result.status === 'rejected') {
-          const serviceName = index === 0 ? 'getMicOnce' : 'startAudioSession';
-          console.error('[voice] session rejection', {
-            name: serviceName,
-            message: result.reason?.message || 'Unknown error',
-            stack: result.reason?.stack
-          });
-        }
-      });
-
-      // Register visibility change handler for AudioContext resume
-      this.setupVisibilityHandler();
-
-    } catch (error) {
-      console.error('[voice] session startup failed', error);
-      this.voiceSessionStarted = false; // Reset flag on failure
-      throw error;
+    if (!this.playbackUnlocked || !this.micGranted) {
+        throw new Error('One or more permission gates failed to open. Check console for details.');
     }
+    
+    // Both gates are open, now set up the full audio pipeline for speaking.
+    await this.startAudioSession();
+    this.setupVisibilityHandler();
   }
 
   /**
@@ -118,7 +125,7 @@ class ConversationTtsService {
       if (AudioContextClass) {
         this.audioContext = new AudioContextClass();
         this.contextId = `ctx-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        this.contextCreatedAt = Date.now();
+        this.contextCreatedAt = Date.now().toString();
       } else {
         throw new Error('AudioContext not supported');
       }
@@ -201,7 +208,7 @@ class ConversationTtsService {
     // Disconnect persistent pipeline
     if (this.persistentMediaSource) {
       this.persistentMediaSource.disconnect();
-      this.persistentMediaSource = null;
+      this.persistentMediaSource = undefined;
     }
 
     // Clean up audio element
@@ -227,6 +234,9 @@ class ConversationTtsService {
     this.dataArray = undefined;
     this.audioLevel = 0;
     this.notifyListeners();
+    this.playbackUnlocked = false;
+    this.micGranted = false;
+    this.log('[voice] session-end: All resources released.');
   }
 
   /**
@@ -260,7 +270,7 @@ class ConversationTtsService {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       this.audioContext = new AudioContext();
       this.contextId = `ctx-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      this.contextCreatedAt = Date.now();
+      this.contextCreatedAt = Date.now().toString();
       console.log(`[voice] ctx-created: ID ${this.contextId}, State: ${this.audioContext.state}`);
     } catch (e) {
       console.error('[voice] ctx-error: Failed to create AudioContext.', e);
@@ -536,4 +546,4 @@ class ConversationTtsService {
   }
 }
 
-export const conversationTtsService = new ConversationTtsService();
+export const conversationTtsService = new ConversationTtsServiceClass();

@@ -22,60 +22,6 @@ export const ConversationOverlay: React.FC = () => {
   const hasStarted = useRef(false); // One-shot guard to prevent double invocation
   const [showPermissionHint, setShowPermissionHint] = useState(false); // Show hint if waiting too long
   
-  useEffect(() => {
-    if (isConversationOpen && !hasStarted.current) {
-      console.log('[voice] ConversationOverlay opened. Probing for permissions...');
-      const probeAndStart = async () => {
-        try {
-          const gestureRequired = await conversationTtsService.probeAudioPermissions();
-          
-          if (!gestureRequired) {
-            console.log('[voice] Gesture not required, starting automatically.');
-            // This is a dedicated, robust flow for auto-start.
-            // It replaces the less reliable call to handleStart().
-            if (hasStarted.current) return;
-            hasStarted.current = true;
-            setIsStarting(true);
-            setPermissionGranted(true); // Optimistically show the listening UI
-
-            try {
-              await conversationTtsService.startVoiceSession();
-              const cachedStream = conversationTtsService.getCachedMicStream();
-              console.log('[voice] micGranted (auto-start)', { micActive: !!cachedStream });
-
-              if (!cachedStream) {
-                console.error('[voice] Auto-start failed: Mic stream not available after session start.');
-                throw new Error('Mic stream not available');
-              }
-
-              chatController.unlock();
-              if (chat_id) {
-                chatController.setConversationMode('convo', chat_id);
-                await chatController.startTurn();
-              } else {
-                console.error("[voice] Cannot start conversation without a chat_id");
-                closeConversation();
-              }
-            } catch (error) {
-              console.error('[voice] Auto-start sequence failed:', error);
-              // Revert UI to a stable state on failure
-              setPermissionGranted(false);
-              setIsStarting(false);
-              hasStarted.current = false;
-              setShowPermissionHint(true);
-            }
-          } else {
-            console.log('[voice] Gesture required, waiting for user tap.');
-          }
-        } catch (error) {
-          console.error('[voice] Error during permission probe:', error);
-        }
-      };
-      probeAndStart();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isConversationOpen, chat_id]);
-
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = () => {
     // 1. Kill all audio immediately
@@ -148,9 +94,8 @@ export const ConversationOverlay: React.FC = () => {
       });
   };
   
-  // Simple mount - set conversation mode and start listening immediately
+  // This effect is now only for cleanup when the component unmounts or isOpen changes
   useEffect(() => {
-    // This effect is now only for cleanup when the component unmounts or isOpen changes
     return () => {
       if (isConversationOpen) {
         // Ensure cleanup runs if the component unmounts unexpectedly
