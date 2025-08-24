@@ -19,6 +19,7 @@ class ConversationTtsService {
   private dataArray?: Uint8Array;
   private rafId?: number;
   private currentNodes?: { source: MediaElementAudioSourceNode; gain: GainNode | null };
+  private isAudioContextInitialized = false;
 
   // Stop all audio playback and cleanup
   public stopAllAudio(): void {
@@ -46,6 +47,48 @@ class ConversationTtsService {
       audio.currentTime = 0;
       audio.src = '';
     });
+  }
+
+  /**
+   * Initializes the AudioContext after a user gesture.
+   * This is crucial for iOS audio playback.
+   */
+  public async initializeAudioContext(): Promise<void> {
+    if (this.isAudioContextInitialized) return;
+
+    try {
+      if (!this.audioContext) {
+        const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) {
+          this.audioContext = new AudioContextClass();
+          console.log('[TTS-LOG] AudioContext created.');
+        } else {
+          console.warn('[TTS-LOG] AudioContext not supported.');
+          return;
+        }
+      }
+
+      if (this.audioContext.state === 'suspended') {
+        console.log('[TTS-LOG] Resuming suspended AudioContext...');
+        await this.audioContext.resume();
+      }
+      
+      this.playSilentSound();
+      this.isAudioContextInitialized = true;
+      console.log(`[TTS-LOG] AudioContext initialized and unlocked. State: ${this.audioContext.state}`);
+      
+    } catch (error) {
+      console.error('[TTS-LOG] Error initializing AudioContext:', error);
+    }
+  }
+
+  private playSilentSound(): void {
+    if (!this.audioContext) return;
+    const buffer = this.audioContext.createBuffer(1, 1, 22050);
+    const source = this.audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(this.audioContext.destination);
+    source.start(0);
   }
 
   public getCurrentAudioLevel(): number {
@@ -124,7 +167,17 @@ class ConversationTtsService {
         });
         
         // ✅ SIMPLIFIED: Play immediately without load() call
-        await audio.play();
+        console.log(`[TTS-LOG] About to play audio. AudioContext state: ${this.audioContext?.state}`);
+        try {
+          await audio.play();
+          console.log('[TTS-LOG] audio.play() promise resolved successfully.');
+        } catch (error) {
+          console.error('[TTS-LOG] audio.play() promise rejected with error:', error);
+          this.cleanupAnalysis();
+          URL.revokeObjectURL(audioUrl);
+          reject(error);
+          return;
+        }
         
       } catch (error) {
         console.error('[ConversationTTS] speakAssistant failed:', error);

@@ -9,13 +9,14 @@ import { conversationTtsService } from '@/services/voice/conversationTts';
 // import { useConversationFlowMonitor } from '@/hooks/useConversationFlowMonitor';
 // import { FlowMonitorIndicator } from './FlowMonitorIndicator'; // Hidden for production
 import { AnimatePresence, motion } from 'framer-motion';
+import { Mic } from 'lucide-react';
 
 export const ConversationOverlay: React.FC = () => {
   const { isConversationOpen, closeConversation } = useConversationUIStore();
   const status = useChatStore((state) => state.status);
   const chat_id = useChatStore((state) => state.chat_id);
   const audioLevel = useConversationAudioLevel(); // Get real-time audio level
-  const hasStartedListening = useRef(false);
+  const [permissionGranted, setPermissionGranted] = useState(false);
   
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = () => {
@@ -27,44 +28,44 @@ export const ConversationOverlay: React.FC = () => {
     
     // 3. Close the UI
     closeConversation();
+    setPermissionGranted(false); // Reset permission on close
   };
 
-
+  const handleStart = async () => {
+    console.log('[CONVERSATION] User tapped to start. Initializing audio...');
+    await conversationTtsService.initializeAudioContext();
+    
+    if (chat_id) {
+      chatController.setConversationMode('convo', chat_id);
+      await chatController.startTurn();
+      setPermissionGranted(true);
+    } else {
+      console.error("[ConversationOverlay] Cannot start conversation without a chat_id");
+      closeConversation();
+    }
+  };
   
   // Simple mount - set conversation mode and start listening immediately
   useEffect(() => {
-    if (isConversationOpen && !hasStartedListening.current) {
-      hasStartedListening.current = true;
-      
-      if (chat_id) {
-        // Set conversation mode and start listening immediately
-        chatController.setConversationMode('convo', chat_id);
-    
-        
-        // Start listening immediately - no need for persistent connection
-        chatController.startTurn().catch(error => {
-          console.error('[ConversationOverlay] Failed to start listening:', error);
-        });
-      } else {
-        console.error('[ConversationOverlay] Cannot start conversation mode without a chat_id.');
-        closeConversation();
-        return;
+    // This effect is now only for cleanup when the component unmounts or isOpen changes
+    return () => {
+      if (isConversationOpen) {
+        // Ensure cleanup runs if the component unmounts unexpectedly
+        handleModalClose();
       }
-    }
-  }, [isConversationOpen, chat_id, closeConversation]);
+    };
+  }, [isConversationOpen]);
   
   // Simple cleanup when conversation closes
   useEffect(() => {
-    if (!isConversationOpen && hasStartedListening.current) {
-      hasStartedListening.current = false;
-      
+    if (!isConversationOpen && permissionGranted) {
       // Reset conversation mode
       chatController.setConversationMode('normal', null);
       
       // Cleanup ChatController
       chatController.cleanup();
     }
-  }, [isConversationOpen]);
+  }, [isConversationOpen, permissionGranted]);
 
   // Map chat status to conversation state for UI
   const state = status === 'recording' ? 'listening' : 
@@ -73,6 +74,24 @@ export const ConversationOverlay: React.FC = () => {
                status === 'speaking' ? 'replying' : 'listening';
 
   if (!isConversationOpen) return null;
+
+  // Render permission screen if not granted yet
+  if (!permissionGranted) {
+    return createPortal(
+      <div 
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm cursor-pointer" 
+        onClick={handleStart}
+      >
+        <div className="text-center text-white flex flex-col items-center gap-4">
+          <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center">
+            <Mic className="w-10 h-10" />
+          </div>
+          <h2 className="text-2xl font-light">Tap to Start Conversation</h2>
+        </div>
+      </div>,
+      document.body
+    );
+  }
 
   return createPortal(
     <div className="fixed inset-0 z-50 bg-white pt-safe pb-safe">
