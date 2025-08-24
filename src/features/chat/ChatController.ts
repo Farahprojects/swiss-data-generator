@@ -144,12 +144,7 @@ class ChatController {
     const thinkingMessageId = `thinking-${finalMessage.client_msg_id}`;
     useChatStore.getState().updateMessage(thinkingMessageId, finalMessage);
     
-    // ✅ TTS TIMING: T1 - LLM text enters TTS pipeline
-    console.log(`[TTS-TIMING] T1 - LLM text enters TTS pipeline at ${new Date().toISOString()}`, {
-      messageId: finalMessage.id,
-      textLength: finalMessage.text?.length || 0,
-      chatId: finalMessage.chat_id
-    });
+
     
     this.playAssistantAudioAndContinue(finalMessage, finalMessage.chat_id);
   }

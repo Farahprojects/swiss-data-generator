@@ -39,7 +39,7 @@ export const ConversationOverlay: React.FC = () => {
       if (chat_id) {
         // Set conversation mode and start listening immediately
         chatController.setConversationMode('convo', chat_id);
-        console.log(`[ConversationOverlay] Conversation mode set for chat_id: ${chat_id}`);
+    
         
         // Start listening immediately - no need for persistent connection
         chatController.startTurn().catch(error => {
