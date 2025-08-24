@@ -36,21 +36,16 @@ const ErrorStateHandler: React.FC<ErrorStateHandlerProps> = ({
   const [diagnosticMessage, setDiagnosticMessage] = useState<string>('');
   const [showErrorHandler, setShowErrorHandler] = useState(false);
 
-  React.useEffect(() => {
-    // Start diagnostic process when error handler opens
-    if (errorState?.guest_report_id) {
-      runDiagnostic();
-    }
-  }, [errorState?.guest_report_id]);
+  const [isRetrying, setIsRetrying] = useState(false);
 
-  const runDiagnostic = async () => {
+  const handleManualRetry = async () => {
     if (!errorState?.guest_report_id) return;
 
-    setIsDiagnosing(true);
-    setDiagnosticMessage('Report Processing Issue');
+    setIsRetrying(true);
+    setDiagnosticMessage('Checking report status...');
     
     try {
-      console.log('[ErrorStateHandler] Starting diagnostic...');
+      console.log('[ErrorStateHandler] Manual retry initiated...');
       
       const response = await ErrorDiagnosticService.runDiagnostic({
         guest_report_id: errorState.guest_report_id,
@@ -77,11 +72,11 @@ const ErrorStateHandler: React.FC<ErrorStateHandlerProps> = ({
       );
 
     } catch (error) {
-      console.error('[ErrorStateHandler] Diagnostic failed:', error);
-      setDiagnosticMessage('Unable to check report status. Please try again.');
+      console.error('[ErrorStateHandler] Manual retry failed:', error);
+      setDiagnosticMessage('Still having issues. Please try again or contact support.');
       setShowErrorHandler(true);
     } finally {
-      setIsDiagnosing(false);
+      setIsRetrying(false);
     }
   };
 
@@ -155,26 +150,26 @@ const ErrorStateHandler: React.FC<ErrorStateHandlerProps> = ({
         <Card className="border-2 border-destructive/20 shadow-xl">
           <CardContent className="p-8 text-center space-y-6">
             <div className="flex items-center justify-center gap-4 py-4">
-              {isDiagnosing ? (
+              {isRetrying ? (
                 <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
                   <Loader2 className="h-6 w-6 text-blue-600 animate-spin" />
                 </div>
               ) : (
-                <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
-                  <AlertTriangle className="h-6 w-6 text-destructive" />
+                <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center">
+                  <AlertTriangle className="h-6 w-6 text-orange-600" />
                 </div>
               )}
             </div>
 
             <div>
               <h2 className="text-2xl font-light text-gray-900 mb-3 tracking-tight">
-                {isDiagnosing ? 'Report Processing Issue' : 'Report Processing Issue'}
+                {isRetrying ? 'Checking Report Status' : 'Internet is running slow'}
               </h2>
               <p className="text-gray-600 font-light mb-4">
-                {isDiagnosing ? diagnosticMessage : errorState.message}
+                {isRetrying ? diagnosticMessage : 'Press the button below and we\'ll get you back on track'}
               </p>
               
-              {!isDiagnosing && errorState.case_number && (
+              {isRetrying && showErrorHandler && errorState.case_number && (
                 <div className="bg-muted/50 rounded-lg p-4 text-sm mb-4">
                   <p className="font-medium text-gray-900 mb-1">Case Number</p>
                   <p className="text-gray-700 font-mono text-xs">{errorState.case_number}</p>
@@ -187,7 +182,19 @@ const ErrorStateHandler: React.FC<ErrorStateHandlerProps> = ({
               )}
             </div>
 
-            {!isDiagnosing && showErrorHandler && (
+            {!isRetrying && (
+              <div className="space-y-3">
+                <Button
+                  onClick={handleManualRetry}
+                  className="w-full bg-gray-900 text-white hover:bg-gray-800 transition-colors"
+                >
+                  <Loader2 className="w-4 h-4 mr-2" />
+                  Check Report Status
+                </Button>
+              </div>
+            )}
+
+            {isRetrying && showErrorHandler && (
               <div className="space-y-3">
                 <Button
                   onClick={handleReturnHome}
@@ -211,7 +218,7 @@ const ErrorStateHandler: React.FC<ErrorStateHandlerProps> = ({
             )}
 
             <p className="text-xs text-gray-500">
-              Our team has been notified and will investigate this issue.
+              {!isRetrying ? 'This gives us time to resolve any issues.' : 'Our team has been notified and will investigate this issue.'}
             </p>
           </CardContent>
         </Card>
