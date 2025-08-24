@@ -140,9 +140,17 @@ class ChatController {
   }
 
   private reconcileOptimisticMessage(finalMessage: Message) {
-    // The thinking message ID is `thinking-${client_msg_id}`
+    // The thinking message ID is `thinking-${finalMessage.client_msg_id}`
     const thinkingMessageId = `thinking-${finalMessage.client_msg_id}`;
     useChatStore.getState().updateMessage(thinkingMessageId, finalMessage);
+    
+    // ✅ TTS TIMING: T1 - LLM text enters TTS pipeline
+    console.log(`[TTS-TIMING] T1 - LLM text enters TTS pipeline at ${new Date().toISOString()}`, {
+      messageId: finalMessage.id,
+      textLength: finalMessage.text?.length || 0,
+      chatId: finalMessage.chat_id
+    });
+    
     this.playAssistantAudioAndContinue(finalMessage, finalMessage.chat_id);
   }
 
@@ -247,14 +255,32 @@ class ChatController {
   private async playAssistantAudioAndContinue(assistantMessage: Message, chat_id: string) {
     if (assistantMessage.text && assistantMessage.id) {
       
+      // ✅ TTS TIMING: T2 - Starting TTS flow
+      console.log(`[TTS-TIMING] T2 - Starting TTS flow at ${new Date().toISOString()}`, {
+        messageId: assistantMessage.id,
+        textLength: assistantMessage.text.length,
+        chatId: chat_id
+      });
+      
       useChatStore.getState().setStatus('speaking');
       // conversationFlowMonitor.observeStep('speaking');
       
       try {
+        // ✅ TTS TIMING: T3 - About to invoke TTS service
+        console.log(`[TTS-TIMING] T3 - About to invoke TTS service at ${new Date().toISOString()}`, {
+          messageId: assistantMessage.id,
+          textLength: assistantMessage.text.length
+        });
+        
         await conversationTtsService.speakAssistant({
           chat_id,
           messageId: assistantMessage.id,
           text: assistantMessage.text
+        });
+        
+        // ✅ TTS TIMING: T4 - TTS service completed
+        console.log(`[TTS-TIMING] T4 - TTS service completed at ${new Date().toISOString()}`, {
+          messageId: assistantMessage.id
         });
         
         // TTS completion callback
