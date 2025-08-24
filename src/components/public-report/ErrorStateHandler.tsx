@@ -45,7 +45,11 @@ const ErrorStateHandler: React.FC<ErrorStateHandlerProps> = ({
     setDiagnosticMessage('Checking report status...');
     
     try {
-      console.log('[ErrorStateHandler] Manual retry initiated...');
+      console.log(`🚨 [ErrorStateHandler] Manual retry initiated for guest_report_id: ${errorState.guest_report_id}`);
+      console.log(`🚨 [ErrorStateHandler] About to call runDiagnostic with:`, {
+        guest_report_id: errorState.guest_report_id,
+        case_number: errorState.case_number
+      });
       
       const response = await ErrorDiagnosticService.runDiagnostic({
         guest_report_id: errorState.guest_report_id,

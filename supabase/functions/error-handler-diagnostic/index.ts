@@ -38,6 +38,7 @@ serve(async (req) => {
   try {
     const body: DiagnosticRequest = await req.json();
     console.log('[error-handler-diagnostic] Request body:', body);
+    console.log(`🔧 [error-handler-diagnostic] Processing diagnostic for guest_report_id: ${body.guest_report_id}`);
     
     const { guest_report_id, case_number } = body;
 
@@ -67,7 +68,7 @@ serve(async (req) => {
     console.log('[error-handler-diagnostic] Starting diagnostic for:', guest_report_id);
 
     // Step 1: Check if report exists in report_ready_signals
-    console.log('[error-handler-diagnostic] Checking report_ready_signals...');
+    console.log(`[error-handler-diagnostic] Checking report_ready_signals for guest_report_id: ${guest_report_id}`);
     const { data: reportReadyData, error: reportReadyError } = await supabase
       .from('report_ready_signals')
       .select('guest_report_id, seen')
