@@ -12,7 +12,7 @@ export interface SpeakAssistantOptions {
 class ConversationTtsService {
   private audioLevel = 0;
   private listeners = new Set<() => void>();
-
+  
   // ✅ REAL AUDIO ANALYSIS: Fields for amplitude-driven animation
   private audioContext?: AudioContext;
   private analyser?: AnalyserNode;
@@ -21,95 +21,236 @@ class ConversationTtsService {
   private currentNodes?: { source: MediaElementAudioSourceNode; gain: GainNode | null };
   private isAudioUnlocked = false;
   private masterAudioElement: HTMLAudioElement | null = null;
-  private cachedMediaElementSource?: MediaElementAudioSourceNode; // Cache for reuse
+
+  // ✅ VOICE SESSION MANAGEMENT
+  private voiceSessionStarted = false;
+  private cachedMicStream: MediaStream | null = null;
+  private contextId: string | null = null;
+  private contextCreatedAt: number | null = null;
+  private audioElementId: string | null = null;
+  private persistentMediaSource: MediaElementAudioSourceNode | null = null;
 
   /**
-   * Unlocks audio playback after a user gesture. This is the single entry point
-   * for preparing all audio systems (AudioContext and the master audio element).
-   * It's crucial for iOS compatibility and MUST be called synchronously from a
-   * user interaction event handler (e.g., onClick).
+   * Idempotent voice session starter - handles both mic access and audio playback permission
+   * together on the first user gesture. Guards against double-start.
    */
-  public unlockAudio(): void {
-    if (this.isAudioUnlocked) return;
+  public async startVoiceSession(): Promise<void> {
+    // Guard against double-start
+    if (this.voiceSessionStarted) {
+      console.log('[voice] session already started, returning early');
+      return;
+    }
+
+    this.voiceSessionStarted = true;
 
     try {
-      // 1. Initialize and resume AudioContext
-      if (!this.audioContext) {
-        const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
-        if (AudioContextClass) {
-          this.audioContext = new AudioContextClass();
-          console.log('[TTS-LOG] AudioContext created.');
-        } else {
-          console.warn('[TTS-LOG] AudioContext not supported.');
-          return;
+      const results = await Promise.allSettled([
+        this.getMicOnce(),
+        this.startAudioSession()
+      ]);
+
+      // Structured logging for session status
+      const micResult = results[0];
+      const audioResult = results[1];
+      
+      const micGranted = micResult.status === 'fulfilled' && !!this.cachedMicStream;
+      const trackCount = this.cachedMicStream?.getAudioTracks().length || 0;
+      const ctxState = this.audioContext?.state || 'unknown';
+
+      console.log('[voice] session', {
+        micGranted,
+        trackCount,
+        ctxState
+      });
+
+      // Log any rejections
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          const serviceName = index === 0 ? 'getMicOnce' : 'startAudioSession';
+          console.error('[voice] session rejection', {
+            name: serviceName,
+            message: result.reason?.message || 'Unknown error',
+            stack: result.reason?.stack
+          });
         }
-      }
+      });
 
-      // This can be called multiple times, it's safe.
-      if (this.audioContext.state === 'suspended') {
-        this.audioContext.resume().catch(err => console.error('[TTS-LOG] Failed to resume AudioContext', err));
-      }
+      // Register visibility change handler for AudioContext resume
+      this.setupVisibilityHandler();
 
-      // 2. Create and "prime" the master audio element
-      if (!this.masterAudioElement) {
-        this.masterAudioElement = new Audio();
-        this.masterAudioElement.muted = true;
-        
-        // Call play() to unlock it. We don't need to await. The call itself is the key.
-        // This will likely throw an empty-source error, which we safely ignore.
-        this.masterAudioElement.play().catch(() => {
-          // This catch is to prevent unhandled promise rejection warnings.
-        });
-        
-        console.log('[TTS-LOG] Master audio element created and primed.');
-      }
-      
-      // Set the flag synchronously. From this point on, audio is considered unlocked.
-      this.isAudioUnlocked = true;
-      console.log(`[TTS-LOG] Audio systems unlocked. AudioContext state: ${this.audioContext.state}`);
-      
     } catch (error) {
-      console.error('[TTS-LOG] Error unlocking audio:', error);
+      console.error('[voice] session startup failed', error);
+      this.voiceSessionStarted = false; // Reset flag on failure
+      throw error;
     }
   }
 
-  // Stop all audio playback and cleanup
+  /**
+   * Get microphone access once and cache the persistent MediaStream
+   */
+  private async getMicOnce(): Promise<MediaStream> {
+    // Return cached stream if it already exists
+    if (this.cachedMicStream) {
+      return this.cachedMicStream;
+    }
+
+    // Request new stream
+    this.cachedMicStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        channelCount: 1,
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        sampleRate: 48000,
+      }
+    });
+
+    return this.cachedMicStream;
+  }
+
+  /**
+   * Start audio session - create single persistent AudioContext and audio element
+   */
+  private async startAudioSession(): Promise<void> {
+    if (!this.audioContext) {
+      const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (AudioContextClass) {
+        this.audioContext = new AudioContextClass();
+        this.contextId = `ctx-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        this.contextCreatedAt = Date.now();
+      } else {
+        throw new Error('AudioContext not supported');
+      }
+    }
+
+    if (this.audioContext.state === 'suspended') {
+      await this.audioContext.resume();
+    }
+
+    // Create single persistent audio element
+    if (!this.masterAudioElement) {
+      this.masterAudioElement = new Audio();
+      this.audioElementId = `audio-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      this.masterAudioElement.muted = true;
+      
+      // Prime the audio element with user gesture
+      await this.masterAudioElement.play().catch(() => {
+        // Expected to fail with empty source, but unlocks audio for iOS
+      });
+      
+      // Create single persistent MediaElementSourceNode
+      this.persistentMediaSource = this.audioContext.createMediaElementSource(this.masterAudioElement);
+      
+      // Setup analyser once
+      if (!this.analyser) {
+        this.analyser = this.audioContext.createAnalyser();
+        this.analyser.fftSize = 2048;
+        this.analyser.smoothingTimeConstant = 0.85;
+        this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+      }
+      
+      // Connect persistent pipeline: source -> analyser -> destination
+      this.persistentMediaSource.connect(this.analyser);
+      this.persistentMediaSource.connect(this.audioContext.destination);
+    }
+
+    this.isAudioUnlocked = true;
+    
+    // Log session start with stable identities
+    console.log('[voice] session-start', {
+      contextId: this.contextId,
+      createdAt: new Date(this.contextCreatedAt || 0).toISOString(),
+      ctxState: this.audioContext.state,
+      audioElId: this.audioElementId,
+      micActive: this.cachedMicStream?.getAudioTracks().some(t => t.readyState === 'live') || false
+    });
+  }
+
+  /**
+   * Setup visibility change handler for AudioContext resume
+   */
+  private setupVisibilityHandler(): void {
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && this.audioContext && this.audioContext.state === 'suspended') {
+        this.audioContext.resume().then(() => {
+          console.log('[voice] resume', { ctxState: this.audioContext?.state });
+        }).catch(err => {
+          console.error('[voice] resume failed', err);
+        });
+      }
+    });
+  }
+
+  /**
+   * End voice session - cleanup mic and audio context
+   */
+  public endSession(): void {
+    // Stop microphone
+    if (this.cachedMicStream) {
+      this.cachedMicStream.getTracks().forEach(track => track.stop());
+      this.cachedMicStream = null;
+    }
+
+    // Stop analysis
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = undefined;
+    }
+
+    // Disconnect persistent pipeline
+    if (this.persistentMediaSource) {
+      this.persistentMediaSource.disconnect();
+      this.persistentMediaSource = null;
+    }
+
+    // Clean up audio element
+    if (this.masterAudioElement) {
+      this.masterAudioElement.pause();
+      this.masterAudioElement.src = '';
+      this.masterAudioElement = null;
+    }
+
+    // Close audio context
+    if (this.audioContext && this.audioContext.state !== 'closed') {
+      this.audioContext.close();
+      this.audioContext = undefined;
+    }
+
+    // Reset session state
+    this.voiceSessionStarted = false;
+    this.isAudioUnlocked = false;
+    this.contextId = null;
+    this.contextCreatedAt = null;
+    this.audioElementId = null;
+    this.analyser = undefined;
+    this.dataArray = undefined;
+    this.audioLevel = 0;
+    this.notifyListeners();
+  }
+
+  /**
+   * Get cached microphone stream
+   */
+  public getCachedMicStream(): MediaStream | null {
+    return this.cachedMicStream;
+  }
+
+
+
+  // Stop current audio playback without breaking session
   public stopAllAudio(): void {
-    // ✅ REAL AUDIO ANALYSIS: Cleanup analyser and RAF
     if (this.rafId) {
       cancelAnimationFrame(this.rafId);
       this.rafId = undefined;
     }
     
-    if (this.currentNodes) {
-      this.currentNodes.source.disconnect();
-      if (this.currentNodes.gain) {
-        this.currentNodes.gain.disconnect();
-      }
-      this.currentNodes = undefined;
-    }
-    
-    // Clear cached MediaElementSourceNode
-    if (this.cachedMediaElementSource) {
-      this.cachedMediaElementSource.disconnect();
-      this.cachedMediaElementSource = undefined;
+    if (this.masterAudioElement) {
+      this.masterAudioElement.pause();
+      this.masterAudioElement.currentTime = 0;
     }
     
     this.audioLevel = 0;
     this.notifyListeners();
-    
-    if (this.masterAudioElement) {
-      this.masterAudioElement.pause();
-      this.masterAudioElement.removeAttribute('src');
-    }
-    
-    // Stop any playing audio elements (fallback)
-    const allAudioElements = document.querySelectorAll('audio');
-    allAudioElements.forEach((audio) => {
-      audio.pause();
-      audio.currentTime = 0;
-      audio.src = '';
-    });
   }
 
   public getCurrentAudioLevel(): number {
@@ -130,9 +271,24 @@ class ConversationTtsService {
     return new Promise(async (resolve, reject) => {
       try {
         
-        // Ensure audio is unlocked before proceeding
-        if (!this.isAudioUnlocked || !this.masterAudioElement) {
-          throw new Error('Audio is not unlocked. A user gesture is required before TTS can play.');
+        // Ensure voice session is active
+        if (!this.voiceSessionStarted || !this.isAudioUnlocked || !this.masterAudioElement || !this.audioContext) {
+          throw new Error('Voice session not started. Call startVoiceSession() first.');
+        }
+
+        // Log before each TTS with stable identities
+        console.log('[voice] pre-tts', {
+          contextId: this.contextId,
+          createdAt: new Date(this.contextCreatedAt || 0).toISOString(),
+          ctxState: this.audioContext.state,
+          audioElId: this.audioElementId,
+          micActive: this.cachedMicStream?.getAudioTracks().some(t => t.readyState === 'live') || false
+        });
+
+        // Resume AudioContext if suspended (Safari behavior)
+        if (this.audioContext.state === 'suspended') {
+          console.log('[voice] resuming suspended context');
+          await this.audioContext.resume();
         }
 
         // Sanitize and normalize text before TTS
@@ -145,150 +301,89 @@ class ConversationTtsService {
           'apikey': SUPABASE_PUBLISHABLE_KEY,
         };
 
-
-
         const response = await fetch(`${SUPABASE_URL}/functions/v1/google-text-to-speech`, {
           method: 'POST',
           headers,
           body: JSON.stringify({ chat_id, text: sanitizedText, voice: googleVoiceCode, sessionId: sessionId || null })
-        });
+      });
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('[ConversationTTS] TTS function error:', response.status, errorText);
-          throw new Error(`TTS failed: ${response.status} - ${errorText}`);
-        }
+      if (!response.ok) {
+        const errorText = await response.text();
+          console.error('[voice] TTS function error:', response.status, errorText);
+        throw new Error(`TTS failed: ${response.status} - ${errorText}`);
+      }
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('[ConversationTTS] TTS function error:', response.status, errorText);
-          throw new Error(`TTS failed: ${response.status} - ${errorText}`);
-        }
-
-        // ✅ SIMPLIFIED: Direct blob to audio with minimal setup
+        // Use persistent audio element and pipeline
         const blob = await response.blob();
-        
         const audioUrl = URL.createObjectURL(blob);
-        // ✅ REUSE MASTER AUDIO ELEMENT: Instead of creating a new one
-        const audio = this.masterAudioElement;
-        audio.src = audioUrl;
-        audio.muted = false; // Unmute for actual playback
+        
+        // Reuse the same persistent audio element - no new creation
+        this.masterAudioElement.src = audioUrl;
+        this.masterAudioElement.muted = false; // Unmute for actual playback
 
-        // ✅ REAL AUDIO ANALYSIS: Setup audio context and analyser
-        await this.setupAudioAnalysis(audio);
-
-        // Start real-time amplitude analysis
+        // Start real-time amplitude analysis using persistent pipeline
         this.startAmplitudeAnalysis();
 
-        // ✅ REAL AUDIO ANALYSIS: Event listeners with cleanup
-        audio.addEventListener('ended', () => {
+        // Event listeners with cleanup
+        const handleEnded = () => {
           this.cleanupAnalysis();
           URL.revokeObjectURL(audioUrl);
+          this.masterAudioElement?.removeEventListener('ended', handleEnded);
+          this.masterAudioElement?.removeEventListener('error', handleError);
           resolve();
-        });
+        };
         
-        audio.addEventListener('error', (error) => {
-          console.error('[ConversationTTS] Audio playback error:', error);
+        const handleError = (error: Event) => {
+          console.error('[voice] Audio playback error:', error);
           this.cleanupAnalysis();
           URL.revokeObjectURL(audioUrl);
+          this.masterAudioElement?.removeEventListener('ended', handleEnded);
+          this.masterAudioElement?.removeEventListener('error', handleError);
           reject(error);
-        });
+        };
+
+        this.masterAudioElement.addEventListener('ended', handleEnded);
+        this.masterAudioElement.addEventListener('error', handleError);
         
-        // ✅ SIMPLIFIED: Play immediately without load() call
-        console.log(`[TTS-LOG] About to play audio. AudioContext state: ${this.audioContext?.state}`);
+        // Play using persistent audio element - no new audio creation
+        console.log(`[voice] playing with persistent element, ctx state: ${this.audioContext.state}`);
         try {
-          await audio.play();
-          console.log('[TTS-LOG] audio.play() promise resolved successfully.');
+          await this.masterAudioElement.play();
+          console.log('[voice] audio.play() resolved successfully');
         } catch (error) {
-          console.error('[TTS-LOG] audio.play() promise rejected with error:', error);
+          console.error('[voice] audio.play() failed:', error);
           this.cleanupAnalysis();
           URL.revokeObjectURL(audioUrl);
+          this.masterAudioElement.removeEventListener('ended', handleEnded);
+          this.masterAudioElement.removeEventListener('error', handleError);
           reject(error);
           return;
         }
         
       } catch (error) {
-        console.error('[ConversationTTS] speakAssistant failed:', error);
-        reject(error);
-      }
+        console.error('[voice] speakAssistant failed:', error);
+            reject(error);
+          }
     });
   }
 
-  // ✅ REAL AUDIO ANALYSIS: Setup audio context and analyser
-  private async setupAudioAnalysis(audio: HTMLAudioElement): Promise<void> {
-    try {
-      // AudioContext is now initialized and unlocked via the unlockAudio() method.
-      // We just need to ensure it exists before proceeding with analysis setup.
-      if (!this.audioContext || !this.isAudioUnlocked) {
-        console.warn('[ConversationTTS] AudioContext not ready for analysis. Unlock audio first.');
-        return;
-      }
-      
-      // Resume context if suspended (it should already be running, but as a safeguard)
-      if (this.audioContext.state === 'suspended') {
-        await this.audioContext.resume();
-      }
 
-      // Setup analyser
-      if (!this.analyser) {
-        this.analyser = this.audioContext.createAnalyser();
-        this.analyser.fftSize = 2048;
-        this.analyser.smoothingTimeConstant = 0.85;
-        
-        // Initialize data array for frequency analysis
-        this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
-      }
 
-      // Create or reuse MediaElementSourceNode to avoid InvalidStateError
-      let source: MediaElementAudioSourceNode;
-      if (this.cachedMediaElementSource) {
-        // Reuse existing source if it's still valid
-        try {
-          // Test if the cached source is still connected to the same audio element
-          source = this.cachedMediaElementSource;
-          console.log('[TTS-LOG] Reusing cached MediaElementSourceNode');
-        } catch (error) {
-          // If reuse fails, create a new one
-          console.log('[TTS-LOG] Cached MediaElementSourceNode invalid, creating new one');
-          this.cachedMediaElementSource?.disconnect();
-          source = this.audioContext.createMediaElementSource(audio);
-          this.cachedMediaElementSource = source;
-        }
-      } else {
-        // Create new MediaElementSourceNode
-        console.log('[TTS-LOG] Creating new MediaElementSourceNode');
-        source = this.audioContext.createMediaElementSource(audio);
-        this.cachedMediaElementSource = source;
-      }
-
-      // Connect: source -> analyser (for analysis) AND source -> destination (for audio)
-      source.connect(this.analyser);
-      source.connect(this.audioContext.destination);
-
-      this.currentNodes = { source, gain: null };
-
-    } catch (error) {
-      console.warn('[ConversationTTS] Audio analysis setup failed - using static animation:', error);
-      this.audioLevel = 0.5;
-      this.notifyListeners();
-    }
-  }
-
-  // ✅ REAL AUDIO ANALYSIS: Start amplitude analysis loop
+  // ✅ REAL AUDIO ANALYSIS: Start amplitude analysis loop using persistent pipeline
   private startAmplitudeAnalysis(): void {
-    if (!this.analyser || !this.dataArray) return;
+    if (!this.analyser || !this.dataArray || !this.masterAudioElement) return;
 
     const analyzeAmplitude = () => {
-      if (!this.analyser || !this.dataArray) return;
-
-      // Get time-domain data
-      const tempArray = new Uint8Array(this.analyser.frequencyBinCount);
-      this.analyser.getByteTimeDomainData(tempArray);
-      
-      // Copy to our instance array for processing
-      for (let i = 0; i < tempArray.length; i++) {
-        this.dataArray[i] = tempArray[i];
+      if (!this.analyser || !this.dataArray || !this.masterAudioElement || this.masterAudioElement.paused) {
+        // Stop analysis if audio is paused/ended
+        this.audioLevel = 0;
+        this.notifyListeners();
+        this.rafId = undefined;
+        return;
       }
+
+      // Get time-domain data from persistent analyser
+      this.analyser.getByteTimeDomainData(this.dataArray);
 
       // Compute RMS amplitude
       let sum = 0;
@@ -309,24 +404,22 @@ class ConversationTtsService {
       this.rafId = requestAnimationFrame(analyzeAmplitude);
     };
 
+    // Stop any existing analysis before starting new one
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+    }
     this.rafId = requestAnimationFrame(analyzeAmplitude);
   }
 
-  // ✅ REAL AUDIO ANALYSIS: Cleanup analysis
+  // ✅ REAL AUDIO ANALYSIS: Cleanup analysis (but keep persistent pipeline)
   private cleanupAnalysis(): void {
     if (this.rafId) {
       cancelAnimationFrame(this.rafId);
       this.rafId = undefined;
     }
     
-    if (this.currentNodes) {
-      this.currentNodes.source.disconnect();
-      if (this.currentNodes.gain) {
-        this.currentNodes.gain.disconnect();
-      }
-      this.currentNodes = undefined;
-    }
-    
+    // Do NOT disconnect persistent pipeline - it stays connected for the session
+    // Only reset the audio level
     this.audioLevel = 0;
     this.notifyListeners();
   }
