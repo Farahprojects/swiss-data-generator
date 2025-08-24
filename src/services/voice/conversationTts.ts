@@ -210,36 +210,6 @@ class ConversationTtsService {
     });
   }
 
-  async getFallbackAudio(chat_id: string, text: string, sessionId?: string | null): Promise<string> {
-    try {
-      const selectedVoiceName = useChatStore.getState().ttsVoice || 'Puck';
-      const googleVoiceCode = 'en-US-Standard-C'; // Use a known working fallback voice
-
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_PUBLISHABLE_KEY,
-      };
-
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/google-text-to-speech`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ chat_id, text: this.sanitizeTtsText(text), voice: googleVoiceCode, sessionId: sessionId || null })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`TTS fallback failed: ${response.status} - ${errorText}`);
-      }
-      
-      const audioBlob = await response.blob();
-      return URL.createObjectURL(audioBlob);
-
-    } catch (error) {
-      console.error('[ConversationTTS] getFallbackAudio failed:', error);
-      throw error;
-    }
-  }
-
   // ✅ REAL AUDIO ANALYSIS: Setup audio context and analyser
   private async setupAudioAnalysis(audio: HTMLAudioElement): Promise<void> {
     try {

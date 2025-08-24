@@ -9,7 +9,6 @@ import { conversationTtsService } from '@/services/voice/conversationTts';
 import { getMessagesForConversation } from '@/services/api/messages';
 import { Message } from '@/core/types';
 import { v4 as uuidv4 } from 'uuid';
-import { audioPlaybackService } from '@/services/voice/AudioPlaybackService';
 
 class ChatController {
   private isTurnActive = false;
@@ -271,14 +270,10 @@ class ChatController {
   private async playAssistantAudioAndContinue(assistantMessage: Message, chat_id: string) {
     if (assistantMessage.text && assistantMessage.id) {
       
-
-      
       useChatStore.getState().setStatus('speaking');
       // conversationFlowMonitor.observeStep('speaking');
       
       try {
-
-        
         await conversationTtsService.speakAssistant({
           chat_id,
           messageId: assistantMessage.id,
@@ -286,41 +281,19 @@ class ChatController {
           sessionId: this.sessionId || null
         });
         
-
-        
         // TTS completion callback
         if (this.isResetting) return;
         this.resetTurn(false); // Restart turn after speaking
         
       } catch (error) {
-        console.warn(`[ChatController] TTS failed: ${error}. Falling back to audio clip.`);
-        this.handleTtsFallback(assistantMessage);
+        console.warn(`[ChatController] TTS failed: ${error}. Moving on without audio.`);
+        // Remove fallback - just move on without audio
+        this.resetTurn(false); // Restart turn after speaking (without audio)
       }
       
     } else {
       console.warn('[ChatController] Could not play audio. Missing text or messageId.');
       this.resetTurn(true); // Don't restart if no text
-    }
-  }
-
-  private async handleTtsFallback(assistantMessage: Message) {
-    try {
-      const audioUrl = await conversationTtsService.getFallbackAudio(
-        assistantMessage.chat_id,
-        assistantMessage.text,
-        this.sessionId || null
-      );
-      
-      audioPlaybackService.play(audioUrl, () => {
-        // TTS completion callback
-        if (this.isResetting) return;
-        this.resetTurn(false); // Restart turn after speaking
-      });
-
-    } catch (error) {
-      console.error('[ChatController] TTS fallback failed:', error);
-      // If even the fallback fails, just move on.
-      this.resetTurn(true);
     }
   }
 
