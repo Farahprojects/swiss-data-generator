@@ -75,57 +75,47 @@ export const ConversationOverlay: React.FC = () => {
 
   if (!isConversationOpen) return null;
 
-  // Render permission screen if not granted yet
-  if (!permissionGranted) {
-    return createPortal(
-      <div 
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm cursor-pointer" 
-        onClick={handleStart}
-      >
-        <div className="text-center text-white flex flex-col items-center gap-4">
-          <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center">
-            <Mic className="w-10 h-10" />
-          </div>
-          <h2 className="text-2xl font-light">Tap to Start Conversation</h2>
-        </div>
-      </div>,
-      document.body
-    );
-  }
-
   return createPortal(
     <div className="fixed inset-0 z-50 bg-white pt-safe pb-safe">
-      {/* Flow Monitor Indicator - Hidden for production */}
-      {/* <FlowMonitorIndicator /> */}
-      
-      {/* Centered content */}
       <div className="h-full w-full flex items-center justify-center px-6">
-        <div className="flex flex-col items-center justify-center gap-6 relative">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={state}
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
-            >
-              <VoiceBubble state={state} audioLevel={audioLevel} />
-            </motion.div>
-          </AnimatePresence>
-          
-          <p className="text-gray-500 font-light">
-            {state === 'listening' ? 'Listening…' : 
-             state === 'processing' ? 'Thinking…' : 'Speaking…'}
-          </p>
-          {/* Close button - positioned under the status text */}
-          <button
-            onClick={handleModalClose}
-            aria-label="Close conversation"
-            className="w-10 h-10 bg-black rounded-full flex items-center justify-center text-white hover:bg-gray-800 transition-colors"
+        {!permissionGranted ? (
+          <div 
+            className="text-center text-gray-800 flex flex-col items-center gap-4 cursor-pointer"
+            onClick={handleStart}
           >
-            ✕
-          </button>
-        </div>
+            <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center transition-colors hover:bg-gray-200">
+              <Mic className="w-10 h-10 text-gray-600" />
+            </div>
+            <h2 className="text-2xl font-light">Tap to Start Conversation</h2>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-6 relative">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={state}
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                transition={{ duration: 0.2, ease: 'easeInOut' }}
+              >
+                <VoiceBubble state={state} audioLevel={audioLevel} />
+              </motion.div>
+            </AnimatePresence>
+            
+            <p className="text-gray-500 font-light">
+              {state === 'listening' ? 'Listening…' : 
+               state === 'processing' ? 'Thinking…' : 'Speaking…'}
+            </p>
+            {/* Close button - positioned under the status text */}
+            <button
+              onClick={handleModalClose}
+              aria-label="Close conversation"
+              className="w-10 h-10 bg-black rounded-full flex items-center justify-center text-white hover:bg-gray-800 transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+        )}
       </div>
     </div>,
     document.body
