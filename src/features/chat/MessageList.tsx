@@ -3,6 +3,7 @@ import { useChatStore } from '@/core/store';
 import { Message } from '@/core/types';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { Loader2 } from 'lucide-react';
+import { useAutoScroll } from '@/hooks/useAutoScroll';
 
 // Lazy load TypewriterText for better performance
 const TypewriterText = lazy(() => import('@/components/ui/TypewriterText').then(module => ({ default: module.TypewriterText })));
@@ -107,7 +108,7 @@ const groupMessagesIntoTurns = (messages: Message[]): Turn[] => {
 
 export const MessageList = () => {
   const messages = useChatStore((state) => state.messages);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const { containerRef, bottomRef, onContentChange } = useAutoScroll();
   const [initialMessageCount, setInitialMessageCount] = useState<number | null>(null);
   const [hasUserSentMessage, setHasUserSentMessage] = useState(false);
   
@@ -130,6 +131,11 @@ export const MessageList = () => {
     }
   }, [messages]);
 
+  // Auto-scroll when messages change
+  React.useEffect(() => {
+    onContentChange();
+  }, [messages.length, onContentChange]);
+
   // Show report ready message when report is ready and user hasn't sent a message yet
   const showReportReadyMessage = isReportReady && !hasUserSentMessage;
   
@@ -147,9 +153,10 @@ export const MessageList = () => {
     <div 
       className="chat-scroll-container flex flex-col overflow-y-auto"
       style={{ 
-        height: '100dvh'
+        height: '100dvh',
+        scrollBehavior: 'smooth'
       }}
-      ref={scrollRef}
+      ref={containerRef}
       id="chat-scroll-container"
     >
       {messages.length === 0 && !showReportReadyMessage ? (
@@ -181,6 +188,9 @@ export const MessageList = () => {
           
           {/* Bottom padding to prevent content from being hidden behind fixed elements */}
           <div style={{ height: '120px' }} />
+          
+          {/* Sentinel element for auto-scroll */}
+          <div ref={bottomRef} />
         </div>
       )}
     </div>
