@@ -136,7 +136,7 @@ export const ConversationOverlay: React.FC = () => {
   return createPortal(
     <div className="fixed inset-0 z-50 bg-white pt-safe pb-safe">
       <div className="h-full w-full flex items-center justify-center px-6">
-        {!permissionGranted ? (
+        {!permissionGranted && !isStarting ? (
           <div 
             className="text-center text-gray-800 flex flex-col items-center gap-4 cursor-pointer"
             onClick={(e) => {
@@ -149,6 +149,14 @@ export const ConversationOverlay: React.FC = () => {
               <Mic className="w-10 h-10 text-gray-600" />
             </div>
             <h2 className="text-2xl font-light">Tap to Start Conversation</h2>
+          </div>
+        ) : isStarting && !permissionGranted ? (
+          // Show loading state while starting voice session
+          <div className="text-center text-gray-800 flex flex-col items-center gap-4">
+            <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center">
+              <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+            <h2 className="text-2xl font-light">Starting Conversation...</h2>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center gap-6 relative">
