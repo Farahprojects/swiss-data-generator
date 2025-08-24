@@ -17,6 +17,7 @@ export const ConversationOverlay: React.FC = () => {
   const chat_id = useChatStore((state) => state.chat_id);
   const audioLevel = useConversationAudioLevel(); // Get real-time audio level
   const [permissionGranted, setPermissionGranted] = useState(false);
+  const [isStarting, setIsStarting] = useState(false); // Guard against double taps
   
   useEffect(() => {
     if (isConversationOpen) {
@@ -35,9 +36,13 @@ export const ConversationOverlay: React.FC = () => {
     // 3. Close the UI
     closeConversation();
     setPermissionGranted(false); // Reset permission on close
+    setIsStarting(false); // Reset guard on close
   };
 
   const handleStart = async () => {
+    if (isStarting) return; // Prevent double taps
+    setIsStarting(true);
+
     console.log('[MIC-LOG] User tapped start. Unlocking controller and requesting microphone...');
     chatController.unlock(); // Unlock the controller first
     await conversationTtsService.unlockAudio();

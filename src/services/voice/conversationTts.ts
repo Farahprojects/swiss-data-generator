@@ -205,6 +205,12 @@ class ConversationTtsService {
         audio.src = audioUrl;
         audio.muted = false; // Unmute for actual playback
 
+        // ✅ WAKE UP AUDIO CONTEXT: Resume if suspended before playing
+        if (this.audioContext && this.audioContext.state === 'suspended') {
+          console.log('[TTS-LOG] AudioContext is suspended, resuming before play...');
+          await this.audioContext.resume();
+        }
+
         // ✅ REAL AUDIO ANALYSIS: Setup audio context and analyser
         await this.setupAudioAnalysis(audio);
 
