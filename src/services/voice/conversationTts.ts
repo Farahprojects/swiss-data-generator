@@ -6,6 +6,7 @@ export interface SpeakAssistantOptions {
   chat_id: string;
   messageId: string;
   text: string;
+  sessionId?: string | null;
 }
 
 class ConversationTtsService {
@@ -60,7 +61,7 @@ class ConversationTtsService {
     this.listeners.forEach(l => l());
   }
 
-  async speakAssistant({ chat_id, messageId, text }: SpeakAssistantOptions): Promise<void> {
+  async speakAssistant({ chat_id, messageId, text, sessionId }: SpeakAssistantOptions): Promise<void> {
     
     return new Promise(async (resolve, reject) => {
       try {
@@ -71,38 +72,34 @@ class ConversationTtsService {
           chatId: chat_id
         });
         
-        const { data: { session } } = await supabase.auth.getSession();
+        // Sanitize and normalize text before TTS
+        const sanitizedText = this.sanitizeTtsText(text);
         const selectedVoiceName = useChatStore.getState().ttsVoice || 'Puck';
         const googleVoiceCode = `en-US-Chirp3-HD-${selectedVoiceName}`;
-
-        // ✅ TTS TIMING: T6 - Auth session retrieved
-        console.log(`[TTS-TIMING] T6 - Auth session retrieved at ${new Date().toISOString()}`, {
-          messageId,
-          hasSession: !!session,
-          voiceCode: googleVoiceCode
-        });
 
         const headers: HeadersInit = {
           'Content-Type': 'application/json',
           'apikey': SUPABASE_PUBLISHABLE_KEY,
         };
 
-        if (session) {
-          headers['Authorization'] = `Bearer ${session.access_token}`;
-        }
-
         // ✅ TTS TIMING: T7 - About to call TTS edge function
         console.log(`[TTS-TIMING] T7 - About to call TTS edge function at ${new Date().toISOString()}`, {
           messageId,
-          textLength: text.length,
+          textLength: sanitizedText.length,
           voiceCode: googleVoiceCode
         });
 
         const response = await fetch(`${SUPABASE_URL}/functions/v1/google-text-to-speech`, {
           method: 'POST',
           headers,
-          body: JSON.stringify({ chat_id, text, voice: googleVoiceCode })
+          body: JSON.stringify({ chat_id, text: sanitizedText, voice: googleVoiceCode, sessionId: sessionId || null })
         });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('[ConversationTTS] TTS function error:', response.status, errorText);
+          throw new Error(`TTS failed: ${response.status} - ${errorText}`);
+        }
 
         if (!response.ok) {
           const errorText = await response.text();
@@ -179,25 +176,20 @@ class ConversationTtsService {
     });
   }
 
-  async getFallbackAudio(chat_id: string, text: string): Promise<string> {
+  async getFallbackAudio(chat_id: string, text: string, sessionId?: string | null): Promise<string> {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
       const selectedVoiceName = useChatStore.getState().ttsVoice || 'Puck';
-      const googleVoiceCode = `en-US-Chirp3-HD-${selectedVoiceName}`;
+      const googleVoiceCode = 'en-US-Standard-C'; // Use a known working fallback voice
 
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_PUBLISHABLE_KEY,
       };
 
-      if (session) {
-        headers['Authorization'] = `Bearer ${session.access_token}`;
-      }
-
       const response = await fetch(`${SUPABASE_URL}/functions/v1/google-text-to-speech`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ chat_id, text, voice: googleVoiceCode })
+        body: JSON.stringify({ chat_id, text: this.sanitizeTtsText(text), voice: googleVoiceCode, sessionId: sessionId || null })
       });
 
       if (!response.ok) {
@@ -315,6 +307,21 @@ class ConversationTtsService {
     
     this.audioLevel = 0;
     this.notifyListeners();
+  }
+
+  // Sanitize text before sending to TTS provider
+  private sanitizeTtsText(input: string): string {
+    if (!input) return '';
+    let t = input;
+    // Remove code blocks
+    t = t.replace(/```[\s\S]*?```/g, ' ');
+    // Strip inline code/backticks
+    t = t.replace(/`+/g, '');
+    // Remove markdown headers/emphasis/quotes
+    t = t.replace(/[#*_>]+/g, ' ');
+    // Collapse whitespace
+    t = t.replace(/\s+/g, ' ').trim();
+    return t;
   }
 }
 
