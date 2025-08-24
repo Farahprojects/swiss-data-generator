@@ -337,18 +337,20 @@ const PublicReport = () => {
             </section>
 
             <TestsSection />
-            {!isMobile && (
-              <div id="report-form" ref={reportFormRef}>
-                <ReportForm onReportCreated={({ guestReportId, name, email, paymentStatus }) => {
-                  handleReportCreated(guestReportId, paymentStatus as ('paid' | 'pending'), name, email);
-                }} />
-              </div>
-            )}
+
+            {/* Desktop Report Form: Hidden on small screens */}
+            <div className="hidden sm:block" id="report-form" ref={reportFormRef}>
+              <ReportForm onReportCreated={({ guestReportId, name, email, paymentStatus }) => {
+                handleReportCreated(guestReportId, paymentStatus as ('paid' | 'pending'), name, email);
+              }} />
+            </div>
+
             <TheraiChatGPTSection />
             <FeaturesSection onGetReportClick={handleGetReportClick} />
             <PublicFooter />
 
-            {isMobile && (
+            {/* Mobile Unlock FAB: Only visible on small screens */}
+            <div className="block sm:hidden">
               <div
                 className={`fixed bottom-6 right-6 z-50 transition-all duration-300 ${
                   showUnlockFab && !isMobileDrawerOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
@@ -363,17 +365,19 @@ const PublicReport = () => {
                   Unlock
                 </Button>
               </div>
-            )}
+            </div>
 
-            {/* Mobile: use top-level portal sheet for stable keyboard handling */}
-            <MobileReportSheet
-              isOpen={isMobileDrawerOpen}
-              onOpenChange={setIsMobileDrawerOpen}
-              onReportCreated={(guestReportId, paymentStatus, name, email) => {
-                handleReportCreated(guestReportId, paymentStatus as ('paid' | 'pending'), name, email);
-                setIsMobileDrawerOpen(false); // Close the sheet on submit
-              }}
-            />
+            {/* Mobile Report Sheet: Only rendered on small screens */}
+            <div className="block sm:hidden">
+              <MobileReportSheet
+                isOpen={isMobileDrawerOpen}
+                onOpenChange={setIsMobileDrawerOpen}
+                onReportCreated={(guestReportId, paymentStatus, name, email) => {
+                  handleReportCreated(guestReportId, paymentStatus as ('paid' | 'pending'), name, email);
+                  setIsMobileDrawerOpen(false); // Close the sheet on submit
+                }}
+              />
+            </div>
             
             {/* Loading modal for when we are verifying payment status after a Stripe redirect */}
             {activeGuest && activeGuest.isStripeReturn && (
