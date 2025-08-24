@@ -204,7 +204,7 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
   const requiresSecondPerson = reportCategory === 'compatibility' && relationshipType !== 'synastry';
 
   const totalSteps = requiresSecondPerson ? 5 : 4;
-  const canGoNext = currentStep < totalSteps;
+  const canGoNext = true; // Always allow proceeding to next step or submission
 
   const nextStep = () => {
     if (currentStep < totalSteps) {
