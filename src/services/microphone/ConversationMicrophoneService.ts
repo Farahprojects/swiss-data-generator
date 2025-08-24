@@ -6,6 +6,7 @@
  */
 
 import { microphoneArbitrator } from './MicrophoneArbitrator';
+import { conversationTtsService } from '@/services/voice/conversationTts';
 
 export interface ConversationMicrophoneOptions {
   onRecordingComplete?: (audioBlob: Blob) => void;
@@ -53,16 +54,13 @@ class ConversationMicrophoneServiceClass {
     try {
       this.log('🎤 Starting conversation recording');
       
-      // Create our own stream - no sharing
-      this.stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          channelCount: 1,           // Mono for efficiency
-          echoCancellation: true,    // Clean input
-          noiseSuppression: true,    // Remove background noise
-          autoGainControl: true,     // Consistent levels
-          sampleRate: 48000,
-        } 
-      });
+      // Use cached stream from TTS service to avoid additional getUserMedia() calls
+      this.stream = conversationTtsService.getCachedMicStream();
+      
+      if (!this.stream) {
+        console.error('[MIC-LOG] No cached mic stream available from TTS service');
+        throw new Error('No microphone stream available. Voice session not started.');
+      }
 
       const trackSettings = this.stream.getAudioTracks()[0]?.getSettings?.() || {};
       console.log('[MIC-LOG] getUserMedia resolved', trackSettings);

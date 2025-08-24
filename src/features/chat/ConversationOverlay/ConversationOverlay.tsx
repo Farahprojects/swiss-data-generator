@@ -36,7 +36,10 @@ export const ConversationOverlay: React.FC = () => {
     // 2. Stop microphone and tell listener we're done
     chatController.resetConversationService();
     
-    // 3. Close the UI
+    // 3. End voice session to cleanup all resources
+    conversationTtsService.endSession();
+    
+    // 4. Close the UI
     closeConversation();
     setPermissionGranted(false); // Reset permission on close
     setIsStarting(false); // Reset guard on close
@@ -60,8 +63,8 @@ export const ConversationOverlay: React.FC = () => {
     // Set flags immediately for instant UI feedback
     setPermissionGranted(true);
     
-    // Unlock both audio and microphone systems synchronously within the user gesture.
-    conversationTtsService.unlockAudio();
+    // Start voice session to unlock both audio and microphone systems
+    conversationTtsService.startVoiceSession();
     chatController.unlock();
     
     console.log('[MIC-LOG] Calling ChatController.startTurn immediately (gesture preserved)');

@@ -16,7 +16,7 @@ class ConversationTtsService {
   // ✅ REAL AUDIO ANALYSIS: Fields for amplitude-driven animation
   private audioContext?: AudioContext;
   private analyser?: AnalyserNode;
-  private dataArray?: Uint8Array;
+  private dataArray?: Float32Array;
   private rafId?: number;
   private currentNodes?: { source: MediaElementAudioSourceNode; gain: GainNode | null };
   private isAudioUnlocked = false;
@@ -146,7 +146,7 @@ class ConversationTtsService {
         this.analyser = this.audioContext.createAnalyser();
         this.analyser.fftSize = 2048;
         this.analyser.smoothingTimeConstant = 0.85;
-        this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+        this.dataArray = new Float32Array(this.analyser.frequencyBinCount);
       }
       
       // Connect persistent pipeline: source -> analyser -> destination
@@ -253,6 +253,54 @@ class ConversationTtsService {
     this.notifyListeners();
   }
 
+  /**
+   * Stop and reset audio for strict sequential flow
+   * Immediately stop current playback and reset for next speak
+   */
+  public stopAndReset(): void {
+    console.log('[voice] stop-and-reset called');
+    
+    // Stop analysis immediately
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = undefined;
+    }
+    
+    if (this.masterAudioElement) {
+      // Log before reset with stable identities
+      console.log('[voice] pre-reset', {
+        contextId: this.contextId,
+        audioElId: this.audioElementId,
+        ctxState: this.audioContext?.state,
+        hasSrc: !!this.masterAudioElement.src
+      });
+      
+      // Immediate stop and reset
+      this.masterAudioElement.pause();
+      this.masterAudioElement.currentTime = 0;
+      
+      // Revoke current object URL if it exists
+      if (this.masterAudioElement.src && this.masterAudioElement.src.startsWith('blob:')) {
+        URL.revokeObjectURL(this.masterAudioElement.src);
+      }
+      
+      // Clear src completely
+      this.masterAudioElement.src = '';
+      this.masterAudioElement.removeAttribute('src');
+      this.masterAudioElement.load(); // Reset element to idle state
+      
+      // Log after reset
+      console.log('[voice] post-reset', {
+        contextId: this.contextId,
+        audioElId: this.audioElementId,
+        hasSrc: !!this.masterAudioElement.src
+      });
+    }
+    
+    this.audioLevel = 0;
+    this.notifyListeners();
+  }
+
   public getCurrentAudioLevel(): number {
     return this.audioLevel;
   }
@@ -313,6 +361,9 @@ class ConversationTtsService {
         throw new Error(`TTS failed: ${response.status} - ${errorText}`);
       }
 
+        // If a speak request arrives early, do stop-and-reset immediately
+        this.stopAndReset();
+        
         // Use persistent audio element and pipeline
         const blob = await response.blob();
         const audioUrl = URL.createObjectURL(blob);
@@ -383,12 +434,12 @@ class ConversationTtsService {
       }
 
       // Get time-domain data from persistent analyser
-      this.analyser.getByteTimeDomainData(this.dataArray);
+      this.analyser.getFloatTimeDomainData(this.dataArray as any);
 
       // Compute RMS amplitude
       let sum = 0;
       for (let i = 0; i < this.dataArray.length; i++) {
-        const v = (this.dataArray[i] - 128) / 128; // Convert to -1..1
+        const v = this.dataArray[i]; // Already in -1..1 range with Float32Array
         sum += v * v;
       }
       const rms = Math.sqrt(sum / this.dataArray.length);
