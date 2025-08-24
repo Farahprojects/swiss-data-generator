@@ -32,8 +32,8 @@ export const ConversationOverlay: React.FC = () => {
   };
 
   const handleStart = async () => {
-    console.log('[CONVERSATION] User tapped to start. Initializing audio...');
-    await conversationTtsService.initializeAudioContext();
+    console.log('[CONVERSATION] User tapped to start. Unlocking audio...');
+    await conversationTtsService.unlockAudio();
     
     if (chat_id) {
       chatController.setConversationMode('convo', chat_id);

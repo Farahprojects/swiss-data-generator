@@ -19,7 +19,54 @@ class ConversationTtsService {
   private dataArray?: Uint8Array;
   private rafId?: number;
   private currentNodes?: { source: MediaElementAudioSourceNode; gain: GainNode | null };
-  private isAudioContextInitialized = false;
+  private isAudioUnlocked = false;
+  private masterAudioElement: HTMLAudioElement | null = null;
+
+  /**
+   * Unlocks audio playback after a user gesture. This is the single entry point
+   * for preparing all audio systems (AudioContext and the master audio element).
+   * It's crucial for iOS compatibility.
+   */
+  public async unlockAudio(): Promise<void> {
+    if (this.isAudioUnlocked) return;
+
+    try {
+      // 1. Initialize and resume AudioContext
+      if (!this.audioContext) {
+        const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) {
+          this.audioContext = new AudioContextClass();
+          console.log('[TTS-LOG] AudioContext created.');
+        } else {
+          console.warn('[TTS-LOG] AudioContext not supported.');
+          return;
+        }
+      }
+
+      if (this.audioContext.state === 'suspended') {
+        console.log('[TTS-LOG] Resuming suspended AudioContext...');
+        await this.audioContext.resume();
+      }
+
+      // 2. Create and "prime" the master audio element
+      if (!this.masterAudioElement) {
+        this.masterAudioElement = new Audio();
+        this.masterAudioElement.muted = true; // Mute for the unlock play
+        
+        // This play call is inside the user gesture, which is key for iOS.
+        // It will likely throw an empty-source error, which we can safely ignore.
+        await this.masterAudioElement.play().catch(() => {});
+        
+        console.log('[TTS-LOG] Master audio element created and primed.');
+      }
+      
+      this.isAudioUnlocked = true;
+      console.log(`[TTS-LOG] Audio systems unlocked. AudioContext state: ${this.audioContext.state}`);
+      
+    } catch (error) {
+      console.error('[TTS-LOG] Error unlocking audio:', error);
+    }
+  }
 
   // Stop all audio playback and cleanup
   public stopAllAudio(): void {
@@ -40,7 +87,12 @@ class ConversationTtsService {
     this.audioLevel = 0;
     this.notifyListeners();
     
-    // Stop any playing audio elements
+    if (this.masterAudioElement) {
+      this.masterAudioElement.pause();
+      this.masterAudioElement.removeAttribute('src');
+    }
+    
+    // Stop any playing audio elements (fallback)
     const allAudioElements = document.querySelectorAll('audio');
     allAudioElements.forEach((audio) => {
       audio.pause();
@@ -108,8 +160,12 @@ class ConversationTtsService {
     
     return new Promise(async (resolve, reject) => {
       try {
-
         
+        // Ensure audio is unlocked before proceeding
+        if (!this.isAudioUnlocked || !this.masterAudioElement) {
+          throw new Error('Audio is not unlocked. A user gesture is required before TTS can play.');
+        }
+
         // Sanitize and normalize text before TTS
         const sanitizedText = this.sanitizeTtsText(text);
         const selectedVoiceName = useChatStore.getState().ttsVoice || 'Puck';
@@ -144,7 +200,10 @@ class ConversationTtsService {
         const blob = await response.blob();
         
         const audioUrl = URL.createObjectURL(blob);
-        const audio = new Audio(audioUrl);
+        // ✅ REUSE MASTER AUDIO ELEMENT: Instead of creating a new one
+        const audio = this.masterAudioElement;
+        audio.src = audioUrl;
+        audio.muted = false; // Unmute for actual playback
 
         // ✅ REAL AUDIO ANALYSIS: Setup audio context and analyser
         await this.setupAudioAnalysis(audio);
@@ -219,19 +278,14 @@ class ConversationTtsService {
   // ✅ REAL AUDIO ANALYSIS: Setup audio context and analyser
   private async setupAudioAnalysis(audio: HTMLAudioElement): Promise<void> {
     try {
-      // Create AudioContext with fallback
-      if (!this.audioContext) {
-        const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
-        if (!AudioContextClass) {
-          console.warn('[ConversationTTS] AudioContext not supported - using static animation');
-          this.audioLevel = 0.5;
-          this.notifyListeners();
-          return;
-        }
-        this.audioContext = new AudioContextClass();
+      // AudioContext is now initialized and unlocked via the unlockAudio() method.
+      // We just need to ensure it exists before proceeding with analysis setup.
+      if (!this.audioContext || !this.isAudioUnlocked) {
+        console.warn('[ConversationTTS] AudioContext not ready for analysis. Unlock audio first.');
+        return;
       }
-
-      // Resume context if suspended
+      
+      // Resume context if suspended (it should already be running, but as a safeguard)
       if (this.audioContext.state === 'suspended') {
         await this.audioContext.resume();
       }
