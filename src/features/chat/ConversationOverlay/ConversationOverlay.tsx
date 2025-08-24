@@ -44,13 +44,24 @@ export const ConversationOverlay: React.FC = () => {
     setIsStarting(true);
 
     console.log('[MIC-LOG] User tapped start. Unlocking controller and requesting microphone...');
-    chatController.unlock(); // Unlock the controller first
+    
+    // First, unlock the audio systems. This is synchronous or very fast.
+    chatController.unlock();
     await conversationTtsService.unlockAudio();
     
     if (chat_id) {
       chatController.setConversationMode('convo', chat_id);
-      await chatController.startTurn();
+
+      // Immediately update the UI to show the conversation view.
       setPermissionGranted(true);
+
+      // Now, start the turn in the background. This might trigger a permission prompt.
+      chatController.startTurn().catch(error => {
+        console.error('[ConversationOverlay] Failed to start turn, likely permission denied:', error);
+        // If it fails (e.g., user denies permission), revert the UI.
+        setPermissionGranted(false);
+        setIsStarting(false);
+      });
     } else {
       console.error("[ConversationOverlay] Cannot start conversation without a chat_id");
       closeConversation();
