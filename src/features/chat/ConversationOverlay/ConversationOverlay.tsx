@@ -47,7 +47,7 @@ export const ConversationOverlay: React.FC = () => {
     setShowPermissionHint(false); // Reset permission hint
   };
 
-  const handleStart = () => { // No longer async
+  const handleStart = async () => {
     // One-shot guard to prevent double invocation
     if (hasStarted.current) {
       console.log('[MIC-LOG] handleStart already invoked, ignoring duplicate call');
@@ -58,43 +58,48 @@ export const ConversationOverlay: React.FC = () => {
     if (isStarting) return; // Prevent double taps
     setIsStarting(true);
 
-    console.log('[MIC-LOG] User tapped start. Unlocking controller and requesting microphone...');
+    console.log('[MIC-LOG] User tapped start...');
     
-    // Set flags immediately for instant UI feedback
-    setPermissionGranted(true);
-    
-    // Start voice session to unlock both audio and microphone systems
-    conversationTtsService.startVoiceSession();
-    chatController.unlock();
-    
-    console.log('[MIC-LOG] Calling ChatController.startTurn immediately (gesture preserved)');
-    
-    if (chat_id) {
-      chatController.setConversationMode('convo', chat_id);
+    try {
+      // Start voice session first - this ensures cached mic stream exists
+      console.log('[MIC-LOG] startVoiceSession begin (gesture)');
+      await conversationTtsService.startVoiceSession();
+      
+      const cachedStream = conversationTtsService.getCachedMicStream();
+      console.log('[MIC-LOG] startVoiceSession complete, mic cached =', !!cachedStream);
+      
+      // Only set UI flags after voice session is successfully established
+      setPermissionGranted(true);
+      chatController.unlock();
+      
+      if (chat_id) {
+        chatController.setConversationMode('convo', chat_id);
 
-      // Call startTurn in the background. It will request microphone permission.
-      chatController.startTurn().catch(error => {
-        console.error('[MIC-LOG] Failed to start turn, likely permission denied:', error);
-        // If it fails (e.g., user denies permission), revert the UI.
-        setPermissionGranted(false);
-        setIsStarting(false);
-        hasStarted.current = false;
-      });
+        // Now start the turn - mic stream is guaranteed to be cached
+        await chatController.startTurn();
 
-      // Watchdog timer remains to detect if the user denies permission or the mic fails silently.
-      setTimeout(() => {
-        const status = useChatStore.getState().status;
-        const hasStream = conversationMicrophoneService.getState().hasStream;
-        
-        if (status !== 'recording' && !hasStream) {
-          console.warn('[MIC-LOG] Watchdog: No recording status or stream after 1.5s, showing hint.');
-          setShowPermissionHint(true);
-        }
-      }, 1500);
+        // Watchdog timer to detect if the user denies permission or the mic fails silently.
+        setTimeout(() => {
+          const status = useChatStore.getState().status;
+          const hasStream = conversationTtsService.getCachedMicStream();
+          
+          if (status !== 'recording' && !hasStream) {
+            console.warn('[MIC-LOG] Watchdog: No recording status or stream after 1.5s, showing hint.');
+            setShowPermissionHint(true);
+          }
+        }, 1500);
 
-    } else {
-      console.error("[ConversationOverlay] Cannot start conversation without a chat_id");
-      closeConversation();
+      } else {
+        console.error("[voice] Cannot start conversation without a chat_id");
+        closeConversation();
+      }
+    } catch (error) {
+      console.error('[voice] Failed to start voice session:', error);
+      // Revert UI state on failure
+      setPermissionGranted(false);
+      setIsStarting(false);
+      hasStarted.current = false;
+      setShowPermissionHint(true);
     }
   };
   
@@ -134,7 +139,11 @@ export const ConversationOverlay: React.FC = () => {
         {!permissionGranted ? (
           <div 
             className="text-center text-gray-800 flex flex-col items-center gap-4 cursor-pointer"
-            onClick={handleStart}
+            onClick={(e) => {
+              // Use { once: true } equivalent by removing the handler after first click
+              e.currentTarget.style.pointerEvents = 'none';
+              handleStart();
+            }}
           >
             <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center transition-colors hover:bg-gray-200">
               <Mic className="w-10 h-10 text-gray-600" />
