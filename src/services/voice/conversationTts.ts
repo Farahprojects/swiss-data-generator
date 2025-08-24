@@ -235,8 +235,13 @@ class ConversationTtsService {
   public getCachedMicStream(): MediaStream | null {
     return this.cachedMicStream;
   }
-
-
+  
+  /**
+   * Get shared AudioContext
+   */
+  public getSharedAudioContext(): AudioContext | undefined {
+    return this.audioContext;
+  }
 
   // Stop current audio playback without breaking session
   public stopAllAudio(): void {

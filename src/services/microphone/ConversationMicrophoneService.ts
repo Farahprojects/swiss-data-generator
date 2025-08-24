@@ -6,7 +6,7 @@
  */
 
 import { microphoneArbitrator } from './MicrophoneArbitrator';
-import { conversationTtsService } from '@/services/voice/conversationTts';
+import { conversationTtsService } from '../voice/conversationTts'; // Import the central voice service
 
 export interface ConversationMicrophoneOptions {
   onRecordingComplete?: (audioBlob: Blob) => void;
@@ -41,39 +41,34 @@ class ConversationMicrophoneServiceClass {
    * START RECORDING - Complete domain-specific recording
    */
   async startRecording(): Promise<boolean> {
-    console.log('[MIC-LOG] ConversationMicrophoneService.startRecording() called. Requesting getUserMedia...');
-    // Check permission from arbitrator
-    if (!microphoneArbitrator.claim('conversation')) {
-      this.error('❌ Cannot start - microphone in use by another domain');
+    this.log('🎤 Starting conversation recording');
+    
+    // Use the single, persistent MediaStream from the voice session
+    const stream = conversationTtsService.getCachedMicStream();
+    if (!stream) {
+      this.error('❌ Cannot start recording: No cached mic stream found in the voice session.');
       if (this.options.onError) {
-        this.options.onError(new Error('Microphone is busy with another feature'));
+        this.options.onError(new Error('Microphone stream not available.'));
       }
       return false;
     }
+    this.stream = stream;
+
+    // Use the single, shared AudioContext from the voice session
+    const audioContext = conversationTtsService.getSharedAudioContext();
+    if (!audioContext) {
+      this.error('❌ Cannot start recording: No shared AudioContext found in the voice session.');
+      if (this.options.onError) {
+        this.options.onError(new Error('AudioContext not available.'));
+      }
+      return false;
+    }
+    this.audioContext = audioContext;
 
     try {
-      this.log('🎤 Starting conversation recording');
-      
-      // Use cached stream from TTS service to avoid additional getUserMedia() calls
-      this.stream = conversationTtsService.getCachedMicStream();
-      
-      if (!this.stream) {
-        console.error('[MIC-LOG] No cached mic stream available from TTS service');
-        throw new Error('No microphone stream available. Voice session not started.');
-      }
-
-      const trackSettings = this.stream.getAudioTracks()[0]?.getSettings?.() || {};
-      console.log('[MIC-LOG] getUserMedia resolved', trackSettings);
-      this.log('🎛️ getUserMedia acquired. Track settings:', trackSettings);
-
-      // Configure audio analysis for optional silence detection
-      this.audioContext = new AudioContext({ sampleRate: 48000 });
-      
       // Defensively resume AudioContext if suspended (helps on iOS)
       if (this.audioContext.state === 'suspended') {
-        console.log('[MIC-LOG] AudioContext suspended, resuming...');
         await this.audioContext.resume();
-        console.log('[MIC-LOG] AudioContext resumed, state:', this.audioContext.state);
       }
       
       this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
@@ -115,15 +110,15 @@ class ConversationMicrophoneServiceClass {
       this.startVoiceActivityDetection();
       
       this.notifyListeners();
-      console.log('[MIC-LOG] Recording started successfully');
+      this.log('✅ Recording started successfully using shared session stream');
       return true;
 
-    } catch (error: any) {
-      console.error('[MIC-LOG] getUserMedia error:', error.name, error);
-      this.error('❌ getUserMedia failed:', error);
+    } catch (error) {
+      this.error('❌ Failed to start recording:', error);
       if (this.options.onError) {
-        this.options.onError(error);
+        this.options.onError(error instanceof Error ? error : new Error('Recording failed'));
       }
+      
       return false;
     }
   }
@@ -221,25 +216,11 @@ class ConversationMicrophoneServiceClass {
    * CLEANUP - Only call this when conversation is completely done
    * (cancel, reset, or overlay close)
    */
-  cleanup(): void {
-    this.log('🧹 Cleaning up conversation microphone service');
-    
-    // Stop recording if active
-    if (this.isRecording && this.mediaRecorder) {
-      this.mediaRecorder.stop();
-      this.isRecording = false;
-    }
+  private cleanup(): void {
+    this.log('🧹 Cleaning up conversation microphone');
 
-    // Release microphone stream
-    if (this.stream) {
-      this.stream.getTracks().forEach(track => {
-        track.stop();
-        this.log(`🎤 Stopped track: ${track.kind}`);
-      });
-      this.stream = null;
-    }
-
-    // Cleanup audio analysis
+    // Do NOT stop the shared stream tracks here. The session manager owns the stream.
+    // We only disconnect our local nodes.
     if (this.mediaStreamSource) {
       this.mediaStreamSource.disconnect();
       this.mediaStreamSource = null;
@@ -249,16 +230,14 @@ class ConversationMicrophoneServiceClass {
       this.analyser.disconnect();
       this.analyser = null;
     }
-
-    if (this.audioContext && this.audioContext.state !== 'closed') {
-      this.audioContext.close();
-      this.audioContext = null;
-    }
-
-    // Clear data
-    this.audioChunks = [];
-    this.mediaRecorder = null;
     
+    // Do NOT close the shared AudioContext. The session manager owns it.
+    this.audioContext = null;
+
+    // Clear local refs
+    this.mediaRecorder = null;
+    this.analyser = null;
+
     // Release microphone from arbitrator
     microphoneArbitrator.release('conversation');
     
