@@ -217,98 +217,96 @@ class ConversationTtsService {
   // ✅ REAL AUDIO ANALYSIS: Setup audio context and analyser
   private async setupAudioAnalysis(audio: HTMLAudioElement): Promise<void> {
     try {
-      // AudioContext is now initialized and unlocked via the unlockAudio() method.
-      // We just need to ensure it exists before proceeding with analysis setup.
       if (!this.audioContext || !this.isAudioUnlocked) {
-        console.warn('[ConversationTTS] AudioContext not ready for analysis. Unlock audio first.');
+        console.warn('[TTS-Animation] AudioContext not ready for analysis. Unlock audio first.');
         return;
       }
       
-      // Resume context if suspended (it should already be running, but as a safeguard)
+      // Defensively resume context if it's suspended
       if (this.audioContext.state === 'suspended') {
         await this.audioContext.resume();
       }
 
-      // Setup analyser
+      // --- SIMPLIFIED CONNECTION LOGIC ---
+      // 1. Disconnect any existing source from the previous playback to ensure a clean slate.
+      if (this.currentNodes) {
+        this.currentNodes.source.disconnect();
+        if (this.currentNodes.gain) this.currentNodes.gain.disconnect();
+        this.currentNodes = undefined;
+      }
+
+      // 2. Create the analyser if it doesn't exist.
       if (!this.analyser) {
         this.analyser = this.audioContext.createAnalyser();
         this.analyser.fftSize = 2048;
         this.analyser.smoothingTimeConstant = 0.85;
-        
-        // Initialize data array for frequency analysis
         this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
       }
 
-      // Create or reuse MediaElementSourceNode to avoid InvalidStateError
-      let source: MediaElementAudioSourceNode;
-      if (this.cachedMediaElementSource) {
-        // Reuse existing source if it's still valid
-        try {
-          // Test if the cached source is still connected to the same audio element
-          source = this.cachedMediaElementSource;
-          console.log('[TTS-LOG] Reusing cached MediaElementSourceNode');
-        } catch (error) {
-          // If reuse fails, create a new one
-          console.log('[TTS-LOG] Cached MediaElementSourceNode invalid, creating new one');
-          this.cachedMediaElementSource?.disconnect();
-          source = this.audioContext.createMediaElementSource(audio);
-          this.cachedMediaElementSource = source;
-        }
-      } else {
-        // Create new MediaElementSourceNode
-        console.log('[TTS-LOG] Creating new MediaElementSourceNode');
-        source = this.audioContext.createMediaElementSource(audio);
-        this.cachedMediaElementSource = source;
-      }
-
-      // Connect: source -> analyser (for analysis) AND source -> destination (for audio)
+      // 3. Always create a new source node. This is the most reliable method.
+      const source = this.audioContext.createMediaElementSource(audio);
+      
+      // 4. Connect the new source to the analyser and the audio output.
       source.connect(this.analyser);
       source.connect(this.audioContext.destination);
 
       this.currentNodes = { source, gain: null };
+      console.log('[TTS-Animation] New analysis connection established.');
 
     } catch (error) {
-      console.warn('[ConversationTTS] Audio analysis setup failed - using static animation:', error);
-      this.audioLevel = 0.5;
+      console.warn('[TTS-Animation] Audio analysis setup failed:', error);
+      // Fallback to a static animation if setup fails
+      this.audioLevel = 0.5; 
       this.notifyListeners();
     }
   }
 
   // ✅ REAL AUDIO ANALYSIS: Start amplitude analysis loop
   private startAmplitudeAnalysis(): void {
-    if (!this.analyser || !this.dataArray) return;
+    if (!this.analyser || !this.dataArray || !this.masterAudioElement) return;
+
+    const audio = this.masterAudioElement;
+
+    // --- Animation Watchdog (Self-Healing) ---
+    // After 250ms, check if the animation has started. If not, re-initialize.
+    const watchdogTimeout = setTimeout(() => {
+      if (audio && !audio.paused && this.audioLevel === 0) {
+        console.warn('[TTS-Animation] Watchdog: Animation appears stalled. Re-initializing analysis.');
+        this.setupAudioAnalysis(audio).catch(err => console.error('[TTS-Animation] Watchdog re-init failed:', err));
+      }
+    }, 250);
 
     const analyzeAmplitude = () => {
-      if (!this.analyser || !this.dataArray) return;
-
-      // Get time-domain data
-      const tempArray = new Uint8Array(this.analyser.frequencyBinCount);
-      this.analyser.getByteTimeDomainData(tempArray);
-      
-      // Copy to our instance array for processing
-      for (let i = 0; i < tempArray.length; i++) {
-        this.dataArray[i] = tempArray[i];
+      if (!this.analyser || !this.dataArray || audio.paused) {
+        // Stop the loop if analyser is gone or audio is paused/ended
+        this.audioLevel = 0;
+        this.notifyListeners();
+        clearTimeout(watchdogTimeout); // Clear watchdog on clean exit
+        this.rafId = undefined;
+        return;
       }
-
-      // Compute RMS amplitude
-      let sum = 0;
-      for (let i = 0; i < this.dataArray.length; i++) {
-        const v = (this.dataArray[i] - 128) / 128; // Convert to -1..1
-        sum += v * v;
-      }
-      const rms = Math.sqrt(sum / this.dataArray.length);
-
-      // Map RMS to 0..1 with threshold and smoothing
-      const level = Math.max(0, Math.min(1, (rms - 0.02) / 0.3));
       
-      // Smooth the level changes
-      this.audioLevel = this.audioLevel * 0.8 + level * 0.2;
+      this.analyser.getByteTimeDomainData(this.dataArray);
+      let sumSquares = 0.0;
+      for (const amplitude of this.dataArray) {
+        const normalized = (amplitude / 128.0) - 1.0;
+        sumSquares += normalized * normalized;
+      }
+      const rms = Math.sqrt(sumSquares / this.dataArray.length);
+
+      // Smooth the level for a more pleasant animation
+      const smoothedLevel = Math.max(this.audioLevel * 0.8, rms);
+      this.audioLevel = Math.min(smoothedLevel, 1.0);
+      
       this.notifyListeners();
 
-      // Continue analysis
       this.rafId = requestAnimationFrame(analyzeAmplitude);
     };
 
+    // Stop any previous animation frame loop before starting a new one
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+    }
     this.rafId = requestAnimationFrame(analyzeAmplitude);
   }
 
