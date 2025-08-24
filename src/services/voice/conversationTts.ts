@@ -6,7 +6,6 @@ export interface SpeakAssistantOptions {
   chat_id: string;
   messageId: string;
   text: string;
-  sessionId?: string | null;
 }
 
 class ConversationTtsService {
@@ -61,7 +60,7 @@ class ConversationTtsService {
     this.listeners.forEach(l => l());
   }
 
-  async speakAssistant({ chat_id, messageId, text, sessionId }: SpeakAssistantOptions): Promise<void> {
+  async speakAssistant({ chat_id, messageId, text }: SpeakAssistantOptions): Promise<void> {
     
     return new Promise(async (resolve, reject) => {
       try {
@@ -72,61 +71,38 @@ class ConversationTtsService {
           chatId: chat_id
         });
         
-        // Sanitize and normalize text before TTS
-        const sanitizedText = this.sanitizeTtsText(text);
+        const { data: { session } } = await supabase.auth.getSession();
         const selectedVoiceName = useChatStore.getState().ttsVoice || 'Puck';
-        // Use known working Google TTS voice names
-        const hdVoice = `en-US-Chirp3-HD-${selectedVoiceName}`;
-        const fastVoice = 'en-US-Standard-C'; // Use a known fast fallback voice
+        const googleVoiceCode = `en-US-Chirp3-HD-${selectedVoiceName}`;
+
+        // ✅ TTS TIMING: T6 - Auth session retrieved
+        console.log(`[TTS-TIMING] T6 - Auth session retrieved at ${new Date().toISOString()}`, {
+          messageId,
+          hasSession: !!session,
+          voiceCode: googleVoiceCode
+        });
 
         const headers: HeadersInit = {
           'Content-Type': 'application/json',
           'apikey': SUPABASE_PUBLISHABLE_KEY,
         };
 
-        // Build a request helper to call the edge function with a given voice
-        const requestTts = (voiceName: string, controller?: AbortController) => {
-          // ✅ TTS TIMING: T7 - About to call TTS edge function
-          console.log(`[TTS-TIMING] T7 - About to call TTS edge function at ${new Date().toISOString()}`, {
-            messageId,
-            textLength: sanitizedText.length,
-            voiceCode: voiceName
-          });
-          return fetch(`${SUPABASE_URL}/functions/v1/google-text-to-speech`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ chat_id, text: sanitizedText, voice: voiceName, sessionId: sessionId || null }),
-            signal: controller?.signal
-          });
-        };
+        if (session) {
+          headers['Authorization'] = `Bearer ${session.access_token}`;
+        }
 
-        // Start primary (HD) request
-        const primaryController = new AbortController();
-        const primaryPromise = requestTts(hdVoice, primaryController);
-
-        // Start fallback (non-HD) after delay if primary is slow
-        const FALLBACK_DELAY_MS = 5000; // start fallback if no response by 5s
-        const fallbackController = new AbortController();
-        let fallbackStarted = false;
-        const fallbackStarter = new Promise<Response>((start) => {
-          setTimeout(() => {
-            fallbackStarted = true;
-            start(requestTts(fastVoice, fallbackController));
-          }, FALLBACK_DELAY_MS);
+        // ✅ TTS TIMING: T7 - About to call TTS edge function
+        console.log(`[TTS-TIMING] T7 - About to call TTS edge function at ${new Date().toISOString()}`, {
+          messageId,
+          textLength: text.length,
+          voiceCode: googleVoiceCode
         });
 
-        // Race the two requests: primary immediately vs fallback after delay
-        const firstResponse = await Promise.race<Promise<Response>[]>([
-          primaryPromise,
-          fallbackStarter as unknown as Promise<Response>
-        ]);
-
-        // Whichever won the race is in firstResponse, but ensure it's OK; if not, try the other
-        let response = firstResponse;
-        if (!response.ok) {
-          // Try the other one explicitly
-          response = fallbackStarted ? await primaryPromise : await requestTts(fastVoice, fallbackController);
-        }
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/google-text-to-speech`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ chat_id, text, voice: googleVoiceCode })
+        });
 
         if (!response.ok) {
           const errorText = await response.text();
@@ -141,10 +117,7 @@ class ConversationTtsService {
           responseSize: response.headers.get('content-length') || 'unknown'
         });
 
-        // Cancel the slower request to save bandwidth
-        try { primaryController.abort(); } catch {}
-        try { fallbackController.abort(); } catch {}
-
+        // ✅ SIMPLIFIED: Direct blob to audio with minimal setup
         const blob = await response.blob();
         
         // ✅ TTS TIMING: T9 - Audio blob created
@@ -206,20 +179,25 @@ class ConversationTtsService {
     });
   }
 
-  async getFallbackAudio(chat_id: string, text: string, sessionId?: string | null): Promise<string> {
+  async getFallbackAudio(chat_id: string, text: string): Promise<string> {
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const selectedVoiceName = useChatStore.getState().ttsVoice || 'Puck';
-      const googleVoiceCode = 'en-US-Standard-C'; // Use a known working fallback voice
+      const googleVoiceCode = `en-US-Chirp3-HD-${selectedVoiceName}`;
 
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_PUBLISHABLE_KEY,
       };
 
+      if (session) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
       const response = await fetch(`${SUPABASE_URL}/functions/v1/google-text-to-speech`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ chat_id, text: this.sanitizeTtsText(text), voice: googleVoiceCode, sessionId: sessionId || null })
+        body: JSON.stringify({ chat_id, text, voice: googleVoiceCode })
       });
 
       if (!response.ok) {
@@ -234,21 +212,6 @@ class ConversationTtsService {
       console.error('[ConversationTTS] getFallbackAudio failed:', error);
       throw error;
     }
-  }
-
-  // Sanitize text before sending to TTS provider
-  private sanitizeTtsText(input: string): string {
-    if (!input) return '';
-    let t = input;
-    // Remove code blocks
-    t = t.replace(/```[\s\S]*?```/g, ' ');
-    // Strip inline code/backticks
-    t = t.replace(/`+/g, '');
-    // Remove markdown headers/emphasis/quotes
-    t = t.replace(/[#*_>]+/g, ' ');
-    // Collapse whitespace
-    t = t.replace(/\s+/g, ' ').trim();
-    return t;
   }
 
   // ✅ REAL AUDIO ANALYSIS: Setup audio context and analyser

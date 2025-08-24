@@ -21,23 +21,15 @@ serve(async (req) => {
   }
 
   try {
-    const { chat_id, text, voice, sessionId } = await req.json();
+    const { chat_id, text, voice } = await req.json();
 
     if (!chat_id || !text) {
       throw new Error("Missing 'chat_id' or 'text' in request body.");
     }
     
-    // Require sessionId (validated upstream by existing session validation flow)
-    if (!sessionId) {
-      return new Response(JSON.stringify({ error: 'Unauthorized: missing sessionId' }), {
-        status: 401,
-        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }
-      });
-    }
-    
     // The voice parameter should be the full name e.g., en-US-Chirp3-HD-Puck
     // This default is a fallback in case the client sends an empty voice parameter.
-    const voiceName = voice || "en-US-Standard-C";
+    const voiceName = voice || "en-US-Chirp3-HD-Puck";
     
     console.log(`[google-tts] Processing TTS for chat_id: ${chat_id} with voice: ${voiceName}`);
     
@@ -71,7 +63,6 @@ serve(async (req) => {
             audioEncoding: "MP3",
             speakingRate: 1.0,
             pitch: 0.0,
-            sampleRateHertz: 22050
           },
         }),
       }
