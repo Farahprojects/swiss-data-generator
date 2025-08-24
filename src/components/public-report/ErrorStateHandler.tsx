@@ -8,6 +8,8 @@ import { clearAllSessionData } from '@/utils/urlHelpers';
 import { useChatStore } from '@/core/store';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { ErrorDiagnosticService, DiagnosticResponse } from '@/services/error/errorDiagnostic';
+import { supabase } from '@/integrations/supabase/client';
+import { stopReportReadyListener } from '@/services/report/reportReadyListener';
 
 interface ErrorState {
   type: string;
@@ -60,13 +62,31 @@ const ErrorStateHandler: React.FC<ErrorStateHandlerProps> = ({
         response,
         errorState.guest_report_id,
         // onReportFound
-        () => {
+        async () => {
+          console.log(`✅ [ErrorStateHandler] Report found! Connecting back to main flow for guest_report_id: ${errorState.guest_report_id}`);
           setDiagnosticMessage('We found your report! Loading it now...');
-          setTimeout(() => {
-            // Trigger report loading and close error handler
-            setShowErrorHandler(false);
-            // Could trigger report loading here
-          }, 3000);
+          
+          // Mirror the handleReportReady flow from reportReadyListener.ts
+          // 1. Set report as ready (triggers UI update)
+          useReportReadyStore.getState().setReportReady(true);
+          
+          // 2. Stop any active listeners
+          stopReportReadyListener(errorState.guest_report_id);
+          
+          // 3. Trigger context injection for chat
+          try {
+            await supabase.functions.invoke('context-injector', {
+              body: { guest_report_id: errorState.guest_report_id }
+            });
+            console.log(`🔗 [ErrorStateHandler] Context injection triggered for guest_report_id: ${errorState.guest_report_id}`);
+          } catch (error) {
+            console.error('[ErrorStateHandler] Context injection failed:', error);
+          }
+          
+          // 4. Clear error state (this will close the popup)
+          useReportReadyStore.getState().setErrorState(null);
+          
+          console.log(`🎉 [ErrorStateHandler] Successfully reconnected flow - popup should close and report should load`);
         },
         // onError
         (message: string) => {
