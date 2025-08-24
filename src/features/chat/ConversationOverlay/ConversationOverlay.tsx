@@ -27,25 +27,54 @@ export const ConversationOverlay: React.FC = () => {
       console.log('[voice] ConversationOverlay opened. Probing for permissions...');
       const probeAndStart = async () => {
         try {
-          // Probe if a user gesture is required.
           const gestureRequired = await conversationTtsService.probeAudioPermissions();
+          
           if (!gestureRequired) {
-            // If no gesture is needed, start the conversation automatically.
             console.log('[voice] Gesture not required, starting automatically.');
-            handleStart(); // This will handle the full start sequence.
+            // This is a dedicated, robust flow for auto-start.
+            // It replaces the less reliable call to handleStart().
+            if (hasStarted.current) return;
+            hasStarted.current = true;
+            setIsStarting(true);
+            setPermissionGranted(true); // Optimistically show the listening UI
+
+            try {
+              await conversationTtsService.startVoiceSession();
+              const cachedStream = conversationTtsService.getCachedMicStream();
+              console.log('[voice] micGranted (auto-start)', { micActive: !!cachedStream });
+
+              if (!cachedStream) {
+                console.error('[voice] Auto-start failed: Mic stream not available after session start.');
+                throw new Error('Mic stream not available');
+              }
+
+              chatController.unlock();
+              if (chat_id) {
+                chatController.setConversationMode('convo', chat_id);
+                await chatController.startTurn();
+              } else {
+                console.error("[voice] Cannot start conversation without a chat_id");
+                closeConversation();
+              }
+            } catch (error) {
+              console.error('[voice] Auto-start sequence failed:', error);
+              // Revert UI to a stable state on failure
+              setPermissionGranted(false);
+              setIsStarting(false);
+              hasStarted.current = false;
+              setShowPermissionHint(true);
+            }
           } else {
-            // Otherwise, wait for the user to tap.
             console.log('[voice] Gesture required, waiting for user tap.');
           }
         } catch (error) {
           console.error('[voice] Error during permission probe:', error);
-          // Fallback to requiring a tap if probing fails.
         }
       };
       probeAndStart();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isConversationOpen]);
+  }, [isConversationOpen, chat_id]);
 
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = () => {
