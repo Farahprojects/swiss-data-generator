@@ -4,6 +4,8 @@ import { useReportModal } from '@/contexts/ReportModalContext';
 import { sessionManager } from '@/utils/sessionManager';
 import { getChatTokens } from '@/services/auth/chatTokens';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ReportGenerationStatusMobile } from './ReportGenerationStatusMobile';
 
 export const ChatSidebarControls: React.FC = () => {
   const ttsVoice = useChatStore((s) => s.ttsVoice);
@@ -11,6 +13,9 @@ export const ChatSidebarControls: React.FC = () => {
   const { open: openReportModal } = useReportModal();
   const { uuid } = getChatTokens();
   const { isPolling, isReportReady } = useReportReadyStore();
+  const isMobile = useIsMobile();
+  const [showMobileStatus, setShowMobileStatus] = useState(false);
+  const [mobileStatusComplete, setMobileStatusComplete] = useState(false);
 
   const clearChat = useChatStore((s) => s.clearChat);
 
@@ -26,21 +31,37 @@ export const ChatSidebarControls: React.FC = () => {
     setTtsVoice(voice);
   };
 
+  // Show mobile status when polling starts on mobile
+  React.useEffect(() => {
+    if (isMobile && isPolling && !mobileStatusComplete) {
+      setShowMobileStatus(true);
+    } else if (!isPolling) {
+      setShowMobileStatus(false);
+      setMobileStatusComplete(false);
+    }
+  }, [isMobile, isPolling, mobileStatusComplete]);
+
+  const handleMobileStatusComplete = () => {
+    setMobileStatusComplete(true);
+    setShowMobileStatus(false);
+  };
+
   return (
-    <div className="w-full flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
-        <button
-          type="button"
-          onClick={() => uuid && openReportModal(uuid)}
-          disabled={!isReportReady || !uuid}
-          className={`w-full text-left px-3 py-2 text-sm rounded-md border ${
-            isReportReady && uuid
-              ? 'bg-gray-100 hover:bg-gray-200 border-gray-200' 
-              : 'bg-gray-100/60 border-gray-200/60 text-gray-400 cursor-not-allowed'
-          } ${isPolling ? 'animate-pulse' : ''}`}
-        >
-          {isPolling ? 'Generating...' : 'Report'}
-        </button>
+    <>
+      <div className="w-full flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => uuid && openReportModal(uuid)}
+            disabled={!isReportReady || !uuid}
+            className={`w-full text-left px-3 py-2 text-sm rounded-md border ${
+              isReportReady && uuid
+                ? 'bg-gray-100 hover:bg-gray-200 border-gray-200' 
+                : 'bg-gray-100/60 border-gray-200/60 text-gray-400 cursor-not-allowed'
+            } ${isPolling ? 'animate-pulse' : ''}`}
+          >
+            {isPolling ? 'Generating...' : 'Report'}
+          </button>
         <button
           type="button"
           onClick={handleClearSession}
@@ -82,6 +103,13 @@ export const ChatSidebarControls: React.FC = () => {
         </select>
       </div>
     </div>
+
+    {/* Mobile Generation Status */}
+    <ReportGenerationStatusMobile 
+      isVisible={showMobileStatus}
+      onComplete={handleMobileStatusComplete}
+    />
+  </>
   );
 };
 
