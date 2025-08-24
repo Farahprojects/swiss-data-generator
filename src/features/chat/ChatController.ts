@@ -275,7 +275,8 @@ class ChatController {
         await conversationTtsService.speakAssistant({
           chat_id,
           messageId: assistantMessage.id,
-          text: assistantMessage.text
+          text: assistantMessage.text,
+          sessionId: this.sessionId || null
         });
         
         // ✅ TTS TIMING: T4 - TTS service completed
@@ -300,7 +301,11 @@ class ChatController {
 
   private async handleTtsFallback(assistantMessage: Message) {
     try {
-      const audioUrl = await conversationTtsService.getFallbackAudio(assistantMessage.chat_id, assistantMessage.text);
+      const audioUrl = await conversationTtsService.getFallbackAudio(
+        assistantMessage.chat_id,
+        assistantMessage.text,
+        this.sessionId || null
+      );
       
       audioPlaybackService.play(audioUrl, () => {
         // TTS completion callback
