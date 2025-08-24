@@ -271,6 +271,14 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
   useEffect(() => {
     if (!isOpen) return;
 
+    const setAppHeight = () => {
+      const doc = document.documentElement;
+      doc.style.setProperty('--app-height', `${window.innerHeight}px`);
+    };
+    
+    setAppHeight();
+    window.addEventListener('resize', setAppHeight);
+
     const html = document.documentElement;
     const body = document.body;
     const prevHtmlOverflow = html.style.overflow;
@@ -304,7 +312,6 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
       vv.addEventListener('resize', onVV);
       vv.addEventListener('scroll', onVV);
     }
-    window.addEventListener('resize', onResize);
     onResize();
 
     // Handle focus scrolling
@@ -318,12 +325,12 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
     document.addEventListener('focusin', onFocusIn);
 
     return () => {
+      window.removeEventListener('resize', setAppHeight);
       vv?.removeEventListener('resize', onVV);
       vv?.removeEventListener('scroll', onVV);
       if (raf) cancelAnimationFrame(raf);
       document.documentElement.style.removeProperty('--kb');
       document.documentElement.style.removeProperty('--footer-h');
-      window.removeEventListener('resize', onResize);
       document.removeEventListener('focusin', onFocusIn);
       if (scrollLockCount.current > 0) scrollLockCount.current -= 1;
       if (scrollLockCount.current === 0) {
@@ -351,7 +358,7 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
       <div className="sheet-backdrop" onClick={handleClose} />
 
       {/* Sheet container (no transforms) */}
-      <div className="fixed inset-x-0 bottom-0 top-0 flex flex-col bg-white sheet__container" style={{ height: '100dvh' }} role="dialog" aria-modal="true">
+      <div className="fixed inset-x-0 bottom-0 top-0 flex flex-col bg-white sheet__container" style={{ height: 'var(--app-height)' }} role="dialog" aria-modal="true">
         <MobileDrawerHeader currentStep={currentStep} totalSteps={totalSteps} onClose={handleClose} />
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4 sheet__scroll" style={{ WebkitOverflowScrolling: 'touch' }}>
           {currentStep === 1 && (
