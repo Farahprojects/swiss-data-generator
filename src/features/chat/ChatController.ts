@@ -255,22 +255,13 @@ class ChatController {
   private async playAssistantAudioAndContinue(assistantMessage: Message, chat_id: string) {
     if (assistantMessage.text && assistantMessage.id) {
       
-      // ✅ TTS TIMING: T2 - Starting TTS flow
-      console.log(`[TTS-TIMING] T2 - Starting TTS flow at ${new Date().toISOString()}`, {
-        messageId: assistantMessage.id,
-        textLength: assistantMessage.text.length,
-        chatId: chat_id
-      });
+
       
       useChatStore.getState().setStatus('speaking');
       // conversationFlowMonitor.observeStep('speaking');
       
       try {
-        // ✅ TTS TIMING: T3 - About to invoke TTS service
-        console.log(`[TTS-TIMING] T3 - About to invoke TTS service at ${new Date().toISOString()}`, {
-          messageId: assistantMessage.id,
-          textLength: assistantMessage.text.length
-        });
+
         
         await conversationTtsService.speakAssistant({
           chat_id,
@@ -279,10 +270,7 @@ class ChatController {
           sessionId: this.sessionId || null
         });
         
-        // ✅ TTS TIMING: T4 - TTS service completed
-        console.log(`[TTS-TIMING] T4 - TTS service completed at ${new Date().toISOString()}`, {
-          messageId: assistantMessage.id
-        });
+
         
         // TTS completion callback
         if (this.isResetting) return;

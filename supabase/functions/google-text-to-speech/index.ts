@@ -41,12 +41,7 @@ serve(async (req) => {
     
     console.log(`[google-tts] Processing TTS for chat_id: ${chat_id} with voice: ${voiceName}`);
     
-    // ✅ TTS TIMING: T14 - TTS edge function started processing
-    console.log(`[TTS-TIMING] T14 - TTS edge function started processing at ${new Date().toISOString()}`, {
-      chatId: chat_id,
-      textLength: text.length,
-      voiceName: voiceName
-    });
+
 
     const t1 = Date.now();
     console.log(`[google-tts] About to call Google TTS API at ${t1} (t0→t1: ${t1 - t0}ms)`);
@@ -80,11 +75,7 @@ serve(async (req) => {
     const t2 = Date.now();
     console.log(`[google-tts] Google TTS API returned at ${t2} (t1→t2: ${t2 - t1}ms)`);
 
-    // ✅ TTS TIMING: T15 - Google TTS API response received
-    console.log(`[TTS-TIMING] T15 - Google TTS API response received at ${new Date().toISOString()}`, {
-      chatId: chat_id,
-      responseTime: t2 - t1
-    });
+
 
     if (!ttsResponse.ok) {
       const errorText = await ttsResponse.text();
@@ -105,12 +96,7 @@ serve(async (req) => {
     const t3 = Date.now();
     console.log(`[google-tts] Base64 decoded at ${t3} (t2→t3: ${t3 - t2}ms)`);
     
-    // ✅ TTS TIMING: T16 - Audio decoded and ready to send
-    console.log(`[TTS-TIMING] T16 - Audio decoded and ready to send at ${new Date().toISOString()}`, {
-      chatId: chat_id,
-      audioBytes: audioBytes.length,
-      decodeTime: t3 - t2
-    });
+
 
     // Always return the full MP3 as fast as possible
     console.log(`[google-tts] Returning full audio file (${audioBytes.length} bytes) for chat_id: ${chat_id}`);
@@ -118,12 +104,7 @@ serve(async (req) => {
     const t4 = Date.now();
     console.log(`[google-tts] Response sent at ${t4} (t3→t4: ${t4 - t3}ms, total: ${t4 - t0}ms)`);
     
-    // ✅ TTS TIMING: T17 - TTS edge function response sent
-    console.log(`[TTS-TIMING] T17 - TTS edge function response sent at ${new Date().toISOString()}`, {
-      chatId: chat_id,
-      totalTime: t4 - t0,
-      audioBytes: audioBytes.length
-    });
+
     
     return new Response(audioBytes, {
       headers: {

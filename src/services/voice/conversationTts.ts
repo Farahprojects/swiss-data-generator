@@ -65,12 +65,7 @@ class ConversationTtsService {
     
     return new Promise(async (resolve, reject) => {
       try {
-        // ✅ TTS TIMING: T5 - TTS service started
-        console.log(`[TTS-TIMING] T5 - TTS service started at ${new Date().toISOString()}`, {
-          messageId,
-          textLength: text.length,
-          chatId: chat_id
-        });
+
         
         // Sanitize and normalize text before TTS
         const sanitizedText = this.sanitizeTtsText(text);
@@ -82,12 +77,7 @@ class ConversationTtsService {
           'apikey': SUPABASE_PUBLISHABLE_KEY,
         };
 
-        // ✅ TTS TIMING: T7 - About to call TTS edge function
-        console.log(`[TTS-TIMING] T7 - About to call TTS edge function at ${new Date().toISOString()}`, {
-          messageId,
-          textLength: sanitizedText.length,
-          voiceCode: googleVoiceCode
-        });
+
 
         const response = await fetch(`${SUPABASE_URL}/functions/v1/google-text-to-speech`, {
           method: 'POST',
@@ -107,22 +97,8 @@ class ConversationTtsService {
           throw new Error(`TTS failed: ${response.status} - ${errorText}`);
         }
 
-        // ✅ TTS TIMING: T8 - TTS edge function response received
-        console.log(`[TTS-TIMING] T8 - TTS edge function response received at ${new Date().toISOString()}`, {
-          messageId,
-          responseStatus: response.status,
-          responseSize: response.headers.get('content-length') || 'unknown'
-        });
-
         // ✅ SIMPLIFIED: Direct blob to audio with minimal setup
         const blob = await response.blob();
-        
-        // ✅ TTS TIMING: T9 - Audio blob created
-        console.log(`[TTS-TIMING] T9 - Audio blob created at ${new Date().toISOString()}`, {
-          messageId,
-          blobSize: blob.size,
-          blobType: blob.type
-        });
         
         const audioUrl = URL.createObjectURL(blob);
         const audio = new Audio(audioUrl);
@@ -130,25 +106,11 @@ class ConversationTtsService {
         // ✅ REAL AUDIO ANALYSIS: Setup audio context and analyser
         await this.setupAudioAnalysis(audio);
 
-        // ✅ TTS TIMING: T10 - Audio analysis setup completed
-        console.log(`[TTS-TIMING] T10 - Audio analysis setup completed at ${new Date().toISOString()}`, {
-          messageId
-        });
-
         // Start real-time amplitude analysis
         this.startAmplitudeAnalysis();
 
-        // ✅ TTS TIMING: T11 - About to start audio playback
-        console.log(`[TTS-TIMING] T11 - About to start audio playback at ${new Date().toISOString()}`, {
-          messageId
-        });
-
         // ✅ REAL AUDIO ANALYSIS: Event listeners with cleanup
         audio.addEventListener('ended', () => {
-          // ✅ TTS TIMING: T12 - Audio playback ended
-          console.log(`[TTS-TIMING] T12 - Audio playback ended at ${new Date().toISOString()}`, {
-            messageId
-          });
           this.cleanupAnalysis();
           URL.revokeObjectURL(audioUrl);
           resolve();
@@ -163,11 +125,6 @@ class ConversationTtsService {
         
         // ✅ SIMPLIFIED: Play immediately without load() call
         await audio.play();
-        
-        // ✅ TTS TIMING: T13 - Audio playback started
-        console.log(`[TTS-TIMING] T13 - Audio playback started at ${new Date().toISOString()}`, {
-          messageId
-        });
         
       } catch (error) {
         console.error('[ConversationTTS] speakAssistant failed:', error);
