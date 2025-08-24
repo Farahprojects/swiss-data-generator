@@ -47,10 +47,10 @@ export const ConversationOverlay: React.FC = () => {
     setShowPermissionHint(false); // Reset permission hint
   };
 
-  const handleStart = async () => {
+  const handleStart = () => { // No longer async
     // One-shot guard to prevent double invocation
     if (hasStarted.current) {
-      console.log('[MIC-LOG] handleStart already invoked, ignoring duplicate call');
+      console.log('[voice] handleStart already invoked, ignoring duplicate call');
       return;
     }
     hasStarted.current = true;
@@ -58,49 +58,46 @@ export const ConversationOverlay: React.FC = () => {
     if (isStarting) return; // Prevent double taps
     setIsStarting(true);
 
-    console.log('[MIC-LOG] User tapped start...');
+    console.log('[voice] tap');
+
+    // --- Synchronous UI Update ---
+    // Immediately hide the "Tap to Start" overlay to give instant feedback.
+    setPermissionGranted(true);
     
-    try {
-      // Start voice session first - this ensures cached mic stream exists
-      console.log('[MIC-LOG] startVoiceSession begin (gesture)');
-      await conversationTtsService.startVoiceSession();
-      
-      const cachedStream = conversationTtsService.getCachedMicStream();
-      console.log('[MIC-LOG] startVoiceSession complete, mic cached =', !!cachedStream);
-      
-      // Only set UI flags after voice session is successfully established
-      setPermissionGranted(true);
-      chatController.unlock();
-      
-      if (chat_id) {
-        chatController.setConversationMode('convo', chat_id);
+    // --- Asynchronous Permission Request ---
+    // Invoke startVoiceSession without awaiting it, tied to the user gesture.
+    conversationTtsService.startVoiceSession()
+      .then(() => {
+        // This block runs if the user grants permissions.
+        const cachedStream = conversationTtsService.getCachedMicStream();
+        console.log('[voice] micGranted', { micActive: !!cachedStream });
 
-        // Now start the turn - mic stream is guaranteed to be cached
-        await chatController.startTurn();
-
-        // Watchdog timer to detect if the user denies permission or the mic fails silently.
-        setTimeout(() => {
-          const status = useChatStore.getState().status;
-          const hasStream = conversationTtsService.getCachedMicStream();
-          
-          if (status !== 'recording' && !hasStream) {
-            console.warn('[MIC-LOG] Watchdog: No recording status or stream after 1.5s, showing hint.');
-            setShowPermissionHint(true);
-          }
-        }, 1500);
-
-      } else {
-        console.error("[voice] Cannot start conversation without a chat_id");
-        closeConversation();
-      }
-    } catch (error) {
-      console.error('[voice] Failed to start voice session:', error);
-      // Revert UI state on failure
-      setPermissionGranted(false);
-      setIsStarting(false);
-      hasStarted.current = false;
-      setShowPermissionHint(true);
-    }
+        // Now that permissions are confirmed, unlock and start the turn.
+        chatController.unlock();
+        if (chat_id) {
+          chatController.setConversationMode('convo', chat_id);
+          chatController.startTurn().catch(error => {
+             console.error('[voice] startTurn failed after session grant:', error);
+             // Revert UI if startTurn fails for some other reason
+             setPermissionGranted(false);
+             setIsStarting(false);
+             hasStarted.current = false;
+          });
+        } else {
+            console.error("[voice] Cannot start conversation without a chat_id");
+            closeConversation();
+        }
+      })
+      .catch(error => {
+        // This block runs if startVoiceSession is rejected (e.g., user denies permission).
+        console.error('[voice] startVoiceSession failed (permission likely denied):', error);
+        
+        // Revert the UI to its initial state and show a hint.
+        setPermissionGranted(false);
+        setIsStarting(false);
+        hasStarted.current = false;
+        setShowPermissionHint(true);
+      });
   };
   
   // Simple mount - set conversation mode and start listening immediately
@@ -136,7 +133,7 @@ export const ConversationOverlay: React.FC = () => {
   return createPortal(
     <div className="fixed inset-0 z-50 bg-white pt-safe pb-safe">
       <div className="h-full w-full flex items-center justify-center px-6">
-        {!permissionGranted && !isStarting ? (
+        {!permissionGranted ? (
           <div 
             className="text-center text-gray-800 flex flex-col items-center gap-4 cursor-pointer"
             onClick={(e) => {
@@ -149,14 +146,6 @@ export const ConversationOverlay: React.FC = () => {
               <Mic className="w-10 h-10 text-gray-600" />
             </div>
             <h2 className="text-2xl font-light">Tap to Start Conversation</h2>
-          </div>
-        ) : isStarting && !permissionGranted ? (
-          // Show loading state while starting voice session
-          <div className="text-center text-gray-800 flex flex-col items-center gap-4">
-            <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center">
-              <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-            </div>
-            <h2 className="text-2xl font-light">Starting Conversation...</h2>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center gap-6 relative">

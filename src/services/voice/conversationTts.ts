@@ -57,7 +57,8 @@ class ConversationTtsService {
       const trackCount = this.cachedMicStream?.getAudioTracks().length || 0;
       const ctxState = this.audioContext?.state || 'unknown';
 
-      console.log('[voice] session', {
+      console.log('[voice] session-start', {
+        contextId: this.contextId,
         micGranted,
         trackCount,
         ctxState
