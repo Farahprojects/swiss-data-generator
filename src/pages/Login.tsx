@@ -65,7 +65,7 @@ const Login = () => {
   // ————————————————————————————————————————————————
   useEffect(() => {
     if (!authLoading && user && !showVerificationModal && !isPendingEmailCheck) {
-      const from = (location.state as any)?.from?.pathname || '/calendar';
+      const from = (location.state as any)?.from?.pathname || '/chat';
       navigate(from, { replace: true });
     }
   }, [authLoading, user, showVerificationModal, isPendingEmailCheck, navigate, location.state]);
@@ -100,7 +100,7 @@ const Login = () => {
     !isPendingEmailCheck &&
     (typeof window === 'undefined' || !window.location.pathname.includes('/auth/password'))
   ) {
-    const from = (location.state as any)?.from?.pathname || '/calendar';
+    const from = (location.state as any)?.from?.pathname || '/chat';
     return <Navigate to={from} replace />;
   }
 
@@ -174,7 +174,7 @@ const Login = () => {
       // Step 3: success — redirect immediately
       
       // Force immediate redirect after successful login
-      const from = (location.state as any)?.from?.pathname || '/calendar';
+      const from = (location.state as any)?.from?.pathname || '/chat';
       navigate(from, { replace: true });
       
     } catch (err: any) {
@@ -202,7 +202,7 @@ const Login = () => {
     setShowVerificationModal(false);
     clearPendingEmail();
     toast({ title: 'Email verified', description: 'Redirecting…' });
-    const from = (location.state as any)?.from?.pathname || '/calendar';
+    const from = (location.state as any)?.from?.pathname || '/chat';
     navigate(from, { replace: true });
   };
 

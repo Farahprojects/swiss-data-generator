@@ -46,7 +46,7 @@ const NotFound = () => {
           <Link to={user ? getSafeRedirectPath() : "/"} className="block">
             <Button className="w-full">
               <Home className="mr-2 h-4 w-4" />
-              {user ? "Return to Calendar" : "Return to Home"}
+              {user ? "Return to Chat" : "Return to Home"}
             </Button>
           </Link>
           
