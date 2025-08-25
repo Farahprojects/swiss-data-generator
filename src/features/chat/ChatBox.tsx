@@ -134,7 +134,7 @@ export const ChatBox = () => {
       >
         <div className="flex flex-row flex-1 bg-white max-w-6xl w-full mx-auto md:border-x border-gray-100 min-h-0">
           {/* Left Sidebar (Desktop) */}
-          <div className="hidden md:flex w-80 border-r border-gray-100 flex-col bg-gray-50/50">
+          <div className="hidden md:flex w-64 border-r border-gray-100 flex-col bg-gray-50/50">
             <div className="p-4 h-full">
               <Suspense fallback={<div className="space-y-4"><div className="h-8 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div></div>}>
                 <ChatSidebarControls />
