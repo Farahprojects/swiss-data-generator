@@ -21,24 +21,45 @@ export const ConversationOverlay: React.FC = () => {
   const [isStarting, setIsStarting] = useState(false); // Guard against double taps
   const hasStarted = useRef(false); // One-shot guard to prevent double invocation
   const [showPermissionHint, setShowPermissionHint] = useState(false); // Show hint if waiting too long
+  const isClosing = useRef(false); // Guard against double close calls
   
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = () => {
-    // 1. Kill all audio immediately
-    conversationTtsService.stopAllAudio();
+    // Prevent double close calls
+    if (isClosing.current) {
+      console.log('[voice] handleModalClose already in progress, ignoring duplicate call');
+      return;
+    }
+    isClosing.current = true;
     
-    // 2. Stop microphone and tell listener we're done
-    chatController.resetConversationService();
-    
-    // 3. End voice session to cleanup all resources
-    conversationTtsService.endSession();
-    
-    // 4. Close the UI
-    closeConversation();
-    setPermissionGranted(false); // Reset permission on close
-    setIsStarting(false); // Reset guard on close
-    hasStarted.current = false; // Reset one-shot guard
-    setShowPermissionHint(false); // Reset permission hint
+    try {
+      console.log('[voice] handleModalClose: Starting cleanup sequence...');
+      
+      // 1. Kill all audio immediately
+      conversationTtsService.stopAllAudio();
+      
+      // 2. Stop microphone and tell listener we're done
+      chatController.resetConversationService();
+      
+      // 3. End voice session to cleanup all resources
+      conversationTtsService.endSession();
+      
+      console.log('[voice] handleModalClose: Cleanup sequence completed');
+      
+    } catch (error) {
+      console.error('[voice] handleModalClose: Error during cleanup:', error);
+      // Continue with UI close even if cleanup fails
+    } finally {
+      // 4. Close the UI - ALWAYS runs even if cleanup throws
+      closeConversation();
+      setPermissionGranted(false); // Reset permission on close
+      setIsStarting(false); // Reset guard on close
+      hasStarted.current = false; // Reset one-shot guard
+      setShowPermissionHint(false); // Reset permission hint
+      isClosing.current = false; // Reset close guard
+      
+      console.log('[voice] handleModalClose: UI closed successfully');
+    }
   };
 
   const handleStart = async () => { // Now async
@@ -101,23 +122,13 @@ export const ConversationOverlay: React.FC = () => {
   // This effect is now only for cleanup when the component unmounts or isOpen changes
   useEffect(() => {
     return () => {
-      if (isConversationOpen) {
+      if (isConversationOpen && !isClosing.current) {
         // Ensure cleanup runs if the component unmounts unexpectedly
+        console.log('[voice] Component unmounting, calling handleModalClose');
         handleModalClose();
       }
     };
   }, [isConversationOpen]);
-  
-  // Simple cleanup when conversation closes
-  useEffect(() => {
-    if (!isConversationOpen && permissionGranted) {
-      // Reset conversation mode
-      chatController.setConversationMode('normal', null);
-      
-      // Cleanup ChatController
-      chatController.cleanup();
-    }
-  }, [isConversationOpen, permissionGranted]);
 
   // Map chat status to conversation state for UI
   const state = status === 'recording' ? 'listening' : 
