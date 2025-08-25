@@ -1,8 +1,5 @@
 project_id = "e658f804-66d4-43ba-9cca-5e3b8e536f52"
 
-[functions.api]
-verify_jwt = false
-
 [functions.api-usage-handler]
 verify_jwt = false
 
