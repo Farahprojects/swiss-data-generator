@@ -65,10 +65,25 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   addMessage: (message) => set((state) => {
-    // Prevent duplicate messages
-    if (state.messages.find(m => m.id === message.id)) {
+    // Enhanced deduplication: check both id and client_msg_id
+    const existingById = state.messages.find(m => m.id === message.id);
+    const existingByClientId = message.client_msg_id ? 
+      state.messages.find(m => m.client_msg_id === message.client_msg_id) : null;
+    
+    // If message already exists by id, skip
+    if (existingById) {
       return state;
     }
+    
+    // If there's an optimistic message with same client_msg_id, replace it
+    if (existingByClientId) {
+      console.log('[Store] Replacing optimistic message:', existingByClientId.id, '->', message.id);
+      const newMessages = state.messages.map(m => 
+        m.client_msg_id === message.client_msg_id ? { ...message } : m
+      );
+      return { messages: newMessages };
+    }
+    
     return { messages: [...state.messages, message] };
   }),
 
@@ -77,6 +92,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const newMessages = state.messages.map((msg) =>
         msg.id === id ? { ...msg, ...updates } : msg
       );
+      
+      // If the update includes a new id, remove any duplicate with that id
+      if (updates.id && updates.id !== id) {
+        const filteredMessages = newMessages.filter((msg, index, arr) => 
+          !(msg.id === updates.id && arr.findIndex(m => m.id === updates.id) !== index)
+        );
+        return { messages: filteredMessages };
+      }
+      
       return { messages: newMessages };
     });
   },

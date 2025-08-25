@@ -79,11 +79,34 @@ class ChatController {
           (payload) => {
             console.log('[ChatController] New message received via realtime:', payload);
             const newMessage = this.transformDatabaseMessage(payload.new);
+            const { messages, updateMessage, addMessage } = useChatStore.getState();
             
-            // Only add if it's not already in our store (avoid duplicates from our own sends)
-            const { messages } = useChatStore.getState();
+            // Reconciliation logic: check if this is updating an optimistic message
+            if (newMessage.role === 'user' && newMessage.client_msg_id) {
+              // Find and update the optimistic user message
+              const optimisticMessage = messages.find(m => m.id === newMessage.client_msg_id);
+              if (optimisticMessage) {
+                console.log('[ChatController] Reconciling user message:', newMessage.client_msg_id, '->', newMessage.id);
+                updateMessage(newMessage.client_msg_id, { ...newMessage });
+                return;
+              }
+            } else if (newMessage.role === 'assistant' && newMessage.client_msg_id) {
+              // Find and update the thinking assistant message
+              const thinkingId = `thinking-${newMessage.client_msg_id}`;
+              const thinkingMessage = messages.find(m => m.id === thinkingId);
+              if (thinkingMessage) {
+                console.log('[ChatController] Reconciling assistant message:', thinkingId, '->', newMessage.id);
+                updateMessage(thinkingId, { ...newMessage });
+                return;
+              }
+            }
+            
+            // Only add if not already present and no reconciliation occurred
             if (!messages.find(m => m.id === newMessage.id)) {
-              useChatStore.getState().addMessage(newMessage);
+              console.log('[ChatController] Adding new message:', newMessage.id);
+              addMessage(newMessage);
+            } else {
+              console.log('[ChatController] Message already exists, skipping:', newMessage.id);
             }
           }
         )
@@ -169,6 +192,7 @@ class ChatController {
       audioUrl,
       createdAt: new Date().toISOString(),
       status: "thinking",
+      client_msg_id, // Add client_msg_id for reconciliation
     };
 
     const optimisticAssistantMessage: Message = {
