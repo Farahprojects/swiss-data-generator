@@ -6,7 +6,8 @@ export interface SpeakAssistantOptions {
   chat_id: string;
   messageId: string;
   text: string;
-  sessionId?: string | null;
+  sessionId: string | null;
+  onComplete?: () => void; // Optional callback when audio finishes
 }
 
 class ConversationTtsService {
@@ -126,7 +127,7 @@ class ConversationTtsService {
     this.listeners.forEach(l => l());
   }
 
-  async speakAssistant({ chat_id, messageId, text, sessionId }: SpeakAssistantOptions): Promise<void> {
+  async speakAssistant({ chat_id, messageId, text, sessionId, onComplete }: SpeakAssistantOptions): Promise<void> {
     try {
       
       // Ensure audio is unlocked before proceeding
@@ -176,12 +177,14 @@ class ConversationTtsService {
         this.cleanupAnalysis();
         URL.revokeObjectURL(audioUrl);
         console.log('[ConversationTTS] Audio playback completed');
+        onComplete?.(); // Call the onComplete callback
       }, { once: true });
       
       audio.addEventListener('error', (error) => {
         console.error('[ConversationTTS] Audio playback error:', error);
         this.cleanupAnalysis();
         URL.revokeObjectURL(audioUrl);
+        onComplete?.(); // Call the onComplete callback
       }, { once: true });
       
       // ✅ FIRE-AND-FORGET: Start playback and return immediately
@@ -190,6 +193,7 @@ class ConversationTtsService {
         console.error('[TTS-LOG] Audio play failed:', error);
         this.cleanupAnalysis();
         URL.revokeObjectURL(audioUrl);
+        onComplete?.(); // Call the onComplete callback
       });
       
       // Return immediately - don't wait for audio to finish

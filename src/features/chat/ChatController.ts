@@ -278,15 +278,22 @@ class ChatController {
         chat_id,
         messageId: assistantMessage.id,
         text: assistantMessage.text,
-        sessionId: this.sessionId || null
+        sessionId: this.sessionId || null,
+        onComplete: () => {
+          // TTS audio finished - reset turn to allow next conversation
+          if (this.isResetting) return;
+          this.resetTurn(false);
+        }
       }).catch(error => {
         // Log TTS errors but don't block conversation flow
         console.warn(`[ChatController] TTS failed: ${error}. Continuing without audio.`);
+        // Still reset turn even if TTS fails
+        if (this.isResetting) return;
+        this.resetTurn(false);
       });
       
-      // Immediately reset turn without waiting for TTS completion
-      if (this.isResetting) return;
-      this.resetTurn(false); // Restart turn immediately after starting TTS
+      // Keep speaking status active while TTS plays
+      // The onComplete callback will handle resetting the turn when audio finishes
       
     } else {
       console.warn('[ChatController] Could not play audio. Missing text or messageId.');
