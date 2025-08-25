@@ -1,7 +1,7 @@
 // src/features/chat/ChatInput.tsx
 import React, { useState } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
-import { Mic, AudioLines, ArrowRight, Loader2, Square } from 'lucide-react';
+import { Mic, AudioLines, ArrowRight, Loader2 } from 'lucide-react';
 import { useChatStore } from '@/core/store';
 import { chatController } from './ChatController';
 import { useConversationUIStore } from './conversation-ui-store';
@@ -65,6 +65,11 @@ export const ChatInput = () => {
 
   // Determine if assistant is generating content (report generation or text generation)
   const isAssistantGenerating = isPolling || status === 'thinking' || status === 'transcribing' || status === 'speaking';
+
+  // Custom solid black square component
+  const SolidBlackSquare = () => (
+    <div className="w-3 h-3 bg-black rounded-sm"></div>
+  );
 
   // Determine mic button state and content
   const getMicButtonContent = () => {
@@ -132,7 +137,7 @@ export const ChatInput = () => {
               onClick={text.trim() ? handleSend : handleSpeakerClick}
             >
               {isAssistantGenerating ? (
-                <Square size={14} className="text-black" />
+                <SolidBlackSquare />
               ) : text.trim() ? (
                 <ArrowRight size={16} className="text-black" />
               ) : (
