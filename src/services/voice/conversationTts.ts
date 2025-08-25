@@ -128,6 +128,10 @@ class ConversationTtsService {
   }
 
   async speakAssistant({ chat_id, messageId, text, sessionId, onComplete }: SpeakAssistantOptions): Promise<void> {
+    const t0 = Date.now();
+    console.log(`[TTS-TIMING] 🎯 TTS pipeline started at ${t0}ms`);
+    console.log(`[TTS-TIMING] 📝 Text received: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
+    
     try {
       
       // Ensure audio is unlocked before proceeding
@@ -135,21 +139,35 @@ class ConversationTtsService {
         throw new Error('Audio is not unlocked. A user gesture is required before TTS can play.');
       }
 
+      const t1 = Date.now();
+      console.log(`[TTS-TIMING] ✅ Audio unlocked check passed at ${t1}ms (t0→t1: ${t1 - t0}ms)`);
+
       // Sanitize and normalize text before TTS
       const sanitizedText = this.sanitizeTtsText(text);
+      const t2 = Date.now();
+      console.log(`[TTS-TIMING] 🧹 Text sanitized at ${t2}ms (t1→t2: ${t2 - t1}ms)`);
+      console.log(`[TTS-TIMING] 📝 Sanitized text: "${sanitizedText.substring(0, 50)}${sanitizedText.length > 50 ? '...' : ''}"`);
+      
       const selectedVoiceName = useChatStore.getState().ttsVoice || 'Puck';
       const googleVoiceCode = `en-US-Chirp3-HD-${selectedVoiceName}`;
+      console.log(`[TTS-TIMING] 🎤 Voice selected: ${googleVoiceCode}`);
 
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_PUBLISHABLE_KEY,
       };
 
+      const t3 = Date.now();
+      console.log(`[TTS-TIMING] 🌐 Calling TTS edge function at ${t3}ms (t2→t3: ${t3 - t2}ms)`);
+
       const response = await fetch(`${SUPABASE_URL}/functions/v1/google-text-to-speech`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ chat_id, text: sanitizedText, voice: googleVoiceCode, sessionId: sessionId || null })
       });
+
+      const t4 = Date.now();
+      console.log(`[TTS-TIMING] 📡 TTS edge function responded at ${t4}ms (t3→t4: ${t4 - t3}ms)`);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -159,21 +177,36 @@ class ConversationTtsService {
 
       // ✅ SIMPLIFIED: Direct blob to audio with minimal setup
       const blob = await response.blob();
+      const t5 = Date.now();
+      console.log(`[TTS-TIMING] 📦 Blob received at ${t5}ms (t4→t5: ${t5 - t4}ms)`);
+      console.log(`[TTS-TIMING] 📦 Blob size: ${blob.size} bytes`);
       
       const audioUrl = URL.createObjectURL(blob);
+      const t6 = Date.now();
+      console.log(`[TTS-TIMING] 🔗 Audio URL created at ${t6}ms (t5→t6: ${t6 - t5}ms)`);
+      
       // ✅ REUSE MASTER AUDIO ELEMENT: Instead of creating a new one
       const audio = this.masterAudioElement;
       audio.src = audioUrl;
       audio.muted = false; // Unmute for actual playback
+      const t7 = Date.now();
+      console.log(`[TTS-TIMING] 🎵 Audio element configured at ${t7}ms (t6→t7: ${t7 - t6}ms)`);
 
       // ✅ REAL AUDIO ANALYSIS: Setup audio context and analyser
       await this.setupAudioAnalysis(audio);
+      const t8 = Date.now();
+      console.log(`[TTS-TIMING] 🔊 Audio analysis setup at ${t8}ms (t7→t8: ${t8 - t7}ms)`);
 
       // Start real-time amplitude analysis
       this.startAmplitudeAnalysis();
+      const t9 = Date.now();
+      console.log(`[TTS-TIMING] 📊 Amplitude analysis started at ${t9}ms (t8→t9: ${t9 - t8}ms)`);
 
       // ✅ FIRE-AND-FORGET: Set up cleanup listeners but don't wait for them
       audio.addEventListener('ended', () => {
+        const tend = Date.now();
+        console.log(`[TTS-TIMING] 🏁 Audio playback ended at ${tend}ms (t9→tend: ${tend - t9}ms)`);
+        console.log(`[TTS-TIMING] 🏁 Total TTS pipeline duration: ${tend - t0}ms`);
         this.cleanupAnalysis();
         URL.revokeObjectURL(audioUrl);
         console.log('[ConversationTTS] Audio playback completed');
@@ -181,6 +214,8 @@ class ConversationTtsService {
       }, { once: true });
       
       audio.addEventListener('error', (error) => {
+        const terror = Date.now();
+        console.error(`[TTS-TIMING] ❌ Audio playback error at ${terror}ms (t9→terror: ${terror - t9}ms)`);
         console.error('[ConversationTTS] Audio playback error:', error);
         this.cleanupAnalysis();
         URL.revokeObjectURL(audioUrl);
@@ -188,8 +223,11 @@ class ConversationTtsService {
       }, { once: true });
       
       // ✅ FIRE-AND-FORGET: Start playback and return immediately
+      console.log(`[TTS-TIMING] ▶️ Starting audio playback at ${t9}ms`);
       console.log(`[TTS-LOG] Starting audio playback. AudioContext state: ${this.audioContext?.state}`);
       audio.play().catch(error => {
+        const tplayError = Date.now();
+        console.error(`[TTS-TIMING] ❌ Audio play failed at ${tplayError}ms (t9→tplayError: ${tplayError - t9}ms)`);
         console.error('[TTS-LOG] Audio play failed:', error);
         this.cleanupAnalysis();
         URL.revokeObjectURL(audioUrl);
@@ -197,9 +235,13 @@ class ConversationTtsService {
       });
       
       // Return immediately - don't wait for audio to finish
+      console.log(`[TTS-TIMING] 🚀 TTS pipeline completed (fire-and-forget) at ${t9}ms`);
+      console.log(`[TTS-TIMING] 🚀 Total setup time: ${t9 - t0}ms`);
       console.log('[ConversationTTS] TTS started successfully - returning immediately');
-      
+
     } catch (error) {
+      const terror = Date.now();
+      console.error(`[TTS-TIMING] ❌ TTS pipeline failed at ${terror}ms (t0→terror: ${terror - t0}ms)`);
       console.error('[ConversationTTS] speakAssistant failed:', error);
       throw error;
     }

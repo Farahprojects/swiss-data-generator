@@ -10,7 +10,7 @@ const CORS_HEADERS = {
 
 serve(async (req) => {
   const t0 = Date.now();
-  console.log(`[google-tts] Received request at ${t0}`);
+  console.log(`[TTS-SERVER] 🎯 TTS edge function received request at ${t0}ms`);
 
   if (req.method === "OPTIONS") {
     console.log("[google-tts] Handling OPTIONS request");
@@ -21,7 +21,16 @@ serve(async (req) => {
   }
 
   try {
+    const t1 = Date.now();
+    console.log(`[TTS-SERVER] 📥 Parsing request body at ${t1}ms (t0→t1: ${t1 - t0}ms)`);
+    
     const { chat_id, text, voice, sessionId } = await req.json();
+
+    const t2 = Date.now();
+    console.log(`[TTS-SERVER] ✅ Request parsed at ${t2}ms (t1→t2: ${t2 - t1}ms)`);
+    console.log(`[TTS-SERVER] 📝 Text length: ${text?.length || 0} chars`);
+    console.log(`[TTS-SERVER] 🎤 Voice: ${voice}`);
+    console.log(`[TTS-SERVER] 💬 Chat ID: ${chat_id}`);
 
     if (!chat_id || !text) {
       throw new Error("Missing 'chat_id' or 'text' in request body.");
@@ -39,12 +48,12 @@ serve(async (req) => {
     // This default is a fallback in case the client sends an empty voice parameter.
     const voiceName = voice || "en-US-Chirp3-HD-Puck";
     
-    console.log(`[google-tts] Processing TTS for chat_id: ${chat_id} with voice: ${voiceName}`);
-    
+    const t3 = Date.now();
+    console.log(`[TTS-SERVER] 🧹 Input validation completed at ${t3}ms (t2→t3: ${t3 - t2}ms)`);
+    console.log(`[TTS-SERVER] 🎤 Final voice name: ${voiceName}`);
 
-
-    const t1 = Date.now();
-    console.log(`[google-tts] About to call Google TTS API at ${t1} (t0→t1: ${t1 - t0}ms)`);
+    const t4 = Date.now();
+    console.log(`[TTS-SERVER] 🌐 Calling Google TTS API at ${t4}ms (t3→t4: ${t4 - t3}ms)`);
 
     // Call Google Text-to-Speech API
     const ttsResponse = await fetch(
@@ -72,10 +81,8 @@ serve(async (req) => {
       }
     );
 
-    const t2 = Date.now();
-    console.log(`[google-tts] Google TTS API returned at ${t2} (t1→t2: ${t2 - t1}ms)`);
-
-
+    const t5 = Date.now();
+    console.log(`[TTS-SERVER] 📡 Google TTS API responded at ${t5}ms (t4→t5: ${t5 - t4}ms)`);
 
     if (!ttsResponse.ok) {
       const errorText = await ttsResponse.text();
@@ -83,47 +90,64 @@ serve(async (req) => {
       throw new Error(`Google TTS API error: ${ttsResponse.status} - ${errorText}`);
     }
 
+    const t6 = Date.now();
+    console.log(`[TTS-SERVER] 📥 Parsing Google TTS response at ${t6}ms (t5→t6: ${t6 - t5}ms)`);
+    
     const ttsData = await ttsResponse.json();
     const audioContent = ttsData.audioContent;
+
+    const t7 = Date.now();
+    console.log(`[TTS-SERVER] ✅ Google TTS response parsed at ${t7}ms (t6→t7: ${t7 - t6}ms)`);
+    console.log(`[TTS-SERVER] 📦 Audio content length: ${audioContent?.length || 0} chars`);
 
     if (!audioContent) {
       throw new Error("No audio content received from Google TTS API");
     }
 
     // Decode base64 audio to binary
+    const t8 = Date.now();
+    console.log(`[TTS-SERVER] 🔄 Decoding base64 audio at ${t8}ms (t7→t8: ${t8 - t7}ms)`);
+    
     const audioBytes = Uint8Array.from(atob(audioContent), c => c.charCodeAt(0));
 
-    const t3 = Date.now();
-    console.log(`[google-tts] Base64 decoded at ${t3} (t2→t3: ${t3 - t2}ms)`);
-    
+    const t9 = Date.now();
+    console.log(`[TTS-SERVER] ✅ Base64 decoded at ${t9}ms (t8→t9: ${t9 - t8}ms)`);
+    console.log(`[TTS-SERVER] 📦 Audio bytes size: ${audioBytes.length} bytes`);
 
+    const t10 = Date.now();
+    console.log(`[TTS-SERVER] 📤 Sending response at ${t10}ms (t9→t10: ${t10 - t9}ms)`);
 
-    // Always return the full MP3 as fast as possible
-    console.log(`[google-tts] Returning full audio file (${audioBytes.length} bytes) for chat_id: ${chat_id}`);
-    
-    const t4 = Date.now();
-    console.log(`[google-tts] Response sent at ${t4} (t3→t4: ${t4 - t3}ms, total: ${t4 - t0}ms)`);
-    
-
-    
-    return new Response(audioBytes, {
+    const response = new Response(audioBytes, {
       headers: {
         ...CORS_HEADERS,
         'Content-Type': 'audio/mpeg',
         'Content-Length': audioBytes.length.toString(),
-        'Cache-Control': 'no-store',
-        'Accept-Ranges': 'bytes',
       },
     });
 
+    const t11 = Date.now();
+    console.log(`[TTS-SERVER] 🏁 Response sent at ${t11}ms (t10→t11: ${t11 - t10}ms)`);
+    console.log(`[TTS-SERVER] 🏁 Total TTS server processing time: ${t11 - t0}ms`);
+    console.log(`[TTS-SERVER] 📊 Breakdown:`);
+    console.log(`[TTS-SERVER]   - Request parsing: ${t2 - t0}ms`);
+    console.log(`[TTS-SERVER]   - Input validation: ${t3 - t2}ms`);
+    console.log(`[TTS-SERVER]   - Google TTS API call: ${t5 - t4}ms`);
+    console.log(`[TTS-SERVER]   - Response parsing: ${t7 - t6}ms`);
+    console.log(`[TTS-SERVER]   - Base64 decoding: ${t9 - t8}ms`);
+    console.log(`[TTS-SERVER]   - Response sending: ${t11 - t10}ms`);
+
+    return response;
+
   } catch (error) {
+    const terror = Date.now();
+    console.error(`[TTS-SERVER] ❌ Error occurred at ${terror}ms (t0→terror: ${terror - t0}ms)`);
     console.error("[google-tts] Error:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-      }
-    );
+    
+    return new Response(JSON.stringify({ 
+      error: error?.message ?? String(error) 
+    }), {
+      status: 500,
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    });
   }
 });
