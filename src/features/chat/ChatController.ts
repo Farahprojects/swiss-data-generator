@@ -167,7 +167,6 @@ class ChatController {
   async startTurn() {
     // ✅ GUARD: Prevent premature microphone activation
     if (!this.isUnlocked) {
-      console.warn('[MIC-LOG] startTurn() called before unlocked. Aborting.');
       return;
     }
 
@@ -265,34 +264,21 @@ class ChatController {
   }
 
   private async playAssistantAudioAndContinue(assistantMessage: Message, chat_id: string) {
-    const t0 = Date.now();
-    console.log(`[CHAT-TIMING] 🎯 ChatController TTS initiated at ${t0}ms`);
-    console.log(`[CHAT-TIMING] 📝 Message ID: ${assistantMessage.id}`);
-    console.log(`[CHAT-TIMING] 📝 Text length: ${assistantMessage.text?.length || 0} chars`);
-    
     if (assistantMessage.text && assistantMessage.id) {
-      
       useChatStore.getState().setStatus('speaking');
-      const t1 = Date.now();
-      console.log(`[CHAT-TIMING] 🗣️ Speaking status set at ${t1}ms (t0→t1: ${t1 - t0}ms)`);
-      // conversationFlowMonitor.observeStep('speaking');
       
-      // FIRE-AND-FORGET TTS: Start TTS and immediately continue
+      // Start TTS and immediately continue
       conversationTtsService.speakAssistant({
         chat_id,
         messageId: assistantMessage.id,
         text: assistantMessage.text,
         sessionId: this.sessionId || null,
         onComplete: () => {
-          const tcomplete = Date.now();
-          console.log(`[CHAT-TIMING] ✅ TTS onComplete callback at ${tcomplete}ms (t0→tcomplete: ${tcomplete - t0}ms)`);
           // TTS audio finished - reset turn to allow next conversation
           if (this.isResetting) return;
           this.resetTurn(false);
         }
       }).catch(error => {
-        const terror = Date.now();
-        console.error(`[CHAT-TIMING] ❌ TTS failed at ${terror}ms (t0→terror: ${terror - t0}ms)`);
         // Log TTS errors but don't block conversation flow
         console.warn(`[ChatController] TTS failed: ${error}. Continuing without audio.`);
         // Still reset turn even if TTS fails
@@ -304,8 +290,6 @@ class ChatController {
       // The onComplete callback will handle resetting the turn when audio finishes
       
     } else {
-      const terror = Date.now();
-      console.error(`[CHAT-TIMING] ❌ Invalid message at ${terror}ms (t0→terror: ${terror - t0}ms)`);
       console.warn('[ChatController] Could not play audio. Missing text or messageId.');
       this.resetTurn(true); // Don't restart if no text
     }

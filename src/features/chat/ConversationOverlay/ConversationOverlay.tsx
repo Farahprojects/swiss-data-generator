@@ -52,7 +52,6 @@ export const ConversationOverlay: React.FC = () => {
   const handleStart = () => { // No longer async
     // One-shot guard to prevent double invocation
     if (hasStarted.current) {
-      console.log('[MIC-LOG] handleStart already invoked, ignoring duplicate call');
       return;
     }
     hasStarted.current = true;
@@ -89,14 +88,14 @@ export const ConversationOverlay: React.FC = () => {
         
         // Now start the first turn with the cached stream
         chatController.startTurn().catch(error => {
-          console.error('[MIC-LOG] Failed to start turn after mic permission:', error);
+          console.error('Failed to start turn after mic permission:', error);
           setPermissionGranted(false);
           setIsStarting(false);
           hasStarted.current = false;
         });
       })
       .catch(error => {
-        console.error('[MIC-LOG] Microphone permission denied within gesture:', error);
+        console.error('Microphone permission denied within gesture:', error);
         // If permission denied, revert the UI
         setPermissionGranted(false);
         setIsStarting(false);
@@ -125,7 +124,7 @@ export const ConversationOverlay: React.FC = () => {
   // Cleanup when conversation closes or component unmounts
   useEffect(() => {
     if (!isConversationOpen && permissionGranted) {
-      console.log('[MIC-LOG] Conversation closed - cleaning up resources');
+      // Conversation closed - cleaning up resources
       
       // Reset conversation mode
       chatController.setConversationMode('normal', null);

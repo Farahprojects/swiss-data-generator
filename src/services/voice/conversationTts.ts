@@ -226,7 +226,7 @@ class ConversationTtsService {
       if (this.cachedMediaElementSource) {
         // Reuse existing source
         source = this.cachedMediaElementSource;
-        console.log('[TTS-LOG] Reusing existing MediaElementSourceNode');
+        // Reuse existing source
         
         // Always disconnect first to prevent double connections
         source.disconnect();
@@ -337,7 +337,7 @@ class ConversationTtsService {
     this.dataArray = undefined;
     this.isAudioUnlocked = false;
     
-    console.log('[TTS-LOG] Complete TTS disposal completed');
+    // Complete TTS disposal completed
   }
 
   // Sanitize text before sending to TTS provider

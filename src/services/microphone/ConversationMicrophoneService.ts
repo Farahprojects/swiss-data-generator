@@ -89,9 +89,7 @@ export class ConversationMicrophoneServiceClass {
       
       // Defensively resume AudioContext if suspended (helps on iOS)
       if (this.audioContext.state === 'suspended') {
-        console.log('[MIC-LOG] AudioContext suspended, resuming...');
         await this.audioContext.resume();
-        console.log('[MIC-LOG] AudioContext resumed, state:', this.audioContext.state);
       }
       
       // SINGLE-GESTURE FLOW: Reuse analyser if it exists, otherwise create new
@@ -148,7 +146,7 @@ export class ConversationMicrophoneServiceClass {
       return true;
 
     } catch (error: any) {
-      console.error('[MIC-LOG] Recording setup error:', error.name, error);
+      console.error('Recording setup error:', error.name, error);
       this.error('❌ Recording setup failed:', error);
       if (this.options.onError) {
         this.options.onError(error);
