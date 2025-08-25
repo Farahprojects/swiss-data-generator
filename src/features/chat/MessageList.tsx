@@ -53,10 +53,16 @@ const ReportLoadingSequence = () => {
         className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black"
         style={{ overflowAnchor: 'none' }}
       >
-        <div className="flex items-center gap-3 text-base font-light leading-relaxed">
-          <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-          <span className="text-gray-700">{LOADING_MESSAGES[currentMessageIndex]}</span>
-        </div>
+        <p className="text-base font-light leading-relaxed text-left">
+          <Suspense fallback={<span className="text-gray-700">{LOADING_MESSAGES[currentMessageIndex]}</span>}>
+            <TypewriterText 
+              text={LOADING_MESSAGES[currentMessageIndex]} 
+              msPerWord={50}
+              disabled={false}
+              className="text-gray-700"
+            />
+          </Suspense>
+        </p>
       </div>
     </div>
   );

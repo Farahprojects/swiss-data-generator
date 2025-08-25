@@ -1,18 +1,23 @@
 // src/features/chat/ChatInput.tsx
 import React, { useState } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
-import { Mic, AudioLines, ArrowRight, Loader2 } from 'lucide-react';
+import { Mic, AudioLines, ArrowRight, Loader2, Square } from 'lucide-react';
 import { useChatStore } from '@/core/store';
 import { chatController } from './ChatController';
 import { useConversationUIStore } from './conversation-ui-store';
 import { useChatTextMicrophone } from '@/hooks/microphone/useChatTextMicrophone';
 import { VoiceWaveform } from './VoiceWaveform';
+import { useReportReadyStore } from '@/services/report/reportReadyStore';
 
 export const ChatInput = () => {
   const [text, setText] = useState('');
   const status = useChatStore((state) => state.status);
   const [isMuted, setIsMuted] = useState(false);
   const { isConversationOpen, openConversation, closeConversation } = useConversationUIStore();
+
+  // Get report generation state
+  const isPolling = useReportReadyStore((state) => state.isPolling);
+  const isReportReady = useReportReadyStore((state) => state.isReportReady);
 
   // Handle transcript ready - add to text area
   const handleTranscriptReady = (transcript: string) => {
@@ -57,6 +62,9 @@ export const ChatInput = () => {
   };
 
   const isRecording = status === 'recording';
+
+  // Determine if assistant is generating content (report generation or text generation)
+  const isAssistantGenerating = isPolling || status === 'thinking' || status === 'transcribing' || status === 'speaking';
 
   // Determine mic button state and content
   const getMicButtonContent = () => {
@@ -115,13 +123,17 @@ export const ChatInput = () => {
             )}
             <button 
               className={`transition-colors ${
-                text.trim() 
-                  ? 'w-8 h-8 bg-white border border-black rounded-full text-black hover:bg-gray-50 flex items-center justify-center' 
-                  : 'w-8 h-8 text-gray-500 hover:text-gray-900 flex items-center justify-center'
+                isAssistantGenerating
+                  ? 'w-8 h-8 bg-black rounded-full text-white flex items-center justify-center' 
+                  : text.trim() 
+                    ? 'w-8 h-8 bg-white border border-black rounded-full text-black hover:bg-gray-50 flex items-center justify-center' 
+                    : 'w-8 h-8 text-gray-500 hover:text-gray-900 flex items-center justify-center'
               }`}
               onClick={text.trim() ? handleSend : handleSpeakerClick}
             >
-              {text.trim() ? (
+              {isAssistantGenerating ? (
+                <Square size={14} className="text-white" />
+              ) : text.trim() ? (
                 <ArrowRight size={16} className="text-black" />
               ) : (
                 <AudioLines size={18} className={isRecording ? 'text-red-500' : ''} />
