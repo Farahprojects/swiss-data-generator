@@ -17,7 +17,7 @@ export class ConversationTtsServiceClass {
   private audioLevel = 0;
   private listeners = new Set<() => void>();
   private rafId: number | undefined;
-  private dataArray: Float32Array | undefined;
+  private dataArray: Float32Array | null = null;
   private isAudioUnlocked = false;
   private cachedMicStream: MediaStream | null = null;
   private voiceSessionStarted = false;
@@ -26,7 +26,6 @@ export class ConversationTtsServiceClass {
   private audioElementId: string | null = null;
   private playbackUnlocked = false;
   private micGranted = false;
-  private dataArray: Float32Array | null = null;
 
   private generateId(prefix: string): string {
     return `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -124,19 +123,9 @@ export class ConversationTtsServiceClass {
    * Start audio session - create single persistent AudioContext and audio element
    */
   private async startAudioSession(): Promise<void> {
+    // Use the existing AudioContext that was created in ensureAudioContext()
     if (!this.audioContext) {
-      const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
-      if (AudioContextClass) {
-        this.audioContext = new AudioContextClass();
-        this.contextId = `ctx-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        this.contextCreatedAt = Date.now().toString();
-      } else {
-        throw new Error('AudioContext not supported');
-      }
-    }
-
-    if (this.audioContext.state === 'suspended') {
-      await this.audioContext.resume();
+      throw new Error('AudioContext not available - ensureAudioContext must be called first');
     }
 
     // Create single persistent audio element
