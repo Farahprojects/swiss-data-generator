@@ -71,7 +71,11 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
                   animate={{ opacity: 1, rotateX: 0 }}
                   exit={{ opacity: 0, rotateX: -90 }}
                   transition={{ duration: 0.3 }}
-                  className="inline-block text-left min-w-[4rem] sm:min-w-[6rem] md:min-w-[8rem] lg:min-w-[12rem] xl:min-w-[16rem]"
+                  className="inline-block text-left min-w-[4rem] sm:min-w-[6rem] md:min-w-[8rem] lg:min-w-[12rem] xl:min-w-[16rem] pr-2 overflow-visible transform-gpu"
+                  style={{
+                    willChange: 'transform',
+                    backfaceVisibility: 'hidden'
+                  }}
                 >
                   {rotatingWords[currentWordIndex]}
                 </motion.span>
