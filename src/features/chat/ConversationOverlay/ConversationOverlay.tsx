@@ -20,7 +20,6 @@ export const ConversationOverlay: React.FC = () => {
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [isStarting, setIsStarting] = useState(false); // Guard against double taps
   const hasStarted = useRef(false); // One-shot guard to prevent double invocation
-  const [showPermissionHint, setShowPermissionHint] = useState(false); // Show hint if waiting too long
   
   useEffect(() => {
     if (isConversationOpen) {
@@ -28,41 +27,28 @@ export const ConversationOverlay: React.FC = () => {
     }
   }, [isConversationOpen]);
 
-  // Hide permission hint when stream is actually acquired
-  useEffect(() => {
-    if (showPermissionHint) {
-      const checkStream = () => {
-        const hasStream = conversationMicrophoneService.getState().hasStream;
-        if (hasStream) {
-          console.log('[MIC-LOG] Stream acquired - hiding permission hint');
-          setShowPermissionHint(false);
-        }
-      };
-      
-      // Check immediately
-      checkStream();
-      
-      // Set up interval to check periodically
-      const interval = setInterval(checkStream, 500);
-      
-      return () => clearInterval(interval);
-    }
-  }, [showPermissionHint]);
+
 
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = () => {
+    console.log('[MIC-LOG] Conversation mode closing - ensuring clean slate');
+    
     // 1. Kill all audio immediately
     conversationTtsService.stopAllAudio();
     
-    // 2. Stop microphone and tell listener we're done
+    // 2. Stop microphone and clean up all resources
     chatController.resetConversationService();
     
-    // 3. Close the UI
+    // 3. Force cleanup of microphone service to release all streams and contexts
+    conversationMicrophoneService.forceCleanup();
+    
+    // 4. Close the UI and reset all state
     closeConversation();
     setPermissionGranted(false); // Reset permission on close
     setIsStarting(false); // Reset guard on close
     hasStarted.current = false; // Reset one-shot guard
-    setShowPermissionHint(false); // Reset permission hint
+    
+    console.log('[MIC-LOG] Conversation mode closed - clean slate ready for next session');
   };
 
   const handleStart = () => { // No longer async
@@ -104,8 +90,7 @@ export const ConversationOverlay: React.FC = () => {
         // Cache the stream for reuse across all turns in this session
         conversationMicrophoneService.cacheStream(stream);
         
-        // Hide permission hint immediately since we now have the stream
-        setShowPermissionHint(false);
+
         
         // Now start the first turn with the cached stream
         chatController.startTurn().catch(error => {
@@ -123,16 +108,7 @@ export const ConversationOverlay: React.FC = () => {
         hasStarted.current = false;
       });
 
-      // Watchdog timer to detect silent failures - increased timeout for Safari permission dialog
-      setTimeout(() => {
-        const status = useChatStore.getState().status;
-        const hasStream = conversationMicrophoneService.getState().hasStream;
-        
-        if (status !== 'recording' && !hasStream) {
-          console.warn('[MIC-LOG] Watchdog: No recording status or stream after 5s, showing hint.');
-          setShowPermissionHint(true);
-        }
-      }, 5000); // Increased from 1.5s to 5s to give users time to respond to Safari dialog
+
 
     } else {
       console.error("[ConversationOverlay] Cannot start conversation without a chat_id");
@@ -151,14 +127,19 @@ export const ConversationOverlay: React.FC = () => {
     };
   }, [isConversationOpen]);
   
-  // Simple cleanup when conversation closes
+  // Cleanup when conversation closes or component unmounts
   useEffect(() => {
     if (!isConversationOpen && permissionGranted) {
+      console.log('[MIC-LOG] Conversation closed - cleaning up resources');
+      
       // Reset conversation mode
       chatController.setConversationMode('normal', null);
       
       // Cleanup ChatController
       chatController.cleanup();
+      
+      // Force cleanup of microphone service to ensure clean slate
+      conversationMicrophoneService.forceCleanup();
     }
   }, [isConversationOpen, permissionGranted]);
 
@@ -202,12 +183,7 @@ export const ConversationOverlay: React.FC = () => {
                state === 'processing' ? 'Thinking…' : 'Speaking…'}
             </p>
             
-            {/* Permission hint - shows if waiting too long for microphone */}
-            {showPermissionHint && (
-              <p className="text-sm text-orange-600 font-light text-center max-w-xs">
-                Waiting for microphone permission… tap 'Allow' in the browser prompt.
-              </p>
-            )}
+
             
             {/* Close button - positioned under the status text */}
             <button
