@@ -22,6 +22,7 @@ import Signup from './pages/Signup';
 import ResetPassword from './pages/auth/Password';
 import CalendarPage from './pages/dashboard/CalendarPage';
 import { AuthGuard } from './components/auth/AuthGuard';
+import { PublicOnlyGuard } from './components/auth/PublicOnlyGuard';
 
 // Lazy load chat screen
 const ReportChatScreen = lazy(() => import('./screens/ReportChatScreen'));
@@ -100,8 +101,16 @@ function App() {
               <div className="min-h-screen bg-background">
                 <Routes>
                   {/* Main Routes */}
-                  <Route path="/" element={<PublicReport />} />
-                  <Route path="/report" element={<PublicReport />} />
+                  <Route path="/" element={
+                    <PublicOnlyGuard>
+                      <PublicReport />
+                    </PublicOnlyGuard>
+                  } />
+                  <Route path="/report" element={
+                    <PublicOnlyGuard>
+                      <PublicReport />
+                    </PublicOnlyGuard>
+                  } />
                   <Route path="/pricing" element={<Pricing />} />
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/about" element={<About />} />
