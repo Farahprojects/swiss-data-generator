@@ -154,6 +154,11 @@ class ChatController {
     
     conversationMicrophoneService.initialize({
       onSilenceDetected: () => this.endTurn(),
+      onRecordingComplete: (audioBlob: Blob) => {
+        // This callback will be used by the microphone service
+        // The actual processing is handled in endTurn() which calls stopRecording()
+        console.log('[ChatController] onRecordingComplete callback received blob:', audioBlob.size, 'bytes');
+      },
       silenceTimeoutMs: 2000 // 2 seconds for natural conversation pauses
     });
     
@@ -184,6 +189,25 @@ class ChatController {
     }
     
     this.initializeConversationService();
+
+    // Defensive guard: Check session readiness before starting recording
+    const stream = conversationTtsService.getCachedMicStream();
+    const ctx = conversationTtsService.getSharedAudioContext();
+    
+    console.log('[ChatController] session-check', {
+      hasStream: !!stream,
+      streamTracks: stream?.getAudioTracks().length,
+      hasContext: !!ctx,
+      contextState: ctx?.state,
+      isSessionReady: conversationTtsService.isSessionReady()
+    });
+    
+    if (!stream || !ctx) {
+      console.error('[ChatController] Voice session not ready - missing stream or context');
+      useChatStore.getState().setStatus('idle');
+      this.isTurnActive = false;
+      throw new Error('Voice session not ready');
+    }
 
     useChatStore.getState().setStatus('recording');
     // conversationFlowMonitor.observeStep('listening');

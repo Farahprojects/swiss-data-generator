@@ -41,7 +41,7 @@ export const ConversationOverlay: React.FC = () => {
     setShowPermissionHint(false); // Reset permission hint
   };
 
-  const handleStart = () => { // No longer async
+  const handleStart = async () => { // Now async
     // One-shot guard to prevent double invocation
     if (hasStarted.current) {
       console.log('[voice] handleStart already invoked, ignoring duplicate call');
@@ -54,44 +54,48 @@ export const ConversationOverlay: React.FC = () => {
 
     console.log('[voice] tap');
 
-    // --- Synchronous UI Update ---
-    // Immediately hide the "Tap to Start" overlay to give instant feedback.
-    setPermissionGranted(true);
-    
-    // --- Asynchronous Permission Request ---
-    // Invoke startVoiceSession without awaiting it, tied to the user gesture.
-    conversationTtsService.startVoiceSession()
-      .then(() => {
-        // This block runs if the user grants permissions.
-        const cachedStream = conversationTtsService.getCachedMicStream();
-        console.log('[voice] micGranted', { micActive: !!cachedStream });
-
-        // Now that permissions are confirmed, unlock and start the turn.
-        chatController.unlock();
-        if (chat_id) {
-          chatController.setConversationMode('convo', chat_id);
-          chatController.startTurn().catch(error => {
-             console.error('[voice] startTurn failed after session grant:', error);
-             // Revert UI if startTurn fails for some other reason
-             setPermissionGranted(false);
-             setIsStarting(false);
-             hasStarted.current = false;
-          });
-        } else {
-            console.error("[voice] Cannot start conversation without a chat_id");
-            closeConversation();
-        }
-      })
-      .catch(error => {
-        // This block runs if startVoiceSession is rejected (e.g., user denies permission).
-        console.error('[voice] startVoiceSession failed (permission likely denied):', error);
-        
-        // Revert the UI to its initial state and show a hint.
-        setPermissionGranted(false);
-        setIsStarting(false);
-        hasStarted.current = false;
-        setShowPermissionHint(true);
+    try {
+      // Await startVoiceSession() within the gesture to ensure session is ready
+      await conversationTtsService.startVoiceSession();
+      
+      // Assert readiness after session resolves
+      const stream = conversationTtsService.getCachedMicStream();
+      const ctx = conversationTtsService.getSharedAudioContext();
+      
+      console.log('[voice] session-assertions', {
+        hasStream: !!stream,
+        streamTracks: stream?.getAudioTracks().length,
+        hasContext: !!ctx,
+        contextState: ctx?.state
       });
+      
+      if (!stream || !ctx) {
+        console.error('[voice] Session not ready after startVoiceSession');
+        throw new Error('Voice session not ready - missing stream or context');
+      }
+      
+      // Only now set permissionGranted to show the conversation UI
+      setPermissionGranted(true);
+      
+      // Unlock controller and start the turn
+      chatController.unlock();
+      if (chat_id) {
+        chatController.setConversationMode('convo', chat_id);
+        await chatController.startTurn();
+      } else {
+        console.error("[voice] Cannot start conversation without a chat_id");
+        closeConversation();
+      }
+      
+    } catch (error) {
+      console.error('[voice] handleStart failed:', error);
+      
+      // Revert UI to stable state on failure
+      setPermissionGranted(false);
+      setIsStarting(false);
+      hasStarted.current = false;
+      setShowPermissionHint(true);
+    }
   };
   
   // This effect is now only for cleanup when the component unmounts or isOpen changes

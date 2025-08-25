@@ -6,7 +6,7 @@
  */
 
 import { microphoneArbitrator } from './MicrophoneArbitrator';
-import { conversationTtsService } from '../voice/conversationTts'; // Import the central voice service
+import { conversationTtsService } from '@/services/voice/conversationTts'; // Import the central voice service
 
 export interface ConversationMicrophoneOptions {
   onRecordingComplete?: (audioBlob: Blob) => void;
@@ -49,6 +49,15 @@ class ConversationMicrophoneServiceClass {
    */
   async startRecording(): Promise<boolean> {
     this.log('🎤 Starting conversation recording');
+    
+    // Claim the arbitrator first
+    if (!microphoneArbitrator.claim('conversation')) {
+      this.error('❌ Cannot start - microphone in use by another domain');
+      if (this.options.onError) {
+        this.options.onError(new Error('Microphone is in use'));
+      }
+      return false;
+    }
     
     // Use the single, persistent MediaStream from the voice session
     const stream = conversationTtsService.getCachedMicStream();
@@ -131,6 +140,8 @@ class ConversationMicrophoneServiceClass {
 
     } catch (error) {
       this.error('❌ Failed to start recording:', error);
+      // Release arbitrator claim on failure
+      microphoneArbitrator.release('conversation');
       if (this.options.onError) {
         this.options.onError(error instanceof Error ? error : new Error('Recording failed'));
       }
@@ -291,12 +302,12 @@ class ConversationMicrophoneServiceClass {
   /**
    * Stop recording and process the audio
    */
-  stopRecording(): void {
+  stopRecording(): Promise<Blob | null> {
     this.log('🛑 Stop recording called...');
     
     if (!this.isRecording || !this.mediaRecorder) {
       this.log('⚠️ Not recording or no MediaRecorder');
-      return;
+      return Promise.resolve(null);
     }
 
     this.log('🔧 Stopping MediaRecorder...');
@@ -307,6 +318,17 @@ class ConversationMicrophoneServiceClass {
     this.stopVoiceActivityDetection();
     
     this.log('✅ Recording stopped successfully');
+    
+    // Return the audio blob from handleRecordingComplete
+    return new Promise((resolve) => {
+      // Override the onRecordingComplete callback temporarily
+      const originalCallback = this.options.onRecordingComplete;
+      this.options.onRecordingComplete = (blob: Blob) => {
+        resolve(blob);
+        // Restore original callback
+        this.options.onRecordingComplete = originalCallback;
+      };
+    });
   }
 
   /**

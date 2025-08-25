@@ -17,6 +17,7 @@ export class ConversationTtsServiceClass {
   private audioLevel = 0;
   private listeners = new Set<() => void>();
   private rafId: number | undefined;
+  private dataArray: Float32Array | undefined;
   private isAudioUnlocked = false;
   private cachedMicStream: MediaStream | null = null;
   private voiceSessionStarted = false;
@@ -83,14 +84,16 @@ export class ConversationTtsServiceClass {
         this.error('[voice] mic-grant-failed:', micResult.reason);
     }
     
-    this.voiceSessionStarted = true;
-
     if (!this.playbackUnlocked || !this.micGranted) {
         throw new Error('One or more permission gates failed to open. Check console for details.');
     }
     
     // Both gates are open, now set up the full audio pipeline for speaking.
     await this.startAudioSession();
+    
+    // Only mark session as started after startAudioSession completes successfully
+    this.voiceSessionStarted = true;
+    
     this.setupVisibilityHandler();
   }
 
@@ -291,6 +294,13 @@ export class ConversationTtsServiceClass {
    */
   public getSharedAudioContext(): AudioContext | undefined {
     return this.audioContext;
+  }
+
+  /**
+   * Check if the session is fully ready (all resources available)
+   */
+  public isSessionReady(): boolean {
+    return Boolean(this.cachedMicStream && this.audioContext && this.masterAudioElement);
   }
 
   // Stop current audio playback without breaking session
