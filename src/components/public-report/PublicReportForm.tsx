@@ -1,12 +1,11 @@
 
-import React, { useState } from 'react';
-import { UseFormReturn, Controller } from 'react-hook-form';
+import React from 'react';
+import { UseFormReturn } from 'react-hook-form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CleanPlaceAutocomplete } from '@/components/shared/forms/place-input/CleanPlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
-import { InlineDateTimeSelector } from '@/components/ui/mobile-pickers';
 
 interface PublicReportFormProps {
   form: UseFormReturn<any>;
@@ -14,11 +13,7 @@ interface PublicReportFormProps {
 }
 
 const PublicReportForm = ({ form, reportType }: PublicReportFormProps) => {
-  const { register, setValue, formState: { errors }, watch, control } = form;
-  const [datePickerOpen, setDatePickerOpen] = useState(false);
-  const [timePickerOpen, setTimePickerOpen] = useState(false);
-  const [date2PickerOpen, setDate2PickerOpen] = useState(false);
-  const [time2PickerOpen, setTime2PickerOpen] = useState(false);
+  const { register, setValue, formState: { errors }, watch } = form;
   
   const request = watch('request');
   const isCompatibilityReport = reportType === 'compatibility' || reportType === 'sync' || request === 'sync';
@@ -68,22 +63,10 @@ const PublicReportForm = ({ form, reportType }: PublicReportFormProps) => {
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="birthDate">Birth Date *</Label>
-              <Controller
-                name="birthDate"
-                control={control}
-                render={({ field }) => (
-                  <InlineDateTimeSelector
-                    type="date"
-                    value={field.value || ''}
-                    onChange={field.onChange}
-                    placeholder="Select birth date"
-                    hasError={!!errors.birthDate}
-                    isOpen={datePickerOpen}
-                    onOpen={() => setDatePickerOpen(true)}
-                    onConfirm={() => setDatePickerOpen(false)}
-                    onCancel={() => setDatePickerOpen(false)}
-                  />
-                )}
+              <Input
+                id="birthDate"
+                type="date"
+                {...register('birthDate')}
               />
               {errors.birthDate && (
                 <p className="text-sm text-destructive">{errors.birthDate.message as string}</p>
@@ -91,22 +74,11 @@ const PublicReportForm = ({ form, reportType }: PublicReportFormProps) => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="birthTime">Birth Time *</Label>
-              <Controller
-                name="birthTime"
-                control={control}
-                render={({ field }) => (
-                  <InlineDateTimeSelector
-                    type="time"
-                    value={field.value || ''}
-                    onChange={field.onChange}
-                    placeholder="Select birth time"
-                    hasError={!!errors.birthTime}
-                    isOpen={timePickerOpen}
-                    onOpen={() => setTimePickerOpen(true)}
-                    onConfirm={() => setTimePickerOpen(false)}
-                    onCancel={() => setTimePickerOpen(false)}
-                  />
-                )}
+              <Input
+                id="birthTime"
+                type="time"
+                {...register('birthTime')}
+                step="60"
               />
               {errors.birthTime && (
                 <p className="text-sm text-destructive">{errors.birthTime.message as string}</p>
@@ -148,22 +120,10 @@ const PublicReportForm = ({ form, reportType }: PublicReportFormProps) => {
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="birthDate2">Partner's Birth Date *</Label>
-                <Controller
-                  name="birthDate2"
-                  control={control}
-                  render={({ field }) => (
-                    <InlineDateTimeSelector
-                      type="date"
-                      value={field.value || ''}
-                      onChange={field.onChange}
-                      placeholder="Select partner's birth date"
-                      hasError={!!errors.birthDate2}
-                      isOpen={date2PickerOpen}
-                      onOpen={() => setDate2PickerOpen(true)}
-                      onConfirm={() => setDate2PickerOpen(false)}
-                      onCancel={() => setDate2PickerOpen(false)}
-                    />
-                  )}
+                <Input
+                  id="birthDate2"
+                  type="date"
+                  {...register('birthDate2')}
                 />
                 {errors.birthDate2 && (
                   <p className="text-sm text-destructive">{errors.birthDate2.message as string}</p>
@@ -171,22 +131,11 @@ const PublicReportForm = ({ form, reportType }: PublicReportFormProps) => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="birthTime2">Partner's Birth Time *</Label>
-                <Controller
-                  name="birthTime2"
-                  control={control}
-                  render={({ field }) => (
-                    <InlineDateTimeSelector
-                      type="time"
-                      value={field.value || ''}
-                      onChange={field.onChange}
-                      placeholder="Select partner's birth time"
-                      hasError={!!errors.birthTime2}
-                      isOpen={time2PickerOpen}
-                      onOpen={() => setTime2PickerOpen(true)}
-                      onConfirm={() => setTime2PickerOpen(false)}
-                      onCancel={() => setTime2PickerOpen(false)}
-                    />
-                  )}
+                <Input
+                  id="birthTime2"
+                  type="time"
+                  {...register('birthTime2')}
+                  step="60"
                 />
                 {errors.birthTime2 && (
                   <p className="text-sm text-destructive">{errors.birthTime2.message as string}</p>
