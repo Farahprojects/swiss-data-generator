@@ -44,51 +44,6 @@ export type Database = {
         }
         Relationships: []
       }
-      api_keys: {
-        Row: {
-          api_key: string
-          created_at: string | null
-          email: string | null
-          id: string
-          is_active: boolean | null
-          pending_email_change: boolean
-          slug_coach: string | null
-          slug_life: string | null
-          slug_store: string | null
-          slug_win: string | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          api_key: string
-          created_at?: string | null
-          email?: string | null
-          id?: string
-          is_active?: boolean | null
-          pending_email_change?: boolean
-          slug_coach?: string | null
-          slug_life?: string | null
-          slug_store?: string | null
-          slug_win?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          api_key?: string
-          created_at?: string | null
-          email?: string | null
-          id?: string
-          is_active?: boolean | null
-          pending_email_change?: boolean
-          slug_coach?: string | null
-          slug_life?: string | null
-          slug_store?: string | null
-          slug_win?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       api_usage: {
         Row: {
           created_at: string | null
@@ -532,13 +487,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "email_messages_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "api_keys"
-            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -1978,10 +1926,6 @@ export type Database = {
         }
         Returns: string
       }
-      regenerate_api_key: {
-        Args: { _user_id: string }
-        Returns: string
-      }
       rpc_notify_orchestrator: {
         Args: { guest_report_id: string }
         Returns: undefined
@@ -2008,10 +1952,6 @@ export type Database = {
       }
       urlencode: {
         Args: { data: Json } | { string: string } | { string: string }
-        Returns: string
-      }
-      validate_api_key: {
-        Args: { _api_key: string }
         Returns: string
       }
     }
