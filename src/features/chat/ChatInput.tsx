@@ -124,7 +124,7 @@ export const ChatInput = () => {
             <button 
               className={`transition-colors ${
                 isAssistantGenerating
-                  ? 'w-8 h-8 bg-black rounded-full text-white flex items-center justify-center' 
+                  ? 'w-8 h-8 bg-white border border-black rounded-full text-black flex items-center justify-center' 
                   : text.trim() 
                     ? 'w-8 h-8 bg-white border border-black rounded-full text-black hover:bg-gray-50 flex items-center justify-center' 
                     : 'w-8 h-8 text-gray-500 hover:text-gray-900 flex items-center justify-center'
@@ -132,7 +132,7 @@ export const ChatInput = () => {
               onClick={text.trim() ? handleSend : handleSpeakerClick}
             >
               {isAssistantGenerating ? (
-                <Square size={14} className="text-white" />
+                <Square size={14} className="text-black" />
               ) : text.trim() ? (
                 <ArrowRight size={16} className="text-black" />
               ) : (
