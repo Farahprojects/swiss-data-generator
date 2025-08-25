@@ -89,10 +89,11 @@ class ConversationTtsService {
       this.currentNodes = undefined;
     }
     
-    // Clear cached MediaElementSourceNode
+    // ✅ KEEP CACHED SOURCE: Don't set to undefined to prevent re-creation
+    // The cached MediaElementSourceNode will be reused on next playback
     if (this.cachedMediaElementSource) {
       this.cachedMediaElementSource.disconnect();
-      this.cachedMediaElementSource = undefined;
+      // DO NOT set to undefined - we'll reuse it
     }
     
     this.audioLevel = 0;
@@ -180,19 +181,19 @@ class ConversationTtsService {
         // Start real-time amplitude analysis
         this.startAmplitudeAnalysis();
 
-        // ✅ REAL AUDIO ANALYSIS: Event listeners with cleanup
+        // ✅ REAL AUDIO ANALYSIS: Event listeners with cleanup (prevent accumulation)
         audio.addEventListener('ended', () => {
           this.cleanupAnalysis();
           URL.revokeObjectURL(audioUrl);
           resolve();
-        });
+        }, { once: true });
         
         audio.addEventListener('error', (error) => {
           console.error('[ConversationTTS] Audio playback error:', error);
           this.cleanupAnalysis();
           URL.revokeObjectURL(audioUrl);
           reject(error);
-        });
+        }, { once: true });
         
         // ✅ SIMPLIFIED: Play immediately without load() call
         console.log(`[TTS-LOG] About to play audio. AudioContext state: ${this.audioContext?.state}`);
@@ -242,26 +243,21 @@ class ConversationTtsService {
       // Create or reuse MediaElementSourceNode to avoid InvalidStateError
       let source: MediaElementAudioSourceNode;
       if (this.cachedMediaElementSource) {
-        // Reuse existing source if it's still valid
-        try {
-          // Test if the cached source is still connected to the same audio element
-          source = this.cachedMediaElementSource;
-          console.log('[TTS-LOG] Reusing cached MediaElementSourceNode');
-        } catch (error) {
-          // If reuse fails, create a new one
-          console.log('[TTS-LOG] Cached MediaElementSourceNode invalid, creating new one');
-          this.cachedMediaElementSource?.disconnect();
-          source = this.audioContext.createMediaElementSource(audio);
-          this.cachedMediaElementSource = source;
-        }
+        // Reuse existing source
+        source = this.cachedMediaElementSource;
+        console.log('[TTS-LOG] Reusing existing MediaElementSourceNode');
+        
+        // Always disconnect first to prevent double connections
+        source.disconnect();
       } else {
-        // Create new MediaElementSourceNode
+        // Create new MediaElementSourceNode only if none exists
         console.log('[TTS-LOG] Creating new MediaElementSourceNode');
         source = this.audioContext.createMediaElementSource(audio);
         this.cachedMediaElementSource = source;
       }
 
       // Connect: source -> analyser (for analysis) AND source -> destination (for audio)
+      // Always connect fresh after disconnect to ensure clean state
       source.connect(this.analyser);
       source.connect(this.audioContext.destination);
 
@@ -329,6 +325,39 @@ class ConversationTtsService {
     
     this.audioLevel = 0;
     this.notifyListeners();
+  }
+
+  // ✅ FULL DISPOSAL METHOD: Complete teardown for modal close (optional)
+  public resetAllAndDispose(): void {
+    this.stopAllAudio();
+    
+    // Fully dispose cached source
+    if (this.cachedMediaElementSource) {
+      this.cachedMediaElementSource.disconnect();
+      this.cachedMediaElementSource = undefined;
+    }
+    
+    // Dispose AudioContext if desired (aggressive cleanup)
+    if (this.audioContext) {
+      this.audioContext.close().catch(err => 
+        console.warn('[TTS-LOG] AudioContext close failed:', err)
+      );
+      this.audioContext = undefined;
+    }
+    
+    // Dispose master audio element
+    if (this.masterAudioElement) {
+      this.masterAudioElement.pause();
+      this.masterAudioElement.removeAttribute('src');
+      this.masterAudioElement = null;
+    }
+    
+    // Reset analyser
+    this.analyser = undefined;
+    this.dataArray = undefined;
+    this.isAudioUnlocked = false;
+    
+    console.log('[TTS-LOG] Complete TTS disposal completed');
   }
 
   // Sanitize text before sending to TTS provider
