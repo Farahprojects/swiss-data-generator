@@ -68,7 +68,7 @@ export default function TorusListening({
   const streamRef = useRef<MediaStream | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const dataRef = useRef<Uint8Array | null>(null);
+  const dataRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
 
   const dots = useMemo(() => {
     return torusData.dots
@@ -125,9 +125,11 @@ export default function TorusListening({
         const analyser = analyserRef.current;
         const buf = dataRef.current;
         if (analyser && buf) {
-          analyser.getByteTimeDomainData(buf);
+          analyser.getByteFrequencyData(buf);
           let sum = 0;
-          buf.forEach(v => sum += ((v - 128) / 128) ** 2);
+          for (let i = 0; i < buf.length; i++) {
+            sum += (buf[i] / 255) ** 2;
+          }
           const rms = Math.sqrt(sum / buf.length);
           setLevel(prev => lerp(prev, rms, 0.2));
         } else {
@@ -164,12 +166,13 @@ export default function TorusListening({
       <motion.div
         style={{ width: '100%', height: '100%' }}
         animate={{ rotate: rotation }}
-        transition={{ type: 'linear', duration: 12, repeat: Infinity }}
+        transition={{ duration: 12, repeat: Infinity, ease: 'linear' }}
       >
         <svg
           width={size}
           height={torusData.image_height * scale}
           viewBox={`0 0 ${torusData.image_width} ${torusData.image_height}`}
+          style={{ background: 'transparent' }}
           aria-hidden
         >
           {dots.map((dot, idx) => {
