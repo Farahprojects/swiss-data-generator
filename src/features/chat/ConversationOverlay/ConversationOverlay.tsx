@@ -21,51 +21,33 @@ export const ConversationOverlay: React.FC = () => {
   const [isStarting, setIsStarting] = useState(false); // Guard against double taps
   const hasStarted = useRef(false); // One-shot guard to prevent double invocation
   const [showPermissionHint, setShowPermissionHint] = useState(false); // Show hint if waiting too long
-  const isClosing = useRef(false); // Guard against double close calls
   
+  useEffect(() => {
+    if (isConversationOpen) {
+      console.log('[MIC-LOG] ConversationOverlay opened. Waiting for user tap...');
+    }
+  }, [isConversationOpen]);
+
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = () => {
-    // Prevent double close calls
-    if (isClosing.current) {
-      console.log('[voice] handleModalClose already in progress, ignoring duplicate call');
-      return;
-    }
-    isClosing.current = true;
+    // 1. Kill all audio immediately
+    conversationTtsService.stopAllAudio();
     
-    try {
-      console.log('[voice] handleModalClose: Starting cleanup sequence...');
-      
-      // 1. Kill all audio immediately
-      conversationTtsService.stopAllAudio();
-      
-      // 2. Stop microphone and tell listener we're done
-      chatController.resetConversationService();
-      
-      // 3. End voice session to cleanup all resources
-      conversationTtsService.endSession();
-      
-      console.log('[voice] handleModalClose: Cleanup sequence completed');
-      
-    } catch (error) {
-      console.error('[voice] handleModalClose: Error during cleanup:', error);
-      // Continue with UI close even if cleanup fails
-    } finally {
-      // 4. Close the UI - ALWAYS runs even if cleanup throws
-      closeConversation();
-      setPermissionGranted(false); // Reset permission on close
-      setIsStarting(false); // Reset guard on close
-      hasStarted.current = false; // Reset one-shot guard
-      setShowPermissionHint(false); // Reset permission hint
-      isClosing.current = false; // Reset close guard
-      
-      console.log('[voice] handleModalClose: UI closed successfully');
-    }
+    // 2. Stop microphone and tell listener we're done
+    chatController.resetConversationService();
+    
+    // 3. Close the UI
+    closeConversation();
+    setPermissionGranted(false); // Reset permission on close
+    setIsStarting(false); // Reset guard on close
+    hasStarted.current = false; // Reset one-shot guard
+    setShowPermissionHint(false); // Reset permission hint
   };
 
-  const handleStart = async () => { // Now async
+  const handleStart = () => { // No longer async
     // One-shot guard to prevent double invocation
     if (hasStarted.current) {
-      console.log('[voice] handleStart already invoked, ignoring duplicate call');
+      console.log('[MIC-LOG] handleStart already invoked, ignoring duplicate call');
       return;
     }
     hasStarted.current = true;
@@ -73,62 +55,67 @@ export const ConversationOverlay: React.FC = () => {
     if (isStarting) return; // Prevent double taps
     setIsStarting(true);
 
-    console.log('[voice] tap');
+    console.log('[MIC-LOG] User tapped start. Unlocking controller and requesting microphone...');
+    
+    // Set flags immediately for instant UI feedback
+    setPermissionGranted(true);
+    
+    // Unlock both audio and microphone systems synchronously within the user gesture.
+    conversationTtsService.unlockAudio();
+    chatController.unlock();
+    
+    console.log('[MIC-LOG] Calling ChatController.startTurn immediately (gesture preserved)');
+    
+    if (chat_id) {
+      chatController.setConversationMode('convo', chat_id);
 
-    try {
-      // Await startVoiceSession() within the gesture to ensure session is ready
-      await conversationTtsService.startVoiceSession();
-      
-      // Assert readiness after session resolves
-      const stream = conversationTtsService.getCachedMicStream();
-      const ctx = conversationTtsService.getSharedAudioContext();
-      
-      console.log('[voice] session-assertions', {
-        hasStream: !!stream,
-        streamTracks: stream?.getAudioTracks().length,
-        hasContext: !!ctx,
-        contextState: ctx?.state
+      // Call startTurn in the background. It will request microphone permission.
+      chatController.startTurn().catch(error => {
+        console.error('[MIC-LOG] Failed to start turn, likely permission denied:', error);
+        // If it fails (e.g., user denies permission), revert the UI.
+        setPermissionGranted(false);
+        setIsStarting(false);
+        hasStarted.current = false;
       });
-      
-      if (!stream || !ctx) {
-        console.error('[voice] Session not ready after startVoiceSession');
-        throw new Error('Voice session not ready - missing stream or context');
-      }
-      
-      // Only now set permissionGranted to show the conversation UI
-      setPermissionGranted(true);
-      
-      // Unlock controller and start the turn
-      chatController.unlock();
-      if (chat_id) {
-        chatController.setConversationMode('convo', chat_id);
-        await chatController.startTurn();
-      } else {
-        console.error("[voice] Cannot start conversation without a chat_id");
-        closeConversation();
-      }
-      
-    } catch (error) {
-      console.error('[voice] handleStart failed:', error);
-      
-      // Revert UI to stable state on failure
-      setPermissionGranted(false);
-      setIsStarting(false);
-      hasStarted.current = false;
-      setShowPermissionHint(true);
+
+      // Watchdog timer remains to detect if the user denies permission or the mic fails silently.
+      setTimeout(() => {
+        const status = useChatStore.getState().status;
+        const hasStream = conversationMicrophoneService.getState().hasStream;
+        
+        if (status !== 'recording' && !hasStream) {
+          console.warn('[MIC-LOG] Watchdog: No recording status or stream after 1.5s, showing hint.');
+          setShowPermissionHint(true);
+        }
+      }, 1500);
+
+    } else {
+      console.error("[ConversationOverlay] Cannot start conversation without a chat_id");
+      closeConversation();
     }
   };
   
-  // This effect is now only for cleanup when the component unmounts or isOpen changes
+  // Simple mount - set conversation mode and start listening immediately
   useEffect(() => {
+    // This effect is now only for cleanup when the component unmounts or isOpen changes
     return () => {
-      if (isConversationOpen && !isClosing.current) {
+      if (isConversationOpen) {
         // Ensure cleanup runs if the component unmounts unexpectedly
-        console.log('[voice] Component unmounting, calling handleModalClose');
         handleModalClose();
       }
     };
   }, [isConversationOpen]);
+  
+  // Simple cleanup when conversation closes
+  useEffect(() => {
+    if (!isConversationOpen && permissionGranted) {
+      // Reset conversation mode
+      chatController.setConversationMode('normal', null);
+      
+      // Cleanup ChatController
+      chatController.cleanup();
+    }
+  }, [isConversationOpen, permissionGranted]);
 
   // Map chat status to conversation state for UI
   const state = status === 'recording' ? 'listening' : 
@@ -144,11 +131,7 @@ export const ConversationOverlay: React.FC = () => {
         {!permissionGranted ? (
           <div 
             className="text-center text-gray-800 flex flex-col items-center gap-4 cursor-pointer"
-            onClick={(e) => {
-              // Use { once: true } equivalent by removing the handler after first click
-              e.currentTarget.style.pointerEvents = 'none';
-              handleStart();
-            }}
+            onClick={handleStart}
           >
             <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center transition-colors hover:bg-gray-200">
               <Mic className="w-10 h-10 text-gray-600" />

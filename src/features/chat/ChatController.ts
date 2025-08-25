@@ -154,11 +154,6 @@ class ChatController {
     
     conversationMicrophoneService.initialize({
       onSilenceDetected: () => this.endTurn(),
-      onRecordingComplete: (audioBlob: Blob) => {
-        // This callback will be used by the microphone service
-        // The actual processing is handled in endTurn() which calls stopRecording()
-        console.log('[ChatController] onRecordingComplete callback received blob:', audioBlob.size, 'bytes');
-      },
       silenceTimeoutMs: 2000 // 2 seconds for natural conversation pauses
     });
     
@@ -190,25 +185,6 @@ class ChatController {
     
     this.initializeConversationService();
 
-    // Defensive guard: Check session readiness before starting recording
-    const stream = conversationTtsService.getCachedMicStream();
-    const ctx = conversationTtsService.getSharedAudioContext();
-    
-    console.log('[ChatController] session-check', {
-      hasStream: !!stream,
-      streamTracks: stream?.getAudioTracks().length,
-      hasContext: !!ctx,
-      contextState: ctx?.state,
-      isSessionReady: conversationTtsService.isSessionReady()
-    });
-    
-    if (!stream || !ctx) {
-      console.error('[ChatController] Voice session not ready - missing stream or context');
-      useChatStore.getState().setStatus('idle');
-      this.isTurnActive = false;
-      throw new Error('Voice session not ready');
-    }
-
     useChatStore.getState().setStatus('recording');
     // conversationFlowMonitor.observeStep('listening');
     
@@ -239,16 +215,46 @@ class ChatController {
     // conversationFlowMonitor.observeStep('transcribing');
     
     try {
-      // Stop recording - this returns void, audio comes via callback
-      conversationMicrophoneService.stopRecording();
+      const audioBlob = await conversationMicrophoneService.stopRecording();
       
-      // Note: Audio processing happens in the onRecordingComplete callback
-      // For now, we need to restructure this to work with the callback approach
-      console.log('[ChatController] Recording stopped, waiting for callback processing');
+      // ✅ ADDED: Validate audio blob before processing
+      if (!audioBlob || audioBlob.size === 0) {
+        console.warn('[ChatController] Empty audio blob received - restarting turn');
+        this.resetTurn(false); // Restart turn to give user another chance
+        return;
+      }
       
-      // TODO: Move the transcription logic to the callback handler
-      this.isTurnActive = false;
-      useChatStore.getState().setStatus('idle');
+  
+      
+      const { transcript } = await sttService.transcribe(
+        audioBlob, 
+        useChatStore.getState().chat_id!,
+        undefined,
+        this.mode,
+        this.sessionId
+      );
+
+      if (!transcript || transcript.trim().length === 0) {
+        console.warn('[ChatController] Empty transcript received - restarting turn');
+        this.resetTurn(false); // Restart turn to give user another chance
+        return;
+      }
+
+      const chat_id = useChatStore.getState().chat_id!;
+      const client_msg_id = uuidv4();
+      const audioUrl = URL.createObjectURL(audioBlob);
+
+      this.addOptimisticMessages(chat_id, transcript, client_msg_id, audioUrl);
+      
+      // conversationFlowMonitor.observeStep('thinking');
+      const finalMessage = await llmService.sendMessage({ 
+        chat_id, 
+        text: transcript, 
+        client_msg_id,
+        mode: this.mode,
+        sessionId: this.sessionId
+      });
+      this.reconcileOptimisticMessage(finalMessage);
       
       // Reset auto-recovery on successful turn completion
       // conversationFlowMonitor.resetAutoRecovery();
@@ -315,7 +321,10 @@ class ChatController {
     } else {
       // Turn transition - stop current recording and VAD, but keep stream for next turn
       if (conversationMicrophoneService.getState().isRecording) {
-        conversationMicrophoneService.stopRecording();
+        conversationMicrophoneService.stopRecording().catch((error) => {
+          // Ignore errors during graceful stop
+          console.warn('[ChatController] Graceful stop error (ignored):', error);
+        });
       } else {
         // Even if not recording, we need to stop any running VAD loop
         conversationMicrophoneService.forceCleanup();
@@ -324,15 +333,17 @@ class ChatController {
     
     if (!endConversationFlow && !this.isResetting) {
       // Short delay before starting next turn
+  
       this.turnRestartTimeout = setTimeout(() => { 
         if (!this.isResetting) {
+      
           this.startTurn(); 
         }
       }, 500);
     }
   }
 
-  cancelTurn() {
+    cancelTurn() {
     if (!this.isTurnActive) return;
   
     // Clear any pending timeouts
@@ -345,7 +356,7 @@ class ChatController {
     this.resetTurn(true);
   }
 
-  resetConversationService() {
+    resetConversationService() {
     this.isResetting = true;
   
     // Clear any existing timeouts
