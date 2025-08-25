@@ -47,7 +47,6 @@ export const ChatBox = () => {
 
   useEffect(() => {
     if (uuid) {
-      console.log(`🎯 [ChatBox] Starting report ready listener with guest_report_id: ${uuid}`);
       startReportReadyListener(uuid);
     }
 

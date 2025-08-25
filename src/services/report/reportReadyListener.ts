@@ -29,7 +29,6 @@ async function triggerContextInjection(guestReportId: string): Promise<void> {
 // Check if report exists in report_ready_signals table
 export async function checkReportSeen(guestReportId: string): Promise<{ hasRow: boolean; seen: boolean }> {
   try {
-    console.log(`🔍 [checkReportSeen] Checking report_ready_signals for guest_report_id: ${guestReportId}`);
     const { data, error } = await supabase
       .from('report_ready_signals')
       .select('guest_report_id, seen')
@@ -268,7 +267,6 @@ function fallbackToPolling(guestReportId: string, startedAt: number): void {
 
     attempts++;
     try {
-      console.log(`🔄 [fallbackToPolling] Attempt ${attempts} - Checking report_ready_signals for guest_report_id: ${guestReportId}`);
       const { data, error } = await supabase
         .from('report_ready_signals')
         .select('guest_report_id')
@@ -368,7 +366,6 @@ async function startPollingFallback(guestReportId: string): Promise<void> {
     }
     
     try {
-      console.log(`⏱️ [startPollingFallback] Attempt ${attempts}/${maxAttempts} - Checking report_ready_signals for guest_report_id: ${guestReportId}`);
       const { data, error } = await supabase
         .from('report_ready_signals')
         .select('guest_report_id')

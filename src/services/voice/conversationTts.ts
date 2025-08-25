@@ -145,12 +145,9 @@ class ConversationTtsService {
       // Sanitize and normalize text before TTS
       const sanitizedText = this.sanitizeTtsText(text);
       const t2 = Date.now();
-      console.log(`[TTS-TIMING] 🧹 Text sanitized at ${t2}ms (t1→t2: ${t2 - t1}ms)`);
-      console.log(`[TTS-TIMING] 📝 Sanitized text: "${sanitizedText.substring(0, 50)}${sanitizedText.length > 50 ? '...' : ''}"`);
-      
+
       const selectedVoiceName = useChatStore.getState().ttsVoice || 'Puck';
       const googleVoiceCode = `en-US-Chirp3-HD-${selectedVoiceName}`;
-      console.log(`[TTS-TIMING] 🎤 Voice selected: ${googleVoiceCode}`);
 
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
@@ -158,7 +155,6 @@ class ConversationTtsService {
       };
 
       const t3 = Date.now();
-      console.log(`[TTS-TIMING] 🌐 Calling TTS edge function at ${t3}ms (t2→t3: ${t3 - t2}ms)`);
 
       const response = await fetch(`${SUPABASE_URL}/functions/v1/google-text-to-speech`, {
         method: 'POST',
@@ -190,17 +186,14 @@ class ConversationTtsService {
       audio.src = audioUrl;
       audio.muted = false; // Unmute for actual playback
       const t7 = Date.now();
-      console.log(`[TTS-TIMING] 🎵 Audio element configured at ${t7}ms (t6→t7: ${t7 - t6}ms)`);
 
       // ✅ REAL AUDIO ANALYSIS: Setup audio context and analyser
       await this.setupAudioAnalysis(audio);
       const t8 = Date.now();
-      console.log(`[TTS-TIMING] 🔊 Audio analysis setup at ${t8}ms (t7→t8: ${t8 - t7}ms)`);
 
       // Start real-time amplitude analysis
       this.startAmplitudeAnalysis();
       const t9 = Date.now();
-      console.log(`[TTS-TIMING] 📊 Amplitude analysis started at ${t9}ms (t8→t9: ${t9 - t8}ms)`);
 
       // ✅ FIRE-AND-FORGET: Set up cleanup listeners but don't wait for them
       audio.addEventListener('ended', () => {
@@ -223,8 +216,6 @@ class ConversationTtsService {
       }, { once: true });
       
       // ✅ FIRE-AND-FORGET: Start playback and return immediately
-      console.log(`[TTS-TIMING] ▶️ Starting audio playback at ${t9}ms`);
-      console.log(`[TTS-LOG] Starting audio playback. AudioContext state: ${this.audioContext?.state}`);
       audio.play().catch(error => {
         const tplayError = Date.now();
         console.error(`[TTS-TIMING] ❌ Audio play failed at ${tplayError}ms (t9→tplayError: ${tplayError - t9}ms)`);
@@ -235,8 +226,6 @@ class ConversationTtsService {
       });
       
       // Return immediately - don't wait for audio to finish
-      console.log(`[TTS-TIMING] 🚀 TTS pipeline completed (fire-and-forget) at ${t9}ms`);
-      console.log(`[TTS-TIMING] 🚀 Total setup time: ${t9 - t0}ms`);
       console.log('[ConversationTTS] TTS started successfully - returning immediately');
 
     } catch (error) {
@@ -283,7 +272,6 @@ class ConversationTtsService {
         source.disconnect();
       } else {
         // Create new MediaElementSourceNode only if none exists
-        console.log('[TTS-LOG] Creating new MediaElementSourceNode');
         source = this.audioContext.createMediaElementSource(audio);
         this.cachedMediaElementSource = source;
       }

@@ -168,17 +168,6 @@ export const MessageList = () => {
   const isPolling = useReportReadyStore((state) => state.isPolling);
   const isReportReady = useReportReadyStore((state) => state.isReportReady);
 
-  // Debug logging
-  React.useEffect(() => {
-    console.log('[MessageList] State debug:', {
-      isPolling,
-      isReportReady,
-      hasUserSentMessage,
-      messagesLength: messages.length,
-      showLoadingSequence: isPolling && !isReportReady
-    });
-  }, [isPolling, isReportReady, hasUserSentMessage, messages.length]);
-
   // Track initial message count to determine which messages are from history
   React.useEffect(() => {
     if (initialMessageCount === null && messages.length > 0) {

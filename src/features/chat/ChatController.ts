@@ -303,10 +303,6 @@ class ChatController {
         this.resetTurn(false);
       });
       
-      const t2 = Date.now();
-      console.log(`[CHAT-TIMING] 🚀 TTS call initiated (fire-and-forget) at ${t2}ms (t1→t2: ${t2 - t1}ms)`);
-      console.log(`[CHAT-TIMING] 🚀 Total ChatController TTS setup: ${t2 - t0}ms`);
-      
       // Keep speaking status active while TTS plays
       // The onComplete callback will handle resetting the turn when audio finishes
       
