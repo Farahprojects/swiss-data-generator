@@ -33,8 +33,8 @@ export const ConversationOverlay: React.FC = () => {
   const handleModalClose = () => {
     console.log('[MIC-LOG] Conversation mode closing - ensuring clean slate');
     
-    // 1. Complete audio reset for clean slate
-    conversationTtsService.resetForCleanSlate();
+    // 1. Kill all audio immediately
+    conversationTtsService.stopAllAudio();
     
     // 2. Stop microphone and clean up all resources
     chatController.resetConversationService();
@@ -137,9 +137,6 @@ export const ConversationOverlay: React.FC = () => {
       
       // Cleanup ChatController
       chatController.cleanup();
-      
-      // Complete audio reset for clean slate
-      conversationTtsService.resetForCleanSlate();
       
       // Force cleanup of microphone service to ensure clean slate
       conversationMicrophoneService.forceCleanup();

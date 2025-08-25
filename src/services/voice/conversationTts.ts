@@ -75,8 +75,6 @@ class ConversationTtsService {
 
   // Stop all audio playback and cleanup
   public stopAllAudio(): void {
-    console.log('[TTS-LOG] stopAllAudio() called - cleaning up all audio resources');
-    
     // ✅ REAL AUDIO ANALYSIS: Cleanup analyser and RAF
     if (this.rafId) {
       cancelAnimationFrame(this.rafId);
@@ -91,21 +89,11 @@ class ConversationTtsService {
       this.currentNodes = undefined;
     }
     
-    // CRITICAL: Clear cached MediaElementSourceNode to prevent InvalidStateError
+    // Clear cached MediaElementSourceNode
     if (this.cachedMediaElementSource) {
-      console.log('[TTS-LOG] Disconnecting cached MediaElementSourceNode');
       this.cachedMediaElementSource.disconnect();
       this.cachedMediaElementSource = undefined;
     }
-    
-    // Cleanup analyser
-    if (this.analyser) {
-      this.analyser.disconnect();
-      this.analyser = undefined;
-    }
-    
-    // Cleanup data array
-    this.dataArray = undefined;
     
     this.audioLevel = 0;
     this.notifyListeners();
@@ -122,36 +110,6 @@ class ConversationTtsService {
       audio.currentTime = 0;
       audio.src = '';
     });
-    
-    console.log('[TTS-LOG] All audio resources cleaned up');
-  }
-
-  // Complete reset for clean slate - call this when conversation mode closes
-  public resetForCleanSlate(): void {
-    console.log('[TTS-LOG] resetForCleanSlate() called - complete audio reset');
-    
-    // Stop all audio first
-    this.stopAllAudio();
-    
-    // Reset unlock state
-    this.isAudioUnlocked = false;
-    
-    // Close and reset AudioContext
-    if (this.audioContext && this.audioContext.state !== 'closed') {
-      this.audioContext.close().then(() => {
-        console.log('[TTS-LOG] AudioContext closed');
-      }).catch(err => {
-        console.warn('[TTS-LOG] Error closing AudioContext:', err);
-      });
-      this.audioContext = undefined;
-    }
-    
-    // Reset master audio element
-    if (this.masterAudioElement) {
-      this.masterAudioElement = null;
-    }
-    
-    console.log('[TTS-LOG] Complete audio reset complete - ready for clean slate');
   }
 
   public getCurrentAudioLevel(): number {
