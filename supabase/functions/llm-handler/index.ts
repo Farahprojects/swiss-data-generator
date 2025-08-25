@@ -189,7 +189,7 @@ Rules:
     return new Response(JSON.stringify({ 
       ...savedMessage,
       client_msg_id
-    }), {can
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
