@@ -4,6 +4,7 @@ import { useReportModal } from '@/contexts/ReportModalContext';
 import { sessionManager } from '@/utils/sessionManager';
 import { getChatTokens } from '@/services/auth/chatTokens';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
+import { SettingsButton } from '@/components/settings/SettingsButton';
 
 export const ChatSidebarControls: React.FC = () => {
   const ttsVoice = useChatStore((s) => s.ttsVoice);
@@ -80,6 +81,15 @@ export const ChatSidebarControls: React.FC = () => {
             <option value="Zephyr">Zephyr</option>
           </optgroup>
         </select>
+      </div>
+      
+      {/* Settings Button at the bottom */}
+      <div className="mt-auto pt-4">
+        <SettingsButton 
+          className="w-full justify-start" 
+          variant="outline" 
+          size="sm"
+        />
       </div>
     </div>
   );
