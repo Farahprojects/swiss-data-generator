@@ -151,6 +151,7 @@ export default function TorusListening({
   const t = time / 4000;
   const rotation = isThinking ? (time / 50) % 360 : 0;
   const scale = size / torusData.image_width;
+  const dotColor = "rgb(60, 60, 65)"; // A single, elegant dark grey color
 
   return (
     <div style={{ 
@@ -172,28 +173,21 @@ export default function TorusListening({
           aria-hidden
         >
           {dots.map((dot, idx) => {
-            // Thinking state: Calm, breathing animation
+            let opacity = 0;
+            let dotScale = 1;
+
             if (isThinking) {
               const angle = Math.atan2(dot.cy - torusData.center.y, dot.cx - torusData.center.x);
               const breathe = 0.5 + 0.5 * Math.sin(t * Math.PI * 2 + angle);
-              return (
-                <motion.circle
-                  key={idx}
-                  cx={dot.cx}
-                  cy={dot.cy}
-                  r={dot.r}
-                  fill={`rgba(150, 150, 155, ${lerp(0.1, 0.4, breathe)})`}
-                  animate={{ scale: lerp(1, 1.1, breathe) }}
-                  transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-                />
-              );
+              opacity = lerp(0.2, 0.5, breathe);
+              dotScale = lerp(1, 1.05, breathe);
+            } else { // Listening State
+              const baseDotCount = Math.floor(dots.length * 0.3);
+              const dynamicDotCount = (dots.length - baseDotCount) * energy;
+              const visibleDots = baseDotCount + dynamicDotCount;
+              opacity = idx < visibleDots ? 0.9 : 0;
+              dotScale = idx < visibleDots ? 1 + energy * 0.2 : 1;
             }
-
-            // Listening state: Reveal animation
-            const baseDotCount = Math.floor(dots.length * 0.3);
-            const dynamicDotCount = (dots.length - baseDotCount) * energy;
-            const visibleDots = baseDotCount + dynamicDotCount;
-            const isVisible = idx < visibleDots;
             
             return (
               <motion.circle
@@ -201,10 +195,10 @@ export default function TorusListening({
                 cx={dot.cx}
                 cy={dot.cy}
                 r={dot.r}
-                fill="rgba(220, 220, 225, 0.9)"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: isVisible ? 1 : 0 }}
-                transition={{ duration: 0.5, ease: 'easeOut' }}
+                fill={dotColor}
+                initial={{ opacity: 0, scale: 1 }}
+                animate={{ opacity, scale: dotScale }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
               />
             );
           })}
