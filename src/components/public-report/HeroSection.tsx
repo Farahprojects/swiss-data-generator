@@ -53,7 +53,7 @@ const HeroSection = ({ onGetReportClick }: HeroSectionProps) => {
 
   return (
     <section className="relative h-screen flex items-center justify-center bg-white overflow-hidden">
-      <div className="relative z-10 w-full px-4 container mx-auto text-center">
+      <div className="relative z-10 w-full px-4 text-center">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
