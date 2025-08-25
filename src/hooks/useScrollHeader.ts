@@ -12,7 +12,7 @@ export const useScrollHeader = () => {
       
       if (heroSection) {
         const heroBottom = heroSection.getBoundingClientRect().bottom;
-        const heroHeight = heroSection.offsetHeight;
+        const heroHeight = (heroSection as HTMLElement).offsetHeight;
         
         // Hide header when scrolling past hero section
         if (currentScrollY > heroHeight * 0.8) {

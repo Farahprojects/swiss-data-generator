@@ -29,10 +29,26 @@ serve(async (req) => {
   }
 
   try {
-    const { chat_id, userMessage } = await req.json();
+    const { chat_id, userMessage, user_id } = await req.json();
 
     if (!chat_id || !userMessage) {
       throw new Error("Missing 'chat_id' or 'userMessage' in request body.");
+    }
+
+    // If user_id is provided, update conversation activity
+    if (user_id) {
+      try {
+        await supabaseAdmin.functions.invoke('conversation-manager', {
+          body: {
+            action: 'update_conversation_activity',
+            user_id,
+            conversation_id: chat_id
+          }
+        });
+      } catch (error) {
+        console.error('[conversation-llm] Error updating conversation activity:', error);
+        // Don't fail the main request if this fails
+      }
     }
     
     // 1. Fetch the conversation history (user message already saved by STT)

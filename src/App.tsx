@@ -106,6 +106,11 @@ function App() {
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />
                   <Route path="/auth/password" element={<ResetPassword />} />
+                  <Route path="/auth" element={
+                    <Suspense fallback={<div>Loading...</div>}>
+                      {React.createElement(lazy(() => import('./pages/AuthPage').then(m => ({ default: m.AuthPage }))))}
+                    </Suspense>
+                  } />
                   
                   {/* Default authenticated route - redirect to chat */}
                   <Route 

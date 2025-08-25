@@ -23,10 +23,12 @@ export interface Message {
 
 export interface Conversation {
   id: string;
+  user_id?: string;
   guestId?: string;
   reportId?: string;
-  createdAt: string;
-  updatedAt: string;
+  title?: string;
+  created_at: string;
+  updated_at: string;
   meta?: Record<string, any>;
   messages: Message[];
 }
