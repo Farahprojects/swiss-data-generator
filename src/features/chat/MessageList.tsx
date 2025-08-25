@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 const TypewriterText = lazy(() => import('@/components/ui/TypewriterText').then(module => ({ default: module.TypewriterText })));
 
 interface Turn {
-  userMessage: Message;
+  userMessage?: Message;
   assistantMessage?: Message;
 }
 
@@ -78,16 +78,18 @@ const TurnItem = ({ turn, isLastTurn, isFromHistory }: { turn: Turn; isLastTurn:
   return (
     <div 
       className="turn" 
-      data-turn-id={userMessage.id}
+      data-turn-id={userMessage?.id || assistantMessage?.id}
     >
       {/* User Message */}
-      <div className="flex items-end gap-3 justify-end mb-4">
-        <div className="px-4 py-3 rounded-2xl max-w-[75%] bg-gray-200 text-black">
-          <p className="text-base font-light leading-relaxed text-left whitespace-pre-wrap">
-            {userMessage.text || ''}
-          </p>
+      {userMessage && (
+        <div className="flex items-end gap-3 justify-end mb-4">
+          <div className="px-4 py-3 rounded-2xl max-w-[75%] bg-gray-200 text-black">
+            <p className="text-base font-light leading-relaxed text-left whitespace-pre-wrap">
+              {userMessage.text || ''}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
       
       {/* Assistant Message */}
       {assistantMessage && (
@@ -129,7 +131,7 @@ const ReportReadyMessage = () => {
   );
 };
 
-// Helper function to group messages into turns
+// Helper function to group messages into turns (lossless)
 const groupMessagesIntoTurns = (messages: Message[]): Turn[] => {
   const turns: Turn[] = [];
   
@@ -152,6 +154,15 @@ const groupMessagesIntoTurns = (messages: Message[]): Turn[] => {
       // Skip the assistant message in the next iteration if we found one
       if (assistantMessage) {
         i++;
+      }
+    } else if (message.role === 'assistant') {
+      // Check if this assistant message was already paired with a user message
+      const lastTurn = turns[turns.length - 1];
+      if (!lastTurn || lastTurn.assistantMessage) {
+        // This is an orphaned assistant message, create a turn for it
+        turns.push({
+          assistantMessage: message
+        });
       }
     }
   }
@@ -210,15 +221,16 @@ export const MessageList = () => {
   // Determine which turns are from history
   const getIsFromHistory = (turn: Turn): boolean => {
     if (initialMessageCount === null) return false;
-    const userIndex = messages.findIndex(m => m.id === turn.userMessage.id);
-    return userIndex < initialMessageCount;
+    const messageToCheck = turn.userMessage || turn.assistantMessage;
+    if (!messageToCheck) return false;
+    const messageIndex = messages.findIndex(m => m.id === messageToCheck.id);
+    return messageIndex < initialMessageCount;
   };
 
   return (
     <div 
-      className="chat-scroll-container flex flex-col overflow-y-auto"
+      className="chat-scroll-container h-full flex flex-col overflow-y-auto"
       style={{ 
-        height: '100dvh',
         scrollBehavior: 'smooth'
       }}
       ref={containerRef}
@@ -278,10 +290,11 @@ export const MessageList = () => {
               {turns.map((turn, index) => {
                 const isFromHistory = getIsFromHistory(turn);
                 const isLastTurn = index === turns.length - 1 && !showReportReadyMessage;
+                const turnKey = turn.userMessage?.id || turn.assistantMessage?.id || `turn-${index}`;
                 
                 return (
                   <TurnItem 
-                    key={turn.userMessage.id} 
+                    key={turnKey} 
                     turn={turn}
                     isLastTurn={isLastTurn}
                     isFromHistory={isFromHistory}
@@ -300,7 +313,7 @@ export const MessageList = () => {
               )}
               
               {/* Bottom padding to prevent content from being hidden behind fixed elements */}
-              <div style={{ height: '120px' }} />
+              <div style={{ height: '80px' }} />
               
               {/* Sentinel element for auto-scroll */}
               <div ref={bottomRef} />
