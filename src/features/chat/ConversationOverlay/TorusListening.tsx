@@ -1,58 +1,42 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { motion } from 'framer-motion';
 
 type TorusListeningProps = {
   /** Set true while your app is in “listening” state (after a user gesture). */
   active: boolean;
   /** Size of the whole widget in pixels. */
   size?: number;
-  /** Number of dots per spiral arm. Total dots = dotsPerArm * 2 */
-  dotsPerArm?: number;
+  /** The path or URL to the torus image. */
+  imageUrl?: string;
 };
 
-// Helper to interpolate between two colors
-const lerpColor = (
-  c1: { r: number; g: number; b: number },
-  c2: { r: number; g: number; b: number },
-  t: number
-) => {
-  const r = c1.r + (c2.r - c1.r) * t;
-  const g = c1.g + (c2.g - c1.g) * t;
-  const b = c1.b + (c2.b - c1.b) * t;
-  return `rgb(${r.toFixed(0)}, ${g.toFixed(0)}, ${b.toFixed(0)})`;
-};
+// Manually calibrated positions to overlay dots on the torus image.
+// These percentages are { top, left }.
+const DOT_POSITIONS = [
+  { top: '50%', left: '15%' },
+  { top: '25%', left: '25%' },
+  { top: '15%', left: '50%' },
+  { top: '25%', left: '75%' },
+  { top: '50%', left: '85%' },
+  { top: '75%', left: '75%' },
+  { top: '85%', left: '50%' },
+  { top: '75%', left: '25%' },
+];
+
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 export default function TorusListening({
   active,
   size = 180,
-  dotsPerArm = 22,
+  imageUrl = "/tora.png", // Assumes tora.png is in the /public folder
 }: TorusListeningProps) {
   const [level, setLevel] = useState(0); // 0..1 smoothed audio level
-  const [time, setTime] = useState(0); // time for idle animation
+  const [time, setTime] = useState(0);
   const rafRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const dataRef = useRef<Uint8Array | null>(null);
-
-  const dots = useMemo(() => {
-    const out: { x: number; y: number; r: number; idx: number }[] = [];
-    const arms = 2;
-    const R = size * 0.40;
-    const spiralTightness = 0.12;
-    for (let arm = 0; arm < arms; arm++) {
-      for (let i = 0; i < dotsPerArm; i++) {
-        const t = i / (dotsPerArm - 1);
-        const theta = (t * Math.PI * 2) + (arm * Math.PI);
-        const inward = 1 - (t * spiralTightness);
-        const radius = R * inward;
-        const x = radius * Math.cos(theta);
-        const y = radius * Math.sin(theta);
-        const r = (size * 0.018) * (0.85 + 0.3 * (1 - t));
-        out.push({ x, y, r, idx: arm * dotsPerArm + i });
-      }
-    }
-    return out;
-  }, [size, dotsPerArm]);
 
   useEffect(() => {
     let mounted = true;
@@ -66,8 +50,8 @@ export default function TorusListening({
         const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
         const source = ctx.createMediaStreamSource(stream);
         const analyser = ctx.createAnalyser();
-        analyser.fftSize = 512;
-        analyser.smoothingTimeConstant = 0.85;
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.8;
         source.connect(analyser);
 
         streamRef.current = stream;
@@ -84,13 +68,11 @@ export default function TorusListening({
 
     function stop() {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+      if (analyserRef.current) analyserRef.current.disconnect();
+      // Let GC handle the rest
       rafRef.current = null;
-      if (analyserRef.current) {
-        try { analyserRef.current.disconnect(); } catch {}
-      }
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(t => t.stop());
-      }
+      streamRef.current = null;
       analyserRef.current = null;
       dataRef.current = null;
     }
@@ -103,30 +85,22 @@ export default function TorusListening({
         
         const analyser = analyserRef.current;
         const buf = dataRef.current;
-        let rms = 0;
         if (analyser && buf) {
           analyser.getByteTimeDomainData(buf);
           let sum = 0;
-          for (let i = 0; i < buf.length; i++) {
-            const v = (buf[i] - 128) / 128;
-            sum += v * v;
-          }
-          rms = Math.sqrt(sum / buf.length);
-          setLevel(prev => prev * 0.80 + rms * 0.20);
+          buf.forEach(v => sum += ((v - 128) / 128) ** 2);
+          const rms = Math.sqrt(sum / buf.length);
+          setLevel(prev => lerp(prev, rms, 0.2));
         } else {
-           // If no mic, decay to zero
-          setLevel(prev => prev * 0.9);
+          setLevel(prev => lerp(prev, 0, 0.1));
         }
         rafRef.current = requestAnimationFrame(tick);
       };
       tick();
     }
 
-    if (active) {
-      start();
-    } else {
-      stop();
-    }
+    if (active) start();
+    else stop();
 
     return () => {
       mounted = false;
@@ -134,19 +108,8 @@ export default function TorusListening({
     };
   }, [active]);
 
-  const view = useMemo(() => {
-    const half = size / 2;
-    return { w: size, h: size, cx: half, cy: half };
-  }, [size]);
-
-  // Animation parameters
-  const t = time / 1000;
-  const energy = Math.min(1, level * 7);
-  const idleBreathe = 0.1 + 0.1 * (Math.sin(t * 1.5) + 1);
-
-  // Colors
-  const baseColor = { r: 60, g: 60, b: 65 }; // Dark cool grey
-  const activeColor = { r: 255, g: 255, b: 255 }; // Pure white
+  const energy = Math.min(1, level * 10); // Amplify sensitivity
+  const t = time / 2000; // Slow down the idle animation timing
 
   return (
     <div
@@ -155,34 +118,44 @@ export default function TorusListening({
       style={{
         width: size,
         height: size,
-        display: "grid",
-        placeItems: "center",
+        position: 'relative',
+        backgroundImage: `url(${imageUrl})`,
+        backgroundSize: 'contain',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
       }}
     >
-      <svg width={view.w} height={view.h} viewBox={`0 0 ${view.w} ${view.h}`} aria-hidden>
-        <g transform={`translate(${view.cx} ${view.cy})`}>
-          {dots.map((d) => {
-            const wave = (Math.sin(t * 2 - d.idx * 0.4) + 1) / 2;
-            const intensity = Math.max(idleBreathe, wave * energy);
-            
-            const dotFill = lerpColor(baseColor, activeColor, intensity);
-            const dotScale = 1 + 0.3 * intensity;
+      {DOT_POSITIONS.map((pos, idx) => {
+        // Create a slow, circular wave for the idle state
+        const angle = t + idx * (Math.PI / 4);
+        const idleBreathe = 0.5 + 0.5 * Math.sin(angle);
+        
+        // Combine idle breathing with voice energy
+        const intensity = lerp(idleBreathe * 0.1, 1.0, energy);
 
-            return (
-              <circle
-                key={d.idx}
-                cx={d.x}
-                cy={d.y}
-                r={d.r * dotScale}
-                fill={dotFill}
-                style={{
-                  transition: "r 100ms ease-out, fill 100ms ease-out",
-                }}
-              />
-            );
-          })}
-        </g>
-      </svg>
+        // Animate color, size, and a subtle glow
+        const color = `rgba(255, 255, 255, ${lerp(0.3, 0.9, intensity)})`;
+        const scale = lerp(1, 1.5, intensity);
+        const dotSize = size * 0.05;
+
+        return (
+          <motion.div
+            key={idx}
+            className="absolute rounded-full"
+            style={{
+              top: pos.top,
+              left: pos.left,
+              width: dotSize,
+              height: dotSize,
+              backgroundColor: color,
+              boxShadow: `0 0 ${lerp(2, 10, intensity)}px rgba(255, 255, 255, ${lerp(0, 0.5, intensity)})`,
+              transform: 'translate(-50%, -50%)', // Center the dot
+            }}
+            animate={{ scale }}
+            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+          />
+        );
+      })}
     </div>
   );
 }
