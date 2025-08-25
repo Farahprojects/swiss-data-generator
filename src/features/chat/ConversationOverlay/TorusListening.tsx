@@ -56,6 +56,7 @@ const torusData = {
 type TorusListeningProps = {
   active: boolean;
   size?: number;
+  isThinking?: boolean;
 };
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -66,6 +67,7 @@ const lerpColor = (c1: number[], c2: number[], t: number) =>
 export default function TorusListening({
   active,
   size = 180,
+  isThinking = false,
 }: TorusListeningProps) {
   const [level, setLevel] = useState(0);
   const [time, setTime] = useState(0);
@@ -79,7 +81,11 @@ export default function TorusListening({
     let mounted = true;
 
     async function start() {
-      if (!active) return;
+      // Don't start audio processing if we're in thinking mode
+      if (!active || isThinking) {
+        loop(); // Still start the animation loop for idle animations
+        return;
+      }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         if (!mounted) { stream.getTracks().forEach(t => t.stop()); return; }
@@ -137,10 +143,11 @@ export default function TorusListening({
       mounted = false;
       stop();
     };
-  }, [active]);
+  }, [active, isThinking]);
 
-  const energy = Math.min(1, level * 10);
+  const energy = isThinking ? 0 : Math.min(1, level * 10);
   const t = time / 4000;
+  const rotation = isThinking ? (time / 50) % 360 : 0;
 
   const baseColor = [60, 60, 65];
   const activeColor = [255, 255, 255];
@@ -148,31 +155,68 @@ export default function TorusListening({
   const scale = size / torusData.image_width;
 
   return (
-    <div style={{ width: size, height: torusData.image_height * scale }}>
-      <svg
-        width={size}
-        height={torusData.image_height * scale}
-        viewBox={`0 0 ${torusData.image_width} ${torusData.image_height}`}
-        aria-hidden
+    <div style={{ 
+      width: size, 
+      height: torusData.image_height * scale,
+      position: 'relative',
+      display: 'grid',
+      placeItems: 'center',
+    }}>
+      <motion.div
+        style={{
+          width: '100%',
+          height: '100%',
+        }}
+        animate={{ rotate: rotation }}
+        transition={{ type: 'linear', duration: 12, repeat: Infinity }}
       >
-        {torusData.dots.map((dot, idx) => {
-          const angle = Math.atan2(dot.cy - torusData.center.y, dot.cx - torusData.center.x);
-          const idleBreathe = 0.5 + 0.5 * Math.sin(t * Math.PI * 2 + angle);
-          const intensity = lerp(idleBreathe * 0.1, 1.0, energy);
-          
-          return (
-            <motion.circle
-              key={idx}
-              cx={dot.cx}
-              cy={dot.cy}
-              r={dot.r}
-              fill={lerpColor(baseColor, activeColor, intensity)}
-              animate={{ scale: lerp(1, 1.3, intensity) }}
-              transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-            />
-          );
-        })}
-      </svg>
+        <svg
+          width={size}
+          height={torusData.image_height * scale}
+          viewBox={`0 0 ${torusData.image_width} ${torusData.image_height}`}
+          aria-hidden
+        >
+          {torusData.dots.map((dot, idx) => {
+            const angle = Math.atan2(dot.cy - torusData.center.y, dot.cx - torusData.center.x);
+            const idleWave = 0.5 + 0.5 * Math.sin(t * Math.PI * 2 + angle);
+            const voiceWave = Math.pow(idleWave, 4);
+            const thinkingWave = 0.5 + 0.5 * Math.sin(t * Math.PI * 4 + angle * 2);
+
+            const wave = isThinking ? thinkingWave : lerp(idleWave * 0.1, voiceWave, energy);
+            
+            return (
+              <motion.circle
+                key={idx}
+                cx={dot.cx}
+                cy={dot.cy}
+                r={dot.r}
+                fill={lerpColor(baseColor, activeColor, wave)}
+                animate={{ scale: lerp(1, 1.3, wave) }}
+                transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+              />
+            );
+          })}
+        </svg>
+      </motion.div>
+      {isThinking && (
+        <div className="absolute flex gap-2">
+          <motion.div
+            className="w-2 h-2 bg-white rounded-full"
+            animate={{ y: [0, -4, 0] }}
+            transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut", delay: 0 }}
+          />
+          <motion.div
+            className="w-2 h-2 bg-white rounded-full"
+            animate={{ y: [0, -4, 0] }}
+            transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
+          />
+          <motion.div
+            className="w-2 h-2 bg-white rounded-full"
+            animate={{ y: [0, -4, 0] }}
+            transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
+          />
+        </div>
+      )}
     </div>
   );
 }

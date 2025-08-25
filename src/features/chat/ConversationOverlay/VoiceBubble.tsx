@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { SpeakingBars } from './SpeakingBars';
-import { ThinkingCloud } from './ThinkingCloud';
 import { useTtsStreamLevel } from '@/hooks/useTtsStreamLevel';
 import TorusListening from './TorusListening';
 
@@ -19,13 +18,13 @@ export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
   }
   
   if (state === 'processing') {
-    return <ThinkingCloud />;
+    // Render the TorusListening component in its 'thinking' state
+    return <TorusListening active={true} size={128} isThinking={true} />;
   }
 
   if (state === 'listening') {
-    // The TorusListening component handles its own audio processing and animation.
-    // We just need to tell it when to be active.
-    return <TorusListening active={true} size={128} />;
+    // Render the TorusListening component in its 'listening' state
+    return <TorusListening active={true} size={128} isThinking={false} />;
   }
 
   // Fallback for 'connecting' state or any other undefined states
