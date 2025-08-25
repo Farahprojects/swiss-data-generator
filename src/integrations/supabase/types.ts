@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -644,6 +644,8 @@ export type Database = {
       guest_reports: {
         Row: {
           amount_paid: number
+          chat_id: string
+          checkout_url: string | null
           created_at: string
           email: string
           email_sent: boolean
@@ -661,6 +663,8 @@ export type Database = {
         }
         Insert: {
           amount_paid: number
+          chat_id?: string
+          checkout_url?: string | null
           created_at?: string
           email: string
           email_sent?: boolean
@@ -678,6 +682,8 @@ export type Database = {
         }
         Update: {
           amount_paid?: number
+          chat_id?: string
+          checkout_url?: string | null
           created_at?: string
           email?: string
           email_sent?: boolean
@@ -894,6 +900,68 @@ export type Database = {
         }
         Relationships: []
       }
+      messages: {
+        Row: {
+          chat_id: string
+          client_msg_id: string | null
+          context_injected: boolean | null
+          created_at: string
+          error: Json | null
+          id: string
+          latency_ms: number | null
+          meta: Json
+          model: string | null
+          reply_to_id: string | null
+          role: string
+          status: string | null
+          text: string | null
+          token_count: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          chat_id: string
+          client_msg_id?: string | null
+          context_injected?: boolean | null
+          created_at?: string
+          error?: Json | null
+          id?: string
+          latency_ms?: number | null
+          meta?: Json
+          model?: string | null
+          reply_to_id?: string | null
+          role: string
+          status?: string | null
+          text?: string | null
+          token_count?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          chat_id?: string
+          client_msg_id?: string | null
+          context_injected?: boolean | null
+          created_at?: string
+          error?: Json | null
+          id?: string
+          latency_ms?: number | null
+          meta?: Json
+          model?: string | null
+          reply_to_id?: string | null
+          role?: string
+          status?: string | null
+          text?: string | null
+          token_count?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_method: {
         Row: {
           active: boolean | null
@@ -972,42 +1040,6 @@ export type Database = {
           stripe_pid?: string | null
           ts?: string | null
           user_id?: string | null
-        }
-        Relationships: []
-      }
-      performance_timings: {
-        Row: {
-          created_at: string
-          duration_ms: number
-          end_time: string
-          guest_report_id: string | null
-          id: string
-          metadata: Json | null
-          request_id: string
-          stage: string
-          start_time: string
-        }
-        Insert: {
-          created_at?: string
-          duration_ms: number
-          end_time: string
-          guest_report_id?: string | null
-          id?: string
-          metadata?: Json | null
-          request_id: string
-          stage: string
-          start_time: string
-        }
-        Update: {
-          created_at?: string
-          duration_ms?: number
-          end_time?: string
-          guest_report_id?: string | null
-          id?: string
-          metadata?: Json | null
-          request_id?: string
-          stage?: string
-          start_time?: string
         }
         Relationships: []
       }
@@ -1191,21 +1223,21 @@ export type Database = {
           guest_report_id: string
           id: string
           is_ai_report: boolean | null
-          seen?: boolean | null
+          seen: boolean
         }
         Insert: {
           created_at?: string | null
           guest_report_id: string
           id?: string
           is_ai_report?: boolean | null
-          seen?: boolean | null
+          seen?: boolean
         }
         Update: {
           created_at?: string | null
           guest_report_id?: string
           id?: string
           is_ai_report?: boolean | null
-          seen?: boolean | null
+          seen?: boolean
         }
         Relationships: []
       }
@@ -1506,42 +1538,6 @@ export type Database = {
         }
         Relationships: []
       }
-      topup_logs_failed: {
-        Row: {
-          amount_cents: number
-          created_at: string | null
-          error_message: string | null
-          id: string
-          reviewed: boolean | null
-          status: string | null
-          stripe_customer_id: string | null
-          stripe_payment_intent_id: string | null
-          user_id: string
-        }
-        Insert: {
-          amount_cents: number
-          created_at?: string | null
-          error_message?: string | null
-          id?: string
-          reviewed?: boolean | null
-          status?: string | null
-          stripe_customer_id?: string | null
-          stripe_payment_intent_id?: string | null
-          user_id: string
-        }
-        Update: {
-          amount_cents?: number
-          created_at?: string | null
-          error_message?: string | null
-          id?: string
-          reviewed?: boolean | null
-          status?: string | null
-          stripe_customer_id?: string | null
-          stripe_payment_intent_id?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
       topup_queue: {
         Row: {
           amount_usd: number
@@ -1797,11 +1793,11 @@ export type Database = {
     Functions: {
       add_user_credits: {
         Args: {
-          _user_id: string
           _amount_usd: number
-          _type?: string
           _description?: string
           _stripe_pid?: string
+          _type?: string
+          _user_id: string
         }
         Returns: undefined
       }
@@ -1812,14 +1808,14 @@ export type Database = {
       check_report_logs_constraints: {
         Args: Record<PropertyKey, never>
         Returns: {
+          column_default: string
+          column_name: string
+          constraint_definition: string
           constraint_name: string
           constraint_type: string
-          column_name: string
           data_type: string
-          udt_name: string
           is_nullable: string
-          column_default: string
-          constraint_definition: string
+          udt_name: string
         }[]
       }
       check_user_admin_role: {
@@ -1831,7 +1827,7 @@ export type Database = {
         Returns: undefined
       }
       create_user_after_payment: {
-        Args: { user_id: string; plan_type?: string }
+        Args: { plan_type?: string; user_id: string }
         Returns: undefined
       }
       delete_user_account: {
@@ -1849,21 +1845,21 @@ export type Database = {
       get_all_users_admin: {
         Args: Record<PropertyKey, never>
         Returns: {
-          user_id: string
-          email: string
-          created_at: string
-          last_sign_in_at: string
-          email_confirmed_at: string
-          role: string
           balance_usd: number
+          created_at: string
+          email: string
+          email_confirmed_at: string
+          last_sign_in_at: string
+          role: string
+          user_id: string
         }[]
       }
       get_flow_status: {
         Args: { user_email: string }
         Returns: {
-          session_id: string
-          flow_state: string
           created_at: string
+          flow_state: string
+          session_id: string
           updated_at: string
         }[]
       }
@@ -1895,12 +1891,12 @@ export type Database = {
       }
       http_delete: {
         Args:
+          | { content: string; content_type: string; uri: string }
           | { uri: string }
-          | { uri: string; content: string; content_type: string }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
       }
       http_get: {
-        Args: { uri: string } | { uri: string; data: Json }
+        Args: { data: Json; uri: string } | { uri: string }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
       }
       http_head: {
@@ -1919,17 +1915,17 @@ export type Database = {
         }[]
       }
       http_patch: {
-        Args: { uri: string; content: string; content_type: string }
+        Args: { content: string; content_type: string; uri: string }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
       }
       http_post: {
         Args:
-          | { uri: string; content: string; content_type: string }
-          | { uri: string; data: Json }
+          | { content: string; content_type: string; uri: string }
+          | { data: Json; uri: string }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
       }
       http_put: {
-        Args: { uri: string; content: string; content_type: string }
+        Args: { content: string; content_type: string; uri: string }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
       }
       http_reset_curlopt: {
@@ -1941,17 +1937,17 @@ export type Database = {
         Returns: boolean
       }
       increment_user_balance: {
-        Args: { user_id_param: string; amount_param: number }
+        Args: { amount_param: number; user_id_param: string }
         Returns: undefined
       }
       record_api_usage: {
         Args: {
-          _user_id: string
-          _endpoint: string
           _cost_usd: number
+          _endpoint: string
+          _processing_time_ms?: number
           _request_params?: Json
           _response_status?: number
-          _processing_time_ms?: number
+          _user_id: string
         }
         Returns: string
       }
@@ -1965,8 +1961,8 @@ export type Database = {
       }
       send_notification_email: {
         Args: {
-          template_type: string
           recipient_email: string
+          template_type: string
           variables?: Json
         }
         Returns: boolean
@@ -1976,11 +1972,11 @@ export type Database = {
         Returns: string
       }
       toggle_addon: {
-        Args: { user_id_param: string; addon_name: string; enabled: boolean }
+        Args: { addon_name: string; enabled: boolean; user_id_param: string }
         Returns: undefined
       }
       upgrade_plan: {
-        Args: { user_id_param: string; new_plan: string }
+        Args: { new_plan: string; user_id_param: string }
         Returns: undefined
       }
       urlencode: {
