@@ -1,14 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from 'framer-motion';
 
-// Paste the JSON data here
 const torusData = {
   "image_width": 326,
   "image_height": 338,
-  "center": {
-    "x": 158.17504663385535,
-    "y": 173.3087183619391
-  },
+  "center": { "x": 158.175, "y": 173.308 },
   "dots": [
     { "cx": 20.745, "cy": 167.254, "r": 8.368 }, { "cx": 47.759, "cy": 161.066, "r": 7.269 },
     { "cx": 12.069, "cy": 148.853, "r": 6.746 }, { "cx": 36.502, "cy": 144.174, "r": 8.425 },
@@ -61,9 +57,6 @@ type TorusListeningProps = {
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
-const lerpColor = (c1: number[], c2: number[], t: number) => 
-  `rgb(${lerp(c1[0], c2[0], t)}, ${lerp(c1[1], c2[1], t)}, ${lerp(c1[2], c2[2], t)})`;
-
 export default function TorusListening({
   active,
   size = 180,
@@ -77,13 +70,22 @@ export default function TorusListening({
   const analyserRef = useRef<AnalyserNode | null>(null);
   const dataRef = useRef<Uint8Array | null>(null);
 
+  const dots = useMemo(() => {
+    return torusData.dots
+      .map(dot => {
+        const dx = dot.cx - torusData.center.x;
+        const dy = dot.cy - torusData.center.y;
+        return { ...dot, dist: Math.sqrt(dx * dx + dy * dy) };
+      })
+      .sort((a, b) => b.dist - a.dist);
+  }, []);
+
   useEffect(() => {
     let mounted = true;
 
     async function start() {
-      // Don't start audio processing if we're in thinking mode
       if (!active || isThinking) {
-        loop(); // Still start the animation loop for idle animations
+        loop();
         return;
       }
       try {
@@ -145,13 +147,9 @@ export default function TorusListening({
     };
   }, [active, isThinking]);
 
-  const energy = isThinking ? 0 : Math.min(1, level * 10);
+  const energy = Math.min(1, level * 10);
   const t = time / 4000;
   const rotation = isThinking ? (time / 50) % 360 : 0;
-
-  const baseColor = [60, 60, 65];
-  const activeColor = [255, 255, 255];
-
   const scale = size / torusData.image_width;
 
   return (
@@ -163,10 +161,7 @@ export default function TorusListening({
       placeItems: 'center',
     }}>
       <motion.div
-        style={{
-          width: '100%',
-          height: '100%',
-        }}
+        style={{ width: '100%', height: '100%' }}
         animate={{ rotate: rotation }}
         transition={{ type: 'linear', duration: 12, repeat: Infinity }}
       >
@@ -176,13 +171,29 @@ export default function TorusListening({
           viewBox={`0 0 ${torusData.image_width} ${torusData.image_height}`}
           aria-hidden
         >
-          {torusData.dots.map((dot, idx) => {
-            const angle = Math.atan2(dot.cy - torusData.center.y, dot.cx - torusData.center.x);
-            const idleWave = 0.5 + 0.5 * Math.sin(t * Math.PI * 2 + angle);
-            const voiceWave = Math.pow(idleWave, 4);
+          {dots.map((dot, idx) => {
+            // Thinking state: Calm, breathing animation
+            if (isThinking) {
+              const angle = Math.atan2(dot.cy - torusData.center.y, dot.cx - torusData.center.x);
+              const breathe = 0.5 + 0.5 * Math.sin(t * Math.PI * 2 + angle);
+              return (
+                <motion.circle
+                  key={idx}
+                  cx={dot.cx}
+                  cy={dot.cy}
+                  r={dot.r}
+                  fill={`rgba(150, 150, 155, ${lerp(0.1, 0.4, breathe)})`}
+                  animate={{ scale: lerp(1, 1.1, breathe) }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                />
+              );
+            }
 
-            // In thinking mode, we just want a gentle, continuous breathing effect
-            const wave = isThinking ? idleWave * 0.1 : lerp(idleWave * 0.1, voiceWave, energy);
+            // Listening state: Reveal animation
+            const baseDotCount = Math.floor(dots.length * 0.3);
+            const dynamicDotCount = (dots.length - baseDotCount) * energy;
+            const visibleDots = baseDotCount + dynamicDotCount;
+            const isVisible = idx < visibleDots;
             
             return (
               <motion.circle
@@ -190,33 +201,15 @@ export default function TorusListening({
                 cx={dot.cx}
                 cy={dot.cy}
                 r={dot.r}
-                fill={lerpColor(baseColor, activeColor, wave)}
-                animate={{ scale: lerp(1, 1.3, wave) }}
-                transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                fill="rgba(220, 220, 225, 0.9)"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: isVisible ? 1 : 0 }}
+                transition={{ duration: 0.5, ease: 'easeOut' }}
               />
             );
           })}
         </svg>
       </motion.div>
-      {isThinking && (
-        <div className="absolute flex gap-2">
-          <motion.div
-            className="w-2 h-2 bg-white rounded-full"
-            animate={{ y: [0, -4, 0] }}
-            transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut", delay: 0 }}
-          />
-          <motion.div
-            className="w-2 h-2 bg-white rounded-full"
-            animate={{ y: [0, -4, 0] }}
-            transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
-          />
-          <motion.div
-            className="w-2 h-2 bg-white rounded-full"
-            animate={{ y: [0, -4, 0] }}
-            transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
-          />
-        </div>
-      )}
     </div>
   );
 }
