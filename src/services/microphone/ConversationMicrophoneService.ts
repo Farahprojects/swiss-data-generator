@@ -53,18 +53,7 @@ export class ConversationMicrophoneServiceClass {
   /**
    * START RECORDING - Complete domain-specific recording
    */
-  async startRecording(): Promise<boolean> {
-    console.log('[MIC-LOG] ConversationMicrophoneService.startRecording() called.');
-    
-    // Check permission from arbitrator
-    if (!microphoneArbitrator.claim('conversation')) {
-      this.error('❌ Cannot start - microphone in use by another domain');
-      if (this.options.onError) {
-        this.options.onError(new Error('Microphone is busy with another feature'));
-      }
-      return false;
-    }
-
+  public async startRecording(): Promise<boolean> {
     try {
       this.log('🎤 Starting conversation recording');
       
@@ -75,21 +64,21 @@ export class ConversationMicrophoneServiceClass {
       } else {
         // Fallback: Create new stream (shouldn't happen in single-gesture flow)
         this.log('⚠️ No cached stream - falling back to getUserMedia (shouldn\'t happen)');
-        this.stream = await navigator.mediaDevices.getUserMedia({ 
+        this.stream = await navigator.mediaDevices.getUserMedia({
           audio: {
-            channelCount: 1,           // Mono for efficiency
-            echoCancellation: true,    // Clean input
-            noiseSuppression: true,    // Remove background noise
-            autoGainControl: true,     // Consistent levels
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
             sampleRate: 48000,
-          } 
+          }
         });
       }
 
-      const trackSettings = this.stream.getAudioTracks()[0]?.getSettings?.() || {};
-      console.log('[MIC-LOG] Stream ready', trackSettings);
-      this.log('🎛️ Stream acquired. Track settings:', trackSettings);
-
+      // Log stream details for debugging
+      const track = this.stream.getAudioTracks()[0];
+      const trackSettings = track.getSettings();
+      
       // SINGLE-GESTURE FLOW: Reuse AudioContext if it exists, otherwise create new
       if (!this.audioContext || this.audioContext.state === 'closed') {
         this.audioContext = new AudioContext({ sampleRate: 48000 });
@@ -155,7 +144,7 @@ export class ConversationMicrophoneServiceClass {
       this.startVoiceActivityDetection();
       
       this.notifyListeners();
-      console.log('[MIC-LOG] Recording started successfully');
+      this.log('🎙️ Recording started successfully');
       return true;
 
     } catch (error: any) {

@@ -23,7 +23,7 @@ export const ConversationOverlay: React.FC = () => {
   
   useEffect(() => {
     if (isConversationOpen) {
-      console.log('[MIC-LOG] ConversationOverlay opened. Waiting for user tap...');
+      // Conversation overlay opened
     }
   }, [isConversationOpen]);
 
@@ -31,7 +31,6 @@ export const ConversationOverlay: React.FC = () => {
 
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = () => {
-    console.log('[MIC-LOG] Conversation mode closing - ensuring clean slate');
     
     // 1. Kill all audio immediately
     conversationTtsService.stopAllAudio();
@@ -48,7 +47,6 @@ export const ConversationOverlay: React.FC = () => {
     setIsStarting(false); // Reset guard on close
     hasStarted.current = false; // Reset one-shot guard
     
-    console.log('[MIC-LOG] Conversation mode closed - clean slate ready for next session');
   };
 
   const handleStart = () => { // No longer async
@@ -62,8 +60,6 @@ export const ConversationOverlay: React.FC = () => {
     if (isStarting) return; // Prevent double taps
     setIsStarting(true);
 
-    console.log('[MIC-LOG] User tapped start. Single-gesture media init: unlocking audio and requesting microphone...');
-    
     // Set flags immediately for instant UI feedback
     setPermissionGranted(true);
     
@@ -85,7 +81,6 @@ export const ConversationOverlay: React.FC = () => {
         } 
       })
       .then(stream => {
-        console.log('[MIC-LOG] getUserMedia resolved within gesture - caching stream for session reuse');
         
         // Cache the stream for reuse across all turns in this session
         conversationMicrophoneService.cacheStream(stream);

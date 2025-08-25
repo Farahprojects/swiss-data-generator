@@ -160,8 +160,7 @@ class ChatController {
     this.conversationServiceInitialized = true;
   }
 
-  public unlock() {
-    console.log('[MIC-LOG] ChatController unlocked by user gesture.');
+  public unlock(): void {
     this.isUnlocked = true;
   }
 
@@ -172,7 +171,6 @@ class ChatController {
       return;
     }
 
-    console.log('[MIC-LOG] ChatController.startTurn() called.');
     if (this.isTurnActive) return;
     this.isTurnActive = true;
     
@@ -196,7 +194,6 @@ class ChatController {
         this.isTurnActive = false;
         throw new Error('Failed to start microphone');
       }
-      console.log('[MIC-LOG] Microphone started successfully');
       // Reset auto-recovery on successful start
       // conversationFlowMonitor.resetAutoRecovery();
     } catch (error: any) {

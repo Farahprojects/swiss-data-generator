@@ -39,7 +39,6 @@ class ConversationTtsService {
         const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
         if (AudioContextClass) {
           this.audioContext = new AudioContextClass();
-          console.log('[TTS-LOG] AudioContext created.');
         } else {
           console.warn('[TTS-LOG] AudioContext not supported.');
           return;
@@ -62,12 +61,10 @@ class ConversationTtsService {
           // This catch is to prevent unhandled promise rejection warnings.
         });
         
-        console.log('[TTS-LOG] Master audio element created and primed.');
       }
       
       // Set the flag synchronously. From this point on, audio is considered unlocked.
       this.isAudioUnlocked = true;
-      console.log(`[TTS-LOG] Audio systems unlocked. AudioContext state: ${this.audioContext.state}`);
       
     } catch (error) {
       console.error('[TTS-LOG] Error unlocking audio:', error);
