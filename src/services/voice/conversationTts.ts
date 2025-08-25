@@ -127,92 +127,78 @@ class ConversationTtsService {
   }
 
   async speakAssistant({ chat_id, messageId, text, sessionId }: SpeakAssistantOptions): Promise<void> {
-    
-    return new Promise(async (resolve, reject) => {
-      try {
-        
-        // Ensure audio is unlocked before proceeding
-        if (!this.isAudioUnlocked || !this.masterAudioElement) {
-          throw new Error('Audio is not unlocked. A user gesture is required before TTS can play.');
-        }
-
-        // Sanitize and normalize text before TTS
-        const sanitizedText = this.sanitizeTtsText(text);
-        const selectedVoiceName = useChatStore.getState().ttsVoice || 'Puck';
-        const googleVoiceCode = `en-US-Chirp3-HD-${selectedVoiceName}`;
-
-        const headers: HeadersInit = {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_PUBLISHABLE_KEY,
-        };
-
-
-
-        const response = await fetch(`${SUPABASE_URL}/functions/v1/google-text-to-speech`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ chat_id, text: sanitizedText, voice: googleVoiceCode, sessionId: sessionId || null })
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('[ConversationTTS] TTS function error:', response.status, errorText);
-          throw new Error(`TTS failed: ${response.status} - ${errorText}`);
-        }
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('[ConversationTTS] TTS function error:', response.status, errorText);
-          throw new Error(`TTS failed: ${response.status} - ${errorText}`);
-        }
-
-        // ✅ SIMPLIFIED: Direct blob to audio with minimal setup
-        const blob = await response.blob();
-        
-        const audioUrl = URL.createObjectURL(blob);
-        // ✅ REUSE MASTER AUDIO ELEMENT: Instead of creating a new one
-        const audio = this.masterAudioElement;
-        audio.src = audioUrl;
-        audio.muted = false; // Unmute for actual playback
-
-        // ✅ REAL AUDIO ANALYSIS: Setup audio context and analyser
-        await this.setupAudioAnalysis(audio);
-
-        // Start real-time amplitude analysis
-        this.startAmplitudeAnalysis();
-
-        // ✅ REAL AUDIO ANALYSIS: Event listeners with cleanup (prevent accumulation)
-        audio.addEventListener('ended', () => {
-          this.cleanupAnalysis();
-          URL.revokeObjectURL(audioUrl);
-          resolve();
-        }, { once: true });
-        
-        audio.addEventListener('error', (error) => {
-          console.error('[ConversationTTS] Audio playback error:', error);
-          this.cleanupAnalysis();
-          URL.revokeObjectURL(audioUrl);
-          reject(error);
-        }, { once: true });
-        
-        // ✅ SIMPLIFIED: Play immediately without load() call
-        console.log(`[TTS-LOG] About to play audio. AudioContext state: ${this.audioContext?.state}`);
-        try {
-          await audio.play();
-          console.log('[TTS-LOG] audio.play() promise resolved successfully.');
-        } catch (error) {
-          console.error('[TTS-LOG] audio.play() promise rejected with error:', error);
-          this.cleanupAnalysis();
-          URL.revokeObjectURL(audioUrl);
-          reject(error);
-          return;
-        }
-        
-      } catch (error) {
-        console.error('[ConversationTTS] speakAssistant failed:', error);
-        reject(error);
+    try {
+      
+      // Ensure audio is unlocked before proceeding
+      if (!this.isAudioUnlocked || !this.masterAudioElement) {
+        throw new Error('Audio is not unlocked. A user gesture is required before TTS can play.');
       }
-    });
+
+      // Sanitize and normalize text before TTS
+      const sanitizedText = this.sanitizeTtsText(text);
+      const selectedVoiceName = useChatStore.getState().ttsVoice || 'Puck';
+      const googleVoiceCode = `en-US-Chirp3-HD-${selectedVoiceName}`;
+
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_PUBLISHABLE_KEY,
+      };
+
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/google-text-to-speech`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ chat_id, text: sanitizedText, voice: googleVoiceCode, sessionId: sessionId || null })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[ConversationTTS] TTS function error:', response.status, errorText);
+        throw new Error(`TTS failed: ${response.status} - ${errorText}`);
+      }
+
+      // ✅ SIMPLIFIED: Direct blob to audio with minimal setup
+      const blob = await response.blob();
+      
+      const audioUrl = URL.createObjectURL(blob);
+      // ✅ REUSE MASTER AUDIO ELEMENT: Instead of creating a new one
+      const audio = this.masterAudioElement;
+      audio.src = audioUrl;
+      audio.muted = false; // Unmute for actual playback
+
+      // ✅ REAL AUDIO ANALYSIS: Setup audio context and analyser
+      await this.setupAudioAnalysis(audio);
+
+      // Start real-time amplitude analysis
+      this.startAmplitudeAnalysis();
+
+      // ✅ FIRE-AND-FORGET: Set up cleanup listeners but don't wait for them
+      audio.addEventListener('ended', () => {
+        this.cleanupAnalysis();
+        URL.revokeObjectURL(audioUrl);
+        console.log('[ConversationTTS] Audio playback completed');
+      }, { once: true });
+      
+      audio.addEventListener('error', (error) => {
+        console.error('[ConversationTTS] Audio playback error:', error);
+        this.cleanupAnalysis();
+        URL.revokeObjectURL(audioUrl);
+      }, { once: true });
+      
+      // ✅ FIRE-AND-FORGET: Start playback and return immediately
+      console.log(`[TTS-LOG] Starting audio playback. AudioContext state: ${this.audioContext?.state}`);
+      audio.play().catch(error => {
+        console.error('[TTS-LOG] Audio play failed:', error);
+        this.cleanupAnalysis();
+        URL.revokeObjectURL(audioUrl);
+      });
+      
+      // Return immediately - don't wait for audio to finish
+      console.log('[ConversationTTS] TTS started successfully - returning immediately');
+      
+    } catch (error) {
+      console.error('[ConversationTTS] speakAssistant failed:', error);
+      throw error;
+    }
   }
 
   // ✅ REAL AUDIO ANALYSIS: Setup audio context and analyser

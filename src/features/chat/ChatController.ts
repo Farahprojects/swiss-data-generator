@@ -273,23 +273,20 @@ class ChatController {
       useChatStore.getState().setStatus('speaking');
       // conversationFlowMonitor.observeStep('speaking');
       
-      try {
-        await conversationTtsService.speakAssistant({
-          chat_id,
-          messageId: assistantMessage.id,
-          text: assistantMessage.text,
-          sessionId: this.sessionId || null
-        });
-        
-        // TTS completion callback
-        if (this.isResetting) return;
-        this.resetTurn(false); // Restart turn after speaking
-        
-      } catch (error) {
-        console.warn(`[ChatController] TTS failed: ${error}. Moving on without audio.`);
-        // Remove fallback - just move on without audio
-        this.resetTurn(false); // Restart turn after speaking (without audio)
-      }
+      // FIRE-AND-FORGET TTS: Start TTS and immediately continue
+      conversationTtsService.speakAssistant({
+        chat_id,
+        messageId: assistantMessage.id,
+        text: assistantMessage.text,
+        sessionId: this.sessionId || null
+      }).catch(error => {
+        // Log TTS errors but don't block conversation flow
+        console.warn(`[ChatController] TTS failed: ${error}. Continuing without audio.`);
+      });
+      
+      // Immediately reset turn without waiting for TTS completion
+      if (this.isResetting) return;
+      this.resetTurn(false); // Restart turn immediately after starting TTS
       
     } else {
       console.warn('[ChatController] Could not play audio. Missing text or messageId.');
