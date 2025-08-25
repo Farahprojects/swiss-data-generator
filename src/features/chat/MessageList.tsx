@@ -13,6 +13,55 @@ interface Turn {
   assistantMessage?: Message;
 }
 
+// Loading sequence messages for report generation
+const LOADING_MESSAGES = [
+  "Getting Astro data...",
+  "Triangulating Starlink...",
+  "Calculating planetary positions...",
+  "Analyzing cosmic patterns...",
+  "AI generating insights...",
+  "Finalizing your report..."
+];
+
+// Loading sequence component
+const ReportLoadingSequence = () => {
+  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
+  const [isComplete, setIsComplete] = useState(false);
+
+  React.useEffect(() => {
+    if (isComplete) return;
+
+    const interval = setInterval(() => {
+      setCurrentMessageIndex(prev => {
+        if (prev < LOADING_MESSAGES.length - 1) {
+          return prev + 1;
+        } else {
+          setIsComplete(true);
+          return prev;
+        }
+      });
+    }, 1500); // Change message every 1.5 seconds
+
+    return () => clearInterval(interval);
+  }, [isComplete]);
+
+  if (isComplete) return null;
+
+  return (
+    <div className="flex items-end gap-3 justify-start mb-8">
+      <div 
+        className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black"
+        style={{ overflowAnchor: 'none' }}
+      >
+        <div className="flex items-center gap-3 text-base font-light leading-relaxed">
+          <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+          <span className="text-gray-700">{LOADING_MESSAGES[currentMessageIndex]}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const TurnItem = ({ turn, isLastTurn, isFromHistory }: { turn: Turn; isLastTurn: boolean; isFromHistory?: boolean }) => {
   const { userMessage, assistantMessage } = turn;
   
@@ -136,6 +185,9 @@ export const MessageList = () => {
     onContentChange();
   }, [messages.length, onContentChange]);
 
+  // Show loading sequence when polling is active and report is not ready yet
+  const showLoadingSequence = isPolling && !isReportReady && !hasUserSentMessage;
+  
   // Show report ready message when report is ready and user hasn't sent a message yet
   const showReportReadyMessage = isReportReady && !hasUserSentMessage;
   
@@ -180,6 +232,11 @@ export const MessageList = () => {
               />
             );
           })}
+          
+          {/* Show loading sequence when report is being generated */}
+          {showLoadingSequence && (
+            <ReportLoadingSequence />
+          )}
           
           {/* Show report ready message when report is ready and user hasn't sent a message yet */}
           {showReportReadyMessage && (
