@@ -66,10 +66,9 @@ export const useConversationMicrophone = (options: ConversationMicrophoneOptions
     return success;
   }, [toast]);
 
-  const stopRecording = useCallback(async (): Promise<Blob | null> => {
+  const stopRecording = useCallback((): void => {
     try {
-      const audioBlob = await conversationMicrophoneService.stopRecording();
-      return audioBlob;
+      conversationMicrophoneService.stopRecording();
     } catch (error) {
       console.error('[useConversationMicrophone] Stop recording failed:', error);
       toast({
@@ -77,7 +76,6 @@ export const useConversationMicrophone = (options: ConversationMicrophoneOptions
         description: "Failed to stop recording properly",
         variant: "destructive",
       });
-      return null;
     }
   }, [toast]);
 

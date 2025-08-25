@@ -25,6 +25,7 @@ export class ConversationTtsServiceClass {
   private audioElementId: string | null = null;
   private playbackUnlocked = false;
   private micGranted = false;
+  private dataArray: Float32Array | null = null;
 
   private generateId(prefix: string): string {
     return `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
