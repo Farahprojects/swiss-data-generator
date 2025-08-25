@@ -1,11 +1,14 @@
 
 import React from 'react';
-import { UseFormReturn } from 'react-hook-form';
+import { UseFormReturn, Controller } from 'react-hook-form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CleanPlaceAutocomplete } from '@/components/shared/forms/place-input/CleanPlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
+import useIsDesktop from '@/hooks/useIsDesktop';
+import CustomDateInput from './custom-inputs/CustomDateInput';
+import CustomTimeInput from './custom-inputs/CustomTimeInput';
 
 interface PublicReportFormProps {
   form: UseFormReturn<any>;
@@ -13,7 +16,8 @@ interface PublicReportFormProps {
 }
 
 const PublicReportForm = ({ form, reportType }: PublicReportFormProps) => {
-  const { register, setValue, formState: { errors }, watch } = form;
+  const { register, setValue, formState: { errors }, watch, control } = form;
+  const isDesktop = useIsDesktop();
   
   const request = watch('request');
   const isCompatibilityReport = reportType === 'compatibility' || reportType === 'sync' || request === 'sync';
@@ -63,23 +67,39 @@ const PublicReportForm = ({ form, reportType }: PublicReportFormProps) => {
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="birthDate">Birth Date *</Label>
-              <Input
-                id="birthDate"
-                type="date"
-                {...register('birthDate')}
-              />
+              {isDesktop ? (
+                <Controller
+                  name="birthDate"
+                  control={control}
+                  render={({ field }) => <CustomDateInput {...field} />}
+                />
+              ) : (
+                <Input
+                  id="birthDate"
+                  type="date"
+                  {...register('birthDate')}
+                />
+              )}
               {errors.birthDate && (
                 <p className="text-sm text-destructive">{errors.birthDate.message as string}</p>
               )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="birthTime">Birth Time *</Label>
-              <Input
-                id="birthTime"
-                type="time"
-                {...register('birthTime')}
-                step="60"
-              />
+              {isDesktop ? (
+                <Controller
+                  name="birthTime"
+                  control={control}
+                  render={({ field }) => <CustomTimeInput {...field} />}
+                />
+              ) : (
+                <Input
+                  id="birthTime"
+                  type="time"
+                  {...register('birthTime')}
+                  step="60"
+                />
+              )}
               {errors.birthTime && (
                 <p className="text-sm text-destructive">{errors.birthTime.message as string}</p>
               )}
