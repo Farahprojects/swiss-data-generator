@@ -171,6 +171,17 @@ export const MessageList = () => {
   const isPolling = useReportReadyStore((state) => state.isPolling);
   const isReportReady = useReportReadyStore((state) => state.isReportReady);
 
+  // Debug logging
+  React.useEffect(() => {
+    console.log('[MessageList] State debug:', {
+      isPolling,
+      isReportReady,
+      hasUserSentMessage,
+      messagesLength: messages.length,
+      showLoadingSequence: isPolling && !isReportReady
+    });
+  }, [isPolling, isReportReady, hasUserSentMessage, messages.length]);
+
   // Track initial message count to determine which messages are from history
   React.useEffect(() => {
     if (initialMessageCount === null && messages.length > 0) {
@@ -191,8 +202,12 @@ export const MessageList = () => {
     onContentChange();
   }, [messages.length, onContentChange]);
 
-  // Show loading sequence when polling is active and report is not ready yet
-  const showLoadingSequence = isPolling && !isReportReady && !hasUserSentMessage;
+  // Simplified logic: Show loading sequence when polling is active and report is not ready
+  // Remove the hasUserSentMessage condition to ensure it always shows
+  const showLoadingSequence = isPolling && !isReportReady;
+  
+  // Fallback: Also show loading sequence if we're in chat but no messages and not ready
+  const showLoadingFallback = messages.length === 0 && !isReportReady && !hasUserSentMessage;
   
   // Show report ready message when report is ready and user hasn't sent a message yet
   const showReportReadyMessage = isReportReady && !hasUserSentMessage;
@@ -217,7 +232,7 @@ export const MessageList = () => {
       ref={containerRef}
       id="chat-scroll-container"
     >
-      {messages.length === 0 && !showReportReadyMessage ? (
+      {messages.length === 0 && !showReportReadyMessage && !showLoadingSequence && !showLoadingFallback ? (
         <div className="flex-1 flex flex-col justify-end">
           <div className="p-4">
             <h2 className="text-3xl font-light text-gray-800 text-left">Let's tune into the energy behind your chart</h2>
@@ -239,8 +254,8 @@ export const MessageList = () => {
             );
           })}
           
-          {/* Show loading sequence when report is being generated */}
-          {showLoadingSequence && (
+          {/* Show loading sequence when report is being generated - simplified condition */}
+          {(showLoadingSequence || showLoadingFallback) && (
             <ReportLoadingSequence />
           )}
           

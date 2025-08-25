@@ -20,6 +20,7 @@ import { ReportModalProvider } from '@/contexts/ReportModalContext';
 import { CancelNudgeModal } from '@/components/public-report/CancelNudgeModal';
 import { shouldShowCancelNudge } from '@/utils/cancelNudgeStorage';
 import UnifiedNavigation from '../components/UnifiedNavigation';
+import { useScrollHeader } from '@/hooks/useScrollHeader';
 
 const PublicReport = () => {
   const location = useLocation();
@@ -75,7 +76,7 @@ const PublicReport = () => {
   const reportFormRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const [showUnlockFab, setShowUnlockFab] = useState(false);
-  const [showHeader, setShowHeader] = useState(true);
+  const { isHeaderVisible, isScrolled } = useScrollHeader();
 
   // Check for cancelled payment status
   useEffect(() => {
@@ -110,18 +111,7 @@ const PublicReport = () => {
     };
   }, [isMobile]);
 
-  // Observe hero visibility to fade header in/out
-  useEffect(() => {
-    const target = heroRef.current;
-    if (!target) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      setShowHeader(entry.isIntersecting);
-    }, { threshold: 0.1 });
-    observer.observe(target);
-    return () => {
-      try { observer.disconnect(); } catch {}
-    };
-  }, []);
+
 
   const handleDismissCancelMessage = () => {
     setShowCancelledMessage(false);
@@ -136,7 +126,7 @@ const PublicReport = () => {
       <PricingProvider>
         <div className="min-h-screen bg-background">
             {/* Fixed Navigation Header */}
-            <UnifiedNavigation />
+            <UnifiedNavigation isVisible={isHeaderVisible} isScrolled={isScrolled} />
             
             {/* Add top spacing to prevent content overlap */}
             <div className="pt-16">
@@ -172,7 +162,7 @@ const PublicReport = () => {
                 onClose={() => setShowCancelNudge(false)}
               />
               
-              <div ref={heroRef}>
+              <div ref={heroRef} data-hero-section>
                 <HeroSection onGetReportClick={handleGetReportClick} />
               </div>
             </div>

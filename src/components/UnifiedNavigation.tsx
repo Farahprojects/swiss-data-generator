@@ -41,7 +41,10 @@ interface NavMessageMenuProps {
   onFilterChange?: (filter: MessageFilterType) => void;
 }
 
-interface UnifiedNavigationProps extends NavMessageMenuProps, WebsiteBuilderMenuProps {}
+interface UnifiedNavigationProps extends NavMessageMenuProps, WebsiteBuilderMenuProps {
+  isVisible?: boolean;
+  isScrolled?: boolean;
+}
 
 const UnifiedNavigation = ({
   isMessagesPageMobile,
@@ -53,6 +56,8 @@ const UnifiedNavigation = ({
   onChangeTemplate,
   onPublish,
   isPublishing,
+  isVisible = true,
+  isScrolled = false,
 }: UnifiedNavigationProps = {}) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -141,7 +146,11 @@ const UnifiedNavigation = ({
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 w-full h-16 bg-white z-50 shadow-sm border-b">
+      <nav className={`fixed top-0 left-0 right-0 w-full h-16 bg-white z-50 shadow-sm border-b transition-all duration-300 ease-in-out ${
+        isVisible 
+          ? 'translate-y-0 opacity-100' 
+          : '-translate-y-full opacity-0'
+      } ${isScrolled ? 'shadow-md' : 'shadow-sm'}`}>
         <div className={navWrapperClass}>
           <div className="flex justify-between items-center h-full">
             {/* Left section */}
