@@ -28,6 +28,27 @@ export const ConversationOverlay: React.FC = () => {
     }
   }, [isConversationOpen]);
 
+  // Hide permission hint when stream is actually acquired
+  useEffect(() => {
+    if (showPermissionHint) {
+      const checkStream = () => {
+        const hasStream = conversationMicrophoneService.getState().hasStream;
+        if (hasStream) {
+          console.log('[MIC-LOG] Stream acquired - hiding permission hint');
+          setShowPermissionHint(false);
+        }
+      };
+      
+      // Check immediately
+      checkStream();
+      
+      // Set up interval to check periodically
+      const interval = setInterval(checkStream, 500);
+      
+      return () => clearInterval(interval);
+    }
+  }, [showPermissionHint]);
+
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = () => {
     // 1. Kill all audio immediately
@@ -83,6 +104,9 @@ export const ConversationOverlay: React.FC = () => {
         // Cache the stream for reuse across all turns in this session
         conversationMicrophoneService.cacheStream(stream);
         
+        // Hide permission hint immediately since we now have the stream
+        setShowPermissionHint(false);
+        
         // Now start the first turn with the cached stream
         chatController.startTurn().catch(error => {
           console.error('[MIC-LOG] Failed to start turn after mic permission:', error);
@@ -99,16 +123,16 @@ export const ConversationOverlay: React.FC = () => {
         hasStarted.current = false;
       });
 
-      // Watchdog timer to detect silent failures
+      // Watchdog timer to detect silent failures - increased timeout for Safari permission dialog
       setTimeout(() => {
         const status = useChatStore.getState().status;
         const hasStream = conversationMicrophoneService.getState().hasStream;
         
         if (status !== 'recording' && !hasStream) {
-          console.warn('[MIC-LOG] Watchdog: No recording status or stream after 1.5s, showing hint.');
+          console.warn('[MIC-LOG] Watchdog: No recording status or stream after 5s, showing hint.');
           setShowPermissionHint(true);
         }
-      }, 1500);
+      }, 5000); // Increased from 1.5s to 5s to give users time to respond to Safari dialog
 
     } else {
       console.error("[ConversationOverlay] Cannot start conversation without a chat_id");
