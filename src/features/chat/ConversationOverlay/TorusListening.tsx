@@ -7,49 +7,53 @@ type TorusListeningProps = {
   size?: number;
   /** Number of dots per spiral arm. Total dots = dotsPerArm * 2 */
   dotsPerArm?: number;
-  /** Base color when quiet. */
-  baseColor?: string; // e.g. "#111"
+};
+
+// Helper to interpolate between two colors
+const lerpColor = (
+  c1: { r: number; g: number; b: number },
+  c2: { r: number; g: number; b: number },
+  t: number
+) => {
+  const r = c1.r + (c2.r - c1.r) * t;
+  const g = c1.g + (c2.g - c1.g) * t;
+  const b = c1.b + (c2.b - c1.b) * t;
+  return `rgb(${r.toFixed(0)}, ${g.toFixed(0)}, ${b.toFixed(0)})`;
 };
 
 export default function TorusListening({
   active,
   size = 180,
   dotsPerArm = 22,
-  baseColor = "#111",
 }: TorusListeningProps) {
-  const [level, setLevel] = useState(0); // 0..1 approx loudness
-  const [rot, setRot] = useState(0);     // rotation degrees
+  const [level, setLevel] = useState(0); // 0..1 smoothed audio level
+  const [time, setTime] = useState(0); // time for idle animation
   const rafRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const dataRef = useRef<Uint8Array | null>(null);
 
-  // Build dot positions for a 2-arm dotted torus look
   const dots = useMemo(() => {
-    const out: { x: number; y: number; r: number; arm: number; idx: number }[] = [];
+    const out: { x: number; y: number; r: number; idx: number }[] = [];
     const arms = 2;
-    const total = dotsPerArm * arms;
-    // Outer radius and subtle inward spiral
     const R = size * 0.40;
-    const spiralTightness = 0.12; // tweak for the “swirl”
+    const spiralTightness = 0.12;
     for (let arm = 0; arm < arms; arm++) {
       for (let i = 0; i < dotsPerArm; i++) {
-        const t = i / (dotsPerArm - 1);              // 0..1 along the arm
-        const theta = (t * Math.PI * 2) + (arm * Math.PI); // offset arm by pi
-        const inward = 1 - (t * spiralTightness);    // gently move inward
+        const t = i / (dotsPerArm - 1);
+        const theta = (t * Math.PI * 2) + (arm * Math.PI);
+        const inward = 1 - (t * spiralTightness);
         const radius = R * inward;
         const x = radius * Math.cos(theta);
         const y = radius * Math.sin(theta);
-        // Slight size falloff to mimic your reference
         const r = (size * 0.018) * (0.85 + 0.3 * (1 - t));
-        out.push({ x, y, r, arm, idx: arm * dotsPerArm + i });
+        out.push({ x, y, r, idx: arm * dotsPerArm + i });
       }
     }
     return out;
   }, [size, dotsPerArm]);
 
-  // Audio setup/teardown tied to `active`
   useEffect(() => {
     let mounted = true;
 
@@ -64,7 +68,6 @@ export default function TorusListening({
         const analyser = ctx.createAnalyser();
         analyser.fftSize = 512;
         analyser.smoothingTimeConstant = 0.85;
-
         source.connect(analyser);
 
         streamRef.current = stream;
@@ -74,23 +77,19 @@ export default function TorusListening({
 
         loop();
       } catch (e) {
-        // If mic is blocked/denied, just idle-animate (no crash)
         console.warn("Mic unavailable:", e);
-        loop(); // still rotate without audio
+        loop(); 
       }
     }
 
     function stop() {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
-      if (analyserRef.current && audioCtxRef.current) {
+      if (analyserRef.current) {
         try { analyserRef.current.disconnect(); } catch {}
       }
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(t => t.stop());
-      }
-      if (audioCtxRef.current) {
-        // Don't close immediately; some browsers dislike it. Just leave for GC.
       }
       analyserRef.current = null;
       dataRef.current = null;
@@ -98,58 +97,56 @@ export default function TorusListening({
 
     function loop() {
       const tick = () => {
-        // Rotate continuously when active, slower when idle
-        setRot(prev => (prev + (active ? 0.7 : 0.25)) % 360);
-
-        // Update mic level if we have audio
+        if (!mounted) return;
+        
+        setTime(performance.now());
+        
         const analyser = analyserRef.current;
         const buf = dataRef.current;
+        let rms = 0;
         if (analyser && buf) {
           analyser.getByteTimeDomainData(buf);
-          // Compute RMS
           let sum = 0;
           for (let i = 0; i < buf.length; i++) {
-            const v = (buf[i] - 128) / 128; // -1..1
+            const v = (buf[i] - 128) / 128;
             sum += v * v;
           }
-          const rms = Math.sqrt(sum / buf.length); // ~0..1
-          // Ease to reduce jitter
+          rms = Math.sqrt(sum / buf.length);
           setLevel(prev => prev * 0.80 + rms * 0.20);
         } else {
-          // No mic: gently breathe
-          const t = performance.now() / 1000;
-          const faux = (Math.sin(t * 2) + 1) / 10; // ~0..0.2
-          setLevel(prev => prev * 0.9 + faux * 0.1);
+           // If no mic, decay to zero
+          setLevel(prev => prev * 0.9);
         }
         rafRef.current = requestAnimationFrame(tick);
       };
       tick();
     }
 
-    start();
+    if (active) {
+      start();
+    } else {
+      stop();
+    }
+
     return () => {
       mounted = false;
       stop();
     };
   }, [active]);
 
-  // Map loudness to a subtle color & size change
-  // level ~ 0..1 → hue shift & lightness bump
-  const hueBase = 220; // deep blue-violet base to fit your brand vibe
-  const hueDelta = 18; // subtle hue travel on speech
-  const lightnessBase = 16; // dark when idle
-  const lightnessBoost = Math.min(26, 10 + Math.round(level * 100) / 2); // brighten on voice
-  const hue = hueBase + level * hueDelta;
-  const fillQuiet = baseColor; // when truly idle
-  const fillTalk = `hsl(${hue}deg 90% ${lightnessBase + lightnessBoost}%)`;
-
-  const dotFill = active ? fillTalk : fillQuiet;
-  const scaleTalk = 1 + Math.min(0.25, level * 0.6); // gentle pop on voice
-
   const view = useMemo(() => {
     const half = size / 2;
     return { w: size, h: size, cx: half, cy: half };
   }, [size]);
+
+  // Animation parameters
+  const t = time / 1000;
+  const energy = Math.min(1, level * 7);
+  const idleBreathe = 0.1 + 0.1 * (Math.sin(t * 1.5) + 1);
+
+  // Colors
+  const baseColor = { r: 60, g: 60, b: 65 }; // Dark cool grey
+  const activeColor = { r: 255, g: 255, b: 255 }; // Pure white
 
   return (
     <div
@@ -160,39 +157,26 @@ export default function TorusListening({
         height: size,
         display: "grid",
         placeItems: "center",
-        transform: `rotate(${rot}deg)`,
-        transition: "transform 80ms linear",
-        willChange: "transform",
-        userSelect: "none",
       }}
     >
       <svg width={view.w} height={view.h} viewBox={`0 0 ${view.w} ${view.h}`} aria-hidden>
-        {/* optional subtle glow when speaking */}
-        {active && (
-          <circle
-            cx={view.cx}
-            cy={view.cy}
-            r={size * 0.44}
-            fill="none"
-            stroke={`hsl(${hue}deg 100% 58% / 0.08)`}
-            strokeWidth={size * 0.06}
-          />
-        )}
-
         <g transform={`translate(${view.cx} ${view.cy})`}>
           {dots.map((d) => {
-            // Arm-based phase so the two spirals breathe a touch differently
-            const armPhase = d.arm === 0 ? 0 : Math.PI;
-            const s = active ? scaleTalk * (1 + 0.06 * Math.sin((performance.now() / 300) + armPhase + d.idx * 0.12)) : 1;
+            const wave = (Math.sin(t * 2 - d.idx * 0.4) + 1) / 2;
+            const intensity = Math.max(idleBreathe, wave * energy);
+            
+            const dotFill = lerpColor(baseColor, activeColor, intensity);
+            const dotScale = 1 + 0.3 * intensity;
+
             return (
               <circle
                 key={d.idx}
                 cx={d.x}
                 cy={d.y}
-                r={d.r * s}
+                r={d.r * dotScale}
                 fill={dotFill}
                 style={{
-                  transition: "r 120ms ease, fill 120ms ease",
+                  transition: "r 100ms ease-out, fill 100ms ease-out",
                 }}
               />
             );
