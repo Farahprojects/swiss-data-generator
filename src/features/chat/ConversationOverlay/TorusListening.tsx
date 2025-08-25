@@ -1,36 +1,73 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from 'framer-motion';
 
-type TorusListeningProps = {
-  /** Set true while your app is in “listening” state (after a user gesture). */
-  active: boolean;
-  /** Size of the whole widget in pixels. */
-  size?: number;
-  /** The path or URL to the torus image. */
-  imageUrl?: string;
+// Paste the JSON data here
+const torusData = {
+  "image_width": 326,
+  "image_height": 338,
+  "center": {
+    "x": 158.17504663385535,
+    "y": 173.3087183619391
+  },
+  "dots": [
+    { "cx": 20.745, "cy": 167.254, "r": 8.368 }, { "cx": 47.759, "cy": 161.066, "r": 7.269 },
+    { "cx": 12.069, "cy": 148.853, "r": 6.746 }, { "cx": 36.502, "cy": 144.174, "r": 8.425 },
+    { "cx": 29.337, "cy": 125.054, "r": 8.406 }, { "cx": 56.923, "cy": 127.748, "r": 7.377 },
+    { "cx": 26.841, "cy": 104.820, "r": 6.793 }, { "cx": 51.3, "cy": 108.034, "r": 8.556 },
+    { "cx": 50.5, "cy": 87.629, "r": 8.291 }, { "cx": 75.921, "cy": 98.536, "r": 7.269 },
+    { "cx": 54.5, "cy": 67.533, "r": 6.909 }, { "cx": 76.911, "cy": 78.368, "r": 8.462 },
+    { "cx": 82.457, "cy": 58.565, "r": 8.253 }, { "cx": 103.024, "cy": 76.861, "r": 7.269 },
+    { "cx": 92.068, "cy": 40.712, "r": 6.817 }, { "cx": 110.071, "cy": 57.582, "r": 8.462 },
+    { "cx": 121.465, "cy": 40.849, "r": 8.349 }, { "cx": 135.520, "cy": 64.461, "r": 7.290 },
+    { "cx": 136.4, "cy": 26.862, "r": 6.793 }, { "cx": 148.274, "cy": 48.639, "r": 8.406 },
+    { "cx": 164.211, "cy": 35.972, "r": 8.311 }, { "cx": 170.177, "cy": 62.928, "r": 7.334 },
+    { "cx": 182.689, "cy": 27.241, "r": 6.793 }, { "cx": 187.222, "cy": 51.666, "r": 8.462 },
+    { "cx": 206.474, "cy": 44.455, "r": 8.272 }, { "cx": 203.794, "cy": 72.082, "r": 7.356 },
+    { "cx": 226.75, "cy": 42.035, "r": 6.675 }, { "cx": 223.646, "cy": 66.455, "r": 8.481 },
+    { "cx": 243.821, "cy": 65.564, "r": 8.330 }, { "cx": 232.947, "cy": 91.052, "r": 7.420 },
+    { "cx": 263.841, "cy": 69.655, "r": 6.793 }, { "cx": 253.25, "cy": 91.916, "r": 8.519 },
+    { "cx": 272.742, "cy": 97.434, "r": 8.253 }, { "cx": 254.527, "cy": 118.208, "r": 7.203 },
+    { "cx": 290.722, "cy": 107.243, "r": 6.770 }, { "cx": 273.885, "cy": 125.268, "r": 8.500 },
+    { "cx": 290.637, "cy": 136.692, "r": 8.330 }, { "cx": 267.087, "cy": 150.807, "r": 7.377 },
+    { "cx": 304.659, "cy": 151.605, "r": 6.840 }, { "cx": 282.897, "cy": 163.386, "r": 8.462 },
+    { "cx": 295.525, "cy": 179.4, "r": 8.272 }, { "cx": 268.575, "cy": 185.406, "r": 7.247 },
+    { "cx": 304.183, "cy": 197.897, "r": 6.840 }, { "cx": 279.912, "cy": 202.328, "r": 8.519 },
+    { "cx": 287.013, "cy": 221.576, "r": 8.406 }, { "cx": 259.5, "cy": 219.0, "r": 7.269 },
+    { "cx": 289.5, "cy": 241.680, "r": 6.770 }, { "cx": 264.930, "cy": 238.611, "r": 8.537 },
+    { "cx": 265.817, "cy": 258.904, "r": 8.349 }, { "cx": 240.451, "cy": 248.024, "r": 7.225 },
+    { "cx": 261.894, "cy": 278.957, "r": 6.723 }, { "cx": 239.631, "cy": 268.445, "r": 8.368 },
+    { "cx": 234.101, "cy": 288.027, "r": 8.291 }, { "cx": 213.184, "cy": 269.672, "r": 7.312 },
+    { "cx": 224.262, "cy": 305.882, "r": 6.793 }, { "cx": 206.181, "cy": 288.915, "r": 8.481 },
+    { "cx": 194.810, "cy": 305.731, "r": 8.291 }, { "cx": 180.633, "cy": 282.266, "r": 7.334 },
+    { "cx": 179.971, "cy": 319.830, "r": 6.723 }, { "cx": 168.152, "cy": 298.013, "r": 8.556 },
+    { "cx": 152.078, "cy": 310.663, "r": 8.311 }, { "cx": 145.928, "cy": 283.646, "r": 7.290 },
+    { "cx": 133.755, "cy": 319.286, "r": 6.746 }, { "cx": 129.114, "cy": 294.929, "r": 8.500 },
+    { "cx": 109.898, "cy": 302.285, "r": 8.311 }, { "cx": 112.538, "cy": 274.556, "r": 7.290 },
+    { "cx": 89.621, "cy": 304.621, "r": 6.863 }, { "cx": 92.925, "cy": 280.184, "r": 8.519 },
+    { "cx": 72.522, "cy": 280.954, "r": 8.406 }, { "cx": 83.518, "cy": 255.518, "r": 7.269 },
+    { "cx": 52.431, "cy": 276.993, "r": 6.817 }, { "cx": 63.139, "cy": 254.772, "r": 8.537 },
+    { "cx": 43.393, "cy": 249.25, "r": 8.291 }, { "cx": 61.772, "cy": 228.377, "r": 7.290 },
+    { "cx": 25.493, "cy": 239.459, "r": 6.863 }, { "cx": 42.586, "cy": 221.284, "r": 8.462 },
+    { "cx": 25.538, "cy": 209.990, "r": 8.387 }, { "cx": 49.518, "cy": 195.843, "r": 7.269 },
+    { "cx": 11.794, "cy": 195.061, "r": 6.817 }, { "cx": 33.617, "cy": 183.16, "r": 8.462 }
+  ]
 };
 
-// Manually calibrated positions to overlay dots on the torus image.
-// These percentages are { top, left }.
-const DOT_POSITIONS = [
-  { top: '50%', left: '15%' },
-  { top: '25%', left: '25%' },
-  { top: '15%', left: '50%' },
-  { top: '25%', left: '75%' },
-  { top: '50%', left: '85%' },
-  { top: '75%', left: '75%' },
-  { top: '85%', left: '50%' },
-  { top: '75%', left: '25%' },
-];
+type TorusListeningProps = {
+  active: boolean;
+  size?: number;
+};
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+const lerpColor = (c1: number[], c2: number[], t: number) => 
+  `rgb(${lerp(c1[0], c2[0], t)}, ${lerp(c1[1], c2[1], t)}, ${lerp(c1[2], c2[2], t)})`;
 
 export default function TorusListening({
   active,
   size = 180,
-  imageUrl = "/tora.png", // Assumes tora.png is in the /public folder
 }: TorusListeningProps) {
-  const [level, setLevel] = useState(0); // 0..1 smoothed audio level
+  const [level, setLevel] = useState(0);
   const [time, setTime] = useState(0);
   const rafRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -46,23 +83,20 @@ export default function TorusListening({
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         if (!mounted) { stream.getTracks().forEach(t => t.stop()); return; }
-
         const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
         const source = ctx.createMediaStreamSource(stream);
         const analyser = ctx.createAnalyser();
         analyser.fftSize = 256;
         analyser.smoothingTimeConstant = 0.8;
         source.connect(analyser);
-
         streamRef.current = stream;
         audioCtxRef.current = ctx;
         analyserRef.current = analyser;
         dataRef.current = new Uint8Array(analyser.frequencyBinCount);
-
         loop();
       } catch (e) {
         console.warn("Mic unavailable:", e);
-        loop(); 
+        loop();
       }
     }
 
@@ -70,7 +104,6 @@ export default function TorusListening({
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
       if (analyserRef.current) analyserRef.current.disconnect();
-      // Let GC handle the rest
       rafRef.current = null;
       streamRef.current = null;
       analyserRef.current = null;
@@ -80,9 +113,7 @@ export default function TorusListening({
     function loop() {
       const tick = () => {
         if (!mounted) return;
-        
         setTime(performance.now());
-        
         const analyser = analyserRef.current;
         const buf = dataRef.current;
         if (analyser && buf) {
@@ -108,54 +139,40 @@ export default function TorusListening({
     };
   }, [active]);
 
-  const energy = Math.min(1, level * 10); // Amplify sensitivity
-  const t = time / 2000; // Slow down the idle animation timing
+  const energy = Math.min(1, level * 10);
+  const t = time / 4000;
+
+  const baseColor = [60, 60, 65];
+  const activeColor = [255, 255, 255];
+
+  const scale = size / torusData.image_width;
 
   return (
-    <div
-      aria-label="Listening"
-      role="img"
-      style={{
-        width: size,
-        height: size,
-        position: 'relative',
-        backgroundImage: `url(${imageUrl})`,
-        backgroundSize: 'contain',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-      }}
-    >
-      {DOT_POSITIONS.map((pos, idx) => {
-        // Create a slow, circular wave for the idle state
-        const angle = t + idx * (Math.PI / 4);
-        const idleBreathe = 0.5 + 0.5 * Math.sin(angle);
-        
-        // Combine idle breathing with voice energy
-        const intensity = lerp(idleBreathe * 0.1, 1.0, energy);
-
-        // Animate color, size, and a subtle glow
-        const color = `rgba(255, 255, 255, ${lerp(0.3, 0.9, intensity)})`;
-        const scale = lerp(1, 1.5, intensity);
-        const dotSize = size * 0.05;
-
-        return (
-          <motion.div
-            key={idx}
-            className="absolute rounded-full"
-            style={{
-              top: pos.top,
-              left: pos.left,
-              width: dotSize,
-              height: dotSize,
-              backgroundColor: color,
-              boxShadow: `0 0 ${lerp(2, 10, intensity)}px rgba(255, 255, 255, ${lerp(0, 0.5, intensity)})`,
-              transform: 'translate(-50%, -50%)', // Center the dot
-            }}
-            animate={{ scale }}
-            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-          />
-        );
-      })}
+    <div style={{ width: size, height: torusData.image_height * scale }}>
+      <svg
+        width={size}
+        height={torusData.image_height * scale}
+        viewBox={`0 0 ${torusData.image_width} ${torusData.image_height}`}
+        aria-hidden
+      >
+        {torusData.dots.map((dot, idx) => {
+          const angle = Math.atan2(dot.cy - torusData.center.y, dot.cx - torusData.center.x);
+          const idleBreathe = 0.5 + 0.5 * Math.sin(t * Math.PI * 2 + angle);
+          const intensity = lerp(idleBreathe * 0.1, 1.0, energy);
+          
+          return (
+            <motion.circle
+              key={idx}
+              cx={dot.cx}
+              cy={dot.cy}
+              r={dot.r}
+              fill={lerpColor(baseColor, activeColor, intensity)}
+              animate={{ scale: lerp(1, 1.3, intensity) }}
+              transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+            />
+          );
+        })}
+      </svg>
     </div>
   );
 }
