@@ -55,30 +55,51 @@ export const ConversationOverlay: React.FC = () => {
     if (isStarting) return; // Prevent double taps
     setIsStarting(true);
 
-    console.log('[MIC-LOG] User tapped start. Unlocking controller and requesting microphone...');
+    console.log('[MIC-LOG] User tapped start. Single-gesture media init: unlocking audio and requesting microphone...');
     
     // Set flags immediately for instant UI feedback
     setPermissionGranted(true);
     
-    // Unlock both audio and microphone systems synchronously within the user gesture.
+    // Unlock audio playback within the user gesture
     conversationTtsService.unlockAudio();
     chatController.unlock();
-    
-    console.log('[MIC-LOG] Calling ChatController.startTurn immediately (gesture preserved)');
     
     if (chat_id) {
       chatController.setConversationMode('convo', chat_id);
 
-      // Call startTurn in the background. It will request microphone permission.
-      chatController.startTurn().catch(error => {
-        console.error('[MIC-LOG] Failed to start turn, likely permission denied:', error);
-        // If it fails (e.g., user denies permission), revert the UI.
+      // SINGLE-GESTURE MEDIA INIT: Request microphone permission within the tap gesture
+      navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 48000,
+        } 
+      })
+      .then(stream => {
+        console.log('[MIC-LOG] getUserMedia resolved within gesture - caching stream for session reuse');
+        
+        // Cache the stream for reuse across all turns in this session
+        conversationMicrophoneService.cacheStream(stream);
+        
+        // Now start the first turn with the cached stream
+        chatController.startTurn().catch(error => {
+          console.error('[MIC-LOG] Failed to start turn after mic permission:', error);
+          setPermissionGranted(false);
+          setIsStarting(false);
+          hasStarted.current = false;
+        });
+      })
+      .catch(error => {
+        console.error('[MIC-LOG] Microphone permission denied within gesture:', error);
+        // If permission denied, revert the UI
         setPermissionGranted(false);
         setIsStarting(false);
         hasStarted.current = false;
       });
 
-      // Watchdog timer remains to detect if the user denies permission or the mic fails silently.
+      // Watchdog timer to detect silent failures
       setTimeout(() => {
         const status = useChatStore.getState().status;
         const hasStream = conversationMicrophoneService.getState().hasStream;

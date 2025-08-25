@@ -14,8 +14,9 @@ export interface ConversationMicrophoneOptions {
   silenceTimeoutMs?: number;
 }
 
-class ConversationMicrophoneServiceClass {
+export class ConversationMicrophoneServiceClass {
   private stream: MediaStream | null = null;
+  private cachedStream: MediaStream | null = null; // NEW: Cached stream for session reuse
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = []; // Simple chunk collection
   private isRecording = false;
@@ -28,6 +29,10 @@ class ConversationMicrophoneServiceClass {
   private options: ConversationMicrophoneOptions = {};
   private listeners = new Set<() => void>();
 
+  constructor(options: ConversationMicrophoneOptions = {}) {
+    this.options = options;
+  }
+
   /**
    * INITIALIZE - Set up service with options
    */
@@ -37,10 +42,20 @@ class ConversationMicrophoneServiceClass {
   }
 
   /**
+   * CACHE STREAM - Store microphone stream for session reuse
+   */
+  public cacheStream(stream: MediaStream): void {
+    this.log('🎤 Caching microphone stream for session reuse');
+    this.cachedStream = stream;
+    this.stream = stream; // Set as current stream
+  }
+
+  /**
    * START RECORDING - Complete domain-specific recording
    */
   async startRecording(): Promise<boolean> {
-    console.log('[MIC-LOG] ConversationMicrophoneService.startRecording() called. Requesting getUserMedia...');
+    console.log('[MIC-LOG] ConversationMicrophoneService.startRecording() called.');
+    
     // Check permission from arbitrator
     if (!microphoneArbitrator.claim('conversation')) {
       this.error('❌ Cannot start - microphone in use by another domain');
@@ -53,23 +68,35 @@ class ConversationMicrophoneServiceClass {
     try {
       this.log('🎤 Starting conversation recording');
       
-      // Create our own stream - no sharing
-      this.stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          channelCount: 1,           // Mono for efficiency
-          echoCancellation: true,    // Clean input
-          noiseSuppression: true,    // Remove background noise
-          autoGainControl: true,     // Consistent levels
-          sampleRate: 48000,
-        } 
-      });
+      // SINGLE-GESTURE FLOW: Use cached stream if available, otherwise fallback
+      if (this.cachedStream) {
+        this.log('🎤 Using cached microphone stream (no getUserMedia call)');
+        this.stream = this.cachedStream;
+      } else {
+        // Fallback: Create new stream (shouldn't happen in single-gesture flow)
+        this.log('⚠️ No cached stream - falling back to getUserMedia (shouldn\'t happen)');
+        this.stream = await navigator.mediaDevices.getUserMedia({ 
+          audio: {
+            channelCount: 1,           // Mono for efficiency
+            echoCancellation: true,    // Clean input
+            noiseSuppression: true,    // Remove background noise
+            autoGainControl: true,     // Consistent levels
+            sampleRate: 48000,
+          } 
+        });
+      }
 
       const trackSettings = this.stream.getAudioTracks()[0]?.getSettings?.() || {};
-      console.log('[MIC-LOG] getUserMedia resolved', trackSettings);
-      this.log('🎛️ getUserMedia acquired. Track settings:', trackSettings);
+      console.log('[MIC-LOG] Stream ready', trackSettings);
+      this.log('🎛️ Stream acquired. Track settings:', trackSettings);
 
-      // Configure audio analysis for optional silence detection
-      this.audioContext = new AudioContext({ sampleRate: 48000 });
+      // SINGLE-GESTURE FLOW: Reuse AudioContext if it exists, otherwise create new
+      if (!this.audioContext || this.audioContext.state === 'closed') {
+        this.audioContext = new AudioContext({ sampleRate: 48000 });
+        this.log('🎛️ Created new AudioContext');
+      } else {
+        this.log('🎛️ Reusing existing AudioContext');
+      }
       
       // Defensively resume AudioContext if suspended (helps on iOS)
       if (this.audioContext.state === 'suspended') {
@@ -78,17 +105,28 @@ class ConversationMicrophoneServiceClass {
         console.log('[MIC-LOG] AudioContext resumed, state:', this.audioContext.state);
       }
       
-      this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
-      this.analyser = this.audioContext.createAnalyser();
-      this.analyser.fftSize = 2048;
-      this.analyser.smoothingTimeConstant = 0.8;
-      this.mediaStreamSource.connect(this.analyser);
+      // SINGLE-GESTURE FLOW: Reuse analyser if it exists, otherwise create new
+      if (!this.analyser) {
+        this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
+        this.analyser = this.audioContext.createAnalyser();
+        this.analyser.fftSize = 2048;
+        this.analyser.smoothingTimeConstant = 0.8;
+        this.mediaStreamSource.connect(this.analyser);
+        this.log('🎛️ Created new analyser and media stream source');
+      } else {
+        this.log('🎛️ Reusing existing analyser');
+      }
 
-      // Set up MediaRecorder - simple and clean
-      this.mediaRecorder = new MediaRecorder(this.stream, {
-        mimeType: 'audio/webm;codecs=opus',
-        audioBitsPerSecond: 128000
-      });
+      // SINGLE-GESTURE FLOW: Reuse MediaRecorder if it exists and is inactive, otherwise create new
+      if (!this.mediaRecorder || this.mediaRecorder.state === 'inactive') {
+        this.mediaRecorder = new MediaRecorder(this.stream, {
+          mimeType: 'audio/webm;codecs=opus',
+          audioBitsPerSecond: 128000
+        });
+        this.log('🎛️ Created new MediaRecorder');
+      } else {
+        this.log('🎛️ Reusing existing MediaRecorder');
+      }
 
       this.audioChunks = [];
       this.isRecording = true;
@@ -121,8 +159,8 @@ class ConversationMicrophoneServiceClass {
       return true;
 
     } catch (error: any) {
-      console.error('[MIC-LOG] getUserMedia error:', error.name, error);
-      this.error('❌ getUserMedia failed:', error);
+      console.error('[MIC-LOG] Recording setup error:', error.name, error);
+      this.error('❌ Recording setup failed:', error);
       if (this.options.onError) {
         this.options.onError(error);
       }
@@ -232,13 +270,21 @@ class ConversationMicrophoneServiceClass {
       this.isRecording = false;
     }
 
-    // Release microphone stream
+    // Release microphone stream (both current and cached)
     if (this.stream) {
       this.stream.getTracks().forEach(track => {
         track.stop();
         this.log(`🎤 Stopped track: ${track.kind}`);
       });
       this.stream = null;
+    }
+
+    if (this.cachedStream) {
+      this.cachedStream.getTracks().forEach(track => {
+        track.stop();
+        this.log(`🎤 Stopped cached track: ${track.kind}`);
+      });
+      this.cachedStream = null;
     }
 
     // Cleanup audio analysis
