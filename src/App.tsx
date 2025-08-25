@@ -60,8 +60,14 @@ const ConditionalAuth: React.FC<{ children: React.ReactNode }> = ({ children }) 
   }
 
   if (path.startsWith('/chat')) {
-    // Chat routes need minimal providers since ReportModalProvider is at app level
-    return <>{children}</>;
+    // Chat routes need auth-aware providers
+    return (
+      <NavigationStateProvider>
+        <SettingsModalProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </SettingsModalProvider>
+      </NavigationStateProvider>
+    );
   }
 
   // Public pages that still use auth-aware UI
@@ -115,6 +121,16 @@ function App() {
                   {/* Default authenticated route - redirect to chat */}
                   <Route 
                     path="/dashboard" 
+                    element={
+                      <AuthGuard>
+                        <Navigate to="/chat" replace />
+                      </AuthGuard>
+                    } 
+                  />
+                  
+                  {/* Auth success redirect to chat */}
+                  <Route 
+                    path="/auth-success" 
                     element={
                       <AuthGuard>
                         <Navigate to="/chat" replace />

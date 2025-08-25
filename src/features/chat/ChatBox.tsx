@@ -1,7 +1,10 @@
-import React, { useEffect, useRef, Suspense, lazy } from 'react';
+import React, { useEffect, useRef, Suspense, lazy, useState } from 'react';
 import { ChatInput } from './ChatInput';
 import { useChatStore } from '@/core/store';
-import { Menu } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useAuthedChat } from '@/hooks/useAuthedChat';
+import { Menu, Calendar, Sparkles } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { getChatTokens } from '@/services/auth/chatTokens';
 import { startReportReadyListener, stopReportReadyListener } from '@/services/report/reportReadyListener';
@@ -9,6 +12,8 @@ import { MotionConfig } from 'framer-motion';
 import { useConversationUIStore } from './conversation-ui-store';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { logUserError } from '@/services/errorService';
+import { SignInPrompt } from '@/components/auth/SignInPrompt';
+import { useNavigate } from 'react-router-dom';
 
 // Lazy load components for better performance
 const MessageList = lazy(() => import('./MessageList').then(module => ({ default: module.MessageList })));
@@ -18,12 +23,27 @@ const ChatSidebarControls = lazy(() => import('./ChatSidebarControls').then(modu
 
 export const ChatBox = () => {
   const { error } = useChatStore();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const { uuid } = getChatTokens();
   const isConversationOpen = useConversationUIStore((s) => s.isConversationOpen);
+  const [signInPrompt, setSignInPrompt] = useState<{ show: boolean; feature: string }>({ 
+    show: false, 
+    feature: '' 
+  });
   
   // Get error state from report ready store
   const errorState = useReportReadyStore((state) => state.errorState);
   const setErrorState = useReportReadyStore((state) => state.setErrorState);
+
+  // Handle auth-gated features
+  const handleCalendarClick = () => {
+    if (user) {
+      navigate('/calendar');
+    } else {
+      setSignInPrompt({ show: true, feature: 'Calendar' });
+    }
+  };
 
   useEffect(() => {
     if (uuid) {
@@ -135,10 +155,26 @@ export const ChatBox = () => {
         <div className="flex flex-row flex-1 bg-white max-w-6xl w-full mx-auto md:border-x border-gray-100 min-h-0">
           {/* Left Sidebar (Desktop) */}
           <div className="hidden md:flex w-64 border-r border-gray-100 flex-col bg-gray-50/50">
-            <div className="p-4 h-full">
-              <Suspense fallback={<div className="space-y-4"><div className="h-8 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div></div>}>
-                <ChatSidebarControls />
-              </Suspense>
+            <div className="p-4 h-full flex flex-col">
+              {/* Calendar Button for Desktop - Only for Auth Users */}
+              {user && (
+                <div className="mb-4">
+                  <Button
+                    variant="outline"
+                    onClick={handleCalendarClick}
+                    className="w-full justify-start font-light text-sm"
+                  >
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Calendar
+                  </Button>
+                </div>
+              )}
+              
+              <div className="flex-1">
+                <Suspense fallback={<div className="space-y-4"><div className="h-8 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div></div>}>
+                  <ChatSidebarControls />
+                </Suspense>
+              </div>
             </div>
           </div>
 
@@ -166,7 +202,21 @@ export const ChatBox = () => {
                   </div>
                 </SheetContent>
               </Sheet>
+              
               <div className="flex-1" />
+              
+              {/* Calendar Button for Mobile - Only for Auth Users */}
+              {user && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCalendarClick}
+                  className="px-3 py-1.5 text-xs font-light"
+                >
+                  <Calendar className="w-4 h-4 mr-1.5" />
+                  Calendar
+                </Button>
+              )}
             </div>
 
             {/* Message List - Lazy Loaded */}
@@ -205,6 +255,14 @@ export const ChatBox = () => {
             onCleanupSession={handleCleanupSession}
           />
         </Suspense>
+      )}
+
+      {/* Sign In Prompt Modal */}
+      {signInPrompt.show && (
+        <SignInPrompt
+          feature={signInPrompt.feature}
+          onClose={() => setSignInPrompt({ show: false, feature: '' })}
+        />
       )}
 
       {/* Report Modal is now rendered by the provider */}
