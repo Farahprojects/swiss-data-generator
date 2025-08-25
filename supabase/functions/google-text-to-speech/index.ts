@@ -72,10 +72,11 @@ serve(async (req) => {
             name: voiceName,
           },
           audioConfig: {
-            audioEncoding: "MP3",
+            audioEncoding: "OGG_OPUS",
             speakingRate: 1.0,
             pitch: 0.0,
-            sampleRateHertz: 22050
+            sampleRateHertz: 24000,
+            bitrate: 32000
           },
         }),
       }
@@ -115,12 +116,12 @@ serve(async (req) => {
     console.log(`[TTS-SERVER] 📦 Audio bytes size: ${audioBytes.length} bytes`);
 
     const t10 = Date.now();
-    console.log(`[TTS-SERVER] 📤 Sending response at ${t10}ms (t9→t10: ${t10 - t9}ms)`);
+    console.log(`[TTS-SERVER] 📤 Sending binary response at ${t10}ms (t9→t10: ${t10 - t9}ms)`);
 
     const response = new Response(audioBytes, {
       headers: {
         ...CORS_HEADERS,
-        'Content-Type': 'audio/mpeg',
+        'Content-Type': 'audio/ogg; codecs=opus',
         'Content-Length': audioBytes.length.toString(),
       },
     });
