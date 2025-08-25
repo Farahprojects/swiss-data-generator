@@ -72,11 +72,10 @@ serve(async (req) => {
             name: voiceName,
           },
           audioConfig: {
-            audioEncoding: "OGG_OPUS",
+            audioEncoding: "MP3",
             speakingRate: 1.0,
             pitch: 0.0,
-            sampleRateHertz: 24000,
-            bitrate: 32000
+            sampleRateHertz: 24000
           },
         }),
       }
@@ -121,7 +120,7 @@ serve(async (req) => {
     const response = new Response(audioBytes, {
       headers: {
         ...CORS_HEADERS,
-        'Content-Type': 'audio/ogg; codecs=opus',
+        'Content-Type': 'audio/mpeg',
         'Content-Length': audioBytes.length.toString(),
       },
     });
