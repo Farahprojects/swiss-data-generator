@@ -180,9 +180,9 @@ export default function TorusListening({
             const angle = Math.atan2(dot.cy - torusData.center.y, dot.cx - torusData.center.x);
             const idleWave = 0.5 + 0.5 * Math.sin(t * Math.PI * 2 + angle);
             const voiceWave = Math.pow(idleWave, 4);
-            const thinkingWave = 0.5 + 0.5 * Math.sin(t * Math.PI * 4 + angle * 2);
 
-            const wave = isThinking ? thinkingWave : lerp(idleWave * 0.1, voiceWave, energy);
+            // In thinking mode, we just want a gentle, continuous breathing effect
+            const wave = isThinking ? idleWave * 0.1 : lerp(idleWave * 0.1, voiceWave, energy);
             
             return (
               <motion.circle
