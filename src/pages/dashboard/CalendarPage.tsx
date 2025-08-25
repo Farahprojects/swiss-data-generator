@@ -1,11 +1,19 @@
-import React, { useState } from "react";
+import React, { useState, Suspense, lazy } from "react";
+import { useNavigate } from "react-router-dom";
 import { useCalendarSessions } from "@/hooks/useCalendarSessions";
 import { useClientsData } from "@/hooks/useClientsData";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/contexts/AuthContext";
 import { CalendarHeader } from "@/components/calendar/CalendarHeader";
 import CalendarView from "@/components/calendar/CalendarView";
 import { EventModal } from "@/components/calendar/EventModal";
-import { DaySessionsModal } from "@/components/calendar/DaySessionsModal"; // NEW
+import { DaySessionsModal } from "@/components/calendar/DaySessionsModal";
+import { Button } from "@/components/ui/button";
+import { MessageSquare, Menu } from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+
+// Lazy load the sidebar controls
+const ChatSidebarControls = lazy(() => import('@/features/chat/ChatSidebarControls').then(module => ({ default: module.ChatSidebarControls })));
 
 
 const CalendarPage: React.FC = () => {
@@ -15,6 +23,8 @@ const CalendarPage: React.FC = () => {
   const [editing, setEditing] = useState<any | null>(null);
   const [newSessionDate, setNewSessionDate] = useState<Date | null>(null);
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
   // Selected day (for mobile day scrolling)
   const [selectedDay, setSelectedDay] = useState(() => {
@@ -109,10 +119,75 @@ const CalendarPage: React.FC = () => {
     setModalOpen(true);
   }
 
+  const handleChatClick = () => {
+    navigate('/chat');
+  };
+
   // ------------------------
 
   return (
-    <div className="max-w-6xl mx-auto p-2 py-6 flex flex-col">{/* removed mt-16 since no navigation */}
+    <div className="flex flex-row flex-1 bg-white max-w-6xl w-full mx-auto md:border-x border-gray-100 min-h-screen">
+      {/* Left Sidebar (Desktop) */}
+      <div className="hidden md:flex w-64 border-r border-gray-100 flex-col bg-gray-50/50">
+        <div className="p-4 h-full flex flex-col">
+          {/* Chat Button for Desktop - Only for Auth Users */}
+          {user && (
+            <div className="mb-4">
+              <Button
+                variant="outline"
+                onClick={handleChatClick}
+                className="w-full justify-start font-light text-sm"
+              >
+                <MessageSquare className="w-4 h-4 mr-2" />
+                Chat
+              </Button>
+            </div>
+          )}
+          
+          <div className="flex-1">
+            <Suspense fallback={<div className="space-y-4"><div className="h-8 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div></div>}>
+              <ChatSidebarControls />
+            </Suspense>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Calendar Area */}
+      <div className="flex flex-col flex-1 w-full min-w-0">
+        {/* Mobile Header */}
+        <div className="md:hidden flex items-center gap-2 p-3 bg-white border-b border-gray-100 pt-safe">
+          <Sheet>
+            <SheetTrigger asChild>
+              <button className="p-2 hover:bg-gray-100 rounded-md">
+                <Menu className="w-5 h-5" />
+              </button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[85%] sm:max-w-xs p-0">
+              <div className="p-4">
+                <div className="mb-3">
+                  <h2 className="text-lg font-light italic">Settings</h2>
+                </div>
+                {user && (
+                  <div className="mb-4">
+                    <Button
+                      variant="outline"
+                      onClick={handleChatClick}
+                      className="w-full justify-start font-light text-sm"
+                    >
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Chat
+                    </Button>
+                  </div>
+                )}
+                <Suspense fallback={<div className="space-y-4"><div className="h-8 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div></div>}>
+                  <ChatSidebarControls />
+                </Suspense>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+
+        <div className="p-2 py-6 flex flex-col flex-1">
         <CalendarHeader
         view={view}
         setView={setView}
@@ -169,7 +244,9 @@ const CalendarPage: React.FC = () => {
           onAddSession={handleOpenAddSessionFromDayModal}
         />
       )}
+        </div>
       </div>
+    </div>
   );
 };
 export default CalendarPage;
