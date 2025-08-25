@@ -44,9 +44,11 @@ serve(async (req) => {
       });
     }
     
-    // The voice parameter should be the full name e.g., en-US-Chirp3-HD-Puck
-    // This default is a fallback in case the client sends an empty voice parameter.
-    const voiceName = voice || "en-US-Chirp3-HD-Puck";
+    // Ensure we have a voice parameter - no fallbacks allowed
+    if (!voice) {
+      throw new Error("Voice parameter is required - no fallback allowed");
+    }
+    const voiceName = voice;
     
     const t3 = Date.now();
     console.log(`[TTS-SERVER] 🧹 Input validation completed at ${t3}ms (t2→t3: ${t3 - t2}ms)`);
