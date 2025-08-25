@@ -40,7 +40,7 @@ const ReportLoadingSequence = () => {
           return prev;
         }
       });
-    }, 1500); // Change message every 1.5 seconds
+    }, 2500); // Change message every 2.5 seconds (increased from 1.5)
 
     return () => clearInterval(interval);
   }, [isComplete]);
@@ -120,10 +120,7 @@ const ReportReadyMessage = () => {
         className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black"
         style={{ overflowAnchor: 'none' }}
       >
-        <div className="flex items-center gap-3 text-base font-light leading-relaxed">
-          <div className="h-4 w-4 rounded-full bg-green-500 flex items-center justify-center">
-            <div className="h-2 w-2 rounded-full bg-white"></div>
-          </div>
+        <div className="text-base font-light leading-relaxed">
           <span className="text-gray-700">Report is Ready</span>
         </div>
       </div>
