@@ -7,7 +7,8 @@ export type ChatStatus =
   | 'transcribing'
   | 'thinking'
   | 'speaking'
-  | 'error';
+  | 'error'
+  | 'loading_messages';
 
 interface ChatState {
   chat_id: string | null;
@@ -15,6 +16,9 @@ interface ChatState {
   status: ChatStatus;
   error: string | null;
   ttsVoice?: string;
+  isLoadingMessages: boolean;
+  messageLoadError: string | null;
+  lastMessagesFetch: number | null;
 
   startConversation: (id: string) => void;
   loadMessages: (messages: Message[]) => void;
@@ -24,6 +28,9 @@ interface ChatState {
   setError: (error: string | null) => void;
   setTtsVoice: (v: string) => void;
   clearChat: () => void;
+  setLoadingMessages: (loading: boolean) => void;
+  setMessageLoadError: (error: string | null) => void;
+  retryLoadMessages: () => Promise<void>;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -32,12 +39,38 @@ export const useChatStore = create<ChatState>((set, get) => ({
   status: 'idle',
   error: null,
   ttsVoice: 'Puck',
+  isLoadingMessages: false,
+  messageLoadError: null,
+  lastMessagesFetch: null,
 
-  startConversation: (id) => set({ chat_id: id, messages: [], status: 'idle', error: null }),
+  startConversation: (id) => set({ 
+    chat_id: id, 
+    messages: [], 
+    status: 'idle', 
+    error: null,
+    messageLoadError: null,
+    lastMessagesFetch: null
+  }),
 
-  loadMessages: (messages) => set({ messages }),
+  loadMessages: (messages) => {
+    const uniqueMessages = messages.filter((msg, index, arr) => 
+      arr.findIndex(m => m.id === msg.id) === index
+    );
+    set({ 
+      messages: uniqueMessages, 
+      isLoadingMessages: false, 
+      messageLoadError: null,
+      lastMessagesFetch: Date.now()
+    });
+  },
 
-  addMessage: (message) => set((state) => ({ messages: [...state.messages, message] })),
+  addMessage: (message) => set((state) => {
+    // Prevent duplicate messages
+    if (state.messages.find(m => m.id === message.id)) {
+      return state;
+    }
+    return { messages: [...state.messages, message] };
+  }),
 
   updateMessage: (id, updates) => {
     set((state) => {
@@ -54,5 +87,35 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   setTtsVoice: (v) => set({ ttsVoice: v }),
 
-  clearChat: () => set({ chat_id: null, messages: [], status: 'idle', error: null }),
+  setLoadingMessages: (loading) => set({ isLoadingMessages: loading }),
+
+  setMessageLoadError: (error) => set({ messageLoadError: error, isLoadingMessages: false }),
+
+  retryLoadMessages: async () => {
+    const state = get();
+    if (!state.chat_id) return;
+    
+    try {
+      set({ isLoadingMessages: true, messageLoadError: null });
+      const { getMessagesForConversation } = await import('@/services/api/messages');
+      const messages = await getMessagesForConversation(state.chat_id);
+      get().loadMessages(messages);
+    } catch (error) {
+      console.error('[Store] Retry load messages failed:', error);
+      set({ 
+        messageLoadError: error instanceof Error ? error.message : 'Failed to load messages',
+        isLoadingMessages: false
+      });
+    }
+  },
+
+  clearChat: () => set({ 
+    chat_id: null, 
+    messages: [], 
+    status: 'idle', 
+    error: null,
+    isLoadingMessages: false,
+    messageLoadError: null,
+    lastMessagesFetch: null
+  }),
 }));

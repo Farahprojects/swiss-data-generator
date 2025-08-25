@@ -24,15 +24,27 @@ class ChatController {
     this.loadExistingMessages();
   }
 
-  private async loadExistingMessages() {
-    const { chat_id } = useChatStore.getState();
+  private async loadExistingMessages(retryCount = 0) {
+    const { chat_id, setLoadingMessages, setMessageLoadError, loadMessages } = useChatStore.getState();
     if (!chat_id) return;
 
+    const maxRetries = 3;
+    const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 5000); // Exponential backoff
+
     try {
+      setLoadingMessages(true);
       const messages = await getMessagesForConversation(chat_id);
-      useChatStore.getState().loadMessages(messages);
+      loadMessages(messages);
+      console.log(`[ChatController] Loaded ${messages.length} existing messages`);
     } catch (error) {
-      console.error('[ChatController] Error loading existing messages:', error);
+      console.error(`[ChatController] Error loading existing messages (attempt ${retryCount + 1}):`, error);
+      
+      if (retryCount < maxRetries) {
+        console.log(`[ChatController] Retrying in ${retryDelay}ms...`);
+        setTimeout(() => this.loadExistingMessages(retryCount + 1), retryDelay);
+      } else {
+        setMessageLoadError(error instanceof Error ? error.message : 'Failed to load messages');
+      }
     }
   }
 
@@ -43,14 +55,66 @@ class ChatController {
     }
     
     useChatStore.getState().startConversation(chat_id);
-    
+    this.setupRealtimeSubscription(chat_id);
+    await this.loadExistingMessages();
+  }
+
+  private realtimeChannel: any = null;
+
+  private setupRealtimeSubscription(chat_id: string) {
+    // Clean up existing subscription
+    this.cleanupRealtimeSubscription();
+
     try {
-      const existingMessages = await getMessagesForConversation(chat_id);
-      if (existingMessages.length > 0) {
-        useChatStore.getState().loadMessages(existingMessages);
-      }
+      this.realtimeChannel = supabase
+        .channel(`messages:${chat_id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `chat_id=eq.${chat_id}`
+          },
+          (payload) => {
+            console.log('[ChatController] New message received via realtime:', payload);
+            const newMessage = this.transformDatabaseMessage(payload.new);
+            
+            // Only add if it's not already in our store (avoid duplicates from our own sends)
+            const { messages } = useChatStore.getState();
+            if (!messages.find(m => m.id === newMessage.id)) {
+              useChatStore.getState().addMessage(newMessage);
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log('[ChatController] Realtime subscription status:', status);
+        });
     } catch (error) {
-      console.error('[ChatController] Error loading existing messages:', error);
+      console.error('[ChatController] Failed to setup realtime subscription:', error);
+    }
+  }
+
+  private transformDatabaseMessage(dbMessage: any): Message {
+    return {
+      id: dbMessage.id,
+      chat_id: dbMessage.chat_id,
+      role: dbMessage.role,
+      text: dbMessage.text,
+      audioUrl: dbMessage.audio_url,
+      timings: dbMessage.timings,
+      createdAt: dbMessage.created_at,
+      meta: dbMessage.meta,
+      client_msg_id: dbMessage.client_msg_id,
+      status: dbMessage.status
+    };
+  }
+
+  private cleanupRealtimeSubscription() {
+    if (this.realtimeChannel) {
+      console.log('[ChatController] Cleaning up realtime subscription');
+      supabase.removeChannel(this.realtimeChannel);
+      this.realtimeChannel = null;
     }
   }
 
@@ -393,8 +457,9 @@ class ChatController {
     // Stop any active conversation
     conversationMicrophoneService.forceCleanup();
     
-    // Stop assistant message listener
-    // this.stopAssistantMessageListener(); // Removed real-time listener
+    // Clean up realtime subscription
+    this.cleanupRealtimeSubscription();
+    
     this.isResetting = false;
     this.isUnlocked = false; // Lock on cleanup
   }

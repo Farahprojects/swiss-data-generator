@@ -2,8 +2,9 @@ import React, { useRef, useState, Suspense, lazy } from 'react';
 import { useChatStore } from '@/core/store';
 import { Message } from '@/core/types';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
-import { Loader2 } from 'lucide-react';
+import { Loader2, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
+import { Button } from '@/components/ui/button';
 
 // Lazy load TypewriterText for better performance
 const TypewriterText = lazy(() => import('@/components/ui/TypewriterText').then(module => ({ default: module.TypewriterText })));
@@ -160,6 +161,11 @@ const groupMessagesIntoTurns = (messages: Message[]): Turn[] => {
 
 export const MessageList = () => {
   const messages = useChatStore((state) => state.messages);
+  const isLoadingMessages = useChatStore((state) => state.isLoadingMessages);
+  const messageLoadError = useChatStore((state) => state.messageLoadError);
+  const retryLoadMessages = useChatStore((state) => state.retryLoadMessages);
+  const lastMessagesFetch = useChatStore((state) => state.lastMessagesFetch);
+  
   const { containerRef, bottomRef, onContentChange } = useAutoScroll();
   const [initialMessageCount, setInitialMessageCount] = useState<number | null>(null);
   const [hasUserSentMessage, setHasUserSentMessage] = useState(false);
@@ -218,44 +224,89 @@ export const MessageList = () => {
       ref={containerRef}
       id="chat-scroll-container"
     >
-      {messages.length === 0 && !showReportReadyMessage && !showLoadingSequence && !showLoadingFallback ? (
-        <div className="flex-1 flex flex-col justify-end">
-          <div className="p-4">
-            <h2 className="text-3xl font-light text-gray-800 text-left">Let's tune into the energy behind your chart</h2>
-          </div>
+      {/* Loading state for messages */}
+      {isLoadingMessages && messages.length === 0 && (
+        <div className="flex-1 flex flex-col justify-center items-center">
+          <Loader2 className="h-6 w-6 animate-spin text-gray-500 mb-2" />
+          <p className="text-gray-500 text-sm">Loading conversation...</p>
         </div>
-      ) : (
-        <div className="flex flex-col p-4">
-          {turns.map((turn, index) => {
-            const isFromHistory = getIsFromHistory(turn);
-            const isLastTurn = index === turns.length - 1 && !showReportReadyMessage;
-            
-            return (
-              <TurnItem 
-                key={turn.userMessage.id} 
-                turn={turn}
-                isLastTurn={isLastTurn}
-                isFromHistory={isFromHistory}
-              />
-            );
-          })}
-          
-          {/* Show loading sequence when report is being generated - simplified condition */}
-          {(showLoadingSequence || showLoadingFallback) && (
-            <ReportLoadingSequence />
-          )}
-          
-          {/* Show report ready message when report is ready and user hasn't sent a message yet */}
-          {showReportReadyMessage && (
-            <ReportReadyMessage />
-          )}
-          
-          {/* Bottom padding to prevent content from being hidden behind fixed elements */}
-          <div style={{ height: '120px' }} />
-          
-          {/* Sentinel element for auto-scroll */}
-          <div ref={bottomRef} />
+      )}
+
+      {/* Error state for message loading */}
+      {messageLoadError && messages.length === 0 && (
+        <div className="flex-1 flex flex-col justify-center items-center p-4">
+          <AlertTriangle className="h-8 w-8 text-orange-500 mb-2" />
+          <p className="text-gray-600 text-center mb-4">
+            Failed to load conversation
+          </p>
+          <p className="text-gray-500 text-sm text-center mb-4">
+            {messageLoadError}
+          </p>
+          <Button 
+            onClick={retryLoadMessages}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Try Again
+          </Button>
         </div>
+      )}
+
+      {/* Empty state or content */}
+      {!isLoadingMessages && !messageLoadError && (
+        <>
+          {messages.length === 0 && !showReportReadyMessage && !showLoadingSequence && !showLoadingFallback ? (
+            <div className="flex-1 flex flex-col justify-end">
+              <div className="p-4">
+                <h2 className="text-3xl font-light text-gray-800 text-left">Let's tune into the energy behind your chart</h2>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col p-4">
+              {/* Message loading indicator at top if loading additional messages */}
+              {isLoadingMessages && messages.length > 0 && (
+                <div className="flex justify-center py-2">
+                  <div className="flex items-center gap-2 text-gray-500 text-sm">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Syncing messages...
+                  </div>
+                </div>
+              )}
+
+              {turns.map((turn, index) => {
+                const isFromHistory = getIsFromHistory(turn);
+                const isLastTurn = index === turns.length - 1 && !showReportReadyMessage;
+                
+                return (
+                  <TurnItem 
+                    key={turn.userMessage.id} 
+                    turn={turn}
+                    isLastTurn={isLastTurn}
+                    isFromHistory={isFromHistory}
+                  />
+                );
+              })}
+              
+              {/* Show loading sequence when report is being generated - simplified condition */}
+              {(showLoadingSequence || showLoadingFallback) && (
+                <ReportLoadingSequence />
+              )}
+              
+              {/* Show report ready message when report is ready and user hasn't sent a message yet */}
+              {showReportReadyMessage && (
+                <ReportReadyMessage />
+              )}
+              
+              {/* Bottom padding to prevent content from being hidden behind fixed elements */}
+              <div style={{ height: '120px' }} />
+              
+              {/* Sentinel element for auto-scroll */}
+              <div ref={bottomRef} />
+            </div>
+          )}
+        </>
       )}
     </div>
   );
