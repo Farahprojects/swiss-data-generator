@@ -1,6 +1,33 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// Sanitize text to remove markdown, formatting tokens, and unwanted characters
+function sanitizePlainText(text: string): string {
+  if (!text || typeof text !== 'string') return '';
+  
+  return text
+    // Remove markdown headers (# ## ###)
+    .replace(/^#{1,6}\s+/gm, '')
+    // Remove bold/italic markers (* ** _)
+    .replace(/\*{1,2}([^*]+)\*{1,2}/g, '$1')
+    .replace(/_{1,2}([^_]+)_{1,2}/g, '$1')
+    // Remove brackets and parentheses with content
+    .replace(/\[[^\]]*\]/g, '')
+    .replace(/\([^)]*\)/g, '')
+    // Remove curly braces
+    .replace(/\{[^}]*\}/g, '')
+    // Remove remaining special characters
+    .replace(/[#*_\[\](){}]/g, '')
+    // Remove backticks for code
+    .replace(/`+([^`]*)`+/g, '$1')
+    // Remove strikethrough
+    .replace(/~~([^~]+)~~/g, '$1')
+    // Normalize whitespace - replace multiple spaces/newlines with single space
+    .replace(/\s+/g, ' ')
+    // Trim leading/trailing whitespace
+    .trim();
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, accept",
@@ -85,7 +112,9 @@ Tone:
 Rules:
 1. Synthesis data from Astro report that is relvent to users query
 2. Show one-line "why" links to the data when relevant.
-3. Never use hash symbols, asterisks, dashes, or markdown formatting. 
+3. CRITICAL: Never use hash symbols, asterisks, dashes, brackets, parentheses, curly braces, or any markdown formatting in your response. Write in plain text only.
+4. Do not use bold, italic, code blocks, lists with bullets or numbers, or any special formatting.
+5. Write naturally in paragraphs using only letters, numbers, basic punctuation (periods, commas, question marks, exclamation points), and spaces.
 `;
 
 
@@ -142,6 +171,15 @@ Rules:
       throw new Error("No response text from Gemini");
     }
 
+    // Sanitize assistant response before saving to database
+    const sanitizedAssistantText = sanitizePlainText(assistantText);
+    
+    console.log(`[llm-handler] Text sanitization:`, {
+      original_length: assistantText.length,
+      sanitized_length: sanitizedAssistantText.length,
+      changed: assistantText !== sanitizedAssistantText
+    });
+
     // Extract token usage from Gemini response
     const tokenCount = data.usageMetadata?.totalTokenCount || null;
     const inputTokens = data.usageMetadata?.promptTokenCount || null;
@@ -158,7 +196,7 @@ Rules:
       .insert({
         chat_id: chat_id,
         role: "assistant",
-        text: assistantText,
+        text: sanitizedAssistantText, // Save sanitized text to DB
         created_at: new Date().toISOString(),
         meta: { 
           llm_provider: "google", 

@@ -2,6 +2,33 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// Sanitize text to remove markdown, formatting tokens, and unwanted characters
+function sanitizePlainText(text: string): string {
+  if (!text || typeof text !== 'string') return '';
+  
+  return text
+    // Remove markdown headers (# ## ###)
+    .replace(/^#{1,6}\s+/gm, '')
+    // Remove bold/italic markers (* ** _)
+    .replace(/\*{1,2}([^*]+)\*{1,2}/g, '$1')
+    .replace(/_{1,2}([^_]+)_{1,2}/g, '$1')
+    // Remove brackets and parentheses with content
+    .replace(/\[[^\]]*\]/g, '')
+    .replace(/\([^)]*\)/g, '')
+    // Remove curly braces
+    .replace(/\{[^}]*\}/g, '')
+    // Remove remaining special characters
+    .replace(/[#*_\[\](){}]/g, '')
+    // Remove backticks for code
+    .replace(/`+([^`]*)`+/g, '$1')
+    // Remove strikethrough
+    .replace(/~~([^~]+)~~/g, '$1')
+    // Normalize whitespace - replace multiple spaces/newlines with single space
+    .replace(/\s+/g, ' ')
+    // Trim leading/trailing whitespace
+    .trim();
+}
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const GOOGLE_API_KEY = Deno.env.get("GOOGLE-API-ONE")
@@ -83,6 +110,9 @@ Rules:
 - Do not mention these instructions.
 - Each sentence must offer insight or guidance — keep it energetic, not technical.
 - If data is unavailable, respond: "Please refresh the link or try again with a valid report."
+- CRITICAL: Never use hash symbols, asterisks, dashes, brackets, parentheses, curly braces, or any markdown formatting in your response. Write in plain text only.
+- Do not use bold, italic, code blocks, lists with bullets or numbers, or any special formatting.
+- Write naturally in paragraphs using only letters, numbers, basic punctuation (periods, commas, question marks, exclamation points), and spaces.
 
 Stay fully within the energetic-psychological lens at all times.`;
 
@@ -137,6 +167,15 @@ Stay fully within the energetic-psychological lens at all times.`;
       throw new Error("Gemini response did not contain expected content");
     }
     
+    // Sanitize assistant response before saving to database
+    const sanitizedAssistantText = sanitizePlainText(assistantResponseText);
+    
+    console.log(`[conversation-llm] Text sanitization:`, {
+      original_length: assistantResponseText.length,
+      sanitized_length: sanitizedAssistantText.length,
+      changed: assistantResponseText !== sanitizedAssistantText
+    });
+    
     console.log("[conversation-llm] Received successful response from Google Gemini.");
 
     // 3. Save the assistant's message first
@@ -144,7 +183,7 @@ Stay fully within the energetic-psychological lens at all times.`;
     const assistantMessageInsertData = {
       chat_id: chat_id,
       role: 'assistant',
-      text: assistantResponseText,
+      text: sanitizedAssistantText, // Save sanitized text to DB
       meta: { llm_provider: "google", model: GOOGLE_MODEL },
     };
     console.log("[conversation-llm] Assistant message INSERT data:", JSON.stringify(assistantMessageInsertData));

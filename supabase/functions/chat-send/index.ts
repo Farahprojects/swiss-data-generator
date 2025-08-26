@@ -1,6 +1,33 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// Sanitize text to remove markdown, formatting tokens, and unwanted characters
+function sanitizePlainText(text: string): string {
+  if (!text || typeof text !== 'string') return '';
+  
+  return text
+    // Remove markdown headers (# ## ###)
+    .replace(/^#{1,6}\s+/gm, '')
+    // Remove bold/italic markers (* ** _)
+    .replace(/\*{1,2}([^*]+)\*{1,2}/g, '$1')
+    .replace(/_{1,2}([^_]+)_{1,2}/g, '$1')
+    // Remove brackets and parentheses with content
+    .replace(/\[[^\]]*\]/g, '')
+    .replace(/\([^)]*\)/g, '')
+    // Remove curly braces
+    .replace(/\{[^}]*\}/g, '')
+    // Remove remaining special characters
+    .replace(/[#*_\[\](){}]/g, '')
+    // Remove backticks for code
+    .replace(/`+([^`]*)`+/g, '$1')
+    // Remove strikethrough
+    .replace(/~~([^~]+)~~/g, '$1')
+    // Normalize whitespace - replace multiple spaces/newlines with single space
+    .replace(/\s+/g, ' ')
+    // Trim leading/trailing whitespace
+    .trim();
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, accept',
@@ -58,11 +85,21 @@ serve(async (req) => {
     // Note: chat_id is already verified by verify-chat-access edge function
     // No additional validation needed here
 
+    // Sanitize user text before saving to database
+    const sanitizedText = sanitizePlainText(text);
+    const originalText = text; // Keep original for LLM context
+    
+    console.log('[chat-send] Text sanitization:', {
+      original_length: originalText.length,
+      sanitized_length: sanitizedText.length,
+      changed: originalText !== sanitizedText
+    });
+
     // Save message to DB (fire and forget)
     const userMessageData = {
       chat_id,
       role: "user",
-      text,
+      text: sanitizedText, // Save sanitized text to DB
       client_msg_id: client_msg_id || crypto.randomUUID(),
       status: "complete",
       meta: {}
@@ -99,7 +136,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         chat_id,
-        text,
+        text: originalText, // Send original text to LLM for better context
         client_msg_id: client_msg_id || userMessageData.client_msg_id,
         mode,
         sessionId
