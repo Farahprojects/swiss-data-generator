@@ -392,6 +392,13 @@ export class ConversationMicrophoneServiceClass {
         return;
       }
       
+      // ✅ WAKE UP CALL: Ensure AudioContext is running before analysis
+      if (this.audioContext && this.audioContext.state === 'suspended') {
+        this.audioContext.resume().then(() => {
+          this.log('✅ AudioContext resumed successfully after being suspended.');
+        });
+      }
+      
       // Get current RMS audio level
       this.analyser.getByteTimeDomainData(dataArray);
       let sumSquares = 0;
