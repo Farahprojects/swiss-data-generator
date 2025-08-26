@@ -171,7 +171,8 @@ Content Ruels:
               latency_ms,
               input_tokens: inputTokens,
               output_tokens: outputTokens,
-              total_tokens: tokenCount
+              total_tokens: tokenCount,
+              ...(mode && sessionId ? { mode, sessionId } : {})
             },
           });
 

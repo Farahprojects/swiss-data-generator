@@ -92,6 +92,21 @@ class ChatController {
               }
             }
             
+            // Handle assistant messages in conversation mode
+            if (newMessage.role === 'assistant') {
+              const meta = newMessage.meta as any;
+              const isConversationMode = meta?.mode === 'conversation';
+              const matchesSession = meta?.sessionId === this.sessionId;
+              
+              console.log('[ChatController] Assistant message meta:', { mode: meta?.mode, sessionId: meta?.sessionId, currentSessionId: this.sessionId });
+              
+              // Trigger TTS if this is a conversation mode message from our session
+              if (isConversationMode && matchesSession && this.sessionId) {
+                console.log('[ChatController] Triggering TTS for conversation assistant message');
+                this.playAssistantAudioAndContinue(newMessage, newMessage.chat_id);
+              }
+            }
+            
             // Only add if not already present and no reconciliation occurred
             if (!messages.find(m => m.id === newMessage.id)) {
               console.log('[ChatController] Adding new message:', newMessage.id);
@@ -308,14 +323,15 @@ class ChatController {
       this.addOptimisticMessages(chat_id, transcript, client_msg_id, audioUrl);
       
       // conversationFlowMonitor.observeStep('thinking');
-      const finalMessage = await llmService.sendMessage({ 
+      await llmService.sendMessage({ 
         chat_id, 
         text: transcript, 
         client_msg_id,
         mode: this.mode,
         sessionId: this.sessionId
       });
-      this.reconcileOptimisticMessage(finalMessage);
+      
+      // Assistant response and TTS will be triggered via realtime events
       
       // Reset auto-recovery on successful turn completion
       // conversationFlowMonitor.resetAutoRecovery();
