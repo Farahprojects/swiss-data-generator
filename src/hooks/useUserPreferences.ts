@@ -55,6 +55,7 @@ export function useUserPreferences() {
   // Track if component is mounted
   const isMountedRef = useRef(true);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const channelRef = useRef<any>(null);
 
   // Function to check if a component is still mounted
   const isMounted = useCallback(() => {
@@ -70,7 +71,6 @@ export function useUserPreferences() {
 
   useEffect(() => {
     let loadTimeout: NodeJS.Timeout;
-    let channel: any;
 
     const loadUserPreferences = async () => {
       if (!user?.id) {
@@ -141,7 +141,7 @@ export function useUserPreferences() {
       if (!user?.id) return;
 
       try {
-        channel = supabase
+        channelRef.current = supabase
           .channel("user_preferences_changes")
           .on(
             "postgres_changes",
@@ -212,8 +212,8 @@ export function useUserPreferences() {
         retryTimeoutRef.current = null;
       }
       
-      if (channel.current) {
-        supabase.removeChannel(channel.current);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
       }
     };
   }, [user, toast, isMounted, retryCount]);
