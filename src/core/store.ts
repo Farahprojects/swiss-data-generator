@@ -65,6 +65,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   addMessage: (message) => set((state) => {
+    console.log('[Store] 🔍 TIMING: addMessage called at', performance.now());
+    const addStartTime = performance.now();
+    
     // Enhanced deduplication: check both id and client_msg_id
     const existingById = state.messages.find(m => m.id === message.id);
     const existingByClientId = message.client_msg_id ? 
@@ -72,6 +75,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     
     // If message already exists by id, skip
     if (existingById) {
+      console.log('[Store] 🔍 TIMING: Message already exists, returning early at', performance.now(), 'delta:', performance.now() - addStartTime);
       return state;
     }
     
@@ -81,10 +85,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const newMessages = state.messages.map(m => 
         m.client_msg_id === message.client_msg_id ? { ...message } : m
       );
+      console.log('[Store] 🔍 TIMING: Optimistic message replaced at', performance.now(), 'delta:', performance.now() - addStartTime);
       return { messages: newMessages };
     }
     
-    return { messages: [...state.messages, message] };
+    const result = { messages: [...state.messages, message] };
+    console.log('[Store] 🔍 TIMING: New message added at', performance.now(), 'delta:', performance.now() - addStartTime);
+    return result;
   }),
 
   updateMessage: (id, updates) => {

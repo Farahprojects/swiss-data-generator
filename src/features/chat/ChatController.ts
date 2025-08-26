@@ -101,8 +101,11 @@ class ChatController {
               
               // Trigger TTS immediately for conversation mode - no session gating
               if (isConversationMode) {
-                console.log('[ChatController] Starting TTS for conversation assistant message');
+                console.log('[ChatController] 🔍 TIMING: Starting TTS for conversation assistant message at', performance.now());
+                const ttsStartTime = performance.now();
+                
                 useChatStore.getState().setStatus('speaking');
+                console.log('[ChatController] 🔍 TIMING: Set status to speaking at', performance.now(), 'delta:', performance.now() - ttsStartTime);
                 
                 // Start TTS async - don't wait for completion
                 conversationTtsService.speakAssistant({
@@ -119,13 +122,17 @@ class ChatController {
                   if (this.isResetting) return;
                   this.resetTurn(false);
                 });
+                console.log('[ChatController] 🔍 TIMING: Called TTS speakAssistant at', performance.now(), 'delta:', performance.now() - ttsStartTime);
               }
             }
             
             // Only add if not already present and no reconciliation occurred
             if (!messages.find(m => m.id === newMessage.id)) {
+              console.log('[ChatController] 🔍 TIMING: About to add message to store at', performance.now());
+              const addMessageStartTime = performance.now();
               console.log('[ChatController] Adding new message:', newMessage.id);
               addMessage(newMessage);
+              console.log('[ChatController] 🔍 TIMING: Added message to store at', performance.now(), 'delta:', performance.now() - addMessageStartTime);
             } else {
               console.log('[ChatController] Message already exists, skipping:', newMessage.id);
             }

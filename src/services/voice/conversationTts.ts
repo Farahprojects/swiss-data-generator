@@ -126,6 +126,9 @@ class ConversationTtsService {
 
   async speakAssistant({ chat_id, messageId, text, sessionId, onComplete }: SpeakAssistantOptions): Promise<void> {
     try {
+      console.log('[ConversationTTS] 🔍 TIMING: speakAssistant called at', performance.now());
+      const funcStartTime = performance.now();
+      
       // Ensure audio is unlocked before proceeding
       if (!this.isAudioUnlocked || !this.masterAudioElement) {
         throw new Error('Audio is not unlocked. A user gesture is required before TTS can play.');
@@ -141,11 +144,14 @@ class ConversationTtsService {
         'apikey': SUPABASE_PUBLISHABLE_KEY,
       };
 
+      console.log('[ConversationTTS] 🔍 TIMING: About to fetch TTS at', performance.now(), 'delta:', performance.now() - funcStartTime);
+      const fetchStartTime = performance.now();
       const response = await fetch(`${SUPABASE_URL}/functions/v1/google-text-to-speech`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ chat_id, text: sanitizedText, voice: googleVoiceCode, sessionId: sessionId || null })
       });
+      console.log('[ConversationTTS] 🔍 TIMING: TTS fetch completed at', performance.now(), 'delta:', performance.now() - fetchStartTime);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -154,16 +160,22 @@ class ConversationTtsService {
       }
 
       // Direct blob to audio with minimal setup
+      console.log('[ConversationTTS] 🔍 TIMING: About to create blob at', performance.now(), 'delta:', performance.now() - fetchStartTime);
+      const blobStartTime = performance.now();
       const blob = await response.blob();
       const audioUrl = URL.createObjectURL(blob);
+      console.log('[ConversationTTS] 🔍 TIMING: Blob created at', performance.now(), 'delta:', performance.now() - blobStartTime);
       
       // Reuse master audio element
       const audio = this.masterAudioElement;
       audio.src = audioUrl;
       audio.muted = false; // Unmute for actual playback
 
+      console.log('[ConversationTTS] 🔍 TIMING: About to setup audio analysis at', performance.now());
+      const analysisStartTime = performance.now();
       // Setup audio context and analyser
       await this.setupAudioAnalysis(audio);
+      console.log('[ConversationTTS] 🔍 TIMING: Audio analysis setup completed at', performance.now(), 'delta:', performance.now() - analysisStartTime);
 
       // Start real-time amplitude analysis
       this.startAmplitudeAnalysis();
@@ -183,7 +195,11 @@ class ConversationTtsService {
       }, { once: true });
       
       // Start playback and return immediately
-      audio.play().catch(error => {
+      console.log('[ConversationTTS] 🔍 TIMING: About to start audio playback at', performance.now(), 'delta:', performance.now() - funcStartTime);
+      const playStartTime = performance.now();
+      audio.play().then(() => {
+        console.log('[ConversationTTS] 🔍 TIMING: Audio playback started at', performance.now(), 'delta:', performance.now() - playStartTime);
+      }).catch(error => {
         console.error('[ConversationTTS] Audio play failed:', error);
         this.cleanupAnalysis();
         URL.revokeObjectURL(audioUrl);
