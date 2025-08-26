@@ -30,6 +30,7 @@ export const useConversationLoop = ({ chat_id, onError }: ConversationLoopOption
   const [error, setError] = useState<Error | null>(null);
   const isActiveRef = useRef(false);
   const sessionIdRef = useRef<string>(`session_${Date.now()}`);
+  const isTtsInProgressRef = useRef(false); // Guard against listening during TTS
 
   // Get current chat messages to send with context
   const messages = useChatStore((state) => state.messages);
@@ -137,6 +138,7 @@ export const useConversationLoop = ({ chat_id, onError }: ConversationLoopOption
     try {
       console.log('[ConversationLoop] Starting TTS playback...');
       setState('replying');
+      isTtsInProgressRef.current = true; // Set TTS guard
 
       await conversationTtsService.speakAssistant({
         text,
@@ -144,6 +146,7 @@ export const useConversationLoop = ({ chat_id, onError }: ConversationLoopOption
         messageId: `assistant_${Date.now()}`,
         sessionId: sessionIdRef.current,
         onComplete: () => {
+          isTtsInProgressRef.current = false; // Clear TTS guard
           if (isActiveRef.current) {
             console.log('[ConversationLoop] TTS completed, returning to listening');
             startListening();
@@ -153,6 +156,7 @@ export const useConversationLoop = ({ chat_id, onError }: ConversationLoopOption
 
     } catch (error) {
       console.error('[ConversationLoop] TTS error:', error);
+      isTtsInProgressRef.current = false; // Clear TTS guard on error
       // Continue conversation even if TTS fails
       if (isActiveRef.current) {
         startListening();
@@ -163,6 +167,12 @@ export const useConversationLoop = ({ chat_id, onError }: ConversationLoopOption
   // Start listening for user input
   const startListening = useCallback(async () => {
     if (!isActiveRef.current) return;
+    
+    // Guard against starting listening while TTS is in progress
+    if (isTtsInProgressRef.current) {
+      console.log('[ConversationLoop] Skipping startListening - TTS in progress');
+      return;
+    }
 
     try {
       console.log('[ConversationLoop] Starting to listen...');
@@ -204,8 +214,8 @@ export const useConversationLoop = ({ chat_id, onError }: ConversationLoopOption
     setError(null);
     setState('idle');
 
-    // Unlock TTS audio context
-    conversationTtsService.unlockAudio();
+    // TTS audio context already unlocked in ConversationOverlay.handleStart
+    // within the user gesture, so we don't need to call it again here
 
     // Start listening immediately
     await startListening();
@@ -215,6 +225,7 @@ export const useConversationLoop = ({ chat_id, onError }: ConversationLoopOption
   const stop = useCallback(() => {
     console.log('[ConversationLoop] Stopping conversation loop');
     isActiveRef.current = false;
+    isTtsInProgressRef.current = false; // Clear TTS guard
     
     // Stop microphone
     if (microphone.isRecording) {

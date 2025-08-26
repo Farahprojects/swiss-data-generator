@@ -74,6 +74,10 @@ export const ConversationOverlay: React.FC = () => {
     }
 
     try {
+      // 🔥 CRITICAL: Unlock TTS audio FIRST within user gesture (before any async calls)
+      conversationTtsService.unlockAudio();
+      console.log('[ConversationOverlay] TTS audio unlocked within user gesture');
+
       // SINGLE-GESTURE MEDIA INIT: Request microphone permission within the tap gesture
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
