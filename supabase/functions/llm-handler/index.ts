@@ -35,8 +35,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  console.log(`[llm-handler] Received ${req.method} request`);
-
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -47,25 +45,19 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    console.log("[llm-handler] Request body:", body);
-    
     const { chat_id, text, client_msg_id, mode, sessionId } = body;
 
     if (!chat_id || !text) {
       throw new Error("Missing 'chat_id' or 'text' in request body.");
     }
 
-    console.log(`[llm-handler] Processing request - chat_id: ${chat_id}, mode: ${mode || 'normal'}, sessionId: ${sessionId || 'none'}`);
-
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
       { auth: { persistSession: false } }
     );
-    console.log("[llm-handler] Supabase client created");
 
     // Fetch conversation history for context
-    console.log("[llm-handler] Fetching conversation history");
     const { data: history, error: historyError } = await supabase
       .from("messages")
       .select("role, text")
@@ -81,8 +73,6 @@ serve(async (req) => {
       });
     }
 
-    console.log(`[llm-handler] Found ${history?.length || 0} messages in history`);
-
     // Get Google API key
     const GOOGLE_API_KEY = Deno.env.get("GOOGLE_LLM_TTS");
     if (!GOOGLE_API_KEY) {
@@ -94,7 +84,6 @@ serve(async (req) => {
     }
 
     // Call Gemini API (non-streaming)
-    console.log("[llm-handler] Calling Gemini API");
     const startTime = Date.now();
     
     // Add system prompt as the first message
@@ -170,22 +159,13 @@ Content Ruels:
 
     // Sanitize assistant response before saving to database
     const sanitizedAssistantText = sanitizePlainText(assistantText);
-    
-    console.log(`[llm-handler] Text sanitization:`, {
-      original_length: assistantText.length,
-      sanitized_length: sanitizedAssistantText.length,
-      changed: assistantText !== sanitizedAssistantText
-    });
 
     // Extract token usage from Gemini response
     const tokenCount = data.usageMetadata?.totalTokenCount || null;
     const inputTokens = data.usageMetadata?.promptTokenCount || null;
     const outputTokens = data.usageMetadata?.candidatesTokenCount || null;
-    
-    console.log(`[llm-handler] Token usage - Total: ${tokenCount}, Input: ${inputTokens}, Output: ${outputTokens}`);
 
     const latency_ms = Date.now() - startTime;
-    console.log(`[llm-handler] Got response from Gemini in ${latency_ms}ms`);
 
     // Save assistant message to database and get the real ID
     const { data: savedMessage, error } = await supabase
@@ -212,7 +192,7 @@ Content Ruels:
       throw new Error(`Failed to save message: ${error.message}`);
     }
 
-    console.log("[llm-handler] Assistant message saved successfully with ID:", savedMessage.id);
+
 
     // ✅ REMOVED: Server-side TTS - keeping client-side TTS flow only
     // ChatController already calls conversationTtsService.speakAssistant
