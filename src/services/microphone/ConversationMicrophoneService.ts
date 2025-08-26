@@ -104,16 +104,20 @@ export class ConversationMicrophoneServiceClass {
         this.log('🎛️ Reusing existing analyser');
       }
 
-      // SINGLE-GESTURE FLOW: Reuse MediaRecorder if it exists and is inactive, otherwise create new
-      if (!this.mediaRecorder || this.mediaRecorder.state === 'inactive') {
-        this.mediaRecorder = new MediaRecorder(this.stream, {
-          mimeType: 'audio/webm;codecs=opus',
-          audioBitsPerSecond: 128000
-        });
-        this.log('🎛️ Created new MediaRecorder');
-      } else {
-        this.log('🎛️ Reusing existing MediaRecorder');
+      // SINGLE-GESTURE FLOW: Always create new MediaRecorder to avoid state conflicts
+      if (this.mediaRecorder) {
+        // Ensure previous recorder is fully stopped
+        if (this.mediaRecorder.state !== 'inactive') {
+          this.mediaRecorder.stop();
+        }
+        this.mediaRecorder = null;
       }
+      
+      this.mediaRecorder = new MediaRecorder(this.stream, {
+        mimeType: 'audio/webm;codecs=opus',
+        audioBitsPerSecond: 128000
+      });
+      this.log('🎛️ Created fresh MediaRecorder to avoid state conflicts');
 
       this.audioChunks = [];
       this.isRecording = true;

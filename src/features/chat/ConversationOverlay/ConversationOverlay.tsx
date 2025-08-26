@@ -169,20 +169,8 @@ export const ConversationOverlay: React.FC = () => {
       
       console.log('[ConversationOverlay] Message sent to LLM, waiting for Realtime response...');
       
-      // Start recording again for next turn - the Realtime effect will handle TTS
-      setConversationState('listening');
-      try {
-        const success = await conversationMicrophoneService.startRecording();
-        if (!success) {
-          console.error('[ConversationOverlay] Failed to start recording after message send');
-          setConversationState('connecting');
-        } else {
-          console.log('[ConversationOverlay] Recording restarted, awaiting assistant response');
-        }
-      } catch (error) {
-        console.error('[ConversationOverlay] Error starting recording after message send:', error);
-        setConversationState('connecting');
-      }
+      // DON'T restart recording here - let the Realtime effect handle it
+      // This prevents the duplicate recording logic that causes MediaRecorder errors
       
     } catch (error) {
       console.error('[ConversationOverlay] Simple processing error:', error);
@@ -209,20 +197,27 @@ export const ConversationOverlay: React.FC = () => {
         text: latestMessage.text,
         sessionId: sessionIdRef.current,
         onComplete: async () => {
-          console.log('[ConversationOverlay] TTS complete, returning to listening');
+          console.log('[ConversationOverlay] TTS complete, restarting recording');
           setConversationState('listening');
           
-          // Start listening again for next turn
+          // Properly restart recording after TTS completes
           try {
+            // First ensure the MediaRecorder is properly stopped
+            if (conversationMicrophoneService.getState().isRecording) {
+              console.log('[ConversationOverlay] Stopping existing recording before restart');
+              await conversationMicrophoneService.stopRecording();
+              await new Promise(resolve => setTimeout(resolve, 100)); // Small delay
+            }
+            
             const success = await conversationMicrophoneService.startRecording();
             if (!success) {
               console.error('[ConversationOverlay] Failed to start recording after TTS');
               setConversationState('connecting');
             } else {
-              console.log('[ConversationOverlay] Recording restarted for next turn');
+              console.log('[ConversationOverlay] Recording restarted successfully for next turn');
             }
           } catch (error) {
-            console.error('[ConversationOverlay] Error starting recording after TTS:', error);
+            console.error('[ConversationOverlay] Error restarting recording after TTS:', error);
             setConversationState('connecting');
           }
         }
