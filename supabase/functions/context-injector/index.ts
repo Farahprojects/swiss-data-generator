@@ -225,7 +225,7 @@ serve(async (req) => {
       const userSwissData = extractUserSwissData(translatorLogs.swiss_data);
       if (Object.keys(userSwissData).length > 0) {
         if (contextContent) contextContent += "\n\n";
-        contextContent += `SWISS ENERGETIC DATA:\n${JSON.stringify(userSwissData, null, 2)}`;
+        contextContent += `Astro report:\n${JSON.stringify(userSwissData, null, 2)}`;
       }
     }
 
