@@ -104,6 +104,11 @@ class ChatController {
                 console.log('[ChatController] 🔍 TIMING: Starting TTS for conversation assistant message at', performance.now());
                 const ttsStartTime = performance.now();
                 
+                // ✅ CRITICAL: Release microphone immediately before TTS to prevent iOS conflicts
+                console.log('🎤 [ChatController] Releasing microphone before TTS in conversation mode');
+                conversationMicrophoneService.cleanup();
+                this.resetTurn(false); // Don't auto-restart in conversation mode
+                
                 useChatStore.getState().setStatus('speaking');
                 console.log('[ChatController] 🔍 TIMING: Set status to speaking at', performance.now(), 'delta:', performance.now() - ttsStartTime);
                 

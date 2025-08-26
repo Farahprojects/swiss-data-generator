@@ -24,7 +24,7 @@ export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
 
   if (state === 'listening') {
     // Render the TorusListening component in its 'listening' state
-    return <TorusListening active={true} size={128} isThinking={false} />;
+    return <TorusListening active={true} size={128} isThinking={false} audioLevel={audioLevel} />;
   }
 
   // Fallback for 'connecting' state or any other undefined states

@@ -53,6 +53,7 @@ type TorusListeningProps = {
   active: boolean;
   size?: number;
   isThinking?: boolean;
+  audioLevel?: number; // Use external audio level instead of getUserMedia
 };
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -61,14 +62,13 @@ export default function TorusListening({
   active,
   size = 180,
   isThinking = false,
+  audioLevel = 0, // External audio level
 }: TorusListeningProps) {
-  const [level, setLevel] = useState(0);
   const [time, setTime] = useState(0);
   const rafRef = useRef<number | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const dataRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
+  
+  // Use external audio level instead of managing our own stream
+  const level = audioLevel;
 
   const dots = useMemo(() => {
     return torusData.dots
@@ -83,71 +83,28 @@ export default function TorusListening({
   useEffect(() => {
     let mounted = true;
 
-    async function start() {
-      if (!active || isThinking) {
-        loop();
-        return;
-      }
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        if (!mounted) { stream.getTracks().forEach(t => t.stop()); return; }
-        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const source = ctx.createMediaStreamSource(stream);
-        const analyser = ctx.createAnalyser();
-        analyser.fftSize = 256;
-        analyser.smoothingTimeConstant = 0.8;
-        source.connect(analyser);
-        streamRef.current = stream;
-        audioCtxRef.current = ctx;
-        analyserRef.current = analyser;
-        dataRef.current = new Uint8Array(analyser.frequencyBinCount);
-        loop();
-      } catch (e) {
-        console.warn("Mic unavailable:", e);
-        loop();
-      }
-    }
-
-    function stop() {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
-      if (analyserRef.current) analyserRef.current.disconnect();
-      rafRef.current = null;
-      streamRef.current = null;
-      analyserRef.current = null;
-      dataRef.current = null;
-    }
-
     function loop() {
       const tick = () => {
         if (!mounted) return;
         setTime(performance.now());
-        const analyser = analyserRef.current;
-        const buf = dataRef.current;
-        if (analyser && buf) {
-          analyser.getByteFrequencyData(buf);
-          let sum = 0;
-          for (let i = 0; i < buf.length; i++) {
-            sum += (buf[i] / 255) ** 2;
-          }
-          const rms = Math.sqrt(sum / buf.length);
-          setLevel(prev => lerp(prev, rms, 0.2));
-        } else {
-          setLevel(prev => lerp(prev, 0, 0.1));
-        }
         rafRef.current = requestAnimationFrame(tick);
       };
       tick();
     }
 
-    if (active) start();
+    function stop() {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+
+    if (active) loop();
     else stop();
 
     return () => {
       mounted = false;
       stop();
     };
-  }, [active, isThinking]);
+  }, [active]);
 
   const energy = Math.min(1, level * 10);
   const t = time / 4000;

@@ -2,6 +2,7 @@ import React, { useRef, useState, Suspense, lazy } from 'react';
 import { useChatStore } from '@/core/store';
 import { Message } from '@/core/types';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
+import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { Loader2, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { Button } from '@/components/ui/button';
@@ -71,9 +72,10 @@ const ReportLoadingSequence = () => {
 
 const TurnItem = ({ turn, isLastTurn, isFromHistory }: { turn: Turn; isLastTurn: boolean; isFromHistory?: boolean }) => {
   const { userMessage, assistantMessage } = turn;
+  const { isConversationOpen } = useConversationUIStore();
   
-  // Skip animation for existing messages from history or if it's not the last turn
-  const shouldAnimate = assistantMessage && isLastTurn && !isFromHistory;
+  // Skip animation for existing messages from history, if it's not the last turn, OR if conversation overlay is open
+  const shouldAnimate = assistantMessage && isLastTurn && !isFromHistory && !isConversationOpen;
 
   return (
     <div 
