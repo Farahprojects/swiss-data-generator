@@ -19,14 +19,9 @@ class ChatController {
   private mode: string = 'normal';
   private sessionId: string | null = null;
   private isUnlocked = false; // New flag to control microphone access
-  
-  // TTS tracking for idempotency
-  private playedMessageIds = new Set<string>();
-  private lastTtsProcessedAt: string | null = null;
 
   constructor() {
     this.loadExistingMessages();
-    this.loadTtsState();
   }
 
   private async loadExistingMessages(retryCount = 0) {
@@ -97,18 +92,34 @@ class ChatController {
               }
             }
             
-            // Handle assistant messages in conversation mode
+            // Handle assistant messages - trigger TTS immediately for conversation mode
             if (newMessage.role === 'assistant') {
               const meta = newMessage.meta as any;
-              const isConversationMode = meta?.mode === 'conversation';
+              const isConversationMode = meta?.mode === 'convo';
               const matchesSession = meta?.sessionId === this.sessionId;
               
               console.log('[ChatController] Assistant message meta:', { mode: meta?.mode, sessionId: meta?.sessionId, currentSessionId: this.sessionId });
               
-              // Trigger TTS if this is a conversation mode message from our session
-              if (isConversationMode && matchesSession && this.sessionId) {
-                console.log('[ChatController] Triggering TTS for conversation assistant message');
-                this.triggerTtsIfNeeded(newMessage, newMessage.chat_id);
+              // Trigger TTS immediately for conversation mode
+              if (isConversationMode && matchesSession && this.sessionId && newMessage.text) {
+                console.log('[ChatController] Starting TTS for conversation assistant message');
+                useChatStore.getState().setStatus('speaking');
+                
+                // Start TTS async - don't wait for completion
+                conversationTtsService.speakAssistant({
+                  chat_id: newMessage.chat_id,
+                  messageId: newMessage.id,
+                  text: newMessage.text,
+                  sessionId: this.sessionId,
+                  onComplete: () => {
+                    if (this.isResetting) return;
+                    this.resetTurn(false);
+                  }
+                }).catch(error => {
+                  console.warn(`[ChatController] TTS failed: ${error}. Continuing without audio.`);
+                  if (this.isResetting) return;
+                  this.resetTurn(false);
+                });
               }
             }
             
@@ -121,12 +132,8 @@ class ChatController {
             }
           }
         )
-        .subscribe(async (status) => {
+        .subscribe((status) => {
           console.log('[ChatController] Realtime subscription status:', status);
-          if (status === 'SUBSCRIBED') {
-            // Once subscribed, catch up on any missed assistant messages
-            await this.catchUpAssistantMessages(chat_id);
-          }
         });
     } catch (error) {
       console.error('[ChatController] Failed to setup realtime subscription:', error);
@@ -159,10 +166,6 @@ class ChatController {
   setConversationMode(mode: string, sessionId: string) {
     this.mode = mode;
     this.sessionId = sessionId;
-    // Reset TTS state for new session
-    this.playedMessageIds.clear();
-    this.lastTtsProcessedAt = new Date().toISOString();
-    this.saveTtsState();
   }
 
   async sendTextMessage(text: string) {
@@ -236,10 +239,6 @@ class ChatController {
     });
   }
 
-  private reconcileOptimisticMessage(finalMessage: Message) {
-    // Assistant message will come via realtime updates
-    this.playAssistantAudioAndContinue(finalMessage, finalMessage.chat_id);
-  }
 
   private initializeConversationService() {
     if (this.conversationServiceInitialized) return;
@@ -356,127 +355,6 @@ class ChatController {
     }
   }
 
-  // Unified TTS trigger with idempotency
-  private triggerTtsIfNeeded(assistantMessage: Message, chat_id: string) {
-    // Check if already played
-    if (this.playedMessageIds.has(assistantMessage.id)) {
-      console.log('[ChatController] TTS already played for message:', assistantMessage.id);
-      return;
-    }
-
-    // Mark as played immediately to prevent double-triggers
-    this.playedMessageIds.add(assistantMessage.id);
-    this.lastTtsProcessedAt = assistantMessage.createdAt;
-    this.saveTtsState();
-
-    this.playAssistantAudioAndContinue(assistantMessage, chat_id);
-  }
-
-  private async playAssistantAudioAndContinue(assistantMessage: Message, chat_id: string) {
-    if (assistantMessage.text && assistantMessage.id) {
-      useChatStore.getState().setStatus('speaking');
-      
-      // Start TTS and immediately continue
-      conversationTtsService.speakAssistant({
-        chat_id,
-        messageId: assistantMessage.id,
-        text: assistantMessage.text,
-        sessionId: this.sessionId || null,
-        onComplete: () => {
-          // TTS audio finished - reset turn to allow next conversation
-          if (this.isResetting) return;
-          this.resetTurn(false);
-        }
-      }).catch(error => {
-        // Log TTS errors but don't block conversation flow
-        console.warn(`[ChatController] TTS failed: ${error}. Continuing without audio.`);
-        // Still reset turn even if TTS fails
-        if (this.isResetting) return;
-        this.resetTurn(false);
-      });
-      
-      // Keep speaking status active while TTS plays
-      // The onComplete callback will handle resetting the turn when audio finishes
-      
-    } else {
-      console.warn('[ChatController] Could not play audio. Missing text or messageId.');
-      this.resetTurn(true); // Don't restart if no text
-    }
-  }
-
-  // Catch up on any assistant messages that might have been missed
-  private async catchUpAssistantMessages(chat_id: string) {
-    if (!this.sessionId || this.mode !== 'conversation') {
-      return;
-    }
-
-    try {
-      console.log('[ChatController] Catching up on assistant messages...');
-      
-      // Query recent assistant messages for this session
-      const { data: messages, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('chat_id', chat_id)
-        .eq('role', 'assistant')
-        .gte('created_at', this.lastTtsProcessedAt || new Date(Date.now() - 60000).toISOString()) // Last minute fallback
-        .order('created_at', { ascending: true });
-
-      if (error) {
-        console.error('[ChatController] Error catching up messages:', error);
-        return;
-      }
-
-      if (!messages || messages.length === 0) {
-        console.log('[ChatController] No assistant messages to catch up on');
-        return;
-      }
-
-      for (const dbMessage of messages) {
-        const message = this.transformDatabaseMessage(dbMessage);
-        const meta = message.meta as any;
-        const isConversationMode = meta?.mode === 'conversation';
-        const matchesSession = meta?.sessionId === this.sessionId;
-
-        if (isConversationMode && matchesSession) {
-          console.log('[ChatController] Catching up TTS for message:', message.id);
-          this.triggerTtsIfNeeded(message, chat_id);
-        }
-      }
-    } catch (error) {
-      console.error('[ChatController] Catch-up failed:', error);
-    }
-  }
-
-  // Persist TTS state to sessionStorage
-  private saveTtsState() {
-    try {
-      const state = {
-        lastTtsProcessedAt: this.lastTtsProcessedAt,
-        playedMessageIds: Array.from(this.playedMessageIds),
-        sessionId: this.sessionId
-      };
-      sessionStorage.setItem('tts-state', JSON.stringify(state));
-    } catch (error) {
-      console.warn('[ChatController] Failed to save TTS state:', error);
-    }
-  }
-
-  // Load TTS state from sessionStorage
-  private loadTtsState() {
-    try {
-      const saved = sessionStorage.getItem('tts-state');
-      if (saved) {
-        const state = JSON.parse(saved);
-        if (state.sessionId === this.sessionId) {
-          this.lastTtsProcessedAt = state.lastTtsProcessedAt;
-          this.playedMessageIds = new Set(state.playedMessageIds || []);
-        }
-      }
-    } catch (error) {
-      console.warn('[ChatController] Failed to load TTS state:', error);
-    }
-  }
 
   private resetTurn(endConversationFlow: boolean = true) {
 
