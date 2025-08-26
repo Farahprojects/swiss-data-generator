@@ -19,6 +19,7 @@ interface ChatState {
   isLoadingMessages: boolean;
   messageLoadError: string | null;
   lastMessagesFetch: number | null;
+  isAssistantTyping: boolean;
 
   startConversation: (id: string) => void;
   loadMessages: (messages: Message[]) => void;
@@ -31,6 +32,7 @@ interface ChatState {
   setLoadingMessages: (loading: boolean) => void;
   setMessageLoadError: (error: string | null) => void;
   retryLoadMessages: () => Promise<void>;
+  setAssistantTyping: (isTyping: boolean) => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -42,6 +44,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isLoadingMessages: false,
   messageLoadError: null,
   lastMessagesFetch: null,
+  isAssistantTyping: false,
 
   startConversation: (id) => set({ 
     chat_id: id, 
@@ -49,7 +52,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
     status: 'idle', 
     error: null,
     messageLoadError: null,
-    lastMessagesFetch: null
+    lastMessagesFetch: null,
+    isAssistantTyping: false
   }),
 
   loadMessages: (messages) => {
@@ -140,6 +144,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
     error: null,
     isLoadingMessages: false,
     messageLoadError: null,
-    lastMessagesFetch: null
+    lastMessagesFetch: null,
+    isAssistantTyping: false
   }),
+
+  setAssistantTyping: (isTyping) => set({ isAssistantTyping: isTyping }),
 }));

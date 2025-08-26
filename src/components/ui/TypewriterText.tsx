@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useChatStore } from '@/core/store';
 
 interface TypewriterTextProps {
   text: string;
@@ -30,6 +31,22 @@ export const TypewriterText: React.FC<TypewriterTextProps> = ({
   const cursorIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isInterruptedRef = useRef(false);
   const lastTextRef = useRef('');
+
+  // Direct store communication
+  const setAssistantTyping = useChatStore(state => state.setAssistantTyping);
+  const isAssistantTyping = useChatStore(state => state.isAssistantTyping);
+
+  // Watch for external stop command from store
+  useEffect(() => {
+    if (!isAssistantTyping && isTyping) {
+      // External stop command - immediately show full text
+      isInterruptedRef.current = true;
+      setIsTyping(false);
+      setDisplayedText(text);
+      cleanup();
+      onComplete?.();
+    }
+  }, [isAssistantTyping, isTyping, text, onComplete]);
 
   // Cleanup function
   const cleanup = useCallback(() => {
@@ -79,6 +96,7 @@ export const TypewriterText: React.FC<TypewriterTextProps> = ({
     const typeNextWord = () => {
       if (isInterruptedRef.current) {
         setIsTyping(false);
+        setAssistantTyping(false); // Direct store communication - stop typing
         onInterrupt?.();
         return;
       }
@@ -95,6 +113,7 @@ export const TypewriterText: React.FC<TypewriterTextProps> = ({
       } else {
         // Animation complete
         setIsTyping(false);
+        setAssistantTyping(false); // Direct store communication - stop typing
         if (showCursor) {
           setCursorVisible(true); // Keep cursor visible after completion
         }
@@ -103,15 +122,16 @@ export const TypewriterText: React.FC<TypewriterTextProps> = ({
     };
 
     typeNextWord();
-  }, [text, msPerWord, onComplete, onInterrupt, showCursor, disabled]);
+  }, [text, msPerWord, onComplete, onInterrupt, showCursor, disabled, setAssistantTyping]);
 
   // Stop typing (for interruptions)
   const stopTyping = useCallback(() => {
     isInterruptedRef.current = true;
     setIsTyping(false);
+    setAssistantTyping(false); // Direct store communication - stop typing
     cleanup();
     onInterrupt?.();
-  }, [cleanup, onInterrupt]);
+  }, [cleanup, onInterrupt, setAssistantTyping]);
 
   // Reset and start animation when text changes
   useEffect(() => {
