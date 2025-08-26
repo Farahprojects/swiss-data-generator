@@ -59,27 +59,14 @@ const baseSchema = z.object({
 
 /** Parse various timestamp combos into an ISO‑UTC string. */
 export function toUtcISO(parts: { date?: string; time?: string; tz?: string; local?: string; birth_date?: string; birth_time?: string; location?: string }): string {
-  console.log(`[toUtcISO] Input parts:`, {
-    date: parts.date,
-    birth_date: parts.birth_date,
-    time: parts.time,
-    birth_time: parts.birth_time,
-    tz: parts.tz,
-    local: parts.local,
-    location: parts.location
-  });
-
   if (parts.local) {
     const d = new Date(parts.local);
     if (isNaN(d.getTime())) throw new Error("Invalid 'local' timestamp");
-    console.log(`[toUtcISO] Using local timestamp: ${parts.local} -> ${d.toISOString()}`);
     return d.toISOString();
   }
   
   const actualDate = parts.birth_date || parts.date;
   const actualTime = parts.birth_time || parts.time;
-  
-  console.log(`[toUtcISO] Extracted date: ${actualDate}, time: ${actualTime}, tz: ${parts.tz}`);
 
   if (actualDate) {
     if (actualTime) {
@@ -91,10 +78,7 @@ export function toUtcISO(parts: { date?: string; time?: string; tz?: string; loc
       const [H, M] = actualTime.split(":" as const).map(Number);
       const tz = parts.tz || "UTC";
       
-      console.log(`[toUtcISO] Parsed components: year=${year}, month=${month}, day=${day}, hour=${H}, minute=${M}, tz=${tz}`);
-      
       const provisional = new Date(Date.UTC(year, month, day, H, M));
-      console.log(`[toUtcISO] Provisional UTC date (before timezone adjustment): ${provisional.toISOString()}`);
       
       try {
         const fmt = new Intl.DateTimeFormat("en-US", {
@@ -104,7 +88,6 @@ export function toUtcISO(parts: { date?: string; time?: string; tz?: string; loc
           hour: "2-digit", minute: "2-digit", hourCycle: "h23"
         });
         const off = fmt.formatToParts(provisional).find(p => p.type === "timeZoneName")?.value ?? "GMT+0";
-        console.log(`[toUtcISO] Timezone offset string: ${off}`);
         
         const m = off.match(/GMT([+-])(\d{1,2})(?::?(\d{2}))?/);
         if (!m) throw new Error("bad offset");
@@ -112,19 +95,14 @@ export function toUtcISO(parts: { date?: string; time?: string; tz?: string; loc
         const hOff = +m[2], minOff = +(m[3]||0);
         const total = sign * (hOff * 60 + minOff);
         
-        console.log(`[toUtcISO] Offset calculation: sign=${sign}, hours=${hOff}, minutes=${minOff}, total_minutes=${total}`);
-        
         const finalUtc = new Date(provisional.getTime() - total * 60000);
-        console.log(`[toUtcISO] Final UTC timestamp: ${finalUtc.toISOString()}`);
         return finalUtc.toISOString();
       } catch(e) {
-        console.log(`[toUtcISO] Timezone conversion failed, using provisional: ${provisional.toISOString()}, error:`, e);
         return provisional.toISOString();
       }
     }
     const d = new Date(actualDate);
     if (isNaN(d.getTime())) throw new Error("Invalid date");
-    console.log(`[toUtcISO] Date only, returning: ${d.toISOString()}`);
     return d.toISOString();
   }
 
@@ -162,25 +140,16 @@ async function ensureLatLon(obj:any){
   return { data:{...obj,latitude:lat,longitude:lng}, googleGeoUsed:true };
 }
 async function inferTimezone(obj:any){
-  console.log(`[inferTimezone] Called with obj:`, { lat: obj.latitude, lng: obj.longitude, tz: obj.tz });
   if (obj.tz) {
-    console.log(`[inferTimezone] Using existing tz: ${obj.tz}`);
     return obj.tz;
   }
   if (obj.latitude!==undefined&&obj.longitude!==undefined){
     const url = `https://maps.googleapis.com/maps/api/timezone/json?location=${obj.latitude},${obj.longitude}&timestamp=0&key=${GEO_KEY}`;
-    console.log(`[inferTimezone] Calling Google Timezone API: ${url.replace(GEO_KEY, 'REDACTED')}`);
     const tf = await fetch(url).then(r=>r.json());
-    console.log(`[inferTimezone] API response:`, tf);
     if (tf.status==="OK"&&tf.timeZoneId) {
-      console.log(`[inferTimezone] Returning timezone: ${tf.timeZoneId}`);
       return tf.timeZoneId;
     }
-    console.log(`[inferTimezone] API failed or no timeZoneId`);
-  } else {
-    console.log(`[inferTimezone] Missing lat/lng coordinates`);
   }
-  console.log(`[inferTimezone] Returning null (fallback)`);
   return null;
 }
 
@@ -254,7 +223,6 @@ serve(async (req)=>{
       return input;
     }
     const body = normaliseBody(rawBody);
-    console.log(`[translator-edge-${reqId}]`, JSON.stringify(body));
     const parsed = baseSchema.parse(body);
     requestType = parsed.request.trim().toLowerCase();
     const canon = CANON[requestType];
@@ -264,23 +232,17 @@ serve(async (req)=>{
     if(canon==="sync" && parsed.person_a && parsed.person_b){
       const {data:pa,googleGeoUsed:g1}=await ensureLatLon(parsed.person_a);
       const tzA=await inferTimezone(pa);
-      console.log(`[translator-edge-${reqId}] Person A timezone inferred: ${tzA}`);
       // Assign timezone back to the person object
       pa.tz = tzA || pa.tz || "UTC";
       const utcA=toUtcISO({...pa,tz:pa.tz,location:pa.location||""});
-      console.log(`[translator-edge-${reqId}] Person A UTC generated: ${utcA}`);
       const normA={...normalise(pa),utc:utcA,tz:pa.tz, name: parsed.person_a.name || ''};
-      console.log(`[translator-edge-${reqId}] Person A final payload:`, JSON.stringify(normA));
 
       const {data:pb,googleGeoUsed:g2}=await ensureLatLon(parsed.person_b);
       const tzB=await inferTimezone(pb);
-      console.log(`[translator-edge-${reqId}] Person B timezone inferred: ${tzB}`);
       // Assign timezone back to the person object
       pb.tz = tzB || pb.tz || "UTC";
       const utcB=toUtcISO({...pb,tz:pb.tz,location:pb.location||""});
-      console.log(`[translator-edge-${reqId}] Person B UTC generated: ${utcB}`);
       const normB={...normalise(pb),utc:utcB,tz:pb.tz, name: parsed.person_b.name || ''};
-      console.log(`[translator-edge-${reqId}] Person B final payload:`, JSON.stringify(normB));
 
       googleGeo = g1||g2;
       payload = { person_a: normA, person_b: normB, ...parsed };
@@ -327,13 +289,9 @@ serve(async (req)=>{
         house_system: parsed.person_a?.house_system ?? withLatLon.house_system ?? "P",
       };
     }
-    console.log(`[translator-edge-${reqId}] Final payload being sent to Swiss API:`, JSON.stringify(payload));
     const url = `${SWISS_API}/${canon}`;
-    console.log(`[translator-edge-${reqId}] Calling Swiss API at: ${url}`);
     const swiss = await fetch(url,{ method:["moonphases","positions"].includes(canon)?"GET":"POST", headers:{"Content-Type":"application/json"}, body:["moonphases","positions"].includes(canon)?undefined:JSON.stringify(payload) });
     const txt = await swiss.text();
-    console.log(`[translator-edge-${reqId}] Swiss API response status: ${swiss.status}`);
-    console.log(`[translator-edge-${reqId}] Swiss API raw response: ${txt.substring(0, 500)}...`);
     const swissData = (()=>{ try{return JSON.parse(txt);}catch{return { raw:txt }; }})();
 
     // Fire report-orchestrator if we have reportType
@@ -363,9 +321,6 @@ serve(async (req)=>{
     // Add astro data only reports to report_ready_signals for UI detection
     if (body.is_guest && body.user_id && swiss.ok) {
       try {
-        // Debug log the raw is_ai_report value
-        console.log(`[translator-edge-${reqId}] DEBUG: Raw is_ai_report value:`, JSON.stringify(body.is_ai_report), typeof body.is_ai_report);
-        
         // Properly handle is_ai_report - could be boolean, string "true"/"false", or missing
         let isAIReport = false;
         if (typeof body.is_ai_report === 'boolean') {
@@ -374,13 +329,9 @@ serve(async (req)=>{
           isAIReport = body.is_ai_report.toLowerCase().trim() === 'true';
         }
         
-        console.log(`[translator-edge-${reqId}] DEBUG: Processed isAIReport:`, isAIReport);
-        console.log(`[translator-edge-${reqId}] DEBUG: Should add to report_ready_signals?`, !isAIReport);
-        
         // If it's astro data only (not AI report), add to report_ready_signals
         if (!isAIReport) {
-          console.log(`[translator-edge-${reqId}] Adding astro data only report to report_ready_signals: ${body.user_id}`);
-          const { data, error } = await sb.from('report_ready_signals').insert({
+          const { error } = await sb.from('report_ready_signals').insert({
             guest_report_id: body.user_id,
             is_ai_report: false,
             created_at: new Date().toISOString()
@@ -388,21 +339,11 @@ serve(async (req)=>{
           
           if (error) {
             console.error(`[translator-edge-${reqId}] Error inserting into report_ready_signals:`, error);
-          } else {
-            console.log(`[translator-edge-${reqId}] Successfully added to report_ready_signals:`, data);
           }
-        } else {
-          console.log(`[translator-edge-${reqId}] Skipping report_ready_signals - this is an AI report`);
         }
       } catch (error) {
         console.warn(`[translator-edge-${reqId}] Failed to add to report_ready_signals:`, error);
       }
-    } else {
-      console.log(`[translator-edge-${reqId}] DEBUG: Skipping report_ready_signals - conditions not met:`, {
-        is_guest: body.is_guest,
-        user_id: !!body.user_id,
-        swiss_ok: swiss.ok
-      });
     }
     
     return new Response(txt,{status:swiss.status,headers:corsHeaders});
