@@ -26,7 +26,7 @@ import { PublicOnlyGuard } from './components/auth/PublicOnlyGuard';
 import UserSettings from './pages/UserSettings';
 
 // Lazy load chat screen
-const ReportChatScreen = lazy(() => import('./screens/ReportChatScreen'));
+import ReportChatScreen from './screens/ReportChatScreen';
 
 import { AuthProvider } from './contexts/AuthContext';
 import NavigationStateProvider from '@/contexts/NavigationStateContext';
@@ -162,11 +162,7 @@ function App() {
                   {/* Chat Route */}
                   <Route 
                     path="/chat/:chat_id?" 
-                    element={
-                      <Suspense fallback={<div>Loading Chat...</div>}>
-                        <ReportChatScreen />
-                      </Suspense>
-                    } 
+                    element={<ReportChatScreen />}
                   />
 
                   {/* Settings Route */}

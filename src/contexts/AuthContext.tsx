@@ -308,18 +308,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       debug('========== SIGN‑OUT ==========');
       setLoading(true);
       
-      // Clear local state
+      // Clear local state first
       setUser(null);
       setSession(null);
       setPendingEmailAddress(null);
       setIsPendingEmailCheck(false);
       clearNavigationState();
 
+      // Import and use cleanup utility
+      const { cleanupAuthState } = await import('@/utils/authCleanup');
+      cleanupAuthState();
+
       // Sign out from Supabase with global scope
-      await supabase.auth.signOut({ scope: 'global' });
+      try {
+        await supabase.auth.signOut({ scope: 'global' });
+      } catch (signOutError) {
+        // Continue even if Supabase signOut fails
+        console.warn('Supabase signOut failed, but continuing with cleanup:', signOutError);
+      }
       
+      // Force page reload to ensure clean state
+      window.location.href = '/chat';
       
     } catch (error) {
+      console.error('Sign out error:', error);
+      // Force reload even on error to ensure clean state
+      window.location.href = '/chat';
     } finally {
       setLoading(false);
     }
