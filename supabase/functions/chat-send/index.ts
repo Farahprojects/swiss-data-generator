@@ -126,34 +126,45 @@ serve(async (req) => {
     }
     console.log('[chat-send] User message inserted');
 
-    // Await the response from llm-handler to get the assistant's message
-    console.log('[chat-send] Awaiting response from llm-handler');
-    const llmResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/llm-handler`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
-      },
-      body: JSON.stringify({
-        chat_id,
-        text: originalText, // Send original text to LLM for better context
-        client_msg_id: client_msg_id || userMessageData.client_msg_id,
-        mode,
-        sessionId
-      })
-    });
+    // Start background processing of LLM response (fire-and-forget)
+    const processLLMResponse = async () => {
+      try {
+        console.log('[chat-send] Starting background LLM processing');
+        const llmResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/llm-handler`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
+          },
+          body: JSON.stringify({
+            chat_id,
+            text: originalText, // Send original text to LLM for better context
+            client_msg_id: client_msg_id || userMessageData.client_msg_id,
+            mode,
+            sessionId
+          })
+        });
 
-    if (!llmResponse.ok) {
-      const errorText = await llmResponse.text();
-      console.error('[chat-send] llm-handler failed:', errorText);
-      throw new Error(`LLM handler failed: ${errorText}`);
-    }
+        if (!llmResponse.ok) {
+          const errorText = await llmResponse.text();
+          console.error('[chat-send] Background LLM processing failed:', errorText);
+        } else {
+          console.log('[chat-send] Background LLM processing completed');
+        }
+      } catch (error) {
+        console.error('[chat-send] Background LLM processing error:', error);
+      }
+    };
 
-    const assistantMessage = await llmResponse.json();
-    console.log('[chat-send] Received assistant message from llm-handler:', assistantMessage);
+    // Start background processing without awaiting
+    EdgeRuntime.waitUntil(processLLMResponse());
 
-    // Return the assistant's message directly to the client
-    return new Response(JSON.stringify(assistantMessage), {
+    // Return immediate acknowledgment
+    return new Response(JSON.stringify({
+      message: "Message saved successfully",
+      user_message: userMessageData,
+      processing: true
+    }), {
       headers: {
         ...corsHeaders,
         "Content-Type": "application/json"

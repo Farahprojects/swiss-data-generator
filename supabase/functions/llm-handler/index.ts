@@ -57,26 +57,8 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    // First, immediately save the user message to acknowledge receipt
-    const { data: userMessage, error: userError } = await supabase
-      .from("messages")
-      .insert({
-        chat_id: chat_id,
-        role: "user",
-        text: text,
-        client_msg_id: client_msg_id,
-        created_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
-
-    if (userError) {
-      console.error("[llm-handler] Failed to save user message:", userError);
-      return new Response(JSON.stringify({ error: "Failed to save user message" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // User message is already saved by chat-send function
+    // No need to save it again here
 
     // Background task to process LLM response
     const processLLMResponse = async () => {
@@ -207,10 +189,9 @@ Content Ruels:
     // Start background processing without awaiting
     EdgeRuntime.waitUntil(processLLMResponse());
 
-    // Return immediate acknowledgment with the user message
+    // Return immediate acknowledgment
     return new Response(JSON.stringify({ 
-      message: "Message received and processing",
-      user_message: userMessage,
+      message: "Processing assistant response",
       client_msg_id
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
