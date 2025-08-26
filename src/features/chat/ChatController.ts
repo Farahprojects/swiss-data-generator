@@ -49,9 +49,9 @@ class ChatController {
     }
   }
 
-  async initializeConversation(chat_id: string) {
+  async initializeForConversation(chat_id: string) {
     if (!chat_id) {
-      console.error('[ChatController] initializeConversation: FAIL FAST - chat_id is required');
+      console.error('[ChatController] initializeForConversation: FAIL FAST - chat_id is required');
       throw new Error('chat_id is required for conversation initialization');
     }
     
@@ -181,6 +181,17 @@ class ChatController {
   setConversationMode(mode: string, sessionId: string) {
     this.mode = mode;
     this.sessionId = sessionId;
+  }
+
+  /**
+   * Initialize conversation for normal mode (called when modal closes)
+   */
+  initializeConversation(chat_id: string): void {
+    this.mode = 'normal';
+    this.sessionId = null;
+    useChatStore.getState().startConversation(chat_id);
+    this.setupRealtimeSubscription(chat_id);
+    console.log('[ChatController] Initialized conversation for normal mode');
   }
 
   async sendTextMessage(text: string) {

@@ -6,24 +6,32 @@ import { useChatStore } from '@/core/store';
 import { chatController } from '../ChatController';
 import { useConversationAudioLevel } from '@/hooks/useConversationAudioLevel';
 import { conversationTtsService } from '@/services/voice/conversationTts';
-// import { useConversationFlowMonitor } from '@/hooks/useConversationFlowMonitor';
-// import { FlowMonitorIndicator } from './FlowMonitorIndicator'; // Hidden for production
+import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
+import { useConversationLoop } from './useConversationLoop';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Mic } from 'lucide-react';
-import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
 
 export const ConversationOverlay: React.FC = () => {
   const { isConversationOpen, closeConversation } = useConversationUIStore();
-  const status = useChatStore((state) => state.status);
   const chat_id = useChatStore((state) => state.chat_id);
   const audioLevel = useConversationAudioLevel(); // Get real-time audio level
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [isStarting, setIsStarting] = useState(false); // Guard against double taps
   const hasStarted = useRef(false); // One-shot guard to prevent double invocation
+
+  // Self-contained conversation loop
+  const conversationLoop = useConversationLoop({
+    chat_id: chat_id || '',
+    onError: (error) => {
+      console.error('[ConversationOverlay] Conversation error:', error);
+      // Could show toast or error UI here
+    }
+  });
   
   useEffect(() => {
     if (isConversationOpen) {
-      // Conversation overlay opened
+      // Disable external chat controller when modal opens
+      chatController.cleanup();
     }
   }, [isConversationOpen]);
 
@@ -31,25 +39,25 @@ export const ConversationOverlay: React.FC = () => {
 
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = () => {
+    // 1. Stop the conversation loop
+    conversationLoop.stop();
     
-    // 1. Kill all audio immediately
-    conversationTtsService.stopAllAudio();
-    
-    // 2. Stop microphone and clean up all resources
-    chatController.resetConversationService();
-    
-    // 3. Force cleanup of microphone service to release all streams and contexts
+    // 2. Force cleanup of microphone service to release all streams and contexts
     conversationMicrophoneService.forceCleanup();
     
-    // 4. Close the UI and reset all state
+    // 3. Close the UI and reset all state
     closeConversation();
     setPermissionGranted(false); // Reset permission on close
     setIsStarting(false); // Reset guard on close
     hasStarted.current = false; // Reset one-shot guard
     
+    // 4. Re-initialize external chat controller for normal mode
+    if (chat_id) {
+      chatController.initializeConversation(chat_id);
+    }
   };
 
-  const handleStart = () => { // No longer async
+  const handleStart = async () => {
     // One-shot guard to prevent double invocation
     if (hasStarted.current) {
       return;
@@ -59,18 +67,15 @@ export const ConversationOverlay: React.FC = () => {
     if (isStarting) return; // Prevent double taps
     setIsStarting(true);
 
-    // Set flags immediately for instant UI feedback
-    setPermissionGranted(true);
-    
-    // Unlock audio playback within the user gesture
-    conversationTtsService.unlockAudio();
-    chatController.unlock();
-    
-    if (chat_id) {
-      chatController.setConversationMode('convo', chat_id);
+    if (!chat_id) {
+      console.error("[ConversationOverlay] Cannot start conversation without a chat_id");
+      closeConversation();
+      return;
+    }
 
+    try {
       // SINGLE-GESTURE MEDIA INIT: Request microphone permission within the tap gesture
-      navigator.mediaDevices.getUserMedia({ 
+      const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           channelCount: 1,
           echoCancellation: true,
@@ -78,35 +83,23 @@ export const ConversationOverlay: React.FC = () => {
           autoGainControl: true,
           sampleRate: 48000,
         } 
-      })
-      .then(stream => {
-        
-        // Cache the stream for reuse across all turns in this session
-        conversationMicrophoneService.cacheStream(stream);
-        
-
-        
-        // Now start the first turn with the cached stream
-        chatController.startTurn().catch(error => {
-          console.error('Failed to start turn after mic permission:', error);
-          setPermissionGranted(false);
-          setIsStarting(false);
-          hasStarted.current = false;
-        });
-      })
-      .catch(error => {
-        console.error('Microphone permission denied within gesture:', error);
-        // If permission denied, revert the UI
-        setPermissionGranted(false);
-        setIsStarting(false);
-        hasStarted.current = false;
       });
 
-
-
-    } else {
-      console.error("[ConversationOverlay] Cannot start conversation without a chat_id");
-      closeConversation();
+      // Cache the stream for reuse across all turns in this session
+      conversationMicrophoneService.cacheStream(stream);
+      
+      // Set flags for instant UI feedback
+      setPermissionGranted(true);
+      
+      // Start the self-contained conversation loop
+      await conversationLoop.start();
+      
+    } catch (error) {
+      console.error('Microphone permission denied within gesture:', error);
+      // If permission denied, revert the UI
+      setPermissionGranted(false);
+      setIsStarting(false);
+      hasStarted.current = false;
     }
   };
   
@@ -124,24 +117,17 @@ export const ConversationOverlay: React.FC = () => {
   // Cleanup when conversation closes or component unmounts
   useEffect(() => {
     if (!isConversationOpen && permissionGranted) {
-      // Conversation closed - cleaning up resources
-      
-      // Reset conversation mode
-      chatController.setConversationMode('normal', null);
-      
-      // Cleanup ChatController
-      chatController.cleanup();
-      
-      // Force cleanup of microphone service to ensure clean slate
+      // Conversation closed - stop the loop and cleanup
+      conversationLoop.stop();
       conversationMicrophoneService.forceCleanup();
     }
-  }, [isConversationOpen, permissionGranted]);
+  }, [isConversationOpen, permissionGranted, conversationLoop]);
 
-  // Map chat status to conversation state for UI
-  const state = status === 'recording' ? 'listening' : 
-               status === 'transcribing' ? 'processing' : 
-               status === 'thinking' ? 'processing' : 
-               status === 'speaking' ? 'replying' : 'listening';
+  // Use local conversation state instead of external chat status
+  const state = conversationLoop.state === 'listening' ? 'listening' :
+               conversationLoop.state === 'processing' ? 'processing' :
+               conversationLoop.state === 'replying' ? 'replying' :
+               conversationLoop.state === 'error' ? 'connecting' : 'listening';
 
   if (!isConversationOpen) return null;
 
