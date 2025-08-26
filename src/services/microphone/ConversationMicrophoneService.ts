@@ -144,10 +144,11 @@ export class ConversationMicrophoneServiceClass {
 
       // Start recording and VAD
       this.mediaRecorder.start(100); // 100ms chunks
+      this.log('🎤 Starting VAD for conversation recording...');
       this.startVoiceActivityDetection();
       
       this.notifyListeners();
-      this.log('🎙️ Recording started successfully');
+      this.log('🎙️ Recording started successfully with VAD active');
       return true;
 
     } catch (error: any) {
@@ -364,8 +365,16 @@ export class ConversationMicrophoneServiceClass {
 
   // ----- Two-Phase Voice Activity Detection (VAD) -----
   private startVoiceActivityDetection(): void {
-    if (!this.analyser || this.monitoringRef.current) return;
+    this.log('🧠 VAD start requested - checking conditions...');
+    this.log(`🧠 analyser exists: ${!!this.analyser}, monitoring already active: ${this.monitoringRef.current}`);
+    
+    if (!this.analyser || this.monitoringRef.current) {
+      this.log('❌ VAD start blocked - analyser missing or already monitoring');
+      return;
+    }
+    
     this.monitoringRef.current = true;
+    this.log('✅ VAD monitoring started successfully');
 
     const bufferLength = this.analyser.fftSize;
     const dataArray = new Uint8Array(bufferLength);

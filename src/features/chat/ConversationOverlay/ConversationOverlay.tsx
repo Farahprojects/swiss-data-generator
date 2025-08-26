@@ -28,25 +28,60 @@ export const ConversationOverlay: React.FC = () => {
   
   // Load session ID once at start - use for entire conversation
   const sessionIdRef = useRef<string>(`session_${Date.now()}`);
+  
+  // Cleanup on unmount to ensure all resources are released
+  useEffect(() => {
+    return () => {
+      if (isConversationOpen) {
+        console.log('[ConversationOverlay] 🔥 Component unmounting - performing emergency cleanup');
+        conversationTtsService.stopAllAudio();
+        conversationMicrophoneService.forceCleanup();
+        try {
+          const { microphoneArbitrator } = require('@/services/microphone/MicrophoneArbitrator');
+          microphoneArbitrator.release('conversation');
+        } catch (error) {
+          console.log('[ConversationOverlay] ⚠️ Emergency cleanup error:', error);
+        }
+      }
+    };
+  }, [isConversationOpen]);
 
 
 
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = () => {
-    // 1. Force cleanup of microphone service to release all streams and contexts
-    conversationMicrophoneService.forceCleanup();
+    console.log('[ConversationOverlay] 🔥 Modal closing - performing complete cleanup');
     
-    // 2. Re-initialize ChatController for normal chat functionality
+    // 1. Stop all TTS audio playback immediately
+    conversationTtsService.stopAllAudio();
+    console.log('[ConversationOverlay] ✅ TTS audio stopped');
+    
+    // 2. Force cleanup of microphone service to release all streams and contexts
+    conversationMicrophoneService.forceCleanup();
+    console.log('[ConversationOverlay] ✅ Microphone service cleaned up');
+    
+    // 3. Release microphone arbitrator to free up browser permissions
+    try {
+      const { microphoneArbitrator } = require('@/services/microphone/MicrophoneArbitrator');
+      microphoneArbitrator.release('conversation');
+      console.log('[ConversationOverlay] ✅ Microphone arbitrator released');
+    } catch (error) {
+      console.log('[ConversationOverlay] ⚠️ Could not release microphone arbitrator:', error);
+    }
+    
+    // 4. Re-initialize ChatController for normal chat functionality
     if (chat_id) {
       chatController.initializeConversation(chat_id);
     }
     
-    // 3. Close the UI and reset all state
+    // 5. Close the UI and reset all state
     closeConversation();
     setPermissionGranted(false); // Reset permission on close
     setIsStarting(false); // Reset guard on close
     hasStarted.current = false; // Reset one-shot guard
     setConversationState('listening');
+    
+    console.log('[ConversationOverlay] ✅ Modal cleanup complete');
   };
 
   const handleStart = () => {
@@ -202,22 +237,21 @@ export const ConversationOverlay: React.FC = () => {
           
           // Properly restart recording after TTS completes
           try {
-            // First ensure the MediaRecorder is properly stopped
-            if (conversationMicrophoneService.getState().isRecording) {
-              console.log('[ConversationOverlay] Stopping existing recording before restart');
-              await conversationMicrophoneService.stopRecording();
-              await new Promise(resolve => setTimeout(resolve, 100)); // Small delay
-            }
+            console.log('[ConversationOverlay] 🔥 TTS complete, restarting recording for next turn');
+            
+            // Small delay to ensure TTS is fully complete
+            await new Promise(resolve => setTimeout(resolve, 200));
             
             const success = await conversationMicrophoneService.startRecording();
             if (!success) {
-              console.error('[ConversationOverlay] Failed to start recording after TTS');
+              console.error('[ConversationOverlay] ❌ Failed to start recording after TTS');
               setConversationState('connecting');
             } else {
-              console.log('[ConversationOverlay] Recording restarted successfully for next turn');
+              console.log('[ConversationOverlay] ✅ Recording restarted successfully for next turn');
+              console.log('[ConversationOverlay] 🎤 VAD should now be active and listening');
             }
           } catch (error) {
-            console.error('[ConversationOverlay] Error restarting recording after TTS:', error);
+            console.error('[ConversationOverlay] ❌ Error restarting recording after TTS:', error);
             setConversationState('connecting');
           }
         }
