@@ -33,18 +33,24 @@ export const useAuthedChat = (conversationId?: string) => {
     if (!user) return;
 
     if (conversationId) {
-      // Load specific conversation
+      // Load specific conversation immediately
       setCurrentConversationId(conversationId);
       startConversation(conversationId);
       // TODO: Load messages from database for this conversation
     } else {
-      // No conversation ID - either create new one or use most recent
-      if (conversations.length > 0 && !conversationsLoading) {
-        const mostRecent = conversations[0];
-        setCurrentConversationId(mostRecent.id);
-        navigate(`/chat/${mostRecent.id}`, { replace: true });
-        startConversation(mostRecent.id);
-      }
+      // Handle case with no conversation ID asynchronously
+      const initializeDefaultConversation = async () => {
+        // Wait for conversations to load, but don't block UI
+        if (conversations.length > 0 && !conversationsLoading) {
+          const mostRecent = conversations[0];
+          setCurrentConversationId(mostRecent.id);
+          navigate(`/chat/${mostRecent.id}`, { replace: true });
+          startConversation(mostRecent.id);
+        }
+      };
+
+      // Run asynchronously to not block initial render
+      Promise.resolve().then(initializeDefaultConversation);
     }
   }, [conversationId, user, conversations, conversationsLoading, startConversation, navigate]);
 
