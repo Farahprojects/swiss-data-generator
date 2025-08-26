@@ -73,11 +73,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   addMessage: (message) => set((state) => {
-    // When a new assistant message arrives, start the typing animation
-    if (message.role === 'assistant') {
-      state.setAssistantTyping(true);
-    }
-
     // Enhanced deduplication: check both id and client_msg_id
     const existingById = state.messages.find(m => m.id === message.id);
     const existingByClientId = message.client_msg_id ? 
