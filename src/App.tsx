@@ -23,6 +23,7 @@ import ResetPassword from './pages/auth/Password';
 import CalendarPage from './pages/dashboard/CalendarPage';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { PublicOnlyGuard } from './components/auth/PublicOnlyGuard';
+import UserSettings from './pages/UserSettings';
 
 // Lazy load chat screen
 const ReportChatScreen = lazy(() => import('./screens/ReportChatScreen'));
@@ -32,6 +33,7 @@ import NavigationStateProvider from '@/contexts/NavigationStateContext';
 import { SettingsModalProvider } from '@/contexts/SettingsModalContext';
 import { PricingProvider } from '@/contexts/PricingContext';
 import { ReportModalProvider } from '@/contexts/ReportModalContext';
+import { SettingsModal } from '@/components/settings/SettingsModal';
 
 
 const queryClient = new QueryClient({
@@ -167,10 +169,13 @@ function App() {
                     } 
                   />
 
+                  {/* Settings Route */}
+                  <Route path="/settings" element={<UserSettings />} />
                   
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </div>
+              <SettingsModal />
               <Toaster />
             </ConditionalAuth>
           </ReportModalProvider>
