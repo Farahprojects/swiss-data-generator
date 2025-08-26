@@ -111,7 +111,7 @@ Tone:
 Content Ruels:
 1. Synthesis data from Astro report that is relvent to users query
 2. Show one-line "why" tying emotional/psychological pattern back to a core need or fear.
-3. Depth over length, but allow a short story or metaphor when it lands harder than a bullet list.
+3. Always lead with Human-centric translation and behavioral resonance, not planets or metaphors.
 `;
 
 
