@@ -89,7 +89,6 @@ export const useConversationMicrophone = (options: ConversationMicrophoneOptions
     // State
     isRecording: state.isRecording,
     hasStream: state.hasStream,
-    hasPermission: state.hasPermission,
     
     // Actions
     startRecording,

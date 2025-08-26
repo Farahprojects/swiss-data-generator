@@ -20,7 +20,6 @@ export class ConversationMicrophoneServiceClass {
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = []; // Simple chunk collection
   private isRecording = false;
-  private hasPermission = false; // NEW: Track permission state
   private audioContext: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
   private mediaStreamSource: MediaStreamAudioSourceNode | null = null;
@@ -46,11 +45,9 @@ export class ConversationMicrophoneServiceClass {
    * CACHE STREAM - Store microphone stream for session reuse
    */
   public cacheStream(stream: MediaStream): void {
-    this.log('🎤 ✅ PERMISSION GRANTED - Caching microphone stream for conversation session');
+    this.log('🎤 Caching microphone stream for session reuse');
     this.cachedStream = stream;
     this.stream = stream; // Set as current stream
-    this.hasPermission = true; // Mark permission as granted
-    this.notifyListeners(); // Update UI about permission state
   }
 
   /**
@@ -60,18 +57,13 @@ export class ConversationMicrophoneServiceClass {
     try {
       this.log('🎤 Starting conversation recording');
       
-      // CHECK PERMISSION STATE: We should have permission from user gesture
-      if (!this.hasPermission && !this.cachedStream) {
-        throw new Error('❌ No microphone permission - user gesture required first');
-      }
-      
-      // SINGLE-GESTURE FLOW: Use cached stream (preferred path)
+      // SINGLE-GESTURE FLOW: Use cached stream if available, otherwise fallback
       if (this.cachedStream) {
-        this.log('🎤 ✅ Using cached microphone stream - permission already granted');
+        this.log('🎤 Using cached microphone stream (no getUserMedia call)');
         this.stream = this.cachedStream;
       } else {
-        // This shouldn't happen in conversation mode since we cache in handleStart
-        this.log('⚠️ No cached stream but hasPermission=true - requesting fresh stream');
+        // Fallback: Create new stream (shouldn't happen in single-gesture flow)
+        this.log('⚠️ No cached stream - falling back to getUserMedia (shouldn\'t happen)');
         this.stream = await navigator.mediaDevices.getUserMedia({
           audio: {
             channelCount: 1,
@@ -81,7 +73,6 @@ export class ConversationMicrophoneServiceClass {
             sampleRate: 48000,
           }
         });
-        this.log('🎤 ✅ Fresh stream obtained successfully');
       }
 
       // Log stream details for debugging
@@ -283,9 +274,6 @@ export class ConversationMicrophoneServiceClass {
       this.cachedStream = null;
     }
 
-    // Reset permission state when cleaning up
-    this.hasPermission = false;
-
     // Cleanup audio analysis
     if (this.mediaStreamSource) {
       this.mediaStreamSource.disconnect();
@@ -319,7 +307,6 @@ export class ConversationMicrophoneServiceClass {
     return {
       isRecording: this.isRecording,
       hasStream: !!this.stream,
-      hasPermission: this.hasPermission,
       audioLevel: this.audioLevel
     };
   }
@@ -352,9 +339,8 @@ export class ConversationMicrophoneServiceClass {
    * FORCE CLEANUP - Emergency cleanup
    */
   forceCleanup(): void {
-    this.log('🚨 Force cleanup - resetting permission state');
+    this.log('🚨 Force cleanup');
     this.isRecording = false;
-    this.hasPermission = false; // Reset permission state
     this.cleanup();
   }
 

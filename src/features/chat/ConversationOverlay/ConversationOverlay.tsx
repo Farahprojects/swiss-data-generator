@@ -75,7 +75,6 @@ export const ConversationOverlay: React.FC = () => {
 
     try {
       // SINGLE-GESTURE MEDIA INIT: Request microphone permission within the tap gesture
-      console.log('[ConversationOverlay] 🎤 Requesting microphone permission within user gesture');
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           channelCount: 1,
@@ -86,19 +85,17 @@ export const ConversationOverlay: React.FC = () => {
         } 
       });
 
-      console.log('[ConversationOverlay] 🎤 ✅ PERMISSION GRANTED - Caching stream for conversation session');
-      // Cache the stream and mark permission as granted
+      // Cache the stream for reuse across all turns in this session
       conversationMicrophoneService.cacheStream(stream);
       
       // Set flags for instant UI feedback
       setPermissionGranted(true);
-      console.log('[ConversationOverlay] 🎤 ✅ Permission cached - starting conversation loop');
       
       // Start the self-contained conversation loop
       await conversationLoop.start();
       
     } catch (error) {
-      console.error('[ConversationOverlay] 🎤 ❌ Microphone permission denied:', error);
+      console.error('Microphone permission denied within gesture:', error);
       // If permission denied, revert the UI
       setPermissionGranted(false);
       setIsStarting(false);
