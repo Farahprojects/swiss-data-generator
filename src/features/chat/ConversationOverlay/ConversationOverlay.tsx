@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { VoiceBubble } from './VoiceBubble';
@@ -11,14 +11,17 @@ import { llmService } from '@/services/llm/chat';
 import { chatController } from '@/features/chat/ChatController';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Mic } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
 
 export const ConversationOverlay: React.FC = () => {
   const { isConversationOpen, closeConversation } = useConversationUIStore();
   const chat_id = useChatStore((state) => state.chat_id);
+  const messages = useChatStore((state) => state.messages);
   const audioLevel = useConversationAudioLevel(); // Get real-time audio level
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [isStarting, setIsStarting] = useState(false); // Guard against double taps
   const hasStarted = useRef(false); // One-shot guard to prevent double invocation
+  const lastProcessedMessageId = useRef<string | null>(null);
 
   // Simple conversation state
   const [conversationState, setConversationState] = useState<'listening' | 'processing' | 'replying' | 'connecting'>('listening');
@@ -62,8 +65,8 @@ export const ConversationOverlay: React.FC = () => {
       return;
     }
 
-    // Clean up ChatController to prevent interference
-    chatController.cleanup();
+    // Set ChatController to conversation mode instead of cleaning up
+    chatController.setConversationMode('convo', sessionIdRef.current);
 
     // 🔥 CRITICAL: Unlock TTS audio FIRST within user gesture
     conversationTtsService.unlockAudio();
@@ -141,9 +144,22 @@ export const ConversationOverlay: React.FC = () => {
       
       console.log('[ConversationOverlay] Transcript:', transcript);
       
-      // Use established LLM service (same as chatbar)
-      const client_msg_id = `conv_${Date.now()}`;
-      const assistantMessage = await llmService.sendMessage({
+      // Use established LLM service (same as chatbar) - use proper UUID
+      const client_msg_id = uuidv4();
+      console.log('[ConversationOverlay] Sending message to LLM...');
+      
+      // Add optimistic user message to store
+      const userMessageId = uuidv4();
+      useChatStore.getState().addMessage({
+        id: userMessageId,
+        chat_id: chat_id || '',
+        role: 'user',
+        text: transcript,
+        createdAt: new Date().toISOString()
+      });
+      
+      // Send message - this will trigger Realtime assistant response
+      await llmService.sendMessage({
         chat_id: chat_id || '',
         text: transcript,
         client_msg_id,
@@ -151,33 +167,46 @@ export const ConversationOverlay: React.FC = () => {
         sessionId: sessionIdRef.current
       });
       
-      console.log('[ConversationOverlay] Assistant response:', assistantMessage.text);
+      console.log('[ConversationOverlay] Message sent to LLM, waiting for Realtime response...');
       
-      // Add user message to store
-      useChatStore.getState().addMessage({
-        id: `user_${Date.now()}`,
-        chat_id: chat_id || '',
-        role: 'user',
-        text: transcript,
-        createdAt: new Date().toISOString()
-      });
+      // Start recording again for next turn - the Realtime effect will handle TTS
+      setConversationState('listening');
+      try {
+        const success = await conversationMicrophoneService.startRecording();
+        if (!success) {
+          console.error('[ConversationOverlay] Failed to start recording after message send');
+          setConversationState('connecting');
+        } else {
+          console.log('[ConversationOverlay] Recording restarted, awaiting assistant response');
+        }
+      } catch (error) {
+        console.error('[ConversationOverlay] Error starting recording after message send:', error);
+        setConversationState('connecting');
+      }
       
-      // Add assistant message to store
-      const assistantMessageId = `assistant_${Date.now()}`;
-      useChatStore.getState().addMessage({
-        id: assistantMessageId,
-        chat_id: chat_id || '',
-        role: 'assistant',
-        text: assistantMessage.text || 'I apologize, but I didn\'t receive a proper response.',
-        createdAt: new Date().toISOString()
-      });
+    } catch (error) {
+      console.error('[ConversationOverlay] Simple processing error:', error);
+      setConversationState('connecting');
+    }
+  };
+
+  // Watch for new assistant messages via Realtime and trigger TTS
+  useEffect(() => {
+    if (!permissionGranted || !chat_id) return;
+
+    const latestMessage = messages
+      .filter(m => m.chat_id === chat_id && m.role === 'assistant')
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+
+    if (latestMessage && latestMessage.id !== lastProcessedMessageId.current) {
+      lastProcessedMessageId.current = latestMessage.id;
+      console.log('[ConversationOverlay] New assistant message arrived via Realtime, triggering TTS');
       
-      // Direct TTS call - no complex hooks
       setConversationState('replying');
-      await conversationTtsService.speakAssistant({
-        chat_id: chat_id || '',
-        messageId: assistantMessageId,
-        text: assistantMessage.text || 'I apologize, but I didn\'t receive a proper response.',
+      conversationTtsService.speakAssistant({
+        chat_id: chat_id,
+        messageId: latestMessage.id,
+        text: latestMessage.text,
         sessionId: sessionIdRef.current,
         onComplete: async () => {
           console.log('[ConversationOverlay] TTS complete, returning to listening');
@@ -190,7 +219,7 @@ export const ConversationOverlay: React.FC = () => {
               console.error('[ConversationOverlay] Failed to start recording after TTS');
               setConversationState('connecting');
             } else {
-              console.log('[ConversationOverlay] Recording started for next turn');
+              console.log('[ConversationOverlay] Recording restarted for next turn');
             }
           } catch (error) {
             console.error('[ConversationOverlay] Error starting recording after TTS:', error);
@@ -198,13 +227,8 @@ export const ConversationOverlay: React.FC = () => {
           }
         }
       });
-      
-    } catch (error) {
-      console.error('[ConversationOverlay] Simple processing error:', error);
-      setConversationState('connecting');
     }
-  };
-  
+  }, [messages, permissionGranted, chat_id]);
 
 
   // Use simple conversation state
