@@ -34,7 +34,7 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
   const isMobile = useIsMobile();
 
   // Determine what views to show based on metadata
-  const hasReport = reportData?.metadata?.has_report || false;
+  const hasReport = reportData?.metadata?.has_ai_report || false;
   const hasSwissData = reportData?.metadata?.has_swiss_data || false;
   const showToggle = hasReport && hasSwissData;
   const defaultView = hasReport ? 'report' : 'astro';
