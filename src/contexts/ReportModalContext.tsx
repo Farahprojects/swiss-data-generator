@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 import { ReportSlideOver } from '@/components/public-report/ReportSlideOver';
 
 interface ModalContext {
