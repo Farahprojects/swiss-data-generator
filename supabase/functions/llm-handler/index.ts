@@ -57,37 +57,55 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    // Fetch conversation history for context
-    const { data: history, error: historyError } = await supabase
+    // First, immediately save the user message to acknowledge receipt
+    const { data: userMessage, error: userError } = await supabase
       .from("messages")
-      .select("role, text")
-      .eq("chat_id", chat_id)
-      .order("created_at", { ascending: true })
-      .limit(30);
+      .insert({
+        chat_id: chat_id,
+        role: "user",
+        text: text,
+        client_msg_id: client_msg_id,
+        created_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
 
-    if (historyError) {
-      console.error("[llm-handler] History fetch error:", historyError);
-      return new Response(JSON.stringify({ error: "Failed to load history" }), {
+    if (userError) {
+      console.error("[llm-handler] Failed to save user message:", userError);
+      return new Response(JSON.stringify({ error: "Failed to save user message" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Get Google API key
-    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_LLM_TTS");
-    if (!GOOGLE_API_KEY) {
-      console.error("[llm-handler] Missing GOOGLE_LLM_TTS");
-      return new Response(JSON.stringify({ error: "LLM service unavailable" }), {
-        status: 503,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // Background task to process LLM response
+    const processLLMResponse = async () => {
+      try {
+        // Fetch conversation history for context (optimized with new indexes)
+        const { data: history, error: historyError } = await supabase
+          .from("messages")
+          .select("role, text")
+          .eq("chat_id", chat_id)
+          .order("created_at", { ascending: true })
+          .limit(30);
 
-    // Call Gemini API (non-streaming)
-    const startTime = Date.now();
-    
-    // Add system prompt as the first message
-    const systemPrompt = `You are an insightful guide who speaks in plain, modern language yet thinks in energetic resonance with planetary influences.
+        if (historyError) {
+          console.error("[llm-handler] History fetch error:", historyError);
+          return;
+        }
+
+        // Get Google API key
+        const GOOGLE_API_KEY = Deno.env.get("GOOGLE_LLM_TTS");
+        if (!GOOGLE_API_KEY) {
+          console.error("[llm-handler] Missing GOOGLE_LLM_TTS");
+          return;
+        }
+
+        // Call Gemini API (non-streaming)
+        const startTime = Date.now();
+        
+        // Add system prompt as the first message
+        const systemPrompt = `You are an insightful guide who speaks in plain, modern language yet thinks in energetic resonance with planetary influences.
 
 Mission:
 – Turn complex astro + Swiss energetic data into revelations a 20-something can feel in their gut.
@@ -103,103 +121,96 @@ Content Ruels:
 3. Always lead with Human-centric translation and behavioral resonance, not planets or metaphors.
 `;
 
+        const contents: any[] = [];
+        
+        // Add system prompt as first user message
+        contents.push({
+          role: "user",
+          parts: [{ text: systemPrompt }]
+        });
+        
+        // Add conversation history (excluding the message we just added)
+        (history || []).forEach((m) => {
+          contents.push({
+            role: m.role === "assistant" ? "model" : "user",
+            parts: [{ text: m.text }],
+          });
+        });
 
-
-    const contents: any[] = [];
-    
-    // Add system prompt as first user message
-    contents.push({
-      role: "user",
-      parts: [{ text: systemPrompt }]
-    });
-    
-    // Add conversation history
-    (history || []).forEach((m) => {
-      contents.push({
-        role: m.role === "assistant" ? "model" : "user",
-        parts: [{ text: m.text }],
-      });
-    });
-
-    // Add current user message if provided (from STT transcript or text input)
-    if (text) {
-      contents.push({
-        role: "user",
-        parts: [{ text: text }],
-      });
-    }
-
-    const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GOOGLE_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents,
-          generationConfig: { 
-            temperature: 0.4 
+        const resp = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GOOGLE_API_KEY}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents,
+              generationConfig: { 
+                temperature: 0.4 
+              }
+            }),
           }
-        }),
+        );
+
+        if (!resp.ok) {
+          const errorText = await resp.text();
+          console.error("[llm-handler] Gemini API error:", errorText);
+          return;
+        }
+
+        const data = await resp.json();
+        const assistantText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (!assistantText) {
+          console.error("[llm-handler] No text in Gemini response:", data);
+          return;
+        }
+
+        // Sanitize assistant response before saving to database
+        const sanitizedAssistantText = sanitizePlainText(assistantText);
+
+        // Extract token usage from Gemini response
+        const tokenCount = data.usageMetadata?.totalTokenCount || null;
+        const inputTokens = data.usageMetadata?.promptTokenCount || null;
+        const outputTokens = data.usageMetadata?.candidatesTokenCount || null;
+
+        const latency_ms = Date.now() - startTime;
+
+        // Save assistant message to database
+        const { error: assistantError } = await supabase
+          .from("messages")
+          .insert({
+            chat_id: chat_id,
+            role: "assistant",
+            text: sanitizedAssistantText,
+            created_at: new Date().toISOString(),
+            meta: { 
+              llm_provider: "google", 
+              model: "gemini-1.5-flash",
+              latency_ms,
+              input_tokens: inputTokens,
+              output_tokens: outputTokens,
+              total_tokens: tokenCount
+            },
+          });
+
+        if (assistantError) {
+          console.error("[llm-handler] Failed to save assistant message:", assistantError);
+        } else {
+          console.log("[llm-handler] Assistant response saved successfully");
+        }
+
+      } catch (error) {
+        console.error("[llm-handler] Background processing error:", error);
       }
-    );
+    };
 
-    if (!resp.ok) {
-      const errorText = await resp.text();
-      console.error("[llm-handler] Gemini API error:", errorText);
-      throw new Error(`Gemini API error: ${resp.status} - ${errorText}`);
-    }
+    // Start background processing without awaiting
+    EdgeRuntime.waitUntil(processLLMResponse());
 
-    const data = await resp.json();
-    const assistantText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!assistantText) {
-      console.error("[llm-handler] No text in Gemini response:", data);
-      throw new Error("No response text from Gemini");
-    }
-
-    // Sanitize assistant response before saving to database
-    const sanitizedAssistantText = sanitizePlainText(assistantText);
-
-    // Extract token usage from Gemini response
-    const tokenCount = data.usageMetadata?.totalTokenCount || null;
-    const inputTokens = data.usageMetadata?.promptTokenCount || null;
-    const outputTokens = data.usageMetadata?.candidatesTokenCount || null;
-
-    const latency_ms = Date.now() - startTime;
-
-    // Save assistant message to database and get the real ID
-    const { data: savedMessage, error } = await supabase
-      .from("messages")
-      .insert({
-        chat_id: chat_id,
-        role: "assistant",
-        text: sanitizedAssistantText, // Save sanitized text to DB
-        created_at: new Date().toISOString(),
-        meta: { 
-          llm_provider: "google", 
-          model: "gemini-1.5-flash",
-          latency_ms,
-          input_tokens: inputTokens,
-          output_tokens: outputTokens,
-          total_tokens: tokenCount
-        },
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error("[llm-handler] Failed to save assistant message:", error);
-      throw new Error(`Failed to save message: ${error.message}`);
-    }
-
-
-
-    // ✅ REMOVED: Server-side TTS - keeping client-side TTS flow only
-    // ChatController already calls conversationTtsService.speakAssistant
-
-    // Return the saved message with the real ID
+    // Return immediate acknowledgment with the user message
     return new Response(JSON.stringify({ 
-      ...savedMessage,
+      message: "Message received and processing",
+      user_message: userMessage,
       client_msg_id
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
