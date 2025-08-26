@@ -33,14 +33,13 @@ export const ConversationOverlay: React.FC = () => {
   useEffect(() => {
     return () => {
       if (isConversationOpen) {
-        console.log('[ConversationOverlay] 🔥 Component unmounting - performing emergency cleanup');
         conversationTtsService.stopAllAudio();
         conversationMicrophoneService.forceCleanup();
         try {
           const { microphoneArbitrator } = require('@/services/microphone/MicrophoneArbitrator');
           microphoneArbitrator.release('conversation');
         } catch (error) {
-          console.log('[ConversationOverlay] ⚠️ Emergency cleanup error:', error);
+          console.log('[ConversationOverlay] Emergency cleanup error');
         }
       }
     };
@@ -49,24 +48,21 @@ export const ConversationOverlay: React.FC = () => {
 
 
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
-  const handleModalClose = () => {
-    console.log('[ConversationOverlay] 🔥 Modal closing - performing complete cleanup');
+  const handleModalClose = async () => {
+    console.log('[ConversationOverlay] Closing modal - cleaning up resources');
     
     // 1. Stop all TTS audio playback immediately
     conversationTtsService.stopAllAudio();
-    console.log('[ConversationOverlay] ✅ TTS audio stopped');
     
     // 2. Force cleanup of microphone service to release all streams and contexts
     conversationMicrophoneService.forceCleanup();
-    console.log('[ConversationOverlay] ✅ Microphone service cleaned up');
     
     // 3. Release microphone arbitrator to free up browser permissions
     try {
       const { microphoneArbitrator } = require('@/services/microphone/MicrophoneArbitrator');
       microphoneArbitrator.release('conversation');
-      console.log('[ConversationOverlay] ✅ Microphone arbitrator released');
     } catch (error) {
-      console.log('[ConversationOverlay] ⚠️ Could not release microphone arbitrator:', error);
+      console.log('[ConversationOverlay] Could not release microphone arbitrator');
     }
     
     // 4. Re-initialize ChatController for normal chat functionality
@@ -74,14 +70,20 @@ export const ConversationOverlay: React.FC = () => {
       chatController.initializeConversation(chat_id);
     }
     
-    // 5. Close the UI and reset all state
+    // 5. Refresh conversation history to show new messages
+    try {
+      const { retryLoadMessages } = useChatStore.getState();
+      await retryLoadMessages();
+    } catch (error) {
+      console.log('[ConversationOverlay] Failed to refresh conversation history');
+    }
+    
+    // 6. Close the UI and reset all state
     closeConversation();
     setPermissionGranted(false); // Reset permission on close
     setIsStarting(false); // Reset guard on close
     hasStarted.current = false; // Reset one-shot guard
     setConversationState('listening');
-    
-    console.log('[ConversationOverlay] ✅ Modal cleanup complete');
   };
 
   const handleStart = () => {
@@ -105,7 +107,6 @@ export const ConversationOverlay: React.FC = () => {
 
     // 🔥 CRITICAL: Unlock TTS audio FIRST within user gesture
     conversationTtsService.unlockAudio();
-    console.log('[ConversationOverlay] TTS audio unlocked within user gesture');
 
     // Set flags for instant UI feedback - go straight to listening mode
     setPermissionGranted(true);
@@ -117,8 +118,6 @@ export const ConversationOverlay: React.FC = () => {
   // Simple conversation flow - nothing can mess with this
   const startSimpleConversation = async () => {
     try {
-      console.log('[ConversationOverlay] Starting simple conversation flow');
-      
       // 1. Get microphone permission and start recording
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
@@ -150,10 +149,9 @@ export const ConversationOverlay: React.FC = () => {
       }
       
       setConversationState('listening');
-      console.log('[ConversationOverlay] Simple conversation started - waiting for speech');
       
     } catch (error) {
-      console.error('[ConversationOverlay] Failed to start simple conversation:', error);
+      console.error('[ConversationOverlay] Failed to start conversation:', error);
       setPermissionGranted(false);
       setIsStarting(false);
       hasStarted.current = false;
@@ -163,8 +161,7 @@ export const ConversationOverlay: React.FC = () => {
   // Simple STT processing - using established services
   const handleSimpleRecordingComplete = async (audioBlob: Blob) => {
     try {
-      console.log('[ConversationOverlay] 🔥 Simple recording complete, processing STT...');
-      console.log('[ConversationOverlay] Audio blob size:', audioBlob.size, 'bytes');
+      console.log('[ConversationOverlay] Processing audio...');
       setConversationState('processing');
       
       // Use established STT service (same as chatbar mic)
@@ -177,12 +174,8 @@ export const ConversationOverlay: React.FC = () => {
         return;
       }
       
-      console.log('[ConversationOverlay] Transcript:', transcript);
-      
       // Use established LLM service (same as chatbar) - use proper UUID
       const client_msg_id = uuidv4();
-      console.log('[ConversationOverlay] Sending message to LLM...');
-      
       // Add optimistic user message to store
       const userMessageId = uuidv4();
       useChatStore.getState().addMessage({
@@ -201,8 +194,6 @@ export const ConversationOverlay: React.FC = () => {
         mode: 'conversation',
         sessionId: sessionIdRef.current
       });
-      
-      console.log('[ConversationOverlay] Message sent to LLM, waiting for Realtime response...');
       
       // DON'T restart recording here - let the Realtime effect handle it
       // This prevents the duplicate recording logic that causes MediaRecorder errors
@@ -223,7 +214,6 @@ export const ConversationOverlay: React.FC = () => {
 
     if (latestMessage && latestMessage.id !== lastProcessedMessageId.current) {
       lastProcessedMessageId.current = latestMessage.id;
-      console.log('[ConversationOverlay] New assistant message arrived via Realtime, triggering TTS');
       
       setConversationState('replying');
       conversationTtsService.speakAssistant({
@@ -232,26 +222,20 @@ export const ConversationOverlay: React.FC = () => {
         text: latestMessage.text,
         sessionId: sessionIdRef.current,
         onComplete: async () => {
-          console.log('[ConversationOverlay] TTS complete, restarting recording');
           setConversationState('listening');
           
           // Properly restart recording after TTS completes
           try {
-            console.log('[ConversationOverlay] 🔥 TTS complete, restarting recording for next turn');
-            
             // Small delay to ensure TTS is fully complete
             await new Promise(resolve => setTimeout(resolve, 200));
             
             const success = await conversationMicrophoneService.startRecording();
             if (!success) {
-              console.error('[ConversationOverlay] ❌ Failed to start recording after TTS');
+              console.error('[ConversationOverlay] Failed to start recording after TTS');
               setConversationState('connecting');
-            } else {
-              console.log('[ConversationOverlay] ✅ Recording restarted successfully for next turn');
-              console.log('[ConversationOverlay] 🎤 VAD should now be active and listening');
             }
           } catch (error) {
-            console.error('[ConversationOverlay] ❌ Error restarting recording after TTS:', error);
+            console.error('[ConversationOverlay] Error starting recording after TTS:', error);
             setConversationState('connecting');
           }
         }

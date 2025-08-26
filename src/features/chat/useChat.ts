@@ -21,7 +21,6 @@ export const useChat = (chat_id?: string, guestId?: string) => {
             try { ss?.setItem(SESSION_KEY, chat_id); } catch (_e) {}
             chatController.initializeConversation(chat_id);
           } else {
-            console.warn('[useChat] ❌ URL chat_id invalid, redirecting to report page');
             navigate('/report');
           }
         })
@@ -41,7 +40,6 @@ export const useChat = (chat_id?: string, guestId?: string) => {
           if (isValid) {
             chatController.initializeConversation(cachedChatId);
           } else {
-            console.warn('[useChat] ❌ Cached chat_id failed verification, clearing cache');
             try { ss?.removeItem(SESSION_KEY); } catch (_e) {}
             
             // If we have a guestId, try to fetch a valid chat_id
@@ -61,7 +59,6 @@ export const useChat = (chat_id?: string, guestId?: string) => {
                   navigate('/report');
                 });
             } else {
-              console.warn('[useChat] No guestId available, redirecting to report page');
               navigate('/report');
             }
           }

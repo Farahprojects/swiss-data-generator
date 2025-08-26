@@ -36,12 +36,10 @@ class ChatController {
       setLoadingMessages(true);
       const messages = await getMessagesForConversation(chat_id);
       loadMessages(messages);
-      console.log(`[ChatController] Loaded ${messages.length} existing messages`);
     } catch (error) {
       console.error(`[ChatController] Error loading existing messages (attempt ${retryCount + 1}):`, error);
       
       if (retryCount < maxRetries) {
-        console.log(`[ChatController] Retrying in ${retryDelay}ms...`);
         setTimeout(() => this.loadExistingMessages(retryCount + 1), retryDelay);
       } else {
         setMessageLoadError(error instanceof Error ? error.message : 'Failed to load messages');
@@ -78,7 +76,6 @@ class ChatController {
             filter: `chat_id=eq.${chat_id}`
           },
           (payload) => {
-            console.log('[ChatController] New message received via realtime:', payload);
             const newMessage = this.transformDatabaseMessage(payload.new);
             const { messages, updateMessage, addMessage } = useChatStore.getState();
             
@@ -87,7 +84,6 @@ class ChatController {
               // Find and update the optimistic user message
               const optimisticMessage = messages.find(m => m.id === newMessage.client_msg_id);
               if (optimisticMessage) {
-                console.log('[ChatController] Reconciling user message:', newMessage.client_msg_id, '->', newMessage.id);
                 updateMessage(newMessage.client_msg_id, { ...newMessage });
                 return;
               }
@@ -98,26 +94,18 @@ class ChatController {
               const meta = newMessage.meta as any;
               const isConversationMode = meta?.mode === 'convo';
               
-              console.log('[ChatController] Assistant message received:', { mode: meta?.mode, sessionId: meta?.sessionId, currentSessionId: this.sessionId });
-              
               // TTS is now handled by ConversationOverlay modal
               // No TTS logic here anymore
             }
             
             // Only add if not already present and no reconciliation occurred
             if (!messages.find(m => m.id === newMessage.id)) {
-              console.log('[ChatController] 🔍 TIMING: About to add message to store at', performance.now());
-              const addMessageStartTime = performance.now();
-              console.log('[ChatController] Adding new message:', newMessage.id);
               addMessage(newMessage);
-              console.log('[ChatController] 🔍 TIMING: Added message to store at', performance.now(), 'delta:', performance.now() - addMessageStartTime);
-            } else {
-              console.log('[ChatController] Message already exists, skipping:', newMessage.id);
             }
           }
         )
         .subscribe((status) => {
-          console.log('[ChatController] Realtime subscription status:', status);
+          // Realtime subscription status
         });
     } catch (error) {
       console.error('[ChatController] Failed to setup realtime subscription:', error);
@@ -141,7 +129,6 @@ class ChatController {
 
   private cleanupRealtimeSubscription() {
     if (this.realtimeChannel) {
-      console.log('[ChatController] Cleaning up realtime subscription');
       supabase.removeChannel(this.realtimeChannel);
       this.realtimeChannel = null;
     }
@@ -160,7 +147,8 @@ class ChatController {
     this.sessionId = null;
     useChatStore.getState().startConversation(chat_id);
     this.setupRealtimeSubscription(chat_id);
-    console.log('[ChatController] Initialized conversation for normal mode');
+    this.loadExistingMessages(); // Load conversation history
+
   }
 
   async sendTextMessage(text: string) {

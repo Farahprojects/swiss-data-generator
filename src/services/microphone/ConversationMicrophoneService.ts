@@ -130,7 +130,6 @@ export class ConversationMicrophoneServiceClass {
       };
 
       this.mediaRecorder.onstop = () => {
-        console.log('[ConversationMic] 🔥 MediaRecorder.onstop called!');
         this.handleRecordingComplete();
       };
 
@@ -144,11 +143,10 @@ export class ConversationMicrophoneServiceClass {
 
       // Start recording and VAD
       this.mediaRecorder.start(100); // 100ms chunks
-      this.log('🎤 Starting VAD for conversation recording...');
       this.startVoiceActivityDetection();
       
       this.notifyListeners();
-      this.log('🎙️ Recording started successfully with VAD active');
+      this.log('🎙️ Recording started successfully');
       return true;
 
     } catch (error: any) {
@@ -247,15 +245,10 @@ export class ConversationMicrophoneServiceClass {
    * HANDLE RECORDING COMPLETE - Process finished recording
    */
   private handleRecordingComplete(): void {
-    console.log('[ConversationMic] 🔥 handleRecordingComplete called!');
     const finalBlob = this.createFinalBlobFromBuffer();
-    console.log('[ConversationMic] 🔥 Created blob:', finalBlob.size, 'bytes');
     
     if (this.options.onRecordingComplete) {
-      console.log('[ConversationMic] 🔥 Calling onRecordingComplete callback');
       this.options.onRecordingComplete(finalBlob);
-    } else {
-      console.log('[ConversationMic] ❌ No onRecordingComplete callback found!');
     }
     
     // IMPORTANT: Do NOT call cleanup here - keep stream and analyser alive
