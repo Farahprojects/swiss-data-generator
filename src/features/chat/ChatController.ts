@@ -90,15 +90,6 @@ class ChatController {
                 updateMessage(newMessage.client_msg_id, { ...newMessage });
                 return;
               }
-            } else if (newMessage.role === 'assistant' && newMessage.client_msg_id) {
-              // Find and update the thinking assistant message
-              const thinkingId = `thinking-${newMessage.client_msg_id}`;
-              const thinkingMessage = messages.find(m => m.id === thinkingId);
-              if (thinkingMessage) {
-                console.log('[ChatController] Reconciling assistant message:', thinkingId, '->', newMessage.id);
-                updateMessage(thinkingId, { ...newMessage });
-                return;
-              }
             }
             
             // Only add if not already present and no reconciliation occurred
@@ -172,8 +163,7 @@ class ChatController {
       // Stop the listener since we got the response
       // this.stopAssistantMessageListener(); // Removed real-time listener
       
-      // Replace the "Thinking..." message with the real assistant message
-      useChatStore.getState().updateMessage(`thinking-${client_msg_id}`, finalMessage);
+      // Assistant response will come via realtime updates
       
     } catch (error) {
       console.error("[ChatController] Error sending message:", error);
@@ -195,17 +185,9 @@ class ChatController {
       client_msg_id, // Add client_msg_id for reconciliation
     };
 
-    const optimisticAssistantMessage: Message = {
-      id: `thinking-${client_msg_id}`,
-      chat_id: chat_id,
-      role: "assistant",
-      text: "Thinking...",
-      createdAt: new Date().toISOString(),
-      status: "thinking",
-    };
-
+    // Only add the user message optimistically
+    // Assistant response will come via realtime updates
     useChatStore.getState().addMessage(optimisticUserMessage);
-    useChatStore.getState().addMessage(optimisticAssistantMessage);
     
     // Imperative scroll alignment after DOM update
     this.scrollToNewTurn(client_msg_id);
@@ -228,12 +210,7 @@ class ChatController {
   }
 
   private reconcileOptimisticMessage(finalMessage: Message) {
-    // The thinking message ID is `thinking-${finalMessage.client_msg_id}`
-    const thinkingMessageId = `thinking-${finalMessage.client_msg_id}`;
-    useChatStore.getState().updateMessage(thinkingMessageId, finalMessage);
-    
-
-    
+    // Assistant message will come via realtime updates
     this.playAssistantAudioAndContinue(finalMessage, finalMessage.chat_id);
   }
 
