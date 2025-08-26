@@ -9,7 +9,7 @@ class SttService {
       throw new Error('Empty audio recording - please try speaking again');
     }
     
-    if (audioBlob.size < 1000) { // Less than 1KB is likely too short
+    if (audioBlob.size < 500) { // Reduced from 1KB to 500 bytes for testing
       console.warn('[STT] Audio blob too small:', audioBlob.size, 'bytes');
       throw new Error('Recording too short - please speak for longer');
     }

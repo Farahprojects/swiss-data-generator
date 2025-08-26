@@ -1,13 +1,14 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { VoiceBubble } from './VoiceBubble';
 import { useChatStore } from '@/core/store';
-import { chatController } from '../ChatController';
+import { supabase } from '@/integrations/supabase/client';
 import { useConversationAudioLevel } from '@/hooks/useConversationAudioLevel';
 import { conversationTtsService } from '@/services/voice/conversationTts';
 import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
-import { useConversationLoop } from './useConversationLoop';
+import { sttService } from '@/services/voice/stt';
+import { llmService } from '@/services/llm/chat';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Mic } from 'lucide-react';
 
@@ -19,45 +20,28 @@ export const ConversationOverlay: React.FC = () => {
   const [isStarting, setIsStarting] = useState(false); // Guard against double taps
   const hasStarted = useRef(false); // One-shot guard to prevent double invocation
 
-  // Self-contained conversation loop
-  const conversationLoop = useConversationLoop({
-    chat_id: chat_id || '',
-    onError: (error) => {
-      console.error('[ConversationOverlay] Conversation error:', error);
-      // Could show toast or error UI here
-    }
-  });
+  // Simple conversation state
+  const [conversationState, setConversationState] = useState<'listening' | 'processing' | 'replying' | 'connecting'>('listening');
   
-  useEffect(() => {
-    if (isConversationOpen) {
-      // Disable external chat controller when modal opens
-      chatController.cleanup();
-    }
-  }, [isConversationOpen]);
+  // Load session ID once at start - use for entire conversation
+  const sessionIdRef = useRef<string>(`session_${Date.now()}`);
 
 
 
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = () => {
-    // 1. Stop the conversation loop
-    conversationLoop.stop();
-    
-    // 2. Force cleanup of microphone service to release all streams and contexts
+    // 1. Force cleanup of microphone service to release all streams and contexts
     conversationMicrophoneService.forceCleanup();
     
-    // 3. Close the UI and reset all state
+    // 2. Close the UI and reset all state
     closeConversation();
     setPermissionGranted(false); // Reset permission on close
     setIsStarting(false); // Reset guard on close
     hasStarted.current = false; // Reset one-shot guard
-    
-    // 4. Re-initialize external chat controller for normal mode
-    if (chat_id) {
-      chatController.initializeConversation(chat_id);
-    }
+    setConversationState('listening');
   };
 
-  const handleStart = async () => {
+  const handleStart = () => {
     // One-shot guard to prevent double invocation
     if (hasStarted.current) {
       return;
@@ -73,12 +57,23 @@ export const ConversationOverlay: React.FC = () => {
       return;
     }
 
-    try {
-      // 🔥 CRITICAL: Unlock TTS audio FIRST within user gesture (before any async calls)
-      conversationTtsService.unlockAudio();
-      console.log('[ConversationOverlay] TTS audio unlocked within user gesture');
+    // 🔥 CRITICAL: Unlock TTS audio FIRST within user gesture
+    conversationTtsService.unlockAudio();
+    console.log('[ConversationOverlay] TTS audio unlocked within user gesture');
 
-      // SINGLE-GESTURE MEDIA INIT: Request microphone permission within the tap gesture
+    // Set flags for instant UI feedback - go straight to listening mode
+    setPermissionGranted(true);
+    
+    // Start simple conversation flow - no complex hooks
+    startSimpleConversation();
+  };
+
+  // Simple conversation flow - nothing can mess with this
+  const startSimpleConversation = async () => {
+    try {
+      console.log('[ConversationOverlay] Starting simple conversation flow');
+      
+      // 1. Get microphone permission and start recording
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           channelCount: 1,
@@ -88,50 +83,152 @@ export const ConversationOverlay: React.FC = () => {
           sampleRate: 48000,
         } 
       });
-
-      // Cache the stream for reuse across all turns in this session
+      
+      // 2. Cache stream for reuse
       conversationMicrophoneService.cacheStream(stream);
       
-      // Set flags for instant UI feedback
-      setPermissionGranted(true);
+      // 3. Set up simple callback for when recording completes
+      conversationMicrophoneService.initialize({
+        onRecordingComplete: handleSimpleRecordingComplete,
+        onError: (error) => {
+          console.error('[ConversationOverlay] Recording error:', error);
+          setConversationState('connecting');
+        },
+        silenceTimeoutMs: 2000 // 2 seconds - same as mic icon
+      });
       
-      // Start the self-contained conversation loop
-      await conversationLoop.start();
+      // 4. Start recording with VAD
+      const success = await conversationMicrophoneService.startRecording();
+      if (!success) {
+        throw new Error('Failed to start recording');
+      }
+      
+      setConversationState('listening');
+      console.log('[ConversationOverlay] Simple conversation started - waiting for speech');
       
     } catch (error) {
-      console.error('Microphone permission denied within gesture:', error);
-      // If permission denied, revert the UI
+      console.error('[ConversationOverlay] Failed to start simple conversation:', error);
       setPermissionGranted(false);
       setIsStarting(false);
       hasStarted.current = false;
     }
   };
-  
-  // Simple mount - set conversation mode and start listening immediately
-  useEffect(() => {
-    // This effect is now only for cleanup when the component unmounts or isOpen changes
-    return () => {
-      if (isConversationOpen) {
-        // Ensure cleanup runs if the component unmounts unexpectedly
-        handleModalClose();
-      }
-    };
-  }, [isConversationOpen]);
-  
-  // Cleanup when conversation closes or component unmounts
-  useEffect(() => {
-    if (!isConversationOpen && permissionGranted) {
-      // Conversation closed - stop the loop and cleanup
-      conversationLoop.stop();
-      conversationMicrophoneService.forceCleanup();
-    }
-  }, [isConversationOpen, permissionGranted, conversationLoop]);
 
-  // Use local conversation state instead of external chat status
-  const state = conversationLoop.state === 'listening' ? 'listening' :
-               conversationLoop.state === 'processing' ? 'processing' :
-               conversationLoop.state === 'replying' ? 'replying' :
-               conversationLoop.state === 'error' ? 'connecting' : 'listening';
+  // Simple STT processing - nothing can mess with this
+  const handleSimpleRecordingComplete = async (audioBlob: Blob) => {
+    try {
+      console.log('[ConversationOverlay] 🔥 Simple recording complete, processing STT...');
+      console.log('[ConversationOverlay] Audio blob size:', audioBlob.size, 'bytes');
+      setConversationState('processing');
+      
+      // Direct STT call - use same style as mic icon
+      const { data: sttData, error: sttError } = await supabase.functions.invoke('google-speech-to-text', {
+        body: audioBlob,
+        headers: {
+          'X-Meta': JSON.stringify({
+            mode: 'conversation',
+            sessionId: sessionIdRef.current,
+            config: {
+              encoding: 'WEBM_OPUS',
+              languageCode: 'en-US',
+              enableAutomaticPunctuation: true,
+              model: 'latest_long'
+            }
+          })
+        }
+      });
+
+      if (sttError) {
+        throw new Error(`STT error: ${sttError.message}`);
+      }
+      
+      const transcript = sttData?.transcript || '';
+      
+      if (!transcript?.trim()) {
+        console.log('[ConversationOverlay] Empty transcript, returning to listening');
+        setConversationState('listening');
+        return;
+      }
+      
+      console.log('[ConversationOverlay] Transcript:', transcript);
+      
+      // Direct LLM-HANDLER call - get response immediately
+      const client_msg_id = `conv_${Date.now()}`;
+      const { data, error } = await supabase.functions.invoke('llm-handler', {
+        body: {
+          chat_id: chat_id || '',
+          text: transcript,
+          client_msg_id,
+          mode: 'conversation',
+          sessionId: sessionIdRef.current,
+          messages: useChatStore.getState().messages // Send conversation context
+        }
+      });
+      
+      if (error) {
+        throw new Error(`LLM Handler error: ${error.message}`);
+      }
+      
+      const assistantMessage = data?.text || 'I apologize, but I didn\'t receive a proper response.';
+      console.log('[ConversationOverlay] Assistant response:', assistantMessage);
+      
+      // Add messages to store
+      const userMessageId = `user_${Date.now()}`;
+      const assistantMessageId = `assistant_${Date.now()}`;
+      
+      useChatStore.getState().addMessage({
+        id: userMessageId,
+        chat_id: chat_id || '',
+        role: 'user',
+        text: transcript,
+        createdAt: new Date().toISOString()
+      });
+      
+      useChatStore.getState().addMessage({
+        id: assistantMessageId,
+        chat_id: chat_id || '',
+        role: 'assistant',
+        text: assistantMessage,
+        createdAt: new Date().toISOString()
+      });
+      
+      // Direct TTS call - no complex hooks
+      setConversationState('replying');
+      await conversationTtsService.speakAssistant({
+        chat_id: chat_id || '',
+        messageId: assistantMessageId,
+        text: assistantMessage,
+        sessionId: sessionIdRef.current,
+        onComplete: async () => {
+          console.log('[ConversationOverlay] TTS complete, returning to listening');
+          setConversationState('listening');
+          
+          // Start listening again for next turn
+          try {
+            const success = await conversationMicrophoneService.startRecording();
+            if (!success) {
+              console.error('[ConversationOverlay] Failed to start recording after TTS');
+              setConversationState('connecting');
+            } else {
+              console.log('[ConversationOverlay] Recording started for next turn');
+            }
+          } catch (error) {
+            console.error('[ConversationOverlay] Error starting recording after TTS:', error);
+            setConversationState('connecting');
+          }
+        }
+      });
+      
+    } catch (error) {
+      console.error('[ConversationOverlay] Simple processing error:', error);
+      setConversationState('connecting');
+    }
+  };
+  
+
+
+  // Use simple conversation state
+  const state = conversationState;
 
   if (!isConversationOpen) return null;
 

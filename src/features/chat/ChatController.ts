@@ -4,7 +4,7 @@ import { useChatStore } from '@/core/store';
 import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
-import { conversationTtsService } from '@/services/voice/conversationTts';
+
 // import { conversationFlowMonitor } from '@/services/conversation/ConversationFlowMonitor';
 import { getMessagesForConversation } from '@/services/api/messages';
 import { Message } from '@/core/types';
@@ -19,7 +19,7 @@ class ChatController {
   private mode: string = 'normal';
   private sessionId: string | null = null;
   private isUnlocked = false; // New flag to control microphone access
-  private isTtsInProgress = false; // New flag to prevent listening during TTS
+
 
   constructor() {
     this.loadExistingMessages();
@@ -93,46 +93,15 @@ class ChatController {
               }
             }
             
-            // Handle assistant messages - trigger TTS immediately for conversation mode
+            // Handle assistant messages - TTS is now handled by ConversationOverlay modal
             if (newMessage.role === 'assistant' && newMessage.text) {
               const meta = newMessage.meta as any;
               const isConversationMode = meta?.mode === 'convo';
               
-              console.log('[ChatController] Assistant message meta:', { mode: meta?.mode, sessionId: meta?.sessionId, currentSessionId: this.sessionId });
+              console.log('[ChatController] Assistant message received:', { mode: meta?.mode, sessionId: meta?.sessionId, currentSessionId: this.sessionId });
               
-              // Trigger TTS immediately for conversation mode - no session gating
-              if (isConversationMode) {
-                console.log('[ChatController] 🔍 TIMING: Starting TTS for conversation assistant message at', performance.now());
-                const ttsStartTime = performance.now();
-                
-                // ✅ CRITICAL: Set state first, then pause microphone
-                this.isTtsInProgress = true;
-                useChatStore.getState().setStatus('speaking');
-                console.log('[ChatController] 🔍 TIMING: Set status to speaking at', performance.now(), 'delta:', performance.now() - ttsStartTime);
-                
-                // Pause microphone without changing state or scheduling restarts
-                this.pauseForPlayback();
-                
-                // Start TTS async - don't wait for completion
-                conversationTtsService.speakAssistant({
-                  chat_id: newMessage.chat_id,
-                  messageId: newMessage.id,
-                  text: newMessage.text,
-                  sessionId: this.sessionId || 'default',
-                  onComplete: () => {
-                    if (this.isResetting) return;
-                    this.isTtsInProgress = false;
-                    console.log('[ChatController] TTS completed, resuming listening');
-                    this.startTurn(); // Resume listening after TTS
-                  }
-                }).catch(error => {
-                  console.warn(`[ChatController] TTS failed: ${error}. Continuing without audio.`);
-                  if (this.isResetting) return;
-                  this.isTtsInProgress = false;
-                  this.startTurn(); // Resume listening even on TTS error
-                });
-                console.log('[ChatController] 🔍 TIMING: Called TTS speakAssistant at', performance.now(), 'delta:', performance.now() - ttsStartTime);
-              }
+              // TTS is now handled by ConversationOverlay modal
+              // No TTS logic here anymore
             }
             
             // Only add if not already present and no reconciliation occurred
@@ -287,11 +256,7 @@ class ChatController {
       return;
     }
 
-    // ✅ GUARD: Prevent listening during TTS playback
-    if (this.isTtsInProgress) {
-      console.log('[ChatController] Skipping startTurn - TTS in progress');
-      return;
-    }
+
 
     if (this.isTurnActive) return;
     this.isTurnActive = true;
@@ -387,27 +352,7 @@ class ChatController {
     }
   }
 
-  // New method: Pause microphone without state changes or restart scheduling
-  private pauseForPlayback() {
-    console.log('[ChatController] Pausing microphone for TTS playback');
-    
-    // Stop current recording and VAD, but keep state intact
-    if (conversationMicrophoneService.getState().isRecording) {
-      conversationMicrophoneService.stopRecording().catch((error) => {
-        console.warn('[ChatController] Graceful stop error during pause (ignored):', error);
-      });
-    } else {
-      conversationMicrophoneService.forceCleanup();
-    }
-    
-    // Clear any pending restart timeouts to prevent conflicts
-    if (this.turnRestartTimeout) {
-      clearTimeout(this.turnRestartTimeout);
-      this.turnRestartTimeout = null;
-    }
-    
-    this.isTurnActive = false;
-  }
+
 
   private resetTurn(endConversationFlow: boolean = true) {
 
@@ -485,7 +430,6 @@ class ChatController {
     this.conversationServiceInitialized = false;
     this.isUnlocked = false; // Lock on reset
     this.isTurnActive = false;
-    this.isTtsInProgress = false; // Reset TTS flag
     useChatStore.getState().setStatus('idle');
 
     this.resetTimeout = setTimeout(() => {
@@ -513,7 +457,6 @@ class ChatController {
     
     this.isResetting = false;
     this.isUnlocked = false; // Lock on cleanup
-    this.isTtsInProgress = false; // Reset TTS flag
   }
 
   // Removed private startAssistantMessageListener and stopAssistantMessageListener

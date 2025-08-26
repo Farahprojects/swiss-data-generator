@@ -126,6 +126,7 @@ export class ConversationMicrophoneServiceClass {
       };
 
       this.mediaRecorder.onstop = () => {
+        console.log('[ConversationMic] 🔥 MediaRecorder.onstop called!');
         this.handleRecordingComplete();
       };
 
@@ -168,6 +169,9 @@ export class ConversationMicrophoneServiceClass {
     this.isRecording = false;
 
     return new Promise((resolve) => {
+      // Store the original onstop handler
+      const originalOnStop = this.mediaRecorder.onstop;
+      
       // Set up the data handler before stopping
       this.mediaRecorder.onstop = () => {
         this.log('📦 MediaRecorder stopped, creating blob...');
@@ -187,6 +191,11 @@ export class ConversationMicrophoneServiceClass {
         // IMPORTANT: Do NOT call cleanup here - keep stream and analyser alive
         // Cleanup should only be called on cancel/reset/overlay close
         this.log('🎤 Stream and analyser kept alive for next turn');
+        
+        // Call the original handler (which calls onRecordingComplete)
+        if (originalOnStop) {
+          originalOnStop.call(this.mediaRecorder);
+        }
         
         resolve(blob);
       };
@@ -233,10 +242,15 @@ export class ConversationMicrophoneServiceClass {
    * HANDLE RECORDING COMPLETE - Process finished recording
    */
   private handleRecordingComplete(): void {
+    console.log('[ConversationMic] 🔥 handleRecordingComplete called!');
     const finalBlob = this.createFinalBlobFromBuffer();
+    console.log('[ConversationMic] 🔥 Created blob:', finalBlob.size, 'bytes');
     
     if (this.options.onRecordingComplete) {
+      console.log('[ConversationMic] 🔥 Calling onRecordingComplete callback');
       this.options.onRecordingComplete(finalBlob);
+    } else {
+      console.log('[ConversationMic] ❌ No onRecordingComplete callback found!');
     }
     
     // IMPORTANT: Do NOT call cleanup here - keep stream and analyser alive
@@ -411,9 +425,6 @@ export class ConversationMicrophoneServiceClass {
             // Natural silence detected - stop recording
             this.log(`🧘‍♂️ ${SILENCE_TIMEOUT}ms silence detected after voice - stopping naturally (RMS: ${rms.toFixed(4)}, dB: ${dB.toFixed(1)})`);
             this.monitoringRef.current = false;
-            if (this.options.onSilenceDetected) {
-              this.options.onSilenceDetected();
-            }
             // ✅ FIXED: Actually stop the recording to trigger audio processing
             if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
               this.mediaRecorder.stop();

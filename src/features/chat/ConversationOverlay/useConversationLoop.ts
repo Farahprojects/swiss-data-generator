@@ -13,10 +13,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useConversationMicrophone } from '@/hooks/microphone/useConversationMicrophone';
 import { conversationTtsService } from '@/services/voice/conversationTts';
-import { supabase } from '@/integrations/supabase/client';
 import { useChatStore } from '@/core/store';
 import { Message } from '@/core/types';
 import { sttService } from '@/services/voice/stt';
+import { llmService } from '@/services/llm/chat';
 
 export type ConversationState = 'idle' | 'listening' | 'processing' | 'replying' | 'error';
 
@@ -31,6 +31,7 @@ export const useConversationLoop = ({ chat_id, onError }: ConversationLoopOption
   const isActiveRef = useRef(false);
   const sessionIdRef = useRef<string>(`session_${Date.now()}`);
   const isTtsInProgressRef = useRef(false); // Guard against listening during TTS
+  const isProcessingAudioRef = useRef(false); // Guard against stopping during audio processing
 
   // Get current chat messages to send with context
   const messages = useChatStore((state) => state.messages);
@@ -42,9 +43,14 @@ export const useConversationLoop = ({ chat_id, onError }: ConversationLoopOption
 
   // Handle successful recording completion
   async function handleRecordingComplete(audioBlob: Blob) {
-    if (!isActiveRef.current) return;
+    console.log('[ConversationLoop] 🔥 handleRecordingComplete called, isActive:', isActiveRef.current);
+    if (!isActiveRef.current) {
+      console.log('[ConversationLoop] ❌ Skipping processing - loop not active');
+      return;
+    }
 
     console.log('[ConversationLoop] Audio recorded, transcribing...');
+    isProcessingAudioRef.current = true; // Set processing guard
     setState('processing');
 
     try {
@@ -66,6 +72,8 @@ export const useConversationLoop = ({ chat_id, onError }: ConversationLoopOption
     } catch (error) {
       console.error('[ConversationLoop] Processing error:', error);
       handleError(new Error('Failed to process audio'));
+    } finally {
+      isProcessingAudioRef.current = false; // Clear processing guard
     }
   }
 
@@ -100,18 +108,17 @@ export const useConversationLoop = ({ chat_id, onError }: ConversationLoopOption
         { role: 'user' as const, content: userMessage }
       ];
 
-      // Call LLM via Supabase edge function
-      const { data, error: llmError } = await supabase.functions.invoke('chat-with-ai', {
-        body: {
-          messages: conversationMessages,
-          chat_id,
-          session_id: sessionIdRef.current
-        }
+      // Call LLM via proper service
+      const client_msg_id = `conv_${Date.now()}`;
+      const finalMessage = await llmService.sendMessage({
+        chat_id,
+        text: userMessage,
+        client_msg_id,
+        mode: 'convo',
+        sessionId: sessionIdRef.current
       });
 
-      if (llmError) throw llmError;
-
-      const assistantMessage = data?.message || 'I apologize, but I didn\'t receive a proper response.';
+      const assistantMessage = finalMessage.text || 'I apologize, but I didn\'t receive a proper response.';
 
       // Add assistant message to store
       useChatStore.getState().addMessage({
@@ -207,7 +214,10 @@ export const useConversationLoop = ({ chat_id, onError }: ConversationLoopOption
 
   // Start the conversation loop
   const start = useCallback(async () => {
-    if (isActiveRef.current) return;
+    if (isActiveRef.current) {
+      console.log('[ConversationLoop] Already active, skipping start');
+      return;
+    }
 
     console.log('[ConversationLoop] Starting conversation loop');
     isActiveRef.current = true;
@@ -223,7 +233,19 @@ export const useConversationLoop = ({ chat_id, onError }: ConversationLoopOption
 
   // Stop the conversation loop
   const stop = useCallback(() => {
-    console.log('[ConversationLoop] Stopping conversation loop');
+    if (!isActiveRef.current) {
+      console.log('[ConversationLoop] Already stopped, skipping');
+      return;
+    }
+    
+    console.log('[ConversationLoop] 🔥 STOP CALLED - Stack trace:', new Error().stack);
+    
+    // Don't stop if we're currently processing audio
+    if (isProcessingAudioRef.current) {
+      console.log('[ConversationLoop] ⚠️ Preventing stop during audio processing');
+      return;
+    }
+    
     isActiveRef.current = false;
     isTtsInProgressRef.current = false; // Clear TTS guard
     
@@ -237,7 +259,7 @@ export const useConversationLoop = ({ chat_id, onError }: ConversationLoopOption
     
     setState('idle');
     setError(null);
-  }, [microphone]);
+  }, [microphone, state]);
 
   // Cleanup on unmount
   useEffect(() => {
