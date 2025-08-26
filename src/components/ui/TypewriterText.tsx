@@ -9,7 +9,6 @@ interface TypewriterTextProps {
   showCursor?: boolean;
   cursorChar?: string;
   disabled?: boolean; // Skip animation entirely
-  isInterrupted?: boolean; // New prop to force stop
 }
 
 export const TypewriterText: React.FC<TypewriterTextProps> = ({
@@ -20,8 +19,7 @@ export const TypewriterText: React.FC<TypewriterTextProps> = ({
   className = '',
   showCursor = false,
   cursorChar = '|',
-  disabled = false,
-  isInterrupted = false
+  disabled = false
 }) => {
   const [displayedText, setDisplayedText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -44,17 +42,6 @@ export const TypewriterText: React.FC<TypewriterTextProps> = ({
       cursorIntervalRef.current = null;
     }
   }, []);
-
-  // Effect to handle external interrupt
-  useEffect(() => {
-    if (isInterrupted && isTyping) {
-      isInterruptedRef.current = true;
-      cleanup();
-      setDisplayedText(text);
-      setIsTyping(false);
-      onComplete?.(); // Call onComplete as the full text is now visible
-    }
-  }, [isInterrupted, isTyping, text, cleanup, onComplete]);
 
   // Cursor blinking effect
   useEffect(() => {

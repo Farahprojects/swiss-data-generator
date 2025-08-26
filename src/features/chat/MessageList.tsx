@@ -73,22 +73,9 @@ const ReportLoadingSequence = () => {
 const TurnItem = ({ turn, isLastTurn, isFromHistory }: { turn: Turn; isLastTurn: boolean; isFromHistory?: boolean }) => {
   const { userMessage, assistantMessage } = turn;
   const { isConversationOpen } = useConversationUIStore();
-  const setAssistantTyping = useChatStore(state => state.setAssistantTyping);
-  const interruptTyping = useChatStore(state => state.interruptTyping);
   
   // Skip animation for existing messages from history, if it's not the last turn, OR if conversation overlay is open
   const shouldAnimate = assistantMessage && isLastTurn && !isFromHistory && !isConversationOpen;
-
-  // Handle typing state when shouldAnimate changes
-  React.useEffect(() => {
-    if (shouldAnimate) {
-      setAssistantTyping(true);
-    }
-  }, [shouldAnimate, setAssistantTyping]);
-
-  const handleTypingComplete = () => {
-    setAssistantTyping(false);
-  };
 
   return (
     <div 
@@ -120,8 +107,6 @@ const TurnItem = ({ turn, isLastTurn, isFromHistory }: { turn: Turn; isLastTurn:
                   msPerWord={80}
                   disabled={!shouldAnimate}
                   className="whitespace-pre-wrap"
-                  onComplete={shouldAnimate ? handleTypingComplete : undefined}
-                  isInterrupted={interruptTyping}
                 />
               </Suspense>
             </p>

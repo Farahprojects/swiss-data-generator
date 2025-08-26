@@ -9,16 +9,9 @@ import { useChatTextMicrophone } from '@/hooks/microphone/useChatTextMicrophone'
 import { VoiceWaveform } from './VoiceWaveform';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
 
-// Stop icon component
-const StopIcon = () => (
-  <div className="w-3 h-3 bg-black rounded-sm"></div>
-);
-
 export const ChatInput = () => {
   const [text, setText] = useState('');
-  const status = useChatStore(state => state.status);
-  const isAssistantTyping = useChatStore(state => state.isAssistantTyping);
-  const setInterruptTyping = useChatStore(state => state.setInterruptTyping);
+  const status = useChatStore((state) => state.status);
   const [isMuted, setIsMuted] = useState(false);
   const { isConversationOpen, openConversation, closeConversation } = useConversationUIStore();
 
@@ -54,23 +47,17 @@ export const ChatInput = () => {
   const handleSpeakerClick = () => {
     if (!isConversationOpen) {
       openConversation();
+      // Removed: chatController.startTurn(); - microphone will be activated after user taps "Start"
       return;
     }
     if (status === 'recording') {
+      // 🚨 CONVERSATION MODE: Only silence detection should end turns
+      // Manual end turn is disabled to ensure proper flow control
       return;
     } else {
+      // Cancel any active conversation and close
       chatController.resetConversationService();
       closeConversation();
-    }
-  };
-
-  const handleRightButtonClick = () => {
-    if (isAssistantTyping) {
-      setInterruptTyping(true);
-    } else if (text.trim()) {
-      handleSend();
-    } else {
-      handleSpeakerClick();
     }
   };
 
@@ -79,7 +66,7 @@ export const ChatInput = () => {
   // Determine if assistant is generating content (report generation or text generation)
   const isAssistantGenerating = isPolling || status === 'thinking' || status === 'transcribing' || status === 'speaking';
 
-  // Custom solid black square component - DEPRECATED, use StopIcon
+  // Custom solid black square component
   const SolidBlackSquare = () => (
     <div className="w-3 h-3 bg-black rounded-sm"></div>
   );
@@ -141,17 +128,15 @@ export const ChatInput = () => {
             )}
             <button 
               className={`transition-colors ${
-                isAssistantTyping || isAssistantGenerating
+                isAssistantGenerating
                   ? 'w-8 h-8 bg-white border border-black rounded-full text-black flex items-center justify-center' 
                   : text.trim() 
                     ? 'w-8 h-8 bg-white border border-black rounded-full text-black hover:bg-gray-50 flex items-center justify-center' 
                     : 'w-8 h-8 text-gray-500 hover:text-gray-900 flex items-center justify-center'
               }`}
-              onClick={handleRightButtonClick}
+              onClick={text.trim() ? handleSend : handleSpeakerClick}
             >
-              {isAssistantTyping ? (
-                <StopIcon />
-              ) : isAssistantGenerating ? (
+              {isAssistantGenerating ? (
                 <SolidBlackSquare />
               ) : text.trim() ? (
                 <ArrowRight size={16} className="text-black" />
