@@ -93,15 +93,14 @@ class ChatController {
             }
             
             // Handle assistant messages - trigger TTS immediately for conversation mode
-            if (newMessage.role === 'assistant') {
+            if (newMessage.role === 'assistant' && newMessage.text) {
               const meta = newMessage.meta as any;
               const isConversationMode = meta?.mode === 'convo';
-              const matchesSession = meta?.sessionId === this.sessionId;
               
               console.log('[ChatController] Assistant message meta:', { mode: meta?.mode, sessionId: meta?.sessionId, currentSessionId: this.sessionId });
               
-              // Trigger TTS immediately for conversation mode
-              if (isConversationMode && matchesSession && this.sessionId && newMessage.text) {
+              // Trigger TTS immediately for conversation mode - no session gating
+              if (isConversationMode) {
                 console.log('[ChatController] Starting TTS for conversation assistant message');
                 useChatStore.getState().setStatus('speaking');
                 
@@ -110,7 +109,7 @@ class ChatController {
                   chat_id: newMessage.chat_id,
                   messageId: newMessage.id,
                   text: newMessage.text,
-                  sessionId: this.sessionId,
+                  sessionId: this.sessionId || 'default',
                   onComplete: () => {
                     if (this.isResetting) return;
                     this.resetTurn(false);
