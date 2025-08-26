@@ -19,6 +19,8 @@ interface ChatState {
   isLoadingMessages: boolean;
   messageLoadError: string | null;
   lastMessagesFetch: number | null;
+  isAssistantTyping: boolean;
+  interruptTyping: boolean;
 
   startConversation: (id: string) => void;
   loadMessages: (messages: Message[]) => void;
@@ -31,6 +33,8 @@ interface ChatState {
   setLoadingMessages: (loading: boolean) => void;
   setMessageLoadError: (error: string | null) => void;
   retryLoadMessages: () => Promise<void>;
+  setAssistantTyping: (isTyping: boolean) => void;
+  setInterruptTyping: (interrupt: boolean) => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -42,6 +46,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isLoadingMessages: false,
   messageLoadError: null,
   lastMessagesFetch: null,
+  isAssistantTyping: false,
+  interruptTyping: false,
 
   startConversation: (id) => set({ 
     chat_id: id, 
@@ -49,7 +55,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
     status: 'idle', 
     error: null,
     messageLoadError: null,
-    lastMessagesFetch: null
+    lastMessagesFetch: null,
+    isAssistantTyping: false, // Reset on new conversation
+    interruptTyping: false
   }),
 
   loadMessages: (messages) => {
@@ -65,6 +73,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   addMessage: (message) => set((state) => {
+    // When a new assistant message arrives, start the typing animation
+    if (message.role === 'assistant') {
+      state.setAssistantTyping(true);
+    }
+
     // Enhanced deduplication: check both id and client_msg_id
     const existingById = state.messages.find(m => m.id === message.id);
     const existingByClientId = message.client_msg_id ? 
@@ -140,6 +153,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
     error: null,
     isLoadingMessages: false,
     messageLoadError: null,
-    lastMessagesFetch: null
+    lastMessagesFetch: null,
+    isAssistantTyping: false,
+    interruptTyping: false
   }),
+
+  setAssistantTyping: (isTyping) => set({ 
+    isAssistantTyping: isTyping,
+    // When typing stops, reset the interrupt flag
+    interruptTyping: isTyping ? get().interruptTyping : false 
+  }),
+
+  setInterruptTyping: (interrupt) => set({ interruptTyping: interrupt }),
 }));
