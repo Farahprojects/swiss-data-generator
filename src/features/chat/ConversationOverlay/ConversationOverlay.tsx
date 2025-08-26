@@ -3,12 +3,12 @@ import { createPortal } from 'react-dom';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { VoiceBubble } from './VoiceBubble';
 import { useChatStore } from '@/core/store';
-import { supabase } from '@/integrations/supabase/client';
 import { useConversationAudioLevel } from '@/hooks/useConversationAudioLevel';
 import { conversationTtsService } from '@/services/voice/conversationTts';
 import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
+import { chatController } from '@/features/chat/ChatController';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Mic } from 'lucide-react';
 
@@ -33,7 +33,12 @@ export const ConversationOverlay: React.FC = () => {
     // 1. Force cleanup of microphone service to release all streams and contexts
     conversationMicrophoneService.forceCleanup();
     
-    // 2. Close the UI and reset all state
+    // 2. Re-initialize ChatController for normal chat functionality
+    if (chat_id) {
+      chatController.initializeConversation(chat_id);
+    }
+    
+    // 3. Close the UI and reset all state
     closeConversation();
     setPermissionGranted(false); // Reset permission on close
     setIsStarting(false); // Reset guard on close
@@ -56,6 +61,9 @@ export const ConversationOverlay: React.FC = () => {
       closeConversation();
       return;
     }
+
+    // Clean up ChatController to prevent interference
+    chatController.cleanup();
 
     // 🔥 CRITICAL: Unlock TTS audio FIRST within user gesture
     conversationTtsService.unlockAudio();
@@ -114,35 +122,16 @@ export const ConversationOverlay: React.FC = () => {
     }
   };
 
-  // Simple STT processing - nothing can mess with this
+  // Simple STT processing - using established services
   const handleSimpleRecordingComplete = async (audioBlob: Blob) => {
     try {
       console.log('[ConversationOverlay] 🔥 Simple recording complete, processing STT...');
       console.log('[ConversationOverlay] Audio blob size:', audioBlob.size, 'bytes');
       setConversationState('processing');
       
-      // Direct STT call - use same style as mic icon
-      const { data: sttData, error: sttError } = await supabase.functions.invoke('google-speech-to-text', {
-        body: audioBlob,
-        headers: {
-          'X-Meta': JSON.stringify({
-            mode: 'conversation',
-            sessionId: sessionIdRef.current,
-            config: {
-              encoding: 'WEBM_OPUS',
-              languageCode: 'en-US',
-              enableAutomaticPunctuation: true,
-              model: 'latest_long'
-            }
-          })
-        }
-      });
-
-      if (sttError) {
-        throw new Error(`STT error: ${sttError.message}`);
-      }
-      
-      const transcript = sttData?.transcript || '';
+      // Use established STT service (same as chatbar mic)
+      const result = await sttService.transcribe(audioBlob, chat_id, {}, 'conversation', sessionIdRef.current);
+      const transcript = result.transcript;
       
       if (!transcript?.trim()) {
         console.log('[ConversationOverlay] Empty transcript, returning to listening');
@@ -152,43 +141,34 @@ export const ConversationOverlay: React.FC = () => {
       
       console.log('[ConversationOverlay] Transcript:', transcript);
       
-      // Direct LLM-HANDLER call - get response immediately
+      // Use established LLM service (same as chatbar)
       const client_msg_id = `conv_${Date.now()}`;
-      const { data, error } = await supabase.functions.invoke('llm-handler', {
-        body: {
-          chat_id: chat_id || '',
-          text: transcript,
-          client_msg_id,
-          mode: 'conversation',
-          sessionId: sessionIdRef.current,
-          messages: useChatStore.getState().messages // Send conversation context
-        }
+      const assistantMessage = await llmService.sendMessage({
+        chat_id: chat_id || '',
+        text: transcript,
+        client_msg_id,
+        mode: 'conversation',
+        sessionId: sessionIdRef.current
       });
       
-      if (error) {
-        throw new Error(`LLM Handler error: ${error.message}`);
-      }
+      console.log('[ConversationOverlay] Assistant response:', assistantMessage.text);
       
-      const assistantMessage = data?.text || 'I apologize, but I didn\'t receive a proper response.';
-      console.log('[ConversationOverlay] Assistant response:', assistantMessage);
-      
-      // Add messages to store
-      const userMessageId = `user_${Date.now()}`;
-      const assistantMessageId = `assistant_${Date.now()}`;
-      
+      // Add user message to store
       useChatStore.getState().addMessage({
-        id: userMessageId,
+        id: `user_${Date.now()}`,
         chat_id: chat_id || '',
         role: 'user',
         text: transcript,
         createdAt: new Date().toISOString()
       });
       
+      // Add assistant message to store
+      const assistantMessageId = `assistant_${Date.now()}`;
       useChatStore.getState().addMessage({
         id: assistantMessageId,
         chat_id: chat_id || '',
         role: 'assistant',
-        text: assistantMessage,
+        text: assistantMessage.text || 'I apologize, but I didn\'t receive a proper response.',
         createdAt: new Date().toISOString()
       });
       
@@ -197,7 +177,7 @@ export const ConversationOverlay: React.FC = () => {
       await conversationTtsService.speakAssistant({
         chat_id: chat_id || '',
         messageId: assistantMessageId,
-        text: assistantMessage,
+        text: assistantMessage.text || 'I apologize, but I didn\'t receive a proper response.',
         sessionId: sessionIdRef.current,
         onComplete: async () => {
           console.log('[ConversationOverlay] TTS complete, returning to listening');
