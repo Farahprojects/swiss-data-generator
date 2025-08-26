@@ -14,7 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export const SettingsModal = () => {
   const { isOpen, closeSettings, activePanel, setActivePanel } = useSettingsModal();
-  const { signOut, user } = useAuth();
+  const { signOut } = useAuth();
 
 
   const handleTabChange = (value) => {
@@ -28,11 +28,9 @@ export const SettingsModal = () => {
 
   const tabs = [
     { id: "general", label: "General", icon: SettingsIcon },
-    ...(user ? [
-      { id: "account", label: "Account", icon: User },
-      { id: "billing", label: "Billing", icon: CreditCard },
-      { id: "notifications", label: "Notifications", icon: Bell },
-    ] : []),
+    { id: "account", label: "Account", icon: User },
+    { id: "billing", label: "Billing", icon: CreditCard },
+    { id: "notifications", label: "Notifications", icon: Bell },
     { id: "support", label: "Support", icon: LifeBuoy },
   ];
 
@@ -72,22 +70,14 @@ export const SettingsModal = () => {
             <Tabs value={activePanel} className="space-y-4">
               <TabsContent value="general">
                 <div className="space-y-4 divide-y">
-                  {user ? (
-                    <>
-                      <div className="flex items-center justify-between py-3">
-                        <span className="text-sm text-gray-800">Log out on this device</span>
-                        <Button variant="outline" className="text-sm" onClick={handleLogout}>Log out</Button>
-                      </div>
-                      <div className="flex items-center justify-between py-3">
-                        <span className="text-sm text-red-600">Delete account</span>
-                        <Button variant="destructive" className="text-sm" onClick={() => handleTabChange("delete")}>Delete account</Button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex items-center justify-between py-3">
-                      <span className="text-sm text-gray-600">General settings for guest users</span>
-                    </div>
-                  )}
+                  <div className="flex items-center justify-between py-3">
+                    <span className="text-sm text-gray-800">Log out on this device</span>
+                    <Button variant="outline" className="text-sm" onClick={handleLogout}>Log out</Button>
+                  </div>
+                  <div className="flex items-center justify-between py-3">
+                    <span className="text-sm text-red-600">Delete account</span>
+                    <Button variant="destructive" className="text-sm" onClick={() => handleTabChange("delete")}>Delete account</Button>
+                  </div>
                 </div>
               </TabsContent>
               <TabsContent value="account"><AccountSettingsPanel /></TabsContent>
