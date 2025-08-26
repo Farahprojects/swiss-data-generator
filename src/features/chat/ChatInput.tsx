@@ -16,15 +16,9 @@ const StopIcon = () => (
 
 export const ChatInput = () => {
   const [text, setText] = useState('');
-  const { 
-    status, 
-    isAssistantTyping, 
-    setInterruptTyping 
-  } = useChatStore(state => ({
-    status: state.status,
-    isAssistantTyping: state.isAssistantTyping,
-    setInterruptTyping: state.setInterruptTyping
-  }));
+  const status = useChatStore(state => state.status);
+  const isAssistantTyping = useChatStore(state => state.isAssistantTyping);
+  const setInterruptTyping = useChatStore(state => state.setInterruptTyping);
   const [isMuted, setIsMuted] = useState(false);
   const { isConversationOpen, openConversation, closeConversation } = useConversationUIStore();
 
