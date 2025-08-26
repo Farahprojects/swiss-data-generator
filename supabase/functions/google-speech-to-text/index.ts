@@ -30,12 +30,7 @@ serve(async (req) => {
     const mode = meta.mode || 'normal';
     const sessionId = meta.sessionId || null;
     
-    console.log(`[google-stt]`, traceId ? `[trace:${traceId}]` : '', `Raw audio data received.`, {
-      audioSize: audioBuffer.length,
-      clientMeta: meta,
-      mode,
-      sessionId
-    });
+
     
     // Validate audio data
     if (!audioBuffer || audioBuffer.length === 0) {
@@ -79,8 +74,7 @@ serve(async (req) => {
       config: defaultConfig
     };
 
-    console.log('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Sending request to Google Speech-to-Text API');
-    console.log('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Config:', JSON.stringify(defaultConfig, null, 2));
+
     
     let response = await fetch(
       `https://speech.googleapis.com/v1/speech:recognize?key=${googleApiKey}`,
@@ -152,18 +146,14 @@ serve(async (req) => {
       }
     } else {
       result = await response.json();
-      console.log('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Google API response:', result);
       transcript = result.results?.[0]?.alternatives?.[0]?.transcript || '';
       confidence = result.results?.[0]?.alternatives?.[0]?.confidence || 0;
     }
 
-    console.log('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Extracted transcript length:', transcript?.length || 0);
-    console.log('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Confidence score:', confidence);
+
     
     // Handle empty transcription results - return empty transcript instead of error
     if (!transcript || transcript.trim().length === 0) {
-      console.warn('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Empty transcript from API - audio may be unclear or silent');
-      console.log('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Returning empty transcript for conversation mode to continue gracefully');
       return new Response(
         JSON.stringify({ 
           transcript: '', // Empty transcript
@@ -180,7 +170,6 @@ serve(async (req) => {
     
     if (confidence < 0.3) {
       console.warn('[google-stt] Low confidence transcript:', confidence, 'for:', transcript);
-      // Still return it but log the warning
     }
 
     // This function's only job is to return the transcript.
