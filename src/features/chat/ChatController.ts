@@ -140,6 +140,13 @@ class ChatController {
   }
 
   async sendTextMessage(text: string) {
+    // Guard: Don't send if conversation overlay is open
+    const { useConversationUIStore } = await import('@/features/chat/conversation-ui-store');
+    if (useConversationUIStore.getState().isConversationOpen) {
+      console.log('[ChatController] sendTextMessage: Blocked - conversation mode active');
+      return;
+    }
+
     const { chat_id } = useChatStore.getState();
     if (!chat_id) {
       console.error('[ChatController] sendTextMessage: No chat_id in store.');
@@ -225,6 +232,13 @@ class ChatController {
   }
 
   async startTurn() {
+    // Guard: Don't start if conversation overlay is open
+    const { useConversationUIStore } = await import('@/features/chat/conversation-ui-store');
+    if (useConversationUIStore.getState().isConversationOpen) {
+      console.log('[ChatController] startTurn: Blocked - conversation mode active');
+      return;
+    }
+
     // ✅ GUARD: Prevent premature microphone activation
     if (!this.isUnlocked) {
       return;
@@ -267,6 +281,13 @@ class ChatController {
   }
 
   async endTurn() {
+    // Guard: Don't process if conversation overlay is open
+    const { useConversationUIStore } = await import('@/features/chat/conversation-ui-store');
+    if (useConversationUIStore.getState().isConversationOpen) {
+      console.log('[ChatController] endTurn: Blocked - conversation mode active');
+      return;
+    }
+
     if (!this.isTurnActive) return;
     
     useChatStore.getState().setStatus('transcribing');

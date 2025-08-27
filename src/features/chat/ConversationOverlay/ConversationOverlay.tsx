@@ -12,6 +12,8 @@ import { chatController } from '@/features/chat/ChatController';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Mic } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
+import { supabase } from '@/integrations/supabase/client';
+import { Message } from '@/core/types';
 
 export const ConversationOverlay: React.FC = () => {
   const { isConversationOpen, closeConversation } = useConversationUIStore();
@@ -31,12 +33,81 @@ export const ConversationOverlay: React.FC = () => {
   const chatIdRef = useRef<string | null>(null);
   const sessionIdRef = useRef<string>(`session_${Date.now()}`);
   
-  // Cache chat_id when modal opens
+  // Overlay-owned Realtime subscription
+  const overlayChannelRef = useRef<any>(null);
+  
+  // Cache chat_id when modal opens and setup overlay realtime
   useEffect(() => {
     if (isConversationOpen && chat_id && !chatIdRef.current) {
       chatIdRef.current = chat_id;
+      // Cleanup ChatController's realtime subscription and setup overlay's own
+      chatController.cleanup();
+      setupOverlayRealtime(chat_id);
     }
   }, [isConversationOpen, chat_id]);
+
+  // Setup overlay-owned realtime subscription
+  const setupOverlayRealtime = (chat_id: string) => {
+    cleanupOverlayRealtime();
+    
+    try {
+      overlayChannelRef.current = supabase
+        .channel(`overlay-messages:${chat_id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `chat_id=eq.${chat_id}`
+          },
+          (payload) => {
+            const newMessage = transformDatabaseMessage(payload.new);
+            const { messages, updateMessage, addMessage } = useChatStore.getState();
+            
+            // Reconciliation logic: check if this is updating an optimistic message
+            if (newMessage.role === 'user' && newMessage.client_msg_id) {
+              // Find and update the optimistic user message
+              const optimisticMessage = messages.find(m => m.id === newMessage.client_msg_id);
+              if (optimisticMessage) {
+                updateMessage(newMessage.client_msg_id, { ...newMessage });
+                return;
+              }
+            }
+            
+            // Only add if not already present and no reconciliation occurred
+            if (!messages.find(m => m.id === newMessage.id)) {
+              addMessage(newMessage);
+            }
+          }
+        )
+        .subscribe();
+    } catch (error) {
+      console.error('[ConversationOverlay] Failed to setup realtime subscription:', error);
+    }
+  };
+
+  const cleanupOverlayRealtime = () => {
+    if (overlayChannelRef.current) {
+      supabase.removeChannel(overlayChannelRef.current);
+      overlayChannelRef.current = null;
+    }
+  };
+
+  const transformDatabaseMessage = (dbMessage: any): Message => {
+    return {
+      id: dbMessage.id,
+      chat_id: dbMessage.chat_id,
+      role: dbMessage.role,
+      text: dbMessage.text,
+      audioUrl: dbMessage.audio_url,
+      timings: dbMessage.timings,
+      createdAt: dbMessage.created_at,
+      meta: dbMessage.meta,
+      client_msg_id: dbMessage.client_msg_id,
+      status: dbMessage.status
+    };
+  };
 
   // Cleanup on unmount to ensure all resources are released
   useEffect(() => {
@@ -45,6 +116,7 @@ export const ConversationOverlay: React.FC = () => {
         isShuttingDown.current = true; // Set shutdown flag
         conversationTtsService.stopAllAudio();
         conversationMicrophoneService.forceCleanup();
+        cleanupOverlayRealtime();
         try {
           const { microphoneArbitrator } = require('@/services/microphone/MicrophoneArbitrator');
           microphoneArbitrator.release('conversation');
@@ -68,7 +140,10 @@ export const ConversationOverlay: React.FC = () => {
     // 2. Force cleanup of microphone service to release all streams and contexts
     conversationMicrophoneService.forceCleanup();
     
-    // 3. Release microphone arbitrator to free up browser permissions
+    // 3. Cleanup overlay realtime subscription
+    cleanupOverlayRealtime();
+    
+    // 4. Release microphone arbitrator to free up browser permissions
     try {
       const { microphoneArbitrator } = require('@/services/microphone/MicrophoneArbitrator');
       microphoneArbitrator.release('conversation');
@@ -76,12 +151,12 @@ export const ConversationOverlay: React.FC = () => {
       // Silent cleanup - this is expected if already released
     }
     
-    // 4. Re-initialize ChatController for normal chat functionality
+    // 5. Re-initialize ChatController for normal chat functionality
     if (chatIdRef.current) {
       chatController.initializeConversation(chatIdRef.current);
     }
     
-    // 5. Refresh conversation history to show new messages
+    // 6. Refresh conversation history to show new messages
     try {
       const { retryLoadMessages } = useChatStore.getState();
       await retryLoadMessages();
@@ -89,14 +164,14 @@ export const ConversationOverlay: React.FC = () => {
       // Silent refresh failure - not critical
     }
     
-    // 6. Close the UI and reset all state
+    // 7. Close the UI and reset all state
     closeConversation();
     setPermissionGranted(false); // Reset permission on close
     setIsStarting(false); // Reset guard on close
     hasStarted.current = false; // Reset one-shot guard
     setConversationState('listening');
     
-    // 7. Clear cached chat_id
+    // 8. Clear cached chat_id
     chatIdRef.current = null;
   };
 
@@ -197,14 +272,14 @@ export const ConversationOverlay: React.FC = () => {
       
       // Use established LLM service (same as chatbar) - use proper UUID
       const client_msg_id = uuidv4();
-      // Add optimistic user message to store
-      const userMessageId = uuidv4();
+      // Add optimistic user message to store using client_msg_id for reconciliation
       useChatStore.getState().addMessage({
-        id: userMessageId,
+        id: client_msg_id, // Use client_msg_id as id for proper reconciliation
         chat_id: chatIdRef.current!,
         role: 'user',
         text: transcript,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        client_msg_id, // Add for reconciliation
       });
       
       // Send message - this will trigger Realtime assistant response
