@@ -64,6 +64,13 @@ export const ConversationOverlay: React.FC = () => {
             const newMessage = payload.new;
             
             if (newMessage.role === 'assistant' && newMessage.meta?.mode === 'conversation') {
+              // Prevent duplicate processing of the same message
+              if (lastProcessedMessageId.current === newMessage.id) {
+                console.log('[CONVERSATION-TURN] Duplicate message detected, skipping:', newMessage.id);
+                return;
+              }
+              
+              lastProcessedMessageId.current = newMessage.id;
               console.log('[CONVERSATION-TURN] Assistant message received, starting TTS.');
               
               // Set conversation state to replying
