@@ -39,8 +39,10 @@ export const ConversationOverlay: React.FC = () => {
   // Cache chat_id when modal opens and setup overlay realtime
   useEffect(() => {
     if (isConversationOpen && chat_id && !chatIdRef.current) {
+      console.log('[ConversationOverlay] 🔥 MODAL OPENING - CACHING CHAT_ID:', chat_id);
       chatIdRef.current = chat_id;
       // Cleanup ChatController's realtime subscription and setup overlay's own
+      console.log('[ConversationOverlay] 🔥 CLEANING UP CHATCONTROLLER BEFORE SETUP');
       chatController.cleanup();
       setupOverlayRealtime(chat_id);
     }
@@ -48,6 +50,7 @@ export const ConversationOverlay: React.FC = () => {
 
   // Setup overlay-owned realtime subscription
   const setupOverlayRealtime = (chat_id: string) => {
+    console.log('[ConversationOverlay] 🔥 SETTING UP OVERLAY REALTIME LISTENER for chat_id:', chat_id);
     cleanupOverlayRealtime();
     
     try {
@@ -62,14 +65,17 @@ export const ConversationOverlay: React.FC = () => {
             filter: `chat_id=eq.${chat_id}`
           },
           (payload) => {
+            console.log('[ConversationOverlay] 🔥 REALTIME MESSAGE RECEIVED:', payload.new);
             const newMessage = transformDatabaseMessage(payload.new);
             const { messages, updateMessage, addMessage } = useChatStore.getState();
             
             // Reconciliation logic: check if this is updating an optimistic message
             if (newMessage.role === 'user' && newMessage.client_msg_id) {
+              console.log('[ConversationOverlay] 🔥 RECONCILING USER MESSAGE with client_msg_id:', newMessage.client_msg_id);
               // Find and update the optimistic user message
               const optimisticMessage = messages.find(m => m.id === newMessage.client_msg_id);
               if (optimisticMessage) {
+                console.log('[ConversationOverlay] 🔥 UPDATING OPTIMISTIC MESSAGE');
                 updateMessage(newMessage.client_msg_id, { ...newMessage });
                 return;
               }
@@ -77,20 +83,26 @@ export const ConversationOverlay: React.FC = () => {
             
             // Only add if not already present and no reconciliation occurred
             if (!messages.find(m => m.id === newMessage.id)) {
+              console.log('[ConversationOverlay] 🔥 ADDING NEW MESSAGE TO STORE:', newMessage.role, newMessage.id);
               addMessage(newMessage);
             }
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log('[ConversationOverlay] 🔥 REALTIME SUBSCRIPTION STATUS:', status);
+        });
+      console.log('[ConversationOverlay] 🔥 OVERLAY REALTIME LISTENER SETUP COMPLETE');
     } catch (error) {
-      console.error('[ConversationOverlay] Failed to setup realtime subscription:', error);
+      console.error('[ConversationOverlay] 🔥 FAILED TO SETUP REALTIME SUBSCRIPTION:', error);
     }
   };
 
   const cleanupOverlayRealtime = () => {
     if (overlayChannelRef.current) {
+      console.log('[ConversationOverlay] 🔥 CLEANING UP OVERLAY REALTIME LISTENER');
       supabase.removeChannel(overlayChannelRef.current);
       overlayChannelRef.current = null;
+      console.log('[ConversationOverlay] 🔥 OVERLAY REALTIME LISTENER CLEANED UP');
     }
   };
 
@@ -131,20 +143,25 @@ export const ConversationOverlay: React.FC = () => {
 
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = async () => {
+    console.log('[ConversationOverlay] 🔥 MODAL CLOSING - STARTING CLEANUP PROCESS');
     // Set shutdown flag immediately to prevent any further processing
     isShuttingDown.current = true;
     
     // 1. Stop all TTS audio playback immediately
+    console.log('[ConversationOverlay] 🔥 STOPPING ALL TTS AUDIO');
     conversationTtsService.stopAllAudio();
     
     // 2. Force cleanup of microphone service to release all streams and contexts
+    console.log('[ConversationOverlay] 🔥 FORCE CLEANING UP MICROPHONE SERVICE');
     conversationMicrophoneService.forceCleanup();
     
     // 3. Cleanup overlay realtime subscription
+    console.log('[ConversationOverlay] 🔥 CLEANING UP OVERLAY REALTIME');
     cleanupOverlayRealtime();
     
     // 4. Release microphone arbitrator to free up browser permissions
     try {
+      console.log('[ConversationOverlay] 🔥 RELEASING MICROPHONE ARBITRATOR');
       const { microphoneArbitrator } = require('@/services/microphone/MicrophoneArbitrator');
       microphoneArbitrator.release('conversation');
     } catch (error) {
@@ -153,11 +170,13 @@ export const ConversationOverlay: React.FC = () => {
     
     // 5. Re-initialize ChatController for normal chat functionality
     if (chatIdRef.current) {
+      console.log('[ConversationOverlay] 🔥 RE-INITIALIZING CHATCONTROLLER');
       chatController.initializeConversation(chatIdRef.current);
     }
     
     // 6. Refresh conversation history to show new messages
     try {
+      console.log('[ConversationOverlay] 🔥 REFRESHING CONVERSATION HISTORY');
       const { retryLoadMessages } = useChatStore.getState();
       await retryLoadMessages();
     } catch (error) {
@@ -165,6 +184,7 @@ export const ConversationOverlay: React.FC = () => {
     }
     
     // 7. Close the UI and reset all state
+    console.log('[ConversationOverlay] 🔥 CLOSING UI AND RESETTING STATE');
     closeConversation();
     setPermissionGranted(false); // Reset permission on close
     setIsStarting(false); // Reset guard on close
@@ -173,6 +193,7 @@ export const ConversationOverlay: React.FC = () => {
     
     // 8. Clear cached chat_id
     chatIdRef.current = null;
+    console.log('[ConversationOverlay] 🔥 MODAL CLOSE COMPLETE - ALL RESOURCES CLEANED UP');
   };
 
   const handleStart = () => {
@@ -254,10 +275,17 @@ export const ConversationOverlay: React.FC = () => {
     }
     
     try {
+      console.log('[ConversationOverlay] 🔥 STARTING STT PROCESSING - blob size:', audioBlob.size);
+      const sttStartTime = Date.now();
       setConversationState('processing');
       
       // Use established STT service (same as chatbar mic)
+      console.log('[ConversationOverlay] 🔥 CALLING STT SERVICE...');
       const result = await sttService.transcribe(audioBlob, chatIdRef.current!, {}, 'conversation', sessionIdRef.current);
+      const sttEndTime = Date.now();
+      console.log('[ConversationOverlay] 🔥 STT COMPLETED in', sttEndTime - sttStartTime, 'ms');
+      console.log('[ConversationOverlay] 🔥 STT RESULT:', result);
+      
       const transcript = result.transcript;
       
       // Shutdown guard - check again after STT
@@ -266,13 +294,19 @@ export const ConversationOverlay: React.FC = () => {
       }
       
       if (!transcript?.trim()) {
+        console.log('[ConversationOverlay] 🔥 EMPTY TRANSCRIPT - RETURNING TO LISTENING');
         setConversationState('listening');
         return;
       }
       
+      console.log('[ConversationOverlay] 🔥 TRANSCRIPT RECEIVED:', transcript);
+      
       // Use established LLM service (same as chatbar) - use proper UUID
       const client_msg_id = uuidv4();
+      console.log('[ConversationOverlay] 🔥 GENERATED CLIENT_MSG_ID:', client_msg_id);
+      
       // Add optimistic user message to store using client_msg_id for reconciliation
+      console.log('[ConversationOverlay] 🔥 ADDING OPTIMISTIC USER MESSAGE TO STORE');
       useChatStore.getState().addMessage({
         id: client_msg_id, // Use client_msg_id as id for proper reconciliation
         chat_id: chatIdRef.current!,
@@ -283,11 +317,16 @@ export const ConversationOverlay: React.FC = () => {
       });
       
       // Send message - this will trigger Realtime assistant response
+      console.log('[ConversationOverlay] 🔥 CALLING LLM SERVICE...');
+      const llmStartTime = Date.now();
       await llmService.sendMessage({
         chat_id: chatIdRef.current!,
         text: transcript,
         client_msg_id
       });
+      const llmEndTime = Date.now();
+      console.log('[ConversationOverlay] 🔥 LLM CALL COMPLETED in', llmEndTime - llmStartTime, 'ms');
+      console.log('[ConversationOverlay] 🔥 TOTAL PROCESSING TIME:', llmEndTime - sttStartTime, 'ms');
       
       // DON'T restart recording here - let the Realtime effect handle it
       // This prevents the duplicate recording logic that causes MediaRecorder errors
@@ -295,7 +334,7 @@ export const ConversationOverlay: React.FC = () => {
     } catch (error) {
       // Only log error if not shutting down
       if (!isShuttingDown.current) {
-        console.error('[ConversationOverlay] Simple processing error:', error);
+        console.error('[ConversationOverlay] 🔥 PROCESSING ERROR:', error);
         setConversationState('connecting');
       }
     }
@@ -310,15 +349,22 @@ export const ConversationOverlay: React.FC = () => {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
 
     if (latestMessage && latestMessage.id !== lastProcessedMessageId.current) {
+      console.log('[ConversationOverlay] 🔥 NEW ASSISTANT MESSAGE DETECTED:', latestMessage.id);
+      console.log('[ConversationOverlay] 🔥 ASSISTANT MESSAGE TEXT:', latestMessage.text);
       lastProcessedMessageId.current = latestMessage.id;
       
       setConversationState('replying');
+      console.log('[ConversationOverlay] 🔥 TRIGGERING TTS FOR ASSISTANT MESSAGE');
+      const ttsStartTime = Date.now();
       conversationTtsService.speakAssistant({
         chat_id: chatIdRef.current,
         messageId: latestMessage.id,
         text: latestMessage.text,
         sessionId: sessionIdRef.current,
         onComplete: async () => {
+          const ttsEndTime = Date.now();
+          console.log('[ConversationOverlay] 🔥 TTS COMPLETED in', ttsEndTime - ttsStartTime, 'ms');
+          
           // Shutdown guard - don't restart recording if modal is closing
           if (isShuttingDown.current) {
             return;
@@ -336,15 +382,18 @@ export const ConversationOverlay: React.FC = () => {
               return;
             }
             
+            console.log('[ConversationOverlay] 🔥 RESTARTING RECORDING AFTER TTS');
             const success = await conversationMicrophoneService.startRecording();
             if (!success) {
-              console.error('[ConversationOverlay] Failed to start recording after TTS');
+              console.error('[ConversationOverlay] 🔥 FAILED TO START RECORDING AFTER TTS');
               setConversationState('connecting');
+            } else {
+              console.log('[ConversationOverlay] 🔥 RECORDING RESTARTED SUCCESSFULLY');
             }
           } catch (error) {
             // Only log error if not shutting down
             if (!isShuttingDown.current) {
-              console.error('[ConversationOverlay] Error starting recording after TTS:', error);
+              console.error('[ConversationOverlay] 🔥 ERROR STARTING RECORDING AFTER TTS:', error);
               setConversationState('connecting');
             }
           }

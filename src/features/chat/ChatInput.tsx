@@ -47,11 +47,12 @@ export const ChatInput = () => {
   const handleSend = () => {
     // Guard: Don't send if conversation overlay is open
     if (isConversationOpen) {
-      console.log('[ChatInput] handleSend: Blocked - conversation mode active');
+      console.log('[ChatInput] 🔥 BLOCKED: handleSend - conversation mode active');
       return;
     }
 
     if (text.trim()) {
+      console.log('[ChatInput] 🔥 PROCESSING: handleSend - normal chat mode');
       // Immediately show stop icon when sending message
       setAssistantTyping(true);
       chatController.sendTextMessage(text);

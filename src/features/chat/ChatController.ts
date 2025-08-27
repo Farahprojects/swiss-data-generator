@@ -143,7 +143,7 @@ class ChatController {
     // Guard: Don't send if conversation overlay is open
     const { useConversationUIStore } = await import('@/features/chat/conversation-ui-store');
     if (useConversationUIStore.getState().isConversationOpen) {
-      console.log('[ChatController] sendTextMessage: Blocked - conversation mode active');
+      console.log('[ChatController] 🔥 BLOCKED: sendTextMessage - conversation mode active');
       return;
     }
 
@@ -153,6 +153,7 @@ class ChatController {
       return;
     }
     
+    console.log('[ChatController] 🔥 PROCESSING: sendTextMessage - normal chat mode');
     const client_msg_id = uuidv4();
     this.addOptimisticMessages(chat_id, text, client_msg_id);
     
@@ -235,7 +236,13 @@ class ChatController {
     // Guard: Don't start if conversation overlay is open
     const { useConversationUIStore } = await import('@/features/chat/conversation-ui-store');
     if (useConversationUIStore.getState().isConversationOpen) {
-      console.log('[ChatController] startTurn: Blocked - conversation mode active');
+      console.log('[ChatController] 🔥 BLOCKED: startTurn - conversation mode active');
+      return;
+    }
+
+    console.log('[ChatController] 🔥 PROCESSING: startTurn - normal chat mode');
+    if (this.isTurnActive) {
+      console.log('[ChatController] Turn already active, skipping startTurn');
       return;
     }
 
@@ -429,6 +436,7 @@ class ChatController {
 
   // Add cleanup method for component unmount
   cleanup() {
+    console.log('[ChatController] 🔥 CLEANUP: Starting ChatController cleanup');
     // Clear all timeouts
     if (this.turnRestartTimeout) {
       clearTimeout(this.turnRestartTimeout);
@@ -447,6 +455,7 @@ class ChatController {
     
     this.isResetting = false;
     this.isUnlocked = false; // Lock on cleanup
+    console.log('[ChatController] 🔥 CLEANUP: ChatController cleanup complete');
   }
 
   // Removed private startAssistantMessageListener and stopAssistantMessageListener
