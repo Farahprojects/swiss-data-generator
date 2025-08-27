@@ -155,31 +155,26 @@ export const ConversationOverlay: React.FC = () => {
           conversationTtsService.stopAllAudio();
           conversationMicrophoneService.forceCleanup();
           
-          // Kill browser microphone stream directly
+          // SIMPLE BROWSER KILL SWITCH - Tell browser we're done
           try {
-            const stream = conversationMicrophoneService.getStream();
-            if (stream) {
-              stream.getTracks().forEach(track => {
-                console.log('[CONVERSATION-TURN] 🔴 KILLING MICROPHONE TRACK:', track.kind);
-                track.stop();
-              });
-            }
-          } catch (error) {
-            console.error('[CONVERSATION-TURN] Error killing microphone stream:', error);
-          }
-          
-          // Kill any playing audio elements
-          try {
-            const audioElements = document.querySelectorAll('audio');
-            audioElements.forEach(audio => {
-              if (!audio.paused) {
-                console.log('[CONVERSATION-TURN] 🔴 KILLING AUDIO ELEMENT');
-                audio.pause();
-                audio.currentTime = 0;
-              }
+            // Kill all audio elements
+            document.querySelectorAll('audio').forEach(audio => {
+              audio.pause();
+              audio.currentTime = 0;
             });
+            
+            // Kill microphone by revoking permission
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+              navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                  stream.getTracks().forEach(track => track.stop());
+                })
+                .catch(() => {}); // Ignore errors
+            }
+            
+            console.log('[CONVERSATION-TURN] 🔴 BROWSER KILLED: Microphone and audio stopped');
           } catch (error) {
-            console.error('[CONVERSATION-TURN] Error killing audio elements:', error);
+            console.error('[CONVERSATION-TURN] Browser kill error:', error);
           }
           
           microphoneArbitrator.release('conversation');
@@ -213,31 +208,26 @@ export const ConversationOverlay: React.FC = () => {
     // Kill microphone stream and cleanup
     conversationMicrophoneService.forceCleanup();
     
-    // Kill browser microphone stream directly
+    // SIMPLE BROWSER KILL SWITCH - Tell browser we're done
     try {
-      const stream = conversationMicrophoneService.getStream();
-      if (stream) {
-        stream.getTracks().forEach(track => {
-          console.log('[CONVERSATION-TURN] 🔴 KILLING MICROPHONE TRACK:', track.kind);
-          track.stop();
-        });
-      }
-    } catch (error) {
-      console.error('[CONVERSATION-TURN] Error killing microphone stream:', error);
-    }
-    
-    // Kill any playing audio elements
-    try {
-      const audioElements = document.querySelectorAll('audio');
-      audioElements.forEach(audio => {
-        if (!audio.paused) {
-          console.log('[CONVERSATION-TURN] 🔴 KILLING AUDIO ELEMENT');
-          audio.pause();
-          audio.currentTime = 0;
-        }
+      // Kill all audio elements
+      document.querySelectorAll('audio').forEach(audio => {
+        audio.pause();
+        audio.currentTime = 0;
       });
+      
+      // Kill microphone by revoking permission
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+          .then(stream => {
+            stream.getTracks().forEach(track => track.stop());
+          })
+          .catch(() => {}); // Ignore errors
+      }
+      
+      console.log('[CONVERSATION-TURN] 🔴 BROWSER KILLED: Microphone and audio stopped');
     } catch (error) {
-      console.error('[CONVERSATION-TURN] Error killing audio elements:', error);
+      console.error('[CONVERSATION-TURN] Browser kill error:', error);
     }
     
     try {
