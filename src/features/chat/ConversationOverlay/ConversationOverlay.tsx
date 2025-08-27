@@ -36,6 +36,9 @@ export const ConversationOverlay: React.FC = () => {
   // Overlay-owned Realtime subscription
   const overlayChannelRef = useRef<any>(null);
   
+  // 🔥 COMPLETE STORE DECOUPLING: Local message tracking for conversation mode
+  const [localMessages, setLocalMessages] = useState<Message[]>([]);
+  
   // Cache chat_id when modal opens and setup overlay realtime
   useEffect(() => {
     if (isConversationOpen && chat_id && !chatIdRef.current) {
@@ -67,25 +70,30 @@ export const ConversationOverlay: React.FC = () => {
           (payload) => {
             console.log('[ConversationOverlay] 🔥 REALTIME MESSAGE RECEIVED:', payload.new);
             const newMessage = transformDatabaseMessage(payload.new);
-            const { messages, updateMessage, addMessage } = useChatStore.getState();
             
-            // Reconciliation logic: check if this is updating an optimistic message
-            if (newMessage.role === 'user' && newMessage.client_msg_id) {
-              console.log('[ConversationOverlay] 🔥 RECONCILING USER MESSAGE with client_msg_id:', newMessage.client_msg_id);
-              // Find and update the optimistic user message
-              const optimisticMessage = messages.find(m => m.id === newMessage.client_msg_id);
-              if (optimisticMessage) {
-                console.log('[ConversationOverlay] 🔥 UPDATING OPTIMISTIC MESSAGE');
-                updateMessage(newMessage.client_msg_id, { ...newMessage });
-                return;
+            // 🔥 COMPLETE STORE DECOUPLING: Use local message tracking instead of store
+            setLocalMessages(prevMessages => {
+              // Reconciliation logic: check if this is updating an optimistic message
+              if (newMessage.role === 'user' && newMessage.client_msg_id) {
+                console.log('[ConversationOverlay] 🔥 RECONCILING USER MESSAGE with client_msg_id:', newMessage.client_msg_id);
+                // Find and update the optimistic user message
+                const optimisticMessage = prevMessages.find(m => m.id === newMessage.client_msg_id);
+                if (optimisticMessage) {
+                  console.log('[ConversationOverlay] 🔥 UPDATING OPTIMISTIC MESSAGE LOCALLY');
+                  return prevMessages.map(m => 
+                    m.id === newMessage.client_msg_id ? { ...newMessage } : m
+                  );
+                }
               }
-            }
-            
-            // Only add if not already present and no reconciliation occurred
-            if (!messages.find(m => m.id === newMessage.id)) {
-              console.log('[ConversationOverlay] 🔥 ADDING NEW MESSAGE TO STORE:', newMessage.role, newMessage.id);
-              addMessage(newMessage);
-            }
+              
+              // Only add if not already present and no reconciliation occurred
+              if (!prevMessages.find(m => m.id === newMessage.id)) {
+                console.log('[ConversationOverlay] 🔥 ADDING NEW MESSAGE LOCALLY:', newMessage.role, newMessage.id);
+                return [...prevMessages, newMessage];
+              }
+              
+              return prevMessages;
+            });
           }
         )
         .subscribe((status) => {
@@ -191,8 +199,9 @@ export const ConversationOverlay: React.FC = () => {
     hasStarted.current = false; // Reset one-shot guard
     setConversationState('listening');
     
-    // 8. Clear cached chat_id
+    // 8. Clear cached chat_id and local messages
     chatIdRef.current = null;
+    setLocalMessages([]); // 🔥 COMPLETE STORE DECOUPLING: Clear local messages
     console.log('[ConversationOverlay] 🔥 MODAL CLOSE COMPLETE - ALL RESOURCES CLEANED UP');
   };
 
@@ -305,16 +314,17 @@ export const ConversationOverlay: React.FC = () => {
       const client_msg_id = uuidv4();
       console.log('[ConversationOverlay] 🔥 GENERATED CLIENT_MSG_ID:', client_msg_id);
       
-      // Add optimistic user message to store using client_msg_id for reconciliation
-      console.log('[ConversationOverlay] 🔥 ADDING OPTIMISTIC USER MESSAGE TO STORE');
-      useChatStore.getState().addMessage({
+      // 🔥 COMPLETE STORE DECOUPLING: Add optimistic user message locally instead of to store
+      console.log('[ConversationOverlay] 🔥 ADDING OPTIMISTIC USER MESSAGE LOCALLY');
+      const optimisticUserMessage: Message = {
         id: client_msg_id, // Use client_msg_id as id for proper reconciliation
         chat_id: chatIdRef.current!,
         role: 'user',
         text: transcript,
         createdAt: new Date().toISOString(),
         client_msg_id, // Add for reconciliation
-      });
+      };
+      setLocalMessages(prev => [...prev, optimisticUserMessage]);
       
       // Send message - this will trigger Realtime assistant response
       console.log('[ConversationOverlay] 🔥 CALLING LLM SERVICE...');
@@ -344,7 +354,8 @@ export const ConversationOverlay: React.FC = () => {
   useEffect(() => {
     if (!permissionGranted || !chatIdRef.current) return;
 
-    const latestMessage = messages
+    // 🔥 COMPLETE STORE DECOUPLING: Use local messages instead of store messages
+    const latestMessage = localMessages
       .filter(m => m.chat_id === chatIdRef.current && m.role === 'assistant')
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
 
@@ -408,7 +419,7 @@ export const ConversationOverlay: React.FC = () => {
         }
       });
     }
-  }, [messages, permissionGranted]);
+  }, [localMessages, permissionGranted]);
 
 
   // Use simple conversation state
