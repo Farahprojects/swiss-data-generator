@@ -1,6 +1,12 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const GOOGLE_TTS_API_KEY = Deno.env.get("GOOGLE-TTS") ?? "";
+
+// Initialize Supabase client
+const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -81,11 +87,43 @@ serve(async (req) => {
     // Decode base64 audio to binary
     const audioBytes = Uint8Array.from(atob(audioContent), c => c.charCodeAt(0));
 
-    const response = new Response(audioBytes, {
+    // Create data URL for direct browser playback
+    const audioUrl = `data:audio/mpeg;base64,${audioContent}`;
+
+    // Save assistant message with audio URL directly to database
+    const { error: dbError } = await supabase
+      .from("messages")
+      .insert({
+        chat_id: chat_id,
+        role: "assistant",
+        text: text,
+        audio_url: audioUrl,
+        created_at: new Date().toISOString(),
+        meta: { 
+          tts_provider: "google",
+          voice: voiceName,
+          sessionId,
+          tts_status: 'ready',
+          processing_time_ms: Date.now() - startTime
+        },
+      });
+
+    if (dbError) {
+      console.error("[google-tts] Failed to save assistant message:", dbError);
+      throw new Error(`Database save failed: ${dbError.message}`);
+    }
+
+    console.log(`[google-tts] Assistant message with audio URL saved to database`);
+
+    // Return success response (audio URL is now in database)
+    const response = new Response(JSON.stringify({
+      success: true,
+      message: "TTS audio generated and saved to database",
+      audio_url: audioUrl
+    }), {
       headers: {
         ...CORS_HEADERS,
-        'Content-Type': 'audio/mpeg',
-        'Content-Length': audioBytes.length.toString(),
+        'Content-Type': 'application/json',
       },
     });
 

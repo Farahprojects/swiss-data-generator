@@ -119,34 +119,8 @@ serve(async (req) => {
         } else {
           console.log('[chat-send] Background LLM processing completed');
           
-          // Get LLM response data
-          const llmData = await llmResponse.json();
-          
-          // Save assistant message to database
-          const assistantMessageData = {
-            chat_id,
-            role: "assistant",
-            text: llmData.assistant_text,
-            audio_url: llmData.audio_url || null, // Save audio URL if provided
-            created_at: new Date().toISOString(),
-            meta: llmData.meta || {}
-          };
-
-          console.log('[chat-send] Inserting assistant message:', { 
-            chat_id, 
-            role: "assistant", 
-            has_audio_url: !!llmData.audio_url 
-          });
-          
-          const { error: assistantError } = await supabase
-            .from("messages")
-            .insert(assistantMessageData);
-
-          if (assistantError) {
-            console.error('[chat-send] Assistant message insert failed:', assistantError);
-          } else {
-            console.log('[chat-send] Assistant message inserted successfully');
-          }
+          // Note: Assistant message with audio URL is saved by TTS service directly
+          console.log('[chat-send] TTS service handles assistant message save');
         }
       } catch (error) {
         console.error('[chat-send] Background LLM processing error:', error);

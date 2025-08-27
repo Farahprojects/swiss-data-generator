@@ -162,13 +162,12 @@ Content Rules:
         // Note: Assistant message will be saved by chat-send function
         console.log("[llm-handler-openai] Assistant response generated successfully");
           
-        // 🔥 CONVERSATION MODE OPTIMIZATION: Generate TTS audio URL
-        let audioUrl = null;
+        // 🔥 CONVERSATION MODE OPTIMIZATION: Trigger TTS directly
         if (mode === 'conversation' && sessionId) {
-          console.log("[llm-handler-openai] 🔥 CONVERSATION MODE: Generating TTS audio URL");
+          console.log("[llm-handler-openai] 🔥 CONVERSATION MODE: Triggering TTS service");
           
           try {
-            // Call TTS service directly to generate audio URL
+            // Call TTS service directly (it will save to database)
             const ttsResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
               method: 'POST',
               headers: {
@@ -184,10 +183,7 @@ Content Rules:
             });
 
             if (ttsResponse.ok) {
-              // Get the audio data and create a direct URL
-              const audioData = await ttsResponse.arrayBuffer();
-              audioUrl = `data:audio/mpeg;base64,${btoa(String.fromCharCode(...new Uint8Array(audioData)))}`;
-              console.log("[llm-handler-openai] 🔥 CONVERSATION MODE: TTS audio URL generated successfully");
+              console.log("[llm-handler-openai] 🔥 CONVERSATION MODE: TTS service completed successfully");
             } else {
               console.error("[llm-handler-openai] 🔥 CONVERSATION MODE: TTS service failed:", ttsResponse.status);
             }
@@ -196,10 +192,9 @@ Content Rules:
           }
         }
 
-        // Return assistant response with audio URL (chat-send will save to DB)
+        // Return assistant response (TTS saves to DB directly)
         return {
           assistant_text: sanitizedAssistantText,
-          audio_url: audioUrl,
           meta: { 
             llm_provider: "openai", 
             model: "gpt-4.1-mini-2025-04-14",
@@ -208,8 +203,7 @@ Content Rules:
             output_tokens: outputTokens,
             total_tokens: tokenCount,
             mode: mode || null,
-            sessionId: sessionId || null,
-            tts_status: audioUrl ? 'ready' : null
+            sessionId: sessionId || null
           }
         };
 
