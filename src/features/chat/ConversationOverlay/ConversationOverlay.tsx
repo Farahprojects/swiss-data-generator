@@ -288,58 +288,70 @@ export const ConversationOverlay: React.FC = () => {
       const sttStartTime = Date.now();
       setConversationState('processing');
       
-      // Use established STT service (same as chatbar mic)
-      console.log('[ConversationOverlay] 🔥 CALLING STT SERVICE...');
-      const result = await sttService.transcribe(audioBlob, chatIdRef.current!, {}, 'conversation', sessionIdRef.current);
-      const sttEndTime = Date.now();
-      console.log('[ConversationOverlay] 🔥 STT COMPLETED in', sttEndTime - sttStartTime, 'ms');
-      console.log('[ConversationOverlay] 🔥 STT RESULT:', result);
-      
-      const transcript = result.transcript;
-      
-      // Shutdown guard - check again after STT
-      if (isShuttingDown.current) {
-        return;
-      }
-      
-      if (!transcript?.trim()) {
-        console.log('[ConversationOverlay] 🔥 EMPTY TRANSCRIPT - RETURNING TO LISTENING');
-        setConversationState('listening');
-        return;
-      }
-      
-      console.log('[ConversationOverlay] 🔥 TRANSCRIPT RECEIVED:', transcript);
-      
-      // Use established LLM service (same as chatbar) - use proper UUID
-      const client_msg_id = uuidv4();
-      console.log('[ConversationOverlay] 🔥 GENERATED CLIENT_MSG_ID:', client_msg_id);
-      
-      // 🔥 COMPLETE STORE DECOUPLING: Add optimistic user message locally instead of to store
-      console.log('[ConversationOverlay] 🔥 ADDING OPTIMISTIC USER MESSAGE LOCALLY');
-      const optimisticUserMessage: Message = {
-        id: client_msg_id, // Use client_msg_id as id for proper reconciliation
-        chat_id: chatIdRef.current!,
-        role: 'user',
-        text: transcript,
-        createdAt: new Date().toISOString(),
-        client_msg_id, // Add for reconciliation
-      };
-      setLocalMessages(prev => [...prev, optimisticUserMessage]);
-      
-      // Send message - this will trigger Realtime assistant response
-      console.log('[ConversationOverlay] 🔥 CALLING LLM SERVICE...');
-      const llmStartTime = Date.now();
-      await llmService.sendMessage({
-        chat_id: chatIdRef.current!,
-        text: transcript,
-        client_msg_id
-      });
-      const llmEndTime = Date.now();
-      console.log('[ConversationOverlay] 🔥 LLM CALL COMPLETED in', llmEndTime - llmStartTime, 'ms');
-      console.log('[ConversationOverlay] 🔥 TOTAL PROCESSING TIME:', llmEndTime - sttStartTime, 'ms');
-      
-      // DON'T restart recording here - let the Realtime effect handle it
-      // This prevents the duplicate recording logic that causes MediaRecorder errors
+      // 🔥 FIRE-AND-FORGET: STT call - don't wait for result
+      console.log('[ConversationOverlay] 🔥 CALLING STT SERVICE (fire-and-forget)...');
+      sttService.transcribe(audioBlob, chatIdRef.current!, {}, 'conversation', sessionIdRef.current)
+        .then(result => {
+          const sttEndTime = Date.now();
+          console.log('[ConversationOverlay] 🔥 STT COMPLETED in', sttEndTime - sttStartTime, 'ms');
+          console.log('[ConversationOverlay] 🔥 STT RESULT:', result);
+          
+          const transcript = result.transcript;
+          
+          // Shutdown guard - check again after STT
+          if (isShuttingDown.current) {
+            return;
+          }
+          
+          if (!transcript?.trim()) {
+            console.log('[ConversationOverlay] 🔥 EMPTY TRANSCRIPT - RETURNING TO LISTENING');
+            setConversationState('listening');
+            return;
+          }
+          
+          console.log('[ConversationOverlay] 🔥 TRANSCRIPT RECEIVED:', transcript);
+          
+          // Use established LLM service (same as chatbar) - use proper UUID
+          const client_msg_id = uuidv4();
+          console.log('[ConversationOverlay] 🔥 GENERATED CLIENT_MSG_ID:', client_msg_id);
+          
+          // 🔥 COMPLETE STORE DECOUPLING: Add optimistic user message locally instead of to store
+          console.log('[ConversationOverlay] 🔥 ADDING OPTIMISTIC USER MESSAGE LOCALLY');
+          const optimisticUserMessage: Message = {
+            id: client_msg_id, // Use client_msg_id as id for proper reconciliation
+            chat_id: chatIdRef.current!,
+            role: 'user',
+            text: transcript,
+            createdAt: new Date().toISOString(),
+            client_msg_id, // Add for reconciliation
+          };
+          setLocalMessages(prev => [...prev, optimisticUserMessage]);
+          
+          // 🔥 FIRE-AND-FORGET: LLM call - don't wait for response
+          console.log('[ConversationOverlay] 🔥 CALLING LLM SERVICE (fire-and-forget)...');
+          const llmStartTime = Date.now();
+          llmService.sendMessage({
+            chat_id: chatIdRef.current!,
+            text: transcript,
+            client_msg_id
+          }).then(() => {
+            const llmEndTime = Date.now();
+            console.log('[ConversationOverlay] 🔥 LLM CALL COMPLETED in', llmEndTime - llmStartTime, 'ms');
+            console.log('[ConversationOverlay] 🔥 TOTAL PROCESSING TIME:', llmEndTime - sttStartTime, 'ms');
+          }).catch(error => {
+            console.error('[ConversationOverlay] 🔥 LLM CALL ERROR:', error);
+          });
+          
+          // DON'T restart recording here - let the Realtime effect handle it
+          // This prevents the duplicate recording logic that causes MediaRecorder errors
+          
+        })
+        .catch(error => {
+          console.error('[ConversationOverlay] 🔥 STT ERROR:', error);
+          if (!isShuttingDown.current) {
+            setConversationState('connecting');
+          }
+        });
       
     } catch (error) {
       // Only log error if not shutting down
@@ -372,6 +384,8 @@ export const ConversationOverlay: React.FC = () => {
       
       console.log('[ConversationOverlay] 🔥 TRIGGERING TTS FOR ASSISTANT MESSAGE');
       const ttsStartTime = Date.now();
+      
+      // 🔥 FIRE-AND-FORGET: TTS call - don't wait for completion
       conversationTtsService.speakAssistant({
         chat_id: chatIdRef.current,
         messageId: latestMessage.id,
