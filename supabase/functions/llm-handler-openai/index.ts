@@ -182,6 +182,32 @@ Content Rules:
           console.error("[llm-handler-openai] Failed to save assistant message:", assistantError);
         } else {
           console.log("[llm-handler-openai] Assistant response saved successfully");
+          
+          // 🔥 CONVERSATION MODE OPTIMIZATION: Direct TTS trigger
+          if (mode === 'conversation' && sessionId) {
+            console.log("[llm-handler-openai] 🔥 CONVERSATION MODE: Triggering direct TTS");
+            
+            // Fire-and-forget TTS call - don't wait for response
+            fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'apikey': Deno.env.get("SUPABASE_ANON_KEY")!,
+              },
+              body: JSON.stringify({
+                chat_id,
+                text: sanitizedAssistantText,
+                voice: 'en-US-Chirp3-HD-Puck', // Default voice for conversation mode
+                sessionId,
+                mode: 'conversation', // Flag for conversation mode
+                messageId: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` // Generate unique message ID
+              })
+            }).then(() => {
+              console.log("[llm-handler-openai] 🔥 CONVERSATION MODE: TTS triggered successfully");
+            }).catch((error) => {
+              console.error("[llm-handler-openai] 🔥 CONVERSATION MODE: TTS trigger failed:", error);
+            });
+          }
         }
 
       } catch (error) {

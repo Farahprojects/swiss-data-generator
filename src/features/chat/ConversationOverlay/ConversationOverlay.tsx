@@ -44,75 +44,13 @@ export const ConversationOverlay: React.FC = () => {
     if (isConversationOpen && chat_id && !chatIdRef.current) {
       console.log('[ConversationOverlay] 🔥 MODAL OPENING - CACHING CHAT_ID:', chat_id);
       chatIdRef.current = chat_id;
-      // Cleanup ChatController's realtime subscription and setup overlay's own
+      // Cleanup ChatController's realtime subscription - no need for overlay realtime
       console.log('[ConversationOverlay] 🔥 CLEANING UP CHATCONTROLLER BEFORE SETUP');
       chatController.cleanup();
-      setupOverlayRealtime(chat_id);
+      // 🔥 CONVERSATION MODE OPTIMIZATION: No Realtime listener needed - direct LLM → TTS
+      console.log('[ConversationOverlay] 🔥 CONVERSATION MODE: Using direct LLM → TTS flow (no Realtime)');
     }
   }, [isConversationOpen, chat_id]);
-
-  // Setup overlay-owned realtime subscription
-  const setupOverlayRealtime = (chat_id: string) => {
-    console.log('[ConversationOverlay] 🔥 SETTING UP OVERLAY REALTIME LISTENER for chat_id:', chat_id);
-    cleanupOverlayRealtime();
-    
-    try {
-      overlayChannelRef.current = supabase
-        .channel(`overlay-messages:${chat_id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'messages',
-            filter: `chat_id=eq.${chat_id}`
-          },
-          (payload) => {
-            console.log('[ConversationOverlay] 🔥 REALTIME MESSAGE RECEIVED:', payload.new);
-            const newMessage = transformDatabaseMessage(payload.new);
-            
-            // 🔥 COMPLETE STORE DECOUPLING: Use local message tracking instead of store
-            setLocalMessages(prevMessages => {
-              // Reconciliation logic: check if this is updating an optimistic message
-              if (newMessage.role === 'user' && newMessage.client_msg_id) {
-                console.log('[ConversationOverlay] 🔥 RECONCILING USER MESSAGE with client_msg_id:', newMessage.client_msg_id);
-                // Find and update the optimistic user message
-                const optimisticMessage = prevMessages.find(m => m.id === newMessage.client_msg_id);
-                if (optimisticMessage) {
-                  console.log('[ConversationOverlay] 🔥 UPDATING OPTIMISTIC MESSAGE LOCALLY');
-                  return prevMessages.map(m => 
-                    m.id === newMessage.client_msg_id ? { ...newMessage } : m
-                  );
-                }
-              }
-              
-              // Only add if not already present and no reconciliation occurred
-              if (!prevMessages.find(m => m.id === newMessage.id)) {
-                console.log('[ConversationOverlay] 🔥 ADDING NEW MESSAGE LOCALLY:', newMessage.role, newMessage.id);
-                return [...prevMessages, newMessage];
-              }
-              
-              return prevMessages;
-            });
-          }
-        )
-        .subscribe((status) => {
-          console.log('[ConversationOverlay] 🔥 REALTIME SUBSCRIPTION STATUS:', status);
-        });
-      console.log('[ConversationOverlay] 🔥 OVERLAY REALTIME LISTENER SETUP COMPLETE');
-    } catch (error) {
-      console.error('[ConversationOverlay] 🔥 FAILED TO SETUP REALTIME SUBSCRIPTION:', error);
-    }
-  };
-
-  const cleanupOverlayRealtime = () => {
-    if (overlayChannelRef.current) {
-      console.log('[ConversationOverlay] 🔥 CLEANING UP OVERLAY REALTIME LISTENER');
-      supabase.removeChannel(overlayChannelRef.current);
-      overlayChannelRef.current = null;
-      console.log('[ConversationOverlay] 🔥 OVERLAY REALTIME LISTENER CLEANED UP');
-    }
-  };
 
   const transformDatabaseMessage = (dbMessage: any): Message => {
     return {
@@ -136,7 +74,7 @@ export const ConversationOverlay: React.FC = () => {
         isShuttingDown.current = true; // Set shutdown flag
         conversationTtsService.stopAllAudio();
         conversationMicrophoneService.forceCleanup();
-        cleanupOverlayRealtime();
+        // cleanupOverlayRealtime(); // No longer needed
         try {
           const { microphoneArbitrator } = require('@/services/microphone/MicrophoneArbitrator');
           microphoneArbitrator.release('conversation');
@@ -165,7 +103,7 @@ export const ConversationOverlay: React.FC = () => {
     
     // 3. Cleanup overlay realtime subscription
     console.log('[ConversationOverlay] 🔥 CLEANING UP OVERLAY REALTIME');
-    cleanupOverlayRealtime();
+    // cleanupOverlayRealtime(); // No longer needed
     
     // 4. Release microphone arbitrator to free up browser permissions
     try {
@@ -367,7 +305,9 @@ export const ConversationOverlay: React.FC = () => {
           llmService.sendMessage({
             chat_id: chatIdRef.current!,
             text: transcript,
-            client_msg_id
+            client_msg_id,
+            mode: 'conversation', // 🔥 CONVERSATION MODE: Flag for direct TTS trigger
+            sessionId: sessionIdRef.current // 🔥 CONVERSATION MODE: Session ID for TTS
           }).then(() => {
             const llmEndTime = Date.now();
             console.log('[ConversationOverlay] 🔥 LLM CALL COMPLETED in', llmEndTime - llmStartTime, 'ms');
@@ -396,87 +336,84 @@ export const ConversationOverlay: React.FC = () => {
     }
   };
 
-  // Watch for new assistant messages via Realtime and trigger TTS
+  // 🔥 CONVERSATION MODE OPTIMIZATION: No TTS useEffect needed - direct LLM → TTS
+  // The LLM handler now directly triggers TTS, so we don't need to watch for new messages
+  // console.log('[ConversationOverlay] 🔥 CONVERSATION MODE: TTS triggered directly by LLM handler');
+
+  // 🔥 CONVERSATION MODE OPTIMIZATION: TTS completion listener for direct LLM → TTS flow
   useEffect(() => {
     if (!permissionGranted || !chatIdRef.current) return;
 
-    // 🔥 COMPLETE STORE DECOUPLING: Use local messages instead of store messages
-    const latestMessage = localMessages
-      .filter(m => m.chat_id === chatIdRef.current && m.role === 'assistant')
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-
-    if (latestMessage && latestMessage.id !== lastProcessedMessageId.current) {
-      console.log('[ConversationOverlay] 🔥 NEW ASSISTANT MESSAGE DETECTED:', latestMessage.id);
-      console.log('[ConversationOverlay] 🔥 ASSISTANT MESSAGE TEXT:', latestMessage.text);
-      lastProcessedMessageId.current = latestMessage.id;
+    // Listen for TTS completion events
+    const handleTtsComplete = async () => {
+      console.log('[ConversationOverlay] 🔥 TTS COMPLETED (direct LLM → TTS flow)');
       
-      setConversationState('replying');
+      // Shutdown guard - don't restart recording if modal is closing
+      if (isShuttingDown.current) {
+        return;
+      }
       
-      // SUSPEND MICROPHONE BEFORE TTS to clear audio lane
-      console.log('[ConversationOverlay] 🔥 SUSPENDING MICROPHONE FOR TTS PLAYBACK');
-      conversationMicrophoneService.suspendForPlayback();
+      setConversationState('listening');
       
-      // RESUME AUDIO PLAYBACK LINE for TTS
-      console.log('[ConversationOverlay] 🔥 RESUMING AUDIO PLAYBACK LINE FOR TTS');
-      conversationTtsService.resumeAudioPlayback();
+      // SUSPEND AUDIO PLAYBACK LINE for microphone
+      console.log('[ConversationOverlay] 🔥 SUSPENDING AUDIO PLAYBACK LINE FOR MICROPHONE');
+      conversationTtsService.suspendAudioPlayback();
       
-      console.log('[ConversationOverlay] 🔥 TRIGGERING TTS FOR ASSISTANT MESSAGE');
-      const ttsStartTime = Date.now();
-      
-      // 🔥 FIRE-AND-FORGET: TTS call - don't wait for completion
-      conversationTtsService.speakAssistant({
-        chat_id: chatIdRef.current,
-        messageId: latestMessage.id,
-        text: latestMessage.text,
-        sessionId: sessionIdRef.current,
-        onComplete: async () => {
-          const ttsEndTime = Date.now();
-          console.log('[ConversationOverlay] 🔥 TTS COMPLETED in', ttsEndTime - ttsStartTime, 'ms');
-          
-          // Shutdown guard - don't restart recording if modal is closing
-          if (isShuttingDown.current) {
-            return;
-          }
-          
-          setConversationState('listening');
-          
-          // SUSPEND AUDIO PLAYBACK LINE for microphone
-          console.log('[ConversationOverlay] 🔥 SUSPENDING AUDIO PLAYBACK LINE FOR MICROPHONE');
-          conversationTtsService.suspendAudioPlayback();
-          
-          // RESUME MICROPHONE AFTER TTS to re-arm audio lane
-          try {
-            console.log('[ConversationOverlay] 🔥 RESUMING MICROPHONE AFTER TTS PLAYBACK');
-            await conversationMicrophoneService.resumeAfterPlayback();
-            
-            // Small delay to ensure audio context is fully resumed
-            await new Promise(resolve => setTimeout(resolve, 100));
-            
-            // Shutdown guard - check again after resume
-            if (isShuttingDown.current) {
-              return;
-            }
-            
-            console.log('[ConversationOverlay] 🔥 RESTARTING RECORDING AFTER TTS');
-            const success = await conversationMicrophoneService.startRecording();
-            if (!success) {
-              console.error('[ConversationOverlay] 🔥 FAILED TO START RECORDING AFTER TTS');
-              setConversationState('connecting');
-            } else {
-              console.log('[ConversationOverlay] 🔥 RECORDING RESTARTED SUCCESSFULLY');
-            }
-          } catch (error) {
-            // Only log error if not shutting down
-            if (!isShuttingDown.current) {
-              console.error('[ConversationOverlay] 🔥 ERROR RESUMING MICROPHONE AFTER TTS:', error);
-              setConversationState('connecting');
-            }
-          }
+      // RESUME MICROPHONE AFTER TTS to re-arm audio lane
+      try {
+        console.log('[ConversationOverlay] 🔥 RESUMING MICROPHONE AFTER TTS PLAYBACK');
+        await conversationMicrophoneService.resumeAfterPlayback();
+        
+        // Small delay to ensure audio context is fully resumed
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Shutdown guard - check again after resume
+        if (isShuttingDown.current) {
+          return;
         }
-      });
-    }
-  }, [localMessages, permissionGranted]);
+        
+        console.log('[ConversationOverlay] 🔥 RESTARTING RECORDING AFTER TTS');
+        const success = await conversationMicrophoneService.startRecording();
+        if (!success) {
+          console.error('[ConversationOverlay] 🔥 FAILED TO START RECORDING AFTER TTS');
+          setConversationState('connecting');
+        } else {
+          console.log('[ConversationOverlay] 🔥 RECORDING RESTARTED SUCCESSFULLY');
+        }
+      } catch (error) {
+        // Only log error if not shutting down
+        if (!isShuttingDown.current) {
+          console.error('[ConversationOverlay] 🔥 ERROR RESUMING MICROPHONE AFTER TTS:', error);
+          setConversationState('connecting');
+        }
+      }
+    };
 
+    // Subscribe to TTS completion events
+    const unsubscribe = conversationTtsService.subscribe(handleTtsComplete);
+    
+    return () => {
+      unsubscribe();
+    };
+  }, [permissionGranted, chatIdRef.current]);
+
+  // 🔥 CONVERSATION MODE OPTIMIZATION: Set replying state when LLM processing starts
+  useEffect(() => {
+    if (conversationState === 'processing') {
+      // After a short delay, set to replying to show TTS is coming
+      const timer = setTimeout(() => {
+        if (!isShuttingDown.current) {
+          console.log('[ConversationOverlay] 🔥 CONVERSATION MODE: Setting replying state for direct TTS');
+          setConversationState('replying');
+          
+          // Resume audio playback line for TTS
+          conversationTtsService.resumeAudioPlayback();
+        }
+      }, 1000); // 1 second delay to show processing state
+      
+      return () => clearTimeout(timer);
+    }
+  }, [conversationState]);
 
   // Use simple conversation state
   const state = conversationState;

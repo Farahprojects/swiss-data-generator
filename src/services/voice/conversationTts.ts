@@ -163,6 +163,23 @@ class ConversationTtsService {
     console.log('[ConversationTTS] 🔊 Audio playback line resumed and ready');
   }
 
+  /**
+   * 🔥 CONVERSATION MODE OPTIMIZATION: Handle direct TTS from LLM handler
+   * This method is called when the LLM handler directly triggers TTS
+   */
+  public handleDirectTtsResponse(chat_id: string, sessionId: string): void {
+    console.log('[ConversationTTS] 🔥 CONVERSATION MODE: Handling direct TTS response');
+    
+    // Set conversation state to replying
+    // This will be handled by the conversation overlay via the TTS completion listener
+    
+    // Resume audio playback line for TTS
+    this.resumeAudioPlayback();
+    
+    // The actual TTS audio will be played by the existing audio element
+    // when the LLM handler sends the audio blob to the frontend
+  }
+
   public getCurrentAudioLevel(): number {
     return this.audioLevel;
   }
@@ -225,6 +242,8 @@ class ConversationTtsService {
         this.cleanupAnalysis();
         URL.revokeObjectURL(audioUrl);
         onComplete?.();
+        // 🔥 CONVERSATION MODE OPTIMIZATION: Notify listeners of TTS completion
+        this.notifyListeners();
       }, { once: true });
       
       audio.addEventListener('error', (error) => {
@@ -232,6 +251,8 @@ class ConversationTtsService {
         this.cleanupAnalysis();
         URL.revokeObjectURL(audioUrl);
         onComplete?.();
+        // 🔥 CONVERSATION MODE OPTIMIZATION: Notify listeners of TTS completion (even on error)
+        this.notifyListeners();
       }, { once: true });
       
       // Start playback and return immediately
@@ -240,6 +261,8 @@ class ConversationTtsService {
         this.cleanupAnalysis();
         URL.revokeObjectURL(audioUrl);
         onComplete?.();
+        // 🔥 CONVERSATION MODE OPTIMIZATION: Notify listeners of TTS completion (even on play error)
+        this.notifyListeners();
       });
 
     } catch (error) {

@@ -29,7 +29,7 @@ serve(async (req) => {
     const body = await req.json();
     console.log('[chat-send] Request body:', body);
     
-    const { chat_id, text, client_msg_id } = body;
+    const { chat_id, text, client_msg_id, mode, sessionId } = body;
 
     if (!chat_id || !text) {
       console.error('[chat-send] Missing required fields');
@@ -107,7 +107,9 @@ serve(async (req) => {
           body: JSON.stringify({
             chat_id,
             text: text,
-            client_msg_id: client_msg_id || userMessageData.client_msg_id
+            client_msg_id: client_msg_id || userMessageData.client_msg_id,
+            mode,
+            sessionId
           })
         });
 
