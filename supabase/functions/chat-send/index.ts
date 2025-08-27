@@ -94,7 +94,12 @@ serve(async (req) => {
     const processLLMResponse = async () => {
       try {
         console.log('[chat-send] Starting background LLM processing');
-        const llmResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/llm-handler`, {
+        
+        // Choose the appropriate LLM handler based on mode
+        const llmHandlerEndpoint = mode === 'conversation' ? 'llm-handler-openai' : 'llm-handler';
+        console.log(`[chat-send] Using LLM handler: ${llmHandlerEndpoint}`);
+        
+        const llmResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/${llmHandlerEndpoint}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
