@@ -48,6 +48,8 @@ export const ConversationOverlay: React.FC = () => {
   }, [isConversationOpen, chat_id]);
   
   // Minimal realtime listener for TTS audio URLs
+  const ttsCleanupRef = useRef<(() => void) | null>(null);
+  
   const setupTtsListener = (chat_id: string) => {
     const channel = supabase
       .channel(`conversation-tts:${chat_id}`)
@@ -67,8 +69,6 @@ export const ConversationOverlay: React.FC = () => {
               newAudioClip.audio_url && 
               newAudioClip.session_id === sessionIdRef.current) {
             
-
-            
             // Play the audio immediately
             playTtsAudio(newAudioClip.audio_url, newAudioClip.text);
           }
@@ -76,10 +76,13 @@ export const ConversationOverlay: React.FC = () => {
       )
       .subscribe();
       
-    // Store channel reference for cleanup
-    return () => {
+    // Store cleanup function for modal close
+    const cleanup = () => {
       supabase.removeChannel(channel);
     };
+    ttsCleanupRef.current = cleanup;
+    
+    return cleanup;
   };
   
   // Play TTS audio through conversationTtsService for proper animation
@@ -165,6 +168,13 @@ export const ConversationOverlay: React.FC = () => {
   const handleModalClose = async () => {
     isShuttingDown.current = true;
     
+    // SAFARI FIX: Clean up TTS listener to prevent duplicate channels
+    if (ttsCleanupRef.current) {
+      console.log('[CONVERSATION-TURN] Cleaning up TTS listener');
+      ttsCleanupRef.current();
+      ttsCleanupRef.current = null;
+    }
+    
     conversationTtsService.stopAllAudio();
     conversationMicrophoneService.forceCleanup();
     
@@ -207,6 +217,7 @@ export const ConversationOverlay: React.FC = () => {
       
       // CRITICAL: Unlock audio SYNCHRONOUSLY during user gesture (Safari fix)
       await conversationTtsService.unlockAudio();
+      console.log('[CONVERSATION-TURN] Audio unlock completed, AudioContext state:', conversationTtsService.getMasterAudioElement()?.constructor.name);
       conversationTtsService.suspendAudioPlayback();
       
       // Request microphone permission with error handling

@@ -31,9 +31,10 @@ class ConversationTtsService {
    * for preparing all audio systems (AudioContext and the master audio element).
    * It's crucial for iOS compatibility and MUST be called synchronously from a
    * user interaction event handler (e.g., onClick).
+   * SAFARI FIX: Always re-validate and re-prime audio on every user gesture call.
    */
   public async unlockAudio(): Promise<void> {
-    if (this.isAudioUnlocked) return;
+    console.log('[TTS-LOG] Audio unlock called, audioContext.state:', this.audioContext?.state || 'none');
 
     try {
       // 1. Initialize and resume AudioContext
@@ -47,29 +48,35 @@ class ConversationTtsService {
         }
       }
 
-      // Resume audio context if suspended
+      // Resume audio context if suspended - ALWAYS check, don't skip
       if (this.audioContext.state === 'suspended') {
+        console.log('[TTS-LOG] Resuming suspended AudioContext');
         await this.audioContext.resume();
       }
+      console.log('[TTS-LOG] AudioContext state after resume:', this.audioContext.state);
 
       // 2. Create and prime the master audio element with silent audio (Safari fix)
+      // SAFARI FIX: Always ensure element exists and re-prime on every gesture call
       if (!this.masterAudioElement) {
+        console.log('[TTS-LOG] Creating new master audio element');
         this.masterAudioElement = new Audio();
         this.masterAudioElement.crossOrigin = 'anonymous';
-        
-        // SAFARI FIX: Use a short silent MP3 data URI to prime the audio element
-        const silentAudio = 'data:audio/mp3;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAAW1wM1BST09mVmVyc2lvbi4wLjk5LjUAVFNTRQAAAA8AAAFMYXZmNTcuODMuMTAwAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==';
-        this.masterAudioElement.src = silentAudio;
-        
-        // Play and immediately pause to prime the element during user gesture
-        try {
-          await this.masterAudioElement.play();
-          this.masterAudioElement.pause();
-          this.masterAudioElement.currentTime = 0;
-        } catch (error) {
-          // Ignore errors on silent audio - the gesture call is what matters
-          console.log('[TTS-LOG] Silent audio priming completed (error expected)');
-        }
+      }
+      
+      // SAFARI FIX: Always re-prime the audio element during user gesture (safe no-op if already primed)
+      const silentAudio = 'data:audio/mp3;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAAW1wM1BST09mVmVyc2lvbi4wLjk5LjUAVFNTRQAAAA8AAAFMYXZmNTcuODMuMTAwAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==';
+      this.masterAudioElement.src = silentAudio;
+      
+      // Play and immediately pause to re-prime the element during user gesture
+      try {
+        console.log('[TTS-LOG] Re-priming audio element with silent audio');
+        await this.masterAudioElement.play();
+        this.masterAudioElement.pause();
+        this.masterAudioElement.currentTime = 0;
+        console.log('[TTS-LOG] Audio element re-primed successfully');
+      } catch (error) {
+        // Ignore errors on silent audio - the gesture call is what matters
+        console.log('[TTS-LOG] Silent audio priming completed (error expected):', error);
       }
       
       // Set the flag synchronously. From this point on, audio is considered unlocked.
@@ -214,6 +221,12 @@ class ConversationTtsService {
       // Ensure audio is unlocked before proceeding
       if (!this.isAudioUnlocked || !this.masterAudioElement) {
         throw new Error('Audio is not unlocked. A user gesture is required before TTS can play.');
+      }
+
+      // SAFARI FIX: Resume AudioContext if suspended before playback
+      if (this.audioContext && this.audioContext.state === 'suspended') {
+        console.log('[TTS-LOG] Resuming AudioContext before TTS playback');
+        await this.audioContext.resume();
       }
 
       // Sanitize and normalize text before TTS
@@ -463,6 +476,12 @@ class ConversationTtsService {
         console.warn('[ConversationTTS] Audio not unlocked - cannot play from URL');
         onComplete?.();
         return;
+      }
+
+      // SAFARI FIX: Resume AudioContext if suspended before playback
+      if (this.audioContext && this.audioContext.state === 'suspended') {
+        console.log('[TTS-LOG] Resuming AudioContext before URL playback');
+        await this.audioContext.resume();
       }
 
       // Reset completion guard
