@@ -87,6 +87,9 @@ export const ConversationOverlay: React.FC = () => {
     try {
       console.log('[CONVERSATION-TURN] Playing TTS audio through TTS service');
       
+      // Pause microphone during TTS playback
+      conversationMicrophoneService.suspendForPlayback();
+      
       // Change UI to speaking
       setConversationState('replying');
       
@@ -202,7 +205,8 @@ export const ConversationOverlay: React.FC = () => {
     try {
       console.log('[CONVERSATION-TURN] Starting...');
       
-      conversationTtsService.unlockAudio();
+      // CRITICAL: Unlock audio SYNCHRONOUSLY during user gesture (Safari fix)
+      await conversationTtsService.unlockAudio();
       conversationTtsService.suspendAudioPlayback();
       
       // Request microphone permission with error handling

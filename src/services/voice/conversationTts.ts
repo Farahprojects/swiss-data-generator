@@ -32,7 +32,7 @@ class ConversationTtsService {
    * It's crucial for iOS compatibility and MUST be called synchronously from a
    * user interaction event handler (e.g., onClick).
    */
-  public unlockAudio(): void {
+  public async unlockAudio(): Promise<void> {
     if (this.isAudioUnlocked) return;
 
     try {
@@ -47,22 +47,29 @@ class ConversationTtsService {
         }
       }
 
-      // This can be called multiple times, it's safe.
+      // Resume audio context if suspended
       if (this.audioContext.state === 'suspended') {
-        this.audioContext.resume().catch(err => console.error('[TTS-LOG] Failed to resume AudioContext', err));
+        await this.audioContext.resume();
       }
 
-      // 2. Create and "prime" the master audio element
+      // 2. Create and prime the master audio element with silent audio (Safari fix)
       if (!this.masterAudioElement) {
         this.masterAudioElement = new Audio();
-        this.masterAudioElement.muted = true;
+        this.masterAudioElement.crossOrigin = 'anonymous';
         
-        // Call play() to unlock it. We don't need to await. The call itself is the key.
-        // This will likely throw an empty-source error, which we safely ignore.
-        this.masterAudioElement.play().catch(() => {
-          // This catch is to prevent unhandled promise rejection warnings.
-        });
+        // SAFARI FIX: Use a short silent MP3 data URI to prime the audio element
+        const silentAudio = 'data:audio/mp3;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAAW1wM1BST09mVmVyc2lvbi4wLjk5LjUAVFNTRQAAAA8AAAFMYXZmNTcuODMuMTAwAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==';
+        this.masterAudioElement.src = silentAudio;
         
+        // Play and immediately pause to prime the element during user gesture
+        try {
+          await this.masterAudioElement.play();
+          this.masterAudioElement.pause();
+          this.masterAudioElement.currentTime = 0;
+        } catch (error) {
+          // Ignore errors on silent audio - the gesture call is what matters
+          console.log('[TTS-LOG] Silent audio priming completed (error expected)');
+        }
       }
       
       // Set the flag synchronously. From this point on, audio is considered unlocked.
