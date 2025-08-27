@@ -13,6 +13,7 @@ export interface SpeakAssistantOptions {
 class ConversationTtsService {
   private audioLevel = 0;
   private listeners = new Set<() => void>();
+  private isTtsCompleting = false; // NEW: Guard against multiple TTS completions
 
   // ✅ REAL AUDIO ANALYSIS: Fields for amplitude-driven animation
   private audioContext?: AudioContext;
@@ -199,6 +200,9 @@ class ConversationTtsService {
 
   async speakAssistant({ chat_id, messageId, text, sessionId, onComplete }: SpeakAssistantOptions): Promise<void> {
     try {
+      // Reset completion guard for new TTS
+      this.isTtsCompleting = false;
+      
       // Ensure audio is unlocked before proceeding
       if (!this.isAudioUnlocked || !this.masterAudioElement) {
         throw new Error('Audio is not unlocked. A user gesture is required before TTS can play.');
@@ -241,8 +245,14 @@ class ConversationTtsService {
       // Start real-time amplitude analysis
       this.startAmplitudeAnalysis();
 
-      // Set up cleanup listeners
+      // Set up cleanup listeners with completion guard
       audio.addEventListener('ended', () => {
+        if (this.isTtsCompleting) {
+          console.log('[ConversationTTS] TTS completion already in progress, skipping ended event');
+          return;
+        }
+        this.isTtsCompleting = true;
+        
         this.cleanupAnalysis();
         URL.revokeObjectURL(audioUrl);
         onComplete?.();
@@ -251,6 +261,12 @@ class ConversationTtsService {
       }, { once: true });
       
       audio.addEventListener('error', (error) => {
+        if (this.isTtsCompleting) {
+          console.log('[ConversationTTS] TTS completion already in progress, skipping error event');
+          return;
+        }
+        this.isTtsCompleting = true;
+        
         console.error('[ConversationTTS] Audio playback error:', error);
         this.cleanupAnalysis();
         URL.revokeObjectURL(audioUrl);
@@ -261,6 +277,12 @@ class ConversationTtsService {
       
       // Start playback and return immediately
       audio.play().catch(error => {
+        if (this.isTtsCompleting) {
+          console.log('[ConversationTTS] TTS completion already in progress, skipping play error');
+          return;
+        }
+        this.isTtsCompleting = true;
+        
         console.error('[ConversationTTS] Audio play failed:', error);
         this.cleanupAnalysis();
         URL.revokeObjectURL(audioUrl);
