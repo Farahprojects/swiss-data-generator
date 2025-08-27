@@ -67,7 +67,7 @@ export const ConversationOverlay: React.FC = () => {
               newAudioClip.audio_url && 
               newAudioClip.session_id === sessionIdRef.current) {
             
-            console.log('[CONVERSATION-TURN] Assistant audio clip received:', newAudioClip.audio_url);
+
             
             // Play the audio immediately
             playTtsAudio(newAudioClip.audio_url, newAudioClip.text);
