@@ -266,34 +266,23 @@ class ConversationTtsService {
       // Start real-time amplitude analysis
       this.startAmplitudeAnalysis();
 
-      // Set up cleanup listeners with completion guard
-      audio.addEventListener('ended', () => {
+      // Set up cleanup listeners with completion guard - UNIFIED COMPLETION PATH
+      const handleCompletion = () => {
         if (this.isTtsCompleting) {
-          console.log('[ConversationTTS] TTS completion already in progress, skipping ended event');
+          console.log('[ConversationTTS] TTS completion already in progress, skipping');
           return;
         }
         this.isTtsCompleting = true;
         
         this.cleanupAnalysis();
         URL.revokeObjectURL(audioUrl);
-        onComplete?.();
-        // 🔥 CONVERSATION MODE OPTIMIZATION: REMOVED - No longer using subscribe pattern
-        // this.notifyListeners();
-      }, { once: true });
+        onComplete?.(); // 🔄 SELF-HEALING: This will call resetToListening()
+      };
       
+      audio.addEventListener('ended', handleCompletion, { once: true });
       audio.addEventListener('error', (error) => {
-        if (this.isTtsCompleting) {
-          console.log('[ConversationTTS] TTS completion already in progress, skipping error event');
-          return;
-        }
-        this.isTtsCompleting = true;
-        
         console.error('[ConversationTTS] Audio playback error:', error);
-        this.cleanupAnalysis();
-        URL.revokeObjectURL(audioUrl);
-        onComplete?.();
-        // 🔥 CONVERSATION MODE OPTIMIZATION: REMOVED - No longer using subscribe pattern
-        // this.notifyListeners();
+        handleCompletion(); // 🔄 SELF-HEALING: Unified error/completion path
       }, { once: true });
       
       // Start playback and return immediately
@@ -302,18 +291,8 @@ class ConversationTtsService {
         console.log('[ConversationTTS] Audio playback started');
         onStart?.();
       }).catch(error => {
-        if (this.isTtsCompleting) {
-          console.log('[ConversationTTS] TTS completion already in progress, skipping play error');
-          return;
-        }
-        this.isTtsCompleting = true;
-        
         console.error('[ConversationTTS] Audio play failed:', error);
-        this.cleanupAnalysis();
-        URL.revokeObjectURL(audioUrl);
-        onComplete?.();
-        // 🔥 CONVERSATION MODE OPTIMIZATION: REMOVED - No longer using subscribe pattern
-        // this.notifyListeners();
+        handleCompletion(); // 🔄 SELF-HEALING: Use unified completion path for play errors too
       });
 
     } catch (error) {
@@ -471,10 +450,13 @@ class ConversationTtsService {
    */
   public async playFromUrl(audioUrl: string, onComplete?: () => void): Promise<void> {
     try {
+      // Reset completion guard for new playback
+      this.isTtsCompleting = false;
+      
       // Ensure audio is unlocked
       if (!this.isAudioUnlocked || !this.masterAudioElement) {
         console.warn('[ConversationTTS] Audio not unlocked - cannot play from URL');
-        onComplete?.();
+        onComplete?.(); // 🔄 SELF-HEALING: Call completion to trigger resetToListening
         return;
       }
 

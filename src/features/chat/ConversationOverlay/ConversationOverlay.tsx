@@ -85,6 +85,76 @@ export const ConversationOverlay: React.FC = () => {
     return cleanup;
   };
   
+  // 🔄 SELF-HEALING RESET TO LISTENING: Central recovery function
+  const resetToListening = async (hardRecovery = false) => {
+    console.log('[CONVERSATION-TURN] resetToListening start, hardRecovery:', hardRecovery);
+    
+    try {
+      // 1. Stop TTS audio
+      conversationTtsService.stopAllAudio();
+      
+      // 2. Resume mic line
+      await conversationMicrophoneService.resumeAfterPlayback();
+      
+      // 3. Start recording (soft recovery)
+      const success = await conversationMicrophoneService.startRecording();
+      
+      // 4. Hard recovery if needed
+      if (!success && hardRecovery) {
+        console.log('[CONVERSATION-TURN] resetToListening: Starting hard recovery');
+        
+        // Force cleanup and get fresh stream
+        conversationMicrophoneService.forceCleanup();
+        
+        try {
+          const freshStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              channelCount: 1,
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+              sampleRate: 48000,
+            }
+          });
+          
+          conversationMicrophoneService.cacheStream(freshStream);
+          conversationMicrophoneService.initialize({
+            onRecordingComplete: handleSimpleRecordingComplete,
+            onSilenceDetected: () => {
+              console.log('[CONVERSATION-TURN] Silence detected, stopping recording and pausing microphone for TTS.');
+              setConversationState('thinking');
+              conversationMicrophoneService.suspendForPlayback();
+              if (conversationMicrophoneService.getState().isRecording) {
+                conversationMicrophoneService.stopRecording();
+              }
+            },
+            onError: (error) => {
+              console.error('[CONVERSATION-TURN] Microphone error after recovery:', error);
+              resetToListening(true); // Try another hard recovery
+            },
+            silenceTimeoutMs: 2000,
+          });
+          
+          await conversationMicrophoneService.startRecording();
+          console.log('[CONVERSATION-TURN] resetToListening: Hard recovery successful');
+          
+        } catch (recoveryError) {
+          console.error('[CONVERSATION-TURN] resetToListening: Hard recovery failed:', recoveryError);
+          setConversationState('connecting');
+          return;
+        }
+      }
+      
+      // 5. Set state to listening
+      setConversationState('listening');
+      console.log('[CONVERSATION-TURN] resetToListening end: Successfully reset to listening');
+      
+    } catch (error) {
+      console.error('[CONVERSATION-TURN] resetToListening failed:', error);
+      setConversationState('connecting');
+    }
+  };
+
   // Play TTS audio through conversationTtsService for proper animation
   const playTtsAudio = async (audioUrl: string, text: string) => {
     try {
@@ -99,16 +169,12 @@ export const ConversationOverlay: React.FC = () => {
       // Use conversationTtsService to play audio with proper animation
       await conversationTtsService.playFromUrl(audioUrl, () => {
         console.log('[CONVERSATION-TURN] TTS audio completed');
-        setConversationState('listening');
-        conversationMicrophoneService.resumeAfterPlayback();
-        conversationMicrophoneService.startRecording();
+        resetToListening(); // 🔄 SELF-HEALING: Always reset to listening after TTS
       });
       
     } catch (error) {
-      console.error('[CONVERSATION-TURN] Failed to play TTS audio:', error);
-      setConversationState('listening');
-      conversationMicrophoneService.resumeAfterPlayback();
-      conversationMicrophoneService.startRecording();
+      console.error('[CONVERSATION-TURN] Audio playback error:', error);
+      resetToListening(true); // 🔄 SELF-HEALING: Hard recovery on TTS error
     }
   };
   
@@ -120,6 +186,24 @@ export const ConversationOverlay: React.FC = () => {
       setIsReady(false);
     }
   }, [isConversationOpen]);
+
+  // 🔄 SELF-HEALING: Optional resiliency - handle tab becoming visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isConversationOpen && permissionGranted) {
+        console.log('[CONVERSATION-TURN] Tab became visible, ensuring audio/mic state');
+        conversationTtsService.unlockAudio().then(() => {
+          resetToListening();
+        }).catch((error) => {
+          console.error('[CONVERSATION-TURN] Failed to re-unlock audio on visibility change:', error);
+          resetToListening(true);
+        });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isConversationOpen, permissionGranted]);
   
   // REMOVED: All realtime listeners and TTS flow
 
@@ -220,6 +304,12 @@ export const ConversationOverlay: React.FC = () => {
       console.log('[CONVERSATION-TURN] Audio unlock completed, AudioContext state:', conversationTtsService.getMasterAudioElement()?.constructor.name);
       conversationTtsService.suspendAudioPlayback();
       
+      // 🔄 SELF-HEALING: If audio unlock failed, attempt resetToListening after stream setup
+      const audioContext = conversationTtsService.getMasterAudioElement();
+      if (!audioContext) {
+        console.warn('[CONVERSATION-TURN] Audio unlock may have failed, will attempt resetToListening after stream setup');
+      }
+      
       // Request microphone permission with error handling
       let stream: MediaStream;
       try {
@@ -256,7 +346,7 @@ export const ConversationOverlay: React.FC = () => {
         },
         onError: (error) => {
           console.error('[CONVERSATION-TURN] Microphone error:', error);
-          setConversationState('connecting');
+          resetToListening(true); // 🔄 SELF-HEALING: Hard recovery on mic error
         },
         silenceTimeoutMs: 2000,
       });
@@ -267,12 +357,12 @@ export const ConversationOverlay: React.FC = () => {
         setConversationState('listening');
       } else {
         console.error('[CONVERSATION-TURN] Failed to start recording.');
-        setConversationState('connecting');
+        resetToListening(true); // 🔄 SELF-HEALING: Hard recovery on failed start
       }
       
     } catch (error) {
       console.error('[CONVERSATION-TURN] Startup error:', error);
-      setConversationState('connecting');
+      resetToListening(true); // 🔄 SELF-HEALING: Hard recovery on startup error
     } finally {
       setIsStarting(false);
     }

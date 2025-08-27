@@ -167,6 +167,7 @@ export class ConversationMicrophoneServiceClass {
 
       this.mediaRecorder.onerror = (event) => {
         this.error('❌ MediaRecorder error:', event);
+        console.log('[CONVERSATION-TURN] MediaRecorder error - triggering self-healing recovery');
         if (this.options.onError) {
           this.options.onError(new Error('Recording failed'));
         }
@@ -179,6 +180,7 @@ export class ConversationMicrophoneServiceClass {
       
       this.notifyListeners();
       this.log('🎙️ Recording started successfully');
+      console.log('[CONVERSATION-TURN] Microphone startRecording return: true');
       
       // 🔥 FIXED: Remove onReady callback to prevent duplicate state setting
       // The TTS onComplete callback will handle state transitions
@@ -188,6 +190,7 @@ export class ConversationMicrophoneServiceClass {
 
     } catch (error: any) {
       console.error('Recording setup error:', error.name, error);
+      console.log('[CONVERSATION-TURN] Microphone startRecording return: false (error)');
       this.error('❌ Recording setup failed:', error);
       if (this.options.onError) {
         this.options.onError(error);
