@@ -26,13 +26,32 @@ export const ConversationOverlay: React.FC = () => {
   const isShuttingDown = useRef(false); // Shutdown guard to prevent processing after modal close
 
   // Simple conversation state
-  const [conversationState, setConversationState] = useState<'listening' | 'processing' | 'replying' | 'connecting'>('listening');
+  const [conversationState, setConversationState] = useState<'listening' | 'processing' | 'replying' | 'connecting' | 'thinking'>('listening');
+  const [isReady, setIsReady] = useState(false); // Guard to ensure chat_id is cached before conversation flow
   
   // Cache chat_id and session ID once at start - use for entire conversation
   const chatIdRef = useRef<string | null>(null);
   const sessionIdRef = useRef<string>(`session_${Date.now()}`);
   
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
+  
+  // Cache chat_id when modal opens - stays for entire conversation
+  useEffect(() => {
+    if (isConversationOpen && chat_id && !chatIdRef.current) {
+      console.log('[CONVERSATION-TURN] Caching chat_id for conversation:', chat_id);
+      chatIdRef.current = chat_id;
+      setIsReady(true); // Mark as ready for conversation flow
+    }
+  }, [isConversationOpen, chat_id]);
+  
+  // Clean up when modal closes
+  useEffect(() => {
+    if (!isConversationOpen) {
+      console.log('[CONVERSATION-TURN] Modal closed, clearing chat_id cache');
+      chatIdRef.current = null;
+      setIsReady(false);
+    }
+  }, [isConversationOpen]);
   
   // REMOVED: All realtime listeners and TTS flow
 
@@ -69,6 +88,7 @@ export const ConversationOverlay: React.FC = () => {
           // Clear cached chat_id and session
           chatIdRef.current = null;
           sessionIdRef.current = `session_${Date.now()}`;
+          setIsReady(false);
           
         } catch (error) {
           console.error('[CONVERSATION-TURN] Emergency cleanup error:', error);
@@ -106,6 +126,7 @@ export const ConversationOverlay: React.FC = () => {
     hasStarted.current = false;
     setConversationState('listening');
     chatIdRef.current = null;
+    setIsReady(false);
     setLocalMessages([]);
   };
 
@@ -113,6 +134,14 @@ export const ConversationOverlay: React.FC = () => {
   const handleStart = async () => {
     if (isStarting || hasStarted.current) return;
     
+    // Guard: Ensure chat_id is cached before starting conversation
+    if (!isReady || !chatIdRef.current) {
+      console.error('[CONVERSATION-TURN] Cannot start conversation - chat_id not ready');
+      setIsStarting(false);
+      return;
+    }
+    
+    console.log('[CONVERSATION-TURN] Starting conversation with chat_id:', chatIdRef.current);
     setIsStarting(true);
     hasStarted.current = true;
     
@@ -146,7 +175,8 @@ export const ConversationOverlay: React.FC = () => {
       conversationMicrophoneService.initialize({
         onRecordingComplete: handleSimpleRecordingComplete,
         onSilenceDetected: () => {
-          console.log('[CONVERSATION-TURN] Silence detected, stopping recording.');
+          console.log('[CONVERSATION-TURN] Silence detected, stopping recording and updating UI to thinking.');
+          setConversationState('thinking'); // Event-driven UI update
           if (conversationMicrophoneService.getState().isRecording) {
             conversationMicrophoneService.stopRecording();
           }
@@ -264,9 +294,16 @@ export const ConversationOverlay: React.FC = () => {
         };
         setLocalMessages(prev => [...prev, optimisticUserMessage]);
         
+        // Guard: Ensure chat_id is available before LLM call
+        if (!chatIdRef.current) {
+          console.error('[CONVERSATION-TURN] Cannot send message - chat_id not available');
+          setConversationState('listening');
+          return;
+        }
+        
         // Fire-and-forget LLM call with error handling
         llmService.sendMessage({
-          chat_id: chatIdRef.current!,
+          chat_id: chatIdRef.current,
           text: transcript,
           client_msg_id,
           mode: 'conversation',
@@ -337,7 +374,7 @@ export const ConversationOverlay: React.FC = () => {
             
           <p className="text-gray-500 font-light">
               {state === 'listening' ? 'Listening…' : 
-               state === 'processing' ? 'Thinking…' : 'Speaking…'}
+               state === 'processing' || state === 'thinking' ? 'Thinking…' : 'Speaking…'}
             </p>
             
 

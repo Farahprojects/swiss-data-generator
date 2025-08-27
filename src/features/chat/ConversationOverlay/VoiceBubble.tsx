@@ -5,7 +5,7 @@ import { useTtsStreamLevel } from '@/hooks/useTtsStreamLevel';
 import TorusListening from './TorusListening';
 
 interface Props {
-  state: 'listening' | 'processing' | 'replying' | 'connecting';
+  state: 'listening' | 'processing' | 'replying' | 'connecting' | 'thinking';
   audioLevel?: number;
 }
 
@@ -17,7 +17,7 @@ export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
     return <SpeakingBars audioLevel={ttsAudioLevel} />;
   }
   
-  if (state === 'processing') {
+  if (state === 'processing' || state === 'thinking') {
     // Render the TorusListening component in its 'thinking' state
     return <TorusListening active={true} size={128} isThinking={true} />;
   }
