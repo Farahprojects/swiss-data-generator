@@ -14,6 +14,7 @@ import { Mic } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { Message } from '@/core/types';
+import { microphoneArbitrator } from '@/services/microphone/MicrophoneArbitrator';
 
 export const ConversationOverlay: React.FC = () => {
   const { isConversationOpen, closeConversation } = useConversationUIStore();
@@ -152,7 +153,6 @@ export const ConversationOverlay: React.FC = () => {
           conversationTtsService.stopAllAudio();
           conversationMicrophoneService.forceCleanup();
           
-          const { microphoneArbitrator } = require('@/services/microphone/MicrophoneArbitrator');
           microphoneArbitrator.release('conversation');
           
           // Clear local messages
@@ -180,7 +180,6 @@ export const ConversationOverlay: React.FC = () => {
     conversationMicrophoneService.forceCleanup();
     
     try {
-      const { microphoneArbitrator } = require('@/services/microphone/MicrophoneArbitrator');
       microphoneArbitrator.release('conversation');
     } catch (error) {}
     
