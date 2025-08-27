@@ -10,7 +10,7 @@ import { microphoneArbitrator } from './MicrophoneArbitrator';
 export interface ConversationMicrophoneOptions {
   onRecordingComplete?: (audioBlob: Blob) => void;
   onError?: (error: Error) => void;
-  onSilenceDetected?: () => void;
+  onSilenceDetected?: () => void; // Explicit callback for silence
   silenceTimeoutMs?: number;
 }
 
@@ -494,10 +494,12 @@ export class ConversationMicrophoneServiceClass {
             // Natural silence detected - stop recording
             this.log(`🧘‍♂️ ${SILENCE_TIMEOUT}ms silence detected after voice - stopping naturally (RMS: ${rms.toFixed(4)}, dB: ${dB.toFixed(1)})`);
             this.monitoringRef.current = false;
-            // ✅ FIXED: Actually stop the recording to trigger audio processing
-            if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-              this.mediaRecorder.stop();
+            
+            // 🔥 FLOW REFINEMENT: Signal silence detection instead of stopping directly
+            if (this.options.onSilenceDetected) {
+              this.options.onSilenceDetected();
             }
+
             this.log(`🛑 VAD loop terminated after silence detection`);
             return; // CRITICAL: Don't schedule next frame after silence detected
           }
@@ -519,16 +521,7 @@ export class ConversationMicrophoneServiceClass {
 
   // ----- Logging helpers (gated) -----
   private log(message: string, ...args: any[]): void {
-    try {
-      if (typeof localStorage !== 'undefined') {
-        const enabled = localStorage.getItem('debugAudio') === '1';
-        if (!enabled) return;
-      }
-    } catch (error) {
-      // Ignore localStorage errors in SSR environments
-    }
-    // eslint-disable-next-line no-console
-    console.log('[ConversationMic]', message, ...args);
+    // No-op - logs are cleaned up to reduce noise
   }
 
   private error(message: string, ...args: any[]): void {
