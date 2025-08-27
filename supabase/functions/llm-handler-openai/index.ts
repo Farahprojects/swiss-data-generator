@@ -159,92 +159,59 @@ Content Rules:
 
         const latency_ms = Date.now() - startTime;
 
-        // Save assistant message to database
-        const { error: assistantError } = await supabase
-          .from("messages")
-          .insert({
-            chat_id: chat_id,
-            role: "assistant",
-            text: sanitizedAssistantText,
-            created_at: new Date().toISOString(),
-            meta: { 
-              llm_provider: "openai", 
-              model: "gpt-4.1-mini-2025-04-14",
-              latency_ms,
-              input_tokens: inputTokens,
-              output_tokens: outputTokens,
-              total_tokens: tokenCount,
-              ...(mode && sessionId ? { mode, sessionId } : {})
-            },
-          });
-
-        if (assistantError) {
-          console.error("[llm-handler-openai] Failed to save assistant message:", assistantError);
-        } else {
-          console.log("[llm-handler-openai] Assistant response saved successfully");
+        // Note: Assistant message will be saved by chat-send function
+        console.log("[llm-handler-openai] Assistant response generated successfully");
           
-          // 🔥 CONVERSATION MODE OPTIMIZATION: Direct TTS trigger
-          if (mode === 'conversation' && sessionId) {
-            console.log("[llm-handler-openai] 🔥 CONVERSATION MODE: Triggering direct TTS");
-            
-            try {
-              // Call TTS service directly to generate audio URL
-              const ttsResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-                },
-                body: JSON.stringify({
-                  chat_id,
-                  text: sanitizedAssistantText,
-                  voice: 'en-US-Chirp3-HD-Puck', // Default voice
-                  sessionId
-                })
-              });
+        // 🔥 CONVERSATION MODE OPTIMIZATION: Generate TTS audio URL
+        let audioUrl = null;
+        if (mode === 'conversation' && sessionId) {
+          console.log("[llm-handler-openai] 🔥 CONVERSATION MODE: Generating TTS audio URL");
+          
+          try {
+            // Call TTS service directly to generate audio URL
+            const ttsResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              },
+              body: JSON.stringify({
+                chat_id,
+                text: sanitizedAssistantText,
+                voice: 'en-US-Chirp3-HD-Puck', // Default voice
+                sessionId
+              })
+            });
 
-              if (ttsResponse.ok) {
-                // Get the audio data and create a direct URL
-                const audioData = await ttsResponse.arrayBuffer();
-                const audioUrl = `data:audio/mpeg;base64,${btoa(String.fromCharCode(...new Uint8Array(audioData)))}`;
-                
-                console.log("[llm-handler-openai] 🔥 CONVERSATION MODE: TTS audio URL generated");
-                
-                // Save assistant message with audio URL
-                const { error: ttsError } = await supabase
-                  .from("messages")
-                  .insert({
-                    chat_id: chat_id,
-                    role: "assistant",
-                    text: sanitizedAssistantText,
-                    audio_url: audioUrl, // Store the audio URL
-                    created_at: new Date().toISOString(),
-                    meta: { 
-                      llm_provider: "openai", 
-                      model: "gpt-4.1-mini-2025-04-14",
-                      latency_ms,
-                      input_tokens: inputTokens,
-                      output_tokens: outputTokens,
-                      total_tokens: tokenCount,
-                      mode: 'conversation',
-                      sessionId,
-                      tts_status: 'ready'
-                    },
-                  });
-
-                if (ttsError) {
-                  console.error("[llm-handler-openai] 🔥 CONVERSATION MODE: Failed to save assistant message with audio URL:", ttsError);
-                } else {
-                  console.log("[llm-handler-openai] 🔥 CONVERSATION MODE: Assistant message with audio URL saved successfully");
-                }
-              } else {
-                console.error("[llm-handler-openai] 🔥 CONVERSATION MODE: TTS service failed:", ttsResponse.status);
-              }
-            } catch (ttsError) {
-              console.error("[llm-handler-openai] 🔥 CONVERSATION MODE: TTS error:", ttsError);
+            if (ttsResponse.ok) {
+              // Get the audio data and create a direct URL
+              const audioData = await ttsResponse.arrayBuffer();
+              audioUrl = `data:audio/mpeg;base64,${btoa(String.fromCharCode(...new Uint8Array(audioData)))}`;
+              console.log("[llm-handler-openai] 🔥 CONVERSATION MODE: TTS audio URL generated successfully");
+            } else {
+              console.error("[llm-handler-openai] 🔥 CONVERSATION MODE: TTS service failed:", ttsResponse.status);
             }
+          } catch (ttsError) {
+            console.error("[llm-handler-openai] 🔥 CONVERSATION MODE: TTS error:", ttsError);
           }
         }
+
+        // Return assistant response with audio URL (chat-send will save to DB)
+        return {
+          assistant_text: sanitizedAssistantText,
+          audio_url: audioUrl,
+          meta: { 
+            llm_provider: "openai", 
+            model: "gpt-4.1-mini-2025-04-14",
+            latency_ms,
+            input_tokens: inputTokens,
+            output_tokens: outputTokens,
+            total_tokens: tokenCount,
+            mode: mode || null,
+            sessionId: sessionId || null,
+            tts_status: audioUrl ? 'ready' : null
+          }
+        };
 
       } catch (error) {
         console.error("[llm-handler-openai] Background processing error:", error);
