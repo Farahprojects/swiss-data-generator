@@ -14,7 +14,6 @@ class ConversationTtsService {
   private audioLevel = 0;
   private listeners = new Set<() => void>();
   private isTtsCompleting = false; // NEW: Guard against multiple TTS completions
-  private currentAbortController?: AbortController; // NEW: For canceling in-flight TTS
 
   // ✅ REAL AUDIO ANALYSIS: Fields for amplitude-driven animation
   private audioContext?: AudioContext;
@@ -190,15 +189,6 @@ class ConversationTtsService {
     return this.masterAudioElement;
   }
 
-  // NEW: Cancel in-flight TTS operations
-  public cancelCurrentTts(): void {
-    if (this.currentAbortController) {
-      this.currentAbortController.abort();
-      this.currentAbortController = undefined;
-    }
-    this.isTtsCompleting = false;
-  }
-
   public subscribe(listener: () => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
@@ -218,43 +208,33 @@ class ConversationTtsService {
         throw new Error('Audio is not unlocked. A user gesture is required before TTS can play.');
       }
 
-      // Cancel any in-flight TTS
-      if (this.currentAbortController) {
-        this.currentAbortController.abort();
-      }
-      this.currentAbortController = new AbortController();
-
       // Sanitize and normalize text before TTS
       const sanitizedText = this.sanitizeTtsText(text);
       const selectedVoiceName = useChatStore.getState().ttsVoice || 'Puck';
       const googleVoiceCode = `en-US-Chirp3-HD-${selectedVoiceName}`;
 
-      // Call TTS edge function with new JSON response format
-      const response = await supabase.functions.invoke('google-text-to-speech', {
-        body: {
-          chat_id,
-          text: sanitizedText,
-          voice: googleVoiceCode,
-          sessionId: sessionId || null
-        }
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_PUBLISHABLE_KEY,
+      };
+
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/google-text-to-speech`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ chat_id, text: sanitizedText, voice: googleVoiceCode, sessionId: sessionId || null })
       });
 
-      if (response.error) {
-        throw new Error(`TTS request failed: ${response.error.message}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[ConversationTTS] TTS function error:', response.status, errorText);
+        throw new Error(`TTS failed: ${response.status} - ${errorText}`);
       }
 
-      const { audioContent, durationMs, tts_id } = response.data;
-
-      if (!audioContent || !durationMs) {
-        throw new Error('Invalid TTS response: missing audioContent or durationMs');
-      }
-
-      // Create blob from base64 audio content
-      const audioBytes = Uint8Array.from(atob(audioContent), c => c.charCodeAt(0));
-      const audioBlob = new Blob([audioBytes], { type: 'audio/wav' });
-      const audioUrl = URL.createObjectURL(audioBlob);
-
-      // Set up audio element
+      // Direct blob to audio with minimal setup
+      const blob = await response.blob();
+      const audioUrl = URL.createObjectURL(blob);
+      
+      // Reuse master audio element
       const audio = this.masterAudioElement;
       audio.src = audioUrl;
       audio.muted = false; // Unmute for actual playback
@@ -265,14 +245,10 @@ class ConversationTtsService {
       // Start real-time amplitude analysis
       this.startAmplitudeAnalysis();
 
-      // Calculate timing with fudge factor
-      const fudgeMs = 200; // Extra time to ensure audio completes
-      const totalDurationMs = durationMs + fudgeMs;
-
-      // Set up completion timer
-      const completionTimer = setTimeout(() => {
+      // Set up cleanup listeners with completion guard
+      audio.addEventListener('ended', () => {
         if (this.isTtsCompleting) {
-          console.log('[ConversationTTS] TTS completion already in progress, skipping timer');
+          console.log('[ConversationTTS] TTS completion already in progress, skipping ended event');
           return;
         }
         this.isTtsCompleting = true;
@@ -280,33 +256,39 @@ class ConversationTtsService {
         this.cleanupAnalysis();
         URL.revokeObjectURL(audioUrl);
         onComplete?.();
-      }, totalDurationMs);
-
-      // Start playback
-      try {
-        await audio.play();
-        console.log(`[ConversationTTS] TTS playback started, tts_id: ${tts_id}, duration: ${durationMs}ms`);
-      } catch (playError) {
-        // Clear timer if play fails
-        clearTimeout(completionTimer);
+        // 🔥 CONVERSATION MODE OPTIMIZATION: REMOVED - No longer using subscribe pattern
+        // this.notifyListeners();
+      }, { once: true });
+      
+      audio.addEventListener('error', (error) => {
+        if (this.isTtsCompleting) {
+          console.log('[ConversationTTS] TTS completion already in progress, skipping error event');
+          return;
+        }
+        this.isTtsCompleting = true;
         
+        console.error('[ConversationTTS] Audio playback error:', error);
+        this.cleanupAnalysis();
+        URL.revokeObjectURL(audioUrl);
+        onComplete?.();
+        // 🔥 CONVERSATION MODE OPTIMIZATION: REMOVED - No longer using subscribe pattern
+        // this.notifyListeners();
+      }, { once: true });
+      
+      // Start playback and return immediately
+      audio.play().catch(error => {
         if (this.isTtsCompleting) {
           console.log('[ConversationTTS] TTS completion already in progress, skipping play error');
           return;
         }
         this.isTtsCompleting = true;
         
-        console.error('[ConversationTTS] Audio play failed:', playError);
+        console.error('[ConversationTTS] Audio play failed:', error);
         this.cleanupAnalysis();
         URL.revokeObjectURL(audioUrl);
         onComplete?.();
-      }
-
-      // Set up abort handler to clean up timer
-      this.currentAbortController.signal.addEventListener('abort', () => {
-        clearTimeout(completionTimer);
-        this.cleanupAnalysis();
-        URL.revokeObjectURL(audioUrl);
+        // 🔥 CONVERSATION MODE OPTIMIZATION: REMOVED - No longer using subscribe pattern
+        // this.notifyListeners();
       });
 
     } catch (error) {
