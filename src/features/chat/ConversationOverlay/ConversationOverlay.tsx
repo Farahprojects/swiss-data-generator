@@ -41,8 +41,82 @@ export const ConversationOverlay: React.FC = () => {
       console.log('[CONVERSATION-TURN] Caching chat_id for conversation:', chat_id);
       chatIdRef.current = chat_id;
       setIsReady(true); // Mark as ready for conversation flow
+      
+      // Set up minimal realtime listener for TTS audio URLs
+      setupTtsListener(chat_id);
     }
   }, [isConversationOpen, chat_id]);
+  
+  // Minimal realtime listener for TTS audio URLs
+  const setupTtsListener = (chat_id: string) => {
+    const channel = supabase
+      .channel(`conversation-tts:${chat_id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `chat_id=eq.${chat_id}`
+        },
+        (payload) => {
+          const newMessage = payload.new;
+          
+          // Check if this is an assistant message with audio URL for conversation mode
+          if (newMessage.role === 'assistant' && 
+              newMessage.audio_url && 
+              newMessage.meta?.mode === 'conversation' &&
+              newMessage.meta?.sessionId === sessionIdRef.current) {
+            
+            console.log('[CONVERSATION-TURN] Assistant message with audio URL received:', newMessage.audio_url);
+            
+            // Play the audio immediately
+            playTtsAudio(newMessage.audio_url, newMessage.text);
+          }
+        }
+      )
+      .subscribe();
+      
+    // Store channel reference for cleanup
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  };
+  
+  // Play TTS audio immediately
+  const playTtsAudio = async (audioUrl: string, text: string) => {
+    try {
+      console.log('[CONVERSATION-TURN] Playing TTS audio immediately');
+      
+      // Change UI to speaking
+      setConversationState('replying');
+      
+      // Create audio element and play
+      const audio = new Audio(audioUrl);
+      
+      audio.addEventListener('ended', () => {
+        console.log('[CONVERSATION-TURN] TTS audio completed');
+        setConversationState('listening');
+        conversationMicrophoneService.resumeAfterPlayback();
+        conversationMicrophoneService.startRecording();
+      });
+      
+      audio.addEventListener('error', (error) => {
+        console.error('[CONVERSATION-TURN] TTS audio error:', error);
+        setConversationState('listening');
+        conversationMicrophoneService.resumeAfterPlayback();
+        conversationMicrophoneService.startRecording();
+      });
+      
+      await audio.play();
+      
+    } catch (error) {
+      console.error('[CONVERSATION-TURN] Failed to play TTS audio:', error);
+      setConversationState('listening');
+      conversationMicrophoneService.resumeAfterPlayback();
+      conversationMicrophoneService.startRecording();
+    }
+  };
   
   // Clean up when modal closes
   useEffect(() => {
@@ -312,33 +386,6 @@ export const ConversationOverlay: React.FC = () => {
           client_msg_id,
           mode: 'conversation',
           sessionId: sessionIdRef.current
-        }).then(async (response) => {
-          // LLM call successful - trigger TTS
-          console.log('[CONVERSATION-TURN] LLM response received, starting TTS');
-          
-          try {
-            await conversationTtsService.speakAssistant({
-              chat_id: chatIdRef.current!,
-              messageId: response.id,
-              text: response.text,
-              sessionId: sessionIdRef.current,
-              onStart: () => {
-                // Audio started - change UI to speaking
-                console.log('[CONVERSATION-TURN] TTS started, changing to speaking');
-                setConversationState('replying');
-              },
-              onComplete: () => {
-                // Audio finished - resume microphone and go back to listening
-                console.log('[CONVERSATION-TURN] TTS completed, resuming microphone');
-                setConversationState('listening');
-                conversationMicrophoneService.resumeAfterPlayback();
-                conversationMicrophoneService.startRecording();
-              }
-            });
-          } catch (ttsError) {
-            console.error('[CONVERSATION-TURN] TTS error:', ttsError);
-            if (!isShuttingDown.current) setConversationState('listening');
-          }
         }).catch(error => {
           console.error('[CONVERSATION-TURN] LLM call error:', error);
           if (!isShuttingDown.current) setConversationState('listening');
