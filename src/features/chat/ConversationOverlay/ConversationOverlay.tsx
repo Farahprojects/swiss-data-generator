@@ -205,32 +205,66 @@ export const ConversationOverlay: React.FC = () => {
     console.log('[ConversationOverlay] 🔥 MODAL CLOSE COMPLETE - ALL RESOURCES CLEANED UP');
   };
 
-  const handleStart = () => {
-    // One-shot guard to prevent double invocation
-    if (hasStarted.current) {
-      return;
-    }
-    hasStarted.current = true;
-
-    if (isStarting) return; // Prevent double taps
-    setIsStarting(true);
-
-    if (!chatIdRef.current) {
-      console.error("[ConversationOverlay] Cannot start conversation without a chat_id");
-      closeConversation();
-      return;
-    }
-
-    // No need to set conversation mode - all requests now use OpenAI
-
-    // 🔥 CRITICAL: Unlock TTS audio FIRST within user gesture
-    conversationTtsService.unlockAudio();
-
-    // Set flags for instant UI feedback - go straight to listening mode
-    setPermissionGranted(true);
+  // Start conversation recording
+  const handleStart = async () => {
+    if (isStarting || hasStarted.current) return;
     
-    // Start simple conversation flow - no complex hooks
-    startSimpleConversation();
+    setIsStarting(true);
+    hasStarted.current = true;
+    
+    try {
+      console.log('[ConversationOverlay] 🔥 STARTING CONVERSATION MODE');
+      
+      // 🔥 CRITICAL: Unlock TTS audio FIRST within user gesture (iOS compatibility)
+      conversationTtsService.unlockAudio();
+      
+      // SUSPEND AUDIO PLAYBACK LINE before starting microphone
+      console.log('[ConversationOverlay] 🔥 SUSPENDING AUDIO PLAYBACK LINE FOR MICROPHONE');
+      conversationTtsService.suspendAudioPlayback();
+      
+      // Request microphone permission
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 48000,
+        }
+      });
+      
+      console.log('[ConversationOverlay] 🔥 MICROPHONE PERMISSION GRANTED');
+      setPermissionGranted(true);
+      
+      // Cache the stream for session reuse
+      conversationMicrophoneService.cacheStream(stream);
+      
+      // Initialize conversation microphone with options
+      conversationMicrophoneService.initialize({
+        onRecordingComplete: handleSimpleRecordingComplete,
+        onError: (error) => {
+          console.error('[ConversationOverlay] 🔥 MICROPHONE ERROR:', error);
+          setConversationState('connecting');
+        },
+        silenceTimeoutMs: 2000, // 2 seconds for natural conversation pauses
+      });
+      
+      // Start recording
+      const success = await conversationMicrophoneService.startRecording();
+      if (success) {
+        console.log('[ConversationOverlay] 🔥 RECORDING STARTED SUCCESSFULLY');
+        setConversationState('listening');
+      } else {
+        console.error('[ConversationOverlay] 🔥 FAILED TO START RECORDING');
+        setConversationState('connecting');
+      }
+      
+    } catch (error) {
+      console.error('[ConversationOverlay] 🔥 STARTUP ERROR:', error);
+      setConversationState('connecting');
+    } finally {
+      setIsStarting(false);
+    }
   };
 
   // Simple conversation flow - nothing can mess with this
@@ -382,6 +416,10 @@ export const ConversationOverlay: React.FC = () => {
       console.log('[ConversationOverlay] 🔥 SUSPENDING MICROPHONE FOR TTS PLAYBACK');
       conversationMicrophoneService.suspendForPlayback();
       
+      // RESUME AUDIO PLAYBACK LINE for TTS
+      console.log('[ConversationOverlay] 🔥 RESUMING AUDIO PLAYBACK LINE FOR TTS');
+      conversationTtsService.resumeAudioPlayback();
+      
       console.log('[ConversationOverlay] 🔥 TRIGGERING TTS FOR ASSISTANT MESSAGE');
       const ttsStartTime = Date.now();
       
@@ -401,6 +439,10 @@ export const ConversationOverlay: React.FC = () => {
           }
           
           setConversationState('listening');
+          
+          // SUSPEND AUDIO PLAYBACK LINE for microphone
+          console.log('[ConversationOverlay] 🔥 SUSPENDING AUDIO PLAYBACK LINE FOR MICROPHONE');
+          conversationTtsService.suspendAudioPlayback();
           
           // RESUME MICROPHONE AFTER TTS to re-arm audio lane
           try {

@@ -111,6 +111,58 @@ class ConversationTtsService {
     });
   }
 
+  /**
+   * SUSPEND AUDIO PLAYBACK - Temporarily disable audio line for microphone
+   * Keeps the audio line alive but disabled, similar to microphone suspension
+   */
+  public suspendAudioPlayback(): void {
+    console.log('[ConversationTTS] 🔇 Suspending audio playback line for microphone');
+    
+    // Stop current playback if any
+    if (this.masterAudioElement) {
+      this.masterAudioElement.pause();
+      this.masterAudioElement.muted = true; // Mute instead of removing src
+    }
+    
+    // Stop analysis but keep analyser alive
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = undefined;
+    }
+    
+    // Disconnect current nodes but keep cached source
+    if (this.currentNodes) {
+      this.currentNodes.source.disconnect();
+      if (this.currentNodes.gain) {
+        this.currentNodes.gain.disconnect();
+      }
+      this.currentNodes = undefined;
+    }
+    
+    // Set audio level to 0 for UI
+    this.audioLevel = 0;
+    this.notifyListeners();
+    
+    console.log('[ConversationTTS] 🔇 Audio playback line suspended (kept alive)');
+  }
+
+  /**
+   * RESUME AUDIO PLAYBACK - Re-enable audio line after microphone
+   * Re-enables the audio line that was suspended, no need to recreate
+   */
+  public resumeAudioPlayback(): void {
+    console.log('[ConversationTTS] 🔊 Resuming audio playback line after microphone');
+    
+    // Unmute the master audio element
+    if (this.masterAudioElement) {
+      this.masterAudioElement.muted = false;
+    }
+    
+    // Audio line is ready for next TTS playback
+    // No need to recreate anything - the cached source and analyser are still available
+    console.log('[ConversationTTS] 🔊 Audio playback line resumed and ready');
+  }
+
   public getCurrentAudioLevel(): number {
     return this.audioLevel;
   }
