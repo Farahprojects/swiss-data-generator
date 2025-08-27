@@ -152,9 +152,6 @@ export const ConversationOverlay: React.FC = () => {
           conversationTtsService.stopAllAudio();
           conversationMicrophoneService.forceCleanup();
           
-          const { microphoneArbitrator } = require('@/services/microphone/MicrophoneArbitrator');
-          microphoneArbitrator.release('conversation');
-          
           // Clear local messages
           setLocalMessages([]);
           
@@ -178,11 +175,6 @@ export const ConversationOverlay: React.FC = () => {
     
     conversationTtsService.stopAllAudio();
     conversationMicrophoneService.forceCleanup();
-    
-    try {
-      const { microphoneArbitrator } = require('@/services/microphone/MicrophoneArbitrator');
-      microphoneArbitrator.release('conversation');
-    } catch (error) {}
     
     if (chatIdRef.current) {
       chatController.initializeConversation(chatIdRef.current);
