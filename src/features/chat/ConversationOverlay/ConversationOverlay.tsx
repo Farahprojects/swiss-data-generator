@@ -71,7 +71,17 @@ export const ConversationOverlay: React.FC = () => {
               }
               
               lastProcessedMessageId.current = newMessage.id;
-              console.log('[CONVERSATION-TURN] Assistant message received, starting TTS.');
+              console.count('[CONVERSATION-TURN] Assistant message received, starting TTS.');
+              
+              // Log audio element listeners before TTS
+              const audioElement = conversationTtsService.getMasterAudioElement();
+              if (audioElement) {
+                const listeners = (audioElement as any)._listeners || {};
+                console.log('[CONVERSATION-TURN] Audio element listeners before TTS:', {
+                  ended: listeners.ended?.length || 0,
+                  error: listeners.error?.length || 0
+                });
+              }
               
               // Set conversation state to replying
               setConversationState('replying');
@@ -89,6 +99,17 @@ export const ConversationOverlay: React.FC = () => {
                   if (isShuttingDown.current) return;
 
                   console.log('[CONVERSATION-TURN] Assistant finished speaking.');
+                  
+                  // Log audio element listeners after TTS
+                  const audioElement = conversationTtsService.getMasterAudioElement();
+                  if (audioElement) {
+                    const listeners = (audioElement as any)._listeners || {};
+                    console.log('[CONVERSATION-TURN] Audio element listeners after TTS:', {
+                      ended: listeners.ended?.length || 0,
+                      error: listeners.error?.length || 0
+                    });
+                  }
+                  
                   setConversationState('listening');
                   conversationTtsService.suspendAudioPlayback();
                   
@@ -223,16 +244,23 @@ export const ConversationOverlay: React.FC = () => {
       conversationTtsService.unlockAudio();
       conversationTtsService.suspendAudioPlayback();
       
-      // Request microphone permission
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: 48000,
-        }
-      });
+      // Request microphone permission with error handling
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            sampleRate: 48000,
+          }
+        });
+      } catch (permissionError) {
+        console.error('[CONVERSATION-TURN] Microphone permission denied:', permissionError);
+        setConversationState('connecting');
+        return;
+      }
       
       setPermissionGranted(true);
       conversationMicrophoneService.cacheStream(stream);
@@ -318,80 +346,84 @@ export const ConversationOverlay: React.FC = () => {
     if (isShuttingDown.current) {
       return;
     }
+
+    // Validate audio blob before processing
+    if (!audioBlob || audioBlob.size < 1024) { // Less than 1KB
+      console.log('[CONVERSATION-TURN] Audio blob too small, returning to listening:', audioBlob?.size || 0);
+      setConversationState('listening');
+      return;
+    }
     
     try {
       setConversationState('processing');
       console.log('[CONVERSATION-TURN] User speech recorded, processing...');
 
-      sttService.transcribe(audioBlob, chatIdRef.current!, {}, 'conversation', sessionIdRef.current)
-        .then(result => {
-          
-          const transcript = result.transcript;
-          
-          // Shutdown guard - check again after STT
-          if (isShuttingDown.current) {
-            return;
-          }
-          
-          if (!transcript?.trim()) {
-            console.log('[CONVERSATION-TURN] Empty transcript, returning to listening.');
-            setConversationState('listening');
-            return;
-          }
-          
-          const client_msg_id = uuidv4();
-          const optimisticUserMessage: Message = {
-            id: client_msg_id, // Use client_msg_id as id for proper reconciliation
-            chat_id: chatIdRef.current!,
-            role: 'user',
-            text: transcript,
-            createdAt: new Date().toISOString(),
-            client_msg_id, // Add for reconciliation
-          };
-          setLocalMessages(prev => [...prev, optimisticUserMessage]);
-          
-          llmService.sendMessage({
-            chat_id: chatIdRef.current!,
-            text: transcript,
-            client_msg_id,
-            mode: 'conversation',
-            sessionId: sessionIdRef.current
-          }).catch(error => {
-            console.error('[CONVERSATION-TURN] LLM call error:', error);
-            if (!isShuttingDown.current) setConversationState('listening');
-          });
-          
-          // DON'T restart recording here - let the Realtime effect handle it
-          // This prevents the duplicate recording logic that causes MediaRecorder errors
-          
-        })
-        .catch(error => {
-          console.error('[CONVERSATION-TURN] STT error:', error);
+      // Wrap STT promise with comprehensive error handling
+      try {
+        const result = await sttService.transcribe(audioBlob, chatIdRef.current!, {}, 'conversation', sessionIdRef.current);
+        
+        // Shutdown guard - check again after STT
+        if (isShuttingDown.current) {
+          return;
+        }
+        
+        const transcript = result.transcript;
+        
+        if (!transcript?.trim()) {
+          console.log('[CONVERSATION-TURN] Empty transcript, returning to listening.');
+          setConversationState('listening');
+          return;
+        }
+        
+        const client_msg_id = uuidv4();
+        const optimisticUserMessage: Message = {
+          id: client_msg_id,
+          chat_id: chatIdRef.current!,
+          role: 'user',
+          text: transcript,
+          createdAt: new Date().toISOString(),
+          client_msg_id,
+        };
+        setLocalMessages(prev => [...prev, optimisticUserMessage]);
+        
+        // Fire-and-forget LLM call with error handling
+        llmService.sendMessage({
+          chat_id: chatIdRef.current!,
+          text: transcript,
+          client_msg_id,
+          mode: 'conversation',
+          sessionId: sessionIdRef.current
+        }).catch(error => {
+          console.error('[CONVERSATION-TURN] LLM call error:', error);
           if (!isShuttingDown.current) setConversationState('listening');
         });
+        
+      } catch (sttError) {
+        console.error('[CONVERSATION-TURN] STT error:', sttError);
+        if (!isShuttingDown.current) setConversationState('listening');
+      }
       
     } catch (error) {
-      if (!isShuttingDown.current) {
-        console.error('[CONVERSATION-TURN] Processing error:', error);
-        setConversationState('listening');
-      }
+      console.error('[CONVERSATION-TURN] Processing error:', error);
+      if (!isShuttingDown.current) setConversationState('listening');
     }
   };
 
 
-  useEffect(() => {
-    if (conversationState === 'processing') {
-      // After a short delay, set to replying to show TTS is coming
-      const timer = setTimeout(() => {
-        if (!isShuttingDown.current) {
-          setConversationState('replying');
-          conversationTtsService.resumeAudioPlayback();
-        }
-      }, 1000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [conversationState]);
+  // TEMPORARILY DISABLED: Confirm only Supabase listener triggers TTS
+  // useEffect(() => {
+  //   if (conversationState === 'processing') {
+  //     // After a short delay, set to replying to show TTS is coming
+  //     const timer = setTimeout(() => {
+  //       if (!isShuttingDown.current) {
+  //         setConversationState('replying');
+  //         conversationTtsService.resumeAudioPlayback();
+  //       }
+  //     }, 1000);
+  //     
+  //     return () => clearTimeout(timer);
+  //   }
+  // }, [conversationState]);
 
   // Use simple conversation state
   const state = conversationState;

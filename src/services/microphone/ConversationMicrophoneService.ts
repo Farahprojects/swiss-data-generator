@@ -20,6 +20,7 @@ export class ConversationMicrophoneServiceClass {
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = []; // Simple chunk collection
   private isRecording = false;
+  private isStartingRecording = false; // NEW: Guard against concurrent recording starts
   private audioContext: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
   private mediaStreamSource: MediaStreamAudioSourceNode | null = null;
@@ -54,6 +55,19 @@ export class ConversationMicrophoneServiceClass {
    * START RECORDING - Complete domain-specific recording
    */
   public async startRecording(): Promise<boolean> {
+    // Guard against concurrent recording starts
+    if (this.isStartingRecording) {
+      this.log('🎤 Recording start already in progress, skipping');
+      return false;
+    }
+    
+    if (this.isRecording) {
+      this.log('🎤 Already recording, skipping');
+      return false;
+    }
+    
+    this.isStartingRecording = true;
+    
     try {
       this.log('🎤 Starting conversation recording');
       
@@ -169,6 +183,7 @@ export class ConversationMicrophoneServiceClass {
       // 🔥 FIXED: Remove onReady callback to prevent duplicate state setting
       // The TTS onComplete callback will handle state transitions
       
+      this.isStartingRecording = false; // Reset guard
       return true;
 
     } catch (error: any) {
@@ -177,6 +192,7 @@ export class ConversationMicrophoneServiceClass {
       if (this.options.onError) {
         this.options.onError(error);
       }
+      this.isStartingRecording = false; // Reset guard on error
       return false;
     }
   }
@@ -267,6 +283,14 @@ export class ConversationMicrophoneServiceClass {
    * HANDLE RECORDING COMPLETE - Process finished recording
    */
   private handleRecordingComplete(): void {
+    // Guard against duplicate callbacks
+    if (!this.isRecording) {
+      this.log('🎤 Recording complete callback called but not recording, skipping');
+      return;
+    }
+    
+    this.isRecording = false; // Mark as not recording before callback
+    
     const finalBlob = this.createFinalBlobFromBuffer();
     
     if (this.options.onRecordingComplete) {
@@ -512,10 +536,12 @@ export class ConversationMicrophoneServiceClass {
             // Natural silence detected - stop recording
             this.log(`🧘‍♂️ ${SILENCE_TIMEOUT}ms silence detected after voice - stopping naturally (RMS: ${rms.toFixed(4)}, dB: ${dB.toFixed(1)})`);
             this.monitoringRef.current = false;
-            // ✅ FIXED: Actually stop the recording to trigger audio processing
-            if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+            
+            // Guard against duplicate silence detection
+            if (this.isRecording && this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
               this.mediaRecorder.stop();
             }
+            
             this.log(`🛑 VAD loop terminated after silence detection`);
             return; // CRITICAL: Don't schedule next frame after silence detected
           }

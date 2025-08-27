@@ -184,6 +184,10 @@ class ConversationTtsService {
     return this.audioLevel;
   }
 
+  public getMasterAudioElement(): HTMLAudioElement | null {
+    return this.masterAudioElement;
+  }
+
   public subscribe(listener: () => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
