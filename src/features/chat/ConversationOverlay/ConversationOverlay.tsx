@@ -144,55 +144,7 @@ export const ConversationOverlay: React.FC = () => {
     };
   };
 
-  // Cleanup on unmount to ensure all resources are released
-  useEffect(() => {
-    return () => {
-      if (isConversationOpen) {
-        try {
-          isShuttingDown.current = true; // Set shutdown flag
-          console.log('[CONVERSATION-TURN] 🔴 EMERGENCY BROWSER KILL SWITCH: Stopping all audio and microphone');
-          
-          conversationTtsService.stopAllAudio();
-          conversationMicrophoneService.forceCleanup();
-          
-          // SIMPLE BROWSER KILL SWITCH - Tell browser we're done
-          try {
-            // Kill all audio elements
-            document.querySelectorAll('audio').forEach(audio => {
-              audio.pause();
-              audio.currentTime = 0;
-            });
-            
-            // Kill microphone by revoking permission
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-              navigator.mediaDevices.getUserMedia({ audio: true })
-                .then(stream => {
-                  stream.getTracks().forEach(track => track.stop());
-                })
-                .catch(() => {}); // Ignore errors
-            }
-            
-            console.log('[CONVERSATION-TURN] 🔴 BROWSER KILLED: Microphone and audio stopped');
-          } catch (error) {
-            console.error('[CONVERSATION-TURN] Browser kill error:', error);
-          }
-          
-          microphoneArbitrator.release('conversation');
-          
-          // Clear local messages
-          setLocalMessages([]);
-          
-          // Clear cached chat_id and session
-          chatIdRef.current = null;
-          sessionIdRef.current = `session_${Date.now()}`;
-          setIsReady(false);
-          
-        } catch (error) {
-          console.error('[CONVERSATION-TURN] Emergency cleanup error:', error);
-        }
-      }
-    }
-  }, [isConversationOpen]);
+
 
 
 
