@@ -56,22 +56,21 @@ export const ConversationOverlay: React.FC = () => {
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'messages',
+          table: 'chat_audio_clips',
           filter: `chat_id=eq.${chat_id}`
         },
         (payload) => {
-          const newMessage = payload.new;
+          const newAudioClip = payload.new;
           
-          // Check if this is an assistant message with audio URL for conversation mode
-          if (newMessage.role === 'assistant' && 
-              newMessage.audio_url && 
-              newMessage.meta?.mode === 'conversation' &&
-              newMessage.meta?.sessionId === sessionIdRef.current) {
+          // Check if this is an assistant audio clip for conversation mode
+          if (newAudioClip.role === 'assistant' && 
+              newAudioClip.audio_url && 
+              newAudioClip.session_id === sessionIdRef.current) {
             
-            console.log('[CONVERSATION-TURN] Assistant message with audio URL received:', newMessage.audio_url);
+            console.log('[CONVERSATION-TURN] Assistant audio clip received:', newAudioClip.audio_url);
             
             // Play the audio immediately
-            playTtsAudio(newMessage.audio_url, newMessage.text);
+            playTtsAudio(newAudioClip.audio_url, newAudioClip.text);
           }
         }
       )
