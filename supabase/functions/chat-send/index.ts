@@ -29,7 +29,7 @@ serve(async (req) => {
     const body = await req.json();
     console.log('[chat-send] Request body:', body);
     
-    const { chat_id, text, client_msg_id, mode, sessionId } = body;
+    const { chat_id, text, client_msg_id } = body;
 
     if (!chat_id || !text) {
       console.error('[chat-send] Missing required fields');
@@ -95,11 +95,10 @@ serve(async (req) => {
       try {
         console.log('[chat-send] Starting background LLM processing');
         
-        // Choose the appropriate LLM handler based on mode
-        const llmHandlerEndpoint = mode === 'conversation' ? 'llm-handler-openai' : 'llm-handler';
-        console.log(`[chat-send] Using LLM handler: ${llmHandlerEndpoint}`);
+        // Always use OpenAI handler
+        console.log(`[chat-send] Using LLM handler: llm-handler-openai`);
         
-        const llmResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/${llmHandlerEndpoint}`, {
+        const llmResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/llm-handler-openai`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -108,9 +107,7 @@ serve(async (req) => {
           body: JSON.stringify({
             chat_id,
             text: text,
-            client_msg_id: client_msg_id || userMessageData.client_msg_id,
-            mode,
-            sessionId
+            client_msg_id: client_msg_id || userMessageData.client_msg_id
           })
         });
 

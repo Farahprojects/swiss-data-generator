@@ -102,8 +102,7 @@ export const ConversationOverlay: React.FC = () => {
       return;
     }
 
-    // Set ChatController to conversation mode instead of cleaning up
-    chatController.setConversationMode('convo', sessionIdRef.current);
+    // No need to set conversation mode - all requests now use OpenAI
 
     // 🔥 CRITICAL: Unlock TTS audio FIRST within user gesture
     conversationTtsService.unlockAudio();
@@ -190,9 +189,7 @@ export const ConversationOverlay: React.FC = () => {
       await llmService.sendMessage({
         chat_id: chat_id || '',
         text: transcript,
-        client_msg_id,
-        mode: 'conversation',
-        sessionId: sessionIdRef.current
+        client_msg_id
       });
       
       // DON'T restart recording here - let the Realtime effect handle it

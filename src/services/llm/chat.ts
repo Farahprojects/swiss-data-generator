@@ -17,14 +17,12 @@ class LlmService {
    * User message is saved to DB, llm-handler is notified but no immediate response
    * Note: chat_id is already verified by verify-chat-access, no guest_id needed
    */
-  async sendMessage(request: { chat_id: string; text: string; client_msg_id?: string; mode?: string; sessionId?: string }): Promise<Message> {
+  async sendMessage(request: { chat_id: string; text: string; client_msg_id?: string }): Promise<Message> {
     const { data, error } = await supabase.functions.invoke('chat-send', {
       body: {
         chat_id: request.chat_id,
         text: request.text,
         client_msg_id: request.client_msg_id,
-        mode: request.mode,
-        sessionId: request.sessionId,
       },
     });
 
@@ -63,14 +61,6 @@ class LlmService {
     return data as Message;
   }
 
-  // Conversation-specific message sending (uses chat-send with conversation mode)
-  async conversationChat(request: Omit<LlmRequest, 'requestAudio'>): Promise<Message> {
-    return this.sendMessage({
-      chat_id: request.chat_id,
-      text: request.userMessage.text,
-      mode: 'conversation'
-    });
-  }
 }
 
 export const llmService = new LlmService();

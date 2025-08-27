@@ -113,9 +113,7 @@ export const useConversationLoop = ({ chat_id, onError }: ConversationLoopOption
       const finalMessage = await llmService.sendMessage({
         chat_id,
         text: userMessage,
-        client_msg_id,
-        mode: 'convo',
-        sessionId: sessionIdRef.current
+        client_msg_id
       });
 
       const assistantMessage = finalMessage.text || 'I apologize, but I didn\'t receive a proper response.';

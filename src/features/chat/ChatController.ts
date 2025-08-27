@@ -16,8 +16,6 @@ class ChatController {
   private isResetting = false;
   private turnRestartTimeout: NodeJS.Timeout | null = null;
   private resetTimeout: NodeJS.Timeout | null = null;
-  private mode: string = 'normal';
-  private sessionId: string | null = null;
   private isUnlocked = false; // New flag to control microphone access
 
 
@@ -91,9 +89,6 @@ class ChatController {
             
             // Handle assistant messages - TTS is now handled by ConversationOverlay modal
             if (newMessage.role === 'assistant' && newMessage.text) {
-              const meta = newMessage.meta as any;
-              const isConversationMode = meta?.mode === 'convo';
-              
               // TTS is now handled by ConversationOverlay modal
               // No TTS logic here anymore
             }
@@ -134,21 +129,14 @@ class ChatController {
     }
   }
 
-  setConversationMode(mode: string, sessionId: string) {
-    this.mode = mode;
-    this.sessionId = sessionId;
-  }
 
   /**
-   * Initialize conversation for normal mode (called when modal closes)
+   * Initialize conversation (called when modal closes)
    */
   initializeConversation(chat_id: string): void {
-    this.mode = 'normal';
-    this.sessionId = null;
     useChatStore.getState().startConversation(chat_id);
     this.setupRealtimeSubscription(chat_id);
     this.loadExistingMessages(); // Load conversation history
-
   }
 
   async sendTextMessage(text: string) {
@@ -168,9 +156,7 @@ class ChatController {
       const finalMessage = await llmService.sendMessage({ 
         chat_id, 
         text, 
-        client_msg_id,
-        mode: this.mode,
-        sessionId: this.sessionId
+        client_msg_id
       });
       
       // Stop the listener since we got the response
@@ -300,10 +286,7 @@ class ChatController {
       
       const { transcript } = await sttService.transcribe(
         audioBlob, 
-        useChatStore.getState().chat_id!,
-        undefined,
-        this.mode,
-        this.sessionId
+        useChatStore.getState().chat_id!
       );
 
       if (!transcript || transcript.trim().length === 0) {
@@ -322,9 +305,7 @@ class ChatController {
       await llmService.sendMessage({ 
         chat_id, 
         text: transcript, 
-        client_msg_id,
-        mode: this.mode,
-        sessionId: this.sessionId
+        client_msg_id
       });
       
       // Assistant response and TTS will be triggered via realtime events
