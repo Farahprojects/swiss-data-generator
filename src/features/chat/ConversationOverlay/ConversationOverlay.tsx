@@ -82,32 +82,21 @@ export const ConversationOverlay: React.FC = () => {
     };
   };
   
-  // Play TTS audio immediately
+  // Play TTS audio through conversationTtsService for proper animation
   const playTtsAudio = async (audioUrl: string, text: string) => {
     try {
-      console.log('[CONVERSATION-TURN] Playing TTS audio immediately');
+      console.log('[CONVERSATION-TURN] Playing TTS audio through TTS service');
       
       // Change UI to speaking
       setConversationState('replying');
       
-      // Create audio element and play
-      const audio = new Audio(audioUrl);
-      
-      audio.addEventListener('ended', () => {
+      // Use conversationTtsService to play audio with proper animation
+      await conversationTtsService.playFromUrl(audioUrl, () => {
         console.log('[CONVERSATION-TURN] TTS audio completed');
         setConversationState('listening');
         conversationMicrophoneService.resumeAfterPlayback();
         conversationMicrophoneService.startRecording();
       });
-      
-      audio.addEventListener('error', (error) => {
-        console.error('[CONVERSATION-TURN] TTS audio error:', error);
-        setConversationState('listening');
-        conversationMicrophoneService.resumeAfterPlayback();
-        conversationMicrophoneService.startRecording();
-      });
-      
-      await audio.play();
       
     } catch (error) {
       console.error('[CONVERSATION-TURN] Failed to play TTS audio:', error);

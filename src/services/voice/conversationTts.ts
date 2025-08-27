@@ -446,6 +446,60 @@ class ConversationTtsService {
     // Complete TTS disposal completed
   }
 
+  /**
+   * Play audio from URL - routes through TTS service for proper animation
+   */
+  public async playFromUrl(audioUrl: string, onComplete?: () => void): Promise<void> {
+    try {
+      // Ensure audio is unlocked
+      if (!this.isAudioUnlocked || !this.masterAudioElement) {
+        console.warn('[ConversationTTS] Audio not unlocked - cannot play from URL');
+        onComplete?.();
+        return;
+      }
+
+      // Reset completion guard
+      this.isTtsCompleting = false;
+
+      // Set up master audio element
+      const audio = this.masterAudioElement;
+      audio.src = audioUrl;
+      audio.muted = false;
+
+      // Setup audio analysis for animation
+      await this.setupAudioAnalysis(audio);
+      this.startAmplitudeAnalysis();
+
+      // Set up event listeners
+      const handleEnded = () => {
+        if (this.isTtsCompleting) return;
+        this.isTtsCompleting = true;
+        this.cleanupAnalysis();
+        onComplete?.();
+      };
+
+      const handleError = (error: Event) => {
+        if (this.isTtsCompleting) return;
+        this.isTtsCompleting = true;
+        console.error('[ConversationTTS] Audio playback error:', error);
+        this.cleanupAnalysis();
+        onComplete?.();
+      };
+
+      audio.addEventListener('ended', handleEnded, { once: true });
+      audio.addEventListener('error', handleError, { once: true });
+
+      // Start playback
+      await audio.play();
+      console.log('[ConversationTTS] Audio playback started from URL');
+
+    } catch (error) {
+      console.error('[ConversationTTS] playFromUrl failed:', error);
+      this.cleanupAnalysis();
+      onComplete?.();
+    }
+  }
+
   // Sanitize text before sending to TTS provider
   private sanitizeTtsText(input: string): string {
     if (!input) return '';
