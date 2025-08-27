@@ -295,11 +295,8 @@ export const ConversationOverlay: React.FC = () => {
           console.error('[ConversationOverlay] 🔥 MICROPHONE ERROR:', error);
           setConversationState('connecting');
         },
-        onReady: () => {
-          // 🔥 AUDIO READY: Set listening state when microphone is actually ready
-          console.log('[ConversationOverlay] 🔥 MICROPHONE READY - SETTING LISTENING STATE');
-          setConversationState('listening');
-        },
+        // 🔥 FIXED: Remove onReady callback to prevent duplicate state setting
+        // The TTS onComplete callback will handle state transitions
         silenceTimeoutMs: 2000, // 2 seconds for natural conversation pauses
       });
       
