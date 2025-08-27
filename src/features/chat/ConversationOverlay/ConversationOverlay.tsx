@@ -41,7 +41,7 @@ export const ConversationOverlay: React.FC = () => {
           const { microphoneArbitrator } = require('@/services/microphone/MicrophoneArbitrator');
           microphoneArbitrator.release('conversation');
         } catch (error) {
-          console.log('[ConversationOverlay] Emergency cleanup error');
+          // Silent cleanup - this is expected if already released
         }
       }
     };
@@ -51,8 +51,6 @@ export const ConversationOverlay: React.FC = () => {
 
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = async () => {
-    console.log('[ConversationOverlay] Closing modal - cleaning up resources');
-    
     // Set shutdown flag immediately to prevent any further processing
     isShuttingDown.current = true;
     
@@ -67,7 +65,7 @@ export const ConversationOverlay: React.FC = () => {
       const { microphoneArbitrator } = require('@/services/microphone/MicrophoneArbitrator');
       microphoneArbitrator.release('conversation');
     } catch (error) {
-      console.log('[ConversationOverlay] Could not release microphone arbitrator');
+      // Silent cleanup - this is expected if already released
     }
     
     // 4. Re-initialize ChatController for normal chat functionality
@@ -80,7 +78,7 @@ export const ConversationOverlay: React.FC = () => {
       const { retryLoadMessages } = useChatStore.getState();
       await retryLoadMessages();
     } catch (error) {
-      console.log('[ConversationOverlay] Failed to refresh conversation history');
+      // Silent refresh failure - not critical
     }
     
     // 6. Close the UI and reset all state
@@ -166,12 +164,10 @@ export const ConversationOverlay: React.FC = () => {
   const handleSimpleRecordingComplete = async (audioBlob: Blob) => {
     // Shutdown guard - don't process if modal is closing
     if (isShuttingDown.current) {
-      console.log('[ConversationOverlay] Shutdown in progress, skipping audio processing');
       return;
     }
     
     try {
-      console.log('[ConversationOverlay] Processing audio...');
       setConversationState('processing');
       
       // Use established STT service (same as chatbar mic)
@@ -180,12 +176,10 @@ export const ConversationOverlay: React.FC = () => {
       
       // Shutdown guard - check again after STT
       if (isShuttingDown.current) {
-        console.log('[ConversationOverlay] Shutdown in progress, skipping transcript processing');
         return;
       }
       
       if (!transcript?.trim()) {
-        console.log('[ConversationOverlay] Empty transcript, returning to listening');
         setConversationState('listening');
         return;
       }
@@ -241,7 +235,6 @@ export const ConversationOverlay: React.FC = () => {
         onComplete: async () => {
           // Shutdown guard - don't restart recording if modal is closing
           if (isShuttingDown.current) {
-            console.log('[ConversationOverlay] Shutdown in progress, skipping recording restart');
             return;
           }
           
@@ -254,7 +247,6 @@ export const ConversationOverlay: React.FC = () => {
             
             // Shutdown guard - check again after delay
             if (isShuttingDown.current) {
-              console.log('[ConversationOverlay] Shutdown in progress, skipping recording restart');
               return;
             }
             
