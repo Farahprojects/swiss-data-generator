@@ -63,13 +63,17 @@ serve(async (req) => {
     // Background task to process LLM response
     const processLLMResponse = async () => {
       try {
-        // Fetch conversation history for context (optimized with new indexes)
+        // Fetch conversation history (last 10 completed messages, optimized)
+        const HISTORY_LIMIT = 10;
         const { data: history, error: historyError } = await supabase
           .from("messages")
           .select("role, text")
           .eq("chat_id", chat_id)
-          .order("created_at", { ascending: true })
-          .limit(30);
+          .eq("status", "complete")
+          .not("text", "is", null)
+          .neq("text", "")
+          .order("created_at", { ascending: false })
+          .limit(HISTORY_LIMIT);
 
         if (historyError) {
           console.error("[llm-handler-openai] History fetch error:", historyError);
@@ -111,8 +115,9 @@ Content Rules:
           content: systemPrompt
         });
         
-        // Add conversation history
-        (history || []).forEach((m) => {
+        // Add conversation history (reverse to get chronological order)
+        const chronologicalHistory = history ? [...history].reverse() : [];
+        chronologicalHistory.forEach((m) => {
           messages.push({
             role: m.role,
             content: m.text
