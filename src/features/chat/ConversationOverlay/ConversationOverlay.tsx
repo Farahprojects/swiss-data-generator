@@ -22,6 +22,7 @@ export const ConversationOverlay: React.FC = () => {
   const [isStarting, setIsStarting] = useState(false); // Guard against double taps
   const hasStarted = useRef(false); // One-shot guard to prevent double invocation
   const lastProcessedMessageId = useRef<string | null>(null);
+  const isShuttingDown = useRef(false); // Shutdown guard to prevent processing after modal close
 
   // Simple conversation state
   const [conversationState, setConversationState] = useState<'listening' | 'processing' | 'replying' | 'connecting'>('listening');
@@ -33,6 +34,7 @@ export const ConversationOverlay: React.FC = () => {
   useEffect(() => {
     return () => {
       if (isConversationOpen) {
+        isShuttingDown.current = true; // Set shutdown flag
         conversationTtsService.stopAllAudio();
         conversationMicrophoneService.forceCleanup();
         try {
@@ -50,6 +52,9 @@ export const ConversationOverlay: React.FC = () => {
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = async () => {
     console.log('[ConversationOverlay] Closing modal - cleaning up resources');
+    
+    // Set shutdown flag immediately to prevent any further processing
+    isShuttingDown.current = true;
     
     // 1. Stop all TTS audio playback immediately
     conversationTtsService.stopAllAudio();
@@ -159,6 +164,12 @@ export const ConversationOverlay: React.FC = () => {
 
   // Simple STT processing - using established services
   const handleSimpleRecordingComplete = async (audioBlob: Blob) => {
+    // Shutdown guard - don't process if modal is closing
+    if (isShuttingDown.current) {
+      console.log('[ConversationOverlay] Shutdown in progress, skipping audio processing');
+      return;
+    }
+    
     try {
       console.log('[ConversationOverlay] Processing audio...');
       setConversationState('processing');
@@ -166,6 +177,12 @@ export const ConversationOverlay: React.FC = () => {
       // Use established STT service (same as chatbar mic)
       const result = await sttService.transcribe(audioBlob, chat_id, {}, 'conversation', sessionIdRef.current);
       const transcript = result.transcript;
+      
+      // Shutdown guard - check again after STT
+      if (isShuttingDown.current) {
+        console.log('[ConversationOverlay] Shutdown in progress, skipping transcript processing');
+        return;
+      }
       
       if (!transcript?.trim()) {
         console.log('[ConversationOverlay] Empty transcript, returning to listening');
@@ -196,8 +213,11 @@ export const ConversationOverlay: React.FC = () => {
       // This prevents the duplicate recording logic that causes MediaRecorder errors
       
     } catch (error) {
-      console.error('[ConversationOverlay] Simple processing error:', error);
-      setConversationState('connecting');
+      // Only log error if not shutting down
+      if (!isShuttingDown.current) {
+        console.error('[ConversationOverlay] Simple processing error:', error);
+        setConversationState('connecting');
+      }
     }
   };
 
@@ -219,6 +239,12 @@ export const ConversationOverlay: React.FC = () => {
         text: latestMessage.text,
         sessionId: sessionIdRef.current,
         onComplete: async () => {
+          // Shutdown guard - don't restart recording if modal is closing
+          if (isShuttingDown.current) {
+            console.log('[ConversationOverlay] Shutdown in progress, skipping recording restart');
+            return;
+          }
+          
           setConversationState('listening');
           
           // Properly restart recording after TTS completes
@@ -226,14 +252,23 @@ export const ConversationOverlay: React.FC = () => {
             // Small delay to ensure TTS is fully complete
             await new Promise(resolve => setTimeout(resolve, 200));
             
+            // Shutdown guard - check again after delay
+            if (isShuttingDown.current) {
+              console.log('[ConversationOverlay] Shutdown in progress, skipping recording restart');
+              return;
+            }
+            
             const success = await conversationMicrophoneService.startRecording();
             if (!success) {
               console.error('[ConversationOverlay] Failed to start recording after TTS');
               setConversationState('connecting');
             }
           } catch (error) {
-            console.error('[ConversationOverlay] Error starting recording after TTS:', error);
-            setConversationState('connecting');
+            // Only log error if not shutting down
+            if (!isShuttingDown.current) {
+              console.error('[ConversationOverlay] Error starting recording after TTS:', error);
+              setConversationState('connecting');
+            }
           }
         }
       });
