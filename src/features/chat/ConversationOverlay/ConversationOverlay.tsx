@@ -23,7 +23,6 @@ export const ConversationOverlay: React.FC = () => {
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [isStarting, setIsStarting] = useState(false); // Guard against double taps
   const hasStarted = useRef(false); // One-shot guard to prevent double invocation
-  const lastProcessedMessageId = useRef<string | null>(null);
   const isShuttingDown = useRef(false); // Shutdown guard to prevent processing after modal close
 
   // Simple conversation state
@@ -33,128 +32,9 @@ export const ConversationOverlay: React.FC = () => {
   const chatIdRef = useRef<string | null>(null);
   const sessionIdRef = useRef<string>(`session_${Date.now()}`);
   
-  // Overlay-owned Realtime subscription
-  const overlayChannelRef = useRef<any>(null);
-  
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
   
-  useEffect(() => {
-    if (isConversationOpen && chat_id && !chatIdRef.current) {
-      chatIdRef.current = chat_id;
-      chatController.cleanup();
-      setupMinimalRealtime(chat_id);
-    }
-  }, [isConversationOpen, chat_id]);
-
-  const setupMinimalRealtime = (chat_id: string) => {
-    cleanupMinimalRealtime();
-    
-    try {
-      overlayChannelRef.current = supabase
-        .channel(`conversation-tts:${chat_id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'messages',
-            filter: `chat_id=eq.${chat_id}`
-          },
-          (payload) => {
-            const newMessage = payload.new;
-            
-            if (newMessage.role === 'assistant' && newMessage.meta?.mode === 'conversation') {
-              // Prevent duplicate processing of the same message
-              if (lastProcessedMessageId.current === newMessage.id) {
-                console.log('[CONVERSATION-TURN] Duplicate message detected, skipping:', newMessage.id);
-                return;
-              }
-              
-              lastProcessedMessageId.current = newMessage.id;
-              console.count('[CONVERSATION-TURN] Assistant message received, starting TTS.');
-              
-              // Log audio element listeners before TTS
-              const audioElement = conversationTtsService.getMasterAudioElement();
-              if (audioElement) {
-                const listeners = (audioElement as any)._listeners || {};
-                console.log('[CONVERSATION-TURN] Audio element listeners before TTS:', {
-                  ended: listeners.ended?.length || 0,
-                  error: listeners.error?.length || 0
-                });
-              }
-              
-              // Set conversation state to replying
-              setConversationState('replying');
-              
-              // Resume audio playback line for TTS
-              conversationTtsService.resumeAudioPlayback();
-              
-              // Trigger TTS for the assistant message
-              conversationTtsService.speakAssistant({
-                chat_id: chatIdRef.current!,
-                messageId: newMessage.id,
-                text: newMessage.text,
-                sessionId: sessionIdRef.current,
-                onComplete: async () => {
-                  if (isShuttingDown.current) return;
-
-                  console.log('[CONVERSATION-TURN] Assistant finished speaking.');
-                  
-                  // Log audio element listeners after TTS
-                  const audioElement = conversationTtsService.getMasterAudioElement();
-                  if (audioElement) {
-                    const listeners = (audioElement as any)._listeners || {};
-                    console.log('[CONVERSATION-TURN] Audio element listeners after TTS:', {
-                      ended: listeners.ended?.length || 0,
-                      error: listeners.error?.length || 0
-                    });
-                  }
-                  
-                  setConversationState('listening');
-                  conversationTtsService.suspendAudioPlayback();
-                  
-                  try {
-                    await conversationMicrophoneService.resumeAfterPlayback();
-                    
-                    // Ensure microphone is fully ready before starting recording
-                    const micState = conversationMicrophoneService.getState();
-                    if (!micState.hasStream) {
-                      console.error('[CONVERSATION-TURN] Microphone stream not available after resume');
-                      setConversationState('listening');
-                      return;
-                    }
-                    
-                    console.log('[CONVERSATION-TURN] Microphone resumed, restarting recording...');
-                    const success = await conversationMicrophoneService.startRecording();
-                    if (success) {
-                      console.log('[CONVERSATION-TURN] Now listening for user...');
-                    } else {
-                       console.error('[CONVERSATION-TURN] Failed to restart recording.');
-                       setConversationState('listening');
-                    }
-                  } catch (error) {
-                    if (!isShuttingDown.current) {
-                      console.error('[CONVERSATION-TURN] Error resuming microphone:', error);
-                      setConversationState('listening');
-                    }
-                  }
-                }
-              });
-            }
-          }
-        )
-        .subscribe();
-    } catch (error) {
-      console.error('[CONVERSATION-TURN] Failed to setup realtime listener:', error);
-    }
-  };
-
-  const cleanupMinimalRealtime = () => {
-    if (overlayChannelRef.current) {
-      supabase.removeChannel(overlayChannelRef.current);
-      overlayChannelRef.current = null;
-    }
-  };
+  // REMOVED: All realtime listeners and TTS flow
 
   const transformDatabaseMessage = (dbMessage: any): Message => {
     return {
@@ -179,7 +59,6 @@ export const ConversationOverlay: React.FC = () => {
           isShuttingDown.current = true; // Set shutdown flag
           conversationTtsService.stopAllAudio();
           conversationMicrophoneService.forceCleanup();
-          cleanupMinimalRealtime(); // Use minimal Realtime cleanup
           
           const { microphoneArbitrator } = require('@/services/microphone/MicrophoneArbitrator');
           microphoneArbitrator.release('conversation');
@@ -206,7 +85,6 @@ export const ConversationOverlay: React.FC = () => {
     
     conversationTtsService.stopAllAudio();
     conversationMicrophoneService.forceCleanup();
-    cleanupMinimalRealtime();
     
     try {
       const { microphoneArbitrator } = require('@/services/microphone/MicrophoneArbitrator');
