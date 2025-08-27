@@ -88,6 +88,14 @@ export const ConversationOverlay: React.FC = () => {
                   try {
                     await conversationMicrophoneService.resumeAfterPlayback();
                     
+                    // Ensure microphone is fully ready before starting recording
+                    const micState = conversationMicrophoneService.getState();
+                    if (!micState.hasStream) {
+                      console.error('[CONVERSATION-TURN] Microphone stream not available after resume');
+                      setConversationState('listening');
+                      return;
+                    }
+                    
                     console.log('[CONVERSATION-TURN] Microphone resumed, restarting recording...');
                     const success = await conversationMicrophoneService.startRecording();
                     if (success) {

@@ -75,6 +75,18 @@ export class ConversationMicrophoneServiceClass {
         });
       }
 
+      // Ensure the stream is ready and has active tracks
+      if (!this.stream || this.stream.getAudioTracks().length === 0) {
+        this.error('❌ No audio tracks available in stream');
+        return false;
+      }
+
+      const audioTrack = this.stream.getAudioTracks()[0];
+      if (audioTrack.readyState !== 'live') {
+        this.error('❌ Audio track not ready:', audioTrack.readyState);
+        return false;
+      }
+
       // Log stream details for debugging
       const track = this.stream.getAudioTracks()[0];
       const trackSettings = track.getSettings();
@@ -90,6 +102,12 @@ export class ConversationMicrophoneServiceClass {
       // Defensively resume AudioContext if suspended (helps on iOS)
       if (this.audioContext.state === 'suspended') {
         await this.audioContext.resume();
+      }
+      
+      // Ensure AudioContext is fully running
+      if (this.audioContext.state !== 'running') {
+        this.error('❌ AudioContext not running after resume:', this.audioContext.state);
+        return false;
       }
       
       // SINGLE-GESTURE FLOW: Reuse analyser if it exists, otherwise create new
