@@ -162,34 +162,32 @@ Content Rules:
         // Note: Assistant message will be saved by chat-send function
         console.log("[llm-handler-openai] Assistant response generated successfully");
           
-        // 🔥 CONVERSATION MODE OPTIMIZATION: Trigger TTS directly
+        // 🔥 CONVERSATION MODE OPTIMIZATION: Trigger TTS directly (fire-and-forget)
         if (mode === 'conversation' && sessionId) {
-          console.log("[llm-handler-openai] 🔥 CONVERSATION MODE: Triggering TTS service");
+          console.log("[llm-handler-openai] 🔥 CONVERSATION MODE: Triggering TTS service (fire-and-forget)");
           
-          try {
-            // Call TTS service directly (it will save to database)
-            const ttsResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-              },
-              body: JSON.stringify({
-                chat_id,
-                text: sanitizedAssistantText,
-                voice: 'en-US-Chirp3-HD-Puck', // Default voice
-                sessionId
-              })
-            });
-
+          // Fire-and-forget TTS call
+          fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+            },
+            body: JSON.stringify({
+              chat_id,
+              text: sanitizedAssistantText,
+              voice: 'en-US-Chirp3-HD-Puck', // Default voice
+              sessionId
+            })
+          }).then(ttsResponse => {
             if (ttsResponse.ok) {
               console.log("[llm-handler-openai] 🔥 CONVERSATION MODE: TTS service completed successfully");
             } else {
               console.error("[llm-handler-openai] 🔥 CONVERSATION MODE: TTS service failed:", ttsResponse.status);
             }
-          } catch (ttsError) {
+          }).catch(ttsError => {
             console.error("[llm-handler-openai] 🔥 CONVERSATION MODE: TTS error:", ttsError);
-          }
+          });
         }
 
         // Return assistant response (TTS saves to DB directly)

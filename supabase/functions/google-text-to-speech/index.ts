@@ -90,8 +90,8 @@ serve(async (req) => {
     // Create data URL for direct browser playback
     const audioUrl = `data:audio/mpeg;base64,${audioContent}`;
 
-    // Save TTS audio clip to dedicated audio table
-    const { error: dbError } = await supabase
+    // Save TTS audio clip to dedicated audio table (fire-and-forget)
+    supabase
       .from("chat_audio_clips")
       .insert({
         chat_id: chat_id,
@@ -108,14 +108,17 @@ serve(async (req) => {
           tts_status: 'ready',
           processing_time_ms: Date.now() - startTime
         },
+      })
+      .then(({ error: dbError }) => {
+        if (dbError) {
+          console.error("[google-tts] Failed to save audio clip:", dbError);
+        } else {
+          console.log(`[google-tts] Audio clip saved to chat_audio_clips table`);
+        }
+      })
+      .catch(error => {
+        console.error("[google-tts] Database save error:", error);
       });
-
-    if (dbError) {
-      console.error("[google-tts] Failed to save audio clip:", dbError);
-      throw new Error(`Database save failed: ${dbError.message}`);
-    }
-
-    console.log(`[google-tts] Audio clip saved to chat_audio_clips table`);
 
     // Return success response (audio URL is now in database)
     const response = new Response(JSON.stringify({
