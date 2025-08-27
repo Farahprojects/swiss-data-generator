@@ -150,8 +150,37 @@ export const ConversationOverlay: React.FC = () => {
       if (isConversationOpen) {
         try {
           isShuttingDown.current = true; // Set shutdown flag
+          console.log('[CONVERSATION-TURN] 🔴 EMERGENCY BROWSER KILL SWITCH: Stopping all audio and microphone');
+          
           conversationTtsService.stopAllAudio();
           conversationMicrophoneService.forceCleanup();
+          
+          // Kill browser microphone stream directly
+          try {
+            const stream = conversationMicrophoneService.getStream();
+            if (stream) {
+              stream.getTracks().forEach(track => {
+                console.log('[CONVERSATION-TURN] 🔴 KILLING MICROPHONE TRACK:', track.kind);
+                track.stop();
+              });
+            }
+          } catch (error) {
+            console.error('[CONVERSATION-TURN] Error killing microphone stream:', error);
+          }
+          
+          // Kill any playing audio elements
+          try {
+            const audioElements = document.querySelectorAll('audio');
+            audioElements.forEach(audio => {
+              if (!audio.paused) {
+                console.log('[CONVERSATION-TURN] 🔴 KILLING AUDIO ELEMENT');
+                audio.pause();
+                audio.currentTime = 0;
+              }
+            });
+          } catch (error) {
+            console.error('[CONVERSATION-TURN] Error killing audio elements:', error);
+          }
           
           microphoneArbitrator.release('conversation');
           
@@ -176,8 +205,40 @@ export const ConversationOverlay: React.FC = () => {
   const handleModalClose = async () => {
     isShuttingDown.current = true;
     
+    console.log('[CONVERSATION-TURN] 🔴 BROWSER KILL SWITCH: Stopping all audio and microphone');
+    
+    // Kill all audio playback
     conversationTtsService.stopAllAudio();
+    
+    // Kill microphone stream and cleanup
     conversationMicrophoneService.forceCleanup();
+    
+    // Kill browser microphone stream directly
+    try {
+      const stream = conversationMicrophoneService.getStream();
+      if (stream) {
+        stream.getTracks().forEach(track => {
+          console.log('[CONVERSATION-TURN] 🔴 KILLING MICROPHONE TRACK:', track.kind);
+          track.stop();
+        });
+      }
+    } catch (error) {
+      console.error('[CONVERSATION-TURN] Error killing microphone stream:', error);
+    }
+    
+    // Kill any playing audio elements
+    try {
+      const audioElements = document.querySelectorAll('audio');
+      audioElements.forEach(audio => {
+        if (!audio.paused) {
+          console.log('[CONVERSATION-TURN] 🔴 KILLING AUDIO ELEMENT');
+          audio.pause();
+          audio.currentTime = 0;
+        }
+      });
+    } catch (error) {
+      console.error('[CONVERSATION-TURN] Error killing audio elements:', error);
+    }
     
     try {
       microphoneArbitrator.release('conversation');
