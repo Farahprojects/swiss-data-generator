@@ -242,8 +242,8 @@ class ConversationTtsService {
         this.cleanupAnalysis();
         URL.revokeObjectURL(audioUrl);
         onComplete?.();
-        // 🔥 CONVERSATION MODE OPTIMIZATION: Notify listeners of TTS completion
-        this.notifyListeners();
+        // 🔥 CONVERSATION MODE OPTIMIZATION: REMOVED - No longer using subscribe pattern
+        // this.notifyListeners();
       }, { once: true });
       
       audio.addEventListener('error', (error) => {
@@ -251,8 +251,8 @@ class ConversationTtsService {
         this.cleanupAnalysis();
         URL.revokeObjectURL(audioUrl);
         onComplete?.();
-        // 🔥 CONVERSATION MODE OPTIMIZATION: Notify listeners of TTS completion (even on error)
-        this.notifyListeners();
+        // 🔥 CONVERSATION MODE OPTIMIZATION: REMOVED - No longer using subscribe pattern
+        // this.notifyListeners();
       }, { once: true });
       
       // Start playback and return immediately
@@ -261,8 +261,8 @@ class ConversationTtsService {
         this.cleanupAnalysis();
         URL.revokeObjectURL(audioUrl);
         onComplete?.();
-        // 🔥 CONVERSATION MODE OPTIMIZATION: Notify listeners of TTS completion (even on play error)
-        this.notifyListeners();
+        // 🔥 CONVERSATION MODE OPTIMIZATION: REMOVED - No longer using subscribe pattern
+        // this.notifyListeners();
       });
 
     } catch (error) {

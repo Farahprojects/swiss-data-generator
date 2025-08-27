@@ -452,62 +452,8 @@ export const ConversationOverlay: React.FC = () => {
   // The LLM handler now directly triggers TTS, so we don't need to watch for new messages
   // console.log('[ConversationOverlay] 🔥 CONVERSATION MODE: TTS triggered directly by LLM handler');
 
-  // 🔥 CONVERSATION MODE OPTIMIZATION: TTS completion listener for direct LLM → TTS flow
-  useEffect(() => {
-    if (!permissionGranted || !chatIdRef.current) return;
-
-    // Listen for TTS completion events
-    const handleTtsComplete = async () => {
-      console.log('[ConversationOverlay] 🔥 TTS COMPLETED (direct LLM → TTS flow)');
-      
-      // Shutdown guard - don't restart recording if modal is closing
-      if (isShuttingDown.current) {
-        return;
-      }
-      
-      setConversationState('listening');
-      
-      // SUSPEND AUDIO PLAYBACK LINE for microphone
-      console.log('[ConversationOverlay] 🔥 SUSPENDING AUDIO PLAYBACK LINE FOR MICROPHONE');
-      conversationTtsService.suspendAudioPlayback();
-      
-      // RESUME MICROPHONE AFTER TTS to re-arm audio lane
-      try {
-        console.log('[ConversationOverlay] 🔥 RESUMING MICROPHONE AFTER TTS PLAYBACK');
-        await conversationMicrophoneService.resumeAfterPlayback();
-        
-        // Small delay to ensure audio context is fully resumed
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Shutdown guard - check again after resume
-        if (isShuttingDown.current) {
-          return;
-        }
-        
-        console.log('[ConversationOverlay] 🔥 RESTARTING RECORDING AFTER TTS');
-        const success = await conversationMicrophoneService.startRecording();
-        if (!success) {
-          console.error('[ConversationOverlay] 🔥 FAILED TO START RECORDING AFTER TTS');
-          setConversationState('connecting');
-        } else {
-          console.log('[ConversationOverlay] 🔥 RECORDING RESTARTED SUCCESSFULLY');
-        }
-      } catch (error) {
-        // Only log error if not shutting down
-        if (!isShuttingDown.current) {
-          console.error('[ConversationOverlay] 🔥 ERROR RESUMING MICROPHONE AFTER TTS:', error);
-          setConversationState('connecting');
-        }
-      }
-    };
-
-    // Subscribe to TTS completion events
-    const unsubscribe = conversationTtsService.subscribe(handleTtsComplete);
-    
-    return () => {
-      unsubscribe();
-    };
-  }, [permissionGranted, chatIdRef.current]);
+  // 🔥 CONVERSATION MODE OPTIMIZATION: REMOVED - Old TTS completion listener causing infinite loop
+  // The minimal Realtime listener now handles all TTS completion logic
 
   // 🔥 CONVERSATION MODE OPTIMIZATION: Set replying state when LLM processing starts
   useEffect(() => {
