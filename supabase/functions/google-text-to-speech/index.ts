@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { encode } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
 const GOOGLE_TTS_API_KEY = Deno.env.get("GOOGLE-TTS") ?? "";
 
@@ -126,7 +127,7 @@ serve(async (req) => {
     const tts_id = `${chat_id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     const response = new Response(JSON.stringify({
-      audioContent: btoa(String.fromCharCode(...wavBytes)),
+      audioContent: encode(wavBytes), // Use safe base64 encoding
       mimeType: 'audio/wav',
       sampleRate: 24000,
       channels: 1,
