@@ -159,8 +159,35 @@ Content Rules:
 
         const latency_ms = Date.now() - startTime;
 
-        // Note: Assistant message will be saved by chat-send function
-        console.log("[llm-handler-openai] Assistant response generated successfully");
+        // Save assistant message to database (fire-and-forget)
+        supabase
+          .from("messages")
+          .insert({
+            chat_id: chat_id,
+            role: "assistant",
+            text: sanitizedAssistantText,
+            created_at: new Date().toISOString(),
+            meta: { 
+              llm_provider: "openai", 
+              model: "gpt-4.1-mini-2025-04-14",
+              latency_ms,
+              input_tokens: inputTokens,
+              output_tokens: outputTokens,
+              total_tokens: tokenCount,
+              mode: mode || null,
+              sessionId: sessionId || null
+            },
+          })
+          .then(({ error: assistantError }) => {
+            if (assistantError) {
+              console.error("[llm-handler-openai] Failed to save assistant message:", assistantError);
+            } else {
+              console.log("[llm-handler-openai] Assistant response saved successfully");
+            }
+          })
+          .catch(error => {
+            console.error("[llm-handler-openai] Database save error:", error);
+          });
           
         // 🔥 CONVERSATION MODE OPTIMIZATION: Trigger TTS directly (fire-and-forget)
         if (mode === 'conversation' && sessionId) {
@@ -189,21 +216,6 @@ Content Rules:
             console.error("[llm-handler-openai] 🔥 CONVERSATION MODE: TTS error:", ttsError);
           });
         }
-
-        // Return assistant response (TTS saves to DB directly)
-        return {
-          assistant_text: sanitizedAssistantText,
-          meta: { 
-            llm_provider: "openai", 
-            model: "gpt-4.1-mini-2025-04-14",
-            latency_ms,
-            input_tokens: inputTokens,
-            output_tokens: outputTokens,
-            total_tokens: tokenCount,
-            mode: mode || null,
-            sessionId: sessionId || null
-          }
-        };
 
       } catch (error) {
         console.error("[llm-handler-openai] Background processing error:", error);

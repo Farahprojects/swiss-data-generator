@@ -152,7 +152,7 @@ class ChatController {
       console.error('[ChatController] sendTextMessage: No chat_id in store.');
       return;
     }
-    
+
     console.log('[ChatController] 🔥 PROCESSING: sendTextMessage - normal chat mode');
     const client_msg_id = uuidv4();
     this.addOptimisticMessages(chat_id, text, client_msg_id);
