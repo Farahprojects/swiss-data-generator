@@ -128,10 +128,9 @@ Content Rules:
               "Authorization": `Bearer ${OPENAI_API_KEY}`
             },
             body: JSON.stringify({
-              model: "gpt-4o-mini",
+              model: "gpt-4.1-mini-2025-04-14",
               messages,
-              temperature: 0.4,
-              max_tokens: 1000
+              max_completion_tokens: 1000
             }),
           }
         );
@@ -170,7 +169,7 @@ Content Rules:
             created_at: new Date().toISOString(),
             meta: { 
               llm_provider: "openai", 
-              model: "gpt-4o-mini",
+              model: "gpt-4.1-mini-2025-04-14",
               latency_ms,
               input_tokens: inputTokens,
               output_tokens: outputTokens,
