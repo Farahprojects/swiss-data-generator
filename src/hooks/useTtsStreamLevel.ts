@@ -6,13 +6,21 @@ export const useTtsStreamLevel = () => {
   const [audioLevel, setAudioLevel] = useState(0);
 
   useEffect(() => {
-    // Subscribe to TTS service notifications for real-time audio level updates
-    const unsubscribe = conversationTtsService.subscribe(() => {
+    let animationFrameId: number;
+
+    const update = () => {
       setAudioLevel(conversationTtsService.getCurrentAudioLevel());
-    });
+      animationFrameId = requestAnimationFrame(update);
+    };
+
+    // 🔥 FIXED: Remove subscription to prevent WebSocket leak
+    // The TTS service no longer sends notifications, so we just poll directly
+    animationFrameId = requestAnimationFrame(update);
 
     return () => {
-      unsubscribe();
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
     };
   }, []);
 
