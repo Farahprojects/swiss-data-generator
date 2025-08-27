@@ -63,26 +63,13 @@ class LlmService {
     return data as Message;
   }
 
-    // Conversation-specific LLM call with fire-and-forget TTS
+  // Conversation-specific message sending (uses chat-send with conversation mode)
   async conversationChat(request: Omit<LlmRequest, 'requestAudio'>): Promise<Message> {
-
-
-    const { data, error } = await supabase.functions.invoke('conversation-llm', {
-      body: {
-        chat_id: request.chat_id,
-        userMessage: request.userMessage,
-      },
+    return this.sendMessage({
+      chat_id: request.chat_id,
+      text: request.userMessage.text,
+      mode: 'conversation'
     });
-
-    if (error) {
-      throw new Error(`Error invoking conversation-llm: ${error.message}`);
-    }
-
-    if (data.error) {
-      throw new Error(`conversation-llm returned an error: ${data.error}`);
-    }
-
-    return data as Message;
   }
 }
 

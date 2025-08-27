@@ -145,12 +145,8 @@ verify_jwt = false
 [functions.verify-chat-access]
 verify_jwt = false
 
-[functions.conversation-llm]
+[functions.llm-handler-openai]
 verify_jwt = false
-
-
-
-
 
 [functions.google-text-to-speech]
 verify_jwt = false
