@@ -44,13 +44,115 @@ export const ConversationOverlay: React.FC = () => {
     if (isConversationOpen && chat_id && !chatIdRef.current) {
       console.log('[ConversationOverlay] 🔥 MODAL OPENING - CACHING CHAT_ID:', chat_id);
       chatIdRef.current = chat_id;
-      // Cleanup ChatController's realtime subscription - no need for overlay realtime
+      // Cleanup ChatController's realtime subscription
       console.log('[ConversationOverlay] 🔥 CLEANING UP CHATCONTROLLER BEFORE SETUP');
       chatController.cleanup();
-      // 🔥 CONVERSATION MODE OPTIMIZATION: No Realtime listener needed - direct LLM → TTS
-      console.log('[ConversationOverlay] 🔥 CONVERSATION MODE: Using direct LLM → TTS flow (no Realtime)');
+      // 🔥 CONVERSATION MODE OPTIMIZATION: Minimal Realtime listener for TTS detection
+      console.log('[ConversationOverlay] 🔥 CONVERSATION MODE: Setting up minimal Realtime for TTS detection');
+      setupMinimalRealtime(chat_id);
     }
   }, [isConversationOpen, chat_id]);
+
+  // 🔥 CONVERSATION MODE OPTIMIZATION: Minimal Realtime setup for TTS detection only
+  const setupMinimalRealtime = (chat_id: string) => {
+    console.log('[ConversationOverlay] 🔥 SETTING UP MINIMAL REALTIME for chat_id:', chat_id);
+    cleanupMinimalRealtime();
+    
+    try {
+      overlayChannelRef.current = supabase
+        .channel(`conversation-tts:${chat_id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `chat_id=eq.${chat_id}`
+          },
+          (payload) => {
+            const newMessage = payload.new;
+            console.log('[ConversationOverlay] 🔥 REALTIME MESSAGE RECEIVED:', newMessage);
+            
+            // 🔥 CONVERSATION MODE: Only process assistant messages with TTS status
+            if (newMessage.role === 'assistant' && newMessage.meta?.mode === 'conversation') {
+              console.log('[ConversationOverlay] 🔥 CONVERSATION MODE: TTS request detected, triggering TTS');
+              
+              // Set conversation state to replying
+              setConversationState('replying');
+              
+              // Resume audio playback line for TTS
+              conversationTtsService.resumeAudioPlayback();
+              
+              // Trigger TTS for the assistant message
+              conversationTtsService.speakAssistant({
+                chat_id: chatIdRef.current!,
+                messageId: newMessage.id,
+                text: newMessage.text,
+                sessionId: sessionIdRef.current,
+                onComplete: async () => {
+                  console.log('[ConversationOverlay] 🔥 TTS COMPLETED (conversation mode)');
+                  
+                  // Shutdown guard - don't restart recording if modal is closing
+                  if (isShuttingDown.current) {
+                    return;
+                  }
+                  
+                  setConversationState('listening');
+                  
+                  // SUSPEND AUDIO PLAYBACK LINE for microphone
+                  console.log('[ConversationOverlay] 🔥 SUSPENDING AUDIO PLAYBACK LINE FOR MICROPHONE');
+                  conversationTtsService.suspendAudioPlayback();
+                  
+                  // RESUME MICROPHONE AFTER TTS to re-arm audio lane
+                  try {
+                    console.log('[ConversationOverlay] 🔥 RESUMING MICROPHONE AFTER TTS PLAYBACK');
+                    await conversationMicrophoneService.resumeAfterPlayback();
+                    
+                    // Small delay to ensure audio context is fully resumed
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    // Shutdown guard - check again after resume
+                    if (isShuttingDown.current) {
+                      return;
+                    }
+                    
+                    console.log('[ConversationOverlay] 🔥 RESTARTING RECORDING AFTER TTS');
+                    const success = await conversationMicrophoneService.startRecording();
+                    if (!success) {
+                      console.error('[ConversationOverlay] 🔥 FAILED TO START RECORDING AFTER TTS');
+                      setConversationState('connecting');
+                    } else {
+                      console.log('[ConversationOverlay] 🔥 RECORDING RESTARTED SUCCESSFULLY');
+                    }
+                  } catch (error) {
+                    // Only log error if not shutting down
+                    if (!isShuttingDown.current) {
+                      console.error('[ConversationOverlay] 🔥 ERROR RESUMING MICROPHONE AFTER TTS:', error);
+                      setConversationState('connecting');
+                    }
+                  }
+                }
+              });
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log('[ConversationOverlay] 🔥 MINIMAL REALTIME SUBSCRIPTION STATUS:', status);
+        });
+      console.log('[ConversationOverlay] 🔥 MINIMAL REALTIME LISTENER SETUP COMPLETE');
+    } catch (error) {
+      console.error('[ConversationOverlay] 🔥 FAILED TO SETUP MINIMAL REALTIME SUBSCRIPTION:', error);
+    }
+  };
+
+  const cleanupMinimalRealtime = () => {
+    if (overlayChannelRef.current) {
+      console.log('[ConversationOverlay] 🔥 CLEANING UP MINIMAL REALTIME LISTENER');
+      supabase.removeChannel(overlayChannelRef.current);
+      overlayChannelRef.current = null;
+      console.log('[ConversationOverlay] 🔥 MINIMAL REALTIME LISTENER CLEANED UP');
+    }
+  };
 
   const transformDatabaseMessage = (dbMessage: any): Message => {
     return {
@@ -71,18 +173,28 @@ export const ConversationOverlay: React.FC = () => {
   useEffect(() => {
     return () => {
       if (isConversationOpen) {
-        isShuttingDown.current = true; // Set shutdown flag
-        conversationTtsService.stopAllAudio();
-        conversationMicrophoneService.forceCleanup();
-        // cleanupOverlayRealtime(); // No longer needed
         try {
+          isShuttingDown.current = true; // Set shutdown flag
+          conversationTtsService.stopAllAudio();
+          conversationMicrophoneService.forceCleanup();
+          cleanupMinimalRealtime(); // Use minimal Realtime cleanup
+          
           const { microphoneArbitrator } = require('@/services/microphone/MicrophoneArbitrator');
           microphoneArbitrator.release('conversation');
+          
+          // Clear local messages
+          setLocalMessages([]);
+          
+          // Clear cached chat_id and session
+          chatIdRef.current = null;
+          sessionIdRef.current = `session_${Date.now()}`;
+          
+          console.log('[ConversationOverlay] 🔥 CONVERSATION MODE: Cleanup complete');
         } catch (error) {
-          // Silent cleanup - this is expected if already released
+          console.error('[ConversationOverlay] Emergency cleanup error:', error);
         }
       }
-    };
+    }
   }, [isConversationOpen]);
 
 
@@ -101,9 +213,9 @@ export const ConversationOverlay: React.FC = () => {
     console.log('[ConversationOverlay] 🔥 FORCE CLEANING UP MICROPHONE SERVICE');
     conversationMicrophoneService.forceCleanup();
     
-    // 3. Cleanup overlay realtime subscription
-    console.log('[ConversationOverlay] 🔥 CLEANING UP OVERLAY REALTIME');
-    // cleanupOverlayRealtime(); // No longer needed
+    // 3. Cleanup minimal realtime subscription
+    console.log('[ConversationOverlay] 🔥 CLEANING UP MINIMAL REALTIME');
+    cleanupMinimalRealtime();
     
     // 4. Release microphone arbitrator to free up browser permissions
     try {
@@ -435,19 +547,19 @@ export const ConversationOverlay: React.FC = () => {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center gap-6 relative">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={state}
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.98 }}
-                transition={{ duration: 0.2, ease: 'easeInOut' }}
-              >
-                <VoiceBubble state={state} audioLevel={audioLevel} />
-              </motion.div>
-            </AnimatePresence>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={state}
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+            >
+              <VoiceBubble state={state} audioLevel={audioLevel} />
+            </motion.div>
+          </AnimatePresence>
             
-            <p className="text-gray-500 font-light">
+          <p className="text-gray-500 font-light">
               {state === 'listening' ? 'Listening…' : 
                state === 'processing' ? 'Thinking…' : 'Speaking…'}
             </p>
@@ -462,7 +574,7 @@ export const ConversationOverlay: React.FC = () => {
             >
               ✕
             </button>
-          </div>
+        </div>
         )}
       </div>
     </div>,

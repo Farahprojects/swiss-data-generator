@@ -187,26 +187,34 @@ Content Rules:
           if (mode === 'conversation' && sessionId) {
             console.log("[llm-handler-openai] 🔥 CONVERSATION MODE: Triggering direct TTS");
             
-            // Fire-and-forget TTS call - don't wait for response
-            fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'apikey': Deno.env.get("SUPABASE_ANON_KEY")!,
-              },
-              body: JSON.stringify({
-                chat_id,
+            // Save TTS request to database for frontend to detect
+            const ttsRequestId = `tts_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const { error: ttsError } = await supabase
+              .from("messages")
+              .insert({
+                chat_id: chat_id,
+                role: "assistant",
                 text: sanitizedAssistantText,
-                voice: 'en-US-Chirp3-HD-Puck', // Default voice for conversation mode
-                sessionId,
-                mode: 'conversation', // Flag for conversation mode
-                messageId: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` // Generate unique message ID
-              })
-            }).then(() => {
-              console.log("[llm-handler-openai] 🔥 CONVERSATION MODE: TTS triggered successfully");
-            }).catch((error) => {
-              console.error("[llm-handler-openai] 🔥 CONVERSATION MODE: TTS trigger failed:", error);
-            });
+                created_at: new Date().toISOString(),
+                meta: { 
+                  llm_provider: "openai", 
+                  model: "gpt-4.1-mini-2025-04-14",
+                  latency_ms,
+                  input_tokens: inputTokens,
+                  output_tokens: outputTokens,
+                  total_tokens: tokenCount,
+                  mode: 'conversation',
+                  sessionId,
+                  tts_request_id: ttsRequestId,
+                  tts_status: 'pending'
+                },
+              });
+
+            if (ttsError) {
+              console.error("[llm-handler-openai] 🔥 CONVERSATION MODE: Failed to save TTS request:", ttsError);
+            } else {
+              console.log("[llm-handler-openai] 🔥 CONVERSATION MODE: TTS request saved, frontend will detect via Realtime");
+            }
           }
         }
 
