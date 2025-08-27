@@ -175,8 +175,12 @@ export const ConversationOverlay: React.FC = () => {
       conversationMicrophoneService.initialize({
         onRecordingComplete: handleSimpleRecordingComplete,
         onSilenceDetected: () => {
-          console.log('[CONVERSATION-TURN] Silence detected, stopping recording and updating UI to thinking.');
+          console.log('[CONVERSATION-TURN] Silence detected, stopping recording and pausing microphone for TTS.');
           setConversationState('thinking'); // Event-driven UI update
+          
+          // Pause microphone (don't kill it) so TTS has clean audio path
+          conversationMicrophoneService.suspendForPlayback();
+          
           if (conversationMicrophoneService.getState().isRecording) {
             conversationMicrophoneService.stopRecording();
           }
@@ -308,6 +312,33 @@ export const ConversationOverlay: React.FC = () => {
           client_msg_id,
           mode: 'conversation',
           sessionId: sessionIdRef.current
+        }).then(async (response) => {
+          // LLM call successful - trigger TTS
+          console.log('[CONVERSATION-TURN] LLM response received, starting TTS');
+          
+          try {
+            await conversationTtsService.speakAssistant({
+              chat_id: chatIdRef.current!,
+              messageId: response.id,
+              text: response.text,
+              sessionId: sessionIdRef.current,
+              onStart: () => {
+                // Audio started - change UI to speaking
+                console.log('[CONVERSATION-TURN] TTS started, changing to speaking');
+                setConversationState('replying');
+              },
+              onComplete: () => {
+                // Audio finished - resume microphone and go back to listening
+                console.log('[CONVERSATION-TURN] TTS completed, resuming microphone');
+                setConversationState('listening');
+                conversationMicrophoneService.resumeAfterPlayback();
+                conversationMicrophoneService.startRecording();
+              }
+            });
+          } catch (ttsError) {
+            console.error('[CONVERSATION-TURN] TTS error:', ttsError);
+            if (!isShuttingDown.current) setConversationState('listening');
+          }
         }).catch(error => {
           console.error('[CONVERSATION-TURN] LLM call error:', error);
           if (!isShuttingDown.current) setConversationState('listening');

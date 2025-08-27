@@ -7,6 +7,7 @@ export interface SpeakAssistantOptions {
   messageId: string;
   text: string;
   sessionId: string | null;
+  onStart?: () => void; // Optional callback when audio starts playing
   onComplete?: () => void; // Optional callback when audio finishes
 }
 
@@ -198,7 +199,7 @@ class ConversationTtsService {
     this.listeners.forEach(l => l());
   }
 
-  async speakAssistant({ chat_id, messageId, text, sessionId, onComplete }: SpeakAssistantOptions): Promise<void> {
+  async speakAssistant({ chat_id, messageId, text, sessionId, onStart, onComplete }: SpeakAssistantOptions): Promise<void> {
     try {
       // Reset completion guard for new TTS
       this.isTtsCompleting = false;
@@ -276,7 +277,11 @@ class ConversationTtsService {
       }, { once: true });
       
       // Start playback and return immediately
-      audio.play().catch(error => {
+      audio.play().then(() => {
+        // Audio started successfully - trigger onStart callback
+        console.log('[ConversationTTS] Audio playback started');
+        onStart?.();
+      }).catch(error => {
         if (this.isTtsCompleting) {
           console.log('[ConversationTTS] TTS completion already in progress, skipping play error');
           return;
