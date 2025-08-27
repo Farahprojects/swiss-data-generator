@@ -97,6 +97,7 @@ export const ConversationOverlay: React.FC = () => {
                     return;
                   }
                   
+                  // 🔥 UI STATE: Set to listening immediately when TTS completes
                   setConversationState('listening');
                   
                   // SUSPEND AUDIO PLAYBACK LINE for microphone
@@ -108,27 +109,25 @@ export const ConversationOverlay: React.FC = () => {
                     console.log('[ConversationOverlay] 🔥 RESUMING MICROPHONE AFTER TTS PLAYBACK');
                     await conversationMicrophoneService.resumeAfterPlayback();
                     
-                    // Small delay to ensure audio context is fully resumed
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    
-                    // Shutdown guard - check again after resume
-                    if (isShuttingDown.current) {
-                      return;
-                    }
+                    // 🔥 AUDIO READY: The onReady callback will set listening state
+                    // No need for artificial delays or manual state setting
                     
                     console.log('[ConversationOverlay] 🔥 RESTARTING RECORDING AFTER TTS');
                     const success = await conversationMicrophoneService.startRecording();
                     if (!success) {
                       console.error('[ConversationOverlay] 🔥 FAILED TO START RECORDING AFTER TTS');
-                      setConversationState('connecting');
+                      // 🔥 ERROR HANDLING: Stay in listening state, don't go to connecting
+                      setConversationState('listening');
                     } else {
                       console.log('[ConversationOverlay] 🔥 RECORDING RESTARTED SUCCESSFULLY');
+                      // 🔥 AUDIO READY: The onReady callback will set listening state
                     }
                   } catch (error) {
                     // Only log error if not shutting down
                     if (!isShuttingDown.current) {
                       console.error('[ConversationOverlay] 🔥 ERROR RESUMING MICROPHONE AFTER TTS:', error);
-                      setConversationState('connecting');
+                      // 🔥 ERROR HANDLING: Stay in listening state, don't go to connecting
+                      setConversationState('listening');
                     }
                   }
                 }
@@ -295,6 +294,11 @@ export const ConversationOverlay: React.FC = () => {
         onError: (error) => {
           console.error('[ConversationOverlay] 🔥 MICROPHONE ERROR:', error);
           setConversationState('connecting');
+        },
+        onReady: () => {
+          // 🔥 AUDIO READY: Set listening state when microphone is actually ready
+          console.log('[ConversationOverlay] 🔥 MICROPHONE READY - SETTING LISTENING STATE');
+          setConversationState('listening');
         },
         silenceTimeoutMs: 2000, // 2 seconds for natural conversation pauses
       });

@@ -11,6 +11,7 @@ export interface ConversationMicrophoneOptions {
   onRecordingComplete?: (audioBlob: Blob) => void;
   onError?: (error: Error) => void;
   onSilenceDetected?: () => void;
+  onReady?: () => void; // 🔥 NEW: Callback when microphone is ready to record
   silenceTimeoutMs?: number;
 }
 
@@ -147,6 +148,13 @@ export class ConversationMicrophoneServiceClass {
       
       this.notifyListeners();
       this.log('🎙️ Recording started successfully');
+      
+      // 🔥 AUDIO READY: Notify when microphone is actually ready to record
+      if (this.options.onReady) {
+        this.log('🎙️ Notifying that microphone is ready to record');
+        this.options.onReady();
+      }
+      
       return true;
 
     } catch (error: any) {
@@ -393,6 +401,12 @@ export class ConversationMicrophoneServiceClass {
       } catch (error) {
         this.error('❌ Failed to resume AudioContext:', error);
       }
+    }
+    
+    // 🔥 AUDIO READY: Notify when microphone is ready after TTS playback
+    if (this.options.onReady) {
+      this.log('🔊 Notifying that microphone is ready after TTS playback');
+      this.options.onReady();
     }
   }
 
