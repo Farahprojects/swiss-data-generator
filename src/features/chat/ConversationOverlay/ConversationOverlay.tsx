@@ -27,9 +27,17 @@ export const ConversationOverlay: React.FC = () => {
   // Simple conversation state
   const [conversationState, setConversationState] = useState<'listening' | 'processing' | 'replying' | 'connecting'>('listening');
   
-  // Load session ID once at start - use for entire conversation
+  // Cache chat_id and session ID once at start - use for entire conversation
+  const chatIdRef = useRef<string | null>(null);
   const sessionIdRef = useRef<string>(`session_${Date.now()}`);
   
+  // Cache chat_id when modal opens
+  useEffect(() => {
+    if (isConversationOpen && chat_id && !chatIdRef.current) {
+      chatIdRef.current = chat_id;
+    }
+  }, [isConversationOpen, chat_id]);
+
   // Cleanup on unmount to ensure all resources are released
   useEffect(() => {
     return () => {
@@ -69,8 +77,8 @@ export const ConversationOverlay: React.FC = () => {
     }
     
     // 4. Re-initialize ChatController for normal chat functionality
-    if (chat_id) {
-      chatController.initializeConversation(chat_id);
+    if (chatIdRef.current) {
+      chatController.initializeConversation(chatIdRef.current);
     }
     
     // 5. Refresh conversation history to show new messages
@@ -87,6 +95,9 @@ export const ConversationOverlay: React.FC = () => {
     setIsStarting(false); // Reset guard on close
     hasStarted.current = false; // Reset one-shot guard
     setConversationState('listening');
+    
+    // 7. Clear cached chat_id
+    chatIdRef.current = null;
   };
 
   const handleStart = () => {
@@ -99,7 +110,7 @@ export const ConversationOverlay: React.FC = () => {
     if (isStarting) return; // Prevent double taps
     setIsStarting(true);
 
-    if (!chat_id) {
+    if (!chatIdRef.current) {
       console.error("[ConversationOverlay] Cannot start conversation without a chat_id");
       closeConversation();
       return;
@@ -171,7 +182,7 @@ export const ConversationOverlay: React.FC = () => {
       setConversationState('processing');
       
       // Use established STT service (same as chatbar mic)
-      const result = await sttService.transcribe(audioBlob, chat_id, {}, 'conversation', sessionIdRef.current);
+      const result = await sttService.transcribe(audioBlob, chatIdRef.current!, {}, 'conversation', sessionIdRef.current);
       const transcript = result.transcript;
       
       // Shutdown guard - check again after STT
@@ -190,7 +201,7 @@ export const ConversationOverlay: React.FC = () => {
       const userMessageId = uuidv4();
       useChatStore.getState().addMessage({
         id: userMessageId,
-        chat_id: chat_id || '',
+        chat_id: chatIdRef.current!,
         role: 'user',
         text: transcript,
         createdAt: new Date().toISOString()
@@ -198,7 +209,7 @@ export const ConversationOverlay: React.FC = () => {
       
       // Send message - this will trigger Realtime assistant response
       await llmService.sendMessage({
-        chat_id: chat_id || '',
+        chat_id: chatIdRef.current!,
         text: transcript,
         client_msg_id
       });
@@ -217,10 +228,10 @@ export const ConversationOverlay: React.FC = () => {
 
   // Watch for new assistant messages via Realtime and trigger TTS
   useEffect(() => {
-    if (!permissionGranted || !chat_id) return;
+    if (!permissionGranted || !chatIdRef.current) return;
 
     const latestMessage = messages
-      .filter(m => m.chat_id === chat_id && m.role === 'assistant')
+      .filter(m => m.chat_id === chatIdRef.current && m.role === 'assistant')
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
 
     if (latestMessage && latestMessage.id !== lastProcessedMessageId.current) {
@@ -228,7 +239,7 @@ export const ConversationOverlay: React.FC = () => {
       
       setConversationState('replying');
       conversationTtsService.speakAssistant({
-        chat_id: chat_id,
+        chat_id: chatIdRef.current,
         messageId: latestMessage.id,
         text: latestMessage.text,
         sessionId: sessionIdRef.current,
@@ -265,7 +276,7 @@ export const ConversationOverlay: React.FC = () => {
         }
       });
     }
-  }, [messages, permissionGranted, chat_id]);
+  }, [messages, permissionGranted]);
 
 
   // Use simple conversation state
