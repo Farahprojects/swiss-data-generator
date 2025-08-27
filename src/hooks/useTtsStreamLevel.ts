@@ -13,14 +13,11 @@ export const useTtsStreamLevel = () => {
       animationFrameId = requestAnimationFrame(update);
     };
 
-    const unsubscribe = conversationTtsService.subscribe(() => {
-      if (!animationFrameId) {
-        animationFrameId = requestAnimationFrame(update);
-      }
-    });
+    // 🔥 FIXED: Remove subscription to prevent WebSocket leak
+    // The TTS service no longer sends notifications, so we just poll directly
+    animationFrameId = requestAnimationFrame(update);
 
     return () => {
-      unsubscribe();
       if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
       }
