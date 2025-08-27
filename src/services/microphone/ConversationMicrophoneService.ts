@@ -348,6 +348,55 @@ export class ConversationMicrophoneServiceClass {
   }
 
   /**
+   * SUSPEND FOR PLAYBACK - Temporarily disable mic for TTS playback
+   */
+  suspendForPlayback(): void {
+    this.log('🔇 Suspending microphone for TTS playback');
+    
+    // Disable the microphone track without releasing the stream
+    if (this.stream) {
+      this.stream.getAudioTracks().forEach(track => {
+        track.enabled = false;
+        this.log('🔇 Disabled audio track for playback');
+      });
+    }
+    
+    // Suspend the AudioContext to free up audio resources
+    if (this.audioContext && this.audioContext.state === 'running') {
+      this.audioContext.suspend().then(() => {
+        this.log('🔇 AudioContext suspended for playback');
+      }).catch((error) => {
+        this.error('❌ Failed to suspend AudioContext:', error);
+      });
+    }
+  }
+
+  /**
+   * RESUME AFTER PLAYBACK - Re-enable mic after TTS playback
+   */
+  async resumeAfterPlayback(): Promise<void> {
+    this.log('🔊 Resuming microphone after TTS playback');
+    
+    // Re-enable the microphone track
+    if (this.stream) {
+      this.stream.getAudioTracks().forEach(track => {
+        track.enabled = true;
+        this.log('🔊 Re-enabled audio track after playback');
+      });
+    }
+    
+    // Resume the AudioContext
+    if (this.audioContext && this.audioContext.state === 'suspended') {
+      try {
+        await this.audioContext.resume();
+        this.log('🔊 AudioContext resumed after playback');
+      } catch (error) {
+        this.error('❌ Failed to resume AudioContext:', error);
+      }
+    }
+  }
+
+  /**
    * FORCE CLEANUP - Emergency cleanup
    */
   forceCleanup(): void {

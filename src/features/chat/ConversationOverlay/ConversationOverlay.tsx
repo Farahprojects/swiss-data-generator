@@ -354,6 +354,11 @@ export const ConversationOverlay: React.FC = () => {
       lastProcessedMessageId.current = latestMessage.id;
       
       setConversationState('replying');
+      
+      // SUSPEND MICROPHONE BEFORE TTS to clear audio lane
+      console.log('[ConversationOverlay] 🔥 SUSPENDING MICROPHONE FOR TTS PLAYBACK');
+      conversationMicrophoneService.suspendForPlayback();
+      
       console.log('[ConversationOverlay] 🔥 TRIGGERING TTS FOR ASSISTANT MESSAGE');
       const ttsStartTime = Date.now();
       conversationTtsService.speakAssistant({
@@ -372,12 +377,15 @@ export const ConversationOverlay: React.FC = () => {
           
           setConversationState('listening');
           
-          // Properly restart recording after TTS completes
+          // RESUME MICROPHONE AFTER TTS to re-arm audio lane
           try {
-            // Small delay to ensure TTS is fully complete
-            await new Promise(resolve => setTimeout(resolve, 200));
+            console.log('[ConversationOverlay] 🔥 RESUMING MICROPHONE AFTER TTS PLAYBACK');
+            await conversationMicrophoneService.resumeAfterPlayback();
             
-            // Shutdown guard - check again after delay
+            // Small delay to ensure audio context is fully resumed
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Shutdown guard - check again after resume
             if (isShuttingDown.current) {
               return;
             }
@@ -393,7 +401,7 @@ export const ConversationOverlay: React.FC = () => {
           } catch (error) {
             // Only log error if not shutting down
             if (!isShuttingDown.current) {
-              console.error('[ConversationOverlay] 🔥 ERROR STARTING RECORDING AFTER TTS:', error);
+              console.error('[ConversationOverlay] 🔥 ERROR RESUMING MICROPHONE AFTER TTS:', error);
               setConversationState('connecting');
             }
           }
