@@ -281,6 +281,11 @@ class ConversationTtsService {
       
       audio.addEventListener('ended', handleCompletion, { once: true });
       audio.addEventListener('error', (error) => {
+        // Skip error logging if this is during silent priming (ignore priming errors)
+        if (audio.src.includes('data:audio/mp3;base64,SUQz')) {
+          console.log('[ConversationTTS] Silent priming error ignored (expected)');
+          return;
+        }
         console.error('[ConversationTTS] Audio playback error:', error);
         handleCompletion(); // 🔄 SELF-HEALING: Unified error/completion path
       }, { once: true });
