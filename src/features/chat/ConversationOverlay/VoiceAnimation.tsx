@@ -25,10 +25,10 @@ export const VoiceAnimation: React.FC<Props> = ({ state }) => {
     <div className="flex flex-col items-center justify-center gap-6 relative h-40 w-40">
       <AnimatePresence mode="wait">
         {state === 'replying' && (
-          <motion.div key="speaking" {...motionProps}>
+          <>
             {console.log('[VoiceAnimation] 🎯 STATE IS REPLYING - About to render SpeakingBars')}
             <SpeakingBars audioLevel={ttsAudioLevel} />
-          </motion.div>
+          </>
         )}
 
         {(state === 'processing' || state === 'thinking') && (
