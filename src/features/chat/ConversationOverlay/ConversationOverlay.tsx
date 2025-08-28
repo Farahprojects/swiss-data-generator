@@ -178,12 +178,25 @@ export const ConversationOverlay: React.FC = () => {
     }
   };
   
-  // Clean up when modal closes
+  // Clean up when modal closes - RESET ALL FLAGS FOR CLEAN STATE
   useEffect(() => {
     if (!isConversationOpen) {
-      console.log('[CONVERSATION-TURN] Modal closed, clearing chat_id cache');
+      console.log('[CONVERSATION-TURN] Modal closed, resetting ALL state flags for clean reopen');
+      
+      // Reset component state flags
       chatIdRef.current = null;
       setIsReady(false);
+      setPermissionGranted(false);
+      setIsStarting(false);
+      hasStarted.current = false;
+      isShuttingDown.current = false;
+      setConversationState('listening');
+      setLocalMessages([]);
+      
+      // Reset session ID for fresh conversation
+      sessionIdRef.current = `session_${Date.now()}`;
+      
+      console.log('[CONVERSATION-TURN] All component state flags reset for clean modal reopen');
     }
   }, [isConversationOpen]);
 
@@ -261,6 +274,9 @@ export const ConversationOverlay: React.FC = () => {
     
     conversationTtsService.stopAllAudio();
     conversationMicrophoneService.forceCleanup();
+    
+    // Reset TTS service state flags completely
+    conversationTtsService.resetAllFlags();
     
     if (chatIdRef.current) {
       chatController.initializeConversation(chatIdRef.current);

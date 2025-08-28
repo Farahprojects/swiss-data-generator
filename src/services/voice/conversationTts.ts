@@ -412,6 +412,22 @@ class ConversationTtsService {
     this.notifyListeners();
   }
 
+  /**
+   * RESET ALL FLAGS: Reset all internal state flags for clean modal reopen
+   */
+  public resetAllFlags(): void {
+    console.log('[ConversationTTS] Resetting all state flags for clean modal reopen');
+    
+    // Reset completion guard
+    this.isTtsCompleting = false;
+    
+    // Reset audio level
+    this.audioLevel = 0;
+    this.notifyListeners();
+    
+    console.log('[ConversationTTS] All TTS state flags reset');
+  }
+
   // ✅ FULL DISPOSAL METHOD: Complete teardown for modal close (optional)
   public resetAllAndDispose(): void {
     this.stopAllAudio();
