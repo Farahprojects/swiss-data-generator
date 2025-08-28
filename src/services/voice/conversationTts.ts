@@ -76,10 +76,6 @@ private currentAbort?: AbortController;
 // Used to ensure we only complete the most recent playback
 private playbackToken = 0;
 
-// Pre-roll speaking animation fields
-private syntheticRafId?: number;
-private syntheticActive = false;
-
 // Call on user gesture to allow playback on iOS/Safari
 public unlockAudio(): void {
 if (typeof window === 'undefined' || typeof document === 'undefined') return;
@@ -136,44 +132,6 @@ return () => this.listeners.delete(listener);
 
 private notifyListeners(): void {
 this.listeners.forEach(fn => fn());
-}
-
-// Start synthetic/pulsing audio level until real playback begins
-public cueSpeakingSoon(): void {
-if (this.syntheticActive) return;
-this.syntheticActive = true;
-
-// Stop any analyser loop so we don't mix sources
-this.cancelRaf();
-
-const start = performance.now();
-const tick = (t: number) => {
-  if (!this.syntheticActive) return;
-
-  const elapsed = (t - start) / 1000;
-  // 1.2 Hz pulse, base 0.35 with small random jitter
-  const base = 0.35 + 0.2 * Math.sin(elapsed * 2 * Math.PI * 1.2);
-  const jitter = (Math.random() - 0.5) * 0.06; // +/- 0.03
-  this.audioLevel = Math.max(0, Math.min(1, base + jitter));
-  this.notifyListeners();
-
-  this.syntheticRafId = requestAnimationFrame(tick);
-};
-
-this.syntheticRafId = requestAnimationFrame(tick);
-}
-
-// Public stopper, safe to call anytime
-public stopSpeakingCue(): void {
-this.stopPreRollCue();
-}
-
-private stopPreRollCue(): void {
-if (this.syntheticRafId) {
-  cancelAnimationFrame(this.syntheticRafId);
-  this.syntheticRafId = undefined;
-}
-this.syntheticActive = false;
 }
 
 // Primary TTS entrypoint
@@ -279,7 +237,6 @@ this.state = 'stopping';
 
 this.cancelRaf();
 this.detachMediaGraph();
-this.stopPreRollCue();
 
 if (this.masterAudioElement) {
   try {
@@ -300,7 +257,6 @@ this.state = 'idle';
 // Full teardown
 public resetAllAndDispose(): void {
 this.stopAllAudio();
-this.stopPreRollCue();
 this.state = 'disposed';
 
 this.replaceAbort(undefined);
@@ -447,7 +403,6 @@ this.mediaElementSource.connect(ctx.destination);
 }
 
 private startAmplitudeAnalysis(): void {
-this.stopPreRollCue(); // cancel synthetic before real analysis
 if (!this.analyser || !this.dataArray) return;
 
 const loop = () => {

@@ -163,9 +163,6 @@ const channel = supabase
         newAudioClip.audio_url &&
         newAudioClip.session_id === sessionIdRef.current
       ) {
-        // Kick the speaking animation immediately on websocket event
-        conversationTtsService.cueSpeakingSoon();
-
         // Deduplicate by row id if available
         const clipId = newAudioClip.id || `${newAudioClip.audio_url}-${newAudioClip.text || ''}`;
         if (playedClipIds.current.has(clipId)) {
@@ -192,6 +189,7 @@ return cleanup;
 };
 
 function enqueueTtsClip(clip: Clip) {
+console.log('[ConversationOverlay] 🎯 TTS URL RECEIVED - Enqueuing clip:', clip.id);
 playbackQueue.current.push(clip);
 maybeStartPlaybackQueue();
 }
@@ -210,6 +208,7 @@ isPlayingQueue.current = true;
 try {
   // Suspend microphone once for the entire queue playback window
   conversationMicrophoneService.suspendForPlayback();
+  console.log('[ConversationOverlay] 🎤 SPEAKING ANIMATION TRIGGERED - Setting state to replying');
   setConversationState('replying');
 
   while (playbackQueue.current.length > 0 && !isShuttingDown.current) {
@@ -234,17 +233,15 @@ try {
   } catch (e) {
     console.error('[ConversationOverlay] Error restarting mic after TTS:', e);
     if (!isShuttingDown.current) setConversationState('connecting');
-  } finally {
-    isPlayingQueue.current = false;
-    // Safety: stop pre-roll if nothing is playing anymore
-    conversationTtsService.stopSpeakingCue();
   }
+  isPlayingQueue.current = false;
 }
 }
 
 async function playTtsAudio(audioUrl: string, _text?: string) {
 if (isShuttingDown.current) return;
 try {
+console.log('[ConversationOverlay] 🔊 STARTING AUDIO PLAYBACK - Fire and forget');
 // conversationTtsService handles analysis and completion callback
 await conversationTtsService.playFromUrl(audioUrl, () => {
 // no-op here; queue loop continues
@@ -274,9 +271,7 @@ try {
 // Stop TTS playback and clear queue
 try {
   conversationTtsService.stopAllAudio();
-} finally {
-  conversationTtsService.stopSpeakingCue(); // ensure animation stops
-}
+} catch {}
 
 // Try to refresh messages list behind the modal
 try {
