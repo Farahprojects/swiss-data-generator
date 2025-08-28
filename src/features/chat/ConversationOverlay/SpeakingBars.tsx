@@ -6,6 +6,7 @@ interface Props {
 }
 
 export const SpeakingBars: React.FC<Props> = ({ audioLevel }) => {
+  console.log('[SpeakingBars] 🎵 WAVEFORM SPEAKING ANIMATION ACTIVE - Audio level:', audioLevel);
   // Simple visual feedback - just respond to audio level
   const bars = Array.from({ length: 4 }, (_, index) => {
     // Simple: middle bars slightly taller, all respond to audio

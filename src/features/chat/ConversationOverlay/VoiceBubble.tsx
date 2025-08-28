@@ -14,6 +14,7 @@ export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
 
   // Show the appropriate component based on the current state
   if (state === 'replying') {
+    console.log('[VoiceBubble] 🎵 YES SPEAKING ANIMATION STARTING - Rendering SpeakingBars component');
     return <SpeakingBars audioLevel={ttsAudioLevel} />;
   }
   
