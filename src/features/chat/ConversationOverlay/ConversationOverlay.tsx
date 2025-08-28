@@ -163,6 +163,9 @@ const channel = supabase
         newAudioClip.audio_url &&
         newAudioClip.session_id === sessionIdRef.current
       ) {
+        // Kick the speaking animation immediately on websocket event
+        conversationTtsService.cueSpeakingSoon();
+
         // Deduplicate by row id if available
         const clipId = newAudioClip.id || `${newAudioClip.audio_url}-${newAudioClip.text || ''}`;
         if (playedClipIds.current.has(clipId)) {
@@ -207,6 +210,7 @@ isPlayingQueue.current = true;
 try {
   // Suspend microphone once for the entire queue playback window
   conversationMicrophoneService.suspendForPlayback();
+  setConversationState('replying');
 
   while (playbackQueue.current.length > 0 && !isShuttingDown.current) {
     const next = playbackQueue.current.shift()!;
@@ -230,20 +234,17 @@ try {
   } catch (e) {
     console.error('[ConversationOverlay] Error restarting mic after TTS:', e);
     if (!isShuttingDown.current) setConversationState('connecting');
+  } finally {
+    isPlayingQueue.current = false;
+    // Safety: stop pre-roll if nothing is playing anymore
+    conversationTtsService.stopSpeakingCue();
   }
-  isPlayingQueue.current = false;
 }
 }
 
 async function playTtsAudio(audioUrl: string, _text?: string) {
 if (isShuttingDown.current) return;
 try {
-// Ensure we're in speaking state for animation
-setConversationState('replying');
-  
-// Resume audio playback for TTS
-conversationTtsService.resumeAudioPlayback();
-  
 // conversationTtsService handles analysis and completion callback
 await conversationTtsService.playFromUrl(audioUrl, () => {
 // no-op here; queue loop continues
@@ -273,7 +274,9 @@ try {
 // Stop TTS playback and clear queue
 try {
   conversationTtsService.stopAllAudio();
-} catch {}
+} finally {
+  conversationTtsService.stopSpeakingCue(); // ensure animation stops
+}
 
 // Try to refresh messages list behind the modal
 try {
