@@ -102,7 +102,17 @@ export const ConversationOverlay: React.FC = () => {
         console.log('[CONVERSATION-TURN] TTS audio completed');
         // Resume microphone after TTS
         conversationMicrophoneService.resumeAfterPlayback();
-        setConversationState('listening');
+        
+        // Start recording again for next user input
+        conversationMicrophoneService.startRecording().then(success => {
+          if (success) {
+            console.log('[CONVERSATION-TURN] Microphone restarted successfully after TTS');
+            setConversationState('listening');
+          } else {
+            console.error('[CONVERSATION-TURN] Failed to restart microphone after TTS');
+            setConversationState('connecting');
+          }
+        });
       });
       
     } catch (error) {
