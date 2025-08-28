@@ -261,17 +261,9 @@ export const ConversationOverlay: React.FC = () => {
       const color = colors[requestId.charCodeAt(0) % colors.length];
       
       try {
-        // 🔍 Step 1: Log browser permission state BEFORE requesting
-        if (navigator.permissions?.query) {
-          const permissionStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName });
-          console.log(`${color} [${requestId}] 🔍 Mic permission state BEFORE request:`, permissionStatus.state);
-          permissionStatus.onchange = () => {
-            console.log(`${color} [${requestId}] 🔍 Mic permission state CHANGED to:`, permissionStatus.state);
-          };
-        }
-
-        console.log(`${color} [${requestId}] 🎤 STARTING getUserMedia request...`);
-        stream = await navigator.mediaDevices.getUserMedia({
+        // ⏱️ Safari fix: Kick off getUserMedia IMMEDIATELY (still in gesture)
+        console.log(`${color} [${requestId}] 🎤 STARTING getUserMedia request (gesture protected)...`);
+        const gumPromise = navigator.mediaDevices.getUserMedia({
           audio: {
             channelCount: 1,
             echoCancellation: true,
@@ -280,6 +272,21 @@ export const ConversationOverlay: React.FC = () => {
             sampleRate: 48000,
           }
         });
+
+        // 🔍 Permission logging can happen in parallel – doesn't need gesture
+        if (navigator.permissions?.query) {
+          navigator.permissions.query({ name: 'microphone' as PermissionName })
+            .then(permissionStatus => {
+              console.log(`${color} [${requestId}] 🔍 Mic permission state BEFORE request:`, permissionStatus.state);
+              permissionStatus.onchange = () => {
+                console.log(`${color} [${requestId}] 🔍 Mic permission state CHANGED to:`, permissionStatus.state);
+              };
+            })
+            .catch(() => {/* ignore */});
+        }
+
+        // Now await the promise – Safari already accepted because it was created synchronously
+        stream = await gumPromise;
         console.log(`${color} [${requestId}] 🎤 getUserMedia SUCCESS - stream obtained`);
 
         // 🔍 Step 2: Log detailed stream and track state on success
