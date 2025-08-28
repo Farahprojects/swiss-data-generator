@@ -13,6 +13,8 @@ export const VoiceAnimation: React.FC<Props> = ({ state }) => {
   const audioLevel = useConversationAudioLevel();
   const ttsAudioLevel = useTtsStreamLevel();
 
+  console.log('[VoiceAnimation] 🎯 State received:', state, 'TTS Audio Level:', ttsAudioLevel);
+
   const motionProps = {
     initial: { opacity: 0, scale: 0.95 },
     animate: { opacity: 1, scale: 1 },
@@ -25,6 +27,7 @@ export const VoiceAnimation: React.FC<Props> = ({ state }) => {
       <AnimatePresence mode="wait">
         {state === 'replying' && (
           <motion.div key="speaking" {...motionProps}>
+            {console.log('[VoiceAnimation] 🎵 RENDERING SpeakingBars component')}
             <SpeakingBars audioLevel={ttsAudioLevel} />
           </motion.div>
         )}

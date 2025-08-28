@@ -6,6 +6,7 @@ interface Props {
 }
 
 export const SpeakingBars: React.FC<Props> = ({ audioLevel }) => {
+  console.log('[SpeakingBars] 🎵 COMPONENT MOUNTED - Audio level:', audioLevel);
   const bars = Array.from({ length: 4 }).map((_, index) => {
     const isMiddleBar = index === 1 || index === 2;
     const baseHeight = isMiddleBar ? 0.8 : 0.6;
