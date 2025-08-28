@@ -257,6 +257,18 @@ class ConversationTtsService {
       
       // Reuse master audio element
       const audio = this.masterAudioElement;
+      
+      // Enhanced diagnostic logging before setting audio source
+      console.log('[ConversationTTS] Audio element state before setting src:', {
+        src: audio.src.substring(0, 50) + (audio.src.length > 50 ? '...' : ''),
+        readyState: audio.readyState,
+        networkState: audio.networkState,
+        paused: audio.paused,
+        ended: audio.ended,
+        duration: audio.duration,
+        currentTime: audio.currentTime
+      });
+      
       audio.src = audioUrl;
       audio.muted = false; // Unmute for actual playback
 
@@ -280,13 +292,26 @@ class ConversationTtsService {
       };
       
       audio.addEventListener('ended', handleCompletion, { once: true });
+      
+      // Enhanced error event listener with detailed diagnostics
       audio.addEventListener('error', (error) => {
+        // Get detailed error information
+        const err = audio.error;
+        console.log('[ConversationTTS] Audio element error details:', {
+          errorCode: err?.code,
+          errorMessage: err?.message || 'No message available',
+          src: audio.src.substring(0, 50) + (audio.src.length > 50 ? '...' : ''),
+          readyState: audio.readyState,
+          networkState: audio.networkState,
+          paused: audio.paused,
+          ended: audio.ended
+        });
+        
         // Skip error logging if this is during silent priming (ignore priming errors)
         if (audio.src.includes('data:audio/mp3;base64,SUQz')) {
           console.log('[ConversationTTS] Silent priming error ignored (expected)');
           return;
         }
-
         // Enhanced error diagnostics for non-priming audio sources
         const getMediaErrorName = (code: number): string => {
           switch (code) {
