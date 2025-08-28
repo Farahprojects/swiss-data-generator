@@ -51,6 +51,8 @@ export const ConversationOverlay: React.FC = () => {
   const ttsCleanupRef = useRef<(() => void) | null>(null);
   
   const setupTtsListener = (chat_id: string) => {
+    console.log('[CONVERSATION-TURN] Setting up TTS realtime listener for chat:', chat_id);
+    
     const channel = supabase
       .channel(`conversation-tts:${chat_id}`)
       .on(
@@ -76,9 +78,11 @@ export const ConversationOverlay: React.FC = () => {
       )
       .subscribe();
       
-    // Store cleanup function for modal close
+    // 🚨 CRITICAL: Store cleanup function for modal close
     const cleanup = () => {
+      console.log('[CONVERSATION-TURN] Sending close message to TTS realtime listener');
       supabase.removeChannel(channel);
+      console.log('[CONVERSATION-TURN] TTS realtime listener closed');
     };
     ttsCleanupRef.current = cleanup;
     
@@ -183,6 +187,16 @@ export const ConversationOverlay: React.FC = () => {
     if (!isConversationOpen) {
       console.log('[CONVERSATION-TURN] Modal closed, resetting ALL state flags for clean reopen');
       
+      // 🚨 CRITICAL: Clean up TTS listener to prevent memory leaks
+      if (ttsCleanupRef.current) {
+        console.log('[CONVERSATION-TURN] Cleaning up TTS realtime listener on modal close');
+        ttsCleanupRef.current();
+        ttsCleanupRef.current = null;
+      }
+      
+      // 🚨 CRITICAL: Force cleanup ChatController realtime subscriptions
+      chatController.cleanup();
+      
       // Reset component state flags
       chatIdRef.current = null;
       setIsReady(false);
@@ -196,7 +210,7 @@ export const ConversationOverlay: React.FC = () => {
       // Reset session ID for fresh conversation
       sessionIdRef.current = `session_${Date.now()}`;
       
-      console.log('[CONVERSATION-TURN] All component state flags reset for clean modal reopen');
+      console.log('[CONVERSATION-TURN] All component state flags and realtime listeners reset for clean modal reopen');
     }
   }, [isConversationOpen]);
 
@@ -263,24 +277,32 @@ export const ConversationOverlay: React.FC = () => {
 
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = async () => {
+    console.log('[CONVERSATION-TURN] Starting modal close cleanup sequence');
     isShuttingDown.current = true;
     
-    // SAFARI FIX: Clean up TTS listener to prevent duplicate channels
+    // 🚨 STEP 1: Clean up TTS realtime listener to prevent memory leaks
     if (ttsCleanupRef.current) {
-      console.log('[CONVERSATION-TURN] Cleaning up TTS listener');
+      console.log('[CONVERSATION-TURN] Cleaning up TTS realtime listener');
       ttsCleanupRef.current();
       ttsCleanupRef.current = null;
     }
     
+    // 🚨 STEP 2: Stop all audio and microphone services
     conversationTtsService.stopAllAudio();
     conversationMicrophoneService.forceCleanup();
     
-    // Reset TTS service state flags completely
+    // 🚨 STEP 3: Reset TTS service state flags completely
     conversationTtsService.resetAllFlags();
     
+    // 🚨 STEP 4: Force cleanup ChatController realtime subscriptions with close messages
+    chatController.cleanup();
+    
+    // 🚨 STEP 5: Reinitialize ChatController for next modal open (if chat exists)
     if (chatIdRef.current) {
       chatController.initializeConversation(chatIdRef.current);
     }
+    
+    console.log('[CONVERSATION-TURN] Modal close cleanup sequence complete');
     
     try {
       const { retryLoadMessages } = useChatStore.getState();
