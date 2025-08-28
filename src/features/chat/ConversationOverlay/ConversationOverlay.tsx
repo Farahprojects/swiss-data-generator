@@ -14,7 +14,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { Message } from '@/core/types';
 import { SpeakingBars } from './SpeakingBars';
 import TorusListening from './TorusListening';
-import { useTtsStreamLevel } from '@/hooks/useTtsStreamLevel';
 
 const DEBUG = typeof window !== 'undefined' && (window as any).CONVO_DEBUG === true;
 function logDebug(...args: any[]) {
@@ -36,7 +35,7 @@ export const ConversationOverlay: React.FC = () => {
   const { isConversationOpen, closeConversation } = useConversationUIStore();
 const chat_id = useChatStore((state) => state.chat_id);
 const audioLevel = useConversationAudioLevel();
-const ttsAudioLevel = useTtsStreamLevel();
+const [ttsAudioLevel, setTtsAudioLevel] = useState(0);
 
 const [permissionGranted, setPermissionGranted] = useState(false);
 const [isStarting, setIsStarting] = useState(false);
@@ -61,6 +60,29 @@ const playedClipIds = useRef<Set<string>>(new Set());
 type Clip = { id?: string; url: string; text?: string | null };
 const playbackQueue = useRef<Clip[]>([]);
 const isPlayingQueue = useRef(false);
+
+// Poll TTS audio level only when replying
+useEffect(() => {
+  if (conversationState !== 'replying') {
+    setTtsAudioLevel(0);
+    return;
+  }
+
+  let animationFrameId: number;
+  const update = () => {
+    const level = conversationTtsService.getCurrentAudioLevel();
+    console.log('[ConversationOverlay] TTS audio level:', level);
+    setTtsAudioLevel(level);
+    animationFrameId = requestAnimationFrame(update);
+  };
+
+  animationFrameId = requestAnimationFrame(update);
+  return () => {
+    if (animationFrameId) {
+      cancelAnimationFrame(animationFrameId);
+    }
+  };
+}, [conversationState]);
 
 // Initialize session when overlay opens with a valid chat_id
 useEffect(() => {
