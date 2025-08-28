@@ -286,7 +286,62 @@ class ConversationTtsService {
           console.log('[ConversationTTS] Silent priming error ignored (expected)');
           return;
         }
-        console.error('[ConversationTTS] Audio playback error:', error);
+
+        // Enhanced error diagnostics for non-priming audio sources
+        const getMediaErrorName = (code: number): string => {
+          switch (code) {
+            case 1: return 'MEDIA_ERR_ABORTED';
+            case 2: return 'MEDIA_ERR_NETWORK';
+            case 3: return 'MEDIA_ERR_DECODE';
+            case 4: return 'MEDIA_ERR_SRC_NOT_SUPPORTED';
+            default: return `UNKNOWN_ERROR_${code}`;
+          }
+        };
+
+        const getReadyStateName = (state: number): string => {
+          switch (state) {
+            case 0: return 'HAVE_NOTHING';
+            case 1: return 'HAVE_METADATA';
+            case 2: return 'HAVE_CURRENT_DATA';
+            case 3: return 'HAVE_FUTURE_DATA';
+            case 4: return 'HAVE_ENOUGH_DATA';
+            default: return `UNKNOWN_STATE_${state}`;
+          }
+        };
+
+        const getNetworkStateName = (state: number): string => {
+          switch (state) {
+            case 0: return 'NETWORK_EMPTY';
+            case 1: return 'NETWORK_IDLE';
+            case 2: return 'NETWORK_LOADING';
+            case 3: return 'NETWORK_NO_SOURCE';
+            default: return `UNKNOWN_NETWORK_${state}`;
+          }
+        };
+
+        console.error('[ConversationTTS] Audio playback error with diagnostics:', {
+          event: error,
+          mediaError: audio.error ? {
+            code: audio.error.code,
+            codeName: getMediaErrorName(audio.error.code),
+            message: audio.error.message || 'No message available'
+          } : 'No MediaError object',
+          audioStates: {
+            src: audio.src.substring(0, 50) + (audio.src.length > 50 ? '...' : ''),
+            readyState: `${audio.readyState} (${getReadyStateName(audio.readyState)})`,
+            networkState: `${audio.networkState} (${getNetworkStateName(audio.networkState)})`,
+            paused: audio.paused,
+            ended: audio.ended,
+            duration: audio.duration,
+            currentTime: audio.currentTime
+          },
+          canPlay: audio.canPlayType ? {
+            mp3: audio.canPlayType('audio/mp3'),
+            wav: audio.canPlayType('audio/wav'),
+            ogg: audio.canPlayType('audio/ogg')
+          } : 'canPlayType not available'
+        });
+
         handleCompletion(); // 🔄 SELF-HEALING: Unified error/completion path
       }, { once: true });
       
