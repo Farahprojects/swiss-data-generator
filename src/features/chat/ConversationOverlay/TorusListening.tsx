@@ -123,11 +123,7 @@ export default function TorusListening({
       <motion.div
         style={{ width: '100%', height: '100%' }}
         animate={{ rotate: rotation }}
-        transition={{ 
-          duration: 12, 
-          repeat: isThinking ? Infinity : 0, 
-          ease: 'linear' 
-        }}
+        transition={{ duration: 12, repeat: Infinity, ease: 'linear' }}
       >
         <svg
           width={size}

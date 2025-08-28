@@ -4,8 +4,8 @@ import { useChatStore } from '@/core/store';
 
 export interface SpeakAssistantOptions {
 chat_id: string;
-  messageId: string;
-  text: string;
+messageId: string;
+text: string;
 sessionId: string | null;
 onStart?: () => void;
 onComplete?: () => void;
@@ -156,9 +156,9 @@ const { chat_id, text, sessionId, onStart, onComplete } = opts;
   const response = await this.fetchWithTimeout(
     `${SUPABASE_URL}/functions/v1/google-text-to-speech`,
     {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
         'apikey': SUPABASE_PUBLISHABLE_KEY,
       },
       body: JSON.stringify({
@@ -172,7 +172,7 @@ const { chat_id, text, sessionId, onStart, onComplete } = opts;
     TTS_TIMEOUT_MS
   );
 
-      if (!response.ok) {
+  if (!response.ok) {
     const errorText = await response.text().catch(() => '');
     throw new TtsFetchError(`TTS failed: ${response.status} - ${errorText}`, response.status);
   }
@@ -380,7 +380,6 @@ await this.audioContext.resume().catch(() => {});
 private async prepareAudioGraph(el: HTMLAudioElement): Promise<void> {
 await this.ensureAudioContext();
 const ctx = this.audioContext!;
-console.log('[ConversationTTS] Preparing audio graph');
 // Create analyser once
 if (!this.analyser) {
 const analyser = ctx.createAnalyser();
@@ -388,7 +387,6 @@ analyser.fftSize = 2048;
 analyser.smoothingTimeConstant = 0.85;
 this.analyser = analyser;
 this.dataArray = new Uint8Array(analyser.frequencyBinCount);
-console.log('[ConversationTTS] Created analyser with fftSize:', analyser.fftSize);
 }
 
 // Create the media element source once for this element
@@ -402,7 +400,6 @@ try {
 } catch {}
 this.mediaElementSource.connect(this.analyser!);
 this.mediaElementSource.connect(ctx.destination);
-console.log('[ConversationTTS] Audio graph connected - analyser ready for amplitude analysis');
 }
 
 private startAmplitudeAnalysis(): void {
@@ -411,7 +408,7 @@ if (!this.analyser || !this.dataArray) return;
 const loop = () => {
   if (!this.analyser || !this.dataArray) return;
 
-  this.analyser.getByteTimeDomainData(new Uint8Array(this.dataArray));
+  this.analyser.getByteTimeDomainData(this.dataArray);
   let sum = 0;
   for (let i = 0; i < this.dataArray.length; i++) {
     const v = (this.dataArray[i] - 128) / 128;
@@ -501,7 +498,7 @@ t = t.replace(/[#*_>]+/g, ' ');
 // Collapse whitespace
 t = t.replace(/\s+/g, ' ').trim();
 return t;
-  }
+}
 }
 
 export const conversationTtsService = new ConversationTtsService();

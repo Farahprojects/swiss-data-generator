@@ -1,506 +1,545 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
+import { VoiceBubble } from './VoiceBubble';
 import { useChatStore } from '@/core/store';
 import { useConversationAudioLevel } from '@/hooks/useConversationAudioLevel';
 import { conversationTtsService } from '@/services/voice/conversationTts';
 import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
+import { chatController } from '@/features/chat/ChatController';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Mic } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { Message } from '@/core/types';
-import { VoiceAnimation } from './VoiceAnimation';
-
-const DEBUG = typeof window !== 'undefined' && (window as any).CONVO_DEBUG === true;
-function logDebug(...args: any[]) {
-if (DEBUG) console.log('[ConversationOverlay]', ...args);
-}
-
-type ConversationState = 'listening' | 'processing' | 'replying' | 'connecting' | 'thinking';
-
-type AudioClipPayload = {
-id?: string;
-chat_id: string;
-role: 'assistant' | 'user';
-audio_url?: string | null;
-session_id?: string | null;
-text?: string | null;
-};
 
 export const ConversationOverlay: React.FC = () => {
   const { isConversationOpen, closeConversation } = useConversationUIStore();
-const chat_id = useChatStore((state) => state.chat_id);
-const audioLevel = useConversationAudioLevel();
-const [ttsAudioLevel, setTtsAudioLevel] = useState(0);
+  const chat_id = useChatStore((state) => state.chat_id);
+  const messages = useChatStore((state) => state.messages);
+  const audioLevel = useConversationAudioLevel(); // Get real-time audio level
+  const [permissionGranted, setPermissionGranted] = useState(false);
+  const [isStarting, setIsStarting] = useState(false); // Guard against double taps
+  const hasStarted = useRef(false); // One-shot guard to prevent double invocation
+  const isShuttingDown = useRef(false); // Shutdown guard to prevent processing after modal close
 
-const [permissionGranted, setPermissionGranted] = useState(false);
-const [isStarting, setIsStarting] = useState(false);
-const hasStarted = useRef(false);
-const isShuttingDown = useRef(false);
-
-const [conversationState, setConversationState] = useState<ConversationState>('listening');
-const [isReady, setIsReady] = useState(false);
-
-// Session & chat caching
-const chatIdRef = useRef<string | null>(null);
-const sessionIdRef = useRef<string>('');
-
-// Local optimistic messages (optional for UI; kept for parity)
-const [localMessages, setLocalMessages] = useState<Message[]>([]);
-
-// TTS realtime: cleanup and dedupe tracking
-const ttsCleanupRef = useRef<(() => void) | null>(null);
-const playedClipIds = useRef<Set<string>>(new Set());
-
-// TTS playback queue (ordered, single consumer)
-type Clip = { id?: string; url: string; text?: string | null };
-const playbackQueue = useRef<Clip[]>([]);
-const isPlayingQueue = useRef(false);
-
-// Poll TTS audio level only when replying
-useEffect(() => {
-  if (conversationState !== 'replying') {
-    setTtsAudioLevel(0);
-    return;
-  }
-
-  let animationFrameId: number;
-  const update = () => {
-    const level = conversationTtsService.getCurrentAudioLevel();
-    console.log('[ConversationOverlay] TTS audio level:', level);
-    setTtsAudioLevel(level);
-    animationFrameId = requestAnimationFrame(update);
-  };
-
-  animationFrameId = requestAnimationFrame(update);
-  return () => {
-    if (animationFrameId) {
-      cancelAnimationFrame(animationFrameId);
+  // Simple conversation state
+  const [conversationState, setConversationState] = useState<'listening' | 'processing' | 'replying' | 'connecting' | 'thinking'>('listening');
+  const [isReady, setIsReady] = useState(false); // Guard to ensure chat_id is cached before conversation flow
+  
+  // Cache chat_id and session ID once at start - use for entire conversation
+  const chatIdRef = useRef<string | null>(null);
+  const sessionIdRef = useRef<string>(`session_${Date.now()}`);
+  
+  const [localMessages, setLocalMessages] = useState<Message[]>([]);
+  
+  // Cache chat_id when modal opens - stays for entire conversation
+  useEffect(() => {
+    if (isConversationOpen && chat_id && !chatIdRef.current) {
+      // console.log('[CONVERSATION-TURN] Caching chat_id for conversation:', chat_id);
+      chatIdRef.current = chat_id;
+      setIsReady(true); // Mark as ready for conversation flow
+      
+      // Set up minimal realtime listener for TTS audio URLs
+      setupTtsListener(chat_id);
     }
-  };
-}, [conversationState]);
-
-// Initialize session when overlay opens with a valid chat_id
-useEffect(() => {
-if (!isConversationOpen) return;
-
-if (chat_id && !chatIdRef.current) {
-  chatIdRef.current = chat_id;
-  sessionIdRef.current = `session_${Date.now()}`;
-  setIsReady(true);
-
-  // Attach Realtime listener
-  ttsCleanupRef.current = setupTtsListener(chat_id);
-  logDebug('Session initialized', { chat_id, sessionId: sessionIdRef.current });
-}
-
-return () => {
-  // On unmount or route change while open
-  if (ttsCleanupRef.current) {
-    ttsCleanupRef.current();
-    ttsCleanupRef.current = null;
-  }
-};
-}, [isConversationOpen, chat_id]);
-
-// When overlay closes, hard reset local state
-useEffect(() => {
-if (isConversationOpen) return;
-
-// Reset component state flags
-chatIdRef.current = null;
-setIsReady(false);
-setPermissionGranted(false);
-setIsStarting(false);
-hasStarted.current = false;
-isShuttingDown.current = false;
-setConversationState('listening');
-setLocalMessages([]);
-
-// Reset session ID for next open
-sessionIdRef.current = '';
-playedClipIds.current.clear();
-playbackQueue.current = [];
-isPlayingQueue.current = false;
-
-// Ensure any listener is removed
-if (ttsCleanupRef.current) {
-  ttsCleanupRef.current();
-  ttsCleanupRef.current = null;
-}
-}, [isConversationOpen]);
-
-// Ensure clean disposal on component unmount while open
-useEffect(() => {
-return () => {
-try {
-isShuttingDown.current = true;
-conversationTtsService.stopAllAudio();
-conversationMicrophoneService.forceCleanup();
-} catch (error) {
-console.error('[ConversationOverlay] Emergency cleanup error:', error);
-} finally {
-// State resets
-setLocalMessages([]);
-chatIdRef.current = null;
-sessionIdRef.current = '';
-setIsReady(false);
-playedClipIds.current.clear();
-playbackQueue.current = [];
-isPlayingQueue.current = false;
-
-    if (ttsCleanupRef.current) {
-      ttsCleanupRef.current();
-      ttsCleanupRef.current = null;
-    }
-  }
-};
-}, []);
-
-const setupTtsListener = (cid: string) => {
-// Defensive: remove previous channel if any
-if (ttsCleanupRef.current) {
-ttsCleanupRef.current();
-ttsCleanupRef.current = null;
-}
-
-const channel = supabase
-  .channel(`conversation-tts:${cid}`)
-  .on(
-    'postgres_changes',
-    {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'chat_audio_clips',
-      filter: `chat_id=eq.${cid}`,
-    },
-    (payload: { new: AudioClipPayload }) => {
-      const newAudioClip = payload?.new;
-      if (!newAudioClip) return;
-
-      // Filter to this session and assistant role with valid URL
-      if (
-        newAudioClip.role === 'assistant' &&
-        newAudioClip.audio_url &&
-        newAudioClip.session_id === sessionIdRef.current
-      ) {
-        // Deduplicate by row id if available
-        const clipId = newAudioClip.id || `${newAudioClip.audio_url}-${newAudioClip.text || ''}`;
-        if (playedClipIds.current.has(clipId)) {
-          logDebug('Duplicate clip ignored', clipId);
-          return;
+  }, [isConversationOpen, chat_id]);
+  
+  // Minimal realtime listener for TTS audio URLs
+  const ttsCleanupRef = useRef<(() => void) | null>(null);
+  
+  const setupTtsListener = (chat_id: string) => {
+    const channel = supabase
+      .channel(`conversation-tts:${chat_id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_audio_clips',
+          filter: `chat_id=eq.${chat_id}`
+        },
+        (payload) => {
+          const newAudioClip = payload.new;
+          
+          // Check if this is an assistant audio clip for conversation mode
+          if (newAudioClip.role === 'assistant' && 
+              newAudioClip.audio_url && 
+              newAudioClip.session_id === sessionIdRef.current) {
+            
+            // Play the audio immediately
+            playTtsAudio(newAudioClip.audio_url, newAudioClip.text);
+          }
         }
-        playedClipIds.current.add(clipId);
+      )
+      .subscribe();
+      
+    // Store cleanup function for modal close
+    const cleanup = () => {
+      supabase.removeChannel(channel);
+    };
+    ttsCleanupRef.current = cleanup;
+    
+    return cleanup;
+  };
+  
 
-        enqueueTtsClip({ id: clipId, url: newAudioClip.audio_url, text: newAudioClip.text });
+  // Play TTS audio through conversationTtsService for proper animation
+  const playTtsAudio = async (audioUrl: string, text: string) => {
+    try {
+
+      
+      // Pause microphone during TTS playback
+      conversationMicrophoneService.suspendForPlayback();
+      
+      // Change UI to speaking
+      setConversationState('replying');
+      
+      // Use conversationTtsService to play audio with proper animation
+      await conversationTtsService.playFromUrl(audioUrl, () => {
+
+        // Resume microphone after TTS
+        conversationMicrophoneService.resumeAfterPlayback();
+        
+        // Start recording again for next user input
+        conversationMicrophoneService.startRecording().then(success => {
+          if (success) {
+
+            setConversationState('listening');
+          } else {
+            console.error('[CONVERSATION-TURN] Failed to restart microphone after TTS');
+            setConversationState('connecting');
+          }
+        });
+      });
+      
+    } catch (error) {
+      console.error('[CONVERSATION-TURN] Audio playback error:', error);
+      setConversationState('connecting');
+    }
+  };
+  
+  // Clean up when modal closes - RESET ALL FLAGS FOR CLEAN STATE
+  useEffect(() => {
+    if (!isConversationOpen) {
+
+      
+      // Reset component state flags
+      chatIdRef.current = null;
+      setIsReady(false);
+      setPermissionGranted(false);
+      setIsStarting(false);
+      hasStarted.current = false;
+      isShuttingDown.current = false;
+      setConversationState('listening');
+      setLocalMessages([]);
+      
+      // Reset session ID for fresh conversation
+      sessionIdRef.current = `session_${Date.now()}`;
+      
+
+    }
+  }, [isConversationOpen]);
+
+  
+  // REMOVED: All realtime listeners and TTS flow
+
+  const transformDatabaseMessage = (dbMessage: any): Message => {
+    return {
+      id: dbMessage.id,
+      chat_id: dbMessage.chat_id,
+      role: dbMessage.role,
+      text: dbMessage.text,
+      audioUrl: dbMessage.audio_url,
+      timings: dbMessage.timings,
+      createdAt: dbMessage.created_at,
+      meta: dbMessage.meta,
+      client_msg_id: dbMessage.client_msg_id,
+      status: dbMessage.status
+    };
+  };
+
+  // Cleanup on unmount to ensure all resources are released
+  useEffect(() => {
+    return () => {
+      if (isConversationOpen) {
+        try {
+          isShuttingDown.current = true; // Set shutdown flag
+          conversationTtsService.stopAllAudio();
+          conversationMicrophoneService.forceCleanup();
+          
+          // Clear local messages
+          setLocalMessages([]);
+          
+          // Clear cached chat_id and session
+          chatIdRef.current = null;
+          sessionIdRef.current = `session_${Date.now()}`;
+          setIsReady(false);
+          
+        } catch (error) {
+          console.error('[CONVERSATION-TURN] Emergency cleanup error:', error);
+        }
       }
     }
-  )
-  .subscribe((status) => {
-    logDebug('Realtime channel status:', status);
-  });
+  }, [isConversationOpen]);
 
-const cleanup = () => {
-  try {
-    supabase.removeChannel(channel);
-  } catch {}
-};
 
-return cleanup;
-};
 
-function enqueueTtsClip(clip: Clip) {
-console.log('[ConversationOverlay] 🎯 TTS URL RECEIVED - Enqueuing clip:', clip.id);
-playbackQueue.current.push(clip);
-maybeStartPlaybackQueue();
-}
+  // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
+  const handleModalClose = async () => {
 
-async function maybeStartPlaybackQueue() {
-if (isPlayingQueue.current) return;
-if (playbackQueue.current.length === 0) return;
-if (isShuttingDown.current) {
-// Flush queue if shutting down
-playbackQueue.current = [];
-return;
-}
+    isShuttingDown.current = true;
+    
+    // 🔍 Step 4: Forceful stream teardown on modal close
 
-isPlayingQueue.current = true;
+    try {
+      const stream = conversationMicrophoneService.getStream();
+      if (stream) {
+        stream.getTracks().forEach(track => {
 
-try {
-  // Suspend microphone once for the entire queue playback window
-  conversationMicrophoneService.suspendForPlayback();
-  console.log('[ConversationOverlay] 🎤 SPEAKING ANIMATION TRIGGERED - Setting state to replying');
-  setConversationState('replying');
+          track.stop();
+        });
 
-  while (playbackQueue.current.length > 0 && !isShuttingDown.current) {
-    const next = playbackQueue.current.shift()!;
-    await playTtsAudio(next.url, next.text || undefined);
-  }
-} catch (err) {
-  console.error('[ConversationOverlay] Queue playback error:', err);
-  // Fall through to resume mic
-} finally {
-  // Resume microphone after the queue drains or on error
-  try {
-    if (!isShuttingDown.current) {
-      conversationMicrophoneService.resumeAfterPlayback();
-      const ok = await conversationMicrophoneService.startRecording();
-      if (ok) {
+      }
+      // This will ensure all internal recorder/analyser states are cleared
+      conversationMicrophoneService.forceCleanup(); 
+    } catch (error) {
+      console.error("🔴 [CLEANUP] 🎤 Error during microphone cleanup:", error);
+    }
+
+    // Stop all audio playback
+    conversationTtsService.stopAllAudio();
+    
+    try {
+      const { retryLoadMessages } = useChatStore.getState();
+      await retryLoadMessages();
+    } catch (error) {}
+    
+    closeConversation();
+    setPermissionGranted(false);
+    setIsStarting(false);
+    hasStarted.current = false;
+    setConversationState('listening');
+    chatIdRef.current = null;
+    setIsReady(false);
+    setLocalMessages([]);
+  };
+
+  // Start conversation recording
+  const handleStart = async () => {
+    if (isStarting || hasStarted.current) return;
+    
+    // Guard: Ensure chat_id is cached before starting conversation
+    if (!isReady || !chatIdRef.current) {
+      console.error('[CONVERSATION-TURN] Cannot start conversation - chat_id not ready');
+      setIsStarting(false);
+      return;
+    }
+    
+    // console.log('[CONVERSATION-TURN] Starting conversation with chat_id:', chatIdRef.current);
+    setIsStarting(true);
+    hasStarted.current = true;
+    
+    try {
+      // console.log('[CONVERSATION-TURN] Starting...');
+      
+      // CRITICAL: Unlock audio SYNCHRONOUSLY during user gesture (Safari fix)
+      // No await - must be synchronous to preserve gesture context
+      conversationTtsService.unlockAudio();
+
+      conversationTtsService.suspendAudioPlayback();
+      
+      
+      // Request microphone permission with enhanced error handling
+      let stream: MediaStream;
+      
+      // Generate unique ID for this getUserMedia call
+      const requestId = Math.random().toString(36).substring(2, 8);
+      const colors = ['🔴', '🟢', '🔵', '🟡', '🟣', '🟠'];
+      const color = colors[requestId.charCodeAt(0) % colors.length];
+      
+      try {
+        // ⏱️ Safari fix: Kick off getUserMedia IMMEDIATELY (still in gesture)
+
+        const gumPromise = navigator.mediaDevices.getUserMedia({
+          audio: {
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            sampleRate: 48000,
+          }
+        });
+
+        // 🔍 Permission logging can happen in parallel – doesn't need gesture
+        if (navigator.permissions?.query) {
+          navigator.permissions.query({ name: 'microphone' as PermissionName })
+            .then(permissionStatus => {
+
+              permissionStatus.onchange = () => {
+                console.log(`${color} [${requestId}] 🔍 Mic permission state CHANGED to:`, permissionStatus.state);
+              };
+            })
+            .catch(() => {/* ignore */});
+        }
+
+        // Now await the promise – Safari already accepted because it was created synchronously
+        stream = await gumPromise;
+
+
+
+
+      } catch (err) {
+        // Enhanced error logging with browser error details
+        console.error(`${color} [${requestId}] 🚨 getUserMedia FAILED:`, {
+          name: err.name,
+          message: err.message,
+          error: err
+        });
+        
+        // Handle specific error types gracefully
+        if (err.name === 'NotAllowedError') {
+          console.error(`${color} [${requestId}] 🚨 Microphone access denied by user`);
+        } else if (err.name === 'NotReadableError') {
+          console.error(`${color} [${requestId}] 🚨 Microphone is in use by another application`);
+        } else if (err.name === 'AbortError') {
+          console.error(`${color} [${requestId}] 🚨 Microphone request was aborted (race condition?)`);
+        } else if (err.name === 'SecurityError') {
+          console.error(`${color} [${requestId}] 🚨 Microphone access blocked by security policy`);
+        } else {
+          console.error(`${color} [${requestId}] 🚨 Unexpected microphone error:`, err.name, err.message);
+        }
+        
+        setConversationState('connecting');
+        return;
+      }
+      
+      setPermissionGranted(true);
+      conversationMicrophoneService.cacheStream(stream);
+      
+      conversationMicrophoneService.initialize({
+        onRecordingComplete: handleSimpleRecordingComplete,
+        onSilenceDetected: () => {
+          console.log('[CONVERSATION-TURN] Silence detected, stopping recording and pausing microphone for TTS.');
+          setConversationState('thinking'); // Event-driven UI update
+          
+          // Pause microphone (don't kill it) so TTS has clean audio path
+          conversationMicrophoneService.suspendForPlayback();
+          
+          if (conversationMicrophoneService.getState().isRecording) {
+            conversationMicrophoneService.stopRecording();
+          }
+        },
+        onError: (error) => {
+          console.error('[CONVERSATION-TURN] Microphone error:', error);
+          setConversationState('connecting');
+        },
+        silenceTimeoutMs: 2000,
+      });
+      
+      const success = await conversationMicrophoneService.startRecording();
+      if (success) {
+        
         setConversationState('listening');
       } else {
+        console.error('[CONVERSATION-TURN] Failed to start recording.');
         setConversationState('connecting');
       }
-    }
-  } catch (e) {
-    console.error('[ConversationOverlay] Error restarting mic after TTS:', e);
-    if (!isShuttingDown.current) setConversationState('connecting');
-  }
-  isPlayingQueue.current = false;
-}
-}
-
-async function playTtsAudio(audioUrl: string, _text?: string) {
-if (isShuttingDown.current) return;
-try {
-console.log('[ConversationOverlay] 🔊 STARTING AUDIO PLAYBACK - Fire and forget');
-// conversationTtsService handles analysis and completion callback
-await conversationTtsService.playFromUrl(audioUrl, () => {
-// no-op here; queue loop continues
-});
-} catch (error) {
-console.error('[ConversationOverlay] Audio playback error:', error);
-// Let queue continue to next item
-}
-}
-
-const handleModalClose = useCallback(async () => {
-isShuttingDown.current = true;
-
-// Stop mic nicely
-try {
-  const stream = conversationMicrophoneService.getStream();
-  if (stream) {
-    stream.getTracks().forEach((t) => {
-      try { t.stop(); } catch {}
-    });
-  }
-  conversationMicrophoneService.forceCleanup();
-} catch (error) {
-  console.error('[ConversationOverlay] Microphone cleanup error:', error);
-}
-
-// Stop TTS playback and clear queue
-try {
-  conversationTtsService.stopAllAudio();
-} catch {}
-
-// Try to refresh messages list behind the modal
-try {
-  const { retryLoadMessages } = useChatStore.getState();
-  await retryLoadMessages();
-} catch {}
-
-// Reset local state
-playbackQueue.current = [];
-playedClipIds.current.clear();
-
-closeConversation();
-setPermissionGranted(false);
-setIsStarting(false);
-hasStarted.current = false;
-setConversationState('listening');
-chatIdRef.current = null;
-setIsReady(false);
-setLocalMessages([]);
-}, [closeConversation]);
-
-const handleStart = useCallback(async () => {
-if (isStarting || hasStarted.current) return;
-
-if (!isReady || !chatIdRef.current) {
-  console.error('[ConversationOverlay] Cannot start - chat_id not ready');
-  return;
-}
-
-setIsStarting(true);
-hasStarted.current = true;
-
-try {
-  // Unlock audio synchronously in gesture
-  conversationTtsService.unlockAudio();
-  conversationTtsService.suspendAudioPlayback();
-
-  // Begin getUserMedia promptly to retain gesture context on Safari
-  let stream: MediaStream;
-  try {
-    const gumPromise = navigator.mediaDevices.getUserMedia({
-      audio: {
-        channelCount: 1,
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-        sampleRate: 48000,
-      },
-    });
-
-    // Optional: observe permission changes without blocking
-    if (navigator.permissions?.query) {
-      navigator.permissions
-        .query({ name: 'microphone' as PermissionName })
-        .then((ps) => {
-          ps.onchange = () => logDebug('Mic permission changed:', ps.state);
-        })
-        .catch(() => {});
-    }
-
-    stream = await gumPromise;
-  } catch (err: any) {
-    console.error('[ConversationOverlay] getUserMedia failed:', err?.name, err?.message);
-    setConversationState('connecting');
-    return;
-  }
-
-  setPermissionGranted(true);
-  conversationMicrophoneService.cacheStream(stream);
-
-  conversationMicrophoneService.initialize({
-    onRecordingComplete: handleSimpleRecordingComplete,
-    onSilenceDetected: () => {
-      logDebug('Silence detected; stopping recording and pausing mic for TTS');
-      setConversationState('thinking');
-      conversationMicrophoneService.suspendForPlayback();
-      if (conversationMicrophoneService.getState().isRecording) {
-        conversationMicrophoneService.stopRecording();
-      }
-    },
-    onError: (error) => {
-      console.error('[ConversationOverlay] Microphone error:', error);
+      
+    } catch (error) {
+      console.error('[CONVERSATION-TURN] Startup error:', error);
       setConversationState('connecting');
-    },
-    silenceTimeoutMs: 2000,
-  });
-
-  const success = await conversationMicrophoneService.startRecording();
-  setConversationState(success ? 'listening' : 'connecting');
-} catch (error) {
-  console.error('[ConversationOverlay] Startup error:', error);
-  setConversationState('connecting');
-} finally {
-  setIsStarting(false);
-}
-}, [isStarting, isReady]);
-
-const handleSimpleRecordingComplete = useCallback(async (audioBlob: Blob) => {
-if (isShuttingDown.current) return;
-
-if (!audioBlob || audioBlob.size < 1024) {
-  logDebug('Audio blob too small, returning to listening:', audioBlob?.size || 0);
-  setConversationState('listening');
-  return;
-}
-
-try {
-  setConversationState('processing');
-
-  try {
-    const chatId = chatIdRef.current!;
-    const sessionId = sessionIdRef.current || `session_${Date.now()}`;
-    if (!sessionIdRef.current) sessionIdRef.current = sessionId;
-
-    const result = await sttService.transcribe(audioBlob, chatId, {}, 'conversation', sessionId);
-
-    if (isShuttingDown.current) return;
-
-    const transcript = result.transcript;
-    if (!transcript?.trim()) {
-      logDebug('Empty transcript, back to listening');
-      setConversationState('listening');
-      return;
+    } finally {
+      setIsStarting(false);
     }
+  };
 
-    const client_msg_id = uuidv4();
-    const optimisticUserMessage: Message = {
-      id: client_msg_id,
-      chat_id: chatId,
-      role: 'user',
-      text: transcript,
-      createdAt: new Date().toISOString(),
-      client_msg_id,
-    };
-    setLocalMessages((prev) => [...prev, optimisticUserMessage]);
-
-    if (!chatIdRef.current) {
-      console.error('[ConversationOverlay] Cannot send message - chat_id missing');
-      setConversationState('listening');
-      return;
-    }
-
-    // Fire-and-forget; TTS will arrive via realtime listener
-    llmService
-      .sendMessage({
-        chat_id: chatIdRef.current,
-        text: transcript,
-        client_msg_id,
-        mode: 'conversation',
-        sessionId: sessionIdRef.current,
-      })
-      .catch((error) => {
-        console.error('[ConversationOverlay] LLM error:', error);
-        if (!isShuttingDown.current) setConversationState('listening');
+  // Simple conversation flow - nothing can mess with this
+  const startSimpleConversation = async () => {
+    try {
+      // 1. Get microphone permission and start recording
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 48000,
+        } 
       });
-  } catch (sttError) {
-    console.error('[ConversationOverlay] STT error:', sttError);
-    if (!isShuttingDown.current) setConversationState('listening');
-  }
-} catch (error) {
-  console.error('[ConversationOverlay] Processing error:', error);
-  if (!isShuttingDown.current) setConversationState('listening');
-}
-}, []);
+      
+      // 2. Cache stream for reuse
+      conversationMicrophoneService.cacheStream(stream);
+      
+      // 3. Set up simple callback for when recording completes
+      conversationMicrophoneService.initialize({
+        onRecordingComplete: handleSimpleRecordingComplete,
+        onError: (error) => {
+          console.error('[ConversationOverlay] Recording error:', error);
+          setConversationState('connecting');
+        },
+        silenceTimeoutMs: 2000 // 2 seconds - same as mic icon
+      });
+      
+      // 4. Start recording with VAD
+      const success = await conversationMicrophoneService.startRecording();
+      if (!success) {
+        throw new Error('Failed to start recording');
+      }
+      
+      setConversationState('listening');
+      
+    } catch (error) {
+      console.error('[ConversationOverlay] Failed to start conversation:', error);
+      setPermissionGranted(false);
+      setIsStarting(false);
+      hasStarted.current = false;
+    }
+  };
 
-const state = conversationState;
+  // Simple STT processing - using established services
+  const handleSimpleRecordingComplete = async (audioBlob: Blob) => {
+    // Shutdown guard - don't process if modal is closing
+    if (isShuttingDown.current) {
+      return;
+    }
 
-// SSR guard
-const canPortal = typeof document !== 'undefined' && !!document.body;
-if (!isConversationOpen || !canPortal) return null;
+    // Validate audio blob before processing
+    if (!audioBlob || audioBlob.size < 1024) { // Less than 1KB
+      console.log('[CONVERSATION-TURN] Audio blob too small, returning to listening:', audioBlob?.size || 0);
+      setConversationState('listening');
+      return;
+    }
+    
+    try {
+      setConversationState('processing');
+
+
+      // Wrap STT promise with comprehensive error handling
+      try {
+        const result = await sttService.transcribe(audioBlob, chatIdRef.current!, {}, 'conversation', sessionIdRef.current);
+        
+        // Shutdown guard - check again after STT
+        if (isShuttingDown.current) {
+          return;
+        }
+        
+        const transcript = result.transcript;
+        
+        if (!transcript?.trim()) {
+          console.log('[CONVERSATION-TURN] Empty transcript, returning to listening.');
+          setConversationState('listening');
+          return;
+        }
+        
+        const client_msg_id = uuidv4();
+        const optimisticUserMessage: Message = {
+          id: client_msg_id,
+          chat_id: chatIdRef.current!,
+          role: 'user',
+          text: transcript,
+          createdAt: new Date().toISOString(),
+          client_msg_id,
+        };
+        setLocalMessages(prev => [...prev, optimisticUserMessage]);
+        
+        // Guard: Ensure chat_id is available before LLM call
+        if (!chatIdRef.current) {
+          console.error('[CONVERSATION-TURN] Cannot send message - chat_id not available');
+          setConversationState('listening');
+          return;
+        }
+        
+        // Fire-and-forget LLM call with error handling
+        llmService.sendMessage({
+          chat_id: chatIdRef.current,
+          text: transcript,
+          client_msg_id,
+          mode: 'conversation',
+          sessionId: sessionIdRef.current
+        }).catch(error => {
+          console.error('[CONVERSATION-TURN] LLM call error:', error);
+          if (!isShuttingDown.current) setConversationState('listening');
+        });
+        
+      } catch (sttError) {
+        console.error('[CONVERSATION-TURN] STT error:', sttError);
+        if (!isShuttingDown.current) setConversationState('listening');
+      }
+      
+    } catch (error) {
+      console.error('[CONVERSATION-TURN] Processing error:', error);
+      if (!isShuttingDown.current) setConversationState('listening');
+    }
+  };
+
+
+  // TEMPORARILY DISABLED: Confirm only Supabase listener triggers TTS
+  // useEffect(() => {
+  //   if (conversationState === 'processing') {
+  //     // After a short delay, set to replying to show TTS is coming
+  //     const timer = setTimeout(() => {
+  //       if (!isShuttingDown.current) {
+  //         setConversationState('replying');
+  //         conversationTtsService.resumeAudioPlayback();
+  //       }
+  //     }, 1000);
+  //     
+  //     return () => clearTimeout(timer);
+  //   }
+  // }, [conversationState]);
+
+  // Use simple conversation state
+  const state = conversationState;
+
+  if (!isConversationOpen) return null;
 
   return createPortal(
     <div className="fixed inset-0 z-50 bg-white pt-safe pb-safe">
-<div className="h-full w-full flex items-center justify-center px-6">
-{!permissionGranted ? (
-<div
-         className="text-center text-gray-800 flex flex-col items-center gap-4 cursor-pointer"
-         onClick={handleStart}
-       >
-<div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center transition-colors hover:bg-gray-200">
-<Mic className="w-10 h-10 text-gray-600" />
-</div>
-<h2 className="text-2xl font-light">Tap to Start Conversation</h2>
-</div>
-) : (
-<div className="flex flex-col items-center justify-center gap-6 relative">
-<VoiceAnimation state={state} />
+      <div className="h-full w-full flex items-center justify-center px-6">
+        {!permissionGranted ? (
+          <div 
+            className="text-center text-gray-800 flex flex-col items-center gap-4 cursor-pointer"
+            onClick={handleStart}
+          >
+            <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center transition-colors hover:bg-gray-200">
+              <Mic className="w-10 h-10 text-gray-600" />
+            </div>
+            <h2 className="text-2xl font-light">Tap to Start Conversation</h2>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-6 relative">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={state}
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+            >
+              <VoiceBubble state={state} audioLevel={audioLevel} />
+            </motion.div>
+          </AnimatePresence>
+            
+          <p className="text-gray-500 font-light">
+              {state === 'listening' ? 'Listening…' : 
+               state === 'processing' || state === 'thinking' ? 'Thinking…' : 'Speaking…'}
+            </p>
+            
 
-        <p className="text-gray-500 font-light">
-          {state === 'listening'
-            ? 'Listening…'
-            : state === 'processing' || state === 'thinking'
-            ? 'Thinking…'
-            : 'Speaking…'}
-        </p>
-
-        <button
-          onClick={handleModalClose}
-          aria-label="Close conversation"
-          className="w-10 h-10 bg-black rounded-full flex items-center justify-center text-white hover:bg-gray-800 transition-colors"
-        >
-          ✕
-        </button>
+            
+            {/* Close button - positioned under the status text */}
+            <button
+              onClick={handleModalClose}
+              aria-label="Close conversation"
+              className="w-10 h-10 bg-black rounded-full flex items-center justify-center text-white hover:bg-gray-800 transition-colors"
+            >
+              ✕
+            </button>
         </div>
-    )}
+        )}
       </div>
     </div>,
     document.body
