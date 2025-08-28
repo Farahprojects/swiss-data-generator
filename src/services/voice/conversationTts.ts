@@ -408,7 +408,7 @@ if (!this.analyser || !this.dataArray) return;
 const loop = () => {
   if (!this.analyser || !this.dataArray) return;
 
-  this.analyser.getByteTimeDomainData(this.dataArray);
+  this.analyser.getByteTimeDomainData(new Uint8Array(this.dataArray));
   let sum = 0;
   for (let i = 0; i < this.dataArray.length; i++) {
     const v = (this.dataArray[i] - 128) / 128;

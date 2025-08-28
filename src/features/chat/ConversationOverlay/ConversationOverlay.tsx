@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
-import { VoiceBubble } from './VoiceBubble';
 import { useChatStore } from '@/core/store';
 import { useConversationAudioLevel } from '@/hooks/useConversationAudioLevel';
 import { conversationTtsService } from '@/services/voice/conversationTts';
