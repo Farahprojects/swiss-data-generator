@@ -34,7 +34,7 @@ class ConversationTtsService {
    * SAFARI FIX: Always re-validate and re-prime audio on every user gesture call.
    */
   public unlockAudio(): void {
-    console.log('[TTS-LOG] Audio unlock called, audioContext.state:', this.audioContext?.state || 'none');
+
 
     try {
       // 1. Initialize and resume AudioContext
@@ -50,15 +50,15 @@ class ConversationTtsService {
 
       // Resume audio context if suspended - ALWAYS check, don't skip
       if (this.audioContext.state === 'suspended') {
-        console.log('[TTS-LOG] Resuming suspended AudioContext');
+
         this.audioContext.resume();
       }
-      console.log('[TTS-LOG] AudioContext state after resume:', this.audioContext.state);
+  
 
       // 2. Create and prime the master audio element with silent audio (Safari fix)
       // SAFARI FIX: Always ensure element exists and re-prime on every gesture call
       if (!this.masterAudioElement) {
-        console.log('[TTS-LOG] Creating new master audio element');
+  
         this.masterAudioElement = new Audio();
         this.masterAudioElement.crossOrigin = 'anonymous';
       }
@@ -69,11 +69,11 @@ class ConversationTtsService {
       
       // Play and immediately pause to re-prime the element during user gesture
       try {
-        console.log('[TTS-LOG] Re-priming audio element with silent audio');
+
         this.masterAudioElement.play();
         this.masterAudioElement.pause();
         this.masterAudioElement.currentTime = 0;
-        console.log('[TTS-LOG] Audio element re-primed successfully');
+
       } catch (error) {
         // Safari doesn't support silent audio priming - this is expected
         if (error.name === 'NotSupportedError') {
@@ -150,7 +150,7 @@ class ConversationTtsService {
    * Keeps the audio line alive but disabled, similar to microphone suspension
    */
   public suspendAudioPlayback(): void {
-    console.log('[ConversationTTS] 🔇 Suspending audio playback line for microphone');
+
     
     // Stop current playback if any
     if (this.masterAudioElement) {
@@ -177,7 +177,7 @@ class ConversationTtsService {
     this.audioLevel = 0;
     this.notifyListeners();
     
-    console.log('[ConversationTTS] 🔇 Audio playback line suspended (kept alive)');
+
   }
 
   /**

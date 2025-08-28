@@ -248,7 +248,7 @@ export const ConversationOverlay: React.FC = () => {
       // CRITICAL: Unlock audio SYNCHRONOUSLY during user gesture (Safari fix)
       // No await - must be synchronous to preserve gesture context
       conversationTtsService.unlockAudio();
-      console.log('[CONVERSATION-TURN] Audio unlock completed, AudioContext state:', conversationTtsService.getMasterAudioElement()?.constructor.name);
+
       conversationTtsService.suspendAudioPlayback();
       
       
@@ -262,7 +262,7 @@ export const ConversationOverlay: React.FC = () => {
       
       try {
         // ⏱️ Safari fix: Kick off getUserMedia IMMEDIATELY (still in gesture)
-        console.log(`${color} [${requestId}] 🎤 STARTING getUserMedia request (gesture protected)...`);
+
         const gumPromise = navigator.mediaDevices.getUserMedia({
           audio: {
             channelCount: 1,
@@ -277,7 +277,7 @@ export const ConversationOverlay: React.FC = () => {
         if (navigator.permissions?.query) {
           navigator.permissions.query({ name: 'microphone' as PermissionName })
             .then(permissionStatus => {
-              console.log(`${color} [${requestId}] 🔍 Mic permission state BEFORE request:`, permissionStatus.state);
+
               permissionStatus.onchange = () => {
                 console.log(`${color} [${requestId}] 🔍 Mic permission state CHANGED to:`, permissionStatus.state);
               };
@@ -287,21 +287,9 @@ export const ConversationOverlay: React.FC = () => {
 
         // Now await the promise – Safari already accepted because it was created synchronously
         stream = await gumPromise;
-        console.log(`${color} [${requestId}] 🎤 getUserMedia SUCCESS - stream obtained`);
 
-        // 🔍 Step 2: Log detailed stream and track state on success
-        console.log(`${color} [${requestId}] 🎤 Mic stream obtained successfully.`, {
-          streamId: stream.id,
-          isActive: stream.active,
-          tracks: stream.getTracks().map(t => ({
-            id: t.id,
-            kind: t.kind,
-            label: t.label,
-            enabled: t.enabled,
-            muted: t.muted,
-            readyState: t.readyState,
-          })),
-        });
+
+
 
       } catch (err) {
         // Enhanced error logging with browser error details
