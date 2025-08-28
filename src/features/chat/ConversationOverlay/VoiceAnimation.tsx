@@ -10,6 +10,7 @@ interface Props {
 }
 
 export const VoiceAnimation: React.FC<Props> = ({ state }) => {
+  console.log('[VoiceAnimation] 🔍 Current state:', state);
   const audioLevel = useConversationAudioLevel();
   const ttsAudioLevel = useTtsStreamLevel();
 
@@ -25,6 +26,7 @@ export const VoiceAnimation: React.FC<Props> = ({ state }) => {
       <AnimatePresence mode="wait">
         {state === 'replying' && (
           <motion.div key="speaking" {...motionProps}>
+            {console.log('[VoiceAnimation] 🎯 STATE IS REPLYING - About to render SpeakingBars')}
             <SpeakingBars audioLevel={ttsAudioLevel} />
           </motion.div>
         )}

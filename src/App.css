@@ -41,7 +41,12 @@
   color: #888;
 }
 
-
+/* Animation kill-switch for Conversation Mode */
+.no-anim,
+.no-anim * {
+  animation: none !important;
+  transition: none !important;
+}
 
 /* Safe area utilities for iOS notch/URL chrome */
 .pt-safe {
