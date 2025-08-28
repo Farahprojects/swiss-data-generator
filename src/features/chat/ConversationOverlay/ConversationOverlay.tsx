@@ -246,7 +246,8 @@ export const ConversationOverlay: React.FC = () => {
       console.log('[CONVERSATION-TURN] Starting...');
       
       // CRITICAL: Unlock audio SYNCHRONOUSLY during user gesture (Safari fix)
-      await conversationTtsService.unlockAudio();
+      // No await - must be synchronous to preserve gesture context
+      conversationTtsService.unlockAudio();
       console.log('[CONVERSATION-TURN] Audio unlock completed, AudioContext state:', conversationTtsService.getMasterAudioElement()?.constructor.name);
       conversationTtsService.suspendAudioPlayback();
       

@@ -33,7 +33,7 @@ class ConversationTtsService {
    * user interaction event handler (e.g., onClick).
    * SAFARI FIX: Always re-validate and re-prime audio on every user gesture call.
    */
-  public async unlockAudio(): Promise<void> {
+  public unlockAudio(): void {
     console.log('[TTS-LOG] Audio unlock called, audioContext.state:', this.audioContext?.state || 'none');
 
     try {
@@ -51,7 +51,7 @@ class ConversationTtsService {
       // Resume audio context if suspended - ALWAYS check, don't skip
       if (this.audioContext.state === 'suspended') {
         console.log('[TTS-LOG] Resuming suspended AudioContext');
-        await this.audioContext.resume();
+        this.audioContext.resume();
       }
       console.log('[TTS-LOG] AudioContext state after resume:', this.audioContext.state);
 
@@ -70,26 +70,31 @@ class ConversationTtsService {
       // Play and immediately pause to re-prime the element during user gesture
       try {
         console.log('[TTS-LOG] Re-priming audio element with silent audio');
-        await this.masterAudioElement.play();
+        this.masterAudioElement.play();
         this.masterAudioElement.pause();
         this.masterAudioElement.currentTime = 0;
         console.log('[TTS-LOG] Audio element re-primed successfully');
       } catch (error) {
-        // Enhanced error logging for audio priming
-        console.log('[TTS-LOG] Silent audio priming error details:', {
-          name: error.name,
-          message: error.message,
-          error: error
-        });
-        
-        // Log audio element state during error
-        console.log('[TTS-LOG] Audio element state during priming error:', {
-          src: this.masterAudioElement.src.substring(0, 50) + (this.masterAudioElement.src.length > 50 ? '...' : ''),
-          readyState: this.masterAudioElement.readyState,
-          networkState: this.masterAudioElement.networkState,
-          paused: this.masterAudioElement.paused,
-          ended: this.masterAudioElement.ended
-        });
+        // Safari doesn't support silent audio priming - this is expected
+        if (error.name === 'NotSupportedError') {
+          console.log('[TTS-LOG] Safari silent audio priming not supported (expected)');
+        } else {
+          // Enhanced error logging for other audio priming errors
+          console.log('[TTS-LOG] Silent audio priming error details:', {
+            name: error.name,
+            message: error.message,
+            error: error
+          });
+          
+          // Log audio element state during error
+          console.log('[TTS-LOG] Audio element state during priming error:', {
+            src: this.masterAudioElement.src.substring(0, 50) + (this.masterAudioElement.src.length > 50 ? '...' : ''),
+            readyState: this.masterAudioElement.readyState,
+            networkState: this.masterAudioElement.networkState,
+            paused: this.masterAudioElement.paused,
+            ended: this.masterAudioElement.ended
+          });
+        }
       }
       
       // Set the flag synchronously. From this point on, audio is considered unlocked.
