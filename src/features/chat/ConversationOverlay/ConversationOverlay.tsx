@@ -38,7 +38,7 @@ export const ConversationOverlay: React.FC = () => {
   // Cache chat_id when modal opens - stays for entire conversation
   useEffect(() => {
     if (isConversationOpen && chat_id && !chatIdRef.current) {
-      console.log('[CONVERSATION-TURN] Caching chat_id for conversation:', chat_id);
+      // console.log('[CONVERSATION-TURN] Caching chat_id for conversation:', chat_id);
       chatIdRef.current = chat_id;
       setIsReady(true); // Mark as ready for conversation flow
       
@@ -238,12 +238,12 @@ export const ConversationOverlay: React.FC = () => {
       return;
     }
     
-    console.log('[CONVERSATION-TURN] Starting conversation with chat_id:', chatIdRef.current);
+    // console.log('[CONVERSATION-TURN] Starting conversation with chat_id:', chatIdRef.current);
     setIsStarting(true);
     hasStarted.current = true;
     
     try {
-      console.log('[CONVERSATION-TURN] Starting...');
+      // console.log('[CONVERSATION-TURN] Starting...');
       
       // CRITICAL: Unlock audio SYNCHRONOUSLY during user gesture (Safari fix)
       // No await - must be synchronous to preserve gesture context
@@ -346,7 +346,7 @@ export const ConversationOverlay: React.FC = () => {
       
       const success = await conversationMicrophoneService.startRecording();
       if (success) {
-        console.log('[CONVERSATION-TURN] Now listening for user...');
+                  // console.log('[CONVERSATION-TURN] Now listening for user...');
         setConversationState('listening');
       } else {
         console.error('[CONVERSATION-TURN] Failed to start recording.');
