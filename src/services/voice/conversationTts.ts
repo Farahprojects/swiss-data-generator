@@ -1,647 +1,504 @@
 // src/services/voice/conversationTts.ts
-import { supabase, SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '@/integrations/supabase/client';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '@/integrations/supabase/client';
 import { useChatStore } from '@/core/store';
 
 export interface SpeakAssistantOptions {
-  chat_id: string;
-  messageId: string;
-  text: string;
-  sessionId: string | null;
-  onStart?: () => void; // Optional callback when audio starts playing
-  onComplete?: () => void; // Optional callback when audio finishes
+chat_id: string;
+messageId: string;
+text: string;
+sessionId: string | null;
+onStart?: () => void;
+onComplete?: () => void;
 }
 
-class ConversationTtsService {
-  private audioLevel = 0;
-  private listeners = new Set<() => void>();
-  private isTtsCompleting = false; // NEW: Guard against multiple TTS completions
+type TtsState = 'idle' | 'preparing' | 'playing' | 'stopping' | 'disposed';
 
-  // ✅ REAL AUDIO ANALYSIS: Fields for amplitude-driven animation
-  private audioContext?: AudioContext;
-  private analyser?: AnalyserNode;
-  private dataArray?: Uint8Array;
-  private rafId?: number;
-  private currentNodes?: { source: MediaElementAudioSourceNode; gain: GainNode | null };
-  private isAudioUnlocked = false;
-  private masterAudioElement: HTMLAudioElement | null = null;
-  private cachedMediaElementSource?: MediaElementAudioSourceNode; // Cache for reuse
+class AudioLockedError extends Error {
+constructor(message = 'Audio is locked; user gesture required') {
+super(message);
+this.name = 'AudioLockedError';
+}
+}
 
-  /**
-   * Unlocks audio playback after a user gesture. This is the single entry point
-   * for preparing all audio systems (AudioContext and the master audio element).
-   * It's crucial for iOS compatibility and MUST be called synchronously from a
-   * user interaction event handler (e.g., onClick).
-   * SAFARI FIX: Always re-validate and re-prime audio on every user gesture call.
-   */
-  public unlockAudio(): void {
+class TtsFetchError extends Error {
+status?: number;
+constructor(message: string, status?: number) {
+super(message);
+this.name = 'TtsFetchError';
+this.status = status;
+}
+}
 
+class PlaybackError extends Error {
+constructor(message: string) {
+super(message);
+this.name = 'PlaybackError';
+}
+}
 
-    try {
-      // 1. Initialize and resume AudioContext
-      if (!this.audioContext) {
-        const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
-        if (AudioContextClass) {
-          this.audioContext = new AudioContextClass();
-        } else {
-          console.warn('[TTS-LOG] AudioContext not supported.');
-          return;
-        }
-      }
+const DEBUG = typeof window !== 'undefined' && (window as any).TTS_DEBUG === true;
+const TTS_TIMEOUT_MS = 25_000;
 
-      // Resume audio context if suspended - ALWAYS check, don't skip
-      if (this.audioContext.state === 'suspended') {
+const VOICE_MAP: Record<string, string> = {
+// extend as needed; default is Puck
+Puck: 'en-US-Chirp3-HD-Puck',
+};
 
-        this.audioContext.resume();
-      }
-  
+function logDebug(...args: any[]) {
+if (DEBUG) console.log('[ConversationTTS]', ...args);
+}
 
-      // 2. Create and prime the master audio element with silent audio (Safari fix)
-      // SAFARI FIX: Always ensure element exists and re-prime on every gesture call
-      if (!this.masterAudioElement) {
-  
-        this.masterAudioElement = new Audio();
-        this.masterAudioElement.crossOrigin = 'anonymous';
-      }
-      
-      // SAFARI FIX: Always re-prime the audio element during user gesture (safe no-op if already primed)
-      const silentAudio = 'data:audio/mp3;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAAW1wM1BST09mVmVyc2lvbi4wLjk5LjUAVFNTRQAAAA8AAAFMYXZmNTcuODMuMTAwAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==';
-      this.masterAudioElement.src = silentAudio;
-      
-      // Play and immediately pause to re-prime the element during user gesture
-      try {
+function mapVoiceName(name?: string): string {
+const key = (name || '').trim();
+if (key && VOICE_MAP[key]) return VOICE_MAP[key];
+return VOICE_MAP.Puck;
+}
 
-        this.masterAudioElement.play();
-        this.masterAudioElement.pause();
-        this.masterAudioElement.currentTime = 0;
+export class ConversationTtsService {
+private state: TtsState = 'idle';
 
-      } catch (error) {
-        // Safari doesn't support silent audio priming - this is expected
-        if (error.name === 'NotSupportedError') {
-          console.log('[TTS-LOG] Safari silent audio priming not supported (expected)');
-        } else {
-          // Enhanced error logging for other audio priming errors
-          console.log('[TTS-LOG] Silent audio priming error details:', {
-            name: error.name,
-            message: error.message,
-            error: error
-          });
-          
-          // Log audio element state during error
-          console.log('[TTS-LOG] Audio element state during priming error:', {
-            src: this.masterAudioElement.src.substring(0, 50) + (this.masterAudioElement.src.length > 50 ? '...' : ''),
-            readyState: this.masterAudioElement.readyState,
-            networkState: this.masterAudioElement.networkState,
-            paused: this.masterAudioElement.paused,
-            ended: this.masterAudioElement.ended
-          });
-        }
-      }
-      
-      // Set the flag synchronously. From this point on, audio is considered unlocked.
-      this.isAudioUnlocked = true;
-      
-    } catch (error) {
-      console.error('[TTS-LOG] Error unlocking audio:', error);
+private audioContext?: AudioContext;
+private analyser?: AnalyserNode;
+private dataArray?: Uint8Array;
+private rafId?: number;
+
+private masterAudioElement?: HTMLAudioElement;
+private mediaElementSource?: MediaElementAudioSourceNode;
+
+private isAudioUnlocked = false;
+
+private audioLevel = 0;
+private listeners = new Set<() => void>();
+
+private currentObjectUrl?: string;
+private currentAbort?: AbortController;
+
+// Used to ensure we only complete the most recent playback
+private playbackToken = 0;
+
+// Call on user gesture to allow playback on iOS/Safari
+public unlockAudio(): void {
+if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+try {
+  // AudioContext
+  if (!this.audioContext) {
+    const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
+    if (!Ctx) {
+      console.warn('[ConversationTTS] AudioContext not supported in this browser.');
+      return;
     }
+    this.audioContext = new Ctx();
+  }
+  // Resume if needed
+  if (this.audioContext.state === 'suspended') {
+    // Resume synchronously if possible
+    void this.audioContext.resume();
   }
 
-  // Stop all audio playback and cleanup
-  public stopAllAudio(): void {
-    // ✅ REAL AUDIO ANALYSIS: Cleanup analyser and RAF
-    if (this.rafId) {
-      cancelAnimationFrame(this.rafId);
-      this.rafId = undefined;
-    }
-    
-    if (this.currentNodes) {
-      this.currentNodes.source.disconnect();
-      if (this.currentNodes.gain) {
-        this.currentNodes.gain.disconnect();
-      }
-      this.currentNodes = undefined;
-    }
-    
-    // ✅ KEEP CACHED SOURCE: Don't set to undefined to prevent re-creation
-    // The cached MediaElementSourceNode will be reused on next playback
-    if (this.cachedMediaElementSource) {
-      this.cachedMediaElementSource.disconnect();
-      // DO NOT set to undefined - we'll reuse it
-    }
-    
-    this.audioLevel = 0;
-    this.notifyListeners();
-    
-    if (this.masterAudioElement) {
-      this.masterAudioElement.pause();
-      this.masterAudioElement.removeAttribute('src');
-    }
-    
-    // Stop any playing audio elements (fallback)
-    const allAudioElements = document.querySelectorAll('audio');
-    allAudioElements.forEach((audio) => {
-      audio.pause();
-      audio.currentTime = 0;
-      audio.src = '';
-    });
+  // Audio element
+  if (!this.masterAudioElement) {
+    const el = document.createElement('audio');
+    el.preload = 'auto';
+    el.crossOrigin = 'anonymous';
+    el.setAttribute('playsinline', 'true');
+    el.style.display = 'none';
+    document.body.appendChild(el);
+    this.masterAudioElement = el;
+  } else {
+    // clear previous errors and ensure state ok
+    this.masterAudioElement.muted = false;
   }
 
-  /**
-   * SUSPEND AUDIO PLAYBACK - Temporarily disable audio line for microphone
-   * Keeps the audio line alive but disabled, similar to microphone suspension
-   */
-  public suspendAudioPlayback(): void {
+  this.isAudioUnlocked = true;
+  logDebug('Audio unlocked and ready');
+} catch (err) {
+  console.error('[ConversationTTS] Error unlocking audio:', err);
+}
+}
 
-    
-    // Stop current playback if any
-    if (this.masterAudioElement) {
-      this.masterAudioElement.pause();
-      this.masterAudioElement.muted = true; // Mute instead of removing src
-    }
-    
-    // Stop analysis but keep analyser alive
-    if (this.rafId) {
-      cancelAnimationFrame(this.rafId);
-      this.rafId = undefined;
-    }
-    
-    // Disconnect current nodes but keep cached source
-    if (this.currentNodes) {
-      this.currentNodes.source.disconnect();
-      if (this.currentNodes.gain) {
-        this.currentNodes.gain.disconnect();
-      }
-      this.currentNodes = undefined;
-    }
-    
-    // Set audio level to 0 for UI
-    this.audioLevel = 0;
-    this.notifyListeners();
-    
+public getCurrentAudioLevel(): number {
+return this.audioLevel;
+}
 
+public getMasterAudioElement(): HTMLAudioElement | null {
+return this.masterAudioElement ?? null;
+}
+
+public subscribe(listener: () => void): () => void {
+this.listeners.add(listener);
+return () => this.listeners.delete(listener);
+}
+
+private notifyListeners(): void {
+this.listeners.forEach(fn => fn());
+}
+
+// Primary TTS entrypoint
+public async speakAssistant(opts: SpeakAssistantOptions): Promise<void> {
+const token = this.beginPlayback();
+try {
+const { chat_id, text, sessionId, onStart, onComplete } = opts;
+
+  if (!this.isAudioUnlocked || !this.masterAudioElement) {
+    throw new AudioLockedError();
   }
 
-  /**
-   * RESUME AUDIO PLAYBACK - Re-enable audio line after microphone
-   * Re-enables the audio line that was suspended, no need to recreate
-   */
-  public resumeAudioPlayback(): void {
-    console.log('[ConversationTTS] 🔊 Resuming audio playback line after microphone');
-    
-    // Unmute the master audio element
-    if (this.masterAudioElement) {
-      this.masterAudioElement.muted = false;
-    }
-    
-    // Audio line is ready for next TTS playback
-    // No need to recreate anything - the cached source and analyser are still available
-    console.log('[ConversationTTS] 🔊 Audio playback line resumed and ready');
-  }
+  await this.ensureAudioContext();
 
-  /**
-   * 🔥 CONVERSATION MODE OPTIMIZATION: Handle direct TTS from LLM handler
-   * This method is called when the LLM handler directly triggers TTS
-   */
-  public handleDirectTtsResponse(chat_id: string, sessionId: string): void {
-    console.log('[ConversationTTS] 🔥 CONVERSATION MODE: Handling direct TTS response');
-    
-    // Set conversation state to replying
-    // This will be handled by the conversation overlay via the TTS completion listener
-    
-    // Resume audio playback line for TTS
-    this.resumeAudioPlayback();
-    
-    // The actual TTS audio will be played by the existing audio element
-    // when the LLM handler sends the audio blob to the frontend
-  }
+  const sanitized = this.sanitizeTtsText(text);
+  const selectedVoiceName = useChatStore.getState().ttsVoice || 'Puck';
+  const voiceCode = mapVoiceName(selectedVoiceName);
 
-  public getCurrentAudioLevel(): number {
-    return this.audioLevel;
-  }
+  const ac = new AbortController();
+  this.replaceAbort(ac);
 
-  public getMasterAudioElement(): HTMLAudioElement | null {
-    return this.masterAudioElement;
-  }
-
-  public subscribe(listener: () => void): () => void {
-    this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
-  }
-
-  private notifyListeners(): void {
-    this.listeners.forEach(l => l());
-  }
-
-  async speakAssistant({ chat_id, messageId, text, sessionId, onStart, onComplete }: SpeakAssistantOptions): Promise<void> {
-    try {
-      // Reset completion guard for new TTS
-      this.isTtsCompleting = false;
-      
-      // Ensure audio is unlocked before proceeding
-      if (!this.isAudioUnlocked || !this.masterAudioElement) {
-        throw new Error('Audio is not unlocked. A user gesture is required before TTS can play.');
-      }
-
-      // SAFARI FIX: Resume AudioContext if suspended before playback
-      if (this.audioContext && this.audioContext.state === 'suspended') {
-        console.log('[TTS-LOG] Resuming AudioContext before TTS playback');
-        await this.audioContext.resume();
-      }
-
-      // Sanitize and normalize text before TTS
-      const sanitizedText = this.sanitizeTtsText(text);
-      const selectedVoiceName = useChatStore.getState().ttsVoice || 'Puck';
-      const googleVoiceCode = `en-US-Chirp3-HD-${selectedVoiceName}`;
-
-      const headers: HeadersInit = {
+  const response = await this.fetchWithTimeout(
+    `${SUPABASE_URL}/functions/v1/google-text-to-speech`,
+    {
+      method: 'POST',
+      headers: {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_PUBLISHABLE_KEY,
-      };
+      },
+      body: JSON.stringify({
+        chat_id,
+        text: sanitized,
+        voice: voiceCode,
+        sessionId: sessionId || null,
+      }),
+      signal: ac.signal,
+    },
+    TTS_TIMEOUT_MS
+  );
 
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/google-text-to-speech`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ chat_id, text: sanitizedText, voice: googleVoiceCode, sessionId: sessionId || null })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[ConversationTTS] TTS function error:', response.status, errorText);
-        throw new Error(`TTS failed: ${response.status} - ${errorText}`);
-      }
-
-      // Direct blob to audio with minimal setup
-      const blob = await response.blob();
-      const audioUrl = URL.createObjectURL(blob);
-      
-      // Reuse master audio element
-      const audio = this.masterAudioElement;
-      
-      // Enhanced diagnostic logging before setting audio source
-      console.log('[ConversationTTS] Audio element state before setting src:', {
-        src: audio.src.substring(0, 50) + (audio.src.length > 50 ? '...' : ''),
-        readyState: audio.readyState,
-        networkState: audio.networkState,
-        paused: audio.paused,
-        ended: audio.ended,
-        duration: audio.duration,
-        currentTime: audio.currentTime
-      });
-      
-      audio.src = audioUrl;
-      audio.muted = false; // Unmute for actual playback
-
-      // Setup audio context and analyser
-      await this.setupAudioAnalysis(audio);
-
-      // Start real-time amplitude analysis
-      this.startAmplitudeAnalysis();
-
-      // Set up cleanup listeners with completion guard - UNIFIED COMPLETION PATH
-      const handleCompletion = () => {
-        if (this.isTtsCompleting) {
-          console.log('[ConversationTTS] TTS completion already in progress, skipping');
-          return;
-        }
-        this.isTtsCompleting = true;
-        
-        this.cleanupAnalysis();
-        URL.revokeObjectURL(audioUrl);
-        onComplete?.(); // 🔄 SELF-HEALING: This will call resetToListening()
-      };
-      
-      audio.addEventListener('ended', handleCompletion, { once: true });
-      
-      // Enhanced error event listener with detailed diagnostics
-      audio.addEventListener('error', (error) => {
-        // Get detailed error information
-        const err = audio.error;
-        console.log('[ConversationTTS] Audio element error details:', {
-          errorCode: err?.code,
-          errorMessage: err?.message || 'No message available',
-          errorObject: err, // Log the actual error object
-          src: audio.src.substring(0, 50) + (audio.src.length > 50 ? '...' : ''),
-          readyState: audio.readyState,
-          networkState: audio.networkState,
-          paused: audio.paused,
-          ended: audio.ended
-        });
-        
-        // Skip error logging if this is during silent priming (ignore priming errors)
-        if (audio.src.includes('data:audio/mp3;base64,SUQz')) {
-          console.log('[ConversationTTS] Silent priming error ignored (expected)');
-          return;
-        }
-        // Enhanced error diagnostics for non-priming audio sources
-        const getMediaErrorName = (code: number): string => {
-          switch (code) {
-            case 1: return 'MEDIA_ERR_ABORTED';
-            case 2: return 'MEDIA_ERR_NETWORK';
-            case 3: return 'MEDIA_ERR_DECODE';
-            case 4: return 'MEDIA_ERR_SRC_NOT_SUPPORTED';
-            default: return `UNKNOWN_ERROR_${code}`;
-          }
-        };
-
-        const getReadyStateName = (state: number): string => {
-          switch (state) {
-            case 0: return 'HAVE_NOTHING';
-            case 1: return 'HAVE_METADATA';
-            case 2: return 'HAVE_CURRENT_DATA';
-            case 3: return 'HAVE_FUTURE_DATA';
-            case 4: return 'HAVE_ENOUGH_DATA';
-            default: return `UNKNOWN_STATE_${state}`;
-          }
-        };
-
-        const getNetworkStateName = (state: number): string => {
-          switch (state) {
-            case 0: return 'NETWORK_EMPTY';
-            case 1: return 'NETWORK_IDLE';
-            case 2: return 'NETWORK_LOADING';
-            case 3: return 'NETWORK_NO_SOURCE';
-            default: return `UNKNOWN_NETWORK_${state}`;
-          }
-        };
-
-        console.error('[ConversationTTS] Audio playback error with diagnostics:', {
-          event: error,
-          mediaError: audio.error ? {
-            code: audio.error.code,
-            codeName: getMediaErrorName(audio.error.code),
-            message: audio.error.message || 'No message available'
-          } : 'No MediaError object',
-          audioStates: {
-            src: audio.src.substring(0, 50) + (audio.src.length > 50 ? '...' : ''),
-            readyState: `${audio.readyState} (${getReadyStateName(audio.readyState)})`,
-            networkState: `${audio.networkState} (${getNetworkStateName(audio.networkState)})`,
-            paused: audio.paused,
-            ended: audio.ended,
-            duration: audio.duration,
-            currentTime: audio.currentTime
-          },
-          canPlay: audio.canPlayType ? {
-            mp3: audio.canPlayType('audio/mp3'),
-            wav: audio.canPlayType('audio/wav'),
-            ogg: audio.canPlayType('audio/ogg')
-          } : 'canPlayType not available'
-        });
-
-        handleCompletion(); // 🔄 SELF-HEALING: Unified error/completion path
-      }, { once: true });
-      
-      // Start playback and return immediately
-      audio.play().then(() => {
-        // Audio started successfully - trigger onStart callback
-        console.log('[ConversationTTS] Audio playback started');
-        onStart?.();
-      }).catch(error => {
-        console.error('[ConversationTTS] Audio play failed:', error);
-        handleCompletion(); // 🔄 SELF-HEALING: Use unified completion path for play errors too
-      });
-
-    } catch (error) {
-      console.error('[ConversationTTS] speakAssistant failed:', error);
-      throw error;
-    }
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => '');
+    throw new TtsFetchError(`TTS failed: ${response.status} - ${errorText}`, response.status);
   }
 
-  // ✅ REAL AUDIO ANALYSIS: Setup audio context and analyser
-  private async setupAudioAnalysis(audio: HTMLAudioElement): Promise<void> {
-    try {
-      // AudioContext is now initialized and unlocked via the unlockAudio() method.
-      // We just need to ensure it exists before proceeding with analysis setup.
-      if (!this.audioContext || !this.isAudioUnlocked) {
-        console.warn('[ConversationTTS] AudioContext not ready for analysis. Unlock audio first.');
-        return;
-      }
-      
-      // Resume context if suspended (it should already be running, but as a safeguard)
-      if (this.audioContext.state === 'suspended') {
-        await this.audioContext.resume();
-      }
+  const blob = await response.blob();
+  const audioUrl = URL.createObjectURL(blob);
+  this.replaceObjectUrl(audioUrl);
 
-      // Setup analyser
-      if (!this.analyser) {
-        this.analyser = this.audioContext.createAnalyser();
-        this.analyser.fftSize = 2048;
-        this.analyser.smoothingTimeConstant = 0.85;
-        
-        // Initialize data array for frequency analysis
-        this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
-      }
+  await this.prepareAudioGraph(this.masterAudioElement);
 
-      // Create or reuse MediaElementSourceNode to avoid InvalidStateError
-      let source: MediaElementAudioSourceNode;
-      if (this.cachedMediaElementSource) {
-        // Reuse existing source
-        source = this.cachedMediaElementSource;
-        // Reuse existing source
-        
-        // Always disconnect first to prevent double connections
-        source.disconnect();
-      } else {
-        // Create new MediaElementSourceNode only if none exists
-        source = this.audioContext.createMediaElementSource(audio);
-        this.cachedMediaElementSource = source;
-      }
+  await this.playInternal(token, this.masterAudioElement, audioUrl, onStart, onComplete);
+} catch (err) {
+  this.failPlayback(err);
+  throw err;
+}
+}
 
-      // Connect: source -> analyser (for analysis) AND source -> destination (for audio)
-      // Always connect fresh after disconnect to ensure clean state
-      source.connect(this.analyser);
-      source.connect(this.audioContext.destination);
+// URL playback entrypoint
+public async playFromUrl(audioUrl: string, onComplete?: () => void): Promise<void> {
+const token = this.beginPlayback();
+try {
+if (!this.isAudioUnlocked || !this.masterAudioElement) {
+throw new AudioLockedError();
+}
+await this.ensureAudioContext();
 
-      this.currentNodes = { source, gain: null };
+  this.replaceObjectUrl(audioUrl); // caller provided; we will not revoke external URLs
+  await this.prepareAudioGraph(this.masterAudioElement);
+  await this.playInternal(token, this.masterAudioElement, audioUrl, undefined, onComplete);
+} catch (err) {
+  this.failPlayback(err);
+  if (onComplete) onComplete();
+  throw err;
+}
+}
 
-    } catch (error) {
-      console.warn('[ConversationTTS] Audio analysis setup failed - using static animation:', error);
-      this.audioLevel = 0.5;
-      this.notifyListeners();
-    }
+// For conversation mode; ensure audio line is ready
+public handleDirectTtsResponse(_chat_id: string, _sessionId: string): void {
+if (!this.isAudioUnlocked) return;
+// ensure audio context is resumed ASAP
+void this.audioContext?.resume().catch(() => {});
+}
+
+// Suspend audio line (e.g., when mic engages)
+public suspendAudioPlayback(): void {
+if (this.audioContext?.state === 'running') {
+void this.audioContext.suspend().catch(() => {});
+}
+}
+
+// Resume audio line (e.g., when mic releases)
+public resumeAudioPlayback(): void {
+if (this.audioContext?.state === 'suspended') {
+void this.audioContext.resume().catch(() => {});
+}
+}
+
+// Hard stop current playback and cleanup
+public stopAllAudio(): void {
+if (this.state === 'disposed') return;
+this.state = 'stopping';
+
+this.cancelRaf();
+this.detachMediaGraph();
+
+if (this.masterAudioElement) {
+  try {
+    this.masterAudioElement.pause();
+    // Do not clear src immediately; revoke/release via replaceObjectUrl/cleanup
+  } catch {}
+}
+
+this.replaceAbort(undefined);
+this.replaceObjectUrl(undefined);
+
+this.audioLevel = 0;
+this.notifyListeners();
+
+this.state = 'idle';
+}
+
+// Full teardown
+public resetAllAndDispose(): void {
+this.stopAllAudio();
+this.state = 'disposed';
+
+this.replaceAbort(undefined);
+
+if (this.mediaElementSource) {
+  try {
+    this.mediaElementSource.disconnect();
+  } catch {}
+  this.mediaElementSource = undefined;
+}
+
+if (this.audioContext) {
+  const ctx = this.audioContext;
+  this.audioContext = undefined;
+  void ctx.close().catch(() => {});
+}
+
+if (this.masterAudioElement) {
+  try {
+    this.masterAudioElement.pause();
+  } catch {}
+  if (this.masterAudioElement.parentElement) {
+    this.masterAudioElement.parentElement.removeChild(this.masterAudioElement);
   }
+  this.masterAudioElement = undefined;
+}
 
-  // ✅ REAL AUDIO ANALYSIS: Start amplitude analysis loop
-  private startAmplitudeAnalysis(): void {
-    if (!this.analyser || !this.dataArray) return;
+this.analyser = undefined;
+this.dataArray = undefined;
+this.isAudioUnlocked = false;
+this.playbackToken++;
+}
 
-    const analyzeAmplitude = () => {
-      if (!this.analyser || !this.dataArray) return;
+public resetAllFlags(): void {
+// Keep simple: reset peak level and completion guards implicitly by state
+this.audioLevel = 0;
+this.notifyListeners();
+}
 
-      // Get time-domain data
-      const tempArray = new Uint8Array(this.analyser.frequencyBinCount);
-      this.analyser.getByteTimeDomainData(tempArray);
-      
-      // Copy to our instance array for processing
-      for (let i = 0; i < tempArray.length; i++) {
-        this.dataArray[i] = tempArray[i];
-      }
+// Internals
 
-      // Compute RMS amplitude
-      let sum = 0;
-      for (let i = 0; i < this.dataArray.length; i++) {
-        const v = (this.dataArray[i] - 128) / 128; // Convert to -1..1
-        sum += v * v;
-      }
-      const rms = Math.sqrt(sum / this.dataArray.length);
+private beginPlayback(): number {
+if (this.state === 'disposed') throw new PlaybackError('Service disposed');
+// Cancel any in-flight playback/fetch
+this.stopAllAudio();
+this.state = 'preparing';
+const token = ++this.playbackToken;
+return token;
+}
 
-      // Map RMS to 0..1 with threshold and smoothing
-      const level = Math.max(0, Math.min(1, (rms - 0.02) / 0.3));
-      
-      // Smooth the level changes
-      this.audioLevel = this.audioLevel * 0.8 + level * 0.2;
-      this.notifyListeners();
+private failPlayback(err: unknown) {
+logDebug('Playback failed:', err);
+this.stopAllAudio();
+}
 
-      // Continue analysis
-      this.rafId = requestAnimationFrame(analyzeAmplitude);
-    };
+private async playInternal(
+token: number,
+el: HTMLAudioElement,
+src: string,
+onStart?: () => void,
+onComplete?: () => void
+): Promise<void> {
+if (this.state === 'disposed') throw new PlaybackError('Service disposed');
 
-    this.rafId = requestAnimationFrame(analyzeAmplitude);
+// Wire events with cleanup
+const handleEnded = () => complete('ended');
+const handleError = () => complete('error');
+
+const complete = (reason: 'ended' | 'error' | 'canceled') => {
+  // Only complete the most recent playback
+  if (token !== this.playbackToken) return;
+  this.state = 'stopping';
+  this.cancelRaf();
+  this.audioLevel = 0;
+  this.notifyListeners();
+  this.detachMediaGraph();
+
+  // Do not revoke external URLs unless we created it
+  // replaceObjectUrl(undefined) will handle revocation of our last objectURL
+  if (reason !== 'canceled') this.replaceObjectUrl(undefined);
+
+  el.removeEventListener('ended', handleEnded);
+  el.removeEventListener('error', handleError);
+
+  this.state = 'idle';
+  if (reason !== 'error' && onComplete) onComplete();
+};
+
+// Set source last; some browsers start loading immediately
+el.src = src;
+
+// Start analysis loop
+this.startAmplitudeAnalysis();
+
+// Attach events
+el.addEventListener('ended', handleEnded, { once: true });
+el.addEventListener('error', handleError, { once: true });
+
+try {
+  this.state = 'playing';
+  await el.play();
+  if (token === this.playbackToken) onStart?.();
+  logDebug('Playback started');
+} catch (e) {
+  complete('error');
+  throw new PlaybackError(`Audio play failed: ${(e as any)?.message || e}`);
+}
+}
+
+private async ensureAudioContext(): Promise<void> {
+if (!this.audioContext) {
+const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
+if (!Ctx) throw new PlaybackError('AudioContext not supported');
+this.audioContext = new Ctx();
+}
+if (this.audioContext.state === 'suspended') {
+await this.audioContext.resume().catch(() => {});
+}
+}
+
+private async prepareAudioGraph(el: HTMLAudioElement): Promise<void> {
+await this.ensureAudioContext();
+const ctx = this.audioContext!;
+// Create analyser once
+if (!this.analyser) {
+const analyser = ctx.createAnalyser();
+analyser.fftSize = 2048;
+analyser.smoothingTimeConstant = 0.85;
+this.analyser = analyser;
+this.dataArray = new Uint8Array(analyser.frequencyBinCount);
+}
+
+// Create the media element source once for this element
+if (!this.mediaElementSource) {
+  this.mediaElementSource = ctx.createMediaElementSource(el);
+}
+
+// Reconnect graph fresh
+try {
+  this.mediaElementSource.disconnect();
+} catch {}
+this.mediaElementSource.connect(this.analyser!);
+this.mediaElementSource.connect(ctx.destination);
+}
+
+private startAmplitudeAnalysis(): void {
+if (!this.analyser || !this.dataArray) return;
+
+const loop = () => {
+  if (!this.analyser || !this.dataArray) return;
+
+  this.analyser.getByteTimeDomainData(this.dataArray);
+  let sum = 0;
+  for (let i = 0; i < this.dataArray.length; i++) {
+    const v = (this.dataArray[i] - 128) / 128;
+    sum += v * v;
   }
+  const rms = Math.sqrt(sum / this.dataArray.length);
 
-  // ✅ REAL AUDIO ANALYSIS: Cleanup analysis
-  private cleanupAnalysis(): void {
-    if (this.rafId) {
-      cancelAnimationFrame(this.rafId);
-      this.rafId = undefined;
-    }
-    
-    if (this.currentNodes) {
-      this.currentNodes.source.disconnect();
-      if (this.currentNodes.gain) {
-        this.currentNodes.gain.disconnect();
-      }
-      this.currentNodes = undefined;
-    }
-    
-    this.audioLevel = 0;
-    this.notifyListeners();
+  // Map RMS to [0..1]
+  const level = Math.max(0, Math.min(1, (rms - 0.02) / 0.3));
+  // Smooth
+  this.audioLevel = this.audioLevel * 0.8 + level * 0.2;
+  this.notifyListeners();
+
+  this.rafId = requestAnimationFrame(loop);
+};
+
+this.cancelRaf();
+this.rafId = requestAnimationFrame(loop);
+}
+
+private cancelRaf(): void {
+if (this.rafId) {
+cancelAnimationFrame(this.rafId);
+this.rafId = undefined;
+}
+}
+
+private detachMediaGraph(): void {
+if (this.mediaElementSource) {
+try {
+this.mediaElementSource.disconnect();
+} catch {}
+}
+}
+
+private replaceObjectUrl(next?: string): void {
+// Revoke previous if we created it
+if (this.currentObjectUrl && this.currentObjectUrl.startsWith('blob:')) {
+try {
+URL.revokeObjectURL(this.currentObjectUrl);
+} catch {}
+}
+this.currentObjectUrl = next;
+}
+
+private replaceAbort(next?: AbortController): void {
+if (this.currentAbort) {
+try {
+this.currentAbort.abort();
+} catch {}
+}
+this.currentAbort = next;
+}
+
+private async fetchWithTimeout(
+url: string,
+init: RequestInit,
+timeoutMs: number
+): Promise<Response> {
+const controller = init.signal instanceof AbortSignal ? undefined : new AbortController();
+const signal = controller?.signal ?? init.signal;
+
+let timeoutId: number | undefined;
+if (controller) {
+  timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+}
+
+try {
+  return await fetch(url, { ...init, signal });
+} finally {
+  if (timeoutId !== undefined) {
+    clearTimeout(timeoutId);
   }
+}
+}
 
-  /**
-   * RESET ALL FLAGS: Reset all internal state flags for clean modal reopen
-   */
-  public resetAllFlags(): void {
-    console.log('[ConversationTTS] Resetting all state flags for clean modal reopen');
-    
-    // Reset completion guard
-    this.isTtsCompleting = false;
-    
-    // Reset audio level
-    this.audioLevel = 0;
-    this.notifyListeners();
-    
-    console.log('[ConversationTTS] All TTS state flags reset');
-  }
-
-  // ✅ FULL DISPOSAL METHOD: Complete teardown for modal close (optional)
-  public resetAllAndDispose(): void {
-    this.stopAllAudio();
-    
-    // Fully dispose cached source
-    if (this.cachedMediaElementSource) {
-      this.cachedMediaElementSource.disconnect();
-      this.cachedMediaElementSource = undefined;
-    }
-    
-    // Dispose AudioContext if desired (aggressive cleanup)
-    if (this.audioContext) {
-      this.audioContext.close().catch(err => 
-        console.warn('[TTS-LOG] AudioContext close failed:', err)
-      );
-      this.audioContext = undefined;
-    }
-    
-    // Dispose master audio element
-    if (this.masterAudioElement) {
-      this.masterAudioElement.pause();
-      this.masterAudioElement.removeAttribute('src');
-      this.masterAudioElement = null;
-    }
-    
-    // Reset analyser
-    this.analyser = undefined;
-    this.dataArray = undefined;
-    this.isAudioUnlocked = false;
-    
-    // Complete TTS disposal completed
-  }
-
-  /**
-   * Play audio from URL - routes through TTS service for proper animation
-   */
-  public async playFromUrl(audioUrl: string, onComplete?: () => void): Promise<void> {
-    try {
-      // Reset completion guard for new playback
-      this.isTtsCompleting = false;
-      
-      // Ensure audio is unlocked
-      if (!this.isAudioUnlocked || !this.masterAudioElement) {
-        console.warn('[ConversationTTS] Audio not unlocked - cannot play from URL');
-        onComplete?.(); // 🔄 SELF-HEALING: Call completion to trigger resetToListening
-        return;
-      }
-
-      // SAFARI FIX: Resume AudioContext if suspended before playback
-      if (this.audioContext && this.audioContext.state === 'suspended') {
-        console.log('[TTS-LOG] Resuming AudioContext before URL playback');
-        await this.audioContext.resume();
-      }
-
-      // Reset completion guard
-      this.isTtsCompleting = false;
-
-      // Set up master audio element
-      const audio = this.masterAudioElement;
-      audio.src = audioUrl;
-      audio.muted = false;
-
-      // Setup audio analysis for animation
-      await this.setupAudioAnalysis(audio);
-      this.startAmplitudeAnalysis();
-
-      // Set up event listeners
-      const handleEnded = () => {
-        if (this.isTtsCompleting) return;
-        this.isTtsCompleting = true;
-        this.cleanupAnalysis();
-        onComplete?.();
-      };
-
-      const handleError = (error: Event) => {
-        if (this.isTtsCompleting) return;
-        this.isTtsCompleting = true;
-        console.error('[ConversationTTS] Audio playback error:', error);
-        this.cleanupAnalysis();
-        onComplete?.();
-      };
-
-      audio.addEventListener('ended', handleEnded, { once: true });
-      audio.addEventListener('error', handleError, { once: true });
-
-      // Start playback
-      await audio.play();
-      
-
-    } catch (error) {
-      console.error('[ConversationTTS] playFromUrl failed:', error);
-      this.cleanupAnalysis();
-      onComplete?.();
-    }
-  }
-
-  // Sanitize text before sending to TTS provider
-  private sanitizeTtsText(input: string): string {
-    if (!input) return '';
-    let t = input;
-    // Remove code blocks
-    t = t.replace(/```[\s\S]*?```/g, ' ');
-    // Strip inline code/backticks
-    t = t.replace(/`+/g, '');
-    // Remove markdown headers/emphasis/quotes
-    t = t.replace(/[#*_>]+/g, ' ');
-    // Collapse whitespace
-    t = t.replace(/\s+/g, ' ').trim();
-    return t;
-  }
+// Conservative sanitization: remove code blocks/inline code and markdown markers, keep punctuation
+private sanitizeTtsText(input: string): string {
+if (!input) return '';
+let t = input;
+// Remove fenced code blocks
+t = t.replace(/[\s\S]*?/g, ' ');
+// Remove inline code ticks
+t = t.replace(/`+/g, '');
+// Remove markdown headers/emphasis/quotes
+t = t.replace(/[#*_>]+/g, ' ');
+// Collapse whitespace
+t = t.replace(/\s+/g, ' ').trim();
+return t;
+}
 }
 
 export const conversationTtsService = new ConversationTtsService();
