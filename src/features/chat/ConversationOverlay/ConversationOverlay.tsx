@@ -189,24 +189,28 @@ export const ConversationOverlay: React.FC = () => {
 
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = async () => {
+    console.log('[CONVERSATION-TURN] 🔴 Modal closing: Starting full cleanup...');
     isShuttingDown.current = true;
     
-    // SAFARI FIX: Clean up TTS listener to prevent duplicate channels
-    if (ttsCleanupRef.current) {
-      console.log('[CONVERSATION-TURN] Cleaning up TTS listener');
-      ttsCleanupRef.current();
-      ttsCleanupRef.current = null;
+    // 🔍 Step 4: Forceful stream teardown on modal close
+    console.log("🎤 Stopping microphone service and all media tracks...");
+    try {
+      const stream = conversationMicrophoneService.getStream();
+      if (stream) {
+        stream.getTracks().forEach(track => {
+          console.log(`🎤 Stopping track: ${track.id} (${track.kind}), readyState: ${track.readyState}`);
+          track.stop();
+        });
+        console.log("🎤 All media tracks stopped.");
+      }
+      // This will ensure all internal recorder/analyser states are cleared
+      conversationMicrophoneService.forceCleanup(); 
+    } catch (error) {
+      console.error("🎤 Error during microphone cleanup:", error);
     }
-    
+
+    // Stop all audio playback
     conversationTtsService.stopAllAudio();
-    conversationMicrophoneService.forceCleanup();
-    
-    // Reset TTS service state flags completely
-    conversationTtsService.resetAllFlags();
-    
-    if (chatIdRef.current) {
-      chatController.initializeConversation(chatIdRef.current);
-    }
     
     try {
       const { retryLoadMessages } = useChatStore.getState();
@@ -250,12 +254,15 @@ export const ConversationOverlay: React.FC = () => {
       // Request microphone permission with enhanced error handling
       let stream: MediaStream;
       try {
-        // Log current permission state before requesting
-        if (navigator.permissions && navigator.permissions.query) {
+        // 🔍 Step 1: Log browser permission state BEFORE requesting
+        if (navigator.permissions?.query) {
           const permissionStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName });
-          console.log('[CONVERSATION-TURN] Microphone permission state:', permissionStatus.state);
+          console.log("🔍 Mic permission state BEFORE request:", permissionStatus.state);
+          permissionStatus.onchange = () => {
+            console.log("🔍 Mic permission state CHANGED to:", permissionStatus.state);
+          };
         }
-        
+
         stream = await navigator.mediaDevices.getUserMedia({
           audio: {
             channelCount: 1,
@@ -265,17 +272,21 @@ export const ConversationOverlay: React.FC = () => {
             sampleRate: 48000,
           }
         });
-        
-        // Success - log track details
-        console.log('[CONVERSATION-TURN] Microphone started successfully:', {
-          tracks: stream.getTracks().map(track => ({
-            kind: track.kind,
-            enabled: track.enabled,
-            muted: track.muted,
-            readyState: track.readyState
-          }))
+
+        // 🔍 Step 2: Log detailed stream and track state on success
+        console.log("🎤 Mic stream obtained successfully.", {
+          streamId: stream.id,
+          isActive: stream.active,
+          tracks: stream.getTracks().map(t => ({
+            id: t.id,
+            kind: t.kind,
+            label: t.label,
+            enabled: t.enabled,
+            muted: t.muted,
+            readyState: t.readyState,
+          })),
         });
-        
+
       } catch (err) {
         // Enhanced error logging with browser error details
         console.error('[CONVERSATION-TURN] Microphone error details:', {
