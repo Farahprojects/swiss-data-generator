@@ -193,20 +193,20 @@ export const ConversationOverlay: React.FC = () => {
     isShuttingDown.current = true;
     
     // 🔍 Step 4: Forceful stream teardown on modal close
-    console.log("🎤 Stopping microphone service and all media tracks...");
+    console.log("🔴 [CLEANUP] 🎤 Stopping microphone service and all media tracks...");
     try {
       const stream = conversationMicrophoneService.getStream();
       if (stream) {
         stream.getTracks().forEach(track => {
-          console.log(`🎤 Stopping track: ${track.id} (${track.kind}), readyState: ${track.readyState}`);
+          console.log(`🔴 [CLEANUP] 🎤 Stopping track: ${track.id} (${track.kind}), readyState: ${track.readyState}`);
           track.stop();
         });
-        console.log("🎤 All media tracks stopped.");
+        console.log("🔴 [CLEANUP] 🎤 All media tracks stopped.");
       }
       // This will ensure all internal recorder/analyser states are cleared
       conversationMicrophoneService.forceCleanup(); 
     } catch (error) {
-      console.error("🎤 Error during microphone cleanup:", error);
+      console.error("🔴 [CLEANUP] 🎤 Error during microphone cleanup:", error);
     }
 
     // Stop all audio playback
@@ -254,16 +254,23 @@ export const ConversationOverlay: React.FC = () => {
       
       // Request microphone permission with enhanced error handling
       let stream: MediaStream;
+      
+      // Generate unique ID for this getUserMedia call
+      const requestId = Math.random().toString(36).substring(2, 8);
+      const colors = ['🔴', '🟢', '🔵', '🟡', '🟣', '🟠'];
+      const color = colors[requestId.charCodeAt(0) % colors.length];
+      
       try {
         // 🔍 Step 1: Log browser permission state BEFORE requesting
         if (navigator.permissions?.query) {
           const permissionStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName });
-          console.log("🔍 Mic permission state BEFORE request:", permissionStatus.state);
+          console.log(`${color} [${requestId}] 🔍 Mic permission state BEFORE request:`, permissionStatus.state);
           permissionStatus.onchange = () => {
-            console.log("🔍 Mic permission state CHANGED to:", permissionStatus.state);
+            console.log(`${color} [${requestId}] 🔍 Mic permission state CHANGED to:`, permissionStatus.state);
           };
         }
 
+        console.log(`${color} [${requestId}] 🎤 STARTING getUserMedia request...`);
         stream = await navigator.mediaDevices.getUserMedia({
           audio: {
             channelCount: 1,
@@ -273,9 +280,10 @@ export const ConversationOverlay: React.FC = () => {
             sampleRate: 48000,
           }
         });
+        console.log(`${color} [${requestId}] 🎤 getUserMedia SUCCESS - stream obtained`);
 
         // 🔍 Step 2: Log detailed stream and track state on success
-        console.log("🎤 Mic stream obtained successfully.", {
+        console.log(`${color} [${requestId}] 🎤 Mic stream obtained successfully.`, {
           streamId: stream.id,
           isActive: stream.active,
           tracks: stream.getTracks().map(t => ({
@@ -290,7 +298,7 @@ export const ConversationOverlay: React.FC = () => {
 
       } catch (err) {
         // Enhanced error logging with browser error details
-        console.error('[CONVERSATION-TURN] Microphone error details:', {
+        console.error(`${color} [${requestId}] 🚨 getUserMedia FAILED:`, {
           name: err.name,
           message: err.message,
           error: err
@@ -298,15 +306,15 @@ export const ConversationOverlay: React.FC = () => {
         
         // Handle specific error types gracefully
         if (err.name === 'NotAllowedError') {
-          console.error('[CONVERSATION-TURN] Microphone access denied by user');
+          console.error(`${color} [${requestId}] 🚨 Microphone access denied by user`);
         } else if (err.name === 'NotReadableError') {
-          console.error('[CONVERSATION-TURN] Microphone is in use by another application');
+          console.error(`${color} [${requestId}] 🚨 Microphone is in use by another application`);
         } else if (err.name === 'AbortError') {
-          console.error('[CONVERSATION-TURN] Microphone request was aborted');
+          console.error(`${color} [${requestId}] 🚨 Microphone request was aborted (race condition?)`);
         } else if (err.name === 'SecurityError') {
-          console.error('[CONVERSATION-TURN] Microphone access blocked by security policy');
+          console.error(`${color} [${requestId}] 🚨 Microphone access blocked by security policy`);
         } else {
-          console.error('[CONVERSATION-TURN] Unexpected microphone error:', err.name, err.message);
+          console.error(`${color} [${requestId}] 🚨 Unexpected microphone error:`, err.name, err.message);
         }
         
         setConversationState('connecting');
