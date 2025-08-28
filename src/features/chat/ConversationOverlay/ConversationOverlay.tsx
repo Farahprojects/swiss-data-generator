@@ -31,7 +31,7 @@ text?: string | null;
 };
 
 export const ConversationOverlay: React.FC = () => {
-const { isConversationOpen, closeConversation } = useConversationUIStore();
+  const { isConversationOpen, closeConversation } = useConversationUIStore();
 const chat_id = useChatStore((state) => state.chat_id);
 const audioLevel = useConversationAudioLevel();
 
@@ -207,7 +207,6 @@ isPlayingQueue.current = true;
 try {
   // Suspend microphone once for the entire queue playback window
   conversationMicrophoneService.suspendForPlayback();
-  setConversationState('replying');
 
   while (playbackQueue.current.length > 0 && !isShuttingDown.current) {
     const next = playbackQueue.current.shift()!;
@@ -239,6 +238,12 @@ try {
 async function playTtsAudio(audioUrl: string, _text?: string) {
 if (isShuttingDown.current) return;
 try {
+// Ensure we're in speaking state for animation
+setConversationState('replying');
+  
+// Resume audio playback for TTS
+conversationTtsService.resumeAudioPlayback();
+  
 // conversationTtsService handles analysis and completion callback
 await conversationTtsService.playFromUrl(audioUrl, () => {
 // no-op here; queue loop continues
@@ -440,8 +445,8 @@ const state = conversationState;
 const canPortal = typeof document !== 'undefined' && !!document.body;
 if (!isConversationOpen || !canPortal) return null;
 
-return createPortal(
-<div className="fixed inset-0 z-50 bg-white pt-safe pb-safe">
+  return createPortal(
+    <div className="fixed inset-0 z-50 bg-white pt-safe pb-safe">
 <div className="h-full w-full flex items-center justify-center px-6">
 {!permissionGranted ? (
 <div
@@ -455,19 +460,19 @@ return createPortal(
 </div>
 ) : (
 <div className="flex flex-col items-center justify-center gap-6 relative">
-<AnimatePresence mode="wait">
-<motion.div
-key={state}
-initial={{ opacity: 0, scale: 0.98 }}
-animate={{ opacity: 1, scale: 1 }}
-exit={{ opacity: 0, scale: 0.98 }}
-transition={{ duration: 0.2, ease: 'easeInOut' }}
->
-<VoiceBubble state={state} audioLevel={audioLevel} />
-</motion.div>
-</AnimatePresence>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={state}
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+            >
+              <VoiceBubble state={state} audioLevel={audioLevel} />
+            </motion.div>
+          </AnimatePresence>
 
-        <p className="text-gray-500 font-light">
+          <p className="text-gray-500 font-light">
           {state === 'listening'
             ? 'Listening…'
             : state === 'processing' || state === 'thinking'
@@ -482,10 +487,10 @@ transition={{ duration: 0.2, ease: 'easeInOut' }}
         >
           ✕
         </button>
-      </div>
+        </div>
     )}
-  </div>
-</div>,
-document.body
-);
+      </div>
+    </div>,
+    document.body
+  );
 };
