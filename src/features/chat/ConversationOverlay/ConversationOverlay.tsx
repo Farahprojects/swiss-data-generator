@@ -247,9 +247,15 @@ export const ConversationOverlay: React.FC = () => {
       conversationTtsService.suspendAudioPlayback();
       
       
-      // Request microphone permission with error handling
+      // Request microphone permission with enhanced error handling
       let stream: MediaStream;
       try {
+        // Log current permission state before requesting
+        if (navigator.permissions && navigator.permissions.query) {
+          const permissionStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+          console.log('[CONVERSATION-TURN] Microphone permission state:', permissionStatus.state);
+        }
+        
         stream = await navigator.mediaDevices.getUserMedia({
           audio: {
             channelCount: 1,
@@ -259,8 +265,38 @@ export const ConversationOverlay: React.FC = () => {
             sampleRate: 48000,
           }
         });
-      } catch (permissionError) {
-        console.error('[CONVERSATION-TURN] Microphone permission denied:', permissionError);
+        
+        // Success - log track details
+        console.log('[CONVERSATION-TURN] Microphone started successfully:', {
+          tracks: stream.getTracks().map(track => ({
+            kind: track.kind,
+            enabled: track.enabled,
+            muted: track.muted,
+            readyState: track.readyState
+          }))
+        });
+        
+      } catch (err) {
+        // Enhanced error logging with browser error details
+        console.error('[CONVERSATION-TURN] Microphone error details:', {
+          name: err.name,
+          message: err.message,
+          error: err
+        });
+        
+        // Handle specific error types gracefully
+        if (err.name === 'NotAllowedError') {
+          console.error('[CONVERSATION-TURN] Microphone access denied by user');
+        } else if (err.name === 'NotReadableError') {
+          console.error('[CONVERSATION-TURN] Microphone is in use by another application');
+        } else if (err.name === 'AbortError') {
+          console.error('[CONVERSATION-TURN] Microphone request was aborted');
+        } else if (err.name === 'SecurityError') {
+          console.error('[CONVERSATION-TURN] Microphone access blocked by security policy');
+        } else {
+          console.error('[CONVERSATION-TURN] Unexpected microphone error:', err.name, err.message);
+        }
+        
         setConversationState('connecting');
         return;
       }

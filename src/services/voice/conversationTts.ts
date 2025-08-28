@@ -75,8 +75,21 @@ class ConversationTtsService {
         this.masterAudioElement.currentTime = 0;
         console.log('[TTS-LOG] Audio element re-primed successfully');
       } catch (error) {
-        // Ignore errors on silent audio - the gesture call is what matters
-        console.log('[TTS-LOG] Silent audio priming completed (error expected):', error);
+        // Enhanced error logging for audio priming
+        console.log('[TTS-LOG] Silent audio priming error details:', {
+          name: error.name,
+          message: error.message,
+          error: error
+        });
+        
+        // Log audio element state during error
+        console.log('[TTS-LOG] Audio element state during priming error:', {
+          src: this.masterAudioElement.src.substring(0, 50) + (this.masterAudioElement.src.length > 50 ? '...' : ''),
+          readyState: this.masterAudioElement.readyState,
+          networkState: this.masterAudioElement.networkState,
+          paused: this.masterAudioElement.paused,
+          ended: this.masterAudioElement.ended
+        });
       }
       
       // Set the flag synchronously. From this point on, audio is considered unlocked.
@@ -300,6 +313,7 @@ class ConversationTtsService {
         console.log('[ConversationTTS] Audio element error details:', {
           errorCode: err?.code,
           errorMessage: err?.message || 'No message available',
+          errorObject: err, // Log the actual error object
           src: audio.src.substring(0, 50) + (audio.src.length > 50 ? '...' : ''),
           readyState: audio.readyState,
           networkState: audio.networkState,
