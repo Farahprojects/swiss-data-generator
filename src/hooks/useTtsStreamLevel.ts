@@ -9,7 +9,9 @@ export const useTtsStreamLevel = () => {
     let animationFrameId: number;
 
     const update = () => {
-      setAudioLevel(conversationTtsService.getCurrentAudioLevel());
+      const level = conversationTtsService.getCurrentAudioLevel();
+      console.log('[useTtsStreamLevel] Current audio level:', level);
+      setAudioLevel(level);
       animationFrameId = requestAnimationFrame(update);
     };
 

@@ -444,7 +444,7 @@ const state = conversationState;
 
 let animationComponent;
 if (state === 'replying') {
-  console.log('[ConversationOverlay] ✅ Rendering SpeakingBars animation component');
+  console.log('[ConversationOverlay] ✅ Rendering SpeakingBars animation component with audioLevel:', ttsAudioLevel);
   animationComponent = <SpeakingBars audioLevel={ttsAudioLevel} />;
 } else if (state === 'processing' || state === 'thinking') {
   animationComponent = <TorusListening active={true} size={128} isThinking={true} />;

@@ -380,6 +380,7 @@ await this.audioContext.resume().catch(() => {});
 private async prepareAudioGraph(el: HTMLAudioElement): Promise<void> {
 await this.ensureAudioContext();
 const ctx = this.audioContext!;
+console.log('[ConversationTTS] Preparing audio graph');
 // Create analyser once
 if (!this.analyser) {
 const analyser = ctx.createAnalyser();
@@ -387,6 +388,7 @@ analyser.fftSize = 2048;
 analyser.smoothingTimeConstant = 0.85;
 this.analyser = analyser;
 this.dataArray = new Uint8Array(analyser.frequencyBinCount);
+console.log('[ConversationTTS] Created analyser with fftSize:', analyser.fftSize);
 }
 
 // Create the media element source once for this element
@@ -400,6 +402,7 @@ try {
 } catch {}
 this.mediaElementSource.connect(this.analyser!);
 this.mediaElementSource.connect(ctx.destination);
+console.log('[ConversationTTS] Audio graph connected - analyser ready for amplitude analysis');
 }
 
 private startAmplitudeAnalysis(): void {
