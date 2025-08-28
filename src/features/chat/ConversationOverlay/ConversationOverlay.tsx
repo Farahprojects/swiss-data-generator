@@ -439,6 +439,11 @@ try {
 
 const state = conversationState;
 
+// Log when speaking animation mounts/responds
+if (state === 'replying') {
+  console.log('[ConversationOverlay] ✅ SPEAKING ANIMATION MOUNTED - VoiceBubble responding to replying state');
+}
+
 // SSR guard
 const canPortal = typeof document !== 'undefined' && !!document.body;
 if (!isConversationOpen || !canPortal) return null;
