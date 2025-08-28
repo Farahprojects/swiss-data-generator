@@ -1,6 +1,7 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SpeakingBars } from './SpeakingBars';
+console.log('[VoiceAnimation] 🎯 SpeakingBars import test:', typeof SpeakingBars);
 import TorusListening from './TorusListening';
 import { useConversationAudioLevel } from '@/hooks/useConversationAudioLevel';
 import { useTtsStreamLevel } from '@/hooks/useTtsStreamLevel';
@@ -27,7 +28,9 @@ export const VoiceAnimation: React.FC<Props> = ({ state }) => {
         {state === 'replying' && (
           <>
             {console.log('[VoiceAnimation] 🎯 STATE IS REPLYING - About to render SpeakingBars')}
+            {console.log('[VoiceAnimation] 🎯 ttsAudioLevel value:', ttsAudioLevel)}
             <SpeakingBars audioLevel={ttsAudioLevel} />
+            {console.log('[VoiceAnimation] 🎯 SpeakingBars component rendered')}
           </>
         )}
 
