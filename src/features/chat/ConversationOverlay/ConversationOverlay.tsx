@@ -358,9 +358,6 @@ export const ConversationOverlay: React.FC = () => {
       console.error('[CONVERSATION-TURN] Failed to start recording.');
       setConversationState('connecting');
     }
-  } catch (error) {
-    console.error('[CONVERSATION-TURN] Startup error:', error);
-    setConversationState('connecting');
   } finally {
     setIsStarting(false);
   }
