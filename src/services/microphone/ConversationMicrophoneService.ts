@@ -55,6 +55,13 @@ export class ConversationMicrophoneServiceClass {
    * START RECORDING - Complete domain-specific recording
    */
   public async startRecording(): Promise<boolean> {
+    this.log('[CONVERSATION-TURN] startRecording called - checking state flags');
+    this.log(`[CONVERSATION-TURN] isStartingRecording: ${this.isStartingRecording}, isRecording: ${this.isRecording}, monitoringRef: ${this.monitoringRef.current}`);
+    
+    // Defensively reset stale state flags
+    this.monitoringRef.current = false;
+    this.audioLevel = 0;
+    
     // Guard against concurrent recording starts
     if (this.isStartingRecording) {
       this.log('🎤 Recording start already in progress, skipping');
@@ -67,6 +74,14 @@ export class ConversationMicrophoneServiceClass {
     }
     
     this.isStartingRecording = true;
+    
+    // Ensure all tracks are enabled if we have a stream
+    if (this.stream) {
+      this.stream.getAudioTracks().forEach(track => {
+        track.enabled = true;
+        this.log(`🎤 Ensured track enabled: ${track.kind}, state: ${track.readyState}`);
+      });
+    }
     
     try {
       this.log('🎤 Starting conversation recording');
@@ -162,6 +177,9 @@ export class ConversationMicrophoneServiceClass {
       };
 
       this.mediaRecorder.onstop = () => {
+        // Reset VAD monitoring flag to ensure it can restart next time
+        this.monitoringRef.current = false;
+        this.log('[CONVERSATION-TURN] MediaRecorder stopped - VAD monitoring flag reset');
         this.handleRecordingComplete();
       };
 
@@ -192,10 +210,15 @@ export class ConversationMicrophoneServiceClass {
       console.error('Recording setup error:', error.name, error);
       console.log('[CONVERSATION-TURN] Microphone startRecording return: false (error)');
       this.error('❌ Recording setup failed:', error);
+      
+      // Reset all state flags on error path
+      this.isStartingRecording = false;
+      this.monitoringRef.current = false;
+      this.audioLevel = 0;
+      
       if (this.options.onError) {
         this.options.onError(error);
       }
-      this.isStartingRecording = false; // Reset guard on error
       return false;
     }
   }
@@ -311,6 +334,12 @@ export class ConversationMicrophoneServiceClass {
    */
   cleanup(): void {
     this.log('🧹 Cleaning up conversation microphone service');
+    this.log('[CONVERSATION-TURN] cleanup called - resetting all state flags');
+    
+    // Reset state flags immediately
+    this.isStartingRecording = false;
+    this.monitoringRef.current = false;
+    this.audioLevel = 0;
     
     // Stop recording if active
     if (this.isRecording && this.mediaRecorder) {
@@ -358,7 +387,7 @@ export class ConversationMicrophoneServiceClass {
     // Release microphone from arbitrator
     microphoneArbitrator.release('conversation');
     
-    this.log('✅ Conversation microphone service cleaned up');
+    this.log('✅ Conversation microphone service cleaned up with state flags reset');
   }
 
   /**
@@ -453,7 +482,14 @@ export class ConversationMicrophoneServiceClass {
    */
   forceCleanup(): void {
     this.log('🚨 Force cleanup');
+    this.log('[CONVERSATION-TURN] forceCleanup called - resetting all state flags');
+    
+    // Reset all state flags immediately  
     this.isRecording = false;
+    this.isStartingRecording = false;
+    this.monitoringRef.current = false;
+    this.audioLevel = 0;
+    
     this.cleanup();
   }
 
