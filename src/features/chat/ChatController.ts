@@ -124,11 +124,8 @@ class ChatController {
 
   private cleanupRealtimeSubscription() {
     if (this.realtimeChannel) {
-      console.log('[ChatController] Cleaning up realtime subscription with close message');
-      // Send close message to all listeners and remove channel
       supabase.removeChannel(this.realtimeChannel);
       this.realtimeChannel = null;
-      console.log('[ChatController] Realtime subscription cleanup complete');
     }
   }
 
@@ -450,19 +447,15 @@ class ChatController {
       this.resetTimeout = null;
     }
     
-    console.log('[ChatController] Starting comprehensive cleanup sequence');
-    
-    // Stop any active conversation services
+    // Stop any active conversation
     conversationMicrophoneService.forceCleanup();
     
-    // 🚨 CRITICAL: Clean up realtime subscription with close messages to all listeners
+    // Clean up realtime subscription
     this.cleanupRealtimeSubscription();
     
-    // Reset internal state flags  
     this.isResetting = false;
     this.isUnlocked = false; // Lock on cleanup
-    
-    console.log('[ChatController] 🔥 CLEANUP: ChatController cleanup complete - all realtime listeners closed');
+    console.log('[ChatController] 🔥 CLEANUP: ChatController cleanup complete');
   }
 
   // Removed private startAssistantMessageListener and stopAssistantMessageListener
