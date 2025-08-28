@@ -86,35 +86,14 @@ export class ConversationMicrophoneServiceClass {
     try {
       this.log('🎤 Starting conversation recording');
       
-      // SINGLE-GESTURE FLOW: Use cached stream if available, otherwise fallback
+      // SINGLE-GESTURE FLOW: Use cached stream only
       if (this.cachedStream) {
         this.log('🎤 Using cached microphone stream (no getUserMedia call)');
         this.stream = this.cachedStream;
       } else {
-        // Fallback: Create new stream (shouldn't happen in single-gesture flow)
-        this.log('⚠️ No cached stream - falling back to getUserMedia (shouldn\'t happen)');
-        
-        // Generate unique ID for this fallback getUserMedia call
-        const requestId = Math.random().toString(36).substring(2, 8);
-        const colors = ['🔴', '🟢', '🔵', '🟡', '🟣', '🟠'];
-        const color = colors[requestId.charCodeAt(0) % colors.length];
-        
-        console.log(`${color} [${requestId}] 🎤 FALLBACK getUserMedia STARTING...`);
-        try {
-          this.stream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-              channelCount: 1,
-              echoCancellation: true,
-              noiseSuppression: true,
-              autoGainControl: true,
-              sampleRate: 48000,
-            }
-          });
-          console.log(`${color} [${requestId}] 🎤 FALLBACK getUserMedia SUCCESS`);
-        } catch (error) {
-          console.error(`${color} [${requestId}] 🚨 FALLBACK getUserMedia FAILED:`, error);
-          throw error;
-        }
+        // No fallback - this should never happen in single-gesture flow
+        this.error('❌ No cached stream available - conversation flow broken');
+        return false;
       }
 
       // Ensure the stream is ready and has active tracks
