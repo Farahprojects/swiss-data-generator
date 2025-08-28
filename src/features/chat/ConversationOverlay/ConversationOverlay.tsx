@@ -12,8 +12,7 @@ import { Mic } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { Message } from '@/core/types';
-import { SpeakingBars } from './SpeakingBars';
-import TorusListening from './TorusListening';
+import { VoiceAnimation } from './VoiceAnimation';
 
 const DEBUG = typeof window !== 'undefined' && (window as any).CONVO_DEBUG === true;
 function logDebug(...args: any[]) {
@@ -464,28 +463,6 @@ try {
 
 const state = conversationState;
 
-let animationComponent;
-if (state === 'replying') {
-  console.log('[ConversationOverlay] ✅ Rendering SpeakingBars animation component with audioLevel:', ttsAudioLevel);
-  animationComponent = <SpeakingBars audioLevel={ttsAudioLevel} />;
-} else if (state === 'processing' || state === 'thinking') {
-  animationComponent = <TorusListening active={true} size={128} isThinking={true} />;
-} else if (state === 'listening') {
-  animationComponent = <TorusListening active={true} size={128} isThinking={false} audioLevel={audioLevel} />;
-} else {
-  // Fallback for 'connecting' or other states
-  const baseClass = 'flex items-center justify-center rounded-full w-24 h-24 md:w-32 md:h-32 shadow-lg';
-  const connectingClass = 'bg-gray-500 shadow-gray-600/50';
-  animationComponent = (
-    <motion.div
-      className={`${baseClass} ${connectingClass}`}
-      style={{ transformOrigin: 'center' }}
-      animate={{ scale: [1, 1.1, 1] }}
-      transition={{ repeat: Infinity, duration: 1.0 }}
-    />
-  );
-}
-
 // SSR guard
 const canPortal = typeof document !== 'undefined' && !!document.body;
 if (!isConversationOpen || !canPortal) return null;
@@ -505,19 +482,9 @@ if (!isConversationOpen || !canPortal) return null;
 </div>
 ) : (
 <div className="flex flex-col items-center justify-center gap-6 relative">
-          <AnimatePresence>
-            <motion.div
-              key={state}
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
-            >
-              {animationComponent}
-            </motion.div>
-          </AnimatePresence>
+<VoiceAnimation state={state} />
 
-          <p className="text-gray-500 font-light">
+        <p className="text-gray-500 font-light">
           {state === 'listening'
             ? 'Listening…'
             : state === 'processing' || state === 'thinking'

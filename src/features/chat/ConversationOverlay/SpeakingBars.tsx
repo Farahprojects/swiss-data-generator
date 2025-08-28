@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 
 interface Props {
@@ -6,14 +6,6 @@ interface Props {
 }
 
 export const SpeakingBars: React.FC<Props> = ({ audioLevel }) => {
-  useEffect(() => {
-    console.log('🎵 SPEAKING ANIMATION MOUNTED: SpeakingBars component is now active.');
-  }, []);
-
-  useEffect(() => {
-    console.log('🎵 SpeakingBars audioLevel changed:', audioLevel);
-  }, [audioLevel]);
-
   const bars = Array.from({ length: 4 }).map((_, index) => {
     const isMiddleBar = index === 1 || index === 2;
     const baseHeight = isMiddleBar ? 0.8 : 0.6;

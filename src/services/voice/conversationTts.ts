@@ -4,8 +4,8 @@ import { useChatStore } from '@/core/store';
 
 export interface SpeakAssistantOptions {
 chat_id: string;
-messageId: string;
-text: string;
+  messageId: string;
+  text: string;
 sessionId: string | null;
 onStart?: () => void;
 onComplete?: () => void;
@@ -156,9 +156,9 @@ const { chat_id, text, sessionId, onStart, onComplete } = opts;
   const response = await this.fetchWithTimeout(
     `${SUPABASE_URL}/functions/v1/google-text-to-speech`,
     {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         'apikey': SUPABASE_PUBLISHABLE_KEY,
       },
       body: JSON.stringify({
@@ -172,7 +172,7 @@ const { chat_id, text, sessionId, onStart, onComplete } = opts;
     TTS_TIMEOUT_MS
   );
 
-  if (!response.ok) {
+      if (!response.ok) {
     const errorText = await response.text().catch(() => '');
     throw new TtsFetchError(`TTS failed: ${response.status} - ${errorText}`, response.status);
   }
@@ -501,7 +501,7 @@ t = t.replace(/[#*_>]+/g, ' ');
 // Collapse whitespace
 t = t.replace(/\s+/g, ' ').trim();
 return t;
-}
+  }
 }
 
 export const conversationTtsService = new ConversationTtsService();
