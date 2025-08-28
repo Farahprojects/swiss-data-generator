@@ -230,35 +230,48 @@ export const ConversationOverlay: React.FC = () => {
   // Start conversation recording
   const handleStart = async () => {
     if (isStarting || hasStarted.current) return;
-
+    
     // Guard: Ensure chat_id is cached before starting conversation
     if (!isReady || !chatIdRef.current) {
       console.error('[CONVERSATION-TURN] Cannot start conversation - chat_id not ready');
+      setIsStarting(false);
       return;
     }
-
+    
     console.log('[CONVERSATION-TURN] Starting conversation with chat_id:', chatIdRef.current);
     setIsStarting(true);
     hasStarted.current = true;
-
+    
     try {
       console.log('[CONVERSATION-TURN] Starting...');
-
+      
       // CRITICAL: Unlock audio SYNCHRONOUSLY during user gesture (Safari fix)
+      // No await - must be synchronous to preserve gesture context
       conversationTtsService.unlockAudio();
-      console.log('[CONVERSATION-TURN] Audio unlock completed');
+      console.log('[CONVERSATION-TURN] Audio unlock completed, AudioContext state:', conversationTtsService.getMasterAudioElement()?.constructor.name);
       conversationTtsService.suspendAudioPlayback();
-
+      
+      
       // Request microphone permission with enhanced error handling
       let stream: MediaStream;
+      
+      // Generate unique ID for this getUserMedia call
       const requestId = Math.random().toString(36).substring(2, 8);
       const colors = ['🔴', '🟢', '🔵', '🟡', '🟣', '🟠'];
       const color = colors[requestId.charCodeAt(0) % colors.length];
-
+      
       try {
-        // ⏱️ Safari fix: Kick off getUserMedia IMMEDIATELY (still in gesture)
-        console.log(`${color} [${requestId}] 🎤 STARTING getUserMedia request (gesture protected)...`);
-        const gumPromise = navigator.mediaDevices.getUserMedia({
+        // 🔍 Step 1: Log browser permission state BEFORE requesting
+        if (navigator.permissions?.query) {
+          const permissionStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+          console.log(`${color} [${requestId}] 🔍 Mic permission state BEFORE request:`, permissionStatus.state);
+          permissionStatus.onchange = () => {
+            console.log(`${color} [${requestId}] 🔍 Mic permission state CHANGED to:`, permissionStatus.state);
+          };
+        }
+
+        console.log(`${color} [${requestId}] 🎤 STARTING getUserMedia request...`);
+        stream = await navigator.mediaDevices.getUserMedia({
           audio: {
             channelCount: 1,
             echoCancellation: true,
@@ -267,23 +280,9 @@ export const ConversationOverlay: React.FC = () => {
             sampleRate: 48000,
           }
         });
-
-        // 🔍 Permission logging can happen in parallel – doesn’t need gesture
-        if (navigator.permissions?.query) {
-          navigator.permissions.query({ name: 'microphone' as PermissionName })
-            .then(permissionStatus => {
-              console.log(`${color} [${requestId}] 🔍 Mic permission state BEFORE request:`, permissionStatus.state);
-              permissionStatus.onchange = () => {
-                console.log(`${color} [${requestId}] 🔍 Mic permission state CHANGED to:`, permissionStatus.state);
-              };
-            })
-            .catch(() => {/* ignore */});
-        }
-
-        // Now await the promise – Safari already accepted because it was created synchronously
-        stream = await gumPromise;
         console.log(`${color} [${requestId}] 🎤 getUserMedia SUCCESS - stream obtained`);
 
+        // 🔍 Step 2: Log detailed stream and track state on success
         console.log(`${color} [${requestId}] 🎤 Mic stream obtained successfully.`, {
           streamId: stream.id,
           isActive: stream.active,
@@ -296,35 +295,6 @@ export const ConversationOverlay: React.FC = () => {
             readyState: t.readyState,
           })),
         });
-
-        setPermissionGranted(true);
-        conversationMicrophoneService.cacheStream(stream);
-
-        conversationMicrophoneService.initialize({
-          onRecordingComplete: handleSimpleRecordingComplete,
-          onSilenceDetected: () => {
-            console.log('[CONVERSATION-TURN] Silence detected, stopping recording and pausing microphone for TTS.');
-            setConversationState('thinking');
-            conversationMicrophoneService.suspendForPlayback();
-            if (conversationMicrophoneService.getState().isRecording) {
-              conversationMicrophoneService.stopRecording();
-            }
-          },
-          onError: (error) => {
-            console.error('[CONVERSATION-TURN] Microphone error:', error);
-            setConversationState('connecting');
-          },
-          silenceTimeoutMs: 2000,
-        });
-
-        const success = await conversationMicrophoneService.startRecording();
-        if (success) {
-          console.log('[CONVERSATION-TURN] Now listening for user...');
-          setConversationState('listening');
-        } else {
-          console.error('[CONVERSATION-TURN] Failed to start recording.');
-          setConversationState('connecting');
-        }
 
       } catch (err) {
         // Enhanced error logging with browser error details
@@ -348,8 +318,41 @@ export const ConversationOverlay: React.FC = () => {
         }
         
         setConversationState('connecting');
+        return;
       }
-
+      
+      setPermissionGranted(true);
+      conversationMicrophoneService.cacheStream(stream);
+      
+      conversationMicrophoneService.initialize({
+        onRecordingComplete: handleSimpleRecordingComplete,
+        onSilenceDetected: () => {
+          console.log('[CONVERSATION-TURN] Silence detected, stopping recording and pausing microphone for TTS.');
+          setConversationState('thinking'); // Event-driven UI update
+          
+          // Pause microphone (don't kill it) so TTS has clean audio path
+          conversationMicrophoneService.suspendForPlayback();
+          
+          if (conversationMicrophoneService.getState().isRecording) {
+            conversationMicrophoneService.stopRecording();
+          }
+        },
+        onError: (error) => {
+          console.error('[CONVERSATION-TURN] Microphone error:', error);
+          setConversationState('connecting');
+        },
+        silenceTimeoutMs: 2000,
+      });
+      
+      const success = await conversationMicrophoneService.startRecording();
+      if (success) {
+        console.log('[CONVERSATION-TURN] Now listening for user...');
+        setConversationState('listening');
+      } else {
+        console.error('[CONVERSATION-TURN] Failed to start recording.');
+        setConversationState('connecting');
+      }
+      
     } catch (error) {
       console.error('[CONVERSATION-TURN] Startup error:', error);
       setConversationState('connecting');
