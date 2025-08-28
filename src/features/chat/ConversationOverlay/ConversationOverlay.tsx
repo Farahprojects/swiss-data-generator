@@ -505,7 +505,7 @@ if (!isConversationOpen || !canPortal) return null;
 </div>
 ) : (
 <div className="flex flex-col items-center justify-center gap-6 relative">
-          <AnimatePresence mode="wait">
+          <AnimatePresence>
             <motion.div
               key={state}
               initial={{ opacity: 0, scale: 0.98 }}
