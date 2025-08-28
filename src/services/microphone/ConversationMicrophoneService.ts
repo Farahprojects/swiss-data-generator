@@ -93,15 +93,28 @@ export class ConversationMicrophoneServiceClass {
       } else {
         // Fallback: Create new stream (shouldn't happen in single-gesture flow)
         this.log('⚠️ No cached stream - falling back to getUserMedia (shouldn\'t happen)');
-        this.stream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            channelCount: 1,
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-            sampleRate: 48000,
-          }
-        });
+        
+        // Generate unique ID for this fallback getUserMedia call
+        const requestId = Math.random().toString(36).substring(2, 8);
+        const colors = ['🔴', '🟢', '🔵', '🟡', '🟣', '🟠'];
+        const color = colors[requestId.charCodeAt(0) % colors.length];
+        
+        console.log(`${color} [${requestId}] 🎤 FALLBACK getUserMedia STARTING...`);
+        try {
+          this.stream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              channelCount: 1,
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+              sampleRate: 48000,
+            }
+          });
+          console.log(`${color} [${requestId}] 🎤 FALLBACK getUserMedia SUCCESS`);
+        } catch (error) {
+          console.error(`${color} [${requestId}] 🚨 FALLBACK getUserMedia FAILED:`, error);
+          throw error;
+        }
       }
 
       // Ensure the stream is ready and has active tracks
