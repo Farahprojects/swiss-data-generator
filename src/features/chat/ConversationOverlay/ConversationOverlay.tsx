@@ -89,7 +89,7 @@ export const ConversationOverlay: React.FC = () => {
   // Play TTS audio through conversationTtsService for proper animation
   const playTtsAudio = async (audioUrl: string, text: string) => {
     try {
-      console.log('[CONVERSATION-TURN] Playing TTS audio through TTS service');
+
       
       // Pause microphone during TTS playback
       conversationMicrophoneService.suspendForPlayback();
@@ -99,14 +99,14 @@ export const ConversationOverlay: React.FC = () => {
       
       // Use conversationTtsService to play audio with proper animation
       await conversationTtsService.playFromUrl(audioUrl, () => {
-        console.log('[CONVERSATION-TURN] TTS audio completed');
+
         // Resume microphone after TTS
         conversationMicrophoneService.resumeAfterPlayback();
         
         // Start recording again for next user input
         conversationMicrophoneService.startRecording().then(success => {
           if (success) {
-            console.log('[CONVERSATION-TURN] Microphone restarted successfully after TTS');
+
             setConversationState('listening');
           } else {
             console.error('[CONVERSATION-TURN] Failed to restart microphone after TTS');
@@ -124,7 +124,7 @@ export const ConversationOverlay: React.FC = () => {
   // Clean up when modal closes - RESET ALL FLAGS FOR CLEAN STATE
   useEffect(() => {
     if (!isConversationOpen) {
-      console.log('[CONVERSATION-TURN] Modal closed, resetting ALL state flags for clean reopen');
+
       
       // Reset component state flags
       chatIdRef.current = null;
@@ -139,7 +139,7 @@ export const ConversationOverlay: React.FC = () => {
       // Reset session ID for fresh conversation
       sessionIdRef.current = `session_${Date.now()}`;
       
-      console.log('[CONVERSATION-TURN] All component state flags reset for clean modal reopen');
+
     }
   }, [isConversationOpen]);
 
@@ -189,19 +189,19 @@ export const ConversationOverlay: React.FC = () => {
 
   // SIMPLE, DIRECT MODAL CLOSE - X button controls everything
   const handleModalClose = async () => {
-    console.log('[CONVERSATION-TURN] 🔴 Modal closing: Starting full cleanup...');
+
     isShuttingDown.current = true;
     
     // 🔍 Step 4: Forceful stream teardown on modal close
-    console.log("🔴 [CLEANUP] 🎤 Stopping microphone service and all media tracks...");
+
     try {
       const stream = conversationMicrophoneService.getStream();
       if (stream) {
         stream.getTracks().forEach(track => {
-          console.log(`🔴 [CLEANUP] 🎤 Stopping track: ${track.id} (${track.kind}), readyState: ${track.readyState}`);
+
           track.stop();
         });
-        console.log("🔴 [CLEANUP] 🎤 All media tracks stopped.");
+
       }
       // This will ensure all internal recorder/analyser states are cleared
       conversationMicrophoneService.forceCleanup(); 
@@ -346,7 +346,7 @@ export const ConversationOverlay: React.FC = () => {
       
       const success = await conversationMicrophoneService.startRecording();
       if (success) {
-                  // console.log('[CONVERSATION-TURN] Now listening for user...');
+        
         setConversationState('listening');
       } else {
         console.error('[CONVERSATION-TURN] Failed to start recording.');
@@ -420,7 +420,7 @@ export const ConversationOverlay: React.FC = () => {
     
     try {
       setConversationState('processing');
-      console.log('[CONVERSATION-TURN] User speech recorded, processing...');
+
 
       // Wrap STT promise with comprehensive error handling
       try {
