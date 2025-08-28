@@ -619,7 +619,7 @@ class ConversationTtsService {
 
       // Start playback
       await audio.play();
-      console.log('[ConversationTTS] Audio playback started from URL');
+      
 
     } catch (error) {
       console.error('[ConversationTTS] playFromUrl failed:', error);

@@ -88,7 +88,7 @@ export class ConversationMicrophoneServiceClass {
       
       // SINGLE-GESTURE FLOW: Use cached stream only
       if (this.cachedStream) {
-        this.log('🎤 Using cached microphone stream (no getUserMedia call)');
+
         this.stream = this.cachedStream;
       } else {
         // No fallback - this should never happen in single-gesture flow
@@ -115,9 +115,9 @@ export class ConversationMicrophoneServiceClass {
       // SINGLE-GESTURE FLOW: Reuse AudioContext if it exists, otherwise create new
       if (!this.audioContext || this.audioContext.state === 'closed') {
         this.audioContext = new AudioContext({ sampleRate: 48000 });
-        this.log('🎛️ Created new AudioContext');
+
       } else {
-        this.log('🎛️ Reusing existing AudioContext');
+
       }
       
       // Defensively resume AudioContext if suspended (helps on iOS)
@@ -138,9 +138,9 @@ export class ConversationMicrophoneServiceClass {
         this.analyser.fftSize = 2048;
         this.analyser.smoothingTimeConstant = 0.8;
         this.mediaStreamSource.connect(this.analyser);
-        this.log('🎛️ Created new analyser and media stream source');
+
       } else {
-        this.log('🎛️ Reusing existing analyser');
+
       }
 
       // SINGLE-GESTURE FLOW: Always create new MediaRecorder to avoid state conflicts
@@ -156,7 +156,7 @@ export class ConversationMicrophoneServiceClass {
         mimeType: 'audio/webm;codecs=opus',
         audioBitsPerSecond: 128000
       });
-      this.log('🎛️ Created fresh MediaRecorder to avoid state conflicts');
+
 
       this.audioChunks = [];
       this.isRecording = true;
@@ -190,7 +190,7 @@ export class ConversationMicrophoneServiceClass {
       
       this.notifyListeners();
       this.log('🎙️ Recording started successfully');
-      console.log('[CONVERSATION-TURN] Microphone startRecording return: true');
+      
       
       // 🔥 FIXED: Remove onReady callback to prevent duplicate state setting
       // The TTS onComplete callback will handle state transitions
@@ -200,7 +200,7 @@ export class ConversationMicrophoneServiceClass {
 
     } catch (error: any) {
       console.error('Recording setup error:', error.name, error);
-      console.log('[CONVERSATION-TURN] Microphone startRecording return: false (error)');
+      
       this.error('❌ Recording setup failed:', error);
       
       // Reset all state flags on error path
