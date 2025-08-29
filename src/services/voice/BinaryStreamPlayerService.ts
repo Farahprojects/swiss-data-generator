@@ -1,4 +1,4 @@
-// Binary MP3 stream player for WebSocket-based audio
+// Binary WAV stream player for WebSocket-based audio
 const DEBUG = true;
 
 function logDebug(...args: any[]) {
@@ -6,118 +6,106 @@ function logDebug(...args: any[]) {
 }
 
 export class BinaryStreamPlayerService {
-  private audio: HTMLAudioElement;
-  private mediaSource: MediaSource;
-  private sourceBuffer: SourceBuffer | null = null;
-  private chunks: Uint8Array[] = [];
-  private isAppending = false;
+  private audioContext: AudioContext | null = null;
+  private sourceNode: AudioBufferSourceNode | null = null;
   private onPlaybackEnd: (() => void) | null = null;
   private streamEnded = false;
   private isPlaying = false;
+  private chunkCount = 0;
 
   constructor(onPlaybackEnd?: () => void) {
-    this.audio = new Audio();
-    this.audio.crossOrigin = 'anonymous';
-    this.mediaSource = new MediaSource();
-    this.audio.src = URL.createObjectURL(this.mediaSource);
     this.onPlaybackEnd = onPlaybackEnd || null;
-
-    this.mediaSource.addEventListener('sourceopen', this.handleSourceOpen);
-    this.audio.addEventListener('ended', this.handlePlaybackEnd);
   }
 
-  private handleSourceOpen = () => {
-    logDebug('MediaSource opened');
-    try {
-      const mimeType = 'audio/mpeg';
-      if (MediaSource.isTypeSupported(mimeType)) {
-        this.sourceBuffer = this.mediaSource.addSourceBuffer(mimeType);
-        this.sourceBuffer.addEventListener('updateend', this.processChunks);
-      } else {
-        console.error('[BinaryStreamPlayer] MIME type not supported:', mimeType);
-      }
-    } catch (e) {
-      console.error('[BinaryStreamPlayer] Error adding source buffer:', e);
+  private async ensureAudioContext(): Promise<AudioContext> {
+    if (!this.audioContext) {
+      this.audioContext = new AudioContext();
+      await this.audioContext.resume();
     }
-  };
+    return this.audioContext;
+  }
 
-  public appendBinaryChunk = (chunk: Uint8Array) => {
+  public appendBinaryChunk = async (chunk: ArrayBuffer) => {
     if (this.streamEnded) return;
 
-    this.chunks.push(chunk);
-    this.processChunks();
-    
-    // Auto-start playback on first chunk
-    if (!this.isPlaying && this.chunks.length === 1) {
-      this.play();
-    }
-  };
-
-  private processChunks = () => {
-    if (this.isAppending || this.chunks.length === 0 || !this.sourceBuffer || this.sourceBuffer.updating) {
-      return;
-    }
-
-    this.isAppending = true;
-    const chunk = this.chunks.shift()!;
-    
     try {
-      this.sourceBuffer.appendBuffer(chunk.buffer as ArrayBuffer);
-    } catch (e) {
-      console.error('[BinaryStreamPlayer] Error appending buffer:', e);
-      this.isAppending = false;
+      const audioContext = await this.ensureAudioContext();
+      
+      // Decode the WAV chunk
+      const audioBuffer = await audioContext.decodeAudioData(chunk);
+      
+      // Create and play the audio source
+      const source = audioContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(audioContext.destination);
+      
+      // Store reference to prevent garbage collection
+      this.sourceNode = source;
+      
+      // Start playback immediately
+      source.start(0);
+      
+      // Track chunk count
+      this.chunkCount++;
+      logDebug(`WAV chunk ${this.chunkCount} decoded and playing`);
+      
+      // Signal start on first chunk
+      if (!this.isPlaying) {
+        this.isPlaying = true;
+        logDebug('WAV playback started');
+      }
+      
+      // Clean up when done
+      source.onended = () => {
+        this.sourceNode = null;
+        logDebug(`WAV chunk ${this.chunkCount} finished playing`);
+      };
+      
+    } catch (error) {
+      console.error('[BinaryStreamPlayer] Error decoding WAV chunk:', error);
     }
   };
   
   public endStream = () => {
     this.streamEnded = true;
-    const endOfStream = () => {
-      if (this.sourceBuffer && !this.sourceBuffer.updating && this.mediaSource.readyState === 'open') {
-        try {
-          this.mediaSource.endOfStream();
-          logDebug('MediaSource stream ended');
-        } catch (e) {
-          console.error('[BinaryStreamPlayer] Error ending stream:', e);
-        }
-      } else {
-        setTimeout(endOfStream, 100);
+    logDebug('WAV stream ended');
+    
+    // Call completion callback after a short delay to allow final chunks to play
+    setTimeout(() => {
+      this.isPlaying = false;
+      if (this.onPlaybackEnd) {
+        this.onPlaybackEnd();
       }
-    };
-    endOfStream();
+    }, 100);
   };
 
   public play = async () => {
-    if (this.audio.paused) {
-      try {
-        await this.audio.play();
-        this.isPlaying = true;
-        logDebug('Playback started');
-      } catch (error) {
-        console.error('[BinaryStreamPlayer] Error starting playback:', error);
-      }
-    }
-  };
-
-  private handlePlaybackEnd = () => {
-    logDebug('Playback ended');
-    this.isPlaying = false;
-    if (this.onPlaybackEnd) {
-      this.onPlaybackEnd();
-    }
+    // For WAV streaming, playback starts automatically with each chunk
+    // This method is kept for compatibility but doesn't need to do anything
+    logDebug('Play called - WAV chunks play automatically');
   };
 
   public cleanup = () => {
     logDebug('Cleaning up BinaryStreamPlayerService');
-    this.audio.removeEventListener('ended', this.handlePlaybackEnd);
-    this.mediaSource.removeEventListener('sourceopen', this.handleSourceOpen);
-    if (this.sourceBuffer) {
-      this.sourceBuffer.removeEventListener('updateend', this.processChunks);
+    
+    // Stop any playing audio
+    if (this.sourceNode) {
+      try {
+        this.sourceNode.stop();
+      } catch (e) {
+        // Ignore errors if already stopped
+      }
+      this.sourceNode = null;
     }
-    if (this.audio.src) {
-      URL.revokeObjectURL(this.audio.src);
+    
+    // Close audio context
+    if (this.audioContext && this.audioContext.state !== 'closed') {
+      this.audioContext.close();
+      this.audioContext = null;
     }
-    this.audio.pause();
-    this.audio.src = '';
+    
     this.isPlaying = false;
+    this.streamEnded = false;
+    this.chunkCount = 0;
   };
 }

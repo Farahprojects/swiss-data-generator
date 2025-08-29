@@ -44,7 +44,7 @@ serve(async (req) => {
 
         console.log(`[TTS-WS] Starting TTS for session ${sessionId}, text length: ${text.length}`);
         
-        // Call OpenAI TTS API with streaming
+        // Call OpenAI TTS API with WAV format for real-time streaming
         const ttsResponse = await fetch("https://api.openai.com/v1/audio/speech", {
           method: "POST",
           headers: {
@@ -55,7 +55,8 @@ serve(async (req) => {
             model: "tts-1",
             input: text,
             voice: voice,
-            response_format: "mp3",
+            response_format: "wav", // Changed from "mp3" to "wav" for PCM streaming
+            speed: 1.0, // Standard speed for optimal quality
           }),
         });
 
@@ -73,14 +74,15 @@ serve(async (req) => {
           return;
         }
 
-        console.log(`[TTS-WS] TTS response received, starting stream for session ${sessionId}`);
+        console.log(`[TTS-WS] TTS response received, starting WAV stream for session ${sessionId}`);
         
         // Send stream start signal
         socket.send(JSON.stringify({ type: "stream-start" }));
         
-        // Stream the binary MP3 data
+        // Stream the binary WAV data in small chunks for real-time playback
         const reader = ttsResponse.body.getReader();
         let totalBytes = 0;
+        let chunkCount = 0;
         
         try {
           while (true) {
@@ -89,12 +91,20 @@ serve(async (req) => {
             
             if (value) {
               totalBytes += value.length;
-              // Convert Uint8Array to ArrayBuffer for proper WebSocket binary transmission
+              chunkCount++;
+              
+              // Send WAV chunk as ArrayBuffer for immediate browser playback
+              // No need for MP3 decoding - browser can handle WAV directly
               socket.send(value.buffer);
+              
+              // Log progress every 10 chunks
+              if (chunkCount % 10 === 0) {
+                console.log(`[TTS-WS] Sent ${chunkCount} chunks, ${totalBytes} bytes for session ${sessionId}`);
+              }
             }
           }
           
-          console.log(`[TTS-WS] Stream completed for session ${sessionId}, total bytes: ${totalBytes}`);
+          console.log(`[TTS-WS] WAV stream completed for session ${sessionId}, total: ${chunkCount} chunks, ${totalBytes} bytes`);
           
           // Send end-of-stream signal
           socket.send(JSON.stringify({ type: "stream-end" }));
