@@ -108,6 +108,7 @@ try {
   } else {
     // clear previous errors and ensure state ok
     this.masterAudioElement.muted = false;
+    this.masterAudioElement.crossOrigin = 'anonymous';
   }
 
   this.isAudioUnlocked = true;
@@ -321,10 +322,6 @@ onComplete?: () => void
 ): Promise<void> {
 if (this.state === 'disposed') throw new PlaybackError('Service disposed');
 
-// Wire events with cleanup
-const handleEnded = () => complete('ended');
-const handleError = () => complete('error');
-
 const complete = (reason: 'ended' | 'error' | 'canceled') => {
   // Only complete the most recent playback
   if (token !== this.playbackToken) return;
@@ -340,27 +337,56 @@ const complete = (reason: 'ended' | 'error' | 'canceled') => {
 
   el.removeEventListener('ended', handleEnded);
   el.removeEventListener('error', handleError);
+  el.removeEventListener('playing', handlePlaying);
 
   this.state = 'idle';
   if (reason !== 'error' && onComplete) onComplete();
 };
 
-// Set source last; some browsers start loading immediately
-el.src = src;
+const handleEnded = () => complete('ended');
+const handleError = () => complete('error');
+const handlePlaying = () => {
+  // Only for the most recent playback
+  if (token !== this.playbackToken) return;
 
-// Start analysis loop
-this.startAmplitudeAnalysis();
+  // If analyser graph is connected, run real analysis
+  if (this.analyser && this.dataArray) {
+    this.startAmplitudeAnalysis();
+  } else {
+    // Fallback: synthetic envelope in case of CORS/graph issues
+    this.cancelRaf();
+    let t = 0;
+    const loop = () => {
+      if (token !== this.playbackToken) return;
+      // simple pulsing 0.2..0.8
+      this.audioLevel = 0.5 + 0.3 * Math.sin(t);
+      t += 0.18;
+      this.notifyListeners();
+      this.rafId = requestAnimationFrame(loop);
+    };
+    this.rafId = requestAnimationFrame(loop);
+  }
+  el.removeEventListener('playing', handlePlaying);
+};
 
-// Attach events
+// Ensure graph is prepared before setting src
+await this.prepareAudioGraph(el);
+
 el.addEventListener('ended', handleEnded, { once: true });
 el.addEventListener('error', handleError, { once: true });
+el.addEventListener('playing', handlePlaying);
+
+// Important: set crossOrigin BEFORE src; ensure 'anonymous' is set in unlockAudio
+el.src = src;
 
 try {
   this.state = 'playing';
+  await this.audioContext?.resume().catch(() => {});
   await el.play();
   if (token === this.playbackToken) onStart?.();
   logDebug('Playback started');
 } catch (e) {
+  el.removeEventListener('playing', handlePlaying);
   complete('error');
   throw new PlaybackError(`Audio play failed: ${(e as any)?.message || e}`);
 }
