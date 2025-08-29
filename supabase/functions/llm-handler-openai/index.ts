@@ -192,24 +192,11 @@ Content Rules:
             console.error("[llm-handler-openai] Database save error:", error);
           });
           
-        // 🔥 CONVERSATION MODE: Trigger TTS (fire-and-forget, no logging)
+        // 🔥 CONVERSATION MODE: Return response for WebSocket TTS (handled by frontend)
         if (mode === 'conversation' && sessionId) {
-          // Fire-and-forget TTS call - no response handling needed
-          fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/openai-tts-stream`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-            },
-            body: JSON.stringify({
-              chat_id,
-              text: sanitizedAssistantText,
-              voice: 'alloy', // OpenAI voice
-              sessionId
-            })
-          }).catch(() => {
-            // Silently ignore TTS errors - frontend handles audio via WebSocket
-          });
+          // No need to call any TTS function - frontend handles WebSocket TTS directly
+          // Frontend will use the response text for WebSocket streaming
+          console.log("[llm-handler-openai] Conversation mode - frontend will handle TTS");
         }
 
       } catch (error) {
@@ -218,9 +205,43 @@ Content Rules:
     };
 
     // Start background processing without awaiting
-    EdgeRuntime.waitUntil(processLLMResponse());
+    const processPromise = processLLMResponse();
+    EdgeRuntime.waitUntil(processPromise);
 
-    // Return immediate acknowledgment
+    // For conversation mode, we need to wait for the response and return it
+    if (mode === 'conversation') {
+      try {
+        await processPromise;
+        // Get the assistant response for frontend TTS
+        const { data: latestMessage } = await supabase
+          .from("messages")
+          .select("text")
+          .eq("chat_id", chat_id)
+          .eq("role", "assistant")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+        
+        return new Response(JSON.stringify({ 
+          message: "Assistant response ready",
+          text: latestMessage?.text || "",
+          client_msg_id
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (error) {
+        console.error("[llm-handler-openai] Error getting assistant response:", error);
+        return new Response(JSON.stringify({ 
+          error: "Failed to get assistant response",
+          client_msg_id
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // Return immediate acknowledgment for non-conversation modes
     return new Response(JSON.stringify({ 
       message: "Processing assistant response",
       client_msg_id
