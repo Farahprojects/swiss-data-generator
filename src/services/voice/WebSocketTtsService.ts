@@ -29,6 +29,7 @@ export class WebSocketTtsService {
   private isAppending = false;
   private streamEnded = false;
   private isPlaying = false;
+  private hasFirstChunk = false; // Phase 1: Track first chunk for safe playback
   
   // Connection management
   private connectionState: ConnectionState = {
@@ -86,6 +87,12 @@ export class WebSocketTtsService {
     
     try {
       this.sourceBuffer.appendBuffer(chunk.buffer as ArrayBuffer);
+      
+      // Phase 1: Mark first chunk as appended
+      if (!this.hasFirstChunk) {
+        this.hasFirstChunk = true;
+        console.log('[WebSocketTTS] First chunk appended, ready for playback');
+      }
     } catch (e) {
       console.error('[WebSocketTTS] Error appending buffer:', e);
       this.isAppending = false;
@@ -97,22 +104,30 @@ export class WebSocketTtsService {
     this.isPlaying = false;
   };
 
+  // ✅ Web Audio context for unlocking (Phase 1)
+  private audioContext: AudioContext | null = null;
+
   // ✅ Ensure audio context is unlocked by user gesture (Safari requirement)
   private async unlockAudioContext(): Promise<boolean> {
     if (this.connectionState.isAudioUnlocked) return true;
     
     try {
-      // Create a temporary audio element with a silent audio source for unlocking
-      const tempAudio = new Audio();
-      tempAudio.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT';
-      tempAudio.volume = 0; // Silent
+      // Create/resume Web Audio context
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      this.audioContext = this.audioContext || new AudioCtx();
       
-      // Prime the temporary audio element during user gesture
-      await tempAudio.play();
-      tempAudio.pause(); // Immediately pause, we just needed to unlock
+      await this.audioContext.resume().catch(() => {});
+      
+      // Optional: one-frame silent buffer to guarantee unlock on iOS
+      const buf = this.audioContext.createBuffer(1, 1, 22050);
+      const src = this.audioContext.createBufferSource();
+      src.buffer = buf;
+      src.connect(this.audioContext.destination);
+      src.start(0);
+      src.stop(0);
       
       this.connectionState.isAudioUnlocked = true;
-      console.log('[WebSocketTTS] Audio context unlocked successfully');
+      console.log('[WebSocketTTS] Web Audio context unlocked successfully');
       return true;
     } catch (error) {
       console.error('[WebSocketTTS] Failed to unlock audio context:', error);
@@ -120,29 +135,24 @@ export class WebSocketTtsService {
     }
   }
 
-  // ✅ NEW: Initialize persistent connection early
+  // ✅ NEW: Initialize persistent connection early (Phase 1)
   public async initializeConnection(sessionId: string): Promise<boolean> {
     console.log(`[WebSocketTTS] Initializing persistent connection for session: ${sessionId}`);
     
     try {
-      // Step 1: Unlock audio context (must happen during user gesture)
-      const audioUnlocked = await this.unlockAudioContext();
-      if (!audioUnlocked) {
-        console.error('[WebSocketTTS] Failed to unlock audio context during initialization');
-        return false;
-      }
+      // Step 1: Try to unlock audio context (non-blocking)
+      this.unlockAudioContext().catch(() => {
+        console.warn('[WebSocketTTS] Audio context unlock failed, will retry later');
+      });
       
-      // Step 2: Initialize MediaSource and audio element (Safari requirement)
-      await this.initializeMediaSource();
-      
-      // Step 3: Establish WebSocket connection
+      // Step 2: Establish WebSocket connection (primary goal)
       const connected = await this.connectWebSocket(sessionId);
       if (!connected) {
         console.error('[WebSocketTTS] Failed to establish WebSocket connection');
         return false;
       }
       
-      // Step 4: Start health monitoring
+      // Step 3: Start health monitoring
       this.startHealthMonitoring();
       
       console.log(`[WebSocketTTS] ✅ Connection initialized successfully for session: ${sessionId}`);
@@ -154,8 +164,8 @@ export class WebSocketTtsService {
     }
   }
 
-  // ✅ NEW: Initialize MediaSource with Safari-safe audio priming
-  private async initializeMediaSource(): Promise<void> {
+  // ✅ NEW: Initialize MediaSource (Phase 1 - no premature play())
+  private initializeMediaSource(): void {
     // Ensure MediaSource is ready
     if (this.mediaSource.readyState === 'closed') {
       this.mediaSource = new MediaSource();
@@ -163,18 +173,9 @@ export class WebSocketTtsService {
       this.mediaSource.addEventListener('sourceopen', this.handleSourceOpen);
     }
     
-    // Load the audio element
+    // Load the audio element (but don't play yet)
     this.audio.load();
-    
-    // Prime the audio element during user gesture (Safari requirement)
-    try {
-      await this.audio.play();
-      this.audio.pause(); // Immediately pause, we just needed to prime
-      console.log('[WebSocketTTS] Audio element primed successfully');
-    } catch (error) {
-      console.error('[WebSocketTTS] Failed to prime audio element:', error);
-      throw error;
-    }
+    console.log('[WebSocketTTS] MediaSource initialized (ready for data)');
   }
 
   // ✅ NEW: Simplified TTS request (no connection setup needed)
@@ -305,11 +306,9 @@ export class WebSocketTtsService {
           this.connectionState.sessionId = sessionId;
           this.connectionState.lastPing = Date.now();
           
-          // Mark as ready if audio is also unlocked
-          if (this.connectionState.isAudioUnlocked) {
-            this.connectionState.isReady = true;
-            console.log('[WebSocketTTS] ✅ Connection ready for TTS requests');
-          }
+          // Mark as ready immediately (don't gate on audio unlock)
+          this.connectionState.isReady = true;
+          console.log('[WebSocketTTS] ✅ Connection ready for TTS requests');
           
           resolve(true);
         };
@@ -361,8 +360,8 @@ export class WebSocketTtsService {
     this.chunks.push(chunk);
     this.processChunks();
     
-    // Start playback on first chunk
-    if (!this.isPlaying && this.chunks.length === 1) {
+    // Phase 1: Start playback only after first chunk is appended
+    if (!this.isPlaying && this.hasFirstChunk) {
       this.startPlayback();
     }
   }
@@ -409,14 +408,11 @@ export class WebSocketTtsService {
     this.isAppending = false;
     this.streamEnded = false;
     this.isPlaying = false;
+    this.hasFirstChunk = false; // Phase 1: Reset first chunk flag
     this.currentTtsCallbacks = null;
     
-    // Create new MediaSource if needed
-    if (this.mediaSource.readyState === 'closed') {
-      this.mediaSource = new MediaSource();
-      this.audio.src = URL.createObjectURL(this.mediaSource);
-      this.mediaSource.addEventListener('sourceopen', this.handleSourceOpen);
-    }
+    // Initialize MediaSource for new request
+    this.initializeMediaSource();
   }
 
   // ✅ NEW: Get connection state

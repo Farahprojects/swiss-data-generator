@@ -374,9 +374,9 @@ try {
   setPermissionGranted(true);
   conversationMicrophoneService.cacheStream(stream);
 
-  // PRIME THE PLAYER: Create the player and call play() within the user gesture
+  // PRIME THE PLAYER: Create the player (Phase 1 - no premature play())
   if (!streamPlayerRef.current) {
-    console.log('[Gesture] Priming audio stream player...');
+    console.log('[Gesture] Creating audio stream player...');
     streamPlayerRef.current = new StreamPlayerService(() => {
       // onPlaybackEnd callback
       if (!isShuttingDown.current) {
@@ -386,7 +386,7 @@ try {
           });
       }
     });
-    streamPlayerRef.current.play(); // This is the critical priming step
+    // Phase 1: Don't call play() here - wait for actual data
   }
   
   // ✅ NEW: Initialize persistent WebSocket TTS connection early
