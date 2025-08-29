@@ -22,7 +22,7 @@ function logDebug(...args: any[]) {
 if (DEBUG) console.log('[ConversationOverlay]', ...args);
 }
 
-type ConversationState = 'listening' | 'processing' | 'replying' | 'connecting' | 'thinking';
+type ConversationState = 'listening' | 'processing' | 'replying' | 'connecting' | 'thinking' | 'establishing';
 
 type AudioClipPayload = {
 id?: string;
@@ -338,6 +338,27 @@ setIsStarting(true);
 hasStarted.current = true;
 
 try {
+  // Play connection sound
+  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+  
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+  
+  oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+  oscillator.frequency.exponentialRampToValueAtTime(1200, audioContext.currentTime + 0.1);
+  
+  gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+  gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.05);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+  
+  oscillator.start(audioContext.currentTime);
+  oscillator.stop(audioContext.currentTime + 0.1);
+
+  // Show establishing connection state
+  setConversationState('establishing');
+  
   // Unlock audio synchronously in gesture
   conversationTtsService.unlockAudio();
 
@@ -424,6 +445,9 @@ try {
     silenceTimeoutMs: 1200,
   });
 
+  // Wait for connection animation to complete (1 second)
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
   const success = await conversationMicrophoneService.startRecording();
   setConversationState(success ? 'listening' : 'connecting');
 } catch (error) {
@@ -549,14 +573,24 @@ if (!isConversationOpen || !canPortal) return null;
     <div className="fixed inset-0 z-50 bg-white pt-safe pb-safe">
 <div className="h-full w-full flex items-center justify-center px-6">
 {!permissionGranted ? (
-<div
-         className="text-center text-gray-800 flex flex-col items-center gap-4 cursor-pointer"
-         onClick={handleStart}
-       >
-<div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center transition-colors hover:bg-gray-200">
-<Mic className="w-10 h-10 text-gray-600" />
-</div>
-<h2 className="text-2xl font-light">Tap to Start Conversation</h2>
+<div className="text-center text-gray-800 flex flex-col items-center gap-6">
+  <div
+    className="flex flex-col items-center gap-4 cursor-pointer"
+    onClick={handleStart}
+  >
+    <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center transition-colors hover:bg-gray-200">
+      <Mic className="w-10 h-10 text-gray-600" />
+    </div>
+    <h2 className="text-2xl font-light">Tap to Start Conversation</h2>
+  </div>
+  
+  <button
+    onClick={handleModalClose}
+    aria-label="Close conversation"
+    className="w-10 h-10 bg-black rounded-full flex items-center justify-center text-white hover:bg-gray-800 transition-colors"
+  >
+    ✕
+  </button>
 </div>
 ) : (
 <div className="flex flex-col items-center justify-center gap-6 relative">
@@ -573,7 +607,9 @@ if (!isConversationOpen || !canPortal) return null;
           </AnimatePresence>
 
           <p className="text-gray-500 font-light">
-          {state === 'listening'
+          {state === 'establishing'
+            ? 'Establishing connection…'
+            : state === 'listening'
             ? 'Listening…'
             : state === 'processing' || state === 'thinking'
             ? 'Thinking…'
