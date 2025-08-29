@@ -186,19 +186,15 @@ Content Rules:
           .then(({ error: assistantError }) => {
             if (assistantError) {
               console.error("[llm-handler-openai] Failed to save assistant message:", assistantError);
-            } else {
-              console.log("[llm-handler-openai] Assistant response saved successfully");
             }
           })
           .catch(error => {
             console.error("[llm-handler-openai] Database save error:", error);
           });
           
-        // 🔥 CONVERSATION MODE OPTIMIZATION: Trigger TTS directly (fire-and-forget)
+        // 🔥 CONVERSATION MODE: Trigger TTS (fire-and-forget, no logging)
         if (mode === 'conversation' && sessionId) {
-          console.log("[llm-handler-openai] 🔥 CONVERSATION MODE: Triggering TTS service (fire-and-forget)");
-          
-          // Fire-and-forget TTS call
+          // Fire-and-forget TTS call - no response handling needed
           fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
             method: 'POST',
             headers: {
@@ -208,17 +204,11 @@ Content Rules:
             body: JSON.stringify({
               chat_id,
               text: sanitizedAssistantText,
-              voice: 'en-US-Chirp3-HD-Puck', // Default voice
+              voice: 'en-US-Chirp3-HD-Puck',
               sessionId
             })
-          }).then(ttsResponse => {
-            if (ttsResponse.ok) {
-              console.log("[llm-handler-openai] 🔥 CONVERSATION MODE: TTS service completed successfully");
-            } else {
-              console.error("[llm-handler-openai] 🔥 CONVERSATION MODE: TTS service failed:", ttsResponse.status);
-            }
-          }).catch(ttsError => {
-            console.error("[llm-handler-openai] 🔥 CONVERSATION MODE: TTS error:", ttsError);
+          }).catch(() => {
+            // Silently ignore TTS errors - frontend handles audio via WebSocket
           });
         }
 
