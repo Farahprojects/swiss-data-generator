@@ -63,10 +63,14 @@ serve(async (req) => {
 
     socket.onmessage = async (event) => {
       try {
+        console.log(`[TTS-WS] Received message from session ${sessionId}:`, event.data);
+        
         const data = JSON.parse(event.data);
+        console.log(`[TTS-WS] Parsed message for session ${sessionId}:`, data);
         
         // Handle ping/pong for health monitoring
         if (data.type === 'ping') {
+          console.log(`[TTS-WS] Ping received from session ${sessionId}`);
           socket.send(JSON.stringify({ type: 'pong' }));
           return;
         }
@@ -83,11 +87,12 @@ serve(async (req) => {
           const { text, voice = "alloy", chat_id } = data;
           
           if (!text || !chat_id) {
+            console.error(`[TTS-WS] Missing required fields for session ${sessionId}: text=${!!text}, chat_id=${!!chat_id}`);
             socket.send(JSON.stringify({ error: "Missing required fields: text, chat_id" }));
             return;
           }
 
-          console.log(`[TTS-WS] TTS request for session ${sessionId}, text length: ${text.length}`);
+          console.log(`[TTS-WS] TTS request for session ${sessionId}, text: "${text.substring(0, 50)}...", voice: ${voice}, chat_id: ${chat_id}`);
           
           // Process TTS request
           await processTtsRequest(sessionId, text, voice, chat_id);
@@ -140,8 +145,25 @@ async function processTtsRequest(sessionId: string, text: string, voice: string,
   
   // Send stream start signal immediately
   socket.send(JSON.stringify({ type: "stream-start" }));
+  console.log(`[TTS-WS] Stream start signal sent to session ${sessionId}`);
   
   try {
+    console.log(`[TTS-WS] Calling OpenAI API for session ${sessionId}...`);
+    
+    const requestBody = {
+      model: "gpt-4o-mini-tts",
+      modalities: ["text", "audio"],
+      input: text,
+      audio: {
+        voice: voice,
+        format: "pcm16",
+        sample_rate: 24000
+      },
+      stream: true
+    };
+    
+    console.log(`[TTS-WS] OpenAI request body for session ${sessionId}:`, JSON.stringify(requestBody, null, 2));
+    
     const openaiResponse = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
@@ -149,18 +171,10 @@ async function processTtsRequest(sessionId: string, text: string, voice: string,
         "Content-Type": "application/json",
         "OpenAI-Beta": "responses=v1"
       },
-      body: JSON.stringify({
-        model: "gpt-4o-mini-tts",
-        modalities: ["text", "audio"],
-        input: text,
-        audio: {
-          voice: voice,
-          format: "pcm16",
-          sample_rate: 24000
-        },
-        stream: true
-      })
+      body: JSON.stringify(requestBody)
     });
+    
+    console.log(`[TTS-WS] OpenAI response status: ${openaiResponse.status} for session ${sessionId}`);
     
     if (!openaiResponse.ok) {
       const errorText = await openaiResponse.text();
@@ -170,11 +184,12 @@ async function processTtsRequest(sessionId: string, text: string, voice: string,
     }
     
     if (!openaiResponse.body) {
+      console.error(`[TTS-WS] No response body from OpenAI API for session ${sessionId}`);
       socket.send(JSON.stringify({ error: "No response body from OpenAI API" }));
       return;
     }
     
-    console.log(`[TTS-WS] OpenAI SSE connection established for session ${sessionId}`);
+    console.log(`[TTS-WS] ✅ OpenAI SSE connection established for session ${sessionId}`);
     
     // Read the SSE stream
     const reader = openaiResponse.body.getReader();
@@ -204,17 +219,18 @@ async function processTtsRequest(sessionId: string, text: string, voice: string,
         const lines = buffer.split('\n');
         buffer = lines.pop() || ''; // Keep incomplete line in buffer
         
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = line.slice(6); // Remove 'data: ' prefix
-              if (data === '[DONE]') {
-                console.log(`[TTS-WS] OpenAI stream completed for session ${sessionId}`);
-                socket.send(JSON.stringify({ type: "stream-end" }));
-                return;
-              }
-              
-              const event = JSON.parse(data);
+                      for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                  try {
+                    const data = line.slice(6); // Remove 'data: ' prefix
+                    if (data === '[DONE]') {
+                      console.log(`[TTS-WS] OpenAI stream completed for session ${sessionId}`);
+                      socket.send(JSON.stringify({ type: "stream-end" }));
+                      return;
+                    }
+                    
+                    const event = JSON.parse(data);
+                    console.log(`[TTS-WS] SSE event for session ${sessionId}:`, event.type);
               
               if (event.type === "response.audio.delta" || event.type === "response.output_audio.delta") {
                 // Decode base64 PCM to binary and forward to browser
@@ -224,12 +240,13 @@ async function processTtsRequest(sessionId: string, text: string, voice: string,
                   pcmArray[i] = pcmData.charCodeAt(i);
                 }
                 
-                // Send as Int16Array (PCM16)
-                const int16Array = new Int16Array(pcmArray.buffer);
-                socket.send(int16Array.buffer);
-                
-                deltaCount++;
-                totalBytes += int16Array.byteLength;
+                                       // Send as Int16Array (PCM16)
+                       const int16Array = new Int16Array(pcmArray.buffer);
+                       console.log(`[TTS-WS] Sending PCM chunk ${deltaCount + 1} to session ${sessionId}: ${int16Array.length} samples, ${int16Array.byteLength} bytes`);
+                       socket.send(int16Array.buffer);
+                       
+                       deltaCount++;
+                       totalBytes += int16Array.byteLength;
                 
                 // Log progress every 10 chunks
                 if (deltaCount % 10 === 0) {
