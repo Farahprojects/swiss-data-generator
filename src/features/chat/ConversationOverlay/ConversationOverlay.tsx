@@ -66,7 +66,6 @@ const isPlayingQueue = useRef(false);
 const firstClipTimer = useRef<number | null>(null);
 
 const streamPlayerRef = useRef<StreamPlayerService | null>(null);
-const streamListenerCleanupRef = useRef<(() => void) | null>(null);
 
 // This effect now only handles cleanup on unmount
 useEffect(() => {
@@ -274,46 +273,6 @@ conversationTtsService
 });
 }
 
-const setupStreamListener = (sessionId: string) => {
-  // Clean up previous listener if any
-  if (streamListenerCleanupRef.current) {
-    streamListenerCleanupRef.current();
-  }
-
-  const channel = supabase.channel(`tts-stream:${sessionId}`);
-
-  channel.on("broadcast", { event: "audio-chunk" }, ({ payload }) => {
-    if (isShuttingDown.current || !streamPlayerRef.current) return;
-    
-    // The player already exists and is primed, just append chunks
-    streamPlayerRef.current.appendChunk(payload.chunk);
-  });
-
-  channel.on("broadcast", { event: "audio-stream-end" }, () => {
-    if (isShuttingDown.current) return;
-    if (streamPlayerRef.current) {
-      streamPlayerRef.current.endStream();
-    }
-  });
-
-  channel.subscribe((status) => {
-    // Detailed logging for WebSocket connection status
-    console.log(`[WebSocket] Subscription status: ${status}`);
-    if (status === 'SUBSCRIBED') {
-      console.log(`[WebSocket] ✅ Successfully subscribed to TTS stream channel: tts-stream:${sessionId}`);
-    } else if (status === 'TIMED_OUT') {
-      console.error(`[WebSocket] ❌ Timed out subscribing to channel: tts-stream:${sessionId}`);
-    } else if (status === 'CHANNEL_ERROR') {
-      console.error(`[WebSocket] ❌ Channel error on: tts-stream:${sessionId}`);
-    }
-  });
-
-  const cleanup = () => {
-    supabase.removeChannel(channel);
-  };
-  streamListenerCleanupRef.current = cleanup;
-};
-
 const handleModalClose = useCallback(async () => {
 isShuttingDown.current = true;
 
@@ -463,10 +422,10 @@ if (!audioBlob || audioBlob.size < 1024) {
 
 // Set up the listener JUST BEFORE we trigger the backend
 if (sessionIdRef.current) {
-    console.log('[Turn] Setting up WebSocket listener for TTS audio stream...');
-    setupStreamListener(sessionIdRef.current);
+    console.log('[Turn] Using WebSocket TTS service for session:', sessionIdRef.current);
+    // WebSocket TTS service will handle the direct connection
 } else {
-    console.error('[Turn] No session ID, cannot set up stream listener.');
+    console.error('[Turn] No session ID, cannot proceed.');
     setConversationState('connecting');
     return;
 }
@@ -524,9 +483,29 @@ try {
   if (response.text) {
     setConversationState('replying');
     
-    // The LLM handler has already triggered TTS via HTTP POST to openai-tts-ws
-    // The frontend WebSocket should receive the audio stream automatically
-    console.log('[ConversationOverlay] LLM response received, waiting for TTS audio stream...');
+    // Use WebSocket TTS service to receive the audio stream
+    webSocketTtsService.speak({
+      text: response.text,
+      voice: 'alloy',
+      chat_id: chatIdRef.current!,
+      sessionId: sessionIdRef.current!,
+      onStart: () => {
+        console.log('[WebSocketTTS] Audio playback started');
+      },
+      onComplete: () => {
+        console.log('[WebSocketTTS] Audio playback completed');
+        if (!isShuttingDown.current) {
+          conversationMicrophoneService.resumeAfterPlayback();
+          conversationMicrophoneService.startRecording().then(ok => {
+            setConversationState(ok ? 'listening' : 'connecting');
+          });
+        }
+      },
+      onError: (error) => {
+        console.error('[WebSocketTTS] Error:', error);
+        if (!isShuttingDown.current) setConversationState('listening');
+      }
+    });
   }
 
 } catch (error) {
