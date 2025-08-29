@@ -395,6 +395,7 @@ try {
     const connectionSuccess = await webSocketTtsService.initializeConnection(sessionIdRef.current);
     if (!connectionSuccess) {
       console.warn('[ConversationOverlay] Failed to initialize TTS connection, will retry later');
+      // Don't fail the entire startup - the connection can be established later when needed
     } else {
       console.log('[ConversationOverlay] ✅ TTS connection initialized successfully');
     }

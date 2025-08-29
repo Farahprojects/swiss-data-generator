@@ -102,9 +102,15 @@ export class WebSocketTtsService {
     if (this.connectionState.isAudioUnlocked) return true;
     
     try {
-      // Prime the audio element during user gesture
-      await this.audio.play();
-      this.audio.pause(); // Immediately pause, we just needed to unlock
+      // Create a temporary audio element with a silent audio source for unlocking
+      const tempAudio = new Audio();
+      tempAudio.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT';
+      tempAudio.volume = 0; // Silent
+      
+      // Prime the temporary audio element during user gesture
+      await tempAudio.play();
+      tempAudio.pause(); // Immediately pause, we just needed to unlock
+      
       this.connectionState.isAudioUnlocked = true;
       console.log('[WebSocketTTS] Audio context unlocked successfully');
       return true;
@@ -151,9 +157,21 @@ export class WebSocketTtsService {
     
     // Check if connection is ready
     if (!this.connectionState.isReady) {
-      console.warn('[WebSocketTTS] Connection not ready, queuing TTS request');
-      this.pendingTtsRequests.push({ text, voice, chat_id, onStart, onComplete, onError });
-      return;
+      console.warn('[WebSocketTTS] Connection not ready, attempting to initialize...');
+      
+      // Try to initialize connection if we have a sessionId
+      if (this.connectionState.sessionId) {
+        const success = await this.initializeConnection(this.connectionState.sessionId);
+        if (!success) {
+          console.warn('[WebSocketTTS] Failed to initialize connection, queuing request');
+          this.pendingTtsRequests.push({ text, voice, chat_id, onStart, onComplete, onError });
+          return;
+        }
+      } else {
+        console.warn('[WebSocketTTS] No sessionId available, queuing request');
+        this.pendingTtsRequests.push({ text, voice, chat_id, onStart, onComplete, onError });
+        return;
+      }
     }
     
     // Reset state for new TTS request
