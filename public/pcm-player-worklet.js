@@ -29,10 +29,14 @@ class PcmPlayerProcessor extends AudioWorkletProcessor {
   
   writePcmData(pcmFrames) {
     // Write PCM frames to ring buffer
+    console.log(`[AudioWorklet] Received ${pcmFrames.length} PCM frames`);
+    
     for (let i = 0; i < pcmFrames.length; i++) {
       this.ringBuffer[this.writeIndex] = pcmFrames[i];
       this.writeIndex = (this.writeIndex + 1) % this.bufferSize;
     }
+    
+    console.log(`[AudioWorklet] Wrote to ring buffer, writeIndex: ${this.writeIndex}`);
   }
   
   reset() {
@@ -66,6 +70,11 @@ class PcmPlayerProcessor extends AudioWorkletProcessor {
         // No data available, output silence
         channel[i] = 0;
       }
+    }
+    
+    // Log occasionally to see if we're processing audio
+    if (Math.random() < 0.01) { // ~1% of the time
+      console.log(`[AudioWorklet] Processing: ${samplesProcessed}/${channel.length} samples, readIndex: ${this.readIndex}, writeIndex: ${this.writeIndex}`);
     }
     
     // Calculate and report audio level

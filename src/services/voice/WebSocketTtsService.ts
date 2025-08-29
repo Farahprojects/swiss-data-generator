@@ -323,18 +323,28 @@ export class WebSocketTtsService {
     
     // Log first few chunks for debugging
     if (this.chunkCount <= 3) {
-      console.log(`[WebSocketTTS] PCM chunk ${this.chunkCount}: ${int16Array.byteLength} bytes`);
+      console.log(`[WebSocketTTS] PCM chunk ${this.chunkCount}: ${int16Array.byteLength} bytes, samples: ${int16Array.length}`);
     }
     
     // Write to PCM player (24kHz sample rate from OpenAI Realtime)
-    this.pcmPlayer.writePcm(int16Array, 24000);
+    try {
+      this.pcmPlayer.writePcm(int16Array, 24000);
+      console.log(`[WebSocketTTS] ✅ PCM data written to player, chunk ${this.chunkCount}`);
+    } catch (error) {
+      console.error('[WebSocketTTS] Error writing PCM to player:', error);
+    }
     
     // Start playback if not already playing
     if (!this.isPlaying) {
       this.isPlaying = true;
-      this.pcmPlayer.resume();
-      this.currentTtsCallbacks?.onStart?.();
-      console.log('[WebSocketTTS] PCM streaming started');
+      try {
+        this.pcmPlayer.resume();
+        console.log('[WebSocketTTS] ✅ PCM player resumed');
+        this.currentTtsCallbacks?.onStart?.();
+        console.log('[WebSocketTTS] PCM streaming started');
+      } catch (error) {
+        console.error('[WebSocketTTS] Error resuming PCM player:', error);
+      }
     }
   }
 

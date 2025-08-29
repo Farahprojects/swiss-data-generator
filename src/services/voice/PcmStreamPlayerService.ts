@@ -69,17 +69,23 @@ export class PcmStreamPlayerService {
     }
     
     try {
+      console.log(`[PcmStreamPlayer] Writing PCM: ${int16Array.length} samples, ${sampleRate}Hz`);
+      
       // Convert Int16 PCM [-32768..32767] to Float32 [-1..1]
       const float32Array = this.convertInt16ToFloat32(int16Array);
       
       // Resample if needed
       const resampledData = this.resampleIfNeeded(float32Array, sampleRate);
       
+      console.log(`[PcmStreamPlayer] Converted to Float32: ${resampledData.length} samples`);
+      
       // Send to worklet
       this.workletNode.port.postMessage({
         type: 'pcm-data',
         data: resampledData
       }, [resampledData.buffer]); // Transfer the buffer for zero-copy
+      
+      console.log('[PcmStreamPlayer] ✅ PCM data sent to worklet');
       
     } catch (error) {
       console.error('[PcmStreamPlayer] Error writing PCM data:', error);
@@ -147,8 +153,24 @@ export class PcmStreamPlayerService {
   
   // ✅ Resume playback
   public resume(): void {
-    this.isPlaying = true;
-    console.log('[PcmStreamPlayer] Playback resumed');
+    if (!this.audioContext) {
+      console.error('[PcmStreamPlayer] Cannot resume - no audio context');
+      return;
+    }
+    
+    if (this.audioContext.state === 'suspended') {
+      console.log('[PcmStreamPlayer] Audio context suspended, attempting to resume...');
+      this.audioContext.resume().then(() => {
+        console.log('[PcmStreamPlayer] ✅ Audio context resumed successfully');
+        this.isPlaying = true;
+      }).catch(error => {
+        console.error('[PcmStreamPlayer] Failed to resume audio context:', error);
+      });
+    } else {
+      console.log(`[PcmStreamPlayer] Audio context state: ${this.audioContext.state}`);
+      this.isPlaying = true;
+      console.log('[PcmStreamPlayer] ✅ Playback resumed');
+    }
   }
   
   // ✅ Check if playing
