@@ -147,6 +147,8 @@ export class WebSocketTtsService {
     this.resetTtsState();
     
     try {
+      console.log(`[WebSocketTTS] Sending TTS request: "${text.substring(0, 50)}...", voice: ${voice}, chat_id: ${chat_id}`);
+      
       // Send TTS request using new format
       this.socket!.send(JSON.stringify({ 
         type: 'tts',
@@ -154,6 +156,8 @@ export class WebSocketTtsService {
         voice, 
         chat_id 
       }));
+      
+      console.log('[WebSocketTTS] ✅ TTS request sent to server');
       
       // Store callbacks for this request
       this.currentTtsCallbacks = { onStart, onComplete, onError };
@@ -292,6 +296,8 @@ export class WebSocketTtsService {
 
   // ✅ NEW: Centralized message handling (Phase 2 - PCM)
   private handleWebSocketMessage(event: MessageEvent): void {
+    console.log(`[WebSocketTTS] Received message: ${event.data instanceof ArrayBuffer ? 'ArrayBuffer' : event.data instanceof Blob ? 'Blob' : 'JSON'}`);
+    
     if (event.data instanceof ArrayBuffer) {
       this.handlePcmChunk(event.data);
     } else if (event.data instanceof Blob) {
@@ -351,6 +357,7 @@ export class WebSocketTtsService {
   private handleJsonMessage(data: string): void {
     try {
       const message = JSON.parse(data);
+      console.log('[WebSocketTTS] JSON message received:', message);
       
       if (message.type === 'pong') {
         console.log('[WebSocketTTS] Health check pong received');
