@@ -81,8 +81,7 @@ serve(async (req) => {
               chunkCount++;
               
               // For HTTP POST, we would need to implement a different streaming mechanism
-              // For now, we'll just log the chunks and return success
-              console.log(`[TTS-WS] Processed chunk ${chunkCount}, ${chunk.length} bytes for session ${sessionId}`);
+              // For now, we'll just process the chunks silently and return success
             }
           }
         }
@@ -211,11 +210,6 @@ serve(async (req) => {
                 // Send WAV chunk as ArrayBuffer for immediate browser playback
                 // Small chunks = faster WebSocket transmission and quicker browser processing
                 socket.send(chunk.buffer);
-                
-                // Log progress every 20 chunks to avoid console spam
-                if (chunkCount % 20 === 0) {
-                  console.log(`[TTS-WS] Sent ${chunkCount} chunks, ${totalBytes} bytes for session ${sessionId}`);
-                }
               }
             }
           }
