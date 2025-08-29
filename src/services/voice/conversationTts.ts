@@ -412,7 +412,7 @@ const analyser = ctx.createAnalyser();
 analyser.fftSize = 2048;
 analyser.smoothingTimeConstant = 0.85;
 this.analyser = analyser;
-this.dataArray = new Uint8Array(analyser.frequencyBinCount);
+this.dataArray = new Uint8Array(analyser.frequencyBinCount) as Uint8Array;
 }
 
 // Create the media element source once for this element
@@ -434,13 +434,14 @@ if (!this.analyser || !this.dataArray) return;
 const loop = () => {
   if (!this.analyser || !this.dataArray) return;
 
-  this.analyser.getByteTimeDomainData(this.dataArray);
+  const tempDataArray = new Uint8Array(this.analyser.frequencyBinCount);
+  this.analyser.getByteTimeDomainData(tempDataArray);
   let sum = 0;
-  for (let i = 0; i < this.dataArray.length; i++) {
-    const v = (this.dataArray[i] - 128) / 128;
+  for (let i = 0; i < tempDataArray.length; i++) {
+    const v = (tempDataArray[i] - 128) / 128;
     sum += v * v;
   }
-  const rms = Math.sqrt(sum / this.dataArray.length);
+  const rms = Math.sqrt(sum / tempDataArray.length);
 
   // Map RMS to [0..1]
   const level = Math.max(0, Math.min(1, (rms - 0.02) / 0.3));

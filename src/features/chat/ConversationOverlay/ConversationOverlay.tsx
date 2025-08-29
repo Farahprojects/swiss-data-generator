@@ -14,6 +14,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { Message } from '@/core/types';
 import { StreamPlayerService } from '@/services/voice/StreamPlayerService';
+import { webSocketTtsService } from '@/services/voice/WebSocketTtsService';
 
 
 const DEBUG = typeof window !== 'undefined' && (window as any).CONVO_DEBUG === true;
@@ -54,6 +55,7 @@ const [localMessages, setLocalMessages] = useState<Message[]>([]);
 
 // TTS realtime: cleanup and dedupe tracking
 const ttsCleanupRef = useRef<(() => void) | null>(null);
+const playedClipIds = useRef<Set<string>>(new Set());
 
 // TTS playback queue (ordered, single consumer)
 type Clip = { id?: string; url: string; text?: string | null };
@@ -119,11 +121,17 @@ if (firstClipTimer.current) {
   firstClipTimer.current = null;
 }
 
+// Clear played clip IDs
+playedClipIds.current.clear();
+
 // Ensure any listener is removed
 if (ttsCleanupRef.current) {
   ttsCleanupRef.current();
   ttsCleanupRef.current = null;
 }
+
+// Cleanup WebSocket TTS
+webSocketTtsService.cleanup();
 }, [isConversationOpen]);
 
 // Ensure clean disposal on component unmount while open
@@ -455,10 +463,10 @@ if (!audioBlob || audioBlob.size < 1024) {
 
 // Set up the listener JUST BEFORE we trigger the backend
 if (sessionIdRef.current) {
-    console.log('[Turn] Setting up stream listener just before LLM call.');
-    setupStreamListener(sessionIdRef.current);
+    console.log('[Turn] Using new WebSocket TTS for session:', sessionIdRef.current);
+    // WebSocket TTS doesn't need a separate listener setup
 } else {
-    console.error('[Turn] No session ID, cannot set up stream listener.');
+    console.error('[Turn] No session ID, cannot proceed.');
     setConversationState('connecting');
     return;
 }
@@ -469,57 +477,77 @@ setConversationState('replying');
 try {
   setConversationState('processing');
 
-  try {
-    const chatId = chatIdRef.current!;
-    const sessionId = sessionIdRef.current || `session_${Date.now()}`;
-    if (!sessionIdRef.current) sessionIdRef.current = sessionId;
+  const chatId = chatIdRef.current!;
+  const sessionId = sessionIdRef.current || `session_${Date.now()}`;
+  if (!sessionIdRef.current) sessionIdRef.current = sessionId;
 
-    const result = await sttService.transcribe(audioBlob, chatId, {}, 'conversation', sessionId);
+  const result = await sttService.transcribe(audioBlob, chatId, {}, 'conversation', sessionId);
 
-    if (isShuttingDown.current) return;
+  if (isShuttingDown.current) return;
 
-    const transcript = result.transcript;
-    if (!transcript?.trim()) {
-      logDebug('Empty transcript, back to listening');
-      setConversationState('listening');
-      return;
-    }
-
-    const client_msg_id = uuidv4();
-    const optimisticUserMessage: Message = {
-      id: client_msg_id,
-      chat_id: chatId,
-      role: 'user',
-      text: transcript,
-      createdAt: new Date().toISOString(),
-      client_msg_id,
-    };
-    setLocalMessages((prev) => [...prev, optimisticUserMessage]);
-
-    if (!chatIdRef.current) {
-      console.error('[ConversationOverlay] Cannot send message - chat_id missing');
-      setConversationState('listening');
-      return;
-    }
-
-    // Fire-and-forget; TTS will arrive via the new stream listener
-    llmService.sendMessage({
-        chat_id: chatIdRef.current!,
-        text: transcript,
-        client_msg_id,
-        mode: 'conversation',
-        sessionId: sessionIdRef.current,
-    }).catch((error) => {
-        console.error('[ConversationOverlay] LLM error:', error);
-        if (!isShuttingDown.current) setConversationState('listening');
-    });
-
-    // We no longer need the watchdog timer for the "replying" state,
-    // as the state will be set when the first audio chunk arrives.
-  } catch (sttError) {
-    console.error('[ConversationOverlay] STT error:', sttError);
-    if (!isShuttingDown.current) setConversationState('listening');
+  const transcript = result.transcript;
+  if (!transcript?.trim()) {
+    logDebug('Empty transcript, back to listening');
+    setConversationState('listening');
+    return;
   }
+
+  const client_msg_id = uuidv4();
+  const optimisticUserMessage: Message = {
+    id: client_msg_id,
+    chat_id: chatId,
+    role: 'user',
+    text: transcript,
+    createdAt: new Date().toISOString(),
+    client_msg_id,
+  };
+  setLocalMessages((prev) => [...prev, optimisticUserMessage]);
+
+  if (!chatIdRef.current) {
+    console.error('[ConversationOverlay] Cannot send message - chat_id missing');
+    setConversationState('listening');
+    return;
+  }
+
+  // First get the response from LLM
+  const response = await llmService.sendMessage({
+      chat_id: chatIdRef.current!,
+      text: transcript,
+      client_msg_id,
+      mode: 'conversation',
+      sessionId: sessionIdRef.current,
+  });
+
+  if (isShuttingDown.current) return;
+
+  // Now use WebSocket TTS for streaming audio
+  if (response.text) {
+    setConversationState('replying');
+    
+    webSocketTtsService.speak({
+      text: response.text,
+      voice: 'alloy',
+      chat_id: chatIdRef.current!,
+      sessionId: sessionIdRef.current!,
+      onStart: () => {
+        console.log('[WebSocketTTS] Audio playback started');
+      },
+      onComplete: () => {
+        console.log('[WebSocketTTS] Audio playback completed');
+        if (!isShuttingDown.current) {
+          conversationMicrophoneService.resumeAfterPlayback();
+          conversationMicrophoneService.startRecording().then(ok => {
+            setConversationState(ok ? 'listening' : 'connecting');
+          });
+        }
+      },
+      onError: (error) => {
+        console.error('[WebSocketTTS] Error:', error);
+        if (!isShuttingDown.current) setConversationState('listening');
+      }
+    });
+  }
+
 } catch (error) {
   console.error('[ConversationOverlay] Processing error:', error);
   if (!isShuttingDown.current) setConversationState('listening');
