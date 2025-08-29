@@ -89,7 +89,8 @@ serve(async (req) => {
                 voice: voice,
                 format: "pcm16",
                 sample_rate: 24000
-              }
+              },
+              stream: true
             })
           });
           
@@ -113,6 +114,15 @@ serve(async (req) => {
           let buffer = '';
           let deltaCount = 0;
           let totalBytes = 0;
+          
+          // No-delta timeout mechanism
+          const noDeltaTimeout = setTimeout(() => {
+            if (deltaCount === 0) {
+              console.error(`[TTS-WS] No audio deltas received within 2 seconds for session ${sessionId}`);
+              socket.send(JSON.stringify({ error: "No audio deltas received" }));
+              return;
+            }
+          }, 2000);
           
           try {
             while (true) {
@@ -138,35 +148,41 @@ serve(async (req) => {
                     
                     const event = JSON.parse(data);
                     
-                    if (event.type === "response.audio.delta") {
-                      // Decode base64 PCM to binary and forward to browser
-                      const pcmData = atob(event.delta);
-                      const pcmArray = new Uint8Array(pcmData.length);
-                      for (let i = 0; i < pcmData.length; i++) {
-                        pcmArray[i] = pcmData.charCodeAt(i);
-                      }
-                      
-                      // Send as Int16Array (PCM16)
-                      const int16Array = new Int16Array(pcmArray.buffer);
-                      socket.send(int16Array.buffer);
-                      
-                      deltaCount++;
-                      totalBytes += int16Array.byteLength;
-                      
-                      // Log progress every 10 chunks
-                      if (deltaCount % 10 === 0) {
-                        console.log(`[TTS-WS] Forwarded ${deltaCount} PCM chunks (${totalBytes} bytes) for session ${sessionId}`);
-                      }
-                      
-                    } else if (event.type === "response.completed") {
-                      console.log(`[TTS-WS] OpenAI response completed for session ${sessionId}, total: ${deltaCount} chunks, ${totalBytes} bytes`);
-                      socket.send(JSON.stringify({ type: "stream-end" }));
-                      return;
-                      
-                    } else if (event.type === "response.text.delta") {
-                      // Text output (optional - we're focusing on audio)
-                      console.log(`[TTS-WS] Text delta: ${event.delta}`);
-                    }
+                                         if (event.type === "response.audio.delta" || event.type === "response.output_audio.delta") {
+                       // Decode base64 PCM to binary and forward to browser
+                       const pcmData = atob(event.delta);
+                       const pcmArray = new Uint8Array(pcmData.length);
+                       for (let i = 0; i < pcmData.length; i++) {
+                         pcmArray[i] = pcmData.charCodeAt(i);
+                       }
+                       
+                       // Send as Int16Array (PCM16)
+                       const int16Array = new Int16Array(pcmArray.buffer);
+                       socket.send(int16Array.buffer);
+                       
+                       deltaCount++;
+                       totalBytes += int16Array.byteLength;
+                       
+                       // Log progress every 10 chunks
+                       if (deltaCount % 10 === 0) {
+                         console.log(`[TTS-WS] Forwarded ${deltaCount} PCM chunks (${totalBytes} bytes) for session ${sessionId}`);
+                       }
+                       
+                       // Clear the no-delta timeout on first chunk
+                       if (deltaCount === 1) {
+                         clearTimeout(noDeltaTimeout);
+                       }
+                       
+                     } else if (event.type === "response.completed") {
+                       clearTimeout(noDeltaTimeout);
+                       console.log(`[TTS-WS] OpenAI response completed for session ${sessionId}, total: ${deltaCount} chunks, ${totalBytes} bytes`);
+                       socket.send(JSON.stringify({ type: "stream-end" }));
+                       return;
+                       
+                     } else if (event.type === "response.text.delta") {
+                       // Text output (optional - we're focusing on audio)
+                       console.log(`[TTS-WS] Text delta: ${event.delta}`);
+                     }
                     
                   } catch (parseError) {
                     console.error(`[TTS-WS] Error parsing SSE event:`, parseError);
@@ -179,6 +195,7 @@ serve(async (req) => {
             console.error(`[TTS-WS] SSE streaming error for session ${sessionId}:`, streamError);
             socket.send(JSON.stringify({ error: "SSE streaming failed" }));
           } finally {
+            clearTimeout(noDeltaTimeout);
             reader.releaseLock();
           }
           

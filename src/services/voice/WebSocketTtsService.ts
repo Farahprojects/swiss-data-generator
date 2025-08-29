@@ -26,6 +26,8 @@ export class WebSocketTtsService {
   private pcmPlayer: PcmStreamPlayerService;
   private streamEnded = false;
   private isPlaying = false;
+  private firstChunkTimeout: number | null = null;
+  private chunkCount = 0;
   
   // Connection management
   private connectionState: ConnectionState = {
@@ -147,6 +149,9 @@ export class WebSocketTtsService {
       
       // Store callbacks for this request
       this.currentTtsCallbacks = { onStart, onComplete, onError };
+      
+      // Start first-chunk watchdog timer
+      this.startFirstChunkWatchdog();
       
     } catch (error) {
       console.error('[WebSocketTTS] Failed to send TTS request:', error);
@@ -281,6 +286,9 @@ export class WebSocketTtsService {
   private handleWebSocketMessage(event: MessageEvent): void {
     if (event.data instanceof ArrayBuffer) {
       this.handlePcmChunk(event.data);
+    } else if (event.data instanceof Blob) {
+      // Blob fallback for compatibility
+      event.data.arrayBuffer().then(buf => this.handlePcmChunk(buf));
     } else {
       this.handleJsonMessage(event.data);
     }
@@ -294,6 +302,21 @@ export class WebSocketTtsService {
     
     // Convert ArrayBuffer to Int16Array for PCM data
     const int16Array = new Int16Array(data);
+    
+    // Clear the first-chunk watchdog on first chunk
+    if (this.chunkCount === 0 && this.firstChunkTimeout) {
+      clearTimeout(this.firstChunkTimeout);
+      this.firstChunkTimeout = null;
+      console.log('[WebSocketTTS] First PCM chunk received, watchdog cleared');
+    }
+    
+    // Increment chunk counter
+    this.chunkCount++;
+    
+    // Log first few chunks for debugging
+    if (this.chunkCount <= 3) {
+      console.log(`[WebSocketTTS] PCM chunk ${this.chunkCount}: ${int16Array.byteLength} bytes`);
+    }
     
     // Write to PCM player (24kHz sample rate from OpenAI Realtime)
     this.pcmPlayer.writePcm(int16Array, 24000);
@@ -320,6 +343,7 @@ export class WebSocketTtsService {
         console.log('[WebSocketTTS] Stream ended');
         this.streamEnded = true;
         this.isPlaying = false;
+        this.pcmPlayer.pause();
         this.currentTtsCallbacks?.onComplete?.();
       } else if (message.error) {
         console.error('[WebSocketTTS] Server error:', message.error);
@@ -335,9 +359,24 @@ export class WebSocketTtsService {
     this.streamEnded = false;
     this.isPlaying = false;
     this.currentTtsCallbacks = null;
+    this.chunkCount = 0;
+    
+    // Clear any existing watchdog timer
+    if (this.firstChunkTimeout) {
+      clearTimeout(this.firstChunkTimeout);
+      this.firstChunkTimeout = null;
+    }
     
     // Reset PCM player
     this.pcmPlayer.pause();
+  }
+
+  // ✅ NEW: First-chunk watchdog timer
+  private startFirstChunkWatchdog(): void {
+    this.firstChunkTimeout = window.setTimeout(() => {
+      console.error('[WebSocketTTS] No audio received within 2 seconds - watchdog timeout');
+      this.currentTtsCallbacks?.onError?.(new Error('No audio received'));
+    }, 2000);
   }
 
   // ✅ NEW: Get connection state
