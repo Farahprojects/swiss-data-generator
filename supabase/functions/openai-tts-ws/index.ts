@@ -44,7 +44,7 @@ serve(async (req) => {
 
         console.log(`[TTS-WS] Starting TTS for session ${sessionId}, text length: ${text.length}`);
         
-        // Call OpenAI TTS API with WAV format for real-time streaming
+        // Call OpenAI TTS API with optimized settings for real-time streaming
         const ttsResponse = await fetch("https://api.openai.com/v1/audio/speech", {
           method: "POST",
           headers: {
@@ -55,8 +55,10 @@ serve(async (req) => {
             model: "tts-1",
             input: text,
             voice: voice,
-            response_format: "wav", // Changed from "mp3" to "wav" for PCM streaming
+            response_format: "wav", // PCM format for minimal decoding overhead
             speed: 1.0, // Standard speed for optimal quality
+            // Note: OpenAI TTS-1 model outputs mono, 24kHz by default
+            // This is perfect for real-time streaming - no additional params needed
           }),
         });
 
@@ -74,15 +76,16 @@ serve(async (req) => {
           return;
         }
 
-        console.log(`[TTS-WS] TTS response received, starting WAV stream for session ${sessionId}`);
+        console.log(`[TTS-WS] TTS response received, starting optimized WAV stream for session ${sessionId}`);
         
         // Send stream start signal
         socket.send(JSON.stringify({ type: "stream-start" }));
         
-        // Stream the binary WAV data in small chunks for real-time playback
+        // Stream the binary WAV data in small chunks for minimal latency
         const reader = ttsResponse.body.getReader();
         let totalBytes = 0;
         let chunkCount = 0;
+        const CHUNK_SIZE = 8192; // 8KB chunks for optimal real-time streaming
         
         try {
           while (true) {
@@ -90,21 +93,25 @@ serve(async (req) => {
             if (done) break;
             
             if (value) {
-              totalBytes += value.length;
-              chunkCount++;
-              
-              // Send WAV chunk as ArrayBuffer for immediate browser playback
-              // No need for MP3 decoding - browser can handle WAV directly
-              socket.send(value.buffer);
-              
-              // Log progress every 10 chunks
-              if (chunkCount % 10 === 0) {
-                console.log(`[TTS-WS] Sent ${chunkCount} chunks, ${totalBytes} bytes for session ${sessionId}`);
+              // Split large chunks into smaller ones for faster incremental playback
+              for (let i = 0; i < value.length; i += CHUNK_SIZE) {
+                const chunk = value.slice(i, i + CHUNK_SIZE);
+                totalBytes += chunk.length;
+                chunkCount++;
+                
+                // Send WAV chunk as ArrayBuffer for immediate browser playback
+                // Small chunks = faster WebSocket transmission and quicker browser processing
+                socket.send(chunk.buffer);
+                
+                // Log progress every 20 chunks to avoid console spam
+                if (chunkCount % 20 === 0) {
+                  console.log(`[TTS-WS] Sent ${chunkCount} chunks, ${totalBytes} bytes for session ${sessionId}`);
+                }
               }
             }
           }
           
-          console.log(`[TTS-WS] WAV stream completed for session ${sessionId}, total: ${chunkCount} chunks, ${totalBytes} bytes`);
+          console.log(`[TTS-WS] Optimized WAV stream completed for session ${sessionId}, total: ${chunkCount} chunks, ${totalBytes} bytes`);
           
           // Send end-of-stream signal
           socket.send(JSON.stringify({ type: "stream-end" }));
