@@ -105,7 +105,10 @@ export class WebSocketTtsService {
         return false;
       }
       
-      // Step 3: Start health monitoring
+      // Step 3: Register session with the server
+      await this.registerSession(sessionId);
+      
+      // Step 4: Start health monitoring
       this.startHealthMonitoring();
       
       console.log(`[WebSocketTTS] ✅ Connection initialized successfully for session: ${sessionId}`);
@@ -144,8 +147,13 @@ export class WebSocketTtsService {
     this.resetTtsState();
     
     try {
-      // Send TTS request directly
-      this.socket!.send(JSON.stringify({ text, voice, chat_id }));
+      // Send TTS request using new format
+      this.socket!.send(JSON.stringify({ 
+        type: 'tts',
+        text, 
+        voice, 
+        chat_id 
+      }));
       
       // Store callbacks for this request
       this.currentTtsCallbacks = { onStart, onComplete, onError };
@@ -377,6 +385,36 @@ export class WebSocketTtsService {
       console.error('[WebSocketTTS] No audio received within 2 seconds - watchdog timeout');
       this.currentTtsCallbacks?.onError?.(new Error('No audio received'));
     }, 2000);
+  }
+
+  // ✅ NEW: Register session with the server
+  private async registerSession(sessionId: string): Promise<void> {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      throw new Error('WebSocket not ready for session registration');
+    }
+
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('Session registration timeout'));
+      }, 5000);
+
+      const handleMessage = (event: MessageEvent) => {
+        try {
+          const message = JSON.parse(event.data);
+          if (message.type === 'registered' && message.sessionId === sessionId) {
+            clearTimeout(timeout);
+            this.socket!.removeEventListener('message', handleMessage);
+            console.log(`[WebSocketTTS] Session ${sessionId} registered successfully`);
+            resolve();
+          }
+        } catch (error) {
+          // Ignore non-JSON messages
+        }
+      };
+
+      this.socket.addEventListener('message', handleMessage);
+      this.socket.send(JSON.stringify({ type: 'register', sessionId }));
+    });
   }
 
   // ✅ NEW: Get connection state
