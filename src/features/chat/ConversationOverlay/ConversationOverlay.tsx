@@ -309,8 +309,14 @@ const setupStreamListener = (sessionId: string) => {
   });
 
   channel.subscribe((status) => {
+    // Detailed logging for WebSocket connection status
+    console.log(`[WebSocket] Subscription status: ${status}`);
     if (status === 'SUBSCRIBED') {
-      logDebug(`Subscribed to TTS stream channel: tts-stream:${sessionId}`);
+      console.log(`[WebSocket] ✅ Successfully subscribed to TTS stream channel: tts-stream:${sessionId}`);
+    } else if (status === 'TIMED_OUT') {
+      console.error(`[WebSocket] ❌ Timed out subscribing to channel: tts-stream:${sessionId}`);
+    } else if (status === 'CHANNEL_ERROR') {
+      console.error(`[WebSocket] ❌ Channel error on: tts-stream:${sessionId}`);
     }
   });
 
