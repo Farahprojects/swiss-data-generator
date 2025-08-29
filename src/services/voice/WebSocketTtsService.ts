@@ -35,14 +35,14 @@ export class WebSocketTtsService {
   }
 
   private handleSourceOpen = () => {
-    console.log('[WebSocketTTS] MediaSource opened for MP4 streaming');
+    console.log('[WebSocketTTS] MediaSource opened for MP3 streaming');
     try {
-      const mimeType = 'video/mp4; codecs="mp4a.40.2"'; // AAC audio in MP4
+      const mimeType = 'audio/mpeg'; // MP3 audio format
       if (MediaSource.isTypeSupported(mimeType)) {
         this.sourceBuffer = this.mediaSource.addSourceBuffer(mimeType);
         this.sourceBuffer.addEventListener('updateend', this.processChunks);
       } else {
-        console.error('[WebSocketTTS] MP4/AAC MIME type not supported:', mimeType);
+        console.error('[WebSocketTTS] MP3 MIME type not supported:', mimeType);
       }
     } catch (e) {
       console.error('[WebSocketTTS] Error adding source buffer:', e);
@@ -66,7 +66,7 @@ export class WebSocketTtsService {
   };
 
   private handlePlaybackEnd = () => {
-    console.log('[WebSocketTTS] MP4 audio playback ended');
+    console.log('[WebSocketTTS] MP3 audio playback ended');
     this.isPlaying = false;
   };
 
@@ -162,7 +162,7 @@ export class WebSocketTtsService {
             return;
           }
           
-          // Binary MP4 chunk - add to queue for streaming
+          // Binary MP3 chunk - add to queue for streaming
           const chunk = new Uint8Array(event.data);
           this.chunks.push(chunk);
           this.processChunks();
@@ -173,7 +173,7 @@ export class WebSocketTtsService {
               await this.audio.play();
               this.isPlaying = true;
               onStart?.();
-              console.log('[WebSocketTTS] MP4 streaming started');
+              console.log('[WebSocketTTS] MP3 streaming started');
             } catch (e) {
               console.error('[WebSocketTTS] Play failed:', e);
               onError?.(e as Error);

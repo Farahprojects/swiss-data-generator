@@ -28,14 +28,14 @@ export class BinaryStreamPlayerService {
   }
 
   private handleSourceOpen = () => {
-    logDebug('MediaSource opened for MP4 streaming');
+    logDebug('MediaSource opened for MP3 streaming');
     try {
-      const mimeType = 'video/mp4; codecs="mp4a.40.2"'; // AAC audio in MP4
+      const mimeType = 'audio/mpeg'; // MP3 audio format
       if (MediaSource.isTypeSupported(mimeType)) {
         this.sourceBuffer = this.mediaSource.addSourceBuffer(mimeType);
         this.sourceBuffer.addEventListener('updateend', this.processChunks);
       } else {
-        console.error('[BinaryStreamPlayer] MP4/AAC MIME type not supported:', mimeType);
+        console.error('[BinaryStreamPlayer] MP3 MIME type not supported:', mimeType);
       }
     } catch (e) {
       console.error('[BinaryStreamPlayer] Error adding source buffer:', e);
@@ -121,7 +121,7 @@ export class BinaryStreamPlayerService {
       try {
         await this.audio.play();
         this.isPlaying = true;
-        logDebug('MP4 streaming started');
+        logDebug('MP3 streaming started');
       } catch (error) {
         console.error('[BinaryStreamPlayer] Error starting playback:', error);
       }
@@ -129,7 +129,7 @@ export class BinaryStreamPlayerService {
   };
 
   private handlePlaybackEnd = () => {
-    logDebug('MP4 playback ended');
+    logDebug('MP3 playback ended');
     this.isPlaying = false;
     if (this.onPlaybackEnd) {
       this.onPlaybackEnd();
