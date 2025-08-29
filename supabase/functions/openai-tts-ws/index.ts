@@ -67,79 +67,125 @@ serve(async (req) => {
 
         console.log(`[TTS-WS] WebSocket TTS request for session ${sessionId}, text length: ${text.length}`);
         
-        // Connect to OpenAI Realtime API
-        const openaiWs = new WebSocket("wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview");
+        // Connect to OpenAI Responses API using SSE
+        console.log(`[TTS-WS] Opening SSE connection to OpenAI for session ${sessionId}`);
         
-        openaiWs.onopen = () => {
-          console.log(`[TTS-WS] OpenAI Realtime connection opened for session ${sessionId}`);
-          
-          // Set audio output format to PCM16
-          openaiWs.send(JSON.stringify({
-            type: "session.update",
-            session: {
-              voice: voice,
-              audio_format: {
-                type: "pcm16",
+        // Send stream start signal immediately
+        socket.send(JSON.stringify({ type: "stream-start" }));
+        
+        try {
+          const openaiResponse = await fetch("https://api.openai.com/v1/responses", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${OPENAI_API_KEY}`,
+              "Content-Type": "application/json",
+              "OpenAI-Beta": "responses=v1"
+            },
+            body: JSON.stringify({
+              model: "gpt-4o-mini-tts",
+              modalities: ["text", "audio"],
+              input: text,
+              audio: {
+                voice: voice,
+                format: "pcm16",
                 sample_rate: 24000
               }
-            }
-          }));
+            })
+          });
           
-          // Create response with text and audio
-          openaiWs.send(JSON.stringify({
-            type: "response.create",
-            response: {
-              modalities: ["text", "audio"],
-              instructions: text,
-              audio: {
-                voice: voice
-              }
-            }
-          }));
-        };
-        
-        openaiWs.onmessage = (openaiEvent) => {
-          try {
-            const openaiData = JSON.parse(openaiEvent.data);
-            
-            if (openaiData.type === "response.output_audio.delta") {
-              // Decode base64 PCM to binary and forward to browser
-              const pcmData = atob(openaiData.delta);
-              const pcmArray = new Uint8Array(pcmData.length);
-              for (let i = 0; i < pcmData.length; i++) {
-                pcmArray[i] = pcmData.charCodeAt(i);
-              }
-              
-              // Send as Int16Array (PCM16)
-              const int16Array = new Int16Array(pcmArray.buffer);
-              socket.send(int16Array.buffer);
-              
-            } else if (openaiData.type === "response.output_audio.done" || openaiData.type === "response.completed") {
-              // Send stream end signal
-              socket.send(JSON.stringify({ type: "stream-end" }));
-              openaiWs.close();
-              
-            } else if (openaiData.type === "response.output_text.delta") {
-              // Text output (optional - we're focusing on audio)
-              console.log(`[TTS-WS] Text delta: ${openaiData.delta}`);
-            }
-            
-          } catch (parseError) {
-            console.error(`[TTS-WS] Error parsing OpenAI message:`, parseError);
+          if (!openaiResponse.ok) {
+            const errorText = await openaiResponse.text();
+            console.error(`[TTS-WS] OpenAI API error: ${openaiResponse.status} - ${errorText}`);
+            socket.send(JSON.stringify({ error: `OpenAI API failed: ${openaiResponse.status}` }));
+            return;
           }
-        };
-        
-        openaiWs.onerror = (error) => {
-          console.error(`[TTS-WS] OpenAI Realtime error for session ${sessionId}:`, error);
-          socket.send(JSON.stringify({ error: "OpenAI Realtime connection failed" }));
-        };
-        
-        openaiWs.onclose = () => {
-          console.log(`[TTS-WS] OpenAI Realtime connection closed for session ${sessionId}`);
-        };
-        
-        // Send stream start signal
-        socket.send(JSON.stringify({ type: "stream-start" }));
+          
+          if (!openaiResponse.body) {
+            socket.send(JSON.stringify({ error: "No response body from OpenAI API" }));
+            return;
+          }
+          
+          console.log(`[TTS-WS] OpenAI SSE connection established for session ${sessionId}`);
+          
+          // Read the SSE stream
+          const reader = openaiResponse.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+          let deltaCount = 0;
+          let totalBytes = 0;
+          
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              
+              // Decode the chunk and add to buffer
+              buffer += decoder.decode(value, { stream: true });
+              
+              // Process complete lines
+              const lines = buffer.split('\n');
+              buffer = lines.pop() || ''; // Keep incomplete line in buffer
+              
+              for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                  try {
+                    const data = line.slice(6); // Remove 'data: ' prefix
+                    if (data === '[DONE]') {
+                      console.log(`[TTS-WS] OpenAI stream completed for session ${sessionId}`);
+                      socket.send(JSON.stringify({ type: "stream-end" }));
+                      return;
+                    }
+                    
+                    const event = JSON.parse(data);
+                    
+                    if (event.type === "response.audio.delta") {
+                      // Decode base64 PCM to binary and forward to browser
+                      const pcmData = atob(event.delta);
+                      const pcmArray = new Uint8Array(pcmData.length);
+                      for (let i = 0; i < pcmData.length; i++) {
+                        pcmArray[i] = pcmData.charCodeAt(i);
+                      }
+                      
+                      // Send as Int16Array (PCM16)
+                      const int16Array = new Int16Array(pcmArray.buffer);
+                      socket.send(int16Array.buffer);
+                      
+                      deltaCount++;
+                      totalBytes += int16Array.byteLength;
+                      
+                      // Log progress every 10 chunks
+                      if (deltaCount % 10 === 0) {
+                        console.log(`[TTS-WS] Forwarded ${deltaCount} PCM chunks (${totalBytes} bytes) for session ${sessionId}`);
+                      }
+                      
+                    } else if (event.type === "response.completed") {
+                      console.log(`[TTS-WS] OpenAI response completed for session ${sessionId}, total: ${deltaCount} chunks, ${totalBytes} bytes`);
+                      socket.send(JSON.stringify({ type: "stream-end" }));
+                      return;
+                      
+                    } else if (event.type === "response.text.delta") {
+                      // Text output (optional - we're focusing on audio)
+                      console.log(`[TTS-WS] Text delta: ${event.delta}`);
+                    }
+                    
+                  } catch (parseError) {
+                    console.error(`[TTS-WS] Error parsing SSE event:`, parseError);
+                  }
+                }
+              }
+            }
+            
+          } catch (streamError) {
+            console.error(`[TTS-WS] SSE streaming error for session ${sessionId}:`, streamError);
+            socket.send(JSON.stringify({ error: "SSE streaming failed" }));
+          } finally {
+            reader.releaseLock();
+          }
+          
+        } catch (fetchError) {
+          console.error(`[TTS-WS] Failed to connect to OpenAI API for session ${sessionId}:`, fetchError);
+          socket.send(JSON.stringify({ error: "Failed to connect to OpenAI API" }));
+        }
 
       } catch (error) {
         console.error(`[TTS-WS] Error processing message for session ${sessionId}:`, error);
