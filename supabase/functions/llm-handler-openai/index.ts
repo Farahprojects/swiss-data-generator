@@ -192,11 +192,28 @@ Content Rules:
             console.error("[llm-handler-openai] Database save error:", error);
           });
           
-        // 🔥 CONVERSATION MODE: Return response for WebSocket TTS (handled by frontend)
+        // �� CONVERSATION MODE: Fire-and-forget TTS call
         if (mode === 'conversation' && sessionId) {
-          // No need to call any TTS function - frontend handles WebSocket TTS directly
-          // Frontend will use the response text for WebSocket streaming
-          console.log("[llm-handler-openai] Conversation mode - frontend will handle TTS");
+          // Call TTS WebSocket service (fire-and-forget)
+          fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/openai-tts-ws?sessionId=${sessionId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+            },
+            body: JSON.stringify({
+              text: sanitizedAssistantText,
+              voice: 'alloy',
+              chat_id: chat_id,
+              sessionId: sessionId
+            })
+          })
+          .then(() => {
+            console.log(`[llm-handler-openai] TTS request sent for session ${sessionId}`);
+          })
+          .catch(error => {
+            console.error(`[llm-handler-openai] TTS request failed for session ${sessionId}:`, error);
+          });
         }
 
       } catch (error) {

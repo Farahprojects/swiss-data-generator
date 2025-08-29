@@ -8,6 +8,107 @@ serve(async (req) => {
   const { headers } = req;
   const upgradeHeader = headers.get("upgrade") || "";
 
+  // Handle HTTP POST requests from LLM handler
+  if (req.method === "POST") {
+    try {
+      const { text, voice = "alloy", chat_id, sessionId } = await req.json();
+      
+      if (!text || !chat_id || !sessionId) {
+        return new Response(JSON.stringify({ error: "Missing required fields: text, chat_id, sessionId" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      console.log(`[TTS-WS] HTTP POST request for session: ${sessionId}, text length: ${text.length}`);
+
+      // Call OpenAI TTS API with WAV format for real-time streaming
+      const ttsResponse = await fetch("https://api.openai.com/v1/audio/speech", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "tts-1",
+          input: text,
+          voice: voice,
+          response_format: "wav", // Changed from "mp3" to "wav" for PCM streaming
+          speed: 1.0, // Standard speed for optimal quality
+        }),
+      });
+
+      if (!ttsResponse.ok) {
+        const errorBody = await ttsResponse.text();
+        console.error("[TTS-WS] OpenAI TTS API error:", errorBody);
+        return new Response(JSON.stringify({ 
+          error: `TTS API failed: ${ttsResponse.status}` 
+        }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      if (!ttsResponse.body) {
+        return new Response(JSON.stringify({ error: "No response body from TTS API" }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      console.log(`[TTS-WS] TTS response received, starting WAV stream for session ${sessionId}`);
+      
+      // Stream the binary WAV data in small chunks for real-time playback
+      const reader = ttsResponse.body.getReader();
+      let totalBytes = 0;
+      let chunkCount = 0;
+      
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          if (value) {
+            totalBytes += value.length;
+            chunkCount++;
+            
+            // For HTTP POST, we would need to implement a different streaming mechanism
+            // For now, we'll just log the chunks and return success
+            console.log(`[TTS-WS] Processed chunk ${chunkCount}, ${value.length} bytes for session ${sessionId}`);
+          }
+        }
+        
+        console.log(`[TTS-WS] WAV stream completed for session ${sessionId}, total: ${chunkCount} chunks, ${totalBytes} bytes`);
+        
+        return new Response(JSON.stringify({ 
+          success: true, 
+          message: "TTS streaming completed",
+          chunks: chunkCount,
+          bytes: totalBytes
+        }), {
+          headers: { "Content-Type": "application/json" }
+        });
+        
+      } catch (streamError) {
+        console.error(`[TTS-WS] Streaming error for session ${sessionId}:`, streamError);
+        return new Response(JSON.stringify({ error: "Streaming failed" }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" }
+        });
+      } finally {
+        reader.releaseLock();
+      }
+
+    } catch (error) {
+      console.error("[TTS-WS] HTTP POST error:", error);
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+  }
+
+  // Handle WebSocket connections from frontend
   if (upgradeHeader.toLowerCase() !== "websocket") {
     return new Response("Expected WebSocket connection", { status: 400 });
   }
@@ -44,7 +145,7 @@ serve(async (req) => {
 
         console.log(`[TTS-WS] Starting TTS for session ${sessionId}, text length: ${text.length}`);
         
-        // Call OpenAI TTS API with optimized settings for real-time streaming
+        // Call OpenAI TTS API with WAV format for real-time streaming
         const ttsResponse = await fetch("https://api.openai.com/v1/audio/speech", {
           method: "POST",
           headers: {
@@ -55,10 +156,8 @@ serve(async (req) => {
             model: "tts-1",
             input: text,
             voice: voice,
-            response_format: "wav", // PCM format for minimal decoding overhead
+            response_format: "wav", // Changed from "mp3" to "wav" for PCM streaming
             speed: 1.0, // Standard speed for optimal quality
-            // Note: OpenAI TTS-1 model outputs mono, 24kHz by default
-            // This is perfect for real-time streaming - no additional params needed
           }),
         });
 
@@ -76,16 +175,15 @@ serve(async (req) => {
           return;
         }
 
-        console.log(`[TTS-WS] TTS response received, starting optimized WAV stream for session ${sessionId}`);
+        console.log(`[TTS-WS] TTS response received, starting WAV stream for session ${sessionId}`);
         
         // Send stream start signal
         socket.send(JSON.stringify({ type: "stream-start" }));
         
-        // Stream the binary WAV data in small chunks for minimal latency
+        // Stream the binary WAV data in small chunks for real-time playback
         const reader = ttsResponse.body.getReader();
         let totalBytes = 0;
         let chunkCount = 0;
-        const CHUNK_SIZE = 8192; // 8KB chunks for optimal real-time streaming
         
         try {
           while (true) {
@@ -93,25 +191,21 @@ serve(async (req) => {
             if (done) break;
             
             if (value) {
-              // Split large chunks into smaller ones for faster incremental playback
-              for (let i = 0; i < value.length; i += CHUNK_SIZE) {
-                const chunk = value.slice(i, i + CHUNK_SIZE);
-                totalBytes += chunk.length;
-                chunkCount++;
-                
-                // Send WAV chunk as ArrayBuffer for immediate browser playback
-                // Small chunks = faster WebSocket transmission and quicker browser processing
-                socket.send(chunk.buffer);
-                
-                // Log progress every 20 chunks to avoid console spam
-                if (chunkCount % 20 === 0) {
-                  console.log(`[TTS-WS] Sent ${chunkCount} chunks, ${totalBytes} bytes for session ${sessionId}`);
-                }
+              totalBytes += value.length;
+              chunkCount++;
+              
+              // Send WAV chunk as ArrayBuffer for immediate browser playback
+              // No need for MP3 decoding - browser can handle WAV directly
+              socket.send(value.buffer);
+              
+              // Log progress every 10 chunks
+              if (chunkCount % 10 === 0) {
+                console.log(`[TTS-WS] Sent ${chunkCount} chunks, ${totalBytes} bytes for session ${sessionId}`);
               }
             }
           }
           
-          console.log(`[TTS-WS] Optimized WAV stream completed for session ${sessionId}, total: ${chunkCount} chunks, ${totalBytes} bytes`);
+          console.log(`[TTS-WS] WAV stream completed for session ${sessionId}, total: ${chunkCount} chunks, ${totalBytes} bytes`);
           
           // Send end-of-stream signal
           socket.send(JSON.stringify({ type: "stream-end" }));

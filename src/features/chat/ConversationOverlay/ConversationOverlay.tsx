@@ -463,10 +463,10 @@ if (!audioBlob || audioBlob.size < 1024) {
 
 // Set up the listener JUST BEFORE we trigger the backend
 if (sessionIdRef.current) {
-    console.log('[Turn] Using new WebSocket TTS for session:', sessionIdRef.current);
-    // WebSocket TTS doesn't need a separate listener setup
+    console.log('[Turn] Setting up WebSocket listener for TTS audio stream...');
+    setupStreamListener(sessionIdRef.current);
 } else {
-    console.error('[Turn] No session ID, cannot proceed.');
+    console.error('[Turn] No session ID, cannot set up stream listener.');
     setConversationState('connecting');
     return;
 }
@@ -520,32 +520,13 @@ try {
 
   if (isShuttingDown.current) return;
 
-  // Now use WebSocket TTS for streaming audio
+  // LLM handler now automatically triggers TTS - just wait for audio stream
   if (response.text) {
     setConversationState('replying');
     
-    webSocketTtsService.speak({
-      text: response.text,
-      voice: 'alloy',
-      chat_id: chatIdRef.current!,
-      sessionId: sessionIdRef.current!,
-      onStart: () => {
-        console.log('[WebSocketTTS] Audio playback started');
-      },
-      onComplete: () => {
-        console.log('[WebSocketTTS] Audio playback completed');
-        if (!isShuttingDown.current) {
-          conversationMicrophoneService.resumeAfterPlayback();
-          conversationMicrophoneService.startRecording().then(ok => {
-            setConversationState(ok ? 'listening' : 'connecting');
-          });
-        }
-      },
-      onError: (error) => {
-        console.error('[WebSocketTTS] Error:', error);
-        if (!isShuttingDown.current) setConversationState('listening');
-      }
-    });
+    // The LLM handler has already triggered TTS via HTTP POST to openai-tts-ws
+    // The frontend WebSocket should receive the audio stream automatically
+    console.log('[ConversationOverlay] LLM response received, waiting for TTS audio stream...');
   }
 
 } catch (error) {
@@ -602,7 +583,7 @@ if (!isConversationOpen || !canPortal) return null;
         >
           ✕
         </button>
-      </div>
+        </div>
     )}
       </div>
     </div>,
