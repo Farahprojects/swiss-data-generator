@@ -294,6 +294,13 @@ try {
   conversationTtsService.stopAllAudio();
 } catch {}
 
+// ✅ NEW: Cleanup persistent WebSocket TTS connection
+try {
+  webSocketTtsService.cleanup();
+} catch (error) {
+  console.error('[ConversationOverlay] WebSocket TTS cleanup error:', error);
+}
+
 // Try to refresh messages list behind the modal
 try {
   const { retryLoadMessages } = useChatStore.getState();
@@ -380,6 +387,17 @@ try {
       }
     });
     streamPlayerRef.current.play(); // This is the critical priming step
+  }
+  
+  // ✅ NEW: Initialize persistent WebSocket TTS connection early
+  if (sessionIdRef.current) {
+    console.log('[Gesture] Initializing persistent WebSocket TTS connection...');
+    const connectionSuccess = await webSocketTtsService.initializeConnection(sessionIdRef.current);
+    if (!connectionSuccess) {
+      console.warn('[ConversationOverlay] Failed to initialize TTS connection, will retry later');
+    } else {
+      console.log('[ConversationOverlay] ✅ TTS connection initialized successfully');
+    }
   }
   
   // The listener will now be set up in handleSimpleRecordingComplete
@@ -483,16 +501,15 @@ try {
   if (response.text) {
     setConversationState('replying');
     
-    // Use WebSocket TTS service to receive the audio stream
-    webSocketTtsService.speak({
-      text: response.text,
-      voice: 'alloy',
-      chat_id: chatIdRef.current!,
-      sessionId: sessionIdRef.current!,
-      onStart: () => {
+    // ✅ NEW: Use simplified TTS request (connection already established)
+    webSocketTtsService.speakText(
+      response.text,
+      'alloy',
+      chatIdRef.current!,
+      () => {
         console.log('[WebSocketTTS] Audio playback started');
       },
-      onComplete: () => {
+      () => {
         console.log('[WebSocketTTS] Audio playback completed');
         if (!isShuttingDown.current) {
           conversationMicrophoneService.resumeAfterPlayback();
@@ -501,11 +518,11 @@ try {
           });
         }
       },
-      onError: (error) => {
+      (error) => {
         console.error('[WebSocketTTS] Error:', error);
         if (!isShuttingDown.current) setConversationState('listening');
       }
-    });
+    );
   }
 
 } catch (error) {

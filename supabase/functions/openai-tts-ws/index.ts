@@ -143,7 +143,15 @@ serve(async (req) => {
 
     socket.onmessage = async (event) => {
       try {
-        const { text, voice = "alloy", chat_id } = JSON.parse(event.data);
+        const data = JSON.parse(event.data);
+        
+        // Handle ping/pong for health monitoring
+        if (data.type === 'ping') {
+          socket.send(JSON.stringify({ type: 'pong' }));
+          return;
+        }
+        
+        const { text, voice = "alloy", chat_id } = data;
         
         if (!text || !chat_id) {
           socket.send(JSON.stringify({ error: "Missing required fields: text, chat_id" }));
