@@ -14,6 +14,7 @@ export class BinaryStreamPlayerService {
   private onPlaybackEnd: (() => void) | null = null;
   private streamEnded = false;
   private isPlaying = false;
+  private isAudioUnlocked = false;
 
   constructor(onPlaybackEnd?: () => void) {
     this.audio = new Audio();
@@ -41,8 +42,31 @@ export class BinaryStreamPlayerService {
     }
   };
 
+  // ✅ Ensure audio context is unlocked by user gesture (Safari requirement)
+  public async unlockAudioContext(): Promise<boolean> {
+    if (this.isAudioUnlocked) return true;
+    
+    try {
+      // Prime the audio element during user gesture
+      await this.audio.play();
+      this.audio.pause(); // Immediately pause, we just needed to unlock
+      this.isAudioUnlocked = true;
+      logDebug('Audio context unlocked successfully');
+      return true;
+    } catch (error) {
+      console.error('[BinaryStreamPlayer] Failed to unlock audio context:', error);
+      return false;
+    }
+  }
+
   public appendBinaryChunk = (chunk: Uint8Array) => {
     if (this.streamEnded) return;
+
+    // ✅ Only process chunks if audio is unlocked
+    if (!this.isAudioUnlocked) {
+      logDebug('Audio context not unlocked, discarding chunk');
+      return;
+    }
 
     this.chunks.push(chunk);
     this.processChunks();
@@ -87,6 +111,12 @@ export class BinaryStreamPlayerService {
   };
 
   public play = async () => {
+    // ✅ Only play if audio context is unlocked
+    if (!this.isAudioUnlocked) {
+      logDebug('Cannot play - audio context not unlocked');
+      return;
+    }
+
     if (this.audio.paused) {
       try {
         await this.audio.play();
@@ -119,5 +149,6 @@ export class BinaryStreamPlayerService {
     this.audio.pause();
     this.audio.src = '';
     this.isPlaying = false;
+    this.isAudioUnlocked = false;
   };
 }
