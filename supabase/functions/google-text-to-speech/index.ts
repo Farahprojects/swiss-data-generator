@@ -62,7 +62,7 @@ serve(async (req) => {
             name: voiceName,
           },
           audioConfig: {
-            audioEncoding: "AAC",
+            audioEncoding: "MP3",
             speakingRate: 1.0,
             pitch: 0.0,
             sampleRateHertz: 22050
@@ -87,8 +87,8 @@ serve(async (req) => {
     // Decode base64 audio to binary
     const audioBytes = Uint8Array.from(atob(audioContent), c => c.charCodeAt(0));
 
-    // Create data URL for direct browser playback (AAC format)
-    const audioUrl = `data:audio/aac;base64,${audioContent}`;
+    // Create data URL for direct browser playback (optimized for Safari)
+    const audioUrl = `data:audio/mpeg;base64,${audioContent}`;
 
     // Save TTS audio clip to dedicated audio table (fire-and-forget)
     supabase
@@ -101,7 +101,7 @@ serve(async (req) => {
         session_id: sessionId,
         voice: voiceName,
         provider: "google",
-        mime_type: "audio/aac",
+        mime_type: "audio/mpeg",
         meta: { 
           tts_provider: "google",
           sessionId,
