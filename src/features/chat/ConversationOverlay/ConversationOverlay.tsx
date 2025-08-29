@@ -33,7 +33,7 @@ text?: string | null;
 };
 
 export const ConversationOverlay: React.FC = () => {
-const { isConversationOpen, closeConversation } = useConversationUIStore();
+  const { isConversationOpen, closeConversation } = useConversationUIStore();
 const chat_id = useChatStore((state) => state.chat_id);
 const audioLevel = useConversationAudioLevel();
 
@@ -66,23 +66,15 @@ const firstClipTimer = useRef<number | null>(null);
 const streamPlayerRef = useRef<StreamPlayerService | null>(null);
 const streamListenerCleanupRef = useRef<(() => void) | null>(null);
 
-// This effect sets up and tears down the stream listener
+// This effect now only handles cleanup on unmount
 useEffect(() => {
-  if (isConversationOpen && sessionIdRef.current) {
-    setupStreamListener(sessionIdRef.current);
-  }
-
   return () => {
-    if (streamListenerCleanupRef.current) {
-      streamListenerCleanupRef.current();
-      streamListenerCleanupRef.current = null;
-    }
     if (streamPlayerRef.current) {
       streamPlayerRef.current.cleanup();
       streamPlayerRef.current = null;
     }
   };
-}, [isConversationOpen]);
+}, []);
 
 // Initialize session when overlay opens
 useEffect(() => {
@@ -283,21 +275,9 @@ const setupStreamListener = (sessionId: string) => {
   const channel = supabase.channel(`tts-stream:${sessionId}`);
 
   channel.on("broadcast", { event: "audio-chunk" }, ({ payload }) => {
-    if (isShuttingDown.current) return;
-    if (!streamPlayerRef.current) {
-      // First chunk received, start playback
-      setConversationState('replying');
-      streamPlayerRef.current = new StreamPlayerService(() => {
-        // onPlaybackEnd callback
-        if (!isShuttingDown.current) {
-            conversationMicrophoneService.resumeAfterPlayback();
-            conversationMicrophoneService.startRecording().then(ok => {
-                setConversationState(ok ? 'listening' : 'connecting');
-            });
-        }
-      });
-      streamPlayerRef.current.play();
-    }
+    if (isShuttingDown.current || !streamPlayerRef.current) return;
+    
+    // The player already exists and is primed, just append chunks
     streamPlayerRef.current.appendChunk(payload.chunk);
   });
 
@@ -420,11 +400,31 @@ try {
   setPermissionGranted(true);
   conversationMicrophoneService.cacheStream(stream);
 
+  // PRIME THE PLAYER: Create the player and call play() within the user gesture
+  if (!streamPlayerRef.current) {
+    console.log('[Gesture] Priming audio stream player...');
+    streamPlayerRef.current = new StreamPlayerService(() => {
+      // onPlaybackEnd callback
+      if (!isShuttingDown.current) {
+          conversationMicrophoneService.resumeAfterPlayback();
+          conversationMicrophoneService.startRecording().then(ok => {
+              setConversationState(ok ? 'listening' : 'connecting');
+          });
+      }
+    });
+    streamPlayerRef.current.play(); // This is the critical priming step
+  }
+  
+  // Now set up the listener, which will use the primed player
+  if (sessionIdRef.current) {
+    setupStreamListener(sessionIdRef.current);
+  }
+
   conversationMicrophoneService.initialize({
     onRecordingComplete: handleSimpleRecordingComplete,
     onSilenceDetected: () => {
-      logDebug('Silence detected; stopping recording and pausing mic for TTS');
-      setConversationState('thinking');
+      logDebug('Silence detected; stopping recording for processing.');
+      setConversationState('processing'); // User has finished speaking
       conversationMicrophoneService.suspendForPlayback();
       if (conversationMicrophoneService.getState().isRecording) {
         conversationMicrophoneService.stopRecording();
@@ -451,10 +451,13 @@ const handleSimpleRecordingComplete = useCallback(async (audioBlob: Blob) => {
 if (isShuttingDown.current) return;
 
 if (!audioBlob || audioBlob.size < 1024) {
-  logDebug('Audio blob too small, returning to listening:', audioBlob?.size || 0);
+  logDebug('Audio blob too small, returning to listening');
   setConversationState('listening');
   return;
 }
+
+// Set state to replying immediately after we have a valid recording
+setConversationState('replying');
 
 try {
   setConversationState('processing');
@@ -522,8 +525,8 @@ const state = conversationState;
 const canPortal = typeof document !== 'undefined' && !!document.body;
 if (!isConversationOpen || !canPortal) return null;
 
-return createPortal(
-<div className="fixed inset-0 z-50 bg-white pt-safe pb-safe">
+  return createPortal(
+    <div className="fixed inset-0 z-50 bg-white pt-safe pb-safe">
 <div className="h-full w-full flex items-center justify-center px-6">
 {!permissionGranted ? (
 <div
@@ -537,19 +540,19 @@ return createPortal(
 </div>
 ) : (
 <div className="flex flex-col items-center justify-center gap-6 relative">
-<AnimatePresence mode="wait">
-<motion.div
-key={state}
-initial={{ opacity: 0, scale: 0.98 }}
-animate={{ opacity: 1, scale: 1 }}
-exit={{ opacity: 0, scale: 0.98 }}
-transition={{ duration: 0.2, ease: 'easeInOut' }}
->
-<VoiceBubble state={state} audioLevel={audioLevel} />
-</motion.div>
-</AnimatePresence>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={state}
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+            >
+              <VoiceBubble state={state} audioLevel={audioLevel} />
+            </motion.div>
+          </AnimatePresence>
 
-        <p className="text-gray-500 font-light">
+          <p className="text-gray-500 font-light">
           {state === 'listening'
             ? 'Listening…'
             : state === 'processing' || state === 'thinking'
@@ -566,8 +569,8 @@ transition={{ duration: 0.2, ease: 'easeInOut' }}
         </button>
       </div>
     )}
-  </div>
-</div>,
-document.body
-);
+      </div>
+    </div>,
+    document.body
+  );
 };
