@@ -50,37 +50,43 @@ export const ChatSidebarControls: React.FC = () => {
           Clear session
         </button>
       </div>
-      <div>
-        <p className="text-xs uppercase tracking-wider text-gray-500 mb-2">Voice</p>
-        <select
-          className="w-full border rounded-md px-2 py-2 text-sm bg-white"
-          value={ttsVoice}
-          onChange={(e) => handleVoiceChange(e.target.value)}
-        >
-          {/* Google Chirp 3 HD Voices - Male */}
-          <optgroup label="Male">
-            <option value="Puck">Puck</option>
-            <option value="Achird">Achird</option>
-            <option value="Algenib">Algenib</option>
-            <option value="Charon">Charon</option>
-            <option value="Enceladus">Enceladus</option>
-            <option value="Fenrir">Fenrir</option>
-            <option value="Orus">Orus</option>
-            <option value="Rasalgethi">Rasalgethi</option>
-          </optgroup>
-          {/* Google Chirp 3 HD Voices - Female */}
-          <optgroup label="Female">
-            <option value="Achernar">Achernar</option>
-            <option value="Aoede">Aoede</option>
-            <option value="Callirrhoe">Callirrhoe</option>
-            <option value="Despina">Despina</option>
-            <option value="Gacrux">Gacrux</option>
-            <option value="Kore">Kore</option>
-            <option value="Leda">Leda</option>
-            <option value="Sulafat">Sulafat</option>
-            <option value="Zephyr">Zephyr</option>
-          </optgroup>
-        </select>
+      <div className="space-y-4 p-4">
+        {/* Voice selection temporarily hidden for OpenAI TTS */}
+        {/*
+        <div>
+          <p className="text-xs uppercase tracking-wider text-gray-500 mb-2">
+            Assistant Voice
+          </p>
+          <select
+            id="tts-voice"
+            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-700 bg-gray-900 text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+            value={ttsVoice}
+            onChange={(e) => handleVoiceChange(e.target.value)}
+          >
+            <optgroup label="Male">
+              <option value="Puck">Puck</option>
+              <option value="Achird">Achird</option>
+              <option value="Algenib">Algenib</option>
+              <option value="Charon">Charon</option>
+              <option value="Enceladus">Enceladus</option>
+              <option value="Fenrir">Fenrir</option>
+              <option value="Orus">Orus</option>
+              <option value="Rasalgethi">Rasalgethi</option>
+            </optgroup>
+            <optgroup label="Female">
+              <option value="Achernar">Achernar</option>
+              <option value="Aoede">Aoede</option>
+              <option value="Callirrhoe">Callirrhoe</option>
+              <option value="Despina">Despina</option>
+              <option value="Gacrux">Gacrux</option>
+              <option value="Kore">Kore</option>
+              <option value="Leda">Leda</option>
+              <option value="Sulafat">Sulafat</option>
+              <option value="Zephyr">Zephyr</option>
+            </optgroup>
+          </select>
+        </div>
+        */}
       </div>
       
       {/* Settings Button at the bottom */}

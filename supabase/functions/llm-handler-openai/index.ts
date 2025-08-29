@@ -195,7 +195,7 @@ Content Rules:
         // 🔥 CONVERSATION MODE: Trigger TTS (fire-and-forget, no logging)
         if (mode === 'conversation' && sessionId) {
           // Fire-and-forget TTS call - no response handling needed
-          fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
+          fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/openai-tts-stream`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -204,7 +204,7 @@ Content Rules:
             body: JSON.stringify({
               chat_id,
               text: sanitizedAssistantText,
-              voice: 'en-US-Chirp3-HD-Puck',
+              voice: 'alloy', // OpenAI voice
               sessionId
             })
           }).catch(() => {

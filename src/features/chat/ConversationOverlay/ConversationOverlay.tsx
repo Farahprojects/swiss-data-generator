@@ -13,6 +13,8 @@ import { Mic } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { Message } from '@/core/types';
+import { StreamPlayerService } from '@/services/voice/StreamPlayerService';
+
 
 const DEBUG = typeof window !== 'undefined' && (window as any).CONVO_DEBUG === true;
 function logDebug(...args: any[]) {
@@ -52,7 +54,6 @@ const [localMessages, setLocalMessages] = useState<Message[]>([]);
 
 // TTS realtime: cleanup and dedupe tracking
 const ttsCleanupRef = useRef<(() => void) | null>(null);
-const playedClipIds = useRef<Set<string>>(new Set());
 
 // TTS playback queue (ordered, single consumer)
 type Clip = { id?: string; url: string; text?: string | null };
@@ -61,20 +62,37 @@ const isPlayingQueue = useRef(false);
 
 // Responsiveness optimizations
 const firstClipTimer = useRef<number | null>(null);
-const gotFirstClip = useRef(false);
 
-// Initialize session when overlay opens with a valid chat_id
+const streamPlayerRef = useRef<StreamPlayerService | null>(null);
+const streamListenerCleanupRef = useRef<(() => void) | null>(null);
+
+// This effect sets up and tears down the stream listener
 useEffect(() => {
-if (!isConversationOpen) return;
+  if (isConversationOpen && sessionIdRef.current) {
+    setupStreamListener(sessionIdRef.current);
+  }
 
-if (chat_id && !chatIdRef.current) {
-  chatIdRef.current = chat_id;
-  sessionIdRef.current = `session_${Date.now()}`;
-  setIsReady(true);
+  return () => {
+    if (streamListenerCleanupRef.current) {
+      streamListenerCleanupRef.current();
+      streamListenerCleanupRef.current = null;
+    }
+    if (streamPlayerRef.current) {
+      streamPlayerRef.current.cleanup();
+      streamPlayerRef.current = null;
+    }
+  };
+}, [isConversationOpen]);
 
-  // Attach Realtime listener
-  ttsCleanupRef.current = setupTtsListener(chat_id);
-  logDebug('Session initialized', { chat_id, sessionId: sessionIdRef.current });
+// Initialize session when overlay opens
+useEffect(() => {
+if (isConversationOpen && chat_id) {
+  if (!chatIdRef.current) {
+    chatIdRef.current = chat_id;
+    sessionIdRef.current = `session_${Date.now()}`;
+    setIsReady(true);
+    // Now that sessionId is set, the stream listener useEffect will pick it up
+  }
 }
 
 return () => {
@@ -102,9 +120,6 @@ setLocalMessages([]);
 
 // Reset session ID for next open
 sessionIdRef.current = '';
-playedClipIds.current.clear();
-playbackQueue.current = [];
-isPlayingQueue.current = false;
 
 // Clear responsiveness timers
 if (firstClipTimer.current) {
@@ -134,9 +149,6 @@ setLocalMessages([]);
 chatIdRef.current = null;
 sessionIdRef.current = '';
 setIsReady(false);
-playedClipIds.current.clear();
-playbackQueue.current = [];
-isPlayingQueue.current = false;
 
     if (ttsCleanupRef.current) {
       ttsCleanupRef.current();
@@ -200,7 +212,6 @@ return cleanup;
 
 function enqueueTtsClip(clip: Clip) {
 // mark that a clip has arrived; cancel "replying" watchdog
-gotFirstClip.current = true;
 if (firstClipTimer.current) {
   clearTimeout(firstClipTimer.current);
   firstClipTimer.current = null;
@@ -263,6 +274,52 @@ conversationTtsService
 });
 }
 
+const setupStreamListener = (sessionId: string) => {
+  // Clean up previous listener if any
+  if (streamListenerCleanupRef.current) {
+    streamListenerCleanupRef.current();
+  }
+
+  const channel = supabase.channel(`tts-stream:${sessionId}`);
+
+  channel.on("broadcast", { event: "audio-chunk" }, ({ payload }) => {
+    if (isShuttingDown.current) return;
+    if (!streamPlayerRef.current) {
+      // First chunk received, start playback
+      setConversationState('replying');
+      streamPlayerRef.current = new StreamPlayerService(() => {
+        // onPlaybackEnd callback
+        if (!isShuttingDown.current) {
+            conversationMicrophoneService.resumeAfterPlayback();
+            conversationMicrophoneService.startRecording().then(ok => {
+                setConversationState(ok ? 'listening' : 'connecting');
+            });
+        }
+      });
+      streamPlayerRef.current.play();
+    }
+    streamPlayerRef.current.appendChunk(payload.chunk);
+  });
+
+  channel.on("broadcast", { event: "audio-stream-end" }, () => {
+    if (isShuttingDown.current) return;
+    if (streamPlayerRef.current) {
+      streamPlayerRef.current.endStream();
+    }
+  });
+
+  channel.subscribe((status) => {
+    if (status === 'SUBSCRIBED') {
+      logDebug(`Subscribed to TTS stream channel: tts-stream:${sessionId}`);
+    }
+  });
+
+  const cleanup = () => {
+    supabase.removeChannel(channel);
+  };
+  streamListenerCleanupRef.current = cleanup;
+};
+
 const handleModalClose = useCallback(async () => {
 isShuttingDown.current = true;
 
@@ -292,7 +349,6 @@ try {
 
 // Reset local state
 playbackQueue.current = [];
-playedClipIds.current.clear();
 
 // Clear responsiveness timers
 if (firstClipTimer.current) {
@@ -430,33 +486,20 @@ try {
       return;
     }
 
-    // Fire-and-forget; TTS will arrive via realtime listener
-    llmService
-      .sendMessage({
-        chat_id: chatIdRef.current,
+    // Fire-and-forget; TTS will arrive via the new stream listener
+    llmService.sendMessage({
+        chat_id: chatIdRef.current!,
         text: transcript,
         client_msg_id,
         mode: 'conversation',
         sessionId: sessionIdRef.current,
-      })
-      .catch((error) => {
+    }).catch((error) => {
         console.error('[ConversationOverlay] LLM error:', error);
         if (!isShuttingDown.current) setConversationState('listening');
-      });
+    });
 
-    // Responsiveness: Show "replying" if TTS takes too long
-    gotFirstClip.current = false;
-    if (firstClipTimer.current) {
-      clearTimeout(firstClipTimer.current);
-      firstClipTimer.current = null;
-    }
-    firstClipTimer.current = window.setTimeout(() => {
-      if (!gotFirstClip.current && !isShuttingDown.current) {
-        setConversationState('replying');
-        // Ensure audio pipeline is warmed so first play() doesn't stall
-        conversationTtsService.resumeAudioPlayback();
-      }
-    }, 350);
+    // We no longer need the watchdog timer for the "replying" state,
+    // as the state will be set when the first audio chunk arrives.
   } catch (sttError) {
     console.error('[ConversationOverlay] STT error:', sttError);
     if (!isShuttingDown.current) setConversationState('listening');
