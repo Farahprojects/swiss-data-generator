@@ -132,14 +132,17 @@ export class WebSocketTtsService {
         return false;
       }
       
-      // Step 2: Establish WebSocket connection
+      // Step 2: Initialize MediaSource and audio element (Safari requirement)
+      await this.initializeMediaSource();
+      
+      // Step 3: Establish WebSocket connection
       const connected = await this.connectWebSocket(sessionId);
       if (!connected) {
         console.error('[WebSocketTTS] Failed to establish WebSocket connection');
         return false;
       }
       
-      // Step 3: Start health monitoring
+      // Step 4: Start health monitoring
       this.startHealthMonitoring();
       
       console.log(`[WebSocketTTS] ✅ Connection initialized successfully for session: ${sessionId}`);
@@ -148,6 +151,29 @@ export class WebSocketTtsService {
     } catch (error) {
       console.error('[WebSocketTTS] Connection initialization failed:', error);
       return false;
+    }
+  }
+
+  // ✅ NEW: Initialize MediaSource with Safari-safe audio priming
+  private async initializeMediaSource(): Promise<void> {
+    // Ensure MediaSource is ready
+    if (this.mediaSource.readyState === 'closed') {
+      this.mediaSource = new MediaSource();
+      this.audio.src = URL.createObjectURL(this.mediaSource);
+      this.mediaSource.addEventListener('sourceopen', this.handleSourceOpen);
+    }
+    
+    // Load the audio element
+    this.audio.load();
+    
+    // Prime the audio element during user gesture (Safari requirement)
+    try {
+      await this.audio.play();
+      this.audio.pause(); // Immediately pause, we just needed to prime
+      console.log('[WebSocketTTS] Audio element primed successfully');
+    } catch (error) {
+      console.error('[WebSocketTTS] Failed to prime audio element:', error);
+      throw error;
     }
   }
 
@@ -401,6 +427,37 @@ export class WebSocketTtsService {
   // ✅ NEW: Check if ready for TTS
   public isReadyForTts(): boolean {
     return this.connectionState.isReady;
+  }
+
+  // ✅ NEW: Pause audio playback (for listening mode)
+  public pausePlayback(): void {
+    if (this.isPlaying) {
+      this.audio.pause();
+      this.isPlaying = false;
+      console.log('[WebSocketTTS] Audio playback paused');
+    }
+  }
+
+  // ✅ NEW: Resume audio playback (after listening mode)
+  public resumePlayback(): void {
+    if (!this.isPlaying && this.audio.paused) {
+      this.audio.play().then(() => {
+        this.isPlaying = true;
+        console.log('[WebSocketTTS] Audio playback resumed');
+      }).catch((error) => {
+        console.error('[WebSocketTTS] Failed to resume playback:', error);
+      });
+    }
+  }
+
+  // ✅ NEW: Clean older chunks to prevent memory buildup
+  public cleanOldChunks(): void {
+    if (this.sourceBuffer && !this.sourceBuffer.updating && this.chunks.length > 10) {
+      // Keep only the last 10 chunks to prevent memory issues
+      const chunksToRemove = this.chunks.length - 10;
+      this.chunks.splice(0, chunksToRemove);
+      console.log(`[WebSocketTTS] Cleaned ${chunksToRemove} old chunks`);
+    }
   }
 
   // Legacy method for backward compatibility

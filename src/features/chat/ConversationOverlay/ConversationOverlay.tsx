@@ -408,6 +408,10 @@ try {
     onSilenceDetected: () => {
       logDebug('Silence detected; stopping recording for processing.');
       setConversationState('processing'); // User has finished speaking
+      
+      // ✅ NEW: Pause TTS playback when user starts speaking
+      webSocketTtsService.pausePlayback();
+      
       conversationMicrophoneService.suspendForPlayback();
       if (conversationMicrophoneService.getState().isRecording) {
         conversationMicrophoneService.stopRecording();
@@ -513,6 +517,10 @@ try {
       () => {
         console.log('[WebSocketTTS] Audio playback completed');
         if (!isShuttingDown.current) {
+          // ✅ NEW: Resume TTS playback and clean old chunks
+          webSocketTtsService.resumePlayback();
+          webSocketTtsService.cleanOldChunks();
+          
           conversationMicrophoneService.resumeAfterPlayback();
           conversationMicrophoneService.startRecording().then(ok => {
             setConversationState(ok ? 'listening' : 'connecting');
