@@ -1,4 +1,4 @@
-// WebSocket-based TTS service for real-time WAV streaming with minimal latency
+// WebSocket-based TTS service for real-time MP4/AAC streaming with minimal latency
 import { SUPABASE_URL } from '@/integrations/supabase/client';
 
 export interface WebSocketTtsOptions {
@@ -13,71 +13,60 @@ export interface WebSocketTtsOptions {
 
 export class WebSocketTtsService {
   private socket: WebSocket | null = null;
-  private audioContext: AudioContext | null = null;
-  private audioQueue: ArrayBuffer[] = [];
-  private isPlaying = false;
+  private audio: HTMLAudioElement;
+  private mediaSource: MediaSource;
+  private sourceBuffer: SourceBuffer | null = null;
+  private chunks: Uint8Array[] = [];
+  private isAppending = false;
   private streamEnded = false;
   private currentSessionId: string | null = null;
-  private isProcessingQueue = false;
-  private chunkCount = 0;
+  private isPlaying = false;
 
   constructor() {
-    // Initialize audio context on first use
+    this.audio = new Audio();
+    this.audio.crossOrigin = 'anonymous';
+    this.mediaSource = new MediaSource();
+    this.audio.src = URL.createObjectURL(this.mediaSource);
+    
+    this.mediaSource.addEventListener('sourceopen', this.handleSourceOpen);
+    this.audio.addEventListener('ended', this.handlePlaybackEnd);
   }
 
-  private async ensureAudioContext(): Promise<AudioContext> {
-    if (!this.audioContext) {
-      this.audioContext = new AudioContext();
-      await this.audioContext.resume();
+  private handleSourceOpen = () => {
+    console.log('[WebSocketTTS] MediaSource opened for MP4 streaming');
+    try {
+      const mimeType = 'video/mp4; codecs="mp4a.40.2"'; // AAC audio in MP4
+      if (MediaSource.isTypeSupported(mimeType)) {
+        this.sourceBuffer = this.mediaSource.addSourceBuffer(mimeType);
+        this.sourceBuffer.addEventListener('updateend', this.processChunks);
+      } else {
+        console.error('[WebSocketTTS] MP4/AAC MIME type not supported:', mimeType);
+      }
+    } catch (e) {
+      console.error('[WebSocketTTS] Error adding source buffer:', e);
     }
-    return this.audioContext;
-  }
+  };
 
-  private async processAudioQueue(): Promise<void> {
-    if (this.isProcessingQueue || this.audioQueue.length === 0) {
+  private processChunks = () => {
+    if (this.isAppending || this.chunks.length === 0 || !this.sourceBuffer || this.sourceBuffer.updating) {
       return;
     }
 
-    this.isProcessingQueue = true;
-    const audioContext = await this.ensureAudioContext();
-
-    while (this.audioQueue.length > 0) {
-      const wavChunk = this.audioQueue.shift()!;
-      
-      try {
-        // Decode the WAV chunk immediately
-        const audioBuffer = await audioContext.decodeAudioData(wavChunk);
-        
-        // Create and play the audio source with minimal latency
-        const source = audioContext.createBufferSource();
-        source.buffer = audioBuffer;
-        source.connect(audioContext.destination);
-        
-        // Start playback immediately - no buffering
-        source.start(0);
-        
-        this.chunkCount++;
-        console.log(`[WebSocketTTS] WAV chunk ${this.chunkCount} decoded and playing immediately`);
-        
-        // Signal start on first chunk
-        if (!this.isPlaying) {
-          this.isPlaying = true;
-          console.log('[WebSocketTTS] Real-time WAV playback started');
-        }
-        
-        // Clean up when done
-        source.onended = () => {
-          console.log(`[WebSocketTTS] WAV chunk ${this.chunkCount} finished playing`);
-        };
-        
-      } catch (error) {
-        console.error('[WebSocketTTS] Error decoding WAV chunk:', error);
-        // Continue processing other chunks even if one fails
-      }
+    this.isAppending = true;
+    const chunk = this.chunks.shift()!;
+    
+    try {
+      this.sourceBuffer.appendBuffer(chunk.buffer as ArrayBuffer);
+    } catch (e) {
+      console.error('[WebSocketTTS] Error appending buffer:', e);
+      this.isAppending = false;
     }
+  };
 
-    this.isProcessingQueue = false;
-  }
+  private handlePlaybackEnd = () => {
+    console.log('[WebSocketTTS] MP4 audio playback ended');
+    this.isPlaying = false;
+  };
 
   public async speak(options: WebSocketTtsOptions): Promise<void> {
     const { text, voice = "alloy", chat_id, sessionId, onStart, onComplete, onError } = options;
@@ -88,14 +77,17 @@ export class WebSocketTtsService {
       this.currentSessionId = sessionId;
       
       // Reset state
-      this.audioQueue = [];
-      this.isPlaying = false;
+      this.chunks = [];
+      this.isAppending = false;
       this.streamEnded = false;
-      this.isProcessingQueue = false;
-      this.chunkCount = 0;
+      this.isPlaying = false;
       
-      // Initialize audio context
-      await this.ensureAudioContext();
+      // Create new MediaSource if needed
+      if (this.mediaSource.readyState === 'closed') {
+        this.mediaSource = new MediaSource();
+        this.audio.src = URL.createObjectURL(this.mediaSource);
+        this.mediaSource.addEventListener('sourceopen', this.handleSourceOpen);
+      }
 
       // Connect to WebSocket
       const wsUrl = `wss://${SUPABASE_URL.replace('https://', '')}/functions/v1/openai-tts-ws?sessionId=${sessionId}`;
@@ -113,20 +105,22 @@ export class WebSocketTtsService {
         if (this.currentSessionId !== sessionId) return; // Ignore old sessions
 
         if (event.data instanceof ArrayBuffer) {
-          // Binary WAV chunk - add to queue and process immediately
-          this.audioQueue.push(event.data);
+          // Binary MP4 chunk - add to queue for streaming
+          const chunk = new Uint8Array(event.data);
+          this.chunks.push(chunk);
+          this.processChunks();
           
-          // Process queue asynchronously to avoid blocking
-          this.processAudioQueue().catch(error => {
-            console.error('[WebSocketTTS] Error processing audio queue:', error);
-            onError?.(error);
-          });
-          
-          // Signal start on first chunk
-          if (!this.isPlaying) {
-            this.isPlaying = true;
-            onStart?.();
-            console.log('[WebSocketTTS] Real-time WAV streaming started');
+          // Start playback on first chunk
+          if (!this.isPlaying && this.chunks.length === 1) {
+            try {
+              await this.audio.play();
+              this.isPlaying = true;
+              onStart?.();
+              console.log('[WebSocketTTS] MP4 streaming started');
+            } catch (e) {
+              console.error('[WebSocketTTS] Play failed:', e);
+              onError?.(e as Error);
+            }
           }
         } else {
           // JSON message
@@ -138,12 +132,7 @@ export class WebSocketTtsService {
             } else if (data.type === 'stream-end') {
               console.log('[WebSocketTTS] Stream ended');
               this.streamEnded = true;
-              
-              // Wait for final chunks to process
-              setTimeout(() => {
-                onComplete?.();
-                this.disconnect();
-              }, 100);
+              this.endStream();
             } else if (data.error) {
               console.error('[WebSocketTTS] Server error:', data.error);
               onError?.(new Error(data.error));
@@ -172,6 +161,17 @@ export class WebSocketTtsService {
     }
   }
 
+  private endStream() {
+    if (this.sourceBuffer && !this.sourceBuffer.updating && this.mediaSource.readyState === 'open') {
+      try {
+        this.mediaSource.endOfStream();
+        console.log('[WebSocketTTS] MediaSource stream ended');
+      } catch (e) {
+        console.error('[WebSocketTTS] Error ending stream:', e);
+      }
+    }
+  }
+
   public disconnect() {
     if (this.socket) {
       this.socket.close();
@@ -184,17 +184,19 @@ export class WebSocketTtsService {
     console.log('[WebSocketTTS] Cleaning up');
     this.disconnect();
     
-    // Close audio context
-    if (this.audioContext && this.audioContext.state !== 'closed') {
-      this.audioContext.close();
-      this.audioContext = null;
+    this.audio.pause();
+    this.audio.onended = null;
+    
+    if (this.sourceBuffer) {
+      this.sourceBuffer.removeEventListener('updateend', this.processChunks);
     }
     
-    this.audioQueue = [];
-    this.isPlaying = false;
-    this.streamEnded = false;
-    this.isProcessingQueue = false;
-    this.chunkCount = 0;
+    this.mediaSource.removeEventListener('sourceopen', this.handleSourceOpen);
+    
+    if (this.audio.src) {
+      URL.revokeObjectURL(this.audio.src);
+      this.audio.src = '';
+    }
   }
 }
 

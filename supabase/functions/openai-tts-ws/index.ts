@@ -36,10 +36,9 @@ serve(async (req) => {
           model: "tts-1",
           input: text,
           voice: voice,
-          response_format: "wav", // PCM format for minimal decoding overhead
+          response_format: "mp4", // MP4/AAC for optimal Safari compatibility and hardware acceleration
           speed: 1.0, // Standard speed for optimal quality
-          // Note: OpenAI TTS-1 model outputs mono, 24kHz by default
-          // This is perfect for real-time streaming - no additional params needed
+          // Note: MP4/AAC is hardware-accelerated on Apple devices and works across all browsers
         }),
       });
 
@@ -164,10 +163,9 @@ serve(async (req) => {
             model: "tts-1",
             input: text,
             voice: voice,
-            response_format: "wav", // PCM format for minimal decoding overhead
+            response_format: "mp4", // MP4/AAC for optimal Safari compatibility and hardware acceleration
             speed: 1.0, // Standard speed for optimal quality
-            // Note: OpenAI TTS-1 model outputs mono, 24kHz by default
-            // This is perfect for real-time streaming - no additional params needed
+            // Note: MP4/AAC is hardware-accelerated on Apple devices and works across all browsers
           }),
         });
 
