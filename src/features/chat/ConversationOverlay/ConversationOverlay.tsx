@@ -517,9 +517,8 @@ try {
       () => {
         console.log('[WebSocketTTS] Audio playback completed');
         if (!isShuttingDown.current) {
-          // ✅ NEW: Resume TTS playback and clean old chunks
+          // ✅ NEW: Resume TTS playback (PCM doesn't need chunk cleaning)
           webSocketTtsService.resumePlayback();
-          webSocketTtsService.cleanOldChunks();
           
           conversationMicrophoneService.resumeAfterPlayback();
           conversationMicrophoneService.startRecording().then(ok => {

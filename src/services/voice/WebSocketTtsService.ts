@@ -1,5 +1,6 @@
-// WebSocket-based TTS service for real-time MP3 streaming with persistent connections
+// WebSocket-based TTS service for real-time PCM streaming with persistent connections
 import { SUPABASE_URL } from '@/integrations/supabase/client';
+import { PcmStreamPlayerService, PcmPlayerCallbacks } from './PcmStreamPlayerService';
 
 export interface WebSocketTtsOptions {
   text: string;
@@ -22,14 +23,9 @@ export interface ConnectionState {
 
 export class WebSocketTtsService {
   private socket: WebSocket | null = null;
-  private audio: HTMLAudioElement;
-  private mediaSource: MediaSource;
-  private sourceBuffer: SourceBuffer | null = null;
-  private chunks: Uint8Array[] = [];
-  private isAppending = false;
+  private pcmPlayer: PcmStreamPlayerService;
   private streamEnded = false;
   private isPlaying = false;
-  private hasFirstChunk = false; // Phase 1: Track first chunk for safe playback
   
   // Connection management
   private connectionState: ConnectionState = {
@@ -52,60 +48,20 @@ export class WebSocketTtsService {
   private readonly HEALTH_CHECK_INTERVAL = 30000; // 30 seconds
   private readonly PING_TIMEOUT = 10000; // 10 seconds
 
-  constructor() {
-    this.audio = new Audio();
-    this.audio.crossOrigin = 'anonymous';
-    this.mediaSource = new MediaSource();
-    this.audio.src = URL.createObjectURL(this.mediaSource);
-    
-    this.mediaSource.addEventListener('sourceopen', this.handleSourceOpen);
-    this.audio.addEventListener('ended', this.handlePlaybackEnd);
-  }
-
-  private handleSourceOpen = () => {
-    console.log('[WebSocketTTS] MediaSource opened for MP3 streaming');
-    try {
-      const mimeType = 'audio/mpeg'; // MP3 audio format
-      if (MediaSource.isTypeSupported(mimeType)) {
-        this.sourceBuffer = this.mediaSource.addSourceBuffer(mimeType);
-        this.sourceBuffer.addEventListener('updateend', this.processChunks);
-      } else {
-        console.error('[WebSocketTTS] MP3 MIME type not supported:', mimeType);
-      }
-    } catch (e) {
-      console.error('[WebSocketTTS] Error adding source buffer:', e);
-    }
-  };
-
-  private processChunks = () => {
-    if (this.isAppending || this.chunks.length === 0 || !this.sourceBuffer || this.sourceBuffer.updating) {
-      return;
-    }
-
-    this.isAppending = true;
-    const chunk = this.chunks.shift()!;
-    
-    try {
-      this.sourceBuffer.appendBuffer(chunk.buffer as ArrayBuffer);
-      
-      // Phase 1: Mark first chunk as appended
-      if (!this.hasFirstChunk) {
-        this.hasFirstChunk = true;
-        console.log('[WebSocketTTS] First chunk appended, ready for playback');
-      }
-    } catch (e) {
-      console.error('[WebSocketTTS] Error appending buffer:', e);
-      this.isAppending = false;
-    }
-  };
-
-  private handlePlaybackEnd = () => {
-    console.log('[WebSocketTTS] MP3 audio playback ended');
-    this.isPlaying = false;
-  };
-
-  // ✅ Web Audio context for unlocking (Phase 1)
+  // Web Audio context for unlocking (Phase 2)
   private audioContext: AudioContext | null = null;
+
+  constructor() {
+    this.pcmPlayer = new PcmStreamPlayerService({
+      onLevel: (rms) => {
+        // Audio level callback for speaking bars
+        console.log('[WebSocketTTS] Audio level:', rms);
+      },
+      onError: (error) => {
+        console.error('[WebSocketTTS] PCM player error:', error);
+      }
+    });
+  }
 
   // ✅ Ensure audio context is unlocked by user gesture (Safari requirement)
   private async unlockAudioContext(): Promise<boolean> {
@@ -118,13 +74,8 @@ export class WebSocketTtsService {
       
       await this.audioContext.resume().catch(() => {});
       
-      // Optional: one-frame silent buffer to guarantee unlock on iOS
-      const buf = this.audioContext.createBuffer(1, 1, 22050);
-      const src = this.audioContext.createBufferSource();
-      src.buffer = buf;
-      src.connect(this.audioContext.destination);
-      src.start(0);
-      src.stop(0);
+      // Initialize PCM player
+      await this.pcmPlayer.ensureWorkletLoaded(this.audioContext);
       
       this.connectionState.isAudioUnlocked = true;
       console.log('[WebSocketTTS] Web Audio context unlocked successfully');
@@ -135,7 +86,7 @@ export class WebSocketTtsService {
     }
   }
 
-  // ✅ NEW: Initialize persistent connection early (Phase 1)
+  // ✅ NEW: Initialize persistent connection early (Phase 2)
   public async initializeConnection(sessionId: string): Promise<boolean> {
     console.log(`[WebSocketTTS] Initializing persistent connection for session: ${sessionId}`);
     
@@ -162,20 +113,6 @@ export class WebSocketTtsService {
       console.error('[WebSocketTTS] Connection initialization failed:', error);
       return false;
     }
-  }
-
-  // ✅ NEW: Initialize MediaSource (Phase 1 - no premature play())
-  private initializeMediaSource(): void {
-    // Ensure MediaSource is ready
-    if (this.mediaSource.readyState === 'closed') {
-      this.mediaSource = new MediaSource();
-      this.audio.src = URL.createObjectURL(this.mediaSource);
-      this.mediaSource.addEventListener('sourceopen', this.handleSourceOpen);
-    }
-    
-    // Load the audio element (but don't play yet)
-    this.audio.load();
-    console.log('[WebSocketTTS] MediaSource initialized (ready for data)');
   }
 
   // ✅ NEW: Simplified TTS request (no connection setup needed)
@@ -340,29 +277,33 @@ export class WebSocketTtsService {
     });
   }
 
-  // ✅ NEW: Centralized message handling
+  // ✅ NEW: Centralized message handling (Phase 2 - PCM)
   private handleWebSocketMessage(event: MessageEvent): void {
     if (event.data instanceof ArrayBuffer) {
-      this.handleAudioChunk(event.data);
+      this.handlePcmChunk(event.data);
     } else {
       this.handleJsonMessage(event.data);
     }
   }
 
-  private handleAudioChunk(data: ArrayBuffer): void {
+  private handlePcmChunk(data: ArrayBuffer): void {
     if (!this.connectionState.isReady) {
-      console.warn('[WebSocketTTS] Received audio chunk but connection not ready, discarding');
+      console.warn('[WebSocketTTS] Received PCM chunk but connection not ready, discarding');
       return;
     }
     
-    // Binary MP3 chunk - add to queue for streaming
-    const chunk = new Uint8Array(data);
-    this.chunks.push(chunk);
-    this.processChunks();
+    // Convert ArrayBuffer to Int16Array for PCM data
+    const int16Array = new Int16Array(data);
     
-    // Phase 1: Start playback only after first chunk is appended
-    if (!this.isPlaying && this.hasFirstChunk) {
-      this.startPlayback();
+    // Write to PCM player (24kHz sample rate from OpenAI Realtime)
+    this.pcmPlayer.writePcm(int16Array, 24000);
+    
+    // Start playback if not already playing
+    if (!this.isPlaying) {
+      this.isPlaying = true;
+      this.pcmPlayer.resume();
+      this.currentTtsCallbacks?.onStart?.();
+      console.log('[WebSocketTTS] PCM streaming started');
     }
   }
 
@@ -378,7 +319,7 @@ export class WebSocketTtsService {
       } else if (message.type === 'stream-end') {
         console.log('[WebSocketTTS] Stream ended');
         this.streamEnded = true;
-        this.endStream();
+        this.isPlaying = false;
         this.currentTtsCallbacks?.onComplete?.();
       } else if (message.error) {
         console.error('[WebSocketTTS] Server error:', message.error);
@@ -389,30 +330,14 @@ export class WebSocketTtsService {
     }
   }
 
-  // ✅ NEW: Start audio playback
-  private async startPlayback(): Promise<void> {
-    try {
-      await this.audio.play();
-      this.isPlaying = true;
-      this.currentTtsCallbacks?.onStart?.();
-      console.log('[WebSocketTTS] MP3 streaming started');
-    } catch (e) {
-      console.error('[WebSocketTTS] Play failed:', e);
-      this.currentTtsCallbacks?.onError?.(e as Error);
-    }
-  }
-
   // ✅ NEW: Reset TTS state for new request
   private resetTtsState(): void {
-    this.chunks = [];
-    this.isAppending = false;
     this.streamEnded = false;
     this.isPlaying = false;
-    this.hasFirstChunk = false; // Phase 1: Reset first chunk flag
     this.currentTtsCallbacks = null;
     
-    // Initialize MediaSource for new request
-    this.initializeMediaSource();
+    // Reset PCM player
+    this.pcmPlayer.pause();
   }
 
   // ✅ NEW: Get connection state
@@ -428,7 +353,7 @@ export class WebSocketTtsService {
   // ✅ NEW: Pause audio playback (for listening mode)
   public pausePlayback(): void {
     if (this.isPlaying) {
-      this.audio.pause();
+      this.pcmPlayer.pause();
       this.isPlaying = false;
       console.log('[WebSocketTTS] Audio playback paused');
     }
@@ -436,23 +361,10 @@ export class WebSocketTtsService {
 
   // ✅ NEW: Resume audio playback (after listening mode)
   public resumePlayback(): void {
-    if (!this.isPlaying && this.audio.paused) {
-      this.audio.play().then(() => {
-        this.isPlaying = true;
-        console.log('[WebSocketTTS] Audio playback resumed');
-      }).catch((error) => {
-        console.error('[WebSocketTTS] Failed to resume playback:', error);
-      });
-    }
-  }
-
-  // ✅ NEW: Clean older chunks to prevent memory buildup
-  public cleanOldChunks(): void {
-    if (this.sourceBuffer && !this.sourceBuffer.updating && this.chunks.length > 10) {
-      // Keep only the last 10 chunks to prevent memory issues
-      const chunksToRemove = this.chunks.length - 10;
-      this.chunks.splice(0, chunksToRemove);
-      console.log(`[WebSocketTTS] Cleaned ${chunksToRemove} old chunks`);
+    if (!this.isPlaying) {
+      this.pcmPlayer.resume();
+      this.isPlaying = true;
+      console.log('[WebSocketTTS] Audio playback resumed');
     }
   }
 
@@ -463,17 +375,6 @@ export class WebSocketTtsService {
     }
     
     return this.speakText(options.text, options.voice, options.chat_id, options.onStart, options.onComplete, options.onError);
-  }
-
-  private endStream() {
-    if (this.sourceBuffer && !this.sourceBuffer.updating && this.mediaSource.readyState === 'open') {
-      try {
-        this.mediaSource.endOfStream();
-        console.log('[WebSocketTTS] MediaSource stream ended');
-      } catch (e) {
-        console.error('[WebSocketTTS] Error ending stream:', e);
-      }
-    }
   }
 
   // ✅ NEW: Cleanup with proper resource management
@@ -508,20 +409,8 @@ export class WebSocketTtsService {
       lastPing: 0
     };
     
-    // Cleanup audio resources
-    this.audio.pause();
-    this.audio.onended = null;
-    
-    if (this.sourceBuffer) {
-      this.sourceBuffer.removeEventListener('updateend', this.processChunks);
-    }
-    
-    this.mediaSource.removeEventListener('sourceopen', this.handleSourceOpen);
-    
-    if (this.audio.src) {
-      URL.revokeObjectURL(this.audio.src);
-      this.audio.src = '';
-    }
+    // Cleanup PCM player
+    this.pcmPlayer.cleanup();
   }
 
   // Private properties for current TTS request
