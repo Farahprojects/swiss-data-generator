@@ -151,11 +151,5 @@ verify_jwt = false
 [functions.google-text-to-speech]
 verify_jwt = false
 
-[functions.openai-tts-stream]
-enabled = false
-verify_jwt = true
-import_map = "./functions/openai-tts-stream/deno.json"
-entrypoint = "./functions/openai-tts-stream/index.ts"
-
 [functions.openai-tts-ws]
 verify_jwt = false
