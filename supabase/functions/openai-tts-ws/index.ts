@@ -75,7 +75,10 @@ serve(async (req) => {
 
         console.log(`[TTS-WS] TTS response received, starting stream for session ${sessionId}`);
         
-        // Stream the binary MP3 data directly
+        // Send stream start signal
+        socket.send(JSON.stringify({ type: "stream-start" }));
+        
+        // Stream the binary MP3 data
         const reader = ttsResponse.body.getReader();
         let totalBytes = 0;
         
@@ -86,8 +89,8 @@ serve(async (req) => {
             
             if (value) {
               totalBytes += value.length;
-              // Send binary chunk directly
-              socket.send(value);
+              // Convert Uint8Array to ArrayBuffer for proper WebSocket binary transmission
+              socket.send(value.buffer);
             }
           }
           
