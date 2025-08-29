@@ -211,7 +211,9 @@ try {
 
   while (playbackQueue.current.length > 0 && !isShuttingDown.current) {
     const next = playbackQueue.current.shift()!;
+    console.log('DEBUG: starting clip', next);
     await playTtsAudio(next.url, next.text || undefined);
+    console.log('DEBUG: finished clip', next);
   }
 } catch (err) {
   console.error('[ConversationOverlay] Queue playback error:', err);
@@ -238,15 +240,12 @@ try {
 
 async function playTtsAudio(audioUrl: string, _text?: string) {
 if (isShuttingDown.current) return;
-try {
-// conversationTtsService handles analysis and completion callback
-await conversationTtsService.playFromUrl(audioUrl, () => {
-// no-op here; queue loop continues
+await new Promise<void>((resolve) => {
+// Resolve only when TTS finishes
+conversationTtsService
+  .playFromUrl(audioUrl, () => resolve())
+  .catch(() => resolve()); // don't block queue on errors
 });
-} catch (error) {
-console.error('[ConversationOverlay] Audio playback error:', error);
-// Let queue continue to next item
-}
 }
 
 const handleModalClose = useCallback(async () => {
