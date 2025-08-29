@@ -415,10 +415,7 @@ try {
     streamPlayerRef.current.play(); // This is the critical priming step
   }
   
-  // Now set up the listener, which will use the primed player
-  if (sessionIdRef.current) {
-    setupStreamListener(sessionIdRef.current);
-  }
+  // The listener will now be set up in handleSimpleRecordingComplete
 
   conversationMicrophoneService.initialize({
     onRecordingComplete: handleSimpleRecordingComplete,
@@ -454,6 +451,16 @@ if (!audioBlob || audioBlob.size < 1024) {
   logDebug('Audio blob too small, returning to listening');
   setConversationState('listening');
   return;
+}
+
+// Set up the listener JUST BEFORE we trigger the backend
+if (sessionIdRef.current) {
+    console.log('[Turn] Setting up stream listener just before LLM call.');
+    setupStreamListener(sessionIdRef.current);
+} else {
+    console.error('[Turn] No session ID, cannot set up stream listener.');
+    setConversationState('connecting');
+    return;
 }
 
 // Set state to replying immediately after we have a valid recording
