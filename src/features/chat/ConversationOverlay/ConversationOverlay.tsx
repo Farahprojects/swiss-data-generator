@@ -59,6 +59,10 @@ type Clip = { id?: string; url: string; text?: string | null };
 const playbackQueue = useRef<Clip[]>([]);
 const isPlayingQueue = useRef(false);
 
+// Responsiveness optimizations
+const firstClipTimer = useRef<number | null>(null);
+const gotFirstClip = useRef(false);
+
 // Initialize session when overlay opens with a valid chat_id
 useEffect(() => {
 if (!isConversationOpen) return;
@@ -101,6 +105,12 @@ sessionIdRef.current = '';
 playedClipIds.current.clear();
 playbackQueue.current = [];
 isPlayingQueue.current = false;
+
+// Clear responsiveness timers
+if (firstClipTimer.current) {
+  clearTimeout(firstClipTimer.current);
+  firstClipTimer.current = null;
+}
 
 // Ensure any listener is removed
 if (ttsCleanupRef.current) {
@@ -189,6 +199,12 @@ return cleanup;
 };
 
 function enqueueTtsClip(clip: Clip) {
+// mark that a clip has arrived; cancel "replying" watchdog
+gotFirstClip.current = true;
+if (firstClipTimer.current) {
+  clearTimeout(firstClipTimer.current);
+  firstClipTimer.current = null;
+}
 playbackQueue.current.push(clip);
 maybeStartPlaybackQueue();
 }
@@ -205,8 +221,7 @@ return;
 isPlayingQueue.current = true;
 
 try {
-  // Suspend microphone once for the entire queue playback window
-  conversationMicrophoneService.suspendForPlayback();
+  // Mic already suspended on silenceDetected; no need to suspend again
   setConversationState('replying');
 
   while (playbackQueue.current.length > 0 && !isShuttingDown.current) {
@@ -279,6 +294,12 @@ try {
 playbackQueue.current = [];
 playedClipIds.current.clear();
 
+// Clear responsiveness timers
+if (firstClipTimer.current) {
+  clearTimeout(firstClipTimer.current);
+  firstClipTimer.current = null;
+}
+
 closeConversation();
 setPermissionGranted(false);
 setIsStarting(false);
@@ -303,7 +324,6 @@ hasStarted.current = true;
 try {
   // Unlock audio synchronously in gesture
   conversationTtsService.unlockAudio();
-  conversationTtsService.suspendAudioPlayback();
 
   // Begin getUserMedia promptly to retain gesture context on Safari
   let stream: MediaStream;
@@ -352,7 +372,7 @@ try {
       console.error('[ConversationOverlay] Microphone error:', error);
       setConversationState('connecting');
     },
-    silenceTimeoutMs: 2000,
+    silenceTimeoutMs: 1200,
   });
 
   const success = await conversationMicrophoneService.startRecording();
@@ -423,6 +443,20 @@ try {
         console.error('[ConversationOverlay] LLM error:', error);
         if (!isShuttingDown.current) setConversationState('listening');
       });
+
+    // Responsiveness: Show "replying" if TTS takes too long
+    gotFirstClip.current = false;
+    if (firstClipTimer.current) {
+      clearTimeout(firstClipTimer.current);
+      firstClipTimer.current = null;
+    }
+    firstClipTimer.current = window.setTimeout(() => {
+      if (!gotFirstClip.current && !isShuttingDown.current) {
+        setConversationState('replying');
+        // Ensure audio pipeline is warmed so first play() doesn't stall
+        conversationTtsService.resumeAudioPlayback();
+      }
+    }, 350);
   } catch (sttError) {
     console.error('[ConversationOverlay] STT error:', sttError);
     if (!isShuttingDown.current) setConversationState('listening');
