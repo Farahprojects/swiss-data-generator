@@ -1,12 +1,27 @@
-// OpenAI Realtime TTS WebSocket streaming service - Production Hardened
+// OpenAI Realtime TTS WebSocket streaming service - Simplified
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { decode as b64decode } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY environment variable is required");
 
 const activeSessions = new Map<string, WebSocket>();
 const inflightControllers = new Map<string, AbortController>();
+
+// Simple base64 decode function
+function b64decode(str: string): Uint8Array {
+  return Uint8Array.from(atob(str), c => c.charCodeAt(0));
+}
+
+// Safe JSON send with socket state check
+function safeSendJSON(ws: WebSocket, obj: unknown): void {
+  if (ws.readyState === WebSocket.OPEN) {
+    try {
+      ws.send(JSON.stringify(obj));
+    } catch (e) {
+      console.error("[TTS-WS] Failed to send JSON:", e);
+    }
+  }
+}
 
 serve(async (req) => {
   const upgrade = req.headers.get("upgrade")?.toLowerCase();
@@ -15,7 +30,8 @@ serve(async (req) => {
   // Handle POST /tts for backend-initiated TTS
   if (req.method === "POST" && url.pathname === "/tts") {
     const secret = req.headers.get("x-internal-secret");
-    if (secret !== Deno.env.get("INTERNAL_TTS_SECRET")) {
+    const expectedSecret = Deno.env.get("INTERNAL_TTS_SECRET");
+    if (expectedSecret && secret !== expectedSecret) {
       return new Response("Unauthorized", { status: 401 });
     }
     
@@ -117,40 +133,27 @@ serve(async (req) => {
         await processTtsRequest(sessionId, text, voice, requestId, chat_id);
         return;
       }
-
-      console.log(`[TTS-WS] Ignored message (no tts/text), session=${sessionId}:`, payload?.type ?? "unknown");
     };
 
-    socket.onerror = (err) => {
-      console.error(`[TTS-WS] WebSocket error, session=${sessionId}:`, err);
-    };
-
-    socket.onclose = (_) => {
-      // Cleanup session and abort any inflight fetch
+    socket.onclose = () => {
+      console.log(`[TTS-WS] Session ${sessionId} disconnected`);
       activeSessions.delete(sessionId);
-      const c = inflightControllers.get(sessionId);
-      if (c) {
-        c.abort("client disconnected");
+      
+      // Abort any in-flight TTS for this session
+      const controller = inflightControllers.get(sessionId);
+      if (controller) {
+        console.log(`[TTS-WS] Aborting TTS for disconnected session ${sessionId}`);
+        controller.abort("client disconnected");
         inflightControllers.delete(sessionId);
       }
-      console.log(`[TTS-WS] Disconnected session=${sessionId}, active=${activeSessions.size}`);
     };
 
     return response;
-  } catch (e) {
-    console.error("[TTS-WS] Upgrade to WebSocket failed:", e);
+  } catch (err) {
+    console.error("[TTS-WS] WebSocket upgrade failed:", err);
     return new Response("WebSocket upgrade failed", { status: 500 });
   }
 });
-
-function safeSendJSON(ws: WebSocket, obj: unknown) {
-  try {
-    if (ws.readyState === ws.CLOSED || ws.readyState === ws.CLOSING) return;
-    ws.send(JSON.stringify(obj));
-  } catch (e) {
-    console.warn("[TTS-WS] send JSON failed:", e);
-  }
-}
 
 async function processTtsRequest(sessionId: string, text: string, voice: string, requestId: string, chat_id?: string) {
   const socket = activeSessions.get(sessionId);
@@ -160,23 +163,15 @@ async function processTtsRequest(sessionId: string, text: string, voice: string,
   }
 
   safeSendJSON(socket, { type: "stream-start", requestId, chat_id });
-
+  
   // Abort if client disconnects
   const controller = new AbortController();
   inflightControllers.set(sessionId, controller);
 
   try {
-    console.log(`[TTS-WS] Calling OpenAI (responses) session=${sessionId}, textLen=${text.length}`);
-    const body = {
-      model: "gpt-4o-mini-tts",
-      input: text,
-      audio: { voice, format: "pcm16", sample_rate: 24000 },
-      stream: true
-    };
+    console.log(`[TTS-WS] Starting OpenAI TTS for session=${sessionId}, text="${text.substring(0, 50)}..."`);
     
-    console.log(`[TTS-WS] OpenAI request body for session ${sessionId}:`, JSON.stringify(body, null, 2));
-    
-    const res = await fetch("https://api.openai.com/v1/responses", {
+    const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${OPENAI_API_KEY}`,
@@ -184,30 +179,34 @@ async function processTtsRequest(sessionId: string, text: string, voice: string,
         "Accept": "text/event-stream",
         "OpenAI-Beta": "responses=v1"
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        model: "gpt-4o-mini-tts",
+        input: text,
+        audio: {
+          voice: voice,
+          format: "pcm16",
+          sample_rate: 24000
+        },
+        stream: true
+      }),
       signal: controller.signal
     });
 
-    console.log(`[TTS-WS] OpenAI status=${res.status} session=${sessionId}`);
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      console.error(`[TTS-WS] OpenAI error session=${sessionId}: ${res.status} ${errText}`);
-      safeSendJSON(socket, { error: `OpenAI error ${res.status}` });
-      return;
-    }
-    if (!res.body) {
-      console.error(`[TTS-WS] OpenAI empty body session=${sessionId}`);
-      safeSendJSON(socket, { error: "No response body from OpenAI" });
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[TTS-WS] OpenAI API error: ${response.status} ${errorText}`);
+      safeSendJSON(socket, { error: `OpenAI API error: ${response.status}` });
       return;
     }
 
-    await streamSSEToSocket(sessionId, res.body, socket, controller.signal, requestId);
+    console.log(`[TTS-WS] OpenAI API call successful, streaming audio for session=${sessionId}`);
+    await streamSSEToSocket(sessionId, response.body!, socket, controller.signal, requestId);
   } catch (e) {
     if ((e as any)?.name === "AbortError") {
-      console.warn(`[TTS-WS] OpenAI fetch aborted session=${sessionId}`);
+      console.log(`[TTS-WS] TTS aborted for session=${sessionId}`);
     } else {
-      console.error(`[TTS-WS] OpenAI fetch failed session=${sessionId}:`, e);
-      safeSendJSON(socket, { error: "Failed to connect to OpenAI API" });
+      console.error(`[TTS-WS] TTS error for session=${sessionId}:`, e);
+      safeSendJSON(socket, { error: "TTS processing failed" });
     }
   } finally {
     inflightControllers.delete(sessionId);
@@ -222,41 +221,37 @@ async function streamSSEToSocket(
   requestId: string
 ) {
   const reader = body.getReader();
-  const textDecoder = new TextDecoder();
-  let buf = "";
+  const decoder = new TextDecoder();
+  let buffer = "";
   let deltaCount = 0;
   let totalBytes = 0;
-
-  const noDeltaTimer = setTimeout(() => {
-    if (deltaCount === 0) {
-      console.error(`[TTS-WS] No audio deltas in 2s session=${sessionId}`);
-      safeSendJSON(socket, { error: "No audio deltas received" });
-    }
-  }, 2000);
+  let noDeltaTimer: number | null = null;
 
   try {
     while (true) {
-      if (signal.aborted) break;
-      const { value, done } = await reader.read();
+      const { done, value } = await reader.read();
       if (done) break;
+      if (signal.aborted) break;
 
-      buf += textDecoder.decode(value, { stream: true });
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
 
-      // Handle CRLF and multi-line SSE events
-      let idx: number;
-      while ((idx = buf.indexOf("\n\n")) >= 0 || (idx = buf.indexOf("\r\n\r\n")) >= 0) {
-        const raw = buf.slice(0, idx);
-        buf = buf.slice(idx + (raw.includes("\r\n") ? 4 : 2));
+      for (const line of lines) {
+        if (signal.aborted) break;
+        if (!line.trim() || line.startsWith(":")) continue;
 
-        const lines = raw.split(/\r?\n/);
-        let dataChunks: string[] = [];
-        // We only need data: lines for OpenAI responses
-        for (const line of lines) {
-          if (line.startsWith("data:")) {
-            dataChunks.push(line.slice(5).trimStart());
-          }
+        const colonIndex = line.indexOf(":");
+        if (colonIndex === -1) continue;
+
+        const eventType = line.substring(0, colonIndex).trim();
+        let data = line.substring(colonIndex + 1).trim();
+        
+        // Handle multi-line data
+        if (data.startsWith('"') && data.endsWith('"')) {
+          data = data.slice(1, -1);
         }
-        const data = dataChunks.join("\n");
+
         if (!data) continue;
         if (data === "[DONE]") {
           safeSendJSON(socket, { type: "stream-end", requestId });
@@ -264,61 +259,59 @@ async function streamSSEToSocket(
           return;
         }
 
-        let evt: any;
-        try {
-          evt = JSON.parse(data);
-        } catch (e) {
-          console.warn(`[TTS-WS] SSE JSON parse error session=${sessionId}:`, e);
-          continue;
-        }
-
-        console.log(`[TTS-WS] SSE event for session ${sessionId}:`, evt.type);
-
-        const t = evt?.type;
-        if (t === "response.audio.delta" || t === "response.output_audio.delta") {
-          // OpenAI sends base64 audio in evt.delta
-          const base64: string = evt.delta ?? evt?.audio?.data;
-          if (!base64) continue;
-
-          const bytes: Uint8Array = b64decode(base64);
-          // Ensure 16-bit alignment
-          const usable = bytes.subarray(0, bytes.byteLength - (bytes.byteLength % 2));
-          if (socket.readyState === socket.OPEN) {
-            try {
-              socket.send(usable.buffer.slice(usable.byteOffset, usable.byteOffset + usable.byteLength));
-              console.log(`[TTS-WS] Sending PCM chunk ${deltaCount + 1} to session ${sessionId}: ${usable.length} samples, ${usable.byteLength} bytes`);
-            } catch (e) {
-              console.warn(`[TTS-WS] socket.send failed session=${sessionId}:`, e);
+        if (eventType === "data") {
+          try {
+            const parsed = JSON.parse(data);
+            const t = parsed.type;
+            
+            if (t === "response.audio.delta" || t === "response.output_audio.delta") {
+              const audioDelta = parsed.audio_delta;
+              if (audioDelta && audioDelta.data) {
+                const pcmBytes = b64decode(audioDelta.data);
+                const int16Array = new Int16Array(pcmBytes.buffer, pcmBytes.byteOffset, pcmBytes.length / 2);
+                
+                deltaCount++;
+                totalBytes += int16Array.byteLength;
+                
+                if (deltaCount % 10 === 0) {
+                  console.log(`[TTS-WS] Forwarded ${deltaCount} PCM chunks (${totalBytes} bytes) for session=${sessionId}`);
+                }
+                
+                if (socket.readyState === WebSocket.OPEN) {
+                  socket.send(int16Array.buffer);
+                }
+                
+                                 // Clear no-delta timer on first chunk
+                 if (deltaCount === 1 && noDeltaTimer !== null) {
+                   clearTimeout(noDeltaTimer);
+                   noDeltaTimer = null;
+                 }
+              }
+                         } else if (t === "response.completed") {
+               if (noDeltaTimer !== null) {
+                 clearTimeout(noDeltaTimer);
+               }
+               safeSendJSON(socket, { type: "stream-end", requestId });
+              console.log(`[TTS-WS] OpenAI completed session=${sessionId}, chunks=${deltaCount}, bytes=${totalBytes}, requestId=${requestId}`);
               return;
+            } else if (t === "response.text.delta") {
+              // Ignore text deltas for TTS
+            } else {
+              console.log(`[TTS-WS] Unknown event type: ${t}`);
             }
-          } else {
-            console.warn(`[TTS-WS] Socket not open, stopping session=${sessionId}`);
-            return;
+          } catch (e) {
+            console.error(`[TTS-WS] JSON parse error in SSE:`, e);
           }
-          deltaCount++;
-          totalBytes += usable.byteLength;
-          if (deltaCount === 1) clearTimeout(noDeltaTimer);
-          if (deltaCount % 10 === 0) {
-            console.log(`[TTS-WS] Sent ${deltaCount} chunks, ${totalBytes} bytes session=${sessionId}`);
-          }
-        } else if (t === "response.completed") {
-          clearTimeout(noDeltaTimer);
-          safeSendJSON(socket, { type: "stream-end", requestId });
-          console.log(`[TTS-WS] OpenAI completed session=${sessionId}, chunks=${deltaCount}, bytes=${totalBytes}, requestId=${requestId}`);
-          return;
-        } else if (t === "response.text.delta") {
-          // Optional: log text deltas
-          console.log(`[TTS-WS] Text delta: ${evt.delta}`);
         }
       }
     }
   } catch (e) {
-    if ((e as any)?.name !== "AbortError") {
-      console.error(`[TTS-WS] SSE stream error session=${sessionId}:`, e);
-      safeSendJSON(socket, { error: "SSE streaming failed" });
+    if ((e as any)?.name === "AbortError") {
+      console.log(`[TTS-WS] SSE stream aborted for session=${sessionId}`);
+    } else {
+      console.error(`[TTS-WS] SSE stream error for session=${sessionId}:`, e);
     }
   } finally {
-    clearTimeout(noDeltaTimer);
-    try { reader.releaseLock(); } catch {}
+    reader.releaseLock();
   }
 }
