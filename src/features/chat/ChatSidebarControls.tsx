@@ -51,8 +51,6 @@ export const ChatSidebarControls: React.FC = () => {
         </button>
       </div>
       <div className="space-y-4 p-4">
-        {/* Voice selection temporarily hidden for OpenAI TTS */}
-        {/*
         <div>
           <p className="text-xs uppercase tracking-wider text-gray-500 mb-2">
             Assistant Voice
@@ -86,7 +84,6 @@ export const ChatSidebarControls: React.FC = () => {
             </optgroup>
           </select>
         </div>
-        */}
       </div>
       
       {/* Settings Button at the bottom */}
