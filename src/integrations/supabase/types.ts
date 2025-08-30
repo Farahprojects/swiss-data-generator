@@ -1450,6 +1450,27 @@ export type Database = {
         }
         Relationships: []
       }
+      temp_audio: {
+        Row: {
+          audio_data: string
+          created_at: string | null
+          session_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          audio_data: string
+          created_at?: string | null
+          session_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          audio_data?: string
+          created_at?: string | null
+          session_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       temp_report_data: {
         Row: {
           chat_hash: string | null
