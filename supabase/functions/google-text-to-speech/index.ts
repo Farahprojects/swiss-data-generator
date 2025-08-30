@@ -130,12 +130,10 @@ serve(async (req) => {
         supabase.from("chat_audio_clips").insert({
           chat_id: chat_id,
           role: "assistant",
-          text: text,
           audio_url: publicUrl,
           storage_path: fileName,
           voice: voiceName,
           provider: "google",
-          mime_type: "audio/mpeg",
           meta: { 
             tts_status: 'ready',
             processing_time_ms: Date.now() - startTime
@@ -167,12 +165,10 @@ serve(async (req) => {
       supabase.from("chat_audio_clips").insert({
         chat_id: chat_id,
         role: "assistant",
-        text: text,
         audio_url: signedUrl,
         storage_path: fileName,
         voice: voiceName,
         provider: "google",
-        mime_type: "audio/mpeg",
         meta: { 
           tts_status: 'ready',
           processing_time_ms: Date.now() - startTime

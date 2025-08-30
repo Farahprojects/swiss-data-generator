@@ -194,48 +194,33 @@ export type Database = {
           audio_url: string
           chat_id: string
           created_at: string
-          duration_ms: number | null
           id: string
-          message_id: string | null
           meta: Json
-          mime_type: string
           provider: string
           role: string
-          session_id: string | null
           storage_path: string | null
-          text: string | null
           voice: string | null
         }
         Insert: {
           audio_url: string
           chat_id: string
           created_at?: string
-          duration_ms?: number | null
           id?: string
-          message_id?: string | null
           meta?: Json
-          mime_type?: string
           provider?: string
           role?: string
-          session_id?: string | null
           storage_path?: string | null
-          text?: string | null
           voice?: string | null
         }
         Update: {
           audio_url?: string
           chat_id?: string
           created_at?: string
-          duration_ms?: number | null
           id?: string
-          message_id?: string | null
           meta?: Json
-          mime_type?: string
           provider?: string
           role?: string
-          session_id?: string | null
           storage_path?: string | null
-          text?: string | null
           voice?: string | null
         }
         Relationships: []
