@@ -1,3 +1,4 @@
+
 // OpenAI TTS service - Using temp_audio table for audio storage
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -69,47 +70,71 @@ serve(async (req) => {
       const audioBytes = new Uint8Array(audioBuffer);
       
       try {
-        // Upsert audio data into temp_audio table
+        // Upsert audio data into temp_audio table - convert Uint8Array to base64
+        const base64Audio = btoa(String.fromCharCode(...audioBytes));
+        
         const { error: upsertError } = await supabase
           .from('temp_audio')
           .upsert({
             session_id: sessionId,
-            audio_data: audioBytes,
+            audio_data: base64Audio,
             updated_at: new Date().toISOString()
           }, {
             onConflict: 'session_id'
           });
         
         if (upsertError) {
-          console.error(`[TTS] Failed to upsert audio data for session ${sessionId}:`, upsertError);
+          console.error(`[TTS] Failed to upsert audio data for session ${sessionId}:`, {
+            error: upsertError,
+            message: upsertError.message,
+            details: upsertError.details,
+            hint: upsertError.hint,
+            code: upsertError.code
+          });
           return new Response(JSON.stringify({ 
-            error: `Failed to store audio data: ${upsertError.message}` 
+            error: `Failed to store audio data: ${upsertError.message}`,
+            details: upsertError.details
           }), {
             status: 500,
             headers: { "Content-Type": "application/json" }
           });
         }
         
-        console.log(`[TTS] ✅ Audio data stored in temp_audio table for session ${sessionId}, ${audioBytes.length} bytes`);
+        console.log(`[TTS] ✅ Audio data stored in temp_audio table for session ${sessionId}, ${audioBytes.length} bytes (${base64Audio.length} base64 chars)`);
         
         return new Response(JSON.stringify({ 
           success: true, 
           message: "TTS audio stored successfully",
-          bytes: audioBytes.length
+          bytes: audioBytes.length,
+          base64Length: base64Audio.length
         }), {
           headers: { "Content-Type": "application/json" }
         });
         
       } catch (dbError) {
-        console.error(`[TTS] Database error for session ${sessionId}:`, dbError);
-        return new Response(JSON.stringify({ error: "Database operation failed" }), {
+        console.error(`[TTS] Database error for session ${sessionId}:`, {
+          error: dbError,
+          message: dbError.message,
+          stack: dbError.stack
+        });
+        return new Response(JSON.stringify({ 
+          error: "Database operation failed",
+          details: dbError.message
+        }), {
           status: 500,
           headers: { "Content-Type": "application/json" }
         });
       }
     } catch (error) {
-      console.error("[TTS] HTTP POST error:", error);
-      return new Response(JSON.stringify({ error: error.message }), {
+      console.error("[TTS] HTTP POST error:", {
+        error: error,
+        message: error.message,
+        stack: error.stack
+      });
+      return new Response(JSON.stringify({ 
+        error: error.message,
+        details: "Unhandled error in TTS processing"
+      }), {
         status: 500,
         headers: { "Content-Type": "application/json" }
       });

@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Mic } from 'lucide-react';
 import { SpeakingBars } from './SpeakingBars';
 import { useTtsStreamLevel } from '@/hooks/useTtsStreamLevel';
 import TorusListening from './TorusListening';
