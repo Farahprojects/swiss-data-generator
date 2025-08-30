@@ -15,7 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Message } from '@/core/types';
 import { StreamPlayerService } from '@/services/voice/StreamPlayerService';
 import { webSocketTtsService } from '@/services/voice/WebSocketTtsService';
-import { tempAudioService } from '@/services/voice/TempAudioService';
+import { chatAudioService } from '@/services/voice/TempAudioService';
 
 
 const DEBUG = typeof window !== 'undefined' && (window as any).CONVO_DEBUG === true;
@@ -132,8 +132,8 @@ if (ttsCleanupRef.current) {
 // Cleanup WebSocket TTS
 webSocketTtsService.cleanup();
 
-// Cleanup temp audio service
-tempAudioService.unsubscribe();
+  // Cleanup chat audio service
+  chatAudioService.unsubscribe();
 }, [isConversationOpen]);
 
 // Ensure clean disposal on component unmount while open
@@ -418,8 +418,8 @@ try {
   
   // WebSocket connection established
   
-  // Step 4: Subscribe to temp_audio table for TTS updates
-  tempAudioService.subscribeToSession(chat_id);
+  // Step 4: Subscribe to chat_audio_clips table for TTS updates
+  chatAudioService.subscribeToSession(chat_id);
   
   // Step 5: Unlock audio synchronously in gesture
   conversationTtsService.unlockAudio();

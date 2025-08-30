@@ -1,48 +1,48 @@
-// TempAudioService - Handles temp_audio table subscriptions and MP3 playback
+// ChatAudioService - Handles chat_audio_clips table subscriptions and MP3 URL playback
 import { supabase } from '@/integrations/supabase/client';
 
-export interface TempAudioCallbacks {
-  onAudioReceived?: (audioData: ArrayBuffer) => void;
+export interface ChatAudioCallbacks {
+  onAudioReceived?: (audioUrl: string) => void;
   onError?: (error: string) => void;
   onPlaybackComplete?: () => void;
 }
 
-export class TempAudioService {
+export class ChatAudioService {
   private chat_id: string | null = null;
   private subscription: any = null;
   private audio: HTMLAudioElement | null = null;
-  private callbacks: TempAudioCallbacks = {};
+  private callbacks: ChatAudioCallbacks = {};
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 10;
   private reconnectTimeout: NodeJS.Timeout | null = null;
   private isReconnecting = false;
 
-  constructor(callbacks: TempAudioCallbacks = {}) {
+  constructor(callbacks: ChatAudioCallbacks = {}) {
     this.callbacks = callbacks;
   }
 
-  // Subscribe to temp_audio table updates for a chat
+  // Subscribe to chat_audio_clips table updates for a chat
   public subscribeToSession(chat_id: string): void {
     if (this.subscription) {
       this.unsubscribe();
     }
 
     this.chat_id = chat_id;
-    console.log(`[TempAudio] 🔌 WebSocket: Subscribing to temp_audio table for chat: ${chat_id}`);
+    console.log(`[ChatAudio] 🔌 WebSocket: Subscribing to chat_audio_clips table for chat: ${chat_id}`);
 
     this.subscription = supabase
-      .channel(`temp-audio:${chat_id}`)
+      .channel(`chat-audio:${chat_id}`)
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'temp_audio',
+          table: 'chat_audio_clips',
           filter: `chat_id=eq.${chat_id}`,
         },
         (payload) => {
           const startTime = performance.now();
-          console.log(`[TempAudio] 📡 WebSocket: Found UPDATE in temp_audio table for chat ${chat_id}`);
+          console.log(`[ChatAudio] 📡 WebSocket: Found UPDATE in chat_audio_clips table for chat ${chat_id}`);
           this.handleAudioUpdate(payload, startTime);
         }
       )
@@ -51,28 +51,28 @@ export class TempAudioService {
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'temp_audio',
+          table: 'chat_audio_clips',
           filter: `chat_id=eq.${chat_id}`,
         },
         (payload) => {
           const startTime = performance.now();
-          console.log(`[TempAudio] 📡 WebSocket: Found INSERT in temp_audio table for chat ${chat_id}`);
+          console.log(`[ChatAudio] 📡 WebSocket: Found INSERT in chat_audio_clips table for chat ${chat_id}`);
           this.handleAudioUpdate(payload, startTime);
         }
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log(`[TempAudio] ✅ WebSocket: Connected to temp_audio table for chat: ${chat_id}`);
+          console.log(`[ChatAudio] ✅ WebSocket: Connected to chat_audio_clips table for chat: ${chat_id}`);
           this.reconnectAttempts = 0; // Reset reconnect counter on successful connection
           this.isReconnecting = false;
         } else if (status === 'TIMED_OUT') {
-          console.error(`[TempAudio] ⏰ WebSocket: Subscription timed out for chat: ${chat_id}`);
+          console.error(`[ChatAudio] ⏰ WebSocket: Subscription timed out for chat: ${chat_id}`);
           this.handleConnectionFailure();
         } else if (status === 'CHANNEL_ERROR') {
-          console.error(`[TempAudio] ❌ WebSocket: Channel error for chat: ${chat_id}`);
+          console.error(`[ChatAudio] ❌ WebSocket: Channel error for chat: ${chat_id}`);
           this.handleConnectionFailure();
         } else if (status === 'CLOSED') {
-          console.warn(`[TempAudio] 🔌 WebSocket: Connection closed for chat: ${chat_id}`);
+          console.warn(`[ChatAudio] 🔌 WebSocket: Connection closed for chat: ${chat_id}`);
           this.handleConnectionFailure();
         }
       });
@@ -84,51 +84,38 @@ export class TempAudioService {
       const processingStart = performance.now();
       const deliveryLatency = startTime ? processingStart - startTime : 0;
       
-      const audioData = payload.new?.audio_data;
-      if (!audioData) {
-        console.warn('[TempAudio] ❌ No audio data found in table payload');
+      const audioUrl = payload.new?.audio_url;
+      if (!audioUrl) {
+        console.warn('[ChatAudio] ❌ No audio URL found in table payload');
         return;
       }
 
-      console.log(`[TempAudio] 🎵 Processing audio data from table: ${audioData.length} base64 chars`);
+      console.log(`[ChatAudio] 🎵 Processing audio URL from table: ${audioUrl}`);
 
-      // Convert base64 to ArrayBuffer
-      const binaryString = atob(audioData);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-
-      console.log(`[TempAudio] ✅ Audio decoded: ${bytes.length} bytes ready for browser`);
-      
-      // Call the callback with the audio data
-      this.callbacks.onAudioReceived?.(bytes.buffer);
-      console.log(`[TempAudio] 🎧 Sending audio to browser for playback...`);
+      // Call the callback with the audio URL
+      this.callbacks.onAudioReceived?.(audioUrl);
+      console.log(`[ChatAudio] 🎧 Sending audio URL to browser for playback...`);
       
       // Play the audio immediately
       const playbackStart = performance.now();
-      await this.playAudio(bytes.buffer);
+      await this.playAudioFromUrl(audioUrl);
       const playbackTime = performance.now() - playbackStart;
       
       const totalTime = performance.now() - processingStart;
-      console.log(`[TempAudio] 🎵 Audio playback initiated in ${playbackTime.toFixed(2)}ms (total: ${totalTime.toFixed(2)}ms)`);
+      console.log(`[ChatAudio] 🎵 Audio playback initiated in ${playbackTime.toFixed(2)}ms (total: ${totalTime.toFixed(2)}ms)`);
       
-    } catch (error) {
-      console.error('[TempAudio] ❌ Error handling audio update:', error);
-      this.callbacks.onError?.(`Failed to process audio: ${error}`);
-    }
+          } catch (error) {
+        console.error('[ChatAudio] ❌ Error handling audio update:', error);
+        this.callbacks.onError?.(`Failed to process audio: ${error}`);
+      }
   }
 
-  // Play MP3 audio immediately in browser
-  private async playAudio(audioBuffer: ArrayBuffer): Promise<void> {
+  // Play MP3 audio from URL immediately in browser
+  private async playAudioFromUrl(audioUrl: string): Promise<void> {
     try {
       const playbackStart = performance.now();
       
-      // Create blob URL for the audio
-      const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
-      const audioUrl = URL.createObjectURL(blob);
-
-      console.log(`[TempAudio] 🎧 Created audio blob URL: ${audioUrl.substring(0, 50)}...`);
+      console.log(`[ChatAudio] 🎧 Playing audio from URL: ${audioUrl.substring(0, 100)}...`);
 
       // Create and configure audio element
       this.audio = new Audio(audioUrl);
@@ -136,35 +123,33 @@ export class TempAudioService {
       this.audio.preload = 'auto'; // Ensure immediate loading
       
       this.audio.addEventListener('loadstart', () => {
-        console.log('[TempAudio] 📥 Audio loading started');
+        console.log('[ChatAudio] 📥 Audio loading started');
       });
 
       this.audio.addEventListener('canplay', () => {
         const loadTime = performance.now() - playbackStart;
-        console.log(`[TempAudio] 🎼 Audio ready to play in ${loadTime.toFixed(2)}ms`);
+        console.log(`[ChatAudio] 🎼 Audio ready to play in ${loadTime.toFixed(2)}ms`);
       });
       
       this.audio.addEventListener('ended', () => {
         const totalTime = performance.now() - playbackStart;
-        console.log(`[TempAudio] ✅ Audio playback completed in ${totalTime.toFixed(2)}ms`);
-        URL.revokeObjectURL(audioUrl); // Clean up blob URL
+        console.log(`[ChatAudio] ✅ Audio playback completed in ${totalTime.toFixed(2)}ms`);
         this.callbacks.onPlaybackComplete?.();
       });
 
       this.audio.addEventListener('error', (error) => {
-        console.error('[TempAudio] ❌ Audio playback error:', error);
-        URL.revokeObjectURL(audioUrl);
+        console.error('[ChatAudio] ❌ Audio playback error:', error);
         this.callbacks.onError?.('Audio playback failed');
       });
 
-      console.log('[TempAudio] 🚀 Starting audio playback in browser...');
+      console.log('[ChatAudio] 🚀 Starting audio playback in browser...');
       await this.audio.play();
       
       const startTime = performance.now() - playbackStart;
-      console.log(`[TempAudio] 🔊 Audio playback started in ${startTime.toFixed(2)}ms`);
+      console.log(`[ChatAudio] 🔊 Audio playback started in ${startTime.toFixed(2)}ms`);
       
     } catch (error) {
-      console.error('[TempAudio] ❌ Error playing audio:', error);
+      console.error('[ChatAudio] ❌ Error playing audio:', error);
       this.callbacks.onError?.(`Failed to play audio: ${error}`);
     }
   }
@@ -179,7 +164,7 @@ export class TempAudioService {
     this.reconnectAttempts++;
     
     if (this.reconnectAttempts > this.maxReconnectAttempts) {
-      console.error(`[TempAudio] ❌ Max reconnection attempts (${this.maxReconnectAttempts}) reached for chat: ${this.chat_id}`);
+      console.error(`[ChatAudio] ❌ Max reconnection attempts (${this.maxReconnectAttempts}) reached for chat: ${this.chat_id}`);
       this.callbacks.onError?.('WebSocket connection failed after maximum retries');
       return;
     }
@@ -187,11 +172,11 @@ export class TempAudioService {
     // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 30s (max)
     const backoffDelay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 30000);
     
-    console.warn(`[TempAudio] 🔄 Attempting reconnection ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${backoffDelay}ms for chat: ${this.chat_id}`);
+    console.warn(`[ChatAudio] 🔄 Attempting reconnection ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${backoffDelay}ms for chat: ${this.chat_id}`);
     
     this.reconnectTimeout = setTimeout(() => {
       if (this.chat_id && this.isReconnecting) {
-        console.log(`[TempAudio] 🔄 Reconnecting to temp_audio table for chat: ${this.chat_id}`);
+        console.log(`[ChatAudio] 🔄 Reconnecting to chat_audio_clips table for chat: ${this.chat_id}`);
         this.subscribeToSession(this.chat_id);
       }
     }, backoffDelay);
@@ -208,7 +193,7 @@ export class TempAudioService {
     this.reconnectAttempts = 0;
     
     if (this.subscription) {
-      console.log(`[TempAudio] Unsubscribing from temp_audio updates for chat: ${this.chat_id}`);
+      console.log(`[ChatAudio] Unsubscribing from chat_audio_clips updates for chat: ${this.chat_id}`);
       supabase.removeChannel(this.subscription);
       this.subscription = null;
     }
@@ -225,7 +210,7 @@ export class TempAudioService {
   public async cleanupSession(chat_id: string): Promise<void> {
     try {
       const { error } = await supabase
-        .from('temp_audio')
+        .from('chat_audio_clips')
         .delete()
         .eq('chat_id', chat_id);
       
@@ -251,4 +236,4 @@ export class TempAudioService {
 }
 
 // Export singleton instance
-export const tempAudioService = new TempAudioService();
+export const chatAudioService = new ChatAudioService();
