@@ -13,8 +13,7 @@ import { Mic } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { Message } from '@/core/types';
-import { StreamPlayerService } from '@/services/voice/StreamPlayerService';
-import { webSocketTtsService } from '@/services/voice/WebSocketTtsService';
+
 import { chatAudioService } from '@/services/voice/TempAudioService';
 
 
@@ -71,18 +70,9 @@ const isPlayingQueue = useRef(false);
 // Responsiveness optimizations
 const firstClipTimer = useRef<number | null>(null);
 
-const streamPlayerRef = useRef<StreamPlayerService | null>(null);
-const streamListenerCleanupRef = useRef<(() => void) | null>(null);
 
-// This effect now only handles cleanup on unmount
-useEffect(() => {
-  return () => {
-    if (streamPlayerRef.current) {
-      streamPlayerRef.current.cleanup();
-      streamPlayerRef.current = null;
-    }
-  };
-}, []);
+
+
 
 // Initialize when overlay opens
 useEffect(() => {
@@ -129,8 +119,7 @@ if (ttsCleanupRef.current) {
   ttsCleanupRef.current = null;
 }
 
-// Cleanup WebSocket TTS
-webSocketTtsService.cleanup();
+
 
   // Cleanup chat audio service
   chatAudioService.unsubscribe();
@@ -229,45 +218,7 @@ conversationTtsService
 });
 }
 
-const setupStreamListener = (chat_id: string) => {
-  // Clean up previous listener if any
-  if (streamListenerCleanupRef.current) {
-    streamListenerCleanupRef.current();
-  }
 
-  const channel = supabase.channel(`tts-stream:${chat_id}`);
-
-  channel.on("broadcast", { event: "audio-chunk" }, ({ payload }) => {
-    if (isShuttingDown.current || !streamPlayerRef.current) return;
-    
-    // The player already exists and is primed, just append chunks
-    streamPlayerRef.current.appendChunk(payload.chunk);
-  });
-
-  channel.on("broadcast", { event: "audio-stream-end" }, () => {
-    if (isShuttingDown.current) return;
-    if (streamPlayerRef.current) {
-      streamPlayerRef.current.endStream();
-    }
-  });
-
-  channel.subscribe((status) => {
-    // Detailed logging for WebSocket connection status
-    console.log(`[WebSocket] Subscription status: ${status}`);
-    if (status === 'SUBSCRIBED') {
-      console.log(`[WebSocket] ✅ Successfully subscribed to TTS stream channel: tts-stream:${chat_id}`);
-    } else if (status === 'TIMED_OUT') {
-      console.error(`[WebSocket] ❌ Timed out subscribing to channel: tts-stream:${chat_id}`);
-    } else if (status === 'CHANNEL_ERROR') {
-      console.error(`[WebSocket] ❌ Channel error on: tts-stream:${chat_id}`);
-    }
-  });
-
-  const cleanup = () => {
-    supabase.removeChannel(channel);
-  };
-  streamListenerCleanupRef.current = cleanup;
-};
 
 const handleModalClose = useCallback(async () => {
 isShuttingDown.current = true;
@@ -341,12 +292,7 @@ try {
     return;
   }
   
-  // Don't await connection priming - let it happen in background
-  webSocketTtsService.initializeConnection(chat_id).then(success => {
-    if (!success) {
-      console.warn('[ConversationOverlay] WebSocket connection failed in background');
-    }
-  });
+
   
   // Step 3: Play connection success click sound
   try {
@@ -422,19 +368,7 @@ try {
   setPermissionGranted(true);
   conversationMicrophoneService.cacheStream(stream);
 
-  // PRIME THE PLAYER: Create the player and call play() within the user gesture
-  if (!streamPlayerRef.current) {
-    streamPlayerRef.current = new StreamPlayerService(() => {
-      // onPlaybackEnd callback
-      if (!isShuttingDown.current) {
-          conversationMicrophoneService.resumeAfterPlayback();
-          conversationMicrophoneService.startRecording().then(ok => {
-              setConversationState(ok ? 'listening' : 'connecting');
-          });
-      }
-    });
-    streamPlayerRef.current.play(); // This is the critical priming step
-  }
+
   
   // The listener will now be set up in handleSimpleRecordingComplete
 

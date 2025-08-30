@@ -5,7 +5,7 @@ import { conversationMicrophoneService } from '@/services/microphone/Conversatio
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
 
-// import { conversationFlowMonitor } from '@/services/conversation/ConversationFlowMonitor';
+
 import { getMessagesForConversation } from '@/services/api/messages';
 import { Message } from '@/core/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -266,7 +266,7 @@ class ChatController {
     this.initializeConversationService();
 
     useChatStore.getState().setStatus('recording');
-    // conversationFlowMonitor.observeStep('listening');
+
     
     try {
       const ok = await conversationMicrophoneService.startRecording();
@@ -279,7 +279,7 @@ class ChatController {
       // Reset auto-recovery on successful start
       // conversationFlowMonitor.resetAutoRecovery();
     } catch (error: any) {
-      // conversationFlowMonitor.observeError('listening', error);
+
       useChatStore.getState().setStatus('idle');
       this.isTurnActive = false;
       useChatStore.getState().setError(error.message);
@@ -298,7 +298,7 @@ class ChatController {
     if (!this.isTurnActive) return;
     
     useChatStore.getState().setStatus('transcribing');
-    // conversationFlowMonitor.observeStep('transcribing');
+
     
     try {
       const audioBlob = await conversationMicrophoneService.stopRecording();
@@ -329,7 +329,7 @@ class ChatController {
 
       this.addOptimisticMessages(chat_id, transcript, client_msg_id, audioUrl);
       
-      // conversationFlowMonitor.observeStep('thinking');
+
       await llmService.sendMessage({ 
         chat_id, 
         text: transcript, 
@@ -342,7 +342,7 @@ class ChatController {
       // conversationFlowMonitor.resetAutoRecovery();
 
     } catch (error: any) {
-      // conversationFlowMonitor.observeError('transcribing', error);
+
       console.error("[ChatController] Error processing voice input:", error);
       useChatStore.getState().setError('Failed to process audio.');
       this.resetTurn();
