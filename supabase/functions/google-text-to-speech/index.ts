@@ -59,7 +59,6 @@ serve(async (req) => {
             pitch: 0.0,
             sampleRateHertz: 22050
           },
-          model: "studio", // Required for HD voices
         }),
       }
     );
@@ -79,7 +78,7 @@ serve(async (req) => {
 
     // Create direct MP3 URL for browser playback
     // The frontend will fetch this URL to get the MP3 audio
-    const audioUrl = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}&input.text=${encodeURIComponent(text)}&voice.languageCode=en-US&voice.name=${encodeURIComponent(voiceName)}&audioConfig.audioEncoding=MP3&model=studio`;
+    const audioUrl = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}&input.text=${encodeURIComponent(text)}&voice.languageCode=en-US&voice.name=${encodeURIComponent(voiceName)}&audioConfig.audioEncoding=MP3`;
 
     // Save TTS audio clip to dedicated audio table (fire-and-forget)
     supabase
