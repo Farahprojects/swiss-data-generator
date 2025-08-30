@@ -14,7 +14,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { Message } from '@/core/types';
 
-import { chatAudioService } from '@/services/voice/TempAudioService';
+
 
 
 const DEBUG = typeof window !== 'undefined' && (window as any).CONVO_DEBUG === true;
@@ -121,8 +121,7 @@ if (ttsCleanupRef.current) {
 
 
 
-  // Cleanup chat audio service
-  chatAudioService.unsubscribe();
+
 }, [isConversationOpen]);
 
 // Ensure clean disposal on component unmount while open
@@ -285,14 +284,12 @@ try {
   // Step 1: Set establishing state for WebSocket connection
   setConversationState('establishing');
   
-  // Step 2: Establish WebSocket connection (non-blocking)
+  // Step 2: Audio priming (no WebSocket needed for conversation mode)
   if (!chat_id) {
-    console.error('[ConversationOverlay] No chat_id available for WebSocket connection');
+    console.error('[ConversationOverlay] No chat_id available');
     setConversationState('connecting');
     return;
   }
-  
-
   
   // Step 3: Play connection success click sound
   try {
@@ -317,21 +314,10 @@ try {
   
   // WebSocket connection established
   
-  // Step 4: Subscribe to chat_audio_clips table for TTS updates with callbacks
-  chatAudioService.subscribeToSession(chat_id);
+  // Step 4: Audio priming complete (no WebSocket subscription needed)
+
   
   // Set up callbacks for audio received from WebSocket
-  chatAudioService.setCallbacks({
-    onAudioReceived: (audioUrl: string) => {
-      console.log('[ConversationOverlay] Audio URL received from WebSocket:', audioUrl);
-      // Enqueue the audio URL into the overlay's existing playback queue
-      enqueueTtsClip({ url: audioUrl });
-    },
-    onError: (error: string) => {
-      console.warn('[ConversationOverlay] ChatAudioService error:', error);
-    }
-  });
-  
   // Step 5: Unlock audio synchronously in gesture
   conversationTtsService.unlockAudio();
 
@@ -370,7 +356,7 @@ try {
 
 
   
-  // The listener will now be set up in handleSimpleRecordingComplete
+
 
   conversationMicrophoneService.initialize({
     onRecordingComplete: handleSimpleRecordingComplete,
@@ -408,7 +394,7 @@ if (!audioBlob || audioBlob.size < 1024) {
   return;
 }
 
-// Removed TTS listener setup for now - just focus on start flow
+// TTS audio URL comes directly from HTTP response - no WebSocket needed
 
 // Set state to replying immediately after we have a valid recording
 setConversationState('replying');
@@ -456,13 +442,18 @@ try {
 
   if (isShuttingDown.current) return;
 
-  // LLM handler now automatically triggers TTS - just wait for audio stream
+  // LLM handler now automatically triggers TTS and returns audioUrl directly
   if (response.text) {
     setConversationState('replying');
     
-    // The LLM handler has already triggered TTS via HTTP POST to openai-tts-ws
-    // The frontend WebSocket should receive the audio stream automatically
-    console.log('[ConversationOverlay] LLM response received, waiting for TTS audio stream...');
+    // Use audioUrl directly from HTTP response (no WebSocket needed)
+    if (response.audioUrl) {
+      console.log('[ConversationOverlay] Audio URL received from HTTP response:', response.audioUrl);
+      enqueueTtsClip({ url: response.audioUrl });
+    } else {
+      console.warn('[ConversationOverlay] No audioUrl in response, falling back to listening');
+      setConversationState('listening');
+    }
   }
 
 } catch (error) {
