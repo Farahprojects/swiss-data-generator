@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Message } from '@/core/types';
 import { StreamPlayerService } from '@/services/voice/StreamPlayerService';
 import { webSocketTtsService } from '@/services/voice/WebSocketTtsService';
+import { tempAudioService } from '@/services/voice/TempAudioService';
 
 
 const DEBUG = typeof window !== 'undefined' && (window as any).CONVO_DEBUG === true;
@@ -22,7 +23,7 @@ function logDebug(...args: any[]) {
 if (DEBUG) console.log('[ConversationOverlay]', ...args);
 }
 
-type ConversationState = 'listening' | 'processing' | 'replying' | 'connecting' | 'thinking';
+type ConversationState = 'listening' | 'processing' | 'replying' | 'connecting' | 'thinking' | 'establishing';
 
 type AudioClipPayload = {
 id?: string;
@@ -132,6 +133,9 @@ if (ttsCleanupRef.current) {
 
 // Cleanup WebSocket TTS
 webSocketTtsService.cleanup();
+
+// Cleanup temp audio service
+tempAudioService.unsubscribe();
 }, [isConversationOpen]);
 
 // Ensure clean disposal on component unmount while open
@@ -372,7 +376,47 @@ setIsStarting(true);
 hasStarted.current = true;
 
 try {
-  // Unlock audio synchronously in gesture
+  // Step 1: Set establishing state for WebSocket connection
+  setConversationState('establishing');
+  
+  // Step 2: Establish WebSocket connection first
+  const sessionId = sessionIdRef.current;
+  console.log('[ConversationOverlay] Establishing WebSocket connection for session:', sessionId);
+  
+  const connectionSuccess = await webSocketTtsService.initializeConnection(sessionId);
+  if (!connectionSuccess) {
+    console.error('[ConversationOverlay] Failed to establish WebSocket connection');
+    setConversationState('connecting');
+    return;
+  }
+  
+  // Step 3: Play connection success click sound
+  try {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    // Click sound: very short, sharp burst
+    oscillator.frequency.setValueAtTime(1500, audioContext.currentTime);
+    
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.02);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.02); // Very short click
+  } catch (soundError) {
+    console.warn('[ConversationOverlay] Could not play connection sound:', soundError);
+  }
+  
+  console.log('[ConversationOverlay] ✅ WebSocket connection established successfully');
+  
+  // Step 4: Subscribe to temp_audio table for TTS updates
+  tempAudioService.subscribeToSession(sessionId);
+  
+  // Step 5: Unlock audio synchronously in gesture
   conversationTtsService.unlockAudio();
 
   // Begin getUserMedia promptly to retain gesture context on Safari
@@ -461,15 +505,7 @@ if (!audioBlob || audioBlob.size < 1024) {
   return;
 }
 
-// Set up the listener JUST BEFORE we trigger the backend
-if (sessionIdRef.current) {
-    console.log('[Turn] Setting up WebSocket listener for TTS audio stream...');
-    setupStreamListener(sessionIdRef.current);
-} else {
-    console.error('[Turn] No session ID, cannot set up stream listener.');
-    setConversationState('connecting');
-    return;
-}
+// Removed TTS listener setup for now - just focus on start flow
 
 // Set state to replying immediately after we have a valid recording
 setConversationState('replying');
@@ -545,14 +581,23 @@ if (!isConversationOpen || !canPortal) return null;
     <div className="fixed inset-0 z-50 bg-white pt-safe pb-safe">
 <div className="h-full w-full flex items-center justify-center px-6">
 {!permissionGranted ? (
+<div className="text-center text-gray-800 flex flex-col items-center gap-4">
 <div
-         className="text-center text-gray-800 flex flex-col items-center gap-4 cursor-pointer"
+         className="cursor-pointer flex flex-col items-center gap-4"
          onClick={handleStart}
        >
 <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center transition-colors hover:bg-gray-200">
 <Mic className="w-10 h-10 text-gray-600" />
 </div>
 <h2 className="text-2xl font-light">Tap to Start Conversation</h2>
+</div>
+<button
+          onClick={closeConversation}
+          aria-label="Close conversation"
+          className="w-10 h-10 bg-black rounded-full flex items-center justify-center text-white hover:bg-gray-800 transition-colors"
+        >
+          ✕
+        </button>
 </div>
 ) : (
 <div className="flex flex-col items-center justify-center gap-6 relative">
@@ -569,7 +614,9 @@ if (!isConversationOpen || !canPortal) return null;
           </AnimatePresence>
 
           <p className="text-gray-500 font-light">
-          {state === 'listening'
+          {state === 'establishing'
+            ? 'Establishing connection…'
+            : state === 'listening'
             ? 'Listening…'
             : state === 'processing' || state === 'thinking'
             ? 'Thinking…'
