@@ -193,9 +193,9 @@ Content Rules:
           });
           
         // �� CONVERSATION MODE: Fire-and-forget TTS call
-        if (mode === 'conversation' && sessionId) {
+        if (mode === 'conversation' && chat_id) {
           // Call TTS WebSocket service (fire-and-forget)
-          fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/openai-tts-ws?sessionId=${sessionId}`, {
+          fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/openai-tts-ws`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -204,15 +204,14 @@ Content Rules:
             body: JSON.stringify({
               text: sanitizedAssistantText,
               voice: 'alloy',
-              chat_id: chat_id,
-              sessionId: sessionId
+              chat_id: chat_id
             })
           })
           .then(() => {
-            console.log(`[llm-handler-openai] TTS request sent for session ${sessionId}`);
+            console.log(`[llm-handler-openai] TTS request sent for chat_id ${chat_id}`);
           })
           .catch(error => {
-            console.error(`[llm-handler-openai] TTS request failed for session ${sessionId}:`, error);
+            console.error(`[llm-handler-openai] TTS request failed for chat_id ${chat_id}:`, error);
           });
         }
 
