@@ -35,7 +35,7 @@ text?: string | null;
 };
 
 export const ConversationOverlay: React.FC = () => {
-  const { isConversationOpen, closeConversation } = useConversationUIStore();
+  const { isConversationOpen, closeConversation, sessionId } = useConversationUIStore();
 const chat_id = useChatStore((state) => state.chat_id);
 const audioLevel = useConversationAudioLevel();
 
@@ -47,9 +47,8 @@ const isShuttingDown = useRef(false);
 const [conversationState, setConversationState] = useState<ConversationState>('listening');
 const [isReady, setIsReady] = useState(false);
 
-// Session & chat caching
+// Chat caching
 const chatIdRef = useRef<string | null>(null);
-const sessionIdRef = useRef<string>('');
 
 // Local optimistic messages (optional for UI; kept for parity)
 const [localMessages, setLocalMessages] = useState<Message[]>([]);
@@ -79,14 +78,12 @@ useEffect(() => {
   };
 }, []);
 
-// Initialize session when overlay opens
+// Initialize when overlay opens
 useEffect(() => {
 if (isConversationOpen && chat_id) {
   if (!chatIdRef.current) {
     chatIdRef.current = chat_id;
-    sessionIdRef.current = `session_${Date.now()}`;
     setIsReady(true);
-    // Now that sessionId is set, the stream listener useEffect will pick it up
   }
 }
 
@@ -113,8 +110,7 @@ isShuttingDown.current = false;
 setConversationState('listening');
 setLocalMessages([]);
 
-// Reset session ID for next open
-sessionIdRef.current = '';
+// Session ID is managed by the store now
 
 // Clear responsiveness timers
 if (firstClipTimer.current) {
@@ -151,7 +147,6 @@ console.error('[ConversationOverlay] Emergency cleanup error:', error);
 // State resets
 setLocalMessages([]);
 chatIdRef.current = null;
-sessionIdRef.current = '';
 setIsReady(false);
 
     if (ttsCleanupRef.current) {
@@ -187,7 +182,7 @@ const channel = supabase
       if (
         newAudioClip.role === 'assistant' &&
         newAudioClip.audio_url &&
-        newAudioClip.session_id === sessionIdRef.current
+        newAudioClip.session_id === sessionId
       ) {
         // Deduplicate by row id if available
         const clipId = newAudioClip.id || `${newAudioClip.audio_url}-${newAudioClip.text || ''}`;
@@ -380,7 +375,6 @@ try {
   setConversationState('establishing');
   
   // Step 2: Establish WebSocket connection first
-  const sessionId = sessionIdRef.current;
   console.log('[ConversationOverlay] Establishing WebSocket connection for session:', sessionId);
   
   if (!sessionId) {
@@ -520,7 +514,6 @@ try {
   setConversationState('processing');
 
   const chatId = chatIdRef.current!;
-  const sessionId = sessionIdRef.current;
   
   if (!sessionId) {
     console.error('[ConversationOverlay] No session ID available - cannot process recording');
@@ -562,7 +555,7 @@ try {
       text: transcript,
       client_msg_id,
       mode: 'conversation',
-      sessionId: sessionIdRef.current,
+      sessionId: sessionId,
   });
 
   if (isShuttingDown.current) return;
