@@ -218,10 +218,10 @@ Content Rules:
           }
         }
 
-      } catch (error) {
-        console.error("[llm-handler-openai] Background processing error:", error);
-      }
-    };
+              } catch (error) {
+          console.error("[llm-handler-openai] Background processing error:", error);
+        }
+      };
 
     // Start background processing without awaiting
     const processPromise = processLLMResponse();
@@ -244,7 +244,6 @@ Content Rules:
         return new Response(JSON.stringify({ 
           message: "Assistant response ready",
           text: latestMessage?.text || "",
-          audioUrl: audioUrl,
           client_msg_id
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
