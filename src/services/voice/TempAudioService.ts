@@ -12,6 +12,10 @@ export class TempAudioService {
   private subscription: any = null;
   private audio: HTMLAudioElement | null = null;
   private callbacks: TempAudioCallbacks = {};
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 10;
+  private reconnectTimeout: NodeJS.Timeout | null = null;
+  private isReconnecting = false;
 
   constructor(callbacks: TempAudioCallbacks = {}) {
     this.callbacks = callbacks;
@@ -59,10 +63,17 @@ export class TempAudioService {
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           console.log(`[TempAudio] ✅ WebSocket: Connected to temp_audio table for chat: ${chat_id}`);
+          this.reconnectAttempts = 0; // Reset reconnect counter on successful connection
+          this.isReconnecting = false;
         } else if (status === 'TIMED_OUT') {
           console.error(`[TempAudio] ⏰ WebSocket: Subscription timed out for chat: ${chat_id}`);
+          this.handleConnectionFailure();
         } else if (status === 'CHANNEL_ERROR') {
           console.error(`[TempAudio] ❌ WebSocket: Channel error for chat: ${chat_id}`);
+          this.handleConnectionFailure();
+        } else if (status === 'CLOSED') {
+          console.warn(`[TempAudio] 🔌 WebSocket: Connection closed for chat: ${chat_id}`);
+          this.handleConnectionFailure();
         }
       });
   }
@@ -157,9 +168,45 @@ export class TempAudioService {
       this.callbacks.onError?.(`Failed to play audio: ${error}`);
     }
   }
-
+  
+  // Handle connection failures and implement auto-reconnection
+  private handleConnectionFailure(): void {
+    if (this.isReconnecting || !this.chat_id) {
+      return; // Already reconnecting or no chat_id to reconnect to
+    }
+    
+    this.isReconnecting = true;
+    this.reconnectAttempts++;
+    
+    if (this.reconnectAttempts > this.maxReconnectAttempts) {
+      console.error(`[TempAudio] ❌ Max reconnection attempts (${this.maxReconnectAttempts}) reached for chat: ${this.chat_id}`);
+      this.callbacks.onError?.('WebSocket connection failed after maximum retries');
+      return;
+    }
+    
+    // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 30s (max)
+    const backoffDelay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 30000);
+    
+    console.warn(`[TempAudio] 🔄 Attempting reconnection ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${backoffDelay}ms for chat: ${this.chat_id}`);
+    
+    this.reconnectTimeout = setTimeout(() => {
+      if (this.chat_id && this.isReconnecting) {
+        console.log(`[TempAudio] 🔄 Reconnecting to temp_audio table for chat: ${this.chat_id}`);
+        this.subscribeToSession(this.chat_id);
+      }
+    }, backoffDelay);
+  }
   // Unsubscribe from updates
   public unsubscribe(): void {
+    // Clear any pending reconnection attempt
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+    
+    this.isReconnecting = false;
+    this.reconnectAttempts = 0;
+    
     if (this.subscription) {
       console.log(`[TempAudio] Unsubscribing from temp_audio updates for chat: ${this.chat_id}`);
       supabase.removeChannel(this.subscription);
