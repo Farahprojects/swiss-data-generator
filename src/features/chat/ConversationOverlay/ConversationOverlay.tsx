@@ -179,7 +179,7 @@ const channel = supabase
       if (
         newAudioClip.role === 'assistant' &&
         newAudioClip.audio_url &&
-        newAudioClip.session_id === chat_id
+        newAudioClip.chat_id === chat_id
       ) {
         // Deduplicate by row id if available
         const clipId = newAudioClip.id || `${newAudioClip.audio_url}-${newAudioClip.text || ''}`;

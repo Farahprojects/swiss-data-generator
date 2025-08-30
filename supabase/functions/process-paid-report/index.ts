@@ -9,7 +9,7 @@ const corsHeaders = {
 
 interface ProcessPaidReportRequest {
   guest_id: string;
-  session_id?: string;
+  chat_id?: string;
 }
 
 serve(async (req) => {
@@ -19,9 +19,9 @@ serve(async (req) => {
   }
 
   try {
-    const { guest_id, session_id } = await req.json() as ProcessPaidReportRequest;
+    const { guest_id, chat_id } = await req.json() as ProcessPaidReportRequest;
     
-    console.log(`🔄 [process-paid-report] Processing request for guest_id: ${guest_id}, session_id: ${session_id}`);
+    console.log(`🔄 [process-paid-report] Processing request for guest_id: ${guest_id}, chat_id: ${chat_id}`);
 
     if (!guest_id) {
       return new Response(JSON.stringify({ error: "guest_id is required" }), {

@@ -34,7 +34,7 @@ export class TempAudioService {
           event: 'UPDATE',
           schema: 'public',
           table: 'temp_audio',
-          filter: `session_id=eq.${chat_id}`,
+          filter: `chat_id=eq.${chat_id}`,
         },
         (payload) => {
           console.log(`[TempAudio] Received audio update for chat ${chat_id}:`, payload);
@@ -47,7 +47,7 @@ export class TempAudioService {
           event: 'INSERT',
           schema: 'public',
           table: 'temp_audio',
-          filter: `session_id=eq.${chat_id}`,
+          filter: `chat_id=eq.${chat_id}`,
         },
         (payload) => {
           console.log(`[TempAudio] Received new audio for chat ${chat_id}:`, payload);
@@ -146,7 +146,7 @@ export class TempAudioService {
       const { error } = await supabase
         .from('temp_audio')
         .delete()
-        .eq('session_id', chat_id);
+        .eq('chat_id', chat_id);
       
       if (error) {
         console.error(`[TempAudio] Failed to cleanup chat ${chat_id}:`, error);

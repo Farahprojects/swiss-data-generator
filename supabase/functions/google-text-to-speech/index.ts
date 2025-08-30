@@ -98,7 +98,6 @@ serve(async (req) => {
         role: "assistant",
         text: text,
         audio_url: audioUrl,
-        session_id: sessionId,
         voice: voiceName,
         provider: "google",
         mime_type: "audio/mpeg",
