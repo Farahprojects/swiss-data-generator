@@ -6,7 +6,6 @@ export interface SpeakAssistantOptions {
 chat_id: string;
 messageId: string;
 text: string;
-sessionId: string | null;
 onStart?: () => void;
 onComplete?: () => void;
 }
@@ -139,7 +138,7 @@ this.listeners.forEach(fn => fn());
 public async speakAssistant(opts: SpeakAssistantOptions): Promise<void> {
 const token = this.beginPlayback();
 try {
-const { chat_id, text, sessionId, onStart, onComplete } = opts;
+const { chat_id, text, onStart, onComplete } = opts;
 
   if (!this.isAudioUnlocked || !this.masterAudioElement) {
     throw new AudioLockedError();
@@ -166,7 +165,6 @@ const { chat_id, text, sessionId, onStart, onComplete } = opts;
         chat_id,
         text: sanitized,
         voice: voiceCode,
-        sessionId: sessionId || null,
       }),
       signal: ac.signal,
     },
@@ -211,7 +209,7 @@ await this.ensureAudioContext();
 }
 
 // For conversation mode; ensure audio line is ready
-public handleDirectTtsResponse(_chat_id: string, _sessionId: string): void {
+public handleDirectTtsResponse(_chat_id: string): void {
 if (!this.isAudioUnlocked) return;
 // ensure audio context is resumed ASAP
 void this.audioContext?.resume().catch(() => {});

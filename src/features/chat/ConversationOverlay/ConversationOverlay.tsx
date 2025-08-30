@@ -270,13 +270,13 @@ conversationTtsService
 });
 }
 
-const setupStreamListener = (sessionId: string) => {
+const setupStreamListener = (chat_id: string) => {
   // Clean up previous listener if any
   if (streamListenerCleanupRef.current) {
     streamListenerCleanupRef.current();
   }
 
-  const channel = supabase.channel(`tts-stream:${sessionId}`);
+  const channel = supabase.channel(`tts-stream:${chat_id}`);
 
   channel.on("broadcast", { event: "audio-chunk" }, ({ payload }) => {
     if (isShuttingDown.current || !streamPlayerRef.current) return;
@@ -296,11 +296,11 @@ const setupStreamListener = (sessionId: string) => {
     // Detailed logging for WebSocket connection status
     console.log(`[WebSocket] Subscription status: ${status}`);
     if (status === 'SUBSCRIBED') {
-      console.log(`[WebSocket] ✅ Successfully subscribed to TTS stream channel: tts-stream:${sessionId}`);
+      console.log(`[WebSocket] ✅ Successfully subscribed to TTS stream channel: tts-stream:${chat_id}`);
     } else if (status === 'TIMED_OUT') {
-      console.error(`[WebSocket] ❌ Timed out subscribing to channel: tts-stream:${sessionId}`);
+      console.error(`[WebSocket] ❌ Timed out subscribing to channel: tts-stream:${chat_id}`);
     } else if (status === 'CHANNEL_ERROR') {
-      console.error(`[WebSocket] ❌ Channel error on: tts-stream:${sessionId}`);
+      console.error(`[WebSocket] ❌ Channel error on: tts-stream:${chat_id}`);
     }
   });
 
