@@ -24,7 +24,7 @@ export class TempAudioService {
     }
 
     this.chat_id = chat_id;
-    // Subscribing to temp_audio updates
+    console.log(`[TempAudio] 🔌 WebSocket: Subscribing to temp_audio table for chat: ${chat_id}`);
 
     this.subscription = supabase
       .channel(`temp-audio:${chat_id}`)
@@ -38,7 +38,7 @@ export class TempAudioService {
         },
         (payload) => {
           const startTime = performance.now();
-          console.log(`[TempAudio] Audio UPDATE received for chat ${chat_id}`);
+          console.log(`[TempAudio] 📡 WebSocket: Found UPDATE in temp_audio table for chat ${chat_id}`);
           this.handleAudioUpdate(payload, startTime);
         }
       )
@@ -52,17 +52,17 @@ export class TempAudioService {
         },
         (payload) => {
           const startTime = performance.now();
-          console.log(`[TempAudio] Audio INSERT received for chat ${chat_id}`);
+          console.log(`[TempAudio] 📡 WebSocket: Found INSERT in temp_audio table for chat ${chat_id}`);
           this.handleAudioUpdate(payload, startTime);
         }
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log(`[TempAudio] ✅ Subscribed to temp_audio for chat: ${chat_id}`);
+          console.log(`[TempAudio] ✅ WebSocket: Connected to temp_audio table for chat: ${chat_id}`);
         } else if (status === 'TIMED_OUT') {
-          console.error(`[TempAudio] ⏰ Subscription timed out for chat: ${chat_id}`);
+          console.error(`[TempAudio] ⏰ WebSocket: Subscription timed out for chat: ${chat_id}`);
         } else if (status === 'CHANNEL_ERROR') {
-          console.error(`[TempAudio] ❌ Channel error for chat: ${chat_id}`);
+          console.error(`[TempAudio] ❌ WebSocket: Channel error for chat: ${chat_id}`);
         }
       });
   }
@@ -75,9 +75,11 @@ export class TempAudioService {
       
       const audioData = payload.new?.audio_data;
       if (!audioData) {
-        console.warn('[TempAudio] No audio data in payload');
+        console.warn('[TempAudio] ❌ No audio data found in table payload');
         return;
       }
+
+      console.log(`[TempAudio] 🎵 Processing audio data from table: ${audioData.length} base64 chars`);
 
       // Convert base64 to ArrayBuffer
       const binaryString = atob(audioData);
@@ -86,10 +88,11 @@ export class TempAudioService {
         bytes[i] = binaryString.charCodeAt(i);
       }
 
-      console.log(`[TempAudio] Audio processed: ${bytes.length} bytes`);
+      console.log(`[TempAudio] ✅ Audio decoded: ${bytes.length} bytes ready for browser`);
       
       // Call the callback with the audio data
       this.callbacks.onAudioReceived?.(bytes.buffer);
+      console.log(`[TempAudio] 🎧 Sending audio to browser for playback...`);
       
       // Play the audio immediately
       const playbackStart = performance.now();

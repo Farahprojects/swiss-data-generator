@@ -27,7 +27,7 @@ serve(async (req) => {
         });
       }
 
-      console.log(`[TTS] HTTP POST request for chat: ${chat_id}, text length: ${text.length}`);
+      console.log(`[TTS] 🎤 TTS request received for chat: ${chat_id}, text: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
 
       // Call OpenAI TTS API
       const ttsResponse = await fetch("https://api.openai.com/v1/audio/speech", {
@@ -63,7 +63,7 @@ serve(async (req) => {
         });
       }
 
-      console.log(`[TTS] TTS response received, storing in temp_audio table for chat ${chat_id}`);
+      console.log(`[TTS] 🎵 OpenAI TTS response received, storing in temp_audio table for chat ${chat_id}`);
       
       // Read the entire MP3 response
       const audioBuffer = await ttsResponse.arrayBuffer();
@@ -78,7 +78,7 @@ serve(async (req) => {
           base64Audio += btoa(String.fromCharCode(...chunk));
         }
         
-        console.log(`[TTS] Attempting upsert for chat: ${chat_id}`);
+        console.log(`[TTS] 💾 Storing audio in temp_audio table for chat: ${chat_id}`);
         
         // Atomic upsert - insert if missing, update if exists
         const { error: upsertError, data: upsertData } = await supabase
@@ -114,7 +114,7 @@ serve(async (req) => {
           });
         }
         
-        console.log(`[TTS] ✅ Audio data stored in temp_audio table for chat ${chat_id}, ${audioBytes.length} bytes (${base64Audio.length} base64 chars)`);
+        console.log(`[TTS] ✅ Audio stored in temp_audio table for chat ${chat_id} - ${audioBytes.length} bytes ready for WebSocket delivery`);
         
         return new Response(JSON.stringify({ 
           success: true, 
