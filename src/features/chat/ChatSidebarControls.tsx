@@ -62,25 +62,22 @@ export const ChatSidebarControls: React.FC = () => {
             onChange={(e) => handleVoiceChange(e.target.value)}
           >
             <optgroup label="Male">
-              <option value="Puck">Puck</option>
-              <option value="Achird">Achird</option>
-              <option value="Algenib">Algenib</option>
-              <option value="Charon">Charon</option>
-              <option value="Enceladus">Enceladus</option>
-              <option value="Fenrir">Fenrir</option>
-              <option value="Orus">Orus</option>
-              <option value="Rasalgethi">Rasalgethi</option>
+              <option value="en-US-Wavenet-D">Wavenet-D (US)</option>
+              <option value="en-US-Wavenet-B">Wavenet-B (US)</option>
+              <option value="en-GB-Wavenet-D">Wavenet-D (UK)</option>
+              <option value="en-GB-Wavenet-B">Wavenet-B (UK)</option>
+              <option value="en-AU-Wavenet-D">Wavenet-D (AU)</option>
+              <option value="en-AU-Wavenet-B">Wavenet-B (AU)</option>
             </optgroup>
             <optgroup label="Female">
-              <option value="Achernar">Achernar</option>
-              <option value="Aoede">Aoede</option>
-              <option value="Callirrhoe">Callirrhoe</option>
-              <option value="Despina">Despina</option>
-              <option value="Gacrux">Gacrux</option>
-              <option value="Kore">Kore</option>
-              <option value="Leda">Leda</option>
-              <option value="Sulafat">Sulafat</option>
-              <option value="Zephyr">Zephyr</option>
+              <option value="en-US-Wavenet-C">Wavenet-C (US)</option>
+              <option value="en-US-Wavenet-E">Wavenet-E (US)</option>
+              <option value="en-US-Wavenet-F">Wavenet-F (US)</option>
+              <option value="en-GB-Wavenet-C">Wavenet-C (UK)</option>
+              <option value="en-GB-Wavenet-A">Wavenet-A (UK)</option>
+              <option value="en-GB-Wavenet-F">Wavenet-F (UK)</option>
+              <option value="en-AU-Wavenet-C">Wavenet-C (AU)</option>
+              <option value="en-AU-Wavenet-A">Wavenet-A (AU)</option>
             </optgroup>
           </select>
         </div>
