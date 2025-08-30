@@ -380,7 +380,7 @@ try {
   setConversationState('establishing');
   
   // Step 2: Establish WebSocket connection first
-  console.log('[ConversationOverlay] Establishing WebSocket connection');
+  // Establishing WebSocket connection
   
   if (!chat_id) {
     console.error('[ConversationOverlay] No chat_id available for WebSocket connection');
@@ -416,7 +416,7 @@ try {
     console.warn('[ConversationOverlay] Could not play connection sound:', soundError);
   }
   
-  console.log('[ConversationOverlay] ✅ WebSocket connection established');
+  // WebSocket connection established
   
   // Step 4: Subscribe to temp_audio table for TTS updates
   tempAudioService.subscribeToSession(chat_id);
@@ -459,7 +459,6 @@ try {
 
   // PRIME THE PLAYER: Create the player and call play() within the user gesture
   if (!streamPlayerRef.current) {
-    console.log('[Gesture] Priming audio stream player...');
     streamPlayerRef.current = new StreamPlayerService(() => {
       // onPlaybackEnd callback
       if (!isShuttingDown.current) {
@@ -518,7 +517,7 @@ setConversationState('replying');
 try {
   setConversationState('processing');
 
-  console.log('[ConversationOverlay] Processing recording');
+  // Processing recording
   
   if (!chat_id) {
     console.error('[ConversationOverlay] No chat_id available - cannot process recording');

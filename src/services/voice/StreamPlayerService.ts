@@ -26,7 +26,7 @@ export class StreamPlayerService {
   }
 
   private handleSourceOpen = () => {
-    logDebug('MediaSource opened');
+    // MediaSource opened
     try {
         const mimeType = 'audio/mpeg';
         if (MediaSource.isTypeSupported(mimeType)) {

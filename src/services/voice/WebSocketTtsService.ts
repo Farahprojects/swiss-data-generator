@@ -186,7 +186,6 @@ export class WebSocketTtsService {
   }
 
   public cleanup() {
-    console.log('[WebSocketTTS] Cleaning up');
     this.disconnect();
     
     this.audio.pause();

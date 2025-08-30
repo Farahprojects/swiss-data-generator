@@ -9,7 +9,6 @@ interface ConversationUIState {
 export const useConversationUIStore = create<ConversationUIState>((set, get) => ({
   isConversationOpen: false,
   openConversation: () => {
-    console.log('[ConversationUIStore] Opening conversation');
     set({ isConversationOpen: true });
     // Add no-anim class to disable animations
     document.documentElement.classList.add('no-anim');

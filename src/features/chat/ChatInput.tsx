@@ -67,7 +67,7 @@ export const ChatInput = () => {
         console.error('[ChatInput] Cannot open conversation - no chat_id available');
         return;
       }
-      console.log('[ChatInput] Opening conversation');
+      // Opening conversation
       openConversation();
       return;
     }
