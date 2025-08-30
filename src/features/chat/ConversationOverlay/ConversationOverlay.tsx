@@ -22,7 +22,7 @@ function logDebug(...args: any[]) {
 if (DEBUG) console.log('[ConversationOverlay]', ...args);
 }
 
-type ConversationState = 'listening' | 'processing' | 'replying' | 'connecting' | 'thinking' | 'establishing';
+type ConversationState = 'listening' | 'processing' | 'replying' | 'connecting' | 'thinking';
 
 type AudioClipPayload = {
 id?: string;
@@ -66,6 +66,7 @@ const isPlayingQueue = useRef(false);
 const firstClipTimer = useRef<number | null>(null);
 
 const streamPlayerRef = useRef<StreamPlayerService | null>(null);
+const streamListenerCleanupRef = useRef<(() => void) | null>(null);
 
 // This effect now only handles cleanup on unmount
 useEffect(() => {
@@ -273,6 +274,46 @@ conversationTtsService
 });
 }
 
+const setupStreamListener = (sessionId: string) => {
+  // Clean up previous listener if any
+  if (streamListenerCleanupRef.current) {
+    streamListenerCleanupRef.current();
+  }
+
+  const channel = supabase.channel(`tts-stream:${sessionId}`);
+
+  channel.on("broadcast", { event: "audio-chunk" }, ({ payload }) => {
+    if (isShuttingDown.current || !streamPlayerRef.current) return;
+    
+    // The player already exists and is primed, just append chunks
+    streamPlayerRef.current.appendChunk(payload.chunk);
+  });
+
+  channel.on("broadcast", { event: "audio-stream-end" }, () => {
+    if (isShuttingDown.current) return;
+    if (streamPlayerRef.current) {
+      streamPlayerRef.current.endStream();
+    }
+  });
+
+  channel.subscribe((status) => {
+    // Detailed logging for WebSocket connection status
+    console.log(`[WebSocket] Subscription status: ${status}`);
+    if (status === 'SUBSCRIBED') {
+      console.log(`[WebSocket] ✅ Successfully subscribed to TTS stream channel: tts-stream:${sessionId}`);
+    } else if (status === 'TIMED_OUT') {
+      console.error(`[WebSocket] ❌ Timed out subscribing to channel: tts-stream:${sessionId}`);
+    } else if (status === 'CHANNEL_ERROR') {
+      console.error(`[WebSocket] ❌ Channel error on: tts-stream:${sessionId}`);
+    }
+  });
+
+  const cleanup = () => {
+    supabase.removeChannel(channel);
+  };
+  streamListenerCleanupRef.current = cleanup;
+};
+
 const handleModalClose = useCallback(async () => {
 isShuttingDown.current = true;
 
@@ -293,13 +334,6 @@ try {
 try {
   conversationTtsService.stopAllAudio();
 } catch {}
-
-// ✅ NEW: Cleanup persistent WebSocket TTS connection
-try {
-  webSocketTtsService.cleanup();
-} catch (error) {
-  console.error('[ConversationOverlay] WebSocket TTS cleanup error:', error);
-}
 
 // Try to refresh messages list behind the modal
 try {
@@ -338,27 +372,6 @@ setIsStarting(true);
 hasStarted.current = true;
 
 try {
-  // Play connection sound
-  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-  const oscillator = audioContext.createOscillator();
-  const gainNode = audioContext.createGain();
-  
-  oscillator.connect(gainNode);
-  gainNode.connect(audioContext.destination);
-  
-  oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-  oscillator.frequency.exponentialRampToValueAtTime(1200, audioContext.currentTime + 0.1);
-  
-  gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-  gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.05);
-  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-  
-  oscillator.start(audioContext.currentTime);
-  oscillator.stop(audioContext.currentTime + 0.1);
-
-  // Show establishing connection state
-  setConversationState('establishing');
-  
   // Unlock audio synchronously in gesture
   conversationTtsService.unlockAudio();
 
@@ -395,9 +408,9 @@ try {
   setPermissionGranted(true);
   conversationMicrophoneService.cacheStream(stream);
 
-  // PRIME THE PLAYER: Create the player (Phase 1 - no premature play())
+  // PRIME THE PLAYER: Create the player and call play() within the user gesture
   if (!streamPlayerRef.current) {
-    console.log('[Gesture] Creating audio stream player...');
+    console.log('[Gesture] Priming audio stream player...');
     streamPlayerRef.current = new StreamPlayerService(() => {
       // onPlaybackEnd callback
       if (!isShuttingDown.current) {
@@ -407,19 +420,7 @@ try {
           });
       }
     });
-    // Phase 1: Don't call play() here - wait for actual data
-  }
-  
-  // ✅ NEW: Initialize persistent WebSocket TTS connection early
-  if (sessionIdRef.current) {
-    console.log('[Gesture] Initializing persistent WebSocket TTS connection...');
-    const connectionSuccess = await webSocketTtsService.initializeConnection(sessionIdRef.current);
-    if (!connectionSuccess) {
-      console.warn('[ConversationOverlay] Failed to initialize TTS connection, will retry later');
-      // Don't fail the entire startup - the connection can be established later when needed
-    } else {
-      console.log('[ConversationOverlay] ✅ TTS connection initialized successfully');
-    }
+    streamPlayerRef.current.play(); // This is the critical priming step
   }
   
   // The listener will now be set up in handleSimpleRecordingComplete
@@ -429,10 +430,6 @@ try {
     onSilenceDetected: () => {
       logDebug('Silence detected; stopping recording for processing.');
       setConversationState('processing'); // User has finished speaking
-      
-      // ✅ NEW: Pause TTS playback when user starts speaking
-      webSocketTtsService.pausePlayback();
-      
       conversationMicrophoneService.suspendForPlayback();
       if (conversationMicrophoneService.getState().isRecording) {
         conversationMicrophoneService.stopRecording();
@@ -445,9 +442,6 @@ try {
     silenceTimeoutMs: 1200,
   });
 
-  // Wait for connection animation to complete (1 second)
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
   const success = await conversationMicrophoneService.startRecording();
   setConversationState(success ? 'listening' : 'connecting');
 } catch (error) {
@@ -469,10 +463,10 @@ if (!audioBlob || audioBlob.size < 1024) {
 
 // Set up the listener JUST BEFORE we trigger the backend
 if (sessionIdRef.current) {
-    console.log('[Turn] Using WebSocket TTS service for session:', sessionIdRef.current);
-    // WebSocket TTS service will handle the direct connection
+    console.log('[Turn] Setting up WebSocket listener for TTS audio stream...');
+    setupStreamListener(sessionIdRef.current);
 } else {
-    console.error('[Turn] No session ID, cannot proceed.');
+    console.error('[Turn] No session ID, cannot set up stream listener.');
     setConversationState('connecting');
     return;
 }
@@ -530,31 +524,9 @@ try {
   if (response.text) {
     setConversationState('replying');
     
-    // ✅ NEW: Use simplified TTS request (connection already established)
-    webSocketTtsService.speakText(
-      response.text,
-      'alloy',
-      chatIdRef.current!,
-      () => {
-        console.log('[WebSocketTTS] Audio playback started');
-      },
-      () => {
-        console.log('[WebSocketTTS] Audio playback completed');
-        if (!isShuttingDown.current) {
-          // ✅ NEW: Resume TTS playback (PCM doesn't need chunk cleaning)
-          webSocketTtsService.resumePlayback();
-          
-          conversationMicrophoneService.resumeAfterPlayback();
-          conversationMicrophoneService.startRecording().then(ok => {
-            setConversationState(ok ? 'listening' : 'connecting');
-          });
-        }
-      },
-      (error) => {
-        console.error('[WebSocketTTS] Error:', error);
-        if (!isShuttingDown.current) setConversationState('listening');
-      }
-    );
+    // The LLM handler has already triggered TTS via HTTP POST to openai-tts-ws
+    // The frontend WebSocket should receive the audio stream automatically
+    console.log('[ConversationOverlay] LLM response received, waiting for TTS audio stream...');
   }
 
 } catch (error) {
@@ -573,24 +545,14 @@ if (!isConversationOpen || !canPortal) return null;
     <div className="fixed inset-0 z-50 bg-white pt-safe pb-safe">
 <div className="h-full w-full flex items-center justify-center px-6">
 {!permissionGranted ? (
-<div className="text-center text-gray-800 flex flex-col items-center gap-6">
-  <div
-    className="flex flex-col items-center gap-4 cursor-pointer"
-    onClick={handleStart}
-  >
-    <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center transition-colors hover:bg-gray-200">
-      <Mic className="w-10 h-10 text-gray-600" />
-    </div>
-    <h2 className="text-2xl font-light">Tap to Start Conversation</h2>
-  </div>
-  
-  <button
-    onClick={handleModalClose}
-    aria-label="Close conversation"
-    className="w-10 h-10 bg-black rounded-full flex items-center justify-center text-white hover:bg-gray-800 transition-colors"
-  >
-    ✕
-  </button>
+<div
+         className="text-center text-gray-800 flex flex-col items-center gap-4 cursor-pointer"
+         onClick={handleStart}
+       >
+<div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center transition-colors hover:bg-gray-200">
+<Mic className="w-10 h-10 text-gray-600" />
+</div>
+<h2 className="text-2xl font-light">Tap to Start Conversation</h2>
 </div>
 ) : (
 <div className="flex flex-col items-center justify-center gap-6 relative">
@@ -607,9 +569,7 @@ if (!isConversationOpen || !canPortal) return null;
           </AnimatePresence>
 
           <p className="text-gray-500 font-light">
-          {state === 'establishing'
-            ? 'Establishing connection…'
-            : state === 'listening'
+          {state === 'listening'
             ? 'Listening…'
             : state === 'processing' || state === 'thinking'
             ? 'Thinking…'

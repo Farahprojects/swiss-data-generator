@@ -195,27 +195,21 @@ Content Rules:
         // �� CONVERSATION MODE: Fire-and-forget TTS call
         if (mode === 'conversation' && sessionId) {
           // Call TTS WebSocket service (fire-and-forget)
-          fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/openai-tts-ws/tts`, {
+          fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/openai-tts-ws?sessionId=${sessionId}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-              'x-internal-secret': Deno.env.get("INTERNAL_TTS_SECRET") || 'default-secret'
             },
             body: JSON.stringify({
-              sessionId: sessionId,
               text: sanitizedAssistantText,
               voice: 'alloy',
               chat_id: chat_id,
-              requestId: crypto.randomUUID()
+              sessionId: sessionId
             })
           })
-          .then((response) => {
-            if (response.ok) {
-              console.log(`[llm-handler-openai] TTS request sent for session ${sessionId}`);
-            } else {
-              console.error(`[llm-handler-openai] TTS request failed for session ${sessionId}: ${response.status} ${response.statusText}`);
-            }
+          .then(() => {
+            console.log(`[llm-handler-openai] TTS request sent for session ${sessionId}`);
           })
           .catch(error => {
             console.error(`[llm-handler-openai] TTS request failed for session ${sessionId}:`, error);
