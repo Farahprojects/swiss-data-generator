@@ -59,7 +59,6 @@ serve(async (req) => {
             pitch: 0.0,
             sampleRateHertz: 22050
           },
-          model: "studio", // Required for HD voices
         }),
       }
     );
@@ -77,9 +76,8 @@ serve(async (req) => {
       throw new Error("No audio content received from Google TTS API");
     }
 
-    // Create direct MP3 URL for browser playback
-    // The frontend will fetch this URL to get the MP3 audio
-    const audioUrl = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}&input.text=${encodeURIComponent(text)}&voice.languageCode=en-US&voice.name=${encodeURIComponent(voiceName)}&audioConfig.audioEncoding=MP3`;
+    // Decode base64 audio content to raw MP3 bytes
+    const audioBytes = Uint8Array.from(atob(audioContent), c => c.charCodeAt(0));
 
     // Save TTS audio clip to dedicated audio table (fire-and-forget)
     supabase
@@ -88,7 +86,7 @@ serve(async (req) => {
         chat_id: chat_id,
         role: "assistant",
         text: text,
-        audio_url: audioUrl,
+        audio_url: null, // No URL needed since we're returning raw bytes
         voice: voiceName,
         provider: "google",
         mime_type: "audio/mpeg",
@@ -109,15 +107,12 @@ serve(async (req) => {
         console.error("[google-tts] Database save error:", error);
       });
 
-    // Return success response (audio URL is now in database)
-    const response = new Response(JSON.stringify({
-      success: true,
-      message: "TTS audio generated and saved to database",
-      audio_url: audioUrl
-    }), {
+    // Return raw MP3 audio bytes
+    const response = new Response(audioBytes, {
       headers: {
         ...CORS_HEADERS,
-        'Content-Type': 'application/json',
+        'Content-Type': 'audio/mpeg',
+        'Content-Length': audioBytes.length.toString(),
       },
     });
 
