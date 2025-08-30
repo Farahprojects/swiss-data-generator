@@ -25,18 +25,10 @@ serve(async (req) => {
   }
 
   try {
-    const { chat_id, text, voice, sessionId } = await req.json();
+    const { chat_id, text, voice } = await req.json();
 
     if (!chat_id || !text) {
       throw new Error("Missing 'chat_id' or 'text' in request body.");
-    }
-    
-    // Require sessionId (validated upstream by existing session validation flow)
-    if (!sessionId) {
-      return new Response(JSON.stringify({ error: 'Unauthorized: missing sessionId' }), {
-        status: 401,
-        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }
-      });
     }
     
     // Ensure we have a voice parameter - no fallbacks allowed
@@ -84,11 +76,9 @@ serve(async (req) => {
       throw new Error("No audio content received from Google TTS API");
     }
 
-    // Decode base64 audio to binary
-    const audioBytes = Uint8Array.from(atob(audioContent), c => c.charCodeAt(0));
-
-    // Create data URL for direct browser playback (optimized for Safari)
-    const audioUrl = `data:audio/mpeg;base64,${audioContent}`;
+    // Create direct MP3 URL for browser playback
+    // The frontend will fetch this URL to get the MP3 audio
+    const audioUrl = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}&input.text=${encodeURIComponent(text)}&voice.languageCode=en-US&voice.name=${encodeURIComponent(voiceName)}&audioConfig.audioEncoding=MP3`;
 
     // Save TTS audio clip to dedicated audio table (fire-and-forget)
     supabase
@@ -103,7 +93,6 @@ serve(async (req) => {
         mime_type: "audio/mpeg",
         meta: { 
           tts_provider: "google",
-          sessionId,
           tts_status: 'ready',
           processing_time_ms: Date.now() - startTime
         },
