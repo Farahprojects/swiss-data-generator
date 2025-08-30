@@ -93,7 +93,8 @@ serve(async (req) => {
       .from('ChatAudio')
       .upload(fileName, audioBytes, {
         contentType: 'audio/mpeg',
-        cacheControl: '3600',
+        cacheControl: 'public, max-age=31536000, immutable',
+        contentDisposition: 'inline',
         upsert: false
       });
 
@@ -111,8 +112,15 @@ serve(async (req) => {
 
     console.log(`[google-tts] Public URL generated: ${publicUrl}`);
 
-    // Save TTS audio clip to dedicated audio table (fire-and-forget)
-    supabase
+    // Prepare response data 
+    const responseData = {
+      success: true,
+      audioUrl: publicUrl,
+      storagePath: fileName
+    };
+
+    // Save TTS audio clip to dedicated audio table (minimal payload, fast insert)
+    const { error: insertError } = await supabase
       .from("chat_audio_clips")
       .insert({
         chat_id: chat_id,
@@ -124,41 +132,29 @@ serve(async (req) => {
         provider: "google",
         mime_type: "audio/mpeg",
         meta: { 
-          tts_provider: "google",
           tts_status: 'ready',
-          processing_time_ms: Date.now() - startTime,
-          file_size_bytes: audioBytes.length,
-          storage_path: fileName
+          processing_time_ms: Date.now() - startTime
         },
-      })
-      .then(({ error: dbError }) => {
-        if (dbError) {
-          console.error("[google-tts] Failed to save audio clip:", dbError);
-        } else {
-          console.log(`[google-tts] Audio clip saved to chat_audio_clips table`);
-        }
-      })
-      .catch(error => {
-        console.error("[google-tts] Database save error:", error);
       });
 
-    // Return success response with audio URL and storage path
-    const response = new Response(JSON.stringify({
-      success: true,
-      audioUrl: publicUrl,
-      storagePath: fileName,
-      message: "TTS audio generated and uploaded to storage"
-    }), {
-      headers: {
-        ...CORS_HEADERS,
-        'Content-Type': 'application/json',
-      },
-    });
+    if (insertError) {
+      console.error("[google-tts] Failed to save audio clip metadata:", insertError);
+      // Still return success - client can play from audioUrl
+    } else {
+      console.log(`[google-tts] Audio clip saved to chat_audio_clips table`);
+    }
 
     const processingTime = Date.now() - startTime;
     console.log(`[google-tts] TTS completed in ${processingTime}ms`);
 
-    return response;
+    // Return success response with performance timing
+    return new Response(JSON.stringify(responseData), {
+      headers: {
+        ...CORS_HEADERS,
+        'Content-Type': 'application/json',
+        'Server-Timing': `tts;dur=${processingTime}`
+      },
+    });
 
   } catch (error) {
     console.error("[google-tts] Error:", error);

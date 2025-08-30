@@ -14,6 +14,7 @@ export class ChatAudioService {
   private maxReconnectAttempts = 10;
   private reconnectTimeout: NodeJS.Timeout | null = null;
   private isReconnecting = false;
+  private playedUrls = new Set<string>(); // Track played URLs to prevent duplicates
 
   constructor(callbacks: ChatAudioCallbacks = {}) {
     this.callbacks = callbacks;
@@ -22,6 +23,12 @@ export class ChatAudioService {
   // Set callbacks after construction
   public setCallbacks(callbacks: ChatAudioCallbacks): void {
     this.callbacks = callbacks;
+  }
+
+  // Mark a URL as already played (for immediate playback de-duplication)
+  public markUrlAsPlayed(audioUrl: string): void {
+    this.playedUrls.add(audioUrl);
+    console.log('[ChatAudio] 🎯 Marked URL as played for de-duplication:', audioUrl);
   }
 
   // Subscribe to chat_audio_clips table updates for a chat
@@ -93,7 +100,14 @@ export class ChatAudioService {
         return;
       }
 
-      console.log(`[ChatAudio] 🎵 Processing audio URL from table: ${audioUrl}`);
+      // De-duplicate: skip if we've already played this URL (immediate playback might have handled it)
+      if (this.playedUrls.has(audioUrl)) {
+        console.log('[ChatAudio] ⏭️ Skipping duplicate audio URL via WebSocket:', audioUrl);
+        return;
+      }
+      
+      this.playedUrls.add(audioUrl);
+      console.log(`[ChatAudio] 🎵 Processing new audio URL from WebSocket: ${audioUrl}`);
 
       // Relay the audio URL to the callback - no internal playback
       this.callbacks.onAudioReceived?.(audioUrl);

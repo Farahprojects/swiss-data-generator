@@ -169,10 +169,30 @@ const { chat_id, text, onStart, onComplete } = opts;
   const data = await response.json();
   console.log('[ConversationTtsService] TTS generation completed:', data);
   
-  // Don't play anything directly - the TempAudioService WebSocket subscription
-  // will pick up the audio_url and handle playback automatically
-  onStart?.();
-  onComplete?.();
+  // IMMEDIATE PLAYBACK: Start playing the returned audio URL right away
+  // The WebSocket subscription will still handle state sync as backup
+  if (data.success && data.audioUrl) {
+    console.log('[ConversationTtsService] Starting immediate playback:', data.audioUrl);
+    onStart?.();
+    
+    try {
+      // Mark this URL as played to prevent duplicate playback via WebSocket
+      const { chatAudioService } = await import('../voice/TempAudioService');
+      chatAudioService.markUrlAsPlayed(data.audioUrl);
+      
+      await this.playFromUrl(data.audioUrl, () => {
+        console.log('[ConversationTtsService] Immediate playback completed');
+        onComplete?.();
+      });
+    } catch (playErr) {
+      console.warn('[ConversationTtsService] Immediate playback failed, relying on WebSocket:', playErr);
+      onComplete?.(); // Still call onComplete to not block flow
+    }
+  } else {
+    // Fallback: still call callbacks but rely on WebSocket
+    onStart?.();
+    onComplete?.();
+  }
 
 } catch (err) {
   console.error('[ConversationTtsService] TTS generation failed:', err);
