@@ -195,7 +195,7 @@ Content Rules:
         // �� CONVERSATION MODE: Fire-and-forget TTS call
         if (mode === 'conversation' && chat_id) {
           // Call TTS WebSocket service (fire-and-forget)
-          fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/openai-tts-ws`, {
+          fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -203,15 +203,15 @@ Content Rules:
             },
             body: JSON.stringify({
               text: sanitizedAssistantText,
-              voice: 'alloy',
+              voice: 'Puck',
               chat_id: chat_id
             })
           })
           .then(() => {
-            console.log(`[llm-handler-openai] TTS request sent for chat_id ${chat_id}`);
+            console.log(`[llm-handler-openai] Google TTS request sent for chat_id ${chat_id}`);
           })
           .catch(error => {
-            console.error(`[llm-handler-openai] TTS request failed for chat_id ${chat_id}:`, error);
+            console.error(`[llm-handler-openai] Google TTS request failed for chat_id ${chat_id}:`, error);
           });
         }
 
