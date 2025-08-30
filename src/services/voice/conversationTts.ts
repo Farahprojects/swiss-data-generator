@@ -222,7 +222,7 @@ const { chat_id, text, onStart, onComplete } = opts;
 }
 
 // URL playback entrypoint
-public async playFromUrl(audioUrl: string, onComplete?: () => void): Promise<void> {
+public async playFromUrl(audioUrl: string, onComplete?: () => void, onStart?: () => void): Promise<void> {
   performance.mark('tts_playback_start');
   const token = this.beginPlayback();
   try {
@@ -233,7 +233,7 @@ public async playFromUrl(audioUrl: string, onComplete?: () => void): Promise<voi
 
     this.replaceObjectUrl(audioUrl); // caller provided; we will not revoke external URLs
     // Remove duplicate prepareAudioGraph call - will be done lazily in playInternal
-    await this.playInternal(token, this.masterAudioElement, audioUrl, undefined, onComplete);
+    await this.playInternal(token, this.masterAudioElement, audioUrl, onStart, onComplete);
   } catch (err) {
     this.failPlayback(err);
     if (onComplete) onComplete();
@@ -568,7 +568,7 @@ private sanitizeTtsText(input: string): string {
 if (!input) return '';
 let t = input;
 // Remove fenced code blocks
-t = t.replace(/[\s\S]*?/g, ' ');
+t = t.replace(/```[\s\S]*?```/g, ' ');
 // Remove inline code ticks
 t = t.replace(/`+/g, '');
 // Remove markdown headers/emphasis/quotes

@@ -128,8 +128,8 @@ export class WebSocketTtsService {
         oscillator.start(audioContext.currentTime);
         oscillator.stop(audioContext.currentTime + 0.1);
         
-        // ✅ Step 2: Simulate WebSocket connection with delay
-        await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
+        // ✅ Step 2: Return immediately - no artificial delay
+        this.isWebSocketReady = true;
         return true;
         
       } catch (audioError) {

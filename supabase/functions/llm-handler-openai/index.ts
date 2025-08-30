@@ -60,8 +60,9 @@ serve(async (req) => {
     // User message is already saved by chat-send function
     // No need to save it again here
 
-    // Background task to process LLM response
-    const processLLMResponse = async () => {
+            // Background task to process LLM response
+        const processLLMResponse = async () => {
+          let audioUrl: string | undefined;
       try {
         // Fetch conversation history (last 10 completed messages, optimized)
         const HISTORY_LIMIT = 10;
@@ -195,7 +196,7 @@ Content Rules:
         // �� CONVERSATION MODE: Fire-and-forget TTS call
         if (mode === 'conversation' && chat_id) {
           // Call TTS WebSocket service (fire-and-forget)
-          fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
+          const ttsResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -206,13 +207,15 @@ Content Rules:
               voice: 'Puck',
               chat_id: chat_id
             })
-          })
-          .then(() => {
-            console.log(`[llm-handler-openai] Google TTS request sent for chat_id ${chat_id}`);
-          })
-          .catch(error => {
-            console.error(`[llm-handler-openai] Google TTS request failed for chat_id ${chat_id}:`, error);
           });
+          
+          if (ttsResponse.ok) {
+            const ttsData = await ttsResponse.json();
+            audioUrl = ttsData.audio_url;
+            console.log(`[llm-handler-openai] Google TTS completed for chat_id ${chat_id}, audioUrl: ${audioUrl}`);
+          } else {
+            console.error(`[llm-handler-openai] Google TTS request failed for chat_id ${chat_id}:`, ttsResponse.status);
+          }
         }
 
       } catch (error) {
@@ -241,6 +244,7 @@ Content Rules:
         return new Response(JSON.stringify({ 
           message: "Assistant response ready",
           text: latestMessage?.text || "",
+          audioUrl: audioUrl,
           client_msg_id
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },

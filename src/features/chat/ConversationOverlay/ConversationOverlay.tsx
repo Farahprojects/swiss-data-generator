@@ -158,57 +158,7 @@ setIsReady(false);
 };
 }, []);
 
-const setupTtsListener = (cid: string) => {
-// Defensive: remove previous channel if any
-if (ttsCleanupRef.current) {
-ttsCleanupRef.current();
-ttsCleanupRef.current = null;
-}
 
-const channel = supabase
-  .channel(`conversation-tts:${cid}`)
-  .on(
-    'postgres_changes',
-    {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'chat_audio_clips',
-      filter: `chat_id=eq.${cid}`,
-    },
-    (payload: { new: AudioClipPayload }) => {
-      const newAudioClip = payload?.new;
-      if (!newAudioClip) return;
-
-      // Filter to this session and assistant role with valid URL
-      if (
-        newAudioClip.role === 'assistant' &&
-        newAudioClip.audio_url &&
-        newAudioClip.chat_id === chat_id
-      ) {
-        // Deduplicate by row id if available
-        const clipId = newAudioClip.id || `${newAudioClip.audio_url}-${newAudioClip.text || ''}`;
-        if (playedClipIds.current.has(clipId)) {
-          logDebug('Duplicate clip ignored', clipId);
-          return;
-        }
-        playedClipIds.current.add(clipId);
-
-        enqueueTtsClip({ id: clipId, url: newAudioClip.audio_url, text: newAudioClip.text });
-      }
-    }
-  )
-  .subscribe((status) => {
-    logDebug('Realtime channel status:', status);
-  });
-
-const cleanup = () => {
-  try {
-    supabase.removeChannel(channel);
-  } catch {}
-};
-
-return cleanup;
-};
 
 function enqueueTtsClip(clip: Clip) {
 // mark that a clip has arrived; cancel "replying" watchdog
@@ -232,9 +182,6 @@ return;
 isPlayingQueue.current = true;
 
 try {
-  // Set replying state to show speaking bars
-  setConversationState('replying');
-  
   // Defensively suspend mic if still recording when assistant starts talking
   if (conversationMicrophoneService.getState().isRecording) {
     conversationMicrophoneService.suspendForPlayback();
@@ -274,7 +221,10 @@ if (isShuttingDown.current) return;
 await new Promise<void>((resolve) => {
 // Resolve only when TTS finishes
 conversationTtsService
-  .playFromUrl(audioUrl, () => resolve())
+  .playFromUrl(audioUrl, () => resolve(), () => {
+    // onStart: Set replying state when audio actually starts playing
+    setConversationState('replying');
+  })
   .catch(() => resolve()); // don't block queue on errors
 });
 }
@@ -384,21 +334,19 @@ try {
   // Step 1: Set establishing state for WebSocket connection
   setConversationState('establishing');
   
-  // Step 2: Establish WebSocket connection first
-  // Establishing WebSocket connection
-  
+  // Step 2: Establish WebSocket connection (non-blocking)
   if (!chat_id) {
     console.error('[ConversationOverlay] No chat_id available for WebSocket connection');
     setConversationState('connecting');
     return;
   }
   
-  const connectionSuccess = await webSocketTtsService.initializeConnection(chat_id);
-  if (!connectionSuccess) {
-    console.error('[ConversationOverlay] Failed to establish WebSocket connection');
-    setConversationState('connecting');
-    return;
-  }
+  // Don't await connection priming - let it happen in background
+  webSocketTtsService.initializeConnection(chat_id).then(success => {
+    if (!success) {
+      console.warn('[ConversationOverlay] WebSocket connection failed in background');
+    }
+  });
   
   // Step 3: Play connection success click sound
   try {
