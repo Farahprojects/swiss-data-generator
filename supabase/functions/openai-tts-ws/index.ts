@@ -27,7 +27,7 @@ serve(async (req) => {
         });
       }
 
-      console.log(`[TTS] HTTP POST request for session: ${sessionId}, text length: ${text.length}`);
+      console.log(`[TTS] HTTP POST request for session: ${sessionId}, text length: ${text.length}, chat_id: ${chat_id}, sessionId type: ${typeof sessionId}, sessionId length: ${sessionId?.length}`);
 
       // Call OpenAI TTS API
       const ttsResponse = await fetch("https://api.openai.com/v1/audio/speech", {
@@ -78,8 +78,10 @@ serve(async (req) => {
           base64Audio += btoa(String.fromCharCode(...chunk));
         }
         
+        console.log(`[TTS] Attempting upsert for session: ${sessionId}`);
+        
         // Atomic upsert - insert if missing, update if exists
-        const { error: upsertError } = await supabase
+        const { error: upsertError, data: upsertData } = await supabase
           .from('temp_audio')
           .upsert({
             session_id: sessionId,
@@ -88,6 +90,12 @@ serve(async (req) => {
           }, {
             onConflict: 'session_id'
           });
+        
+        console.log(`[TTS] Upsert result for session ${sessionId}:`, { 
+          error: upsertError, 
+          data: upsertData,
+          sessionId: sessionId 
+        });
         
         if (upsertError) {
           console.error(`[TTS] Failed to upsert audio data for session ${sessionId}:`, {

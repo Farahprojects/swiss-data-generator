@@ -383,6 +383,12 @@ try {
   const sessionId = sessionIdRef.current;
   console.log('[ConversationOverlay] Establishing WebSocket connection for session:', sessionId);
   
+  if (!sessionId) {
+    console.error('[ConversationOverlay] No session ID available for WebSocket connection');
+    setConversationState('connecting');
+    return;
+  }
+  
   const connectionSuccess = await webSocketTtsService.initializeConnection(sessionId);
   if (!connectionSuccess) {
     console.error('[ConversationOverlay] Failed to establish WebSocket connection');
@@ -514,8 +520,13 @@ try {
   setConversationState('processing');
 
   const chatId = chatIdRef.current!;
-  const sessionId = sessionIdRef.current || `session_${Date.now()}`;
-  if (!sessionIdRef.current) sessionIdRef.current = sessionId;
+  const sessionId = sessionIdRef.current;
+  
+  if (!sessionId) {
+    console.error('[ConversationOverlay] No session ID available - cannot process recording');
+    setConversationState('listening');
+    return;
+  }
 
   const result = await sttService.transcribe(audioBlob, chatId, {}, 'conversation', sessionId);
 
