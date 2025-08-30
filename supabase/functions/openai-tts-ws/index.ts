@@ -84,11 +84,11 @@ serve(async (req) => {
         const { error: upsertError, data: upsertData } = await supabase
           .from('temp_audio')
           .upsert({
-            session_id: chat_id,
+            chat_id: chat_id,
             audio_data: base64Audio,
             updated_at: new Date().toISOString()
           }, {
-            onConflict: 'session_id'
+            onConflict: 'chat_id'
           });
         
         console.log(`[TTS] Upsert result for chat ${chat_id}:`, { 
