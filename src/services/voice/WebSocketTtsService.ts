@@ -5,7 +5,6 @@ export interface WebSocketTtsOptions {
   text: string;
   voice?: string;
   chat_id: string;
-  sessionId: string;
   onStart?: () => void;
   onComplete?: () => void;
   onError?: (error: Error) => void;
@@ -19,7 +18,7 @@ export class WebSocketTtsService {
   private chunks: Uint8Array[] = [];
   private isAppending = false;
   private streamEnded = false;
-  private currentSessionId: string | null = null;
+  private currentChatId: string | null = null;
   private isPlaying = false;
   private isWebSocketReady = false;
   private isAudioUnlocked = false;
@@ -107,12 +106,12 @@ export class WebSocketTtsService {
   }
 
     // ✅ NEW: Simple start flow - just prime audio
-  public async initializeConnection(sessionId: string): Promise<boolean> {
+  public async initializeConnection(chat_id: string): Promise<boolean> {
     try {
-      console.log(`[WebSocketTTS] Starting flow for session: ${sessionId}`);
+      console.log(`[WebSocketTTS] Starting flow for chat: ${chat_id}`);
       
       // Reset state
-      this.currentSessionId = sessionId;
+      this.currentChatId = chat_id;
       this.isWebSocketReady = false;
       
       // ✅ Step 1: Prime audio playback (must happen during user gesture)
@@ -152,12 +151,12 @@ export class WebSocketTtsService {
   }
 
   public async speak(options: WebSocketTtsOptions): Promise<void> {
-    const { text, voice = "alloy", chat_id, sessionId, onStart, onComplete, onError } = options;
+    const { text, voice = "alloy", chat_id, onStart, onComplete, onError } = options;
     
     try {
       // If connection is not ready, initialize it
-      if (!this.isWebSocketReady || this.currentSessionId !== sessionId) {
-        const connectionSuccess = await this.initializeConnection(sessionId);
+          if (!this.isWebSocketReady || this.currentChatId !== options.chat_id) {
+      const connectionSuccess = await this.initializeConnection(options.chat_id);
         if (!connectionSuccess) {
           throw new Error('Failed to establish WebSocket connection');
         }
@@ -189,7 +188,7 @@ export class WebSocketTtsService {
       this.socket.close();
       this.socket = null;
     }
-    this.currentSessionId = null;
+    this.currentChatId = null;
     this.isWebSocketReady = false;
   }
 

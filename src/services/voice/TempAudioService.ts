@@ -8,7 +8,7 @@ export interface TempAudioCallbacks {
 }
 
 export class TempAudioService {
-  private sessionId: string | null = null;
+  private chat_id: string | null = null;
   private subscription: any = null;
   private audio: HTMLAudioElement | null = null;
   private callbacks: TempAudioCallbacks = {};
@@ -17,27 +17,27 @@ export class TempAudioService {
     this.callbacks = callbacks;
   }
 
-  // Subscribe to temp_audio table updates for a session
-  public subscribeToSession(sessionId: string): void {
+  // Subscribe to temp_audio table updates for a chat
+  public subscribeToSession(chat_id: string): void {
     if (this.subscription) {
       this.unsubscribe();
     }
 
-    this.sessionId = sessionId;
-    console.log(`[TempAudio] Subscribing to temp_audio updates for session: ${sessionId}`);
+    this.chat_id = chat_id;
+    console.log(`[TempAudio] Subscribing to temp_audio updates for chat: ${chat_id}`);
 
     this.subscription = supabase
-      .channel(`temp-audio:${sessionId}`)
+      .channel(`temp-audio:${chat_id}`)
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
           table: 'temp_audio',
-          filter: `session_id=eq.${sessionId}`,
+          filter: `session_id=eq.${chat_id}`,
         },
         (payload) => {
-          console.log(`[TempAudio] Received audio update for session ${sessionId}:`, payload);
+          console.log(`[TempAudio] Received audio update for chat ${chat_id}:`, payload);
           this.handleAudioUpdate(payload);
         }
       )
@@ -47,17 +47,17 @@ export class TempAudioService {
           event: 'INSERT',
           schema: 'public',
           table: 'temp_audio',
-          filter: `session_id=eq.${sessionId}`,
+          filter: `session_id=eq.${chat_id}`,
         },
         (payload) => {
-          console.log(`[TempAudio] Received new audio for session ${sessionId}:`, payload);
+          console.log(`[TempAudio] Received new audio for chat ${chat_id}:`, payload);
           this.handleAudioUpdate(payload);
         }
       )
       .subscribe((status) => {
         console.log(`[TempAudio] Subscription status: ${status}`);
         if (status === 'SUBSCRIBED') {
-          console.log(`[TempAudio] ✅ Successfully subscribed to temp_audio updates for session: ${sessionId}`);
+          console.log(`[TempAudio] ✅ Successfully subscribed to temp_audio updates for chat: ${chat_id}`);
         }
       });
   }
@@ -127,7 +127,7 @@ export class TempAudioService {
   // Unsubscribe from updates
   public unsubscribe(): void {
     if (this.subscription) {
-      console.log(`[TempAudio] Unsubscribing from temp_audio updates for session: ${this.sessionId}`);
+      console.log(`[TempAudio] Unsubscribing from temp_audio updates for chat: ${this.chat_id}`);
       supabase.removeChannel(this.subscription);
       this.subscription = null;
     }
@@ -137,30 +137,30 @@ export class TempAudioService {
       this.audio = null;
     }
     
-    this.sessionId = null;
+    this.chat_id = null;
   }
 
-  // Clean up audio data for a session (optional)
-  public async cleanupSession(sessionId: string): Promise<void> {
+  // Clean up audio data for a chat (optional)
+  public async cleanupSession(chat_id: string): Promise<void> {
     try {
       const { error } = await supabase
         .from('temp_audio')
         .delete()
-        .eq('session_id', sessionId);
+        .eq('session_id', chat_id);
       
       if (error) {
-        console.error(`[TempAudio] Failed to cleanup session ${sessionId}:`, error);
+        console.error(`[TempAudio] Failed to cleanup chat ${chat_id}:`, error);
       } else {
-        console.log(`[TempAudio] ✅ Cleaned up audio data for session: ${sessionId}`);
+        console.log(`[TempAudio] ✅ Cleaned up audio data for chat: ${chat_id}`);
       }
     } catch (error) {
-      console.error(`[TempAudio] Error cleaning up session ${sessionId}:`, error);
+      console.error(`[TempAudio] Error cleaning up chat ${chat_id}:`, error);
     }
   }
 
-  // Get current session ID
-  public getCurrentSessionId(): string | null {
-    return this.sessionId;
+  // Get current chat ID
+  public getCurrentChatId(): string | null {
+    return this.chat_id;
   }
 
   // Check if subscribed

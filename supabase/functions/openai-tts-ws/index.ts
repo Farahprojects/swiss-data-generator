@@ -18,16 +18,16 @@ serve(async (req) => {
   // Handle HTTP POST requests from LLM handler
   if (req.method === "POST") {
     try {
-      const { text, voice = "alloy", chat_id, sessionId } = await req.json();
+      const { text, voice = "alloy", chat_id } = await req.json();
       
-      if (!text || !chat_id || !sessionId) {
-        return new Response(JSON.stringify({ error: "Missing required fields: text, chat_id, sessionId" }), {
+      if (!text || !chat_id) {
+        return new Response(JSON.stringify({ error: "Missing required fields: text, chat_id" }), {
           status: 400,
           headers: { "Content-Type": "application/json" }
         });
       }
 
-      console.log(`[TTS] HTTP POST request for session: ${sessionId}, text length: ${text.length}, chat_id: ${chat_id}, sessionId type: ${typeof sessionId}, sessionId length: ${sessionId?.length}`);
+      console.log(`[TTS] HTTP POST request for chat: ${chat_id}, text length: ${text.length}`);
 
       // Call OpenAI TTS API
       const ttsResponse = await fetch("https://api.openai.com/v1/audio/speech", {
@@ -63,7 +63,7 @@ serve(async (req) => {
         });
       }
 
-      console.log(`[TTS] TTS response received, storing in temp_audio table for session ${sessionId}`);
+      console.log(`[TTS] TTS response received, storing in temp_audio table for chat ${chat_id}`);
       
       // Read the entire MP3 response
       const audioBuffer = await ttsResponse.arrayBuffer();
@@ -78,27 +78,27 @@ serve(async (req) => {
           base64Audio += btoa(String.fromCharCode(...chunk));
         }
         
-        console.log(`[TTS] Attempting upsert for session: ${sessionId}`);
+        console.log(`[TTS] Attempting upsert for chat: ${chat_id}`);
         
         // Atomic upsert - insert if missing, update if exists
         const { error: upsertError, data: upsertData } = await supabase
           .from('temp_audio')
           .upsert({
-            session_id: sessionId,
+            session_id: chat_id,
             audio_data: base64Audio,
             updated_at: new Date().toISOString()
           }, {
             onConflict: 'session_id'
           });
         
-        console.log(`[TTS] Upsert result for session ${sessionId}:`, { 
+        console.log(`[TTS] Upsert result for chat ${chat_id}:`, { 
           error: upsertError, 
           data: upsertData,
-          sessionId: sessionId 
+          chat_id: chat_id 
         });
         
         if (upsertError) {
-          console.error(`[TTS] Failed to upsert audio data for session ${sessionId}:`, {
+          console.error(`[TTS] Failed to upsert audio data for chat ${chat_id}:`, {
             error: upsertError,
             message: upsertError.message,
             details: upsertError.details,
@@ -114,7 +114,7 @@ serve(async (req) => {
           });
         }
         
-        console.log(`[TTS] ✅ Audio data stored in temp_audio table for session ${sessionId}, ${audioBytes.length} bytes (${base64Audio.length} base64 chars)`);
+        console.log(`[TTS] ✅ Audio data stored in temp_audio table for chat ${chat_id}, ${audioBytes.length} bytes (${base64Audio.length} base64 chars)`);
         
         return new Response(JSON.stringify({ 
           success: true, 
@@ -126,7 +126,7 @@ serve(async (req) => {
         });
         
       } catch (dbError) {
-        console.error(`[TTS] Database error for session ${sessionId}:`, {
+        console.error(`[TTS] Database error for chat ${chat_id}:`, {
           error: dbError,
           message: dbError.message,
           stack: dbError.stack

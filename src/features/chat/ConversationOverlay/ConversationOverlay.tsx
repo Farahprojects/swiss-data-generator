@@ -35,11 +35,11 @@ text?: string | null;
 };
 
 export const ConversationOverlay: React.FC = () => {
-  const { isConversationOpen, closeConversation, sessionId } = useConversationUIStore();
+  const { isConversationOpen, closeConversation, chat_id: conversationChatId } = useConversationUIStore();
   const chat_id = useChatStore((state) => state.chat_id);
   
-  // Debug session ID
-  console.log('[ConversationOverlay] Render - isConversationOpen:', isConversationOpen, 'sessionId:', sessionId, 'chat_id:', chat_id);
+  // Debug chat_id
+  console.log('[ConversationOverlay] Render - isConversationOpen:', isConversationOpen, 'conversationChatId:', conversationChatId, 'chat_id:', chat_id);
 const audioLevel = useConversationAudioLevel();
 
 const [permissionGranted, setPermissionGranted] = useState(false);
@@ -185,7 +185,7 @@ const channel = supabase
       if (
         newAudioClip.role === 'assistant' &&
         newAudioClip.audio_url &&
-        newAudioClip.session_id === sessionId
+        newAudioClip.session_id === conversationChatId
       ) {
         // Deduplicate by row id if available
         const clipId = newAudioClip.id || `${newAudioClip.audio_url}-${newAudioClip.text || ''}`;
@@ -370,8 +370,8 @@ if (!isReady || !chatIdRef.current) {
   return;
 }
 
-if (!sessionId) {
-  console.error('[ConversationOverlay] Cannot start - no session ID available');
+if (!conversationChatId) {
+  console.error('[ConversationOverlay] Cannot start - no chat_id available');
   return;
 }
 
@@ -383,15 +383,15 @@ try {
   setConversationState('establishing');
   
   // Step 2: Establish WebSocket connection first
-  console.log('[ConversationOverlay] Establishing WebSocket connection for session:', sessionId);
+  console.log('[ConversationOverlay] Establishing WebSocket connection for chat_id:', conversationChatId);
   
-  if (!sessionId) {
-    console.error('[ConversationOverlay] No session ID available for WebSocket connection');
+  if (!conversationChatId) {
+    console.error('[ConversationOverlay] No chat_id available for WebSocket connection');
     setConversationState('connecting');
     return;
   }
   
-  const connectionSuccess = await webSocketTtsService.initializeConnection(sessionId);
+  const connectionSuccess = await webSocketTtsService.initializeConnection(conversationChatId);
   if (!connectionSuccess) {
     console.error('[ConversationOverlay] Failed to establish WebSocket connection');
     setConversationState('connecting');
@@ -422,7 +422,7 @@ try {
   console.log('[ConversationOverlay] ✅ WebSocket connection established successfully');
   
   // Step 4: Subscribe to temp_audio table for TTS updates
-  tempAudioService.subscribeToSession(sessionId);
+  tempAudioService.subscribeToSession(conversationChatId);
   
   // Step 5: Unlock audio synchronously in gesture
   conversationTtsService.unlockAudio();
@@ -523,13 +523,13 @@ try {
 
   const chatId = chatIdRef.current!;
   
-  if (!sessionId) {
-    console.error('[ConversationOverlay] No session ID available - cannot process recording');
+  if (!conversationChatId) {
+    console.error('[ConversationOverlay] No chat_id available - cannot process recording');
     setConversationState('listening');
     return;
   }
 
-  const result = await sttService.transcribe(audioBlob, chatId, {}, 'conversation', sessionId);
+  const result = await sttService.transcribe(audioBlob, chatId, {}, 'conversation', conversationChatId);
 
   if (isShuttingDown.current) return;
 
@@ -563,7 +563,7 @@ try {
       text: transcript,
       client_msg_id,
       mode: 'conversation',
-      sessionId: sessionId,
+      // chat_id is already passed in the request
   });
 
   if (isShuttingDown.current) return;

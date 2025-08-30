@@ -22,7 +22,6 @@ class LlmService {
     text: string; 
     client_msg_id?: string;
     mode?: string; // 🔥 CONVERSATION MODE: Flag for direct TTS trigger
-    sessionId?: string; // 🔥 CONVERSATION MODE: Session ID for TTS
   }): Promise<Message> {
     const { data, error } = await supabase.functions.invoke('chat-send', {
       body: {
@@ -30,7 +29,6 @@ class LlmService {
         text: request.text,
         client_msg_id: request.client_msg_id,
         mode: request.mode, // 🔥 CONVERSATION MODE: Pass mode to chat-send
-        sessionId: request.sessionId, // 🔥 CONVERSATION MODE: Pass sessionId to chat-send
       },
     });
 
