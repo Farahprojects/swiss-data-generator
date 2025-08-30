@@ -36,7 +36,10 @@ text?: string | null;
 
 export const ConversationOverlay: React.FC = () => {
   const { isConversationOpen, closeConversation, sessionId } = useConversationUIStore();
-const chat_id = useChatStore((state) => state.chat_id);
+  const chat_id = useChatStore((state) => state.chat_id);
+  
+  // Debug session ID
+  console.log('[ConversationOverlay] Render - isConversationOpen:', isConversationOpen, 'sessionId:', sessionId, 'chat_id:', chat_id);
 const audioLevel = useConversationAudioLevel();
 
 const [permissionGranted, setPermissionGranted] = useState(false);
@@ -364,6 +367,11 @@ if (isStarting || hasStarted.current) return;
 
 if (!isReady || !chatIdRef.current) {
   console.error('[ConversationOverlay] Cannot start - chat_id not ready');
+  return;
+}
+
+if (!sessionId) {
+  console.error('[ConversationOverlay] Cannot start - no session ID available');
   return;
 }
 

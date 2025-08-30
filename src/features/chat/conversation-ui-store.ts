@@ -7,12 +7,13 @@ interface ConversationUIState {
   closeConversation: () => void;
 }
 
-export const useConversationUIStore = create<ConversationUIState>((set) => ({
+export const useConversationUIStore = create<ConversationUIState>((set, get) => ({
   isConversationOpen: false,
   sessionId: null,
-  openConversation: () => {
-    // Create session ID ONCE when conversation opens
-    const sessionId = `session_${Date.now()}`;
+  openConversation: (chatId?: string) => {
+    // Use chat_id as session ID if provided, otherwise create timestamp-based ID
+    const sessionId = chatId || `session_${Date.now()}`;
+    console.log('[ConversationUIStore] Opening conversation with session ID:', sessionId);
     set({ isConversationOpen: true, sessionId });
     // Add no-anim class to disable animations
     document.documentElement.classList.add('no-anim');

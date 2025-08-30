@@ -21,6 +21,7 @@ export const ChatInput = () => {
   const setAssistantTyping = useChatStore((state) => state.setAssistantTyping);
   const [isMuted, setIsMuted] = useState(false);
   const { isConversationOpen, openConversation, closeConversation } = useConversationUIStore();
+  const chat_id = useChatStore((state) => state.chat_id);
 
   // Get report generation state
   const isPolling = useReportReadyStore((state) => state.isPolling);
@@ -62,7 +63,12 @@ export const ChatInput = () => {
 
   const handleSpeakerClick = () => {
     if (!isConversationOpen) {
-      openConversation();
+      if (!chat_id) {
+        console.error('[ChatInput] Cannot open conversation - no chat_id available');
+        return;
+      }
+      console.log('[ChatInput] Opening conversation with chat_id:', chat_id);
+      openConversation(chat_id);
       return;
     }
     if (status === 'recording') {
