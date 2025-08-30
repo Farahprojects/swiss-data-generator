@@ -57,12 +57,8 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    // User message is already saved by chat-send function
-    // No need to save it again here
-
-            // Background task to process LLM response
-        const processLLMResponse = async () => {
-          let audioUrl: string | undefined;
+    // Process LLM response
+    const processLLMResponse = async () => {
       try {
         // Fetch conversation history (last 10 completed messages, optimized)
         const HISTORY_LIMIT = 10;
@@ -78,14 +74,14 @@ serve(async (req) => {
 
         if (historyError) {
           console.error("[llm-handler-openai] History fetch error:", historyError);
-          return;
+          return null;
         }
 
         // Get OpenAI API key
         const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
         if (!OPENAI_API_KEY) {
           console.error("[llm-handler-openai] Missing OPENAI_API_KEY");
-          return;
+          return null;
         }
 
         // Call OpenAI GPT-4 API
@@ -144,7 +140,7 @@ Content Rules:
         if (!resp.ok) {
           const errorText = await resp.text();
           console.error("[llm-handler-openai] OpenAI API error:", errorText);
-          return;
+          return null;
         }
 
         const data = await resp.json();
@@ -152,11 +148,11 @@ Content Rules:
 
         if (!assistantText) {
           console.error("[llm-handler-openai] No text in OpenAI response:", data);
-          return;
+          return null;
         }
 
         // Sanitize assistant response before saving to database
-        const sanitizedAssistantText = sanitizePlainText(assistantText);
+        const sanitizedText = sanitizePlainText(assistantText);
 
         // Extract token usage from OpenAI response
         const tokenCount = data.usage?.total_tokens || null;
@@ -165,13 +161,13 @@ Content Rules:
 
         const latency_ms = Date.now() - startTime;
 
-        // Save assistant message to database (fire-and-forget)
-        supabase
+        // Save assistant message to database (fire-and-forget for non-conversation mode)
+        const saveToDb = supabase
           .from("messages")
           .insert({
             chat_id: chat_id,
             role: "assistant",
-            text: sanitizedAssistantText,
+            text: sanitizedText,
             created_at: new Date().toISOString(),
             meta: { 
               llm_provider: "openai", 
@@ -183,75 +179,78 @@ Content Rules:
               mode: mode || null,
               sessionId: sessionId || null
             },
-          })
-          .then(({ error: assistantError }) => {
+          });
+
+        // For conversation mode, await the DB save; for others, fire-and-forget
+        if (mode === 'conversation') {
+          const { error: assistantError } = await saveToDb;
+          if (assistantError) {
+            console.error("[llm-handler-openai] Failed to save assistant message:", assistantError);
+          }
+        } else {
+          saveToDb.then(({ error: assistantError }) => {
             if (assistantError) {
               console.error("[llm-handler-openai] Failed to save assistant message:", assistantError);
             }
-          })
-          .catch(error => {
+          }).catch(error => {
             console.error("[llm-handler-openai] Database save error:", error);
           });
-          
-        // �� CONVERSATION MODE: Fire-and-forget TTS call
-        if (mode === 'conversation' && chat_id) {
-          // Call TTS WebSocket service (fire-and-forget)
-          const ttsResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-            },
-            body: JSON.stringify({
-              text: sanitizedAssistantText,
-              voice: 'Puck',
-              chat_id: chat_id
-            })
-          });
-          
-          if (ttsResponse.ok) {
-            const ttsData = await ttsResponse.json();
-            audioUrl = ttsData.audio_url;
-            console.log(`[llm-handler-openai] Google TTS completed for chat_id ${chat_id}, audioUrl: ${audioUrl}`);
-          } else {
-            console.error(`[llm-handler-openai] Google TTS request failed for chat_id ${chat_id}:`, ttsResponse.status);
-          }
         }
 
-              } catch (error) {
-          console.error("[llm-handler-openai] Background processing error:", error);
-        }
-      };
+        // Return the sanitized text so it can be used outside the function
+        return { text: sanitizedText, tokenCount, latency_ms };
 
-    // Start background processing without awaiting
-    const processPromise = processLLMResponse();
-    EdgeRuntime.waitUntil(processPromise);
+      } catch (error) {
+        console.error("[llm-handler-openai] Background processing error:", error);
+        return null;
+      }
+    };
 
-    // For conversation mode, we need to wait for the response and return it
+    // For conversation mode, we need to wait for the response and return it with audioUrl
     if (mode === 'conversation') {
       try {
-        await processPromise;
-        // Get the assistant response for frontend TTS
-        const { data: latestMessage } = await supabase
-          .from("messages")
-          .select("text")
-          .eq("chat_id", chat_id)
-          .eq("role", "assistant")
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .single();
+        const llmResult = await processLLMResponse();
+        
+        // Call TTS service and get signed URL
+        let audioUrl = null;
+        let storagePath = null;
+        
+        if (llmResult?.text) {
+          console.log(`[llm-handler-openai] Calling TTS for conversation mode...`);
+          
+          const { data: ttsData, error: ttsError } = await supabase.functions.invoke('google-text-to-speech', {
+            body: { 
+              chat_id,
+              text: llmResult.text,
+              voice: 'Puck'
+            },
+          });
+
+          if (ttsError) {
+            console.error("[llm-handler-openai] TTS service error:", ttsError);
+          } else if (ttsData?.error) {
+            console.error("[llm-handler-openai] TTS service returned error:", ttsData.error);
+          } else {
+            console.log("[llm-handler-openai] TTS service call successful");
+            audioUrl = ttsData.audioUrl;
+            storagePath = ttsData.storagePath;
+          }
+        }
         
         return new Response(JSON.stringify({ 
+          success: true,
           message: "Assistant response ready",
-          text: latestMessage?.text || "",
+          text: llmResult?.text || "",
+          audioUrl,
+          storagePath,
           client_msg_id
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       } catch (error) {
-        console.error("[llm-handler-openai] Error getting assistant response:", error);
+        console.error("[llm-handler-openai] Error processing conversation:", error);
         return new Response(JSON.stringify({ 
-          error: "Failed to get assistant response",
+          error: "Failed to process conversation",
           client_msg_id
         }), {
           status: 500,
@@ -260,7 +259,10 @@ Content Rules:
       }
     }
 
-    // Return immediate acknowledgment for non-conversation modes
+    // For non-conversation modes, process in background and return immediate acknowledgment
+    const processPromise = processLLMResponse();
+    EdgeRuntime.waitUntil(processPromise);
+
     return new Response(JSON.stringify({ 
       message: "Processing assistant response",
       client_msg_id

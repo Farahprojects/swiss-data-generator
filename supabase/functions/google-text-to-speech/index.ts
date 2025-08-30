@@ -105,28 +105,70 @@ serve(async (req) => {
 
     console.log(`[google-tts] Audio uploaded successfully to: ${uploadData.path}`);
 
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
+    // Generate signed URL with 5 minute expiration for immediate playback
+    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
       .from('ChatAudio')
-      .getPublicUrl(fileName);
+      .createSignedUrl(fileName, 300); // 5 minutes
 
-    console.log(`[google-tts] Public URL generated: ${publicUrl}`);
+    if (signedUrlError) {
+      console.error("[google-tts] Failed to create signed URL:", signedUrlError);
+      // Fallback to public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('ChatAudio')
+        .getPublicUrl(fileName);
+      
+      console.log(`[google-tts] Using fallback public URL: ${publicUrl}`);
+      
+      const responseData = {
+        success: true,
+        audioUrl: publicUrl,
+        storagePath: fileName
+      };
+      
+      // Save to DB in background (non-blocking)
+      EdgeRuntime.waitUntil(
+        supabase.from("chat_audio_clips").insert({
+          chat_id: chat_id,
+          role: "assistant",
+          text: text,
+          audio_url: publicUrl,
+          storage_path: fileName,
+          voice: voiceName,
+          provider: "google",
+          mime_type: "audio/mpeg",
+          meta: { 
+            tts_status: 'ready',
+            processing_time_ms: Date.now() - startTime
+          },
+        }).then(({ error }) => {
+          if (error) {
+            console.error("[google-tts] Background DB insert failed:", error);
+          } else {
+            console.log(`[google-tts] Background DB insert completed`);
+          }
+        })
+      );
+      
+      return responseData;
+    }
 
-    // Prepare response data 
+    const signedUrl = signedUrlData.signedUrl;
+    console.log(`[google-tts] Signed URL generated: ${signedUrl}`);
+
+    // Prepare response data with signed URL
     const responseData = {
       success: true,
-      audioUrl: publicUrl,
+      audioUrl: signedUrl,
       storagePath: fileName
     };
 
-    // Save TTS audio clip to dedicated audio table (minimal payload, fast insert)
-    const { error: insertError } = await supabase
-      .from("chat_audio_clips")
-      .insert({
+    // Save TTS audio clip to dedicated audio table in background (non-blocking)
+    EdgeRuntime.waitUntil(
+      supabase.from("chat_audio_clips").insert({
         chat_id: chat_id,
         role: "assistant",
         text: text,
-        audio_url: publicUrl,
+        audio_url: signedUrl,
         storage_path: fileName,
         voice: voiceName,
         provider: "google",
@@ -135,14 +177,14 @@ serve(async (req) => {
           tts_status: 'ready',
           processing_time_ms: Date.now() - startTime
         },
-      });
-
-    if (insertError) {
-      console.error("[google-tts] Failed to save audio clip metadata:", insertError);
-      // Still return success - client can play from audioUrl
-    } else {
-      console.log(`[google-tts] Audio clip saved to chat_audio_clips table`);
-    }
+      }).then(({ error }) => {
+        if (error) {
+          console.error("[google-tts] Background DB insert failed:", error);
+        } else {
+          console.log(`[google-tts] Background DB insert completed`);
+        }
+      })
+    );
 
     const processingTime = Date.now() - startTime;
     console.log(`[google-tts] TTS completed in ${processingTime}ms`);

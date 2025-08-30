@@ -320,10 +320,18 @@ try {
   // Step 4: Subscribe to chat_audio_clips table for TTS updates with callbacks
   chatAudioService.subscribeToSession(chat_id);
   
-  // Set up callbacks for audio received from WebSocket
+  // Set up callbacks for audio received from WebSocket (fallback only)
   chatAudioService.setCallbacks({
     onAudioReceived: (audioUrl: string) => {
-      console.log('[ConversationOverlay] Audio URL received from WebSocket:', audioUrl);
+      console.log('[ConversationOverlay] Audio URL received from WebSocket (fallback):', audioUrl);
+      
+      // Simple deduplication: check if this URL matches the last enqueued URL
+      const lastClip = playbackQueue.current[playbackQueue.current.length - 1];
+      if (lastClip && lastClip.url === audioUrl) {
+        console.log('[ConversationOverlay] Skipping duplicate audio URL from WebSocket');
+        return;
+      }
+      
       enqueueTtsClip({ url: audioUrl });
     },
     onError: (error: string) => {
@@ -445,7 +453,7 @@ try {
   };
   setLocalMessages((prev) => [...prev, optimisticUserMessage]);
 
-  // First get the response from LLM
+  // Get the response from LLM with audioUrl
   const response = await llmService.sendMessage({
       chat_id: chat_id,
       text: transcript,
@@ -458,8 +466,14 @@ try {
   if (response.text) {
     setConversationState('replying');
     
-    // Wait for TTS audio via WebSocket
-    console.log('[ConversationOverlay] LLM response received, waiting for TTS audio via WebSocket...');
+    // Check if we have audioUrl in the response (primary path)
+    if (response.audioUrl) {
+      console.log('[ConversationOverlay] Audio URL received from HTTP response:', response.audioUrl);
+      enqueueTtsClip({ url: response.audioUrl, text: response.text });
+    } else {
+      // Fallback: wait for TTS audio via WebSocket
+      console.log('[ConversationOverlay] No audioUrl in response, waiting for TTS audio via WebSocket...');
+    }
   }
 
 } catch (error) {
