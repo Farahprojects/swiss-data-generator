@@ -50,8 +50,7 @@ const isShuttingDown = useRef(false);
 const [conversationState, setConversationState] = useState<ConversationState>('listening');
 const [isReady, setIsReady] = useState(false);
 
-// Chat caching
-const chatIdRef = useRef<string | null>(null);
+// No longer needed - using chat_id from store directly
 
 // Local optimistic messages (optional for UI; kept for parity)
 const [localMessages, setLocalMessages] = useState<Message[]>([]);
@@ -84,10 +83,7 @@ useEffect(() => {
 // Initialize when overlay opens
 useEffect(() => {
 if (isConversationOpen && chat_id) {
-  if (!chatIdRef.current) {
-    chatIdRef.current = chat_id;
-    setIsReady(true);
-  }
+  setIsReady(true);
 }
 
 return () => {
@@ -104,7 +100,6 @@ useEffect(() => {
 if (isConversationOpen) return;
 
 // Reset component state flags
-chatIdRef.current = null;
 setIsReady(false);
 setPermissionGranted(false);
 setIsStarting(false);
@@ -149,7 +144,6 @@ console.error('[ConversationOverlay] Emergency cleanup error:', error);
 } finally {
 // State resets
 setLocalMessages([]);
-chatIdRef.current = null;
 setIsReady(false);
 
     if (ttsCleanupRef.current) {
@@ -357,7 +351,6 @@ setPermissionGranted(false);
 setIsStarting(false);
 hasStarted.current = false;
 setConversationState('listening');
-chatIdRef.current = null;
 setIsReady(false);
 setLocalMessages([]);
 }, [closeConversation]);
@@ -365,7 +358,7 @@ setLocalMessages([]);
 const handleStart = useCallback(async () => {
 if (isStarting || hasStarted.current) return;
 
-if (!isReady || !chatIdRef.current) {
+if (!isReady || !chat_id) {
   console.error('[ConversationOverlay] Cannot start - chat_id not ready');
   return;
 }
@@ -521,8 +514,6 @@ setConversationState('replying');
 try {
   setConversationState('processing');
 
-  const chatId = chatIdRef.current!;
-  
   console.log('[ConversationOverlay] Processing recording with chat_id:', chat_id);
   
   if (!chat_id) {
@@ -531,7 +522,7 @@ try {
     return;
   }
 
-  const result = await sttService.transcribe(audioBlob, chatId, {}, 'conversation', chat_id);
+  const result = await sttService.transcribe(audioBlob, chat_id, {}, 'conversation', chat_id);
 
   if (isShuttingDown.current) return;
 
@@ -545,7 +536,7 @@ try {
   const client_msg_id = uuidv4();
   const optimisticUserMessage: Message = {
     id: client_msg_id,
-    chat_id: chatId,
+    chat_id: chat_id,
     role: 'user',
     text: transcript,
     createdAt: new Date().toISOString(),
@@ -553,19 +544,12 @@ try {
   };
   setLocalMessages((prev) => [...prev, optimisticUserMessage]);
 
-  if (!chatIdRef.current) {
-    console.error('[ConversationOverlay] Cannot send message - chat_id missing');
-    setConversationState('listening');
-    return;
-  }
-
   // First get the response from LLM
   const response = await llmService.sendMessage({
-      chat_id: chatIdRef.current!,
+      chat_id: chat_id,
       text: transcript,
       client_msg_id,
       mode: 'conversation',
-      // chat_id is already passed in the request
   });
 
   if (isShuttingDown.current) return;
