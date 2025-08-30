@@ -134,24 +134,15 @@ private notifyListeners(): void {
 this.listeners.forEach(fn => fn());
 }
 
-// Primary TTS entrypoint
+// Primary TTS entrypoint - now relies on WebSocket subscription for playback
 public async speakAssistant(opts: SpeakAssistantOptions): Promise<void> {
-const token = this.beginPlayback();
 try {
 const { chat_id, text, onStart, onComplete } = opts;
 
-  if (!this.isAudioUnlocked || !this.masterAudioElement) {
-    throw new AudioLockedError();
-  }
-
-  await this.ensureAudioContext();
+  console.log('[ConversationTtsService] Starting TTS generation via edge function');
 
   const sanitized = this.sanitizeTtsText(text);
   const selectedVoiceName = useChatStore.getState().ttsVoice || 'Puck';
-  const voiceCode = mapVoiceName(selectedVoiceName);
-
-  const ac = new AbortController();
-  this.replaceAbort(ac);
 
   const response = await this.fetchWithTimeout(
     `${SUPABASE_URL}/functions/v1/google-text-to-speech`,
@@ -164,9 +155,8 @@ const { chat_id, text, onStart, onComplete } = opts;
       body: JSON.stringify({
         chat_id,
         text: sanitized,
-        voice: voiceCode,
+        voice: selectedVoiceName, // Send the voice name directly
       }),
-      signal: ac.signal,
     },
     TTS_TIMEOUT_MS
   );
@@ -176,15 +166,16 @@ const { chat_id, text, onStart, onComplete } = opts;
     throw new TtsFetchError(`TTS failed: ${response.status} - ${errorText}`, response.status);
   }
 
-  const blob = await response.blob();
-  const audioUrl = URL.createObjectURL(blob);
-  this.replaceObjectUrl(audioUrl);
+  const data = await response.json();
+  console.log('[ConversationTtsService] TTS generation completed:', data);
+  
+  // Don't play anything directly - the TempAudioService WebSocket subscription
+  // will pick up the audio_url and handle playback automatically
+  onStart?.();
+  onComplete?.();
 
-  await this.prepareAudioGraph(this.masterAudioElement);
-
-  await this.playInternal(token, this.masterAudioElement, audioUrl, onStart, onComplete);
 } catch (err) {
-  this.failPlayback(err);
+  console.error('[ConversationTtsService] TTS generation failed:', err);
   throw err;
 }
 }

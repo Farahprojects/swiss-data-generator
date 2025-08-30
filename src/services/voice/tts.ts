@@ -2,9 +2,9 @@
 import { supabase } from '@/integrations/supabase/client';
 
 class TtsService {
-  async speak(messageId: string, text: string): Promise<string> {
+  async speak(chat_id: string, text: string, voice: string = 'Puck'): Promise<string> {
     const { data, error } = await supabase.functions.invoke('google-text-to-speech', {
-      body: { messageId, text },
+      body: { chat_id, text, voice },
     });
 
     if (error) {
@@ -22,6 +22,8 @@ class TtsService {
       throw new Error("Response from google-text-to-speech was invalid.");
     }
 
+    // Note: This audioUrl is just for debugging - actual playback happens via WebSocket subscription
+    console.log("[TTS] Audio uploaded to storage:", data.audioUrl);
     return data.audioUrl;
   }
 }

@@ -27,6 +27,8 @@ serve(async (req) => {
   try {
     const { chat_id, text, voice } = await req.json();
 
+    console.log(`[google-tts] Request received - chat_id: ${chat_id}, text length: ${text?.length}, voice: ${voice}`);
+
     if (!chat_id || !text) {
       throw new Error("Missing 'chat_id' or 'text' in request body.");
     }
@@ -35,7 +37,9 @@ serve(async (req) => {
     if (!voice) {
       throw new Error("Voice parameter is required - no fallback allowed");
     }
+    
     const voiceName = `en-US-Chirp3-HD-${voice}`;
+    console.log(`[google-tts] Using voice: ${voiceName}`);
 
     // Call Google Text-to-Speech API
     const ttsResponse = await fetch(
@@ -76,8 +80,36 @@ serve(async (req) => {
       throw new Error("No audio content received from Google TTS API");
     }
 
-    // Create data URL for direct browser playback
-    const dataUrl = `data:audio/mpeg;base64,${audioContent}`;
+    // Decode base64 audio content to raw MP3 bytes
+    const audioBytes = Uint8Array.from(atob(audioContent), c => c.charCodeAt(0));
+    
+    // Upload to Supabase Storage
+    const timestamp = Date.now();
+    const fileName = `clips/${chat_id}/${timestamp}-${crypto.randomUUID()}.mp3`;
+    
+    console.log(`[google-tts] Uploading audio file: ${fileName}, size: ${audioBytes.length} bytes`);
+    
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('ChatAudio')
+      .upload(fileName, audioBytes, {
+        contentType: 'audio/mpeg',
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.error("[google-tts] Storage upload failed:", uploadError);
+      throw new Error(`Failed to upload audio: ${uploadError.message}`);
+    }
+
+    console.log(`[google-tts] Audio uploaded successfully to: ${uploadData.path}`);
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('ChatAudio')
+      .getPublicUrl(fileName);
+
+    console.log(`[google-tts] Public URL generated: ${publicUrl}`);
 
     // Save TTS audio clip to dedicated audio table (fire-and-forget)
     supabase
@@ -86,14 +118,17 @@ serve(async (req) => {
         chat_id: chat_id,
         role: "assistant",
         text: text,
-        audio_url: dataUrl,
+        audio_url: publicUrl,
+        storage_path: fileName,
         voice: voiceName,
         provider: "google",
         mime_type: "audio/mpeg",
         meta: { 
           tts_provider: "google",
           tts_status: 'ready',
-          processing_time_ms: Date.now() - startTime
+          processing_time_ms: Date.now() - startTime,
+          file_size_bytes: audioBytes.length,
+          storage_path: fileName
         },
       })
       .then(({ error: dbError }) => {
@@ -107,11 +142,12 @@ serve(async (req) => {
         console.error("[google-tts] Database save error:", error);
       });
 
-    // Return success response with audio URL
+    // Return success response with audio URL and storage path
     const response = new Response(JSON.stringify({
       success: true,
-      message: "TTS audio generated and saved to database",
-      audio_url: dataUrl
+      audioUrl: publicUrl,
+      storagePath: fileName,
+      message: "TTS audio generated and uploaded to storage"
     }), {
       headers: {
         ...CORS_HEADERS,
