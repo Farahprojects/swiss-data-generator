@@ -181,10 +181,7 @@ const { chat_id, text, onStart, onComplete } = opts;
     onStart?.();
     
     try {
-      // Mark this URL as played to prevent duplicate playback via WebSocket
-      const { chatAudioService } = await import('../voice/TempAudioService');
-      chatAudioService.markUrlAsPlayed(data.audioUrl);
-      
+      // Direct playback - no deduplication needed since WebSocket fallback is removed
       await this.playFromUrl(data.audioUrl, () => {
         console.log('[ConversationTtsService] Immediate playback completed');
         

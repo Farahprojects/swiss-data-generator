@@ -8,11 +8,9 @@ import { conversationTtsService } from '@/services/voice/conversationTts';
 import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
-import { chatAudioService } from '@/services/voice/chatAudioService';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Mic } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
-import { supabase } from '@/integrations/supabase/client';
 import { Message } from '@/core/types';
 
 
@@ -122,8 +120,8 @@ if (ttsCleanupRef.current) {
 
 
 
-  // Cleanup chat audio service
-  chatAudioService.clearPlayedUrls();
+  // Cleanup any remaining TTS resources
+  conversationTtsService.stopAllAudio();
 }, [isConversationOpen]);
 
 // Ensure clean disposal on component unmount while open
@@ -318,36 +316,7 @@ try {
   
   // WebSocket connection established
   
-  // Step 4: Subscribe to chat_audio_clips table for TTS updates
-  
-  // Set up WebSocket subscription for TTS audio (fallback only)
-  const wsChannel = supabase
-    .channel('chat_audio_clips')
-    .on('postgres_changes', {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'chat_audio_clips',
-      filter: `chat_id=eq.${chat_id}`
-    }, (payload) => {
-      const { audio_url } = payload.new as any;
-      if (audio_url) {
-        console.log('[ConversationOverlay] Audio URL received from WebSocket (fallback):', audio_url);
-        
-        // Check if this URL has already been played via HTTP response
-        if (chatAudioService.hasBeenPlayed(audio_url)) {
-          console.log('[ConversationOverlay] Skipping duplicate audio URL from WebSocket');
-          return;
-        }
-        
-        enqueueTtsClip({ url: audio_url });
-      }
-    })
-    .subscribe();
-  
-  // Store cleanup function
-  ttsCleanupRef.current = () => {
-    supabase.removeChannel(wsChannel);
-  };
+  // Step 4: TTS is now handled directly via HTTP response (no WebSocket needed)
   
   // Step 5: Unlock audio synchronously in gesture
   conversationTtsService.unlockAudio();
@@ -476,13 +445,12 @@ try {
   if (response.text) {
     setConversationState('replying');
     
-    // Check if we have audioUrl in the response (primary path)
+    // TTS audio URL is always provided in HTTP response now
     if (response.audioUrl) {
       console.log('[ConversationOverlay] Audio URL received from HTTP response:', response.audioUrl);
-      chatAudioService.markUrlAsPlayed(response.audioUrl);
       enqueueTtsClip({ url: response.audioUrl, text: response.text });
     } else {
-      // Fallback: wait for TTS audio via WebSocket
+      // This should not happen with the current implementation
       console.log('[ConversationOverlay] No audioUrl in response, waiting for TTS audio via WebSocket...');
     }
   }
