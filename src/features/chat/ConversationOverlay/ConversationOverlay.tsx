@@ -523,6 +523,8 @@ try {
 
   const chatId = chatIdRef.current!;
   
+  console.log('[ConversationOverlay] Processing recording with chat_id:', chat_id);
+  
   if (!chat_id) {
     console.error('[ConversationOverlay] No chat_id available - cannot process recording');
     setConversationState('listening');
@@ -581,7 +583,7 @@ try {
   console.error('[ConversationOverlay] Processing error:', error);
   if (!isShuttingDown.current) setConversationState('listening');
 }
-}, []);
+}, [chat_id]);
 
 const state = conversationState;
 
