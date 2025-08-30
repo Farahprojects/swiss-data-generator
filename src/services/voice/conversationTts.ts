@@ -112,6 +112,9 @@ try {
 
   this.isAudioUnlocked = true;
   logDebug('Audio unlocked and ready');
+  
+  // Prime the decoder with a silent MP3 to warm the media pipeline
+  this.primeDecoder();
 } catch (err) {
   console.error('[ConversationTTS] Error unlocking audio:', err);
 }
@@ -139,6 +142,7 @@ public async speakAssistant(opts: SpeakAssistantOptions): Promise<void> {
 try {
 const { chat_id, text, onStart, onComplete } = opts;
 
+  performance.mark('tts_request_start');
   console.log('[ConversationTtsService] Starting TTS generation via edge function');
 
   const sanitized = this.sanitizeTtsText(text);
@@ -167,6 +171,7 @@ const { chat_id, text, onStart, onComplete } = opts;
   }
 
   const data = await response.json();
+  performance.mark('tts_edge_response');
   console.log('[ConversationTtsService] TTS generation completed:', data);
   
   // IMMEDIATE PLAYBACK: Start playing the returned audio URL right away
@@ -182,6 +187,22 @@ const { chat_id, text, onStart, onComplete } = opts;
       
       await this.playFromUrl(data.audioUrl, () => {
         console.log('[ConversationTtsService] Immediate playback completed');
+        
+        // Log performance measurements
+        try {
+          const ttsRequestToResponse = performance.measure('tts_request_to_response', 'tts_request_start', 'tts_edge_response');
+          const responseToPlaying = performance.measure('response_to_playing', 'tts_edge_response', 'audio_playing');
+          const totalLatency = performance.measure('total_tts_latency', 'tts_request_start', 'audio_playing');
+          
+          console.log('[ConversationTtsService] Performance:', {
+            ttsRequestToResponse: `${ttsRequestToResponse.duration.toFixed(1)}ms`,
+            responseToPlaying: `${responseToPlaying.duration.toFixed(1)}ms`,
+            totalLatency: `${totalLatency.duration.toFixed(1)}ms`
+          });
+        } catch (e) {
+          // Performance marks might not be available
+        }
+        
         onComplete?.();
       });
     } catch (playErr) {
@@ -202,21 +223,22 @@ const { chat_id, text, onStart, onComplete } = opts;
 
 // URL playback entrypoint
 public async playFromUrl(audioUrl: string, onComplete?: () => void): Promise<void> {
-const token = this.beginPlayback();
-try {
-if (!this.isAudioUnlocked || !this.masterAudioElement) {
-throw new AudioLockedError();
-}
-await this.ensureAudioContext();
+  performance.mark('tts_playback_start');
+  const token = this.beginPlayback();
+  try {
+    if (!this.isAudioUnlocked || !this.masterAudioElement) {
+      throw new AudioLockedError();
+    }
+    await this.ensureAudioContext();
 
-  this.replaceObjectUrl(audioUrl); // caller provided; we will not revoke external URLs
-  await this.prepareAudioGraph(this.masterAudioElement);
-  await this.playInternal(token, this.masterAudioElement, audioUrl, undefined, onComplete);
-} catch (err) {
-  this.failPlayback(err);
-  if (onComplete) onComplete();
-  throw err;
-}
+    this.replaceObjectUrl(audioUrl); // caller provided; we will not revoke external URLs
+    // Remove duplicate prepareAudioGraph call - will be done lazily in playInternal
+    await this.playInternal(token, this.masterAudioElement, audioUrl, undefined, onComplete);
+  } catch (err) {
+    this.failPlayback(err);
+    if (onComplete) onComplete();
+    throw err;
+  }
 }
 
 // For conversation mode; ensure audio line is ready
@@ -358,34 +380,54 @@ const handlePlaying = () => {
   // Only for the most recent playback
   if (token !== this.playbackToken) return;
 
-  // If analyser graph is connected, run real analysis
-  if (this.analyser && this.dataArray) {
-    this.startAmplitudeAnalysis();
-  } else {
-    // Fallback: synthetic envelope in case of CORS/graph issues
+  performance.mark('audio_playing');
+  
+  // Lazy connect the analyser graph only after playback starts
+  this.prepareAudioGraph(el).then(() => {
+    if (token !== this.playbackToken) return;
+    
+    // If analyser graph is connected, run real analysis
+    if (this.analyser && this.dataArray) {
+      this.startAmplitudeAnalysis();
+    } else {
+      // Fallback: synthetic envelope in case of CORS/graph issues
+      this.cancelRaf();
+      let t = 0;
+      const loop = () => {
+        if (token !== this.playbackToken) return;
+        // simple pulsing 0.2..0.8
+        this.audioLevel = 0.5 + 0.3 * Math.sin(t);
+        t += 0.18;
+        this.notifyListeners();
+        this.rafId = requestAnimationFrame(loop);
+      };
+      this.rafId = requestAnimationFrame(loop);
+    }
+  }).catch(() => {
+    // If analyser setup fails, fall back to synthetic
+    if (token !== this.playbackToken) return;
     this.cancelRaf();
     let t = 0;
     const loop = () => {
       if (token !== this.playbackToken) return;
-      // simple pulsing 0.2..0.8
       this.audioLevel = 0.5 + 0.3 * Math.sin(t);
       t += 0.18;
       this.notifyListeners();
       this.rafId = requestAnimationFrame(loop);
     };
     this.rafId = requestAnimationFrame(loop);
-  }
+  });
+  
   el.removeEventListener('playing', handlePlaying);
 };
-
-// Ensure graph is prepared before setting src
-await this.prepareAudioGraph(el);
 
 el.addEventListener('ended', handleEnded, { once: true });
 el.addEventListener('error', handleError, { once: true });
 el.addEventListener('playing', handlePlaying);
+el.addEventListener('loadedmetadata', () => performance.mark('audio_loadedmetadata'));
+el.addEventListener('canplay', () => performance.mark('audio_canplay'));
 
-// Important: set crossOrigin BEFORE src; ensure 'anonymous' is set in unlockAudio
+// Set src immediately for fastest playback start
 el.src = src;
 
 try {
@@ -534,6 +576,36 @@ t = t.replace(/[#*_>]+/g, ' ');
 // Collapse whitespace
 t = t.replace(/\s+/g, ' ').trim();
 return t;
+}
+
+// Prime the decoder with a silent MP3 to warm the media pipeline
+private async primeDecoder(): Promise<void> {
+  if (!this.masterAudioElement) return;
+  
+  try {
+    // Create a minimal silent MP3 data URL (50-100ms of silence)
+    const silentMp3DataUrl = 'data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjIwLjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAAFbgBtbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1t//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjM1AAAAAAAAAAAAAAAAJAYAAAAAAAAABW4A';
+    
+    const el = this.masterAudioElement;
+    const originalSrc = el.src;
+    
+    // Set the silent MP3 and play briefly
+    el.src = silentMp3DataUrl;
+    await el.play();
+    
+    // Pause after a short delay to warm the decoder
+    setTimeout(() => {
+      if (el.src === silentMp3DataUrl) {
+        el.pause();
+        el.src = originalSrc || '';
+      }
+    }, 50);
+    
+    logDebug('Decoder primed with silent MP3');
+  } catch (err) {
+    // Silent fail - priming is optional
+    logDebug('Decoder priming failed (non-critical):', err);
+  }
 }
 }
 
