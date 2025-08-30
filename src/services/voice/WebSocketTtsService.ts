@@ -108,14 +108,11 @@ export class WebSocketTtsService {
     // ✅ NEW: Simple start flow - just prime audio
   public async initializeConnection(chat_id: string): Promise<boolean> {
     try {
-      console.log(`[WebSocketTTS] Starting flow for chat: ${chat_id}`);
-      
       // Reset state
       this.currentChatId = chat_id;
       this.isWebSocketReady = false;
       
       // ✅ Step 1: Prime audio playback (must happen during user gesture)
-      console.log('[WebSocketTTS] Priming audio playback...');
       try {
         // Create a silent audio source for priming
         const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -131,12 +128,8 @@ export class WebSocketTtsService {
         oscillator.start(audioContext.currentTime);
         oscillator.stop(audioContext.currentTime + 0.1);
         
-        console.log('[WebSocketTTS] ✅ Audio playback primed successfully');
-        
         // ✅ Step 2: Simulate WebSocket connection with delay
         await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
-        
-        console.log('[WebSocketTTS] ✅ Start flow completed successfully');
         return true;
         
       } catch (audioError) {

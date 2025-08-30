@@ -38,8 +38,12 @@ export const ConversationOverlay: React.FC = () => {
   const { isConversationOpen, closeConversation } = useConversationUIStore();
   const chat_id = useChatStore((state) => state.chat_id);
   
-  // Debug chat_id
-  console.log('[ConversationOverlay] Render - isConversationOpen:', isConversationOpen, 'chat_id:', chat_id);
+  // Debug chat_id - only log when state changes
+  useEffect(() => {
+    if (DEBUG) {
+      console.log('[ConversationOverlay] State change - isConversationOpen:', isConversationOpen, 'chat_id:', chat_id);
+    }
+  }, [isConversationOpen, chat_id]);
 const audioLevel = useConversationAudioLevel();
 
 const [permissionGranted, setPermissionGranted] = useState(false);
@@ -376,7 +380,7 @@ try {
   setConversationState('establishing');
   
   // Step 2: Establish WebSocket connection first
-  console.log('[ConversationOverlay] Establishing WebSocket connection for chat_id:', chat_id);
+  console.log('[ConversationOverlay] Establishing WebSocket connection');
   
   if (!chat_id) {
     console.error('[ConversationOverlay] No chat_id available for WebSocket connection');
@@ -412,7 +416,7 @@ try {
     console.warn('[ConversationOverlay] Could not play connection sound:', soundError);
   }
   
-  console.log('[ConversationOverlay] ✅ WebSocket connection established successfully');
+  console.log('[ConversationOverlay] ✅ WebSocket connection established');
   
   // Step 4: Subscribe to temp_audio table for TTS updates
   tempAudioService.subscribeToSession(chat_id);
@@ -514,7 +518,7 @@ setConversationState('replying');
 try {
   setConversationState('processing');
 
-  console.log('[ConversationOverlay] Processing recording with chat_id:', chat_id);
+  console.log('[ConversationOverlay] Processing recording');
   
   if (!chat_id) {
     console.error('[ConversationOverlay] No chat_id available - cannot process recording');

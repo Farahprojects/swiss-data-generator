@@ -24,8 +24,7 @@ export class TempAudioService {
     }
 
     this.chat_id = chat_id;
-    console.log(`[TempAudio] 🎧 Subscribing to temp_audio updates for chat: ${chat_id}`);
-    console.log(`[TempAudio] 📊 Database indexes available for fast audio delivery`);
+    // Subscribing to temp_audio updates
 
     this.subscription = supabase
       .channel(`temp-audio:${chat_id}`)
@@ -39,8 +38,7 @@ export class TempAudioService {
         },
         (payload) => {
           const startTime = performance.now();
-          console.log(`[TempAudio] 🔄 Received audio UPDATE for chat ${chat_id} at ${new Date().toISOString()}`);
-          console.log(`[TempAudio] 📦 Payload size: ${JSON.stringify(payload).length} bytes`);
+          console.log(`[TempAudio] Audio UPDATE received for chat ${chat_id}`);
           this.handleAudioUpdate(payload, startTime);
         }
       )
@@ -54,16 +52,13 @@ export class TempAudioService {
         },
         (payload) => {
           const startTime = performance.now();
-          console.log(`[TempAudio] 🆕 Received new audio INSERT for chat ${chat_id} at ${new Date().toISOString()}`);
-          console.log(`[TempAudio] 📦 Payload size: ${JSON.stringify(payload).length} bytes`);
+          console.log(`[TempAudio] Audio INSERT received for chat ${chat_id}`);
           this.handleAudioUpdate(payload, startTime);
         }
       )
       .subscribe((status) => {
-        console.log(`[TempAudio] 🔌 WebSocket subscription status: ${status}`);
         if (status === 'SUBSCRIBED') {
-          console.log(`[TempAudio] ✅ Successfully subscribed to temp_audio updates for chat: ${chat_id}`);
-          console.log(`[TempAudio] 🚀 Ready for instant audio delivery via indexed database queries`);
+          console.log(`[TempAudio] ✅ Subscribed to temp_audio for chat: ${chat_id}`);
         } else if (status === 'TIMED_OUT') {
           console.error(`[TempAudio] ⏰ Subscription timed out for chat: ${chat_id}`);
         } else if (status === 'CHANNEL_ERROR') {
@@ -78,25 +73,20 @@ export class TempAudioService {
       const processingStart = performance.now();
       const deliveryLatency = startTime ? processingStart - startTime : 0;
       
-      console.log(`[TempAudio] 🎯 Processing audio update (delivery latency: ${deliveryLatency.toFixed(2)}ms)`);
-      
       const audioData = payload.new?.audio_data;
       if (!audioData) {
-        console.warn('[TempAudio] ⚠️ No audio data in payload');
+        console.warn('[TempAudio] No audio data in payload');
         return;
       }
 
       // Convert base64 to ArrayBuffer
-      const decodeStart = performance.now();
       const binaryString = atob(audioData);
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
-      const decodeTime = performance.now() - decodeStart;
 
-      console.log(`[TempAudio] ✅ Audio data processed: ${bytes.length} bytes in ${decodeTime.toFixed(2)}ms`);
-      console.log(`[TempAudio] 🔊 Sending audio to browser for immediate playback`);
+      console.log(`[TempAudio] Audio processed: ${bytes.length} bytes`);
       
       // Call the callback with the audio data
       this.callbacks.onAudioReceived?.(bytes.buffer);
