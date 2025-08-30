@@ -1453,20 +1453,20 @@ export type Database = {
       temp_audio: {
         Row: {
           audio_data: string
+          chat_id: string
           created_at: string | null
-          session_id: string
           updated_at: string | null
         }
         Insert: {
           audio_data: string
+          chat_id: string
           created_at?: string | null
-          session_id: string
           updated_at?: string | null
         }
         Update: {
           audio_data?: string
+          chat_id?: string
           created_at?: string | null
-          session_id?: string
           updated_at?: string | null
         }
         Relationships: []
