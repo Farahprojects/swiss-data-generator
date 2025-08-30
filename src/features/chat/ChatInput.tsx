@@ -67,8 +67,8 @@ export const ChatInput = () => {
         console.error('[ChatInput] Cannot open conversation - no chat_id available');
         return;
       }
-      console.log('[ChatInput] Opening conversation with chat_id:', chat_id);
-      openConversation(chat_id);
+      console.log('[ChatInput] Opening conversation');
+      openConversation();
       return;
     }
     if (status === 'recording') {
