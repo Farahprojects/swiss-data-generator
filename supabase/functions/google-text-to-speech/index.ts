@@ -76,8 +76,8 @@ serve(async (req) => {
       throw new Error("No audio content received from Google TTS API");
     }
 
-    // Decode base64 audio content to raw MP3 bytes
-    const audioBytes = Uint8Array.from(atob(audioContent), c => c.charCodeAt(0));
+    // Create data URL for direct browser playback
+    const dataUrl = `data:audio/mpeg;base64,${audioContent}`;
 
     // Save TTS audio clip to dedicated audio table (fire-and-forget)
     supabase
@@ -86,7 +86,7 @@ serve(async (req) => {
         chat_id: chat_id,
         role: "assistant",
         text: text,
-        audio_url: null, // No URL needed since we're returning raw bytes
+        audio_url: dataUrl,
         voice: voiceName,
         provider: "google",
         mime_type: "audio/mpeg",
@@ -107,12 +107,15 @@ serve(async (req) => {
         console.error("[google-tts] Database save error:", error);
       });
 
-    // Return raw MP3 audio bytes
-    const response = new Response(audioBytes, {
+    // Return success response with audio URL
+    const response = new Response(JSON.stringify({
+      success: true,
+      message: "TTS audio generated and saved to database",
+      audio_url: dataUrl
+    }), {
       headers: {
         ...CORS_HEADERS,
-        'Content-Type': 'audio/mpeg',
-        'Content-Length': audioBytes.length.toString(),
+        'Content-Type': 'application/json',
       },
     });
 
