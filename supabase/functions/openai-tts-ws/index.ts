@@ -70,9 +70,15 @@ serve(async (req) => {
       const audioBytes = new Uint8Array(audioBuffer);
       
       try {
-        // Upsert audio data into temp_audio table - convert Uint8Array to base64
-        const base64Audio = btoa(String.fromCharCode(...audioBytes));
+        // Convert Uint8Array to base64 in chunks to avoid stack overflow
+        let base64Audio = '';
+        const chunkSize = 32768; // 32KB chunks
+        for (let i = 0; i < audioBytes.length; i += chunkSize) {
+          const chunk = audioBytes.slice(i, i + chunkSize);
+          base64Audio += btoa(String.fromCharCode(...chunk));
+        }
         
+        // Atomic upsert - insert if missing, update if exists
         const { error: upsertError } = await supabase
           .from('temp_audio')
           .upsert({
