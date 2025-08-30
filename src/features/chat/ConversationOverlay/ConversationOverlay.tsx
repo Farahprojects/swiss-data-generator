@@ -14,7 +14,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { Message } from '@/core/types';
 
-
+import { chatAudioService } from '@/services/voice/TempAudioService';
 
 
 const DEBUG = typeof window !== 'undefined' && (window as any).CONVO_DEBUG === true;
@@ -61,6 +61,7 @@ const [localMessages, setLocalMessages] = useState<Message[]>([]);
 // TTS realtime: cleanup and dedupe tracking
 const ttsCleanupRef = useRef<(() => void) | null>(null);
 const playedClipIds = useRef<Set<string>>(new Set());
+const processedAudioUrls = useRef<Set<string>>(new Set()); // Track processed URLs to avoid duplicates
 
 // TTS playback queue (ordered, single consumer)
 type Clip = { id?: string; url: string; text?: string | null };
@@ -121,7 +122,8 @@ if (ttsCleanupRef.current) {
 
 
 
-
+  // Cleanup chat audio service
+  chatAudioService.unsubscribe();
 }, [isConversationOpen]);
 
 // Ensure clean disposal on component unmount while open
@@ -248,6 +250,7 @@ try {
 
 // Reset local state
 playbackQueue.current = [];
+processedAudioUrls.current.clear(); // Clear processed URLs
 
 // Clear responsiveness timers
 if (firstClipTimer.current) {
@@ -284,12 +287,14 @@ try {
   // Step 1: Set establishing state for WebSocket connection
   setConversationState('establishing');
   
-  // Step 2: Audio priming (no WebSocket needed for conversation mode)
+  // Step 2: Establish WebSocket connection (non-blocking)
   if (!chat_id) {
-    console.error('[ConversationOverlay] No chat_id available');
+    console.error('[ConversationOverlay] No chat_id available for WebSocket connection');
     setConversationState('connecting');
     return;
   }
+  
+
   
   // Step 3: Play connection success click sound
   try {
@@ -314,10 +319,29 @@ try {
   
   // WebSocket connection established
   
-  // Step 4: Audio priming complete (no WebSocket subscription needed)
-
+  // Step 4: Subscribe to chat_audio_clips table for TTS updates with callbacks
+  chatAudioService.subscribeToSession(chat_id);
   
   // Set up callbacks for audio received from WebSocket
+  chatAudioService.setCallbacks({
+    onAudioReceived: (audioUrl: string) => {
+      console.log('[ConversationOverlay] Audio URL received from WebSocket:', audioUrl);
+      
+      // 🔍 Check if we already processed this URL via HTTP response
+      if (processedAudioUrls.current.has(audioUrl)) {
+        console.log('[ConversationOverlay] ⏭️ Skipping duplicate audioUrl (already processed via HTTP):', audioUrl);
+        return;
+      }
+      
+      console.log('[ConversationOverlay] 🎧 Processing new audioUrl from WebSocket:', audioUrl);
+      processedAudioUrls.current.add(audioUrl);
+      enqueueTtsClip({ url: audioUrl });
+    },
+    onError: (error: string) => {
+      console.warn('[ConversationOverlay] ChatAudioService error:', error);
+    }
+  });
+  
   // Step 5: Unlock audio synchronously in gesture
   conversationTtsService.unlockAudio();
 
@@ -356,7 +380,7 @@ try {
 
 
   
-
+  // The listener will now be set up in handleSimpleRecordingComplete
 
   conversationMicrophoneService.initialize({
     onRecordingComplete: handleSimpleRecordingComplete,
@@ -394,7 +418,7 @@ if (!audioBlob || audioBlob.size < 1024) {
   return;
 }
 
-// TTS audio URL comes directly from HTTP response - no WebSocket needed
+// Removed TTS listener setup for now - just focus on start flow
 
 // Set state to replying immediately after we have a valid recording
 setConversationState('replying');
@@ -442,17 +466,24 @@ try {
 
   if (isShuttingDown.current) return;
 
-  // LLM handler now automatically triggers TTS and returns audioUrl directly
+  // 🔍 DEBUG: Check if we got audioUrl in HTTP response
+  console.log('[ConversationOverlay] 🔍 HTTP Response Debug:', {
+    hasText: !!response.text,
+    hasAudioUrl: !!response.audioUrl,
+    audioUrl: response.audioUrl,
+    responseKeys: Object.keys(response)
+  });
+
   if (response.text) {
     setConversationState('replying');
     
-    // Use audioUrl directly from HTTP response (no WebSocket needed)
+    // 🎯 OPTIMIZATION: Use HTTP response audioUrl if available (faster)
     if (response.audioUrl) {
-      console.log('[ConversationOverlay] Audio URL received from HTTP response:', response.audioUrl);
+      console.log('[ConversationOverlay] 🚀 Using HTTP response audioUrl:', response.audioUrl);
+      processedAudioUrls.current.add(response.audioUrl); // Mark as processed
       enqueueTtsClip({ url: response.audioUrl });
     } else {
-      console.warn('[ConversationOverlay] No audioUrl in response, falling back to listening');
-      setConversationState('listening');
+      console.log('[ConversationOverlay] ⏳ No audioUrl in HTTP response, waiting for WebSocket...');
     }
   }
 
