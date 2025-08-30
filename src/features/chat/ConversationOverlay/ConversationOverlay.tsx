@@ -232,8 +232,13 @@ return;
 isPlayingQueue.current = true;
 
 try {
-  // Mic already suspended on silenceDetected; no need to suspend again
+  // Set replying state to show speaking bars
   setConversationState('replying');
+  
+  // Defensively suspend mic if still recording when assistant starts talking
+  if (conversationMicrophoneService.getState().isRecording) {
+    conversationMicrophoneService.suspendForPlayback();
+  }
 
   while (playbackQueue.current.length > 0 && !isShuttingDown.current) {
     const next = playbackQueue.current.shift()!;
@@ -418,8 +423,20 @@ try {
   
   // WebSocket connection established
   
-  // Step 4: Subscribe to chat_audio_clips table for TTS updates
+  // Step 4: Subscribe to chat_audio_clips table for TTS updates with callbacks
   chatAudioService.subscribeToSession(chat_id);
+  
+  // Set up callbacks for audio received from WebSocket
+  chatAudioService.setCallbacks({
+    onAudioReceived: (audioUrl: string) => {
+      console.log('[ConversationOverlay] Audio URL received from WebSocket:', audioUrl);
+      // Enqueue the audio URL into the overlay's existing playback queue
+      enqueueTtsClip({ url: audioUrl });
+    },
+    onError: (error: string) => {
+      console.warn('[ConversationOverlay] ChatAudioService error:', error);
+    }
+  });
   
   // Step 5: Unlock audio synchronously in gesture
   conversationTtsService.unlockAudio();

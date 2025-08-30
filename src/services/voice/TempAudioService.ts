@@ -1,16 +1,14 @@
-// ChatAudioService - Handles chat_audio_clips table subscriptions and MP3 URL playback
+// ChatAudioService - Handles chat_audio_clips table subscriptions and relays audio URLs to callbacks
 import { supabase } from '@/integrations/supabase/client';
 
 export interface ChatAudioCallbacks {
   onAudioReceived?: (audioUrl: string) => void;
   onError?: (error: string) => void;
-  onPlaybackComplete?: () => void;
 }
 
 export class ChatAudioService {
   private chat_id: string | null = null;
   private subscription: any = null;
-  private audio: HTMLAudioElement | null = null;
   private callbacks: ChatAudioCallbacks = {};
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 10;
@@ -18,6 +16,11 @@ export class ChatAudioService {
   private isReconnecting = false;
 
   constructor(callbacks: ChatAudioCallbacks = {}) {
+    this.callbacks = callbacks;
+  }
+
+  // Set callbacks after construction
+  public setCallbacks(callbacks: ChatAudioCallbacks): void {
     this.callbacks = callbacks;
   }
 
@@ -92,65 +95,13 @@ export class ChatAudioService {
 
       console.log(`[ChatAudio] 🎵 Processing audio URL from table: ${audioUrl}`);
 
-      // Call the callback with the audio URL
+      // Relay the audio URL to the callback - no internal playback
       this.callbacks.onAudioReceived?.(audioUrl);
-      console.log(`[ChatAudio] 🎧 Sending audio URL to browser for playback...`);
-      
-      // Play the audio immediately
-      const playbackStart = performance.now();
-      await this.playAudioFromUrl(audioUrl);
-      const playbackTime = performance.now() - playbackStart;
-      
-      const totalTime = performance.now() - processingStart;
-      console.log(`[ChatAudio] 🎵 Audio playback initiated in ${playbackTime.toFixed(2)}ms (total: ${totalTime.toFixed(2)}ms)`);
-      
-          } catch (error) {
-        console.error('[ChatAudio] ❌ Error handling audio update:', error);
-        this.callbacks.onError?.(`Failed to process audio: ${error}`);
-      }
-  }
-
-  // Play MP3 audio from URL immediately in browser
-  private async playAudioFromUrl(audioUrl: string): Promise<void> {
-    try {
-      const playbackStart = performance.now();
-      
-      console.log(`[ChatAudio] 🎧 Playing audio from URL: ${audioUrl.substring(0, 100)}...`);
-
-      // Create and configure audio element
-      this.audio = new Audio(audioUrl);
-      this.audio.crossOrigin = 'anonymous';
-      this.audio.preload = 'auto'; // Ensure immediate loading
-      
-      this.audio.addEventListener('loadstart', () => {
-        console.log('[ChatAudio] 📥 Audio loading started');
-      });
-
-      this.audio.addEventListener('canplay', () => {
-        const loadTime = performance.now() - playbackStart;
-        console.log(`[ChatAudio] 🎼 Audio ready to play in ${loadTime.toFixed(2)}ms`);
-      });
-      
-      this.audio.addEventListener('ended', () => {
-        const totalTime = performance.now() - playbackStart;
-        console.log(`[ChatAudio] ✅ Audio playback completed in ${totalTime.toFixed(2)}ms`);
-        this.callbacks.onPlaybackComplete?.();
-      });
-
-      this.audio.addEventListener('error', (error) => {
-        console.error('[ChatAudio] ❌ Audio playback error:', error);
-        this.callbacks.onError?.('Audio playback failed');
-      });
-
-      console.log('[ChatAudio] 🚀 Starting audio playback in browser...');
-      await this.audio.play();
-      
-      const startTime = performance.now() - playbackStart;
-      console.log(`[ChatAudio] 🔊 Audio playback started in ${startTime.toFixed(2)}ms`);
+      console.log(`[ChatAudio] 🎧 Audio URL relayed to callback in ${deliveryLatency.toFixed(2)}ms`);
       
     } catch (error) {
-      console.error('[ChatAudio] ❌ Error playing audio:', error);
-      this.callbacks.onError?.(`Failed to play audio: ${error}`);
+      console.error('[ChatAudio] ❌ Error handling audio update:', error);
+      this.callbacks.onError?.(`Failed to process audio: ${error}`);
     }
   }
   
@@ -181,6 +132,7 @@ export class ChatAudioService {
       }
     }, backoffDelay);
   }
+
   // Unsubscribe from updates
   public unsubscribe(): void {
     // Clear any pending reconnection attempt
@@ -198,11 +150,6 @@ export class ChatAudioService {
       this.subscription = null;
     }
     
-    if (this.audio) {
-      this.audio.pause();
-      this.audio = null;
-    }
-    
     this.chat_id = null;
   }
 
@@ -215,12 +162,12 @@ export class ChatAudioService {
         .eq('chat_id', chat_id);
       
       if (error) {
-        console.error(`[TempAudio] Failed to cleanup chat ${chat_id}:`, error);
+        console.error(`[ChatAudio] Failed to cleanup chat ${chat_id}:`, error);
       } else {
-        console.log(`[TempAudio] ✅ Cleaned up audio data for chat: ${chat_id}`);
+        console.log(`[ChatAudio] ✅ Cleaned up audio data for chat: ${chat_id}`);
       }
     } catch (error) {
-      console.error(`[TempAudio] Error cleaning up chat ${chat_id}:`, error);
+      console.error(`[ChatAudio] Error cleaning up chat ${chat_id}:`, error);
     }
   }
 
