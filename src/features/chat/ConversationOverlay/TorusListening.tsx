@@ -145,9 +145,13 @@ export default function TorusListening({
               const baseDotCount = Math.floor(dots.length * 0.3);
               const dynamicDotCount = (dots.length - baseDotCount) * energy;
               const visibleDots = baseDotCount + dynamicDotCount;
-              opacity = idx < visibleDots ? 0.9 : 0;
+              opacity = idx < visibleDots ? 0.9 : 0.3; // Show inactive dots in light grey
               dotScale = idx < visibleDots ? 1 + energy * 0.2 : 1;
             }
+            
+            // Determine dot color based on whether it's active or inactive
+            const isActive = idx < (isThinking ? dots.length : (Math.floor(dots.length * 0.3) + (dots.length - Math.floor(dots.length * 0.3)) * energy));
+            const fillColor = isActive ? dotColor : "rgb(180, 180, 185)"; // Light grey for inactive dots
             
             return (
               <motion.circle
@@ -155,7 +159,7 @@ export default function TorusListening({
                 cx={dot.cx}
                 cy={dot.cy}
                 r={dot.r}
-                fill={dotColor}
+                fill={fillColor}
                 initial={{ opacity: 0, scale: 1 }}
                 animate={{ opacity, scale: dotScale }}
                 transition={{ duration: 0.4, ease: 'easeOut' }}
