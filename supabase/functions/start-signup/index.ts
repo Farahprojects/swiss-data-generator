@@ -74,28 +74,32 @@ serve(async (req) => {
       );
     }
 
+    // Get email template from database
+    const { data: templateData, error: templateError } = await supabase
+      .from('email_notification_templates')
+      .select('subject, body_html, body_text')
+      .eq('template_type', 'email_verification')
+      .single();
+
+    if (templateError || !templateData) {
+      console.error('Error fetching email template:', templateError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch email template' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Replace template variables
+    const htmlContent = templateData.body_html.replace(/\{\{verification_link\}\}/g, data.properties.action_link);
+    const textContent = templateData.body_text.replace(/\{\{verification_link\}\}/g, data.properties.action_link);
+
     // Send verification email using existing verification-emailer function
     const { error: emailError } = await supabase.functions.invoke('verification-emailer', {
       body: {
         to: email,
-        subject: 'Please verify your email address',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2>Welcome to Theria API!</h2>
-            <p>Thank you for signing up. Please click the link below to verify your email address and complete your registration:</p>
-            <p style="margin: 20px 0;">
-              <a href="${data.properties.action_link}" 
-                 style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
-                Verify Email Address
-              </a>
-            </p>
-            <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
-            <p style="word-break: break-all; color: #666;">${data.properties.action_link}</p>
-            <p>This link will expire in 24 hours.</p>
-            <p>If you didn't create an account, you can safely ignore this email.</p>
-          </div>
-        `,
-        text: `Welcome to Theria API! Please verify your email by clicking this link: ${data.properties.action_link}`
+        subject: templateData.subject,
+        html: htmlContent,
+        text: textContent
       }
     });
 
