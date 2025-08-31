@@ -38,28 +38,22 @@ serve(async (req) => {
       }
     });
 
-    // Check if user exists and is unverified
-    const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
+    // Check if user exists and verification status from profiles table
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('email_verified, verification_status')
+      .eq('email', email)
+      .single();
     
-    if (userError) {
-      console.error('Error fetching users:', userError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to verify user status' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const existingUser = userData.users.find(user => user.email === email);
-    
-    if (!existingUser) {
-      console.log('User not found for email:', email);
+    if (profileError) {
+      console.error('Error fetching user profile:', profileError);
       return new Response(
         JSON.stringify({ error: 'No account found with this email address' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    if (existingUser.email_confirmed_at) {
+    if (profile.email_verified || profile.verification_status === 'verified') {
       console.log('User already verified for email:', email);
       return new Response(
         JSON.stringify({ error: 'This email address is already verified' }),
