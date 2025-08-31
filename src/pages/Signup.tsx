@@ -312,11 +312,6 @@ const Signup = () => {
                 </>
               )}
             </h1>
-            <p className="text-lg text-gray-600 font-light">
-              {signupSuccess 
-                ? 'One more step to complete your registration' 
-                : 'Begin your journey of self-discovery'}
-            </p>
           </header>
 
           {signupSuccess ? renderSuccessMessage() : renderSignupForm()}
