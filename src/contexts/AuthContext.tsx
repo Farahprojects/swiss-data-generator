@@ -101,36 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (typeof window !== 'undefined') (window as any).__authTrace.listeners++;
       log('debug', 'Auth state change', { event, hasSession: !!supaSession }, 'auth');
       
-      // Check email verification BEFORE setting session/user state
-      if (supaSession?.user) {
-        try {
-          const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('email_verified')
-            .eq('id', supaSession.user.id)
-            .single();
-          
-          if (!error && profile && !profile.email_verified) {
-            // User is not verified - clear session and block access
-            log('debug', 'Blocking unverified user access', { userId: supaSession.user.id }, 'auth');
-            await supabase.auth.signOut();
-            setUser(null);
-            setSession(null);
-            setLoading(false);
-            return;
-          }
-        } catch (error) {
-          log('error', 'Failed to check verification status', error, 'auth');
-          // On error, block access by default
-          await supabase.auth.signOut();
-          setUser(null);
-          setSession(null);
-          setLoading(false);
-          return;
-        }
-      }
-      
-      // Only set user and session if verification check passed
+      // Set user and session state - let features decide access based on email_confirmed_at
       setUser(supaSession?.user ?? null);
       setSession(supaSession);
       setLoading(false);
@@ -179,37 +150,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
      * Bootstrap existing session ONLY ONCE
      * ────────────────────────────*/
     if (typeof window !== 'undefined') (window as any).__authTrace.initialSessionChecks++;
-    supabase.auth.getSession().then(async ({ data: { session: supaSession } }) => {
+    supabase.auth.getSession().then(({ data: { session: supaSession } }) => {
       log('debug', 'Initial session check', { hasSession: !!supaSession }, 'auth');
       
-      // Check verification before setting session state
-      if (supaSession?.user) {
-        try {
-          const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('email_verified')
-            .eq('id', supaSession.user.id)
-            .single();
-          
-          if (!error && profile && !profile.email_verified) {
-            // User is not verified - clear session
-            log('debug', 'Clearing unverified user session on initial check', { userId: supaSession.user.id }, 'auth');
-            await supabase.auth.signOut();
-            setUser(null);
-            setSession(null);
-            setLoading(false);
-            return;
-          }
-        } catch (error) {
-          log('error', 'Failed to check verification status on initial check', error, 'auth');
-          // On error, clear session by default
-          await supabase.auth.signOut();
-          setUser(null);
-          setSession(null);
-          setLoading(false);
-          return;
-        }
-      }
+      // Set user and session state - let features decide access based on email_confirmed_at
       
       setUser(supaSession?.user ?? null);
       setSession(supaSession);

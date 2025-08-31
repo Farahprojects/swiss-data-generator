@@ -15,9 +15,14 @@ const ReportChatScreen = () => {
   const { user } = useAuth();
   const { uuid } = getChatTokens(); // Only need uuid, not token
 
-  // Always call both hooks, but make them conditional internally
-  useAuthedChat(user ? chat_id : null);
-  useChat(!user ? chat_id : null, !user ? (uuid || undefined) : undefined);
+  // Use different hooks based on auth state
+  if (user) {
+    // Authenticated user - use conversation system
+    useAuthedChat(chat_id);
+  } else {
+    // Guest user - use traditional guest chat
+    useChat(chat_id, uuid || undefined);
+  }
 
   return (
     <MobileViewportLock active>
