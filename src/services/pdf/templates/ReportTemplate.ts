@@ -111,8 +111,7 @@ export class ReportTemplate extends BaseTemplate {
 
     // ═════════════ FOOTER ═════════════
     if (options.includeFooter !== false && lineY + 15 < this.pageHeight) {
-      this.doc.setFontSize(9).setFont('helvetica', 'italic').setTextColor(120);
-      this.doc.text('www.theraiastro.com', this.pageWidth / 2, this.pageHeight - 15, { align: 'center' });
+      // Footer placeholder - no content by default
     }
 
     // ═════════════ SAVE ═════════════
