@@ -91,25 +91,8 @@ const Signup = () => {
       if (newUser) {
         debug('Signup successful, user created:', newUser.id);
         
-        // Send verification email
-        try {
-          const { data, error: tokenError } = await supabase.functions.invoke('signup_token', {
-            body: { user_id: newUser.id }
-          });
-          
-          if (tokenError) {
-            console.error('Error sending verification email:', tokenError);
-            toast({
-              title: 'Account Created',
-              description: 'Your account was created but there was an issue sending the verification email. Please contact support.',
-              variant: 'destructive'
-            });
-          } else {
-            debug('Verification email sent successfully');
-          }
-        } catch (emailError) {
-          console.error('Exception sending verification email:', emailError);
-        }
+        // Verification email is now sent automatically by AuthContext
+        debug('Signup successful, verification email sent automatically');
 
         setVerificationEmail(email);
         setCurrentUserId(newUser.id);
@@ -166,7 +149,7 @@ const Signup = () => {
     setLoading(true);
     
     try {
-      const { data, error } = await supabase.functions.invoke('signup_token', {
+      const { data, error } = await supabase.functions.invoke('email-verification', {
         body: { user_id: currentUserId }
       });
       
