@@ -29,32 +29,67 @@ const ConfirmEmail: React.FC = () => {
   const finishSuccess = async (kind: 'signup' | 'email_change') => {
     console.log(`[EMAIL-VERIFY] ✓ SUCCESS: ${kind} verification completed`);
     
-    setMessage('Updating your profile...');
+    setMessage('Finalizing your account...');
     
     try {
-      // Update profile verification status
-      const { error: profileError } = await supabase.rpc('mark_profile_verified');
-      if (profileError) {
-        console.error('[EMAIL-VERIFY] Profile update error:', profileError);
-        // Don't fail the entire flow for profile update errors
-      } else {
-        console.log('[EMAIL-VERIFY] ✓ Profile verification status updated');
+      // Ensure profile exists first
+      const { error: profileCreationError } = await supabase.rpc('ensure_profile_for_current_user');
+      if (profileCreationError) {
+        console.error('[EMAIL-VERIFY] Profile creation error:', profileCreationError);
+        throw profileCreationError;
       }
+      console.log('[EMAIL-VERIFY] ✓ Profile ensured');
+
+      // Mark profile as verified with retry logic
+      let verificationAttempts = 0;
+      let verificationSuccess = false;
+      
+      while (verificationAttempts < 3 && !verificationSuccess) {
+        verificationAttempts++;
+        console.log(`[EMAIL-VERIFY] Attempting profile verification (attempt ${verificationAttempts})`);
+        
+        const { data: isVerified, error: verificationError } = await supabase.rpc('mark_profile_verified');
+        
+        if (verificationError) {
+          console.error(`[EMAIL-VERIFY] Profile verification error (attempt ${verificationAttempts}):`, verificationError);
+          if (verificationAttempts >= 3) throw verificationError;
+          await new Promise(resolve => setTimeout(resolve, 500)); // Wait before retry
+          continue;
+        }
+        
+        if (isVerified) {
+          console.log('[EMAIL-VERIFY] ✓ Profile verification status updated successfully');
+          verificationSuccess = true;
+        } else {
+          console.warn(`[EMAIL-VERIFY] Profile verification returned false (attempt ${verificationAttempts})`);
+          if (verificationAttempts >= 3) {
+            throw new Error('Profile verification failed after multiple attempts');
+          }
+          await new Promise(resolve => setTimeout(resolve, 500)); // Wait before retry
+        }
+      }
+      
     } catch (error) {
-      console.error('[EMAIL-VERIFY] Profile update exception:', error);
-      // Continue with success flow even if profile update fails
+      console.error('[EMAIL-VERIFY] Critical profile update error:', error);
+      setStatus('error');
+      setMessage('Failed to finalize your account. Please try again or contact support.');
+      toast({ 
+        variant: 'destructive', 
+        title: 'Account Setup Error', 
+        description: 'Unable to complete account verification. Please try again.' 
+      });
+      return;
     }
     
     setStatus('success');
-    const msg =
-      kind === 'signup'
-        ? 'Your email has been verified – you are now logged in!'
-        : 'Your email has been updated – you are now logged in!';
+    const msg = kind === 'signup'
+      ? 'Email verified! You may now enter the app.'
+      : 'Email updated! You may now enter the app.';
     setMessage(msg);
     toast({ variant: 'success', title: 'Success', description: msg });
 
     window.history.replaceState({}, '', '/auth/email');
-    setTimeout(() => navigate('/chat'), 2800);
+    // Remove auto-redirect - user must click button to enter
   };
 
   useEffect(() => {
