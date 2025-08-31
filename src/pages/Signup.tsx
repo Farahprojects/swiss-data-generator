@@ -223,7 +223,7 @@ const Signup = () => {
         </div>
 
         {errorMsg && (
-          <div className="text-center text-sm text-red-600 bg-red-50 p-3 rounded-md border border-red-200 font-light">
+          <div className="text-center text-sm text-red-600 font-light">
             {errorMsg}
           </div>
         )}
