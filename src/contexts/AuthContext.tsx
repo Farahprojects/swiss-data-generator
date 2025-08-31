@@ -178,29 +178,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * ─────────────────────────────────*/
   const signIn = async (email: string, password: string) => {
     try {
-
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
         return { error, data: null };
       }
       
-      // Set user state and let features check email_confirmed_at for access
+      // Check verification status in profiles table
       if (data?.user) {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('verification_status, email_verified')
+          .eq('id', data.user.id)
+          .single();
+        
+        // Block signin if not verified
+        if (!profileError && profile && !profile.email_verified) {
+          return { 
+            error: new Error('Please verify your email address before signing in'), 
+            data: null 
+          };
+        }
+        
         setUser(data.user);
         setSession(data.session);
         setLoading(false);
-        
-        // Show warning for unverified users but don't block signin
-        if (!data.user.email_confirmed_at) {
-          return { error: new Error('Please verify your email to unlock all features'), data };
-        }
       }
       
       return { error: null, data };
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error('Unexpected sign-in error');
-      
       return { error, data: null };
     }
   };
@@ -221,7 +228,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error };
       }
 
-      // Allow user to be set but features will check email_confirmed_at
+      // Send custom verification email after successful signup
+      if (data?.user && !data?.user?.email_confirmed_at) {
+        try {
+          await supabase.functions.invoke('email-verification', {
+            body: {
+              user_id: data.user.id
+            }
+          });
+          log('debug', 'Verification email sent', { userId: data.user.id }, 'auth');
+        } catch (emailError) {
+          log('error', 'Failed to send verification email', emailError, 'auth');
+          // Don't block signup for email sending failure
+        }
+      }
+
+      // Allow user to be set but they won't be able to sign in until verified
       if (data?.user) {
         setUser(data.user);
         setSession(data.session);
@@ -356,15 +378,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
   const resendVerificationEmail = async (email: string) => {
     try {
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
-        email,
-        options: { 
-          emailRedirectTo: typeof window !== 'undefined' 
-            ? `${window.location.origin}/auth/email` 
-            : '/auth/email'
-        },
+      // Get user ID for the email
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) {
+        return { error: new Error('User not found') };
+      }
+
+      // Use custom verification email function
+      const { error } = await supabase.functions.invoke('email-verification', {
+        body: {
+          user_id: userData.user.id
+        }
       });
+      
       return { error };
     } catch (err: unknown) {
       return { error: err instanceof Error ? err : new Error('Could not resend verification') };
