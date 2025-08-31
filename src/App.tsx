@@ -128,6 +128,11 @@ function App() {
                       {React.createElement(lazy(() => import('./pages/AuthPage').then(m => ({ default: m.AuthPage }))))}
                     </Suspense>
                   } />
+                  <Route path="/auth/email" element={
+                    <Suspense fallback={<div>Loading...</div>}>
+                      {React.createElement(lazy(() => import('./pages/AuthPage').then(m => ({ default: m.AuthPage }))))}
+                    </Suspense>
+                  } />
                   
                   {/* Default authenticated route - redirect to chat */}
                   <Route 

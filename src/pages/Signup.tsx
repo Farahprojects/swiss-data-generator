@@ -75,9 +75,9 @@ const Signup = () => {
       if (error) {
         debug('Signup error:', error);
         
-        if (error.message.includes('User already registered')) {
+        if (error.message.includes('User already registered') || error.message.includes('already registered')) {
           setErrorMsg('An account with this email already exists. Try signing in instead.');
-        } else if (error.message.includes('Password should be at least')) {
+        } else if (error.message.includes('Password should be at least') || error.message.includes('weak password')) {
           setErrorMsg('Password must be at least 6 characters long');
         } else if (error.message.includes('Invalid email')) {
           setErrorMsg('Please enter a valid email address');
@@ -88,16 +88,11 @@ const Signup = () => {
         return;
       }
 
-      if (newUser) {
-        debug('Signup successful, user created:', newUser.id);
-        
-        // Verification email is now sent automatically by AuthContext
-        debug('Signup successful, verification email sent automatically');
-
-        setVerificationEmail(email);
-        setCurrentUserId(newUser.id);
-        setSignupSuccess(true);
-      }
+      // With pre-auth flow, no user is created until email verification
+      debug('Pre-auth signup successful, verification email sent');
+      
+      setVerificationEmail(email);
+      setSignupSuccess(true);
     } catch (err: any) {
       debug('Signup exception:', err);
       setErrorMsg('An unexpected error occurred. Please try again.');
@@ -137,26 +132,24 @@ const Signup = () => {
   };
 
   const handleResendVerification = async () => {
-    if (!currentUserId) {
-      toast({
-        title: 'Error',
-        description: 'Unable to resend verification email. Please try signing up again.',
-        variant: 'destructive'
-      });
-      return;
-    }
-
     setLoading(true);
     
     try {
-      const { data, error } = await supabase.functions.invoke('email-verification', {
-        body: { user_id: currentUserId }
+      // Resend using the same pre-auth flow
+      const { data, error } = await supabase.functions.invoke('start-signup', {
+        body: { email, password }
       });
       
       if (error) {
         toast({
           title: 'Error',
           description: 'Failed to resend verification email. Please try again.',
+          variant: 'destructive'
+        });
+      } else if (data?.error) {
+        toast({
+          title: 'Error',
+          description: data.error,
           variant: 'destructive'
         });
       } else {

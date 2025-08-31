@@ -214,42 +214,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/email`
-        }
+      // Use the new pre-auth signup flow
+      const { data, error } = await supabase.functions.invoke('start-signup', {
+        body: { email, password }
       });
 
-      log('debug', 'Sign up response', { hasError: !!error, hasUser: !!data?.user }, 'auth');
+      log('debug', 'Pre-auth signup response', { hasError: !!error, data }, 'auth');
       
       if (error) {
-        return { error };
+        return { error: new Error(error.message || 'Signup failed') };
       }
 
-      // Send custom verification email after successful signup
-      if (data?.user && !data?.user?.email_confirmed_at) {
-        try {
-          await supabase.functions.invoke('email-verification', {
-            body: {
-              user_id: data.user.id
-            }
-          });
-          log('debug', 'Verification email sent', { userId: data.user.id }, 'auth');
-        } catch (emailError) {
-          log('error', 'Failed to send verification email', emailError, 'auth');
-          // Don't block signup for email sending failure
-        }
+      if (data?.error) {
+        return { error: new Error(data.error) };
       }
 
-      // Allow user to be set but they won't be able to sign in until verified
-      if (data?.user) {
-        setUser(data.user);
-        setSession(data.session);
-      }
-      
-      return { error: null, user: data.user };
+      // No user/session is created until email verification is complete
+      return { error: null, user: null };
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error('Unexpected sign-up error');
       return { error };
