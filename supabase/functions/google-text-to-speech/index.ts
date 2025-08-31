@@ -126,6 +126,8 @@ serve(async (req) => {
       };
       
       // Save to DB in background (non-blocking)
+      // COMMENTED OUT: No longer saving to DB for conversation mode
+      /*
       EdgeRuntime.waitUntil(
         supabase.from("chat_audio_clips").insert({
           chat_id: chat_id,
@@ -146,6 +148,7 @@ serve(async (req) => {
           }
         })
       );
+      */
       
       return responseData;
     }
@@ -161,6 +164,8 @@ serve(async (req) => {
     };
 
     // Save TTS audio clip to dedicated audio table in background (non-blocking)
+    // COMMENTED OUT: No longer saving to DB for conversation mode
+    /*
     EdgeRuntime.waitUntil(
       supabase.from("chat_audio_clips").insert({
         chat_id: chat_id,
@@ -181,6 +186,7 @@ serve(async (req) => {
         }
       })
     );
+    */
 
     const processingTime = Date.now() - startTime;
     console.log(`[google-tts] TTS completed in ${processingTime}ms`);
