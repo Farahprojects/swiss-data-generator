@@ -280,25 +280,32 @@ await new Promise<void>(async (resolve) => {
       bytes[i] = binaryString.charCodeAt(i);
     }
     
-    // Pre-decode MP3 for smooth iOS playback
+    // Pre-decode MP3 for smooth iOS playback, then use conversationTtsService for animation
     try {
+      // Pre-decode to warm up the decoder
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const audioBuffer = await audioContext.decodeAudioData(bytes.buffer);
+      await audioContext.decodeAudioData(bytes.buffer);
       
-      console.log('[ConversationOverlay] 🎵 MP3 pre-decoded, starting smooth playback');
+      console.log('[ConversationOverlay] 🎵 MP3 pre-decoded, using conversationTtsService for smooth playback with animation');
       
-      // Play the decoded buffer immediately
-      const source = audioContext.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(audioContext.destination);
+      // Create blob URL and use conversationTtsService for animation and cleanup
+      const blob = new Blob([bytes], { type: clip.mimeType || 'audio/mpeg' });
+      const audioUrl = URL.createObjectURL(blob);
       
-      source.onended = () => {
-        console.log('[ConversationOverlay] ✅ Smooth audio playback completed');
-        resolve();
-      };
-      
-      source.start();
-      setConversationState('replying');
+      conversationTtsService
+        .playFromUrl(audioUrl, () => {
+          console.log('[ConversationOverlay] ✅ Smooth audio playback completed');
+          URL.revokeObjectURL(audioUrl);
+          resolve();
+        }, () => {
+          console.log('[ConversationOverlay] 🎵 Audio playback started - setting replying state');
+          setConversationState('replying');
+        })
+        .catch((error) => {
+          console.error('[ConversationOverlay] ❌ Audio playback failed:', error);
+          URL.revokeObjectURL(audioUrl);
+          resolve();
+        });
       
     } catch (decodeError) {
       console.warn('[ConversationOverlay] Pre-decode failed, falling back to blob URL:', decodeError);
