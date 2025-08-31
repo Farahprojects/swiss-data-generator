@@ -184,39 +184,14 @@ serve(async (req) => {
         
         console.log('[chat-send] ✅ TTS completed, audioUrl:', audioUrl);
 
-        // Step 5: Push TTS URL directly to browser via telephone connection
-        try {
-          console.log('[chat-send] 📞 Pushing TTS URL via direct connection to chat:', chat_id);
-          
-          const { data: broadcastData, error: broadcastError } = await supabase
-            .channel(`conversation:${chat_id}`)
-            .send({
-              type: 'broadcast',
-              event: 'tts-ready',
-              payload: {
-                audioUrl: audioUrl,
-                text: assistantText,
-                chat_id: chat_id
-              }
-            });
-
-          if (broadcastError) {
-            console.error('[chat-send] ❌ Failed to push TTS URL via connection:', broadcastError);
-          } else {
-            console.log('[chat-send] ✅ TTS URL pushed via direct connection');
-          }
-        } catch (broadcastError) {
-          console.error('[chat-send] ❌ Error pushing TTS URL via connection:', broadcastError);
-        }
-
-        // Step 6: Return response immediately to browser (TTS delivered via connection only)
+        // Step 5: TTS makes the phone call directly - just return response
         const responseData = {
           message: "Assistant response ready",
           text: assistantText,
           client_msg_id: userMessageData.client_msg_id
         };
 
-        console.log('[chat-send] 🚀 Returning response to browser (TTS via connection)');
+        console.log('[chat-send] 🚀 Returning response to browser (TTS makes phone call)');
         return new Response(JSON.stringify(responseData), {
           headers: { ...corsHeaders, "Content-Type": "application/json" }
         });

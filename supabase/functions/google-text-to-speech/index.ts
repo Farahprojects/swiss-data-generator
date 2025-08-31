@@ -185,6 +185,31 @@ serve(async (req) => {
     const processingTime = Date.now() - startTime;
     console.log(`[google-tts] TTS completed in ${processingTime}ms`);
 
+    // 📞 Make the phone call - push TTS URL directly to browser
+    try {
+      console.log(`[google-tts] 📞 Making phone call to chat: ${chat_id}`);
+      
+      const { data: broadcastData, error: broadcastError } = await supabase
+        .channel(`conversation:${chat_id}`)
+        .send({
+          type: 'broadcast',
+          event: 'tts-ready',
+          payload: {
+            audioUrl: signedUrl,
+            text: text,
+            chat_id: chat_id
+          }
+        });
+
+      if (broadcastError) {
+        console.error('[google-tts] ❌ Failed to make phone call:', broadcastError);
+      } else {
+        console.log('[google-tts] ✅ Phone call successful - TTS URL delivered directly');
+      }
+    } catch (broadcastError) {
+      console.error('[google-tts] ❌ Error making phone call:', broadcastError);
+    }
+
     // Return success response with performance timing
     return new Response(JSON.stringify(responseData), {
       headers: {
