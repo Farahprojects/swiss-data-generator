@@ -308,8 +308,6 @@ const Signup = () => {
                 </>
               ) : (
                 <>
-                  Join
-                  <br />
                   <span className="italic font-medium">Therai</span>
                 </>
               )}
