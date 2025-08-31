@@ -268,7 +268,7 @@ try {
 async function playTtsAudio(clip: Clip) {
 if (isShuttingDown.current) return;
 
-await new Promise<void>((resolve) => {
+await new Promise<void>(async (resolve) => {
   if (clip.audioBytes) {
     // Use raw MP3 bytes for immediate playback
     console.log('[ConversationOverlay] 🎵 Playing from raw MP3 bytes, size:', clip.audioBytes.length);
@@ -280,26 +280,45 @@ await new Promise<void>((resolve) => {
       bytes[i] = binaryString.charCodeAt(i);
     }
     
-    // Create blob URL for immediate playback
-    const blob = new Blob([bytes], { type: clip.mimeType || 'audio/mpeg' });
-    const audioUrl = URL.createObjectURL(blob);
-    
-    console.log('[ConversationOverlay] 🎵 Calling conversationTtsService.playFromUrl with blob URL');
-    conversationTtsService
-      .playFromUrl(audioUrl, () => {
-        console.log('[ConversationOverlay] ✅ Audio playback completed');
-        URL.revokeObjectURL(audioUrl); // Clean up blob URL
+    // Pre-decode MP3 for smooth iOS playback
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioBuffer = await audioContext.decodeAudioData(bytes.buffer);
+      
+      console.log('[ConversationOverlay] 🎵 MP3 pre-decoded, starting smooth playback');
+      
+      // Play the decoded buffer immediately
+      const source = audioContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(audioContext.destination);
+      
+      source.onended = () => {
+        console.log('[ConversationOverlay] ✅ Smooth audio playback completed');
         resolve();
-      }, () => {
-        console.log('[ConversationOverlay] 🎵 Audio playback started - setting replying state');
-        // onStart: Set replying state when audio actually starts playing
-        setConversationState('replying');
-      })
-      .catch((error) => {
-        console.error('[ConversationOverlay] ❌ Audio playback failed:', error);
-        URL.revokeObjectURL(audioUrl); // Clean up on error
-        resolve();
-      });
+      };
+      
+      source.start();
+      setConversationState('replying');
+      
+    } catch (decodeError) {
+      console.warn('[ConversationOverlay] Pre-decode failed, falling back to blob URL:', decodeError);
+      
+      // Fallback to blob URL method
+      const blob = new Blob([bytes], { type: clip.mimeType || 'audio/mpeg' });
+      const audioUrl = URL.createObjectURL(blob);
+      
+      conversationTtsService
+        .playFromUrl(audioUrl, () => {
+          URL.revokeObjectURL(audioUrl);
+          resolve();
+        }, () => {
+          setConversationState('replying');
+        })
+        .catch(() => {
+          URL.revokeObjectURL(audioUrl);
+          resolve();
+        });
+    }
       
   } else if (clip.url) {
     // Fallback to URL playback
