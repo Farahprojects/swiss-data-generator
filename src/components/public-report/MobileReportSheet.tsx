@@ -242,9 +242,9 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
     }
   };
 
-  const requiresSecondPerson = reportCategory === 'compatibility' && relationshipType !== 'synastry';
+  const requiresSecondPerson = requestField === 'sync';
 
-  const totalSteps = requiresSecondPerson ? 5 : 4;
+  const totalSteps = requiresSecondPerson ? 4 : 3;
   const canGoNext = true; // Always allow proceeding to next step or submission
 
   const nextStep = () => {
@@ -365,23 +365,16 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
             <Step1ReportType control={control} setValue={setValue} selectedCategory={reportCategory} onNext={nextStep} />
           )}
           {currentStep === 2 && (
-            reportCategory === 'astro-data' ? (
-              <Step1_5AstroData control={control} setValue={setValue} selectedSubCategory={formValues.reportSubCategory} onNext={nextStep} />
-            ) : (
-              <Step1_5SubCategory control={control} setValue={setValue} selectedCategory={reportCategory} selectedSubCategory={formValues.reportSubCategory} onNext={nextStep} />
-            )
-          )}
-          {currentStep === 3 && (
             <Step2PersonA register={register} setValue={setValue} watch={watch} errors={errors} onNext={nextStep} />
           )}
-          {currentStep === 4 && (
+          {currentStep === 3 && (
             requiresSecondPerson ? (
               <Step2PersonB register={register} setValue={setValue} watch={watch} errors={errors} onNext={nextStep} />
             ) : (
               <Step3Payment register={register} watch={watch} errors={errors} isProcessing={isProcessing} onTimeoutChange={() => {}} />
             )
           )}
-          {currentStep === 5 && requiresSecondPerson && (
+          {currentStep === 4 && requiresSecondPerson && (
             <Step3Payment register={register} watch={watch} errors={errors} isProcessing={isProcessing} onTimeoutChange={() => {}} />
           )}
         </div>

@@ -2,7 +2,7 @@
 import React from 'react';
 import { Controller, UseFormSetValue } from 'react-hook-form';
 import { motion } from 'framer-motion';
-import { reportCategories } from '@/constants/report-types';
+import { astroRequestCategories } from '@/constants/report-types';
 import { ReportFormData } from '@/types/public-report';
 import { useMobileSafeTopPadding } from '@/hooks/useMobileSafeTopPadding';
 
@@ -15,22 +15,17 @@ interface Step1ReportTypeProps {
 
 const Step1ReportType = ({ control, setValue, selectedCategory, onNext }: Step1ReportTypeProps) => {
 
-  // Mirror desktop handleCategoryClick logic
-  const handleCategoryClick = (
+  // Mirror desktop astro data click logic
+  const handleAstroDataClick = (
     value: string,
     reportType: string,
     onChange: (v: any) => void,
   ) => {
     onChange(value);
-    // Mirror desktop logic: Do NOT set reportType for snapshot category here
-    if (value !== 'snapshot' && setValue) {
-      setValue('reportType', reportType, { shouldValidate: true });
-    } else {
-      // Clear reportType for categories that need sub-selection or don't use reportType
-      setValue('reportType', '', { shouldValidate: true });
-    }
-    
-    // Removed auto-advance - let user manually proceed
+    // For astro data, the request field IS the report type
+    setValue('request', value, { shouldValidate: true });
+    // Clear reportType since astro data uses request field instead
+    setValue('reportType', '', { shouldValidate: true });
   };
 
   return (
@@ -42,15 +37,16 @@ const Step1ReportType = ({ control, setValue, selectedCategory, onNext }: Step1R
       className="space-y-6 pt-6"
     >
       <div className="text-center space-y-2">
-        <h2 className="text-2xl font-light tracking-tight text-[hsl(var(--apple-gray-dark))]">What area would you like <em className="font-normal">guidance</em> on?</h2>
+        <h2 className="text-2xl font-light tracking-tight text-[hsl(var(--apple-gray-dark))]">Choose your <em className="font-normal">astro data</em> type</h2>
+        <p className="text-sm text-[hsl(var(--apple-gray))] font-light">Raw ephemeris data - instant calculations</p>
       </div>
 
       <Controller
         control={control}
-        name="reportCategory"
+        name="request"
         render={({ field }) => (
           <div className="space-y-4">
-            {reportCategories.map((category) => {
+            {astroRequestCategories.map((category) => {
               const IconComponent = category.icon;
               const isSelected = field.value === category.value;
               
@@ -58,7 +54,7 @@ const Step1ReportType = ({ control, setValue, selectedCategory, onNext }: Step1R
                 <motion.button
                   key={category.value}
                   type="button"
-                  onClick={() => handleCategoryClick(category.value, category.reportType, field.onChange)}
+                  onClick={() => handleAstroDataClick(category.value, category.request, field.onChange)}
                   className={`w-full p-6 rounded-3xl border transition-all duration-300 ease-out active:scale-95 min-h-[80px] ${
                     isSelected 
                       ? 'border-primary bg-primary/5 shadow-lg' 
@@ -77,6 +73,9 @@ const Step1ReportType = ({ control, setValue, selectedCategory, onNext }: Step1R
                           : 'text-[hsl(var(--apple-gray-dark))]'
                       }`}>{category.title}</h3>
                       <p className="text-sm text-[hsl(var(--apple-gray))] font-light leading-relaxed">{category.description}</p>
+                      <div className="mt-2 text-xs text-green-600 font-medium">
+                        ⚡ Instant delivery (~5 seconds)
+                      </div>
                     </div>
                   </div>
                 </motion.button>
