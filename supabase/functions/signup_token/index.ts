@@ -48,7 +48,7 @@ serve(async (req) => {
   }
 
   const supabase = createClient(url, key);
-  const redirectTo = "https://www.theraiapi.com/auth/email";
+  const redirectTo = "https://therai.co/auth/email";
   let tokenLink = "";
   let emailOtp = "";
   let userEmail = "";

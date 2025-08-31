@@ -4,7 +4,12 @@
  * This ensures consistency when dealing with redirects in auth flows
  */
 export function getAbsoluteUrl(path: string): string {
-  const baseUrl = window.location.origin;
+  // For production, always use therai.co domain
+  // For development, use the current origin
+  const baseUrl = window.location.hostname === 'localhost' || window.location.hostname.includes('lovable.app')
+    ? window.location.origin
+    : 'https://therai.co';
+  
   // Remove trailing slashes from the base and leading slashes from the path
   // to ensure we don't end up with double slashes
   const cleanBase = baseUrl.replace(/\/+$/, '');

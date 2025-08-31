@@ -43,7 +43,7 @@ serve(async (req) => {
       email,
       password,
       options: {
-        redirectTo: `${Deno.env.get('SUPABASE_URL')?.replace('supabase.co', 'supabase.co')}/auth/v1/verify?redirect_to=${encodeURIComponent(`${req.headers.get('origin') || 'https://www.theraiapi.com'}/auth/email`)}`
+        redirectTo: `${Deno.env.get('SUPABASE_URL')?.replace('supabase.co', 'supabase.co')}/auth/v1/verify?redirect_to=${encodeURIComponent('https://therai.co/auth/email')}`
       }
     });
 
