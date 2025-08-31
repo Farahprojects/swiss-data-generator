@@ -1,56 +1,35 @@
 
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 
-
-type SettingsPanelType = "general" | "account" | "notifications" | "delete" | "support" | "billing";
-
-interface SettingsModalContextProps {
+interface SettingsModalState {
   isOpen: boolean;
-  activePanel: SettingsPanelType;
-  openSettings: (panel?: SettingsPanelType) => void;
-  closeSettings: () => void;
-  setActivePanel: (panel: SettingsPanelType) => void;
+  openModal: () => void;
+  closeModal: () => void;
 }
 
-const SettingsModalContext = createContext<SettingsModalContextProps | undefined>(undefined);
+const SettingsModalContext = createContext<SettingsModalState | undefined>(undefined);
 
-export const SettingsModalProvider = ({ children }: { children: React.ReactNode }) => {
+export const useSettingsModal = (): SettingsModalState => {
+  const context = useContext(SettingsModalContext);
+  if (!context) {
+    throw new Error('useSettingsModal must be used within a SettingsModalProvider');
+  }
+  return context;
+};
+
+interface SettingsModalProviderProps {
+  children: ReactNode;
+}
+
+export const SettingsModalProvider: React.FC<SettingsModalProviderProps> = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [activePanel, setActivePanel] = useState<SettingsPanelType>("general");
 
-  const openSettings = (panel?: SettingsPanelType) => {
-    if (panel) {
-      setActivePanel(panel);
-    }
-    
-    setIsOpen(true);
-  };
-
-  const closeSettings = () => {
-    setIsOpen(false);
-  };
+  const openModal = () => setIsOpen(true);
+  const closeModal = () => setIsOpen(false);
 
   return (
-    <SettingsModalContext.Provider 
-      value={{ 
-        isOpen, 
-        activePanel, 
-        openSettings, 
-        closeSettings, 
-        setActivePanel 
-      }}
-    >
+    <SettingsModalContext.Provider value={{ isOpen, openModal, closeModal }}>
       {children}
     </SettingsModalContext.Provider>
   );
-};
-
-export const useSettingsModal = () => {
-  const context = useContext(SettingsModalContext);
-  
-  if (context === undefined) {
-    throw new Error("useSettingsModal must be used within a SettingsModalProvider");
-  }
-  
-  return context;
 };
