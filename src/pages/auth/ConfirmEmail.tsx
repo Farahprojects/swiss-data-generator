@@ -26,8 +26,24 @@ const ConfirmEmail: React.FC = () => {
   const { toast } = useToast();
   const processedRef = useRef(false);
 
-  const finishSuccess = (kind: 'signup' | 'email_change') => {
+  const finishSuccess = async (kind: 'signup' | 'email_change') => {
     console.log(`[EMAIL-VERIFY] ✓ SUCCESS: ${kind} verification completed`);
+    
+    setMessage('Updating your profile...');
+    
+    try {
+      // Update profile verification status
+      const { error: profileError } = await supabase.rpc('mark_profile_verified');
+      if (profileError) {
+        console.error('[EMAIL-VERIFY] Profile update error:', profileError);
+        // Don't fail the entire flow for profile update errors
+      } else {
+        console.log('[EMAIL-VERIFY] ✓ Profile verification status updated');
+      }
+    } catch (error) {
+      console.error('[EMAIL-VERIFY] Profile update exception:', error);
+      // Continue with success flow even if profile update fails
+    }
     
     setStatus('success');
     const msg =
