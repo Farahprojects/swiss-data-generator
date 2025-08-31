@@ -386,9 +386,8 @@ class ChatTextMicrophoneServiceClass {
   // ---------- Logging helpers ----------
   private generateTraceId(): string {
     try {
-      // @ts-ignore - crypto is available in browsers
-      if (typeof crypto !== 'undefined' && typeof (crypto as any).randomUUID === 'function') {
-        return (crypto as any).randomUUID();
+      if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+        return crypto.randomUUID();
       }
     } catch {}
     return 'mic-' + Math.random().toString(36).slice(2);

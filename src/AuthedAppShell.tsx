@@ -25,10 +25,8 @@ import NavigationStateProvider from '@/contexts/NavigationStateContext';
 const AuthedAppShell: React.FC = () => {
   // Lightweight trace: mark that authed shell loaded
   if (typeof window !== 'undefined') {
-    // @ts-ignore
-    window.__authTrace = window.__authTrace || { providerMounts: 0, listeners: 0, initialSessionChecks: 0 };
-    // @ts-ignore
-    window.__authTrace.shellLoads = (window.__authTrace.shellLoads || 0) + 1;
+    (window as any).__authTrace = (window as any).__authTrace || { providerMounts: 0, listeners: 0, initialSessionChecks: 0 };
+    (window as any).__authTrace.shellLoads = ((window as any).__authTrace.shellLoads || 0) + 1;
   }
 
   return (
