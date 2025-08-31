@@ -222,7 +222,7 @@ class ChatController {
     
     conversationMicrophoneService.initialize({
       onSilenceDetected: () => this.endTurn(),
-      silenceTimeoutMs: 2000 // 2 seconds for natural conversation pauses
+      silenceTimeoutMs: 1500 // 1.5 seconds for responsive conversation
     });
     
     this.conversationServiceInitialized = true;

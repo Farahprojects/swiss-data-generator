@@ -176,7 +176,7 @@ class ChatTextMicrophoneServiceClass {
     const VOICE_START_THRESHOLD = 0.012;  // RMS threshold to detect voice start
     const VOICE_START_DURATION = 300;     // Duration to confirm voice (300ms)
     const SILENCE_THRESHOLD = 0.008;      // Lower threshold for silence (hysteresis)
-    const SILENCE_TIMEOUT = this.options.silenceTimeoutMs || 2000; // 2 seconds for natural pauses
+    const SILENCE_TIMEOUT = this.options.silenceTimeoutMs || 1500; // 1.5 seconds for responsive conversation
     
     this.log(`🧠 VAD started - waiting for voice (>${VOICE_START_THRESHOLD} RMS for ${VOICE_START_DURATION}ms, silence <${SILENCE_THRESHOLD} RMS for ${SILENCE_TIMEOUT}ms)`);
 
