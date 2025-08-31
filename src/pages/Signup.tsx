@@ -145,30 +145,34 @@ const Signup = () => {
     setLoading(true);
     
     try {
-      // Resend using the same pre-auth flow
-      const { data, error } = await supabase.functions.invoke('start-signup', {
-        body: { email, password }
+      // Use dedicated resend verification function
+      const { data, error } = await supabase.functions.invoke('resend-verification', {
+        body: { email }
       });
       
       if (error) {
+        console.error('Resend verification error:', error);
         toast({
           title: 'Error',
           description: 'Failed to resend verification email. Please try again.',
           variant: 'destructive'
         });
       } else if (data?.error) {
+        console.error('Resend verification response error:', data.error);
         toast({
           title: 'Error',
           description: data.error,
           variant: 'destructive'
         });
       } else {
+        console.log('Verification email resent successfully');
         toast({
           title: 'Email Sent',
           description: 'Verification email has been resent. Please check your inbox.',
         });
       }
     } catch (err) {
+      console.error('Exception during resend:', err);
       toast({
         title: 'Error',
         description: 'An error occurred while resending the email.',
