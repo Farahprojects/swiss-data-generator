@@ -1164,13 +1164,13 @@ export type Database = {
           created_at: string
           email: string
           email_verified: boolean
-          features: Json
+          features: Json | null
           id: string
           last_seen_at: string
-          metadata: Json
+          metadata: Json | null
           stripe_customer_id: string | null
-          subscription_plan: string
-          subscription_status: string
+          subscription_plan: string | null
+          subscription_status: string | null
           updated_at: string
           verification_status: Database["public"]["Enums"]["verification_status_type"]
         }
@@ -1178,13 +1178,13 @@ export type Database = {
           created_at?: string
           email: string
           email_verified?: boolean
-          features?: Json
+          features?: Json | null
           id: string
           last_seen_at?: string
-          metadata?: Json
+          metadata?: Json | null
           stripe_customer_id?: string | null
-          subscription_plan?: string
-          subscription_status?: string
+          subscription_plan?: string | null
+          subscription_status?: string | null
           updated_at?: string
           verification_status?: Database["public"]["Enums"]["verification_status_type"]
         }
@@ -1192,13 +1192,13 @@ export type Database = {
           created_at?: string
           email?: string
           email_verified?: boolean
-          features?: Json
+          features?: Json | null
           id?: string
           last_seen_at?: string
-          metadata?: Json
+          metadata?: Json | null
           stripe_customer_id?: string | null
-          subscription_plan?: string
-          subscription_status?: string
+          subscription_plan?: string | null
+          subscription_status?: string | null
           updated_at?: string
           verification_status?: Database["public"]["Enums"]["verification_status_type"]
         }
