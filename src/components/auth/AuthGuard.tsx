@@ -64,6 +64,12 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/login" state={{ from: location, showVerification: true, pendingEmail: pendingEmailAddress }} replace />;
   }
   
+  // Check if user has verified their email
+  if (user && !user.email_confirmed_at) {
+    // User is logged in but email not verified - redirect to verification page
+    return <Navigate to="/auth/email-verification" state={{ from: location }} replace />;
+  }
+  
   // User is logged in and verified, render protected component
   return <>{children}</>;
 };

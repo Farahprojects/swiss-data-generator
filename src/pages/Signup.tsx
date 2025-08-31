@@ -111,9 +111,8 @@ const Signup = () => {
           console.error('Exception sending verification email:', emailError);
         }
 
-        setVerificationEmail(email);
-        setCurrentUserId(newUser.id);
-        setSignupSuccess(true);
+        // Redirect to email verification page instead of showing success modal
+        navigate('/auth/email-verification');
       }
     } catch (err: any) {
       debug('Signup exception:', err);
