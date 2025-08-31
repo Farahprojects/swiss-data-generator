@@ -206,43 +206,15 @@ Content Rules:
       }
     };
 
-    // For conversation mode, we need to wait for the response and return it with audioUrl
+    // For conversation mode, just return the LLM response (TTS handled by chat-send)
     if (mode === 'conversation') {
       try {
         const llmResult = await processLLMResponse();
-        
-        // Call TTS service and get signed URL
-        let audioUrl = null;
-        let storagePath = null;
-        
-        if (llmResult?.text) {
-          console.log(`[llm-handler-openai] Calling TTS for conversation mode...`);
-          
-          const { data: ttsData, error: ttsError } = await supabase.functions.invoke('google-text-to-speech', {
-            body: { 
-              chat_id,
-              text: llmResult.text,
-              voice: 'Puck'
-            },
-          });
-
-          if (ttsError) {
-            console.error("[llm-handler-openai] TTS service error:", ttsError);
-          } else if (ttsData?.error) {
-            console.error("[llm-handler-openai] TTS service returned error:", ttsData.error);
-          } else {
-            console.log("[llm-handler-openai] TTS service call successful");
-            audioUrl = ttsData.audioUrl;
-            storagePath = ttsData.storagePath;
-          }
-        }
         
         return new Response(JSON.stringify({ 
           success: true,
           message: "Assistant response ready",
           text: llmResult?.text || "",
-          audioUrl,
-          storagePath,
           client_msg_id
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },

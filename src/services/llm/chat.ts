@@ -21,34 +21,10 @@ class LlmService {
     chat_id: string; 
     text: string; 
     client_msg_id?: string;
-    mode?: string; // 🔥 CONVERSATION MODE: Flag for direct TTS trigger
+    mode?: string; // 🔥 CONVERSATION MODE: Flag for orchestrated flow
   }): Promise<Message & { audioUrl?: string; storagePath?: string }> {
     
-    // For conversation mode, call llm-handler-openai directly to get audioUrl
-    if (request.mode === 'conversation') {
-      const { data, error } = await supabase.functions.invoke('llm-handler-openai', {
-        body: {
-          chat_id: request.chat_id,
-          text: request.text,
-          client_msg_id: request.client_msg_id,
-          mode: request.mode,
-        },
-      });
-
-      if (error) {
-        console.error(`[LLM] llm-handler-openai error:`, error);
-        throw new Error(`Error invoking llm-handler-openai: ${error.message}`);
-      }
-
-      if (data?.error) {
-        console.error(`[LLM] llm-handler-openai returned error:`, data.error);
-        throw new Error(`llm-handler-openai error: ${data.error}`);
-      }
-
-      return data as Message & { audioUrl?: string; storagePath?: string };
-    }
-    
-    // For other modes, use chat-send
+    // Use chat-send for all modes (including conversation mode)
     const { data, error } = await supabase.functions.invoke('chat-send', {
       body: {
         chat_id: request.chat_id,

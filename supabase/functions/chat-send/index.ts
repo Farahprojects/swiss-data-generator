@@ -90,13 +90,129 @@ serve(async (req) => {
     }
     console.log('[chat-send] User message inserted');
 
-    // Start background processing of LLM response (fire-and-forget)
+    // 🎯 CONVERSATION MODE: Orchestrate the full flow
+    if (mode === 'conversation') {
+      try {
+        console.log('[chat-send] 🎤 Starting conversation mode orchestration');
+        
+        // Step 2: Call LLM handler to get assistant response
+        console.log('[chat-send] 🤖 Calling LLM handler...');
+        const llmResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/llm-handler-openai`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
+          },
+          body: JSON.stringify({
+            chat_id,
+            text: text,
+            client_msg_id: client_msg_id || userMessageData.client_msg_id,
+            mode: 'conversation'
+          })
+        });
+
+        if (!llmResponse.ok) {
+          const errorText = await llmResponse.text();
+          console.error('[chat-send] ❌ LLM handler failed:', errorText);
+          throw new Error(`LLM handler failed: ${llmResponse.status}`);
+        }
+
+        const llmData = await llmResponse.json();
+        const assistantText = llmData.text;
+        
+        if (!assistantText) {
+          console.error('[chat-send] ❌ No assistant text received from LLM');
+          throw new Error('No assistant response received');
+        }
+
+        console.log('[chat-send] ✅ LLM response received, length:', assistantText.length);
+
+        // Step 3: Save assistant message to DB
+        const assistantMessageData = {
+          chat_id,
+          role: "assistant",
+          text: assistantText,
+          client_msg_id: `assistant_${client_msg_id || userMessageData.client_msg_id}`,
+          status: "complete",
+          meta: { mode: 'conversation' }
+        };
+
+        console.log('[chat-send] 💾 Saving assistant message to DB...');
+        const { error: assistantError } = await supabase
+          .from("messages")
+          .upsert(assistantMessageData, {
+            onConflict: "client_msg_id"
+          });
+
+        if (assistantError) {
+          console.error('[chat-send] ❌ Assistant message save failed:', assistantError);
+          // Continue anyway - we can still return the response
+        } else {
+          console.log('[chat-send] ✅ Assistant message saved to DB');
+        }
+
+        // Step 4: Call TTS to generate audio
+        console.log('[chat-send] 🎵 Calling TTS service...');
+        const ttsResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
+          },
+          body: JSON.stringify({
+            text: assistantText,
+            voice: 'Puck',
+            chat_id: chat_id
+          })
+        });
+
+        if (!ttsResponse.ok) {
+          const errorText = await ttsResponse.text();
+          console.error('[chat-send] ❌ TTS service failed:', errorText);
+          // Return response without audio - user can still see the text
+          return new Response(JSON.stringify({
+            message: "Assistant response ready",
+            text: assistantText,
+            client_msg_id: userMessageData.client_msg_id
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+
+        const ttsData = await ttsResponse.json();
+        const audioUrl = ttsData.audioUrl;
+        
+        console.log('[chat-send] ✅ TTS completed, audioUrl:', audioUrl);
+
+        // Step 5: Return response immediately to browser
+        const responseData = {
+          message: "Assistant response ready",
+          text: assistantText,
+          audioUrl: audioUrl,
+          client_msg_id: userMessageData.client_msg_id
+        };
+
+        console.log('[chat-send] 🚀 Returning response to browser with audioUrl');
+        return new Response(JSON.stringify(responseData), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+
+      } catch (error) {
+        console.error('[chat-send] ❌ Conversation mode error:', error);
+        return new Response(JSON.stringify({
+          error: `Conversation mode failed: ${error.message}`,
+          client_msg_id: userMessageData.client_msg_id
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+    }
+
+    // For non-conversation modes, use the old fire-and-forget approach
     const processLLMResponse = async () => {
       try {
         console.log('[chat-send] Starting background LLM processing');
-        
-        // Always use OpenAI handler
-        console.log(`[chat-send] Using LLM handler: llm-handler-openai`);
         
         const llmResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/llm-handler-openai`, {
           method: 'POST',
@@ -118,9 +234,6 @@ serve(async (req) => {
           console.error('[chat-send] Background LLM processing failed:', errorText);
         } else {
           console.log('[chat-send] Background LLM processing completed');
-          
-          // Note: Assistant message with audio URL is saved by TTS service directly
-          console.log('[chat-send] TTS service handles assistant message save');
         }
       } catch (error) {
         console.error('[chat-send] Background LLM processing error:', error);
