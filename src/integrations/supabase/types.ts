@@ -1162,45 +1162,51 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
-          email: string
-          email_verified: boolean
+          email: string | null
+          email_verified: boolean | null
           features: Json | null
           id: string
-          last_seen_at: string
+          last_seen_at: string | null
           metadata: Json | null
           stripe_customer_id: string | null
           subscription_plan: string | null
           subscription_status: string | null
-          updated_at: string
-          verification_status: Database["public"]["Enums"]["verification_status_type"]
+          updated_at: string | null
+          verification_status:
+            | Database["public"]["Enums"]["verification_status_type"]
+            | null
         }
         Insert: {
           created_at?: string
-          email: string
-          email_verified?: boolean
+          email?: string | null
+          email_verified?: boolean | null
           features?: Json | null
           id: string
-          last_seen_at?: string
+          last_seen_at?: string | null
           metadata?: Json | null
           stripe_customer_id?: string | null
           subscription_plan?: string | null
           subscription_status?: string | null
-          updated_at?: string
-          verification_status?: Database["public"]["Enums"]["verification_status_type"]
+          updated_at?: string | null
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status_type"]
+            | null
         }
         Update: {
           created_at?: string
-          email?: string
-          email_verified?: boolean
+          email?: string | null
+          email_verified?: boolean | null
           features?: Json | null
           id?: string
-          last_seen_at?: string
+          last_seen_at?: string | null
           metadata?: Json | null
           stripe_customer_id?: string | null
           subscription_plan?: string | null
           subscription_status?: string | null
-          updated_at?: string
-          verification_status?: Database["public"]["Enums"]["verification_status_type"]
+          updated_at?: string | null
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status_type"]
+            | null
         }
         Relationships: []
       }
