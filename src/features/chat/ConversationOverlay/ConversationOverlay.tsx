@@ -58,6 +58,10 @@ const [isReady, setIsReady] = useState(false);
 // Local optimistic messages (optional for UI; kept for parity)
 const [localMessages, setLocalMessages] = useState<Message[]>([]);
 
+// Mic watchdog for self-healing
+const lastGoodMicRef = useRef<number>(Date.now());
+const watchdogIntervalRef = useRef<number | null>(null);
+
 // Telephone-style connection management
 const connectionRef = useRef<any>(null);
 const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'failed'>('disconnected');
@@ -141,6 +145,54 @@ const firstClipTimer = useRef<number | null>(null);
 
 
 
+// Mic watchdog healing functions
+const performHeal = useCallback(() => {
+  if (!permissionGranted || conversationState !== 'listening') return;
+  
+  try {
+    // Ensure audio context is running
+    conversationMicrophoneService.ensureAudioContext();
+    
+    // Ensure VAD is monitoring
+    conversationMicrophoneService.ensureMonitoring();
+    
+    // If not recording, try to start
+    if (!conversationMicrophoneService.getState().isRecording) {
+      conversationMicrophoneService.startRecording().then((success) => {
+        if (!success) {
+          logDebug('🔄 Watchdog: Failed to restart recording');
+        }
+      });
+    }
+  } catch (error) {
+    logDebug('🔄 Watchdog heal error:', error);
+  }
+}, [permissionGranted, conversationState]);
+
+const performDeepHeal = useCallback(() => {
+  if (!permissionGranted || conversationState !== 'listening') return;
+  
+  try {
+    // First try normal heal
+    conversationMicrophoneService.ensureAudioContext();
+    conversationMicrophoneService.ensureMonitoring();
+    
+    // Nudge the audio track by toggling enabled
+    const stream = conversationMicrophoneService.getStream();
+    if (stream) {
+      stream.getAudioTracks().forEach(track => {
+        track.enabled = false;
+        setTimeout(() => {
+          track.enabled = true;
+          logDebug('🔄 Watchdog: Nudged audio track');
+        }, 50);
+      });
+    }
+  } catch (error) {
+    logDebug('🔄 Watchdog deep heal error:', error);
+  }
+}, [permissionGranted, conversationState]);
+
 // Initialize when overlay opens
 useEffect(() => {
 if (isConversationOpen && chat_id) {
@@ -166,7 +218,11 @@ isShuttingDown.current = false;
 setConversationState('listening');
 setLocalMessages([]);
 
-// Session ID is managed by the store now
+// Clear watchdog
+if (watchdogIntervalRef.current) {
+  clearInterval(watchdogIntervalRef.current);
+  watchdogIntervalRef.current = null;
+}
 
 // Clear responsiveness timers
 if (firstClipTimer.current) {
@@ -182,6 +238,65 @@ if (firstClipTimer.current) {
   conversationTtsService.stopAllAudio();
 }, [isConversationOpen]);
 
+// Mic watchdog effect - start when permission granted and listening
+useEffect(() => {
+  if (!permissionGranted || conversationState !== 'listening') {
+    if (watchdogIntervalRef.current) {
+      clearInterval(watchdogIntervalRef.current);
+      watchdogIntervalRef.current = null;
+    }
+    return;
+  }
+
+  // Start watchdog
+  watchdogIntervalRef.current = window.setInterval(() => {
+    const now = Date.now();
+    const currentAudioLevel = conversationMicrophoneService.getCurrentAudioLevel();
+    
+    // Track good mic activity (audio level > threshold)
+    if (currentAudioLevel > 0.003) {
+      lastGoodMicRef.current = now;
+    }
+    
+    // Heal if needed
+    performHeal();
+    
+    // Deep heal if no good mic activity for 4+ seconds
+    if (now - lastGoodMicRef.current > 4000) {
+      performDeepHeal();
+      lastGoodMicRef.current = now; // Reset to prevent spam
+    }
+  }, 1500);
+
+  return () => {
+    if (watchdogIntervalRef.current) {
+      clearInterval(watchdogIntervalRef.current);
+      watchdogIntervalRef.current = null;
+    }
+  };
+}, [permissionGranted, conversationState, performHeal, performDeepHeal]);
+
+// Tab focus/visibility healing
+useEffect(() => {
+  const handleVisibilityChange = () => {
+    if (!document.hidden) {
+      setTimeout(() => performHeal(), 100); // Small delay after visibility change
+    }
+  };
+
+  const handleFocus = () => {
+    setTimeout(() => performHeal(), 100); // Small delay after focus
+  };
+
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  window.addEventListener('focus', handleFocus);
+
+  return () => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+    window.removeEventListener('focus', handleFocus);
+  };
+}, [performHeal]);
+
 // Ensure clean disposal on component unmount while open
 useEffect(() => {
 return () => {
@@ -189,14 +304,18 @@ try {
 isShuttingDown.current = true;
 conversationTtsService.stopAllAudio();
 conversationMicrophoneService.forceCleanup();
+
+// Clear watchdog
+if (watchdogIntervalRef.current) {
+  clearInterval(watchdogIntervalRef.current);
+  watchdogIntervalRef.current = null;
+}
 } catch (error) {
 console.error('[ConversationOverlay] Emergency cleanup error:', error);
 } finally {
 // State resets
 setLocalMessages([]);
 setIsReady(false);
-
-
   }
 };
 }, []);
@@ -362,6 +481,12 @@ try {
 
 // Reset local state
 playbackQueue.current = [];
+
+// Clear watchdog
+if (watchdogIntervalRef.current) {
+  clearInterval(watchdogIntervalRef.current);
+  watchdogIntervalRef.current = null;
+}
 
 // Clear responsiveness timers
 if (firstClipTimer.current) {

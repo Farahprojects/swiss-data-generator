@@ -592,6 +592,29 @@ export class ConversationMicrophoneServiceClass {
     checkVAD();
   }
 
+  /**
+   * ENSURE AUDIO CONTEXT - Public helper for watchdog
+   */
+  public ensureAudioContext(): void {
+    if (this.audioContext && this.audioContext.state === 'suspended') {
+      this.audioContext.resume().then(() => {
+        this.log('🔄 Watchdog: AudioContext resumed');
+      }).catch((error) => {
+        this.error('🔄 Watchdog: Failed to resume AudioContext:', error);
+      });
+    }
+  }
+
+  /**
+   * ENSURE MONITORING - Public helper for watchdog
+   */
+  public ensureMonitoring(): void {
+    if (!this.monitoringRef.current && this.analyser && this.isRecording) {
+      this.log('🔄 Watchdog: Re-arming VAD');
+      this.startVoiceActivityDetection();
+    }
+  }
+
   // ----- Logging helpers (gated) -----
   private log(message: string, ...args: any[]): void {
     try {
