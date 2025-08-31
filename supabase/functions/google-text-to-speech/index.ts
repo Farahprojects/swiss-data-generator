@@ -185,9 +185,12 @@ serve(async (req) => {
     const processingTime = Date.now() - startTime;
     console.log(`[google-tts] TTS completed in ${processingTime}ms`);
 
-    // 📞 Make the phone call - push TTS URL directly to browser
+    // 📞 Make the phone call - push raw MP3 bytes directly to browser
     try {
-      console.log(`[google-tts] 📞 Making phone call to chat: ${chat_id}`);
+      console.log(`[google-tts] 📞 Making phone call with raw MP3 bytes to chat: ${chat_id}`);
+      
+      // Convert audio bytes to base64 for transmission (browser will decode)
+      const audioBase64 = btoa(String.fromCharCode(...audioBytes));
       
       const { data: broadcastData, error: broadcastError } = await supabase
         .channel(`conversation:${chat_id}`)
@@ -195,16 +198,19 @@ serve(async (req) => {
           type: 'broadcast',
           event: 'tts-ready',
           payload: {
-            audioUrl: signedUrl,
+            audioBytes: audioBase64, // Raw MP3 bytes as base64
+            audioUrl: signedUrl, // Keep URL as fallback
             text: text,
-            chat_id: chat_id
+            chat_id: chat_id,
+            mimeType: 'audio/mpeg',
+            size: audioBytes.length
           }
         });
 
       if (broadcastError) {
         console.error('[google-tts] ❌ Failed to make phone call:', broadcastError);
       } else {
-        console.log('[google-tts] ✅ Phone call successful - TTS URL delivered directly');
+        console.log('[google-tts] ✅ Phone call successful - raw MP3 bytes delivered directly');
       }
     } catch (broadcastError) {
       console.error('[google-tts] ❌ Error making phone call:', broadcastError);

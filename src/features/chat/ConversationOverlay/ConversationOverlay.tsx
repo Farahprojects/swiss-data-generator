@@ -78,8 +78,23 @@ const establishConnection = useCallback(async () => {
 
     // Listen for TTS ready events
     connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
-      console.log('[ConversationOverlay] 🎵 TTS URL received via direct connection:', payload.audioUrl);
-      enqueueTtsClip({ url: payload.audioUrl, text: payload.text });
+      console.log('[ConversationOverlay] 🎵 TTS data received via direct connection:', {
+        hasAudioBytes: !!payload.audioBytes,
+        hasAudioUrl: !!payload.audioUrl,
+        size: payload.size
+      });
+      
+      if (payload.audioBytes) {
+        // Use raw MP3 bytes for immediate playback
+        enqueueTtsClip({ 
+          audioBytes: payload.audioBytes, 
+          text: payload.text,
+          mimeType: payload.mimeType 
+        });
+      } else if (payload.audioUrl) {
+        // Fallback to URL if bytes not available
+        enqueueTtsClip({ url: payload.audioUrl, text: payload.text });
+      }
     });
 
     // Handle connection status
@@ -115,7 +130,13 @@ const closeConnection = useCallback(() => {
 }, []);
 
 // TTS playback queue (ordered, single consumer)
-type Clip = { id?: string; url: string; text?: string | null };
+type Clip = { 
+  id?: string; 
+  url?: string; 
+  audioBytes?: string; // Base64 encoded MP3 bytes
+  text?: string | null;
+  mimeType?: string;
+};
 const playbackQueue = useRef<Clip[]>([]);
 const isPlayingQueue = useRef(false);
 
@@ -218,7 +239,7 @@ try {
   while (playbackQueue.current.length > 0 && !isShuttingDown.current) {
     const next = playbackQueue.current.shift()!;
     console.log('DEBUG: starting clip', next);
-    await playTtsAudio(next.url, next.text || undefined);
+    await playTtsAudio(next);
     console.log('DEBUG: finished clip', next);
   }
 } catch (err) {
@@ -244,16 +265,52 @@ try {
 }
 }
 
-async function playTtsAudio(audioUrl: string, _text?: string) {
+async function playTtsAudio(clip: Clip) {
 if (isShuttingDown.current) return;
+
 await new Promise<void>((resolve) => {
-// Resolve only when TTS finishes
-conversationTtsService
-  .playFromUrl(audioUrl, () => resolve(), () => {
-    // onStart: Set replying state when audio actually starts playing
-    setConversationState('replying');
-  })
-  .catch(() => resolve()); // don't block queue on errors
+  if (clip.audioBytes) {
+    // Use raw MP3 bytes for immediate playback
+    console.log('[ConversationOverlay] 🎵 Playing from raw MP3 bytes, size:', clip.audioBytes.length);
+    
+    // Decode base64 to ArrayBuffer
+    const binaryString = atob(clip.audioBytes);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    
+    // Create blob URL for immediate playback
+    const blob = new Blob([bytes], { type: clip.mimeType || 'audio/mpeg' });
+    const audioUrl = URL.createObjectURL(blob);
+    
+    conversationTtsService
+      .playFromUrl(audioUrl, () => {
+        URL.revokeObjectURL(audioUrl); // Clean up blob URL
+        resolve();
+      }, () => {
+        // onStart: Set replying state when audio actually starts playing
+        setConversationState('replying');
+      })
+      .catch(() => {
+        URL.revokeObjectURL(audioUrl); // Clean up on error
+        resolve();
+      });
+      
+  } else if (clip.url) {
+    // Fallback to URL playback
+    console.log('[ConversationOverlay] 🎵 Playing from URL:', clip.url);
+    
+    conversationTtsService
+      .playFromUrl(clip.url, () => resolve(), () => {
+        // onStart: Set replying state when audio actually starts playing
+        setConversationState('replying');
+      })
+      .catch(() => resolve()); // don't block queue on errors
+  } else {
+    console.error('[ConversationOverlay] ❌ No audio data available in clip');
+    resolve();
+  }
 });
 }
 
