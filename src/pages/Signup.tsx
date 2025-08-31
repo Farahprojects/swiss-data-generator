@@ -31,7 +31,7 @@ const Signup = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState<React.ReactNode>('');
   const [signupSuccess, setSignupSuccess] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState('');
   const [currentUserId, setCurrentUserId] = useState('');
@@ -75,8 +75,18 @@ const Signup = () => {
       if (error) {
         debug('Signup error:', error);
         
-        if (error.message.includes('User already registered') || error.message.includes('already registered')) {
-          setErrorMsg('An account with this email already exists. Try signing in instead.');
+        if (error.message.includes('already exists') || error.message.includes('already registered')) {
+          setErrorMsg(
+            <>
+              An account with this email already exists.{' '}
+              <Link 
+                to="/login" 
+                className="text-gray-900 hover:text-gray-700 transition-colors border-b border-gray-300 hover:border-gray-600 pb-1 font-medium"
+              >
+                Sign in instead
+              </Link>
+            </>
+          );
         } else if (error.message.includes('Password should be at least') || error.message.includes('weak password')) {
           setErrorMsg('Password must be at least 6 characters long');
         } else if (error.message.includes('Invalid email')) {

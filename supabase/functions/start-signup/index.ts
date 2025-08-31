@@ -49,6 +49,18 @@ serve(async (req) => {
 
     if (error) {
       console.error('Error generating signup link:', error);
+      
+      // Handle email already exists case specifically
+      if (error.message?.includes('already been registered') || error.status === 422) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'An account with this email already exists. Please sign in instead.',
+            errorCode: 'email_exists'
+          }),
+          { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       return new Response(
         JSON.stringify({ error: error.message }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
