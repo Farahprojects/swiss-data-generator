@@ -69,10 +69,11 @@ serve(async (req) => {
 
     console.log('Generating new verification link for existing unverified user:', email);
 
-    // Generate new verification link for existing unverified user
+    // Generate email verification link for existing unverified user
     const { data, error } = await supabase.auth.admin.generateLink({
-      type: 'signup',
+      type: 'email_change',
       email,
+      newEmail: email, // Same email to trigger verification
       options: {
         redirectTo: 'https://therai.co/auth/email'
       }
