@@ -97,14 +97,10 @@ const establishConnection = useCallback(async () => {
 
     // Handle connection status
     connection.subscribe((status) => {
-      console.log('[ConversationOverlay] 📞 Connection status:', status);
-      
       if (status === 'SUBSCRIBED') {
         setConnectionStatus('connected');
-        console.log('[ConversationOverlay] ✅ Telephone connection established');
       } else if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR') {
         setConnectionStatus('failed');
-        console.error('[ConversationOverlay] ❌ Connection failed:', status);
       }
     });
 
@@ -112,7 +108,6 @@ const establishConnection = useCallback(async () => {
     return true;
 
   } catch (error) {
-    console.error('[ConversationOverlay] ❌ Connection establishment failed:', error);
     setConnectionStatus('failed');
     return false;
   }
@@ -120,8 +115,12 @@ const establishConnection = useCallback(async () => {
 
 const closeConnection = useCallback(() => {
   if (connectionRef.current) {
-    console.log('[ConversationOverlay] 📞 Closing telephone connection');
-    connectionRef.current.unsubscribe();
+    // Gracefully close WebSocket connection without console noise
+    try {
+      connectionRef.current.unsubscribe();
+    } catch (error) {
+      // Silently handle any unsubscribe errors
+    }
     connectionRef.current = null;
     setConnectionStatus('disconnected');
   }
