@@ -24,18 +24,18 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
         <Router>
-          <AuthProvider>
-            <ProfileProvider>
-              <NavigationStateProvider>
+          <NavigationStateProvider>
+            <AuthProvider>
+              <ProfileProvider>
                 <SettingsModalProvider>
                   <div className="min-h-screen bg-background font-sans antialiased">
                     <AppContent />
                     <Toaster />
                   </div>
                 </SettingsModalProvider>
-              </NavigationStateProvider>
-            </ProfileProvider>
-          </AuthProvider>
+              </ProfileProvider>
+            </AuthProvider>
+          </NavigationStateProvider>
         </Router>
       </ThemeProvider>
     </QueryClientProvider>
