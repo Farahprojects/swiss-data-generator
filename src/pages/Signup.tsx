@@ -81,7 +81,7 @@ const Signup = () => {
               An account with this email already exists.{' '}
               <Link 
                 to="/login" 
-                className="text-gray-900 hover:text-gray-700 transition-colors border-b border-gray-300 hover:border-gray-600 pb-1 font-medium"
+                className="text-blue-600 hover:text-blue-800 transition-colors border-b border-blue-300 hover:border-blue-600 pb-1 font-medium"
               >
                 Sign in instead
               </Link>
