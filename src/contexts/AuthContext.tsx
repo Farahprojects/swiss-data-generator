@@ -221,15 +221,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error };
       }
 
-      // Don't set user immediately - require email verification first
-      // User will be set only after email verification
+      // Allow user to be set but features will check email_confirmed_at
       if (data?.user) {
-        // Store signup info in localStorage for verification flow
-        localStorage.setItem('pendingEmailVerification', email);
-        localStorage.setItem('signupTimestamp', Date.now().toString());
+        setUser(data.user);
+        setSession(data.session);
       }
       
-      return { error: null, user: null, requiresVerification: true };
+      return { error: null, user: data.user };
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error('Unexpected sign-up error');
       return { error };
