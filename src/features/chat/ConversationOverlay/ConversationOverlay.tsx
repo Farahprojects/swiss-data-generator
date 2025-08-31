@@ -12,6 +12,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Mic } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Message } from '@/core/types';
+import { supabase } from '@/integrations/supabase/client';
 
 
 
@@ -57,9 +58,61 @@ const [isReady, setIsReady] = useState(false);
 // Local optimistic messages (optional for UI; kept for parity)
 const [localMessages, setLocalMessages] = useState<Message[]>([]);
 
-// TTS realtime: cleanup and dedupe tracking
-const ttsCleanupRef = useRef<(() => void) | null>(null);
-const playedClipIds = useRef<Set<string>>(new Set());
+// Telephone-style connection management
+const connectionRef = useRef<any>(null);
+const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'failed'>('disconnected');
+
+// Connection management functions
+const establishConnection = useCallback(async () => {
+  if (!chat_id) {
+    console.error('[ConversationOverlay] No chat_id available for connection');
+    return false;
+  }
+
+  try {
+    setConnectionStatus('connecting');
+    console.log('[ConversationOverlay] 📞 Establishing telephone-style connection for chat:', chat_id);
+
+    // Create connection channel
+    const connection = supabase.channel(`conversation:${chat_id}`);
+
+    // Listen for TTS ready events
+    connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
+      console.log('[ConversationOverlay] 🎵 TTS URL received via direct connection:', payload.audioUrl);
+      enqueueTtsClip({ url: payload.audioUrl, text: payload.text });
+    });
+
+    // Handle connection status
+    connection.subscribe((status) => {
+      console.log('[ConversationOverlay] 📞 Connection status:', status);
+      
+      if (status === 'SUBSCRIBED') {
+        setConnectionStatus('connected');
+        console.log('[ConversationOverlay] ✅ Telephone connection established');
+      } else if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR') {
+        setConnectionStatus('failed');
+        console.error('[ConversationOverlay] ❌ Connection failed:', status);
+      }
+    });
+
+    connectionRef.current = connection;
+    return true;
+
+  } catch (error) {
+    console.error('[ConversationOverlay] ❌ Connection establishment failed:', error);
+    setConnectionStatus('failed');
+    return false;
+  }
+}, [chat_id]);
+
+const closeConnection = useCallback(() => {
+  if (connectionRef.current) {
+    console.log('[ConversationOverlay] 📞 Closing telephone connection');
+    connectionRef.current.unsubscribe();
+    connectionRef.current = null;
+    setConnectionStatus('disconnected');
+  }
+}, []);
 
 // TTS playback queue (ordered, single consumer)
 type Clip = { id?: string; url: string; text?: string | null };
@@ -80,11 +133,8 @@ if (isConversationOpen && chat_id) {
 }
 
 return () => {
-  // On unmount or route change while open
-  if (ttsCleanupRef.current) {
-    ttsCleanupRef.current();
-    ttsCleanupRef.current = null;
-  }
+  // Cleanup connection on unmount
+  closeConnection();
 };
 }, [isConversationOpen, chat_id]);
 
@@ -109,14 +159,7 @@ if (firstClipTimer.current) {
   firstClipTimer.current = null;
 }
 
-// Clear played clip IDs
-playedClipIds.current.clear();
 
-// Ensure any listener is removed
-if (ttsCleanupRef.current) {
-  ttsCleanupRef.current();
-  ttsCleanupRef.current = null;
-}
 
 
 
@@ -138,10 +181,7 @@ console.error('[ConversationOverlay] Emergency cleanup error:', error);
 setLocalMessages([]);
 setIsReady(false);
 
-    if (ttsCleanupRef.current) {
-      ttsCleanupRef.current();
-      ttsCleanupRef.current = null;
-    }
+
   }
 };
 }, []);
@@ -222,6 +262,9 @@ conversationTtsService
 const handleModalClose = useCallback(async () => {
 isShuttingDown.current = true;
 
+// Close telephone connection
+closeConnection();
+
 // Stop mic nicely
 try {
   const stream = conversationMicrophoneService.getStream();
@@ -281,12 +324,13 @@ setIsStarting(true);
 hasStarted.current = true;
 
 try {
-  // Step 1: Set establishing state for WebSocket connection
+  // Step 1: Set establishing state for telephone connection
   setConversationState('establishing');
   
-  // Step 2: Establish WebSocket connection (non-blocking)
-  if (!chat_id) {
-    console.error('[ConversationOverlay] No chat_id available for WebSocket connection');
+  // Step 2: Establish telephone-style connection
+  const connectionSuccess = await establishConnection();
+  if (!connectionSuccess) {
+    console.error('[ConversationOverlay] Failed to establish telephone connection');
     setConversationState('connecting');
     return;
   }

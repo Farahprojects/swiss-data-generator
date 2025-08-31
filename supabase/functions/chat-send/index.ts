@@ -184,11 +184,36 @@ serve(async (req) => {
         
         console.log('[chat-send] ✅ TTS completed, audioUrl:', audioUrl);
 
-        // Step 5: Return response immediately to browser
+        // Step 5: Push TTS URL directly to browser via telephone connection
+        try {
+          console.log('[chat-send] 📞 Pushing TTS URL via direct connection to chat:', chat_id);
+          
+          const { data: broadcastData, error: broadcastError } = await supabase
+            .channel(`conversation:${chat_id}`)
+            .send({
+              type: 'broadcast',
+              event: 'tts-ready',
+              payload: {
+                audioUrl: audioUrl,
+                text: assistantText,
+                chat_id: chat_id
+              }
+            });
+
+          if (broadcastError) {
+            console.error('[chat-send] ❌ Failed to push TTS URL via connection:', broadcastError);
+          } else {
+            console.log('[chat-send] ✅ TTS URL pushed via direct connection');
+          }
+        } catch (broadcastError) {
+          console.error('[chat-send] ❌ Error pushing TTS URL via connection:', broadcastError);
+        }
+
+        // Step 6: Return response immediately to browser (with audioUrl as backup)
         const responseData = {
           message: "Assistant response ready",
           text: assistantText,
-          audioUrl: audioUrl,
+          audioUrl: audioUrl, // Keep as backup in case connection fails
           client_msg_id: userMessageData.client_msg_id
         };
 
