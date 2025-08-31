@@ -284,15 +284,19 @@ await new Promise<void>((resolve) => {
     const blob = new Blob([bytes], { type: clip.mimeType || 'audio/mpeg' });
     const audioUrl = URL.createObjectURL(blob);
     
+    console.log('[ConversationOverlay] 🎵 Calling conversationTtsService.playFromUrl with blob URL');
     conversationTtsService
       .playFromUrl(audioUrl, () => {
+        console.log('[ConversationOverlay] ✅ Audio playback completed');
         URL.revokeObjectURL(audioUrl); // Clean up blob URL
         resolve();
       }, () => {
+        console.log('[ConversationOverlay] 🎵 Audio playback started - setting replying state');
         // onStart: Set replying state when audio actually starts playing
         setConversationState('replying');
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error('[ConversationOverlay] ❌ Audio playback failed:', error);
         URL.revokeObjectURL(audioUrl); // Clean up on error
         resolve();
       });

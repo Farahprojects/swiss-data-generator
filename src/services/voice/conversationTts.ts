@@ -221,17 +221,27 @@ const { chat_id, text, onStart, onComplete } = opts;
 // URL playback entrypoint
 public async playFromUrl(audioUrl: string, onComplete?: () => void, onStart?: () => void): Promise<void> {
   performance.mark('tts_playback_start');
+  console.log('[ConversationTtsService] 🎵 playFromUrl called with URL:', audioUrl.substring(0, 50) + '...');
+  console.log('[ConversationTtsService] 🔓 Audio unlocked:', this.isAudioUnlocked);
+  console.log('[ConversationTtsService] 🎧 Master audio element exists:', !!this.masterAudioElement);
+  
   const token = this.beginPlayback();
   try {
     if (!this.isAudioUnlocked || !this.masterAudioElement) {
+      console.error('[ConversationTtsService] ❌ Audio not unlocked or no master element');
       throw new AudioLockedError();
     }
+    
+    console.log('[ConversationTtsService] 🔄 Ensuring audio context...');
     await this.ensureAudioContext();
+    console.log('[ConversationTtsService] ✅ Audio context ready, state:', this.audioContext?.state);
 
     this.replaceObjectUrl(audioUrl); // caller provided; we will not revoke external URLs
+    console.log('[ConversationTtsService] 🎵 Calling playInternal...');
     // Remove duplicate prepareAudioGraph call - will be done lazily in playInternal
     await this.playInternal(token, this.masterAudioElement, audioUrl, onStart, onComplete);
   } catch (err) {
+    console.error('[ConversationTtsService] ❌ playFromUrl failed:', err);
     this.failPlayback(err);
     if (onComplete) onComplete();
     throw err;
@@ -426,14 +436,26 @@ el.addEventListener('canplay', () => performance.mark('audio_canplay'));
 
 // Set src immediately for fastest playback start
 el.src = src;
+console.log('[ConversationTtsService] 🎵 Audio element properties:', {
+  muted: el.muted,
+  volume: el.volume,
+  paused: el.paused,
+  readyState: el.readyState,
+  src: el.src.substring(0, 50) + '...'
+});
 
 try {
   this.state = 'playing';
+  console.log('[ConversationTtsService] 🎵 Resuming audio context...');
   await this.audioContext?.resume().catch(() => {});
+  console.log('[ConversationTtsService] 🎵 Audio context state after resume:', this.audioContext?.state);
+  console.log('[ConversationTtsService] 🎵 Starting audio playback...');
   await el.play();
+  console.log('[ConversationTtsService] ✅ Audio play() succeeded');
   if (token === this.playbackToken) onStart?.();
   logDebug('Playback started');
 } catch (e) {
+  console.error('[ConversationTtsService] ❌ Audio play() failed:', e);
   el.removeEventListener('playing', handlePlaying);
   complete('error');
   throw new PlaybackError(`Audio play failed: ${(e as any)?.message || e}`);
