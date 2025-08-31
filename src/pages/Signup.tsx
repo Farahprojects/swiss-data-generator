@@ -308,7 +308,7 @@ const Signup = () => {
                 </>
               ) : (
                 <>
-                  <span className="italic font-medium">Therai</span>
+                  <span className="italic font-medium">Clarity Begins</span>
                 </>
               )}
             </h1>
