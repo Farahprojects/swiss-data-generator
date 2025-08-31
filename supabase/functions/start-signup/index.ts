@@ -54,23 +54,32 @@ serve(async (req) => {
       if (error.message?.includes('already been registered') || error.status === 422) {
         return new Response(
           JSON.stringify({ 
+            success: false,
             error: 'An account with this email already exists. Please sign in instead.',
             errorCode: 'email_exists'
           }),
-          { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
       return new Response(
-        JSON.stringify({ error: error.message }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          success: false,
+          error: error.message || 'Failed to create account',
+          errorCode: 'signup_failed'
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     if (!data.properties?.action_link) {
       return new Response(
-        JSON.stringify({ error: 'Failed to generate verification link' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          success: false,
+          error: 'Failed to generate verification link',
+          errorCode: 'link_generation_failed'
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -84,8 +93,12 @@ serve(async (req) => {
     if (templateError || !templateData) {
       console.error('Error fetching email template:', templateError);
       return new Response(
-        JSON.stringify({ error: 'Failed to fetch email template' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          success: false,
+          error: 'Failed to fetch email template',
+          errorCode: 'template_error'
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -106,8 +119,12 @@ serve(async (req) => {
     if (emailError) {
       console.error('Error sending verification email:', emailError);
       return new Response(
-        JSON.stringify({ error: 'Failed to send verification email' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          success: false,
+          error: 'Failed to send verification email',
+          errorCode: 'email_send_failed'
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -122,8 +139,12 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in start-signup function:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        success: false,
+        error: 'Internal server error',
+        errorCode: 'internal_error'
+      }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

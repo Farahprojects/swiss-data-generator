@@ -225,6 +225,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: new Error(error.message || 'Signup failed') };
       }
 
+      // Check for structured error response
+      if (data?.success === false) {
+        if (data.errorCode === 'email_exists') {
+          return { error: new Error('An account with this email already exists. Please sign in instead.') };
+        }
+        return { error: new Error(data.error || 'Signup failed') };
+      }
+
       if (data?.error) {
         return { error: new Error(data.error) };
       }
