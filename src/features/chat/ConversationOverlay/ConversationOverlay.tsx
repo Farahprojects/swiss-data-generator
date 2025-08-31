@@ -78,12 +78,6 @@ const establishConnection = useCallback(async () => {
 
     // Listen for TTS ready events
     connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
-      console.log('[ConversationOverlay] 🎵 TTS data received via direct connection:', {
-        hasAudioBytes: !!payload.audioBytes,
-        hasAudioUrl: !!payload.audioUrl,
-        size: payload.size
-      });
-      
       if (payload.audioBytes) {
         // Use raw MP3 bytes for immediate playback
         enqueueTtsClip({ 
@@ -238,9 +232,7 @@ try {
 
   while (playbackQueue.current.length > 0 && !isShuttingDown.current) {
     const next = playbackQueue.current.shift()!;
-    console.log('DEBUG: starting clip', next);
     await playTtsAudio(next);
-    console.log('DEBUG: finished clip', next);
   }
 } catch (err) {
   console.error('[ConversationOverlay] Queue playback error:', err);
@@ -271,7 +263,6 @@ if (isShuttingDown.current) return;
 await new Promise<void>(async (resolve) => {
   if (clip.audioBytes) {
     // Use raw MP3 bytes for immediate playback
-    console.log('[ConversationOverlay] 🎵 Playing from raw MP3 bytes, size:', clip.audioBytes.length);
     
     // Decode base64 to ArrayBuffer
     const binaryString = atob(clip.audioBytes);
@@ -286,7 +277,7 @@ await new Promise<void>(async (resolve) => {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       await audioContext.decodeAudioData(bytes.buffer);
       
-      console.log('[ConversationOverlay] 🎵 MP3 pre-decoded, using conversationTtsService for smooth playback with animation');
+
       
       // Create blob URL and use conversationTtsService for animation and cleanup
       const blob = new Blob([bytes], { type: clip.mimeType || 'audio/mpeg' });
@@ -294,11 +285,9 @@ await new Promise<void>(async (resolve) => {
       
       conversationTtsService
         .playFromUrl(audioUrl, () => {
-          console.log('[ConversationOverlay] ✅ Smooth audio playback completed');
           URL.revokeObjectURL(audioUrl);
           resolve();
         }, () => {
-          console.log('[ConversationOverlay] 🎵 Audio playback started - setting replying state');
           setConversationState('replying');
         })
         .catch((error) => {
@@ -329,7 +318,6 @@ await new Promise<void>(async (resolve) => {
       
   } else if (clip.url) {
     // Fallback to URL playback
-    console.log('[ConversationOverlay] 🎵 Playing from URL:', clip.url);
     
     conversationTtsService
       .playFromUrl(clip.url, () => resolve(), () => {
@@ -575,9 +563,6 @@ try {
 
   if (response.text) {
     setConversationState('replying');
-    
-    // Wait for TTS audio via telephone connection only
-    console.log('[ConversationOverlay] LLM response received, waiting for TTS audio via telephone connection...');
   }
 
 } catch (error) {
