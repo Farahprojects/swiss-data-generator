@@ -371,45 +371,6 @@ export type Database = {
           },
         ]
       }
-      conversation_folders: {
-        Row: {
-          conversation_id: string
-          created_at: string
-          folder_id: string
-          id: string
-          updated_at: string
-        }
-        Insert: {
-          conversation_id: string
-          created_at?: string
-          folder_id: string
-          id?: string
-          updated_at?: string
-        }
-        Update: {
-          conversation_id?: string
-          created_at?: string
-          folder_id?: string
-          id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_cf_conversation"
-            columns: ["conversation_id"]
-            isOneToOne: false
-            referencedRelation: "conversations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_cf_folder"
-            columns: ["folder_id"]
-            isOneToOne: false
-            referencedRelation: "folders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       conversations: {
         Row: {
           created_at: string | null
@@ -663,36 +624,6 @@ export type Database = {
           name?: string
           subject_template?: string
           updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      folders: {
-        Row: {
-          ai_summary: string | null
-          created_at: string
-          custom_report: Json | null
-          folder_name: string
-          id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          ai_summary?: string | null
-          created_at?: string
-          custom_report?: Json | null
-          folder_name: string
-          id?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          ai_summary?: string | null
-          created_at?: string
-          custom_report?: Json | null
-          folder_name?: string
-          id?: string
-          updated_at?: string
           user_id?: string
         }
         Relationships: []
@@ -1156,51 +1087,6 @@ export type Database = {
           product_code?: string | null
           report_type?: string | null
           unit_price_usd?: number
-        }
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          created_at: string
-          email: string
-          email_verified: boolean
-          features: Json
-          id: string
-          last_seen_at: string
-          metadata: Json
-          stripe_customer_id: string | null
-          subscription_plan: string
-          subscription_status: string
-          updated_at: string
-          verification_status: Database["public"]["Enums"]["verification_status_type"]
-        }
-        Insert: {
-          created_at?: string
-          email: string
-          email_verified?: boolean
-          features?: Json
-          id: string
-          last_seen_at?: string
-          metadata?: Json
-          stripe_customer_id?: string | null
-          subscription_plan?: string
-          subscription_status?: string
-          updated_at?: string
-          verification_status?: Database["public"]["Enums"]["verification_status_type"]
-        }
-        Update: {
-          created_at?: string
-          email?: string
-          email_verified?: boolean
-          features?: Json
-          id?: string
-          last_seen_at?: string
-          metadata?: Json
-          stripe_customer_id?: string | null
-          subscription_plan?: string
-          subscription_status?: string
-          updated_at?: string
-          verification_status?: Database["public"]["Enums"]["verification_status_type"]
         }
         Relationships: []
       }
@@ -1980,10 +1866,6 @@ export type Database = {
         Args: { user_id_to_delete: string }
         Returns: boolean
       }
-      ensure_profile_for_current_user: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
       gen_random_bytes: {
         Args: { "": number }
         Returns: string
@@ -2090,14 +1972,6 @@ export type Database = {
         Args: { amount_param: number; user_id_param: string }
         Returns: undefined
       }
-      is_user_verified: {
-        Args: { _user_id?: string }
-        Returns: boolean
-      }
-      mark_profile_verified: {
-        Args: { user_id?: string }
-        Returns: boolean
-      }
       record_api_usage: {
         Args: {
           _cost_usd: number
@@ -2141,7 +2015,6 @@ export type Database = {
     Enums: {
       queue_status: "pending" | "processing" | "completed" | "failed"
       user_role: "admin" | "user"
-      verification_status_type: "pending" | "verified" | "blocked"
     }
     CompositeTypes: {
       http_header: {
@@ -2287,7 +2160,6 @@ export const Constants = {
     Enums: {
       queue_status: ["pending", "processing", "completed", "failed"],
       user_role: ["admin", "user"],
-      verification_status_type: ["pending", "verified", "blocked"],
     },
   },
 } as const
