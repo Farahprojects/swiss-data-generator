@@ -5,11 +5,13 @@ import { useChatStore } from '@/core/store';
 import { chatController } from './ChatController';
 import { getChatIdForGuest, verifyChatIdIntegrity } from '@/services/api/guestReports';
 
-export const useChat = (chat_id?: string, guestId?: string) => {
+export const useChat = (chat_id?: string | null, guestId?: string) => {
   const state = useChatStore();
   const navigate = useNavigate();
 
   useEffect(() => {
+    // If chat_id is explicitly null, skip initialization
+    if (chat_id === null) return;
     const ss = typeof window !== 'undefined' ? window.sessionStorage : null;
     const SESSION_KEY = 'therai_chat_id';
 

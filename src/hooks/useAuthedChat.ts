@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
  * Hook for authenticated users' chat experience
  * Manages conversation history, creation, and navigation
  */
-export const useAuthedChat = (conversationId?: string) => {
+export const useAuthedChat = (conversationId?: string | null) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
@@ -30,7 +30,8 @@ export const useAuthedChat = (conversationId?: string) => {
 
   // Initialize conversation on mount or when conversationId changes
   useEffect(() => {
-    if (!user) return;
+    // If conversationId is explicitly null or user is not authenticated, skip initialization
+    if (!user || conversationId === null) return;
 
     if (conversationId) {
       // Load specific conversation immediately
