@@ -83,84 +83,12 @@ serve(async (req) => {
     // Decode base64 audio content to raw MP3 bytes
     const audioBytes = Uint8Array.from(atob(audioContent), c => c.charCodeAt(0));
     
-    // Upload to Supabase Storage
-    const timestamp = Date.now();
-    const fileName = `clips/${chat_id}/${timestamp}-${crypto.randomUUID()}.mp3`;
-    
-    console.log(`[google-tts] Uploading audio file: ${fileName}, size: ${audioBytes.length} bytes`);
-    
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('ChatAudio')
-      .upload(fileName, audioBytes, {
-        contentType: 'audio/mpeg',
-        cacheControl: 'public, max-age=31536000, immutable',
-        contentDisposition: 'inline',
-        upsert: false
-      });
-
-    if (uploadError) {
-      console.error("[google-tts] Storage upload failed:", uploadError);
-      throw new Error(`Failed to upload audio: ${uploadError.message}`);
-    }
-
-    console.log(`[google-tts] Audio uploaded successfully to: ${uploadData.path}`);
-
-    // Generate signed URL with 5 minute expiration for immediate playback
-    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-      .from('ChatAudio')
-      .createSignedUrl(fileName, 300); // 5 minutes
-
-    if (signedUrlError) {
-      console.error("[google-tts] Failed to create signed URL:", signedUrlError);
-      // Fallback to public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('ChatAudio')
-        .getPublicUrl(fileName);
-      
-      console.log(`[google-tts] Using fallback public URL: ${publicUrl}`);
-      
-      const responseData = {
-        success: true,
-        audioUrl: publicUrl,
-        storagePath: fileName
-      };
-      
-      // Save to DB in background (non-blocking)
-      // COMMENTED OUT: No longer saving to DB for conversation mode
-      /*
-      EdgeRuntime.waitUntil(
-        supabase.from("chat_audio_clips").insert({
-          chat_id: chat_id,
-          role: "assistant",
-          audio_url: publicUrl,
-          storage_path: fileName,
-          voice: voiceName,
-          provider: "google",
-          meta: { 
-            tts_status: 'ready',
-            processing_time_ms: Date.now() - startTime
-          },
-        }).then(({ error }) => {
-          if (error) {
-            console.error("[google-tts] Background DB insert failed:", error);
-          } else {
-            console.log(`[google-tts] Background DB insert completed`);
-          }
-        })
-      );
-      */
-      
-      return responseData;
-    }
-
-    const signedUrl = signedUrlData.signedUrl;
-    console.log(`[google-tts] Signed URL generated: ${signedUrl}`);
-
-    // Prepare response data with signed URL
+    // COMMENTED OUT: No longer uploading to bucket for conversation mode
+    // Pure streaming approach - no storage, no DB
     const responseData = {
       success: true,
-      audioUrl: signedUrl,
-      storagePath: fileName
+      audioUrl: null, // No URL since we're not storing
+      storagePath: null
     };
 
     // Save TTS audio clip to dedicated audio table in background (non-blocking)
@@ -198,20 +126,20 @@ serve(async (req) => {
       // Convert audio bytes to base64 for transmission (browser will decode)
       const audioBase64 = btoa(String.fromCharCode(...audioBytes));
       
-      const { data: broadcastData, error: broadcastError } = await supabase
-        .channel(`conversation:${chat_id}`)
-        .send({
-          type: 'broadcast',
-          event: 'tts-ready',
-          payload: {
-            audioBytes: audioBase64, // Raw MP3 bytes as base64
-            audioUrl: signedUrl, // Keep URL as fallback
-            text: text,
-            chat_id: chat_id,
-            mimeType: 'audio/mpeg',
-            size: audioBytes.length
-          }
-        });
+              const { data: broadcastData, error: broadcastError } = await supabase
+          .channel(`conversation:${chat_id}`)
+          .send({
+            type: 'broadcast',
+            event: 'tts-ready',
+            payload: {
+              audioBytes: audioBase64, // Raw MP3 bytes as base64
+              audioUrl: null, // No URL since we're not storing
+              text: text,
+              chat_id: chat_id,
+              mimeType: 'audio/mpeg',
+              size: audioBytes.length
+            }
+          });
 
       if (broadcastError) {
         console.error('[google-tts] ❌ Failed to make phone call:', broadcastError);
