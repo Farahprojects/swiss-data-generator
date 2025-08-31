@@ -489,14 +489,8 @@ try {
   if (response.text) {
     setConversationState('replying');
     
-    // TTS audio URL is always provided in HTTP response now
-    if (response.audioUrl) {
-      console.log('[ConversationOverlay] Audio URL received from HTTP response:', response.audioUrl);
-      enqueueTtsClip({ url: response.audioUrl, text: response.text });
-    } else {
-      // This should not happen with the current implementation
-      console.log('[ConversationOverlay] No audioUrl in response, waiting for TTS audio via WebSocket...');
-    }
+    // Wait for TTS audio via telephone connection only
+    console.log('[ConversationOverlay] LLM response received, waiting for TTS audio via telephone connection...');
   }
 
 } catch (error) {

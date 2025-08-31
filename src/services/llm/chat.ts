@@ -22,7 +22,7 @@ class LlmService {
     text: string; 
     client_msg_id?: string;
     mode?: string; // 🔥 CONVERSATION MODE: Flag for orchestrated flow
-  }): Promise<Message & { audioUrl?: string; storagePath?: string }> {
+  }): Promise<Message> {
     
     // Use chat-send for all modes (including conversation mode)
     const { data, error } = await supabase.functions.invoke('chat-send', {

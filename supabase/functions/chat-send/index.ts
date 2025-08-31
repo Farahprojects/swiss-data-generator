@@ -209,15 +209,14 @@ serve(async (req) => {
           console.error('[chat-send] ❌ Error pushing TTS URL via connection:', broadcastError);
         }
 
-        // Step 6: Return response immediately to browser (with audioUrl as backup)
+        // Step 6: Return response immediately to browser (TTS delivered via connection only)
         const responseData = {
           message: "Assistant response ready",
           text: assistantText,
-          audioUrl: audioUrl, // Keep as backup in case connection fails
           client_msg_id: userMessageData.client_msg_id
         };
 
-        console.log('[chat-send] 🚀 Returning response to browser with audioUrl');
+        console.log('[chat-send] 🚀 Returning response to browser (TTS via connection)');
         return new Response(JSON.stringify(responseData), {
           headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
