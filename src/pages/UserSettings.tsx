@@ -7,13 +7,13 @@ import { Badge } from '@/components/ui/badge';
 
 const UserSettings = () => {
   const { user, signOut } = useAuth();
-  const { profile, loading } = useProfile();
+  const { profile, isLoading } = useProfile();
 
   const handleSignOut = async () => {
     await signOut();
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div>Loading settings...</div>

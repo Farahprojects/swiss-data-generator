@@ -4,6 +4,8 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 interface NavigationState {
   currentPage: string;
   setCurrentPage: (page: string) => void;
+  clearNavigationState: () => void;
+  getSafeRedirectPath: () => string;
 }
 
 const NavigationStateContext = createContext<NavigationState | undefined>(undefined);
@@ -23,8 +25,21 @@ interface NavigationStateProviderProps {
 export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ children }) => {
   const [currentPage, setCurrentPage] = useState('chat');
 
+  const clearNavigationState = () => {
+    setCurrentPage('chat');
+  };
+
+  const getSafeRedirectPath = () => {
+    return currentPage === 'chat' ? '/chat' : '/';
+  };
+
   return (
-    <NavigationStateContext.Provider value={{ currentPage, setCurrentPage }}>
+    <NavigationStateContext.Provider value={{ 
+      currentPage, 
+      setCurrentPage, 
+      clearNavigationState, 
+      getSafeRedirectPath 
+    }}>
       {children}
     </NavigationStateContext.Provider>
   );
