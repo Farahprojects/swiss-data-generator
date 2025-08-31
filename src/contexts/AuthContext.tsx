@@ -206,8 +206,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password,
         options: { 
           emailRedirectTo: typeof window !== 'undefined' 
-            ? `${window.location.origin}/chat` 
-            : '/chat'
+            ? `${window.location.origin}/auth/email` 
+            : '/auth/email'
         },
       });
       
@@ -350,8 +350,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email,
         options: { 
           emailRedirectTo: typeof window !== 'undefined' 
-            ? `${window.location.origin}/chat` 
-            : '/chat'
+            ? `${window.location.origin}/auth/email` 
+            : '/auth/email'
         },
       });
       return { error };
