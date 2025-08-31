@@ -101,16 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (typeof window !== 'undefined') (window as any).__authTrace.listeners++;
       log('debug', 'Auth state change', { event, hasSession: !!supaSession }, 'auth');
       
-      // Only allow authenticated users if their email is confirmed
-      if (supaSession?.user && !supaSession.user.email_confirmed_at) {
-        log('debug', 'User email not confirmed, keeping logged out', null, 'auth');
-        setUser(null);
-        setSession(null);
-        setLoading(false);
-        return;
-      }
-      
-      // Set user and session state for confirmed users
+      // Set user and session state - let features decide access based on email_confirmed_at
       setUser(supaSession?.user ?? null);
       setSession(supaSession);
       setLoading(false);
@@ -162,14 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(({ data: { session: supaSession } }) => {
       log('debug', 'Initial session check', { hasSession: !!supaSession }, 'auth');
       
-      // Only allow authenticated users if their email is confirmed
-      if (supaSession?.user && !supaSession.user.email_confirmed_at) {
-        log('debug', 'Initial session: User email not confirmed, keeping logged out', null, 'auth');
-        setUser(null);
-        setSession(null);
-        setLoading(false);
-        return;
-      }
+      // Set user and session state - let features decide access based on email_confirmed_at
       
       setUser(supaSession?.user ?? null);
       setSession(supaSession);
@@ -201,13 +185,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error, data: null };
       }
       
-      // Only set user state if email is confirmed
-      if (data?.user && data.user.email_confirmed_at) {
+      // Set user state and let features check email_confirmed_at for access
+      if (data?.user) {
         setUser(data.user);
         setSession(data.session);
         setLoading(false);
-      } else if (data?.user && !data.user.email_confirmed_at) {
-        return { error: new Error('Please verify your email address before signing in'), data: null };
+        
+        // Show warning for unverified users but don't block signin
+        if (!data.user.email_confirmed_at) {
+          return { error: new Error('Please verify your email to unlock all features'), data };
+        }
       }
       
       return { error: null, data };
@@ -220,29 +207,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string) => {
     try {
-      // Ensure we're logged out first to prevent auto-login
-      await supabase.auth.signOut();
-      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { 
-          emailRedirectTo: typeof window !== 'undefined' 
-            ? `${window.location.origin}/auth/email` 
-            : '/auth/email'
-        },
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/email`
+        }
       });
+
+      log('debug', 'Sign up response', { hasError: !!error, hasUser: !!data?.user }, 'auth');
       
       if (error) {
         return { error };
       }
 
-      // CRITICAL: Do not set user/session state after signup
-      // User must verify email first before being considered authenticated
+      // Allow user to be set but features will check email_confirmed_at
+      if (data?.user) {
+        setUser(data.user);
+        setSession(data.session);
+      }
+      
       return { error: null, user: data.user };
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error('Unexpected sign-up error');
-      
       return { error };
     }
   };

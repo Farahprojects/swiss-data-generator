@@ -7,6 +7,7 @@ import UserSettings from './pages/UserSettings';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ResetPassword from './pages/auth/Password';
+import ConfirmEmail from './pages/auth/ConfirmEmail';
 import { AuthGuard } from './components/auth/AuthGuard';
 import PublicReport from './pages/PublicReport';
 import Pricing from './pages/Pricing';
@@ -49,6 +50,7 @@ const AuthedAppShell: React.FC = () => {
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/auth/password" element={<ResetPassword />} />
+              <Route path="/auth/email" element={<ConfirmEmail />} />
               <Route path="/stripe/return" element={<StripeReturn />} />
               
               {/* Protected routes */}
