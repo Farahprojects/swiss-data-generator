@@ -127,7 +127,7 @@ const closeConnection = useCallback(() => {
 type Clip = { 
   id?: string; 
   url?: string; 
-  audioBytes?: string; // Base64 encoded MP3 bytes
+  audioBytes?: number[]; // Raw MP3 bytes as number array
   text?: string | null;
   mimeType?: string;
 };
@@ -264,12 +264,8 @@ await new Promise<void>(async (resolve) => {
   if (clip.audioBytes) {
     // Use raw MP3 bytes for immediate playback
     
-    // Decode base64 to ArrayBuffer
-    const binaryString = atob(clip.audioBytes);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
+    // Convert array to Uint8Array (no base64 decoding needed)
+    const bytes = new Uint8Array(clip.audioBytes);
     
     // Pre-decode MP3 for smooth iOS playback, then use conversationTtsService for animation
     try {

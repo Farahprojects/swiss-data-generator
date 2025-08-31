@@ -83,7 +83,6 @@ serve(async (req) => {
     // Decode base64 audio content to raw MP3 bytes
     const audioBytes = Uint8Array.from(atob(audioContent), c => c.charCodeAt(0));
     
-    // COMMENTED OUT: No longer uploading to bucket for conversation mode
     // Pure streaming approach - no storage, no DB
     const responseData = {
       success: true,
@@ -119,32 +118,30 @@ serve(async (req) => {
     const processingTime = Date.now() - startTime;
     console.log(`[google-tts] TTS completed in ${processingTime}ms`);
 
-    // 📞 Make the phone call - push raw MP3 bytes directly to browser
+        // 📞 Make the phone call - push raw MP3 bytes directly to browser via binary WebSocket
     try {
-      console.log(`[google-tts] 📞 Making phone call with raw MP3 bytes to chat: ${chat_id}`);
+      console.log(`[google-tts] 📞 Making phone call with binary MP3 bytes to chat: ${chat_id}`);
       
-      // Convert audio bytes to base64 for transmission (browser will decode)
-      const audioBase64 = btoa(String.fromCharCode(...audioBytes));
-      
-              const { data: broadcastData, error: broadcastError } = await supabase
-          .channel(`conversation:${chat_id}`)
-          .send({
-            type: 'broadcast',
-            event: 'tts-ready',
-            payload: {
-              audioBytes: audioBase64, // Raw MP3 bytes as base64
-              audioUrl: null, // No URL since we're not storing
-              text: text,
-              chat_id: chat_id,
-              mimeType: 'audio/mpeg',
-              size: audioBytes.length
-            }
-          });
+      // Send raw MP3 bytes directly via binary WebSocket (no base64 encoding)
+      const { data: broadcastData, error: broadcastError } = await supabase
+        .channel(`conversation:${chat_id}`)
+        .send({
+          type: 'broadcast',
+          event: 'tts-ready',
+          payload: {
+            audioBytes: Array.from(audioBytes), // Raw MP3 bytes as array (no base64)
+            audioUrl: null, // No URL since we're not storing
+            text: text,
+            chat_id: chat_id,
+            mimeType: 'audio/mpeg',
+            size: audioBytes.length
+          }
+        });
 
       if (broadcastError) {
         console.error('[google-tts] ❌ Failed to make phone call:', broadcastError);
       } else {
-        console.log('[google-tts] ✅ Phone call successful - raw MP3 bytes delivered directly');
+        console.log('[google-tts] ✅ Phone call successful - binary MP3 bytes delivered directly');
       }
     } catch (broadcastError) {
       console.error('[google-tts] ❌ Error making phone call:', broadcastError);
