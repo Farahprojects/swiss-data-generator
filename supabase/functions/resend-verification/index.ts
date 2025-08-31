@@ -63,74 +63,24 @@ serve(async (req) => {
 
     console.log('Generating new verification link for existing unverified user:', email);
 
-    // Generate email verification link for existing unverified user
-    const { data, error } = await supabase.auth.admin.generateLink({
-      type: 'email_change',
+    // Use the resend method for email verification
+    const { data, error } = await supabase.auth.resend({
+      type: 'signup',
       email,
-      newEmail: email, // Same email to trigger verification
       options: {
-        redirectTo: 'https://therai.co/auth/email'
+        emailRedirectTo: 'https://therai.co/auth/email'
       }
     });
 
     if (error) {
-      console.error('Error generating verification link:', error);
+      console.error('Error resending verification email:', error);
       return new Response(
-        JSON.stringify({ error: 'Failed to generate verification link' }),
+        JSON.stringify({ error: 'Failed to resend verification email' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    if (!data.properties?.action_link) {
-      console.error('No action link in response:', data);
-      return new Response(
-        JSON.stringify({ error: 'Failed to generate verification link' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('Generated verification link successfully');
-
-    // Get email template from database
-    const { data: templateData, error: templateError } = await supabase
-      .from('email_notification_templates')
-      .select('subject, body_html, body_text')
-      .eq('template_type', 'email_verification')
-      .single();
-
-    if (templateError || !templateData) {
-      console.error('Error fetching email template:', templateError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to fetch email template' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Replace template variables
-    const htmlContent = templateData.body_html.replace(/\{\{verification_link\}\}/g, data.properties.action_link);
-    const textContent = templateData.body_text.replace(/\{\{verification_link\}\}/g, data.properties.action_link);
-
-    console.log('Sending verification email via verification-emailer');
-
-    // Send verification email using existing verification-emailer function
-    const { error: emailError } = await supabase.functions.invoke('verification-emailer', {
-      body: {
-        to: email,
-        subject: templateData.subject,
-        html: htmlContent,
-        text: textContent
-      }
-    });
-
-    if (emailError) {
-      console.error('Error sending verification email:', emailError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to send verification email' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('Verification email sent successfully');
+    console.log('Verification email resent successfully');
 
     return new Response(
       JSON.stringify({ 
