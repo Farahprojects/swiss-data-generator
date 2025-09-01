@@ -14,9 +14,8 @@ const SubscriptionPaywall: React.FC = () => {
     try {
       setLoading(true);
       
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
+      const { data, error } = await supabase.functions.invoke('create-subscription', {
         body: {
-          mode: 'subscription',
           successUrl: `${window.location.origin}/success`,
           cancelUrl: `${window.location.origin}/subscription-paywall`
         }
