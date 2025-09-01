@@ -32,7 +32,7 @@ const FeaturesSection = ({ onGetReportClick }: FeaturesSectionProps) => {
           className="text-center mb-20"
         >
           <h2 className="text-4xl lg:text-6xl font-light text-gray-900 mb-8 tracking-tight">
-            Why Choose Our Reports?
+            Deeper Understanding of the Human Experience
           </h2>
         </motion.div>
 
@@ -47,8 +47,8 @@ const FeaturesSection = ({ onGetReportClick }: FeaturesSectionProps) => {
             <div className="bg-gray-50 border border-gray-200/50 rounded-2xl w-20 h-20 flex items-center justify-center mx-auto mb-6 group-hover:border-gray-300/60 transition-all duration-300">
               <CheckCircle className="h-6 w-6 text-gray-700" />
             </div>
-            <h3 className="text-xl font-medium mb-4 text-gray-900 tracking-tight">AI-Powered Accuracy</h3>
-            <p className="text-gray-600 leading-relaxed text-sm">Advanced algorithms ensure precise calculations and personalized insights.</p>
+            <h3 className="text-xl font-medium mb-4 text-gray-900 tracking-tight">Restore Clarity Through Rhythm</h3>
+            <p className="text-gray-600 leading-relaxed text-sm">Decode the energetic patterns that guide your life and align with natural cycles for greater insight.</p>
           </motion.div>
 
           <motion.div
@@ -61,8 +61,8 @@ const FeaturesSection = ({ onGetReportClick }: FeaturesSectionProps) => {
             <div className="bg-gray-50 border border-gray-200/50 rounded-2xl w-20 h-20 flex items-center justify-center mx-auto mb-6 group-hover:border-gray-300/60 transition-all duration-300">
               <Clock className="h-6 w-6 text-gray-700" />
             </div>
-            <h3 className="text-xl font-medium mb-4 text-gray-900 tracking-tight">Instant Delivery</h3>
-            <p className="text-gray-600 leading-relaxed text-sm">Get your comprehensive report delivered to your email within minutes.</p>
+            <h3 className="text-xl font-medium mb-4 text-gray-900 tracking-tight">Find Your Frequency</h3>
+            <p className="text-gray-600 leading-relaxed text-sm">Tune into the frequency that's been guiding you all along through lived experience and intelligence.</p>
           </motion.div>
 
           <motion.div
@@ -75,8 +75,8 @@ const FeaturesSection = ({ onGetReportClick }: FeaturesSectionProps) => {
             <div className="bg-gray-50 border border-gray-200/50 rounded-2xl w-20 h-20 flex items-center justify-center mx-auto mb-6 group-hover:border-gray-300/60 transition-all duration-300">
               <Star className="h-6 w-6 text-gray-700" />
             </div>
-            <h3 className="text-xl font-medium mb-4 text-gray-900 tracking-tight">Professional Quality</h3>
-            <p className="text-gray-600 leading-relaxed text-sm">Detailed, professional-grade reports trusted by astrology enthusiasts.</p>
+            <h3 className="text-xl font-medium mb-4 text-gray-900 tracking-tight">Insight, Action & Timing</h3>
+            <p className="text-gray-600 leading-relaxed text-sm">Where understanding converges with perfect timing to guide your most important decisions.</p>
           </motion.div>
         </div>
         
