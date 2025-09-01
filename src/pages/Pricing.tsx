@@ -111,6 +111,19 @@ const Pricing: React.FC = () => {
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
+      
+      {/* Hero Section */}
+      <section className="py-16 bg-background">
+        <div className="container mx-auto px-4">
+          <h1 className="text-4xl font-light text-gray-900 mb-4 text-center tracking-tight">
+            Try or Subscribe
+          </h1>
+          <p className="max-w-2xl mx-auto text-center text-lg text-gray-700 mb-10 font-light">
+            Unlock your full potential with unlimited access to personalized insights and advanced features.
+          </p>
+        </div>
+      </section>
+
       <main className="flex-grow flex items-center justify-center px-4 sm:px-6 lg:px-8 py-16">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -202,6 +215,45 @@ const Pricing: React.FC = () => {
           </Card>
         </motion.div>
       </main>
+
+      {/* FAQ Section */}
+      <section className="py-20 bg-white">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl font-light mb-12 text-center text-gray-900 tracking-tight">
+            Common Questions
+          </h2>
+          
+          <div className="max-w-3xl mx-auto">
+            <div className="space-y-6">
+              <div className="border-b border-gray-200 pb-6">
+                <h3 className="text-xl font-light mb-2 text-gray-900 tracking-tight">What's included in the subscription?</h3>
+                <p className="text-gray-600 font-light">Get unlimited relationship chats, personalized AI insights, and advanced relationship analysis to help you understand your connections better.</p>
+              </div>
+              
+              <div className="border-b border-gray-200 pb-6">
+                <h3 className="text-xl font-light mb-2 text-gray-900 tracking-tight">Can I cancel anytime?</h3>
+                <p className="text-gray-600 font-light">Yes, you can cancel your subscription at any time. Your access will continue until the end of your current billing period.</p>
+              </div>
+              
+              <div className="border-b border-gray-200 pb-6">
+                <h3 className="text-xl font-light mb-2 text-gray-900 tracking-tight">How secure is my data?</h3>
+                <p className="text-gray-600 font-light">We use industry-standard encryption and security measures to protect your personal information. Your data is never shared with third parties.</p>
+              </div>
+              
+              <div className="border-b border-gray-200 pb-6">
+                <h3 className="text-xl font-light mb-2 text-gray-900 tracking-tight">How does the AI analysis work?</h3>
+                <p className="text-gray-600 font-light">Our AI analyzes patterns in your conversations and provides personalized insights based on relationship psychology and communication science.</p>
+              </div>
+              
+              <div className="border-b border-gray-200 pb-6">
+                <h3 className="text-xl font-light mb-2 text-gray-900 tracking-tight">Is there a free trial?</h3>
+                <p className="text-gray-600 font-light">Yes, you can start with a free trial to explore the features before committing to a subscription.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <Footer />
     </div>
   );
