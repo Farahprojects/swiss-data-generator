@@ -198,7 +198,7 @@ const Pricing: React.FC = () => {
                   {/* Body */}
                   <div className="space-y-4">
                     <p className="text-lg font-light text-gray-600 leading-relaxed">
-                      ${tryPricing?.unit_price_usd} — {tryPricing?.description?.split('Your birth chart')[1]?.replace('+ today\'s transits combined in one powerful insight.', '')}Your birth chart + today's transits combined in one powerful insight.
+                      ${tryPricing?.unit_price_usd} — Your birth chart + today's transits combined in one powerful insight.
                     </p>
 
                     {/* Features list (subtle) */}
@@ -298,7 +298,7 @@ const Pricing: React.FC = () => {
                   {/* Body */}
                   <div className="space-y-4">
                     <p className="text-lg font-light text-gray-600 leading-relaxed">
-                      ${pricing?.unit_price_usd}/month — {pricing?.description?.split('Unlimited relationship chats')[1]?.replace('+ tailored insights just for you.', '')}Unlimited relationship chats + tailored insights just for you.
+                      ${pricing?.unit_price_usd}/month — Unlimited relationship chats + tailored insights just for you.
                     </p>
 
                     {/* Features list (subtle) */}
