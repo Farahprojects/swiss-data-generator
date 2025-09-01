@@ -1,7 +1,6 @@
 import React, { useRef, useState, Suspense, lazy } from 'react';
 import { useChatStore } from '@/core/store';
 import { Message } from '@/core/types';
-import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { Loader2, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
@@ -14,60 +13,6 @@ interface Turn {
   userMessage?: Message;
   assistantMessage?: Message;
 }
-
-// Loading sequence messages for report generation
-const LOADING_MESSAGES = [
-  "Getting Astro data...",
-  "Triangulating Starlink...",
-  "Calculating planetary positions...",
-  "Analyzing cosmic patterns...",
-  "AI generating insights..."
-];
-
-// Loading sequence component
-const ReportLoadingSequence = () => {
-  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
-  const [isComplete, setIsComplete] = useState(false);
-
-  React.useEffect(() => {
-    if (isComplete) return;
-
-    const interval = setInterval(() => {
-      setCurrentMessageIndex(prev => {
-        if (prev < LOADING_MESSAGES.length - 1) {
-          return prev + 1;
-        } else {
-          setIsComplete(true);
-          return prev;
-        }
-      });
-    }, 2500); // Change message every 2.5 seconds (increased from 1.5)
-
-    return () => clearInterval(interval);
-  }, [isComplete]);
-
-  if (isComplete) return null;
-
-  return (
-    <div className="flex items-end gap-3 justify-start mb-8">
-      <div 
-        className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black"
-        style={{ overflowAnchor: 'none' }}
-      >
-        <p className="text-base font-light leading-relaxed text-left">
-          <Suspense fallback={<span className="text-gray-700">{LOADING_MESSAGES[currentMessageIndex]}</span>}>
-            <TypewriterText 
-              text={LOADING_MESSAGES[currentMessageIndex]} 
-              msPerWord={50}
-              disabled={false}
-              className="text-gray-700"
-            />
-          </Suspense>
-        </p>
-      </div>
-    </div>
-  );
-};
 
 const TurnItem = ({ turn, isLastTurn, isFromHistory }: { turn: Turn; isLastTurn: boolean; isFromHistory?: boolean }) => {
   const { userMessage, assistantMessage } = turn;
@@ -112,22 +57,6 @@ const TurnItem = ({ turn, isLastTurn, isFromHistory }: { turn: Turn; isLastTurn:
           </div>
         </div>
       )}
-    </div>
-  );
-};
-
-// Message component for "Report is Ready"
-const ReportReadyMessage = () => {
-  return (
-    <div className="flex items-end gap-3 justify-start mb-8">
-      <div 
-        className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black"
-        style={{ overflowAnchor: 'none' }}
-      >
-        <div className="text-base font-light leading-relaxed">
-          <span className="text-gray-700">Report is Ready</span>
-        </div>
-      </div>
     </div>
   );
 };
@@ -182,10 +111,6 @@ export const MessageList = () => {
   const [initialMessageCount, setInitialMessageCount] = useState<number | null>(null);
   const [hasUserSentMessage, setHasUserSentMessage] = useState(false);
   
-  // Get report generation state
-  // const isPolling = useReportReadyStore((state) => state.isPolling);
-  // const isReportReady = useReportReadyStore((state) => state.isReportReady);
-
   // Track initial message count to determine which messages are from history
   React.useEffect(() => {
     if (initialMessageCount === null && messages.length > 0) {
@@ -205,16 +130,6 @@ export const MessageList = () => {
   React.useEffect(() => {
     onContentChange();
   }, [messages.length, onContentChange]);
-
-  // Simplified logic: Show loading sequence when polling is active and report is not ready
-  // Remove the hasUserSentMessage condition to ensure it always shows
-  const showLoadingSequence = false; // isPolling && !isReportReady;
-  
-  // Fallback: Also show loading sequence if we're in chat but no messages and not ready
-  const showLoadingFallback = false; // messages.length === 0 && !isReportReady && !hasUserSentMessage;
-  
-  // Show report ready message when report is ready and user hasn't sent a message yet
-  const showReportReadyMessage = false; // isReportReady && !hasUserSentMessage;
   
   // Group messages into turns
   const turns = groupMessagesIntoTurns(messages);
@@ -270,7 +185,7 @@ export const MessageList = () => {
       {/* Empty state or content */}
       {!isLoadingMessages && !messageLoadError && (
         <>
-          {messages.length === 0 && !showReportReadyMessage && !showLoadingSequence && !showLoadingFallback ? (
+          {messages.length === 0 ? (
             <div className="flex-1 flex flex-col justify-end">
               <div className="p-4">
                 <h2 className="text-3xl font-light text-gray-800 text-left">Let's tune into the energy behind your chart</h2>
@@ -290,7 +205,7 @@ export const MessageList = () => {
 
               {turns.map((turn, index) => {
                 const isFromHistory = getIsFromHistory(turn);
-                const isLastTurn = index === turns.length - 1 && !showReportReadyMessage;
+                const isLastTurn = index === turns.length - 1;
                 const turnKey = turn.userMessage?.id || turn.assistantMessage?.id || `turn-${index}`;
                 
                 return (
@@ -302,16 +217,6 @@ export const MessageList = () => {
                   />
                 );
               })}
-              
-              {/* Show loading sequence when report is being generated - simplified condition */}
-              {(showLoadingSequence || showLoadingFallback) && (
-                <ReportLoadingSequence />
-              )}
-              
-              {/* Show report ready message when report is ready and user hasn't sent a message yet */}
-              {showReportReadyMessage && (
-                <ReportReadyMessage />
-              )}
               
               {/* Bottom padding to prevent content from being hidden behind fixed elements */}
               <div style={{ height: '80px' }} />

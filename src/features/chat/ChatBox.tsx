@@ -7,7 +7,6 @@ import { Menu, Calendar, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { getChatTokens } from '@/services/auth/chatTokens';
-import { startReportReadyListener, stopReportReadyListener } from '@/services/report/reportReadyListener';
 import { MotionConfig } from 'framer-motion';
 import { useConversationUIStore } from './conversation-ui-store';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
@@ -45,25 +44,7 @@ export const ChatBox = () => {
     }
   };
 
-  useEffect(() => {
-    if (uuid) {
-      // Only start listener for guest users (signed-in users don't need report-ready polling)
-      if (!user) {
-        console.log(`[ChatBox] Starting report ready listener for guest user: ${uuid}`);
-        startReportReadyListener(uuid);
-      } else {
-        console.log(`[ChatBox] Skipping report ready listener for signed-in user: ${user.email}`);
-      }
-    }
 
-    // Cleanup listener on unmount or uuid change
-    return () => {
-      if (uuid) {
-        console.log(`[ChatBox] Cleaning up report ready listener for: ${uuid}`);
-        stopReportReadyListener(uuid);
-      }
-    };
-  }, [uuid, user]);
 
   // Additional cleanup on component unmount
   useEffect(() => {
@@ -102,11 +83,6 @@ export const ChatBox = () => {
       // Clear chat store
       const { clearChat } = useChatStore.getState();
       clearChat();
-      
-      // Stop any active report ready listeners
-      if (uuid) {
-        stopReportReadyListener(uuid);
-      }
       
       // Clear conversation UI store
       const { closeConversation } = useConversationUIStore.getState();
