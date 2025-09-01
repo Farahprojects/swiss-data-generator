@@ -1,14 +1,45 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/Logo';
 import { Sparkles } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const SubscriptionPaywall: React.FC = () => {
-  const handleUnlock = () => {
-    // TODO: Implement Stripe checkout integration
-    console.log('Unlock subscription clicked');
+  const [loading, setLoading] = useState(false);
+
+  const handleUnlock = async () => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: {
+          mode: 'subscription',
+          successUrl: `${window.location.origin}/success`,
+          cancelUrl: `${window.location.origin}/subscription-paywall`
+        }
+      });
+
+      if (error) {
+        console.error('Checkout error:', error);
+        toast.error('Failed to create checkout session. Please try again.');
+        return;
+      }
+
+      if (data?.url) {
+        // Redirect to Stripe checkout
+        window.location.href = data.url;
+      } else {
+        toast.error('No checkout URL received. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error creating checkout:', error);
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -75,9 +106,10 @@ const SubscriptionPaywall: React.FC = () => {
               >
                 <Button
                   onClick={handleUnlock}
-                  className="w-full bg-gray-900 hover:bg-gray-800 text-white font-light py-4 rounded-xl text-lg transition-all duration-200 shadow-sm hover:shadow-md"
+                  disabled={loading}
+                  className="w-full bg-gray-900 hover:bg-gray-800 text-white font-light py-4 rounded-xl text-lg transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50"
                 >
-                  Unlock
+                  {loading ? 'Processing...' : 'Unlock'}
                 </Button>
               </motion.div>
 
