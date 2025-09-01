@@ -1,113 +1,206 @@
-import React from "react";
-import { Button } from "@/components/ui/button";
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Check, Star } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { Sparkles, XCircle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
-const Pricing = () => {
-  const { user } = useAuth();
+interface PricingData {
+  name: string;
+  description: string;
+  unit_price_usd: number;
+}
 
-  const handleSubscribe = async () => {
-    if (!user) {
-      toast.error("Please log in to subscribe");
-      return;
-    }
+const Pricing: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const [loading, setLoading] = useState(false);
+  const [pricing, setPricing] = useState<PricingData | null>(null);
+  const [pricingLoading, setPricingLoading] = useState(true);
+  
+  const isCancelled = searchParams.get('subscription') === 'cancelled';
 
+  // Fetch pricing data on component mount
+  useEffect(() => {
+    const fetchPricing = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('price_list')
+          .select('name, description, unit_price_usd')
+          .eq('id', 'subscription1')
+          .single();
+
+        if (error) {
+          console.error('Error fetching pricing:', error);
+          // Fallback to default pricing
+          setPricing({
+            name: 'Premium Subscription',
+            description: 'Unlimited relationship chats and personalized AI insights',
+            unit_price_usd: 10.00
+          });
+        } else {
+          setPricing(data);
+        }
+      } catch (error) {
+        console.error('Error fetching pricing:', error);
+        // Fallback to default pricing
+        setPricing({
+          name: 'Premium Subscription',
+          description: 'Unlimited relationship chats and personalized AI insights',
+          unit_price_usd: 10.00
+        });
+      } finally {
+        setPricingLoading(false);
+      }
+    };
+
+    fetchPricing();
+  }, []);
+
+  const handleUnlock = async () => {
+    if (!pricing) return;
+    
     try {
-      const { data, error } = await supabase.functions.invoke('create-checkout');
+      setLoading(true);
       
+      const { data, error } = await supabase.functions.invoke('create-subscription', {
+        body: {
+          successUrl: `${window.location.origin}/success`,
+          cancelUrl: `${window.location.origin}/pricing`
+        }
+      });
+
       if (error) {
         console.error('Checkout error:', error);
-        toast.error('Failed to create checkout session');
+        toast.error('Failed to create checkout session. Please try again.');
         return;
       }
 
       if (data?.url) {
-        // Open Stripe checkout in a new tab
-        window.open(data.url, '_blank');
+        // Redirect to Stripe checkout
+        window.location.href = data.url;
+      } else {
+        toast.error('No checkout URL received. Please try again.');
       }
     } catch (error) {
-      console.error('Error:', error);
-      toast.error('Something went wrong');
+      console.error('Error creating checkout:', error);
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
+
+  if (pricingLoading) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <Navbar />
+        <div className="flex-grow flex items-center justify-center bg-white">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading pricing...</p>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
-      <main className="flex-grow">
-        {/* HERO SECTION */}
-        <section className="py-16 bg-background">
-          <div className="container mx-auto px-4">
-            <h1 className="text-4xl font-light text-gray-900 mb-4 text-center tracking-tight">
-              Simple Monthly Subscription
-            </h1>
-            <p className="max-w-2xl mx-auto text-center text-lg text-gray-700 mb-10 font-light">
-              Get unlimited access to all our features with our affordable monthly plan.
-            </p>
-          </div>
-        </section>
-
-        {/* PRICING CARD */}
-        <section className="container mx-auto pb-16 px-4">
-          <div className="flex justify-center">
-            <Card className="w-full max-w-md relative">
-              <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground">
-                <Star className="w-4 h-4 mr-1" />
-                Most Popular
-              </Badge>
-              
-              <CardHeader className="text-center pt-8">
-                <CardTitle className="text-2xl font-light">Monthly Plan</CardTitle>
-                <CardDescription>Everything you need to get started</CardDescription>
-                <div className="mt-4">
-                  <span className="text-5xl font-light text-primary">$10</span>
-                  <span className="text-xl text-gray-500 font-light">/month</span>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="space-y-6">
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-3">
-                    <Check className="w-5 h-5 text-green-500" />
-                    <span className="font-light">Full platform access</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <Check className="w-5 h-5 text-green-500" />
-                    <span className="font-light">All premium features</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <Check className="w-5 h-5 text-green-500" />
-                    <span className="font-light">Priority support</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <Check className="w-5 h-5 text-green-500" />
-                    <span className="font-light">Cancel anytime</span>
-                  </div>
-                </div>
-                
-                <Button 
-                  onClick={handleSubscribe}
-                  className="w-full bg-primary text-primary-foreground font-light rounded-xl px-8 py-4 text-lg transition-all duration-300 hover:scale-105 hover:shadow-lg"
-                  disabled={!user}
-                >
-                  {user ? "Subscribe Now" : "Login to Subscribe"}
-                </Button>
-                
-                {!user && (
-                  <p className="text-sm text-gray-500 text-center font-light">
-                    Please log in to start your subscription
-                  </p>
+      <main className="flex-grow flex items-center justify-center px-4 sm:px-6 lg:px-8 py-16">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+          className="w-full max-w-md"
+        >
+          <Card className="border-0 shadow-lg bg-white rounded-3xl overflow-hidden">
+            <CardContent className="p-12 text-center space-y-8">
+              {/* Icon */}
+              <motion.div
+                initial={{ scale: 0.8 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2, duration: 0.5 }}
+                className={`flex items-center justify-center h-16 w-16 mx-auto rounded-full ${
+                  isCancelled ? 'bg-red-100' : 'bg-gray-900'
+                }`}
+              >
+                {isCancelled ? (
+                  <XCircle className="h-8 w-8 text-red-600" />
+                ) : (
+                  <Sparkles className="h-8 w-8 text-white" />
                 )}
-              </CardContent>
-            </Card>
-          </div>
-        </section>
+              </motion.div>
+
+              {/* Header */}
+              <div className="space-y-3">
+                {isCancelled ? (
+                  <>
+                    <h1 className="text-3xl font-light text-gray-900 leading-tight">
+                      We'd love you to <span className="italic font-light">stay</span>
+                    </h1>
+                    <p className="text-lg font-light text-gray-600">
+                      We spent a lot of time and effort building this and would like you to enjoy this app. 
+                      Unfortunately we can't make it free.
+                    </p>
+                  </>
+                ) : (
+                  <h1 className="text-3xl font-light text-gray-900 leading-tight">
+                    Go deeper and unlock your full <span className="italic font-light">insights</span>
+                  </h1>
+                )}
+              </div>
+
+              {/* Body */}
+              <div className="space-y-6">
+                <p className="text-xl font-light text-gray-600 leading-relaxed">
+                  ${pricing?.unit_price_usd}/month — {pricing?.description}
+                </p>
+
+                {/* Features list (subtle) */}
+                <div className="space-y-3 text-left">
+                  <div className="flex items-center gap-3 text-gray-600">
+                    <div className="w-1.5 h-1.5 rounded-full bg-gray-400"></div>
+                    <span className="text-sm font-light">Unlimited relationship chats</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-gray-600">
+                    <div className="w-1.5 h-1.5 rounded-full bg-gray-400"></div>
+                    <span className="text-sm font-light">Personalized AI insights</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-gray-600">
+                    <div className="w-1.5 h-1.5 rounded-full bg-gray-400"></div>
+                    <span className="text-sm font-light">Advanced relationship analysis</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* CTA Button */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4, duration: 0.5 }}
+                className="pt-4"
+              >
+                <Button
+                  onClick={handleUnlock}
+                  disabled={loading}
+                  className="w-full bg-gray-900 hover:bg-gray-800 text-white font-light py-4 rounded-xl text-lg transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50"
+                >
+                  {loading ? 'Processing...' : isCancelled ? 'Try Again' : 'Unlock'}
+                </Button>
+              </motion.div>
+
+              {/* Security note */}
+              <p className="text-xs text-gray-400 font-light leading-relaxed">
+                Secure payment processed by Stripe. Cancel anytime.
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
       </main>
       <Footer />
     </div>
