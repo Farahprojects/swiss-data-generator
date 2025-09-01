@@ -356,7 +356,7 @@ const Pricing: React.FC = () => {
             <div className="space-y-6">
               <div className="border-b border-gray-200 pb-6">
                 <h3 className="text-xl font-light mb-2 text-gray-900 tracking-tight">What's included in the subscription?</h3>
-                <p className="text-gray-600 font-light">Get unlimited relationship chats, personalized AI insights, and advanced relationship analysis to help you understand your connections better.</p>
+                <p className="text-gray-600 font-light">Unlimited conversations with our AI astrologer, personalized birth chart analyses, transit readings, and deep cosmic insights tailored to your unique astrological blueprint. Discover patterns, timing, and guidance whenever you need it.</p>
               </div>
               
               <div className="border-b border-gray-200 pb-6">
@@ -371,12 +371,12 @@ const Pricing: React.FC = () => {
               
               <div className="border-b border-gray-200 pb-6">
                 <h3 className="text-xl font-light mb-2 text-gray-900 tracking-tight">How does the AI analysis work?</h3>
-                <p className="text-gray-600 font-light">Our AI analyzes patterns in your conversations and provides personalized insights based on relationship psychology and communication science.</p>
+                <p className="text-gray-600 font-light">Our AI combines ancient astrological wisdom with cutting-edge analysis, interpreting your birth chart, current planetary transits, and cosmic patterns to deliver personalized insights that reveal your path, timing, and potential.</p>
               </div>
               
               <div className="border-b border-gray-200 pb-6">
-                <h3 className="text-xl font-light mb-2 text-gray-900 tracking-tight">Is there a free trial?</h3>
-                <p className="text-gray-600 font-light">Yes, you can start with a free trial to explore the features before committing to a subscription.</p>
+                <h3 className="text-xl font-light mb-2 text-gray-900 tracking-tight">Try or Subscribe?</h3>
+                <p className="text-gray-600 font-light">Start with "Try It Once" to get a taste of your cosmic blueprint — no subscription needed. Ready to go deeper? Subscribe for unlimited access to ongoing guidance and advanced insights whenever inspiration strikes.</p>
               </div>
             </div>
           </div>
