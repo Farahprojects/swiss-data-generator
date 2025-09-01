@@ -219,7 +219,7 @@ const Login = () => {
       <UnifiedNavigation />
 
       <main className="flex-grow flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-lg space-y-12">
+        <div className="w-full max-w-md mx-auto space-y-12">
           {showForgotPassword ? (
             <ForgotPasswordForm onCancel={() => setShowForgotPassword(false)} />
           ) : (
@@ -252,7 +252,7 @@ const Login = () => {
                 <Button
                   type="submit"
                   size="lg"
-                  className="w-full py-6 text-lg font-light bg-gray-900 text-white hover:bg-gray-800 transition-all duration-300"
+                  className="w-full py-6 text-lg font-light bg-gray-900 text-white hover:bg-gray-800 transition-all duration-300 rounded-full"
                   disabled={!emailValid || !passwordValid || loading}
                 >
                   {loading ? 'Signing in…' : 'Sign in'}
