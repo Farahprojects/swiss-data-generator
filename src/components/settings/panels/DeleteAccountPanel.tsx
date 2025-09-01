@@ -39,7 +39,16 @@ export const DeleteAccountPanel = () => {
     try {
       console.log('🚀 Calling delete-account edge function...');
       
-      const { data, error } = await supabase.functions.invoke('delete-account');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No session found');
+      
+      const { data, error } = await supabase.functions.invoke('delete-account', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      });
 
       if (error) {
         console.error('❌ Edge function error:', error);
