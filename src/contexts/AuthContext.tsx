@@ -6,7 +6,6 @@ import { getAbsoluteUrl } from '@/utils/urlUtils';
 import { log } from '@/utils/logUtils';
 
 import { authService } from '@/services/authService';
-import { SUPABASE_URL } from '@/integrations/supabase/client';
 /**
  * Utility – only logs outside production builds.
  */
@@ -362,12 +361,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
     try {
-      if (!SUPABASE_URL) {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      if (!supabaseUrl) {
         return { error: new Error('Missing Supabase URL') };
       }
       // Create popup window
       const popup = window.open(
-        `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(`${baseUrl}/chat`)}`,
+        `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(`${baseUrl}/chat`)}`,
         'googleSignIn',
         'width=500,height=600,scrollbars=yes,resizable=yes'
       );
@@ -401,13 +401,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
     try {
-      if (!SUPABASE_URL) {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      if (!supabaseUrl) {
         return { error: new Error('Missing Supabase URL') };
       }
       
       // Create popup window
       const popup = window.open(
-        `${SUPABASE_URL}/auth/v1/authorize?provider=apple&redirect_to=${encodeURIComponent(`${baseUrl}/chat`)}`,
+        `${supabaseUrl}/auth/v1/authorize?provider=apple&redirect_to=${encodeURIComponent(`${baseUrl}/chat`)}`,
         'appleSignIn',
         'width=500,height=600,scrollbars=yes,resizable=yes'
       );

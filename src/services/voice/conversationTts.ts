@@ -1,5 +1,5 @@
 // src/services/voice/conversationTts.ts
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { useChatStore } from '@/core/store';
 
 export interface SpeakAssistantOptions {
@@ -148,13 +148,16 @@ const { chat_id, text, onStart, onComplete } = opts;
   const sanitized = this.sanitizeTtsText(text);
   const selectedVoiceName = useChatStore.getState().ttsVoice || 'Puck';
 
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  
   const response = await this.fetchWithTimeout(
-    `${SUPABASE_URL}/functions/v1/google-text-to-speech`,
+    `${supabaseUrl}/functions/v1/google-text-to-speech`,
     {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': SUPABASE_PUBLISHABLE_KEY,
+        'apikey': supabaseKey,
       },
       body: JSON.stringify({
         chat_id,
