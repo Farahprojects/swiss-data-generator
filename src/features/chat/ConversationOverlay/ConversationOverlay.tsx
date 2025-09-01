@@ -62,6 +62,9 @@ const [localMessages, setLocalMessages] = useState<Message[]>([]);
 const lastGoodMicRef = useRef<number>(Date.now());
 const watchdogIntervalRef = useRef<number | null>(null);
 
+// Store current TTS audio source for cleanup
+const currentTtsSourceRef = useRef<AudioBufferSourceNode | null>(null);
+
 // Telephone-style connection management
 const connectionRef = useRef<any>(null);
 const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'failed'>('disconnected');
@@ -399,7 +402,12 @@ await new Promise<void>(async (resolve) => {
       // Create and play audio source
       const source = audioContext.createBufferSource();
       source.buffer = audioBuffer;
+      
+      // Connect source directly to destination for simple playback
       source.connect(audioContext.destination);
+      
+      // Store reference to stop audio on modal close
+      const audioSourceRef = { current: source };
       
       // Set replying state when audio starts
       setConversationState('replying');
@@ -414,6 +422,11 @@ await new Promise<void>(async (resolve) => {
       // Start playback
       source.start(0);
       console.log('[DEBUG] Audio playback started');
+      
+      // Store reference for cleanup (will be used in handleModalClose)
+      if (!currentTtsSourceRef.current) {
+        currentTtsSourceRef.current = source;
+      }
       
     } catch (error) {
       console.error('[ConversationOverlay] ❌ Direct audio playback failed:', error);
@@ -459,6 +472,14 @@ try {
 // Stop TTS playback and clear queue
 try {
   conversationTtsService.stopAllAudio();
+} catch {}
+
+// Stop current TTS audio source if playing
+try {
+  if (currentTtsSourceRef.current) {
+    currentTtsSourceRef.current.stop();
+    currentTtsSourceRef.current = null;
+  }
 } catch {}
 
 // Try to refresh messages list behind the modal
