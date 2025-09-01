@@ -53,23 +53,20 @@ export function useBilling() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('No session found')
 
-      // Simple redirect to backend-managed setup
-      const response = await fetch('/functions/v1/billing-setup-card', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
+      // Use create-checkout with mode: "setup" for payment method setup
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: {
+          mode: 'setup',
+          successUrl: `${window.location.origin}/settings?payment_setup=success`,
+          cancelUrl: `${window.location.origin}/settings?payment_setup=cancelled`
         }
       })
 
-      if (!response.ok) {
-        throw new Error('Failed to create setup intent')
-      }
+      if (error) throw error
+      if (!data?.url) throw new Error('No checkout URL returned')
 
-      const { setup_url } = await response.json()
-      
-      // Redirect to backend-managed Stripe setup
-      window.location.href = setup_url
+      // Open in new tab (standard behavior)
+      window.open(data.url, '_blank')
     } catch (err) {
       console.error('Setup card error:', err)
       setError(err instanceof Error ? err.message : 'Failed to setup card')
