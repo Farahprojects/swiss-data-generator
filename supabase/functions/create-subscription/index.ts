@@ -66,7 +66,7 @@ serve(async (req) => {
         },
       ],
       mode: "subscription",
-      success_url: `${origin}/dashboard?subscription=success`,
+      success_url: `${origin}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/subscription-paywall?subscription=cancelled`,
       metadata: {
         user_id: user.id,

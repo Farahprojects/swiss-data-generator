@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/Logo';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 const SubscriptionPaywall: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
+  
+  const isCancelled = searchParams.get('subscription') === 'cancelled';
 
   const handleUnlock = async () => {
     try {
@@ -61,16 +65,34 @@ const SubscriptionPaywall: React.FC = () => {
                 initial={{ scale: 0.8 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.2, duration: 0.5 }}
-                className="flex items-center justify-center h-16 w-16 mx-auto rounded-full bg-gray-900"
+                className={`flex items-center justify-center h-16 w-16 mx-auto rounded-full ${
+                  isCancelled ? 'bg-red-100' : 'bg-gray-900'
+                }`}
               >
-                <Sparkles className="h-8 w-8 text-white" />
+                {isCancelled ? (
+                  <XCircle className="h-8 w-8 text-red-600" />
+                ) : (
+                  <Sparkles className="h-8 w-8 text-white" />
+                )}
               </motion.div>
 
               {/* Header */}
               <div className="space-y-3">
-                <h1 className="text-3xl font-light text-gray-900 leading-tight">
-                  Go deeper and unlock your full <span className="italic font-light">insights</span>
-                </h1>
+                {isCancelled ? (
+                  <>
+                    <h1 className="text-3xl font-light text-gray-900 leading-tight">
+                      We'd love you to <span className="italic font-light">stay</span>
+                    </h1>
+                    <p className="text-lg font-light text-gray-600">
+                      We spent a lot of time and effort building this and would like you to enjoy this app. 
+                      Unfortunately we can't make it free.
+                    </p>
+                  </>
+                ) : (
+                  <h1 className="text-3xl font-light text-gray-900 leading-tight">
+                    Go deeper and unlock your full <span className="italic font-light">insights</span>
+                  </h1>
+                )}
               </div>
 
               {/* Body */}
@@ -108,7 +130,7 @@ const SubscriptionPaywall: React.FC = () => {
                   disabled={loading}
                   className="w-full bg-gray-900 hover:bg-gray-800 text-white font-light py-4 rounded-xl text-lg transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50"
                 >
-                  {loading ? 'Processing...' : 'Unlock'}
+                  {loading ? 'Processing...' : isCancelled ? 'Try Again' : 'Unlock'}
                 </Button>
               </motion.div>
 

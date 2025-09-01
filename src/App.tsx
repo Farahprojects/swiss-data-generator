@@ -136,6 +136,18 @@ function App() {
                       <SubscriptionPaywall />
                     </AuthGuard>
                   } />
+                  <Route path="/subscription-paywall" element={
+                    <AuthGuard>
+                      <SubscriptionPaywall />
+                    </AuthGuard>
+                  } />
+                  <Route path="/subscription/success" element={
+                    <AuthGuard>
+                      <Suspense fallback={<div>Loading...</div>}>
+                        {React.createElement(lazy(() => import('./pages/SubscriptionSuccess').then(m => ({ default: m.default }))))}
+                      </Suspense>
+                    </AuthGuard>
+                  } />
                   
                   {/* Default authenticated route - redirect to chat */}
                   <Route 
