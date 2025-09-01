@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/integrations/supabase/client'
 import { loadStripe } from '@stripe/stripe-js'
@@ -38,7 +38,7 @@ export function useBilling() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchPaymentMethod = async () => {
+  const fetchPaymentMethod = useCallback(async () => {
     if (!user) return
 
     try {
@@ -77,7 +77,7 @@ export function useBilling() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [user])
 
   const setupCard = async () => {
     if (!user) throw new Error('User not authenticated')

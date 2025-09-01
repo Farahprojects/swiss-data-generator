@@ -65,7 +65,7 @@ export default function BillingPanel() {
   useEffect(() => {
     refetchBilling()
     fetchSettingsData()
-  }, [])
+  }, [refetchBilling, fetchSettingsData])
 
   if (billingLoading || settingsLoading) {
     return (

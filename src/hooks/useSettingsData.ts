@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/integrations/supabase/client'
 
@@ -61,7 +61,7 @@ export function useSettingsData() {
     error: null
   })
 
-  const fetchSettingsData = async () => {
+  const fetchSettingsData = useCallback(async () => {
     if (!user) {
       setData(prev => ({ ...prev, loading: false, profile: null, paymentMethod: null, credits: null }))
       return
@@ -107,14 +107,14 @@ export function useSettingsData() {
         error: error instanceof Error ? error.message : 'Failed to load settings data'
       }))
     }
-  }
+  }, [user])
 
   // Manual fetch function that components can call when needed
-  const fetchOnDemand = () => {
+  const fetchOnDemand = useCallback(() => {
     if (user) {
       fetchSettingsData()
     }
-  }
+  }, [user, fetchSettingsData])
 
   // Don't automatically fetch on user change - only when explicitly requested
   // useEffect(() => {
