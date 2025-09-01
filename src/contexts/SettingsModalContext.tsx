@@ -1,5 +1,6 @@
 
 import React, { createContext, useContext, useState } from "react";
+import { SettingsModal } from "@/components/settings/SettingsModal";
 
 
 type SettingsPanelType = "general" | "account" | "notifications" | "delete" | "support" | "billing";
@@ -41,6 +42,7 @@ export const SettingsModalProvider = ({ children }: { children: React.ReactNode 
       }}
     >
       {children}
+      <SettingsModal />
     </SettingsModalContext.Provider>
   );
 };

@@ -5,6 +5,7 @@ import { useChat } from '@/features/chat/useChat';
 import { useAuthedChat } from '@/hooks/useAuthedChat';
 import { useAuth } from '@/contexts/AuthContext';
 import { ReportModalProvider } from '@/contexts/ReportModalContext';
+import { SettingsModalProvider } from '@/contexts/SettingsModalContext';
 import { MobileViewportLock } from '@/features/chat/MobileViewportLock';
 import { getChatTokens } from '@/services/auth/chatTokens';
 
@@ -42,13 +43,15 @@ const ReportChatScreen = () => {
   }
 
   return (
-    <ReportModalProvider>
-      <MobileViewportLock active>
-        <div className="font-sans antialiased text-gray-800 bg-gray-50 fixed inset-0 flex flex-col">
-          <ChatBox />
-        </div>
-      </MobileViewportLock>
-    </ReportModalProvider>
+    <SettingsModalProvider>
+      <ReportModalProvider>
+        <MobileViewportLock active>
+          <div className="font-sans antialiased text-gray-800 bg-gray-50 fixed inset-0 flex flex-col">
+            <ChatBox />
+          </div>
+        </MobileViewportLock>
+      </ReportModalProvider>
+    </SettingsModalProvider>
   );
 };
 
