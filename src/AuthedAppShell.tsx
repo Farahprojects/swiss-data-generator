@@ -14,6 +14,7 @@ import Pricing from './pages/Pricing';
 import Contact from './pages/Contact';
 import About from './pages/About';
 import Legal from './pages/Legal';
+import SubscriptionPaywall from './pages/SubscriptionPaywall';
 
 import CalendarPage from './pages/dashboard/CalendarPage';
 import Blog from './pages/Blog';
@@ -51,6 +52,7 @@ const AuthedAppShell: React.FC = () => {
               <Route path="/signup" element={<Signup />} />
               <Route path="/auth/password" element={<ResetPassword />} />
               <Route path="/auth/email" element={<ConfirmEmail />} />
+              <Route path="/subscription" element={<SubscriptionPaywall />} />
               <Route path="/stripe/return" element={<StripeReturn />} />
               
               {/* Protected routes */}
