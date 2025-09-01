@@ -402,7 +402,7 @@ await new Promise<void>(async (resolve) => {
 
       
       // Create blob URL and use conversationTtsService for animation and cleanup
-      const blob = new Blob([bytes.buffer], { type: clip.mimeType || 'audio/mpeg' });
+      const blob = new Blob([bytes], { type: clip.mimeType || 'audio/mpeg' });
       console.log('[DEBUG] blob size:', blob.size);
       console.log('[DEBUG] blob type:', blob.type);
       const audioUrl = URL.createObjectURL(blob);
@@ -429,7 +429,7 @@ await new Promise<void>(async (resolve) => {
       console.log('[DEBUG-FALLBACK] bytes.buffer type:', typeof bytes.buffer, bytes.buffer?.constructor.name);
       
       // Fallback to blob URL method
-      const blob = new Blob([bytes.buffer], { type: clip.mimeType || 'audio/mpeg' });
+      const blob = new Blob([bytes], { type: clip.mimeType || 'audio/mpeg' });
       console.log('[DEBUG-FALLBACK] blob size:', blob.size);
       console.log('[DEBUG-FALLBACK] blob type:', blob.type);
       const audioUrl = URL.createObjectURL(blob);
