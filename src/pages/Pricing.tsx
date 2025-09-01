@@ -116,64 +116,64 @@ const Pricing: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-          className="w-full max-w-md"
+          className="w-full max-w-sm"
         >
-          <Card className="border-0 shadow-lg bg-white rounded-3xl overflow-hidden">
-            <CardContent className="p-12 text-center space-y-8">
+          <Card className="border-0 shadow-lg bg-white rounded-2xl overflow-hidden">
+            <CardContent className="p-8 text-center space-y-6">
               {/* Icon */}
               <motion.div
                 initial={{ scale: 0.8 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.2, duration: 0.5 }}
-                className={`flex items-center justify-center h-16 w-16 mx-auto rounded-full ${
+                className={`flex items-center justify-center h-12 w-12 mx-auto rounded-full ${
                   isCancelled ? 'bg-red-100' : 'bg-gray-900'
                 }`}
               >
                 {isCancelled ? (
-                  <XCircle className="h-8 w-8 text-red-600" />
+                  <XCircle className="h-6 w-6 text-red-600" />
                 ) : (
-                  <Sparkles className="h-8 w-8 text-white" />
+                  <Sparkles className="h-6 w-6 text-white" />
                 )}
               </motion.div>
 
               {/* Header */}
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {isCancelled ? (
                   <>
-                    <h1 className="text-3xl font-light text-gray-900 leading-tight">
+                    <h1 className="text-2xl font-light text-gray-900 leading-tight">
                       We'd love you to <span className="italic font-light">stay</span>
                     </h1>
-                    <p className="text-lg font-light text-gray-600">
+                    <p className="text-base font-light text-gray-600">
                       We spent a lot of time and effort building this and would like you to enjoy this app. 
                       Unfortunately we can't make it free.
                     </p>
                   </>
                 ) : (
-                  <h1 className="text-3xl font-light text-gray-900 leading-tight">
+                  <h1 className="text-2xl font-light text-gray-900 leading-tight">
                     Go deeper and unlock your full <span className="italic font-light">insights</span>
                   </h1>
                 )}
               </div>
 
               {/* Body */}
-              <div className="space-y-6">
-                <p className="text-xl font-light text-gray-600 leading-relaxed">
+              <div className="space-y-4">
+                <p className="text-lg font-light text-gray-600 leading-relaxed">
                   ${pricing?.unit_price_usd}/month — {pricing?.description}
                 </p>
 
                 {/* Features list (subtle) */}
-                <div className="space-y-3 text-left">
-                  <div className="flex items-center gap-3 text-gray-600">
-                    <div className="w-1.5 h-1.5 rounded-full bg-gray-400"></div>
-                    <span className="text-sm font-light">Unlimited relationship chats</span>
+                <div className="space-y-2 text-left">
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <div className="w-1 h-1 rounded-full bg-gray-400"></div>
+                    <span className="text-xs font-light">Unlimited relationship chats</span>
                   </div>
-                  <div className="flex items-center gap-3 text-gray-600">
-                    <div className="w-1.5 h-1.5 rounded-full bg-gray-400"></div>
-                    <span className="text-sm font-light">Personalized AI insights</span>
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <div className="w-1 h-1 rounded-full bg-gray-400"></div>
+                    <span className="text-xs font-light">Personalized AI insights</span>
                   </div>
-                  <div className="flex items-center gap-3 text-gray-600">
-                    <div className="w-1.5 h-1.5 rounded-full bg-gray-400"></div>
-                    <span className="text-sm font-light">Advanced relationship analysis</span>
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <div className="w-1 h-1 rounded-full bg-gray-400"></div>
+                    <span className="text-xs font-light">Advanced relationship analysis</span>
                   </div>
                 </div>
               </div>
@@ -183,12 +183,12 @@ const Pricing: React.FC = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.4, duration: 0.5 }}
-                className="pt-4"
+                className="pt-3"
               >
                 <Button
                   onClick={handleUnlock}
                   disabled={loading}
-                  className="w-full bg-gray-900 hover:bg-gray-800 text-white font-light py-4 rounded-xl text-lg transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50"
+                  className="w-full bg-gray-900 hover:bg-gray-800 text-white font-light py-3 rounded-xl text-base transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50"
                 >
                   {loading ? 'Processing...' : isCancelled ? 'Try Again' : 'Unlock'}
                 </Button>
