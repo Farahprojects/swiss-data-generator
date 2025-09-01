@@ -306,6 +306,11 @@ async function handlePaymentMethodDetached(paymentMethod: Stripe.PaymentMethod) 
 async function updatePaymentMethodInDb(userId: string, paymentMethod: Stripe.PaymentMethod) {
   if (paymentMethod.type !== 'card' || !paymentMethod.card) return
 
+  console.log(`Updating payment method for user ${userId}: ${paymentMethod.id}`)
+
+  // Get billing details from Stripe
+  const billingDetails = paymentMethod.billing_details || {}
+  
   // Deactivate other payment methods for this user
   await supabase
     .from('payment_method')
@@ -317,22 +322,36 @@ async function updatePaymentMethodInDb(userId: string, paymentMethod: Stripe.Pay
     .eq('user_id', userId)
     .eq('active', true)
 
-  // Insert or update the new payment method
+  // Insert or update the new payment method with complete billing information
+  const paymentMethodData = {
+    user_id: userId,
+    stripe_customer_id: paymentMethod.customer as string,
+    stripe_payment_method_id: paymentMethod.id,
+    card_brand: paymentMethod.card.brand,
+    card_last4: paymentMethod.card.last4,
+    exp_month: paymentMethod.card.exp_month,
+    exp_year: paymentMethod.card.exp_year,
+    fingerprint: paymentMethod.card.fingerprint,
+    payment_method_type: 'card',
+    active: true,
+    ts: new Date().toISOString(),
+    // Billing address information
+    email: billingDetails.email,
+    billing_name: billingDetails.name,
+    billing_address_line1: billingDetails.address?.line1,
+    billing_address_line2: billingDetails.address?.line2,
+    city: billingDetails.address?.city,
+    state: billingDetails.address?.state,
+    postal_code: billingDetails.address?.postal_code,
+    country: billingDetails.address?.country,
+    payment_status: 'active'
+  }
+
   await supabase
     .from('payment_method')
-    .upsert({
-      user_id: userId,
-      stripe_customer_id: paymentMethod.customer as string,
-      stripe_payment_method_id: paymentMethod.id,
-      card_brand: paymentMethod.card.brand,
-      card_last4: paymentMethod.card.last4,
-      exp_month: paymentMethod.card.exp_month,
-      exp_year: paymentMethod.card.exp_year,
-      fingerprint: paymentMethod.card.fingerprint,
-      payment_method_type: 'card',
-      active: true,
-      ts: new Date().toISOString()
-    }, {
+    .upsert(paymentMethodData, {
       onConflict: 'stripe_payment_method_id'
     })
+
+  console.log(`Successfully updated payment method for user ${userId}`)
 }
