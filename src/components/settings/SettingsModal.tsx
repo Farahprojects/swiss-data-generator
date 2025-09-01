@@ -10,7 +10,7 @@ import { NotificationsPanel } from "./panels/NotificationsPanel";
 import { DeleteAccountPanel } from "./panels/DeleteAccountPanel";
 import { ContactSupportPanel } from "./panels/ContactSupportPanel";
 import { SignInPrompt } from "@/components/auth/SignInPrompt";
-import BillingPanel from "./BillingPanel";
+
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettingsData } from "@/hooks/useSettingsData";
 
@@ -145,7 +145,11 @@ export const SettingsModal = () => {
                 </div>
               </TabsContent>
               <TabsContent value="account"><AccountSettingsPanel /></TabsContent>
-              <TabsContent value="billing"><BillingPanel /></TabsContent>
+              <TabsContent value="billing">
+                <div className="p-4 text-center text-gray-500">
+                  Billing features have been removed
+                </div>
+              </TabsContent>
               <TabsContent value="notifications"><NotificationsPanel /></TabsContent>
               <TabsContent value="support"><ContactSupportPanel /></TabsContent>
               <TabsContent value="delete"><DeleteAccountPanel /></TabsContent>
