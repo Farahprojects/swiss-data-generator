@@ -153,7 +153,7 @@ const Pricing: React.FC = () => {
       <Navbar />
       
       {/* Hero Section */}
-      <section className="py-16 bg-background">
+      <section className="pt-24 pb-16 bg-background">
         <div className="container mx-auto px-4">
           <h1 className="text-4xl font-light text-gray-900 mb-4 text-center tracking-tight">
             Try or Subscribe
