@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useChatStore } from '@/core/store';
 import { useAuth } from '@/contexts/AuthContext';
-import { MessageSquare, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ChatThreadsSidebarProps {
@@ -50,9 +50,9 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
 
   return (
     <div className={cn("w-full flex flex-col gap-4", className)}>
-      {/* Thread Header */}
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-gray-700">Chat Threads</h3>
+        <h3 className="text-sm font-medium text-gray-700">Chats</h3>
         {isGuest && (
           <button
             onClick={handleNewChat}
@@ -64,30 +64,23 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         )}
       </div>
 
-      {/* Current Thread */}
+      {/* Current Chat */}
       {chat_id && (
-        <div className="space-y-2">
-          <div className="text-xs text-gray-500 uppercase tracking-wide">Current Thread</div>
-          <div className="flex items-center gap-2 p-3 bg-gray-100 rounded-lg border border-gray-200">
-            <MessageSquare className="w-4 h-4 text-gray-600 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-gray-900 truncate" title={threadTitle}>
-                {threadTitle}
-              </div>
-              <div className="text-xs text-gray-500">
-                {isGuest ? 'Guest Session' : 'Signed In'}
-              </div>
+        <div className="flex items-center gap-2 p-2">
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium text-gray-900 truncate" title={threadTitle}>
+              {threadTitle}
             </div>
-            {isGuest && (
-              <button
-                onClick={handleClearSession}
-                className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-                title="Clear Session"
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
-            )}
           </div>
+          {isGuest && (
+            <button
+              onClick={handleClearSession}
+              className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+              title="Clear Session"
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
+          )}
         </div>
       )}
 
