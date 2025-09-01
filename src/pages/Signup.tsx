@@ -152,6 +152,18 @@ const Signup = () => {
       
       if (error) {
         console.error('Resend verification error:', error);
+        
+        // Check for specific error status codes that indicate user should login
+        if (error.status === 409) {
+          toast({
+            title: 'Account Found',
+            description: 'This email is already registered. Redirecting to login...',
+            variant: 'default'
+          });
+          setTimeout(() => navigate('/login'), 2000);
+          return;
+        }
+        
         toast({
           title: 'Error',
           description: 'Failed to resend verification email. Please try again.',
@@ -159,6 +171,18 @@ const Signup = () => {
         });
       } else if (data?.error) {
         console.error('Resend verification response error:', data.error);
+        
+        // Handle specific error codes returned from the edge function
+        if (data.code === 'email_exists' || data.code === 'already_verified') {
+          toast({
+            title: 'Account Found',
+            description: data.message || 'This email is already registered. Redirecting to login...',
+            variant: 'default'
+          });
+          setTimeout(() => navigate('/login'), 2000);
+          return;
+        }
+        
         toast({
           title: 'Error',
           description: data.error,

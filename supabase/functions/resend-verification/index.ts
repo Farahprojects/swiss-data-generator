@@ -56,8 +56,12 @@ serve(async (req) => {
     if (profile.email_verified || profile.verification_status === 'verified') {
       console.log('User already verified for email:', email);
       return new Response(
-        JSON.stringify({ error: 'This email address is already verified' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          error: 'This email address is already verified', 
+          code: 'already_verified',
+          message: 'Your email is already verified. Please try logging in.' 
+        }),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -74,6 +78,20 @@ serve(async (req) => {
 
     if (error) {
       console.error('Error generating verification link:', error);
+      
+      // Handle specific error cases gracefully
+      if (error.message?.includes('already been registered') || error.code === 'email_exists') {
+        console.log('User already registered, suggesting login instead');
+        return new Response(
+          JSON.stringify({ 
+            error: 'User already registered', 
+            code: 'email_exists',
+            message: 'This email is already registered. Please try logging in instead.' 
+          }),
+          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       return new Response(
         JSON.stringify({ error: 'Failed to generate verification link' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
