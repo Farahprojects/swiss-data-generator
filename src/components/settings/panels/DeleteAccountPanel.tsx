@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { cleanupAuthState } from "@/utils/authCleanup";
 import { Trash2 } from "lucide-react";
 
 export const DeleteAccountPanel = () => {
@@ -35,7 +36,7 @@ export const DeleteAccountPanel = () => {
     }
     
     setIsDeleting(true);
-    console.log('🚀 Starting account deletion process...');
+    console.log('🚨 Starting fire-and-forget account deletion...');
     
     try {
       // Get user session for auth
@@ -44,43 +45,49 @@ export const DeleteAccountPanel = () => {
         throw new Error('No session found')
       }
 
-      console.log('📨 Calling delete-account edge function...');
+      console.log('📨 Triggering delete-account edge function (fire-and-forget)...');
       
-      // Add a timeout to prevent infinite hanging
-      const deleteAccountPromise = supabase.functions.invoke('delete-account', {
+      // Fire-and-forget: don't await the response, just trigger it
+      supabase.functions.invoke('delete-account', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         }
+      }).catch((error) => {
+        console.error("Edge function error (non-blocking):", error);
       });
       
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Delete operation timed out after 20 seconds')), 20000)
-      });
-      
-      const result = await Promise.race([deleteAccountPromise, timeoutPromise]);
-      const { data, error } = result;
-
-      if (error) {
-        console.error('❌ Edge function returned error:', error);
-        throw new Error(error.message || 'Failed to delete account')
-      }
-      
-      console.log('✅ Account deletion successful:', data);
-      
-      // If successful, sign out and redirect
+      // Show immediate feedback
       toast({
-        title: "Account Deleted",
-        description: "Your account and all associated data have been permanently deleted."
+        title: "Account Deletion Started",
+        description: "Your account deletion is in progress. You'll be signed out and redirected."
       });
       
-      await signOut();
-      window.location.href = '/login';
+      console.log('⏱️ Waiting briefly for edge function to start...');
+      
+      // Wait briefly for the edge function to start processing
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      console.log('🧹 Cleaning up auth state and redirecting...');
+      
+      // Immediate cleanup and redirect - don't wait for edge function completion
+      cleanupAuthState();
+      
+      // Attempt sign out (don't await to avoid blocking)
+      signOut().catch((error) => {
+        console.error("Sign out error (non-blocking):", error);
+      });
+      
+      // Force redirect immediately 
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 100);
+      
     } catch (error) {
-      console.error('❌ Delete account exception:', error);
+      console.error('❌ Delete account initiation error:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete account. Please try again."
+        description: error instanceof Error ? error.message : "Failed to initiate account deletion. Please try again."
       });
       setIsDeleting(false);
       setIsDialogOpen(false);
@@ -181,7 +188,7 @@ export const DeleteAccountPanel = () => {
               {isDeleting ? (
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full border-2 border-destructive-foreground/30 border-t-destructive-foreground animate-spin" />
-                  Deleting...
+                  Processing...
                 </div>
               ) : (
                 <>
