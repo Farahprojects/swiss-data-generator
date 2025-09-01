@@ -47,7 +47,13 @@ export const ChatBox = () => {
 
   useEffect(() => {
     if (uuid) {
-      startReportReadyListener(uuid);
+      // Only start listener for guest users (signed-in users don't need report-ready polling)
+      if (!user) {
+        console.log(`[ChatBox] Starting report ready listener for guest user: ${uuid}`);
+        startReportReadyListener(uuid);
+      } else {
+        console.log(`[ChatBox] Skipping report ready listener for signed-in user: ${user.email}`);
+      }
     }
 
     // Cleanup listener on unmount or uuid change
@@ -57,7 +63,7 @@ export const ChatBox = () => {
         stopReportReadyListener(uuid);
       }
     };
-  }, [uuid]);
+  }, [uuid, user]);
 
   // Additional cleanup on component unmount
   useEffect(() => {
