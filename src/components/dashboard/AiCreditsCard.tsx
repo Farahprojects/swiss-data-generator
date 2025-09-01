@@ -19,7 +19,10 @@ export const AiCreditsCard = () => {
 
   useEffect(() => {
     const fetchUserBalance = async () => {
-      if (!user?.id) return;
+      if (!user?.id) {
+        setIsLoading(false);
+        return;
+      }
       
       try {
         setIsLoading(true);
@@ -31,6 +34,10 @@ export const AiCreditsCard = () => {
 
         if (error) {
           console.error("Error fetching user balance:", error);
+          // Don't retry on database errors - user may have been deleted
+          setBalance(0);
+          setLastUpdate(null);
+          setIsLoading(false);
           return;
         }
 
@@ -39,13 +46,16 @@ export const AiCreditsCard = () => {
         setLastUpdate(data?.last_updated || null);
       } catch (err) {
         console.error("Failed to fetch user balance:", err);
+        // Set default values on error
+        setBalance(0);
+        setLastUpdate(null);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchUserBalance();
-  }, [user]);
+  }, [user?.id]); // Only depend on user.id, not entire user object
 
   // Format date to show in the UI
   const formattedLastTopUp = lastUpdate 

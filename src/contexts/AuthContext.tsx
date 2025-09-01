@@ -186,18 +186,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Check verification status in profiles table
       if (data?.user) {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('verification_status, email_verified')
-          .eq('id', data.user.id)
-          .single();
-        
-        // Block signin if not verified
-        if (!profileError && profile && !profile.email_verified) {
-          return { 
-            error: new Error('Please verify your email address before signing in'), 
-            data: null 
-          };
+        try {
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('verification_status, email_verified')
+            .eq('id', data.user.id)
+            .maybeSingle();
+          
+          // Block signin if profile exists and not verified
+          if (!profileError && profile && !profile.email_verified) {
+            return { 
+              error: new Error('Please verify your email address before signing in'), 
+              data: null 
+            };
+          }
+        } catch (profileErr) {
+          // Log profile fetch error but don't block signin
+          console.warn('Could not fetch profile for verification check:', profileErr);
         }
         
         setUser(data.user);
