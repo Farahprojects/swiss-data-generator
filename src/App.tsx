@@ -21,6 +21,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ResetPassword from './pages/auth/Password';
 import ConfirmEmail from './pages/auth/ConfirmEmail';
+import SubscriptionPaywall from './pages/SubscriptionPaywall';
 import CalendarPage from './pages/dashboard/CalendarPage';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { PublicOnlyGuard } from './components/auth/PublicOnlyGuard';
@@ -130,6 +131,11 @@ function App() {
                     </Suspense>
                   } />
                   <Route path="/auth/email" element={<ConfirmEmail />} />
+                  <Route path="/subscription" element={
+                    <AuthGuard>
+                      <SubscriptionPaywall />
+                    </AuthGuard>
+                  } />
                   
                   {/* Default authenticated route - redirect to chat */}
                   <Route 

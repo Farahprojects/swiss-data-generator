@@ -302,7 +302,7 @@ const ConfirmEmail: React.FC = () => {
             <CardFooter className="flex flex-col gap-4 justify-center px-0 pt-8">
               {status === 'success' ? (
                 <Button
-                  onClick={() => navigate('/chat')}
+                  onClick={() => navigate('/subscription')}
                   className="w-full bg-gray-900 hover:bg-gray-800 text-white font-light py-4 rounded-xl"
                 >
                   Continue to Chat

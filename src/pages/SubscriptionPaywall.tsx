@@ -1,0 +1,100 @@
+import React from 'react';
+import { motion } from 'framer-motion';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import Logo from '@/components/Logo';
+import { Sparkles } from 'lucide-react';
+
+const SubscriptionPaywall: React.FC = () => {
+  const handleUnlock = () => {
+    // TODO: Implement Stripe checkout integration
+    console.log('Unlock subscription clicked');
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col bg-white">
+      <header className="w-full py-8 flex justify-center border-b border-gray-100">
+        <Logo size="md" />
+      </header>
+
+      <main className="flex-grow flex items-center justify-center px-4 sm:px-6 lg:px-8 py-16">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+          className="w-full max-w-md"
+        >
+          <Card className="border-0 shadow-lg bg-white rounded-3xl overflow-hidden">
+            <CardContent className="p-12 text-center space-y-8">
+              {/* Icon */}
+              <motion.div
+                initial={{ scale: 0.8 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2, duration: 0.5 }}
+                className="flex items-center justify-center h-16 w-16 mx-auto rounded-full bg-gray-900"
+              >
+                <Sparkles className="h-8 w-8 text-white" />
+              </motion.div>
+
+              {/* Header */}
+              <div className="space-y-3">
+                <h1 className="text-3xl font-light text-gray-900 leading-tight">
+                  Go deeper and unlock your full <span className="italic font-light">insights</span>
+                </h1>
+              </div>
+
+              {/* Body */}
+              <div className="space-y-6">
+                <p className="text-xl font-light text-gray-600 leading-relaxed">
+                  $10/month — unlimited chats and actionable AI insights
+                </p>
+
+                {/* Features list (subtle) */}
+                <div className="space-y-3 text-left">
+                  <div className="flex items-center gap-3 text-gray-600">
+                    <div className="w-1.5 h-1.5 rounded-full bg-gray-400"></div>
+                    <span className="text-sm font-light">Unlimited relationship chats</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-gray-600">
+                    <div className="w-1.5 h-1.5 rounded-full bg-gray-400"></div>
+                    <span className="text-sm font-light">Personalized AI insights</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-gray-600">
+                    <div className="w-1.5 h-1.5 rounded-full bg-gray-400"></div>
+                    <span className="text-sm font-light">Advanced relationship analysis</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* CTA Button */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4, duration: 0.5 }}
+                className="pt-4"
+              >
+                <Button
+                  onClick={handleUnlock}
+                  className="w-full bg-gray-900 hover:bg-gray-800 text-white font-light py-4 rounded-xl text-lg transition-all duration-200 shadow-sm hover:shadow-md"
+                >
+                  Unlock
+                </Button>
+              </motion.div>
+
+              {/* Security note */}
+              <p className="text-xs text-gray-400 font-light leading-relaxed">
+                Secure payment processed by Stripe. Cancel anytime.
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </main>
+
+      <footer className="py-8 text-center text-sm text-gray-500 font-light">
+        © {new Date().getFullYear()} Theraiapi. All rights reserved.
+      </footer>
+    </div>
+  );
+};
+
+export default SubscriptionPaywall;
