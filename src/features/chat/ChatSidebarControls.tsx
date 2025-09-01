@@ -4,8 +4,6 @@ import { useReportModal } from '@/contexts/ReportModalContext';
 import { sessionManager } from '@/utils/sessionManager';
 import { getChatTokens } from '@/services/auth/chatTokens';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
-import { SettingsButton } from '@/components/settings/SettingsButton';
-import { UserAvatar } from '@/components/settings/UserAvatar';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const ChatSidebarControls: React.FC = () => {
@@ -45,13 +43,16 @@ export const ChatSidebarControls: React.FC = () => {
         >
           {isPolling ? 'Generating...' : 'Report'}
         </button>
-        <button
-          type="button"
-          onClick={handleClearSession}
-          className="w-full text-left px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md border border-gray-200"
-        >
-          Clear session
-        </button>
+        {/* Only show Clear session for guest users */}
+        {!user && (
+          <button
+            type="button"
+            onClick={handleClearSession}
+            className="w-full text-left px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md border border-gray-200"
+          >
+            Clear session
+          </button>
+        )}
       </div>
       <div className="space-y-4 p-4">
         <div>
@@ -87,20 +88,6 @@ export const ChatSidebarControls: React.FC = () => {
             </optgroup>
           </select>
         </div>
-      </div>
-      
-      {/* User Avatar or Sign In at the bottom */}
-      <div className="mt-auto pt-4">
-        {user ? (
-          <div className="flex items-center gap-3">
-            <UserAvatar size="sm" />
-            <span className="text-sm text-gray-600">{user.email}</span>
-          </div>
-        ) : (
-          <div className="text-sm text-gray-500 text-center py-2">
-            Sign in
-          </div>
-        )}
       </div>
     </div>
   );
