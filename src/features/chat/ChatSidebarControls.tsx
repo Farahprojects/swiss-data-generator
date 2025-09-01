@@ -5,6 +5,8 @@ import { sessionManager } from '@/utils/sessionManager';
 import { getChatTokens } from '@/services/auth/chatTokens';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { SettingsButton } from '@/components/settings/SettingsButton';
+import { UserAvatar } from '@/components/settings/UserAvatar';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const ChatSidebarControls: React.FC = () => {
   const ttsVoice = useChatStore((s) => s.ttsVoice);
@@ -12,6 +14,7 @@ export const ChatSidebarControls: React.FC = () => {
   const { open: openReportModal } = useReportModal();
   const { uuid } = getChatTokens();
   const { isPolling, isReportReady } = useReportReadyStore();
+  const { user } = useAuth();
 
   const clearChat = useChatStore((s) => s.clearChat);
 
@@ -86,13 +89,24 @@ export const ChatSidebarControls: React.FC = () => {
         </div>
       </div>
       
-      {/* Settings Button at the bottom */}
+      {/* User Avatar or Sign In at the bottom */}
       <div className="mt-auto pt-4">
-        <SettingsButton 
-          className="w-full justify-start" 
-          variant="outline" 
-          size="sm"
-        />
+        {user ? (
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => {}}>
+            <UserAvatar size="sm" />
+            <SettingsButton 
+              className="flex-1 justify-start" 
+              variant="outline" 
+              size="sm"
+              showIcon={false}
+              label="Settings"
+            />
+          </div>
+        ) : (
+          <div className="text-sm text-gray-500 text-center py-2">
+            Sign in
+          </div>
+        )}
       </div>
     </div>
   );
