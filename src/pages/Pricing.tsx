@@ -188,17 +188,17 @@ const Pricing: React.FC = () => {
                   {/* Header */}
                   <div className="space-y-2">
                     <h2 className="text-2xl font-light text-gray-900 leading-tight">
-                      Try It Once — <span className="italic font-light">Discover Your Cosmic Snapshot</span>
+                      {tryPricing?.name}
                     </h2>
                     <p className="text-base font-light text-gray-600">
-                      Get a personalized report that reveals where you are right now and what's shaping your path ahead.
+                      {tryPricing?.description?.split('Your birth chart')[0]}
                     </p>
                   </div>
 
                   {/* Body */}
                   <div className="space-y-4">
                     <p className="text-lg font-light text-gray-600 leading-relaxed">
-                      ${tryPricing?.unit_price_usd} — Your birth chart + today's transits combined in one powerful insight.
+                      ${tryPricing?.unit_price_usd} — {tryPricing?.description?.split('Your birth chart')[1]?.replace('+ today\'s transits combined in one powerful insight.', '')}Your birth chart + today's transits combined in one powerful insight.
                     </p>
 
                     {/* Features list (subtle) */}
@@ -286,10 +286,10 @@ const Pricing: React.FC = () => {
                     ) : (
                       <>
                         <h2 className="text-2xl font-light text-gray-900 leading-tight">
-                          Unlock Unlimited Insights — <span className="italic font-light">Go Deeper Every Day</span>
+                          {pricing?.name}
                         </h2>
                         <p className="text-base font-light text-gray-600">
-                          Step into full access: ongoing guidance, advanced relationship insights, and personalized AI support whenever you need it.
+                          {pricing?.description?.split('Unlimited relationship chats')[0]}
                         </p>
                       </>
                     )}
@@ -298,7 +298,7 @@ const Pricing: React.FC = () => {
                   {/* Body */}
                   <div className="space-y-4">
                     <p className="text-lg font-light text-gray-600 leading-relaxed">
-                      ${pricing?.unit_price_usd}/month — Unlimited relationship chats + tailored insights just for you.
+                      ${pricing?.unit_price_usd}/month — {pricing?.description?.split('Unlimited relationship chats')[1]?.replace('+ tailored insights just for you.', '')}Unlimited relationship chats + tailored insights just for you.
                     </p>
 
                     {/* Features list (subtle) */}
