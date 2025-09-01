@@ -257,7 +257,7 @@ const Signup = () => {
         <Button 
           type="submit" 
           size="lg"
-          className="w-full py-6 text-lg font-light bg-gray-900 text-white hover:bg-gray-800 transition-all duration-300"
+          className="w-full py-6 text-lg font-light bg-gray-900 text-white hover:bg-gray-800 transition-all duration-300 rounded-full"
           disabled={loading || !emailValid || !passwordValid || !passwordsMatch}
         >
           {loading ? 'Creating account...' : 'Begin'}
@@ -304,7 +304,7 @@ const Signup = () => {
             variant="outline" 
             disabled={loading}
             size="lg"
-            className="w-full py-4 font-light border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-all duration-300"
+            className="w-full py-4 font-light border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-all duration-300 rounded-full"
           >
             {loading ? 'Sending...' : 'Resend verification email'}
           </Button>
@@ -312,7 +312,7 @@ const Signup = () => {
           <Link to="/login" className="w-full">
             <Button 
               size="lg"
-              className="w-full py-4 font-light bg-gray-900 text-white hover:bg-gray-800 transition-all duration-300"
+              className="w-full py-4 font-light bg-gray-900 text-white hover:bg-gray-800 transition-all duration-300 rounded-full"
             >
               Go to Login
             </Button>
@@ -327,7 +327,7 @@ const Signup = () => {
       <UnifiedNavigation />
 
       <main className="flex-grow flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-lg space-y-12">
+        <div className="w-full max-w-md mx-auto space-y-12">
           <header className="text-center space-y-4">
             <h1 className="text-5xl md:text-6xl font-light text-gray-900 leading-tight">
               {signupSuccess ? (

@@ -49,7 +49,7 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
           onChange={(e) => onChange(e.target.value)}
           onFocus={onFocus}
           placeholder={placeholder}
-          className={`h-12 bg-white border-gray-200 text-gray-900 placeholder:text-gray-500 focus:border-gray-600 font-light pr-12 rounded-xl ${
+          className={`h-12 bg-white border-gray-200 text-gray-900 placeholder:text-gray-500 focus:border-gray-600 font-light pr-12 rounded-full ${
             (!isValid && password) || showMatchError ? 'border-red-500 focus:border-red-500' : ''
           }`}
           required

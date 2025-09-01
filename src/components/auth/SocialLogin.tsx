@@ -36,7 +36,7 @@ const SocialLogin: React.FC<SocialLoginProps> = ({ onGoogleSignIn, onAppleSignIn
           type="button" 
           variant="outline" 
           onClick={handleGoogleSignIn}
-          className="flex items-center justify-center"
+          className="flex items-center justify-center rounded-full"
         >
           <FcGoogle className="mr-2 h-5 w-5" />
           Google
@@ -46,7 +46,7 @@ const SocialLogin: React.FC<SocialLoginProps> = ({ onGoogleSignIn, onAppleSignIn
           type="button" 
           variant="outline" 
           onClick={handleAppleSignIn}
-          className="flex items-center justify-center"
+          className="flex items-center justify-center rounded-full"
         >
           <FaApple className="mr-2 h-5 w-5" />
           Apple
