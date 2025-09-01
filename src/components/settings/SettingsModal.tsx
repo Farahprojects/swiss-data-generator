@@ -9,6 +9,7 @@ import { AccountSettingsPanel } from "./account/AccountSettingsPanel";
 import { NotificationsPanel } from "./panels/NotificationsPanel";
 import { DeleteAccountPanel } from "./panels/DeleteAccountPanel";
 import { ContactSupportPanel } from "./panels/ContactSupportPanel";
+import { VoiceSelectionPanel } from "./VoiceSelectionPanel";
 import { SignInPrompt } from "@/components/auth/SignInPrompt";
 
 import { useAuth } from "@/contexts/AuthContext";
@@ -102,46 +103,51 @@ export const SettingsModal = () => {
           <div className="flex-1 overflow-y-auto p-6">
             <Tabs value={activePanel} className="space-y-4">
               <TabsContent value="general">
-                <div className="space-y-4 divide-y">
-                  {user ? (
-                    <>
-                      <div className="flex items-center justify-between py-3">
-                        <span className="text-sm text-gray-800">Log out on this device</span>
-                        <Button 
-                          variant="outline" 
-                          className="text-sm" 
-                          onClick={handleLogout}
-                          disabled={loggingOut}
-                        >
-                          {loggingOut ? "Logging out..." : "Log out"}
-                        </Button>
-                      </div>
-                      <div className="flex items-center justify-between py-3">
-                        <span className="text-sm text-red-600">Delete account</span>
-                        <Button variant="destructive" className="text-sm" onClick={() => handleTabChange("delete")}>Delete account</Button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="py-6 text-center">
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="text-lg font-light text-gray-900 mb-2">
-                            Sign in to access <span className="italic">account settings</span>
-                          </h3>
-                          <p className="text-sm text-gray-600">
-                            Create an account to save preferences and access advanced features.
-                          </p>
+                <div className="space-y-6">
+                  {/* Voice Selection - Available for all users */}
+                  <VoiceSelectionPanel />
+                  
+                  <div className="border-t pt-6">
+                    {user ? (
+                      <>
+                        <div className="flex items-center justify-between py-3">
+                          <span className="text-sm text-gray-800">Log out on this device</span>
+                          <Button 
+                            variant="outline" 
+                            className="text-sm" 
+                            onClick={handleLogout}
+                            disabled={loggingOut}
+                          >
+                            {loggingOut ? "Logging out..." : "Log out"}
+                          </Button>
                         </div>
-                        <Button 
-                          onClick={() => setShowSignInPrompt(true)}
-                          className="bg-gray-900 text-white hover:bg-gray-800 font-light"
-                        >
-                          <User className="w-4 h-4 mr-2" />
-                          Sign In
-                        </Button>
+                        <div className="flex items-center justify-between py-3">
+                          <span className="text-sm text-red-600">Delete account</span>
+                          <Button variant="destructive" className="text-sm" onClick={() => handleTabChange("delete")}>Delete account</Button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="py-6 text-center">
+                        <div className="space-y-4">
+                          <div>
+                            <h3 className="text-lg font-light text-gray-900 mb-2">
+                              Sign in to access <span className="italic">account settings</span>
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                              Create an account to save preferences and access advanced features.
+                            </p>
+                          </div>
+                          <Button 
+                            onClick={() => setShowSignInPrompt(true)}
+                            className="bg-gray-900 text-white hover:bg-gray-800 font-light"
+                          >
+                            <User className="w-4 h-4 mr-2" />
+                            Sign In
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </TabsContent>
               <TabsContent value="account"><AccountSettingsPanel /></TabsContent>

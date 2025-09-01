@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { useChatStore } from '@/core/store';
+import React from 'react';
 import { useReportModal } from '@/contexts/ReportModalContext';
 import { sessionManager } from '@/utils/sessionManager';
 import { getChatTokens } from '@/services/auth/chatTokens';
@@ -7,8 +6,6 @@ import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const ChatSidebarControls: React.FC = () => {
-  const ttsVoice = useChatStore((s) => s.ttsVoice);
-  const setTtsVoice = useChatStore((s) => s.setTtsVoice);
   const { open: openReportModal } = useReportModal();
   const { uuid } = getChatTokens();
   const { isPolling, isReportReady } = useReportReadyStore();
@@ -22,10 +19,6 @@ export const ChatSidebarControls: React.FC = () => {
     
     // Then clear all session data
     await sessionManager.clearSession({ redirectTo: '/', preserveNavigation: false });
-  };
-
-  const handleVoiceChange = (voice: string) => {
-    setTtsVoice(voice);
   };
 
   return (
@@ -54,41 +47,7 @@ export const ChatSidebarControls: React.FC = () => {
           </button>
         )}
       </div>
-      <div className="space-y-4 p-4">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-gray-500 mb-2">
-            Assistant Voice
-          </p>
-          <select
-            id="tts-voice"
-            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-700 bg-gray-900 text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-            value={ttsVoice}
-            onChange={(e) => handleVoiceChange(e.target.value)}
-          >
-            <optgroup label="Male">
-              <option value="Puck">Puck</option>
-              <option value="Achird">Achird</option>
-              <option value="Algenib">Algenib</option>
-              <option value="Charon">Charon</option>
-              <option value="Enceladus">Enceladus</option>
-              <option value="Fenrir">Fenrir</option>
-              <option value="Orus">Orus</option>
-              <option value="Rasalgethi">Rasalgethi</option>
-            </optgroup>
-            <optgroup label="Female">
-              <option value="Achernar">Achernar</option>
-              <option value="Aoede">Aoede</option>
-              <option value="Callirrhoe">Callirrhoe</option>
-              <option value="Despina">Despina</option>
-              <option value="Gacrux">Gacrux</option>
-              <option value="Kore">Kore</option>
-              <option value="Leda">Leda</option>
-              <option value="Sulafat">Sulafat</option>
-              <option value="Zephyr">Zephyr</option>
-            </optgroup>
-          </select>
-        </div>
-      </div>
+
     </div>
   );
 };
