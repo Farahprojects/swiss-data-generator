@@ -3,7 +3,7 @@ import { ChatInput } from './ChatInput';
 import { useChatStore } from '@/core/store';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthedChat } from '@/hooks/useAuthedChat';
-import { Menu, Calendar, Sparkles } from 'lucide-react';
+import { Menu, Calendar, Sparkles, Settings, User, CreditCard, Bell, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { getChatTokens } from '@/services/auth/chatTokens';
@@ -13,6 +13,9 @@ import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { logUserError } from '@/services/errorService';
 import { SignInPrompt } from '@/components/auth/SignInPrompt';
 import { useNavigate } from 'react-router-dom';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { UserAvatar } from '@/components/settings/UserAvatar';
+import { useSettingsModal } from '@/contexts/SettingsModalContext';
 
 // Lazy load components for better performance
 const MessageList = lazy(() => import('./MessageList').then(module => ({ default: module.MessageList })));
@@ -31,9 +34,20 @@ export const ChatBox = () => {
     feature: '' 
   });
   
+  const { openSettings } = useSettingsModal();
+  
   // Get error state from report ready store
   const errorState = useReportReadyStore((state) => state.errorState);
   const setErrorState = useReportReadyStore((state) => state.setErrorState);
+
+  const handleOpenSettings = (panel: string) => {
+    openSettings(panel as "general" | "account" | "notifications" | "support" | "billing");
+  };
+
+  const handleSignOut = () => {
+    // Handle sign out logic
+    console.log('Sign out clicked');
+  };
 
   // Handle auth-gated features
   const handleCalendarClick = () => {
@@ -161,6 +175,46 @@ export const ChatBox = () => {
 
           {/* Main Chat Area */}
           <div className="flex flex-col flex-1 w-full min-w-0">
+            {/* Top Header with User Avatar */}
+            <div className="flex items-center justify-between p-3 bg-white border-b border-gray-100">
+              <div className="flex-1" />
+              
+              {/* User Avatar Dropdown - Top Right */}
+              {user && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
+                      <UserAvatar size="sm" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem onClick={() => handleOpenSettings('general')}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      Settings
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleOpenSettings('account')}>
+                      <User className="mr-2 h-4 w-4" />
+                      Account Settings
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => handleOpenSettings('billing')}>
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Billing
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleOpenSettings('notifications')}>
+                      <Bell className="mr-2 h-4 w-4" />
+                      Notifications
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut} className="text-red-600">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+
             {/* Mobile Header */}
             <div className="md:hidden flex items-center gap-2 p-3 bg-white border-b border-gray-100 pt-safe">
               <Sheet>

@@ -92,15 +92,9 @@ export const ChatSidebarControls: React.FC = () => {
       {/* User Avatar or Sign In at the bottom */}
       <div className="mt-auto pt-4">
         {user ? (
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => {}}>
+          <div className="flex items-center gap-3">
             <UserAvatar size="sm" />
-            <SettingsButton 
-              className="flex-1 justify-start" 
-              variant="outline" 
-              size="sm"
-              showIcon={false}
-              label="Settings"
-            />
+            <span className="text-sm text-gray-600">{user.email}</span>
           </div>
         ) : (
           <div className="text-sm text-gray-500 text-center py-2">
