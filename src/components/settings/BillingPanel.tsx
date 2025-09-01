@@ -11,7 +11,7 @@ import { toast } from 'sonner'
 
 export default function BillingPanel() {
   const { paymentMethod, loading: billingLoading, setupCard, deleteCard } = useBilling()
-  const { profile, credits, loading: settingsLoading } = useSettingsData()
+  const { profile, loading: settingsLoading } = useSettingsData()
   const [isSetupLoading, setIsSetupLoading] = useState(false)
   const [isDeleteLoading, setIsDeleteLoading] = useState(false)
 
@@ -97,7 +97,10 @@ export default function BillingPanel() {
                 <span className="text-sm font-medium text-blue-900">Credits Balance</span>
               </div>
               <p className="text-2xl font-bold text-blue-900">
-                ${credits?.balance_usd?.toFixed(2) || '0.00'}
+                $0.00
+              </p>
+              <p className="text-xs text-blue-700 mt-1">
+                Credit system disabled
               </p>
             </div>
             

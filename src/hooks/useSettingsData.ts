@@ -87,18 +87,14 @@ export function useSettingsData() {
           .eq('active', true)
           .maybeSingle(),
         
-        // Fetch user credits
-        supabase
-          .from('user_credits')
-          .select('balance_usd, last_updated')
-          .eq('user_id', user.id)
-          .maybeSingle()
+        // Skip user credits as it's no longer used
+        Promise.resolve({ data: null, error: null })
       ])
 
       setData({
         profile: profileResult.data,
         paymentMethod: paymentResult.data,
-        credits: creditsResult.data,
+        credits: null, // No longer using user credits
         loading: false,
         error: null
       })
