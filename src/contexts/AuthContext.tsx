@@ -34,6 +34,7 @@ export type AuthContextType = {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  isValidating: boolean;
   pendingEmailAddress: string | null;
   isPendingEmailCheck: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null; data: any }>; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -75,6 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [pendingEmailAddress, setPendingEmailAddress] = useState<string | null>(null);
   const [isPendingEmailCheck, setIsPendingEmailCheck] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
   const { clearNavigationState } = useNavigationState();
   const initializedRef = useRef(false);
 
@@ -105,6 +107,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(supaSession?.user ?? null);
       setSession(supaSession);
       setLoading(false);
+
+      // Validate session after any auth state change (deferred to avoid deadlocks)
+      if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && supaSession?.user) {
+        setTimeout(async () => {
+          setIsValidating(true);
+          try {
+            const { data: userData, error } = await supabase.auth.getUser();
+            if (error || !userData?.user) {
+              console.warn('[AuthContext] Session validation failed, clearing auth state');
+              const { cleanupAuthState } = await import('@/utils/authCleanup');
+              cleanupAuthState();
+              try {
+                await supabase.auth.signOut({ scope: 'global' });
+              } catch (signOutError) {
+                console.warn('Global signOut failed during validation cleanup:', signOutError);
+              }
+              setUser(null);
+              setSession(null);
+              setPendingEmailAddress(null);
+              setIsPendingEmailCheck(false);
+            }
+          } catch (validationError) {
+            console.error('Session validation error:', validationError);
+          } finally {
+            setIsValidating(false);
+          }
+        }, 0);
+      }
 
       if (event === 'SIGNED_IN' && supaSession) {
         // Only check for pending email change if we suspect there might be one
@@ -167,14 +197,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
      * Bootstrap existing session ONLY ONCE
      * ────────────────────────────*/
     if (typeof window !== 'undefined') (window as any).__authTrace.initialSessionChecks++;
-    supabase.auth.getSession().then(({ data: { session: supaSession } }) => {
+    supabase.auth.getSession().then(async ({ data: { session: supaSession } }) => {
       log('debug', 'Initial session check', { hasSession: !!supaSession }, 'auth');
       
-      // Set user and session state - let features decide access based on email_confirmed_at
-      
+      // Set user and session state initially
       setUser(supaSession?.user ?? null);
       setSession(supaSession);
       setLoading(false);
+
+      // Immediate validation if we have a session (deferred to avoid deadlocks)
+      if (supaSession?.user) {
+        setTimeout(async () => {
+          setIsValidating(true);
+          try {
+            const { data: userData, error } = await supabase.auth.getUser();
+            if (error || !userData?.user) {
+              console.warn('[AuthContext] Initial session validation failed, clearing auth state');
+              const { cleanupAuthState } = await import('@/utils/authCleanup');
+              cleanupAuthState();
+              try {
+                await supabase.auth.signOut({ scope: 'global' });
+              } catch (signOutError) {
+                console.warn('Global signOut failed during initial validation cleanup:', signOutError);
+              }
+              setUser(null);
+              setSession(null);
+              setPendingEmailAddress(null);
+              setIsPendingEmailCheck(false);
+            }
+          } catch (validationError) {
+            console.error('Initial session validation error:', validationError);
+          } finally {
+            setIsValidating(false);
+          }
+        }, 0);
+      }
     }).catch((error) => {
       console.error('Error getting initial session:', error);
       setLoading(false);
@@ -468,6 +525,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         session,
         loading,
+        isValidating,
         pendingEmailAddress,
         isPendingEmailCheck,
         signIn,

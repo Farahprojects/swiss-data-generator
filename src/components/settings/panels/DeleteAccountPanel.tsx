@@ -57,22 +57,22 @@ export const DeleteAccountPanel = () => {
       
       console.log('✅ Account deletion successful:', data);
       
-      // Immediately sign out and clear all auth state
-      console.log('🚪 Signing out user after successful account deletion...');
+      // Immediately clear all auth state and sign out
+      console.log('🚪 Clearing auth state after successful account deletion...');
       
-      // Clear auth state first to prevent any lingering session
-      const { cleanupAuthState, emergencyAuthCleanup } = await import('@/utils/authCleanup');
+      // 1. Clean up storage first
+      const { cleanupAuthState } = await import('@/utils/authCleanup');
       cleanupAuthState();
       
-      // Force sign out from Supabase directly
+      // 2. Force global sign out from Supabase
       try {
         await supabase.auth.signOut({ scope: 'global' });
-        console.log('✅ Supabase signOut completed');
+        console.log('✅ Supabase global signOut completed');
       } catch (signOutError) {
         console.warn('⚠️ Supabase signOut failed, but continuing:', signOutError);
       }
       
-      // Also use the AuthContext signOut for complete cleanup
+      // 3. Use AuthContext signOut for complete cleanup
       try {
         await signOut();
         console.log('✅ AuthContext signOut completed');
@@ -80,18 +80,14 @@ export const DeleteAccountPanel = () => {
         console.warn('⚠️ AuthContext signOut failed:', contextSignOutError);
       }
       
-      // Force emergency cleanup to ensure complete state reset
+      // 4. Emergency cleanup (this will force reload)
+      const { emergencyAuthCleanup } = await import('@/utils/authCleanup');
       emergencyAuthCleanup();
       
       toast({
         title: "Account Deleted",
-        description: "Your account has been successfully deleted. You will be redirected shortly."
+        description: "Your account has been successfully deleted."
       });
-      
-      // Force redirect after a brief delay to allow toast to show
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 1500);
       
     } catch (error) {
       console.error('❌ Delete account error:', error);

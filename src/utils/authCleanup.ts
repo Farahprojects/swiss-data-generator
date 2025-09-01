@@ -4,17 +4,17 @@
 export const cleanupAuthState = () => {
   console.log('🧹 Cleaning up auth state...');
   
-  // Clear all Supabase auth keys from localStorage
+  // Clear all Supabase auth keys from localStorage (more aggressive patterns)
   Object.keys(localStorage).forEach((key) => {
-    if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+    if (key.startsWith('supabase') || key.includes('sb-') || key.includes('auth')) {
       console.log('Removing localStorage key:', key);
       localStorage.removeItem(key);
     }
   });
   
-  // Clear from sessionStorage if present
+  // Clear from sessionStorage if present (more aggressive patterns)
   Object.keys(sessionStorage || {}).forEach((key) => {
-    if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+    if (key.startsWith('supabase') || key.includes('sb-') || key.includes('auth')) {
       console.log('Removing sessionStorage key:', key);
       sessionStorage.removeItem(key);
     }
