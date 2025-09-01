@@ -21,6 +21,7 @@ import CalendarPage from './pages/dashboard/CalendarPage';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import StripeReturn from './pages/StripeReturn';
+import ReportChatScreen from './screens/ReportChatScreen';
 import NotFound from './pages/NotFound';
 import NavigationStateProvider from '@/contexts/NavigationStateContext';
 
@@ -58,6 +59,10 @@ const AuthedAppShell: React.FC = () => {
               <Route path="/success" element={<SubscriptionSuccess />} />
               <Route path="/cancel" element={<SubscriptionPaywall />} />
               <Route path="/stripe/return" element={<StripeReturn />} />
+              
+              {/* Chat routes */}
+              <Route path="/chat" element={<ReportChatScreen />} />
+              <Route path="/chat/:chat_id" element={<ReportChatScreen />} />
               
               {/* Protected routes */}
               <Route path="/settings" element={<AuthGuard><UserSettings /></AuthGuard>} />

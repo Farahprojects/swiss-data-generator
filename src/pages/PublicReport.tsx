@@ -259,7 +259,7 @@ const PublicReport = () => {
                         setChatTokens(activeGuest.guestId, '');
                         setActiveGuest(null);
                         setIsReportReady(false);
-                        navigate('/chat');
+                        navigate(`/chat?guest_id=${activeGuest.guestId}`);
                       }
                     }}
                     className="w-full bg-gray-900 text-white hover:bg-gray-800"
@@ -280,7 +280,7 @@ const PublicReport = () => {
                   // Payment confirmed, navigate to chat immediately - let chat page handle report polling
                   setChatTokens(paidData.guestId, '');
                   setActiveGuest(null);
-                  navigate('/chat');
+                  navigate(`/chat?guest_id=${paidData.guestId}`);
                 }}
                 onReportReady={(readyData) => {
                   // Report is ready, show the ready modal

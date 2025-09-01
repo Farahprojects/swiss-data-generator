@@ -18,12 +18,9 @@ export default function StripeReturn() {
     console.log('🔍 [StripeReturn] Parsed params:', { guestId, sessionId, status });
     
     if (guestId) {
-      console.log('✅ [StripeReturn] Found guest_id, navigating to report page');
-      // Pass through all parameters for proper detection
-      const reportUrl = sessionId && status 
-        ? `/report?guest_id=${guestId}&session_id=${sessionId}&status=${status}`
-        : `/report?guest_id=${guestId}`;
-      navigate(reportUrl, { replace: true });
+      console.log('✅ [StripeReturn] Found guest_id, navigating to chat page');
+      // Navigate to chat with guest_id
+      navigate(`/chat?guest_id=${guestId}`, { replace: true });
     } else if (sessionId) {
       console.log('✅ [StripeReturn] Found session_id, navigating to report page');
       const reportUrl = status 
