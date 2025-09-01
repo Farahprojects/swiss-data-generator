@@ -35,6 +35,7 @@ export const DeleteAccountPanel = () => {
     }
     
     setIsDeleting(true);
+    console.log('🚀 Starting account deletion process...');
     
     try {
       // Get user session for auth
@@ -43,16 +44,28 @@ export const DeleteAccountPanel = () => {
         throw new Error('No session found')
       }
 
-      // Call the delete account edge function
-      const { data, error } = await supabase.functions.invoke('delete-account', {
+      console.log('📨 Calling delete-account edge function...');
+      
+      // Add a timeout to prevent infinite hanging
+      const deleteAccountPromise = supabase.functions.invoke('delete-account', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         }
-      })
+      });
+      
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Delete operation timed out after 20 seconds')), 20000)
+      });
+      
+      const result = await Promise.race([deleteAccountPromise, timeoutPromise]);
+      const { data, error } = result;
 
       if (error) {
+        console.error('❌ Edge function returned error:', error);
         throw new Error(error.message || 'Failed to delete account')
       }
+      
+      console.log('✅ Account deletion successful:', data);
       
       // If successful, sign out and redirect
       toast({
@@ -63,11 +76,11 @@ export const DeleteAccountPanel = () => {
       await signOut();
       window.location.href = '/login';
     } catch (error) {
-      console.error('Delete account exception:', error);
+      console.error('❌ Delete account exception:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to delete account. Please try again."
+        description: error instanceof Error ? error.message : "Failed to delete account. Please try again."
       });
       setIsDeleting(false);
       setIsDialogOpen(false);
@@ -155,7 +168,6 @@ export const DeleteAccountPanel = () => {
             <Button 
               variant="outline" 
               onClick={handleCancel} 
-              disabled={isDeleting}
               className="flex-1 rounded-xl font-medium transition-all duration-200 hover:bg-muted/50"
             >
               Cancel
