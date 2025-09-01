@@ -9,6 +9,7 @@ import Signup from './pages/Signup';
 import ResetPassword from './pages/auth/Password';
 import ConfirmEmail from './pages/auth/ConfirmEmail';
 import { AuthGuard } from './components/auth/AuthGuard';
+import { PublicOnlyGuard } from './components/auth/PublicOnlyGuard';
 import PublicReport from './pages/PublicReport';
 import Pricing from './pages/Pricing';
 import Contact from './pages/Contact';
@@ -39,36 +40,37 @@ const AuthedAppShell: React.FC = () => {
         <ModalStateProvider>
           <SettingsModalProvider>
             <Routes>
-              {/* Public routes */}
-              <Route path="/" element={<PublicReport />} />
-              <Route path="/pricing" element={<Pricing />} />
-
-              <Route path="/about" element={<About />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/legal" element={<Legal />} />
-              <Route path="/blog" element={<Blog />} />
-              <Route path="/blog/:slug" element={<BlogPost />} />
+              {/* Public routes - redirect authenticated users to chat */}
+              <Route path="/" element={<PublicOnlyGuard><PublicReport /></PublicOnlyGuard>} />
+              <Route path="/pricing" element={<PublicOnlyGuard><Pricing /></PublicOnlyGuard>} />
+              <Route path="/about" element={<PublicOnlyGuard><About /></PublicOnlyGuard>} />
+              <Route path="/contact" element={<PublicOnlyGuard><Contact /></PublicOnlyGuard>} />
+              <Route path="/legal" element={<PublicOnlyGuard><Legal /></PublicOnlyGuard>} />
+              <Route path="/blog" element={<PublicOnlyGuard><Blog /></PublicOnlyGuard>} />
+              <Route path="/blog/:slug" element={<PublicOnlyGuard><BlogPost /></PublicOnlyGuard>} />
               
-              {/* Auth routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/auth/password" element={<ResetPassword />} />
-              <Route path="/auth/email" element={<ConfirmEmail />} />
-              <Route path="/subscription" element={<SubscriptionPaywall />} />
-              <Route path="/subscription-paywall" element={<SubscriptionPaywall />} />
-              <Route path="/success" element={<SubscriptionSuccess />} />
-              <Route path="/cancel" element={<SubscriptionPaywall />} />
-              <Route path="/stripe/return" element={<StripeReturn />} />
+              {/* Auth routes - redirect authenticated users to chat */}
+              <Route path="/login" element={<PublicOnlyGuard><Login /></PublicOnlyGuard>} />
+              <Route path="/signup" element={<PublicOnlyGuard><Signup /></PublicOnlyGuard>} />
+              <Route path="/auth/password" element={<PublicOnlyGuard><ResetPassword /></PublicOnlyGuard>} />
+              <Route path="/auth/email" element={<PublicOnlyGuard><ConfirmEmail /></PublicOnlyGuard>} />
               
-              {/* Chat routes */}
+              {/* Payment/subscription routes - redirect authenticated users to chat */}
+              <Route path="/subscription" element={<PublicOnlyGuard><SubscriptionPaywall /></PublicOnlyGuard>} />
+              <Route path="/subscription-paywall" element={<PublicOnlyGuard><SubscriptionPaywall /></PublicOnlyGuard>} />
+              <Route path="/success" element={<PublicOnlyGuard><SubscriptionSuccess /></PublicOnlyGuard>} />
+              <Route path="/cancel" element={<PublicOnlyGuard><SubscriptionPaywall /></PublicOnlyGuard>} />
+              <Route path="/stripe/return" element={<PublicOnlyGuard><StripeReturn /></PublicOnlyGuard>} />
+              
+              {/* Chat routes - accessible to both authenticated and guest users */}
               <Route path="/chat" element={<ReportChatScreen />} />
               <Route path="/chat/:chat_id" element={<ReportChatScreen />} />
               
               {/* Protected routes */}
               <Route path="/settings" element={<AuthGuard><UserSettings /></AuthGuard>} />
               
-              {/* 404 */}
-              <Route path="*" element={<NotFound />} />
+              {/* 404 - redirect authenticated users to chat */}
+              <Route path="*" element={<PublicOnlyGuard><NotFound /></PublicOnlyGuard>} />
             </Routes>
           </SettingsModalProvider>
         </ModalStateProvider>
