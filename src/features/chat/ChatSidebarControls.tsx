@@ -11,13 +11,10 @@ export const ChatSidebarControls: React.FC = () => {
   const { isPolling, isReportReady } = useReportReadyStore();
   const { user } = useAuth();
 
-  const clearChat = useChatStore((s) => s.clearChat);
+
 
   const handleClearSession = async () => {
-    // Clear chat store first
-    clearChat();
-    
-    // Then clear all session data
+    // Clear all session data
     await sessionManager.clearSession({ redirectTo: '/', preserveNavigation: false });
   };
 
