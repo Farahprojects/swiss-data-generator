@@ -45,9 +45,9 @@ const About = () => {
         <section className="py-24 bg-gradient-to-b from-background to-accent/20">
           <div className="container mx-auto px-4">
             <h2 className="text-3xl font-light mb-16 text-center text-gray-900 tracking-tight">Our Team</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-6xl mx-auto">
+            <div className="flex flex-col md:flex-row gap-12 max-w-4xl mx-auto justify-center">
               {/* Founder Card */}
-              <div className="backdrop-blur-sm bg-white/50 rounded-2xl p-10 shadow-lg border border-white/20 hover:shadow-xl transition-all flex flex-col justify-between">
+              <div className="backdrop-blur-sm bg-white/50 rounded-2xl p-10 shadow-lg border border-white/20 hover:shadow-xl transition-all flex flex-col justify-between flex-1 max-w-md">
                 <div className="flex flex-col items-center text-center">
                   <div className="w-24 h-24 mb-6 rounded-full overflow-hidden flex items-center justify-center">
                     <img src={normalizeStorageUrl("https://auth.theraiastro.com/storage/v1/object/public/therai-assets//me.png")} alt="Peter Farah" className="object-cover w-24 h-24" loading="lazy" />
@@ -85,7 +85,7 @@ const About = () => {
               </div>
 
               {/* OpenAI Support Card */}
-              <div className="backdrop-blur-sm bg-white/50 rounded-2xl p-10 shadow-lg border border-white/20 hover:shadow-xl transition-all flex flex-col justify-between">
+              <div className="backdrop-blur-sm bg-white/50 rounded-2xl p-10 shadow-lg border border-white/20 hover:shadow-xl transition-all flex flex-col justify-between flex-1 max-w-md">
                 <div className="flex flex-col items-center text-center">
                   <div className="w-24 h-24 mb-6 rounded-full overflow-hidden flex items-center justify-center">
                     <img src={normalizeStorageUrl("https://auth.theraiastro.com/storage/v1/object/public/therai-assets//OpenAI-black-monoblossom.png")} alt="OpenAI Logo" className="object-contain w-20 h-20" loading="lazy" />
