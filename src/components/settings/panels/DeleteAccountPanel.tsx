@@ -10,15 +10,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Trash2 } from "lucide-react";
 
 export const DeleteAccountPanel = () => {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [confirmation, setConfirmation] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   
   const handleDeleteClick = () => {
@@ -26,15 +25,6 @@ export const DeleteAccountPanel = () => {
   };
   
   const confirmDelete = async () => {
-    if (confirmation !== "DELETE") {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Please type the confirmation phrase exactly as shown."
-      });
-      return;
-    }
-    
     if (!user) {
       toast({
         variant: "destructive",
@@ -87,60 +77,109 @@ export const DeleteAccountPanel = () => {
     }
   };
 
+  const handleCancel = () => {
+    setIsDialogOpen(false);
+  };
+
   return (
-    <div className="p-6 bg-white rounded-lg shadow">
-      <h2 className="text-2xl font-semibold mb-6">Delete Account</h2>
-      
-      <div className="mb-8">
-        <p className="text-gray-600 mb-6">
-          Deleting your account is permanent and cannot be undone. All your data, 
-          API keys, and subscription information will be permanently removed.
+    <div className="space-y-8">
+      {/* Header Section */}
+      <div className="space-y-3">
+        <h2 className="text-2xl font-light tracking-tight text-foreground">
+          Delete Account
+        </h2>
+        <p className="text-muted-foreground font-light leading-relaxed max-w-2xl">
+          Permanently remove your account and all associated data. This action cannot be undone 
+          and will immediately cancel any active subscriptions.
         </p>
-        
+      </div>
+      
+      {/* Warning Section */}
+      <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-6 space-y-4">
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5">
+            <Trash2 className="h-5 w-5 text-destructive" />
+          </div>
+          <div className="space-y-3">
+            <h3 className="font-medium text-destructive">
+              This will permanently delete:
+            </h3>
+            <ul className="space-y-2 text-sm text-muted-foreground font-light">
+              <li className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-destructive/60" />
+                Your profile and account settings
+              </li>
+              <li className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-destructive/60" />
+                All conversations and chat history
+              </li>
+              <li className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-destructive/60" />
+                Payment methods and billing information
+              </li>
+              <li className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-destructive/60" />
+                Active subscriptions (immediately cancelled)
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      
+      {/* Action Button */}
+      <div className="pt-4">
         <Button 
           variant="destructive" 
           onClick={handleDeleteClick}
-          className="bg-red-600 hover:bg-red-700"
+          className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-medium rounded-xl px-6 py-2.5 transition-all duration-200 hover:scale-[0.98] active:scale-[0.96]"
         >
+          <Trash2 className="w-4 h-4 mr-2" />
           Delete Account
         </Button>
       </div>
       
+      {/* Confirmation Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="text-red-600">
-              Are you absolutely sure?
+        <DialogContent className="sm:max-w-md rounded-2xl border-0 shadow-2xl bg-background/95 backdrop-blur-xl">
+          <DialogHeader className="space-y-4 text-center pb-2">
+            <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
+              <Trash2 className="w-6 h-6 text-destructive" />
+            </div>
+            <DialogTitle className="text-xl font-light tracking-tight text-foreground">
+              Delete Your Account?
             </DialogTitle>
-            <DialogDescription>
-              This action cannot be undone. This will permanently delete your account
-              and remove your data from our servers.
+            <DialogDescription className="text-muted-foreground font-light leading-relaxed px-2">
+              This action cannot be undone. Your account and all data will be permanently deleted, 
+              and any active subscriptions will be immediately cancelled.
             </DialogDescription>
           </DialogHeader>
           
-          <div className="py-4">
-            <p className="mb-3 font-medium">
-              Type "DELETE" to confirm:
-            </p>
-            <Input
-              value={confirmation}
-              onChange={(e) => setConfirmation(e.target.value)}
-              placeholder="DELETE"
-              className="mb-2"
-            />
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isDeleting}>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-3 pt-6">
+            <Button 
+              variant="outline" 
+              onClick={handleCancel} 
+              disabled={isDeleting}
+              className="flex-1 rounded-xl font-medium transition-all duration-200 hover:bg-muted/50"
+            >
               Cancel
             </Button>
             <Button 
               variant="destructive" 
               onClick={confirmDelete}
-              disabled={isDeleting || confirmation !== "DELETE"}
-              className="bg-red-600 hover:bg-red-700"
+              disabled={isDeleting}
+              className="flex-1 bg-destructive hover:bg-destructive/90 text-destructive-foreground font-medium rounded-xl transition-all duration-200 hover:scale-[0.98] active:scale-[0.96]"
             >
-              {isDeleting ? "Deleting..." : "Yes, Delete My Account"}
+              {isDeleting ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full border-2 border-destructive-foreground/30 border-t-destructive-foreground animate-spin" />
+                  Deleting...
+                </div>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Account
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
