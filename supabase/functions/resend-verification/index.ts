@@ -57,11 +57,13 @@ serve(async (req) => {
       console.log('User already verified for email:', email);
       return new Response(
         JSON.stringify({ 
+          success: false,
           error: 'This email address is already verified', 
           code: 'already_verified',
-          message: 'Your email is already verified. Please try logging in.' 
+          message: 'Your email is already verified. Please try logging in.',
+          shouldRedirectToLogin: true
         }),
-        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -84,11 +86,13 @@ serve(async (req) => {
         console.log('User already registered, suggesting login instead');
         return new Response(
           JSON.stringify({ 
+            success: false,
             error: 'User already registered', 
             code: 'email_exists',
-            message: 'This email is already registered. Please try logging in instead.' 
+            message: 'This email is already registered. Please try logging in instead.',
+            shouldRedirectToLogin: true
           }),
-          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       

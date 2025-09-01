@@ -152,28 +152,14 @@ const Signup = () => {
       
       if (error) {
         console.error('Resend verification error:', error);
-        
-        // Check for specific error status codes that indicate user should login
-        if (error.status === 409) {
-          toast({
-            title: 'Account Found',
-            description: 'This email is already registered. Redirecting to login...',
-            variant: 'default'
-          });
-          setTimeout(() => navigate('/login'), 2000);
-          return;
-        }
-        
         toast({
           title: 'Error',
           description: 'Failed to resend verification email. Please try again.',
           variant: 'destructive'
         });
-      } else if (data?.error) {
-        console.error('Resend verification response error:', data.error);
-        
-        // Handle specific error codes returned from the edge function
-        if (data.code === 'email_exists' || data.code === 'already_verified') {
+      } else if (data) {
+        // Check for graceful error responses (success: false)
+        if (data.success === false && data.shouldRedirectToLogin) {
           toast({
             title: 'Account Found',
             description: data.message || 'This email is already registered. Redirecting to login...',
@@ -183,16 +169,32 @@ const Signup = () => {
           return;
         }
         
+        // Check for legacy error format
+        if (data.error && (data.code === 'email_exists' || data.code === 'already_verified')) {
+          toast({
+            title: 'Account Found',
+            description: data.message || 'This email is already registered. Redirecting to login...',
+            variant: 'default'
+          });
+          setTimeout(() => navigate('/login'), 2000);
+          return;
+        }
+        
+        // Handle any other errors
+        if (data.error) {
+          toast({
+            title: 'Error',
+            description: data.error,
+            variant: 'destructive'
+          });
+          return;
+        }
+        
+        // Success case
         toast({
-          title: 'Error',
-          description: data.error,
-          variant: 'destructive'
-        });
-      } else {
-        console.log('Verification email resent successfully');
-        toast({
-          title: 'Email Sent',
-          description: 'Verification email has been resent. Please check your inbox.',
+          title: 'Verification Email Sent',
+          description: data.message || 'Please check your email for the verification link.',
+          variant: 'default'
         });
       }
     } catch (err) {
