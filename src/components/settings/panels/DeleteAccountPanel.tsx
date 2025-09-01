@@ -47,27 +47,30 @@ export const DeleteAccountPanel = () => {
     setIsDeleting(true);
     
     try {
-      // Call the admin function to delete the user using the PostgreSQL function
-      const { data, error } = await supabase.rpc('delete_user_account' as any, {
-        user_id_to_delete: user.id
-      });
-      
-      if (error) {
-        console.error('Delete account error:', error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: error.message || "Failed to delete account. Please try again."
-        });
-        setIsDeleting(false);
-        setIsDialogOpen(false);
-        return;
+      // Get user session for auth
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        throw new Error('No session found')
+      }
+
+      // Call the delete account edge function
+      const response = await fetch('/functions/v1/delete-account', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to delete account')
       }
       
       // If successful, sign out and redirect
       toast({
         title: "Account Deleted",
-        description: "Your account has been successfully deleted."
+        description: "Your account and all associated data have been permanently deleted."
       });
       
       await signOut();

@@ -4,12 +4,14 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
-import { CreditCard, Plus, Trash2, AlertTriangle, Calendar, Receipt, ExternalLink } from 'lucide-react'
+import { CreditCard, Plus, Trash2, AlertTriangle, Calendar, Receipt, ExternalLink, Wallet, DollarSign } from 'lucide-react'
 import { useBilling } from '@/hooks/useBilling'
+import { useSettingsData } from '@/hooks/useSettingsData'
 import { toast } from 'sonner'
 
 export default function BillingPanel() {
-  const { paymentMethod, loading, setupCard, deleteCard } = useBilling()
+  const { paymentMethod, loading: billingLoading, setupCard, deleteCard } = useBilling()
+  const { profile, credits, loading: settingsLoading } = useSettingsData()
   const [isSetupLoading, setIsSetupLoading] = useState(false)
   const [isDeleteLoading, setIsDeleteLoading] = useState(false)
 
@@ -59,7 +61,7 @@ export default function BillingPanel() {
     })
   }
 
-  if (loading) {
+  if (billingLoading || settingsLoading) {
     return (
       <Card>
         <CardHeader>
@@ -79,6 +81,57 @@ export default function BillingPanel() {
 
   return (
     <div className="space-y-6">
+      {/* Account Overview */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Wallet className="h-5 w-5" />
+            Account Overview
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <DollarSign className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-900">Credits Balance</span>
+              </div>
+              <p className="text-2xl font-bold text-blue-900">
+                ${credits?.balance_usd?.toFixed(2) || '0.00'}
+              </p>
+            </div>
+            
+            <div className="p-4 bg-green-50 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Badge className="h-4 w-4 text-green-600" />
+                <span className="text-sm font-medium text-green-900">Subscription</span>
+              </div>
+              <p className="text-lg font-semibold text-green-900 capitalize">
+                {profile?.subscription_plan || 'Free'}
+              </p>
+              <Badge variant={profile?.subscription_active ? 'default' : 'secondary'} className="mt-1">
+                {profile?.subscription_active ? 'Active' : 'Inactive'}
+              </Badge>
+            </div>
+
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <CreditCard className="h-4 w-4 text-gray-600" />
+                <span className="text-sm font-medium text-gray-900">Payment Method</span>
+              </div>
+              <p className="text-lg font-semibold text-gray-900">
+                {paymentMethod ? `•••• ${paymentMethod.card_last4}` : 'None'}
+              </p>
+              {paymentMethod && (
+                <p className="text-sm text-gray-600">
+                  {formatCardBrand(paymentMethod.card_brand)}
+                </p>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
