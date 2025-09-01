@@ -13,6 +13,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Trash2 } from "lucide-react";
+import { aggressiveAuthCleanup } from '@/utils/authCleanup';
 
 export const DeleteAccountPanel = () => {
   const { user, signOut } = useAuth();
@@ -81,7 +82,7 @@ export const DeleteAccountPanel = () => {
       }
       
       // Force emergency cleanup to ensure complete state reset
-      emergencyAuthCleanup();
+      aggressiveAuthCleanup();
       
       toast({
         title: "Account Deleted",

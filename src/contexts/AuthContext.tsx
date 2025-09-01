@@ -4,6 +4,7 @@ import type { User, Session } from '@supabase/supabase-js';
 import { useNavigationState } from '@/contexts/NavigationStateContext';
 import { getAbsoluteUrl } from '@/utils/urlUtils';
 import { log } from '@/utils/logUtils';
+import { cleanupAuthState } from '@/utils/authCleanup';
 
 import { authService } from '@/services/authService';
 import { SUPABASE_URL } from '@/integrations/supabase/client';

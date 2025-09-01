@@ -29,6 +29,21 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
     }
   }, [location.pathname, user, loading, isPasswordResetRoute, hasRecoveryToken, pendingEmailAddress]);
   
+  // Show loading spinner while auth is being validated
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
+  // Check if user has verified their email
+  if (user && !user.email_confirmed_at) {
+    // User is logged in but email not verified - redirect to verification page
+    return <Navigate to="/auth/email-verification" state={{ from: location }} replace />;
+  }
+
   // If user is on password reset route, don't apply auth guard
   if (isPasswordResetRoute) {
     log('debug', 'Password reset route detected, bypassing auth guard');
