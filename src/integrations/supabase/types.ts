@@ -1988,16 +1988,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      add_user_credits: {
-        Args: {
-          _amount_usd: number
-          _description?: string
-          _stripe_pid?: string
-          _type?: string
-          _user_id: string
-        }
-        Returns: undefined
-      }
       bytea_to_text: {
         Args: { data: string }
         Returns: string
@@ -2137,10 +2127,6 @@ export type Database = {
         Args: { curlopt: string; value: string }
         Returns: boolean
       }
-      increment_user_balance: {
-        Args: { amount_param: number; user_id_param: string }
-        Returns: undefined
-      }
       is_user_verified: {
         Args: { _user_id?: string }
         Returns: boolean
@@ -2148,17 +2134,6 @@ export type Database = {
       mark_profile_verified: {
         Args: { user_id?: string }
         Returns: boolean
-      }
-      record_api_usage: {
-        Args: {
-          _cost_usd: number
-          _endpoint: string
-          _processing_time_ms?: number
-          _request_params?: Json
-          _response_status?: number
-          _user_id: string
-        }
-        Returns: string
       }
       rpc_notify_orchestrator: {
         Args: { guest_report_id: string }
