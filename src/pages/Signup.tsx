@@ -328,7 +328,7 @@ const Signup = () => {
 
       <main className="flex-grow flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md mx-auto space-y-12">
-          <header className="text-center space-y-4">
+          <header className="text-center space-y-4 pt-8">
             <h1 className="text-5xl md:text-6xl font-light text-gray-900 leading-tight">
               {signupSuccess ? (
                 <>
