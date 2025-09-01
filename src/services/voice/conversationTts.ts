@@ -124,6 +124,12 @@ public getCurrentAudioLevel(): number {
 return this.audioLevel;
 }
 
+// Method to set audio level from external sources (like direct Web Audio API)
+public setAudioLevelForAnimation(level: number): void {
+this.audioLevel = level;
+this.notifyListeners();
+}
+
 public getMasterAudioElement(): HTMLAudioElement | null {
 return this.masterAudioElement ?? null;
 }

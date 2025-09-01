@@ -403,8 +403,14 @@ await new Promise<void>(async (resolve) => {
       const source = audioContext.createBufferSource();
       source.buffer = audioBuffer;
       
-      // Connect source directly to destination for simple playback
-      source.connect(audioContext.destination);
+      // Create analyser for speaking animation
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      
+      // Connect: source → analyser → destination
+      source.connect(analyser);
+      analyser.connect(audioContext.destination);
       
       // Store reference to stop audio on modal close
       const audioSourceRef = { current: source };
@@ -412,9 +418,29 @@ await new Promise<void>(async (resolve) => {
       // Set replying state when audio starts
       setConversationState('replying');
       
+      // Simple speaking animation loop that updates the service
+      const animateSpeaking = () => {
+        if (isShuttingDown.current) return;
+        
+        analyser.getByteFrequencyData(dataArray);
+        const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+        const audioLevel = average / 255; // Normalize to 0-1
+        
+        // Update the conversationTtsService audio level so SpeakingBars can use it
+        conversationTtsService.setAudioLevelForAnimation(audioLevel);
+        
+        if (!isShuttingDown.current) {
+          requestAnimationFrame(animateSpeaking);
+        }
+      };
+      
+      // Start animation loop
+      animateSpeaking();
+      
       // Handle completion
       source.onended = () => {
         console.log('[DEBUG] Audio playback completed');
+        conversationTtsService.setAudioLevelForAnimation(0);
         setConversationState('listening');
         resolve();
       };
