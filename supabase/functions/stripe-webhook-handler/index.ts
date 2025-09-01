@@ -1,551 +1,276 @@
-/* ========================================================================== *
-   Supabase Edge Function – Stripe Webhook Handler (cards + top-ups + services)
-   (2025-06-25) – Hardened for production & null-safe
- * ========================================================================== */
 
-import { serve }    from "https://deno.land/std@0.224.0/http/server.ts";
-import Stripe       from "https://esm.sh/stripe@12.14.0?target=deno&deno-std=0.224.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2?target=deno&deno-std=0.224.0";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import Stripe from 'https://esm.sh/stripe@12.18.0'
 
-/* ─────────────── ENV ─────────────── */
+const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
+  apiVersion: '2023-08-16',
+})
 
-const REQUIRED_ENV = [
-  "STRIPE_SECRET_KEY",
-  "STRIPE_WEBHOOK_SECRET",
-  "SUPABASE_URL",
-  "SUPABASE_SERVICE_ROLE_KEY",
-] as const;
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-for (const k of REQUIRED_ENV) {
-  if (!Deno.env.get(k)) throw new Error(`Missing env: ${k}`);
-}
+serve(async (req) => {
+  try {
+    if (req.method !== 'POST') {
+      return new Response('Method not allowed', { status: 405 })
+    }
 
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
-  apiVersion: "2023-10-16",
-});
-const supabase = createClient(
-  Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-);
+    const signature = req.headers.get('stripe-signature')
+    const body = await req.text()
+    const endpointSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET')
 
-/* ─────────────── CORS ─────────────── */
+    if (!signature || !endpointSecret) {
+      return new Response('Missing signature or secret', { status: 400 })
+    }
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin":  "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, stripe-signature",
-};
-
-/* ───────── Signature verify (same algo; kept) ───────── */
-
-function secureCompare(a: string, b: string) {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
-}
-
-async function verifyStripeSignature(
-  payload: string,
-  sigHeader: string,
-  secret: string,
-  toleranceSec = 300,
-) {
-  const parts = sigHeader.split(",").reduce<Record<string, string>>((acc, p) => {
-    const [k, v] = p.split("=");
-    acc[k] = v;
-    return acc;
-  }, {});
-  const ts   = parts.t;
-  const sigs = parts.v1?.split(" ") ?? [];
-  if (!ts || !sigs.length) throw new Error("Malformed Stripe-Signature");
-  if (Math.abs(Date.now() / 1e3 - Number(ts)) > toleranceSec) {
-    throw new Error("Timestamp outside tolerance");
-  }
-
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const expectedBuf = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    new TextEncoder().encode(`${ts}.${payload}`),
-  );
-  const expected = Array.from(new Uint8Array(expectedBuf))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  if (!sigs.some((sig) => secureCompare(sig, expected))) {
-    throw new Error("Signature mismatch");
-  }
-}
-
-/* ───────── Helper: log + swallow (never crash Stripe) ───────── */
-
-function warn(msg: string, extra?: unknown) {
-  console.warn(`[webhook] ${msg}`, extra ?? "");
-}
-
-/* ───────── Event bookkeeping (unchanged, but non-fatal) ───────── */
-
-async function upsertEvent(evt: any) {
-  const { error } = await supabase
-    .from("stripe_webhook_events")
-    .insert(
-      {
-        stripe_event_id: evt.id,
-        stripe_event_type: evt.type,
-        stripe_kind: evt.type.split(".")[0],
-        stripe_customer_id:
-          evt.data?.object?.customer ?? evt.data?.object?.customer_id ?? null,
-        payload: evt,
-        processed: false,
-      },
-      { ignoreDuplicates: true },
-    );
-  if (error && error.code !== "23505") throw error;
-}
-
-async function markEvent(evtId: string, ok: boolean, errMsg?: string) {
-  await supabase.from("stripe_webhook_events")
-    .update({
-      processed: ok,
-      processed_at: new Date().toISOString(),
-      processing_error: errMsg ?? null,
-    })
-    .eq("stripe_event_id", evtId);
-}
-
-/* ───────── Coach resolver (null-safe) ───────── */
-
-async function resolveCoachFromSlug(slug?: string): Promise<string | null> {
-  if (!slug) return null;
-  const { data, error } = await supabase
-    .from("coach_websites")
-    .select("coach_id")
-    .eq("site_slug", slug)
-    .single();
-
-  if (error || !data?.coach_id) {
-    warn(`coach_slug "${slug}" not found`);
-    return null;
-  }
-  return data.coach_id;
-}
-
-/* ───────── Service purchase logger (null coach OK) ───────── */
-
-async function logServicePurchase(pi: Stripe.PaymentIntent, success = true) {
-  const meta = pi.metadata ?? {};
-
-  // Resolve coach (may be null)
-  const coachId = await resolveCoachFromSlug(meta.coach_slug);
-
-  // Monetary breakdown (5 % fee)
-  const platformFeeCents = Math.floor(pi.amount * 0.05);
-  const coachPayoutCents = pi.amount - platformFeeCents;
-
-  const receiptUrl =
-    pi.charges?.data?.[0]?.receipt_url ?? null;
-
-  // Best-effort customer email
-  let customerEmail: string | null = meta.guest_email ?? null;
-  if (!customerEmail && pi.customer && typeof pi.customer === "string") {
+    let event: Stripe.Event
     try {
-      const cust = await stripe.customers.retrieve(pi.customer);
-      if (!cust.deleted) customerEmail = cust.email ?? null;
-    } catch (_) { /* swallow */ }
+      event = stripe.webhooks.constructEvent(body, signature, endpointSecret)
+    } catch (err) {
+      console.error('Webhook signature verification failed:', err)
+      return new Response('Invalid signature', { status: 400 })
+    }
+
+    console.log(`Processing webhook event: ${event.type}`)
+
+    // Store the webhook event for audit purposes
+    await supabase
+      .from('stripe_webhook_events')
+      .insert({
+        stripe_event_id: event.id,
+        stripe_event_type: event.type,
+        stripe_kind: event.type.split('.')[0],
+        stripe_customer_id: getCustomerIdFromEvent(event),
+        payload: event,
+        processed: false
+      })
+
+    // Process the event
+    await processWebhookEvent(event)
+
+    // Mark as processed
+    await supabase
+      .from('stripe_webhook_events')
+      .update({ processed: true, processed_at: new Date().toISOString() })
+      .eq('stripe_event_id', event.id)
+
+    return new Response(JSON.stringify({ received: true }), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 200,
+    })
+  } catch (error) {
+    console.error('Webhook handler error:', error)
+    return new Response('Internal server error', { status: 500 })
   }
+})
 
-  const row = {
-    stripe_payment_intent_id: pi.id,
-    stripe_session_id:       meta.stripe_session_id ?? pi.id,
-    coach_id:                coachId,               // may be null now
-    coach_slug:              meta.coach_slug ?? null,
-    service_title:           meta.service_title ?? "Service",
-    service_description:     meta.service_description ?? null,
-    service_price_original:  meta.service_price ?? null,
-    amount_cents:            pi.amount,
-    platform_fee_cents:      success ? platformFeeCents : 0,
-    coach_payout_cents:      success ? coachPayoutCents : 0,
-    customer_email:          customerEmail,
-    customer_name:           meta.customer_name ?? null,
-    stripe_customer_id:      typeof pi.customer === "string" ? pi.customer : null,
-    payment_status:          success ? "completed" : "failed",
-    receipt_url:             success ? receiptUrl : null,
-    purchase_metadata:       meta,
-  };
-
-  const { error } = await supabase
-    .from("service_purchases")
-    .upsert(row, {
-      onConflict: "stripe_payment_intent_id",
-      returning: "minimal",
-    });
-  if (error) throw error;
+function getCustomerIdFromEvent(event: Stripe.Event): string | null {
+  const obj = event.data.object as any
+  return obj.customer || obj.customer_id || null
 }
 
-/* ───────── User Resolution for Subscriptions ───────── */
+async function processWebhookEvent(event: Stripe.Event) {
+  switch (event.type) {
+    case 'customer.subscription.created':
+    case 'customer.subscription.updated':
+      await handleSubscriptionChange(event.data.object as Stripe.Subscription)
+      break
+    
+    case 'customer.subscription.deleted':
+      await handleSubscriptionDeleted(event.data.object as Stripe.Subscription)
+      break
+    
+    case 'invoice.payment_succeeded':
+    case 'invoice.payment_failed':
+      await handleInvoicePayment(event.data.object as Stripe.Invoice, event.type)
+      break
+    
+    case 'checkout.session.completed':
+      await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session)
+      break
+    
+    case 'setup_intent.succeeded':
+      await handleSetupIntentSucceeded(event.data.object as Stripe.SetupIntent)
+      break
+    
+    case 'payment_method.attached':
+      await handlePaymentMethodAttached(event.data.object as Stripe.PaymentMethod)
+      break
+    
+    case 'payment_method.detached':
+      await handlePaymentMethodDetached(event.data.object as Stripe.PaymentMethod)
+      break
+    
+    default:
+      console.log(`Unhandled event type: ${event.type}`)
+  }
+}
 
-async function resolveUserFromWebhook(
-  session?: Stripe.Checkout.Session,
-  subscription?: Stripe.Subscription,
-  customerId?: string
-): Promise<string | null> {
-  // Try client_reference_id first (most reliable)
-  if (session?.client_reference_id) {
-    return session.client_reference_id;
+async function resolveUserId(customerId: string, clientReferenceId?: string, metadata?: any): Promise<string | null> {
+  // Try client_reference_id first (this is the Supabase user_id)
+  if (clientReferenceId) {
+    return clientReferenceId
   }
 
   // Try metadata.user_id
-  const userId = session?.metadata?.user_id || subscription?.metadata?.user_id;
-  if (userId) return userId;
+  if (metadata?.user_id) {
+    return metadata.user_id
+  }
 
   // Fallback: lookup by stripe_customer_id in profiles
-  if (customerId) {
-    const { data } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("stripe_customer_id", customerId)
-      .single();
-    if (data?.id) return data.id;
-  }
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('stripe_customer_id', customerId)
+    .single()
 
-  // Final fallback: lookup by email via Stripe customer
-  if (customerId) {
-    try {
-      const customer = await stripe.customers.retrieve(customerId);
-      if (!customer.deleted && customer.email) {
-        const { data } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("email", customer.email)
-          .single();
-        if (data?.id) return data.id;
-      }
-    } catch (err) {
-      warn("Failed to resolve user by email", err);
-    }
-  }
-
-  return null;
+  return profile?.id || null
 }
 
-/* ───────── Profile Updates for Subscriptions ───────── */
+async function handleSubscriptionChange(subscription: Stripe.Subscription) {
+  const userId = await resolveUserId(subscription.customer as string, undefined, subscription.metadata)
+  if (!userId) {
+    console.error('Could not resolve user ID for subscription:', subscription.id)
+    return
+  }
 
-async function updateProfileForSubscription(
-  userId: string,
-  subscription: Stripe.Subscription,
-  customerId: string
-) {
-  const plan = subscription.metadata?.subscription_plan || "10_monthly";
-  const status = subscription.status;
-  const isActive = status === "active" || status === "trialing";
+  const status = subscription.status
+  const isActive = ['active', 'trialing'].includes(status)
+  
+  let nextCharge: string | null = null
+  if (subscription.current_period_end) {
+    nextCharge = new Date(subscription.current_period_end * 1000).toISOString()
+  }
 
-  const profileUpdate = {
-    id: userId,
-    stripe_customer_id: customerId,
-    stripe_subscription_id: subscription.id,
-    subscription_status: status,
-    subscription_active: isActive,
-    subscription_plan: plan,
-    subscription_start_date: new Date(subscription.created * 1000).toISOString(),
-    subscription_next_charge: new Date(subscription.current_period_end * 1000).toISOString(),
-  };
+  const planName = subscription.items.data[0]?.price?.nickname || 
+                   subscription.items.data[0]?.price?.id || 'unknown'
 
-  const { error } = await supabase.from("profiles").upsert(profileUpdate);
-  if (error) throw error;
-
-  console.log(`[WEBHOOK] Updated profile for user ${userId}, subscription ${subscription.id}, active: ${isActive}`);
-}
-
-async function updateProfileForCancelledSubscription(
-  userId: string,
-  subscription: Stripe.Subscription
-) {
-  const { error } = await supabase
-    .from("profiles")
+  await supabase
+    .from('profiles')
     .update({
-      subscription_status: "canceled",
+      stripe_customer_id: subscription.customer as string,
+      stripe_subscription_id: subscription.id,
+      subscription_status: status,
+      subscription_active: isActive,
+      subscription_plan: planName,
+      subscription_start_date: new Date(subscription.created * 1000).toISOString(),
+      subscription_next_charge: nextCharge,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', userId)
+}
+
+async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+  const userId = await resolveUserId(subscription.customer as string, undefined, subscription.metadata)
+  if (!userId) return
+
+  await supabase
+    .from('profiles')
+    .update({
+      subscription_status: 'canceled',
       subscription_active: false,
       subscription_next_charge: null,
+      updated_at: new Date().toISOString()
     })
-    .eq("id", userId);
-
-  if (error) throw error;
-  console.log(`[WEBHOOK] Cancelled subscription for user ${userId}`);
+    .eq('id', userId)
 }
 
-async function updateProfilePaymentStatus(
-  userId: string,
-  status: "succeeded" | "failed"
-) {
-  const { error } = await supabase
-    .from("profiles")
-    .update({ last_payment_status: status })
-    .eq("id", userId);
+async function handleInvoicePayment(invoice: Stripe.Invoice, eventType: string) {
+  const userId = await resolveUserId(invoice.customer as string)
+  if (!userId) return
 
-  if (error) warn("Failed to update payment status", error);
-}
+  const paymentStatus = eventType === 'invoice.payment_succeeded' ? 'succeeded' : 'failed'
 
-/* ───────── Guest Report Payment Status Update ───────── */
-
-async function updateGuestReportPaymentStatus(guestReportId: string) {
-  console.log(`[WEBHOOK] Updating guest_report ${guestReportId} to 'paid'`);
-  
-  const { error: updateError } = await supabase
-    .from('guest_reports')
+  await supabase
+    .from('profiles')
     .update({
-      payment_status: 'paid',
+      last_payment_status: paymentStatus,
+      updated_at: new Date().toISOString()
     })
-    .eq('id', guestReportId)
-    .eq('payment_status', 'pending'); // Idempotency check
+    .eq('id', userId)
+}
 
-  if (updateError) {
-    console.error(`[WEBHOOK] Error updating guest_report ${guestReportId} to paid:`, updateError);
-    throw updateError;
+async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+  const userId = await resolveUserId(session.customer as string, session.client_reference_id, session.metadata)
+  if (!userId) return
+
+  const updateData: any = {
+    stripe_customer_id: session.customer,
+    updated_at: new Date().toISOString()
   }
 
-  console.log(`[WEBHOOK] Successfully updated guest_report ${guestReportId} to 'paid'`);
-}
-
-/* ───────── Top-up helpers (unchanged but with try/catch) ───────── */
-
-async function logTopup(userId: string, pi: Stripe.PaymentIntent, status: "completed" | "failed") {
-  const table = status === "completed" ? "topup_logs" : "topup_logs_failed";
-
-  const payload: any = {
-    user_id: userId,
-    stripe_payment_intent_id: pi.id,
-    amount_cents: pi.amount,
-    status,
-  };
-  if (status === "completed") {
-    payload.receipt_url =
-      pi.charges?.data?.[0]?.receipt_url ?? null;
-  } else {
-    payload.message = pi.last_payment_error?.message ?? "Unknown failure";
+  if (session.subscription) {
+    updateData.stripe_subscription_id = session.subscription
   }
 
-  const { error } = await supabase
-    .from(table)
-    .upsert(payload, { onConflict: "stripe_payment_intent_id", returning: "minimal" });
-
-  if (error) throw error;
+  await supabase
+    .from('profiles')
+    .update(updateData)
+    .eq('id', userId)
 }
 
-async function deactivateCardsForUser(userId: string) {
-  const now = new Date().toISOString();
-  const { error } = await supabase
-    .from("payment_method")
-    .update({
+async function handleSetupIntentSucceeded(setupIntent: Stripe.SetupIntent) {
+  const userId = await resolveUserId(setupIntent.customer as string, undefined, setupIntent.metadata)
+  if (!userId) return
+
+  // Get the payment method that was set up
+  if (setupIntent.payment_method) {
+    const paymentMethod = await stripe.paymentMethods.retrieve(setupIntent.payment_method as string)
+    await updatePaymentMethodInDb(userId, paymentMethod)
+  }
+}
+
+async function handlePaymentMethodAttached(paymentMethod: Stripe.PaymentMethod) {
+  const userId = await resolveUserId(paymentMethod.customer as string)
+  if (!userId) return
+
+  await updatePaymentMethodInDb(userId, paymentMethod)
+}
+
+async function handlePaymentMethodDetached(paymentMethod: Stripe.PaymentMethod) {
+  // Mark payment method as inactive in our DB
+  await supabase
+    .from('payment_method')
+    .update({ 
       active: false,
-      status_reason: "stripe_failed",
-      status_changed_at: now,
+      status_reason: 'detached_from_stripe',
+      status_changed_at: new Date().toISOString()
     })
-    .eq("user_id", userId)
-    .eq("active", true);
-
-  if (error) warn("Failed to deactivate cards", error);
+    .eq('stripe_payment_method_id', paymentMethod.id)
 }
 
-/* ───────── MAIN ───────── */
+async function updatePaymentMethodInDb(userId: string, paymentMethod: Stripe.PaymentMethod) {
+  if (paymentMethod.type !== 'card' || !paymentMethod.card) return
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: CORS_HEADERS });
-  }
+  // Deactivate other payment methods for this user
+  await supabase
+    .from('payment_method')
+    .update({ 
+      active: false,
+      status_reason: 'replaced_by_new_card',
+      status_changed_at: new Date().toISOString()
+    })
+    .eq('user_id', userId)
+    .eq('active', true)
 
-  const rawBody = await req.text().catch(() => "");
-  const sig     = req.headers.get("stripe-signature") ?? "";
-
-  /* 1️⃣ verify signature */
-  try {
-    await verifyStripeSignature(rawBody, sig, Deno.env.get("STRIPE_WEBHOOK_SECRET")!);
-  } catch (err) {
-    warn("Signature verification failed", err);
-    return new Response("Bad signature", { status: 400, headers: CORS_HEADERS });
-  }
-
-  const evt = JSON.parse(rawBody);
-
-  /* 2️⃣ dedupe / log */
-  try {
-    await upsertEvent(evt);
-  } catch (err) {
-    warn("Failed to upsert event", err);
-  }
-
-  /* 3️⃣ handle */
-  let ok = true;
-  let errMsg: string | undefined;
-
-  try {
-    switch (evt.type) {
-
-      /* ——— Checkout session completed ——— */
-      case "checkout.session.completed": {
-        const session = evt.data.object as Stripe.Checkout.Session;
-        const metadata = session.metadata;
-
-        console.log(`[WEBHOOK] Processing checkout.session.completed: ${session.id}`);
-        console.log(`[WEBHOOK] Session metadata:`, metadata);
-        console.log(`[WEBHOOK] Session payment_status:`, session.payment_status);
-
-        // Handle subscription checkout
-        if (session.mode === "subscription" && session.payment_status === "paid") {
-          const userId = await resolveUserFromWebhook(session, undefined, session.customer as string);
-          if (userId) {
-            // Update profiles with basic subscription info (detailed info comes from subscription.created)
-            await supabase.from("profiles").upsert({
-              id: userId,
-              stripe_customer_id: session.customer as string,
-              stripe_subscription_id: session.subscription as string,
-              last_payment_status: "succeeded",
-            });
-            console.log(`[WEBHOOK] Updated profile for subscription checkout: ${userId}`);
-          } else {
-            warn(`Could not resolve user for subscription checkout ${session.id}`);
-          }
-        }
-
-        // Check if this is a guest report purchase
-        if (metadata?.purchase_type === 'report' && metadata?.guest_report_id) {
-          console.log(`[WEBHOOK] Handling checkout session for guest report: ${metadata.guest_report_id}`);
-
-          // Only proceed if payment was successful
-          if (session.payment_status === 'paid') {
-            const guestReportId = metadata.guest_report_id;
-            await updateGuestReportPaymentStatus(guestReportId);
-            
-            // CRITICAL: Now, trigger the report generation flow
-            console.log(`[WEBHOOK] Invoking process-paid-report for guest: ${guestReportId}`);
-            const { error: invokeError } = await supabase.functions.invoke('process-paid-report', {
-              body: { guest_id: guestReportId }
-            });
-            if (invokeError) {
-              console.error(`[WEBHOOK] Failed to invoke process-paid-report for ${guestReportId}:`, invokeError);
-              // Do not throw, as the payment itself was successful. Log the error.
-            }
-
-          } else {
-            console.log(`[WEBHOOK] Session payment_status is '${session.payment_status}', not 'paid'. Skipping update.`);
-          }
-        }
-        break;
-      }
-
-      /* ——— Subscription lifecycle events ——— */
-      case "customer.subscription.created":
-      case "customer.subscription.updated": {
-        const subscription = evt.data.object as Stripe.Subscription;
-        const userId = await resolveUserFromWebhook(undefined, subscription, subscription.customer as string);
-        
-        if (userId) {
-          await updateProfileForSubscription(userId, subscription, subscription.customer as string);
-        } else {
-          warn(`Could not resolve user for subscription ${subscription.id}`);
-        }
-        break;
-      }
-
-      case "customer.subscription.deleted": {
-        const subscription = evt.data.object as Stripe.Subscription;
-        const userId = await resolveUserFromWebhook(undefined, subscription, subscription.customer as string);
-        
-        if (userId) {
-          await updateProfileForCancelledSubscription(userId, subscription);
-        } else {
-          warn(`Could not resolve user for cancelled subscription ${subscription.id}`);
-        }
-        break;
-      }
-
-      /* ——— Invoice payment events ——— */
-      case "invoice.payment_succeeded": {
-        const invoice = evt.data.object as Stripe.Invoice;
-        if (invoice.subscription) {
-          const userId = await resolveUserFromWebhook(undefined, undefined, invoice.customer as string);
-          if (userId) {
-            await updateProfilePaymentStatus(userId, "succeeded");
-          }
-        }
-        break;
-      }
-
-      case "invoice.payment_failed": {
-        const invoice = evt.data.object as Stripe.Invoice;
-        if (invoice.subscription) {
-          const userId = await resolveUserFromWebhook(undefined, undefined, invoice.customer as string);
-          if (userId) {
-            await updateProfilePaymentStatus(userId, "failed");
-          }
-        }
-        break;
-      }
-
-      /* ——— Payment succeeded ——— */
-      case "payment_intent.succeeded":
-      case "charge.succeeded": {
-        // Always fetch the PI (with charges) – covers both event types
-        const piId =
-          evt.type === "payment_intent.succeeded"
-            ? (evt.data.object as Stripe.PaymentIntent).id
-            : (evt.data.object as Stripe.Charge).payment_intent;
-
-        if (!piId) break; // defensive
-
-        const pi = await stripe.paymentIntents.retrieve(
-          piId as string,
-          { expand: ["charges"] },
-        );
-
-        if (pi.metadata?.purchase_type === "service") {
-          await logServicePurchase(pi as Stripe.PaymentIntent, true);
-        } else {
-          const userId = pi.metadata?.user_id;
-          if (userId) await logTopup(userId, pi as Stripe.PaymentIntent, "completed");
-        }
-        break;
-      }
-
-      /* ——— Payment failed ——— */
-      case "payment_intent.payment_failed":
-      case "charge.failed": {
-        const piId =
-          evt.type === "payment_intent.payment_failed"
-            ? (evt.data.object as Stripe.PaymentIntent).id
-            : (evt.data.object as Stripe.Charge).payment_intent;
-
-        if (!piId) break;
-
-        const pi = await stripe.paymentIntents.retrieve(piId as string);
-
-        if (pi.metadata?.purchase_type === "service") {
-          await logServicePurchase(pi as Stripe.PaymentIntent, false);
-        } else {
-          const userId = pi.metadata?.user_id;
-          if (userId) {
-            await logTopup(userId, pi as Stripe.PaymentIntent, "failed");
-            await deactivateCardsForUser(userId);
-          }
-        }
-        break;
-      }
-
-      /* ignore others */
-    }
-  } catch (err) {
-    ok = false;
-    errMsg = String(err);
-    warn("Handler logic error", err);
-  } finally {
-    await markEvent(evt.id, ok, errMsg);
-  }
-
-  return new Response("ok", { status: ok ? 200 : 500, headers: CORS_HEADERS });
-});
+  // Insert or update the new payment method
+  await supabase
+    .from('payment_method')
+    .upsert({
+      user_id: userId,
+      stripe_customer_id: paymentMethod.customer as string,
+      stripe_payment_method_id: paymentMethod.id,
+      card_brand: paymentMethod.card.brand,
+      card_last4: paymentMethod.card.last4,
+      exp_month: paymentMethod.card.exp_month,
+      exp_year: paymentMethod.card.exp_year,
+      fingerprint: paymentMethod.card.fingerprint,
+      payment_method_type: 'card',
+      active: true,
+      ts: new Date().toISOString()
+    }, {
+      onConflict: 'stripe_payment_method_id'
+    })
+}

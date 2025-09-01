@@ -1,204 +1,62 @@
 
-import React, { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ThemeProvider } from "next-themes";
-import { Toaster } from "@/components/ui/toaster";
-import "./App.css";
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Toaster } from '@/components/ui/sonner'
+import { AuthProvider } from '@/contexts/AuthContext'
+import { ThemeProvider } from '@/components/theme-provider'
 
-// Public pages
-import PublicReport from './pages/PublicReport';
-import Pricing from './pages/Pricing';
-import Contact from './pages/Contact';
-import About from './pages/About';
-import Legal from './pages/Legal';
-import NotFound from './pages/NotFound';
+// Pages
+import LandingPage from '@/pages/LandingPage'
+import Login from '@/pages/Login'
+import Signup from '@/pages/Signup'
+import Dashboard from '@/pages/Dashboard'
+import Settings from '@/pages/Settings'
+import SubscriptionPaywall from '@/pages/SubscriptionPaywall'
+import SubscriptionSuccess from '@/pages/SubscriptionSuccess'
 
-import Blog from './pages/Blog';
-import BlogPost from './pages/BlogPost';
-import StripeReturn from './pages/StripeReturn';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
-import ResetPassword from './pages/auth/Password';
-import ConfirmEmail from './pages/auth/ConfirmEmail';
-import SubscriptionPaywall from './pages/SubscriptionPaywall';
-import CalendarPage from './pages/dashboard/CalendarPage';
-import { AuthGuard } from './components/auth/AuthGuard';
-import { PublicOnlyGuard } from './components/auth/PublicOnlyGuard';
-import UserSettings from './pages/UserSettings';
+// Components
+import ProtectedRoute from '@/components/ProtectedRoute'
 
-// Lazy load chat screen
-import ReportChatScreen from './screens/ReportChatScreen';
-
-import { AuthProvider } from './contexts/AuthContext';
-import NavigationStateProvider from '@/contexts/NavigationStateContext';
-import { SettingsModalProvider } from '@/contexts/SettingsModalContext';
-import { PricingProvider } from '@/contexts/PricingContext';
-import { ReportModalProvider } from '@/contexts/ReportModalContext';
-import { SettingsModal } from '@/components/settings/SettingsModal';
-
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-    },
-  },
-});
-
-const ConditionalAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const location = useLocation();
-  const path = location.pathname;
-
-
-  if (path.startsWith('/report')) {
-    // Public report now needs auth-aware UI with navigation
-    return (
-      <NavigationStateProvider>
-        <SettingsModalProvider>
-          <AuthProvider>{children}</AuthProvider>
-        </SettingsModalProvider>
-      </NavigationStateProvider>
-    );
-  }
-
-  if (path.startsWith('/chat')) {
-    // Chat routes need auth-aware providers
-    return (
-      <NavigationStateProvider>
-        <SettingsModalProvider>
-          <AuthProvider>{children}</AuthProvider>
-        </SettingsModalProvider>
-      </NavigationStateProvider>
-    );
-  }
-
-  // Public pages that still use auth-aware UI
-  return (
-    <NavigationStateProvider>
-      <SettingsModalProvider>
-        <AuthProvider>{children}</AuthProvider>
-      </SettingsModalProvider>
-    </NavigationStateProvider>
-  );
-};
+const queryClient = new QueryClient()
 
 function App() {
-  if (typeof window === 'undefined') {
-    return <div>Loading...</div>;
-  }
-
   return (
-    <ThemeProvider 
-      attribute="class" 
-      defaultTheme="light" 
-      forcedTheme="light"
-      enableSystem={false}
-      disableTransitionOnChange
-    >
+    <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
       <QueryClientProvider client={queryClient}>
-        <Router>
-          <ReportModalProvider>
-            <ConditionalAuth>
-              <div className="min-h-screen bg-background">
-                <Routes>
-                  {/* Main Routes */}
-                  <Route path="/" element={
-                    <PublicOnlyGuard>
-                      <PublicReport />
-                    </PublicOnlyGuard>
-                  } />
-                  <Route path="/report" element={
-                    <PublicOnlyGuard>
-                      <PublicReport />
-                    </PublicOnlyGuard>
-                  } />
-                  <Route path="/pricing" element={<Pricing />} />
-                  <Route path="/contact" element={<Contact />} />
-                  <Route path="/about" element={<About />} />
-                  <Route path="/legal" element={<Legal />} />
-                  <Route path="/blog" element={<Blog />} />
-                  <Route path="/blog/:slug" element={<BlogPost />} />
-                  <Route path="/stripe-return" element={<StripeReturn />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/signup" element={<Signup />} />
-                  <Route path="/auth/password" element={<ResetPassword />} />
-                  <Route path="/auth" element={
-                    <Suspense fallback={<div>Loading...</div>}>
-                      {React.createElement(lazy(() => import('./pages/AuthPage').then(m => ({ default: m.AuthPage }))))}
-                    </Suspense>
-                  } />
-                  <Route path="/auth/email" element={<ConfirmEmail />} />
-                  <Route path="/subscription" element={
-                    <AuthGuard>
-                      <SubscriptionPaywall />
-                    </AuthGuard>
-                  } />
-                  <Route path="/subscription-paywall" element={
-                    <AuthGuard>
-                      <SubscriptionPaywall />
-                    </AuthGuard>
-                  } />
-                  <Route path="/subscription/success" element={
-                    <AuthGuard>
-                      <Suspense fallback={<div>Loading...</div>}>
-                        {React.createElement(lazy(() => import('./pages/SubscriptionSuccess').then(m => ({ default: m.default }))))}
-                      </Suspense>
-                    </AuthGuard>
-                  } />
-                  
-                  {/* Default authenticated route - redirect to chat */}
-                  <Route 
-                    path="/dashboard" 
-                    element={
-                      <AuthGuard>
-                        <Navigate to="/chat" replace />
-                      </AuthGuard>
-                    } 
-                  />
-                  
-                  {/* Auth success redirect to chat */}
-                  <Route 
-                    path="/auth-success" 
-                    element={
-                      <AuthGuard>
-                        <Navigate to="/chat" replace />
-                      </AuthGuard>
-                    } 
-                  />
-                  
-                  {/* Protected Calendar Route */}
-                  <Route 
-                    path="/calendar" 
-                    element={
-                      <AuthGuard>
-                        <CalendarPage />
-                      </AuthGuard>
-                    } 
-                  />
-
-                  {/* Chat Route */}
-                  <Route 
-                    path="/chat/:chat_id?" 
-                    element={<ReportChatScreen />}
-                  />
-
-                  {/* Settings Route */}
-                  <Route path="/settings" element={<UserSettings />} />
-                  
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </div>
-              <SettingsModal />
+        <AuthProvider>
+          <Router>
+            <div className="min-h-screen bg-background">
+              <Routes>
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/subscription-paywall" element={<SubscriptionPaywall />} />
+                <Route path="/subscription/success" element={<SubscriptionSuccess />} />
+                <Route
+                  path="/dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/settings"
+                  element={
+                    <ProtectedRoute>
+                      <Settings />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
               <Toaster />
-            </ConditionalAuth>
-          </ReportModalProvider>
-        </Router>
+            </div>
+          </Router>
+        </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
-  );
+  )
 }
 
-export default App;
+export default App
