@@ -19,13 +19,7 @@ export const ENABLE_VOICE_INPUT = import.meta.env.VITE_ENABLE_VOICE_INPUT !== 'f
 export const ENABLE_TEXT_INPUT = import.meta.env.VITE_ENABLE_TEXT_INPUT !== 'false'; // true by default
 
 // --- Supabase Config ---
-// These are typically public and safe to expose.
-export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-export const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-// A helper function to check if the core config is loaded
-export const isConfigured = () => {
-  return !!SUPABASE_URL && !!SUPABASE_ANON_KEY;
-};
+// Re-export from centralized supabase config to maintain compatibility
+export { SUPABASE_URL, SUPABASE_ANON_KEY, isSupabaseConfigured as isConfigured } from '@/integrations/supabase/config';
 
 

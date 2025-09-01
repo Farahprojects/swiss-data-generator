@@ -148,16 +148,15 @@ const { chat_id, text, onStart, onComplete } = opts;
   const sanitized = this.sanitizeTtsText(text);
   const selectedVoiceName = useChatStore.getState().ttsVoice || 'Puck';
 
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  const { SUPABASE_URL, SUPABASE_ANON_KEY } = await import('@/integrations/supabase/config');
   
   const response = await this.fetchWithTimeout(
-    `${supabaseUrl}/functions/v1/google-text-to-speech`,
+    `${SUPABASE_URL}/functions/v1/google-text-to-speech`,
     {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': supabaseKey,
+        'apikey': SUPABASE_ANON_KEY,
       },
       body: JSON.stringify({
         chat_id,
