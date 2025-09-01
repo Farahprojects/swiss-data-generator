@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
@@ -74,17 +75,21 @@ serve(async (req) => {
       last_payment_status: "inactive",
     };
 
+    let nextBillingAt: string | null = null;
+
     if (subscriptions.data.length > 0) {
       const subscription = subscriptions.data[0];
       const isActive = subscription.status === "active" || subscription.status === "trialing";
       const plan = subscription.metadata?.subscription_plan || "10_monthly";
+      
+      nextBillingAt = new Date(subscription.current_period_end * 1000).toISOString();
       
       subscriptionData = {
         subscription_active: isActive,
         subscription_status: subscription.status,
         subscription_plan: plan,
         subscription_start_date: new Date(subscription.created * 1000).toISOString(),
-        subscription_next_charge: new Date(subscription.current_period_end * 1000).toISOString(),
+        subscription_next_charge: nextBillingAt,
         stripe_subscription_id: subscription.id,
         last_payment_status: isActive ? "active" : subscription.status,
       };
@@ -102,6 +107,17 @@ serve(async (req) => {
       stripe_customer_id: customerId,
       ...subscriptionData,
     });
+
+    // Update payment method with next billing date if we have an active subscription
+    if (nextBillingAt) {
+      await serviceClient
+        .from("payment_method")
+        .update({
+          next_billing_at: nextBillingAt
+        })
+        .eq('user_id', user.id)
+        .eq('active', true);
+    }
 
     return new Response(JSON.stringify({
       subscription_active: subscriptionData.subscription_active,

@@ -4,6 +4,16 @@ import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/integrations/supabase/client'
 import { loadStripe } from '@stripe/stripe-js'
 
+interface InvoiceHistoryEntry {
+  id: string
+  number: string
+  amount_cents: number
+  currency: string
+  status: string
+  charge_date: string
+  receipt_url?: string
+}
+
 interface PaymentMethod {
   id: string
   card_brand: string
@@ -11,6 +21,15 @@ interface PaymentMethod {
   exp_month: number
   exp_year: number
   active: boolean
+  last_charge_at?: string
+  last_charge_status?: string
+  last_invoice_id?: string
+  last_invoice_number?: string
+  last_invoice_amount_cents?: number
+  last_invoice_currency?: string
+  last_receipt_url?: string
+  next_billing_at?: string
+  invoice_history?: InvoiceHistoryEntry[]
 }
 
 export function useBilling() {
@@ -26,7 +45,23 @@ export function useBilling() {
       setLoading(true)
       const { data, error } = await supabase
         .from('payment_method')
-        .select('id, card_brand, card_last4, exp_month, exp_year, active')
+        .select(`
+          id, 
+          card_brand, 
+          card_last4, 
+          exp_month, 
+          exp_year, 
+          active,
+          last_charge_at,
+          last_charge_status,
+          last_invoice_id,
+          last_invoice_number,
+          last_invoice_amount_cents,
+          last_invoice_currency,
+          last_receipt_url,
+          next_billing_at,
+          invoice_history
+        `)
         .eq('user_id', user.id)
         .eq('active', true)
         .single()

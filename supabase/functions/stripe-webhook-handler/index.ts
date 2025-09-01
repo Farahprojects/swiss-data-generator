@@ -160,6 +160,17 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
       updated_at: new Date().toISOString()
     })
     .eq('id', userId)
+
+  // Update payment method with next billing date
+  if (nextCharge) {
+    await supabase
+      .from('payment_method')
+      .update({
+        next_billing_at: nextCharge
+      })
+      .eq('user_id', userId)
+      .eq('active', true)
+  }
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
@@ -175,6 +186,15 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
       updated_at: new Date().toISOString()
     })
     .eq('id', userId)
+
+  // Clear next billing date
+  await supabase
+    .from('payment_method')
+    .update({
+      next_billing_at: null
+    })
+    .eq('user_id', userId)
+    .eq('active', true)
 }
 
 async function handleInvoicePayment(invoice: Stripe.Invoice, eventType: string) {
@@ -182,6 +202,9 @@ async function handleInvoicePayment(invoice: Stripe.Invoice, eventType: string) 
   if (!userId) return
 
   const paymentStatus = eventType === 'invoice.payment_succeeded' ? 'succeeded' : 'failed'
+  const chargeAt = new Date().toISOString()
+
+  console.log(`Handling invoice payment for user ${userId}: ${paymentStatus}`)
 
   await supabase
     .from('profiles')
@@ -190,6 +213,45 @@ async function handleInvoicePayment(invoice: Stripe.Invoice, eventType: string) 
       updated_at: new Date().toISOString()
     })
     .eq('id', userId)
+
+  // Update payment method with billing details
+  const invoiceEntry = {
+    id: invoice.id,
+    number: invoice.number,
+    amount_cents: invoice.amount_paid || invoice.total,
+    currency: invoice.currency,
+    status: paymentStatus,
+    charge_date: chargeAt,
+    receipt_url: invoice.hosted_invoice_url
+  }
+
+  // Get current invoice history
+  const { data: currentPaymentMethod } = await supabase
+    .from('payment_method')
+    .select('invoice_history')
+    .eq('user_id', userId)
+    .eq('active', true)
+    .single()
+
+  const currentHistory = currentPaymentMethod?.invoice_history || []
+  const updatedHistory = [invoiceEntry, ...currentHistory].slice(0, 12) // Keep last 12 invoices
+
+  await supabase
+    .from('payment_method')
+    .update({
+      last_charge_at: chargeAt,
+      last_charge_status: paymentStatus,
+      last_invoice_id: invoice.id,
+      last_invoice_number: invoice.number,
+      last_invoice_amount_cents: invoice.amount_paid || invoice.total,
+      last_invoice_currency: invoice.currency,
+      last_receipt_url: invoice.hosted_invoice_url,
+      invoice_history: updatedHistory
+    })
+    .eq('user_id', userId)
+    .eq('active', true)
+
+  console.log(`Updated payment method billing info for user ${userId}`)
 }
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {

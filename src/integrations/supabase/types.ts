@@ -1057,6 +1057,15 @@ export type Database = {
           exp_year: number | null
           fingerprint: string | null
           id: number
+          invoice_history: Json
+          last_charge_at: string | null
+          last_charge_status: string | null
+          last_invoice_amount_cents: number | null
+          last_invoice_currency: string | null
+          last_invoice_id: string | null
+          last_invoice_number: string | null
+          last_receipt_url: string | null
+          next_billing_at: string | null
           payment_method_type: string | null
           payment_status: string | null
           postal_code: string | null
@@ -1083,6 +1092,15 @@ export type Database = {
           exp_year?: number | null
           fingerprint?: string | null
           id?: number
+          invoice_history?: Json
+          last_charge_at?: string | null
+          last_charge_status?: string | null
+          last_invoice_amount_cents?: number | null
+          last_invoice_currency?: string | null
+          last_invoice_id?: string | null
+          last_invoice_number?: string | null
+          last_receipt_url?: string | null
+          next_billing_at?: string | null
           payment_method_type?: string | null
           payment_status?: string | null
           postal_code?: string | null
@@ -1109,6 +1127,15 @@ export type Database = {
           exp_year?: number | null
           fingerprint?: string | null
           id?: number
+          invoice_history?: Json
+          last_charge_at?: string | null
+          last_charge_status?: string | null
+          last_invoice_amount_cents?: number | null
+          last_invoice_currency?: string | null
+          last_invoice_id?: string | null
+          last_invoice_number?: string | null
+          last_receipt_url?: string | null
+          next_billing_at?: string | null
           payment_method_type?: string | null
           payment_status?: string | null
           postal_code?: string | null
