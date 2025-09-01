@@ -44,17 +44,14 @@ export const DeleteAccountPanel = () => {
       }
 
       // Call the delete account edge function
-      const response = await fetch('/functions/v1/delete-account', {
-        method: 'POST',
+      const { data, error } = await supabase.functions.invoke('delete-account', {
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${session.access_token}`,
         }
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to delete account')
+      if (error) {
+        throw new Error(error.message || 'Failed to delete account')
       }
       
       // If successful, sign out and redirect
