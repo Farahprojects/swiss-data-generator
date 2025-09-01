@@ -113,16 +113,21 @@ export function useSettingsData() {
     }
   }
 
-  const refetchData = () => {
-    fetchSettingsData()
+  // Manual fetch function that components can call when needed
+  const fetchOnDemand = () => {
+    if (user) {
+      fetchSettingsData()
+    }
   }
 
-  useEffect(() => {
-    fetchSettingsData()
-  }, [user])
+  // Don't automatically fetch on user change - only when explicitly requested
+  // useEffect(() => {
+  //   fetchSettingsData()
+  // }, [user])
 
   return {
     ...data,
-    refetch: refetchData
+    fetchData: fetchOnDemand,
+    refetch: fetchOnDemand
   }
 }

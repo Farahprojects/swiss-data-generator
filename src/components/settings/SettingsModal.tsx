@@ -12,13 +12,21 @@ import { ContactSupportPanel } from "./panels/ContactSupportPanel";
 import { SignInPrompt } from "@/components/auth/SignInPrompt";
 import BillingPanel from "./BillingPanel";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSettingsData } from "@/hooks/useSettingsData";
 
 export const SettingsModal = () => {
   const { isOpen, closeSettings, activePanel, setActivePanel } = useSettingsModal();
   const { signOut, user, loading } = useAuth();
+  const { fetchData: fetchSettingsData } = useSettingsData();
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
+  // Fetch settings data when modal opens and user is signed in
+  useEffect(() => {
+    if (isOpen && user) {
+      fetchSettingsData();
+    }
+  }, [isOpen, user, fetchSettingsData]);
 
   const handleTabChange = (value) => {
     setActivePanel(value);
