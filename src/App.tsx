@@ -20,6 +20,7 @@ import StripeReturn from './pages/StripeReturn';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ResetPassword from './pages/auth/Password';
+import ConfirmEmail from './pages/auth/ConfirmEmail';
 import CalendarPage from './pages/dashboard/CalendarPage';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { PublicOnlyGuard } from './components/auth/PublicOnlyGuard';
@@ -128,11 +129,7 @@ function App() {
                       {React.createElement(lazy(() => import('./pages/AuthPage').then(m => ({ default: m.AuthPage }))))}
                     </Suspense>
                   } />
-                  <Route path="/auth/email" element={
-                    <Suspense fallback={<div>Loading...</div>}>
-                      {React.createElement(lazy(() => import('./pages/AuthPage').then(m => ({ default: m.AuthPage }))))}
-                    </Suspense>
-                  } />
+                  <Route path="/auth/email" element={<ConfirmEmail />} />
                   
                   {/* Default authenticated route - redirect to chat */}
                   <Route 
