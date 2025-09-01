@@ -16,8 +16,7 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { PdfGenerator } from '@/services/pdf/PdfGenerator';
-import { transformLogDataToPdfData } from '@/services/pdf/utils/reportDataTransformer';
+// PDF functionality removed to reduce bundle size
 import { ReportRenderer } from '@/components/shared/ReportRenderer';
 import { ReportData } from '@/utils/reportContentExtraction';
 
@@ -98,23 +97,7 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
     URL.revokeObjectURL(url);
   };
 
-  // Handle download as PDF
-  const handleDownloadPDF = async () => {
-    if (!logData) return;
-    
-    try {
-      const pdfData = transformLogDataToPdfData(logData);
-      await PdfGenerator.generateReportPdf(pdfData, {
-        format: 'a4',
-        orientation: 'portrait',
-        includeHeader: true,
-        includeFooter: true
-      });
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      alert('Failed to generate PDF. Please try again.');
-    }
-  };
+  // PDF download functionality removed to reduce bundle size
 
   // Determine which view to show by default
   useEffect(() => {
@@ -208,9 +191,6 @@ const ActivityLogDrawer = ({ isOpen, onClose, logData }: ActivityLogDrawerProps)
               <DropdownMenuContent className="bg-white">
                 <DropdownMenuItem onClick={handleDownloadCSV}>
                   CSV Format
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleDownloadPDF}>
-                  PDF Format
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

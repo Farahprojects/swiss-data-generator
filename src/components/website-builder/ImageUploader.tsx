@@ -18,7 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ImageEditorModal } from '@/components/image-editor/ImageEditorModal';
+// Image editor functionality removed to reduce bundle size
 
 interface ImageUploaderProps {
   value?: string | ImageData;
@@ -40,7 +40,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showImageEditor, setShowImageEditor] = useState(false);
+  // Image editor state removed
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Get valid image URL using validation utility
@@ -107,16 +107,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     }
   };
 
-  const handleEdit = () => {
-    if (imageUrl && filePath) {
-      setShowImageEditor(true);
-    }
-  };
-
-  const handleSaveEdit = (newImageData: ImageData) => {
-    onChange(newImageData);
-    setShowImageEditor(false);
-  };
+  // Edit functionality removed to reduce bundle size
 
   return (
     <>
@@ -141,15 +132,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
               }}
             />
             <div className="absolute top-2 right-2 flex space-x-1">
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={handleEdit}
-                className="h-6 w-6 p-0"
-                title="Edit image"
-              >
-                <Edit className="h-3 w-3" />
-              </Button>
+              {/* Edit button removed to reduce bundle size */}
               <Button
                 size="sm"
                 variant="destructive"
@@ -211,16 +194,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         </AlertDialogContent>
       </AlertDialog>
 
-      {showImageEditor && imageUrl && filePath && (
-        <ImageEditorModal
-          isOpen={showImageEditor}
-          onClose={() => setShowImageEditor(false)}
-          imageData={{ url: imageUrl, filePath }}
-          onSave={handleSaveEdit}
-          section={section}
-          serviceIndex={serviceIndex}
-        />
-      )}
+      {/* Image editor modal removed to reduce bundle size */}
     </>
   );
 };

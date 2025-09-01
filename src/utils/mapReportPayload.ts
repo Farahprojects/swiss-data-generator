@@ -1,5 +1,5 @@
 
-import memoize from 'memoizee';
+// Memoize removed to reduce bundle size
 import { MappedReport, MappedReportSchema, RawReportPayload } from '@/types/mappedReport';
 
 function _mapReportPayload({
@@ -84,14 +84,7 @@ function _mapReportPayload({
   return Object.freeze(validated);
 }
 
-export const mapReportPayload = memoize(_mapReportPayload, {
-  normalizer: (args) => JSON.stringify(args[0]),
-  maxAge: 5 * 60 * 1000, // 5 minutes
-  max: 50, // Reduced from 100 to prevent memory bloat
-  dispose: () => {
-    // Clean up large objects when cache entry is disposed
-    console.log('🗑️ Cleaning up report payload cache entry');
-  }
-});
+// Simple export without memoization to reduce bundle size
+export const mapReportPayload = _mapReportPayload;
 
 export const mapReportPayloadFresh = _mapReportPayload;

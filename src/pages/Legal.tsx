@@ -6,7 +6,7 @@ import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { marked } from "marked";
+// Markdown support removed to reduce bundle size
 
 
 type LegalDocument = {
@@ -91,9 +91,10 @@ const Legal = () => {
                         </div>
                         <ScrollArea className="h-[60vh]">
                           <div 
-                            className="prose prose-slate max-w-none"
-                            dangerouslySetInnerHTML={{ __html: String(marked(doc.content)) }} 
-                          />
+                            className="prose prose-slate max-w-none whitespace-pre-wrap"
+                          >
+                            {doc.content}
+                          </div>
                         </ScrollArea>
                       </div>
                     </TabsContent>
