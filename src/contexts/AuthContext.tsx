@@ -143,6 +143,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (event === 'SIGNED_OUT') {
         setPendingEmailAddress(null);
         setIsPendingEmailCheck(false);
+        setUser(null);
+        setSession(null);
+      }
+      
+      // Additional check for user deletion - validate user still exists
+      if (event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
+        if (supaSession?.user) {
+          // Validate that the user still exists in the database
+          validateUserExists(supaSession.user.id).catch(() => {
+            // User doesn't exist anymore - clear auth state
+            console.warn('[AuthContext] User no longer exists in database, clearing auth state');
+            setUser(null);
+            setSession(null);
+            setPendingEmailAddress(null);
+            setIsPendingEmailCheck(false);
+          });
+        }
       }
     });
 
@@ -163,14 +180,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
+    // Set up periodic user validation for deleted accounts
+    const validationInterval = setInterval(async () => {
+      if (user?.id) {
+        const userExists = await validateUserExists(user.id);
+        if (!userExists) {
+          console.warn('[AuthContext] Periodic validation: User no longer exists, clearing auth state');
+          setUser(null);
+          setSession(null);
+          setPendingEmailAddress(null);
+          setIsPendingEmailCheck(false);
+        }
+      }
+    }, 30000); // Check every 30 seconds
+
     return () => {
       log('debug', 'Cleaning up auth subscription', null, 'auth');
       subscription.unsubscribe();
+      clearInterval(validationInterval);
     };
-  }, []);
+  }, [user?.id]);
 
   const clearPendingEmail = () => {
     setPendingEmailAddress(null);
+  };
+
+  // Validate that a user still exists in the database
+  const validateUserExists = async (userId: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .single();
+      
+      if (error || !data) {
+        return false;
+      }
+      
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   /* ──────────────────────────────────

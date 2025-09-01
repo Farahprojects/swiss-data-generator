@@ -61,7 +61,7 @@ export const DeleteAccountPanel = () => {
       console.log('🚪 Signing out user after successful account deletion...');
       
       // Clear auth state first to prevent any lingering session
-      const { cleanupAuthState } = await import('@/utils/authCleanup');
+      const { cleanupAuthState, emergencyAuthCleanup } = await import('@/utils/authCleanup');
       cleanupAuthState();
       
       // Force sign out from Supabase directly
@@ -79,6 +79,9 @@ export const DeleteAccountPanel = () => {
       } catch (contextSignOutError) {
         console.warn('⚠️ AuthContext signOut failed:', contextSignOutError);
       }
+      
+      // Force emergency cleanup to ensure complete state reset
+      emergencyAuthCleanup();
       
       toast({
         title: "Account Deleted",
