@@ -10,7 +10,7 @@ import { NotificationsPanel } from "./panels/NotificationsPanel";
 import { DeleteAccountPanel } from "./panels/DeleteAccountPanel";
 import { ContactSupportPanel } from "./panels/ContactSupportPanel";
 import { SignInPrompt } from "@/components/auth/SignInPrompt";
-// BillingPanel removed
+import { BillingPanel } from "./BillingPanel";
 import { useAuth } from "@/contexts/AuthContext";
 
 export const SettingsModal = () => {
@@ -138,14 +138,7 @@ export const SettingsModal = () => {
               </TabsContent>
               <TabsContent value="account"><AccountSettingsPanel /></TabsContent>
               <TabsContent value="billing">
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-medium">Billing & Credits</h3>
-                    <p className="text-sm text-gray-500 mt-2">
-                      Billing features have been removed.
-                    </p>
-                  </div>
-                </div>
+                <BillingPanel />
               </TabsContent>
               <TabsContent value="notifications"><NotificationsPanel /></TabsContent>
               <TabsContent value="support"><ContactSupportPanel /></TabsContent>

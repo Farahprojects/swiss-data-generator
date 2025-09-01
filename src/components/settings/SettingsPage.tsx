@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { User, CreditCard, Bell, Shield } from 'lucide-react'
-import BillingPanel from './BillingPanel'
+import { BillingPanel } from './BillingPanel'
 
 export default function SettingsPage() {
   return (
