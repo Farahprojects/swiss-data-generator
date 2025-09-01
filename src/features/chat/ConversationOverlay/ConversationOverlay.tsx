@@ -394,7 +394,7 @@ await new Promise<void>(async (resolve) => {
 
       
       // Create blob URL and use conversationTtsService for animation and cleanup
-      const blob = new Blob([bytes], { type: clip.mimeType || 'audio/mpeg' });
+      const blob = new Blob([bytes.buffer], { type: clip.mimeType || 'audio/mpeg' });
       const audioUrl = URL.createObjectURL(blob);
       
       conversationTtsService
@@ -414,7 +414,7 @@ await new Promise<void>(async (resolve) => {
       console.warn('[ConversationOverlay] Pre-decode failed, falling back to blob URL:', decodeError);
       
       // Fallback to blob URL method
-      const blob = new Blob([bytes], { type: clip.mimeType || 'audio/mpeg' });
+      const blob = new Blob([bytes.buffer], { type: clip.mimeType || 'audio/mpeg' });
       const audioUrl = URL.createObjectURL(blob);
       
       conversationTtsService
