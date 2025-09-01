@@ -197,7 +197,7 @@ const Pricing: React.FC = () => {
 
                   {/* Body */}
                   <div className="space-y-4">
-                    <p className="text-lg font-light text-gray-600 leading-relaxed">
+                    <p className="text-lg font-bold text-gray-600 leading-relaxed">
                       ${tryPricing?.unit_price_usd}
                     </p>
 
@@ -297,7 +297,7 @@ const Pricing: React.FC = () => {
 
                   {/* Body */}
                   <div className="space-y-4">
-                    <p className="text-lg font-light text-gray-600 leading-relaxed">
+                    <p className="text-lg font-bold text-gray-600 leading-relaxed">
                       ${pricing?.unit_price_usd}/month
                     </p>
 
