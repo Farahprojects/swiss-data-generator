@@ -32,7 +32,7 @@ serve(async (req) => {
       apiVersion: "2023-10-16",
     });
 
-    // Find or create customer
+    // Find or create customer and immediately update profiles
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     let customerId;
     if (customers.data.length > 0) {
@@ -44,6 +44,18 @@ serve(async (req) => {
       });
       customerId = customer.id;
     }
+
+    // Immediately update profiles table with stripe_customer_id
+    const serviceClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+    
+    await serviceClient.from("profiles").upsert({
+      id: user.id,
+      email: user.email,
+      stripe_customer_id: customerId,
+    });
 
     const origin = req.headers.get("origin") || "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
 
@@ -68,9 +80,16 @@ serve(async (req) => {
       mode: "subscription",
       success_url: `${origin}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/subscription-paywall?subscription=cancelled`,
+      client_reference_id: user.id, // Critical for webhook resolution
       metadata: {
         user_id: user.id,
         subscription_plan: "10_monthly",
+      },
+      subscription_data: {
+        metadata: {
+          user_id: user.id,
+          subscription_plan: "10_monthly",
+        },
       },
     });
 

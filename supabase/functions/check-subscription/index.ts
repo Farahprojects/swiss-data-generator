@@ -58,16 +58,15 @@ serve(async (req) => {
 
     const customerId = customers.data[0].id;
 
-    // Get active subscriptions
+    // Get all subscriptions (not just active ones)
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
-      status: "active",
       limit: 1,
     });
 
-    const isActive = subscriptions.data.length > 0;
     let subscriptionData = {
       subscription_active: false,
+      subscription_status: "inactive",
       subscription_plan: null,
       subscription_start_date: null,
       subscription_next_charge: null,
@@ -75,20 +74,29 @@ serve(async (req) => {
       last_payment_status: "inactive",
     };
 
-    if (isActive) {
+    if (subscriptions.data.length > 0) {
       const subscription = subscriptions.data[0];
+      const isActive = subscription.status === "active" || subscription.status === "trialing";
+      const plan = subscription.metadata?.subscription_plan || "10_monthly";
+      
       subscriptionData = {
-        subscription_active: true,
-        subscription_plan: "10_monthly",
+        subscription_active: isActive,
+        subscription_status: subscription.status,
+        subscription_plan: plan,
         subscription_start_date: new Date(subscription.created * 1000).toISOString(),
         subscription_next_charge: new Date(subscription.current_period_end * 1000).toISOString(),
         stripe_subscription_id: subscription.id,
-        last_payment_status: "active",
+        last_payment_status: isActive ? "active" : subscription.status,
       };
     }
 
-    // Update profile with subscription data
-    await supabaseClient.from("profiles").upsert({
+    // Update profile with subscription data using service role
+    const serviceClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
+    await serviceClient.from("profiles").upsert({
       id: user.id,
       email: user.email,
       stripe_customer_id: customerId,
