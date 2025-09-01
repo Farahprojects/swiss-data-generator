@@ -252,17 +252,24 @@ export const ChatBox = () => {
       </MotionConfig>
 
       {/* Error Handler Popup */}
-      {errorState && (
-        <Suspense fallback={null}>
+      {/* Commented out as requested - keeping file but disabling flow */}
+      {/* {errorState && (
+        <Suspense fallback={<div>Loading error handler...</div>}>
           <ErrorStateHandler
             errorState={errorState}
-            onTriggerErrorLogging={handleTriggerErrorLogging}
-            onCleanupSession={handleCleanupSession}
+            onRetry={handleTriggerErrorLogging}
+            onCleanup={handleCleanupSession}
+            onClose={() => setErrorState(null)}
           />
         </Suspense>
-      )}
+      )} */}
 
-      {/* Sign In Prompt Modal */}
+      {/* Settings Modal */}
+      {/* {showSettings && (
+        <SettingsModal onClose={() => setShowSettings(false)} />
+      )} */}
+
+      {/* Sign In Prompt */}
       {signInPrompt.show && (
         <SignInPrompt
           feature={signInPrompt.feature}

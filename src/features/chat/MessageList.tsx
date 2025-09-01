@@ -21,8 +21,7 @@ const LOADING_MESSAGES = [
   "Triangulating Starlink...",
   "Calculating planetary positions...",
   "Analyzing cosmic patterns...",
-  "AI generating insights...",
-  "Finalizing your report..."
+  "AI generating insights..."
 ];
 
 // Loading sequence component
@@ -184,8 +183,8 @@ export const MessageList = () => {
   const [hasUserSentMessage, setHasUserSentMessage] = useState(false);
   
   // Get report generation state
-  const isPolling = useReportReadyStore((state) => state.isPolling);
-  const isReportReady = useReportReadyStore((state) => state.isReportReady);
+  // const isPolling = useReportReadyStore((state) => state.isPolling);
+  // const isReportReady = useReportReadyStore((state) => state.isReportReady);
 
   // Track initial message count to determine which messages are from history
   React.useEffect(() => {
@@ -209,13 +208,13 @@ export const MessageList = () => {
 
   // Simplified logic: Show loading sequence when polling is active and report is not ready
   // Remove the hasUserSentMessage condition to ensure it always shows
-  const showLoadingSequence = isPolling && !isReportReady;
+  const showLoadingSequence = false; // isPolling && !isReportReady;
   
   // Fallback: Also show loading sequence if we're in chat but no messages and not ready
-  const showLoadingFallback = messages.length === 0 && !isReportReady && !hasUserSentMessage;
+  const showLoadingFallback = false; // messages.length === 0 && !isReportReady && !hasUserSentMessage;
   
   // Show report ready message when report is ready and user hasn't sent a message yet
-  const showReportReadyMessage = isReportReady && !hasUserSentMessage;
+  const showReportReadyMessage = false; // isReportReady && !hasUserSentMessage;
   
   // Group messages into turns
   const turns = groupMessagesIntoTurns(messages);
