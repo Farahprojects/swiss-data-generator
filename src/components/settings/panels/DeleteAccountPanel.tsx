@@ -62,8 +62,17 @@ export const DeleteAccountPanel = () => {
         description: "Your account has been successfully deleted."
       });
       
-      // Redirect to login after successful deletion
-      window.location.href = '/login';
+      // Properly clean up auth state after successful deletion
+      try {
+        await signOut();
+        // Emergency cleanup to ensure all auth state is cleared
+        const { emergencyAuthCleanup } = await import('@/utils/authCleanup');
+        emergencyAuthCleanup();
+      } catch (cleanupError) {
+        console.warn('Auth cleanup error, forcing redirect:', cleanupError);
+        // Fallback to direct redirect if cleanup fails
+        window.location.href = '/';
+      }
       
     } catch (error) {
       console.error('❌ Delete account error:', error);
