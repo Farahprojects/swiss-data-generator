@@ -188,32 +188,32 @@ const Pricing: React.FC = () => {
                   {/* Header */}
                   <div className="space-y-2">
                     <h2 className="text-2xl font-light text-gray-900 leading-tight">
-                      Try It <span className="italic font-light">Once</span>
+                      Try It Once — <span className="italic font-light">Discover Your Cosmic Snapshot</span>
                     </h2>
                     <p className="text-base font-light text-gray-600">
-                      Get a taste of what we offer with a single personalized report.
+                      Get a personalized report that reveals where you are right now and what's shaping your path ahead.
                     </p>
                   </div>
 
                   {/* Body */}
                   <div className="space-y-4">
                     <p className="text-lg font-light text-gray-600 leading-relaxed">
-                      ${tryPricing?.unit_price_usd} — {tryPricing?.description}
+                      ${tryPricing?.unit_price_usd} — Your birth chart + today's transits combined in one powerful insight.
                     </p>
 
                     {/* Features list (subtle) */}
                     <div className="space-y-2 text-left">
                       <div className="flex items-center gap-2 text-gray-600">
                         <div className="w-1 h-1 rounded-full bg-gray-400"></div>
-                        <span className="text-xs font-light">One personalized report</span>
+                        <span className="text-xs font-light">One detailed, personalized report</span>
                       </div>
                       <div className="flex items-center gap-2 text-gray-600">
                         <div className="w-1 h-1 rounded-full bg-gray-400"></div>
-                        <span className="text-xs font-light">No commitment required</span>
+                        <span className="text-xs font-light">No strings attached — explore risk-free</span>
                       </div>
                       <div className="flex items-center gap-2 text-gray-600">
                         <div className="w-1 h-1 rounded-full bg-gray-400"></div>
-                        <span className="text-xs font-light">Perfect for exploring</span>
+                        <span className="text-xs font-light">Perfect first step to see what's possible</span>
                       </div>
                     </div>
                   </div>
@@ -286,10 +286,10 @@ const Pricing: React.FC = () => {
                     ) : (
                       <>
                         <h2 className="text-2xl font-light text-gray-900 leading-tight">
-                          Go deeper and unlock your full <span className="italic font-light">insights</span>
+                          Unlock Unlimited Insights — <span className="italic font-light">Go Deeper Every Day</span>
                         </h2>
                         <p className="text-base font-light text-gray-600">
-                          Get unlimited access to all our features and insights.
+                          Step into full access: ongoing guidance, advanced relationship insights, and personalized AI support whenever you need it.
                         </p>
                       </>
                     )}
@@ -298,22 +298,22 @@ const Pricing: React.FC = () => {
                   {/* Body */}
                   <div className="space-y-4">
                     <p className="text-lg font-light text-gray-600 leading-relaxed">
-                      ${pricing?.unit_price_usd}/month — {pricing?.description}
+                      ${pricing?.unit_price_usd}/month — Unlimited relationship chats + tailored insights just for you.
                     </p>
 
                     {/* Features list (subtle) */}
                     <div className="space-y-2 text-left">
                       <div className="flex items-center gap-2 text-gray-600">
                         <div className="w-1 h-1 rounded-full bg-gray-400"></div>
-                        <span className="text-xs font-light">Unlimited relationship chats</span>
+                        <span className="text-xs font-light">Unlimited relationship readings & guidance</span>
                       </div>
                       <div className="flex items-center gap-2 text-gray-600">
                         <div className="w-1 h-1 rounded-full bg-gray-400"></div>
-                        <span className="text-xs font-light">Personalized AI insights</span>
+                        <span className="text-xs font-light">AI insights tuned to your chart and energy</span>
                       </div>
                       <div className="flex items-center gap-2 text-gray-600">
                         <div className="w-1 h-1 rounded-full bg-gray-400"></div>
-                        <span className="text-xs font-light">Advanced relationship analysis</span>
+                        <span className="text-xs font-light">Deep-dive, advanced relationship analysis</span>
                       </div>
                     </div>
                   </div>
@@ -336,7 +336,7 @@ const Pricing: React.FC = () => {
 
                   {/* Security note */}
                   <p className="text-xs text-gray-400 font-light leading-relaxed">
-                    Secure payment processed by Stripe. Cancel anytime.
+                    Secure payment. Cancel anytime.
                   </p>
                 </CardContent>
               </Card>
