@@ -1,23 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-// Debug logging in development
-if (import.meta.env.DEV) {
-  console.log('Environment variables check:', {
-    SUPABASE_URL: SUPABASE_URL ? 'Set' : 'Missing',
-    SUPABASE_PUBLISHABLE_KEY: SUPABASE_PUBLISHABLE_KEY ? 'Set' : 'Missing',
-    allEnvVars: Object.keys(import.meta.env).filter(key => key.startsWith('VITE_'))
-  });
-}
+// Use environment variables with fallback for Lovable preview environment
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndydnFxdnF2d3FtZmRxdnFtYWFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1ODA0NjIsImV4cCI6MjA2MTE1NjQ2Mn0.u9P-SY4kSo7e16I29TXXSOJou5tErfYuldrr_CITWX0";
 
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-  console.error('Missing Supabase environment variables:', {
-    SUPABASE_URL: SUPABASE_URL || 'MISSING',
-    SUPABASE_PUBLISHABLE_KEY: SUPABASE_PUBLISHABLE_KEY || 'MISSING',
-    availableEnvVars: Object.keys(import.meta.env)
-  });
   throw new Error('Missing required Supabase environment variables. Please check your .env file.');
 }
 
