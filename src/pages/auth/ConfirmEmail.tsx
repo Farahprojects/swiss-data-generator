@@ -15,8 +15,6 @@ import { Loader, CheckCircle, XCircle } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { useToast } from '@/hooks/use-toast';
 
-const BRAND_PURPLE = '#7C3AED';
-
 const ConfirmEmail: React.FC = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Verifying your email…');
@@ -256,78 +254,84 @@ const ConfirmEmail: React.FC = () => {
 
   const bgColor =
     status === 'loading'
-      ? 'bg-indigo-100 text-indigo-600'
+      ? 'bg-gray-100 text-gray-700'
       : status === 'success'
-      ? 'bg-emerald-100 text-emerald-600'
-      : 'bg-red-100 text-red-600';
+      ? 'bg-gray-900 text-white'
+      : 'bg-red-50 text-red-600';
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-white via-gray-50 to-gray-100">
-      <header className="w-full py-5 flex justify-center bg-white/90 backdrop-bl-md shadow-sm">
+    <div className="min-h-screen flex flex-col bg-white">
+      <header className="w-full py-8 flex justify-center border-b border-gray-100">
         <Logo size="md" />
       </header>
 
-      <main className="flex-grow flex items-center justify-center px-4 sm:px-6 lg:px-8">
+      <main className="flex-grow flex items-center justify-center px-4 sm:px-6 lg:px-8 py-16">
         <motion.div
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.35, ease: 'easeOut' }}
-          className="w-full max-w-md sm:max-w-lg md:max-w-xl"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+          className="w-full max-w-md"
         >
-          <Card className="relative overflow-hidden border border-gray-200 shadow-xl rounded-3xl bg-white min-h-[24rem]">
-            <div className="pointer-events-none absolute inset-0 rounded-3xl border border-transparent bg-[radial-gradient(circle_at_top_left,theme(colors.indigo.300)_0%,transparent_70%)]" />
-
-            <CardHeader className="text-center pb-1 relative z-10 bg-white/85 backdrop-blur-sm rounded-t-3xl">
-              <CardTitle className="text-3xl font-extrabold tracking-tight text-gray-900">
+          <Card className="border-0 shadow-none bg-transparent">
+            <CardHeader className="text-center pb-8 px-0">
+              <CardTitle className="text-4xl font-light text-gray-900 mb-3">
                 {heading}
               </CardTitle>
-              <CardDescription className="text-gray-600">
+              <CardDescription className="text-gray-600 font-light text-lg">
                 {status === 'loading'
-                  ? 'Hold tight while we confirm…'
+                  ? 'Verifying your email address'
                   : status === 'success'
-                  ? 'You are verified.'
-                  : 'We encountered a problem.'}
+                  ? 'Your email has been verified'
+                  : 'Verification failed'}
               </CardDescription>
             </CardHeader>
 
-            <CardContent className="flex flex-col items-center gap-6 p-10 relative z-10">
+            <CardContent className="flex flex-col items-center gap-8 px-0">
               <motion.div
-                className={`flex items-center justify-center h-20 w-20 rounded-full ${bgColor}`}
+                className={`flex items-center justify-center h-16 w-16 rounded-full ${bgColor}`}
                 animate={status}
                 variants={iconVariants}
               >
-                <Icon className="h-12 w-12" />
+                <Icon className="h-8 w-8" />
               </motion.div>
-              <p className="text-center text-lg text-gray-700 max-w-sm leading-relaxed">{message}</p>
+              <p className="text-center text-gray-600 font-light leading-relaxed max-w-sm">
+                {message}
+              </p>
             </CardContent>
 
-            <CardFooter className="flex flex-col sm:flex-row gap-3 justify-center bg-gray-50 rounded-b-3xl relative z-10 p-6">
+            <CardFooter className="flex flex-col gap-4 justify-center px-0 pt-8">
               {status === 'success' ? (
                 <Button
-                  style={{ background: BRAND_PURPLE }}
                   onClick={() => navigate('/chat')}
-                  className="w-full sm:w-auto text-white hover:opacity-90"
+                  className="w-full bg-gray-900 hover:bg-gray-800 text-white font-light py-4 rounded-xl"
                 >
-                  Go to Chat
+                  Continue to Chat
                 </Button>
               ) : (
-                <>
-                  <Button onClick={() => navigate('/login')} className="w-full sm:w-auto" variant="outline">
+                <div className="flex flex-col gap-3 w-full">
+                  <Button 
+                    onClick={() => navigate('/login')} 
+                    className="w-full bg-gray-900 hover:bg-gray-800 text-white font-light py-4 rounded-xl"
+                  >
                     Return to Login
                   </Button>
                   {status === 'error' && (
-                    <Button asChild variant="outline" className="w-full sm:w-auto">
-                      <Link to="/signup">Create Account</Link>
+                    <Button 
+                      asChild 
+                      variant="outline" 
+                      className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 font-light py-4 rounded-xl"
+                    >
+                      <Link to="/signup">Create New Account</Link>
                     </Button>
                   )}
-                </>
+                </div>
               )}
             </CardFooter>
           </Card>
         </motion.div>
       </main>
 
-      <footer className="py-6 text-center text-xs text-gray-500">
+      <footer className="py-8 text-center text-sm text-gray-500 font-light">
         © {new Date().getFullYear()} Theraiapi. All rights reserved.
       </footer>
     </div>
