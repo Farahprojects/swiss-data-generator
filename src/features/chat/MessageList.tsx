@@ -188,7 +188,7 @@ export const MessageList = () => {
           {messages.length === 0 ? (
             <div className="flex-1 flex flex-col justify-end">
               <div className="p-4">
-                <h2 className="text-3xl font-light text-gray-800 text-left">Let's tune into the energy behind your chart</h2>
+                {/* Empty state - removed chart energy text */}
               </div>
             </div>
           ) : (
