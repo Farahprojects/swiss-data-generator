@@ -20,7 +20,12 @@ serve(async (req) => {
     // Initialize Supabase client with service role key
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
 
     // Get user from auth header
     const authHeader = req.headers.get('Authorization')
@@ -35,53 +40,88 @@ serve(async (req) => {
       return new Response('Invalid token', { status: 401, headers: corsHeaders })
     }
 
-    console.log(`Deleting account for user: ${user.id}`)
+    console.log(`Starting account deletion for user: ${user.id}`)
 
     // Initialize Stripe
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
       apiVersion: '2023-08-16',
     })
 
-    // Get user's Stripe customer ID if it exists
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('stripe_customer_id')
-      .eq('id', user.id)
-      .single()
+    // Step 1: Cancel Stripe subscriptions and payment methods IMMEDIATELY
+    const { data: paymentMethods } = await supabase
+      .from('payment_method')
+      .select('stripe_customer_id, stripe_payment_method_id')
+      .eq('user_id', user.id)
+      .eq('active', true)
 
-    // Cancel any active subscriptions and remove payment methods
-    if (profile?.stripe_customer_id) {
-      try {
-        // Get and cancel all active subscriptions
-        const subscriptions = await stripe.subscriptions.list({
-          customer: profile.stripe_customer_id,
-          status: 'active'
-        })
+    if (paymentMethods && paymentMethods.length > 0) {
+      for (const pm of paymentMethods) {
+        if (pm.stripe_customer_id) {
+          try {
+            console.log(`Processing Stripe cleanup for customer: ${pm.stripe_customer_id}`)
+            
+            // Cancel all active subscriptions
+            const subscriptions = await stripe.subscriptions.list({
+              customer: pm.stripe_customer_id,
+              status: 'active'
+            })
 
-        for (const subscription of subscriptions.data) {
-          await stripe.subscriptions.cancel(subscription.id)
-          console.log(`Cancelled subscription: ${subscription.id}`)
+            for (const subscription of subscriptions.data) {
+              await stripe.subscriptions.cancel(subscription.id, {
+                cancellation_details: {
+                  comment: 'Account deletion requested by user'
+                }
+              })
+              console.log(`✓ Cancelled subscription: ${subscription.id}`)
+            }
+
+            // Cancel all trialing subscriptions
+            const trialingSubscriptions = await stripe.subscriptions.list({
+              customer: pm.stripe_customer_id,
+              status: 'trialing'
+            })
+
+            for (const subscription of trialingSubscriptions.data) {
+              await stripe.subscriptions.cancel(subscription.id, {
+                cancellation_details: {
+                  comment: 'Account deletion requested by user'
+                }
+              })
+              console.log(`✓ Cancelled trialing subscription: ${subscription.id}`)
+            }
+
+            // Detach all payment methods
+            const customerPaymentMethods = await stripe.paymentMethods.list({
+              customer: pm.stripe_customer_id,
+              type: 'card'
+            })
+
+            for (const paymentMethod of customerPaymentMethods.data) {
+              await stripe.paymentMethods.detach(paymentMethod.id)
+              console.log(`✓ Detached payment method: ${paymentMethod.id}`)
+            }
+
+            // Update customer to indicate account deleted
+            await stripe.customers.update(pm.stripe_customer_id, {
+              metadata: {
+                account_deleted: 'true',
+                deleted_at: new Date().toISOString()
+              }
+            })
+
+            console.log(`✓ Completed Stripe cleanup for customer: ${pm.stripe_customer_id}`)
+          } catch (stripeError) {
+            console.error(`Stripe cleanup error for customer ${pm.stripe_customer_id}:`, stripeError)
+            // Continue with deletion - don't let Stripe errors block account deletion
+          }
         }
-
-        // Detach all payment methods
-        const paymentMethods = await stripe.paymentMethods.list({
-          customer: profile.stripe_customer_id,
-          type: 'card'
-        })
-
-        for (const paymentMethod of paymentMethods.data) {
-          await stripe.paymentMethods.detach(paymentMethod.id)
-          console.log(`Detached payment method: ${paymentMethod.id}`)
-        }
-
-        console.log(`Cleaned up Stripe data for customer: ${profile.stripe_customer_id}`)
-      } catch (stripeError) {
-        console.error('Error cleaning up Stripe data:', stripeError)
-        // Continue with account deletion even if Stripe cleanup fails
       }
+    } else {
+      console.log('No active payment methods found for user')
     }
 
-    // Use the database function to delete the user account
+    // Step 2: Delete all user data from public tables
+    console.log('Starting database cleanup...')
     const { error: deleteError } = await supabase.rpc('delete_user_account', {
       user_id_to_delete: user.id
     })
@@ -89,7 +129,7 @@ serve(async (req) => {
     if (deleteError) {
       console.error('Database deletion error:', deleteError)
       return new Response(JSON.stringify({ 
-        error: 'Failed to delete account',
+        error: 'Failed to delete user data from database',
         details: deleteError.message 
       }), {
         status: 500,
@@ -97,11 +137,28 @@ serve(async (req) => {
       })
     }
 
-    console.log(`Successfully deleted account for user: ${user.id}`)
+    console.log('✓ Database cleanup completed')
+
+    // Step 3: Delete the user from Supabase Auth (this is the final step)
+    console.log('Deleting user from auth...')
+    const { error: authDeleteError } = await supabase.auth.admin.deleteUser(user.id)
+
+    if (authDeleteError) {
+      console.error('Auth deletion error:', authDeleteError)
+      return new Response(JSON.stringify({ 
+        error: 'Failed to delete user from authentication system',
+        details: authDeleteError.message 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    console.log(`✅ Account deletion completed successfully for user: ${user.id}`)
 
     return new Response(JSON.stringify({ 
       success: true,
-      message: 'Account deleted successfully'
+      message: 'Account deleted successfully. All subscriptions have been cancelled and no further charges will occur.'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
