@@ -2029,7 +2029,7 @@ export type Database = {
       }
       delete_user_account: {
         Args: { user_id_to_delete: string }
-        Returns: boolean
+        Returns: undefined
       }
       ensure_profile_for_current_user: {
         Args: Record<PropertyKey, never>
