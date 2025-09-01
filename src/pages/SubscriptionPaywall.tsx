@@ -8,13 +8,60 @@ import { Sparkles, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+interface PricingData {
+  name: string;
+  description: string;
+  unit_price_usd: number;
+}
+
 const SubscriptionPaywall: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
+  const [pricing, setPricing] = useState<PricingData | null>(null);
+  const [pricingLoading, setPricingLoading] = useState(true);
   
   const isCancelled = searchParams.get('subscription') === 'cancelled';
 
+  // Fetch pricing data on component mount
+  useEffect(() => {
+    const fetchPricing = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('price_list')
+          .select('name, description, unit_price_usd')
+          .eq('id', 'subscription1')
+          .single();
+
+        if (error) {
+          console.error('Error fetching pricing:', error);
+          // Fallback to default pricing
+          setPricing({
+            name: 'Premium Subscription',
+            description: 'Unlimited relationship chats and personalized AI insights',
+            unit_price_usd: 10.00
+          });
+        } else {
+          setPricing(data);
+        }
+      } catch (error) {
+        console.error('Error fetching pricing:', error);
+        // Fallback to default pricing
+        setPricing({
+          name: 'Premium Subscription',
+          description: 'Unlimited relationship chats and personalized AI insights',
+          unit_price_usd: 10.00
+        });
+      } finally {
+        setPricingLoading(false);
+      }
+    };
+
+    fetchPricing();
+  }, []);
+
   const handleUnlock = async () => {
+    if (!pricing) return;
+    
     try {
       setLoading(true);
       
@@ -44,6 +91,17 @@ const SubscriptionPaywall: React.FC = () => {
       setLoading(false);
     }
   };
+
+  if (pricingLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading pricing...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
@@ -98,7 +156,7 @@ const SubscriptionPaywall: React.FC = () => {
               {/* Body */}
               <div className="space-y-6">
                 <p className="text-xl font-light text-gray-600 leading-relaxed">
-                  $10/month — unlimited chats and actionable AI insights
+                  ${pricing?.unit_price_usd}/month — {pricing?.description}
                 </p>
 
                 {/* Features list (subtle) */}

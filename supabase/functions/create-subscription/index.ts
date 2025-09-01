@@ -28,6 +28,25 @@ serve(async (req) => {
     const user = userData.user;
     if (!user?.email) throw new Error("User not authenticated");
 
+    // Fetch pricing from database
+    const { data: pricingData, error: pricingError } = await supabaseClient
+      .from("price_list")
+      .select("name, description, unit_price_usd")
+      .eq("id", "subscription1")
+      .single();
+
+    let pricing;
+    if (pricingError) {
+      // Fallback pricing
+      pricing = {
+        name: "Premium Subscription",
+        description: "Unlimited chats and actionable AI insights",
+        unit_price_usd: 10.00
+      };
+    } else {
+      pricing = pricingData;
+    }
+
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2023-10-16",
     });
@@ -57,9 +76,10 @@ serve(async (req) => {
       stripe_customer_id: customerId,
     });
 
+    const { successUrl, cancelUrl } = await req.json();
     const origin = req.headers.get("origin") || "https://wrvqqvqvwqmfdqvqmaar.supabase.co";
 
-    // Create subscription checkout session
+    // Create subscription checkout session with dynamic pricing
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ["card"],
@@ -68,18 +88,18 @@ serve(async (req) => {
           price_data: {
             currency: "usd",
             product_data: { 
-              name: "Premium Subscription",
-              description: "Unlimited chats and actionable AI insights"
+              name: pricing.name,
+              description: pricing.description
             },
-            unit_amount: 1000, // $10.00
+            unit_amount: Math.round(pricing.unit_price_usd * 100), // Convert to cents
             recurring: { interval: "month" },
           },
           quantity: 1,
         },
       ],
       mode: "subscription",
-      success_url: `${origin}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/subscription-paywall?subscription=cancelled`,
+      success_url: successUrl || `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: cancelUrl || `${origin}/subscription-paywall?subscription=cancelled`,
       client_reference_id: user.id, // Critical for webhook resolution
       metadata: {
         user_id: user.id,
