@@ -2,39 +2,19 @@
 import { useState, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/integrations/supabase/client'
-import { loadStripe } from '@stripe/stripe-js'
 
-interface InvoiceHistoryEntry {
-  id: string
-  number: string
-  amount_cents: number
-  currency: string
-  status: string
-  charge_date: string
-  receipt_url?: string
-}
-
-interface PaymentMethod {
+interface SimplePaymentMethod {
   id: string
   card_brand: string
   card_last4: string
   exp_month: number
   exp_year: number
   active: boolean
-  last_charge_at?: string
-  last_charge_status?: string
-  last_invoice_id?: string
-  last_invoice_number?: string
-  last_invoice_amount_cents?: number
-  last_invoice_currency?: string
-  last_receipt_url?: string
-  next_billing_at?: string
-  invoice_history?: InvoiceHistoryEntry[]
 }
 
 export function useBilling() {
   const { user } = useAuth()
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null)
+  const [paymentMethod, setPaymentMethod] = useState<SimplePaymentMethod | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -45,23 +25,7 @@ export function useBilling() {
       setLoading(true)
       const { data, error } = await supabase
         .from('payment_method')
-        .select(`
-          id, 
-          card_brand, 
-          card_last4, 
-          exp_month, 
-          exp_year, 
-          active,
-          last_charge_at,
-          last_charge_status,
-          last_invoice_id,
-          last_invoice_number,
-          last_invoice_amount_cents,
-          last_invoice_currency,
-          last_receipt_url,
-          next_billing_at,
-          invoice_history
-        `)
+        .select('id, card_brand, card_last4, exp_month, exp_year, active')
         .eq('user_id', user.id)
         .eq('active', true)
         .single()
@@ -89,6 +53,7 @@ export function useBilling() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('No session found')
 
+      // Simple redirect to backend-managed setup
       const response = await fetch('/functions/v1/billing-setup-card', {
         method: 'POST',
         headers: {
@@ -101,25 +66,10 @@ export function useBilling() {
         throw new Error('Failed to create setup intent')
       }
 
-      const { client_secret } = await response.json()
+      const { setup_url } = await response.json()
       
-      const stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
-      if (!stripe) throw new Error('Stripe failed to load')
-
-      const { error: stripeError } = await stripe.confirmSetup({
-        elements: null,
-        clientSecret: client_secret,
-        confirmParams: {
-          return_url: `${window.location.origin}/settings?billing_setup=success`
-        }
-      })
-
-      if (stripeError) {
-        throw new Error(stripeError.message)
-      }
-
-      // Refetch payment method after successful setup
-      await fetchPaymentMethod()
+      // Redirect to backend-managed Stripe setup
+      window.location.href = setup_url
     } catch (err) {
       console.error('Setup card error:', err)
       setError(err instanceof Error ? err.message : 'Failed to setup card')
@@ -151,12 +101,10 @@ export function useBilling() {
         throw new Error('Failed to delete payment method')
       }
 
-      const result = await response.json()
-      
       // Clear local state
       setPaymentMethod(null)
       
-      return result
+      return { success: true }
     } catch (err) {
       console.error('Delete card error:', err)
       setError(err instanceof Error ? err.message : 'Failed to delete card')
@@ -165,11 +113,6 @@ export function useBilling() {
       setLoading(false)
     }
   }
-
-  // Don't auto-fetch - only fetch when explicitly called
-  // useEffect(() => {
-  //   fetchPaymentMethod()
-  // }, [user])
 
   return {
     paymentMethod,
