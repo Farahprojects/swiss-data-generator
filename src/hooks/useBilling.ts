@@ -166,9 +166,10 @@ export function useBilling() {
     }
   }
 
-  useEffect(() => {
-    fetchPaymentMethod()
-  }, [user])
+  // Don't auto-fetch - only fetch when explicitly called
+  // useEffect(() => {
+  //   fetchPaymentMethod()
+  // }, [user])
 
   return {
     paymentMethod,

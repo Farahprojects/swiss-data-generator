@@ -1,5 +1,5 @@
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -10,8 +10,8 @@ import { useSettingsData } from '@/hooks/useSettingsData'
 import { toast } from 'sonner'
 
 export default function BillingPanel() {
-  const { paymentMethod, loading: billingLoading, setupCard, deleteCard } = useBilling()
-  const { profile, loading: settingsLoading } = useSettingsData()
+  const { paymentMethod, loading: billingLoading, setupCard, deleteCard, refetch: refetchBilling } = useBilling()
+  const { profile, loading: settingsLoading, fetchData: fetchSettingsData } = useSettingsData()
   const [isSetupLoading, setIsSetupLoading] = useState(false)
   const [isDeleteLoading, setIsDeleteLoading] = useState(false)
 
@@ -60,6 +60,12 @@ export default function BillingPanel() {
       day: 'numeric',
     })
   }
+
+  // Fetch data when component mounts
+  useEffect(() => {
+    refetchBilling()
+    fetchSettingsData()
+  }, [])
 
   if (billingLoading || settingsLoading) {
     return (
