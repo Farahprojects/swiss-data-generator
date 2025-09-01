@@ -57,22 +57,38 @@ export const DeleteAccountPanel = () => {
       
       console.log('✅ Account deletion successful:', data);
       
-      toast({
-        title: "Account Deleted",
-        description: "Your account has been successfully deleted."
-      });
+      // Immediately sign out and clear all auth state
+      console.log('🚪 Signing out user after successful account deletion...');
       
-      // Properly clean up auth state after successful deletion
+      // Clear auth state first to prevent any lingering session
+      const { cleanupAuthState } = await import('@/utils/authCleanup');
+      cleanupAuthState();
+      
+      // Force sign out from Supabase directly
+      try {
+        await supabase.auth.signOut({ scope: 'global' });
+        console.log('✅ Supabase signOut completed');
+      } catch (signOutError) {
+        console.warn('⚠️ Supabase signOut failed, but continuing:', signOutError);
+      }
+      
+      // Also use the AuthContext signOut for complete cleanup
       try {
         await signOut();
-        // Emergency cleanup to ensure all auth state is cleared
-        const { emergencyAuthCleanup } = await import('@/utils/authCleanup');
-        emergencyAuthCleanup();
-      } catch (cleanupError) {
-        console.warn('Auth cleanup error, forcing redirect:', cleanupError);
-        // Fallback to direct redirect if cleanup fails
-        window.location.href = '/';
+        console.log('✅ AuthContext signOut completed');
+      } catch (contextSignOutError) {
+        console.warn('⚠️ AuthContext signOut failed:', contextSignOutError);
       }
+      
+      toast({
+        title: "Account Deleted",
+        description: "Your account has been successfully deleted. You will be redirected shortly."
+      });
+      
+      // Force redirect after a brief delay to allow toast to show
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 1500);
       
     } catch (error) {
       console.error('❌ Delete account error:', error);
