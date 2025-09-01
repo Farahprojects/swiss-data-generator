@@ -385,6 +385,14 @@ await new Promise<void>(async (resolve) => {
     // Convert array to Uint8Array (no base64 decoding needed)
     const bytes = new Uint8Array(clip.audioBytes);
     
+    // SURGICAL LOGGING - Let's see exactly what we're working with
+    console.log('[DEBUG] clip.audioBytes type:', typeof clip.audioBytes, Array.isArray(clip.audioBytes));
+    console.log('[DEBUG] clip.audioBytes length:', clip.audioBytes?.length);
+    console.log('[DEBUG] clip.audioBytes sample:', clip.audioBytes?.slice(0, 5));
+    console.log('[DEBUG] bytes type:', typeof bytes, bytes.constructor.name);
+    console.log('[DEBUG] bytes.buffer:', bytes.buffer);
+    console.log('[DEBUG] bytes.buffer type:', typeof bytes.buffer, bytes.buffer?.constructor.name);
+    
     // Pre-decode MP3 for smooth iOS playback, then use conversationTtsService for animation
     try {
       // Pre-decode to warm up the decoder
@@ -395,6 +403,8 @@ await new Promise<void>(async (resolve) => {
       
       // Create blob URL and use conversationTtsService for animation and cleanup
       const blob = new Blob([bytes.buffer], { type: clip.mimeType || 'audio/mpeg' });
+      console.log('[DEBUG] blob size:', blob.size);
+      console.log('[DEBUG] blob type:', blob.type);
       const audioUrl = URL.createObjectURL(blob);
       
       conversationTtsService
@@ -413,8 +423,15 @@ await new Promise<void>(async (resolve) => {
     } catch (decodeError) {
       console.warn('[ConversationOverlay] Pre-decode failed, falling back to blob URL:', decodeError);
       
+      // SURGICAL LOGGING - Fallback path
+      console.log('[DEBUG-FALLBACK] bytes type:', typeof bytes, bytes.constructor.name);
+      console.log('[DEBUG-FALLBACK] bytes.buffer:', bytes.buffer);
+      console.log('[DEBUG-FALLBACK] bytes.buffer type:', typeof bytes.buffer, bytes.buffer?.constructor.name);
+      
       // Fallback to blob URL method
       const blob = new Blob([bytes.buffer], { type: clip.mimeType || 'audio/mpeg' });
+      console.log('[DEBUG-FALLBACK] blob size:', blob.size);
+      console.log('[DEBUG-FALLBACK] blob type:', blob.type);
       const audioUrl = URL.createObjectURL(blob);
       
       conversationTtsService
