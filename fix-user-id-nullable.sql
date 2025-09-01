@@ -1,1 +1,0 @@
-ALTER TABLE guest_reports ALTER COLUMN user_id DROP NOT NULL;
