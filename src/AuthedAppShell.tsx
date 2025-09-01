@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ModalStateProvider } from '@/contexts/ModalStateProvider';
 import { SettingsModalProvider } from '@/contexts/SettingsModalContext';
+import { PricingProvider } from '@/contexts/PricingContext';
 import UserSettings from './pages/UserSettings';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -18,7 +19,7 @@ import Legal from './pages/Legal';
 import SubscriptionPaywall from './pages/SubscriptionPaywall';
 import SubscriptionSuccess from './pages/SubscriptionSuccess';
 
-import CalendarPage from './pages/dashboard/CalendarPage';
+
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import StripeReturn from './pages/StripeReturn';
@@ -42,7 +43,7 @@ const AuthedAppShell: React.FC = () => {
             <Routes>
               {/* Public routes - redirect authenticated users to chat */}
               <Route path="/" element={<PublicOnlyGuard><PublicReport /></PublicOnlyGuard>} />
-              <Route path="/pricing" element={<PublicOnlyGuard><Pricing /></PublicOnlyGuard>} />
+              <Route path="/pricing" element={<PublicOnlyGuard><PricingProvider><Pricing /></PricingProvider></PublicOnlyGuard>} />
               <Route path="/about" element={<PublicOnlyGuard><About /></PublicOnlyGuard>} />
               <Route path="/contact" element={<PublicOnlyGuard><Contact /></PublicOnlyGuard>} />
               <Route path="/legal" element={<PublicOnlyGuard><Legal /></PublicOnlyGuard>} />
