@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Sparkles, XCircle } from 'lucide-react';
+import { Sparkles, XCircle, Zap } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { makeOneTimePayment } from '@/utils/stripe-checkout';
@@ -180,9 +180,9 @@ const Pricing: React.FC = () => {
                     initial={{ scale: 0.8 }}
                     animate={{ scale: 1 }}
                     transition={{ delay: 0.2, duration: 0.5 }}
-                    className="flex items-center justify-center h-12 w-12 mx-auto rounded-full bg-blue-100"
+                    className="flex items-center justify-center h-12 w-12 mx-auto rounded-full bg-gray-900"
                   >
-                    <Sparkles className="h-6 w-6 text-blue-600" />
+                    <Zap className="h-6 w-6 text-white" />
                   </motion.div>
 
                   {/* Header */}
@@ -228,7 +228,7 @@ const Pricing: React.FC = () => {
                     <Button
                       onClick={handleTryIt}
                       disabled={tryLoading}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-light py-3 rounded-xl text-base transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50"
+                      className="w-full bg-gray-900 hover:bg-gray-800 text-white font-light py-3 rounded-xl text-base transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50"
                     >
                       {tryLoading ? 'Processing...' : 'Try It Now'}
                     </Button>
