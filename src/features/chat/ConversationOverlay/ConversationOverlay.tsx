@@ -380,82 +380,54 @@ if (isShuttingDown.current) return;
 
 await new Promise<void>(async (resolve) => {
   if (clip.audioBytes) {
-    // Use raw MP3 bytes for immediate playback
+    // SIMPLE SOLUTION: Direct Web Audio API playback from MP3 bytes
     
-    // Convert array to Uint8Array (no base64 decoding needed)
-    const bytes = new Uint8Array(clip.audioBytes);
+    console.log('[DEBUG] Playing MP3 directly from', clip.audioBytes.length, 'bytes');
+    console.log('[DEBUG] Sample data:', clip.audioBytes.slice(0, 5));
     
-    // SURGICAL LOGGING - Let's see exactly what we're working with
-    console.log('[DEBUG] clip.audioBytes type:', typeof clip.audioBytes, Array.isArray(clip.audioBytes));
-    console.log('[DEBUG] clip.audioBytes length:', clip.audioBytes?.length);
-    console.log('[DEBUG] clip.audioBytes sample:', clip.audioBytes?.slice(0, 5));
-    console.log('[DEBUG] bytes type:', typeof bytes, bytes.constructor.name);
-    console.log('[DEBUG] bytes.buffer:', bytes.buffer);
-    console.log('[DEBUG] bytes.buffer type:', typeof bytes.buffer, bytes.buffer?.constructor.name);
-    
-    // Pre-decode MP3 for smooth iOS playback, then use conversationTtsService for animation
     try {
-      // Pre-decode to warm up the decoder
+      // Create audio context and decode MP3 bytes directly
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      await audioContext.decodeAudioData(bytes.buffer);
       
-
+      // Convert number array to ArrayBuffer for decodeAudioData
+      const arrayBuffer = new Uint8Array(clip.audioBytes).buffer;
       
-      // Create blob URL and use conversationTtsService for animation and cleanup
-      const blob = new Blob([bytes], { type: clip.mimeType || 'audio/mpeg' });
-      console.log('[DEBUG] blob size:', blob.size);
-      console.log('[DEBUG] blob type:', blob.type);
-      const audioUrl = URL.createObjectURL(blob);
+      // Decode the MP3 data
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      console.log('[DEBUG] MP3 decoded successfully, duration:', audioBuffer.duration, 'seconds');
       
-      conversationTtsService
-        .playFromUrl(audioUrl, () => {
-          URL.revokeObjectURL(audioUrl);
-          resolve();
-        }, () => {
-          setConversationState('replying');
-        })
-        .catch((error) => {
-          console.error('[ConversationOverlay] ❌ Audio playback failed:', error);
-          URL.revokeObjectURL(audioUrl);
-          resolve();
-        });
+      // Create and play audio source
+      const source = audioContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(audioContext.destination);
       
-    } catch (decodeError) {
-      console.warn('[ConversationOverlay] Pre-decode failed, falling back to blob URL:', decodeError);
+      // Set replying state when audio starts
+      setConversationState('replying');
       
-      // SURGICAL LOGGING - Fallback path
-      console.log('[DEBUG-FALLBACK] bytes type:', typeof bytes, bytes.constructor.name);
-      console.log('[DEBUG-FALLBACK] bytes.buffer:', bytes.buffer);
-      console.log('[DEBUG-FALLBACK] bytes.buffer type:', typeof bytes.buffer, bytes.buffer?.constructor.name);
+      // Handle completion
+      source.onended = () => {
+        console.log('[DEBUG] Audio playback completed');
+        setConversationState('listening');
+        resolve();
+      };
       
-      // Fallback to blob URL method
-      const blob = new Blob([bytes], { type: clip.mimeType || 'audio/mpeg' });
-      console.log('[DEBUG-FALLBACK] blob size:', blob.size);
-      console.log('[DEBUG-FALLBACK] blob type:', blob.type);
-      const audioUrl = URL.createObjectURL(blob);
+      // Start playback
+      source.start(0);
+      console.log('[DEBUG] Audio playback started');
       
-      conversationTtsService
-        .playFromUrl(audioUrl, () => {
-          URL.revokeObjectURL(audioUrl);
-          resolve();
-        }, () => {
-          setConversationState('replying');
-        })
-        .catch(() => {
-          URL.revokeObjectURL(audioUrl);
-          resolve();
-        });
+    } catch (error) {
+      console.error('[ConversationOverlay] ❌ Direct audio playback failed:', error);
+      setConversationState('listening');
+      resolve();
     }
       
   } else if (clip.url) {
-    // Fallback to URL playback
-    
+    // Fallback to URL playback (keep existing logic for compatibility)
     conversationTtsService
       .playFromUrl(clip.url, () => resolve(), () => {
-        // onStart: Set replying state when audio actually starts playing
         setConversationState('replying');
       })
-      .catch(() => resolve()); // don't block queue on errors
+      .catch(() => resolve());
   } else {
     console.error('[ConversationOverlay] ❌ No audio data available in clip');
     resolve();
