@@ -22,6 +22,7 @@ interface ChatState {
   isAssistantTyping: boolean;
 
   startConversation: (id: string) => void;
+  startNewGuestConversation: () => void;
   loadMessages: (messages: Message[]) => void;
   addMessage: (message: Message) => void;
   updateMessage: (id: string, updates: Partial<Message>) => void;
@@ -55,6 +56,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
     lastMessagesFetch: null,
     isAssistantTyping: false
   }),
+
+  startNewGuestConversation: () => {
+    const newChatId = crypto.randomUUID();
+    set({ 
+      chat_id: newChatId, 
+      messages: [], 
+      status: 'idle', 
+      error: null,
+      messageLoadError: null,
+      lastMessagesFetch: null,
+      isAssistantTyping: false
+    });
+  },
 
   loadMessages: (messages) => {
     const uniqueMessages = messages.filter((msg, index, arr) => 
