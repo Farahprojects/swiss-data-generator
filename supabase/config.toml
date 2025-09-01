@@ -1,4 +1,4 @@
-project_id = "e658f804-66d4-43ba-9cca-5e3b8e536f52"
+project_id = "wrvqqvqvwqmfdqvqmaar"
 
 [functions.api-usage-handler]
 verify_jwt = false
@@ -152,4 +152,16 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.openai-tts-ws]
+verify_jwt = false
+
+[functions.check-subscription]
+verify_jwt = true
+
+[functions.create-subscription]
+verify_jwt = true
+
+[functions.customer-portal]
+verify_jwt = true
+
+[functions.sync-subscriptions-due-today]
 verify_jwt = false
