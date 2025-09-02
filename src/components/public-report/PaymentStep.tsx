@@ -140,8 +140,6 @@ const PaymentStep = ({
       // Use the base price from cache, but apply promo discount from validation
       const promoResult = data as TrustedPricingObject;
       
-      console.log('🔍 [DEBUG] validate-promo-code response:', promoResult);
-      
       return {
         ...promoResult,
         trusted_base_price_usd: getBasePrice(), // Use cached price
@@ -196,13 +194,10 @@ const PaymentStep = ({
 
       setTrustedPricing(pricingResult);
 
-      console.log('🔍 [DEBUG] PaymentStep pricingResult:', pricingResult);
-
-      // Always use onSubmitWithTrustedPricing if available (ReportForm needs this)
+      // Use the new onSubmitWithTrustedPricing if available, otherwise fallback to onSubmit
       if (onSubmitWithTrustedPricing) {
         onSubmitWithTrustedPricing(pricingResult);
       } else {
-        // Fallback for standalone usage
         onSubmit();
       }
 
