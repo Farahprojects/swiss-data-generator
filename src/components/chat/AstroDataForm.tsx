@@ -88,8 +88,8 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
           trustedPricing: {
             valid: true,
             discount_usd: 0,
-            trusted_base_price_usd: 19.99,
-            final_price_usd: 19.99,
+            trusted_base_price_usd: 1.00,
+            final_price_usd: 1.00,
             report_type: formData.reportType || formData.request || 'astro-data'
           }
         }
@@ -376,13 +376,13 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                     <span>
                       {selectedAstroType === 'essence' ? 'The Self - Astro Data' : 'Compatibility - Astro Data'}
                     </span>
-                    <span>$19.99</span>
+                    <span>$1.00</span>
                   </div>
                 </div>
                 <hr className="border-gray-200" />
                 <div className="flex justify-between text-lg font-medium text-gray-900">
                   <span>Total</span>
-                  <span>$19.99</span>
+                  <span>$1.00</span>
                 </div>
               </div>
 
