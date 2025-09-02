@@ -12,6 +12,7 @@ import InlineDateTimeSelector from '@/components/ui/mobile-pickers/InlineDateTim
 import { astroRequestCategories } from '@/constants/report-types';
 import { ReportFormData } from '@/types/public-report';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { usePriceFetch } from '@/hooks/usePriceFetch';
 
 interface AstroDataFormProps {
   onClose: () => void;
@@ -22,10 +23,11 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   onClose,
   onSubmit,
 }) => {
-  const [currentStep, setCurrentStep] = useState<'type' | 'details'>('type');
+  const [currentStep, setCurrentStep] = useState<'type' | 'details' | 'payment'>('type');
   const [selectedAstroType, setSelectedAstroType] = useState<string>('');
   const [activeSelector, setActiveSelector] = useState<'date' | 'time' | null>(null);
   const isMobile = useIsMobile();
+  const { getReportPrice, getReportTitle } = usePriceFetch();
 
   const form = useForm<ReportFormData>({
     defaultValues: {
@@ -60,12 +62,21 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   };
 
   const handleFormSubmit = (data: ReportFormData) => {
-    onSubmit(data);
+    setCurrentStep('payment');
+  };
+
+  const handlePaymentSubmit = () => {
+    const formData = form.getValues();
+    onSubmit(formData);
   };
 
   const goBackToType = () => {
     setCurrentStep('type');
     setSelectedAstroType('');
+  };
+
+  const goBackToDetails = () => {
+    setCurrentStep('details');
   };
 
   const ErrorMsg = ({ msg }: { msg: string }) => (
@@ -162,7 +173,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                 );
               })}
             </motion.div>
-          ) : (
+          ) : currentStep === 'details' ? (
             <motion.form
               key="details"
               initial={{ opacity: 0, x: 20 }}
@@ -293,6 +304,100 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                 </Button>
               </div>
             </motion.form>
+          ) : (
+            <motion.div
+              key="payment"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+              {/* Payment Step */}
+              <div className="text-center mb-6">
+                <h3 className="text-xl font-medium text-gray-900 mb-2">
+                  Review & Payment
+                </h3>
+                <p className="text-gray-600">
+                  Almost there! Review your order and proceed to payment.
+                </p>
+              </div>
+
+              {/* Order Summary */}
+              <div className="bg-gray-50 rounded-xl p-6 space-y-4">
+                <h4 className="text-lg font-medium text-gray-900">Order Summary</h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-base text-gray-700">
+                    <span>
+                      {(() => {
+                        try {
+                          return getReportTitle({
+                            reportType: formValues.reportType,
+                            request: formValues.request
+                          });
+                        } catch {
+                          return 'Astro Data Report';
+                        }
+                      })()}
+                    </span>
+                    <span>
+                      ${(() => {
+                        try {
+                          return getReportPrice({
+                            reportType: formValues.reportType,
+                            request: formValues.request
+                          }).toFixed(2);
+                        } catch {
+                          return '19.99';
+                        }
+                      })()}
+                    </span>
+                  </div>
+                </div>
+                <hr className="border-gray-200" />
+                <div className="flex justify-between text-lg font-medium text-gray-900">
+                  <span>Total</span>
+                  <span>
+                    ${(() => {
+                      try {
+                        return getReportPrice({
+                          reportType: formValues.reportType,
+                          request: formValues.request
+                        }).toFixed(2);
+                      } catch {
+                        return '19.99';
+                      }
+                    })()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Payment Info */}
+              <div className="bg-blue-50 rounded-xl p-4">
+                <p className="text-sm text-blue-800 text-center">
+                  Your astro data will be generated instantly and delivered to your email.
+                  Secure payment processed by Stripe.
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={goBackToDetails}
+                  className="flex-1"
+                >
+                  Back
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handlePaymentSubmit}
+                  className="flex-1 bg-gray-900 hover:bg-gray-800"
+                >
+                  Proceed to Payment
+                </Button>
+              </div>
+            </motion.div>
           )}
         </AnimatePresence>
       </div>
