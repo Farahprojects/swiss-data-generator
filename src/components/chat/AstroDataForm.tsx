@@ -113,6 +113,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
             secondPersonLatitude: formData.secondPersonLatitude,
             secondPersonLongitude: formData.secondPersonLongitude,
             secondPersonPlaceId: formData.secondPersonPlaceId,
+            promoCode: formData.promoCode || '',
             isAstroOnly: true
           },
           trustedPricing: {
