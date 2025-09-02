@@ -47,7 +47,7 @@ const TurnItem = ({ turn, isLastTurn, isFromHistory }: { turn: Turn; isLastTurn:
           >
             <p className="text-base font-light leading-relaxed text-left">
               <Suspense fallback={<span className="whitespace-pre-wrap">{assistantMessage.text || ''}</span>}>
-                <TypewriterText 
+Well                 <TypewriterText 
                   text={assistantMessage.text || ''} 
                   msPerWord={80}
                   disabled={!shouldAnimate}
@@ -107,6 +107,7 @@ export const MessageList = () => {
   const messageLoadError = useChatStore((state) => state.messageLoadError);
   const retryLoadMessages = useChatStore((state) => state.retryLoadMessages);
   const lastMessagesFetch = useChatStore((state) => state.lastMessagesFetch);
+  const chat_id = useChatStore((state) => state.chat_id);
   
   const { containerRef, bottomRef, onContentChange } = useAutoScroll();
   const [initialMessageCount, setInitialMessageCount] = useState<number | null>(null);
@@ -202,7 +203,7 @@ export const MessageList = () => {
           {messages.length === 0 ? (
             <div className="flex-1 flex flex-col justify-end">
               <div className="p-4">
-                {!astroChoiceMade ? (
+                {!astroChoiceMade && !chat_id ? (
                   <AstroDataPromptMessage
                     onAddAstroData={handleAddAstroData}
                     onContinueWithout={handleContinueWithoutAstro}

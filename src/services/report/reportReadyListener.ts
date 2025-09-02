@@ -12,18 +12,11 @@ const activeListeners: Record<string, {
 }> = {};
 
 // Trigger context injection for chat when report is ready
+// DISABLED: Now handled by ReportChatScreen polling to prevent duplicate injection
 async function triggerContextInjection(guestReportId: string): Promise<void> {
-  try {
-    const response = await supabase.functions.invoke('context-injector', {
-      body: { guest_report_id: guestReportId }
-    });
-
-    if (response.error) {
-      console.error('[ReportReady] Context injection failed:', response.error);
-    }
-  } catch (error) {
-    console.error('[ReportReady] Error triggering context injection:', error);
-  }
+  console.log('[ReportReady] Context injection disabled - now handled by ReportChatScreen polling');
+  // Context injection is now handled by the ReportChatScreen polling system
+  // to prevent duplicate injections
 }
 
 // Check if report exists in report_ready_signals table

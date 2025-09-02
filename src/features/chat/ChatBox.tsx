@@ -25,9 +25,10 @@ const ChatSidebarControls = lazy(() => import('./ChatSidebarControls').then(modu
 
 interface ChatBoxProps {
   isGuestThreadReady?: boolean;
+  guestReportId?: string;
 }
 
-export const ChatBox: React.FC<ChatBoxProps> = ({ isGuestThreadReady = false }) => {
+export const ChatBox: React.FC<ChatBoxProps> = ({ isGuestThreadReady = false, guestReportId }) => {
   const { error } = useChatStore();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -174,7 +175,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ isGuestThreadReady = false }) 
               
               <div className="flex-1">
                 <Suspense fallback={<div className="space-y-4"><div className="h-8 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div></div>}>
-                  <ChatSidebarControls isGuestThreadReady={isGuestThreadReady} />
+                  <ChatSidebarControls isGuestThreadReady={isGuestThreadReady} guestReportId={guestReportId} />
                 </Suspense>
               </div>
             </div>
@@ -239,7 +240,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ isGuestThreadReady = false }) 
                       <h2 className="text-lg font-light italic">Settings</h2>
                     </div>
                     <Suspense fallback={<div className="space-y-4"><div className="h-8 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div></div>}>
-                      <ChatSidebarControls isGuestThreadReady={isGuestThreadReady} />
+                      <ChatSidebarControls isGuestThreadReady={isGuestThreadReady} guestReportId={guestReportId} />
                     </Suspense>
                   </div>
                 </SheetContent>

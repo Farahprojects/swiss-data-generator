@@ -14,6 +14,7 @@ import { ChatBox } from '@/features/chat/ChatBox';
 const ReportChatScreen = () => {
   const { chat_id } = useParams<{ chat_id: string }>();
   const [searchParams] = useSearchParams();
+
   const { user } = useAuth();
   
   // Get guest_id and chat_id from URL if present
@@ -144,26 +145,14 @@ const ReportChatScreen = () => {
           // Show success message to user
           console.log(`[ChatPage] 🎯 Astro data successfully injected into chat!`);
           
-          // Show success message to user (you can replace this with a toast)
-          // For now, we'll add a system message to the chat
-          const { error: messageError } = await supabase
-            .from('messages')
-            .insert({
-              chat_id: urlChatId || chat_id,
-              role: 'assistant',
-              text: '✨ Your astro data has been loaded! I can now provide personalized insights based on your birth chart.',
-              status: 'complete',
-              meta: {
-                type: 'astro_data_ready',
-                guest_report_id: guestId,
-                timestamp: new Date().toISOString()
-              }
-            });
-
-          if (messageError) {
-            console.error(`[ChatPage] ❌ Failed to add success message:`, messageError);
+          // 🎯 Set chat ID in store for conversation mode
+          const finalChatId = urlChatId || chat_id;
+          if (finalChatId) {
+            console.log(`[ChatPage] 🔑 Setting chat_id and guest_id in store: ${finalChatId}, ${guestId}`);
+            // Start conversation in store with both chat_id and guest_id
+            useChatStore.getState().startConversation(finalChatId, guestId);
           }
-
+          
           // 🎯 Show guest thread on left panel - system is ready!
           console.log(`[ChatPage] 🧵 Guest thread ready - showing on left panel`);
           setIsGuestThreadReady(true);
@@ -185,23 +174,75 @@ const ReportChatScreen = () => {
   // This is just for logging and debugging
   useEffect(() => {
     console.log(`[ChatPage] 🔗 URL parameters updated - guest_id: ${guestId}, chat_id: ${urlChatId}`);
-  }, [guestId, urlChatId]);
-
-  // Additional effect to handle guest_id and chat_id from URL search params changes
-  useEffect(() => {
-    // This effect will run whenever URL parameters change
-    if (guestId) {
-      console.log(`[ChatPage] 🔄 Guest ID from URL: ${guestId}`);
-    }
-    if (urlChatId) {
-      console.log(`[ChatPage] 🔄 Chat ID from URL: ${urlChatId}`);
-    }
     
-    // If we have both IDs, log the complete session
-    if (guestId && urlChatId) {
-      console.log(`[ChatPage] 🎯 Complete session detected - Guest: ${guestId}, Chat: ${urlChatId}`);
+    // Reset guest thread ready state when URL parameters are cleared
+    if (!guestId && isGuestThreadReady) {
+      console.log(`[ChatPage] 🔄 Guest ID cleared, resetting thread ready state`);
+      setIsGuestThreadReady(false);
+      hasTriggeredGenerationRef.current = false;
     }
-  }, [guestId, urlChatId]);
+  }, [guestId, urlChatId, isGuestThreadReady]);
+
+  // 🔄 STREAMLINED REHYDRATION: Simple session restoration on page load
+  useEffect(() => {
+    if (!guestId) return;
+
+    console.log(`[ChatPage] 🔄 Page load rehydration for guest_id: ${guestId}`);
+    
+    const rehydrateSession = async () => {
+      try {
+        // Check if we already have both IDs in store
+        const store = useChatStore.getState();
+        const hasCompleteSession = store.chat_id && store.guest_id;
+        
+        if (hasCompleteSession) {
+          console.log(`[ChatPage] ✅ Session already complete in store`);
+          return;
+        }
+
+        // We need to rehydrate - start with guest_id from URL
+        let finalChatId = urlChatId || chat_id;
+        
+        // If chat_id is missing, fetch it from backend
+        if (!finalChatId) {
+          console.log(`[ChatPage] 🔍 Fetching chat_id from backend for guest_id: ${guestId}`);
+          
+          const { data: guestReport, error } = await supabase
+            .from('guest_reports')
+            .select('chat_id')
+            .eq('id', guestId)
+            .single();
+
+          if (error || !guestReport?.chat_id) {
+            console.error(`[ChatPage] ❌ Failed to fetch chat_id for guest_id: ${guestId}`, error);
+            return;
+          }
+
+          finalChatId = guestReport.chat_id;
+          console.log(`[ChatPage] 🔑 Retrieved chat_id: ${finalChatId} from backend`);
+        }
+
+        // Now we have both IDs - restore to store
+        if (finalChatId) {
+          console.log(`[ChatPage] 🔄 Restoring session to store - chat_id: ${finalChatId}, guest_id: ${guestId}`);
+          store.startConversation(finalChatId, guestId);
+          
+          // Check if context injection is needed
+          if (!hasTriggeredGenerationRef.current) {
+            console.log(`[ChatPage] 🔄 Session restored - checking if context injection needed`);
+            // This will trigger the polling logic to check for report ready signals
+          }
+        }
+      } catch (error) {
+        console.error(`[ChatPage] ❌ Error during session rehydration:`, error);
+      }
+    };
+
+    // Run rehydration on page load
+    rehydrateSession();
+  }, [guestId, urlChatId, chat_id]);
+
+
 
   return (
     <PricingProvider>
@@ -209,7 +250,7 @@ const ReportChatScreen = () => {
         <ReportModalProvider>
           <MobileViewportLock active>
             <div className="font-sans antialiased text-gray-800 bg-gray-50 fixed inset-0 flex flex-col">
-              <ChatBox isGuestThreadReady={isGuestThreadReady} />
+              <ChatBox isGuestThreadReady={isGuestThreadReady} guestReportId={guestId} />
             </div>
           </MobileViewportLock>
         </ReportModalProvider>

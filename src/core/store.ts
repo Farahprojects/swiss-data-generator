@@ -12,6 +12,7 @@ export type ChatStatus =
 
 interface ChatState {
   chat_id: string | null;
+  guest_id: string | null; // Add guest_id to store
   messages: Message[];
   status: ChatStatus;
   error: string | null;
@@ -21,7 +22,7 @@ interface ChatState {
   lastMessagesFetch: number | null;
   isAssistantTyping: boolean;
 
-  startConversation: (id: string) => void;
+  startConversation: (id: string, guest_id?: string) => void; // Add guest_id parameter
   startNewGuestConversation: () => void;
   loadMessages: (messages: Message[]) => void;
   addMessage: (message: Message) => void;
@@ -38,6 +39,7 @@ interface ChatState {
 
 export const useChatStore = create<ChatState>((set, get) => ({
   chat_id: null,
+  guest_id: null, // Add guest_id to initial state
   messages: [],
   status: 'idle',
   error: null,
@@ -47,8 +49,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
   lastMessagesFetch: null,
   isAssistantTyping: false,
 
-  startConversation: (id) => set({ 
+  startConversation: (id, guest_id) => set({ 
     chat_id: id, 
+    guest_id: guest_id || null, // Store guest_id if provided
     messages: [], 
     status: 'idle', 
     error: null,
@@ -153,6 +156,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   clearChat: () => set({ 
     chat_id: null, 
+    guest_id: null, // Clear guest_id when clearing chat
     messages: [], 
     status: 'idle', 
     error: null,

@@ -7,20 +7,21 @@ import { useReportModal } from '@/contexts/ReportModalContext';
 import { getChatTokens, clearChatTokens } from '@/services/auth/chatTokens';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { AuthModal } from '@/components/auth/AuthModal';
-import { useNavigate } from 'react-router-dom';
+
 
 interface ChatThreadsSidebarProps {
   className?: string;
   isGuestThreadReady?: boolean;
+  guestReportId?: string; // Add this to pass the actual guest_report_id
 }
 
-export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ className, isGuestThreadReady = false }) => {
+export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ className, isGuestThreadReady = false, guestReportId }) => {
   const { messages, chat_id, clearChat } = useChatStore();
   const { user } = useAuth();
   const { open: openReportModal } = useReportModal();
   const { uuid } = getChatTokens();
   const { isPolling, isReportReady } = useReportReadyStore();
-  const navigate = useNavigate();
+
   const [hoveredThread, setHoveredThread] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -57,12 +58,26 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
 
 
   const handleClearSession = () => {
-    // Clear chat store
+    console.log('[ChatThreadsSidebar] 🧹 Starting complete session cleanup...');
+    
+    // Clear chat store (this clears messages, chat_id, guest_id, etc.)
     clearChat();
+    
     // Clear chat tokens from storage
     clearChatTokens();
-    // Navigate to clean chat URL without guest_id parameter
-    navigate('/chat', { replace: true });
+    
+    // Clear any URL search parameters to ensure clean state
+    if (window.location.search) {
+      console.log('[ChatThreadsSidebar] 🔄 Clearing URL search parameters');
+      window.history.replaceState({}, '', '/chat');
+    }
+    
+    // Force a complete page refresh to reset all component state
+    // This ensures isGuestThreadReady, hasTriggeredGenerationRef, and all other state is reset
+    console.log('[ChatThreadsSidebar] 🔄 Forcing page refresh for complete state reset');
+    window.location.href = '/chat';
+    
+    console.log('[ChatThreadsSidebar] ✅ Session cleanup complete, page will refresh');
   };
 
   return (
@@ -98,15 +113,23 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-lg p-1">
               {/* Astro Button */}
               <button
-                onClick={() => uuid && openReportModal(uuid)}
-                disabled={!isReportReady || !uuid}
-                className={cn(
-                  "flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors",
-                  isReportReady && uuid
-                    ? 'text-blue-600 hover:bg-blue-50' 
-                    : 'text-gray-400 cursor-not-allowed'
-                )}
-                title="Generate Astro Report"
+                onClick={() => {
+                  if (isGuest && isGuestThreadReady) {
+                    // For guest users, open the report modal with actual guest_report_id
+                    console.log('[ChatThreadsSidebar] Opening report modal for guest user');
+                    if (guestReportId) {
+                      openReportModal(guestReportId);
+                    } else {
+                      console.error('[ChatThreadsSidebar] No guest_report_id available');
+                    }
+                  } else if (uuid) {
+                    // For signed-in users, use the uuid
+                    openReportModal(uuid);
+                  }
+                }}
+                disabled={false} // Always clickable
+                className="flex items-center gap-1 px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                title={isGuest ? "View Astro Data" : "Generate Astro Report"}
               >
                 <Sparkles className="w-3 h-3" />
                 Astro
