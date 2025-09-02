@@ -4,9 +4,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Trash2, Sparkles, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReportModal } from '@/contexts/ReportModalContext';
-import { getChatTokens } from '@/services/auth/chatTokens';
+import { getChatTokens, clearChatTokens } from '@/services/auth/chatTokens';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { AuthModal } from '@/components/auth/AuthModal';
+import { useNavigate } from 'react-router-dom';
 
 interface ChatThreadsSidebarProps {
   className?: string;
@@ -18,6 +19,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const { open: openReportModal } = useReportModal();
   const { uuid } = getChatTokens();
   const { isPolling, isReportReady } = useReportReadyStore();
+  const navigate = useNavigate();
   const [hoveredThread, setHoveredThread] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -49,7 +51,12 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
 
 
   const handleClearSession = () => {
+    // Clear chat store
     clearChat();
+    // Clear chat tokens from storage
+    clearChatTokens();
+    // Navigate to clean chat URL without guest_id parameter
+    navigate('/chat', { replace: true });
   };
 
   return (
