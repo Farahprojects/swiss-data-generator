@@ -11,6 +11,7 @@ import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPl
 import InlineDateTimeSelector from '@/components/ui/mobile-pickers/InlineDateTimeSelector';
 import { astroRequestCategories } from '@/constants/report-types';
 import { ReportFormData } from '@/types/public-report';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface AstroDataFormProps {
   onClose: () => void;
@@ -24,6 +25,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   const [currentStep, setCurrentStep] = useState<'type' | 'details'>('type');
   const [selectedAstroType, setSelectedAstroType] = useState<string>('');
   const [activeSelector, setActiveSelector] = useState<'date' | 'time' | null>(null);
+  const isMobile = useIsMobile();
 
   const form = useForm<ReportFormData>({
     defaultValues: {
@@ -208,17 +210,26 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                     <Label htmlFor="birthDate" className="text-sm font-medium text-gray-700">
                       Birth Date *
                     </Label>
-                    <InlineDateTimeSelector
-                      type="date"
-                      value={formValues.birthDate || ''}
-                      onChange={(date) => setValue('birthDate', date)}
-                      onConfirm={() => setActiveSelector(null)}
-                      onCancel={() => setActiveSelector(null)}
-                      isOpen={activeSelector === 'date'}
-                      placeholder="Select date"
-                      hasError={!!errors.birthDate}
-                      onOpen={() => setActiveSelector('date')}
-                    />
+                    {isMobile ? (
+                      <InlineDateTimeSelector
+                        type="date"
+                        value={formValues.birthDate || ''}
+                        onChange={(date) => setValue('birthDate', date)}
+                        onConfirm={() => setActiveSelector(null)}
+                        onCancel={() => setActiveSelector(null)}
+                        isOpen={activeSelector === 'date'}
+                        placeholder="Select date"
+                        hasError={!!errors.birthDate}
+                        onOpen={() => setActiveSelector('date')}
+                      />
+                    ) : (
+                      <Input
+                        id="birthDate"
+                        type="date"
+                        {...register('birthDate', { required: 'Birth date is required' })}
+                        className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
+                      />
+                    )}
                     {errors.birthDate && <ErrorMsg msg={errors.birthDate.message || ''} />}
                   </div>
 
@@ -226,17 +237,26 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                     <Label htmlFor="birthTime" className="text-sm font-medium text-gray-700">
                       Birth Time *
                     </Label>
-                    <InlineDateTimeSelector
-                      type="time"
-                      value={formValues.birthTime || ''}
-                      onChange={(time) => setValue('birthTime', time)}
-                      onConfirm={() => setActiveSelector(null)}
-                      onCancel={() => setActiveSelector(null)}
-                      isOpen={activeSelector === 'time'}
-                      placeholder="Select time"
-                      hasError={!!errors.birthTime}
-                      onOpen={() => setActiveSelector('time')}
-                    />
+                    {isMobile ? (
+                      <InlineDateTimeSelector
+                        type="time"
+                        value={formValues.birthTime || ''}
+                        onChange={(time) => setValue('birthTime', time)}
+                        onConfirm={() => setActiveSelector(null)}
+                        onCancel={() => setActiveSelector(null)}
+                        isOpen={activeSelector === 'time'}
+                        placeholder="Select time"
+                        hasError={!!errors.birthTime}
+                        onOpen={() => setActiveSelector('time')}
+                      />
+                    ) : (
+                      <Input
+                        id="birthTime"
+                        type="time"
+                        {...register('birthTime', { required: 'Birth time is required' })}
+                        className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
+                      />
+                    )}
                     {errors.birthTime && <ErrorMsg msg={errors.birthTime.message || ''} />}
                   </div>
                 </div>
