@@ -40,8 +40,17 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       birthLatitude: undefined,
       birthLongitude: undefined,
       birthPlaceId: '',
+      // Second person fields for compatibility reports
+      secondPersonName: '',
+      secondPersonBirthDate: '',
+      secondPersonBirthTime: '',
+      secondPersonBirthLocation: '',
+      secondPersonLatitude: undefined,
+      secondPersonLongitude: undefined,
+      secondPersonPlaceId: '',
       request: '',
       reportType: '',
+      promoCode: '',
     },
   });
 
@@ -63,6 +72,15 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   };
 
   const handleFormSubmit = (data: ReportFormData) => {
+    // Validate second person fields for compatibility reports
+    if (selectedAstroType === 'sync') {
+      if (!data.secondPersonName || !data.secondPersonBirthDate || 
+          !data.secondPersonBirthTime || !data.secondPersonBirthLocation) {
+        // Show error toast or handle validation
+        console.error('Second person fields are required for compatibility reports');
+        return;
+      }
+    }
     setCurrentStep('payment');
   };
 
@@ -83,14 +101,23 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
             birthLatitude: formData.birthLatitude,
             birthLongitude: formData.birthLongitude,
             birthPlaceId: formData.birthPlaceId,
+            // Second person data for compatibility reports
+            secondPersonName: formData.secondPersonName,
+            secondPersonBirthDate: formData.secondPersonBirthDate,
+            secondPersonBirthTime: formData.secondPersonBirthTime,
+            secondPersonBirthLocation: formData.secondPersonBirthLocation,
+            secondPersonLatitude: formData.secondPersonLatitude,
+            secondPersonLongitude: formData.secondPersonLongitude,
+            secondPersonPlaceId: formData.secondPersonPlaceId,
             isAstroOnly: true
           },
           trustedPricing: {
             valid: true,
             discount_usd: 0,
-            trusted_base_price_usd: 1.00,
-            final_price_usd: 1.00,
-            report_type: formData.reportType || formData.request || 'astro-data'
+            trusted_base_price_usd: 19.99,
+            final_price_usd: 19.99,
+            report_type: formData.reportType || formData.request || 'astro-data',
+            promo_code_id: formData.promoCode || null
           }
         }
       });
@@ -151,7 +178,8 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
             </button>
           )}
           <h2 className="text-xl font-medium text-gray-900">
-            {currentStep === 'type' ? 'Choose Astro Data Type' : 'Your Details'}
+            {currentStep === 'type' ? 'Choose Astro Data Type' : 
+             selectedAstroType === 'sync' ? 'Your Details & Partner\'s Details' : 'Your Details'}
           </h2>
         </div>
         <button
@@ -318,22 +346,121 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                   </div>
                 </div>
 
-                <div>
-                  <Label htmlFor="birthLocation" className="text-sm font-medium text-gray-700">
-                    Birth Location *
-                  </Label>
-                  <CleanPlaceAutocomplete
-                    value={formValues.birthLocation || ''}
-                    onChange={(val) => setValue('birthLocation', val)}
-                    onPlaceSelect={handlePlaceSelect}
-                    placeholder="Enter birth city, state, country"
-                    className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
-                  />
-                  {errors.birthLocation && <ErrorMsg msg={errors.birthLocation.message || ''} />}
-                </div>
-              </div>
+                                            <div>
+                              <Label htmlFor="birthLocation" className="text-sm font-medium text-gray-700">
+                                Birth Location *
+                              </Label>
+                              <CleanPlaceAutocomplete
+                                value={formValues.birthLocation || ''}
+                                onChange={(val) => setValue('birthLocation', val)}
+                                onPlaceSelect={handlePlaceSelect}
+                                placeholder="Enter birth city, state, country"
+                                className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
+                              />
+                              {errors.birthLocation && <ErrorMsg msg={errors.birthLocation.message || ''} />}
+                            </div>
+                          </div>
 
-              <div className="flex gap-3 pt-4">
+                          {/* Second Person Fields for Compatibility Reports */}
+                          {selectedAstroType === 'sync' && (
+                            <div className="space-y-4 pt-6 border-t border-gray-200">
+                              <div className="text-center">
+                                <h3 className="text-lg font-medium text-gray-900 mb-2">Partner's Details</h3>
+                                <p className="text-sm text-gray-600">We need your partner's information for compatibility analysis</p>
+                              </div>
+                              
+                              <div>
+                                <Label htmlFor="secondPersonName" className="text-sm font-medium text-gray-700">
+                                  Partner's Name *
+                                </Label>
+                                <Input
+                                  id="secondPersonName"
+                                  {...register('secondPersonName', { required: 'Partner\'s name is required' })}
+                                  placeholder="Enter partner's full name"
+                                  className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
+                                />
+                                {errors.secondPersonName && <ErrorMsg msg={errors.secondPersonName.message || ''} />}
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <Label htmlFor="secondPersonBirthDate" className="text-sm font-medium text-gray-700">
+                                    Partner's Birth Date *
+                                  </Label>
+                                  {isMobile ? (
+                                    <InlineDateTimeSelector
+                                      type="date"
+                                      value={formValues.secondPersonBirthDate || ''}
+                                      onChange={(date) => setValue('secondPersonBirthDate', date)}
+                                      onConfirm={() => setActiveSelector(null)}
+                                      onCancel={() => setActiveSelector(null)}
+                                      isOpen={activeSelector === 'date'}
+                                      placeholder="Select date"
+                                      hasError={!!errors.secondPersonBirthDate}
+                                      onOpen={() => setActiveSelector('date')}
+                                    />
+                                  ) : (
+                                    <Input
+                                      id="secondPersonBirthDate"
+                                      type="date"
+                                      {...register('secondPersonBirthDate', { required: 'Partner\'s birth date is required' })}
+                                      className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
+                                    />
+                                  )}
+                                  {errors.secondPersonBirthDate && <ErrorMsg msg={errors.secondPersonBirthDate.message || ''} />}
+                                </div>
+
+                                <div>
+                                  <Label htmlFor="secondPersonBirthTime" className="text-sm font-medium text-gray-700">
+                                    Partner's Birth Time *
+                                  </Label>
+                                  {isMobile ? (
+                                    <InlineDateTimeSelector
+                                      type="time"
+                                      value={formValues.secondPersonBirthTime || ''}
+                                      onChange={(time) => setValue('secondPersonBirthTime', time)}
+                                      onConfirm={() => setActiveSelector(null)}
+                                      onCancel={() => setActiveSelector(null)}
+                                      isOpen={activeSelector === 'time'}
+                                      placeholder="Select time"
+                                      hasError={!!errors.secondPersonBirthTime}
+                                      onCancel={() => setActiveSelector(null)}
+                                      onOpen={() => setActiveSelector('time')}
+                                    />
+                                  ) : (
+                                    <Input
+                                      id="secondPersonBirthTime"
+                                      type="time"
+                                      {...register('secondPersonBirthTime', { required: 'Partner\'s birth time is required' })}
+                                      className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
+                                    />
+                                  )}
+                                  {errors.secondPersonBirthTime && <ErrorMsg msg={errors.secondPersonBirthTime.message || ''} />}
+                                </div>
+                              </div>
+
+                              <div>
+                                <Label htmlFor="secondPersonBirthLocation" className="text-sm font-medium text-gray-700">
+                                  Partner's Birth Location *
+                                </Label>
+                                <CleanPlaceAutocomplete
+                                  value={formValues.secondPersonBirthLocation || ''}
+                                  onChange={(val) => setValue('secondPersonBirthLocation', val)}
+                                  onPlaceSelect={(place) => {
+                                    setValue('secondPersonBirthLocation', place.name);
+                                    if (place.latitude) setValue('secondPersonLatitude', place.latitude);
+                                    if (place.longitude) setValue('secondPersonLongitude', place.longitude);
+                                    if (place.placeId) setValue('secondPersonPlaceId', place.placeId);
+                                  }}
+                                  placeholder="Enter partner's birth city, state, country"
+                                  className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
+                                />
+                                {errors.secondPersonBirthLocation && <ErrorMsg msg={errors.secondPersonBirthLocation.message || ''} />}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex gap-3 pt-4">
                 <Button
                   type="button"
                   variant="outline"
@@ -342,12 +469,12 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                 >
                   Back
                 </Button>
-                <Button
-                  type="submit"
-                  className="flex-1 bg-gray-900 hover:bg-gray-800"
-                >
-                  Generate Astro Data
-                </Button>
+                                            <Button
+                              type="submit"
+                              className="flex-1 bg-gray-900 hover:bg-gray-800"
+                            >
+                              Next
+                            </Button>
               </div>
             </motion.form>
           ) : (
