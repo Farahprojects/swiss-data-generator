@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, User, Heart, Target, ArrowLeft } from 'lucide-react';
+import { X, User, Heart, Target, ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { AlertCircle, Tag } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { CleanPlaceAutocomplete } from '@/components/shared/forms/place-input/CleanPlaceAutocomplete';
-import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
+import { PlaceData } from '@/components/ui/forms/place-input/utils/extractPlaceData';
 import InlineDateTimeSelector from '@/components/ui/mobile-pickers/InlineDateTimeSelector';
 import { astroRequestCategories } from '@/constants/report-types';
 import { ReportFormData } from '@/types/public-report';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
+import { usePricing } from '@/contexts/PricingContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface AstroDataFormProps {
   onClose: () => void;
@@ -28,7 +30,13 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   const [selectedAstroType, setSelectedAstroType] = useState<string>('');
   const [activeSelector, setActiveSelector] = useState<'date' | 'time' | 'secondDate' | 'secondTime' | null>(null);
   const [showPromoCode, setShowPromoCode] = useState(false);
+  const [isValidatingPromo, setIsValidatingPromo] = useState(false);
+  const [promoError, setPromoError] = useState<string>('');
+  const [trustedPricing, setTrustedPricing] = useState<any>(null);
   const isMobile = useIsMobile();
+  
+  const { toast } = useToast();
+  const { getPriceById, isLoading: pricesLoading } = usePricing();
 
   const form = useForm<ReportFormData>({
     defaultValues: {
@@ -49,11 +57,73 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       secondPersonPlaceId: '',
       request: '',
       reportType: '',
+      promoCode: '',
     },
   });
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = form;
   const formValues = watch();
+
+  // Get price identifier from form data (mirroring PaymentStep logic)
+  const getPriceIdentifier = () => {
+    // Prioritize direct reportType for unified behavior
+    if (formValues.reportType) {
+      return formValues.reportType;
+    }
+    
+    // Fallback to request field for astro data
+    if (formValues.request) {
+      return formValues.request;
+    }
+    
+    return '';
+  };
+
+  // Get base price from cached data (mirroring PaymentStep logic)
+  const getBasePrice = () => {
+    const priceIdentifier = getPriceIdentifier();
+    if (!priceIdentifier) return 0;
+    
+    const priceData = getPriceById(priceIdentifier);
+    return priceData ? Number(priceData.unit_price_usd) : 0;
+  };
+
+  // Validate promo code and get trusted pricing (mirroring PaymentStep logic)
+  const validatePromoCode = async (promoCode: string): Promise<any> => {
+    setIsValidatingPromo(true);
+    setPromoError('');
+
+    try {
+      const id = getPriceIdentifier();
+      
+      if (!id) {
+        return { valid: false, discount_usd: 0, trusted_base_price_usd: 0, final_price_usd: 0, report_type: '', reason: 'Invalid report type' };
+      }
+
+      const { data, error } = await supabase.functions.invoke('validate-promo-code', {
+        body: { promoCode, basePrice: getBasePrice(), reportType: id }
+      });
+
+      if (error) {
+        return { valid: false, discount_usd: 0, trusted_base_price_usd: getBasePrice(), final_price_usd: getBasePrice(), report_type: id, reason: 'Failed to validate promo code' };
+      }
+
+      // Use the base price from cache, but apply promo discount from validation
+      const promoResult = data;
+      
+      return {
+        ...promoResult,
+        trusted_base_price_usd: getBasePrice(), // Use cached price
+        final_price_usd: promoResult.valid ? promoResult.final_price_usd : getBasePrice(),
+      };
+
+    } catch (error) {
+      console.error('❌ Promo validation exception:', error);
+      throw new Error('Failed to validate pricing');
+    } finally {
+      setIsValidatingPromo(false);
+    }
+  };
 
   const handleAstroTypeSelect = (type: string) => {
     setSelectedAstroType(type);
@@ -92,36 +162,68 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   const handlePaymentSubmit = async () => {
     try {
       const formData = form.getValues();
-      
+      const currentPromoCode = formData.promoCode?.trim() || '';
+      let pricingResult: any;
+
+      // Validate promo code if provided, otherwise use base pricing
+      if (currentPromoCode) {
+        pricingResult = await validatePromoCode(currentPromoCode);
+        
+        if (!pricingResult.valid) {
+          setPromoError(pricingResult.reason || 'Invalid Promo Code');
+          return;
+        }
+      } else {
+        // No promo code provided - use base pricing
+        const priceIdentifier = getPriceIdentifier();
+        if (!priceIdentifier) {
+          setPromoError('Invalid report type');
+          return;
+        }
+        
+        pricingResult = {
+          valid: true,
+          discount_usd: 0,
+          trusted_base_price_usd: getBasePrice(),
+          final_price_usd: getBasePrice(),
+          report_type: priceIdentifier,
+          reason: undefined
+        };
+      }
+
+      setTrustedPricing(pricingResult);
+
+      // Transform form data to match translator edge function field names (mirroring ReportForm)
+      const transformedReportData = {
+        // Keep original form fields for compatibility
+        ...formData,
+        
+        // Add translator field names for birth data
+        birth_date: formData.birthDate,
+        birth_time: formData.birthTime,
+        location: formData.birthLocation,
+        latitude: formData.birthLatitude,
+        longitude: formData.birthLongitude,
+        
+        // Second person fields with translator names
+        second_person_birth_date: formData.secondPersonBirthDate,
+        second_person_birth_time: formData.secondPersonBirthTime,
+        second_person_location: formData.secondPersonBirthLocation,
+        second_person_latitude: formData.secondPersonLatitude,
+        second_person_longitude: formData.secondPersonLongitude,
+        
+        // Ensure request field is set
+        request: formData.request || (formData.reportType?.includes('sync') ? 'sync' : 'essence'),
+        
+        // Guest flags
+        is_guest: true
+      };
+
       // Call initiate-report-flow to create guest report and get chat_id
       const { data: response, error } = await supabase.functions.invoke('initiate-report-flow', {
         body: {
-          reportData: {
-            reportType: formData.reportType || formData.request || 'astro-data',
-            name: formData.name,
-            email: formData.email,
-            birthDate: formData.birthDate,
-            birthTime: formData.birthTime,
-            birthLocation: formData.birthLocation,
-            birthLatitude: formData.birthLatitude,
-            birthLongitude: formData.birthLongitude,
-            birthPlaceId: formData.birthPlaceId,
-            secondPersonName: formData.secondPersonName,
-            secondPersonBirthDate: formData.secondPersonBirthDate,
-            secondPersonBirthTime: formData.secondPersonBirthTime,
-            secondPersonBirthLocation: formData.secondPersonBirthLocation,
-            secondPersonLatitude: formData.secondPersonLatitude,
-            secondPersonLongitude: formData.secondPersonLongitude,
-            secondPersonPlaceId: formData.secondPersonPlaceId,
-            isAstroOnly: true
-          },
-          trustedPricing: {
-            valid: true,
-            discount_usd: 0,
-            trusted_base_price_usd: 1.00,
-            final_price_usd: 1.00,
-            report_type: formData.reportType || formData.request || 'astro-data'
-          }
+          reportData: transformedReportData,
+          trustedPricing: pricingResult
         }
       });
 
@@ -133,6 +235,33 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
 
       if (response) {
         console.log('Report flow initiated successfully:', response);
+        
+        // If this is a paid report, trigger report generation immediately
+        if (response.paymentStatus === 'paid') {
+          console.log(`[AstroForm] 💰 Paid report detected, triggering report generation for: ${response.guestReportId}`);
+          
+          try {
+            const { error: triggerError } = await supabase.functions.invoke('trigger-report-generation', { 
+              body: { guest_report_id: response.guestReportId } 
+            });
+
+            if (triggerError) {
+              console.error(`[AstroForm] ❌ Failed to trigger report generation:`, triggerError);
+            } else {
+              console.log(`[AstroForm] ✅ Report generation triggered successfully for: ${response.guestReportId}`);
+            }
+          } catch (error) {
+            console.error(`[AstroForm] ❌ Error triggering report generation:`, error);
+          }
+        }
+        
+        // Update URL with guest_id and chat_id for session persistence (no page reload)
+        const currentUrl = window.location.pathname;
+        const newUrl = `${currentUrl}?guest_id=${response.guestReportId}&chat_id=${response.chatId}`;
+        window.history.replaceState({}, "", newUrl);
+        
+        console.log(`[AstroForm] 🔗 URL updated for session persistence: ${newUrl}`);
+        
         // Store the chat_id and guest_report_id for the chat session
         onSubmit({
           ...formData,
@@ -533,13 +662,21 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                     <span>
                       {selectedAstroType === 'essence' ? 'The Self - Astro Data' : selectedAstroType === 'sync' ? 'Compatibility - Astro Data' : 'Astro Data'}
                     </span>
-                    <span>$1.00</span>
+                    <span>${pricesLoading ? '...' : (trustedPricing?.trusted_base_price_usd || getBasePrice()).toFixed(2)}</span>
                   </div>
+                  {trustedPricing?.discount_usd > 0 && (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-500 font-light">Promo discount</span>
+                      <span className="text-green-600 font-light">
+                        -${trustedPricing.discount_usd.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <hr className="border-gray-200" />
                 <div className="flex justify-between text-lg font-medium text-gray-900">
                   <span>Total</span>
-                  <span>$1.00</span>
+                  <span>${pricesLoading ? '...' : (trustedPricing?.final_price_usd || getBasePrice()).toFixed(2)}</span>
                 </div>
               </div>
 
@@ -568,12 +705,22 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                           id="promoCode"
                           {...register('promoCode')}
                           placeholder="Enter promo code"
-                          className="h-12 rounded-xl text-base font-light border-gray-200 focus:border-gray-400 transition-all duration-200"
+                          className={`h-12 rounded-xl text-base font-light border-gray-200 focus:border-gray-400 transition-all duration-200 ${
+                            promoError ? 'border-red-400 ring-1 ring-red-400' : ''
+                          }`}
+                          disabled={isValidatingPromo}
                         />
                         
-                        {errors.promoCode && (
+                        {isValidatingPromo && (
+                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                            <Loader2 className="h-4 h-4 animate-spin" />
+                          </div>
+                        )}
+                        
+                        {/* Clean text error message */}
+                        {promoError && (
                           <p className="mt-2 text-sm text-red-600 font-light leading-relaxed">
-                            {errors.promoCode.message}
+                            {promoError}
                           </p>
                         )}
                       </div>
