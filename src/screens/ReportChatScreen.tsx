@@ -7,6 +7,8 @@ import { SettingsModalProvider } from '@/contexts/SettingsModalContext';
 import { PricingProvider } from '@/contexts/PricingContext';
 import { MobileViewportLock } from '@/features/chat/MobileViewportLock';
 import { supabase } from '@/integrations/supabase/client';
+import { useChatStore } from '@/core/store';
+import { useReportReadyStore } from '@/services/report/reportReadyStore';
 
 // Import ChatBox directly for immediate rendering
 import { ChatBox } from '@/features/chat/ChatBox';
@@ -51,6 +53,18 @@ const ReportChatScreen = () => {
         if (existingSignal && existingSignal.length > 0) {
           console.log(`[ChatPage] ✅ Report already exists for: ${guestId}`);
           hasTriggeredGenerationRef.current = true;
+          
+          // Set report ready in store and prepare the thread
+          useReportReadyStore.getState().setReportReady(true);
+          setIsGuestThreadReady(true);
+          
+          // Ensure chat session is initialized
+          const finalChatId = urlChatId || chat_id;
+          if (finalChatId) {
+            console.log(`[ChatPage] 🔑 Report ready - initializing chat session: ${finalChatId}`);
+            useChatStore.getState().startConversation(finalChatId, guestId);
+          }
+          
           return;
         }
 
@@ -142,6 +156,10 @@ const ReportChatScreen = () => {
           console.log(`[ChatPage] ✅ Context injection successful:`, contextData);
           hasTriggeredGenerationRef.current = true;
           
+          // Set report ready state in store for persistence
+          useReportReadyStore.getState().setReportReady(true);
+          console.log(`[ChatPage] 📊 Report ready state set in store`);
+          
           // Show success message to user
           console.log(`[ChatPage] 🎯 Astro data successfully injected into chat!`);
           
@@ -226,6 +244,19 @@ const ReportChatScreen = () => {
         if (finalChatId) {
           console.log(`[ChatPage] 🔄 Restoring session to store - chat_id: ${finalChatId}, guest_id: ${guestId}`);
           store.startConversation(finalChatId, guestId);
+          
+          // Check if report is already ready and update thread visibility
+          const { data: readySignal } = await supabase
+            .from('report_ready_signals')
+            .select('guest_report_id')
+            .eq('guest_report_id', guestId)
+            .limit(1);
+            
+          if (readySignal && readySignal.length > 0) {
+            console.log(`[ChatPage] ✅ Report ready signal found during rehydration`);
+            useReportReadyStore.getState().setReportReady(true);
+            setIsGuestThreadReady(true);
+          }
           
           // Check if context injection is needed
           if (!hasTriggeredGenerationRef.current) {
