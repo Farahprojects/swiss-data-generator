@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AstroDataForm } from './AstroDataForm';
+import { ReportFormData } from '@/types/public-report';
 
 interface AstroDataPromptMessageProps {
   onAddAstroData: () => void;
@@ -11,6 +13,37 @@ export const AstroDataPromptMessage: React.FC<AstroDataPromptMessageProps> = ({
   onAddAstroData,
   onContinueWithout,
 }) => {
+  const [showForm, setShowForm] = useState(false);
+
+  const handleAddAstroData = () => {
+    setShowForm(true);
+  };
+
+  const handleFormClose = () => {
+    setShowForm(false);
+  };
+
+  const handleFormSubmit = (data: ReportFormData) => {
+    console.log('Astro data submitted:', data);
+    // Here you can handle the form submission
+    // For now, just close the form and call the original callback
+    setShowForm(false);
+    onAddAstroData();
+  };
+
+  if (showForm) {
+    return (
+      <div className="flex items-start justify-start mb-8">
+        <div className="w-full max-w-2xl lg:max-w-4xl">
+          <AstroDataForm
+            onClose={handleFormClose}
+            onSubmit={handleFormSubmit}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-start justify-start mb-8">
       {/* Message Content */}
@@ -22,7 +55,7 @@ export const AstroDataPromptMessage: React.FC<AstroDataPromptMessageProps> = ({
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-2">
           <Button
-            onClick={onAddAstroData}
+            onClick={handleAddAstroData}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-gray-900 text-white hover:bg-gray-800 transition-colors rounded-lg"
           >
             <Sparkles className="w-4 h-4" />
