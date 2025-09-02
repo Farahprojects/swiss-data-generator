@@ -25,7 +25,7 @@ const ChatSidebarControls = lazy(() => import('./ChatSidebarControls').then(modu
 
 export const ChatBox = () => {
   const { error } = useChatStore();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { uuid } = getChatTokens();
   const isConversationOpen = useConversationUIStore((s) => s.isConversationOpen);
@@ -44,9 +44,12 @@ export const ChatBox = () => {
     openSettings(panel as "general" | "account" | "notifications" | "support" | "billing");
   };
 
-  const handleSignOut = () => {
-    // Handle sign out logic
-    console.log('Sign out clicked');
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   // Handle auth-gated features
