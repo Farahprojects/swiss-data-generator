@@ -143,111 +143,11 @@ private notifyListeners(): void {
 this.listeners.forEach(fn => fn());
 }
 
-// Primary TTS entrypoint - now relies on WebSocket subscription for playback
-public async speakAssistant(opts: SpeakAssistantOptions): Promise<void> {
-try {
-const { chat_id, text, onStart, onComplete } = opts;
+// 🚫 REMOVED: speakAssistant method - not used in conversation mode
+// Audio now comes directly via WebSocket broadcast (MP3 bytes)
 
-  performance.mark('tts_request_start');
-  console.log('[ConversationTtsService] Starting TTS generation via edge function');
-
-  const sanitized = this.sanitizeTtsText(text);
-  const selectedVoiceName = useChatStore.getState().ttsVoice || 'Puck';
-
-  const { SUPABASE_URL, SUPABASE_ANON_KEY } = await import('@/integrations/supabase/config');
-  
-  const response = await this.fetchWithTimeout(
-    `${SUPABASE_URL}/functions/v1/google-text-to-speech`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_ANON_KEY,
-      },
-      body: JSON.stringify({
-        chat_id,
-        text: sanitized,
-        voice: selectedVoiceName, // Send the voice name directly
-      }),
-    },
-    TTS_TIMEOUT_MS
-  );
-
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => '');
-    throw new TtsFetchError(`TTS failed: ${response.status} - ${errorText}`, response.status);
-  }
-
-  const data = await response.json();
-  performance.mark('tts_edge_response');
-  console.log('[ConversationTtsService] TTS generation completed:', data);
-  
-  // IMMEDIATE PLAYBACK: Start playing the returned audio URL right away
-  // The WebSocket subscription will still handle state sync as backup
-  if (data.success && data.audioUrl) {
-    console.log('[ConversationTtsService] Starting immediate playback:', data.audioUrl);
-    onStart?.();
-    
-    try {
-      // Direct playback - no deduplication needed since WebSocket fallback is removed
-      await this.playFromUrl(data.audioUrl, () => {
-        console.log('[ConversationTtsService] Immediate playback completed');
-        
-        // Log performance measurements
-        try {
-          const ttsRequestToResponse = performance.measure('tts_request_to_response', 'tts_request_start', 'tts_edge_response');
-          const responseToPlaying = performance.measure('response_to_playing', 'tts_edge_response', 'audio_playing');
-          const totalLatency = performance.measure('total_tts_latency', 'tts_request_start', 'audio_playing');
-          
-          console.log('[ConversationTtsService] Performance:', {
-            ttsRequestToResponse: `${ttsRequestToResponse.duration.toFixed(1)}ms`,
-            responseToPlaying: `${responseToPlaying.duration.toFixed(1)}ms`,
-            totalLatency: `${totalLatency.duration.toFixed(1)}ms`
-          });
-        } catch (e) {
-          // Performance marks might not be available
-        }
-        
-        onComplete?.();
-      });
-    } catch (playErr) {
-      console.warn('[ConversationTtsService] Immediate playback failed, relying on WebSocket:', playErr);
-      onComplete?.(); // Still call onComplete to not block flow
-    }
-  } else {
-    // Fallback: still call callbacks but rely on WebSocket
-    onStart?.();
-    onComplete?.();
-  }
-
-} catch (err) {
-  console.error('[ConversationTtsService] TTS generation failed:', err);
-  throw err;
-}
-}
-
-// URL playback entrypoint
-public async playFromUrl(audioUrl: string, onComplete?: () => void, onStart?: () => void): Promise<void> {
-  performance.mark('tts_playback_start');
-  
-  const token = this.beginPlayback();
-  try {
-    if (!this.isAudioUnlocked || !this.masterAudioElement) {
-      throw new AudioLockedError();
-    }
-    
-    await this.ensureAudioContext();
-
-    this.replaceObjectUrl(audioUrl); // caller provided; we will not revoke external URLs
-    // Remove duplicate prepareAudioGraph call - will be done lazily in playInternal
-    await this.playInternal(token, this.masterAudioElement, audioUrl, onStart, onComplete);
-  } catch (err) {
-    console.error('[ConversationTtsService] ❌ playFromUrl failed:', err);
-    this.failPlayback(err);
-    if (onComplete) onComplete();
-    throw err;
-  }
-}
+// 🚫 REMOVED: playFromUrl method - not used in conversation mode
+// Audio now comes directly via WebSocket broadcast (MP3 bytes)
 
 // For conversation mode; ensure audio line is ready
 public handleDirectTtsResponse(_chat_id: string): void {

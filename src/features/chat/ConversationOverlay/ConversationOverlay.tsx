@@ -439,7 +439,7 @@ await new Promise<void>(async (resolve) => {
       
       // Handle completion
       source.onended = () => {
-        console.log('[DEBUG] Audio playback completed');
+        console.log('[ConversationOverlay] 🎵 Audio playback completed - setting state to listening');
         conversationTtsService.setAudioLevelForAnimation(0);
         setConversationState('listening');
         resolve();
@@ -447,7 +447,8 @@ await new Promise<void>(async (resolve) => {
       
       // Start playback
       source.start(0);
-      console.log('[DEBUG] Audio playback started');
+      console.log('[ConversationOverlay] 🎵 Audio playback started - setting state to replying');
+      setConversationState('replying');
       
       // Store reference for cleanup (will be used in handleModalClose)
       if (!currentTtsSourceRef.current) {
@@ -460,13 +461,6 @@ await new Promise<void>(async (resolve) => {
       resolve();
     }
       
-  } else if (clip.url) {
-    // Fallback to URL playback (keep existing logic for compatibility)
-    conversationTtsService
-      .playFromUrl(clip.url, () => resolve(), () => {
-        setConversationState('replying');
-      })
-      .catch(() => resolve());
   } else {
     console.error('[ConversationOverlay] ❌ No audio data available in clip');
     resolve();
