@@ -7,6 +7,7 @@ import { SettingsModalProvider } from '@/contexts/SettingsModalContext';
 import { PricingProvider } from '@/contexts/PricingContext';
 import { MobileViewportLock } from '@/features/chat/MobileViewportLock';
 import { supabase } from '@/integrations/supabase/client';
+import { useChatStore } from '@/core/store';
 
 // Import ChatBox directly for immediate rendering
 import { ChatBox } from '@/features/chat/ChatBox';
@@ -50,8 +51,9 @@ const ReportChatScreen = () => {
         
         if (existingSignal && existingSignal.length > 0) {
           console.log(`[ChatPage] ✅ Report already exists for: ${guestId}`);
-          hasTriggeredGenerationRef.current = true;
-          return;
+          // Don't set hasTriggeredGenerationRef here - let the polling handle it
+          // hasTriggeredGenerationRef.current = true;
+          // return;
         }
 
         // Check payment status
@@ -155,7 +157,9 @@ const ReportChatScreen = () => {
           
           // 🎯 Show guest thread on left panel - system is ready!
           console.log(`[ChatPage] 🧵 Guest thread ready - showing on left panel`);
+          console.log(`[ChatPage] 🔄 Setting isGuestThreadReady from ${isGuestThreadReady} to true`);
           setIsGuestThreadReady(true);
+          console.log(`[ChatPage] ✅ isGuestThreadReady state update triggered`);
         }
       } catch (error) {
         console.error(`[ChatPage] ❌ Polling error:`, error);
@@ -241,6 +245,11 @@ const ReportChatScreen = () => {
     // Run rehydration on page load
     rehydrateSession();
   }, [guestId, urlChatId, chat_id]);
+
+  // 🎯 DEBUG: Monitor isGuestThreadReady state changes
+  useEffect(() => {
+    console.log(`[ChatPage] 🔍 isGuestThreadReady state changed to: ${isGuestThreadReady}`);
+  }, [isGuestThreadReady]);
 
 
 
