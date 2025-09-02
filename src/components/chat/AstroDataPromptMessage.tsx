@@ -21,7 +21,7 @@ export const AstroDataPromptMessage: React.FC<AstroDataPromptMessageProps> = ({
       {/* Message Content */}
       <div className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black">
         <p className="text-base font-light leading-relaxed text-left mb-4">
-          Hey there! 👋 Would you like to add your astrological data for a more personalized experience? This will help me provide insights tailored to your unique chart.
+          Would you like to add your astrological data for a more personalized experience? This will help me provide insights tailored to your unique chart.
         </p>
         
         {/* Action Buttons */}
@@ -42,10 +42,6 @@ export const AstroDataPromptMessage: React.FC<AstroDataPromptMessageProps> = ({
             Continue Without
           </Button>
         </div>
-        
-        <p className="text-xs text-gray-500 mt-3">
-          You can always add astro data later from the settings menu
-        </p>
       </div>
     </div>
   );
