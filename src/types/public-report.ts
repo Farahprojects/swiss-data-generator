@@ -36,6 +36,9 @@ export interface ReportFormData {
   notes?: string;
   promoCode?: string;
   is_guest?: boolean;
+  // Chat-related fields
+  chat_id?: string;
+  guest_report_id?: string;
 }
 
 export interface ReportTypeOption {
