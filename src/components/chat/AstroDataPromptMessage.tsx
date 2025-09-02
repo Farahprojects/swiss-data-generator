@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, MessageCircle } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface AstroDataPromptMessageProps {
@@ -14,8 +14,7 @@ export const AstroDataPromptMessage: React.FC<AstroDataPromptMessageProps> = ({
   return (
     <div className="flex items-start gap-3 justify-start mb-8">
       {/* Bot Avatar */}
-      <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-        <MessageCircle className="w-5 h-5 text-gray-600" />
+      <div className="w-8 h-8 bg-gray-200 rounded-full flex-shrink-0">
       </div>
       
       {/* Message Content */}
