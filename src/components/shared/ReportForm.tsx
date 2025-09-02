@@ -68,12 +68,13 @@ export const ReportForm: React.FC<ReportFormProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   
   // Direct submission to initiate-report-flow (desktop)
-  const submitReport = async (data: ReportFormData, pricing: TrustedPricingObject) => {
+  const submitReport = async (data: ReportFormData, pricing: TrustedPricingObject, promoCode?: string) => {
     setIsProcessing(true);
     try {
       const payloadBody = {
         reportData: data,
         trustedPricing: pricing,
+        promoCode: promoCode || null, // Include promo code for backend lookup
         is_guest: true
       };
       
@@ -230,7 +231,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     const submissionData = coachSlug ? { ...transformedReportData, coachSlug } : transformedReportData;
     
     try {
-      const result = await submitReport(submissionData, trustedPricing);
+      const result = await submitReport(submissionData, trustedPricing, formData.promoCode);
       if (result.success && result.guestReportId && result.paymentStatus) {
         // Notify parent component about successful report creation
         onReportCreated?.(result);

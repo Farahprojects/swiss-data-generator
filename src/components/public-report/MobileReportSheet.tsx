@@ -182,6 +182,7 @@ const MobileReportSheet: React.FC<MobileReportSheetProps> = ({ isOpen, onOpenCha
           const payloadBody = {
             reportData: transformedReportData,
             trustedPricing: pricingResult,
+            promoCode: currentPromoCode || null, // Include promo code for backend lookup
             is_guest: true
           };
           
