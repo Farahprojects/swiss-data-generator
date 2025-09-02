@@ -12,11 +12,7 @@ export const AstroDataPromptMessage: React.FC<AstroDataPromptMessageProps> = ({
   onContinueWithout,
 }) => {
   return (
-    <div className="flex items-start gap-3 justify-start mb-8">
-      {/* Bot Avatar */}
-      <div className="w-8 h-8 bg-gray-200 rounded-full flex-shrink-0">
-      </div>
-      
+    <div className="flex items-start justify-start mb-8">
       {/* Message Content */}
       <div className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black">
         <p className="text-base font-light leading-relaxed text-left mb-4">
