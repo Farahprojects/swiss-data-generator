@@ -1,8 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useChatStore } from '@/core/store';
 import { useAuth } from '@/contexts/AuthContext';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useReportModal } from '@/contexts/ReportModalContext';
+import { getChatTokens } from '@/services/auth/chatTokens';
+import { useReportReadyStore } from '@/services/report/reportReadyStore';
 
 interface ChatThreadsSidebarProps {
   className?: string;
@@ -11,6 +14,10 @@ interface ChatThreadsSidebarProps {
 export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ className }) => {
   const { messages, chat_id, clearChat } = useChatStore();
   const { user } = useAuth();
+  const { open: openReportModal } = useReportModal();
+  const { uuid } = getChatTokens();
+  const { isPolling, isReportReady } = useReportReadyStore();
+  const [hoveredThread, setHoveredThread] = useState<string | null>(null);
 
   // Generate thread title from first user message
   const threadTitle = useMemo(() => {
@@ -51,20 +58,50 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
 
       {/* Current Chat */}
       {chat_id && (
-        <div className="flex items-center gap-2 p-2">
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-gray-900 truncate" title={threadTitle}>
-              {threadTitle}
+        <div 
+          className="relative group"
+          onMouseEnter={() => setHoveredThread(chat_id)}
+          onMouseLeave={() => setHoveredThread(null)}
+        >
+          <div className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded-lg transition-colors">
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-gray-900 truncate" title={threadTitle}>
+                {threadTitle}
+              </div>
             </div>
           </div>
-          {isGuest && (
-            <button
-              onClick={handleClearSession}
-              className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-              title="Clear Session"
-            >
-              <Trash2 className="w-3 h-3" />
-            </button>
+          
+          {/* Hover Actions */}
+          {hoveredThread === chat_id && (
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-lg p-1">
+              {/* Astro Button */}
+              <button
+                onClick={() => uuid && openReportModal(uuid)}
+                disabled={!isReportReady || !uuid}
+                className={cn(
+                  "flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors",
+                  isReportReady && uuid
+                    ? 'text-blue-600 hover:bg-blue-50' 
+                    : 'text-gray-400 cursor-not-allowed'
+                )}
+                title="Generate Astro Report"
+              >
+                <Sparkles className="w-3 h-3" />
+                Astro
+              </button>
+              
+              {/* Delete Button */}
+              {isGuest && (
+                <button
+                  onClick={handleClearSession}
+                  className="flex items-center gap-1 px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded transition-colors"
+                  title="Clear Session"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  Delete
+                </button>
+              )}
+            </div>
           )}
         </div>
       )}
