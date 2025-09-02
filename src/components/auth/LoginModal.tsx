@@ -74,7 +74,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onSuccess }) => {
     try {
       const result = await signIn(email, password);
       if (result.error) {
-        setErrorMsg(result.error);
+        setErrorMsg(result.error.message || 'Sign in failed');
       }
     } catch (error) {
       setErrorMsg('An unexpected error occurred. Please try again.');
@@ -145,8 +145,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onSuccess }) => {
   if (showForgotPassword) {
     return (
       <ForgotPasswordForm
-        onBack={() => setShowForgotPassword(false)}
-        onSuccess={() => setShowForgotPassword(false)}
+        onCancel={() => setShowForgotPassword(false)}
       />
     );
   }
@@ -208,7 +207,10 @@ const LoginModal: React.FC<LoginModalProps> = ({ onSuccess }) => {
           email={pendingEmailAddress || email}
           currentEmail={user?.email || ''}
           pendingEmail={pendingEmailAddress}
-          resendVerificationEmail={handleResendVerification}
+          resendVerificationEmail={async (email: string) => {
+            await handleResendVerification();
+            return { error: new Error('') };
+          }}
           onVerified={handleVerificationFinished}
           onCancel={handleVerificationCancelled}
         />

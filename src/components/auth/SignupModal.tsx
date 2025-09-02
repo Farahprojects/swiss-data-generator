@@ -48,8 +48,8 @@ const SignupModal: React.FC<SignupModalProps> = ({ onSuccess }) => {
       const result = await signUp(email, password);
       
       if (result.error) {
-        setErrorMsg(result.error);
-      } else if (result.requiresVerification) {
+        setErrorMsg(result.error.message || 'Sign up failed');
+      } else if (result.user) {
         setSignupSuccess(true);
         setVerificationEmail(email);
         toast({
@@ -94,7 +94,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ onSuccess }) => {
     try {
       // Use the same signup function to resend verification
       const result = await signUp(verificationEmail, password);
-      if (result.requiresVerification) {
+      if (result.user) {
         toast({
           title: 'Verification email sent',
           description: 'Please check your inbox and click the verification link.',
