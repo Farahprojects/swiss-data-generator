@@ -11,9 +11,10 @@ import { useNavigate } from 'react-router-dom';
 
 interface ChatThreadsSidebarProps {
   className?: string;
+  isGuestThreadReady?: boolean;
 }
 
-export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ className }) => {
+export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ className, isGuestThreadReady = false }) => {
   const { messages, chat_id, clearChat } = useChatStore();
   const { user } = useAuth();
   const { open: openReportModal } = useReportModal();
@@ -23,9 +24,18 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const [hoveredThread, setHoveredThread] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  
+  // For guest users, show current thread
+  // For signed-in users, this will be replaced with conversations list later
+  const isGuest = !user;
 
-  // Generate thread title from first user message
+  // Generate thread title from first user message or use guest title
   const threadTitle = useMemo(() => {
+    // For guest users when thread is ready, show a nice title
+    if (isGuest && isGuestThreadReady) {
+      return '✨ Guest Session';
+    }
+    
     if (messages.length === 0) return 'New Chat';
     
     // Find first user message
@@ -42,11 +52,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     
     // Truncate to 30 chars and add ellipsis
     return firstWords.substring(0, 27) + '...';
-  }, [messages]);
-
-  // For guest users, show current thread
-  // For signed-in users, this will be replaced with conversations list later
-  const isGuest = !user;
+  }, [messages, isGuest, isGuestThreadReady]);
 
 
 
@@ -66,23 +72,29 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         <h3 className="text-sm font-medium text-gray-700">Chats</h3>
       </div>
 
-      {/* Current Chat */}
-      {chat_id && (
+      {/* Current Chat - Show for both signed-in and guest users */}
+      {(chat_id || (isGuest && isGuestThreadReady)) && (
         <div 
           className="relative group"
           onMouseEnter={() => setHoveredThread(chat_id)}
           onMouseLeave={() => setHoveredThread(null)}
         >
-          <div className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded-lg transition-colors">
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-gray-900 truncate" title={threadTitle}>
-                {threadTitle}
+                      <div className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded-lg transition-colors">
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-gray-900 truncate" title={threadTitle}>
+                  {threadTitle}
+                </div>
+                {/* Show status for guest users */}
+                {isGuest && isGuestThreadReady && (
+                  <div className="text-xs text-green-600 mt-0.5">
+                    Astro data ready
+                  </div>
+                )}
               </div>
             </div>
-          </div>
           
-          {/* Hover Actions */}
-          {hoveredThread === chat_id && (
+          {/* Hover Actions - Always show for guest users when ready */}
+          {(hoveredThread === chat_id || (isGuest && isGuestThreadReady)) && (
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-lg p-1">
               {/* Astro Button */}
               <button
@@ -115,6 +127,8 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
           )}
         </div>
       )}
+
+
 
       {/* Placeholder for future conversations list */}
       {!isGuest && (

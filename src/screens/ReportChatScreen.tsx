@@ -1,5 +1,5 @@
 // src/screens/ReportChatScreen.tsx
-import React, { useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { ReportModalProvider } from '@/contexts/ReportModalContext';
@@ -20,6 +20,9 @@ const ReportChatScreen = () => {
   const guestId = searchParams.get('guest_id');
   const urlChatId = searchParams.get('chat_id');
   const hasTriggeredGenerationRef = useRef(false);
+  
+  // 🎯 Track when guest thread is ready to show
+  const [isGuestThreadReady, setIsGuestThreadReady] = useState(false);
 
   // 🎯 COMPLETE FLOW:
   // 1. User completes Astro form → URL updates with ?guest_id=abc123&chat_id=xyz789
@@ -151,7 +154,7 @@ const ReportChatScreen = () => {
               text: '✨ Your astro data has been loaded! I can now provide personalized insights based on your birth chart.',
               status: 'complete',
               meta: {
-                type: 'astro_data_loaded',
+                type: 'astro_data_ready',
                 guest_report_id: guestId,
                 timestamp: new Date().toISOString()
               }
@@ -160,6 +163,10 @@ const ReportChatScreen = () => {
           if (messageError) {
             console.error(`[ChatPage] ❌ Failed to add success message:`, messageError);
           }
+
+          // 🎯 Show guest thread on left panel - system is ready!
+          console.log(`[ChatPage] 🧵 Guest thread ready - showing on left panel`);
+          setIsGuestThreadReady(true);
         }
       } catch (error) {
         console.error(`[ChatPage] ❌ Polling error:`, error);
@@ -202,7 +209,7 @@ const ReportChatScreen = () => {
         <ReportModalProvider>
           <MobileViewportLock active>
             <div className="font-sans antialiased text-gray-800 bg-gray-50 fixed inset-0 flex flex-col">
-              <ChatBox />
+              <ChatBox isGuestThreadReady={isGuestThreadReady} />
             </div>
           </MobileViewportLock>
         </ReportModalProvider>
