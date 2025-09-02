@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { useReportModal } from '@/contexts/ReportModalContext';
 import { getChatTokens } from '@/services/auth/chatTokens';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
+import { useSettingsModal } from '@/contexts/SettingsModalContext';
 
 interface ChatThreadsSidebarProps {
   className?: string;
@@ -17,6 +18,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const { open: openReportModal } = useReportModal();
   const { uuid } = getChatTokens();
   const { isPolling, isReportReady } = useReportReadyStore();
+  const { setShowSignInPrompt } = useSettingsModal();
   const [hoveredThread, setHoveredThread] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -118,9 +120,12 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
       {/* Guest user info */}
       {isGuest && (
         <div className="mt-auto pt-4 border-t border-gray-200">
-          <div className="text-xs text-gray-500 text-center">
+          <button
+            onClick={() => setShowSignInPrompt(true)}
+            className="w-full px-3 py-2 text-sm bg-gray-900 text-white hover:bg-gray-800 rounded-lg transition-colors font-light"
+          >
             Sign in to save chat history
-          </div>
+          </button>
         </div>
       )}
 
