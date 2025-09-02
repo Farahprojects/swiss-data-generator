@@ -196,10 +196,13 @@ const PaymentStep = ({
 
       setTrustedPricing(pricingResult);
 
-      // Use the new onSubmitWithTrustedPricing if available, otherwise fallback to onSubmit
+      console.log('🔍 [DEBUG] PaymentStep pricingResult:', pricingResult);
+
+      // Always use onSubmitWithTrustedPricing if available (ReportForm needs this)
       if (onSubmitWithTrustedPricing) {
         onSubmitWithTrustedPricing(pricingResult);
       } else {
+        // Fallback for standalone usage
         onSubmit();
       }
 
