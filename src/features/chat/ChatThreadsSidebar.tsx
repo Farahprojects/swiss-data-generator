@@ -30,13 +30,8 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   // For signed-in users, this will be replaced with conversations list later
   const isGuest = !user;
 
-  // Generate thread title from first user message or use guest title
+  // Generate thread title from first user message (same for both guest and signed-in users)
   const threadTitle = useMemo(() => {
-    // For guest users when thread is ready, show a nice title
-    if (isGuest && isGuestThreadReady) {
-      return '✨ Guest Session';
-    }
-    
     if (messages.length === 0) return 'New Chat';
     
     // Find first user message
@@ -53,7 +48,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     
     // Truncate to 30 chars and add ellipsis
     return firstWords.substring(0, 27) + '...';
-  }, [messages, isGuest, isGuestThreadReady]);
+  }, [messages]);
 
 
 
@@ -99,17 +94,11 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                 <div className="text-sm font-medium text-gray-900 truncate" title={threadTitle}>
                   {threadTitle}
                 </div>
-                {/* Show status for guest users */}
-                {isGuest && isGuestThreadReady && (
-                  <div className="text-xs text-green-600 mt-0.5">
-                    Astro data ready
-                  </div>
-                )}
               </div>
             </div>
           
-          {/* Hover Actions - Always show for guest users when ready */}
-          {(hoveredThread === chat_id || (isGuest && isGuestThreadReady)) && (
+          {/* Hover Actions - Show on hover for both guest and signed-in users */}
+          {hoveredThread === chat_id && (
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-lg p-1">
               {/* Astro Button */}
               <button
