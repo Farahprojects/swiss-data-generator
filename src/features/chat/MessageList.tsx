@@ -5,6 +5,7 @@ import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { Loader2, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { Button } from '@/components/ui/button';
+import { AstroDataPromptMessage } from '@/components/chat/AstroDataPromptMessage';
 
 // Lazy load TypewriterText for better performance
 const TypewriterText = lazy(() => import('@/components/ui/TypewriterText').then(module => ({ default: module.TypewriterText })));
@@ -110,6 +111,19 @@ export const MessageList = () => {
   const { containerRef, bottomRef, onContentChange } = useAutoScroll();
   const [initialMessageCount, setInitialMessageCount] = useState<number | null>(null);
   const [hasUserSentMessage, setHasUserSentMessage] = useState(false);
+  const [astroChoiceMade, setAstroChoiceMade] = useState(false);
+  
+  const handleAddAstroData = () => {
+    setAstroChoiceMade(true);
+    // TODO: Open astro data form or redirect to report generation
+    console.log('User chose to add astro data');
+  };
+
+  const handleContinueWithoutAstro = () => {
+    setAstroChoiceMade(true);
+    // TODO: Initialize chat without astro data
+    console.log('User chose to continue without astro data');
+  };
   
   // Track initial message count to determine which messages are from history
   React.useEffect(() => {
@@ -188,7 +202,16 @@ export const MessageList = () => {
           {messages.length === 0 ? (
             <div className="flex-1 flex flex-col justify-end">
               <div className="p-4">
-                {/* Empty state - removed chart energy text */}
+                {!astroChoiceMade ? (
+                  <AstroDataPromptMessage
+                    onAddAstroData={handleAddAstroData}
+                    onContinueWithout={handleContinueWithoutAstro}
+                  />
+                ) : (
+                  <div className="text-center text-gray-500">
+                    <p className="text-sm">Ready to chat! Type your message below.</p>
+                  </div>
+                )}
               </div>
             </div>
           ) : (
