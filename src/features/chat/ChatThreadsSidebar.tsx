@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useChatStore } from '@/core/store';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ChatThreadsSidebarProps {
@@ -9,7 +9,7 @@ interface ChatThreadsSidebarProps {
 }
 
 export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ className }) => {
-  const { messages, chat_id, startNewGuestConversation, clearChat } = useChatStore();
+  const { messages, chat_id, clearChat } = useChatStore();
   const { user } = useAuth();
 
   // Generate thread title from first user message
@@ -36,13 +36,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   // For signed-in users, this will be replaced with conversations list later
   const isGuest = !user;
 
-  const handleNewChat = () => {
-    clearChat();
-    // Generate new chat_id for guest users
-    if (isGuest) {
-      startNewGuestConversation();
-    }
-  };
+
 
   const handleClearSession = () => {
     clearChat();
@@ -53,15 +47,6 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-gray-700">Chats</h3>
-        {isGuest && (
-          <button
-            onClick={handleNewChat}
-            className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-            title="New Chat"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-        )}
       </div>
 
       {/* Current Chat */}
