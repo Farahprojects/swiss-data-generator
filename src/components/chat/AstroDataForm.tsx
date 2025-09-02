@@ -13,6 +13,7 @@ import InlineDateTimeSelector from '@/components/ui/mobile-pickers/InlineDateTim
 import { astroRequestCategories } from '@/constants/report-types';
 import { ReportFormData } from '@/types/public-report';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AstroDataFormProps {
   onClose: () => void;
@@ -61,8 +62,52 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     if (place.placeId) setValue('birthPlaceId', place.placeId);
   };
 
-  const handleFormSubmit = (data: ReportFormData) => {
-    setCurrentStep('payment');
+  const handleFormSubmit = async (data: ReportFormData) => {
+    try {
+      // Call initiate-report-flow to create guest report and get chat_id
+      const { data: response, error } = await supabase.functions.invoke('initiate-report-flow', {
+        body: {
+          reportData: {
+            reportType: data.reportType || data.request || 'astro-data',
+            name: data.name,
+            email: data.email,
+            birthDate: data.birthDate,
+            birthTime: data.birthTime,
+            birthLocation: data.birthLocation,
+            birthLatitude: data.birthLatitude,
+            birthLongitude: data.birthLongitude,
+            birthPlaceId: data.birthPlaceId,
+            isAstroOnly: true
+          },
+          trustedPricing: {
+            valid: true,
+            discount_usd: 0,
+            trusted_base_price_usd: 19.99,
+            final_price_usd: 19.99,
+            report_type: data.reportType || data.request || 'astro-data'
+          }
+        }
+      });
+
+      if (error) {
+        console.error('Failed to initiate report flow:', error);
+        // TODO: Show error toast
+        return;
+      }
+
+      if (response) {
+        console.log('Report flow initiated successfully:', response);
+        // Store the chat_id and guest_report_id for the chat session
+        onSubmit({
+          ...data,
+          chat_id: response.chatId,
+          guest_report_id: response.guestReportId
+        });
+      }
+    } catch (error) {
+      console.error('Error initiating report flow:', error);
+      // TODO: Show error toast
+    }
   };
 
   const handlePaymentSubmit = () => {

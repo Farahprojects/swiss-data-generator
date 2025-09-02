@@ -23,12 +23,23 @@ export const AstroDataPromptMessage: React.FC<AstroDataPromptMessageProps> = ({
     setShowForm(false);
   };
 
-  const handleFormSubmit = (data: ReportFormData) => {
+  const handleFormSubmit = (data: ReportFormData & { chat_id?: string; guest_report_id?: string }) => {
     console.log('Astro data submitted:', data);
-    // Here you can handle the form submission
-    // For now, just close the form and call the original callback
-    setShowForm(false);
-    onAddAstroData();
+    
+    if (data.chat_id && data.guest_report_id) {
+      // Success! We have a chat_id and guest_report_id
+      console.log('✅ Report flow initiated successfully:', {
+        chat_id: data.chat_id,
+        guest_report_id: data.guest_report_id
+      });
+      
+      // TODO: Store these in the chat store or context
+      // For now, just show success and close form
+      setShowForm(false);
+      onAddAstroData();
+    } else {
+      console.error('Missing chat_id or guest_report_id from form submission');
+    }
   };
 
   if (showForm) {
