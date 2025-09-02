@@ -72,7 +72,7 @@ export const ReportForm: React.FC<ReportFormProps> = ({
     setIsProcessing(true);
     try {
       const payloadBody = {
-        reportData: data,
+        reportData: { ...data, promoCode: data.promoCode || '' },
         trustedPricing: pricing,
         is_guest: true
       };
