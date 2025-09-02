@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { useReportModal } from '@/contexts/ReportModalContext';
 import { getChatTokens } from '@/services/auth/chatTokens';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
-import { useSettingsModal } from '@/contexts/SettingsModalContext';
+import { SignInPrompt } from '@/components/auth/SignInPrompt';
 
 interface ChatThreadsSidebarProps {
   className?: string;
@@ -18,9 +18,9 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const { open: openReportModal } = useReportModal();
   const { uuid } = getChatTokens();
   const { isPolling, isReportReady } = useReportReadyStore();
-  const { setShowSignInPrompt } = useSettingsModal();
   const [hoveredThread, setHoveredThread] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showSignInPrompt, setShowSignInPrompt] = useState(false);
 
   // Generate thread title from first user message
   const threadTitle = useMemo(() => {
@@ -166,6 +166,14 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
             </div>
           </div>
         </div>
+      )}
+
+      {/* Sign In Prompt Modal */}
+      {showSignInPrompt && (
+        <SignInPrompt
+          feature="chat history"
+          onClose={() => setShowSignInPrompt(false)}
+        />
       )}
     </div>
   );
