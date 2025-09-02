@@ -12,7 +12,6 @@ import InlineDateTimeSelector from '@/components/ui/mobile-pickers/InlineDateTim
 import { astroRequestCategories } from '@/constants/report-types';
 import { ReportFormData } from '@/types/public-report';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { usePriceFetch } from '@/hooks/usePriceFetch';
 
 interface AstroDataFormProps {
   onClose: () => void;
@@ -27,7 +26,6 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   const [selectedAstroType, setSelectedAstroType] = useState<string>('');
   const [activeSelector, setActiveSelector] = useState<'date' | 'time' | null>(null);
   const isMobile = useIsMobile();
-  const { getReportPrice, getReportTitle } = usePriceFetch();
 
   const form = useForm<ReportFormData>({
     defaultValues: {
@@ -328,46 +326,15 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                 <div className="space-y-3">
                   <div className="flex justify-between text-base text-gray-700">
                     <span>
-                      {(() => {
-                        try {
-                          return getReportTitle({
-                            reportType: formValues.reportType,
-                            request: formValues.request
-                          });
-                        } catch {
-                          return 'Astro Data Report';
-                        }
-                      })()}
+                      {selectedAstroType === 'essence' ? 'The Self - Astro Data' : 'Compatibility - Astro Data'}
                     </span>
-                    <span>
-                      ${(() => {
-                        try {
-                          return getReportPrice({
-                            reportType: formValues.reportType,
-                            request: formValues.request
-                          }).toFixed(2);
-                        } catch {
-                          return '19.99';
-                        }
-                      })()}
-                    </span>
+                    <span>$19.99</span>
                   </div>
                 </div>
                 <hr className="border-gray-200" />
                 <div className="flex justify-between text-lg font-medium text-gray-900">
                   <span>Total</span>
-                  <span>
-                    ${(() => {
-                      try {
-                        return getReportPrice({
-                          reportType: formValues.reportType,
-                          request: formValues.request
-                        }).toFixed(2);
-                      } catch {
-                        return '19.99';
-                      }
-                    })()}
-                  </span>
+                  <span>$19.99</span>
                 </div>
               </div>
 
