@@ -87,14 +87,8 @@ const PublicReport = () => {
   }, [location.search]);
 
   const handleGetReportClick = () => {
-    if (isMobile) {
-      setIsMobileDrawerOpen(true);
-    } else {
-      const reportSection = document.querySelector('#report-form');
-      if (reportSection && reportSection instanceof HTMLElement) {
-        reportSection.scrollIntoView({ behavior: 'smooth' });
-      }
-    }
+    // Go directly to chat page, bypassing all forms
+    navigate('/chat');
   };
   
   // Observe hero visibility to toggle mobile Unlock FAB with smooth transition
