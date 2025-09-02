@@ -24,9 +24,9 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   onClose,
   onSubmit,
 }) => {
-  const [currentStep, setCurrentStep] = useState<'type' | 'details' | 'payment'>('type');
+  const [currentStep, setCurrentStep] = useState<'type' | 'details' | 'secondPerson' | 'payment'>('type');
   const [selectedAstroType, setSelectedAstroType] = useState<string>('');
-  const [activeSelector, setActiveSelector] = useState<'date' | 'time' | null>(null);
+  const [activeSelector, setActiveSelector] = useState<'date' | 'time' | 'secondDate' | 'secondTime' | null>(null);
   const [showPromoCode, setShowPromoCode] = useState(false);
   const isMobile = useIsMobile();
 
@@ -40,6 +40,13 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       birthLatitude: undefined,
       birthLongitude: undefined,
       birthPlaceId: '',
+      secondPersonName: '',
+      secondPersonBirthDate: '',
+      secondPersonBirthTime: '',
+      secondPersonBirthLocation: '',
+      secondPersonLatitude: undefined,
+      secondPersonLongitude: undefined,
+      secondPersonPlaceId: '',
       request: '',
       reportType: '',
     },
@@ -63,7 +70,23 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   };
 
   const handleFormSubmit = (data: ReportFormData) => {
+    // If compatibility type is selected, go to second person form
+    if (selectedAstroType === 'sync') {
+      setCurrentStep('secondPerson');
+    } else {
+      setCurrentStep('payment');
+    }
+  };
+
+  const handleSecondPersonSubmit = (data: ReportFormData) => {
     setCurrentStep('payment');
+  };
+
+  const handleSecondPlaceSelect = (place: PlaceData) => {
+    setValue('secondPersonBirthLocation', place.name);
+    if (place.latitude) setValue('secondPersonLatitude', place.latitude);
+    if (place.longitude) setValue('secondPersonLongitude', place.longitude);
+    if (place.placeId) setValue('secondPersonPlaceId', place.placeId);
   };
 
   const handlePaymentSubmit = async () => {
@@ -83,6 +106,13 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
             birthLatitude: formData.birthLatitude,
             birthLongitude: formData.birthLongitude,
             birthPlaceId: formData.birthPlaceId,
+            secondPersonName: formData.secondPersonName,
+            secondPersonBirthDate: formData.secondPersonBirthDate,
+            secondPersonBirthTime: formData.secondPersonBirthTime,
+            secondPersonBirthLocation: formData.secondPersonBirthLocation,
+            secondPersonLatitude: formData.secondPersonLatitude,
+            secondPersonLongitude: formData.secondPersonLongitude,
+            secondPersonPlaceId: formData.secondPersonPlaceId,
             isAstroOnly: true
           },
           trustedPricing: {
@@ -125,6 +155,10 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     setCurrentStep('details');
   };
 
+  const goBackToSecondPerson = () => {
+    setCurrentStep('secondPerson');
+  };
+
   const ErrorMsg = ({ msg }: { msg: string }) => (
     <div className="text-sm text-red-500 mt-1 flex items-center gap-2">
       <AlertCircle className="w-4 h-4" />
@@ -142,16 +176,28 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between p-6 border-b border-gray-200">
         <div className="flex items-center gap-3">
-          {currentStep === 'details' && (
+          {(currentStep === 'details' || currentStep === 'secondPerson' || currentStep === 'payment') && (
             <button
-              onClick={goBackToType}
+              onClick={() => {
+                if (currentStep === 'details') goBackToType();
+                else if (currentStep === 'secondPerson') setCurrentStep('details');
+                else if (currentStep === 'payment') {
+                  selectedAstroType === 'sync' ? setCurrentStep('secondPerson') : setCurrentStep('details');
+                }
+              }}
               className="p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
           )}
           <h2 className="text-xl font-medium text-gray-900">
-            {currentStep === 'type' ? 'Choose Astro Data Type' : 'Your Details'}
+            {currentStep === 'type' 
+              ? 'Choose Astro Data Type' 
+              : currentStep === 'details'
+              ? 'Your Details'
+              : currentStep === 'secondPerson'
+              ? 'Second Person Details'
+              : 'Review & Payment'}
           </h2>
         </div>
         <button
@@ -346,7 +392,118 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                   type="submit"
                   className="flex-1 bg-gray-900 hover:bg-gray-800"
                 >
-                  Generate Astro Data
+                  {selectedAstroType === 'sync' ? 'Continue to Second Person' : 'Generate Astro Data'}
+                </Button>
+              </div>
+            </motion.form>
+          ) : currentStep === 'secondPerson' ? (
+            <motion.form
+              key="secondPerson"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              onSubmit={handleSubmit(handleSecondPersonSubmit)}
+              className="space-y-6"
+            >
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="secondPersonName" className="text-sm font-medium text-gray-700">
+                    Second Person's Full Name *
+                  </Label>
+                  <Input
+                    id="secondPersonName"
+                    {...register('secondPersonName', { required: 'Second person name is required' })}
+                    placeholder="Enter second person's full name"
+                    className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
+                  />
+                  {errors.secondPersonName && <ErrorMsg msg={errors.secondPersonName.message || ''} />}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="secondPersonBirthDate" className="text-sm font-medium text-gray-700">
+                      Birth Date *
+                    </Label>
+                    {isMobile ? (
+                      <InlineDateTimeSelector
+                        type="date"
+                        value={formValues.secondPersonBirthDate || ''}
+                        onChange={(date) => setValue('secondPersonBirthDate', date)}
+                        onConfirm={() => setActiveSelector(null)}
+                        onCancel={() => setActiveSelector(null)}
+                        isOpen={activeSelector === 'secondDate'}
+                        placeholder="Select date"
+                        hasError={!!errors.secondPersonBirthDate}
+                        onOpen={() => setActiveSelector('secondDate')}
+                      />
+                    ) : (
+                      <Input
+                        id="secondPersonBirthDate"
+                        type="date"
+                        {...register('secondPersonBirthDate', { required: 'Second person birth date is required' })}
+                        className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
+                      />
+                    )}
+                    {errors.secondPersonBirthDate && <ErrorMsg msg={errors.secondPersonBirthDate.message || ''} />}
+                  </div>
+
+                  <div>
+                    <Label htmlFor="secondPersonBirthTime" className="text-sm font-medium text-gray-700">
+                      Birth Time *
+                    </Label>
+                    {isMobile ? (
+                      <InlineDateTimeSelector
+                        type="time"
+                        value={formValues.secondPersonBirthTime || ''}
+                        onChange={(time) => setValue('secondPersonBirthTime', time)}
+                        onConfirm={() => setActiveSelector(null)}
+                        onCancel={() => setActiveSelector(null)}
+                        isOpen={activeSelector === 'secondTime'}
+                        placeholder="Select time"
+                        hasError={!!errors.secondPersonBirthTime}
+                        onOpen={() => setActiveSelector('secondTime')}
+                      />
+                    ) : (
+                      <Input
+                        id="secondPersonBirthTime"
+                        type="time"
+                        {...register('secondPersonBirthTime', { required: 'Second person birth time is required' })}
+                        className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
+                      />
+                    )}
+                    {errors.secondPersonBirthTime && <ErrorMsg msg={errors.secondPersonBirthTime.message || ''} />}
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="secondPersonBirthLocation" className="text-sm font-medium text-gray-700">
+                    Birth Location *
+                  </Label>
+                  <CleanPlaceAutocomplete
+                    value={formValues.secondPersonBirthLocation || ''}
+                    onChange={(val) => setValue('secondPersonBirthLocation', val)}
+                    onPlaceSelect={handleSecondPlaceSelect}
+                    placeholder="Enter birth city, state, country"
+                    className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
+                  />
+                  {errors.secondPersonBirthLocation && <ErrorMsg msg={errors.secondPersonBirthLocation.message || ''} />}
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCurrentStep('details')}
+                  className="flex-1"
+                >
+                  Back
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1 bg-gray-900 hover:bg-gray-800"
+                >
+                  Continue to Payment
                 </Button>
               </div>
             </motion.form>
@@ -374,7 +531,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                 <div className="space-y-3">
                   <div className="flex justify-between text-base text-gray-700">
                     <span>
-                      {selectedAstroType === 'essence' ? 'The Self - Astro Data' : 'Compatibility - Astro Data'}
+                      {selectedAstroType === 'essence' ? 'The Self - Astro Data' : selectedAstroType === 'sync' ? 'Compatibility - Astro Data' : 'Astro Data'}
                     </span>
                     <span>$1.00</span>
                   </div>
@@ -430,7 +587,9 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={goBackToDetails}
+                  onClick={() => {
+                    selectedAstroType === 'sync' ? setCurrentStep('secondPerson') : setCurrentStep('details');
+                  }}
                   className="flex-1"
                 >
                   Back
