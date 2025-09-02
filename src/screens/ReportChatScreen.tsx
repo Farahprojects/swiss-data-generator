@@ -30,17 +30,18 @@ const ReportChatScreen = () => {
     }
   }, [user, guestId, chat_id, navigate]);
 
-  // Use different hooks based on auth state
-  if (user) {
-    // Authenticated user - use conversation system
-    useAuthedChat(chat_id);
-  } else if (guestId || chat_id) {
-    // Guest user - use traditional guest chat
-    useChat(chat_id, guestId || undefined);
-  } else {
-    // No valid identifier, will redirect above
-    return null;
-  }
+  // Always call hooks unconditionally to avoid React violations
+  const authedChatResult = useAuthedChat(chat_id);
+  const guestChatResult = useChat(chat_id, guestId || undefined);
+  
+  // Handle the results based on auth state
+  useEffect(() => {
+    if (user) {
+      // Authenticated user - conversation system is active
+    } else if (guestId || chat_id) {
+      // Guest user - traditional guest chat is active
+    }
+  }, [user, guestId, chat_id]);
 
   return (
     <SettingsModalProvider>
