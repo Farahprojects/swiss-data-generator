@@ -62,21 +62,27 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     if (place.placeId) setValue('birthPlaceId', place.placeId);
   };
 
-  const handleFormSubmit = async (data: ReportFormData) => {
+  const handleFormSubmit = (data: ReportFormData) => {
+    setCurrentStep('payment');
+  };
+
+  const handlePaymentSubmit = async () => {
     try {
+      const formData = form.getValues();
+      
       // Call initiate-report-flow to create guest report and get chat_id
       const { data: response, error } = await supabase.functions.invoke('initiate-report-flow', {
         body: {
           reportData: {
-            reportType: data.reportType || data.request || 'astro-data',
-            name: data.name,
-            email: data.email,
-            birthDate: data.birthDate,
-            birthTime: data.birthTime,
-            birthLocation: data.birthLocation,
-            birthLatitude: data.birthLatitude,
-            birthLongitude: data.birthLongitude,
-            birthPlaceId: data.birthPlaceId,
+            reportType: formData.reportType || formData.request || 'astro-data',
+            name: formData.name,
+            email: formData.email,
+            birthDate: formData.birthDate,
+            birthTime: formData.birthTime,
+            birthLocation: formData.birthLocation,
+            birthLatitude: formData.birthLatitude,
+            birthLongitude: formData.birthLongitude,
+            birthPlaceId: formData.birthPlaceId,
             isAstroOnly: true
           },
           trustedPricing: {
@@ -84,7 +90,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
             discount_usd: 0,
             trusted_base_price_usd: 19.99,
             final_price_usd: 19.99,
-            report_type: data.reportType || data.request || 'astro-data'
+            report_type: formData.reportType || formData.request || 'astro-data'
           }
         }
       });
@@ -99,7 +105,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
         console.log('Report flow initiated successfully:', response);
         // Store the chat_id and guest_report_id for the chat session
         onSubmit({
-          ...data,
+          ...formData,
           chat_id: response.chatId,
           guest_report_id: response.guestReportId
         });
@@ -108,11 +114,6 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       console.error('Error initiating report flow:', error);
       // TODO: Show error toast
     }
-  };
-
-  const handlePaymentSubmit = () => {
-    const formData = form.getValues();
-    onSubmit(formData);
   };
 
   const goBackToType = () => {
