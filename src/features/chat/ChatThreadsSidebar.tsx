@@ -1,12 +1,18 @@
 import React, { useMemo, useState } from 'react';
 import { useChatStore } from '@/core/store';
 import { useAuth } from '@/contexts/AuthContext';
-import { Trash2, Sparkles, AlertTriangle } from 'lucide-react';
+import { Trash2, Sparkles, AlertTriangle, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReportModal } from '@/contexts/ReportModalContext';
 import { getChatTokens, clearChatTokens } from '@/services/auth/chatTokens';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { AuthModal } from '@/components/auth/AuthModal';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 
 interface ChatThreadsSidebarProps {
@@ -89,54 +95,55 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
           onMouseEnter={() => setHoveredThread(chat_id)}
           onMouseLeave={() => setHoveredThread(null)}
         >
-                      <div className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded-lg transition-colors">
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-gray-900 truncate" title={threadTitle}>
-                  {threadTitle}
-                </div>
+          <div className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded-lg transition-colors">
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-gray-900 truncate" title={threadTitle}>
+                {threadTitle}
               </div>
             </div>
-          
-          {/* Hover Actions - Show on hover for both guest and signed-in users */}
-          {hoveredThread === chat_id && (
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-lg p-1">
-              {/* Astro Button */}
-              <button
-                onClick={() => {
-                  if (isGuest && isGuestThreadReady) {
-                    // For guest users, open the report modal with actual guest_report_id
-                    console.log('[ChatThreadsSidebar] Opening report modal for guest user');
-                    if (guestReportId) {
-                      openReportModal(guestReportId);
-                    } else {
-                      console.error('[ChatThreadsSidebar] No guest_report_id available');
-                    }
-                  } else if (uuid) {
-                    // For signed-in users, use the uuid
-                    openReportModal(uuid);
-                  }
-                }}
-                disabled={false} // Always clickable
-                className="flex items-center gap-1 px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                title={isGuest ? "View Astro Data" : "Generate Astro Report"}
-              >
-                <Sparkles className="w-3 h-3" />
-                Astro
-              </button>
-              
-              {/* Delete Button */}
-              {isGuest && (
-                <button
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="flex items-center gap-1 px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded transition-colors"
-                  title="Clear Session"
-                >
-                  <Trash2 className="w-3 h-3" />
-                  Delete
+            
+            {/* Three dots menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="p-1 hover:bg-gray-200 rounded transition-colors">
+                  <MoreHorizontal className="w-4 h-4 text-gray-600" />
                 </button>
-              )}
-            </div>
-          )}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg">
+                <DropdownMenuItem
+                  onClick={() => {
+                    if (isGuest && isGuestThreadReady) {
+                      // For guest users, open the report modal with actual guest_report_id
+                      console.log('[ChatThreadsSidebar] Opening report modal for guest user');
+                      if (guestReportId) {
+                        openReportModal(guestReportId);
+                      } else {
+                        console.error('[ChatThreadsSidebar] No guest_report_id available');
+                      }
+                    } else if (uuid) {
+                      // For signed-in users, use the uuid
+                      openReportModal(uuid);
+                    }
+                  }}
+                  className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4 text-blue-600" />
+                  {isGuest ? "View Astro Data" : "Generate Astro Report"}
+                </DropdownMenuItem>
+                
+                {/* Delete option only for guest users */}
+                {isGuest && (
+                  <DropdownMenuItem
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer text-red-600"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Clear Session
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       )}
 
