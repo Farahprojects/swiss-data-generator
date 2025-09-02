@@ -99,6 +99,81 @@ const ReportChatScreen = () => {
 
   }, [guestId]);
 
+  // 🎯 POLLING: Check for report ready signals every 2 seconds
+  useEffect(() => {
+    if (!guestId) return;
+
+    console.log(`[ChatPage] 🔄 Starting report ready polling for guest_id: ${guestId}`);
+    
+    const pollInterval = setInterval(async () => {
+      try {
+        console.log(`[ChatPage] 🔍 Polling report_ready_signals for: ${guestId}`);
+        
+        const { data: signals, error } = await supabase
+          .from('report_ready_signals')
+          .select('guest_report_id, created_at')
+          .eq('guest_report_id', guestId)
+          .limit(1);
+
+        if (error) {
+          console.error(`[ChatPage] ❌ Polling error:`, error);
+          return;
+        }
+
+        if (signals && signals.length > 0) {
+          console.log(`[ChatPage] 🎉 Report ready signal detected for: ${guestId}!`);
+          clearInterval(pollInterval);
+          
+          // Trigger context injection
+          console.log(`[ChatPage] 💉 Calling context-injector for: ${guestId}`);
+          const { data: contextData, error: contextError } = await supabase.functions.invoke('context-injector', {
+            body: { guest_report_id: guestId }
+          });
+
+          if (contextError) {
+            console.error(`[ChatPage] ❌ Context injection failed:`, contextError);
+            return;
+          }
+
+          console.log(`[ChatPage] ✅ Context injection successful:`, contextData);
+          hasTriggeredGenerationRef.current = true;
+          
+          // Show success message to user
+          console.log(`[ChatPage] 🎯 Astro data successfully injected into chat!`);
+          
+          // Show success message to user (you can replace this with a toast)
+          // For now, we'll add a system message to the chat
+          const { error: messageError } = await supabase
+            .from('messages')
+            .insert({
+              chat_id: urlChatId || chat_id,
+              role: 'assistant',
+              text: '✨ Your astro data has been loaded! I can now provide personalized insights based on your birth chart.',
+              status: 'complete',
+              meta: {
+                type: 'astro_data_loaded',
+                guest_report_id: guestId,
+                timestamp: new Date().toISOString()
+              }
+            });
+
+          if (messageError) {
+            console.error(`[ChatPage] ❌ Failed to add success message:`, messageError);
+          }
+        }
+      } catch (error) {
+        console.error(`[ChatPage] ❌ Polling error:`, error);
+      }
+    }, 2000); // Poll every 2 seconds
+
+    // Cleanup on unmount or guestId change
+    return () => {
+      console.log(`[ChatPage] 🧹 Cleaning up polling for guest_id: ${guestId}`);
+      clearInterval(pollInterval);
+    };
+
+  }, [guestId]);
+
   // URL change listener - React will automatically re-render when URL params change
   // This is just for logging and debugging
   useEffect(() => {
