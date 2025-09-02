@@ -76,9 +76,6 @@ verify_jwt = false
 [functions.process-paid-report]
 verify_jwt = false
 
-[functions.process-topup-queue]
-verify_jwt = false
-
 [functions.report-orchestrator]
 verify_jwt = false
 
