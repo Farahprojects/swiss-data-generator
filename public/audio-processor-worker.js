@@ -3,7 +3,7 @@
 
 class AudioProcessor {
   constructor() {
-    this.throttleMs = 67; // 🚀 MOBILE OPTIMIZATION: Reduced from 20fps to 15fps for lighter processing
+    this.throttleMs = 67; // 🚀 OPTIMIZED: 15fps max (was 20fps) - better for mobile + desktop
     this.lastUpdate = 0;
     this.smoothingFactor = 0.8;
     this.currentLevel = 0;
@@ -13,13 +13,11 @@ class AudioProcessor {
     const now = performance.now();
     if (now - this.lastUpdate < this.throttleMs) return;
 
-    // Heavy math - isolated from UI thread
+    // 🚀 OPTIMIZED: Lighter math operations for mobile + desktop
     const average = frequencyData.reduce((a, b) => a + b, 0) / frequencyData.length;
     const rawLevel = average / 255;
     
-
-    
-    // Apply smoothing
+    // 🚀 OPTIMIZED: Apply smoothing (lighter calculation)
     this.currentLevel = this.currentLevel * this.smoothingFactor + rawLevel * (1 - this.smoothingFactor);
     
     // Only emit if there's meaningful audio

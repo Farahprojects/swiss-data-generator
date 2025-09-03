@@ -42,8 +42,8 @@ export const SpeakingBarsOptimized = forwardRef<SpeakingBarsRef, Props>(({ isAct
           // GPU-accelerated transform driven by CSS variables - MORE DYNAMIC!
           transform: 'scaleY(calc(var(--base-height) + var(--audio-level) * 1.2))',
           opacity: `calc(0.75 + var(--is-active) * 0.25)`,
-          // Smooth transitions - MOBILE OPTIMIZED
-          transition: 'transform 150ms ease-out, opacity 200ms ease'
+          // Smooth transitions
+          transition: 'transform 100ms cubic-bezier(0.4, 0, 0.2, 1), opacity 150ms ease'
         } as React.CSSProperties}
       />
     );

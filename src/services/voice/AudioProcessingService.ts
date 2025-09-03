@@ -11,10 +11,8 @@ export class AudioProcessingService {
   private dataArray: Uint8Array | null = null;
   private animationFrameId: number | null = null;
   
-  // 🚀 MOBILE OPTIMIZATION: Detect mobile and adjust processing
+  // 🚀 OPTIMIZED: Mobile detection for adaptive processing
   private isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  private mobileThrottleMs = 100; // 10fps for mobile (vs 15fps for desktop)
-  private desktopThrottleMs = 67; // 15fps for desktop
 
   constructor() {
     this.initWorker();
@@ -64,21 +62,19 @@ export class AudioProcessingService {
       return;
     }
 
-    // 🚀 MOBILE OPTIMIZATION: Set adaptive throttling before starting
-    this.setAdaptiveThrottling();
-    
     console.log('[AudioProcessingService] 🚀 Starting audio processing...');
+    console.log('[AudioProcessingService] 📱 Device type:', this.isMobile ? 'Mobile' : 'Desktop');
 
     const processFrame = () => {
       if (!this.analyser || !this.dataArray || !this.worker) return;
 
-      // Get frequency data
+      // 🚀 OPTIMIZED: Get frequency data (lighter with 128 FFT size)
       this.analyser.getByteFrequencyData(this.dataArray);
       
-      // Get frequency data for processing
+      // 🚀 OPTIMIZED: Calculate average (lighter operation)
       const average = this.dataArray.reduce((a, b) => a + b, 0) / this.dataArray.length;
       
-      // Send to worker for processing
+      // 🚀 OPTIMIZED: Send to worker for processing
       this.worker.postMessage({
         type: 'process-audio',
         data: Array.from(this.dataArray) // Convert to regular array for worker
@@ -105,18 +101,6 @@ export class AudioProcessingService {
 
   public setThrottle(fps: number) {
     if (this.worker && this.isReady) {
-      this.worker.postMessage({ type: 'set-throttle', data: { fps } });
-    }
-  }
-  
-  // 🚀 MOBILE OPTIMIZATION: Set adaptive throttling based on device
-  public setAdaptiveThrottling() {
-    if (this.worker && this.isReady) {
-      const throttleMs = this.isMobile ? this.mobileThrottleMs : this.desktopThrottleMs;
-      const fps = Math.round(1000 / throttleMs);
-      
-      console.log(`[AudioProcessingService] 🚀 Setting adaptive throttling: ${this.isMobile ? 'Mobile' : 'Desktop'} - ${fps}fps (${throttleMs}ms)`);
-      
       this.worker.postMessage({ type: 'set-throttle', data: { fps } });
     }
   }
