@@ -186,6 +186,13 @@ class ChatController {
   }
 
   /**
+   * Check if realtime subscription is active
+   */
+  public hasRealtimeSubscription(): boolean {
+    return this.realtimeChannel && this.realtimeChannel.subscribe;
+  }
+
+  /**
    * Handle TTS audio events from unified WebSocket
    * This replaces the separate conversation WebSocket
    */

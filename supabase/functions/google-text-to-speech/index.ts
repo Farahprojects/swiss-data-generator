@@ -122,9 +122,9 @@ serve(async (req) => {
     try {
       console.log(`[google-tts] 📞 Making phone call with binary MP3 bytes to chat: ${chat_id}`);
       
-      // Send raw MP3 bytes directly via binary WebSocket (no base64 encoding)
+      // Send raw MP3 bytes directly via unified WebSocket (messages:${chat_id})
       const { data: broadcastData, error: broadcastError } = await supabase
-        .channel(`conversation:${chat_id}`)
+        .channel(`messages:${chat_id}`)
         .send({
           type: 'broadcast',
           event: 'tts-ready',

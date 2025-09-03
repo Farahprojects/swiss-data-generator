@@ -150,6 +150,12 @@ const ReportChatScreen = () => {
               console.log(`[ChatPage] 📚 Loading existing messages for chat: ${finalChatId}`);
               chatController.loadExistingMessages(finalChatId);
             }
+            
+            // 🎯 CRITICAL: Ensure WebSocket is set up for TTS even when skipping polling
+            if (!chatController.hasRealtimeSubscription()) {
+              console.log(`[ChatPage] 📡 Setting up WebSocket for TTS: ${finalChatId}`);
+              chatController.setupRealtimeSubscription(finalChatId);
+            }
           }
           
           return true; // Report already exists
@@ -277,6 +283,12 @@ const ReportChatScreen = () => {
           if (finalChatId && store.messages.length === 0) {
             console.log(`[ChatPage] 📚 Loading existing messages for chat: ${finalChatId}`);
             chatController.loadExistingMessages(finalChatId);
+          }
+          
+          // 🎯 CRITICAL: Ensure WebSocket is set up for TTS even when skipping rehydration
+          if (finalChatId && !chatController.hasRealtimeSubscription()) {
+            console.log(`[ChatPage] 📡 Setting up WebSocket for TTS: ${finalChatId}`);
+            chatController.setupRealtimeSubscription(finalChatId);
           }
           
           return; // Skip rehydration
