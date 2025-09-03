@@ -8,6 +8,7 @@ import { conversationMicrophoneService } from '@/services/microphone/Conversatio
 import { conversationTtsService } from '@/services/voice/conversationTts';
 import { audioProcessingService } from '@/services/voice/AudioProcessingService';
 import { directAudioAnimationService } from '@/services/voice/DirectAudioAnimationService';
+import { EnvelopePlayer } from '@/services/voice/EnvelopePlayer';
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
 import { v4 as uuidv4 } from 'uuid';
@@ -58,6 +59,9 @@ export const ConversationOverlay: React.FC = () => {
   // 🎵 AUDIO: Single context for all audio
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  
+  // 🎵 ENVELOPE: Player for smooth, synced animation
+  const envelopePlayerRef = useRef<EnvelopePlayer | null>(null);
   
   // 🎯 STATE-DRIVEN: Local messages follow state changes
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
@@ -139,17 +143,23 @@ export const ConversationOverlay: React.FC = () => {
         // Start envelope-driven animation service
         directAudioAnimationService.start();
         
-        // Schedule envelope values to drive bar animation
-        const frameDuration = audioBuffer.duration / envelope.length; // Time per envelope frame
+        // 🎯 NEW: Use EnvelopePlayer for synced, mobile-friendly animation
+        if (envelopePlayerRef.current) {
+          envelopePlayerRef.current.stop();
+        }
         
-        envelope.forEach((level, index) => {
-          const delay = index * frameDuration * 1000; // Convert to milliseconds
-          setTimeout(() => {
+        envelopePlayerRef.current = new EnvelopePlayer(
+          envelope,
+          audioBuffer.duration * 1000, // Convert to milliseconds
+          (level) => {
             if (!isShuttingDown.current) {
               directAudioAnimationService.notifyAudioLevel(level);
             }
-          }, delay);
-        });
+          }
+        );
+        
+        // Start envelope playback in sync with audio
+        envelopePlayerRef.current.start();
       } else {
         // Fallback to old audio analysis if no envelope
         console.log('[ConversationOverlay] 🎵 No envelope data, falling back to audio analysis');
@@ -170,6 +180,11 @@ export const ConversationOverlay: React.FC = () => {
          // 🎵 Stop all animation services when TTS ends
          audioProcessingService.stopProcessing();
          directAudioAnimationService.stop();
+         
+         // 🎯 NEW: Stop envelope player when audio ends
+         if (envelopePlayerRef.current) {
+           envelopePlayerRef.current.stop();
+         }
          
          conversationTtsService.setAudioLevelForAnimation(0);
          setState('listening');
@@ -337,6 +352,11 @@ export const ConversationOverlay: React.FC = () => {
          // 🚀 NEW: Stop optimized audio processing
      audioProcessingService.stopProcessing();
      directAudioAnimationService.stop();
+     
+     // 🎯 NEW: Stop envelope player when modal closes
+     if (envelopePlayerRef.current) {
+       envelopePlayerRef.current.stop();
+     }
     
     // Stop microphone and release all resources
     conversationMicrophoneService.stopRecording();

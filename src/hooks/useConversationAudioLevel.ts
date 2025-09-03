@@ -22,6 +22,7 @@ export const useConversationAudioLevel = () => {
       
       // Use the higher of the two levels
       const level = Math.max(micLevel, ttsLevel);
+      
       setAudioLevel(level);
       
       animationFrame = requestAnimationFrame(updateAudioLevel);

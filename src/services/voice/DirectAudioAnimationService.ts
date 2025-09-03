@@ -14,7 +14,8 @@ export class DirectAudioAnimationService {
 
   // Notify all listeners (called by AudioProcessingService)
   public notifyAudioLevel(level: number): void {
-    this.currentLevel = level;
+    this.currentLevel = level; // Update current level
+    
     if (this.isProcessing) {
       this.listeners.forEach(listener => listener(level));
     }
