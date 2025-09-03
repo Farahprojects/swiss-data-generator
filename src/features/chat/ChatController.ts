@@ -59,6 +59,12 @@ class ChatController {
   private realtimeChannel: any = null;
 
   private setupRealtimeSubscription(chat_id: string) {
+    // Prevent duplicate WebSocket setup
+    if (this.realtimeChannel && this.realtimeChannel.subscribe) {
+      console.log('[ChatController] 🚫 WebSocket already active, skipping duplicate setup');
+      return;
+    }
+    
     // Clean up existing subscription
     this.cleanupRealtimeSubscription();
 
@@ -202,7 +208,15 @@ class ChatController {
    * Initialize conversation (called when modal closes)
    */
   initializeConversation(chat_id: string): void {
-    useChatStore.getState().startConversation(chat_id);
+    // Prevent duplicate initialization
+    const store = useChatStore.getState();
+    if (store.chat_id === chat_id && this.realtimeChannel) {
+      console.log('[ChatController] 🚫 Skipping duplicate initialization for chat_id:', chat_id);
+      return;
+    }
+    
+    console.log('[ChatController] 🔄 Initializing conversation for chat_id:', chat_id);
+    store.startConversation(chat_id);
     this.setupRealtimeSubscription(chat_id);
     this.loadExistingMessages(); // Load conversation history
   }

@@ -125,7 +125,7 @@ const ReportChatScreen = () => {
     
     const pollInterval = setInterval(async () => {
       try {
-        console.log(`[ChatPage] 🔍 Polling report_ready_signals for: ${guestId}`);
+        // Reduced logging - only log on first attempt and errors
         
         const { data: signals, error } = await supabase
           .from('report_ready_signals')
@@ -189,10 +189,7 @@ const ReportChatScreen = () => {
   }, [guestId]);
 
   // URL change listener - React will automatically re-render when URL params change
-  // This is just for logging and debugging
   useEffect(() => {
-    console.log(`[ChatPage] 🔗 URL parameters updated - guest_id: ${guestId}, chat_id: ${urlChatId}`);
-    
     // Reset guest thread ready state when URL parameters are cleared
     if (!guestId && isGuestThreadReady) {
       console.log(`[ChatPage] 🔄 Guest ID cleared, resetting thread ready state`);
@@ -243,7 +240,11 @@ const ReportChatScreen = () => {
         // Now we have both IDs - restore to store
         if (finalChatId) {
           console.log(`[ChatPage] 🔄 Restoring session to store - chat_id: ${finalChatId}, guest_id: ${guestId}`);
-          store.startConversation(finalChatId, guestId);
+          
+          // Only start conversation if not already active
+          if (store.chat_id !== finalChatId) {
+            store.startConversation(finalChatId, guestId);
+          }
           
           // Check if report is already ready and update thread visibility
           const { data: readySignal } = await supabase
