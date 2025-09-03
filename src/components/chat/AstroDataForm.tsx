@@ -17,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { usePricing } from '@/contexts/PricingContext';
 import { useToast } from '@/hooks/use-toast';
 import { useChatStore } from '@/core/store';
+import { chatController } from '@/features/chat/ChatController';
 
 interface AstroDataFormProps {
   onClose: () => void;
@@ -267,6 +268,9 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
         try {
           useChatStore.getState().startConversation(response.chatId, response.guestReportId);
           console.log(`[AstroForm] 🧠 Store hydrated with chat_id and guest_id: ${response.chatId}, ${response.guestReportId}`);
+          // Also initialize chat controller to load history and subscribe to realtime
+          chatController.initializeConversation(response.chatId);
+          console.log('[AstroForm] 🔔 ChatController initialized for realtime and history');
         } catch (e) {
           console.error('[AstroForm] ❌ Failed to hydrate chat store:', e);
         }
