@@ -326,7 +326,10 @@ export const ConversationOverlay: React.FC = () => {
   if (!isConversationOpen || typeof document === 'undefined') return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 bg-white pt-safe pb-safe">
+    <div 
+      className="fixed inset-0 z-50 bg-white pt-safe pb-safe"
+      data-conversation-overlay
+    >
       <div className="h-full w-full flex items-center justify-center px-6">
         {!permissionGranted ? (
           <div className="text-center text-gray-800 flex flex-col items-center gap-4">

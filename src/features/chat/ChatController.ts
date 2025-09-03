@@ -161,10 +161,19 @@ class ChatController {
   }
 
   async sendTextMessage(text: string) {
-    // Guard: Don't send if conversation overlay is open
+    // 🚫 GUARD: Don't send if conversation overlay is open
     const { useConversationUIStore } = await import('@/features/chat/conversation-ui-store');
-    if (useConversationUIStore.getState().isConversationOpen) {
+    const conversationStore = useConversationUIStore.getState();
+    
+    if (conversationStore.isConversationOpen) {
       console.log('[ChatController] 🔥 BLOCKED: sendTextMessage - conversation mode active');
+      return;
+    }
+    
+    // 🚫 ADDITIONAL GUARD: Check if there's an active conversation overlay in DOM
+    const conversationOverlay = document.querySelector('[data-conversation-overlay]');
+    if (conversationOverlay) {
+      console.log('[ChatController] 🔥 BLOCKED: sendTextMessage - conversation overlay detected in DOM');
       return;
     }
 

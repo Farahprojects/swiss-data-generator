@@ -46,9 +46,16 @@ export const ChatInput = () => {
   });
 
   const handleSend = () => {
-    // Guard: Don't send if conversation overlay is open
+    // 🚫 GUARD: Don't send if conversation overlay is open
     if (isConversationOpen) {
       console.log('[ChatInput] 🔥 BLOCKED: handleSend - conversation mode active');
+      return;
+    }
+    
+    // 🚫 ADDITIONAL GUARD: Check if there's an active conversation overlay in DOM
+    const conversationOverlay = document.querySelector('[data-conversation-overlay]');
+    if (conversationOverlay) {
+      console.log('[ChatInput] 🔥 BLOCKED: handleSend - conversation overlay detected in DOM');
       return;
     }
 
