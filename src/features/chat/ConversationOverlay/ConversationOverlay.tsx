@@ -153,7 +153,7 @@ export const ConversationOverlay: React.FC = () => {
           (level) => {
             if (!isShuttingDown.current) {
               // 🎯 DIRECT: Update the audio level for the speaking bars
-              setAudioLevel(level);
+              directAudioAnimationService.notifyAudioLevel(level);
             }
           }
         );
