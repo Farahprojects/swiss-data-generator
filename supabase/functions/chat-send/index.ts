@@ -61,6 +61,25 @@ serve(async (req) => {
     // Note: chat_id is already verified by verify-chat-access edge function
     // No additional validation needed here
 
+    // 🚫 IDEMPOTENCY CHECK: Prevent duplicate processing of the same message
+    const existingMessage = await supabase
+      .from("messages")
+      .select("id, role, text, status")
+      .eq("client_msg_id", client_msg_id || crypto.randomUUID())
+      .eq("chat_id", chat_id)
+      .single();
+
+    if (existingMessage && existingMessage.status === "complete") {
+      console.log('[chat-send] 🚫 Idempotency: Message already processed, skipping duplicate call');
+      return new Response(JSON.stringify({
+        message: "Message already processed",
+        client_msg_id: client_msg_id || crypto.randomUUID(),
+        existing_message: existingMessage
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
     // Save message to DB (fire and forget)
     const userMessageData = {
       chat_id,
@@ -96,6 +115,27 @@ serve(async (req) => {
     if (mode === 'conversation') {
       try {
         console.log('[chat-send] 🎤 Starting conversation mode orchestration');
+        
+        // 🚫 CONVERSATION IDEMPOTENCY: Check if we already have an assistant response for this user message
+        const existingAssistantMessage = await supabase
+          .from("messages")
+          .select("id, text, meta")
+          .eq("chat_id", chat_id)
+          .eq("role", "assistant")
+          .eq("meta->>user_message_id", userMessageData.client_msg_id)
+          .single();
+
+        if (existingAssistantMessage) {
+          console.log('[chat-send] 🚫 Conversation idempotency: Assistant response already exists, skipping LLM/TTS');
+          return new Response(JSON.stringify({
+            message: "Conversation already processed",
+            text: existingAssistantMessage.text,
+            client_msg_id: userMessageData.client_msg_id,
+            existing_assistant: existingAssistantMessage
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
         
         // Step 2: Call LLM handler to get assistant response
         console.log('[chat-send] 🤖 Calling LLM handler...');
@@ -136,7 +176,10 @@ serve(async (req) => {
           text: assistantText,
           client_msg_id: crypto.randomUUID(),
           status: "complete",
-          meta: { mode: 'conversation' }
+          meta: { 
+            mode: 'conversation',
+            user_message_id: userMessageData.client_msg_id  // 🔗 Link to user message for idempotency
+          }
         };
 
         console.log('[chat-send] 💾 Saving assistant message to DB...');
