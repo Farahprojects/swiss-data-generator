@@ -65,7 +65,11 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
     return (
       <Sheet open={isOpen} onOpenChange={onClose}>
         <SheetContent side="right" className="w-full sm:max-w-2xl">
-          <div className="flex items-center justify-center h-full">
+          <SheetHeader className="px-6 py-4 border-b bg-white">
+            <SheetTitle className="text-lg font-medium text-gray-900">Loading Report</SheetTitle>
+            <SheetDescription className="text-sm text-gray-600">Please wait while we prepare your report</SheetDescription>
+          </SheetHeader>
+          <div className="flex items-center justify-center h-full p-6">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
               <p className="text-gray-600">Loading your report...</p>
@@ -80,7 +84,11 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
     return (
       <Sheet open={isOpen} onOpenChange={onClose}>
         <SheetContent side="right" className="w-full sm:max-w-2xl">
-          <div className="flex items-center justify-center h-full">
+          <SheetHeader className="px-6 py-4 border-b bg-white">
+            <SheetTitle className="text-lg font-medium text-gray-900">Error</SheetTitle>
+            <SheetDescription className="text-sm text-gray-600">There was a problem loading your report</SheetDescription>
+          </SheetHeader>
+          <div className="flex items-center justify-center h-full p-6">
             <div className="text-center">
               <p className="text-red-600 mb-4">Error loading report: {error}</p>
               <Button onClick={() => guestReportId && fetchReport(guestReportId)}>
@@ -120,7 +128,11 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
     return (
       <Sheet open={isOpen} onOpenChange={onClose}>
         <SheetContent side="right" className="w-full sm:max-w-2xl">
-          <div className="flex items-center justify-center h-full">
+          <SheetHeader className="px-6 py-4 border-b bg-white">
+            <SheetTitle className="text-lg font-medium text-gray-900">Report</SheetTitle>
+            <SheetDescription className="text-sm text-gray-600">Report information</SheetDescription>
+          </SheetHeader>
+          <div className="flex items-center justify-center h-full p-6">
             <p className="text-gray-600">No report data available.</p>
           </div>
         </SheetContent>
@@ -135,8 +147,8 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
       <SheetContent side="right" className="w-full sm:max-w-2xl p-0">
         <div className="flex flex-col h-full">
           <SheetHeader className="flex flex-row items-center justify-between px-6 py-4 border-b bg-white">
-            <SheetTitle className="sr-only">Report</SheetTitle>
-            <SheetDescription className="sr-only">Astrological report data</SheetDescription>
+            <SheetTitle className="text-lg font-medium text-gray-900">Astrological Report</SheetTitle>
+            <SheetDescription className="text-sm text-gray-600">Your personalized astrological insights and data</SheetDescription>
             <div className="flex items-center gap-3">
             </div>
             <div></div>
