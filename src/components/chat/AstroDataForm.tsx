@@ -16,6 +16,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { usePricing } from '@/contexts/PricingContext';
 import { useToast } from '@/hooks/use-toast';
+import { useChatStore } from '@/core/store';
 
 interface AstroDataFormProps {
   onClose: () => void;
@@ -261,6 +262,14 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
         window.history.replaceState({}, "", newUrl);
         
         console.log(`[AstroForm] 🔗 URL updated for session persistence: ${newUrl}`);
+        
+        // Hydrate chat store immediately so chat is usable right away
+        try {
+          useChatStore.getState().startConversation(response.chatId, response.guestReportId);
+          console.log(`[AstroForm] 🧠 Store hydrated with chat_id and guest_id: ${response.chatId}, ${response.guestReportId}`);
+        } catch (e) {
+          console.error('[AstroForm] ❌ Failed to hydrate chat store:', e);
+        }
         
         // Store the chat_id and guest_report_id for the chat session
         onSubmit({
