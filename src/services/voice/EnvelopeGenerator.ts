@@ -1,8 +1,8 @@
 /**
- * 🎵 ENVELOPE GENERATOR - Real PCM-Derived Envelopes
+ * 🎵 ENVELOPE GENERATOR - Progressive PCM-Derived Envelopes
  * 
- * Generates envelope data from decoded MP3 audio for smooth speaking bar animation.
- * Fails fast if envelope is invalid - no silent fallbacks.
+ * Generates envelope data progressively for instant speaking bar animation.
+ * Quick preview for immediate start, full envelope for perfect sync.
  */
 
 export interface EnvelopeResult {
@@ -12,13 +12,69 @@ export interface EnvelopeResult {
   error?: string;
 }
 
+export interface PreviewEnvelope {
+  level: number;
+  isValid: boolean;
+  error?: string;
+}
+
 export class EnvelopeGenerator {
   /**
-   * Generate envelope from decoded audio buffer
+   * Generate quick preview envelope from first ~100ms of audio
+   * @param audioBuffer - Decoded audio from AudioContext.decodeAudioData
+   * @returns PreviewEnvelope for immediate bar animation
+   */
+  static generatePreviewEnvelope(audioBuffer: AudioBuffer): PreviewEnvelope {
+    try {
+      const channelData = audioBuffer.getChannelData(0);
+      const previewWindowSize = 512; // samples per frame
+      const previewSamples = Math.min(previewWindowSize * 4, channelData.length); // first ~100ms
+      
+      if (previewSamples < previewWindowSize) {
+        return {
+          level: 0,
+          isValid: false,
+          error: 'Audio too short for preview envelope'
+        };
+      }
+      
+      // Calculate RMS for preview window
+      let sum = 0;
+      for (let i = 0; i < previewSamples; i++) {
+        sum += channelData[i] ** 2;
+      }
+      
+      const previewLevel = Math.sqrt(sum / previewSamples);
+      
+      // Validate preview has meaningful variation
+      if (previewLevel < 0.01) {
+        return {
+          level: 0,
+          isValid: false,
+          error: 'Preview envelope too quiet'
+        };
+      }
+      
+      return {
+        level: Math.min(1.0, previewLevel * 10), // Scale up for visibility
+        isValid: true
+      };
+      
+    } catch (error) {
+      return {
+        level: 0,
+        isValid: false,
+        error: `Preview envelope generation failed: ${error instanceof Error ? error.message : String(error)}`
+      };
+    }
+  }
+
+  /**
+   * Generate full envelope progressively from decoded audio buffer
    * @param audioBuffer - Decoded audio from AudioContext.decodeAudioData
    * @returns EnvelopeResult with normalized RMS values or error
    */
-  static generateEnvelope(audioBuffer: AudioBuffer): EnvelopeResult {
+  static generateFullEnvelope(audioBuffer: AudioBuffer): EnvelopeResult {
     try {
       // Get PCM channel data (mono or first channel)
       const channelData = audioBuffer.getChannelData(0); // Float32Array [-1..1]

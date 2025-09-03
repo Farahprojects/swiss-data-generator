@@ -120,34 +120,33 @@ export const ConversationOverlay: React.FC = () => {
       const arrayBuffer = new Uint8Array(audioBytes).buffer;
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
       
-      // 🎵 GENERATE ENVELOPE: Create real PCM-derived envelope for smooth bars
-      const envelopeResult = EnvelopeGenerator.generateEnvelope(audioBuffer);
+      // 🎵 QUICK PREVIEW: Generate preview envelope for instant bar movement
+      const previewEnvelope = EnvelopeGenerator.generatePreviewEnvelope(audioBuffer);
       
-      if (!envelopeResult.isValid) {
-        // 🚫 FAIL FAST: Invalid envelope - stop playback and log error
-        console.error('[ConversationOverlay] ❌ Envelope generation failed:', envelopeResult.error);
+      if (!previewEnvelope.isValid) {
+        // 🚫 FAIL FAST: Invalid preview envelope - stop playback and log error
+        console.error('[ConversationOverlay] ❌ Preview envelope generation failed:', previewEnvelope.error);
         setState('listening');
         return;
       }
       
-      console.log(`[ConversationOverlay] 🎵 Generated envelope: ${envelopeResult.envelope.length} frames, duration: ${envelopeResult.duration.toFixed(2)}s`);
+      console.log(`[ConversationOverlay] 🚀 Preview envelope ready: level ${previewEnvelope.level.toFixed(3)}`);
       
       // 🎯 DIRECT: Create source and play (no analyser needed for envelope-driven animation)
       const source = audioContext.createBufferSource();
       source.buffer = audioBuffer;
       source.connect(audioContext.destination);
       
-      // 🎵 ENVELOPE-DRIVEN: Use real PCM-derived loudness values for smooth bars
+      // 🎵 ENVELOPE-DRIVEN: Start with preview for instant animation
       directAudioAnimationService.start();
       
-      // 🎯 NEW: Use EnvelopePlayer for synced, mobile-friendly animation
+      // 🎯 NEW: Use EnvelopePlayer for progressive, mobile-friendly animation
       if (envelopePlayerRef.current) {
         envelopePlayerRef.current.stop();
       }
       
       envelopePlayerRef.current = new EnvelopePlayer(
-        envelopeResult.envelope,
-        envelopeResult.duration * 1000, // Convert to milliseconds
+        audioBuffer.duration * 1000, // Convert to milliseconds
         (level) => {
           if (!isShuttingDown.current) {
             // 🎯 DIRECT: Update the audio level for the speaking bars
@@ -156,8 +155,23 @@ export const ConversationOverlay: React.FC = () => {
         }
       );
       
-      // Start envelope playback in sync with audio
-      envelopePlayerRef.current.start();
+      // 🚀 START IMMEDIATELY: Preview envelope for instant bar movement
+      envelopePlayerRef.current.startWithPreview(previewEnvelope.level);
+      
+      // 🎵 BACKGROUND: Generate full envelope while audio plays
+      setTimeout(() => {
+        if (!isShuttingDown.current && envelopePlayerRef.current) {
+          const fullEnvelopeResult = EnvelopeGenerator.generateFullEnvelope(audioBuffer);
+          
+          if (fullEnvelopeResult.isValid) {
+            console.log(`[ConversationOverlay] 📊 Full envelope generated: ${fullEnvelopeResult.envelope.length} frames`);
+            envelopePlayerRef.current.setFullEnvelope(fullEnvelopeResult.envelope);
+          } else {
+            console.error('[ConversationOverlay] ❌ Full envelope generation failed:', fullEnvelopeResult.error);
+            // Don't stop audio - continue with preview
+          }
+        }
+      }, 50); // Small delay to ensure audio has started
       
       // 🎯 STATE DRIVEN: Set replying state
       setState('replying');
