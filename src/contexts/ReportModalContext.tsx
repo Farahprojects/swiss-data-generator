@@ -25,7 +25,8 @@ export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
       setOnLoadCallback(() => onLoad);
     }
     setIsOpen(true);
-    setShouldFetch(true); // Trigger fetch when modal opens
+    // Only trigger fetch for existing reports, not for 'new' reports
+    setShouldFetch(guestReportId !== 'new');
   }, []);
 
   const close = useCallback(() => {

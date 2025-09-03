@@ -112,13 +112,15 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
               <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg">
                 <DropdownMenuItem
                   onClick={() => {
-                    if (isGuest && isGuestThreadReady) {
-                      // For guest users, open the report modal with actual guest_report_id
+                    if (isGuest) {
+                      // For guest users, always allow opening report modal
                       console.log('[ChatThreadsSidebar] Opening report modal for guest user');
                       if (guestReportId) {
+                        // Existing guest with report - view astro data
                         openReportModal(guestReportId);
                       } else {
-                        console.error('[ChatThreadsSidebar] No guest_report_id available');
+                        // Fresh guest - create new report
+                        openReportModal('new');
                       }
                     } else if (uuid) {
                       // For signed-in users, use the uuid
@@ -128,7 +130,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                   className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer"
                 >
                   <Sparkles className="w-4 h-4 text-blue-600" />
-                  {isGuest ? "View Astro Data" : "Generate Astro Report"}
+                  {isGuest ? (isGuestThreadReady ? "View Astro Data" : "Add Astro Data") : "Generate Astro Report"}
                 </DropdownMenuItem>
                 
                 {/* Delete option only for guest users */}

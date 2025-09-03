@@ -48,7 +48,7 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
 
   // Fetch when explicitly told to via shouldFetch prop
   useEffect(() => {
-    if (shouldFetch && guestReportId) {
+    if (shouldFetch && guestReportId && guestReportId !== 'new') {
       fetchReport(guestReportId);
     } else if (shouldFetch && !guestReportId) {
       console.warn('[ReportSlideOver] No guest report ID provided');
@@ -86,6 +86,29 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
               <Button onClick={() => guestReportId && fetchReport(guestReportId)}>
                 Try Again
               </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  // Show astro data form for new users
+  if (guestReportId === 'new') {
+    return (
+      <Sheet open={isOpen} onOpenChange={onClose}>
+        <SheetContent side="right" className="w-full sm:max-w-2xl p-0">
+          <div className="flex flex-col h-full">
+            <SheetHeader className="flex flex-row items-center justify-between px-6 py-4 border-b bg-white">
+              <SheetTitle className="text-lg font-medium text-gray-900">Add Astro Data</SheetTitle>
+              <SheetDescription className="text-sm text-gray-600">Enter your birth details to get started</SheetDescription>
+            </SheetHeader>
+            <div className="flex-1 p-6">
+              {/* Import and use the existing AstroDataForm component */}
+              <div className="text-center py-8 text-gray-500">
+                <p>Astro data form will be integrated here</p>
+                <p className="text-sm mt-2">This will allow fresh users to add their birth details</p>
+              </div>
             </div>
           </div>
         </SheetContent>
