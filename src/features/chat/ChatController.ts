@@ -23,23 +23,26 @@ class ChatController {
     this.loadExistingMessages();
   }
 
-  private async loadExistingMessages(retryCount = 0) {
-    const { chat_id, setLoadingMessages, setMessageLoadError, loadMessages } = useChatStore.getState();
-    if (!chat_id) return;
+  public async loadExistingMessages(chat_id?: string, retryCount = 0) {
+    const targetChatId = chat_id || useChatStore.getState().chat_id;
+    if (!targetChatId) return;
 
     const maxRetries = 3;
     const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 5000); // Exponential backoff
 
     try {
+      const { setLoadingMessages, setMessageLoadError, loadMessages } = useChatStore.getState();
       setLoadingMessages(true);
-      const messages = await getMessagesForConversation(chat_id);
+      const messages = await getMessagesForConversation(targetChatId);
       loadMessages(messages);
+      console.log(`[ChatController] 📚 Loaded ${messages.length} existing messages for chat: ${targetChatId}`);
     } catch (error) {
       console.error(`[ChatController] Error loading existing messages (attempt ${retryCount + 1}):`, error);
       
       if (retryCount < maxRetries) {
-        setTimeout(() => this.loadExistingMessages(retryCount + 1), retryDelay);
+        setTimeout(() => this.loadExistingMessages(targetChatId, retryCount + 1), retryDelay);
       } else {
+        const { setMessageLoadError } = useChatStore.getState();
         setMessageLoadError(error instanceof Error ? error.message : 'Failed to load messages');
       }
     }
@@ -218,7 +221,7 @@ class ChatController {
     console.log('[ChatController] 🔄 Initializing conversation for chat_id:', chat_id);
     store.startConversation(chat_id);
     this.setupRealtimeSubscription(chat_id);
-    this.loadExistingMessages(); // Load conversation history
+    this.loadExistingMessages(chat_id); // Load conversation history
   }
 
   async sendTextMessage(text: string) {

@@ -9,6 +9,7 @@ import { MobileViewportLock } from '@/features/chat/MobileViewportLock';
 import { supabase } from '@/integrations/supabase/client';
 import { useChatStore } from '@/core/store';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
+import { chatController } from '@/features/chat/ChatController';
 
 // Import ChatBox directly for immediate rendering
 import { ChatBox } from '@/features/chat/ChatBox';
@@ -142,6 +143,13 @@ const ReportChatScreen = () => {
           if (finalChatId) {
             console.log(`[ChatPage] 🔑 Setting chat_id and guest_id in store: ${finalChatId}, ${guestId}`);
             useChatStore.getState().startConversation(finalChatId, guestId);
+            
+            // 🎯 CRITICAL: Load existing messages even when skipping polling
+            const store = useChatStore.getState();
+            if (store.messages.length === 0) {
+              console.log(`[ChatPage] 📚 Loading existing messages for chat: ${finalChatId}`);
+              chatController.loadExistingMessages(finalChatId);
+            }
           }
           
           return true; // Report already exists
@@ -263,6 +271,12 @@ const ReportChatScreen = () => {
           if (finalChatId && (!store.chat_id || !store.guest_id)) {
             console.log(`[ChatPage] 🔑 Setting chat_id and guest_id in store: ${finalChatId}, ${guestId}`);
             store.startConversation(finalChatId, guestId);
+          }
+          
+          // 🎯 CRITICAL: Load existing messages even when skipping rehydration
+          if (finalChatId && store.messages.length === 0) {
+            console.log(`[ChatPage] 📚 Loading existing messages for chat: ${finalChatId}`);
+            chatController.loadExistingMessages(finalChatId);
           }
           
           return; // Skip rehydration
