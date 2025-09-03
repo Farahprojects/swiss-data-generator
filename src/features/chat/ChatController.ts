@@ -23,26 +23,23 @@ class ChatController {
     this.loadExistingMessages();
   }
 
-  public async loadExistingMessages(chat_id?: string, retryCount = 0) {
-    const targetChatId = chat_id || useChatStore.getState().chat_id;
-    if (!targetChatId) return;
+  private async loadExistingMessages(retryCount = 0) {
+    const { chat_id, setLoadingMessages, setMessageLoadError, loadMessages } = useChatStore.getState();
+    if (!chat_id) return;
 
     const maxRetries = 3;
     const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 5000); // Exponential backoff
 
     try {
-      const { setLoadingMessages, setMessageLoadError, loadMessages } = useChatStore.getState();
       setLoadingMessages(true);
-      const messages = await getMessagesForConversation(targetChatId);
+      const messages = await getMessagesForConversation(chat_id);
       loadMessages(messages);
-      console.log(`[ChatController] 📚 Loaded ${messages.length} existing messages for chat: ${targetChatId}`);
     } catch (error) {
       console.error(`[ChatController] Error loading existing messages (attempt ${retryCount + 1}):`, error);
       
       if (retryCount < maxRetries) {
-        setTimeout(() => this.loadExistingMessages(targetChatId, retryCount + 1), retryDelay);
+        setTimeout(() => this.loadExistingMessages(retryCount + 1), retryDelay);
       } else {
-        const { setMessageLoadError } = useChatStore.getState();
         setMessageLoadError(error instanceof Error ? error.message : 'Failed to load messages');
       }
     }
@@ -62,12 +59,6 @@ class ChatController {
   private realtimeChannel: any = null;
 
   private setupRealtimeSubscription(chat_id: string) {
-    // Prevent duplicate WebSocket setup
-    if (this.realtimeChannel && this.realtimeChannel.subscribe) {
-      console.log('[ChatController] 🚫 WebSocket already active, skipping duplicate setup');
-      return;
-    }
-    
     // Clean up existing subscription
     this.cleanupRealtimeSubscription();
 
@@ -186,13 +177,6 @@ class ChatController {
   }
 
   /**
-   * Check if realtime subscription is active
-   */
-  public hasRealtimeSubscription(): boolean {
-    return this.realtimeChannel && this.realtimeChannel.subscribe;
-  }
-
-  /**
    * Handle TTS audio events from unified WebSocket
    * This replaces the separate conversation WebSocket
    */
@@ -218,17 +202,9 @@ class ChatController {
    * Initialize conversation (called when modal closes)
    */
   initializeConversation(chat_id: string): void {
-    // Prevent duplicate initialization
-    const store = useChatStore.getState();
-    if (store.chat_id === chat_id && this.realtimeChannel) {
-      console.log('[ChatController] 🚫 Skipping duplicate initialization for chat_id:', chat_id);
-      return;
-    }
-    
-    console.log('[ChatController] 🔄 Initializing conversation for chat_id:', chat_id);
-    store.startConversation(chat_id);
+    useChatStore.getState().startConversation(chat_id);
     this.setupRealtimeSubscription(chat_id);
-    this.loadExistingMessages(chat_id); // Load conversation history
+    this.loadExistingMessages(); // Load conversation history
   }
 
   async sendTextMessage(text: string) {

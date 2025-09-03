@@ -85,9 +85,11 @@ export const ConversationOverlay: React.FC = () => {
 
   // 🎯 DIRECT AUDIO: WebSocket → Browser Audio in one function
   const playAudioImmediately = useCallback(async (audioBytes: number[], text?: string) => {
-    if (isShuttingDown.current) return;
-    
-
+    // 🚫 GUARD: Only play audio if conversation modal is open
+    if (!isConversationOpen || isShuttingDown.current) {
+      console.log('[ConversationOverlay] 🚫 Audio ignored - conversation modal not open or shutting down');
+      return;
+    }
     
     try {
       // 🎯 CHECK: Ensure AudioContext is available and running
@@ -157,15 +159,21 @@ export const ConversationOverlay: React.FC = () => {
       console.error('[ConversationOverlay] ❌ Direct audio failed:', error);
       setState('listening');
     }
-  }, []);
+  }, [isConversationOpen]);
 
   // 🎯 UNIFIED WEBSOCKET: Listen to ChatController's WebSocket via custom events
   const setupTtsListener = useCallback(() => {
-    if (!chat_id) return false;
+    if (!chat_id || !isConversationOpen) return false;
     
     try {
       // Listen for TTS events from ChatController's unified WebSocket
       const handleTtsReady = (event: CustomEvent) => {
+        // 🚫 GUARD: Only process TTS if conversation modal is open
+        if (!isConversationOpen) {
+          console.log('[ConversationOverlay] 🚫 TTS ignored - conversation modal not open');
+          return;
+        }
+        
         const { audioBytes, text } = event.detail;
         if (audioBytes) {
           console.log('[ConversationOverlay] 🎵 TTS audio received via unified WebSocket');
@@ -185,7 +193,7 @@ export const ConversationOverlay: React.FC = () => {
       console.error('[ConversationOverlay] TTS listener setup failed:', error);
       return false;
     }
-  }, [chat_id, playAudioImmediately]);
+  }, [chat_id, isConversationOpen, playAudioImmediately]);
 
   // 🎯 START: Initialize conversation
   const handleStart = useCallback(async () => {
@@ -199,8 +207,13 @@ export const ConversationOverlay: React.FC = () => {
       // 🎯 PAUSE: Stop text mode realtime to prevent WebSocket conflicts
       chatController.pauseRealtimeForConversationMode();
       
-      // 🎯 STATE DRIVEN: Ready to start conversation
+      // 🎯 STATE DRIVEN: Setup TTS listener via unified WebSocket
       setState('establishing');
+      const success = await setupTtsListener();
+      if (!success) {
+        setState('connecting');
+        return;
+      }
       
       // 🎯 STATE DRIVEN: Get microphone
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -246,10 +259,16 @@ export const ConversationOverlay: React.FC = () => {
     } finally {
       setIsStarting(false);
     }
-  }, [chat_id, isStarting, setupTtsListener]);
+  }, [chat_id, isStarting, isConversationOpen, setupTtsListener]);
 
   // 🎯 PROCESSING: Handle recording completion
   const processRecording = useCallback(async (audioBlob: Blob) => {
+    // 🚫 GUARD: Only process if conversation modal is open
+    if (!isConversationOpen) {
+      console.log('[ConversationOverlay] 🚫 Recording ignored - conversation modal not open');
+      return;
+    }
+    
     console.log('[ConversationOverlay] 🎤 Processing recording, blob size:', audioBlob.size, 'chat_id:', chat_id);
     
     if (!chat_id) {
@@ -285,15 +304,6 @@ export const ConversationOverlay: React.FC = () => {
       
       console.log('[ConversationOverlay] 🎤 llmService response received:', response);
       
-      // 🎯 CRITICAL: NOW set up TTS WebSocket listener after chat-send has processed the response
-      console.log('[ConversationOverlay] 🎵 Setting up TTS WebSocket listener for audio phone call...');
-      const ttsSuccess = await setupTtsListener();
-      if (!ttsSuccess) {
-        console.error('[ConversationOverlay] ❌ Failed to setup TTS listener');
-        setState('listening');
-        return;
-      }
-      
       // 🎯 STATE DRIVEN: Replying state (TTS will come via WebSocket from chat-send)
       console.log('[ConversationOverlay] 🎤 Setting state to replying, waiting for TTS...');
       setState('replying');
@@ -302,7 +312,7 @@ export const ConversationOverlay: React.FC = () => {
       console.error('[ConversationOverlay] ❌ Processing failed:', error);
       setState('listening');
     }
-  }, [chat_id]);
+  }, [chat_id, isConversationOpen]);
 
   // 🎯 CLEANUP: Reset everything
   const handleModalClose = useCallback(async () => {
