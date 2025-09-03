@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Mic } from 'lucide-react';
-import { SpeakingBars } from './SpeakingBars';
-import { useTtsStreamLevel } from '@/hooks/useTtsStreamLevel';
+import { SpeakingBarsOptimized } from './SpeakingBarsOptimized';
+import { useOptimizedAudioLevel } from '@/hooks/useOptimizedAudioLevel';
 import TorusListening from './TorusListening';
 
 interface Props {
@@ -11,11 +11,11 @@ interface Props {
 }
 
 export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
-  const ttsAudioLevel = useTtsStreamLevel();
+  const ttsAudioLevel = useOptimizedAudioLevel();
 
   // Show the appropriate component based on the current state
   if (state === 'replying') {
-    return <SpeakingBars audioLevel={ttsAudioLevel} />;
+    return <SpeakingBarsOptimized audioLevel={ttsAudioLevel} isActive={true} />;
   }
   
   if (state === 'processing' || state === 'thinking') {

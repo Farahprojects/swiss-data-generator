@@ -6,6 +6,7 @@ import { useConversationAudioLevel } from '@/hooks/useConversationAudioLevel';
 import { VoiceBubble } from './VoiceBubble';
 import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
 import { conversationTtsService } from '@/services/voice/conversationTts';
+import { audioProcessingService } from '@/services/voice/AudioProcessingService';
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
 import { v4 as uuidv4 } from 'uuid';
@@ -81,6 +82,9 @@ export const ConversationOverlay: React.FC = () => {
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       analyserRef.current = audioContextRef.current.createAnalyser();
       analyserRef.current.fftSize = 256;
+      
+      // 🚀 NEW: Set up audio processing service with analyser
+      audioProcessingService.setAnalyser(analyserRef.current);
     }
     
     return () => {
@@ -88,6 +92,9 @@ export const ConversationOverlay: React.FC = () => {
       safelyCloseAudioContext(audioContextRef.current);
       audioContextRef.current = null;
       analyserRef.current = null;
+      
+      // 🚀 NEW: Clean up audio processing service
+      audioProcessingService.stopProcessing();
     };
   }, []);
 
@@ -150,16 +157,8 @@ export const ConversationOverlay: React.FC = () => {
          }
        };
       
-      // 🎯 ANIMATION: Speaking bars follow state
-      const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      const animateSpeaking = () => {
-        if (isShuttingDown.current) return;
-        analyser.getByteFrequencyData(dataArray);
-        const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-        conversationTtsService.setAudioLevelForAnimation(average / 255);
-        requestAnimationFrame(animateSpeaking);
-      };
-      animateSpeaking();
+      // 🚀 NEW: Start optimized audio processing for speaking animation
+      audioProcessingService.startProcessing();
       
     } catch (error) {
       console.error('[ConversationOverlay] ❌ Direct audio failed:', error);
@@ -315,6 +314,9 @@ export const ConversationOverlay: React.FC = () => {
       connectionRef.current.unsubscribe();
       connectionRef.current = null;
     }
+    
+    // 🚀 NEW: Stop optimized audio processing
+    audioProcessingService.stopProcessing();
     
     // Stop microphone and release all resources
     conversationMicrophoneService.stopRecording();
