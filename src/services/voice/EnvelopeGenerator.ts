@@ -46,17 +46,27 @@ export class EnvelopeGenerator {
       
       const previewLevel = Math.sqrt(sum / previewSamples);
       
-      // Validate preview has meaningful variation
-      if (previewLevel < 0.01) {
+      // Debug logging to understand the values
+      console.log(`[EnvelopeGenerator] 🔍 Preview analysis:`, {
+        samples: previewSamples,
+        rawRMS: previewLevel,
+        sampleRange: `[${Math.min(...channelData.slice(0, previewSamples)).toFixed(4)}, ${Math.max(...channelData.slice(0, previewSamples)).toFixed(4)}]`
+      });
+      
+      // More lenient validation - accept very quiet audio
+      if (previewLevel < 0.001) { // Reduced from 0.01 to 0.001
         return {
           level: 0,
           isValid: false,
-          error: 'Preview envelope too quiet'
+          error: `Preview envelope too quiet (RMS: ${previewLevel.toFixed(6)})`
         };
       }
       
+      // Scale the level appropriately for visibility
+      const scaledLevel = Math.min(1.0, previewLevel * 100); // Increased multiplier from 10 to 100
+      
       return {
-        level: Math.min(1.0, previewLevel * 10), // Scale up for visibility
+        level: scaledLevel,
         isValid: true
       };
       
