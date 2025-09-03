@@ -119,12 +119,6 @@ export const MessageList = () => {
     // TODO: Open astro data form or redirect to report generation
     console.log('User chose to add astro data');
   };
-
-  const handleContinueWithoutAstro = () => {
-    setAstroChoiceMade(true);
-    // TODO: Initialize chat without astro data
-    console.log('User chose to continue without astro data');
-  };
   
   // Track initial message count to determine which messages are from history
   React.useEffect(() => {
@@ -138,8 +132,12 @@ export const MessageList = () => {
     const userMessages = messages.filter(m => m.role === 'user');
     if (userMessages.length > 0) {
       setHasUserSentMessage(true);
+      // Auto-assume "without" if user starts typing
+      if (!astroChoiceMade) {
+        setAstroChoiceMade(true);
+      }
     }
-  }, [messages]);
+  }, [messages, astroChoiceMade]);
 
   // Auto-scroll when messages change
   React.useEffect(() => {
@@ -206,7 +204,6 @@ export const MessageList = () => {
                 {!astroChoiceMade && !chat_id ? (
                   <AstroDataPromptMessage
                     onAddAstroData={handleAddAstroData}
-                    onContinueWithout={handleContinueWithoutAstro}
                   />
                 ) : (
                   <div className="text-center text-gray-500">
