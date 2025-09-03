@@ -161,41 +161,40 @@ Content Rules:
 
         const latency_ms = Date.now() - startTime;
 
-        // Save assistant message to database (fire-and-forget for non-conversation mode)
-        const saveToDb = supabase
-          .from("messages")
-          .insert({
-            chat_id: chat_id,
-            role: "assistant",
-            text: sanitizedText,
-            created_at: new Date().toISOString(),
-            meta: { 
-              llm_provider: "openai", 
-              model: "gpt-4.1-mini-2025-04-14",
-              latency_ms,
-              input_tokens: inputTokens,
-              output_tokens: outputTokens,
-              total_tokens: tokenCount,
-              mode: mode || null,
-              sessionId: sessionId || null
-            },
-          });
+        // 🚫 COMMENTED OUT: Database save for conversation mode (handled by chat-send)
+        // const saveToDb = supabase
+        //   .from("messages")
+        //   .insert({
+        //     chat_id: chat_id,
+        //     role: "assistant",
+        //     text: sanitizedText,
+        //     created_at: new Date().toISOString(),
+        //     meta: { 
+        //       llm_provider: "openai", 
+        //       model: "gpt-4.1-mini-2025-04-14",
+        //       latency_ms,
+        //       input_tokens: inputTokens,
+        //       output_tokens: outputTokens,
+        //       total_tokens: tokenCount,
+        //       mode: mode || null,
+        //       sessionId: sessionId || null
+        //     },
+        //   });
 
-        // For conversation mode, await the DB save; for others, fire-and-forget
-        if (mode === 'conversation') {
-          const { error: assistantError } = await saveToDb;
-          if (assistantError) {
-            console.error("[llm-handler-openai] Failed to save assistant message:", assistantError);
-          }
-        } else {
-          saveToDb.then(({ error: assistantError }) => {
-            if (assistantError) {
-              console.error("[llm-handler-openai] Failed to save assistant message:", assistantError);
-            }
-          }).catch(error => {
-            console.error("[llm-handler-openai] Database save error:", error);
-          });
-        }
+        // 🚫 COMMENTED OUT: Database save logic for conversation mode
+        // if (mode === 'conversation') {
+        //   const { error: assistantError } = await saveToDb;
+        //   if (assistantError) {
+        //     console.error("[llm-handler-openai] Failed to save assistant message:", assistantError);
+        //   }
+        // } else {
+        //   saveToDb.then(({ error: assistantError }) => {
+        //     if (assistantError) {
+        //       console.error("[llm-handler-openai] Failed to save assistant message:", assistantError);
+        //   }).catch(error => {
+        //     console.error("[llm-handler-openai] Database save error:", error);
+        //   });
+        // }
 
         // Return the sanitized text so it can be used outside the function
         return { text: sanitizedText, tokenCount, latency_ms };
