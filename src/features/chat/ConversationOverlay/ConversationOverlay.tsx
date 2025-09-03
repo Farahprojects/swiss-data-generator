@@ -26,6 +26,17 @@ type Message = {
   client_msg_id: string;
 };
 
+// 🎵 UTILITY: Safely close AudioContext with proper state checking
+const safelyCloseAudioContext = (audioContext: AudioContext | null): void => {
+  if (audioContext && audioContext.state !== 'closed') {
+    try {
+      audioContext.close();
+    } catch (error) {
+      console.log('[ConversationOverlay] AudioContext already closed, skipping');
+    }
+  }
+};
+
 export const ConversationOverlay: React.FC = () => {
   const { isConversationOpen, closeConversation } = useConversationUIStore();
   const chat_id = useChatStore((state) => state.chat_id);
@@ -59,9 +70,8 @@ export const ConversationOverlay: React.FC = () => {
       if (connectionRef.current) {
         connectionRef.current.unsubscribe();
       }
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-      }
+      // 🎵 ELEGANT: Use utility function for safe AudioContext cleanup
+      safelyCloseAudioContext(audioContextRef.current);
     };
   }, [isConversationOpen, chat_id]);
 
@@ -74,11 +84,10 @@ export const ConversationOverlay: React.FC = () => {
     }
     
     return () => {
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-        audioContextRef.current = null;
-        analyserRef.current = null;
-      }
+      // 🎵 ELEGANT: Use utility function for safe AudioContext cleanup
+      safelyCloseAudioContext(audioContextRef.current);
+      audioContextRef.current = null;
+      analyserRef.current = null;
     };
   }, []);
 

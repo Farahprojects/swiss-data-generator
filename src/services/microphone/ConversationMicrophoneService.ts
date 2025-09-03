@@ -14,6 +14,17 @@ export interface ConversationMicrophoneOptions {
   silenceTimeoutMs?: number;
 }
 
+// 🎵 UTILITY: Safely close AudioContext with proper state checking
+const safelyCloseAudioContext = (audioContext: AudioContext | null): void => {
+  if (audioContext && audioContext.state !== 'closed') {
+    try {
+      audioContext.close();
+    } catch (error) {
+      console.log('[ConversationMicrophoneService] AudioContext already closed, skipping');
+    }
+  }
+};
+
 export class ConversationMicrophoneServiceClass {
   private stream: MediaStream | null = null;
   private cachedStream: MediaStream | null = null; // NEW: Cached stream for session reuse
@@ -380,10 +391,9 @@ export class ConversationMicrophoneServiceClass {
       this.analyser = null;
     }
 
-    if (this.audioContext && this.audioContext.state !== 'closed') {
-      this.audioContext.close();
-      this.audioContext = null;
-    }
+    // 🎵 ELEGANT: Use utility function for safe AudioContext cleanup
+    safelyCloseAudioContext(this.audioContext);
+    this.audioContext = null;
 
     // Clear data
     this.audioChunks = [];
