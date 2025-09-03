@@ -14,6 +14,49 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+// 🎵 Calculate audio envelope from MP3 data for smooth bar animation
+async function calculateAudioEnvelope(audioBytes: Uint8Array): Promise<number[]> {
+  try {
+    // For MP3 data, we'll use a simplified approach since we can't easily decode to PCM
+    // We'll calculate envelope based on MP3 frame energy patterns
+    
+    const envelope: number[] = [];
+    const frameSize = 512; // MP3 frames are typically 512 samples
+    const numFrames = Math.floor(audioBytes.length / frameSize);
+    
+    // Calculate energy per frame (simplified MP3 frame analysis)
+    for (let i = 0; i < numFrames; i++) {
+      const start = i * frameSize;
+      const end = Math.min(start + frameSize, audioBytes.length);
+      const frame = audioBytes.slice(start, end);
+      
+      // Calculate RMS (Root Mean Square) for this frame
+      let sum = 0;
+      for (let j = 0; j < frame.length; j++) {
+        sum += frame[j] * frame[j];
+      }
+      const rms = Math.sqrt(sum / frame.length);
+      
+      // Normalize to 0-1 range and add to envelope
+      const normalizedLevel = Math.min(1.0, rms / 128); // Normalize by typical MP3 byte range
+      envelope.push(normalizedLevel);
+    }
+    
+    // Ensure we have at least some envelope data
+    if (envelope.length === 0) {
+      envelope.push(0.1, 0.2, 0.3, 0.2, 0.1); // Fallback envelope
+    }
+    
+    console.log(`[google-tts] 🎵 Calculated envelope with ${envelope.length} frames`);
+    return envelope;
+    
+  } catch (error) {
+    console.error('[google-tts] Error calculating envelope:', error);
+    // Return fallback envelope if calculation fails
+    return [0.1, 0.2, 0.3, 0.2, 0.1];
+  }
+}
+
 serve(async (req) => {
   const startTime = Date.now();
 
@@ -118,11 +161,14 @@ serve(async (req) => {
     const processingTime = Date.now() - startTime;
     console.log(`[google-tts] TTS completed in ${processingTime}ms`);
 
-        // 📞 Make the phone call - push raw MP3 bytes directly to browser via binary WebSocket
+        // 📞 Make the phone call - push raw MP3 bytes + envelope data directly to browser via WebSocket
     try {
-      console.log(`[google-tts] 📞 Making phone call with binary MP3 bytes to chat: ${chat_id}`);
+      console.log(`[google-tts] 📞 Making phone call with binary MP3 bytes + envelope to chat: ${chat_id}`);
       
-      // Send raw MP3 bytes directly via binary WebSocket (no base64 encoding)
+      // 🎵 Calculate audio envelope for smooth bar animation (no frontend processing needed!)
+      const envelope = await calculateAudioEnvelope(audioBytes);
+      
+      // Send raw MP3 bytes + envelope data via WebSocket
       const { data: broadcastData, error: broadcastError } = await supabase
         .channel(`conversation:${chat_id}`)
         .send({
@@ -130,6 +176,7 @@ serve(async (req) => {
           event: 'tts-ready',
           payload: {
             audioBytes: Array.from(audioBytes), // Raw MP3 bytes as array (no base64)
+            envelope: envelope, // 🎵 Pre-calculated loudness values for smooth bars
             audioUrl: null, // No URL since we're not storing
             text: text,
             chat_id: chat_id,

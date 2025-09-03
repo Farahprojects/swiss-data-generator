@@ -99,8 +99,8 @@ export const ConversationOverlay: React.FC = () => {
     };
   }, []);
 
-  // 🎯 DIRECT AUDIO: WebSocket → Browser Audio in one function
-  const playAudioImmediately = useCallback(async (audioBytes: number[], text?: string) => {
+  // 🎯 DIRECT AUDIO: WebSocket → Browser Audio + Envelope for smooth bars
+  const playAudioImmediately = useCallback(async (audioBytes: number[], text?: string, envelope?: number[]) => {
     if (isShuttingDown.current) return;
     
 
@@ -132,13 +132,31 @@ export const ConversationOverlay: React.FC = () => {
       source.connect(analyser);
       analyser.connect(audioContext.destination);
       
-      // 🚀 NEW: Ensure analyser is set up for THIS audio session
-      audioProcessingService.setAnalyser(analyser);
-      
-      // 🚀 NEW: Start optimized audio processing BEFORE playing audio
-      
-      audioProcessingService.startProcessing();
-      directAudioAnimationService.start();
+      // 🎵 ENVELOPE-DRIVEN: Use pre-calculated loudness values for smooth bars (no FFT needed!)
+      if (envelope && envelope.length > 0) {
+        console.log(`[ConversationOverlay] 🎵 Using envelope data with ${envelope.length} frames for smooth bars`);
+        
+        // Start envelope-driven animation service
+        directAudioAnimationService.start();
+        
+        // Schedule envelope values to drive bar animation
+        const frameDuration = audioBuffer.duration / envelope.length; // Time per envelope frame
+        
+        envelope.forEach((level, index) => {
+          const delay = index * frameDuration * 1000; // Convert to milliseconds
+          setTimeout(() => {
+            if (!isShuttingDown.current) {
+              directAudioAnimationService.notifyAudioLevel(level);
+            }
+          }, delay);
+        });
+      } else {
+        // Fallback to old audio analysis if no envelope
+        console.log('[ConversationOverlay] 🎵 No envelope data, falling back to audio analysis');
+        audioProcessingService.setAnalyser(analyser);
+        audioProcessingService.startProcessing();
+        directAudioAnimationService.start();
+      }
       
       // 🎯 STATE DRIVEN: Set replying state
       setState('replying');
@@ -149,7 +167,7 @@ export const ConversationOverlay: React.FC = () => {
        source.onended = () => {
          console.log('[ConversationOverlay] 🎵 TTS audio finished, returning to listening mode');
          
-         // 🚀 NEW: Stop audio processing when TTS ends
+         // 🎵 Stop all animation services when TTS ends
          audioProcessingService.stopProcessing();
          directAudioAnimationService.stop();
          
@@ -186,10 +204,10 @@ export const ConversationOverlay: React.FC = () => {
     try {
       const connection = supabase.channel(`conversation:${chat_id}`);
       
-      // 🎯 DIRECT: WebSocket → Audio
+      // 🎯 DIRECT: WebSocket → Audio + Envelope
       connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
         if (payload.audioBytes) {
-          playAudioImmediately(payload.audioBytes, payload.text);
+          playAudioImmediately(payload.audioBytes, payload.text, payload.envelope);
         }
       });
       

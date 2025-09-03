@@ -7,36 +7,31 @@ interface Props {
 }
 
 export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive, audioLevel = 0 }) => {
-  // Four bars with slightly different responsiveness for a subtle wave effect
-  const bars = Array.from({ length: 4 }, (_, index) => {
-    const responsiveness = 0.6 + index * 0.12; // 0.6, 0.72, 0.84, 0.96
+  // Four bars with different base heights: small, big, big, small
+  const bars = [
+    { id: 0, baseHeight: 0.6, className: 'h-10' }, // Small bar on left
+    { id: 1, baseHeight: 0.8, className: 'h-14' }, // Big bar in middle-left
+    { id: 2, baseHeight: 0.8, className: 'h-14' }, // Big bar in middle-right
+    { id: 3, baseHeight: 0.6, className: 'h-10' }, // Small bar on right
+  ];
 
-    // Scale from center: keep it smaller at rest and grow with audio
-    // Half-size baseline so it feels compact ("not long candles")
-    const minScale = 0.45;
-    const extra = Math.min(0.75, audioLevel * responsiveness); // cap growth
-    const scaleY = minScale + extra; // 0.45 .. ~1.2
-
-    return {
-      id: index,
-      scaleY,
-      delay: index * 0.06, // slight phase shift
-    };
-  });
+  // All bars use the same motion calculation
+  const minScale = 0.45;
+  const extra = Math.min(0.75, audioLevel * 1.2); // Increased from 0.8 to 1.2 for more dramatic movement
+  const scaleY = minScale + extra; // 0.45 .. ~1.35
 
   return (
     <div className="flex items-center justify-center gap-3 h-16 w-28">
       {bars.map((bar) => (
         <motion.div
           key={bar.id}
-          className="bg-black rounded-full"
+          className={`bg-black rounded-full ${bar.className}`}
           style={{
-            width: '16px', // thicker bars
-            height: '56px', // shorter overall height; we animate from center
+            width: '16px', // All bars same width
             transformOrigin: 'center',
           }}
           animate={{
-            scaleY: bar.scaleY,
+            scaleY: scaleY,
             opacity: audioLevel > 0.02 ? 1 : 0.7,
           }}
           transition={{
@@ -44,7 +39,6 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive, audioLevel = 
               type: 'spring',
               stiffness: 380,
               damping: 26,
-              delay: bar.delay,
             },
             opacity: { duration: 0.15 },
           }}
