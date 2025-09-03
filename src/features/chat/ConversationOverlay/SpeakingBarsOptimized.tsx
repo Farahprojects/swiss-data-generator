@@ -8,34 +8,17 @@ interface Props {
 export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive, audioLevel = 0 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // 🎯 MOBILE-FIRST: Use CSS variables + GPU transforms for smooth animation
+  // 🎯 DIRECT: Update CSS variables for GPU-accelerated animation
   useEffect(() => {
     if (!isActive || !containerRef.current) return;
 
-    let frameId: number;
+    // Calculate scale values for the bars
+    const minScale = 0.45;
+    const extra = Math.min(0.75, audioLevel * 1.2); // Dramatic movement
+    const scaleY = minScale + extra;
     
-    const animate = () => {
-      if (!containerRef.current) return;
-      
-      // 🎵 Calculate scale values for each bar
-      const minScale = 0.45;
-      const extra = Math.min(0.75, audioLevel * 1.2); // Dramatic movement
-      const scaleY = minScale + extra;
-      
-      // 🎨 Update CSS variables for GPU-accelerated animation
-      containerRef.current.style.setProperty('--bar-scale', scaleY.toString());
-      
-      frameId = requestAnimationFrame(animate);
-    };
-
-    // 🚀 Start animation loop
-    frameId = requestAnimationFrame(animate);
-    
-    return () => {
-      if (frameId) {
-        cancelAnimationFrame(frameId);
-      }
-    };
+    // Update CSS variable for smooth GPU animation
+    containerRef.current.style.setProperty('--bar-scale', scaleY.toString());
   }, [isActive, audioLevel]);
 
   // Four bars with different base heights: small, big, big, small

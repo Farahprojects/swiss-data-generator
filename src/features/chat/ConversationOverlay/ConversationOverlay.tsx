@@ -6,7 +6,6 @@ import { useConversationAudioLevel } from '@/hooks/useConversationAudioLevel';
 import { VoiceBubble } from './VoiceBubble';
 import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
 import { conversationTtsService } from '@/services/voice/conversationTts';
-import { audioProcessingService } from '@/services/voice/AudioProcessingService';
 import { directAudioAnimationService } from '@/services/voice/DirectAudioAnimationService';
 import { EnvelopePlayer } from '@/services/voice/EnvelopePlayer';
 import { sttService } from '@/services/voice/stt';
@@ -153,7 +152,8 @@ export const ConversationOverlay: React.FC = () => {
           audioBuffer.duration * 1000, // Convert to milliseconds
           (level) => {
             if (!isShuttingDown.current) {
-              directAudioAnimationService.notifyAudioLevel(level);
+              // 🎯 DIRECT: Update the audio level for the speaking bars
+              setAudioLevel(level);
             }
           }
         );
