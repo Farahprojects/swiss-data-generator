@@ -8,6 +8,7 @@ import { conversationMicrophoneService } from '@/services/microphone/Conversatio
 import { conversationTtsService } from '@/services/voice/conversationTts';
 import { directAudioAnimationService } from '@/services/voice/DirectAudioAnimationService';
 import { EnvelopePlayer } from '@/services/voice/EnvelopePlayer';
+import { EnvelopeGenerator } from '@/services/voice/EnvelopeGenerator';
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
 import { v4 as uuidv4 } from 'uuid';
@@ -57,7 +58,6 @@ export const ConversationOverlay: React.FC = () => {
   
   // 🎵 AUDIO: Single context for all audio
   const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
   
   // 🎵 ENVELOPE: Player for smooth, synced animation
   const envelopePlayerRef = useRef<EnvelopePlayer | null>(null);
@@ -84,19 +84,14 @@ export const ConversationOverlay: React.FC = () => {
   useEffect(() => {
     if (!audioContextRef.current) {
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      analyserRef.current = audioContextRef.current.createAnalyser();
-      analyserRef.current.fftSize = 128; // 🚀 OPTIMIZED: Reduced from 256 for mobile + desktop performance
-      
-      // ✅ Envelope-driven system - no audio processing needed
+      // 🎵 Envelope-driven animation - no analyser needed
     }
     
     return () => {
       // 🎵 ELEGANT: Use utility function for safe AudioContext cleanup
       safelyCloseAudioContext(audioContextRef.current);
       audioContextRef.current = null;
-      analyserRef.current = null;
-      
-      // ✅ Envelope-driven system - no cleanup needed
+      // 🎵 Envelope-driven animation - no analyser cleanup needed
     };
   }, []);
 
@@ -111,12 +106,10 @@ export const ConversationOverlay: React.FC = () => {
       if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
         console.log('[ConversationOverlay] 🎵 AudioContext closed or missing, recreating...');
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-        analyserRef.current = audioContextRef.current.createAnalyser();
-        analyserRef.current.fftSize = 128; // 🚀 OPTIMIZED: Reduced from 256 for mobile + desktop performance
+        // 🎵 Envelope-driven animation - no analyser needed
       }
       
       const audioContext = audioContextRef.current;
-      const analyser = analyserRef.current!;
       
       // 🎯 CHECK: Ensure AudioContext is running (resume if suspended)
       if (audioContext.state === 'suspended') {
@@ -127,42 +120,44 @@ export const ConversationOverlay: React.FC = () => {
       const arrayBuffer = new Uint8Array(audioBytes).buffer;
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
       
-      // 🎯 DIRECT: Create source and play
+      // 🎵 GENERATE ENVELOPE: Create real PCM-derived envelope for smooth bars
+      const envelopeResult = EnvelopeGenerator.generateEnvelope(audioBuffer);
+      
+      if (!envelopeResult.isValid) {
+        // 🚫 FAIL FAST: Invalid envelope - stop playback and log error
+        console.error('[ConversationOverlay] ❌ Envelope generation failed:', envelopeResult.error);
+        setState('listening');
+        return;
+      }
+      
+      console.log(`[ConversationOverlay] 🎵 Generated envelope: ${envelopeResult.envelope.length} frames, duration: ${envelopeResult.duration.toFixed(2)}s`);
+      
+      // 🎯 DIRECT: Create source and play (no analyser needed for envelope-driven animation)
       const source = audioContext.createBufferSource();
       source.buffer = audioBuffer;
-      source.connect(analyser);
-      analyser.connect(audioContext.destination);
+      source.connect(audioContext.destination);
       
-      // 🎵 ENVELOPE-DRIVEN: Use pre-calculated loudness values for smooth bars (no FFT needed!)
-      if (envelope && envelope.length > 0) {
-        console.log(`[ConversationOverlay] 🎵 Using envelope data with ${envelope.length} frames for smooth bars`);
-        
-        // Start envelope-driven animation service
-        directAudioAnimationService.start();
-        
-        // 🎯 NEW: Use EnvelopePlayer for synced, mobile-friendly animation
-        if (envelopePlayerRef.current) {
-          envelopePlayerRef.current.stop();
-        }
-        
-        envelopePlayerRef.current = new EnvelopePlayer(
-          envelope,
-          audioBuffer.duration * 1000, // Convert to milliseconds
-          (level) => {
-            if (!isShuttingDown.current) {
-              // 🎯 DIRECT: Update the audio level for the speaking bars
-              directAudioAnimationService.notifyAudioLevel(level);
-            }
-          }
-        );
-        
-        // Start envelope playback in sync with audio
-        envelopePlayerRef.current.start();
-      } else {
-        // ✅ Always have envelope data from backend - no fallback needed
-        console.log('[ConversationOverlay] 🎵 No envelope data provided');
-        directAudioAnimationService.start();
+      // 🎵 ENVELOPE-DRIVEN: Use real PCM-derived loudness values for smooth bars
+      directAudioAnimationService.start();
+      
+      // 🎯 NEW: Use EnvelopePlayer for synced, mobile-friendly animation
+      if (envelopePlayerRef.current) {
+        envelopePlayerRef.current.stop();
       }
+      
+      envelopePlayerRef.current = new EnvelopePlayer(
+        envelopeResult.envelope,
+        envelopeResult.duration * 1000, // Convert to milliseconds
+        (level) => {
+          if (!isShuttingDown.current) {
+            // 🎯 DIRECT: Update the audio level for the speaking bars
+            directAudioAnimationService.notifyAudioLevel(level);
+          }
+        }
+      );
+      
+      // Start envelope playback in sync with audio
+      envelopePlayerRef.current.start();
       
       // 🎯 STATE DRIVEN: Set replying state
       setState('replying');
