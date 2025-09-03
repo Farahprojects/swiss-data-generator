@@ -133,6 +133,10 @@ export const ConversationOverlay: React.FC = () => {
       analyser.connect(audioContext.destination);
       
       // 🚀 NEW: Start optimized audio processing BEFORE playing audio
+      console.log('[ConversationOverlay] 🎵 Starting audio processing with analyser:', analyser);
+      console.log('[ConversationOverlay] 🎵 Analyser fftSize:', analyser.fftSize);
+      console.log('[ConversationOverlay] 🎵 Analyser frequencyBinCount:', analyser.frequencyBinCount);
+      
       audioProcessingService.startProcessing();
       directAudioAnimationService.start();
       

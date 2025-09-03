@@ -60,20 +60,27 @@ export class AudioProcessingService {
     }
 
     console.log('[AudioProcessingService] 🚀 Starting audio processing...');
-    console.log('[AudioProcessingService] Analyser state:', this.analyser.state);
+    console.log('[AudioProcessingService] Analyser:', this.analyser);
+    console.log('[AudioProcessingService] Analyser fftSize:', this.analyser?.fftSize);
+    console.log('[AudioProcessingService] Data array length:', this.dataArray?.length);
     console.log('[AudioProcessingService] Worker ready:', this.isReady);
 
     const processFrame = () => {
-      if (!this.analyser || !this.dataArray || !this.worker) return;
+      if (!this.analyser || !this.dataArray || !this.worker) {
+        console.log('[AudioProcessingService] ❌ Missing components:', { 
+          analyser: !!this.analyser, 
+          dataArray: !!this.dataArray, 
+          worker: !!this.worker 
+        });
+        return;
+      }
 
       // Get frequency data
       this.analyser.getByteFrequencyData(this.dataArray);
       
       // Debug: Check if we're getting actual audio data
       const average = this.dataArray.reduce((a, b) => a + b, 0) / this.dataArray.length;
-      if (average > 0) {
-        console.log('[AudioProcessingService] 🎵 Audio detected, level:', average);
-      }
+      console.log('[AudioProcessingService] 🎵 Frame processed, average level:', average.toFixed(3));
       
       // Send to worker for processing
       this.worker.postMessage({
