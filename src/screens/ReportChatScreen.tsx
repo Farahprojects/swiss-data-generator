@@ -121,70 +121,108 @@ const ReportChatScreen = () => {
   useEffect(() => {
     if (!guestId) return;
 
-    console.log(`[ChatPage] 🔄 Starting report ready polling for guest_id: ${guestId}`);
-    
-    const pollInterval = setInterval(async () => {
+    // 🚫 GUARD: Check if astro report is already generated
+    const checkIfReportAlreadyGenerated = async () => {
       try {
-        // Reduced logging - only log on first attempt and errors
-        
-        const { data: signals, error } = await supabase
+        const { data: existingSignal } = await supabase
           .from('report_ready_signals')
           .select('guest_report_id, created_at')
           .eq('guest_report_id', guestId)
           .limit(1);
 
-        if (error) {
-          console.error(`[ChatPage] ❌ Polling error:`, error);
-          return;
-        }
-
-        if (signals && signals.length > 0) {
-          console.log(`[ChatPage] 🎉 Report ready signal detected for: ${guestId}!`);
-          clearInterval(pollInterval);
+        if (existingSignal && existingSignal.length > 0) {
+          console.log(`[ChatPage] ✅ Astro report already generated for: ${guestId} - skipping polling`);
           
-          // Trigger context injection
-          console.log(`[ChatPage] 💉 Calling context-injector for: ${guestId}`);
-          const { data: contextData, error: contextError } = await supabase.functions.invoke('context-injector', {
-            body: { guest_report_id: guestId }
-          });
-
-          if (contextError) {
-            console.error(`[ChatPage] ❌ Context injection failed:`, contextError);
-            return;
-          }
-
-          console.log(`[ChatPage] ✅ Context injection successful:`, contextData);
-          hasTriggeredGenerationRef.current = true;
-          
-          // Set report ready state in store for persistence
+          // Set report ready state and show thread immediately
           useReportReadyStore.getState().setReportReady(true);
-          console.log(`[ChatPage] 📊 Report ready state set in store`);
+          setIsGuestThreadReady(true);
           
-          // Show success message to user
-          console.log(`[ChatPage] 🎯 Astro data successfully injected into chat!`);
-          
-          // 🎯 Set chat ID in store for conversation mode
+          // Set chat ID in store for conversation mode
           const finalChatId = urlChatId || chat_id;
           if (finalChatId) {
             console.log(`[ChatPage] 🔑 Setting chat_id and guest_id in store: ${finalChatId}, ${guestId}`);
-            // Start conversation in store with both chat_id and guest_id
             useChatStore.getState().startConversation(finalChatId, guestId);
           }
           
-          // 🎯 Show guest thread on left panel - system is ready!
-          console.log(`[ChatPage] 🧵 Guest thread ready - showing on left panel`);
-          setIsGuestThreadReady(true);
+          return true; // Report already exists
         }
+        
+        return false; // Report doesn't exist, need to poll
       } catch (error) {
-        console.error(`[ChatPage] ❌ Polling error:`, error);
+        console.error(`[ChatPage] ❌ Error checking existing report:`, error);
+        return false; // On error, assume we need to poll
       }
-    }, 2000); // Poll every 2 seconds
-
-    // Cleanup on unmount or guestId change
-    return () => {
-      console.log(`[ChatPage] 🧹 Cleaning up polling for guest_id: ${guestId}`);
-      clearInterval(pollInterval);
     };
+
+    // Check first, then decide whether to poll
+    checkIfReportAlreadyGenerated().then((reportExists) => {
+      if (reportExists) {
+        console.log(`[ChatPage] 🚫 Skipping polling - report already generated`);
+        return; // Don't start polling
+      }
+
+      console.log(`[ChatPage] 🔄 Starting report ready polling for guest_id: ${guestId}`);
+      
+      const pollInterval = setInterval(async () => {
+        try {
+          const { data: signals, error } = await supabase
+            .from('report_ready_signals')
+            .select('guest_report_id, created_at')
+            .eq('guest_report_id', guestId)
+            .limit(1);
+
+          if (error) {
+            console.error(`[ChatPage] ❌ Polling error:`, error);
+            return;
+          }
+
+          if (signals && signals.length > 0) {
+            console.log(`[ChatPage] 🎉 Report ready signal detected for: ${guestId}!`);
+            clearInterval(pollInterval);
+            
+            // Trigger context injection
+            console.log(`[ChatPage] 💉 Calling context-injector for: ${guestId}`);
+            const { data: contextData, error: contextError } = await supabase.functions.invoke('context-injector', {
+              body: { guest_report_id: guestId }
+            });
+
+            if (contextError) {
+              console.error(`[ChatPage] ❌ Context injection failed:`, contextError);
+              return;
+            }
+
+            console.log(`[ChatPage] ✅ Context injection successful:`, contextData);
+            hasTriggeredGenerationRef.current = true;
+            
+            // Set report ready state in store for persistence
+            useReportReadyStore.getState().setReportReady(true);
+            console.log(`[ChatPage] 📊 Report ready state set in store`);
+            
+            // Show success message to user
+            console.log(`[ChatPage] 🎯 Astro data successfully injected into chat!`);
+            
+            // 🎯 Set chat ID in store for conversation mode
+            const finalChatId = urlChatId || chat_id;
+            if (finalChatId) {
+              console.log(`[ChatPage] 🔑 Setting chat_id and guest_id in store: ${finalChatId}, ${guestId}`);
+              useChatStore.getState().startConversation(finalChatId, guestId);
+            }
+            
+            // 🎯 Show guest thread on left panel - system is ready!
+            console.log(`[ChatPage] 🧵 Guest thread ready - showing on left panel`);
+            setIsGuestThreadReady(true);
+          }
+        } catch (error) {
+          console.error(`[ChatPage] ❌ Polling error:`, error);
+        }
+      }, 2000); // Poll every 2 seconds
+
+      // Cleanup on unmount or guestId change
+      return () => {
+        console.log(`[ChatPage] 🧹 Cleaning up polling for guest_id: ${guestId}`);
+        clearInterval(pollInterval);
+      };
+    });
 
   }, [guestId]);
 
@@ -202,10 +240,37 @@ const ReportChatScreen = () => {
   useEffect(() => {
     if (!guestId) return;
 
-    console.log(`[ChatPage] 🔄 Page load rehydration for guest_id: ${guestId}`);
-    
-    const rehydrateSession = async () => {
+    // 🚫 GUARD: Check if astro report is already generated before rehydrating
+    const checkAndRehydrate = async () => {
       try {
+        // First check if report is already ready
+        const { data: readySignal } = await supabase
+          .from('report_ready_signals')
+          .select('guest_report_id')
+          .eq('guest_report_id', guestId)
+          .limit(1);
+        
+        if (readySignal && readySignal.length > 0) {
+          console.log(`[ChatPage] ✅ Astro report already generated - skipping rehydration`);
+          
+          // Report is ready, just set the state and return
+          useReportReadyStore.getState().setReportReady(true);
+          setIsGuestThreadReady(true);
+          
+          // Set chat ID in store if not already set
+          const store = useChatStore.getState();
+          const finalChatId = urlChatId || chat_id;
+          if (finalChatId && (!store.chat_id || !store.guest_id)) {
+            console.log(`[ChatPage] 🔑 Setting chat_id and guest_id in store: ${finalChatId}, ${guestId}`);
+            store.startConversation(finalChatId, guestId);
+          }
+          
+          return; // Skip rehydration
+        }
+
+        // Report not ready, proceed with normal rehydration
+        console.log(`[ChatPage] 🔄 Page load rehydration for guest_id: ${guestId}`);
+        
         // Check if we already have both IDs in store
         const store = useChatStore.getState();
         const hasCompleteSession = store.chat_id && store.guest_id;
@@ -246,19 +311,6 @@ const ReportChatScreen = () => {
             store.startConversation(finalChatId, guestId);
           }
           
-          // Check if report is already ready and update thread visibility
-          const { data: readySignal } = await supabase
-            .from('report_ready_signals')
-            .select('guest_report_id')
-            .eq('guest_report_id', guestId)
-            .limit(1);
-            
-          if (readySignal && readySignal.length > 0) {
-            console.log(`[ChatPage] ✅ Report ready signal found during rehydration`);
-            useReportReadyStore.getState().setReportReady(true);
-            setIsGuestThreadReady(true);
-          }
-          
           // Check if context injection is needed
           if (!hasTriggeredGenerationRef.current) {
             console.log(`[ChatPage] 🔄 Session restored - checking if context injection needed`);
@@ -271,7 +323,7 @@ const ReportChatScreen = () => {
     };
 
     // Run rehydration on page load
-    rehydrateSession();
+    checkAndRehydrate();
   }, [guestId, urlChatId, chat_id]);
 
 
