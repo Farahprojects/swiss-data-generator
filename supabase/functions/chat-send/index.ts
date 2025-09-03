@@ -133,31 +133,31 @@ serve(async (req) => {
 
         console.log('[chat-send] ✅ LLM response received, length:', assistantText.length);
 
-        // Step 3: Save assistant message to DB
-        const assistantMessageData = {
-          chat_id,
-          role: "assistant",
-          text: assistantText,
-          client_msg_id: crypto.randomUUID(),
-          status: "complete",
-          meta: { 
-            mode: 'conversation'
-          }
-        };
+        // 🚫 COMMENTED OUT: Assistant message save (handled by llm-handler-openai)
+        // const assistantMessageData = {
+        //   chat_id,
+        //   role: "assistant",
+        //   text: assistantText,
+        //   client_msg_id: crypto.randomUUID(),
+        //   status: "complete",
+        //   meta: { 
+        //     mode: 'conversation'
+        //   }
+        // };
 
-        console.log('[chat-send] 💾 Saving assistant message to DB...');
-        const { error: assistantError } = await supabase
-          .from("messages")
-          .upsert(assistantMessageData, {
-            onConflict: "client_msg_id"
-          });
+        // console.log('[chat-send] 💾 Saving assistant message to DB...');
+        // const { error: assistantError } = await supabase
+        //   .from("messages")
+        //   .upsert(assistantMessageData, {
+        //     onConflict: "client_msg_id"
+        //   });
 
-        if (assistantError) {
-          console.error('[chat-send] ❌ Assistant message save failed:', assistantError);
-          // Continue anyway - we can still return the response
-        } else {
-          console.log('[chat-send] ✅ Assistant message saved to DB');
-        }
+        // if (assistantError) {
+        //   console.error('[chat-send] ❌ Assistant message save failed:', assistantError);
+        //   // Continue anyway - we can still return the response
+        // } else {
+        //   console.log('[chat-send] ✅ Assistant message saved to DB');
+        // }
 
         // Step 4: Call TTS to generate audio
         console.log('[chat-send] 🎵 Calling TTS service...');
