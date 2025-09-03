@@ -229,8 +229,7 @@ export const ConversationOverlay: React.FC = () => {
       // 🎯 STATE DRIVEN: Initialize microphone service BEFORE starting recording
       conversationMicrophoneService.initialize({
         onRecordingComplete: (audioBlob: Blob) => {
-          console.log('[ConversationOverlay] 🎤 Recording complete callback fired, blob size:', audioBlob.size);
-          // Remove state check - always process recording when callback fires
+          // Process recording when callback fires
           processRecording(audioBlob);
         },
         onError: (error: Error) => {
@@ -238,7 +237,6 @@ export const ConversationOverlay: React.FC = () => {
           setState('connecting');
         },
         onSilenceDetected: () => {
-          console.log('[ConversationOverlay] 🎤 Silence detected, stopping recording');
           conversationMicrophoneService.stopRecording();
         },
         silenceTimeoutMs: 1200,
@@ -267,8 +265,6 @@ export const ConversationOverlay: React.FC = () => {
 
   // 🎯 PROCESSING: Handle recording completion
   const processRecording = useCallback(async (audioBlob: Blob) => {
-    console.log('[ConversationOverlay] 🎤 Processing recording, blob size:', audioBlob.size, 'chat_id:', chat_id);
-    
     if (!chat_id) {
       console.error('[ConversationOverlay] ❌ No chat_id available for processing');
       return;
@@ -276,23 +272,18 @@ export const ConversationOverlay: React.FC = () => {
     
     try {
       // 🎯 STATE DRIVEN: Processing state
-      console.log('[ConversationOverlay] 🎤 Setting state to thinking...');
       setState('thinking');
       
       // Transcribe audio
-      console.log('[ConversationOverlay] 🎤 Starting transcription...');
       const result = await sttService.transcribe(audioBlob, chat_id, {}, 'conversation', chat_id);
       const transcript = result.transcript?.trim();
-      console.log('[ConversationOverlay] 🎤 Transcription result:', transcript);
       
       if (!transcript) {
-        console.log('[ConversationOverlay] 🎤 Empty transcript, returning to listening');
         setState('listening');
         return;
       }
       
       // Send to chat-send via the existing working llmService (handles LLM → TTS → WebSocket automatically)
-      console.log('[ConversationOverlay] 🎤 Sending to chat-send via llmService...');
       const response = await llmService.sendMessage({
         chat_id,
         text: transcript,
@@ -300,10 +291,7 @@ export const ConversationOverlay: React.FC = () => {
         mode: 'conversation'
       });
       
-      console.log('[ConversationOverlay] 🎤 llmService response received:', response);
-      
       // 🎯 STATE DRIVEN: Replying state (TTS will come via WebSocket from chat-send)
-      console.log('[ConversationOverlay] 🎤 Setting state to replying, waiting for TTS...');
       setState('replying');
       
     } catch (error) {
