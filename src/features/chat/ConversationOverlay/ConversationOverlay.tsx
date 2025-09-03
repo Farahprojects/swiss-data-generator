@@ -120,19 +120,14 @@ export const ConversationOverlay: React.FC = () => {
       const arrayBuffer = new Uint8Array(audioBytes).buffer;
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
       
-      // 🎵 QUICK PREVIEW: Generate preview envelope for instant bar movement
+      // 🎵 PROFESSIONAL PREVIEW: Generate accurate preview from real PCM chunk
       const previewEnvelope = EnvelopeGenerator.generatePreviewEnvelope(audioBuffer);
       
       if (!previewEnvelope.isValid) {
-        console.warn('[ConversationOverlay] ⚠️ Preview envelope failed, using fallback:', previewEnvelope.error);
-        
-        // 🎯 FALLBACK: Use a default level to keep animation working
-        const fallbackLevel = 0.3; // Default speaking bar level
-        console.log(`[ConversationOverlay] 🔄 Using fallback level: ${fallbackLevel}`);
-        
-        // Continue with fallback instead of stopping
-        previewEnvelope.level = fallbackLevel;
-        previewEnvelope.isValid = true;
+        // 🚫 PROFESSIONAL: No fallbacks - if preview fails, stop and log error
+        console.error('[ConversationOverlay] ❌ Professional preview envelope failed:', previewEnvelope.error);
+        setState('listening');
+        return;
       }
       
       console.log(`[ConversationOverlay] 🚀 Preview envelope ready: level ${previewEnvelope.level.toFixed(3)}`);

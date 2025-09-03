@@ -1,8 +1,8 @@
 /**
- * 🎵 ENVELOPE GENERATOR - Progressive PCM-Derived Envelopes
+ * 🎵 ENVELOPE GENERATOR - Professional PCM-Derived Envelopes
  * 
- * Generates envelope data progressively for instant speaking bar animation.
- * Quick preview for immediate start, full envelope for perfect sync.
+ * Generates envelope data from real PCM samples for perfect audio sync.
+ * No fallbacks, no fake levels - bars always represent actual audio.
  */
 
 export interface EnvelopeResult {
@@ -20,50 +20,56 @@ export interface PreviewEnvelope {
 
 export class EnvelopeGenerator {
   /**
-   * Generate quick preview envelope from first ~100ms of audio
+   * Generate accurate preview envelope from first PCM chunk
    * @param audioBuffer - Decoded audio from AudioContext.decodeAudioData
-   * @returns PreviewEnvelope for immediate bar animation
+   * @returns PreviewEnvelope derived from real PCM data
    */
   static generatePreviewEnvelope(audioBuffer: AudioBuffer): PreviewEnvelope {
     try {
       const channelData = audioBuffer.getChannelData(0);
-      const previewWindowSize = 512; // samples per frame
-      const previewSamples = Math.min(previewWindowSize * 4, channelData.length); // first ~100ms
+      const sampleRate = audioBuffer.sampleRate;
       
-      if (previewSamples < previewWindowSize) {
+      // Professional approach: Use first 100ms window for accurate preview
+      const previewDuration = 0.1; // 100ms
+      const previewSamples = Math.floor(sampleRate * previewDuration);
+      const actualSamples = Math.min(previewSamples, channelData.length);
+      
+      if (actualSamples < 512) { // Minimum viable window
         return {
           level: 0,
           isValid: false,
-          error: 'Audio too short for preview envelope'
+          error: `Audio too short for preview (${actualSamples} samples)`
         };
       }
       
-      // Calculate RMS for preview window
+      // Calculate RMS over the first 100ms window
       let sum = 0;
-      for (let i = 0; i < previewSamples; i++) {
+      for (let i = 0; i < actualSamples; i++) {
         sum += channelData[i] ** 2;
       }
       
-      const previewLevel = Math.sqrt(sum / previewSamples);
+      const previewLevel = Math.sqrt(sum / actualSamples);
       
-      // Debug logging to understand the values
-      console.log(`[EnvelopeGenerator] 🔍 Preview analysis:`, {
-        samples: previewSamples,
-        rawRMS: previewLevel,
-        sampleRange: `[${Math.min(...channelData.slice(0, previewSamples)).toFixed(4)}, ${Math.max(...channelData.slice(0, previewSamples)).toFixed(4)}]`
+      // Debug logging for analysis
+      console.log(`[EnvelopeGenerator] 🔍 Professional preview analysis:`, {
+        sampleRate,
+        previewDuration: `${previewDuration * 1000}ms`,
+        actualSamples,
+        rawRMS: previewLevel.toFixed(6),
+        sampleRange: `[${Math.min(...channelData.slice(0, actualSamples)).toFixed(4)}, ${Math.max(...channelData.slice(0, actualSamples)).toFixed(4)}]`
       });
       
-      // More lenient validation - accept very quiet audio
-      if (previewLevel < 0.001) { // Reduced from 0.01 to 0.001
+      // Professional validation: Accept any non-zero amplitude
+      if (previewLevel < 0.000001) { // Extremely low threshold for silent audio
         return {
           level: 0,
           isValid: false,
-          error: `Preview envelope too quiet (RMS: ${previewLevel.toFixed(6)})`
+          error: `Audio appears silent (RMS: ${previewLevel.toFixed(8)})`
         };
       }
       
-      // Scale the level appropriately for visibility
-      const scaledLevel = Math.min(1.0, previewLevel * 100); // Increased multiplier from 10 to 100
+      // Scale appropriately for visibility while maintaining accuracy
+      const scaledLevel = Math.min(1.0, previewLevel * 50); // Conservative scaling
       
       return {
         level: scaledLevel,
@@ -88,10 +94,11 @@ export class EnvelopeGenerator {
     try {
       // Get PCM channel data (mono or first channel)
       const channelData = audioBuffer.getChannelData(0); // Float32Array [-1..1]
-      const windowSize = 512; // samples per frame for RMS calculation
+      const sampleRate = audioBuffer.sampleRate;
+      const windowSize = Math.floor(sampleRate * 0.02); // 20ms windows for smooth animation
       const envelope: number[] = [];
       
-      // Calculate RMS for each window
+      // Calculate RMS for each 20ms window
       for (let i = 0; i < channelData.length; i += windowSize) {
         let sum = 0;
         const endIndex = Math.min(i + windowSize, channelData.length);
@@ -109,12 +116,12 @@ export class EnvelopeGenerator {
       const minVal = Math.min(...envelope);
       const amplitudeRange = maxVal - minVal;
       
-      if (amplitudeRange < 0.05) {
+      if (amplitudeRange < 0.001) { // More lenient for full envelope
         return {
           envelope: [],
           duration: audioBuffer.duration,
           isValid: false,
-          error: `Envelope invalid: amplitude too flat (range: ${amplitudeRange.toFixed(4)})`
+          error: `Envelope invalid: amplitude too flat (range: ${amplitudeRange.toFixed(6)})`
         };
       }
       
