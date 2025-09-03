@@ -17,17 +17,13 @@ class AudioProcessor {
     const average = frequencyData.reduce((a, b) => a + b, 0) / frequencyData.length;
     const rawLevel = average / 255;
     
-    // Debug: Log audio levels
-    if (rawLevel > 0.01) {
-      console.log('[AudioProcessor] 🎵 Processing audio, raw level:', rawLevel.toFixed(3));
-    }
+
     
     // Apply smoothing
     this.currentLevel = this.currentLevel * this.smoothingFactor + rawLevel * (1 - this.smoothingFactor);
     
     // Only emit if there's meaningful audio
     if (this.currentLevel > 0.02) {
-      console.log('[AudioProcessor] 🔊 Emitting audio level:', this.currentLevel.toFixed(3));
       self.postMessage({
         type: 'audio-level',
         level: this.currentLevel,
