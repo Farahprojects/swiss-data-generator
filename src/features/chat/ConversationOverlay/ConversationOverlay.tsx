@@ -131,14 +131,21 @@ export const ConversationOverlay: React.FC = () => {
       source.connect(analyser);
       analyser.connect(audioContext.destination);
       
-             // 🎯 STATE DRIVEN: Set replying state
-       setState('replying');
+      // 🚀 NEW: Start optimized audio processing BEFORE playing audio
+      audioProcessingService.startProcessing();
+      
+      // 🎯 STATE DRIVEN: Set replying state
+      setState('replying');
       source.start(0);
       currentTtsSourceRef.current = source;
       
              // 🎯 STATE DRIVEN: Return to listening when done
        source.onended = () => {
          console.log('[ConversationOverlay] 🎵 TTS audio finished, returning to listening mode');
+         
+         // 🚀 NEW: Stop audio processing when TTS ends
+         audioProcessingService.stopProcessing();
+         
          conversationTtsService.setAudioLevelForAnimation(0);
          setState('listening');
          
@@ -157,8 +164,7 @@ export const ConversationOverlay: React.FC = () => {
          }
        };
       
-      // 🚀 NEW: Start optimized audio processing for speaking animation
-      audioProcessingService.startProcessing();
+
       
     } catch (error) {
       console.error('[ConversationOverlay] ❌ Direct audio failed:', error);

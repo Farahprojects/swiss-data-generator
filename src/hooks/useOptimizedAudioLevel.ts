@@ -12,9 +12,13 @@ export const useOptimizedAudioLevel = () => {
   useEffect(() => {
     // Subscribe to audio processing service
     const unsubscribe = audioProcessingService.subscribe((level) => {
+      // Debug: Log received audio levels
+      console.log('[useOptimizedAudioLevel] 🎵 Received audio level:', level.toFixed(3));
+      
       // Only update state if level changed significantly (prevents unnecessary re-renders)
       const levelDiff = Math.abs(level - lastLevelRef.current);
       if (levelDiff > 0.05 || level === 0) {
+        console.log('[useOptimizedAudioLevel] 🔄 Updating state from', lastLevelRef.current.toFixed(3), 'to', level.toFixed(3));
         setAudioLevel(level);
         lastLevelRef.current = level;
       }
