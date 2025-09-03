@@ -37,6 +37,12 @@ const ReportChatScreen = () => {
   useEffect(() => {
     if (!guestId || hasTriggeredGenerationRef.current) return;
 
+    // 🚫 GUARD: Don't check if report is already ready in store
+    if (useReportReadyStore.getState().isReportReady) {
+      console.log(`[ChatPage] 🚫 Skipping report check - already ready in store for: ${guestId}`);
+      return;
+    }
+
     console.log(`[ChatPage] 🚀 URL-driven report flow checker activated for guest_id: ${guestId}`);
 
     const checkAndTriggerReport = async () => {
@@ -121,10 +127,23 @@ const ReportChatScreen = () => {
   useEffect(() => {
     if (!guestId) return;
 
+    // 🚫 GUARD: Don't start polling if report is already ready
+    if (useReportReadyStore.getState().isReportReady) {
+      console.log(`[ChatPage] 🚫 Skipping polling - report already ready for: ${guestId}`);
+      return;
+    }
+
     console.log(`[ChatPage] 🔄 Starting report ready polling for guest_id: ${guestId}`);
     
     const pollInterval = setInterval(async () => {
       try {
+        // 🚫 GUARD: Stop polling if report became ready between intervals
+        if (useReportReadyStore.getState().isReportReady) {
+          console.log(`[ChatPage] 🚫 Stopping polling - report became ready for: ${guestId}`);
+          clearInterval(pollInterval);
+          return;
+        }
+
         console.log(`[ChatPage] 🔍 Polling report_ready_signals for: ${guestId}`);
         
         const { data: signals, error } = await supabase
@@ -186,7 +205,7 @@ const ReportChatScreen = () => {
       clearInterval(pollInterval);
     };
 
-  }, [guestId]);
+  }, [guestId, urlChatId, chat_id]);
 
   // URL change listener - React will automatically re-render when URL params change
   // This is just for logging and debugging
@@ -204,6 +223,12 @@ const ReportChatScreen = () => {
   // 🔄 STREAMLINED REHYDRATION: Simple session restoration on page load
   useEffect(() => {
     if (!guestId) return;
+
+    // 🚫 GUARD: Don't rehydrate if report is already ready
+    if (useReportReadyStore.getState().isReportReady) {
+      console.log(`[ChatPage] 🚫 Skipping rehydration - report already ready for: ${guestId}`);
+      return;
+    }
 
     console.log(`[ChatPage] 🔄 Page load rehydration for guest_id: ${guestId}`);
     
@@ -259,9 +284,11 @@ const ReportChatScreen = () => {
           }
           
           // Check if context injection is needed
-          if (!hasTriggeredGenerationRef.current) {
+          if (!hasTriggeredGenerationRef.current && !useReportReadyStore.getState().isReportReady) {
             console.log(`[ChatPage] 🔄 Session restored - checking if context injection needed`);
             // This will trigger the polling logic to check for report ready signals
+          } else {
+            console.log(`[ChatPage] 🚫 Skipping context injection check - already handled`);
           }
         }
       } catch (error) {
