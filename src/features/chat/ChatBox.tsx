@@ -2,6 +2,7 @@ import React, { useEffect, useRef, Suspense, lazy, useState } from 'react';
 import { ChatInput } from './ChatInput';
 import { useChatStore } from '@/core/store';
 import { useAuth } from '@/contexts/AuthContext';
+import { useChat } from './useChat';
 
 import { Menu, Calendar, Sparkles, Settings, User, CreditCard, Bell, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,9 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ isGuestThreadReady = false, gu
   const navigate = useNavigate();
   const { uuid } = getChatTokens();
   const isConversationOpen = useConversationUIStore((s) => s.isConversationOpen);
+  
+  // Initialize ChatController for realtime updates (both text and conversation modes)
+  const { startTurn, sendTextMessage, endTurn, cancelTurn } = useChat(guestReportId ? undefined : uuid, guestReportId);
   const [signInPrompt, setSignInPrompt] = useState<{ show: boolean; feature: string }>({ 
     show: false, 
     feature: '' 
