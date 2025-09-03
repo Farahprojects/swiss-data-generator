@@ -1,55 +1,33 @@
 /**
- * 🎵 ENVELOPE PLAYER - Professional, Progressive Animation
+ * 🎵 ENVELOPE PLAYER - Simple, Progressive Animation
  * 
- * Handles progressive envelope data for perfect audio sync.
- * No fallbacks, smooth interpolation, professional-grade timing.
+ * Handles progressive envelope data for smooth speaking bar animation.
+ * Simple, fast, no complex preview logic.
  */
 
 export class EnvelopePlayer {
   private envelope: number[] = [];
-  private startTime: number;
-  private duration: number;
   private rafId: number | null = null;
   private callback: (level: number) => void;
   private isPlaying: boolean = false;
   private currentFrame: number = 0;
-  private previewMode: boolean = true;
   private lastLevel: number = 0;
 
-  constructor(duration: number, callback: (level: number) => void) {
-    this.duration = duration;
+  constructor(callback: (level: number) => void) {
     this.callback = callback;
-    this.startTime = performance.now();
   }
 
   /**
-   * Start with professional preview envelope for instant, accurate animation
-   */
-  public startWithPreview(previewLevel: number): void {
-    if (this.isPlaying) return;
-    
-    this.isPlaying = true;
-    this.previewMode = true;
-    this.startTime = performance.now();
-    this.lastLevel = previewLevel;
-    
-    // Start with accurate preview level for instant bar movement
-    this.callback(previewLevel);
-    
-    console.log(`[EnvelopePlayer] 🚀 Professional preview started: level ${previewLevel.toFixed(4)}`);
-  }
-
-  /**
-   * Add full envelope data progressively for perfect sync
+   * Set full envelope data for progressive playback
    */
   public setFullEnvelope(fullEnvelope: number[]): void {
     this.envelope = fullEnvelope;
-    this.previewMode = false;
     this.currentFrame = 0;
+    this.lastLevel = 0;
     
-    console.log(`[EnvelopePlayer] 📊 Full envelope loaded: ${fullEnvelope.length} frames`);
+    console.log(`[EnvelopePlayer] 📊 Envelope loaded: ${fullEnvelope.length} frames`);
     
-    // Start progressive playback if not already running
+    // Start progressive playback
     if (this.isPlaying && !this.rafId) {
       this.startProgressivePlayback();
     }
@@ -90,9 +68,10 @@ export class EnvelopePlayer {
   }
 
   /**
-   * Start playback (legacy method - use startWithPreview instead)
+   * Start playback
    */
   public start(): void {
+    this.isPlaying = true;
     if (this.envelope.length > 0) {
       this.startProgressivePlayback();
     }

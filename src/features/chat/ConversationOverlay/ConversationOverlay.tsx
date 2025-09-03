@@ -120,63 +120,49 @@ export const ConversationOverlay: React.FC = () => {
       const arrayBuffer = new Uint8Array(audioBytes).buffer;
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
       
-      // 🎵 PROFESSIONAL PREVIEW: Generate accurate preview from real PCM chunk
-      const previewEnvelope = EnvelopeGenerator.generatePreviewEnvelope(audioBuffer);
-      
-      if (!previewEnvelope.isValid) {
-        // 🚫 PROFESSIONAL: No fallbacks - if preview fails, stop and log error
-        console.error('[ConversationOverlay] ❌ Professional preview envelope failed:', previewEnvelope.error);
-        setState('listening');
-        return;
-      }
-      
-      console.log(`[ConversationOverlay] 🚀 Preview envelope ready: level ${previewEnvelope.level.toFixed(3)}`);
-      
-      // 🎯 DIRECT: Create source and play (no analyser needed for envelope-driven animation)
+      // 🎵 SIMPLE & FAST: Start audio immediately, no envelope delay
       const source = audioContext.createBufferSource();
       source.buffer = audioBuffer;
       source.connect(audioContext.destination);
       
-      // 🎵 ENVELOPE-DRIVEN: Start with preview for instant animation
+      // 🎯 START IMMEDIATELY: Audio + simple animation together
       directAudioAnimationService.start();
       
-      // 🎯 NEW: Use EnvelopePlayer for progressive, mobile-friendly animation
+      // 🚀 SIMPLE: Start with basic level, no complex PCM analysis
+      const simpleStartLevel = 0.4; // Simple, visible level
+      directAudioAnimationService.notifyAudioLevel(simpleStartLevel);
+      
+      // 🎵 ENVELOPE PLAYER: Handle progressive updates
       if (envelopePlayerRef.current) {
         envelopePlayerRef.current.stop();
       }
       
       envelopePlayerRef.current = new EnvelopePlayer(
-        audioBuffer.duration * 1000, // Convert to milliseconds
         (level) => {
           if (!isShuttingDown.current) {
-            // 🎯 DIRECT: Update the audio level for the speaking bars
             directAudioAnimationService.notifyAudioLevel(level);
           }
         }
       );
       
-      // 🚀 START IMMEDIATELY: Preview envelope for instant bar movement
-      envelopePlayerRef.current.startWithPreview(previewEnvelope.level);
+      // 🚀 START AUDIO NOW: No waiting for envelope analysis
+      setState('replying');
+      source.start(0);
+      currentTtsSourceRef.current = source;
       
-      // 🎵 BACKGROUND: Generate full envelope while audio plays
+      // 🎵 BACKGROUND: Generate envelope while audio plays (non-blocking)
       setTimeout(() => {
         if (!isShuttingDown.current && envelopePlayerRef.current) {
           const fullEnvelopeResult = EnvelopeGenerator.generateFullEnvelope(audioBuffer);
           
           if (fullEnvelopeResult.isValid) {
-            console.log(`[ConversationOverlay] 📊 Full envelope generated: ${fullEnvelopeResult.envelope.length} frames`);
+            console.log(`[ConversationOverlay] 📊 Full envelope ready: ${fullEnvelopeResult.envelope.length} frames`);
             envelopePlayerRef.current.setFullEnvelope(fullEnvelopeResult.envelope);
           } else {
-            console.error('[ConversationOverlay] ❌ Full envelope generation failed:', fullEnvelopeResult.error);
-            // Don't stop audio - continue with preview
+            console.warn('[ConversationOverlay] ⚠️ Full envelope failed, continuing with simple animation');
           }
         }
-      }, 50); // Small delay to ensure audio has started
-      
-      // 🎯 STATE DRIVEN: Set replying state
-      setState('replying');
-      source.start(0);
-      currentTtsSourceRef.current = source;
+      }, 100); // Small delay to ensure audio has started
       
              // 🎯 STATE DRIVEN: Return to listening when done
        source.onended = () => {
