@@ -201,9 +201,15 @@ export const MessageList = () => {
           {messages.length === 0 ? (
             <div className="flex-1 flex flex-col justify-end">
               <div className="p-4">
-                <div className="text-center text-gray-500">
-                  <p className="text-sm">Ready to chat! Type your message below.</p>
-                </div>
+                {!astroChoiceMade && !chat_id ? (
+                  <AstroDataPromptMessage
+                    onAddAstroData={handleAddAstroData}
+                  />
+                ) : (
+                  <div className="text-center text-gray-500">
+                    <p className="text-sm">Ready to chat! Type your message below.</p>
+                  </div>
+                )}
               </div>
             </div>
           ) : (
