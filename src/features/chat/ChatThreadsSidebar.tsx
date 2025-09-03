@@ -67,28 +67,18 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     // Clear chat tokens from storage
     clearChatTokens();
     
-    // Clear report ready store state
-    useReportReadyStore.getState().setReportReady(false);
-    useReportReadyStore.getState().stopPolling();
-    useReportReadyStore.getState().setErrorState(null);
-    
     // Clear any URL search parameters to ensure clean state
     if (window.location.search) {
       console.log('[ChatThreadsSidebar] 🔄 Clearing URL search parameters');
       window.history.replaceState({}, '', '/chat');
     }
     
-    // Clear sessionStorage for report ready state
-    if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.removeItem('therai_report_ready');
-    }
+    // Force a complete page refresh to reset all component state
+    // This ensures isGuestThreadReady, hasTriggeredGenerationRef, and all other state is reset
+    console.log('[ChatThreadsSidebar] 🔄 Forcing page refresh for complete state reset');
+    window.location.href = '/chat';
     
-    // Clear localStorage for any other persisted state
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem('therai_chat_tokens');
-    }
-    
-    console.log('[ChatThreadsSidebar] ✅ Session cleanup complete - all stores cleared, URL reset, ready for fresh start');
+    console.log('[ChatThreadsSidebar] ✅ Session cleanup complete, page will refresh');
   };
 
   return (
