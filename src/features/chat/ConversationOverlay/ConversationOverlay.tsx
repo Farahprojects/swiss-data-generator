@@ -87,8 +87,7 @@ export const ConversationOverlay: React.FC = () => {
       analyserRef.current = audioContextRef.current.createAnalyser();
       analyserRef.current.fftSize = 128; // 🚀 OPTIMIZED: Reduced from 256 for mobile + desktop performance
       
-      // 🚀 NEW: Set up audio processing service with analyser
-      audioProcessingService.setAnalyser(analyserRef.current);
+      // ✅ Envelope-driven system - no audio processing needed
     }
     
     return () => {
@@ -97,8 +96,7 @@ export const ConversationOverlay: React.FC = () => {
       audioContextRef.current = null;
       analyserRef.current = null;
       
-      // 🚀 NEW: Clean up audio processing service
-      audioProcessingService.stopProcessing();
+      // ✅ Envelope-driven system - no cleanup needed
     };
   }, []);
 
@@ -161,10 +159,8 @@ export const ConversationOverlay: React.FC = () => {
         // Start envelope playback in sync with audio
         envelopePlayerRef.current.start();
       } else {
-        // Fallback to old audio analysis if no envelope
-        console.log('[ConversationOverlay] 🎵 No envelope data, falling back to audio analysis');
-        audioProcessingService.setAnalyser(analyser);
-        audioProcessingService.startProcessing();
+        // ✅ Always have envelope data from backend - no fallback needed
+        console.log('[ConversationOverlay] 🎵 No envelope data provided');
         directAudioAnimationService.start();
       }
       
@@ -177,9 +173,8 @@ export const ConversationOverlay: React.FC = () => {
        source.onended = () => {
          console.log('[ConversationOverlay] 🎵 TTS audio finished, returning to listening mode');
          
-         // 🎵 Stop all animation services when TTS ends
-         audioProcessingService.stopProcessing();
-         directAudioAnimationService.stop();
+          // 🎵 Stop animation service when TTS ends
+          directAudioAnimationService.stop();
          
          // 🎯 NEW: Stop envelope player when audio ends
          if (envelopePlayerRef.current) {
@@ -349,8 +344,7 @@ export const ConversationOverlay: React.FC = () => {
       connectionRef.current = null;
     }
     
-         // 🚀 NEW: Stop optimized audio processing
-     audioProcessingService.stopProcessing();
+     // 🚀 Stop animation service
      directAudioAnimationService.stop();
      
      // 🎯 NEW: Stop envelope player when modal closes

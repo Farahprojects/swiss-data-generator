@@ -1,35 +1,11 @@
-// Optimized Audio Level Hook
-// Uses Web Worker + throttled updates instead of 60fps polling
+// ✅ DEPRECATED: This hook is no longer needed
+// The new envelope-driven system provides audio levels directly through services
 
-import { useState, useEffect, useRef } from 'react';
-import { audioProcessingService } from '@/services/voice/AudioProcessingService';
+import { useState } from 'react';
 
 export const useOptimizedAudioLevel = () => {
-  const [audioLevel, setAudioLevel] = useState(0);
-  const lastLevelRef = useRef(0);
-  const unsubscribeRef = useRef<(() => void) | null>(null);
-
-  useEffect(() => {
-    // Subscribe to audio processing service
-    const unsubscribe = audioProcessingService.subscribe((level) => {
-      // Only update state if level changed significantly (prevents unnecessary re-renders)
-      const levelDiff = Math.abs(level - lastLevelRef.current);
-      if (levelDiff > 0.05 || level === 0) {
-        setAudioLevel(level);
-        lastLevelRef.current = level;
-      }
-    });
-
-    unsubscribeRef.current = unsubscribe;
-
-    return () => {
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current();
-      }
-    };
-  }, []);
-
-  return audioLevel;
+  // ✅ Return static 0 - envelope system handles audio levels directly
+  return 0;
 };
 
 // Hook for conversation state management (high-level only)
