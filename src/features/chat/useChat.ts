@@ -89,7 +89,10 @@ export const useChat = (chat_id?: string, guestId?: string) => {
           navigate('/report');
         });
     } else {
-      navigate('/report');
+      // 🎯 FRESH CHAT: User wants to start a new chat session
+      console.log('[useChat] 🆕 Starting fresh chat session - no guest_id or cached chat_id');
+      // Don't redirect - let them start fresh
+      // The chat page will show the astro data prompt for new users
     }
   }, [chat_id, guestId, navigate]);
 
