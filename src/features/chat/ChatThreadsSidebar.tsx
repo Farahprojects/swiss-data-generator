@@ -67,18 +67,14 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     // Clear chat tokens from storage
     clearChatTokens();
     
-    // Clear any URL search parameters to ensure clean state
-    if (window.location.search) {
-      console.log('[ChatThreadsSidebar] 🔄 Clearing URL search parameters');
-      window.history.replaceState({}, '', '/chat');
-    }
+    // Clear any URL search parameters and chat-specific params to ensure clean state
+    console.log('[ChatThreadsSidebar] 🔄 Clearing URL parameters and redirecting to clean home');
     
-    // Force a complete page refresh to reset all component state
-    // This ensures isGuestThreadReady, hasTriggeredGenerationRef, and all other state is reset
-    console.log('[ChatThreadsSidebar] 🔄 Forcing page refresh for complete state reset');
-    window.location.href = '/chat';
+    // Navigate to clean home page (/) - this clears the persisted URL completely
+    window.history.replaceState({}, '', '/');
+    window.location.href = '/';
     
-    console.log('[ChatThreadsSidebar] ✅ Session cleanup complete, page will refresh');
+    console.log('[ChatThreadsSidebar] ✅ Session cleanup complete, redirecting to clean home page');
   };
 
   return (
