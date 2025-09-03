@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
+import { directAudioAnimationService } from '@/services/voice/DirectAudioAnimationService';
 
 export const useConversationAudioLevel = () => {
   const [audioLevel, setAudioLevel] = useState(0);
@@ -13,8 +14,16 @@ export const useConversationAudioLevel = () => {
     let animationFrame: number;
 
     const updateAudioLevel = () => {
-      const level = conversationMicrophoneService.getCurrentAudioLevel();
+      // Get audio level from microphone service (for listening state)
+      const micLevel = conversationMicrophoneService.getCurrentAudioLevel();
+      
+      // Get current TTS audio level from the service
+      const ttsLevel = directAudioAnimationService.getCurrentLevel();
+      
+      // Use the higher of the two levels
+      const level = Math.max(micLevel, ttsLevel);
       setAudioLevel(level);
+      
       animationFrame = requestAnimationFrame(updateAudioLevel);
     };
 

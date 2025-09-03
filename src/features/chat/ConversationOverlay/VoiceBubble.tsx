@@ -1,7 +1,7 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Mic } from 'lucide-react';
-import { SpeakingBarsOptimized, SpeakingBarsRef } from './SpeakingBarsOptimized';
+import { SpeakingBarsOptimized } from './SpeakingBarsOptimized';
 import { directAudioAnimationService } from '@/services/voice/DirectAudioAnimationService';
 import TorusListening from './TorusListening';
 
@@ -11,13 +11,11 @@ interface Props {
 }
 
 export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
-  const speakingBarsRef = useRef<SpeakingBarsRef>(null);
-
-  // Subscribe to direct audio animation service (bypasses React state)
+  // Subscribe to direct audio animation service for smooth audio level updates
   useEffect(() => {
-    if (speakingBarsRef.current && state === 'replying') {
+    if (state === 'replying') {
       const unsubscribe = directAudioAnimationService.subscribe((level) => {
-        speakingBarsRef.current?.updateAudioLevel(level);
+        // The audio level will be passed down as a prop to SpeakingBarsOptimized
       });
       
       return unsubscribe;
@@ -26,7 +24,7 @@ export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
 
   // Show the appropriate component based on the current state
   if (state === 'replying') {
-    return <SpeakingBarsOptimized ref={speakingBarsRef} isActive={true} />;
+    return <SpeakingBarsOptimized isActive={true} audioLevel={audioLevel} />;
   }
   
   if (state === 'processing' || state === 'thinking') {

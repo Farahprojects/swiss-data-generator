@@ -4,6 +4,7 @@
 export class DirectAudioAnimationService {
   private listeners = new Set<(level: number) => void>();
   private isProcessing = false;
+  private currentLevel = 0;
 
   // Subscribe to audio level updates
   public subscribe(listener: (level: number) => void): () => void {
@@ -13,9 +14,15 @@ export class DirectAudioAnimationService {
 
   // Notify all listeners (called by AudioProcessingService)
   public notifyAudioLevel(level: number): void {
+    this.currentLevel = level;
     if (this.isProcessing) {
       this.listeners.forEach(listener => listener(level));
     }
+  }
+
+  // Get current audio level
+  public getCurrentLevel(): number {
+    return this.currentLevel;
   }
 
   // Start processing
@@ -26,6 +33,7 @@ export class DirectAudioAnimationService {
   // Stop processing
   public stop(): void {
     this.isProcessing = false;
+    this.currentLevel = 0;
     // Reset all listeners to zero
     this.listeners.forEach(listener => listener(0));
   }

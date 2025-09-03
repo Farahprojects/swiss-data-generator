@@ -1,64 +1,55 @@
-import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
+import React from 'react';
+import { motion } from 'framer-motion';
 
 interface Props {
   isActive: boolean;
+  audioLevel?: number;
 }
 
-export interface SpeakingBarsRef {
-  updateAudioLevel: (level: number) => void;
-}
-
-export const SpeakingBarsOptimized = forwardRef<SpeakingBarsRef, Props>(({ isActive }, ref) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  
-  // Expose method to parent for direct audio level updates
-  useImperativeHandle(ref, () => ({
-    updateAudioLevel: (level: number) => {
-      if (containerRef.current) {
-        // Direct DOM manipulation - no React re-renders!
-        containerRef.current.style.setProperty('--audio-level', level.toString());
-        containerRef.current.style.setProperty('--is-active', isActive ? '1' : '0');
-      }
-    }
-  }), [isActive]);
-
-  // Generate 4 bars with different base heights
+export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive, audioLevel = 0 }) => {
+  // Four bars with slightly different responsiveness for a subtle wave effect
   const bars = Array.from({ length: 4 }, (_, index) => {
-    const isMiddleBar = index === 1 || index === 2;
-    const baseHeight = isMiddleBar ? 0.8 : 0.6;
-    
-    return (
-      <div
-        key={index}
-        className="bg-black rounded-full"
-        style={{
-          // Dimensions
-          width: '16px',
-          height: '56px',
-          transformOrigin: 'center',
-          // CSS variable inputs
-          ['--bar-index' as any]: index.toString(),
-          ['--base-height' as any]: baseHeight.toString(),
-          // GPU-accelerated transform driven by CSS variables - MORE DYNAMIC!
-          transform: 'scaleY(calc(var(--base-height) + var(--audio-level) * 1.2))',
-          opacity: `calc(0.75 + var(--is-active) * 0.25)`,
-          // Smooth transitions
-          transition: 'transform 100ms cubic-bezier(0.4, 0, 0.2, 1), opacity 150ms ease'
-        } as React.CSSProperties}
-      />
-    );
+    const responsiveness = 0.6 + index * 0.12; // 0.6, 0.72, 0.84, 0.96
+
+    // Scale from center: keep it smaller at rest and grow with audio
+    // Half-size baseline so it feels compact ("not long candles")
+    const minScale = 0.45;
+    const extra = Math.min(0.75, audioLevel * responsiveness); // cap growth
+    const scaleY = minScale + extra; // 0.45 .. ~1.2
+
+    return {
+      id: index,
+      scaleY,
+      delay: index * 0.06, // slight phase shift
+    };
   });
 
   return (
-    <div 
-      ref={containerRef}
-      className="flex items-center justify-center gap-3 h-16 w-28"
-      style={{
-        ['--audio-level' as any]: '0',
-        ['--is-active' as any]: isActive ? '1' : '0',
-      } as React.CSSProperties}
-    >
-      {bars}
+    <div className="flex items-center justify-center gap-3 h-16 w-28">
+      {bars.map((bar) => (
+        <motion.div
+          key={bar.id}
+          className="bg-black rounded-full"
+          style={{
+            width: '16px', // thicker bars
+            height: '56px', // shorter overall height; we animate from center
+            transformOrigin: 'center',
+          }}
+          animate={{
+            scaleY: bar.scaleY,
+            opacity: audioLevel > 0.02 ? 1 : 0.7,
+          }}
+          transition={{
+            scaleY: {
+              type: 'spring',
+              stiffness: 380,
+              damping: 26,
+              delay: bar.delay,
+            },
+            opacity: { duration: 0.15 },
+          }}
+        />
+      ))}
     </div>
   );
-});
+};
