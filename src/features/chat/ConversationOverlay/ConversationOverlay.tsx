@@ -132,6 +132,10 @@ export const ConversationOverlay: React.FC = () => {
       source.connect(analyser);
       analyser.connect(audioContext.destination);
       
+      // 🚀 NEW: Ensure analyser is set up for THIS audio session
+      console.log('[ConversationOverlay] 🎵 Setting up analyser for current audio session');
+      audioProcessingService.setAnalyser(analyser);
+      
       // 🚀 NEW: Start optimized audio processing BEFORE playing audio
       console.log('[ConversationOverlay] 🎵 Starting audio processing with analyser:', analyser);
       console.log('[ConversationOverlay] 🎵 Analyser fftSize:', analyser.fftSize);
