@@ -26,7 +26,6 @@ export class ConversationMicrophoneServiceClass {
   private mediaStreamSource: MediaStreamAudioSourceNode | null = null;
   private monitoringRef = { current: false };
   private audioLevel = 0;
-  private shuttingDown = false; // NEW: Shutdown flag for silent teardown
   
   private options: ConversationMicrophoneOptions = {};
   private listeners = new Set<() => void>();
@@ -57,17 +56,24 @@ export class ConversationMicrophoneServiceClass {
    */
   public async startRecording(): Promise<boolean> {
     this.log('[CONVERSATION-TURN] startRecording called - checking state flags');
-    this.log(`[CONVERSATION-TURN] isStartingRecording: ${this.isStartingRecording}, isRecording: ${this.isRecording}, monitoringRef: ${this.monitoringRef.current}, shuttingDown: ${this.shuttingDown}`);
-    
-    // 🚫 SHUTDOWN GUARD: Silent return if shutting down
-    if (this.shuttingDown) {
-      this.log('🔇 Shutting down, silently skipping startRecording');
-      return false;
-    }
+    this.log(`[CONVERSATION-TURN] isStartingRecording: ${this.isStartingRecording}, isRecording: ${this.isRecording}, monitoringRef: ${this.monitoringRef.current}`);
     
     // Defensively reset stale state flags
     this.monitoringRef.current = false;
     this.audioLevel = 0;
+    
+    // 🚫 GUARD: Don't start recording if conversation modal is closed
+    try {
+      const { useConversationUIStore } = await import('@/features/chat/conversation-ui-store');
+      const conversationStore = useConversationUIStore.getState();
+      
+      if (!conversationStore.isConversationOpen) {
+        this.log('🎤 Modal closed, skipping startRecording');
+        return false;
+      }
+    } catch (error) {
+      this.log('🎤 Could not check conversation state, proceeding with caution');
+    }
     
     // Guard against concurrent recording starts
     if (this.isStartingRecording) {
@@ -98,14 +104,9 @@ export class ConversationMicrophoneServiceClass {
 
         this.stream = this.cachedStream;
       } else {
-        // 🚫 SHUTDOWN GUARD: Silent return if shutting down, less scary error otherwise
-        if (this.shuttingDown) {
-          this.log('🔇 Shutting down, no cached stream available (expected)');
-          return false;
-        } else {
-          this.error('❌ No cached stream available - conversation flow broken');
-          return false;
-        }
+        // No fallback - this should never happen in single-gesture flow
+        this.error('❌ No cached stream available - conversation flow broken');
+        return false;
       }
 
       // Ensure the stream is ready and has active tracks
@@ -340,9 +341,6 @@ export class ConversationMicrophoneServiceClass {
     this.log('🧹 Cleaning up conversation microphone service');
     this.log('[CONVERSATION-TURN] cleanup called - resetting all state flags');
     
-    // 🚫 SHUTDOWN GUARD: Set shutdown flag for silent teardown
-    this.shuttingDown = true;
-    
     // Reset state flags immediately
     this.isStartingRecording = false;
     this.monitoringRef.current = false;
@@ -421,14 +419,6 @@ export class ConversationMicrophoneServiceClass {
   }
 
   /**
-   * SET SHUTDOWN - Mark service as shutting down for silent teardown
-   */
-  setShuttingDown(shuttingDown: boolean): void {
-    this.shuttingDown = shuttingDown;
-    this.log(`🔇 Shutdown flag set to: ${shuttingDown}`);
-  }
-
-  /**
    * SUBSCRIBE - For React state updates
    */
   subscribe(listener: () => void): () => void {
@@ -498,9 +488,6 @@ export class ConversationMicrophoneServiceClass {
   forceCleanup(): void {
     this.log('🚨 Force cleanup');
     this.log('[CONVERSATION-TURN] forceCleanup called - resetting all state flags');
-    
-    // 🚫 SHUTDOWN GUARD: Set shutdown flag for silent teardown
-    this.shuttingDown = true;
     
     // Reset all state flags immediately  
     this.isRecording = false;
