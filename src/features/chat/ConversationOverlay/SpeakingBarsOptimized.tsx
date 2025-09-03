@@ -30,10 +30,20 @@ export const SpeakingBarsOptimized = forwardRef<SpeakingBarsRef, Props>(({ isAct
     return (
       <div
         key={index}
-        className="speaking-bar"
+        className="bg-black rounded-full"
         style={{
-          '--bar-index': index.toString(),
-          '--base-height': baseHeight.toString(),
+          // Dimensions
+          width: '16px',
+          height: '56px',
+          transformOrigin: 'center',
+          // CSS variable inputs
+          ['--bar-index' as any]: index.toString(),
+          ['--base-height' as any]: baseHeight.toString(),
+          // GPU-accelerated transform driven by CSS variables
+          transform: 'scaleY(calc(var(--base-height) + var(--audio-level) * 0.4))',
+          opacity: `calc(0.75 + var(--is-active) * 0.25)`,
+          // Smooth transitions
+          transition: 'transform 100ms cubic-bezier(0.4, 0, 0.2, 1), opacity 150ms ease'
         } as React.CSSProperties}
       />
     );
@@ -42,46 +52,13 @@ export const SpeakingBarsOptimized = forwardRef<SpeakingBarsRef, Props>(({ isAct
   return (
     <div 
       ref={containerRef}
-      className="speaking-bars-container"
+      className="flex items-center justify-center gap-3 h-16 w-28"
       style={{
-        '--audio-level': '0',
-        '--is-active': isActive ? '1' : '0',
+        ['--audio-level' as any]: '0',
+        ['--is-active' as any]: isActive ? '1' : '0',
       } as React.CSSProperties}
     >
       {bars}
-      
-      {/* CSS handles all animations via custom properties */}
-      <style jsx>{`
-        .speaking-bars-container {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 12px;
-          height: 64px;
-          width: 112px;
-        }
-        
-        .speaking-bar {
-          width: 16px;
-          height: 56px;
-          background-color: rgb(0, 0, 0);
-          border-radius: 50%;
-          transform-origin: center;
-          
-          /* GPU-accelerated animations via CSS variables */
-          transform: scaleY(calc(var(--base-height) + var(--audio-level) * 0.4));
-          opacity: calc(0.75 + var(--is-active) * 0.25);
-          
-          /* Smooth transitions for GPU acceleration */
-          transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1),
-                      opacity 0.15s ease;
-        }
-        
-        /* Hover effects */
-        .speaking-bar:hover {
-          transform: scaleY(calc(var(--base-height) + var(--audio-level) * 0.4)) scale(1.1);
-        }
-      `}</style>
     </div>
   );
 });
