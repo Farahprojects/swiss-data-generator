@@ -134,7 +134,7 @@ serve(async (req) => {
           chat_id,
           role: "assistant",
           text: assistantText,
-          client_msg_id: `assistant_${client_msg_id || userMessageData.client_msg_id}`,
+          client_msg_id: crypto.randomUUID(),
           status: "complete",
           meta: { mode: 'conversation' }
         };
