@@ -10,6 +10,11 @@ export class AudioProcessingService {
   private analyser: AnalyserNode | null = null;
   private dataArray: Uint8Array | null = null;
   private animationFrameId: number | null = null;
+  
+  // 🚀 MOBILE OPTIMIZATION: Detect mobile and adjust processing
+  private isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  private mobileThrottleMs = 100; // 10fps for mobile (vs 15fps for desktop)
+  private desktopThrottleMs = 67; // 15fps for desktop
 
   constructor() {
     this.initWorker();
@@ -59,6 +64,9 @@ export class AudioProcessingService {
       return;
     }
 
+    // 🚀 MOBILE OPTIMIZATION: Set adaptive throttling before starting
+    this.setAdaptiveThrottling();
+    
     console.log('[AudioProcessingService] 🚀 Starting audio processing...');
 
     const processFrame = () => {
@@ -97,6 +105,18 @@ export class AudioProcessingService {
 
   public setThrottle(fps: number) {
     if (this.worker && this.isReady) {
+      this.worker.postMessage({ type: 'set-throttle', data: { fps } });
+    }
+  }
+  
+  // 🚀 MOBILE OPTIMIZATION: Set adaptive throttling based on device
+  public setAdaptiveThrottling() {
+    if (this.worker && this.isReady) {
+      const throttleMs = this.isMobile ? this.mobileThrottleMs : this.desktopThrottleMs;
+      const fps = Math.round(1000 / throttleMs);
+      
+      console.log(`[AudioProcessingService] 🚀 Setting adaptive throttling: ${this.isMobile ? 'Mobile' : 'Desktop'} - ${fps}fps (${throttleMs}ms)`);
+      
       this.worker.postMessage({ type: 'set-throttle', data: { fps } });
     }
   }

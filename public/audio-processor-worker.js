@@ -3,7 +3,7 @@
 
 class AudioProcessor {
   constructor() {
-    this.throttleMs = 50; // 20fps max
+    this.throttleMs = 67; // 🚀 MOBILE OPTIMIZATION: Reduced from 20fps to 15fps for lighter processing
     this.lastUpdate = 0;
     this.smoothingFactor = 0.8;
     this.currentLevel = 0;

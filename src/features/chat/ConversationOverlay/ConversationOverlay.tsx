@@ -82,7 +82,7 @@ export const ConversationOverlay: React.FC = () => {
     if (!audioContextRef.current) {
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       analyserRef.current = audioContextRef.current.createAnalyser();
-      analyserRef.current.fftSize = 256;
+      analyserRef.current.fftSize = 128; // 🚀 MOBILE OPTIMIZATION: Reduced from 256 for lighter processing
       
       // 🚀 NEW: Set up audio processing service with analyser
       audioProcessingService.setAnalyser(analyserRef.current);
@@ -111,7 +111,7 @@ export const ConversationOverlay: React.FC = () => {
         console.log('[ConversationOverlay] 🎵 AudioContext closed or missing, recreating...');
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
         analyserRef.current = audioContextRef.current.createAnalyser();
-        analyserRef.current.fftSize = 256;
+        analyserRef.current.fftSize = 128; // 🚀 MOBILE OPTIMIZATION: Reduced from 256 for lighter processing
       }
       
       const audioContext = audioContextRef.current;
