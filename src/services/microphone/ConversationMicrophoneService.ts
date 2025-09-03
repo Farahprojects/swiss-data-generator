@@ -26,6 +26,7 @@ export class ConversationMicrophoneServiceClass {
   private mediaStreamSource: MediaStreamAudioSourceNode | null = null;
   private monitoringRef = { current: false };
   private audioLevel = 0;
+  private shuttingDown = false; // NEW: Shutdown flag for silent teardown
   
   private options: ConversationMicrophoneOptions = {};
   private listeners = new Set<() => void>();
@@ -56,7 +57,13 @@ export class ConversationMicrophoneServiceClass {
    */
   public async startRecording(): Promise<boolean> {
     this.log('[CONVERSATION-TURN] startRecording called - checking state flags');
-    this.log(`[CONVERSATION-TURN] isStartingRecording: ${this.isStartingRecording}, isRecording: ${this.isRecording}, monitoringRef: ${this.monitoringRef.current}`);
+    this.log(`[CONVERSATION-TURN] isStartingRecording: ${this.isStartingRecording}, isRecording: ${this.isRecording}, monitoringRef: ${this.monitoringRef.current}, shuttingDown: ${this.shuttingDown}`);
+    
+    // 🚫 SHUTDOWN GUARD: Silent return if shutting down
+    if (this.shuttingDown) {
+      this.log('🔇 Shutting down, silently skipping startRecording');
+      return false;
+    }
     
     // Defensively reset stale state flags
     this.monitoringRef.current = false;
@@ -91,9 +98,14 @@ export class ConversationMicrophoneServiceClass {
 
         this.stream = this.cachedStream;
       } else {
-        // No fallback - this should never happen in single-gesture flow
-        this.error('❌ No cached stream available - conversation flow broken');
-        return false;
+        // 🚫 SHUTDOWN GUARD: Silent return if shutting down, less scary error otherwise
+        if (this.shuttingDown) {
+          this.log('🔇 Shutting down, no cached stream available (expected)');
+          return false;
+        } else {
+          this.error('❌ No cached stream available - conversation flow broken');
+          return false;
+        }
       }
 
       // Ensure the stream is ready and has active tracks
@@ -328,6 +340,9 @@ export class ConversationMicrophoneServiceClass {
     this.log('🧹 Cleaning up conversation microphone service');
     this.log('[CONVERSATION-TURN] cleanup called - resetting all state flags');
     
+    // 🚫 SHUTDOWN GUARD: Set shutdown flag for silent teardown
+    this.shuttingDown = true;
+    
     // Reset state flags immediately
     this.isStartingRecording = false;
     this.monitoringRef.current = false;
@@ -406,6 +421,14 @@ export class ConversationMicrophoneServiceClass {
   }
 
   /**
+   * SET SHUTDOWN - Mark service as shutting down for silent teardown
+   */
+  setShuttingDown(shuttingDown: boolean): void {
+    this.shuttingDown = shuttingDown;
+    this.log(`🔇 Shutdown flag set to: ${shuttingDown}`);
+  }
+
+  /**
    * SUBSCRIBE - For React state updates
    */
   subscribe(listener: () => void): () => void {
@@ -475,6 +498,9 @@ export class ConversationMicrophoneServiceClass {
   forceCleanup(): void {
     this.log('🚨 Force cleanup');
     this.log('[CONVERSATION-TURN] forceCleanup called - resetting all state flags');
+    
+    // 🚫 SHUTDOWN GUARD: Set shutdown flag for silent teardown
+    this.shuttingDown = true;
     
     // Reset all state flags immediately  
     this.isRecording = false;

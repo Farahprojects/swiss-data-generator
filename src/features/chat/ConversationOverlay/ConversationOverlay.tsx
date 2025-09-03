@@ -126,19 +126,23 @@ export const ConversationOverlay: React.FC = () => {
          conversationTtsService.setAudioLevelForAnimation(0);
          setState('listening');
          
-         // 🚨 CHECK: Only restart microphone if we're not shutting down
-         if (!isShuttingDown.current) {
-           // 🎤 Restart microphone recording for next turn
-           try {
-             conversationMicrophoneService.startRecording();
-             console.log('[ConversationOverlay] 🎤 Microphone recording restarted for next turn');
-           } catch (error) {
-             console.error('[ConversationOverlay] ❌ Failed to restart microphone recording:', error);
-           }
-         } else {
-           // 🚫 Shutting down - no auto-restart
-           console.log('[ConversationOverlay] 🎤 Shutting down, skipping microphone restart');
+                // 🚨 CHECK: Only restart microphone if we're not shutting down AND stream exists
+       if (!isShuttingDown.current && conversationMicrophoneService.getStream()) {
+         // 🎤 Restart microphone recording for next turn
+         try {
+           conversationMicrophoneService.startRecording();
+           console.log('[ConversationOverlay] 🎤 Microphone recording restarted for next turn');
+         } catch (error) {
+           console.error('[ConversationOverlay] ❌ Failed to restart microphone recording:', error);
          }
+       } else {
+         // 🚫 Shutting down or no stream - no auto-restart
+         if (isShuttingDown.current) {
+           console.log('[ConversationOverlay] 🎤 Shutting down, skipping microphone restart');
+         } else {
+           console.log('[ConversationOverlay] 🎤 No stream available, skipping microphone restart');
+         }
+       }
        };
       
       // 🎯 ANIMATION: Speaking bars follow state
@@ -190,6 +194,10 @@ export const ConversationOverlay: React.FC = () => {
     hasStarted.current = true;
     
     try {
+      // 🚨 REOPEN ROBUSTNESS: Force cleanup to guarantee clean slate
+      conversationMicrophoneService.forceCleanup();
+      console.log('[ConversationOverlay] 🚨 Force cleanup completed, starting fresh');
+      
       // 🎯 STATE DRIVEN: Establish connection
       setState('establishing');
       const success = await establishConnection();
@@ -225,6 +233,20 @@ export const ConversationOverlay: React.FC = () => {
       
       // 🎯 STATE DRIVEN: Start recording AFTER initialization
       console.log('[ConversationOverlay] 🎤 Starting recording...');
+      
+      // 🎤 HELPFUL LOGGING: Check track state before starting
+      const currentStream = conversationMicrophoneService.getStream();
+      if (currentStream) {
+        const track = currentStream.getAudioTracks()[0];
+        if (track) {
+          console.log('[ConversationOverlay] 🎤 Track state before start:', {
+            readyState: track.readyState,
+            enabled: track.enabled,
+            muted: track.muted
+          });
+        }
+      }
+      
       const recordingStarted = await conversationMicrophoneService.startRecording();
       console.log('[ConversationOverlay] 🎤 Recording started:', recordingStarted);
       
@@ -307,8 +329,8 @@ export const ConversationOverlay: React.FC = () => {
       connectionRef.current = null;
     }
     
-    // Stop microphone and release all resources
-    conversationMicrophoneService.stopRecording();
+    // Cancel recording (prevents onRecordingComplete from firing) and cleanup microphone
+    conversationMicrophoneService.cancelRecording();
     conversationMicrophoneService.cleanup();
     
     // 🎯 STATE DRIVEN: Reset to listening
