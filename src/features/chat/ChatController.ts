@@ -318,11 +318,22 @@ class ChatController {
   }
 
   async endTurn() {
-    // Guard: Don't process if conversation overlay is open
+    // 🚫 GUARD: Don't process if conversation overlay is open
     const { useConversationUIStore } = await import('@/features/chat/conversation-ui-store');
-    if (useConversationUIStore.getState().isConversationOpen) {
+    const conversationStore = useConversationUIStore.getState();
+    
+    if (conversationStore.isConversationOpen) {
       console.log('[ChatController] endTurn: Blocked - conversation mode active');
       return;
+    }
+    
+    // 🚫 ADDITIONAL GUARD: Check if there's an active conversation overlay in DOM
+    if (typeof document !== 'undefined') {
+      const conversationOverlay = document.querySelector('[data-conversation-overlay]');
+      if (conversationOverlay) {
+        console.log('[ChatController] endTurn: Blocked - conversation overlay detected in DOM');
+        return;
+      }
     }
 
     if (!this.isTurnActive) return;
