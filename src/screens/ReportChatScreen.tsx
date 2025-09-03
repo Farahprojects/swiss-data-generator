@@ -39,7 +39,6 @@ const ReportChatScreen = () => {
 
     // 🚫 GUARD: Don't check if report is already ready in store (prevents refresh loops)
     if (useReportReadyStore.getState().isReportReady) {
-      console.log(`[ChatPage] 🚫 Skipping report check - already ready in store for: ${guestId}`);
       return;
     }
 
@@ -129,7 +128,6 @@ const ReportChatScreen = () => {
 
     // 🚫 GUARD: Don't start polling if report is already ready (prevents refresh loops)
     if (useReportReadyStore.getState().isReportReady) {
-      console.log(`[ChatPage] 🚫 Skipping polling - report already ready for: ${guestId}`);
       return;
     }
 
@@ -210,11 +208,8 @@ const ReportChatScreen = () => {
   // URL change listener - React will automatically re-render when URL params change
   // This is just for logging and debugging
   useEffect(() => {
-    console.log(`[ChatPage] 🔗 URL parameters updated - guest_id: ${guestId}, chat_id: ${urlChatId}`);
-    
     // Reset guest thread ready state when URL parameters are cleared
     if (!guestId && isGuestThreadReady) {
-      console.log(`[ChatPage] 🔄 Guest ID cleared, resetting thread ready state`);
       setIsGuestThreadReady(false);
       hasTriggeredGenerationRef.current = false;
     }
@@ -226,7 +221,6 @@ const ReportChatScreen = () => {
 
     // 🚫 GUARD: Don't rehydrate if report is already ready (prevents refresh loops)
     if (useReportReadyStore.getState().isReportReady) {
-      console.log(`[ChatPage] 🚫 Skipping rehydration - report already ready for: ${guestId}`);
       return;
     }
 

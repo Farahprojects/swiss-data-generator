@@ -17,9 +17,3 @@ export const isSupabaseConfigured = (): boolean => {
   return !!(SUPABASE_URL && SUPABASE_ANON_KEY);
 };
 
-// Log configuration status (for debugging)
-if (typeof window !== 'undefined') {
-  console.log('[Supabase Config] URL:', SUPABASE_URL ? 'configured' : 'missing');
-  console.log('[Supabase Config] Anon Key:', SUPABASE_ANON_KEY ? 'configured' : 'missing');
-  console.log('[Supabase Config] Using fallbacks:', !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
-}
