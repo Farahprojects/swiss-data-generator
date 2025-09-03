@@ -12,6 +12,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mic } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { chatController } from '@/features/chat/ChatController';
 
 // 🎯 CORE STATE MACHINE: This drives everything
 type ConversationState = 'listening' | 'thinking' | 'replying' | 'connecting' | 'establishing';
@@ -158,25 +159,30 @@ export const ConversationOverlay: React.FC = () => {
     }
   }, []);
 
-  // 🎯 CONNECTION: Simple WebSocket setup
-  const establishConnection = useCallback(async () => {
+  // 🎯 UNIFIED WEBSOCKET: Listen to ChatController's WebSocket via custom events
+  const setupTtsListener = useCallback(() => {
     if (!chat_id) return false;
     
     try {
-      const connection = supabase.channel(`conversation:${chat_id}`);
-      
-      // 🎯 DIRECT: WebSocket → Audio
-      connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
-        if (payload.audioBytes) {
-          playAudioImmediately(payload.audioBytes, payload.text);
+      // Listen for TTS events from ChatController's unified WebSocket
+      const handleTtsReady = (event: CustomEvent) => {
+        const { audioBytes, text } = event.detail;
+        if (audioBytes) {
+          console.log('[ConversationOverlay] 🎵 TTS audio received via unified WebSocket');
+          playAudioImmediately(audioBytes, text);
         }
-      });
+      };
       
-      connection.subscribe();
-      connectionRef.current = connection;
+      // Add event listener
+      window.addEventListener('tts-ready', handleTtsReady as EventListener);
+      
+      // Store cleanup function
+      connectionRef.current = { cleanup: () => window.removeEventListener('tts-ready', handleTtsReady as EventListener) };
+      
+      console.log('[ConversationOverlay] 🎵 TTS listener setup via unified WebSocket');
       return true;
     } catch (error) {
-      console.error('[ConversationOverlay] Connection failed:', error);
+      console.error('[ConversationOverlay] TTS listener setup failed:', error);
       return false;
     }
   }, [chat_id, playAudioImmediately]);
@@ -190,9 +196,12 @@ export const ConversationOverlay: React.FC = () => {
     hasStarted.current = true;
     
     try {
-      // 🎯 STATE DRIVEN: Establish connection
+      // 🎯 PAUSE: Stop text mode realtime to prevent WebSocket conflicts
+      chatController.pauseRealtimeForConversationMode();
+      
+      // 🎯 STATE DRIVEN: Setup TTS listener via unified WebSocket
       setState('establishing');
-      const success = await establishConnection();
+      const success = await setupTtsListener();
       if (!success) {
         setState('connecting');
         return;
@@ -242,7 +251,7 @@ export const ConversationOverlay: React.FC = () => {
     } finally {
       setIsStarting(false);
     }
-  }, [chat_id, isStarting, establishConnection]);
+  }, [chat_id, isStarting, setupTtsListener]);
 
   // 🎯 PROCESSING: Handle recording completion
   const processRecording = useCallback(async (audioBlob: Blob) => {
@@ -301,15 +310,20 @@ export const ConversationOverlay: React.FC = () => {
       currentTtsSourceRef.current = null;
     }
     
-    // Close connection
-    if (connectionRef.current) {
-      connectionRef.current.unsubscribe();
+    // Cleanup TTS listener
+    if (connectionRef.current && connectionRef.current.cleanup) {
+      connectionRef.current.cleanup();
       connectionRef.current = null;
     }
     
     // Stop microphone and release all resources
     conversationMicrophoneService.stopRecording();
     conversationMicrophoneService.cleanup();
+    
+    // 🎯 RESUME: Restart text mode realtime after conversation mode ends
+    if (chat_id) {
+      chatController.resumeRealtimeAfterConversationMode(chat_id);
+    }
     
     // 🎯 STATE DRIVEN: Reset to listening
     setState('listening');
@@ -318,7 +332,7 @@ export const ConversationOverlay: React.FC = () => {
     isShuttingDown.current = false;
     
     closeConversation();
-  }, [closeConversation]);
+  }, [closeConversation, chat_id]);
 
   // 🎯 MICROPHONE: Service is now initialized in handleStart, no need for separate useEffect
 

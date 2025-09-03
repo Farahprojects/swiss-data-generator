@@ -114,14 +114,20 @@ class ChatController {
             const existingMessage = messages.find(m => m.id === updatedMessage.id);
             if (existingMessage) {
               updateMessage(updatedMessage.id, updatedMessage);
-            } else {
-              // Message not in store yet, add it
-              addMessage(updatedMessage);
             }
           }
         )
+        .on(
+          'broadcast',
+          { event: 'tts-ready' },
+          ({ payload }) => {
+            // 🎵 TTS Audio Event: Handle telephone call for conversation mode
+            console.log('[ChatController] 🎵 TTS audio received via unified WebSocket');
+            this.handleTtsAudio(payload);
+          }
+        )
         .subscribe((status) => {
-          // Realtime subscription status
+          console.log('[ChatController] 📡 Unified WebSocket status (text + TTS):', status);
         });
     } catch (error) {
       console.error('[ChatController] Failed to setup realtime subscription:', error);
@@ -145,9 +151,50 @@ class ChatController {
 
   private cleanupRealtimeSubscription() {
     if (this.realtimeChannel) {
+      console.log('[ChatController] 🧹 Cleaning up text mode realtime subscription');
       supabase.removeChannel(this.realtimeChannel);
       this.realtimeChannel = null;
     }
+  }
+
+  /**
+   * Pause realtime subscription when conversation mode is active
+   * This prevents conflicts between text and conversation mode WebSockets
+   */
+  public pauseRealtimeForConversationMode(): void {
+    if (this.realtimeChannel) {
+      console.log('[ChatController] ⏸️ Pausing text mode realtime for conversation mode');
+      this.cleanupRealtimeSubscription();
+    }
+  }
+
+  /**
+   * Resume realtime subscription when conversation mode ends
+   */
+  public resumeRealtimeAfterConversationMode(chat_id: string): void {
+    console.log('[ChatController] ▶️ Resuming unified realtime after conversation mode');
+    this.setupRealtimeSubscription(chat_id);
+  }
+
+  /**
+   * Handle TTS audio events from unified WebSocket
+   * This replaces the separate conversation WebSocket
+   */
+  private handleTtsAudio(payload: any): void {
+    if (payload.audioBytes) {
+      console.log('[ChatController] 🎵 TTS audio ready, notifying conversation mode');
+      // Emit event for conversation mode to handle audio playback
+      this.emitTtsReady(payload);
+    }
+  }
+
+  /**
+   * Emit TTS ready event for conversation mode listeners
+   */
+  private emitTtsReady(payload: any): void {
+    // Use a custom event to communicate with ConversationOverlay
+    const event = new CustomEvent('tts-ready', { detail: payload });
+    window.dispatchEvent(event);
   }
 
 
