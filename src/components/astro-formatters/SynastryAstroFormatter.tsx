@@ -35,13 +35,6 @@ export const SynastryAstroFormatter: React.FC<SynastryAstroFormatterProps> = ({
   // Normalize raw payload first for UI consumption
   const vm = normalizeSync(swissData);
   
-  console.log('[SynastryAstroFormatter] Normalized VM:', {
-    subjectCount: vm.subjects.length,
-    subjectNames: vm.subjects.map(s => s.name),
-    analysisDate: vm.analysisDate,
-    timeBasis: vm.timeBasis
-  });
-  
   // Use the dynamic parser for synastry/composite sections
   const astroData = parseAstroData(swissData);
   const { synastry_aspects, composite_chart } = astroData;
@@ -134,14 +127,6 @@ export const SynastryAstroFormatter: React.FC<SynastryAstroFormatterProps> = ({
                     </TabsList>
                 
                     {vm.subjects.map((subject) => {
-                      console.log(`[Panel Mount] ${subject.key} (${subject.name}):`, {
-                        angles: !!subject.natal?.angles,
-                        houses: !!subject.natal?.houses,
-                        planets: !!subject.natal?.planets,
-                        transits: !!subject.transits,
-                        tzDisplay: subject.tzDisplay
-                      });
-                      
                       // Compute final timezone display
                       const tzDisplay = (subject.transits?.timezone && subject.transits.timezone !== 'UTC')
                         ? subject.transits.timezone

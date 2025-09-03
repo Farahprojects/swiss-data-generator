@@ -43,13 +43,6 @@ export type SyncVM = {
 };
 
 export function normalizeSync(payload: any): SyncVM {
-  console.log('[normalizeSync] Debug payload structure:', {
-    hasNatal: !!payload?.natal,
-    hasNatalSubjects: !!payload?.natal?.subjects,
-    hasTransits: !!payload?.transits,
-    natalKeys: Object.keys(payload?.natal?.subjects || {}),
-    transitKeys: Object.keys(payload?.transits || {})
-  });
   
   const meta = payload?.meta ?? {};
   let analysisDate = [meta.date, meta.time].filter(Boolean).join(" ");
@@ -68,19 +61,9 @@ export function normalizeSync(payload: any): SyncVM {
     const natal = natalSubjects?.[key] ?? {};
     const transits = trans?.[key];
     
-    console.log(`[normalizeSync] Processing ${key}:`, {
-      hasNatal: !!natal,
-      hasTransits: !!transits,
-      natalName: natal?.name,
-      transitsName: transits?.name,
-      natalHasAngles: !!natal?.angles,
-      natalHasPlanets: !!natal?.planets,
-      transitsHasPlanets: !!transits?.planets,
-      transitsHasAspects: !!transits?.aspects_to_natal
-    });
+
     
     if (!natal && !transits) {
-      console.log(`[normalizeSync] Skipping ${key} - no data`);
       return null;
     }
 
@@ -94,7 +77,7 @@ export function normalizeSync(payload: any): SyncVM {
         ? transits.timezone 
         : natal?.meta?.tz || undefined;
 
-    console.log(`[normalizeSync] Created subject ${key}:`, { name, tzDisplay });
+
 
     return { 
       key, 
