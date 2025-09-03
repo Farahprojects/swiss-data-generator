@@ -22,14 +22,14 @@ class AudioProcessor {
     
     // Only emit if there's meaningful audio
     if (this.currentLevel > 0.02) {
-      this.postMessage({
+      self.postMessage({
         type: 'audio-level',
         level: this.currentLevel,
         timestamp: now
       });
     } else {
       // Emit zero during silence
-      this.postMessage({
+      self.postMessage({
         type: 'audio-level',
         level: 0,
         timestamp: now
