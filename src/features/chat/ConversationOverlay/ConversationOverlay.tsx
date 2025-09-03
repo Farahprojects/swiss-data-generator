@@ -12,7 +12,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mic } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { chatController } from '@/features/chat/ChatController';
 
 // 🎯 CORE STATE MACHINE: This drives everything
 type ConversationState = 'listening' | 'thinking' | 'replying' | 'connecting' | 'establishing';
@@ -85,11 +84,9 @@ export const ConversationOverlay: React.FC = () => {
 
   // 🎯 DIRECT AUDIO: WebSocket → Browser Audio in one function
   const playAudioImmediately = useCallback(async (audioBytes: number[], text?: string) => {
-    // 🚫 GUARD: Only play audio if conversation modal is open
-    if (!isConversationOpen || isShuttingDown.current) {
-      console.log('[ConversationOverlay] 🚫 Audio ignored - conversation modal not open or shutting down');
-      return;
-    }
+    if (isShuttingDown.current) return;
+    
+
     
     try {
       // 🎯 CHECK: Ensure AudioContext is available and running
@@ -159,41 +156,30 @@ export const ConversationOverlay: React.FC = () => {
       console.error('[ConversationOverlay] ❌ Direct audio failed:', error);
       setState('listening');
     }
-  }, [isConversationOpen]);
+  }, []);
 
-  // 🎯 UNIFIED WEBSOCKET: Listen to ChatController's WebSocket via custom events
-  const setupTtsListener = useCallback(() => {
-    if (!chat_id || !isConversationOpen) return false;
+  // 🎯 CONNECTION: Simple WebSocket setup
+  const establishConnection = useCallback(async () => {
+    if (!chat_id) return false;
     
     try {
-      // Listen for TTS events from ChatController's unified WebSocket
-      const handleTtsReady = (event: CustomEvent) => {
-        // 🚫 GUARD: Only process TTS if conversation modal is open
-        if (!isConversationOpen) {
-          console.log('[ConversationOverlay] 🚫 TTS ignored - conversation modal not open');
-          return;
+      const connection = supabase.channel(`conversation:${chat_id}`);
+      
+      // 🎯 DIRECT: WebSocket → Audio
+      connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
+        if (payload.audioBytes) {
+          playAudioImmediately(payload.audioBytes, payload.text);
         }
-        
-        const { audioBytes, text } = event.detail;
-        if (audioBytes) {
-          console.log('[ConversationOverlay] 🎵 TTS audio received via unified WebSocket');
-          playAudioImmediately(audioBytes, text);
-        }
-      };
+      });
       
-      // Add event listener
-      window.addEventListener('tts-ready', handleTtsReady as EventListener);
-      
-      // Store cleanup function
-      connectionRef.current = { cleanup: () => window.removeEventListener('tts-ready', handleTtsReady as EventListener) };
-      
-      console.log('[ConversationOverlay] 🎵 TTS listener setup via unified WebSocket');
+      connection.subscribe();
+      connectionRef.current = connection;
       return true;
     } catch (error) {
-      console.error('[ConversationOverlay] TTS listener setup failed:', error);
+      console.error('[ConversationOverlay] Connection failed:', error);
       return false;
     }
-  }, [chat_id, isConversationOpen, playAudioImmediately]);
+  }, [chat_id, playAudioImmediately]);
 
   // 🎯 START: Initialize conversation
   const handleStart = useCallback(async () => {
@@ -204,12 +190,9 @@ export const ConversationOverlay: React.FC = () => {
     hasStarted.current = true;
     
     try {
-      // 🎯 PAUSE: Stop text mode realtime to prevent WebSocket conflicts
-      chatController.pauseRealtimeForConversationMode();
-      
-      // 🎯 STATE DRIVEN: Setup TTS listener via unified WebSocket
+      // 🎯 STATE DRIVEN: Establish connection
       setState('establishing');
-      const success = await setupTtsListener();
+      const success = await establishConnection();
       if (!success) {
         setState('connecting');
         return;
@@ -259,16 +242,10 @@ export const ConversationOverlay: React.FC = () => {
     } finally {
       setIsStarting(false);
     }
-  }, [chat_id, isStarting, isConversationOpen, setupTtsListener]);
+  }, [chat_id, isStarting, establishConnection]);
 
   // 🎯 PROCESSING: Handle recording completion
   const processRecording = useCallback(async (audioBlob: Blob) => {
-    // 🚫 GUARD: Only process if conversation modal is open
-    if (!isConversationOpen) {
-      console.log('[ConversationOverlay] 🚫 Recording ignored - conversation modal not open');
-      return;
-    }
-    
     console.log('[ConversationOverlay] 🎤 Processing recording, blob size:', audioBlob.size, 'chat_id:', chat_id);
     
     if (!chat_id) {
@@ -312,7 +289,7 @@ export const ConversationOverlay: React.FC = () => {
       console.error('[ConversationOverlay] ❌ Processing failed:', error);
       setState('listening');
     }
-  }, [chat_id, isConversationOpen]);
+  }, [chat_id]);
 
   // 🎯 CLEANUP: Reset everything
   const handleModalClose = useCallback(async () => {
@@ -324,20 +301,15 @@ export const ConversationOverlay: React.FC = () => {
       currentTtsSourceRef.current = null;
     }
     
-    // Cleanup TTS listener
-    if (connectionRef.current && connectionRef.current.cleanup) {
-      connectionRef.current.cleanup();
+    // Close connection
+    if (connectionRef.current) {
+      connectionRef.current.unsubscribe();
       connectionRef.current = null;
     }
     
     // Stop microphone and release all resources
     conversationMicrophoneService.stopRecording();
     conversationMicrophoneService.cleanup();
-    
-    // 🎯 RESUME: Restart text mode realtime after conversation mode ends
-    if (chat_id) {
-      chatController.resumeRealtimeAfterConversationMode(chat_id);
-    }
     
     // 🎯 STATE DRIVEN: Reset to listening
     setState('listening');
@@ -346,7 +318,7 @@ export const ConversationOverlay: React.FC = () => {
     isShuttingDown.current = false;
     
     closeConversation();
-  }, [closeConversation, chat_id]);
+  }, [closeConversation]);
 
   // 🎯 MICROPHONE: Service is now initialized in handleStart, no need for separate useEffect
 
