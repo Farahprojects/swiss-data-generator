@@ -3,6 +3,15 @@ import { supabase } from '@/integrations/supabase/client';
 
 class SttService {
   async transcribe(audioBlob: Blob, chat_id?: string, meta?: Record<string, any>, mode?: string, sessionId?: string): Promise<{ transcript: string }> {
+    console.log('[STT] 🎤 Starting transcription for conversation mode');
+    console.log('[STT] 📊 Audio blob details:', {
+      size: audioBlob.size,
+      type: audioBlob.type,
+      chat_id,
+      mode,
+      sessionId
+    });
+    
     // Validate audio blob before processing
     if (!audioBlob || audioBlob.size === 0) {
       console.warn('[STT] Empty or missing audio blob, skipping transcription');
@@ -42,6 +51,14 @@ class SttService {
       console.error('[STT] No data in response');
       throw new Error('No data received from Google STT');
     }
+
+    console.log('[STT] 📝 STT response received:', {
+      transcript: data.transcript,
+      transcriptLength: data.transcript?.length || 0,
+      confidence: data.confidence,
+      mode: data.mode,
+      sessionId: data.sessionId
+    });
 
     // Return the transcript
     return {

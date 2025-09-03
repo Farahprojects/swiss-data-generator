@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { useChatStore } from '@/core/store';
@@ -86,15 +86,24 @@ export const ConversationOverlay: React.FC = () => {
   const playAudioImmediately = useCallback(async (audioBytes: number[], text?: string) => {
     if (isShuttingDown.current) return;
     
+
+    
     try {
-             if (!audioContextRef.current) {
-         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-         analyserRef.current = audioContextRef.current.createAnalyser();
-         analyserRef.current.fftSize = 256;
-       }
+      // 🎯 CHECK: Ensure AudioContext is available and running
+      if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
+        console.log('[ConversationOverlay] 🎵 AudioContext closed or missing, recreating...');
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        analyserRef.current = audioContextRef.current.createAnalyser();
+        analyserRef.current.fftSize = 256;
+      }
       
       const audioContext = audioContextRef.current;
       const analyser = analyserRef.current!;
+      
+      // 🎯 CHECK: Ensure AudioContext is running (resume if suspended)
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+      }
       
       // 🎯 DIRECT: Convert bytes to ArrayBuffer and decode
       const arrayBuffer = new Uint8Array(audioBytes).buffer;
@@ -111,11 +120,26 @@ export const ConversationOverlay: React.FC = () => {
       source.start(0);
       currentTtsSourceRef.current = source;
       
-      // 🎯 STATE DRIVEN: Return to listening when done
-      source.onended = () => {
-        conversationTtsService.setAudioLevelForAnimation(0);
-        setState('listening');
-      };
+             // 🎯 STATE DRIVEN: Return to listening when done
+       source.onended = () => {
+         console.log('[ConversationOverlay] 🎵 TTS audio finished, returning to listening mode');
+         conversationTtsService.setAudioLevelForAnimation(0);
+         setState('listening');
+         
+         // 🚨 CHECK: Only restart microphone if we're not shutting down
+         if (!isShuttingDown.current) {
+           // 🎤 Restart microphone recording for next turn
+           try {
+             conversationMicrophoneService.startRecording();
+             console.log('[ConversationOverlay] 🎤 Microphone recording restarted for next turn');
+           } catch (error) {
+             console.error('[ConversationOverlay] ❌ Failed to restart microphone recording:', error);
+           }
+         } else {
+           // 🚫 Shutting down - no auto-restart
+           console.log('[ConversationOverlay] 🎤 Shutting down, skipping microphone restart');
+         }
+       };
       
       // 🎯 ANIMATION: Speaking bars follow state
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
@@ -178,9 +202,39 @@ export const ConversationOverlay: React.FC = () => {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       setPermissionGranted(true);
       
-      // 🎯 STATE DRIVEN: Start recording
-      await conversationMicrophoneService.startRecording();
-      setState('listening');
+      // 🎯 STATE DRIVEN: Cache the stream for the microphone service
+      conversationMicrophoneService.cacheStream(stream);
+      
+      // 🎯 STATE DRIVEN: Initialize microphone service BEFORE starting recording
+      conversationMicrophoneService.initialize({
+        onRecordingComplete: (audioBlob: Blob) => {
+          console.log('[ConversationOverlay] 🎤 Recording complete callback fired, blob size:', audioBlob.size);
+          // Remove state check - always process recording when callback fires
+          processRecording(audioBlob);
+        },
+        onError: (error: Error) => {
+          console.error('[ConversationOverlay] Microphone error:', error);
+          setState('connecting');
+        },
+        onSilenceDetected: () => {
+          console.log('[ConversationOverlay] 🎤 Silence detected, stopping recording');
+          conversationMicrophoneService.stopRecording();
+        },
+        silenceTimeoutMs: 1200,
+      });
+      
+      // 🎯 STATE DRIVEN: Start recording AFTER initialization
+      console.log('[ConversationOverlay] 🎤 Starting recording...');
+      const recordingStarted = await conversationMicrophoneService.startRecording();
+      console.log('[ConversationOverlay] 🎤 Recording started:', recordingStarted);
+      
+      if (recordingStarted) {
+        setState('listening');
+        console.log('[ConversationOverlay] 🎤 State set to listening, ready for voice input');
+      } else {
+        console.error('[ConversationOverlay] ❌ Failed to start recording');
+        setState('connecting');
+      }
       
     } catch (error) {
       console.error('[ConversationOverlay] Start failed:', error);
@@ -192,36 +246,47 @@ export const ConversationOverlay: React.FC = () => {
 
   // 🎯 PROCESSING: Handle recording completion
   const processRecording = useCallback(async (audioBlob: Blob) => {
-    if (!chat_id) return;
+    console.log('[ConversationOverlay] 🎤 Processing recording, blob size:', audioBlob.size, 'chat_id:', chat_id);
+    
+    if (!chat_id) {
+      console.error('[ConversationOverlay] ❌ No chat_id available for processing');
+      return;
+    }
     
     try {
       // 🎯 STATE DRIVEN: Processing state
+      console.log('[ConversationOverlay] 🎤 Setting state to thinking...');
       setState('thinking');
       
       // Transcribe audio
+      console.log('[ConversationOverlay] 🎤 Starting transcription...');
       const result = await sttService.transcribe(audioBlob, chat_id, {}, 'conversation', chat_id);
       const transcript = result.transcript?.trim();
+      console.log('[ConversationOverlay] 🎤 Transcription result:', transcript);
       
       if (!transcript) {
+        console.log('[ConversationOverlay] 🎤 Empty transcript, returning to listening');
         setState('listening');
         return;
       }
       
-      // Send to LLM
+      // Send to chat-send via the existing working llmService (handles LLM → TTS → WebSocket automatically)
+      console.log('[ConversationOverlay] 🎤 Sending to chat-send via llmService...');
       const response = await llmService.sendMessage({
         chat_id,
         text: transcript,
         client_msg_id: uuidv4(),
-        mode: 'conversation',
+        mode: 'conversation'
       });
       
-             // 🎯 STATE DRIVEN: Replying state (TTS will come via WebSocket)
-       if (response.text) {
-         setState('replying');
-       }
+      console.log('[ConversationOverlay] 🎤 llmService response received:', response);
+      
+      // 🎯 STATE DRIVEN: Replying state (TTS will come via WebSocket from chat-send)
+      console.log('[ConversationOverlay] 🎤 Setting state to replying, waiting for TTS...');
+      setState('replying');
       
     } catch (error) {
-      console.error('[ConversationOverlay] Processing failed:', error);
+      console.error('[ConversationOverlay] ❌ Processing failed:', error);
       setState('listening');
     }
   }, [chat_id]);
@@ -242,8 +307,9 @@ export const ConversationOverlay: React.FC = () => {
       connectionRef.current = null;
     }
     
-    // Stop microphone
+    // Stop microphone and release all resources
     conversationMicrophoneService.stopRecording();
+    conversationMicrophoneService.cleanup();
     
     // 🎯 STATE DRIVEN: Reset to listening
     setState('listening');
@@ -254,25 +320,7 @@ export const ConversationOverlay: React.FC = () => {
     closeConversation();
   }, [closeConversation]);
 
-  // 🎯 MICROPHONE: Initialize with state-driven callbacks
-  useEffect(() => {
-    if (!permissionGranted || state !== 'listening') return;
-    
-    conversationMicrophoneService.initialize({
-      onRecordingComplete: (audioBlob: Blob) => {
-        if (state === 'listening') {
-          processRecording(audioBlob);
-        }
-      },
-      onError: (error: Error) => {
-        console.error('[ConversationOverlay] Microphone error:', error);
-        setState('connecting');
-      },
-      silenceTimeoutMs: 1200,
-    });
-    
-    conversationMicrophoneService.startRecording();
-  }, [permissionGranted, state, processRecording]);
+  // 🎯 MICROPHONE: Service is now initialized in handleStart, no need for separate useEffect
 
   // 🎯 SSR GUARD
   if (!isConversationOpen || typeof document === 'undefined') return null;
