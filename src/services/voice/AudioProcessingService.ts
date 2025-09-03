@@ -1,6 +1,8 @@
 // Audio Processing Service
 // Manages Web Worker for off-thread audio analysis
 
+import { directAudioAnimationService } from './DirectAudioAnimationService';
+
 export class AudioProcessingService {
   private worker: Worker | null = null;
   private isReady = false;
@@ -26,10 +28,13 @@ export class AudioProcessingService {
             console.log('[AudioProcessingService] Worker ready');
             break;
             
-          case 'audio-level':
-            // Notify all listeners with the processed audio level
-            this.listeners.forEach(listener => listener(level));
-            break;
+                  case 'audio-level':
+          // Notify all listeners with the processed audio level
+          this.listeners.forEach(listener => listener(level));
+          
+          // 🚀 NEW: Also notify direct animation service (bypasses React)
+          directAudioAnimationService.notifyAudioLevel(level);
+          break;
         }
       };
 

@@ -7,6 +7,7 @@ import { VoiceBubble } from './VoiceBubble';
 import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
 import { conversationTtsService } from '@/services/voice/conversationTts';
 import { audioProcessingService } from '@/services/voice/AudioProcessingService';
+import { directAudioAnimationService } from '@/services/voice/DirectAudioAnimationService';
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
 import { v4 as uuidv4 } from 'uuid';
@@ -133,6 +134,7 @@ export const ConversationOverlay: React.FC = () => {
       
       // 🚀 NEW: Start optimized audio processing BEFORE playing audio
       audioProcessingService.startProcessing();
+      directAudioAnimationService.start();
       
       // 🎯 STATE DRIVEN: Set replying state
       setState('replying');
@@ -145,6 +147,7 @@ export const ConversationOverlay: React.FC = () => {
          
          // 🚀 NEW: Stop audio processing when TTS ends
          audioProcessingService.stopProcessing();
+         directAudioAnimationService.stop();
          
          conversationTtsService.setAudioLevelForAnimation(0);
          setState('listening');
@@ -321,8 +324,9 @@ export const ConversationOverlay: React.FC = () => {
       connectionRef.current = null;
     }
     
-    // 🚀 NEW: Stop optimized audio processing
-    audioProcessingService.stopProcessing();
+         // 🚀 NEW: Stop optimized audio processing
+     audioProcessingService.stopProcessing();
+     directAudioAnimationService.stop();
     
     // Stop microphone and release all resources
     conversationMicrophoneService.stopRecording();

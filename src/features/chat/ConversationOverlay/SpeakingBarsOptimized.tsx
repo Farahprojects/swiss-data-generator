@@ -1,22 +1,26 @@
-import React, { useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 
 interface Props {
-  audioLevel: number;
   isActive: boolean;
 }
 
-export const SpeakingBarsOptimized: React.FC<Props> = ({ audioLevel, isActive }) => {
+export interface SpeakingBarsRef {
+  updateAudioLevel: (level: number) => void;
+}
+
+export const SpeakingBarsOptimized = forwardRef<SpeakingBarsRef, Props>(({ isActive }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // Update CSS variables directly - no React re-renders!
-  useEffect(() => {
-    if (!containerRef.current) return;
-    
-    // Set CSS custom property for GPU-accelerated animations
-    containerRef.current.style.setProperty('--audio-level', audioLevel.toString());
-    containerRef.current.style.setProperty('--is-active', isActive ? '1' : '0');
-  }, [audioLevel, isActive]);
+  // Expose method to parent for direct audio level updates
+  useImperativeHandle(ref, () => ({
+    updateAudioLevel: (level: number) => {
+      if (containerRef.current) {
+        // Direct DOM manipulation - no React re-renders!
+        containerRef.current.style.setProperty('--audio-level', level.toString());
+        containerRef.current.style.setProperty('--is-active', isActive ? '1' : '0');
+      }
+    }
+  }), [isActive]);
 
   // Generate 4 bars with different base heights
   const bars = Array.from({ length: 4 }, (_, index) => {
@@ -40,7 +44,7 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ audioLevel, isActive })
       ref={containerRef}
       className="speaking-bars-container"
       style={{
-        '--audio-level': audioLevel.toString(),
+        '--audio-level': '0',
         '--is-active': isActive ? '1' : '0',
       } as React.CSSProperties}
     >
@@ -80,4 +84,4 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ audioLevel, isActive })
       `}</style>
     </div>
   );
-};
+});
