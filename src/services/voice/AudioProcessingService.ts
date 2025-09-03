@@ -69,7 +69,7 @@ export class AudioProcessingService {
       if (!this.analyser || !this.dataArray || !this.worker) return;
 
       // 🚀 OPTIMIZED: Get frequency data (lighter with 128 FFT size)
-      this.analyser.getByteFrequencyData(this.dataArray);
+      this.analyser.getByteFrequencyData(this.dataArray as Uint8Array<ArrayBuffer>);
       
       // 🚀 OPTIMIZED: Calculate average (lighter operation)
       const average = this.dataArray.reduce((a, b) => a + b, 0) / this.dataArray.length;
