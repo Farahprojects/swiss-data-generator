@@ -87,15 +87,36 @@ class ChatController {
               }
             }
             
-            // Handle assistant messages - TTS is now handled by ConversationOverlay modal
-            if (newMessage.role === 'assistant' && newMessage.text) {
-              // TTS is now handled by ConversationOverlay modal
-              // No TTS logic here anymore
-            }
-            
             // Only add if not already present and no reconciliation occurred
             if (!messages.find(m => m.id === newMessage.id)) {
               addMessage(newMessage);
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'messages',
+            filter: `chat_id=eq.${chat_id}`
+          },
+          (payload) => {
+            const updatedMessage = this.transformDatabaseMessage(payload.new);
+            const { messages, updateMessage, addMessage } = useChatStore.getState();
+            
+            // Skip context_injected system updates
+            if (updatedMessage.role === 'assistant' && payload.new.context_injected) {
+              return;
+            }
+            
+            // Find existing message and update, or add if missing
+            const existingMessage = messages.find(m => m.id === updatedMessage.id);
+            if (existingMessage) {
+              updateMessage(updatedMessage.id, updatedMessage);
+            } else {
+              // Message not in store yet, add it
+              addMessage(updatedMessage);
             }
           }
         )
