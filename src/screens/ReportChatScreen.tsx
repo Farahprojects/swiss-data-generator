@@ -151,11 +151,8 @@ const ReportChatScreen = () => {
               chatController.loadExistingMessages(finalChatId);
             }
             
-            // 🎯 CRITICAL: Ensure WebSocket is set up for TTS even when skipping polling
-            if (!chatController.hasRealtimeSubscription()) {
-              console.log(`[ChatPage] 📡 Setting up WebSocket for TTS: ${finalChatId}`);
-              chatController.setupRealtimeSubscription(finalChatId);
-            }
+            // 🎯 NOTE: TTS WebSocket will be initialized by chat-send after processing response
+            // Don't set it up here - let the conversation flow handle it
           }
           
           return true; // Report already exists
@@ -285,11 +282,8 @@ const ReportChatScreen = () => {
             chatController.loadExistingMessages(finalChatId);
           }
           
-          // 🎯 CRITICAL: Ensure WebSocket is set up for TTS even when skipping rehydration
-          if (finalChatId && !chatController.hasRealtimeSubscription()) {
-            console.log(`[ChatPage] 📡 Setting up WebSocket for TTS: ${finalChatId}`);
-            chatController.setupRealtimeSubscription(finalChatId);
-          }
+          // 🎯 NOTE: TTS WebSocket will be initialized by chat-send after processing response
+          // Don't set it up here - let the conversation flow handle it
           
           return; // Skip rehydration
         }

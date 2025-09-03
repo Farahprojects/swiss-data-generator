@@ -199,13 +199,8 @@ export const ConversationOverlay: React.FC = () => {
       // 🎯 PAUSE: Stop text mode realtime to prevent WebSocket conflicts
       chatController.pauseRealtimeForConversationMode();
       
-      // 🎯 STATE DRIVEN: Setup TTS listener via unified WebSocket
+      // 🎯 STATE DRIVEN: Ready to start conversation
       setState('establishing');
-      const success = await setupTtsListener();
-      if (!success) {
-        setState('connecting');
-        return;
-      }
       
       // 🎯 STATE DRIVEN: Get microphone
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -289,6 +284,15 @@ export const ConversationOverlay: React.FC = () => {
       });
       
       console.log('[ConversationOverlay] 🎤 llmService response received:', response);
+      
+      // 🎯 CRITICAL: NOW set up TTS WebSocket listener after chat-send has processed the response
+      console.log('[ConversationOverlay] 🎵 Setting up TTS WebSocket listener for audio phone call...');
+      const ttsSuccess = await setupTtsListener();
+      if (!ttsSuccess) {
+        console.error('[ConversationOverlay] ❌ Failed to setup TTS listener');
+        setState('listening');
+        return;
+      }
       
       // 🎯 STATE DRIVEN: Replying state (TTS will come via WebSocket from chat-send)
       console.log('[ConversationOverlay] 🎤 Setting state to replying, waiting for TTS...');
