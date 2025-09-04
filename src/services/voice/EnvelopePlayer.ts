@@ -58,7 +58,7 @@ export class EnvelopePlayer {
   }
 
   /**
-   * Start progressive envelope playback - sync to audio clock for perfect timing
+   * Start progressive envelope playback - just tick through precomputed values
    */
   private startProgressivePlayback(): void {
     if (this.rafId) return;
@@ -71,24 +71,12 @@ export class EnvelopePlayer {
         return;
       }
 
-      // 🎯 PROFESSIONAL: Sync to audio clock instead of performance.now()
-      // This ensures perfect sync with actual audio playback
-      const audioElement = document.querySelector('audio') as HTMLAudioElement;
-      let currentTime = 0;
-      
-      if (audioElement && !audioElement.paused) {
-        currentTime = audioElement.currentTime * 1000; // Convert to milliseconds
-      } else {
-        // Fallback to performance timing if no audio element
-        currentTime = performance.now() - this.startTime;
-      }
-      
-      // Map audio time to envelope index using frameDurationMs
+      // Map elapsed time to envelope index using frameDurationMs
+      const elapsedMs = performance.now() - this.startTime;
       const targetFrame = Math.min(
         this.envelope.length - 1,
-        Math.floor(currentTime / this.frameDurationMs)
+        Math.floor(elapsedMs / this.frameDurationMs)
       );
-      
       this.currentFrame = targetFrame;
       const level = this.envelope[targetFrame] || 0;
       

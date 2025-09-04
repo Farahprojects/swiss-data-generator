@@ -62,14 +62,6 @@ export const ConversationOverlay: React.FC = () => {
   // 🎵 ENVELOPE: Player for smooth, synced animation
   const envelopePlayerRef = useRef<EnvelopePlayer | null>(null);
   
-  // 🎵 STREAMING: Audio and envelope chunk management
-  const audioChunksRef = useRef<number[][]>([]);
-  const envelopeChunksRef = useRef<number[][]>([]);
-  const audioBlobRef = useRef<Blob | null>(null);
-  const audioElementRef = useRef<HTMLAudioElement | null>(null);
-  const frameDurationMsRef = useRef<number>(20);
-  const isStreamingRef = useRef(false);
-  
   // 🎯 STATE-DRIVEN: Local messages follow state changes
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
 
@@ -213,192 +205,18 @@ export const ConversationOverlay: React.FC = () => {
     }
   }, []);
 
-  // 🎵 STREAMING: Handle envelope chunks for progressive animation
-  const handleEnvelopeChunk = useCallback((chunk: number[], chunkIndex: number, totalChunks: number, frameDurationMs: number) => {
-    if (isShuttingDown.current) return;
-    
-    console.log(`[ConversationOverlay] 🎵 Envelope chunk ${chunkIndex + 1}/${totalChunks} received`);
-    
-    // Store envelope chunk
-    envelopeChunksRef.current[chunkIndex] = chunk;
-    frameDurationMsRef.current = frameDurationMs;
-    
-    // If first chunk, start envelope animation immediately
-    if (chunkIndex === 0) {
-      startEnvelopeAnimation();
-    }
-    
-    // If last chunk, finalize envelope
-    if (chunkIndex === totalChunks - 1) {
-      finalizeEnvelope();
-    }
-  }, []);
-
-  // 🎵 STREAMING: Handle audio chunks for streaming playback
-  const handleAudioChunk = useCallback((chunk: number[], chunkIndex: number, totalChunks: number, mimeType: string) => {
-    if (isShuttingDown.current) return;
-    
-    console.log(`[ConversationOverlay] 🎵 Audio chunk ${chunkIndex + 1}/${totalChunks} received`);
-    
-    // Store audio chunk
-    audioChunksRef.current[chunkIndex] = chunk;
-    
-    // If first chunk, start streaming audio
-    if (chunkIndex === 0) {
-      startStreamingAudio();
-    }
-    
-    // If last chunk, finalize audio
-    if (chunkIndex === totalChunks - 1) {
-      finalizeStreamingAudio();
-    }
-  }, []);
-
-  // 🎵 STREAMING: Start envelope animation with first chunk
-  const startEnvelopeAnimation = useCallback(() => {
-    console.log('[ConversationOverlay] 🎵 Starting envelope animation');
-    
-    // Start animation service
-    directAudioAnimationService.start();
-    
-    // Create envelope player
-    if (envelopePlayerRef.current) {
-      envelopePlayerRef.current.stop();
-    }
-    
-    envelopePlayerRef.current = new EnvelopePlayer(
-      10000, // Long duration for streaming
-      frameDurationMsRef.current,
-      (level) => {
-        if (!isShuttingDown.current) {
-          directAudioAnimationService.notifyAudioLevel(level);
-        }
-      }
-    );
-    
-    // Set replying state for immediate UI feedback
-    setState('replying');
-  }, []);
-
-  // 🎵 STREAMING: Finalize envelope when all chunks received
-  const finalizeEnvelope = useCallback(() => {
-    if (!envelopePlayerRef.current) return;
-    
-    console.log('[ConversationOverlay] 🎵 Finalizing envelope');
-    
-    // Combine all envelope chunks
-    const fullEnvelope = envelopeChunksRef.current.flat();
-    
-    // Start with first value for immediate animation
-    const previewLevel = fullEnvelope[0] || 0.1;
-    envelopePlayerRef.current.startWithPreview(previewLevel);
-    
-    // Set full envelope
-    envelopePlayerRef.current.setFullEnvelope(fullEnvelope);
-  }, []);
-
-  // 🎵 STREAMING: Start streaming audio with first chunk
-  const startStreamingAudio = useCallback(() => {
-    if (isStreamingRef.current) return;
-    
-    isStreamingRef.current = true;
-    console.log('[ConversationOverlay] 🎵 Starting streaming audio');
-    
-    // Create audio element for streaming
-    if (audioElementRef.current) {
-      audioElementRef.current.pause();
-      audioElementRef.current = null;
-    }
-    
-    audioElementRef.current = new Audio();
-    audioElementRef.current.preload = 'none';
-    
-    // Handle audio events
-    audioElementRef.current.onended = () => {
-      console.log('[ConversationOverlay] 🎵 Streaming audio finished');
-      handleStreamingEnd();
-    };
-    
-    audioElementRef.current.onerror = (error) => {
-      console.error('[ConversationOverlay] ❌ Streaming audio error:', error);
-      setState('listening');
-    };
-  }, []);
-
-  // 🎵 STREAMING: Finalize audio when all chunks received
-  const finalizeStreamingAudio = useCallback(() => {
-    if (!audioElementRef.current) return;
-    
-    console.log('[ConversationOverlay] 🎵 Finalizing streaming audio');
-    
-    // Combine all audio chunks into single blob
-    const allChunks = audioChunksRef.current.flat();
-    const audioBlob = new Blob([new Uint8Array(allChunks)], { type: 'audio/mpeg' });
-    const audioUrl = URL.createObjectURL(audioBlob);
-    
-    // Set audio source and play
-    audioElementRef.current.src = audioUrl;
-    audioElementRef.current.play().catch(error => {
-      console.error('[ConversationOverlay] ❌ Failed to play streaming audio:', error);
-      setState('listening');
-    });
-    
-    // Clean up chunks
-    audioChunksRef.current = [];
-  }, []);
-
-  // 🎵 STREAMING: Handle streaming end
-  const handleStreamingEnd = useCallback(() => {
-    console.log('[ConversationOverlay] 🎵 Streaming finished, returning to listening mode');
-    
-    // Stop animation service
-    directAudioAnimationService.stop();
-    
-    // Stop envelope player
-    if (envelopePlayerRef.current) {
-      envelopePlayerRef.current.stop();
-    }
-    
-    // Clean up audio
-    if (audioElementRef.current) {
-      audioElementRef.current.pause();
-      audioElementRef.current = null;
-    }
-    
-    // Reset streaming state
-    isStreamingRef.current = false;
-    audioChunksRef.current = [];
-    envelopeChunksRef.current = [];
-    
-    // Return to listening
-    setState('listening');
-    
-    // Restart microphone if not shutting down
-    if (!isShuttingDown.current) {
-      try {
-        conversationMicrophoneService.startRecording();
-        console.log('[ConversationOverlay] 🎤 Microphone recording restarted');
-      } catch (error) {
-        console.error('[ConversationOverlay] ❌ Failed to restart microphone:', error);
-      }
-    }
-  }, []);
-
-  // 🎯 CONNECTION: Streaming WebSocket setup
+  // 🎯 CONNECTION: Simple WebSocket setup
   const establishConnection = useCallback(async () => {
     if (!chat_id) return false;
     
     try {
       const connection = supabase.channel(`conversation:${chat_id}`);
       
-      // 🎵 STREAMING: Handle envelope chunks for progressive animation
-      connection.on('broadcast', { event: 'envelope-chunk' }, ({ payload }) => {
-        handleEnvelopeChunk(payload.chunk, payload.chunkIndex, payload.totalChunks, payload.frameDurationMs);
-      });
-      
-      // 🎵 STREAMING: Handle audio chunks for streaming playback
-      connection.on('broadcast', { event: 'audio-chunk' }, ({ payload }) => {
-        handleAudioChunk(payload.chunk, payload.chunkIndex, payload.totalChunks, payload.mimeType);
+      // 🎯 DIRECT: WebSocket → Audio + Envelope
+      connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
+        if (payload.audioBytes) {
+          playAudioImmediately(payload.audioBytes, payload.text, payload.envelope, payload.frameDurationMs);
+        }
       });
       
       connection.subscribe();
@@ -512,13 +330,7 @@ export const ConversationOverlay: React.FC = () => {
   const handleModalClose = useCallback(async () => {
     isShuttingDown.current = true;
     
-    // Stop streaming audio
-    if (audioElementRef.current) {
-      audioElementRef.current.pause();
-      audioElementRef.current = null;
-    }
-    
-    // Stop WebAudio source
+    // Stop audio
     if (currentTtsSourceRef.current) {
       currentTtsSourceRef.current.stop();
       currentTtsSourceRef.current = null;
@@ -530,24 +342,19 @@ export const ConversationOverlay: React.FC = () => {
       connectionRef.current = null;
     }
     
-    // Stop animation service
-    directAudioAnimationService.stop();
-    
-    // Stop envelope player
-    if (envelopePlayerRef.current) {
-      envelopePlayerRef.current.stop();
-    }
-    
-    // Reset streaming state
-    isStreamingRef.current = false;
-    audioChunksRef.current = [];
-    envelopeChunksRef.current = [];
+     // 🚀 Stop animation service
+     directAudioAnimationService.stop();
+     
+     // 🎯 NEW: Stop envelope player when modal closes
+     if (envelopePlayerRef.current) {
+       envelopePlayerRef.current.stop();
+     }
     
     // Stop microphone and release all resources
     conversationMicrophoneService.stopRecording();
     conversationMicrophoneService.cleanup();
     
-    // Reset state
+    // 🎯 STATE DRIVEN: Reset to listening
     setState('listening');
     setPermissionGranted(false);
     hasStarted.current = false;

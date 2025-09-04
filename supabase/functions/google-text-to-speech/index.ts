@@ -195,70 +195,36 @@ serve(async (req) => {
     const processingTime = Date.now() - startTime;
     console.log(`[google-tts] TTS completed in ${processingTime}ms`);
 
-                // 📞 Make the phone call - stream MP3 chunks + envelope chunks for progressive playback
-        try {
-          console.log(`[google-tts] 📞 Making streaming phone call to chat: ${chat_id}`);
-          
-          // 🎵 Stream A: Send envelope chunks first for immediate bar animation
-          const envelopeChunkSize = 128; // Small chunks for smooth progressive animation
-          const totalEnvelopeChunks = Math.ceil(envelope.length / envelopeChunkSize);
-          
-          for (let i = 0; i < totalEnvelopeChunks; i++) {
-            const start = i * envelopeChunkSize;
-            const end = Math.min(start + envelopeChunkSize, envelope.length);
-            const envelopeChunk = envelope.slice(start, end);
-            
-            const { error: envelopeError } = await supabase
-              .channel(`conversation:${chat_id}`)
-              .send({
-                type: 'broadcast',
-                event: 'envelope-chunk',
-                payload: {
-                  chunk: envelopeChunk,
-                  chunkIndex: i,
-                  totalChunks: totalEnvelopeChunks,
-                  frameDurationMs: frameDurationMs,
-                  chat_id: chat_id
-                }
-              });
-            
-            if (envelopeError) {
-              console.error(`[google-tts] ❌ Failed to send envelope chunk ${i}:`, envelopeError);
-            }
+        // 📞 Make the phone call - push raw MP3 bytes + envelope data directly to browser via WebSocket
+    try {
+      console.log(`[google-tts] 📞 Making phone call with binary MP3 bytes + envelope to chat: ${chat_id}`);
+      
+      // Send raw MP3 bytes + envelope data via WebSocket
+      const { data: broadcastData, error: broadcastError } = await supabase
+        .channel(`conversation:${chat_id}`)
+        .send({
+          type: 'broadcast',
+          event: 'tts-ready',
+          payload: {
+            audioBytes: Array.from(audioBytes), // Raw MP3 bytes as array (no base64)
+            envelope: envelope, // 🎵 Pre-calculated loudness values from PCM
+            frameDurationMs: frameDurationMs,
+            audioUrl: null, // No URL since we're not storing
+            text: text,
+            chat_id: chat_id,
+            mimeType: 'audio/mpeg',
+            size: audioBytes.length
           }
-          
-          // 🎵 Stream B: Send MP3 chunks for streaming audio playback
-          const audioChunkSize = 8192; // 8KB chunks for smooth streaming
-          const totalAudioChunks = Math.ceil(audioBytes.length / audioChunkSize);
-          
-          for (let i = 0; i < totalAudioChunks; i++) {
-            const start = i * audioChunkSize;
-            const end = Math.min(start + audioChunkSize, audioBytes.length);
-            const audioChunk = audioBytes.slice(start, end);
-            
-            const { error: audioError } = await supabase
-              .channel(`conversation:${chat_id}`)
-              .send({
-                type: 'broadcast',
-                event: 'audio-chunk',
-                payload: {
-                  chunk: Array.from(audioChunk),
-                  chunkIndex: i,
-                  totalChunks: totalAudioChunks,
-                  mimeType: 'audio/mpeg',
-                  chat_id: chat_id
-                }
-              });
-            
-            if (audioError) {
-              console.error(`[google-tts] ❌ Failed to send audio chunk ${i}:`, audioError);
-            }
-          }
-          
-          console.log(`[google-tts] ✅ Streaming phone call successful - ${totalEnvelopeChunks} envelope chunks, ${totalAudioChunks} audio chunks`);
-        } catch (broadcastError) {
-          console.error('[google-tts] ❌ Error making streaming phone call:', broadcastError);
-        }
+        });
+
+      if (broadcastError) {
+        console.error('[google-tts] ❌ Failed to make phone call:', broadcastError);
+      } else {
+        console.log('[google-tts] ✅ Phone call successful - binary MP3 bytes delivered directly');
+      }
+    } catch (broadcastError) {
+      console.error('[google-tts] ❌ Error making phone call:', broadcastError);
+    }
 
     // Return success response with performance timing
     return new Response(JSON.stringify(responseData), {
