@@ -2,7 +2,7 @@ import React, { useRef, useState, Suspense, lazy } from 'react';
 import { useChatStore } from '@/core/store';
 import { Message } from '@/core/types';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
-import { Loader2, RefreshCw, AlertTriangle } from 'lucide-react';
+import { RefreshCw, AlertTriangle } from 'lucide-react';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { Button } from '@/components/ui/button';
 import { AstroDataPromptMessage } from '@/components/chat/AstroDataPromptMessage';
@@ -103,7 +103,7 @@ const groupMessagesIntoTurns = (messages: Message[]): Turn[] => {
 
 export const MessageList = () => {
   const messages = useChatStore((state) => state.messages);
-  const isLoadingMessages = useChatStore((state) => state.isLoadingMessages);
+  // 🚀 LAZY LOAD: Removed isLoadingMessages - no loading states
   const messageLoadError = useChatStore((state) => state.messageLoadError);
   const retryLoadMessages = useChatStore((state) => state.retryLoadMessages);
   const lastMessagesFetch = useChatStore((state) => state.lastMessagesFetch);
@@ -165,13 +165,7 @@ export const MessageList = () => {
       ref={containerRef}
       id="chat-scroll-container"
     >
-      {/* Loading state for messages */}
-      {isLoadingMessages && messages.length === 0 && (
-        <div className="flex-1 flex flex-col justify-center items-center">
-          <Loader2 className="h-6 w-6 animate-spin text-gray-500 mb-2" />
-          <p className="text-gray-500 text-sm">Loading conversation...</p>
-        </div>
-      )}
+      {/* 🚀 LAZY LOAD: No loading spinner - messages load silently in background */}
 
       {/* Error state for message loading */}
       {messageLoadError && messages.length === 0 && (
@@ -196,7 +190,7 @@ export const MessageList = () => {
       )}
 
       {/* Empty state or content */}
-      {!isLoadingMessages && !messageLoadError && (
+      {!messageLoadError && (
         <>
           {messages.length === 0 ? (
             <div className="flex-1 flex flex-col justify-end">
@@ -214,15 +208,7 @@ export const MessageList = () => {
             </div>
           ) : (
             <div className="flex flex-col p-4">
-              {/* Message loading indicator at top if loading additional messages */}
-              {isLoadingMessages && messages.length > 0 && (
-                <div className="flex justify-center py-2">
-                  <div className="flex items-center gap-2 text-gray-500 text-sm">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Syncing messages...
-                  </div>
-                </div>
-              )}
+              {/* 🚀 LAZY LOAD: No loading indicators - messages load silently */}
 
               {turns.map((turn, index) => {
                 const isFromHistory = getIsFromHistory(turn);

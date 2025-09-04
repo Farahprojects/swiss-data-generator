@@ -24,14 +24,14 @@ class ChatController {
   }
 
   private async loadExistingMessages(retryCount = 0) {
-    const { chat_id, setLoadingMessages, setMessageLoadError, loadMessages } = useChatStore.getState();
+    const { chat_id, setMessageLoadError, loadMessages } = useChatStore.getState();
     if (!chat_id) return;
 
     const maxRetries = 3;
     const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 5000); // Exponential backoff
 
     try {
-      setLoadingMessages(true);
+      // 🚀 LAZY LOAD: No loading state, just fetch and load silently
       const messages = await getMessagesForConversation(chat_id);
       loadMessages(messages);
     } catch (error) {
