@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { decode as b64decode } from "https://deno.land/std@0.224.0/encoding/base64.ts";
+import { decodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
 const GOOGLE_TTS_API_KEY = Deno.env.get("GOOGLE-TTS") ?? "";
 if (!GOOGLE_TTS_API_KEY) {
@@ -72,7 +72,7 @@ throw new Error("Google TTS API returned no audioContent");
 }
 
 // More efficient than atob + charCode loop
-return b64decode(json.audioContent);
+return decodeBase64(json.audioContent);
 }
 
 function fireAndForget(p: Promise<unknown>) {
