@@ -88,14 +88,14 @@ export const astroRequestCategories = [
   {
     value: 'essence',
     title: 'The Self',
-    description: 'Your birth chart + current transits (raw astrological data)',
+    description: 'Your birth chart + current transits',
     icon: User,
     request: 'essence',
   },
   {
     value: 'sync',
     title: 'Compatibility',
-    description: 'Synastry + composite + transits (raw astrological data)',
+    description: 'Synastry + composite + transits',
     icon: Heart,
     request: 'sync',
   },

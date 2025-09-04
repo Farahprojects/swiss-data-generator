@@ -357,11 +357,12 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
               exit={{ opacity: 0, x: -20 }}
               className="space-y-4"
             >
-              <p className="text-gray-600 text-center mb-6">
+              <p className="text-gray-600 text-center mb-6 col-span-full">
                 Select the type of astrological data you'd like to generate
               </p>
               
-              {astroRequestCategories.map((category) => {
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {astroRequestCategories.map((category) => {
                 const IconComponent = category.icon;
                 const isSelected = selectedAstroType === category.value;
                 
@@ -402,6 +403,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                   </motion.button>
                 );
               })}
+              </div>
             </motion.div>
           ) : currentStep === 'details' ? (
             <motion.form
