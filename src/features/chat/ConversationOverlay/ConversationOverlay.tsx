@@ -47,6 +47,7 @@ export const ConversationOverlay: React.FC = () => {
   // 🎯 PRIMARY: State machine drives everything
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
+  const [isWebSocketInitializing, setIsWebSocketInitializing] = useState(false);
   
   // 🎯 ESSENTIAL: Only what we need for state transitions
   const hasStarted = useRef(false);
@@ -332,8 +333,12 @@ export const ConversationOverlay: React.FC = () => {
       
       // 🚀 WARM START: Initialize WebSocket and AudioContext immediately
       console.log('[ConversationOverlay] 🚀 Warming up connections...');
+      setIsWebSocketInitializing(true);
+      
       await establishConnection();
       await pingAudioContext();
+      
+      setIsWebSocketInitializing(false);
       console.log('[ConversationOverlay] 🚀 Connections warmed up and ready');
       
       // 🎯 STATE DRIVEN: Get microphone
@@ -543,13 +548,15 @@ export const ConversationOverlay: React.FC = () => {
         {!permissionGranted ? (
           <div className="text-center text-gray-800 flex flex-col items-center gap-4">
             <div
-              className="cursor-pointer flex flex-col items-center gap-4"
-              onClick={handleStart}
+              className={`flex flex-col items-center gap-4 ${isWebSocketInitializing ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+              onClick={isWebSocketInitializing ? undefined : handleStart}
             >
-              <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center transition-colors hover:bg-gray-200">
+              <div className={`w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center transition-colors ${isWebSocketInitializing ? 'websocket-spinning-border' : 'hover:bg-gray-200'}`}>
                 <Mic className="w-10 h-10 text-gray-600" />
               </div>
-              <h2 className="text-2xl font-light">Tap to Start Conversation</h2>
+              <h2 className="text-2xl font-light">
+                {isWebSocketInitializing ? 'Initializing...' : 'Tap to Start Conversation'}
+              </h2>
             </div>
             <button
               onClick={closeConversation}

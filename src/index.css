@@ -49,6 +49,39 @@
     /* Dynamic viewport unit – updated via JS to fix mobile 100vh bugs */
     --vh: 1vh;
   }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  WEBSOCKET INITIALIZATION ANIMATION                                       */
+/*  ------------------------------------------------------------------------- */
+@layer components {
+  .websocket-spinning-border {
+    position: relative;
+  }
+  
+  .websocket-spinning-border::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border: 2px solid transparent;
+    border-top: 2px solid #000;
+    border-radius: 50%;
+    animation: websocket-spin 1.5s linear infinite;
+    will-change: transform; /* GPU acceleration */
+  }
+  
+  @keyframes websocket-spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+}
 
   .dark {
     --background: 222.2 84% 4.9%;
