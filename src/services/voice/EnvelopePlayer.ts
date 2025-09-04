@@ -9,6 +9,7 @@ export class EnvelopePlayer {
   private envelope: number[] = [];
   private startTime: number;
   private duration: number;
+  private frameDurationMs: number;
   private rafId: number | null = null;
   private callback: (level: number) => void;
   private isPlaying: boolean = false;
@@ -16,8 +17,9 @@ export class EnvelopePlayer {
   private previewMode: boolean = true;
   private lastLevel: number = 0;
 
-  constructor(duration: number, callback: (level: number) => void) {
+  constructor(duration: number, frameDurationMs: number, callback: (level: number) => void) {
     this.duration = duration;
+    this.frameDurationMs = Math.max(1, frameDurationMs || 20);
     this.callback = callback;
     this.startTime = performance.now();
   }
@@ -56,7 +58,7 @@ export class EnvelopePlayer {
   }
 
   /**
-   * Start progressive envelope playback - just tick through precomputed values
+   * Start progressive envelope playback - sync to audio clock
    */
   private startProgressivePlayback(): void {
     if (this.rafId) return;
@@ -69,14 +71,29 @@ export class EnvelopePlayer {
         return;
       }
 
-      // 🎯 DUMB: Just use precomputed envelope value directly (no math!)
-      const level = this.envelope[this.currentFrame] || 0;
+      // 🎯 PROFESSIONAL: Sync to audio clock instead of performance.now()
+      // This ensures perfect sync with actual audio playback
+      const audioElement = document.querySelector('audio') as HTMLAudioElement;
+      let currentTime = 0;
+      
+      if (audioElement && !audioElement.paused) {
+        currentTime = audioElement.currentTime * 1000; // Convert to milliseconds
+      } else {
+        // Fallback to performance timing if no audio element
+        currentTime = performance.now() - this.startTime;
+      }
+      
+      // Map audio time to envelope index using frameDurationMs
+      const targetFrame = Math.min(
+        this.envelope.length - 1,
+        Math.floor(currentTime / this.frameDurationMs)
+      );
+      
+      this.currentFrame = targetFrame;
+      const level = this.envelope[targetFrame] || 0;
       
       // Send precomputed level to callback
       this.callback(level);
-      
-      // Move to next frame
-      this.currentFrame++;
       
       // Continue animation loop
       this.rafId = requestAnimationFrame(step);

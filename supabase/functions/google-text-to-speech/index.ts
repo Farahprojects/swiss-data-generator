@@ -14,47 +14,44 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-// 🎵 Calculate audio envelope from MP3 data for smooth bar animation
-async function calculateAudioEnvelope(audioBytes: Uint8Array): Promise<number[]> {
-  try {
-    // For MP3 data, we'll use a simplified approach since we can't easily decode to PCM
-    // We'll calculate envelope based on MP3 frame energy patterns
-    
-    const envelope: number[] = [];
-    const frameSize = 512; // MP3 frames are typically 512 samples
-    const numFrames = Math.floor(audioBytes.length / frameSize);
-    
-    // Calculate energy per frame (simplified MP3 frame analysis)
-    for (let i = 0; i < numFrames; i++) {
-      const start = i * frameSize;
-      const end = Math.min(start + frameSize, audioBytes.length);
-      const frame = audioBytes.slice(start, end);
-      
-      // Calculate RMS (Root Mean Square) for this frame
-      let sum = 0;
-      for (let j = 0; j < frame.length; j++) {
-        sum += frame[j] * frame[j];
-      }
-      const rms = Math.sqrt(sum / frame.length);
-      
-      // Normalize to 0-1 range and add to envelope
-      const normalizedLevel = Math.min(1.0, rms / 128); // Normalize by typical MP3 byte range
-      envelope.push(normalizedLevel);
-    }
-    
-    // Ensure we have at least some envelope data
-    if (envelope.length === 0) {
-      envelope.push(0.1, 0.2, 0.3, 0.2, 0.1); // Fallback envelope
-    }
-    
-    console.log(`[google-tts] 🎵 Calculated envelope with ${envelope.length} frames`);
-    return envelope;
-    
-  } catch (error) {
-    console.error('[google-tts] Error calculating envelope:', error);
-    // Return fallback envelope if calculation fails
-    return [0.1, 0.2, 0.3, 0.2, 0.1];
+// 🎵 Calculate audio envelope from LINEAR16 PCM for precise bar animation
+function calculateEnvelopeFromLinear16(pcmBytes: Uint8Array, sampleRate: number, windowMs: number = 20): { envelope: number[]; frameDurationMs: number } {
+  // Convert bytes to signed 16-bit samples
+  const dataView = new DataView(pcmBytes.buffer, pcmBytes.byteOffset, pcmBytes.byteLength);
+  const numSamples = Math.floor(pcmBytes.byteLength / 2);
+  const samples = new Float32Array(numSamples);
+  for (let i = 0; i < numSamples; i++) {
+    const s = dataView.getInt16(i * 2, true); // little-endian
+    samples[i] = s / 32768; // normalize to [-1, 1]
   }
+
+  // Compute RMS over fixed windows (e.g., 20ms)
+  const windowSize = Math.max(1, Math.floor((sampleRate * windowMs) / 1000));
+  const envelope: number[] = [];
+  for (let i = 0; i < samples.length; i += windowSize) {
+    const end = Math.min(i + windowSize, samples.length);
+    let sum = 0;
+    const len = end - i;
+    for (let j = i; j < end; j++) sum += samples[j] * samples[j];
+    const rms = Math.sqrt(sum / Math.max(1, len));
+    envelope.push(rms);
+  }
+
+  // Normalize 0..1
+  let max = 0;
+  let min = 1;
+  for (let i = 0; i < envelope.length; i++) {
+    if (envelope[i] > max) max = envelope[i];
+    if (envelope[i] < min) min = envelope[i];
+  }
+  const range = Math.max(1e-6, max - min);
+  for (let i = 0; i < envelope.length; i++) {
+    envelope[i] = (envelope[i] - min) / range;
+  }
+
+  const frameDurationMs = (windowSize / sampleRate) * 1000;
+  console.log(`[google-tts] 🎵 Calculated PCM envelope: ${envelope.length} frames @ ${frameDurationMs.toFixed(2)}ms`);
+  return { envelope, frameDurationMs };
 }
 
 serve(async (req) => {
@@ -84,7 +81,7 @@ serve(async (req) => {
     const voiceName = `en-US-Chirp3-HD-${voice}`;
     console.log(`[google-tts] Using voice: ${voiceName}`);
 
-    // Call Google Text-to-Speech API
+    // Call Google Text-to-Speech API for MP3 (playback)
     const ttsResponse = await fetch(
       `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
       {
@@ -123,8 +120,45 @@ serve(async (req) => {
       throw new Error("No audio content received from Google TTS API");
     }
 
-    // Decode base64 audio content to raw MP3 bytes
+    // Decode base64 MP3 audio content to raw bytes
     const audioBytes = Uint8Array.from(atob(audioContent), c => c.charCodeAt(0));
+
+    // In parallel, request LINEAR16 for precise envelope calculation (same text/voice)
+    const pcmSampleRate = 22050;
+    const pcmReq = fetch(
+      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "User-Agent": "TheRAI-TTS/1.0",
+        },
+        body: JSON.stringify({
+          input: { text },
+          voice: {
+            languageCode: "en-US",
+            name: voiceName,
+          },
+          audioConfig: {
+            audioEncoding: "LINEAR16",
+            speakingRate: 1.0,
+            pitch: 0.0,
+            sampleRateHertz: pcmSampleRate
+          },
+        }),
+      }
+    );
+    const pcmResp = await pcmReq;
+    if (!pcmResp.ok) {
+      const errText = await pcmResp.text();
+      console.error("[google-tts] LINEAR16 request failed:", pcmResp.status, errText);
+      throw new Error(`Google TTS LINEAR16 error: ${pcmResp.status}`);
+    }
+    const pcmJson = await pcmResp.json();
+    const pcmContent = pcmJson.audioContent as string;
+    const pcmBytes = Uint8Array.from(atob(pcmContent), c => c.charCodeAt(0));
+    const { envelope, frameDurationMs } = calculateEnvelopeFromLinear16(pcmBytes, pcmSampleRate, 20);
     
     // Pure streaming approach - no storage, no DB
     const responseData = {
@@ -161,37 +195,86 @@ serve(async (req) => {
     const processingTime = Date.now() - startTime;
     console.log(`[google-tts] TTS completed in ${processingTime}ms`);
 
-        // 📞 Make the phone call - push raw MP3 bytes + envelope data directly to browser via WebSocket
+        // 📞 Make the phone call - stream MP3 chunks + envelope data via WebSocket
     try {
-      console.log(`[google-tts] 📞 Making phone call with binary MP3 bytes + envelope to chat: ${chat_id}`);
+      console.log(`[google-tts] 📞 Making phone call with streaming MP3 + envelope to chat: ${chat_id}`);
       
-      // 🎵 Calculate audio envelope for smooth bar animation (no frontend processing needed!)
-      const envelope = await calculateAudioEnvelope(audioBytes);
+      // 🎵 Send preview envelope first (first 100-200ms) for immediate bar animation
+      const previewDuration = Math.min(200, frameDurationMs * 10); // First ~200ms
+      const previewFrames = Math.min(envelope.length, Math.ceil(previewDuration / frameDurationMs));
+      const previewEnvelope = envelope.slice(0, previewFrames);
       
-      // Send raw MP3 bytes + envelope data via WebSocket
-      const { data: broadcastData, error: broadcastError } = await supabase
+      // Send preview envelope immediately
+      const { error: previewError } = await supabase
         .channel(`conversation:${chat_id}`)
         .send({
           type: 'broadcast',
-          event: 'tts-ready',
+          event: 'tts-preview',
           payload: {
-            audioBytes: Array.from(audioBytes), // Raw MP3 bytes as array (no base64)
-            envelope: envelope, // 🎵 Pre-calculated loudness values for smooth bars
-            audioUrl: null, // No URL since we're not storing
-            text: text,
-            chat_id: chat_id,
-            mimeType: 'audio/mpeg',
-            size: audioBytes.length
+            envelope: previewEnvelope,
+            frameDurationMs: frameDurationMs,
+            totalFrames: envelope.length,
+            chat_id: chat_id
           }
         });
 
-      if (broadcastError) {
-        console.error('[google-tts] ❌ Failed to make phone call:', broadcastError);
+      if (previewError) {
+        console.error('[google-tts] ❌ Failed to send preview envelope:', previewError);
       } else {
-        console.log('[google-tts] ✅ Phone call successful - binary MP3 bytes delivered directly');
+        console.log(`[google-tts] ✅ Preview envelope sent: ${previewFrames} frames`);
       }
+
+      // 🎵 Stream MP3 in chunks for non-blocking playback
+      const chunkSize = 8192; // 8KB chunks
+      const totalChunks = Math.ceil(audioBytes.length / chunkSize);
+      
+      for (let i = 0; i < totalChunks; i++) {
+        const start = i * chunkSize;
+        const end = Math.min(start + chunkSize, audioBytes.length);
+        const chunk = audioBytes.slice(start, end);
+        
+        const { error: chunkError } = await supabase
+          .channel(`conversation:${chat_id}`)
+          .send({
+            type: 'broadcast',
+            event: 'tts-chunk',
+            payload: {
+              chunk: Array.from(chunk),
+              chunkIndex: i,
+              totalChunks: totalChunks,
+              isLast: i === totalChunks - 1,
+              chat_id: chat_id
+            }
+          });
+
+        if (chunkError) {
+          console.error(`[google-tts] ❌ Failed to send chunk ${i}:`, chunkError);
+          break;
+        }
+      }
+
+      // 🎵 Send full envelope after streaming starts
+      const { error: envelopeError } = await supabase
+        .channel(`conversation:${chat_id}`)
+        .send({
+          type: 'broadcast',
+          event: 'tts-envelope',
+          payload: {
+            envelope: envelope,
+            frameDurationMs: frameDurationMs,
+            chat_id: chat_id
+          }
+        });
+
+      if (envelopeError) {
+        console.error('[google-tts] ❌ Failed to send full envelope:', envelopeError);
+      } else {
+        console.log(`[google-tts] ✅ Full envelope sent: ${envelope.length} frames`);
+      }
+
+      console.log('[google-tts] ✅ Streaming phone call successful');
     } catch (broadcastError) {
-      console.error('[google-tts] ❌ Error making phone call:', broadcastError);
+      console.error('[google-tts] ❌ Error making streaming phone call:', broadcastError);
     }
 
     // Return success response with performance timing
