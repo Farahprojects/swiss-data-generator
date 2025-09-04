@@ -234,7 +234,6 @@ export const ElegantDateTimePicker: React.FC<ElegantDateTimePickerProps> = ({
                 initialFocus
                 className="pointer-events-auto"
                 disabled={(date) => date > new Date()}
-                captionLayout="dropdown"
                 fromYear={1900}
                 toYear={new Date().getFullYear()}
               />
