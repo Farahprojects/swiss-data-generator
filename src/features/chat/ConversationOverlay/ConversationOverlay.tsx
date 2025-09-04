@@ -94,46 +94,23 @@ export const ConversationOverlay: React.FC = () => {
     };
   }, []);
 
-  // 🎵 REAL-TIME: Browser Audio Analysis → Live Animation
+  // 🚀 INSTANT: HTML5 Audio → No Decoding, No Heavy Processing
   const playAudioImmediately = useCallback(async (audioBytes: number[], text?: string) => {
     if (isShuttingDown.current) return;
     
     try {
-      // 🎯 CHECK: Ensure AudioContext is available and running
-      if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
-        console.log('[ConversationOverlay] 🎵 AudioContext closed or missing, recreating...');
-        try {
-          audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ latencyHint: 'playback' });
-        } catch (e) {
-          audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-        }
-      }
+      // 🚀 NO AUDIOCONTEXT NEEDED - HTML5 Audio handles everything
       
-      const audioContext = audioContextRef.current;
+      // 🚀 INSTANT: Create blob URL and play with HTML5 audio (no decoding!)
+      const audioBlob = new Blob([new Uint8Array(audioBytes)], { type: 'audio/mpeg' });
+      const audioUrl = URL.createObjectURL(audioBlob);
       
-      // 🎯 CHECK: Ensure AudioContext is running (resume if suspended)
-      if (audioContext.state === 'suspended') {
-        await audioContext.resume();
-      }
-      
-      // 🎯 DIRECT: Convert bytes to ArrayBuffer and decode
-      const arrayBuffer = new Uint8Array(audioBytes).buffer;
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      
-      // 🎵 REAL-TIME: Create analyzer for live audio analysis
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 128; // Reduced for better mobile performance
-      analyser.smoothingTimeConstant = 0.8; // Smooth the data
-      
-      // 🎯 DIRECT: Create source and connect to analyzer + destination
-      const source = audioContext.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(analyser);
-      analyser.connect(audioContext.destination);
+      // 🎯 DIRECT: Create HTML5 audio element for instant playback
+      const audio = new Audio(audioUrl);
+      currentTtsSourceRef.current = audio; // Store reference for cleanup
       
       // 🚀 PLAY AUDIO IMMEDIATELY - No waiting for anything else
-      source.start(0);
-      currentTtsSourceRef.current = source;
+      audio.play();
       
       // 🎯 STATE DRIVEN: Set replying state
       setState('replying');
@@ -145,44 +122,39 @@ export const ConversationOverlay: React.FC = () => {
         console.warn('[ConversationOverlay] Could not suspend mic for playback', e);
       }
       
-      // 🎵 REAL-TIME: Start bars animation service for live data
+      // 🎵 SIMPLE: Start bars animation service with simple animation
       directBarsAnimationService.start();
       
-      // 🎵 REAL-TIME: Live audio analysis loop (25fps for mobile performance)
-      const frequencyData = new Uint8Array(analyser.frequencyBinCount);
+      // 🎵 SIMPLE: Basic animation loop (no heavy audio analysis)
       const animate = () => {
         if (isShuttingDown.current || !currentTtsSourceRef.current) return;
         
-        // Get live frequency data from the analyzer
-        analyser.getByteFrequencyData(frequencyData);
-        
-        // 🎵 REAL-TIME: Convert frequency data to 4 bar levels
-        // Calculate overall audio level from all frequencies
-        let totalSum = 0;
-        for (let i = 0; i < frequencyData.length; i++) {
-          totalSum += frequencyData[i];
-        }
-        const overallLevel = Math.min(1, (totalSum / frequencyData.length) / 128) * 0.8 + 0.2;
+        // Simple pulsing animation while audio is playing
+        const time = Date.now() * 0.005; // Slow animation
+        const level = Math.abs(Math.sin(time)) * 0.6 + 0.4; // 0.4 to 1.0 range
         
         // All bars move together from center outward with same intensity
-        const barLevels: FourBarLevels = [overallLevel, overallLevel, overallLevel, overallLevel];
+        const barLevels: FourBarLevels = [level, level, level, level];
         
-        // Send live data to bars
+        // Send simple data to bars
         directBarsAnimationService.notifyBars(barLevels);
         
         // 25fps = 40ms intervals for mobile performance
         setTimeout(animate, 40);
       };
       
-      // Start the real-time animation loop
+      // Start the simple animation loop
       setTimeout(animate, 40);
       
       // 🎯 STATE DRIVEN: Return to listening when done
-      source.onended = () => {
+      audio.onended = () => {
         console.log('[ConversationOverlay] 🎵 TTS audio finished, returning to listening mode');
         
         // 🎵 Stop animation service when TTS ends
         directBarsAnimationService.stop();
+        
+        // 🧹 Cleanup blob URL
+        URL.revokeObjectURL(audioUrl);
         
         setState('listening');
          
