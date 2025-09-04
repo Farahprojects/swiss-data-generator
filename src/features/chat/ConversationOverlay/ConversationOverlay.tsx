@@ -305,8 +305,10 @@ export const ConversationOverlay: React.FC = () => {
     if (!audioContextRef.current) {
       try {
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ latencyHint: 'playback' });
+        console.log('[ConversationOverlay] 🎵 AudioContext created');
       } catch (e) {
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        console.log('[ConversationOverlay] 🎵 AudioContext created (fallback)');
       }
     }
     
@@ -314,6 +316,8 @@ export const ConversationOverlay: React.FC = () => {
     if (audioContextRef.current.state === 'suspended') {
       await audioContextRef.current.resume();
       console.log('[ConversationOverlay] 🎵 AudioContext pinged and resumed');
+    } else {
+      console.log(`[ConversationOverlay] 🎵 AudioContext pinged (state: ${audioContextRef.current.state})`);
     }
     
     return audioContextRef.current;
