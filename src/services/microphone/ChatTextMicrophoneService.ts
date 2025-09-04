@@ -172,10 +172,10 @@ class ChatTextMicrophoneServiceClass {
     let voiceStartTime: number | null = null;
     let silenceStartTime: number | null = null;
     
-    // 🚀 MOBILE-FIRST: Optimized thresholds for mobile responsiveness
-    const VOICE_START_THRESHOLD = 0.008;  // More sensitive for mobile microphones
-    const VOICE_START_DURATION = 200;     // Faster voice confirmation for mobile
-    const SILENCE_THRESHOLD = 0.005;      // More sensitive silence detection
+    // 🚀 MOBILE-FIRST: Balanced thresholds for mobile responsiveness
+    const VOICE_START_THRESHOLD = 0.010;  // Balanced for mobile microphones
+    const VOICE_START_DURATION = 250;     // Reasonable voice confirmation
+    const SILENCE_THRESHOLD = 0.006;      // Balanced silence detection
     const SILENCE_TIMEOUT = this.options.silenceTimeoutMs || 800; // Mobile-optimized timeout
     
     this.log(`🧠 VAD started - waiting for voice (>${VOICE_START_THRESHOLD} RMS for ${VOICE_START_DURATION}ms, silence <${SILENCE_THRESHOLD} RMS for ${SILENCE_TIMEOUT}ms)`);
@@ -195,6 +195,11 @@ class ChatTextMicrophoneServiceClass {
       
       // Notify UI of audio level changes for waveform animation
       this.notifyListeners();
+      
+      // 🐛 DEBUG: Log VAD state for troubleshooting
+      if (phase === 'monitoring_silence' && rms < SILENCE_THRESHOLD) {
+        console.log(`[VAD] Silence detected: RMS=${rms.toFixed(4)} < ${SILENCE_THRESHOLD}, silence duration: ${silenceStartTime ? now - silenceStartTime : 0}ms`);
+      }
       
       const now = Date.now();
       
