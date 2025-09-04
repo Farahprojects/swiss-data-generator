@@ -159,38 +159,33 @@ serve(async (req) => {
         //   console.log('[chat-send] ✅ Assistant message saved to DB');
         // }
 
-        // Step 4: Call TTS to generate audio
-        console.log('[chat-send] 🎵 Calling TTS service...');
-        const ttsResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
-          },
-          body: JSON.stringify({
-            text: assistantText,
-            voice: 'Puck',
-            chat_id: chat_id
+        // Step 4: Call TTS to generate audio (fire-and-forget)
+        console.log('[chat-send] 🎵 Starting TTS service (fire-and-forget)...');
+        EdgeRuntime.waitUntil(
+          fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
+            },
+            body: JSON.stringify({
+              text: assistantText,
+              voice: 'Puck',
+              chat_id: chat_id
+            })
+          }).then(async (ttsResponse) => {
+            if (!ttsResponse.ok) {
+              const errorText = await ttsResponse.text();
+              console.error('[chat-send] ❌ TTS service failed:', errorText);
+            } else {
+              console.log('[chat-send] ✅ TTS completed in background');
+            }
+          }).catch((error) => {
+            console.error('[chat-send] ❌ TTS service error:', error);
           })
-        });
+        );
 
-        if (!ttsResponse.ok) {
-          const errorText = await ttsResponse.text();
-          console.error('[chat-send] ❌ TTS service failed:', errorText);
-          // Return response without audio - user can still see the text
-          return new Response(JSON.stringify({
-            message: "Assistant response ready",
-            text: assistantText,
-            client_msg_id: userMessageData.client_msg_id
-          }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" }
-          });
-        }
-
-        const ttsData = await ttsResponse.json();
-        const audioUrl = ttsData.audioUrl;
-        
-        // Step 5: TTS makes the phone call directly - just return response
+        // Step 5: Return response immediately - TTS will make phone call when ready
         const responseData = {
           message: "Assistant response ready",
           text: assistantText,
