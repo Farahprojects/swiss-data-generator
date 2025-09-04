@@ -425,21 +425,23 @@ export const ConversationOverlay: React.FC = () => {
           
           console.log('[ConversationOverlay] 📝 Transcript received:', transcript);
           
-          // 🚀 OPTIMIZED: WebSocket already established at start, just ensure it's active
-          console.log('[ConversationOverlay] 🚀 WebSocket already warmed up, proceeding with LLM call');
-          
-          // Send to chat-send via the existing working llmService (handles LLM → TTS → WebSocket automatically)
-          console.log('[ConversationOverlay] 🎯 Calling llmService.sendMessage for TTS generation');
-          return llmService.sendMessage({
+          // 🚀 FIRE-AND-FORGET: Send to LLM without waiting (TTS will come via WebSocket)
+          console.log('[ConversationOverlay] 🎯 Calling llmService.sendMessage for TTS generation (fire-and-forget)');
+          llmService.sendMessage({
             chat_id,
             text: transcript,
             client_msg_id: uuidv4(),
             mode: 'conversation'
+          }).then(() => {
+            console.log('[ConversationOverlay] ✅ llmService.sendMessage completed');
+            // 🎯 STATE DRIVEN: Replying state (TTS will come via WebSocket from chat-send)
+            setState('replying');
+          }).catch(error => {
+            console.error('[ConversationOverlay] ❌ LLM processing failed:', error);
+            setState('listening');
           });
-        })
-        .then(() => {
-          console.log('[ConversationOverlay] ✅ llmService.sendMessage completed');
-          // 🎯 STATE DRIVEN: Replying state (TTS will come via WebSocket from chat-send)
+          
+          // 🎯 IMMEDIATE: Set replying state since LLM call is fire-and-forget
           setState('replying');
         })
         .catch(error => {
