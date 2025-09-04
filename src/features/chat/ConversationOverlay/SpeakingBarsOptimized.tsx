@@ -46,7 +46,7 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive }) => {
           className={`bg-black rounded-full ${bar.className}`}
           style={{
             width: '16px', // All bars same width
-            transformOrigin: 'bottom',
+            transformOrigin: 'center', // Scale from center outward (up and down)
             transform: `scaleY(var(--bar${idx+1}-scale, 1))`,
             willChange: 'transform', // GPU acceleration hint
             transition: 'none !important', // Disable any CSS transitions
