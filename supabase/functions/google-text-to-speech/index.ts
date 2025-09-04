@@ -1,195 +1,209 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const GOOGLE_TTS_API_KEY = Deno.env.get("GOOGLE-TTS") || "";
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+const GOOGLE_TTS_API_KEY = Deno.env.get("GOOGLE-TTS") ?? "";
 
-// Tunables
-const TTS_TIMEOUT_MS = Number(Deno.env.get("GOOGLE_TTS_TIMEOUT_MS") ?? 7000);
-const CHUNK_SIZE_CHARS = Number(Deno.env.get("BROADCAST_CHUNK_SIZE_CHARS") ?? 200_000); // ~200 KB base64 chunks
-const DEBUG = Deno.env.get("DEBUG") === "1";
+// Initialize Supabase client
+const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, accept",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, accept',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const BROADCAST_ENDPOINT = `${SUPABASE_URL}/realtime/v1/api/broadcast`;
-
-function log(...args: unknown[]) {
-  if (DEBUG) console.log(...args);
-}
-
-async function broadcast(channel: string, event: string, payload: unknown) {
-  const res = await fetch(BROADCAST_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-      "apikey": SUPABASE_SERVICE_ROLE_KEY,
-    },
-    body: JSON.stringify({
-      channel,
-      event,
-      payload,
-    }),
-  });
-  if (!res.ok) {
-    const txt = await res.text().catch(() => "");
-    throw new Error(`Realtime HTTP broadcast failed: ${res.status} ${res.statusText} - ${txt}`);
+// 🎵 RMS: Calculate real audio envelope from MP3 for speech-synced animation
+async function calculateRMSFromMP3(mp3Bytes: Uint8Array, frameMs: number = 20): Promise<number[]> {
+  try {
+    // Decode MP3 to get audio buffer
+    const audioContext = new (globalThis.AudioContext || (globalThis as any).webkitAudioContext)();
+    const arrayBuffer = mp3Bytes.buffer.slice(mp3Bytes.byteOffset, mp3Bytes.byteOffset + mp3Bytes.byteLength);
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    
+    // Get audio data
+    const channelData = audioBuffer.getChannelData(0); // Use first channel
+    const sampleRate = audioBuffer.sampleRate;
+    const frameSize = Math.floor((sampleRate * frameMs) / 1000); // Samples per frame
+    
+    // Calculate RMS for each frame
+    const rmsValues: number[] = [];
+    for (let i = 0; i < channelData.length; i += frameSize) {
+      const end = Math.min(i + frameSize, channelData.length);
+      let sum = 0;
+      const len = end - i;
+      
+      for (let j = i; j < end; j++) {
+        sum += channelData[j] * channelData[j];
+      }
+      
+      const rms = Math.sqrt(sum / len);
+      rmsValues.push(rms);
+    }
+    
+    // Normalize to [0, 1] range
+    const maxRms = Math.max(...rmsValues);
+    const normalizedRms = rmsValues.map(rms => maxRms > 0 ? rms / maxRms : 0);
+    
+    console.log(`[google-tts] 🎵 Calculated RMS envelope: ${normalizedRms.length} frames @ ${frameMs}ms`);
+    return normalizedRms;
+  } catch (error) {
+    console.error('[google-tts] ❌ Failed to calculate RMS from MP3:', error);
+    // Fallback to simple animation if RMS calculation fails
+    const durationMs = (mp3Bytes.length / 16000) * 1000; // Rough estimate
+    return generateFallbackAnimation(durationMs, frameMs);
   }
 }
 
-async function sha1(input: string): Promise<string> {
-  const data = new TextEncoder().encode(input);
-  const hash = await crypto.subtle.digest("SHA-1", data);
-  const bytes = new Uint8Array(hash);
-  return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+// 🎯 FALLBACK: Simple animation if RMS calculation fails
+function generateFallbackAnimation(durationMs: number, frameMs: number): number[] {
+  const numFrames = Math.ceil(durationMs / frameMs);
+  const animationNumbers: number[] = [];
+  
+  for (let i = 0; i < numFrames; i++) {
+    const progress = i / numFrames;
+    const baseLevel = Math.sin(progress * Math.PI * 4) * 0.3 + 0.4;
+    const randomVariation = (Math.random() - 0.5) * 0.2;
+    const finalLevel = Math.max(0.1, Math.min(1.0, baseLevel + randomVariation));
+    animationNumbers.push(finalLevel);
+  }
+  
+  console.log(`[google-tts] 🎯 Generated fallback animation: ${animationNumbers.length} frames`);
+  return animationNumbers;
 }
 
-function buildVoiceName(voice: string): string {
-  const v = voice.trim();
-  // If already fully-qualified (e.g., en-US-Chirp3-HD-Puck, en-GB-Studio-B)
-  if (/^[a-z]{2}-[A-Z]{2}-/.test(v)) return v;
-  // If caller sends family + name (e.g., Chirp3-HD-Puck)
-  if (v.startsWith("Chirp3-HD-")) return `en-US-${v}`;
-  // Back-compat with your previous scheme (e.g., "Puck" -> "en-US-Chirp3-HD-Puck")
-  return `en-US-Chirp3-HD-${v}`;
+// Utility: Uint8Array → base64
+function uint8ToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
 }
 
-function languageFromVoiceName(name: string): string {
-  const m = name.match(/^([a-z]{2}-[A-Z]{2})-/);
-  return m ? m[1] : "en-US";
-}
 
 serve(async (req) => {
+  const startTime = Date.now();
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: CORS_HEADERS });
+    return new Response(null, { 
+      status: 204,
+      headers: CORS_HEADERS 
+    });
   }
 
-  const startTime = performance.now();
-
   try {
-    if (!GOOGLE_TTS_API_KEY) throw new Error("Missing GOOGLE-TTS key");
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) throw new Error("Missing Supabase env");
+    const { chat_id, text, voice } = await req.json();
 
-    const { chat_id, text, voice } = await req.json().catch(() => ({}));
+    console.log(`[google-tts] Request received - chat_id: ${chat_id}, text length: ${text?.length}, voice: ${voice}`);
 
-    if (!chat_id || typeof chat_id !== "string") throw new Error("chat_id required");
-    if (!text || typeof text !== "string" || text.trim().length === 0) throw new Error("text required");
-    if (!voice || typeof voice !== "string") throw new Error("voice required");
+    if (!chat_id || !text) {
+      throw new Error("Missing 'chat_id' or 'text' in request body.");
+    }
+    
+    // Ensure we have a voice parameter - no fallbacks allowed
+    if (!voice) {
+      throw new Error("Voice parameter is required - no fallback allowed");
+    }
+    
+    const voiceName = `en-US-Chirp3-HD-${voice}`;
+    console.log(`[google-tts] Using voice: ${voiceName}`);
 
-    // Use exact HD voice name provided by client, or construct it if you standardize internally.
-    const voiceName = buildVoiceName(voice);
-    const languageCode = languageFromVoiceName(voiceName);
-    log("[google-tts] request", { chat_id, len: text.length, voiceName, languageCode });
+    // 🎵 FETCH MP3 + PCM IN PARALLEL
+    const mp3Resp = await fetch(
+      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
+      {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({input:{text:text},voice:{languageCode:"en-US",name:voiceName},audioConfig:{audioEncoding:"MP3"}})}
+    );
+    if(!mp3Resp.ok){throw new Error("Google TTS API error");}
+    const mp3Json=await mp3Resp.json();
+    const audioBytes=Uint8Array.from(atob(mp3Json.audioContent),c=>c.charCodeAt(0));
 
-    // Call Google TTS (single shot). Keep the payload minimal.
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort("TTS timeout"), TTS_TIMEOUT_MS);
 
-    const ttsBody = {
-      input: { text },
-      voice: { languageCode, name: voiceName },
-      audioConfig: { audioEncoding: "MP3" },
+    // NOTE: Removing synthetic animation generation to reduce server work
+
+    // Pure streaming approach - no storage, no DB
+    const responseData = {
+      success: true,
+      audioUrl: null, // No URL since we're not storing
+      storagePath: null
     };
 
-    const ttsRes = await fetch(
-      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(ttsBody),
-        signal: controller.signal,
-      }
-    ).finally(() => clearTimeout(timeout));
-
-    if (!ttsRes.ok) {
-      const errTxt = await ttsRes.text().catch(() => "");
-      throw new Error(`Google TTS error ${ttsRes.status}: ${errTxt}`);
-    }
-
-    const { audioContent } = await ttsRes.json();
-    if (!audioContent || typeof audioContent !== "string") {
-      throw new Error("No audioContent from Google TTS");
-    }
-
-    const processingTimeMs = Math.round(performance.now() - startTime);
-    const channel = `conversation:${chat_id}`;
-    const b64 = audioContent; // already base64
-    const totalChars = b64.length;
-    const totalChunks = Math.ceil(totalChars / CHUNK_SIZE_CHARS);
-
-    // Build a stable id for dedupe client-side if desired
-    const ttsId = await sha1(`${voiceName}::${text}`);
-
-    // Broadcast work happens outside the request lifecycle
-    const work = (async () => {
-      try {
-        // Start event with metadata
-        await broadcast(channel, "tts-start", {
-          id: ttsId,
-          chat_id,
-          text,
-          voice: voiceName,
-          mimeType: "audio/mpeg",
-          encoding: "base64",
-          totalChunks,
-          sizeBase64Chars: totalChars,
-          processingTimeMs,
-        });
-
-        // Chunked payload
-        for (let i = 0; i < totalChunks; i++) {
-          const begin = i * CHUNK_SIZE_CHARS;
-          const end = Math.min(begin + CHUNK_SIZE_CHARS, totalChars);
-          const chunk = b64.slice(begin, end);
-
-          await broadcast(channel, "tts-chunk", {
-            id: ttsId,
-            index: i,
-            total: totalChunks,
-            data: chunk,
-          });
-        }
-
-        // End event
-        await broadcast(channel, "tts-end", {
-          id: ttsId,
-          chat_id,
-          totalChunks,
-          done: true,
-        });
-      } catch (e) {
-        console.error("[google-tts] broadcast error:", e);
-        await broadcast(channel, "tts-error", {
-          id: ttsId,
-          error: e?.message || String(e),
-        }).catch(() => {});
-      }
-    })();
-
-    // Don't block the HTTP response on broadcasts
-    // @ts-ignore EdgeRuntime.waitUntil is available in Supabase Edge Functions
-    EdgeRuntime?.waitUntil?.(work);
-
-    // Immediate HTTP response
-    return new Response(
-      JSON.stringify({ success: true, id: ttsId }),
-      {
-        headers: {
-          ...CORS_HEADERS,
-          "Content-Type": "application/json",
-          "Server-Timing": `tts;dur=${processingTimeMs}`,
+    // Save TTS audio clip to dedicated audio table in background (non-blocking)
+    // COMMENTED OUT: No longer saving to DB for conversation mode
+    /*
+    EdgeRuntime.waitUntil(
+      supabase.from("chat_audio_clips").insert({
+        chat_id: chat_id,
+        role: "assistant",
+        audio_url: signedUrl,
+        storage_path: fileName,
+        voice: voiceName,
+        provider: "google",
+        meta: { 
+          tts_status: 'ready',
+          processing_time_ms: Date.now() - startTime
         },
-      }
+      }).then(({ error }) => {
+        if (error) {
+          console.error("[google-tts] Background DB insert failed:", error);
+        } else {
+          console.log(`[google-tts] Background DB insert completed`);
+        }
+      })
     );
-  } catch (err) {
-    console.error("[google-tts] error:", err);
-    return new Response(
-      JSON.stringify({ error: err?.message || "Unknown error" }),
-      { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+    */
+
+    const processingTime = Date.now() - startTime;
+
+        // 🚀 FIRE-AND-FORGET: WebSocket broadcast (non-blocking for faster response)
+    console.log(`[google-tts] 📞 Making phone call with binary MP3 bytes to chat: ${chat_id}`);
+    
+    // Use EdgeRuntime.waitUntil for fire-and-forget WebSocket broadcast
+    EdgeRuntime.waitUntil(
+      supabase
+        .channel(`conversation:${chat_id}`)
+        .send({
+          type: 'broadcast',
+          event: 'tts-ready',
+          payload: {
+            audioBytes: Array.from(audioBytes),
+            audioUrl: null, // No URL since we're not storing
+            text: text, // Keep original text for display
+            chat_id: chat_id,
+            mimeType: 'audio/mpeg',
+            size: audioBytes.length
+          }
+        })
+        .then(({ error: broadcastError }) => {
+          if (broadcastError) {
+            console.error('[google-tts] ❌ Failed to make phone call:', broadcastError);
+          } else {
+          }
+        })
+        .catch((broadcastError) => {
+          console.error('[google-tts] ❌ Error making phone call:', broadcastError);
+        })
     );
+
+    // Return success response with performance timing
+    return new Response(JSON.stringify(responseData), {
+      headers: {
+        ...CORS_HEADERS,
+        'Content-Type': 'application/json',
+        'Server-Timing': `tts;dur=${processingTime}`
+      },
+    });
+
+  } catch (error) {
+    console.error("[google-tts] Error:", error);
+    
+    return new Response(JSON.stringify({ 
+      error: error?.message ?? String(error) 
+    }), {
+      status: 500,
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    });
   }
 });
