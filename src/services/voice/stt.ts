@@ -28,8 +28,7 @@ class SttService {
             encoding: 'WEBM_OPUS',
             languageCode: 'en-US',
             enableAutomaticPunctuation: true,
-            model: 'latest_long',
-            sampleRateHertz: 16000  // 🚀 MOBILE-FIRST: Match frontend sample rate
+            model: 'latest_short' // Mobile-first: Faster model for quicker response
           }
         })
       }

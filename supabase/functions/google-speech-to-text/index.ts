@@ -40,20 +40,18 @@ serve(async (req) => {
       throw new Error('Google STT API key not configured');
     }
 
-    // 🚀 MOBILE-FIRST: Optimized configuration for mobile performance
+    // Mobile-first configuration for speed
     const sttConfig = {
       encoding: 'WEBM_OPUS',
       languageCode: 'en-US',
       enableAutomaticPunctuation: true,
-      model: 'latest_long',
-      sampleRateHertz: 16000,  // Mobile-optimized sample rate
+      model: 'latest_short', // Mobile-first: Faster model
       ...config
     };
 
-    // Convert raw binary to base64 for Google API (required format)
-    // CRITICAL: Handle large audio buffers without stack overflow
+    // Mobile-first: Optimized base64 conversion for smaller files
     let binaryString = '';
-    const chunkSize = 8192; // Process in chunks to avoid stack overflow
+    const chunkSize = 16384; // Mobile-first: Larger chunks for faster processing
     for (let i = 0; i < audioBuffer.length; i += chunkSize) {
       const chunk = audioBuffer.slice(i, i + chunkSize);
       binaryString += String.fromCharCode(...chunk);

@@ -71,19 +71,19 @@ class ChatTextMicrophoneServiceClass {
       const trackSettings = this.stream.getAudioTracks()[0]?.getSettings?.() || {};
       this.log('🎛️ getUserMedia acquired. Track settings:', trackSettings);
 
-      // Set up audio analysis - 🚀 MOBILE-FIRST: Optimized for mobile performance
-      this.audioContext = new AudioContext({ sampleRate: 16000 }); // 16kHz for mobile efficiency
+      // Set up audio analysis - mobile optimized
+      this.audioContext = new AudioContext({ sampleRate: 16000 }); // Mobile-first: 16kHz for faster processing
       this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
       this.analyser = this.audioContext.createAnalyser();
-      this.analyser.fftSize = 1024; // 🚀 MOBILE-FIRST: Smaller FFT for mobile performance
+      this.analyser.fftSize = 1024; // Mobile-first: Smaller FFT for faster analysis
       this.analyser.smoothingTimeConstant = 0.8;
       this.mediaStreamSource.connect(this.analyser);
       // reduced detailed analyser config logging
 
-      // Set up MediaRecorder - 🚀 MOBILE-FIRST: Lower bitrate for faster uploads
+      // Set up MediaRecorder - mobile optimized for speed
       this.mediaRecorder = new MediaRecorder(this.stream, {
         mimeType: 'audio/webm;codecs=opus',
-        audioBitsPerSecond: 64000  // 50% smaller files for mobile
+        audioBitsPerSecond: 64000 // Mobile-first: 50% smaller files for faster upload
       });
 
       this.audioChunks = [];
@@ -172,11 +172,11 @@ class ChatTextMicrophoneServiceClass {
     let voiceStartTime: number | null = null;
     let silenceStartTime: number | null = null;
     
-    // 🚀 MOBILE-FIRST: Balanced thresholds for mobile responsiveness
-    const VOICE_START_THRESHOLD = 0.010;  // Balanced for mobile microphones
-    const VOICE_START_DURATION = 250;     // Reasonable voice confirmation
-    const SILENCE_THRESHOLD = 0.006;      // Balanced silence detection
-    const SILENCE_TIMEOUT = this.options.silenceTimeoutMs || 800; // Mobile-optimized timeout
+    // Optimized thresholds for natural conversation flow
+    const VOICE_START_THRESHOLD = 0.012;  // RMS threshold to detect voice start
+    const VOICE_START_DURATION = 300;     // Duration to confirm voice (300ms)
+    const SILENCE_THRESHOLD = 0.008;      // Lower threshold for silence (hysteresis)
+    const SILENCE_TIMEOUT = this.options.silenceTimeoutMs || 1500; // 1.5 seconds for responsive conversation
     
     this.log(`🧠 VAD started - waiting for voice (>${VOICE_START_THRESHOLD} RMS for ${VOICE_START_DURATION}ms, silence <${SILENCE_THRESHOLD} RMS for ${SILENCE_TIMEOUT}ms)`);
 
@@ -195,11 +195,6 @@ class ChatTextMicrophoneServiceClass {
       
       // Notify UI of audio level changes for waveform animation
       this.notifyListeners();
-      
-      // 🐛 DEBUG: Log VAD state for troubleshooting
-      if (phase === 'monitoring_silence' && rms < SILENCE_THRESHOLD) {
-        console.log(`[VAD] Silence detected: RMS=${rms.toFixed(4)} < ${SILENCE_THRESHOLD}, silence duration: ${silenceStartTime ? now - silenceStartTime : 0}ms`);
-      }
       
       const now = Date.now();
       
