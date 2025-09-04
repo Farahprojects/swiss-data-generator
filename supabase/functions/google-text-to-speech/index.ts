@@ -65,7 +65,7 @@ serve(async (req) => {
             pitch: 0.0,
             sampleRateHertz: 22050
           },
-          enableTimePointing: ["SSML_MARK"], // Enable phoneme alignment
+          timepointing: ["WORD", "PHONEME"], // Enable word and phoneme alignment
         }),
       }
     );
@@ -91,16 +91,24 @@ serve(async (req) => {
     console.log('[google-tts] 🔍 Raw timepoints:', JSON.stringify(timepoints, null, 2));
     
     const phonemes = timepoints.map((tp: any, index: number) => {
-      // Google TTS timepoints format: { timeSeconds: number, markName?: string }
+      // Google TTS timepoints format: { timeSeconds: number, markName?: string, type?: string }
       const start = tp.timeSeconds || 0;
       const nextTimepoint = timepoints[index + 1];
       const end = nextTimepoint ? nextTimepoint.timeSeconds : start + 0.1; // Use next timepoint or default 100ms
       
+      // Determine intensity based on type and content
+      let intensity = 0.5; // Default
+      if (tp.type === 'PHONEME' && tp.markName) {
+        intensity = tp.markName.match(/[aeiou]/i) ? 0.8 : 0.4; // Vowels = higher intensity
+      } else if (tp.type === 'WORD') {
+        intensity = 0.6; // Words get medium intensity
+      }
+      
       return {
-        symbol: tp.markName || `phoneme_${index}`,
+        symbol: tp.markName || `${tp.type || 'phoneme'}_${index}`,
         start: start,
         end: end,
-        intensity: tp.markName ? (tp.markName.match(/[aeiou]/i) ? 0.8 : 0.4) : 0.5 // Vowels = higher intensity
+        intensity: intensity
       };
     });
     
