@@ -35,6 +35,7 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive, audioLevel = 
       className="flex items-center justify-center gap-3 h-16 w-28"
       style={{
         '--bar-scale': '1',
+        willChange: 'transform', // GPU acceleration hint
       } as React.CSSProperties}
     >
       {bars.map((bar) => (
@@ -45,6 +46,7 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive, audioLevel = 
             width: '16px', // All bars same width
             transformOrigin: 'center',
             transform: `scaleY(var(--bar-scale, 1))`,
+            willChange: 'transform', // GPU acceleration hint
           }}
         />
       ))}
