@@ -22,6 +22,13 @@ serve(async (req) => {
     const meta = metaHeader ? JSON.parse(metaHeader) : {};
     const config = meta.config || {};
     
+    console.log('[google-stt] 📥 RECEIVED:', {
+      audioSize: audioBuffer.length,
+      mode: meta.mode,
+      sessionId: meta.sessionId,
+      config: config
+    });
+    
     // Validate audio data
     if (!audioBuffer || audioBuffer.length === 0) {
       console.error('[google-stt] Empty audio buffer');
@@ -83,9 +90,15 @@ serve(async (req) => {
     const result = await response.json();
     transcript = result.results?.[0]?.alternatives?.[0]?.transcript || '';
 
+    console.log('[google-stt] 📤 SENDING:', {
+      transcriptLength: transcript.length,
+      transcript: transcript.substring(0, 100) + (transcript.length > 100 ? '...' : ''),
+      mode: meta.mode
+    });
 
     // Handle empty transcription results
     if (!transcript || transcript.trim().length === 0) {
+      console.log('[google-stt] ⚠️ Empty transcript - returning empty result');
       return new Response(
         JSON.stringify({ transcript: '' }),
         {
@@ -95,6 +108,7 @@ serve(async (req) => {
     }
 
     // Return simple transcript result
+    console.log('[google-stt] ✅ FIRE-AND-FORGET: Transcript sent, function complete');
     return new Response(
       JSON.stringify({ transcript }),
       {
