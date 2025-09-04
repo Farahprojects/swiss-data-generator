@@ -100,11 +100,9 @@ export const ConversationOverlay: React.FC = () => {
     };
   }, []);
 
-  // 🎵 RMS: WebSocket → Browser Audio + Real speech-synced animation
-  const playAudioImmediately = useCallback(async (audioBytes: number[], text?: string, levels?: number[], frameDurationMs?: number, bars?: number[][]) => {
+  // 🎵 REAL-TIME: Browser Audio Analysis → Live Animation
+  const playAudioImmediately = useCallback(async (audioBytes: number[], text?: string) => {
     if (isShuttingDown.current) return;
-    
-
     
     try {
       // 🎯 CHECK: Ensure AudioContext is available and running
@@ -115,7 +113,6 @@ export const ConversationOverlay: React.FC = () => {
         } catch (e) {
           audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
         }
-        // 🎵 Envelope-driven animation - no analyser needed
       }
       
       const audioContext = audioContextRef.current;
@@ -129,10 +126,16 @@ export const ConversationOverlay: React.FC = () => {
       const arrayBuffer = new Uint8Array(audioBytes).buffer;
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
       
-      // 🎯 DIRECT: Create source and play (no analyser needed for envelope-driven animation)
+      // 🎵 REAL-TIME: Create analyzer for live audio analysis
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256; // Good balance of frequency resolution and performance
+      analyser.smoothingTimeConstant = 0.8; // Smooth the data
+      
+      // 🎯 DIRECT: Create source and connect to analyzer + destination
       const source = audioContext.createBufferSource();
       source.buffer = audioBuffer;
-      source.connect(audioContext.destination);
+      source.connect(analyser);
+      analyser.connect(audioContext.destination);
       
       // 🔇 Suspend microphone capture during TTS playback (mutual exclusivity)
       try {
@@ -141,81 +144,58 @@ export const ConversationOverlay: React.FC = () => {
         console.warn('[ConversationOverlay] Could not suspend mic for playback', e);
       }
       
-      // 🎵 ENVELOPE-DRIVEN: Start animation services
-      directAudioAnimationService.start();
+      // 🎵 REAL-TIME: Start bars animation service for live data
       directBarsAnimationService.start();
-      
-      // 🎯 SIMPLE: No envelope player needed - direct animation numbers
       
       // 🎯 STATE DRIVEN: Set replying state FIRST
       setState('replying');
       
-      // 🚀 START AUDIO IMMEDIATELY: No waiting for envelope analysis
+      // 🚀 START AUDIO IMMEDIATELY
       source.start(0);
       currentTtsSourceRef.current = source;
       
-      // 🎵 NEW: 4-bar payload takes precedence (only when provided)
-      if (Array.isArray(bars) && bars.length === 4 && bars.every(arr => Array.isArray(arr) && arr.length > 0)) {
-        const barLengths = bars.map(b => b.length);
-        const minLen = Math.min(...barLengths);
-        const usedFrameMs = frameDurationMs ?? ((audioBuffer.duration * 1000) / minLen);
-        let idx = 0;
-        const start = performance.now();
-        const step = () => {
-          if (isShuttingDown.current || !currentTtsSourceRef.current) return;
-          const elapsed = performance.now() - start;
-          idx = Math.floor(elapsed / usedFrameMs);
-          if (idx < minLen) {
-            const l0 = (bars[0][idx] ?? 0) / 255;
-            const l1 = (bars[1][idx] ?? 0) / 255;
-            const l2 = (bars[2][idx] ?? 0) / 255;
-            const l3 = (bars[3][idx] ?? 0) / 255;
-            directBarsAnimationService.notifyBars([l0, l1, l2, l3] as FourBarLevels);
-            setTimeout(step, usedFrameMs);
+      // 🎵 REAL-TIME: Live audio analysis loop
+      const frequencyData = new Uint8Array(analyser.frequencyBinCount);
+      const animate = () => {
+        if (isShuttingDown.current || !currentTtsSourceRef.current) return;
+        
+        // Get live frequency data from the analyzer
+        analyser.getByteFrequencyData(frequencyData);
+        
+        // 🎵 REAL-TIME: Convert frequency data to 4 bar levels
+        // Split frequency spectrum into 4 bands for 4 bars
+        const bandSize = Math.floor(frequencyData.length / 4);
+        const barLevels: FourBarLevels = [0, 0, 0, 0];
+        
+        for (let i = 0; i < 4; i++) {
+          const start = i * bandSize;
+          const end = Math.min(start + bandSize, frequencyData.length);
+          let sum = 0;
+          for (let j = start; j < end; j++) {
+            sum += frequencyData[j];
           }
-        };
-        setTimeout(step, usedFrameMs);
-      } else if (Array.isArray(levels) && levels.length > 0) {
-        // 🎵 Legacy single-level path
-        console.log(`[ConversationOverlay] 🎵 Using ${levels.length} envelope levels for animation`);
-        console.log(`[ConversationOverlay] 🎵 First few values:`, levels.slice(0, 5));
+          // Normalize to 0-1 range and apply some scaling for visual effect
+          barLevels[i] = Math.min(1, (sum / (end - start)) / 128) * 0.8 + 0.2;
+        }
         
-        // Start animation immediately with first server-calculated value
-        const firstLevel = levels[0] ?? 0; // Server already sends final scale values
-        directAudioAnimationService.notifyAudioLevel(firstLevel);
+        // Send live data to bars
+        directBarsAnimationService.notifyBars(barLevels);
         
-        // Dynamic frame duration: stretch RMS sequence to match audio length
-        const frameMs = (audioBuffer.duration * 1000) / levels.length;
-        let frameIndex = 1;
-        
-        const animateFrame = () => {
-          if (isShuttingDown.current || !currentTtsSourceRef.current) return;
-          
-          if (frameIndex < levels.length) {
-            const level = levels[frameIndex] ?? 0; // Server already sends final scale values
-            directAudioAnimationService.notifyAudioLevel(level);
-            frameIndex++;
-            setTimeout(animateFrame, frameMs);
-          }
-        };
-        
-        // Start animation sequence after first frame
-        setTimeout(animateFrame, frameMs);
-      } else {
-        console.warn('[ConversationOverlay] ⚠️ No animation values received');
-      }
+        // Continue animation loop
+        requestAnimationFrame(animate);
+      };
       
-             // 🎯 STATE DRIVEN: Return to listening when done
-       source.onended = () => {
-         console.log('[ConversationOverlay] 🎵 TTS audio finished, returning to listening mode');
-         
-          // 🎵 Stop animation service when TTS ends
-          directAudioAnimationService.stop();
-         
-                   // 🎯 SIMPLE: No envelope player to stop
-         
-         conversationTtsService.setAudioLevelForAnimation(0);
-         setState('listening');
+      // Start the real-time animation loop
+      requestAnimationFrame(animate);
+      
+      // 🎯 STATE DRIVEN: Return to listening when done
+      source.onended = () => {
+        console.log('[ConversationOverlay] 🎵 TTS audio finished, returning to listening mode');
+        
+        // 🎵 Stop animation service when TTS ends
+        directBarsAnimationService.stop();
+        
+        setState('listening');
          
          // 🔊 Resume microphone capture after playback ends
          try {
@@ -258,10 +238,10 @@ export const ConversationOverlay: React.FC = () => {
     try {
       const connection = supabase.channel(`conversation:${chat_id}`);
       
-      // 🎯 DIRECT: WebSocket → Audio + Envelope
+      // 🎯 DIRECT: WebSocket → Audio + Real-time Analysis
       connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
         if (payload.audioBytes) {
-          playAudioImmediately(payload.audioBytes, payload.text, payload.levels, payload.frameDurationMs, payload.bars);
+          playAudioImmediately(payload.audioBytes, payload.text);
         }
       });
       
@@ -389,9 +369,7 @@ export const ConversationOverlay: React.FC = () => {
     }
     
      // 🚀 Stop animation service
-     directAudioAnimationService.stop();
-     
-           // 🎯 SIMPLE: No envelope player to stop
+     directBarsAnimationService.stop();
     
     // Stop microphone and release all resources
     conversationMicrophoneService.stopRecording();
