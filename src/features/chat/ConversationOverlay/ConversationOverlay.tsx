@@ -179,24 +179,26 @@ export const ConversationOverlay: React.FC = () => {
       currentTtsSourceRef.current = source;
       
       // 🎵 EDGE-FIRST: Use precomputed envelope from backend (no frontend processing!)
-      if (envelope && envelope.length > 0) {
+      if (Array.isArray(envelope) && envelope.length > 0) {
         console.log(`[ConversationOverlay] 🚀 Using precomputed envelope: ${envelope.length} frames`);
         
         // Start with first envelope value for instant animation
-        const previewLevel = envelope[0] || 0.1;
+        const previewLevelNumber = Number(envelope[0]);
+        const previewLevel = Number.isFinite(previewLevelNumber) ? previewLevelNumber : 0.1;
         envelopePlayerRef.current.startWithPreview(previewLevel);
         
         // Set full precomputed envelope immediately
-        envelopePlayerRef.current.setFullEnvelope(envelope);
-      } else if (typeof (envelope as any) === 'string' && (envelope as any).length > 0) {
+        envelopePlayerRef.current.setFullEnvelope(envelope as number[]);
+      } else if (typeof envelope === 'string' && envelope.length > 0) {
         // Handle base64 8-bit quantized envelope
-        const base64 = envelope as unknown as string;
+        const base64 = envelope;
         const bin = atob(base64);
         const q = new Uint8Array(bin.length);
         for (let i = 0; i < bin.length; i++) q[i] = bin.charCodeAt(i);
-        const dequantized = Array.from(q, (v) => v / 255);
+        const dequantized: number[] = Array.from(q, (v) => v / 255);
         console.log(`[ConversationOverlay] 🚀 Using dequantized envelope: ${dequantized.length} frames`);
-        const previewLevel = dequantized[0] || 0.1;
+        const previewLevelNum = Number(dequantized[0]);
+        const previewLevel = Number.isFinite(previewLevelNum) ? previewLevelNum : 0.1;
         envelopePlayerRef.current.startWithPreview(previewLevel);
         envelopePlayerRef.current.setFullEnvelope(dequantized);
       } else {
