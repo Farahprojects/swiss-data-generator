@@ -188,20 +188,23 @@ export const ConversationOverlay: React.FC = () => {
       // Start the real-time animation loop
       animationTimeoutRef.current = window.setTimeout(animate, 40);
       
-      // 🎯 STATE DRIVEN: Return to listening when done
-      source.onended = () => {
-        console.log('[ConversationOverlay] 🎵 TTS audio finished, returning to listening mode');
-        
-        // 🛑 CLEANUP: Cancel animation timeout to prevent CPU leak
-        if (animationTimeoutRef.current) {
-          clearTimeout(animationTimeoutRef.current);
-          animationTimeoutRef.current = null;
-        }
-        
-        // 🎵 Stop animation service when TTS ends
-        directBarsAnimationService.stop();
-        
-        setState('listening');
+              // 🎯 STATE DRIVEN: Return to listening when done
+        source.onended = () => {
+          console.log('[ConversationOverlay] 🎵 TTS audio finished, returning to listening mode');
+          
+          // 🛑 CLEANUP: Cancel animation timeout to prevent CPU leak
+          if (animationTimeoutRef.current) {
+            clearTimeout(animationTimeoutRef.current);
+            animationTimeoutRef.current = null;
+          }
+          
+          // 🎵 Stop animation service when TTS ends
+          directBarsAnimationService.stop();
+          
+          // 🛡️ REACT SAFE: Use setTimeout to ensure state changes happen in next tick
+          setTimeout(() => {
+            setState('listening');
+          }, 0);
          
          // 🔊 Resume microphone capture after playback ends
          try {
@@ -233,7 +236,10 @@ export const ConversationOverlay: React.FC = () => {
       
     } catch (error) {
       console.error('[ConversationOverlay] ❌ Web Audio API failed:', error);
-      setState('listening');
+      // 🛡️ REACT SAFE: Use setTimeout to ensure state changes happen in next tick
+      setTimeout(() => {
+        setState('listening');
+      }, 0);
     }
   }, []);
 
@@ -247,7 +253,10 @@ export const ConversationOverlay: React.FC = () => {
       // 🎯 DIRECT: WebSocket → Audio + Real-time Analysis
       connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
         if (payload.audioBytes) {
-          playAudioImmediately(payload.audioBytes, payload.text);
+          // 🛡️ REACT SAFE: Use setTimeout to ensure state changes happen in next tick
+          setTimeout(() => {
+            playAudioImmediately(payload.audioBytes, payload.text);
+          }, 0);
         }
       });
       
