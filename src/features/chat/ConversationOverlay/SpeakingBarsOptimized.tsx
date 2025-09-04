@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { directAudioAnimationService } from '@/services/voice/DirectAudioAnimationService';
+import { directBarsAnimationService, FourBarLevels } from '@/services/voice/DirectBarsAnimationService';
 
 interface Props {
   isActive: boolean;
@@ -8,44 +9,38 @@ interface Props {
 
 export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive, audioLevel = 0 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const smoothedLevelsRef = useRef<number[]>([0, 0, 0, 0]);
 
-  // 🎯 PURE SERVER-DRIVEN: No client-side math, just direct server values for 4 bars
+  // 🎯 PURE SERVER-DRIVEN (single-level fallback)
   useEffect(() => {
     if (!isActive || !containerRef.current) return;
 
-    const applyLevels = (serverLevels: number[]) => {
-      // Simple smoothing: exponential moving average with alpha=0.3
-      const alpha = 0.3;
-      const smoothedLevels = serverLevels.map((level, index) => {
-        const current = smoothedLevelsRef.current[index] || 0;
-        return current + alpha * (level - current);
-      });
-      smoothedLevelsRef.current = smoothedLevels;
-      
-      // Map 0-1 range to 0.2-1.0 scale range for visual appeal
-      const minScale = 0.2;
-      const maxScale = 1.0;
-      
-      smoothedLevels.forEach((level, index) => {
-        const scale = minScale + level * (maxScale - minScale);
-        containerRef.current!.style.setProperty(`--bar-${index}-scale`, scale.toString());
-      });
+    const applyLevel = (serverValue: number) => {
+      // NO MATH - server already calculated the final scale value
+      containerRef.current!.style.setProperty('--bar-scale', serverValue.toString());
     };
 
-    // Set initial visual immediately (backward compatibility)
-    if (audioLevel > 0) {
-      const initialLevels = [audioLevel, audioLevel, audioLevel, audioLevel];
-      applyLevels(initialLevels);
-    }
+    // Set initial visual immediately
+    applyLevel(audioLevel);
 
-    const unsubscribe = directAudioAnimationService.subscribe(applyLevels);
-    return () => {
-      unsubscribe();
-      // Reset smoothed levels when component becomes inactive
-      smoothedLevelsRef.current = [0, 0, 0, 0];
-    };
+    const unsubscribe = directAudioAnimationService.subscribe(applyLevel);
+    return unsubscribe;
   }, [isActive, audioLevel]);
+
+  // 🎯 NEW: 4-bar updates if provided
+  useEffect(() => {
+    if (!isActive || !containerRef.current) return;
+
+    const applyBars = (levels: FourBarLevels) => {
+      // levels are 0..1 final scale values per bar (server-driven)
+      containerRef.current!.style.setProperty('--bar1-scale', levels[0].toString());
+      containerRef.current!.style.setProperty('--bar2-scale', levels[1].toString());
+      containerRef.current!.style.setProperty('--bar3-scale', levels[2].toString());
+      containerRef.current!.style.setProperty('--bar4-scale', levels[3].toString());
+    };
+
+    const unsubscribe = directBarsAnimationService.subscribe(applyBars);
+    return unsubscribe;
+  }, [isActive]);
 
   // Four bars with different base heights: small, big, big, small
   const bars = [
@@ -60,21 +55,18 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive, audioLevel = 
       ref={containerRef}
       className="flex items-center justify-center gap-3 h-16 w-28"
       style={{
-        '--bar-0-scale': '1',
-        '--bar-1-scale': '1',
-        '--bar-2-scale': '1',
-        '--bar-3-scale': '1',
+        '--bar-scale': '1',
         willChange: 'transform', // GPU acceleration hint
       } as React.CSSProperties}
     >
-      {bars.map((bar) => (
+      {bars.map((bar, idx) => (
         <div
           key={bar.id}
           className={`bg-black rounded-full ${bar.className}`}
           style={{
             width: '16px', // All bars same width
-            transformOrigin: 'bottom center', // Scale from bottom center
-            transform: `scaleY(var(--bar-${bar.id}-scale, 1))`,
+            transformOrigin: 'bottom',
+            transform: `scaleY(var(--bar${idx+1}-scale, var(--bar-scale, 1)))`,
             willChange: 'transform', // GPU acceleration hint
             transition: 'none !important', // Disable any CSS transitions
           }}

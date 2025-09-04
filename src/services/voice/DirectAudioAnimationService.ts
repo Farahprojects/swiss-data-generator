@@ -2,42 +2,28 @@
 // Bypasses React state entirely for smooth, GPU-accelerated animations
 
 export class DirectAudioAnimationService {
-  private listeners = new Set<(levels: number[]) => void>();
+  private listeners = new Set<(level: number) => void>();
   private isProcessing = false;
-  private currentLevels = [0, 0, 0, 0]; // 4 bars
+  private currentLevel = 0;
 
-  // Subscribe to audio level updates (now receives array of 4 bar levels)
-  public subscribe(listener: (levels: number[]) => void): () => void {
+  // Subscribe to audio level updates
+  public subscribe(listener: (level: number) => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
   }
 
-  // Notify all listeners with 4-bar data
-  public notifyAudioLevel(levels: number[]): void {
-    if (levels.length === 4) {
-      this.currentLevels = [...levels]; // Update current levels
-      
-      if (this.isProcessing) {
-        this.listeners.forEach(listener => listener(this.currentLevels));
-      }
-    } else if (levels.length === 1) {
-      // Backward compatibility: single level applied to all bars
-      this.currentLevels = [levels[0], levels[0], levels[0], levels[0]];
-      
-      if (this.isProcessing) {
-        this.listeners.forEach(listener => listener(this.currentLevels));
-      }
+  // Notify all listeners (called by AudioProcessingService)
+  public notifyAudioLevel(level: number): void {
+    this.currentLevel = level; // Update current level
+    
+    if (this.isProcessing) {
+      this.listeners.forEach(listener => listener(level));
     }
   }
 
-  // Get current audio levels (returns array of 4 bar levels)
-  public getCurrentLevels(): number[] {
-    return [...this.currentLevels];
-  }
-
-  // Get current audio level (backward compatibility - returns first bar)
+  // Get current audio level
   public getCurrentLevel(): number {
-    return this.currentLevels[0];
+    return this.currentLevel;
   }
 
   // Start processing
@@ -48,9 +34,9 @@ export class DirectAudioAnimationService {
   // Stop processing
   public stop(): void {
     this.isProcessing = false;
-    this.currentLevels = [0, 0, 0, 0];
+    this.currentLevel = 0;
     // Reset all listeners to zero
-    this.listeners.forEach(listener => listener([0, 0, 0, 0]));
+    this.listeners.forEach(listener => listener(0));
   }
 
   // Clean up
