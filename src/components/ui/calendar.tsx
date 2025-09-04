@@ -29,8 +29,7 @@ function Calendar({
         nav_button_previous: "absolute left-1",
         nav_button_next: "absolute right-1",
         table: "w-full border-collapse space-y-1",
-        head_row: "hidden", // Properly hide day headers using DayPicker API
-        head_cell: "hidden", // Hide individual header cells
+        // Remove all head-related styling since we're overriding components
         row: "flex w-full mt-2",
         cell: "h-10 w-10 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
         day: cn(
@@ -56,7 +55,19 @@ function Calendar({
           }
           return <ChevronRight className="h-4 w-4" />
         },
-        // Use proper DayPicker component override to hide headers
+        // Override table components to remove weekday headers completely
+        Table: ({ children, ...props }) => (
+          <table {...props} className="w-full border-collapse space-y-1">
+            {React.Children.toArray(children).filter((child: any) => 
+              child?.type?.displayName !== 'TableHead' && 
+              child?.type?.name !== 'TableHead'
+            )}
+          </table>
+        ),
+        TableHead: () => null,
+        TableHeadRow: () => null,
+        TableHeadCell: () => null,
+        // Alternative component names
         Head: () => null,
         HeadRow: () => null,
         HeadCell: () => null,
