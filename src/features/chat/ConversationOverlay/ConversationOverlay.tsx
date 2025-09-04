@@ -7,8 +7,8 @@ import { VoiceBubble } from './VoiceBubble';
 import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
 import { conversationTtsService } from '@/services/voice/conversationTts';
 import { directAudioAnimationService } from '@/services/voice/DirectAudioAnimationService';
-import { EnvelopePlayer } from '@/services/voice/EnvelopePlayer';
-import { EnvelopeGenerator } from '@/services/voice/EnvelopeGenerator';
+// 🎵 PHONEME-BASED: No EnvelopePlayer needed
+// 🎵 PHONEME-BASED: No EnvelopeGenerator needed
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
 import { v4 as uuidv4 } from 'uuid';
@@ -61,7 +61,7 @@ export const ConversationOverlay: React.FC = () => {
   const audioContextRef = useRef<AudioContext | null>(null);
   
   // 🎵 ENVELOPE: Player for smooth, synced animation
-  const envelopePlayerRef = useRef<EnvelopePlayer | null>(null);
+  // 🎵 PHONEME-BASED: No envelope player needed
   
   // 🎯 STATE-DRIVEN: Local messages follow state changes
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
@@ -130,7 +130,7 @@ export const ConversationOverlay: React.FC = () => {
       const arrayBuffer = new Uint8Array(audioBytes).buffer;
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
       
-      // 🎯 DIRECT: Create source and play (no analyser needed for envelope-driven animation)
+      // 🎯 DIRECT: Create source and play (no analyser needed for phoneme-driven animation)
       const source = audioContext.createBufferSource();
       source.buffer = audioBuffer;
       source.connect(audioContext.destination);
@@ -142,13 +142,8 @@ export const ConversationOverlay: React.FC = () => {
         console.warn('[ConversationOverlay] Could not suspend mic for playback', e);
       }
       
-      // 🎵 ENVELOPE-DRIVEN: Start animation service
+      // 🎵 PHONEME-DRIVEN: Start animation service
       directAudioAnimationService.start();
-      
-      // 🎯 NEW: Use EnvelopePlayer for progressive, mobile-friendly animation
-      if (envelopePlayerRef.current) {
-        envelopePlayerRef.current.stop();
-      }
       
       // 🎵 PHONEME-BASED: Use phoneme alignment for animation (no envelope math!)
       if (phonemes && phonemes.length > 0) {
@@ -186,7 +181,7 @@ export const ConversationOverlay: React.FC = () => {
       // 🎯 STATE DRIVEN: Set replying state FIRST
       setState('replying');
       
-      // 🚀 START AUDIO IMMEDIATELY: No waiting for envelope analysis
+      // 🚀 START AUDIO IMMEDIATELY: No waiting for phoneme analysis
       source.start(0);
       currentTtsSourceRef.current = source;
       
@@ -199,10 +194,7 @@ export const ConversationOverlay: React.FC = () => {
           // 🎵 Stop animation service when TTS ends
           directAudioAnimationService.stop();
          
-         // 🎯 NEW: Stop envelope player when audio ends
-         if (envelopePlayerRef.current) {
-           envelopePlayerRef.current.stop();
-         }
+         // 🎵 PHONEME-BASED: No envelope player to stop
          
          conversationTtsService.setAudioLevelForAnimation(0);
          setState('listening');
@@ -381,10 +373,7 @@ export const ConversationOverlay: React.FC = () => {
      // 🚀 Stop animation service
      directAudioAnimationService.stop();
      
-     // 🎯 NEW: Stop envelope player when modal closes
-     if (envelopePlayerRef.current) {
-       envelopePlayerRef.current.stop();
-     }
+     // 🎵 PHONEME-BASED: No envelope player to stop
     
     // Stop microphone and release all resources
     conversationMicrophoneService.stopRecording();
