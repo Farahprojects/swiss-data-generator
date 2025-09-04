@@ -235,7 +235,7 @@ export const ConversationOverlay: React.FC = () => {
       
     } catch (error) {
       console.error('[ConversationOverlay] ❌ Web Audio API failed:', error);
-      setState('listening');
+      setState('connecting');
     }
   }, []);
 
@@ -416,21 +416,21 @@ export const ConversationOverlay: React.FC = () => {
             // 🎯 NOTE: Replying state will be set when WebSocket receives TTS audio
           }).catch(error => {
             console.error('[ConversationOverlay] ❌ LLM processing failed:', error);
-            setState('listening');
+            setState('connecting');
           });
           
           // 🎯 KEEP THINKING: Don't set replying until we have actual audio from WebSocket
         })
         .catch(error => {
           console.error('[ConversationOverlay] ❌ STT or LLM processing failed:', error);
-          setState('listening');
+          setState('connecting');
         });
       
       // 🎯 KEEP THINKING STATE: Don't override thinking state - let the promise chain handle state transitions
       
     } catch (error) {
       console.error('[ConversationOverlay] ❌ Processing failed:', error);
-      setState('listening');
+      setState('connecting');
     } finally {
       // 🛡️ CLEANUP: Reset processing flag
       isProcessingRef.current = false;
@@ -492,7 +492,7 @@ export const ConversationOverlay: React.FC = () => {
     console.log('[ConversationOverlay] 🎨 Animation service stopped');
     
     // 🎯 STEP 6: Reset UI state (after all browser APIs are closed)
-    setState('listening');
+    setState('connecting');
     hasStarted.current = false;
     isShuttingDown.current = false;
     console.log('[ConversationOverlay] 🎯 UI state reset');
