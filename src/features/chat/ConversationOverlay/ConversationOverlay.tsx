@@ -101,8 +101,8 @@ export const ConversationOverlay: React.FC = () => {
     };
   }, []);
 
-  // 🎯 DIRECT AUDIO: WebSocket → Browser Audio + Envelope for smooth bars
-  const playAudioImmediately = useCallback(async (audioBytes: number[], text?: string, envelope?: number[], frameDurationMs?: number) => {
+  // 🎯 DIRECT AUDIO: WebSocket → Browser Audio + Phoneme Animation
+  const playAudioImmediately = useCallback(async (audioBytes: number[], text?: string, phonemes?: any[], frameDurationMs?: number) => {
     if (isShuttingDown.current) return;
     
 
@@ -126,18 +126,8 @@ export const ConversationOverlay: React.FC = () => {
         await audioContext.resume();
       }
       
-      // 🎯 DIRECT: Convert bytes/base64 to ArrayBuffer and decode
-      let arrayBuffer: ArrayBuffer;
-      if (Array.isArray(audioBytes)) {
-        arrayBuffer = new Uint8Array(audioBytes).buffer;
-      } else {
-        // If payload is base64 string, decode
-        const binary = atob(audioBytes as unknown as string);
-        const len = binary.length;
-        const bytes = new Uint8Array(len);
-        for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
-        arrayBuffer = bytes.buffer;
-      }
+      // 🎯 DIRECT: Convert bytes to ArrayBuffer and decode
+      const arrayBuffer = new Uint8Array(audioBytes).buffer;
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
       
       // 🎯 DIRECT: Create source and play (no analyser needed for envelope-driven animation)
@@ -160,16 +150,38 @@ export const ConversationOverlay: React.FC = () => {
         envelopePlayerRef.current.stop();
       }
       
-      envelopePlayerRef.current = new EnvelopePlayer(
-        audioBuffer.duration * 1000, // Convert to milliseconds
-        frameDurationMs && frameDurationMs > 0 ? frameDurationMs : 20,
-        (level) => {
-          if (!isShuttingDown.current) {
-            // 🎯 DIRECT: Update the audio level for the speaking bars
-            directAudioAnimationService.notifyAudioLevel(level);
-          }
-        }
-      );
+      // 🎵 PHONEME-BASED: Use phoneme alignment for animation (no envelope math!)
+      if (phonemes && phonemes.length > 0) {
+        console.log(`[ConversationOverlay] 🎵 Using ${phonemes.length} phonemes for animation`);
+        
+        // Start phoneme-based animation
+        const startPhonemeAnimation = () => {
+          const updateAnimation = () => {
+            if (!currentTtsSourceRef.current || isShuttingDown.current) return;
+            
+            const currentTime = audioContextRef.current?.currentTime || 0;
+            const activePhoneme = phonemes.find(p => currentTime >= p.start && currentTime <= p.end);
+            
+            if (activePhoneme) {
+              // Animate based on phoneme intensity
+              directAudioAnimationService.notifyAudioLevel(activePhoneme.intensity || 0.5);
+            } else {
+              // Silence - lower bars
+              directAudioAnimationService.notifyAudioLevel(0.1);
+            }
+            
+            requestAnimationFrame(updateAnimation);
+          };
+          
+          updateAnimation();
+        };
+        
+        // Start animation after a short delay to sync with audio
+        setTimeout(startPhonemeAnimation, 50);
+      } else {
+        console.warn('[ConversationOverlay] ⚠️ No phoneme data received, using static animation');
+        directAudioAnimationService.notifyAudioLevel(0.3); // Static level
+      }
       
       // 🎯 STATE DRIVEN: Set replying state FIRST
       setState('replying');
@@ -178,34 +190,7 @@ export const ConversationOverlay: React.FC = () => {
       source.start(0);
       currentTtsSourceRef.current = source;
       
-      // 🎵 EDGE-FIRST: Use precomputed envelope from backend (no frontend processing!)
-      if (Array.isArray(envelope) && envelope.length > 0) {
-        console.log(`[ConversationOverlay] 🚀 Using precomputed envelope: ${envelope.length} frames`);
-        
-        // Start with first envelope value for instant animation
-        const previewLevelNumber = Number(envelope[0]);
-        const previewLevel = Number.isFinite(previewLevelNumber) ? previewLevelNumber : 0.1;
-        envelopePlayerRef.current.startWithPreview(previewLevel);
-        
-        // Set full precomputed envelope immediately
-        envelopePlayerRef.current.setFullEnvelope(envelope as number[]);
-      } else if (typeof envelope === 'string' && envelope.length > 0) {
-        // Handle base64 8-bit quantized envelope
-        const base64 = envelope;
-        const bin = atob(base64);
-        const q = new Uint8Array(bin.length);
-        for (let i = 0; i < bin.length; i++) q[i] = bin.charCodeAt(i);
-        const dequantized: number[] = Array.from(q, (v) => v / 255);
-        console.log(`[ConversationOverlay] 🚀 Using dequantized envelope: ${dequantized.length} frames`);
-        const previewLevelNum = Number(dequantized[0]);
-        const previewLevel = Number.isFinite(previewLevelNum) ? previewLevelNum : 0.1;
-        envelopePlayerRef.current.startWithPreview(previewLevel);
-        envelopePlayerRef.current.setFullEnvelope(dequantized);
-      } else {
-        console.warn('[ConversationOverlay] ⚠️ No precomputed envelope received from backend');
-        // Fallback to minimal animation
-        envelopePlayerRef.current.startWithPreview(0.1);
-      }
+      // 🎵 PHONEME ANIMATION: Already started above, no additional processing needed
       
              // 🎯 STATE DRIVEN: Return to listening when done
        source.onended = () => {
@@ -231,13 +216,17 @@ export const ConversationOverlay: React.FC = () => {
          
          // 🚨 CHECK: Only restart microphone if we're not shutting down
          if (!isShuttingDown.current) {
-           // 🎤 Restart microphone recording for next turn
-           try {
-             conversationMicrophoneService.startRecording();
-             console.log('[ConversationOverlay] 🎤 Microphone recording restarted for next turn');
-           } catch (error) {
-             console.error('[ConversationOverlay] ❌ Failed to restart microphone recording:', error);
-           }
+           // 🎤 Restart microphone recording with timing buffer to align VAD with TTS end
+           setTimeout(() => {
+             if (!isShuttingDown.current) {
+               try {
+                 conversationMicrophoneService.startRecording();
+                 console.log('[ConversationOverlay] 🎤 Microphone recording restarted for next turn (with timing buffer)');
+               } catch (error) {
+                 console.error('[ConversationOverlay] ❌ Failed to restart microphone recording:', error);
+               }
+             }
+           }, 100); // 100ms buffer to align VAD with TTS timing
          } else {
            // 🚫 Shutting down - no auto-restart
            console.log('[ConversationOverlay] 🎤 Shutting down, skipping microphone restart');
@@ -261,10 +250,8 @@ export const ConversationOverlay: React.FC = () => {
       
       // 🎯 DIRECT: WebSocket → Audio + Envelope
       connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
-        const audioData = payload.audioBase64 ?? payload.audioBytes;
-        const envData = payload.envelopeBase64 ?? payload.envelope;
-        if (audioData) {
-          playAudioImmediately(audioData, payload.text, envData, payload.frameDurationMs);
+        if (payload.audioBytes) {
+          playAudioImmediately(payload.audioBytes, payload.text, payload.phonemes, payload.frameDurationMs);
         }
       });
       

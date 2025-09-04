@@ -91,7 +91,7 @@ serve(async (req) => {
     const voiceName = `en-US-Chirp3-HD-${voice}`;
     console.log(`[google-tts] Using voice: ${voiceName}`);
 
-    // Call Google Text-to-Speech API for MP3 (playback)
+    // Call Google Text-to-Speech API for MP3 (playback) with alignment data
     const ttsResponse = await fetch(
       `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
       {
@@ -113,6 +113,7 @@ serve(async (req) => {
             pitch: 0.0,
             sampleRateHertz: 22050
           },
+          enableTimePointing: ["SSML_MARK"], // Enable phoneme alignment
         }),
       }
     );
@@ -125,6 +126,7 @@ serve(async (req) => {
     
     const ttsData = await ttsResponse.json();
     const audioContent = ttsData.audioContent;
+    const timepoints = ttsData.timepoints || []; // Phoneme alignment data
 
     if (!audioContent) {
       throw new Error("No audio content received from Google TTS API");
@@ -132,65 +134,103 @@ serve(async (req) => {
 
     // Decode base64 MP3 audio content to raw bytes
     const audioBytes = Uint8Array.from(atob(audioContent), c => c.charCodeAt(0));
-
-    // In parallel, request LINEAR16 for precise envelope calculation (same text/voice)
-    const pcmSampleRate = 22050;
-    const pcmReq = fetch(
-      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "User-Agent": "TheRAI-TTS/1.0",
-        },
-        body: JSON.stringify({
-          input: { text },
-          voice: {
-            languageCode: "en-US",
-            name: voiceName,
-          },
-          audioConfig: {
-            audioEncoding: "LINEAR16",
-            speakingRate: 1.0,
-            pitch: 0.0,
-            sampleRateHertz: pcmSampleRate
-          },
-        }),
+    
+    // Process phoneme alignment data for animation
+    console.log('[google-tts] 🔍 Raw timepoints:', JSON.stringify(timepoints, null, 2));
+    
+    const phonemes = timepoints.map((tp: any, index: number) => {
+      // Google TTS timepoints format: { timeSeconds: number, markName?: string }
+      const start = tp.timeSeconds || 0;
+      const nextTimepoint = timepoints[index + 1];
+      const end = nextTimepoint ? nextTimepoint.timeSeconds : start + 0.1; // Use next timepoint or default 100ms
+      
+      return {
+        symbol: tp.markName || `phoneme_${index}`,
+        start: start,
+        end: end,
+        intensity: tp.markName ? (tp.markName.match(/[aeiou]/i) ? 0.8 : 0.4) : 0.5 // Vowels = higher intensity
+      };
+    });
+    
+    console.log(`[google-tts] 🎵 Generated ${phonemes.length} phoneme timepoints for animation`);
+    
+    // Fallback: If no timepoints, create simple word-based timing
+    if (phonemes.length === 0) {
+      console.log('[google-tts] ⚠️ No timepoints received, creating fallback word-based timing');
+      const words = text.split(' ');
+      const avgWordDuration = 0.5; // 500ms per word average
+      
+      for (let i = 0; i < words.length; i++) {
+        const start = i * avgWordDuration;
+        const end = (i + 1) * avgWordDuration;
+        phonemes.push({
+          symbol: `word_${i}`,
+          start: start,
+          end: end,
+          intensity: 0.6 // Medium intensity for words
+        });
       }
-    );
-    const pcmResp = await pcmReq;
-    if (!pcmResp.ok) {
-      const errText = await pcmResp.text();
-      console.error("[google-tts] LINEAR16 request failed:", pcmResp.status, errText);
-      throw new Error(`Google TTS LINEAR16 error: ${pcmResp.status}`);
     }
-    const pcmJson = await pcmResp.json();
-    const pcmContent = pcmJson.audioContent as string;
-    const pcmBytes = Uint8Array.from(atob(pcmContent), c => c.charCodeAt(0));
-    const { envelope, frameDurationMs } = calculateEnvelopeFromLinear16(pcmBytes, pcmSampleRate, 20);
 
-    // 📉 Downsample envelope to ~24 fps to reduce WS payload size
-    const TARGET_FPS = 24;
-    const desiredFrameMs = 1000 / TARGET_FPS;
-    const stride = Math.max(1, Math.round(desiredFrameMs / frameDurationMs));
-    const downsampledEnvelope: number[] = [];
-    for (let i = 0; i < envelope.length; i += stride) {
-      downsampledEnvelope.push(envelope[i]);
-    }
-    const downsampledFrameDurationMs = frameDurationMs * stride;
-    console.log(
-      `[google-tts] 📉 Downsampled envelope: ${downsampledEnvelope.length} frames @ ${downsampledFrameDurationMs.toFixed(2)}ms (stride=${stride})`
-    );
+    // 🚫 DISABLED: Envelope generation for performance testing
+    // In parallel, request LINEAR16 for precise envelope calculation (same text/voice)
+    // const pcmSampleRate = 22050;
+    // const pcmReq = fetch(
+    //   `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
+    //   {
+    //     method: "POST",
+    //     headers: {
+    //       "Content-Type": "application/json",
+    //       "Accept": "application/json",
+    //       "User-Agent": "TheRAI-TTS/1.0",
+    //     },
+    //     body: JSON.stringify({
+    //       input: { text },
+    //       voice: {
+    //         languageCode: "en-US",
+    //         name: voiceName,
+    //       },
+    //       audioConfig: {
+    //         audioEncoding: "LINEAR16",
+    //         speakingRate: 1.0,
+    //         pitch: 0.0,
+    //         sampleRateHertz: pcmSampleRate
+    //       },
+    //     }),
+    //   }
+    // );
+    // const pcmResp = await pcmReq;
+    // if (!pcmResp.ok) {
+    //   const errText = await pcmResp.text();
+    //   console.error("[google-tts] LINEAR16 request failed:", pcmResp.status, errText);
+    //   throw new Error(`Google TTS LINEAR16 error: ${pcmResp.status}`);
+    // }
+    // const pcmJson = await pcmResp.json();
+    // const pcmContent = pcmJson.audioContent as string;
+    // const pcmBytes = Uint8Array.from(atob(pcmContent), c => c.charCodeAt(0));
+    // const { envelope, frameDurationMs } = calculateEnvelopeFromLinear16(pcmBytes, pcmSampleRate, 20);
+
+    // 📉 Downsample envelope to ~15 fps to reduce WS payload size and RAF load
+    // const TARGET_FPS = 15;
+    // const desiredFrameMs = 1000 / TARGET_FPS;
+    // const stride = Math.max(1, Math.round(desiredFrameMs / frameDurationMs));
+    // const downsampledEnvelope: number[] = [];
+    // for (let i = 0; i < envelope.length; i += stride) {
+    //   downsampledEnvelope.push(envelope[i]);
+    // }
+    // const downsampledFrameDurationMs = frameDurationMs * stride;
+    // console.log(
+    //   `[google-tts] 📉 Downsampled envelope: ${downsampledEnvelope.length} frames @ ${downsampledFrameDurationMs.toFixed(2)}ms (stride=${stride})`
+    // );
 
     // 📦 Quantize to 8-bit (0..255) and base64 encode for lighter WS JSON payload
-    const quantized = new Uint8Array(downsampledEnvelope.length);
-    for (let i = 0; i < downsampledEnvelope.length; i++) {
-      const clamped = Math.max(0, Math.min(1, downsampledEnvelope[i] || 0));
-      quantized[i] = Math.round(clamped * 255);
-    }
-    const envelopeBase64 = uint8ToBase64(quantized);
-    const audioBase64 = uint8ToBase64(audioBytes);
+    // const quantized = new Uint8Array(downsampledEnvelope.length);
+    // for (let i = 0; i < downsampledEnvelope.length; i++) {
+    //   const clamped = Math.max(0, Math.min(1, downsampledEnvelope[i] || 0));
+    //   quantized[i] = Math.round(clamped * 255);
+    // }
+    // const envelopeBase64 = uint8ToBase64(quantized);
+    // const audioBase64 = uint8ToBase64(audioBytes); // Base64 is 33% larger than binary!
     
     // Pure streaming approach - no storage, no DB
     const responseData = {
@@ -238,9 +278,8 @@ serve(async (req) => {
           type: 'broadcast',
           event: 'tts-ready',
           payload: {
-            audioBase64: audioBase64, // Raw MP3 bytes as base64 string
-            envelopeBase64: envelopeBase64, // 8-bit quantized envelope as base64
-            frameDurationMs: downsampledFrameDurationMs,
+            audioBytes: Array.from(audioBytes), // Raw MP3 bytes as array
+            phonemes: phonemes, // Phoneme alignment data for animation
             audioUrl: null, // No URL since we're not storing
             text: text,
             chat_id: chat_id,
