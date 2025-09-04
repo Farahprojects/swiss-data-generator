@@ -13,6 +13,12 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive }) => {
     if (!isActive || !containerRef.current) return;
 
     const applyBars = (levels: FourBarLevels) => {
+      // 🎯 DEBUG: Verify all bars get the same signal
+      const allSame = levels[0] === levels[1] && levels[1] === levels[2] && levels[2] === levels[3];
+      if (!allSame) {
+        console.warn('[SpeakingBars] ⚠️ Bars not synchronized:', levels);
+      }
+      
       // levels are 0..1 final scale values per bar from real-time analysis
       containerRef.current!.style.setProperty('--bar1-scale', levels[0].toString());
       containerRef.current!.style.setProperty('--bar2-scale', levels[1].toString());
@@ -24,12 +30,12 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive }) => {
     return unsubscribe;
   }, [isActive]);
 
-  // Four bars with different base heights: small, big, big, small
+  // 🎯 SIMPLIFIED: All bars identical for perfect synchronization
   const bars = [
-    { id: 0, baseHeight: 0.6, className: 'h-16' }, // Small bar on left (increased from h-10)
-    { id: 1, baseHeight: 0.8, className: 'h-20' }, // Big bar in middle-left (increased from h-14)
-    { id: 2, baseHeight: 0.8, className: 'h-20' }, // Big bar in middle-right (increased from h-14)
-    { id: 3, baseHeight: 0.6, className: 'h-16' }, // Small bar on right (increased from h-10)
+    { id: 0, className: 'h-20' }, // All bars same height
+    { id: 1, className: 'h-20' }, // All bars same height
+    { id: 2, className: 'h-20' }, // All bars same height
+    { id: 3, className: 'h-20' }, // All bars same height
   ];
 
   return (

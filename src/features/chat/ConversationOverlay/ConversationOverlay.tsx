@@ -161,13 +161,20 @@ export const ConversationOverlay: React.FC = () => {
         // Get live frequency data from the analyzer
         analyser.getByteFrequencyData(frequencyData);
         
-        // 🎵 REAL-TIME: Convert frequency data to 4 bar levels
-        // Use spaced frequency bins for 4 bars (0, 64, 128, 192)
+        // 🎵 REAL-TIME: Calculate overall audio level for synchronized bars
+        // Sum all frequency bins to get overall audio intensity
+        let totalLevel = 0;
+        for (let i = 0; i < frequencyData.length; i++) {
+          totalLevel += frequencyData[i];
+        }
+        const overallLevel = totalLevel / (frequencyData.length * 255); // Normalize to 0-1
+        
+        // 🎯 SIMPLIFIED: All bars use the same signal for synchronized movement
         const barLevels: FourBarLevels = [
-          frequencyData[0] / 255,     // Low frequencies
-          frequencyData[64] / 255,    // Mid-low frequencies  
-          frequencyData[128] / 255,   // Mid-high frequencies
-          frequencyData[192] / 255    // High frequencies
+          overallLevel,  // All bars move together
+          overallLevel,  // All bars move together
+          overallLevel,  // All bars move together
+          overallLevel   // All bars move together
         ];
         
         // Send live data to bars
@@ -319,13 +326,8 @@ export const ConversationOverlay: React.FC = () => {
       // 🎯 STATE DRIVEN: Processing state
       setState('thinking');
       
-      // Transcribe audio with timeout
-      const sttPromise = sttService.transcribe(audioBlob, chat_id, {}, 'conversation', chat_id);
-      const sttTimeout = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('STT timeout after 10 seconds')), 10000)
-      );
-      
-      const result = await Promise.race([sttPromise, sttTimeout]) as { transcript: string };
+      // Transcribe audio
+      const result = await sttService.transcribe(audioBlob, chat_id, {}, 'conversation', chat_id);
       const transcript = result.transcript?.trim();
       
       if (!transcript) {
@@ -335,12 +337,7 @@ export const ConversationOverlay: React.FC = () => {
       
       // 🎯 OPTIMIZED: Create WebSocket connection NOW (after STT, before LLM)
       console.log('[ConversationOverlay] 🎯 Creating WebSocket connection after STT');
-      const connectionPromise = establishConnection();
-      const connectionTimeout = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('WebSocket connection timeout after 5 seconds')), 5000)
-      );
-      
-      const connectionSuccess = await Promise.race([connectionPromise, connectionTimeout]);
+      const connectionSuccess = await establishConnection();
       if (!connectionSuccess) {
         console.error('[ConversationOverlay] ❌ Failed to establish WebSocket connection');
         setState('listening');
@@ -348,18 +345,12 @@ export const ConversationOverlay: React.FC = () => {
       }
       
       // Send to chat-send via the existing working llmService (handles LLM → TTS → WebSocket automatically)
-      // 🚨 CRITICAL: LLM call is NOT fire-and-forget - it blocks for LLM + TTS processing!
-      const llmPromise = llmService.sendMessage({
+      const response = await llmService.sendMessage({
         chat_id,
         text: transcript,
         client_msg_id: uuidv4(),
         mode: 'conversation'
       });
-      const llmTimeout = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('LLM+TTS timeout after 30 seconds')), 30000)
-      );
-      
-      const response = await Promise.race([llmPromise, llmTimeout]);
       
       // 🎯 STATE DRIVEN: Replying state (TTS will come via WebSocket from chat-send)
       setState('replying');
