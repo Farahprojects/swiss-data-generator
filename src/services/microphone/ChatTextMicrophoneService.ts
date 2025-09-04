@@ -2,11 +2,12 @@
  * 💬 CHAT TEXT MICROPHONE SERVICE - Complete Domain Isolation
  * 
  * Handles ALL microphone functionality for chat text area voice input.
- * Completely isolated from other domains.
+ * Completely isolated from other domains. Now uses shared RollingBufferVAD.
  */
 
 import { supabase } from '@/integrations/supabase/client';
 import { microphoneArbitrator } from './MicrophoneArbitrator';
+import { RollingBufferVAD } from './vad/RollingBufferVAD';
 
 export interface ChatTextMicrophoneOptions {
   onTranscriptReady?: (transcript: string) => void;
@@ -16,24 +17,15 @@ export interface ChatTextMicrophoneOptions {
 
 class ChatTextMicrophoneServiceClass {
   private stream: MediaStream | null = null;
-  private mediaRecorder: MediaRecorder | null = null;
+  private rollingBufferVAD: RollingBufferVAD | null = null;
   private audioContext: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
   private mediaStreamSource: MediaStreamAudioSourceNode | null = null;
   
-  // Rolling buffer for VAD lookback
-  private preBufferChunks: Blob[] = [];
-  private activeChunks: Blob[] = [];
-  private lookbackWindowMs = 750; // 750ms rolling buffer
-  private timeSliceMs = 250; // Chunk every 250ms
-  private voiceStarted = false;
-  
   private isRecording = false;
   private isProcessing = false;
   private audioLevel = 0;
-  private silenceTimer: NodeJS.Timeout | null = null;
   private recordingTimeout: NodeJS.Timeout | null = null;
-  private monitoringRef = { current: false };
   private currentTraceId: string | null = null;
   private recordingStartedAt: number | null = null;
   
@@ -49,7 +41,7 @@ class ChatTextMicrophoneServiceClass {
   }
 
   /**
-   * START RECORDING - Complete domain-specific recording
+   * START RECORDING - Complete domain-specific recording with rolling buffer VAD
    */
   async startRecording(): Promise<boolean> {
     // Check permission from arbitrator
@@ -84,57 +76,40 @@ class ChatTextMicrophoneServiceClass {
       this.analyser.fftSize = 1024; // Mobile-first: Smaller FFT for faster analysis
       this.analyser.smoothingTimeConstant = 0.8;
       this.mediaStreamSource.connect(this.analyser);
-      // reduced detailed analyser config logging
 
-      // Set up MediaRecorder - mobile optimized for rolling buffer
-      this.mediaRecorder = new MediaRecorder(this.stream, {
-        mimeType: 'audio/webm;codecs=opus',
-        audioBitsPerSecond: 64000 // Mobile-first: 50% smaller files for faster upload
+      // Initialize rolling buffer VAD
+      this.rollingBufferVAD = new RollingBufferVAD({
+        lookbackWindowMs: 750,
+        chunkDurationMs: 250,
+        voiceThreshold: 0.012,
+        silenceThreshold: 0.008,
+        voiceConfirmMs: 300,
+        silenceTimeoutMs: this.options.silenceTimeoutMs || 1500,
+        onVoiceStart: () => {
+          this.log('🎤 Rolling buffer VAD: Voice activity confirmed');
+        },
+        onSilenceDetected: () => {
+          this.log('🧘‍♂️ Rolling buffer VAD: Silence detected - stopping recording');
+          if (this.options.onSilenceDetected) {
+            this.options.onSilenceDetected();
+          }
+          this.stopRecording();
+        },
+        onError: (error: Error) => {
+          this.error('❌ Rolling buffer VAD error:', error);
+        }
       });
 
-      // Reset rolling buffer state
-      this.preBufferChunks = [];
-      this.activeChunks = [];
-      this.voiceStarted = false;
       this.isRecording = true;
 
-      // Rolling buffer implementation with VAD lookback
-      this.mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          if (!this.voiceStarted) {
-            // Pre-voice: maintain rolling buffer
-            this.preBufferChunks.push(event.data);
-            
-            // Keep only last lookbackWindowMs worth of chunks
-            const maxChunks = Math.ceil(this.lookbackWindowMs / this.timeSliceMs);
-            if (this.preBufferChunks.length > maxChunks) {
-              this.preBufferChunks.shift();
-            }
-          } else {
-            // Post-voice: collect active recording
-            this.activeChunks.push(event.data);
-          }
-        }
-      };
-
-      this.mediaRecorder.onstop = async () => {
-        // Process audio with rolling buffer
-        await this.processAudio();
-        this.cleanup();
-      };
-
-      // Start recording with time slicing for rolling buffer
-      this.mediaRecorder.start(this.timeSliceMs);
-      // minimal start log
+      // Start rolling buffer VAD
+      await this.rollingBufferVAD.start(this.stream, this.audioContext, this.analyser);
       
       // Set 45-second timeout to automatically stop recording
       this.recordingTimeout = setTimeout(() => {
         this.log('⏰ 45-second recording timeout reached - stopping automatically');
         this.stopRecording();
       }, 45000);
-      
-      // Start two-phase Voice Activity Detection
-      this.startVoiceActivityDetection();
       
       this.notifyListeners();
       this.log('✅ Recording started');
@@ -150,19 +125,12 @@ class ChatTextMicrophoneServiceClass {
   /**
    * STOP RECORDING - Clean domain-specific stop
    */
-  stopRecording(): void {
+  async stopRecording(): Promise<void> {
     if (!this.isRecording) return;
 
     this.log('🛑 Stopping recording');
     
     this.isRecording = false;
-    this.monitoringRef.current = false;
-    
-    // Clear silence timer
-    if (this.silenceTimer) {
-      clearTimeout(this.silenceTimer);
-      this.silenceTimer = null;
-    }
 
     // Clear recording timeout
     if (this.recordingTimeout) {
@@ -170,135 +138,45 @@ class ChatTextMicrophoneServiceClass {
       this.recordingTimeout = null;
     }
 
-    // Stop MediaRecorder
-    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      this.log('⏹️ Calling mediaRecorder.stop()');
-      this.mediaRecorder.stop();
+    // Stop rolling buffer VAD and get final blob
+    let finalBlob: Blob | null = null;
+    if (this.rollingBufferVAD) {
+      finalBlob = await this.rollingBufferVAD.stop();
     }
-    // NOTE: cleanup will be triggered in the mediaRecorder.onstop handler
-  }
 
-  /**
-   * TWO-PHASE VOICE ACTIVITY DETECTION - Professional VAD system
-   */
-  private startVoiceActivityDetection(): void {
-    if (!this.analyser || this.monitoringRef.current) return;
-    this.monitoringRef.current = true;
+    // Process audio if we have a recording
+    if (finalBlob) {
+      await this.processAudio(finalBlob);
+    } else {
+      this.log('📵 No audio recorded');
+    }
 
-    const bufferLength = this.analyser.fftSize;
-    const dataArray = new Uint8Array(bufferLength);
-    
-    // VAD State Machine
-    let phase: 'waiting_for_voice' | 'monitoring_silence' = 'waiting_for_voice';
-    let voiceStartTime: number | null = null;
-    let silenceStartTime: number | null = null;
-    
-    // Optimized thresholds for natural conversation flow
-    const VOICE_START_THRESHOLD = 0.012;  // RMS threshold to detect voice start
-    const VOICE_START_DURATION = 300;     // Duration to confirm voice (300ms)
-    const SILENCE_THRESHOLD = 0.008;      // Lower threshold for silence (hysteresis)
-    const SILENCE_TIMEOUT = this.options.silenceTimeoutMs || 1500; // 1.5 seconds for responsive conversation
-    
-    this.log(`🧠 VAD started - waiting for voice (>${VOICE_START_THRESHOLD} RMS for ${VOICE_START_DURATION}ms, silence <${SILENCE_THRESHOLD} RMS for ${SILENCE_TIMEOUT}ms)`);
-
-    const checkVAD = () => {
-      if (!this.monitoringRef.current || !this.analyser) return;
-      
-      // Get current RMS audio level
-      this.analyser.getByteTimeDomainData(dataArray);
-      let sumSquares = 0;
-      for (let i = 0; i < bufferLength; i++) {
-        const centered = (dataArray[i] - 128) / 128;
-        sumSquares += centered * centered;
-      }
-      const rms = Math.sqrt(sumSquares / bufferLength);
-      this.audioLevel = rms;
-      
-      // Notify UI of audio level changes for waveform animation
-      this.notifyListeners();
-      
-      const now = Date.now();
-      
-      if (phase === 'waiting_for_voice') {
-        // Phase 1: Wait for real voice activity
-        if (rms > VOICE_START_THRESHOLD) {
-          if (voiceStartTime === null) {
-            voiceStartTime = now;
-          } else if (now - voiceStartTime >= VOICE_START_DURATION) {
-            // Voice confirmed! Mark voice started for rolling buffer
-            this.voiceStarted = true;
-            phase = 'monitoring_silence';
-            voiceStartTime = null;
-            this.log(`🎤 Voice activity confirmed - capturing with ${this.lookbackWindowMs}ms lookback`);
-          }
-        } else {
-          voiceStartTime = null; // Reset if signal drops
-        }
-        
-      } else if (phase === 'monitoring_silence') {
-        // Phase 2: Monitor for silence after voice detected
-        if (rms < SILENCE_THRESHOLD) {
-          if (silenceStartTime === null) {
-            silenceStartTime = now;
-          } else if (now - silenceStartTime >= SILENCE_TIMEOUT) {
-            // Natural silence detected - stop recording
-            this.log(`🧘‍♂️ ${SILENCE_TIMEOUT}ms silence detected after voice - stopping naturally`);
-            this.monitoringRef.current = false;
-            
-            if (this.options.onSilenceDetected) {
-              this.options.onSilenceDetected();
-            }
-            
-            this.stopRecording();
-            return;
-          }
-        } else {
-          silenceStartTime = null; // Reset silence timer - still speaking
-        }
-      }
-
-      requestAnimationFrame(checkVAD);
-    };
-
-    checkVAD();
+    this.cleanup();
   }
 
   /**
    * PROCESS AUDIO - Domain-specific transcription with rolling buffer
    */
-  private async processAudio(): Promise<void> {
-    // If voice was never detected, don't process anything
-    if (!this.voiceStarted || this.activeChunks.length === 0) {
-      this.log('📵 No voice detected, skipping processing');
-      return;
-    }
-
+  private async processAudio(audioBlob: Blob): Promise<void> {
     try {
       this.isProcessing = true;
       this.notifyListeners();
       
-      // Combine pre-buffer (lookback) + active chunks for complete audio
-      const allChunks = [...this.preBufferChunks, ...this.activeChunks];
-      const finalBlob = new Blob(allChunks, { type: 'audio/webm;codecs=opus' });
       const measuredDurationMs = this.recordingStartedAt ? Date.now() - this.recordingStartedAt : 0;
 
       this.log('🔄 Processing audio with VAD lookback', { 
-        finalBlobSize: finalBlob.size,
-        measuredDurationMs,
-        preBufferChunks: this.preBufferChunks.length,
-        activeChunks: this.activeChunks.length,
-        lookbackMs: this.lookbackWindowMs
+        finalBlobSize: audioBlob.size,
+        measuredDurationMs
       });
       
-      // Use supabase.functions.invoke, which handles auth transparently and now works
-      // because the edge function is fixed to accept raw binary data.
+      // Use supabase.functions.invoke for transcription
       const { data, error } = await supabase.functions.invoke('google-speech-to-text', {
-        body: finalBlob,
+        body: audioBlob,
         headers: {
           'X-Trace-Id': this.currentTraceId || '',
           'X-Meta': JSON.stringify({
             measuredDurationMs,
-            blobSize: finalBlob.size,
+            blobSize: audioBlob.size,
             config: {
               encoding: 'WEBM_OPUS',
               languageCode: 'en-US',
@@ -332,6 +210,12 @@ class ChatTextMicrophoneServiceClass {
   private cleanup(): void {
     this.log('🧹 Cleaning up chat text microphone');
 
+    // Cleanup rolling buffer VAD
+    if (this.rollingBufferVAD) {
+      this.rollingBufferVAD.cleanup();
+      this.rollingBufferVAD = null;
+    }
+
     // Disconnect audio nodes
     if (this.mediaStreamSource) {
       this.mediaStreamSource.disconnect();
@@ -351,16 +235,10 @@ class ChatTextMicrophoneServiceClass {
     }
 
     // Clear refs
-    this.mediaRecorder = null;
     this.analyser = null;
     this.audioLevel = 0;
     this.currentTraceId = null;
     this.recordingStartedAt = null;
-    
-    // Reset rolling buffer state
-    this.preBufferChunks = [];
-    this.activeChunks = [];
-    this.voiceStarted = false;
 
     // Clear any remaining timers
     if (this.recordingTimeout) {
@@ -378,6 +256,12 @@ class ChatTextMicrophoneServiceClass {
    * GET STATE - For React hooks
    */
   getState() {
+    // Get audio level from rolling buffer VAD if available
+    if (this.rollingBufferVAD) {
+      const vadState = this.rollingBufferVAD.getState();
+      this.audioLevel = vadState.audioLevel;
+    }
+    
     return {
       isRecording: this.isRecording,
       isProcessing: this.isProcessing,
@@ -402,7 +286,7 @@ class ChatTextMicrophoneServiceClass {
    */
   async toggleRecording(): Promise<void> {
     if (this.isRecording) {
-      this.stopRecording();
+      await this.stopRecording();
     } else {
       await this.startRecording();
     }
@@ -415,7 +299,6 @@ class ChatTextMicrophoneServiceClass {
     this.log('🚨 Force cleanup');
     this.isRecording = false;
     this.isProcessing = false;
-    this.monitoringRef.current = false;
     this.cleanup();
   }
 
@@ -434,20 +317,16 @@ class ChatTextMicrophoneServiceClass {
   }
 
   private log(message: string, ...args: any[]): void {
-    // Gate non-error logs behind a runtime flag to keep console clean by default.
-    // Enable by running in DevTools: localStorage.setItem('debugAudio', '1')
     try {
       if (typeof localStorage !== 'undefined') {
         const enabled = localStorage.getItem('debugAudio') === '1';
         if (!enabled) return;
       }
     } catch {}
-    // eslint-disable-next-line no-console
     console.log('[ChatTextMic]', this.prefix(), message, ...args);
   }
 
   private error(message: string, ...args: any[]): void {
-    // eslint-disable-next-line no-console
     console.error('[ChatTextMic]', this.prefix(), message, ...args);
   }
 

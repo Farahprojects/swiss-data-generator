@@ -6,6 +6,7 @@
  */
 
 import { microphoneArbitrator } from './MicrophoneArbitrator';
+import { RollingBufferVAD, RollingBufferVADOptions } from './vad/RollingBufferVAD';
 
 export interface ConversationMicrophoneOptions {
   onRecordingComplete?: (audioBlob: Blob) => void;
@@ -28,14 +29,12 @@ const safelyCloseAudioContext = (audioContext: AudioContext | null): void => {
 export class ConversationMicrophoneServiceClass {
   private stream: MediaStream | null = null;
   private cachedStream: MediaStream | null = null; // NEW: Cached stream for session reuse
-  private mediaRecorder: MediaRecorder | null = null;
-  private audioChunks: Blob[] = []; // Simple chunk collection
+  private rollingBufferVAD: RollingBufferVAD | null = null;
   private isRecording = false;
   private isStartingRecording = false; // NEW: Guard against concurrent recording starts
   private audioContext: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
   private mediaStreamSource: MediaStreamAudioSourceNode | null = null;
-  private monitoringRef = { current: false };
   private audioLevel = 0;
   
   private options: ConversationMicrophoneOptions = {};
@@ -67,10 +66,9 @@ export class ConversationMicrophoneServiceClass {
    */
   public async startRecording(): Promise<boolean> {
     this.log('[CONVERSATION-TURN] startRecording called - checking state flags');
-    this.log(`[CONVERSATION-TURN] isStartingRecording: ${this.isStartingRecording}, isRecording: ${this.isRecording}, monitoringRef: ${this.monitoringRef.current}`);
+    this.log(`[CONVERSATION-TURN] isStartingRecording: ${this.isStartingRecording}, isRecording: ${this.isRecording}`);
     
     // Defensively reset stale state flags
-    this.monitoringRef.current = false;
     this.audioLevel = 0;
     
     // 🚫 GUARD: Don't start recording if conversation modal is closed
@@ -168,50 +166,34 @@ export class ConversationMicrophoneServiceClass {
 
       }
 
-      // SINGLE-GESTURE FLOW: Always create new MediaRecorder to avoid state conflicts
-      if (this.mediaRecorder) {
-        // Ensure previous recorder is fully stopped
-        if (this.mediaRecorder.state !== 'inactive') {
-          this.mediaRecorder.stop();
+      // Initialize rolling buffer VAD
+      this.rollingBufferVAD = new RollingBufferVAD({
+        lookbackWindowMs: 750,
+        chunkDurationMs: 250,
+        voiceThreshold: 0.012,
+        silenceThreshold: 0.008,
+        voiceConfirmMs: 300,
+        silenceTimeoutMs: this.options.silenceTimeoutMs || 1500,
+        onVoiceStart: () => {
+          this.log('🎤 Rolling buffer VAD: Voice activity confirmed');
+        },
+        onSilenceDetected: () => {
+          this.log('🧘‍♂️ Rolling buffer VAD: Silence detected - stopping recording');
+          this.isRecording = false;
+          this.handleRecordingComplete();
+        },
+        onError: (error: Error) => {
+          this.error('❌ Rolling buffer VAD error:', error);
+          if (this.options.onError) {
+            this.options.onError(error);
+          }
         }
-        this.mediaRecorder = null;
-      }
-      
-      this.mediaRecorder = new MediaRecorder(this.stream, {
-        mimeType: 'audio/webm;codecs=opus',
-        audioBitsPerSecond: 64000 // Mobile-first: 50% smaller files for faster upload
       });
 
-
-      this.audioChunks = [];
       this.isRecording = true;
 
-      // Simple chunk collection - no manipulation
-      this.mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          this.audioChunks.push(event.data);
-        }
-      };
-
-      this.mediaRecorder.onstop = () => {
-        // Reset VAD monitoring flag to ensure it can restart next time
-        this.monitoringRef.current = false;
-        this.log('[CONVERSATION-TURN] MediaRecorder stopped - VAD monitoring flag reset');
-        this.handleRecordingComplete();
-      };
-
-      this.mediaRecorder.onerror = (event) => {
-        this.error('❌ MediaRecorder error:', event);
-        console.log('[CONVERSATION-TURN] MediaRecorder error - triggering self-healing recovery');
-        if (this.options.onError) {
-          this.options.onError(new Error('Recording failed'));
-        }
-        this.cleanup();
-      };
-
-      // Start recording and VAD
-      this.mediaRecorder.start(100); // 100ms chunks
-      this.startVoiceActivityDetection();
+      // Start rolling buffer VAD
+      await this.rollingBufferVAD.start(this.stream, this.audioContext, this.analyser);
       
       this.notifyListeners();
       this.log('🎙️ Recording started successfully');
@@ -230,7 +212,6 @@ export class ConversationMicrophoneServiceClass {
       
       // Reset all state flags on error path
       this.isStartingRecording = false;
-      this.monitoringRef.current = false;
       this.audioLevel = 0;
       
       if (this.options.onError) {
@@ -244,7 +225,7 @@ export class ConversationMicrophoneServiceClass {
    * STOP RECORDING - Complete domain-specific recording
    */
   async stopRecording(): Promise<Blob | null> {
-    if (!this.isRecording || !this.mediaRecorder) {
+    if (!this.isRecording || !this.rollingBufferVAD) {
       this.log('❌ Cannot stop - not recording');
       return null;
     }
@@ -252,41 +233,20 @@ export class ConversationMicrophoneServiceClass {
     this.log('🛑 Stopping conversation recording');
     this.isRecording = false;
 
-    return new Promise((resolve) => {
-      // Store the original onstop handler
-      const originalOnStop = this.mediaRecorder.onstop;
-      
-      // Set up the data handler before stopping
-      this.mediaRecorder.onstop = () => {
-        this.log('📦 MediaRecorder stopped, creating blob...');
-        
-        if (this.audioChunks.length === 0) {
-          this.log('⚠️ No audio chunks collected');
-          resolve(null);
-          return;
-        }
-
-        const blob = new Blob(this.audioChunks, { type: 'audio/webm;codecs=opus' });
-        this.log(`✅ Recording complete: ${blob.size} bytes`);
-        
-        // Clear chunks for next recording
-        this.audioChunks = [];
-        
-        // IMPORTANT: Do NOT call cleanup here - keep stream and analyser alive
-        // Cleanup should only be called on cancel/reset/overlay close
-        this.log('🎤 Stream and analyser kept alive for next turn');
-        
-        // Call the original handler (which calls onRecordingComplete)
-        if (originalOnStop) {
-          originalOnStop.call(this.mediaRecorder);
-        }
-        
-        resolve(blob);
-      };
-
-      // Stop the recorder
-      this.mediaRecorder.stop();
-    });
+    // Stop rolling buffer VAD and get final blob
+    const blob = await this.rollingBufferVAD.stop();
+    
+    if (blob) {
+      this.log(`✅ Recording complete: ${blob.size} bytes`);
+    } else {
+      this.log('⚠️ No audio collected');
+    }
+    
+    // IMPORTANT: Do NOT call cleanup here - keep stream and analyser alive
+    // Cleanup should only be called on cancel/reset/overlay close
+    this.log('🎤 Stream and analyser kept alive for next turn');
+    
+    return blob;
   }
 
   /**
@@ -299,44 +259,41 @@ export class ConversationMicrophoneServiceClass {
     
     this.isRecording = false;
     
-    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      this.mediaRecorder.stop();
+    if (this.rollingBufferVAD) {
+      this.rollingBufferVAD.stop();
     }
     
     this.cleanup();
   }
 
   /**
-   * CREATE FINAL BLOB FROM BUFFER - Build final audio with retroactive trimming
+   * GET CURRENT AUDIO LEVEL - For rolling buffer VAD feedback
    */
-  private createFinalBlobFromBuffer(): Blob {
-    if (this.audioChunks.length === 0) {
-      this.log('⚠️ No audio chunks - returning empty blob');
-      return new Blob([], { type: 'audio/webm' });
+  getCurrentAudioLevel(): number {
+    if (this.rollingBufferVAD) {
+      const vadState = this.rollingBufferVAD.getState();
+      return vadState.audioLevel;
     }
-
-    // Simple, professional approach - let MediaRecorder handle the format
-    const finalBlob = new Blob(this.audioChunks, { type: 'audio/webm;codecs=opus' });
-    this.log(`📼 Clean audio blob created: ${finalBlob.size} bytes from ${this.audioChunks.length} chunks`);
-    
-    return finalBlob;
+    return this.audioLevel;
   }
 
   /**
    * HANDLE RECORDING COMPLETE - Process finished recording
    */
-  private handleRecordingComplete(): void {
+  private async handleRecordingComplete(): Promise<void> {
     // Guard against duplicate callbacks
-    if (!this.isRecording) {
-      this.log('🎤 Recording complete callback called but not recording, skipping');
-      return;
+    if (this.isRecording) {
+      this.log('🎤 Recording complete callback called but still recording, stopping VAD first');
+      this.isRecording = false; // Mark as not recording before callback
     }
     
-    this.isRecording = false; // Mark as not recording before callback
+    let finalBlob: Blob | null = null;
     
-    const finalBlob = this.createFinalBlobFromBuffer();
+    if (this.rollingBufferVAD) {
+      finalBlob = await this.rollingBufferVAD.stop();
+    }
     
-    if (this.options.onRecordingComplete) {
+    if (finalBlob && this.options.onRecordingComplete) {
       this.options.onRecordingComplete(finalBlob);
     }
     
@@ -355,13 +312,17 @@ export class ConversationMicrophoneServiceClass {
     
     // Reset state flags immediately
     this.isStartingRecording = false;
-    this.monitoringRef.current = false;
     this.audioLevel = 0;
     
     // Stop recording if active
-    if (this.isRecording && this.mediaRecorder) {
-      this.mediaRecorder.stop();
+    if (this.isRecording) {
       this.isRecording = false;
+    }
+
+    // Cleanup rolling buffer VAD
+    if (this.rollingBufferVAD) {
+      this.rollingBufferVAD.cleanup();
+      this.rollingBufferVAD = null;
     }
 
     // Release microphone stream (both current and cached)
@@ -395,10 +356,6 @@ export class ConversationMicrophoneServiceClass {
     // 🎵 ELEGANT: Use utility function for safe AudioContext cleanup
     safelyCloseAudioContext(this.audioContext);
     this.audioContext = null;
-
-    // Clear data
-    this.audioChunks = [];
-    this.mediaRecorder = null;
     
     // Release microphone from arbitrator
     microphoneArbitrator.release('conversation');
@@ -417,10 +374,6 @@ export class ConversationMicrophoneServiceClass {
     };
   }
 
-  // Get current audio level for UI feedback
-  getCurrentAudioLevel(): number {
-    return this.audioLevel;
-  }
 
   /**
    * GET STREAM - For external access (if needed)
@@ -503,150 +456,9 @@ export class ConversationMicrophoneServiceClass {
     // Reset all state flags immediately  
     this.isRecording = false;
     this.isStartingRecording = false;
-    this.monitoringRef.current = false;
     this.audioLevel = 0;
     
     this.cleanup();
-  }
-
-  // ----- Two-Phase Voice Activity Detection (VAD) -----
-  private startVoiceActivityDetection(): void {
-    this.log('🧠 VAD start requested - checking conditions...');
-    this.log(`🧠 analyser exists: ${!!this.analyser}, monitoring already active: ${this.monitoringRef.current}`);
-    
-    if (!this.analyser || this.monitoringRef.current) {
-      this.log('❌ VAD start blocked - analyser missing or already monitoring');
-      return;
-    }
-    
-    this.monitoringRef.current = true;
-    this.log('✅ VAD monitoring started successfully');
-
-    const bufferLength = this.analyser.fftSize;
-    const dataArray = new Uint8Array(bufferLength);
-    
-    // VAD State Machine
-    let phase: 'waiting_for_voice' | 'monitoring_silence' = 'waiting_for_voice';
-    let voiceStartTime: number | null = null;
-    let silenceStartTime: number | null = null;
-    
-    // Optimized thresholds for natural conversation flow
-    const VOICE_START_THRESHOLD = 0.012;  // RMS threshold to detect voice start
-    const VOICE_START_DURATION = 300;     // Duration to confirm voice (300ms)
-    const SILENCE_THRESHOLD = 0.008;      // Lower threshold for silence (hysteresis)
-    const SILENCE_TIMEOUT = this.options.silenceTimeoutMs || 1500; // 1.5 seconds for responsive conversation
-    
-    this.log(`🧠 VAD started - waiting for voice (>${VOICE_START_THRESHOLD} RMS for ${VOICE_START_DURATION}ms, silence <${SILENCE_THRESHOLD} RMS for ${SILENCE_TIMEOUT}ms)`);
-
-    let lastSampleTime = 0;
-    const targetIntervalMs = 33; // ~30 fps sampling
-    const checkVAD = () => {
-      // CRITICAL: Check monitoring state first to prevent infinite recursion
-      if (!this.monitoringRef.current || !this.analyser) {
-        this.log(`🛑 VAD loop terminated (monitoring: ${this.monitoringRef.current}, analyser: ${!!this.analyser})`);
-        return;
-      }
-      
-      // ✅ WAKE UP CALL: Ensure AudioContext is running before analysis
-      if (this.audioContext && this.audioContext.state === 'suspended') {
-        this.audioContext.resume().then(() => {
-          this.log('✅ AudioContext resumed successfully after being suspended.');
-        });
-      }
-      
-      // Throttle sampling for lower CPU
-      const nowHr = performance.now();
-      if (nowHr - lastSampleTime < targetIntervalMs) {
-        if (this.monitoringRef.current) requestAnimationFrame(checkVAD);
-        return;
-      }
-      lastSampleTime = nowHr;
-
-      // Get current RMS audio level
-      this.analyser.getByteTimeDomainData(dataArray);
-      let sumSquares = 0;
-      for (let i = 0; i < bufferLength; i++) {
-        const centered = (dataArray[i] - 128) / 128;
-        sumSquares += centered * centered;
-      }
-      const rms = Math.sqrt(sumSquares / bufferLength);
-      this.audioLevel = rms;
-      
-      // Convert to dB for debugging
-      const dB = rms > 0 ? 20 * Math.log10(rms) : -100;
-      
-      const now = Date.now();
-      
-      if (phase === 'waiting_for_voice') {
-        // Phase 1: Wait for real voice activity
-        if (rms > VOICE_START_THRESHOLD) {
-          if (voiceStartTime === null) {
-            voiceStartTime = now;
-          } else if (now - voiceStartTime >= VOICE_START_DURATION) {
-            // Voice confirmed! Switch to silence monitoring
-            phase = 'monitoring_silence';
-            voiceStartTime = null;
-            this.log(`🎤 Voice activity confirmed (RMS: ${rms.toFixed(4)}, dB: ${dB.toFixed(1)}) - now monitoring for ${SILENCE_TIMEOUT}ms silence`);
-          }
-        } else {
-          voiceStartTime = null; // Reset if signal drops
-        }
-        
-      } else if (phase === 'monitoring_silence') {
-        // Phase 2: Monitor for silence after voice detected
-        if (rms < SILENCE_THRESHOLD) {
-          if (silenceStartTime === null) {
-            silenceStartTime = now;
-          } else if (now - silenceStartTime >= SILENCE_TIMEOUT) {
-            // Natural silence detected - stop recording
-            this.log(`🧘‍♂️ ${SILENCE_TIMEOUT}ms silence detected after voice - stopping naturally (RMS: ${rms.toFixed(4)}, dB: ${dB.toFixed(1)})`);
-            this.monitoringRef.current = false;
-            
-            // Guard against duplicate silence detection
-            if (this.isRecording && this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-              this.mediaRecorder.stop();
-            }
-            
-            this.log(`🛑 VAD loop terminated after silence detection`);
-            return; // CRITICAL: Don't schedule next frame after silence detected
-          }
-        } else {
-          silenceStartTime = null; // Reset silence timer - still speaking
-        }
-      }
-
-      // Only continue the loop if we're still monitoring
-      if (this.monitoringRef.current) {
-        requestAnimationFrame(checkVAD);
-      } else {
-        this.log(`🛑 VAD loop terminated (monitoring flag changed during execution)`);
-      }
-    };
-
-    checkVAD();
-  }
-
-  /**
-   * ENSURE AUDIO CONTEXT - Public helper for watchdog
-   */
-  public ensureAudioContext(): void {
-    if (this.audioContext && this.audioContext.state === 'suspended') {
-      this.audioContext.resume().then(() => {
-        this.log('🔄 Watchdog: AudioContext resumed');
-      }).catch((error) => {
-        this.error('🔄 Watchdog: Failed to resume AudioContext:', error);
-      });
-    }
-  }
-
-  /**
-   * ENSURE MONITORING - Public helper for watchdog
-   */
-  public ensureMonitoring(): void {
-    if (!this.monitoringRef.current && this.analyser && this.isRecording) {
-      this.log('🔄 Watchdog: Re-arming VAD');
-      this.startVoiceActivityDetection();
-    }
   }
 
   // ----- Logging helpers (gated) -----
