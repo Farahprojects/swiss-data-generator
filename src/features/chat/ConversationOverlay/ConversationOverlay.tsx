@@ -54,6 +54,7 @@ export const ConversationOverlay: React.FC = () => {
   const connectionRef = useRef<any>(null);
   const currentTtsSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const animationTimeoutRef = useRef<number | null>(null);
+  const isProcessingRef = useRef<boolean>(false);
   
   // 🎵 AUDIO: Single context for all audio
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -322,6 +323,14 @@ export const ConversationOverlay: React.FC = () => {
       return;
     }
     
+    // 🛡️ PROTECTION: Prevent duplicate processing
+    if (isProcessingRef.current || state === 'thinking' || state === 'replying') {
+      console.log('[ConversationOverlay] 🛡️ Already processing, ignoring duplicate call');
+      return;
+    }
+    
+    isProcessingRef.current = true;
+    
     try {
       // 🎯 STATE DRIVEN: Processing state
       setState('thinking');
@@ -345,12 +354,14 @@ export const ConversationOverlay: React.FC = () => {
       }
       
       // Send to chat-send via the existing working llmService (handles LLM → TTS → WebSocket automatically)
+      console.log('[ConversationOverlay] 🎯 Calling llmService.sendMessage for TTS generation');
       const response = await llmService.sendMessage({
         chat_id,
         text: transcript,
         client_msg_id: uuidv4(),
         mode: 'conversation'
       });
+      console.log('[ConversationOverlay] ✅ llmService.sendMessage completed');
       
       // 🎯 STATE DRIVEN: Replying state (TTS will come via WebSocket from chat-send)
       setState('replying');
@@ -358,8 +369,11 @@ export const ConversationOverlay: React.FC = () => {
     } catch (error) {
       console.error('[ConversationOverlay] ❌ Processing failed:', error);
       setState('listening');
+    } finally {
+      // 🛡️ CLEANUP: Reset processing flag
+      isProcessingRef.current = false;
     }
-  }, [chat_id, establishConnection]);
+  }, [chat_id, establishConnection, state]);
 
   // 🎯 CLEANUP: Master shutdown - Browser APIs FIRST, then everything else
   const handleModalClose = useCallback(async () => {
