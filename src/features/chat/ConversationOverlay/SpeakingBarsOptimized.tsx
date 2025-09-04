@@ -8,6 +8,7 @@ interface Props {
 
 export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive, audioLevel = 0 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const smoothRef = useRef(0);
 
   // 🎯 Subscribe directly to animation service to avoid React per-frame updates
   useEffect(() => {
@@ -15,9 +16,13 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive, audioLevel = 
 
     const baselineHeight = 0.4; // Always visible baseline (40%)
     const maxMovement = 0.6;    // Up to +60%
+    const ALPHA = 0.35;         // Smoothing constant (0=butter smooth, 1=raw)
 
     const update = (level: number) => {
-      const scaleY = baselineHeight + Math.max(0, Math.min(1, level)) * maxMovement;
+      // Exponential moving average to reduce jitter
+      smoothRef.current = smoothRef.current + ALPHA * (level - smoothRef.current);
+      const clamped = Math.max(0, Math.min(1, smoothRef.current));
+      const scaleY = baselineHeight + clamped * maxMovement;
       containerRef.current!.style.setProperty('--bar-scale', scaleY.toString());
     };
 
@@ -50,10 +55,11 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive, audioLevel = 
           key={bar.id}
           className={`bg-black rounded-full ${bar.className} transition-transform duration-75`}
           style={{
-            width: '16px', // All bars same width
+            width: '16px',
             transformOrigin: 'center',
             transform: `scaleY(var(--bar-scale, 1))`,
-            willChange: 'transform', // GPU acceleration hint
+            willChange: 'transform',
+            transitionTimingFunction: 'cubic-bezier(.2,.8,.4,1)',
           }}
         />
       ))}
