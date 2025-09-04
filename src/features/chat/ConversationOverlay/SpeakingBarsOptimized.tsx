@@ -26,16 +26,16 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive }) => {
 
   // Four bars with different base heights: small, big, big, small
   const bars = [
-    { id: 0, baseHeight: 0.6, className: 'h-10' }, // Small bar on left
-    { id: 1, baseHeight: 0.8, className: 'h-14' }, // Big bar in middle-left
-    { id: 2, baseHeight: 0.8, className: 'h-14' }, // Big bar in middle-right
-    { id: 3, baseHeight: 0.6, className: 'h-10' }, // Small bar on right
+    { id: 0, baseHeight: 0.6, className: 'h-16' }, // Small bar on left (increased from h-10)
+    { id: 1, baseHeight: 0.8, className: 'h-20' }, // Big bar in middle-left (increased from h-14)
+    { id: 2, baseHeight: 0.8, className: 'h-20' }, // Big bar in middle-right (increased from h-14)
+    { id: 3, baseHeight: 0.6, className: 'h-16' }, // Small bar on right (increased from h-10)
   ];
 
   return (
     <div 
       ref={containerRef}
-      className="flex items-center justify-center gap-3 h-16 w-28"
+      className="flex items-center justify-center gap-3 h-24 w-28"
       style={{
         willChange: 'transform', // GPU acceleration hint
       } as React.CSSProperties}
