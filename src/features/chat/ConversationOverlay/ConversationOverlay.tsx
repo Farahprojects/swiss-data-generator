@@ -84,7 +84,12 @@ export const ConversationOverlay: React.FC = () => {
   // 🎵 AUDIO: Initialize once, reuse for all audio
   useEffect(() => {
     if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      try {
+        // Prefer playback latency to reduce power usage on mobile/desktop when playing TTS
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ latencyHint: 'playback' });
+      } catch (e) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
       // 🎵 Envelope-driven animation - no analyser needed
     }
     
@@ -106,7 +111,11 @@ export const ConversationOverlay: React.FC = () => {
       // 🎯 CHECK: Ensure AudioContext is available and running
       if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
         console.log('[ConversationOverlay] 🎵 AudioContext closed or missing, recreating...');
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        try {
+          audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ latencyHint: 'playback' });
+        } catch (e) {
+          audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        }
         // 🎵 Envelope-driven animation - no analyser needed
       }
       
@@ -117,8 +126,18 @@ export const ConversationOverlay: React.FC = () => {
         await audioContext.resume();
       }
       
-      // 🎯 DIRECT: Convert bytes to ArrayBuffer and decode
-      const arrayBuffer = new Uint8Array(audioBytes).buffer;
+      // 🎯 DIRECT: Convert bytes/base64 to ArrayBuffer and decode
+      let arrayBuffer: ArrayBuffer;
+      if (Array.isArray(audioBytes)) {
+        arrayBuffer = new Uint8Array(audioBytes).buffer;
+      } else {
+        // If payload is base64 string, decode
+        const binary = atob(audioBytes as unknown as string);
+        const len = binary.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+        arrayBuffer = bytes.buffer;
+      }
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
       
       // 🎯 DIRECT: Create source and play (no analyser needed for envelope-driven animation)
@@ -169,6 +188,17 @@ export const ConversationOverlay: React.FC = () => {
         
         // Set full precomputed envelope immediately
         envelopePlayerRef.current.setFullEnvelope(envelope);
+      } else if (typeof (envelope as any) === 'string' && (envelope as any).length > 0) {
+        // Handle base64 8-bit quantized envelope
+        const base64 = envelope as unknown as string;
+        const bin = atob(base64);
+        const q = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) q[i] = bin.charCodeAt(i);
+        const dequantized = Array.from(q, (v) => v / 255);
+        console.log(`[ConversationOverlay] 🚀 Using dequantized envelope: ${dequantized.length} frames`);
+        const previewLevel = dequantized[0] || 0.1;
+        envelopePlayerRef.current.startWithPreview(previewLevel);
+        envelopePlayerRef.current.setFullEnvelope(dequantized);
       } else {
         console.warn('[ConversationOverlay] ⚠️ No precomputed envelope received from backend');
         // Fallback to minimal animation
@@ -229,8 +259,10 @@ export const ConversationOverlay: React.FC = () => {
       
       // 🎯 DIRECT: WebSocket → Audio + Envelope
       connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
-        if (payload.audioBytes) {
-          playAudioImmediately(payload.audioBytes, payload.text, payload.envelope, payload.frameDurationMs);
+        const audioData = payload.audioBase64 ?? payload.audioBytes;
+        const envData = payload.envelopeBase64 ?? payload.envelope;
+        if (audioData) {
+          playAudioImmediately(audioData, payload.text, envData, payload.frameDurationMs);
         }
       });
       

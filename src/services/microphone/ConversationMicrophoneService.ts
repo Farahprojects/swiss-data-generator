@@ -159,7 +159,8 @@ export class ConversationMicrophoneServiceClass {
       if (!this.analyser) {
         this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
         this.analyser = this.audioContext.createAnalyser();
-        this.analyser.fftSize = 2048;
+        // Lighter settings for mobile/desktop unified flow
+        this.analyser.fftSize = 1024;
         this.analyser.smoothingTimeConstant = 0.8;
         this.mediaStreamSource.connect(this.analyser);
 
@@ -537,6 +538,8 @@ export class ConversationMicrophoneServiceClass {
     
     this.log(`🧠 VAD started - waiting for voice (>${VOICE_START_THRESHOLD} RMS for ${VOICE_START_DURATION}ms, silence <${SILENCE_THRESHOLD} RMS for ${SILENCE_TIMEOUT}ms)`);
 
+    let lastSampleTime = 0;
+    const targetIntervalMs = 33; // ~30 fps sampling
     const checkVAD = () => {
       // CRITICAL: Check monitoring state first to prevent infinite recursion
       if (!this.monitoringRef.current || !this.analyser) {
@@ -551,6 +554,14 @@ export class ConversationMicrophoneServiceClass {
         });
       }
       
+      // Throttle sampling for lower CPU
+      const nowHr = performance.now();
+      if (nowHr - lastSampleTime < targetIntervalMs) {
+        if (this.monitoringRef.current) requestAnimationFrame(checkVAD);
+        return;
+      }
+      lastSampleTime = nowHr;
+
       // Get current RMS audio level
       this.analyser.getByteTimeDomainData(dataArray);
       let sumSquares = 0;

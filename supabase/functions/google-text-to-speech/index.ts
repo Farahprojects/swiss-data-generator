@@ -54,6 +54,16 @@ function calculateEnvelopeFromLinear16(pcmBytes: Uint8Array, sampleRate: number,
   return { envelope, frameDurationMs };
 }
 
+// Utility: Uint8Array → base64
+function uint8ToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
 serve(async (req) => {
   const startTime = Date.now();
 
@@ -160,8 +170,8 @@ serve(async (req) => {
     const pcmBytes = Uint8Array.from(atob(pcmContent), c => c.charCodeAt(0));
     const { envelope, frameDurationMs } = calculateEnvelopeFromLinear16(pcmBytes, pcmSampleRate, 20);
 
-    // 📉 Downsample envelope to ~30 fps to reduce WS payload size (keep client payload shape)
-    const TARGET_FPS = 30;
+    // 📉 Downsample envelope to ~24 fps to reduce WS payload size
+    const TARGET_FPS = 24;
     const desiredFrameMs = 1000 / TARGET_FPS;
     const stride = Math.max(1, Math.round(desiredFrameMs / frameDurationMs));
     const downsampledEnvelope: number[] = [];
@@ -172,6 +182,15 @@ serve(async (req) => {
     console.log(
       `[google-tts] 📉 Downsampled envelope: ${downsampledEnvelope.length} frames @ ${downsampledFrameDurationMs.toFixed(2)}ms (stride=${stride})`
     );
+
+    // 📦 Quantize to 8-bit (0..255) and base64 encode for lighter WS JSON payload
+    const quantized = new Uint8Array(downsampledEnvelope.length);
+    for (let i = 0; i < downsampledEnvelope.length; i++) {
+      const clamped = Math.max(0, Math.min(1, downsampledEnvelope[i] || 0));
+      quantized[i] = Math.round(clamped * 255);
+    }
+    const envelopeBase64 = uint8ToBase64(quantized);
+    const audioBase64 = uint8ToBase64(audioBytes);
     
     // Pure streaming approach - no storage, no DB
     const responseData = {
@@ -219,8 +238,8 @@ serve(async (req) => {
           type: 'broadcast',
           event: 'tts-ready',
           payload: {
-            audioBytes: Array.from(audioBytes), // Raw MP3 bytes as array (no base64)
-            envelope: downsampledEnvelope, // 🎵 Pre-calculated loudness values from PCM (downsampled)
+            audioBase64: audioBase64, // Raw MP3 bytes as base64 string
+            envelopeBase64: envelopeBase64, // 8-bit quantized envelope as base64
             frameDurationMs: downsampledFrameDurationMs,
             audioUrl: null, // No URL since we're not storing
             text: text,
