@@ -45,10 +45,17 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { chat_id, text, client_msg_id, mode, sessionId } = body;
+    const { chat_id, text } = body;
 
     if (!chat_id || !text) {
       throw new Error("Missing 'chat_id' or 'text' in request body.");
+    }
+
+    // Get OpenAI API key
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) {
+      console.error("[llm-handler-openai] Missing OPENAI_API_KEY");
+      throw new Error("OpenAI API key not configured");
     }
 
     const supabase = createClient(
@@ -57,38 +64,28 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    // Process LLM response
-    const processLLMResponse = async () => {
-      try {
-        // Fetch conversation history (last 10 completed messages, optimized)
-        const HISTORY_LIMIT = 10;
-        const { data: history, error: historyError } = await supabase
-          .from("messages")
-          .select("role, text")
-          .eq("chat_id", chat_id)
-          .eq("status", "complete")
-          .not("text", "is", null)
-          .neq("text", "")
-          .order("created_at", { ascending: false })
-          .limit(HISTORY_LIMIT);
+    // Fetch conversation history (last 10 completed messages, optimized)
+    const HISTORY_LIMIT = 10;
+    const { data: history, error: historyError } = await supabase
+      .from("messages")
+      .select("role, text")
+      .eq("chat_id", chat_id)
+      .eq("status", "complete")
+      .not("text", "is", null)
+      .neq("text", "")
+      .order("created_at", { ascending: false })
+      .limit(HISTORY_LIMIT);
 
-        if (historyError) {
-          console.error("[llm-handler-openai] History fetch error:", historyError);
-          return null;
-        }
+    if (historyError) {
+      console.error("[llm-handler-openai] History fetch error:", historyError);
+      throw new Error("Failed to fetch conversation history");
+    }
 
-        // Get OpenAI API key
-        const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-        if (!OPENAI_API_KEY) {
-          console.error("[llm-handler-openai] Missing OPENAI_API_KEY");
-          return null;
-        }
-
-        // Call OpenAI GPT-4 API
-        const startTime = Date.now();
-        
-        // System prompt
-        const systemPrompt = `You are an insightful guide who speaks in plain, modern language yet thinks in energetic resonance with planetary influences.
+    // Call OpenAI GPT-4 API
+    const startTime = Date.now();
+    
+    // System prompt
+    const systemPrompt = `You are an insightful guide who speaks in plain, modern language yet thinks in energetic resonance with planetary influences.
 
 Mission:
 – Turn complex astro + Swiss energetic data into revelations a 20-something can feel in their gut.
@@ -104,140 +101,70 @@ Content Rules:
 3. Always lead with Human-centric translation and behavioral resonance, not planets or metaphors.
 `;
 
-        const messages: any[] = [];
-        
-        // Add system message
-        messages.push({
-          role: "system",
-          content: systemPrompt
-        });
-        
-        // Add conversation history (reverse to get chronological order)
-        const chronologicalHistory = history ? [...history].reverse() : [];
-        chronologicalHistory.forEach((m) => {
-          messages.push({
-            role: m.role,
-            content: m.text
-          });
-        });
+    const messages: any[] = [];
+    
+    // Add system message
+    messages.push({
+      role: "system",
+      content: systemPrompt
+    });
+    
+    // Add conversation history (reverse to get chronological order)
+    const chronologicalHistory = history ? [...history].reverse() : [];
+    chronologicalHistory.forEach((m) => {
+      messages.push({
+        role: m.role,
+        content: m.text
+      });
+    });
 
-        const resp = await fetch(
-          "https://api.openai.com/v1/chat/completions",
-          {
-            method: "POST",
-            headers: { 
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${OPENAI_API_KEY}`
-            },
-            body: JSON.stringify({
-              model: "gpt-4.1-mini-2025-04-14",
-              messages,
-              max_completion_tokens: 1000
-            }),
-          }
-        );
-
-        if (!resp.ok) {
-          const errorText = await resp.text();
-          console.error("[llm-handler-openai] OpenAI API error:", errorText);
-          return null;
-        }
-
-        const data = await resp.json();
-        const assistantText = data.choices?.[0]?.message?.content;
-
-        if (!assistantText) {
-          console.error("[llm-handler-openai] No text in OpenAI response:", data);
-          return null;
-        }
-
-        // Sanitize assistant response before saving to database
-        const sanitizedText = sanitizePlainText(assistantText);
-
-        // Extract token usage from OpenAI response
-        const tokenCount = data.usage?.total_tokens || null;
-        const inputTokens = data.usage?.prompt_tokens || null;
-        const outputTokens = data.usage?.completion_tokens || null;
-
-        const latency_ms = Date.now() - startTime;
-
-        // Save assistant message to database (fire-and-forget for non-conversation mode)
-        const saveToDb = supabase
-          .from("messages")
-          .insert({
-            chat_id: chat_id,
-            role: "assistant",
-            text: sanitizedText,
-            created_at: new Date().toISOString(),
-            meta: { 
-              llm_provider: "openai", 
-              model: "gpt-4.1-mini-2025-04-14",
-              latency_ms,
-              input_tokens: inputTokens,
-              output_tokens: outputTokens,
-              total_tokens: tokenCount,
-              mode: mode || null,
-              sessionId: sessionId || null
-            },
-          });
-
-        // For conversation mode, await the DB save; for others, fire-and-forget
-        if (mode === 'conversation') {
-          const { error: assistantError } = await saveToDb;
-          if (assistantError) {
-            console.error("[llm-handler-openai] Failed to save assistant message:", assistantError);
-          }
-        } else {
-          saveToDb.then(({ error: assistantError }) => {
-            if (assistantError) {
-              console.error("[llm-handler-openai] Failed to save assistant message:", assistantError);
-            }
-          }).catch(error => {
-            console.error("[llm-handler-openai] Database save error:", error);
-          });
-        }
-
-        // Return the sanitized text so it can be used outside the function
-        return { text: sanitizedText, tokenCount, latency_ms };
-
-      } catch (error) {
-        console.error("[llm-handler-openai] Background processing error:", error);
-        return null;
+    const resp = await fetch(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "gpt-4.1-mini-2025-04-14",
+          messages,
+          max_completion_tokens: 1000
+        }),
       }
-    };
+    );
 
-    // For conversation mode, just return the LLM response (TTS handled by chat-send)
-    if (mode === 'conversation') {
-      try {
-        const llmResult = await processLLMResponse();
-        
-        return new Response(JSON.stringify({ 
-          success: true,
-          message: "Assistant response ready",
-          text: llmResult?.text || "",
-          client_msg_id
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      } catch (error) {
-        console.error("[llm-handler-openai] Error processing conversation:", error);
-        return new Response(JSON.stringify({ 
-          error: "Failed to process conversation",
-          client_msg_id
-        }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+    if (!resp.ok) {
+      const errorText = await resp.text();
+      console.error("[llm-handler-openai] OpenAI API error:", errorText);
+      throw new Error(`OpenAI API request failed: ${resp.status}`);
     }
 
-    // For non-conversation modes, process in background and return immediate acknowledgment
-    const processPromise = processLLMResponse();
-    EdgeRuntime.waitUntil(processPromise);
+    const data = await resp.json();
+    const assistantText = data.choices?.[0]?.message?.content;
 
+    if (!assistantText) {
+      console.error("[llm-handler-openai] No text in OpenAI response:", data);
+      throw new Error("No response text from OpenAI");
+    }
+
+    // Sanitize assistant response
+    const sanitizedText = sanitizePlainText(assistantText);
+
+    // Extract usage metrics from OpenAI response
+    const usage = {
+      total_tokens: data.usage?.total_tokens || null,
+      input_tokens: data.usage?.prompt_tokens || null,
+      output_tokens: data.usage?.completion_tokens || null,
+    };
+
+    const latency_ms = Date.now() - startTime;
+
+    // Return clean response for chat-send to handle
     return new Response(JSON.stringify({ 
-      message: "Processing assistant response",
-      client_msg_id
+      text: sanitizedText,
+      usage,
+      latency_ms
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

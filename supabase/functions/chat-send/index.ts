@@ -111,9 +111,7 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             chat_id,
-            text: text,
-            client_msg_id: client_msg_id || userMessageData.client_msg_id,
-            mode: 'conversation'
+            text: text
           })
         });
 
@@ -124,7 +122,7 @@ serve(async (req) => {
         }
 
         const llmData = await llmResponse.json();
-        const assistantText = llmData.text;
+        const { text: assistantText, usage, latency_ms } = llmData;
         
         if (!assistantText) {
           console.error('[chat-send] ❌ No assistant text received from LLM');
@@ -133,31 +131,37 @@ serve(async (req) => {
 
         console.log('[chat-send] ✅ LLM response received, length:', assistantText.length);
 
-        // 🚫 COMMENTED OUT: Assistant message save (handled by llm-handler-openai)
-        // const assistantMessageData = {
-        //   chat_id,
-        //   role: "assistant",
-        //   text: assistantText,
-        //   client_msg_id: crypto.randomUUID(),
-        //   status: "complete",
-        //   meta: { 
-        //     mode: 'conversation'
-        //   }
-        // };
+        // Step 3: Save assistant message to DB
+        const assistantMessageData = {
+          chat_id,
+          role: "assistant",
+          text: assistantText,
+          client_msg_id: crypto.randomUUID(),
+          status: "complete",
+          meta: { 
+            llm_provider: "openai", 
+            model: "gpt-4.1-mini-2025-04-14",
+            latency_ms,
+            input_tokens: usage?.input_tokens,
+            output_tokens: usage?.output_tokens,
+            total_tokens: usage?.total_tokens,
+            mode: 'conversation'
+          }
+        };
 
-        // console.log('[chat-send] 💾 Saving assistant message to DB...');
-        // const { error: assistantError } = await supabase
-        //   .from("messages")
-        //   .upsert(assistantMessageData, {
-        //     onConflict: "client_msg_id"
-        //   });
+        console.log('[chat-send] 💾 Saving assistant message to DB...');
+        const { error: assistantError } = await supabase
+          .from("messages")
+          .upsert(assistantMessageData, {
+            onConflict: "client_msg_id"
+          });
 
-        // if (assistantError) {
-        //   console.error('[chat-send] ❌ Assistant message save failed:', assistantError);
-        //   // Continue anyway - we can still return the response
-        // } else {
-        //   console.log('[chat-send] ✅ Assistant message saved to DB');
-        // }
+        if (assistantError) {
+          console.error('[chat-send] ❌ Assistant message save failed:', assistantError);
+          // Continue anyway - we can still return the response
+        } else {
+          console.log('[chat-send] ✅ Assistant message saved to DB');
+        }
 
         // Step 4: Call TTS to generate audio (fire-and-forget)
         console.log('[chat-send] 🎵 Starting TTS service (fire-and-forget)...');
@@ -220,16 +224,50 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             chat_id,
-            text: text,
-            client_msg_id: client_msg_id || userMessageData.client_msg_id,
-            mode,
-            sessionId
+            text: text
           })
         });
 
         if (!llmResponse.ok) {
           const errorText = await llmResponse.text();
           console.error('[chat-send] Background LLM processing failed:', errorText);
+          return;
+        }
+
+        const llmData = await llmResponse.json();
+        const { text: assistantText, usage, latency_ms } = llmData;
+
+        if (!assistantText) {
+          console.error('[chat-send] ❌ No assistant text received from background LLM');
+          return;
+        }
+
+        // Save assistant message to DB
+        const assistantMessageData = {
+          chat_id,
+          role: "assistant",
+          text: assistantText,
+          client_msg_id: crypto.randomUUID(),
+          status: "complete",
+          meta: { 
+            llm_provider: "openai", 
+            model: "gpt-4.1-mini-2025-04-14",
+            latency_ms,
+            input_tokens: usage?.input_tokens,
+            output_tokens: usage?.output_tokens,
+            total_tokens: usage?.total_tokens,
+            mode: mode || 'background'
+          }
+        };
+
+        const { error: assistantError } = await supabase
+          .from("messages")
+          .upsert(assistantMessageData, {
+            onConflict: "client_msg_id"
+          });
+
+        if (assistantError) {
+          console.error('[chat-send] Background assistant message save failed:', assistantError);
         } else {
           console.log('[chat-send] Background LLM processing completed');
         }
