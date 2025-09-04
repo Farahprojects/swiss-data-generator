@@ -155,9 +155,10 @@ export const ConversationOverlay: React.FC = () => {
       // 🎵 RMS: Use real speech-synced RMS values (no processing!)
       if (Array.isArray(levels) && levels.length > 0) {
         console.log(`[ConversationOverlay] 🎵 Using ${levels.length} envelope levels for animation`);
+        console.log(`[ConversationOverlay] 🎵 First few values:`, levels.slice(0, 5));
         
-        // Start animation immediately with first RMS value
-        const firstLevel = (levels[0] ?? 0) / 255;
+        // Start animation immediately with first server-calculated value
+        const firstLevel = levels[0] ?? 0; // Server already sends final scale values
         directAudioAnimationService.notifyAudioLevel(firstLevel);
         
         // Dynamic frame duration: stretch RMS sequence to match audio length
@@ -168,7 +169,7 @@ export const ConversationOverlay: React.FC = () => {
           if (isShuttingDown.current || !currentTtsSourceRef.current) return;
           
           if (frameIndex < levels.length) {
-            const level = (levels[frameIndex] ?? 0) / 255;
+            const level = levels[frameIndex] ?? 0; // Server already sends final scale values
             directAudioAnimationService.notifyAudioLevel(level);
             frameIndex++;
             setTimeout(animateFrame, frameMs);
