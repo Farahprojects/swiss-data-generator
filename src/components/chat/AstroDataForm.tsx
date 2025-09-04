@@ -10,6 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { CleanPlaceAutocomplete } from '@/components/shared/forms/place-input/CleanPlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import InlineDateTimeSelector from '@/components/ui/mobile-pickers/InlineDateTimeSelector';
+import { DateTimePicker } from '@/components/ui/DateTimePicker';
 import { astroRequestCategories } from '@/constants/report-types';
 import { ReportFormData } from '@/types/public-report';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -448,60 +449,69 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                   {errors.email && <ErrorMsg msg={errors.email.message || ''} />}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="birthDate" className="text-sm font-medium text-gray-700">
-                      Birth Date *
-                    </Label>
-                    {isMobile ? (
-                      <InlineDateTimeSelector
-                        type="date"
-                        value={formValues.birthDate || ''}
-                        onChange={(date) => setValue('birthDate', date)}
-                        onConfirm={() => setActiveSelector(null)}
-                        onCancel={() => setActiveSelector(null)}
-                        isOpen={activeSelector === 'date'}
-                        placeholder="Select date"
-                        hasError={!!errors.birthDate}
-                        onOpen={() => setActiveSelector('date')}
+                <div>
+                  <Label className="text-sm font-medium text-gray-700 mb-1 block">
+                    Birth Date & Time *
+                  </Label>
+                  {isMobile ? (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <InlineDateTimeSelector
+                          type="date"
+                          value={formValues.birthDate || ''}
+                          onChange={(date) => setValue('birthDate', date)}
+                          onConfirm={() => setActiveSelector(null)}
+                          onCancel={() => setActiveSelector(null)}
+                          isOpen={activeSelector === 'date'}
+                          placeholder="Select date"
+                          hasError={!!errors.birthDate}
+                          onOpen={() => setActiveSelector('date')}
+                        />
+                        {errors.birthDate && <ErrorMsg msg={errors.birthDate.message || ''} />}
+                      </div>
+                      <div>
+                        <InlineDateTimeSelector
+                          type="time"
+                          value={formValues.birthTime || ''}
+                          onChange={(time) => setValue('birthTime', time)}
+                          onConfirm={() => setActiveSelector(null)}
+                          onCancel={() => setActiveSelector(null)}
+                          isOpen={activeSelector === 'time'}
+                          placeholder="Select time"
+                          hasError={!!errors.birthTime}
+                          onOpen={() => setActiveSelector('time')}
+                        />
+                        {errors.birthTime && <ErrorMsg msg={errors.birthTime.message || ''} />}
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <DateTimePicker
+                        dateValue={formValues.birthDate || ''}
+                        timeValue={formValues.birthTime || ''}
+                        onDateChange={(date) => {
+                          setValue('birthDate', date);
+                          // Register validation for the field
+                          register('birthDate', { required: 'Birth date is required' });
+                        }}
+                        onTimeChange={(time) => {
+                          setValue('birthTime', time);
+                          // Register validation for the field
+                          register('birthTime', { required: 'Birth time is required' });
+                        }}
+                        hasDateError={!!errors.birthDate}
+                        hasTimeError={!!errors.birthTime}
                       />
-                    ) : (
-                      <Input
-                        id="birthDate"
-                        type="date"
-                        {...register('birthDate', { required: 'Birth date is required' })}
-                        className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
-                      />
-                    )}
-                    {errors.birthDate && <ErrorMsg msg={errors.birthDate.message || ''} />}
-                  </div>
-
-                  <div>
-                    <Label htmlFor="birthTime" className="text-sm font-medium text-gray-700">
-                      Birth Time *
-                    </Label>
-                    {isMobile ? (
-                      <InlineDateTimeSelector
-                        type="time"
-                        value={formValues.birthTime || ''}
-                        onChange={(time) => setValue('birthTime', time)}
-                        onConfirm={() => setActiveSelector(null)}
-                        onCancel={() => setActiveSelector(null)}
-                        isOpen={activeSelector === 'time'}
-                        placeholder="Select time"
-                        hasError={!!errors.birthTime}
-                        onOpen={() => setActiveSelector('time')}
-                      />
-                    ) : (
-                      <Input
-                        id="birthTime"
-                        type="time"
-                        {...register('birthTime', { required: 'Birth time is required' })}
-                        className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
-                      />
-                    )}
-                    {errors.birthTime && <ErrorMsg msg={errors.birthTime.message || ''} />}
-                  </div>
+                      <div className="grid grid-cols-2 gap-4 mt-1">
+                        <div>
+                          {errors.birthDate && <ErrorMsg msg={errors.birthDate.message || ''} />}
+                        </div>
+                        <div>
+                          {errors.birthTime && <ErrorMsg msg={errors.birthTime.message || ''} />}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div>
