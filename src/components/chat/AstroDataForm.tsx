@@ -10,7 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { CleanPlaceAutocomplete } from '@/components/shared/forms/place-input/CleanPlaceAutocomplete';
 import { PlaceData } from '@/components/shared/forms/place-input/utils/extractPlaceData';
 import InlineDateTimeSelector from '@/components/ui/mobile-pickers/InlineDateTimeSelector';
-import { ElegantDateTimePicker } from '@/components/ui/ElegantDateTimePicker';
+import { SimpleDateTimePicker } from '@/components/ui/SimpleDateTimePicker';
 import { astroRequestCategories } from '@/constants/report-types';
 import { ReportFormData } from '@/types/public-report';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -486,7 +486,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                     </div>
                   ) : (
                     <div>
-                      <ElegantDateTimePicker
+                      <SimpleDateTimePicker
                         dateValue={formValues.birthDate || ''}
                         timeValue={formValues.birthTime || ''}
                         onDateChange={(date) => {
