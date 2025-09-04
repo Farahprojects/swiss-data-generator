@@ -5,10 +5,7 @@ import { useChatStore } from '@/core/store';
 import { useConversationAudioLevel } from '@/hooks/useConversationAudioLevel';
 import { VoiceBubble } from './VoiceBubble';
 import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
-import { conversationTtsService } from '@/services/voice/conversationTts';
-import { directAudioAnimationService } from '@/services/voice/DirectAudioAnimationService';
 import { directBarsAnimationService, FourBarLevels } from '@/services/voice/DirectBarsAnimationService';
-// 🎯 SIMPLE: No complex envelope processing needed
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
 import { v4 as uuidv4 } from 'uuid';
@@ -60,7 +57,6 @@ export const ConversationOverlay: React.FC = () => {
   // 🎵 AUDIO: Single context for all audio
   const audioContextRef = useRef<AudioContext | null>(null);
   
-  // 🎯 SIMPLE: No envelope player needed - direct animation numbers
   
   // 🎯 STATE-DRIVEN: Local messages follow state changes
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
@@ -89,14 +85,12 @@ export const ConversationOverlay: React.FC = () => {
       } catch (e) {
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       }
-      // 🎵 Envelope-driven animation - no analyser needed
     }
     
     return () => {
       // 🎵 ELEGANT: Use utility function for safe AudioContext cleanup
       safelyCloseAudioContext(audioContextRef.current);
       audioContextRef.current = null;
-      // 🎵 Envelope-driven animation - no analyser cleanup needed
     };
   }, []);
 

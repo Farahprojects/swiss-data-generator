@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Mic } from 'lucide-react';
 import { SpeakingBarsOptimized } from './SpeakingBarsOptimized';
-import { directAudioAnimationService } from '@/services/voice/DirectAudioAnimationService';
 import TorusListening from './TorusListening';
 
 interface Props {
@@ -11,11 +10,9 @@ interface Props {
 }
 
 export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
-  // No per-frame React subscriptions here; SpeakingBarsOptimized subscribes directly
-
   // Show the appropriate component based on the current state
   if (state === 'replying') {
-    return <SpeakingBarsOptimized isActive={true} audioLevel={audioLevel} />;
+    return <SpeakingBarsOptimized isActive={true} />;
   }
   
   if (state === 'processing' || state === 'thinking') {
