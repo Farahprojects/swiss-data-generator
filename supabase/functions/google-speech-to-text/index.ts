@@ -77,52 +77,11 @@ serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('[google-stt] Google API error:', errorText);
-
-      // Whisper Fallback Logic for long audio
-      if (response.status === 400 && errorText.includes("Sync input too long")) {
-        console.warn('[google-stt] Audio too long for Google, falling back to Whisper');
-
-        const openAiApiKey = Deno.env.get('OPENAI_API_KEY');
-        if (!openAiApiKey) {
-          throw new Error('OpenAI API key not configured for fallback');
-        }
-
-        try {
-          const audioBlob = new Blob([audioBuffer], { type: 'audio/webm' });
-          const formData = new FormData();
-          formData.append('file', audioBlob, 'audio.webm');
-          formData.append('model', 'whisper-1');
-
-          const whisperResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${openAiApiKey}`,
-            },
-            body: formData,
-          });
-
-          if (!whisperResponse.ok) {
-            const whisperErrorText = await whisperResponse.text();
-            console.error('[google-stt] Whisper fallback failed:', whisperErrorText);
-            throw new Error(`Whisper fallback failed: ${whisperResponse.status} - ${whisperErrorText}`);
-          }
-
-          const whisperResult = await whisperResponse.json();
-          transcript = whisperResult.text || '';
-          console.log('[google-stt] Whisper fallback successful');
-
-        } catch (fallbackError) {
-          console.error('[google-stt] Whisper fallback error:', fallbackError);
-          throw new Error(`Google Speech-to-Text API error: ${response.status} - ${errorText}`);
-        }
-
-      } else {
-        throw new Error(`Google Speech-to-Text API error: ${response.status} - ${errorText}`);
-      }
-    } else {
-      const result = await response.json();
-      transcript = result.results?.[0]?.alternatives?.[0]?.transcript || '';
+      throw new Error(`Google Speech-to-Text API error: ${response.status} - ${errorText}`);
     }
+
+    const result = await response.json();
+    transcript = result.results?.[0]?.alternatives?.[0]?.transcript || '';
 
 
     // Handle empty transcription results

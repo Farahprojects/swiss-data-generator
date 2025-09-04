@@ -411,30 +411,44 @@ export const ConversationOverlay: React.FC = () => {
       // 🎯 STATE DRIVEN: Processing state
       setState('thinking');
       
-      // Transcribe audio
-      const result = await sttService.transcribe(audioBlob, chat_id, {}, 'conversation', chat_id);
-      const transcript = result.transcript?.trim();
+      // 🚀 FIRE-AND-FORGET: Start STT transcription without waiting
+      console.log('[ConversationOverlay] 🚀 Starting STT transcription (fire-and-forget)');
+      sttService.transcribe(audioBlob, chat_id, {}, 'conversation', chat_id)
+        .then(result => {
+          const transcript = result.transcript?.trim();
+          
+          if (!transcript) {
+            console.log('[ConversationOverlay] ⚠️ Empty transcript, returning to listening');
+            setState('listening');
+            return;
+          }
+          
+          console.log('[ConversationOverlay] 📝 Transcript received:', transcript);
+          
+          // 🚀 OPTIMIZED: WebSocket already established at start, just ensure it's active
+          console.log('[ConversationOverlay] 🚀 WebSocket already warmed up, proceeding with LLM call');
+          
+          // Send to chat-send via the existing working llmService (handles LLM → TTS → WebSocket automatically)
+          console.log('[ConversationOverlay] 🎯 Calling llmService.sendMessage for TTS generation');
+          return llmService.sendMessage({
+            chat_id,
+            text: transcript,
+            client_msg_id: uuidv4(),
+            mode: 'conversation'
+          });
+        })
+        .then(() => {
+          console.log('[ConversationOverlay] ✅ llmService.sendMessage completed');
+          // 🎯 STATE DRIVEN: Replying state (TTS will come via WebSocket from chat-send)
+          setState('replying');
+        })
+        .catch(error => {
+          console.error('[ConversationOverlay] ❌ STT or LLM processing failed:', error);
+          setState('listening');
+        });
       
-      if (!transcript) {
-        setState('listening');
-        return;
-      }
-      
-      // 🚀 OPTIMIZED: WebSocket already established at start, just ensure it's active
-      console.log('[ConversationOverlay] 🚀 WebSocket already warmed up, proceeding with LLM call');
-      
-      // Send to chat-send via the existing working llmService (handles LLM → TTS → WebSocket automatically)
-      console.log('[ConversationOverlay] 🎯 Calling llmService.sendMessage for TTS generation');
-      const response = await llmService.sendMessage({
-        chat_id,
-        text: transcript,
-        client_msg_id: uuidv4(),
-        mode: 'conversation'
-      });
-      console.log('[ConversationOverlay] ✅ llmService.sendMessage completed');
-      
-      // 🎯 STATE DRIVEN: Replying state (TTS will come via WebSocket from chat-send)
-      setState('replying');
+      // 🎯 IMMEDIATE: Return to listening state while STT processes in background
+      setState('listening');
       
     } catch (error) {
       console.error('[ConversationOverlay] ❌ Processing failed:', error);
