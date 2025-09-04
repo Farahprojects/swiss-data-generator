@@ -46,12 +46,16 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
       {/* Date Picker */}
       <div className="relative">
         <Input
-          type="date"
+          type="text"
           value={dateValue || ''}
           onChange={(e) => {
             onDateChange(e.target.value);
             if (e.target.value) {
-              setSelectedDate(new Date(e.target.value));
+              try {
+                setSelectedDate(new Date(e.target.value));
+              } catch (error) {
+                // Invalid date format, ignore
+              }
             }
           }}
           className={cn(
