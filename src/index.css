@@ -144,6 +144,7 @@
   /* Safe area padding utilities */
   .safe-area-pb { padding-bottom: env(safe-area-inset-bottom, 0px); }
 }
+}
 
 /* -------------------------------------------------------------------------- */
 /*  GLOBAL RESET / QUALITY‑OF‑LIFE FIXES                                      */
