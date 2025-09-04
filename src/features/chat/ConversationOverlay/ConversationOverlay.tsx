@@ -94,23 +94,46 @@ export const ConversationOverlay: React.FC = () => {
     };
   }, []);
 
-  // 🚀 INSTANT: HTML5 Audio → No Decoding, No Heavy Processing
+  // 🎵 WEB AUDIO API: Real-time analysis with AnalyserNode for authentic bars
   const playAudioImmediately = useCallback(async (audioBytes: number[], text?: string) => {
     if (isShuttingDown.current) return;
     
     try {
-      // 🚀 NO AUDIOCONTEXT NEEDED - HTML5 Audio handles everything
+      // 🎯 CHECK: Ensure AudioContext is available and running
+      if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
+        console.log('[ConversationOverlay] 🎵 AudioContext closed or missing, recreating...');
+        try {
+          audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ latencyHint: 'playback' });
+        } catch (e) {
+          audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        }
+      }
       
-      // 🚀 INSTANT: Create blob URL and play with HTML5 audio (no decoding!)
-      const audioBlob = new Blob([new Uint8Array(audioBytes)], { type: 'audio/mpeg' });
-      const audioUrl = URL.createObjectURL(audioBlob);
+      const audioContext = audioContextRef.current;
       
-      // 🎯 DIRECT: Create HTML5 audio element for instant playback
-      const audio = new Audio(audioUrl);
-      currentTtsSourceRef.current = audio; // Store reference for cleanup
+      // 🎯 CHECK: Ensure AudioContext is running (resume if suspended)
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+      }
+      
+      // 🎯 DIRECT: Convert bytes to ArrayBuffer and decode
+      const arrayBuffer = new Uint8Array(audioBytes).buffer;
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      
+      // 🎵 REAL-TIME: Create analyzer for live audio analysis
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256; // Good resolution for 4 bars
+      analyser.smoothingTimeConstant = 0.8; // Smooth the data
+      
+      // 🎯 DIRECT: Create source and connect to analyzer + destination
+      const source = audioContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(analyser);
+      analyser.connect(audioContext.destination);
       
       // 🚀 PLAY AUDIO IMMEDIATELY - No waiting for anything else
-      audio.play();
+      source.start(0);
+      currentTtsSourceRef.current = source;
       
       // 🎯 STATE DRIVEN: Set replying state
       setState('replying');
@@ -122,39 +145,42 @@ export const ConversationOverlay: React.FC = () => {
         console.warn('[ConversationOverlay] Could not suspend mic for playback', e);
       }
       
-      // 🎵 SIMPLE: Start bars animation service with simple animation
+      // 🎵 REAL-TIME: Start bars animation service for live data
       directBarsAnimationService.start();
       
-      // 🎵 SIMPLE: Basic animation loop (no heavy audio analysis)
+      // 🎵 REAL-TIME: Live audio analysis loop (25fps for mobile performance)
+      const frequencyData = new Uint8Array(analyser.frequencyBinCount);
       const animate = () => {
         if (isShuttingDown.current || !currentTtsSourceRef.current) return;
         
-        // Simple pulsing animation while audio is playing
-        const time = Date.now() * 0.005; // Slow animation
-        const level = Math.abs(Math.sin(time)) * 0.6 + 0.4; // 0.4 to 1.0 range
+        // Get live frequency data from the analyzer
+        analyser.getByteFrequencyData(frequencyData);
         
-        // All bars move together from center outward with same intensity
-        const barLevels: FourBarLevels = [level, level, level, level];
+        // 🎵 REAL-TIME: Convert frequency data to 4 bar levels
+        // Use spaced frequency bins for 4 bars (0, 64, 128, 192)
+        const barLevels: FourBarLevels = [
+          frequencyData[0] / 255,     // Low frequencies
+          frequencyData[64] / 255,    // Mid-low frequencies  
+          frequencyData[128] / 255,   // Mid-high frequencies
+          frequencyData[192] / 255    // High frequencies
+        ];
         
-        // Send simple data to bars
+        // Send live data to bars
         directBarsAnimationService.notifyBars(barLevels);
         
         // 25fps = 40ms intervals for mobile performance
         setTimeout(animate, 40);
       };
       
-      // Start the simple animation loop
+      // Start the real-time animation loop
       setTimeout(animate, 40);
       
       // 🎯 STATE DRIVEN: Return to listening when done
-      audio.onended = () => {
+      source.onended = () => {
         console.log('[ConversationOverlay] 🎵 TTS audio finished, returning to listening mode');
         
         // 🎵 Stop animation service when TTS ends
         directBarsAnimationService.stop();
-        
-        // 🧹 Cleanup blob URL
-        URL.revokeObjectURL(audioUrl);
         
         setState('listening');
          
@@ -187,7 +213,7 @@ export const ConversationOverlay: React.FC = () => {
 
       
     } catch (error) {
-      console.error('[ConversationOverlay] ❌ Direct audio failed:', error);
+      console.error('[ConversationOverlay] ❌ Web Audio API failed:', error);
       setState('listening');
     }
   }, []);
@@ -318,14 +344,13 @@ export const ConversationOverlay: React.FC = () => {
     console.log('[ConversationOverlay] 🚨 X Button pressed - Master shutdown starting');
     isShuttingDown.current = true;
     
-    // 🎵 STEP 1: Stop HTML5 Audio (correct method)
+    // 🎵 STEP 1: Stop Web Audio API source
     if (currentTtsSourceRef.current) {
       try {
-        (currentTtsSourceRef.current as HTMLAudioElement).pause();
-        (currentTtsSourceRef.current as HTMLAudioElement).currentTime = 0;
-        console.log('[ConversationOverlay] 🎵 HTML5 Audio stopped');
+        (currentTtsSourceRef.current as AudioBufferSourceNode).stop();
+        console.log('[ConversationOverlay] 🎵 Web Audio API source stopped');
       } catch (e) {
-        console.warn('[ConversationOverlay] Could not stop HTML5 Audio:', e);
+        console.warn('[ConversationOverlay] Could not stop Web Audio API source:', e);
       }
       currentTtsSourceRef.current = null;
     }
