@@ -313,34 +313,54 @@ export const ConversationOverlay: React.FC = () => {
     }
   }, [chat_id]);
 
-  // 🎯 CLEANUP: Reset everything
+  // 🎯 CLEANUP: Master shutdown - Browser APIs FIRST, then everything else
   const handleModalClose = useCallback(async () => {
+    console.log('[ConversationOverlay] 🚨 X Button pressed - Master shutdown starting');
     isShuttingDown.current = true;
     
-    // Stop audio
+    // 🎵 STEP 1: Stop HTML5 Audio (correct method)
     if (currentTtsSourceRef.current) {
-      currentTtsSourceRef.current.stop();
+      try {
+        (currentTtsSourceRef.current as HTMLAudioElement).pause();
+        (currentTtsSourceRef.current as HTMLAudioElement).currentTime = 0;
+        console.log('[ConversationOverlay] 🎵 HTML5 Audio stopped');
+      } catch (e) {
+        console.warn('[ConversationOverlay] Could not stop HTML5 Audio:', e);
+      }
       currentTtsSourceRef.current = null;
     }
     
-    // Close connection
+    // 🎵 STEP 2: Close AudioContext (browser API)
+    safelyCloseAudioContext(audioContextRef.current);
+    audioContextRef.current = null;
+    console.log('[ConversationOverlay] 🎵 AudioContext closed');
+    
+    // 🎤 STEP 3: Stop microphone and release MediaStream (browser API)
+    try {
+      conversationMicrophoneService.stopRecording();
+      conversationMicrophoneService.cleanup();
+      console.log('[ConversationOverlay] 🎤 Microphone and MediaStream released');
+    } catch (e) {
+      console.warn('[ConversationOverlay] Could not cleanup microphone:', e);
+    }
+    
+    // 🌐 STEP 4: Close WebSocket connection
     if (connectionRef.current) {
       connectionRef.current.unsubscribe();
       connectionRef.current = null;
+      console.log('[ConversationOverlay] 🌐 WebSocket connection closed');
     }
     
-     // 🚀 Stop animation service
-     directBarsAnimationService.stop();
+    // 🎨 STEP 5: Stop animation service
+    directBarsAnimationService.stop();
+    console.log('[ConversationOverlay] 🎨 Animation service stopped');
     
-    // Stop microphone and release all resources
-    conversationMicrophoneService.stopRecording();
-    conversationMicrophoneService.cleanup();
-    
-    // 🎯 STATE DRIVEN: Reset to listening
+    // 🎯 STEP 6: Reset UI state (after all browser APIs are closed)
     setState('listening');
     setPermissionGranted(false);
     hasStarted.current = false;
     isShuttingDown.current = false;
+    console.log('[ConversationOverlay] 🎯 UI state reset');
     
     closeConversation();
   }, [closeConversation]);
