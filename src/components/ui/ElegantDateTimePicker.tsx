@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Calendar } from '@/components/ui/calendar';
+import { TimePicker } from '@/components/ui/TimePicker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { CalendarIcon, Clock } from 'lucide-react';
@@ -24,6 +25,7 @@ export const ElegantDateTimePicker: React.FC<ElegantDateTimePickerProps> = ({
   hasTimeError = false
 }) => {
   const [isDateOpen, setIsDateOpen] = useState(false);
+  const [isTimeOpen, setIsTimeOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     dateValue ? new Date(dateValue) : undefined
   );
@@ -194,8 +196,11 @@ export const ElegantDateTimePicker: React.FC<ElegantDateTimePickerProps> = ({
               selected={selectedDate}
               onSelect={handleDateSelect}
               initialFocus
-              className="p-3 pointer-events-auto"
+              className="pointer-events-auto"
               disabled={(date) => date > new Date()}
+              captionLayout="dropdown"
+              fromYear={1900}
+              toYear={new Date().getFullYear()}
             />
           </PopoverContent>
         </Popover>
@@ -242,14 +247,25 @@ export const ElegantDateTimePicker: React.FC<ElegantDateTimePickerProps> = ({
           </select>
         </div>
         
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-10 w-10 p-0 hover:bg-gray-100 rounded-xl"
-        >
-          <Clock className="h-4 w-4 text-gray-400" />
-        </Button>
+        <Popover open={isTimeOpen} onOpenChange={setIsTimeOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-10 w-10 p-0 hover:bg-gray-100 rounded-xl"
+            >
+              <Clock className="h-4 w-4 text-gray-400" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <TimePicker
+              value={timeValue}
+              onChange={onTimeChange}
+              onClose={() => setIsTimeOpen(false)}
+            />
+          </PopoverContent>
+        </Popover>
       </div>
     </div>
   );
