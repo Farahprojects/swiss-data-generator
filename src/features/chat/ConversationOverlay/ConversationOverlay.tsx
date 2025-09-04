@@ -408,7 +408,7 @@ export const ConversationOverlay: React.FC = () => {
     isProcessingRef.current = true;
     
     try {
-      // 🎯 STATE DRIVEN: Processing state
+      // 🎯 STATE DRIVEN: Processing state - show thinking UI immediately
       setState('thinking');
       
       // 🚀 FIRE-AND-FORGET: Start STT transcription without waiting
@@ -447,8 +447,7 @@ export const ConversationOverlay: React.FC = () => {
           setState('listening');
         });
       
-      // 🎯 IMMEDIATE: Return to listening state while STT processes in background
-      setState('listening');
+      // 🎯 KEEP THINKING STATE: Don't override thinking state - let the promise chain handle state transitions
       
     } catch (error) {
       console.error('[ConversationOverlay] ❌ Processing failed:', error);
