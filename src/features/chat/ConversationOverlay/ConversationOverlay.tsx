@@ -201,10 +201,7 @@ export const ConversationOverlay: React.FC = () => {
           // 🎵 Stop animation service when TTS ends
           directBarsAnimationService.stop();
           
-          // 🛡️ REACT SAFE: Use setTimeout to ensure state changes happen in next tick
-          setTimeout(() => {
-            setState('listening');
-          }, 0);
+          setState('listening');
          
          // 🔊 Resume microphone capture after playback ends
          try {
@@ -236,10 +233,7 @@ export const ConversationOverlay: React.FC = () => {
       
     } catch (error) {
       console.error('[ConversationOverlay] ❌ Web Audio API failed:', error);
-      // 🛡️ REACT SAFE: Use setTimeout to ensure state changes happen in next tick
-      setTimeout(() => {
-        setState('listening');
-      }, 0);
+      setState('listening');
     }
   }, []);
 
@@ -253,10 +247,7 @@ export const ConversationOverlay: React.FC = () => {
       // 🎯 DIRECT: WebSocket → Audio + Real-time Analysis
       connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
         if (payload.audioBytes) {
-          // 🛡️ REACT SAFE: Use setTimeout to ensure state changes happen in next tick
-          setTimeout(() => {
-            playAudioImmediately(payload.audioBytes, payload.text);
-          }, 0);
+          playAudioImmediately(payload.audioBytes, payload.text);
         }
       });
       
