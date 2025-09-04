@@ -131,6 +131,13 @@ export const ConversationOverlay: React.FC = () => {
       source.connect(analyser);
       analyser.connect(audioContext.destination);
       
+      // 🚀 PLAY AUDIO IMMEDIATELY - No waiting for anything else
+      source.start(0);
+      currentTtsSourceRef.current = source;
+      
+      // 🎯 STATE DRIVEN: Set replying state
+      setState('replying');
+      
       // 🔇 Suspend microphone capture during TTS playback (mutual exclusivity)
       try {
         conversationMicrophoneService.suspendForPlayback();
@@ -140,13 +147,6 @@ export const ConversationOverlay: React.FC = () => {
       
       // 🎵 REAL-TIME: Start bars animation service for live data
       directBarsAnimationService.start();
-      
-      // 🎯 STATE DRIVEN: Set replying state FIRST
-      setState('replying');
-      
-      // 🚀 START AUDIO IMMEDIATELY
-      source.start(0);
-      currentTtsSourceRef.current = source;
       
       // 🎵 REAL-TIME: Live audio analysis loop (25fps for mobile performance)
       const frequencyData = new Uint8Array(analyser.frequencyBinCount);
