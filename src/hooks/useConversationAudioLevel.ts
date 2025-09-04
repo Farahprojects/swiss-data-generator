@@ -25,6 +25,11 @@ export const useConversationAudioLevel = (enabled: boolean = true) => {
       // Use the higher of the two levels
       const level = Math.max(micLevel, ttsLevel);
       
+      // Debug logging
+      if (micLevel > 0.01) {
+        console.log(`[useConversationAudioLevel] 🎤 Mic level: ${micLevel.toFixed(4)}, TTS level: ${ttsLevel.toFixed(4)}, Final: ${level.toFixed(4)}`);
+      }
+      
       setAudioLevel(level);
       
       animationFrame = requestAnimationFrame(updateAudioLevel);
