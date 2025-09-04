@@ -49,26 +49,50 @@ export const ElegantDateTimePicker: React.FC<ElegantDateTimePickerProps> = ({
   const handleDateSelect = (newDate: Date | undefined) => {
     if (newDate) {
       setSelectedDate(newDate);
-      onDateChange(format(newDate, 'yyyy-MM-dd'));
+      const formattedDate = format(newDate, 'yyyy-MM-dd');
+      onDateChange(formattedDate);
       setIsDateOpen(false);
+      
+      // Update the individual field refs to show the new values
+      const [newYear, newMonth, newDay] = formattedDate.split('-');
+      if (dayRef.current) dayRef.current.value = newDay;
+      if (monthRef.current) monthRef.current.value = newMonth;
+      if (yearRef.current) yearRef.current.value = newYear;
     }
   };
 
   const updateDate = (newDay: string, newMonth: string, newYear: string) => {
-    if (newDay && newMonth && newYear) {
+    if (newDay && newMonth && newYear && newDay.length >= 1 && newMonth.length >= 1 && newYear.length >= 4) {
       const dateStr = `${newYear}-${newMonth.padStart(2, '0')}-${newDay.padStart(2, '0')}`;
       onDateChange(dateStr);
-      setSelectedDate(new Date(dateStr));
+      
+      // Update the calendar selection to match manual input
+      try {
+        const parsedDate = new Date(dateStr);
+        if (!isNaN(parsedDate.getTime())) {
+          setSelectedDate(parsedDate);
+        }
+      } catch (error) {
+        // Invalid date, ignore
+      }
     }
   };
 
   const updateTime = (newHour: string, newMinute: string, newAmpm: string) => {
-    if (newHour && newMinute) {
+    if (newHour && newMinute && newHour.length >= 1 && newMinute.length >= 1) {
       let hour24 = parseInt(newHour);
       if (newAmpm === 'PM' && hour24 !== 12) hour24 += 12;
       if (newAmpm === 'AM' && hour24 === 12) hour24 = 0;
       
-      onTimeChange(`${hour24.toString().padStart(2, '0')}:${newMinute.padStart(2, '0')}`);
+      const timeString = `${hour24.toString().padStart(2, '0')}:${newMinute.padStart(2, '0')}`;
+      onTimeChange(timeString);
+      
+      // Update the individual field refs to show the new values
+      if (hourRef.current) {
+        const display12Hour = hour24 === 0 ? '12' : (hour24 > 12 ? (hour24 - 12).toString() : hour24.toString());
+        hourRef.current.value = display12Hour;
+      }
+      if (minuteRef.current) minuteRef.current.value = newMinute.padStart(2, '0');
     }
   };
 
@@ -78,18 +102,22 @@ export const ElegantDateTimePicker: React.FC<ElegantDateTimePickerProps> = ({
     if (field === 'day') {
       if (numValue.length <= 2) {
         const validDay = Math.min(parseInt(numValue) || 0, 31).toString();
-        if (numValue.length === 2 && parseInt(numValue) > 0) {
+        if (numValue.length === 2 && parseInt(numValue) > 0 && parseInt(numValue) <= 31) {
           updateDate(validDay, month, year);
           nextRef?.current?.focus();
+        } else if (numValue.length === 1 || numValue.length === 2) {
+          updateDate(validDay, month, year);
         }
         return validDay;
       }
     } else if (field === 'month') {
       if (numValue.length <= 2) {
         const validMonth = Math.min(parseInt(numValue) || 0, 12).toString();
-        if (numValue.length === 2 && parseInt(numValue) > 0) {
+        if (numValue.length === 2 && parseInt(numValue) > 0 && parseInt(numValue) <= 12) {
           updateDate(day, validMonth, year);
           nextRef?.current?.focus();
+        } else if (numValue.length === 1 || numValue.length === 2) {
+          updateDate(day, validMonth, year);
         }
         return validMonth;
       }
@@ -109,17 +137,21 @@ export const ElegantDateTimePicker: React.FC<ElegantDateTimePickerProps> = ({
     
     if (field === 'hour') {
       if (numValue.length <= 2) {
-        const validHour = Math.min(parseInt(numValue) || 0, 12).toString();
-        if (numValue.length === 2 && parseInt(numValue) > 0) {
+        const validHour = Math.min(parseInt(numValue) || 1, 12).toString();
+        if (numValue.length === 2 && parseInt(numValue) > 0 && parseInt(numValue) <= 12) {
           updateTime(validHour, minute, ampm);
           nextRef?.current?.focus();
+        } else if (numValue.length === 1 || numValue.length === 2) {
+          updateTime(validHour, minute, ampm);
         }
         return validHour;
       }
     } else if (field === 'minute') {
       if (numValue.length <= 2) {
-        const validMinute = Math.min(parseInt(numValue) || 0, 59).toString();
+        const validMinute = Math.min(parseInt(numValue) || 0, 59).toString().padStart(2, '0');
         if (numValue.length === 2) {
+          updateTime(hour, validMinute, ampm);
+        } else if (numValue.length === 1) {
           updateTime(hour, validMinute, ampm);
         }
         return validMinute;
