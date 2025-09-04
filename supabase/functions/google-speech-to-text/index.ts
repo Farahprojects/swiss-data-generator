@@ -1,15 +1,10 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-trace-id, x-meta',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-meta',
 };
-
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -22,15 +17,10 @@ serve(async (req) => {
     const arrayBuffer = await req.arrayBuffer();
     const audioBuffer = new Uint8Array(arrayBuffer);
     
-    // Get metadata from headers
-    const traceId = req.headers.get('X-Trace-Id') || null;
+    // Get basic config from headers if provided
     const metaHeader = req.headers.get('X-Meta');
     const meta = metaHeader ? JSON.parse(metaHeader) : {};
     const config = meta.config || {};
-    const mode = meta.mode || 'normal';
-    const sessionId = meta.sessionId || null;
-    
-
     
     // Validate audio data
     if (!audioBuffer || audioBuffer.length === 0) {
@@ -43,17 +33,12 @@ serve(async (req) => {
       throw new Error('Google STT API key not configured');
     }
 
-    // Simplified configuration using only supported fields
-    const defaultConfig = {
+    // Simple configuration with essential settings only
+    const sttConfig = {
       encoding: 'WEBM_OPUS',
       languageCode: 'en-US',
       enableAutomaticPunctuation: true,
       model: 'latest_long',
-      useEnhanced: true,
-      speechContexts: [{
-        phrases: ["therapy", "session", "client", "feelings", "emotions", "breakthrough", "progress"],
-        boost: 10
-      }],
       ...config
     };
 
@@ -71,7 +56,7 @@ serve(async (req) => {
       audio: {
         content: base64Audio
       },
-      config: defaultConfig
+      config: sttConfig
     };
 
 
@@ -87,19 +72,15 @@ serve(async (req) => {
       }
     );
 
-    let result;
     let transcript;
-    let confidence = 0;
-    let stt_provider = 'google';
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[google-stt]', traceId ? `[trace:${traceId}]` : '', 'Google API error:', errorText);
+      console.error('[google-stt] Google API error:', errorText);
 
-      // Whisper Fallback Logic
+      // Whisper Fallback Logic for long audio
       if (response.status === 400 && errorText.includes("Sync input too long")) {
-        console.warn(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Google rejected for duration, falling back to Whisper`);
-        stt_provider = 'openai_whisper_fallback';
+        console.warn('[google-stt] Audio too long for Google, falling back to Whisper');
 
         const openAiApiKey = Deno.env.get('OPENAI_API_KEY');
         if (!openAiApiKey) {
@@ -107,9 +88,7 @@ serve(async (req) => {
         }
 
         try {
-          // Use the raw audio buffer directly for Whisper
           const audioBlob = new Blob([audioBuffer], { type: 'audio/webm' });
-
           const formData = new FormData();
           formData.append('file', audioBlob, 'audio.webm');
           formData.append('model', 'whisper-1');
@@ -124,63 +103,41 @@ serve(async (req) => {
 
           if (!whisperResponse.ok) {
             const whisperErrorText = await whisperResponse.text();
-            console.error(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Whisper fallback failed:`, whisperErrorText);
+            console.error('[google-stt] Whisper fallback failed:', whisperErrorText);
             throw new Error(`Whisper fallback failed: ${whisperResponse.status} - ${whisperErrorText}`);
           }
 
           const whisperResult = await whisperResponse.json();
           transcript = whisperResult.text || '';
-          confidence = 1; // Whisper doesn't provide confidence, assume 1
-
-          console.log(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Whisper fallback successful. Transcript length: ${transcript.length}`);
+          console.log('[google-stt] Whisper fallback successful');
 
         } catch (fallbackError) {
-          console.error(`[google-stt] ${traceId ? `[trace:${traceId}]` : ''} Error during Whisper fallback execution:`, fallbackError);
-          // Re-throw original Google error if fallback fails critically
+          console.error('[google-stt] Whisper fallback error:', fallbackError);
           throw new Error(`Google Speech-to-Text API error: ${response.status} - ${errorText}`);
         }
 
       } else {
-        // Not a duration error, so throw it
         throw new Error(`Google Speech-to-Text API error: ${response.status} - ${errorText}`);
       }
     } else {
-      result = await response.json();
+      const result = await response.json();
       transcript = result.results?.[0]?.alternatives?.[0]?.transcript || '';
-      confidence = result.results?.[0]?.alternatives?.[0]?.confidence || 0;
     }
 
 
-    
-    // Handle empty transcription results - return empty transcript instead of error
+    // Handle empty transcription results
     if (!transcript || transcript.trim().length === 0) {
       return new Response(
-        JSON.stringify({ 
-          transcript: '', // Empty transcript
-          confidence: 0,
-          mode,
-          sessionId,
-          note: 'No speech detected - conversation can continue'
-        }),
+        JSON.stringify({ transcript: '' }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
       );
     }
-    
-    if (confidence < 0.3) {
-      console.warn('[google-stt] Low confidence transcript:', confidence, 'for:', transcript);
-    }
 
-    // This function's only job is to return the transcript.
-    // The client (ChatController) will orchestrate the next steps.
+    // Return simple transcript result
     return new Response(
-      JSON.stringify({ 
-        transcript,
-        confidence,
-        mode,
-        sessionId
-      }),
+      JSON.stringify({ transcript }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
