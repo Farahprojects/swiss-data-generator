@@ -157,20 +157,15 @@ export const ConversationOverlay: React.FC = () => {
         analyser.getByteFrequencyData(frequencyData);
         
         // 🎵 REAL-TIME: Convert frequency data to 4 bar levels
-        // Split frequency spectrum into 4 bands for 4 bars
-        const bandSize = Math.floor(frequencyData.length / 4);
-        const barLevels: FourBarLevels = [0, 0, 0, 0];
-        
-        for (let i = 0; i < 4; i++) {
-          const start = i * bandSize;
-          const end = Math.min(start + bandSize, frequencyData.length);
-          let sum = 0;
-          for (let j = start; j < end; j++) {
-            sum += frequencyData[j];
-          }
-          // Normalize to 0-1 range and apply some scaling for visual effect
-          barLevels[i] = Math.min(1, (sum / (end - start)) / 128) * 0.8 + 0.2;
+        // Calculate overall audio level from all frequencies
+        let totalSum = 0;
+        for (let i = 0; i < frequencyData.length; i++) {
+          totalSum += frequencyData[i];
         }
+        const overallLevel = Math.min(1, (totalSum / frequencyData.length) / 128) * 0.8 + 0.2;
+        
+        // All bars move together from center outward with same intensity
+        const barLevels: FourBarLevels = [overallLevel, overallLevel, overallLevel, overallLevel];
         
         // Send live data to bars
         directBarsAnimationService.notifyBars(barLevels);
