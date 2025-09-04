@@ -9,19 +9,29 @@ interface Props {
 export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive, audioLevel = 0 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // 🎯 PURE SERVER-DRIVEN: No client-side math, just direct server values
+  // 🎯 PURE SERVER-DRIVEN: No client-side math, just direct server values for 4 bars
   useEffect(() => {
     if (!isActive || !containerRef.current) return;
 
-    const applyLevel = (serverValue: number) => {
-      // NO MATH - server already calculated the final scale value
-      containerRef.current!.style.setProperty('--bar-scale', serverValue.toString());
+    const applyLevels = (serverLevels: number[]) => {
+      // NO MATH - server already calculated the final scale values
+      // Map 0-1 range to 0.2-1.0 scale range for visual appeal
+      const minScale = 0.2;
+      const maxScale = 1.0;
+      
+      serverLevels.forEach((level, index) => {
+        const scale = minScale + level * (maxScale - minScale);
+        containerRef.current!.style.setProperty(`--bar-${index}-scale`, scale.toString());
+      });
     };
 
-    // Set initial visual immediately
-    applyLevel(audioLevel);
+    // Set initial visual immediately (backward compatibility)
+    if (audioLevel > 0) {
+      const initialLevels = [audioLevel, audioLevel, audioLevel, audioLevel];
+      applyLevels(initialLevels);
+    }
 
-    const unsubscribe = directAudioAnimationService.subscribe(applyLevel);
+    const unsubscribe = directAudioAnimationService.subscribe(applyLevels);
     return unsubscribe;
   }, [isActive, audioLevel]);
 
@@ -38,7 +48,10 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive, audioLevel = 
       ref={containerRef}
       className="flex items-center justify-center gap-3 h-16 w-28"
       style={{
-        '--bar-scale': '1',
+        '--bar-0-scale': '1',
+        '--bar-1-scale': '1',
+        '--bar-2-scale': '1',
+        '--bar-3-scale': '1',
         willChange: 'transform', // GPU acceleration hint
       } as React.CSSProperties}
     >
@@ -49,7 +62,7 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive, audioLevel = 
           style={{
             width: '16px', // All bars same width
             transformOrigin: 'bottom',
-            transform: `scaleY(var(--bar-scale, 1))`,
+            transform: `scaleY(var(--bar-${bar.id}-scale, 1))`,
             willChange: 'transform', // GPU acceleration hint
             transition: 'none !important', // Disable any CSS transitions
           }}

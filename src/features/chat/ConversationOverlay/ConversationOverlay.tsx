@@ -100,7 +100,7 @@ export const ConversationOverlay: React.FC = () => {
   }, []);
 
   // 🎵 RMS: WebSocket → Browser Audio + Real speech-synced animation
-  const playAudioImmediately = useCallback(async (audioBytes: number[], text?: string, levels?: number[], frameDurationMs?: number) => {
+  const playAudioImmediately = useCallback(async (audioBytes: number[], text?: string, animationData?: { frameMs: number; bars: number[][] }) => {
     if (isShuttingDown.current) return;
     
 
@@ -152,35 +152,43 @@ export const ConversationOverlay: React.FC = () => {
       source.start(0);
       currentTtsSourceRef.current = source;
       
-      // 🎵 RMS: Use real speech-synced RMS values (no processing!)
-      if (Array.isArray(levels) && levels.length > 0) {
-        console.log(`[ConversationOverlay] 🎵 Using ${levels.length} envelope levels for animation`);
-        console.log(`[ConversationOverlay] 🎵 First few values:`, levels.slice(0, 5));
+      // 🎯 4-BAR ANIMATION: Use server-generated smooth, deterministic data
+      if (animationData?.bars && animationData.bars.length === 4) {
+        console.log(`[ConversationOverlay] 🎵 Using 4-bar animation data with ${animationData.bars[0].length} frames`);
+        console.log(`[ConversationOverlay] 🎵 Frame duration: ${animationData.frameMs}ms`);
         
-        // Start animation immediately with first server-calculated value
-        const firstLevel = levels[0] ?? 0; // Server already sends final scale values
-        directAudioAnimationService.notifyAudioLevel(firstLevel);
-        
-        // Dynamic frame duration: stretch RMS sequence to match audio length
-        const frameMs = (audioBuffer.duration * 1000) / levels.length;
-        let frameIndex = 1;
+        const startTime = performance.now();
+        let animationFrameId: number;
         
         const animateFrame = () => {
-          if (isShuttingDown.current || !currentTtsSourceRef.current) return;
+          if (isShuttingDown.current || !currentTtsSourceRef.current) {
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            return;
+          }
           
-          if (frameIndex < levels.length) {
-            const level = levels[frameIndex] ?? 0; // Server already sends final scale values
-            directAudioAnimationService.notifyAudioLevel(level);
-            frameIndex++;
-            setTimeout(animateFrame, frameMs);
+          const elapsed = performance.now() - startTime;
+          const frameIndex = Math.floor(elapsed / animationData.frameMs);
+          
+          if (frameIndex < animationData.bars[0].length) {
+            // Get current levels for all 4 bars (0-255 range)
+            const barLevels = animationData.bars.map(bar => bar[frameIndex] ?? 0);
+            
+            // Convert to 0-1 range and send all 4 bar levels to animation service
+            const normalizedLevels = barLevels.map(level => level / 255);
+            directAudioAnimationService.notifyAudioLevel(normalizedLevels);
+            
+            animationFrameId = requestAnimationFrame(animateFrame);
+          } else {
+            // Animation complete
+            console.log('[ConversationOverlay] 🎵 4-bar animation sequence complete');
           }
         };
         
-        // Start animation sequence after first frame
-        setTimeout(animateFrame, frameMs);
+        // Start animation loop
+        animationFrameId = requestAnimationFrame(animateFrame);
       } else {
-        console.warn('[ConversationOverlay] ⚠️ No RMS values received - using minimal animation');
-        directAudioAnimationService.notifyAudioLevel(0.1);
+        console.warn('[ConversationOverlay] ⚠️ No 4-bar animation data received - using minimal animation');
+        directAudioAnimationService.notifyAudioLevel([0.1, 0.1, 0.1, 0.1]);
       }
       
              // 🎯 STATE DRIVEN: Return to listening when done
@@ -236,10 +244,10 @@ export const ConversationOverlay: React.FC = () => {
     try {
       const connection = supabase.channel(`conversation:${chat_id}`);
       
-      // 🎯 DIRECT: WebSocket → Audio + Envelope
+      // 🎯 DIRECT: WebSocket → Audio + 4-Bar Animation Data
       connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
         if (payload.audioBytes) {
-          playAudioImmediately(payload.audioBytes, payload.text, payload.levels, payload.frameDurationMs);
+          playAudioImmediately(payload.audioBytes, payload.text, payload.animationData);
         }
       });
       

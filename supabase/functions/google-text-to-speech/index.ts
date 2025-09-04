@@ -119,19 +119,112 @@ serve(async (req) => {
     const mp3Json=await mp3Resp.json();
     const audioBytes=Uint8Array.from(atob(mp3Json.audioContent),c=>c.charCodeAt(0));
 
-    // 🔹 Synthetic envelope (lightweight) - SERVER CALCULATES FINAL SCALE VALUES
-    const buildEnvelope=(durMs:number,frameMs=40)=>{const n=Math.ceil(durMs/frameMs);const u=new Uint8Array(n);for(let i=0;i<n;i++){const t=i/n;const base=Math.sin(t*Math.PI*3)*0.4+0.6;const jitter=(Math.random()-.5)*0.15;u[i]=Math.max(0,Math.min(255,Math.round((base+jitter)*255)));}return u;};
-    const estDurMs=text.split(/\s+/).length/150*60*1000;
-    const rawLevels=buildEnvelope(estDurMs);
-    
-    // SERVER CALCULATES FINAL SCALE VALUES - NO CLIENT MATH
-    const baselineHeight = 0.2;
-    const maxMovement = 0.8;
-    const levelsArr = Array.from(rawLevels).map(raw => {
-      const normalized = raw / 255; // 0-1
-      return baselineHeight + normalized * maxMovement; // Final scale value
-    });
-    const frameDurationMs=40;
+    // 🎯 PRODUCTION-READY: Smooth, deterministic 4-bar animation
+    const buildBars = (durMs: number, frameMs = 40, seed = 1337) => {
+      const frames = Math.max(1, Math.ceil(durMs / frameMs));
+
+      // ---- tiny seeded PRNG (mulberry32) for repeatable "random" ----
+      function mulberry32(a: number) {
+        return function () {
+          let t = (a += 0x6d2b79f5);
+          t = Math.imul(t ^ (t >>> 15), t | 1);
+          t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+      const rnd = mulberry32(seed);
+
+      // ---- helper: cosine (smooth) interpolation between control points ----
+      const smoothLerp = (a: number, b: number, t: number) => {
+        const t2 = (1 - Math.cos(Math.PI * t)) * 0.5; // 0..1 ease-in-out
+        return a * (1 - t2) + b * t2;
+      };
+
+      // ---- 1) build a smooth "base" curve via random control points ----
+      const ctrlStepMs = 240; // control every ~0.24s (natural speech-ish)
+      const ctrlCount = Math.max(2, Math.ceil(durMs / ctrlStepMs) + 1);
+      const ctrl: number[] = Array.from({ length: ctrlCount }, () => 0.2 + rnd() * 0.7); // 0.2..0.9
+
+      // optional: bias some pauses by occasionally dropping points
+      for (let i = 1; i < ctrl.length - 1; i++) {
+        if (rnd() < 0.12) ctrl[i] *= 0.35; // light "pause"
+      }
+
+      const base: number[] = new Array(frames);
+      for (let i = 0; i < frames; i++) {
+        const tMs = i * frameMs;
+        const c = tMs / ctrlStepMs;
+        const c0 = Math.floor(c);
+        const c1 = Math.min(ctrl.length - 1, c0 + 1);
+        const f = Math.min(1, Math.max(0, c - c0));
+        base[i] = smoothLerp(ctrl[c0], ctrl[c1], f);
+      }
+
+      // ---- 2) add tiny, cheap variation so bars don't move identically ----
+      // lightweight "wobble" via two sines with small amplitudes
+      const twoPi = Math.PI * 2;
+      const hzA = 1.6 + rnd() * 0.6; // ~1.6–2.2 Hz
+      const hzB = 3.0 + rnd() * 0.7; // ~3.0–3.7 Hz
+      const ampA = 0.06; // subtle
+      const ampB = 0.03; // very subtle
+      const phase2 = rnd() * twoPi;
+      const phase3 = rnd() * twoPi;
+
+      const bar2: number[] = new Array(frames);
+      const bar3: number[] = new Array(frames);
+
+      for (let i = 0; i < frames; i++) {
+        const t = i * frameMs / 1000; // seconds
+        const wobble2 = Math.sin(twoPi * hzA * t + phase2) * ampA + Math.sin(twoPi * hzB * t) * ampB;
+        const wobble3 = Math.sin(twoPi * (hzA * 1.07) * t + phase3) * ampA + Math.sin(twoPi * (hzB * 0.92) * t) * ampB;
+        bar2[i] = clamp01(base[i] + wobble2);
+        bar3[i] = clamp01(base[i] + wobble3);
+      }
+
+      // ---- 3) derive side bars as "followers" (clean look, less busy) ----
+      // left = lean toward bar2; right = lean toward bar3
+      const sideBlend = 0.75; // closer to base than middle bars
+      const bar1: number[] = new Array(frames);
+      const bar4: number[] = new Array(frames);
+      for (let i = 0; i < frames; i++) {
+        bar1[i] = clamp01(sideBlend * base[i] + (1 - sideBlend) * bar2[i]);
+        bar4[i] = clamp01(sideBlend * base[i] + (1 - sideBlend) * bar3[i]);
+      }
+
+      // ---- 4) apply soft attack/release to avoid pops at start/end ----
+      const attackMs = 140;
+      const releaseMs = 160;
+      const attackFrames = Math.min(frames, Math.ceil(attackMs / frameMs));
+      const releaseFrames = Math.min(frames, Math.ceil(releaseMs / frameMs));
+      for (let i = 0; i < frames; i++) {
+        const att = i < attackFrames ? i / attackFrames : 1;
+        const rel = i > frames - releaseFrames ? (frames - i) / releaseFrames : 1;
+        const gate = Math.min(1, Math.max(0, smoothStep(att) * smoothStep(rel)));
+        bar1[i] *= gate; bar2[i] *= gate; bar3[i] *= gate; bar4[i] *= gate;
+      }
+
+      // ---- 5) quantize to Uint8 (0..255) for super-cheap UI mapping ----
+      const q = (arr: number[]) => {
+        const out = new Uint8Array(frames);
+        for (let i = 0; i < frames; i++) out[i] = Math.round(arr[i] * 255);
+        return out;
+      };
+
+      return {
+        frameMs,
+        bars: [q(bar1), q(bar2), q(bar3), q(bar4)],
+      };
+
+      function clamp01(x: number) { return x < 0 ? 0 : x > 1 ? 1 : x; }
+      function smoothStep(x: number) { // 0..1 -> smooth 0..1
+        const t = x < 0 ? 0 : x > 1 ? 1 : x;
+        return t * t * (3 - 2 * t);
+      }
+    };
+
+    const estDurMs = text.split(/\s+/).length / 150 * 60 * 1000;
+    const animationData = buildBars(estDurMs, 40, 1337);
+    const frameDurationMs = animationData.frameMs;
 
     // Pure streaming approach - no storage, no DB
     const responseData = {
@@ -180,8 +273,10 @@ serve(async (req) => {
           event: 'tts-ready',
           payload: {
             audioBytes: Array.from(audioBytes),
-            levels: levelsArr,
-            frameDurationMs,
+            animationData: {
+              frameMs: animationData.frameMs,
+              bars: animationData.bars.map(bar => Array.from(bar)) // Convert Uint8Array to regular array for JSON
+            },
             audioUrl: null, // No URL since we're not storing
             text: text,
             chat_id: chat_id,
