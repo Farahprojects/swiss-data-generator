@@ -204,7 +204,6 @@ serve(async (req) => {
     */
 
     const processingTime = Date.now() - startTime;
-    console.log(`[google-tts] TTS completed in ${processingTime}ms`);
 
         // 🚀 FIRE-AND-FORGET: WebSocket broadcast (non-blocking for faster response)
     console.log(`[google-tts] 📞 Making phone call with binary MP3 bytes to chat: ${chat_id}`);
@@ -229,7 +228,6 @@ serve(async (req) => {
           if (broadcastError) {
             console.error('[google-tts] ❌ Failed to make phone call:', broadcastError);
           } else {
-            console.log('[google-tts] ✅ Phone call successful - binary MP3 bytes delivered directly');
           }
         })
         .catch((broadcastError) => {

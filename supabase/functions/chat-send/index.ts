@@ -190,16 +190,12 @@ serve(async (req) => {
         const ttsData = await ttsResponse.json();
         const audioUrl = ttsData.audioUrl;
         
-        console.log('[chat-send] ✅ TTS completed, audioUrl:', audioUrl);
-
         // Step 5: TTS makes the phone call directly - just return response
         const responseData = {
           message: "Assistant response ready",
           text: assistantText,
           client_msg_id: userMessageData.client_msg_id
         };
-
-        console.log('[chat-send] 🚀 Returning response to browser (TTS makes phone call)');
         return new Response(JSON.stringify(responseData), {
           headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
