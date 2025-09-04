@@ -7,8 +7,7 @@ import { VoiceBubble } from './VoiceBubble';
 import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
 import { conversationTtsService } from '@/services/voice/conversationTts';
 import { directAudioAnimationService } from '@/services/voice/DirectAudioAnimationService';
-// 🎵 PHONEME-BASED: No EnvelopePlayer needed
-// 🎵 PHONEME-BASED: No EnvelopeGenerator needed
+// 🎯 SIMPLE: No complex envelope processing needed
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
 import { v4 as uuidv4 } from 'uuid';
@@ -60,8 +59,7 @@ export const ConversationOverlay: React.FC = () => {
   // 🎵 AUDIO: Single context for all audio
   const audioContextRef = useRef<AudioContext | null>(null);
   
-  // 🎵 ENVELOPE: Player for smooth, synced animation
-  // 🎵 PHONEME-BASED: No envelope player needed
+  // 🎯 SIMPLE: No envelope player needed - direct animation numbers
   
   // 🎯 STATE-DRIVEN: Local messages follow state changes
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
@@ -101,8 +99,8 @@ export const ConversationOverlay: React.FC = () => {
     };
   }, []);
 
-  // 🎯 DIRECT AUDIO: WebSocket → Browser Audio + Phoneme Animation
-  const playAudioImmediately = useCallback(async (audioBytes: number[], text?: string, phonemes?: any[], frameDurationMs?: number) => {
+  // 🎯 SIMPLE: WebSocket → Browser Audio + Direct animation numbers
+  const playAudioImmediately = useCallback(async (audioBytes: number[], text?: string, animationNumbers?: number[], frameDurationMs?: number) => {
     if (isShuttingDown.current) return;
     
 
@@ -130,7 +128,7 @@ export const ConversationOverlay: React.FC = () => {
       const arrayBuffer = new Uint8Array(audioBytes).buffer;
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
       
-      // 🎯 DIRECT: Create source and play (no analyser needed for phoneme-driven animation)
+      // 🎯 DIRECT: Create source and play (no analyser needed for envelope-driven animation)
       const source = audioContext.createBufferSource();
       source.buffer = audioBuffer;
       source.connect(audioContext.destination);
@@ -142,49 +140,47 @@ export const ConversationOverlay: React.FC = () => {
         console.warn('[ConversationOverlay] Could not suspend mic for playback', e);
       }
       
-      // 🎵 PHONEME-DRIVEN: Start animation service
+      // 🎵 ENVELOPE-DRIVEN: Start animation service
       directAudioAnimationService.start();
       
-      // 🎵 PHONEME-BASED: Use phoneme alignment for animation (no envelope math!)
-      if (phonemes && phonemes.length > 0) {
-        console.log(`[ConversationOverlay] 🎵 Using ${phonemes.length} phonemes for animation`);
-        
-        // Start phoneme-based animation
-        const startPhonemeAnimation = () => {
-          const updateAnimation = () => {
-            if (!currentTtsSourceRef.current || isShuttingDown.current) return;
-            
-            const currentTime = audioContextRef.current?.currentTime || 0;
-            const activePhoneme = phonemes.find(p => currentTime >= p.start && currentTime <= p.end);
-            
-            if (activePhoneme) {
-              // Animate based on phoneme intensity
-              directAudioAnimationService.notifyAudioLevel(activePhoneme.intensity || 0.5);
-            } else {
-              // Silence - lower bars
-              directAudioAnimationService.notifyAudioLevel(0.1);
-            }
-            
-            requestAnimationFrame(updateAnimation);
-          };
-          
-          updateAnimation();
-        };
-        
-        // Start animation after a short delay to sync with audio
-        setTimeout(startPhonemeAnimation, 50);
-      } else {
-        throw new Error('No phoneme data received from TTS - cannot animate');
-      }
+      // 🎯 SIMPLE: No envelope player needed - direct animation numbers
       
       // 🎯 STATE DRIVEN: Set replying state FIRST
       setState('replying');
       
-      // 🚀 START AUDIO IMMEDIATELY: No waiting for phoneme analysis
+      // 🚀 START AUDIO IMMEDIATELY: No waiting for envelope analysis
       source.start(0);
       currentTtsSourceRef.current = source;
       
-      // 🎵 PHONEME ANIMATION: Already started above, no additional processing needed
+      // 🎯 SIMPLE: Use precomputed animation numbers directly (no processing!)
+      if (Array.isArray(animationNumbers) && animationNumbers.length > 0) {
+        console.log(`[ConversationOverlay] 🎯 Using ${animationNumbers.length} precomputed animation numbers`);
+        
+        // Start animation immediately with first number
+        const firstLevel = Math.max(0.1, Math.min(1.0, animationNumbers[0] || 0.1));
+        directAudioAnimationService.notifyAudioLevel(firstLevel);
+        
+        // Play animation numbers in sequence
+        const frameMs = frameDurationMs || 50;
+        let frameIndex = 1;
+        
+        const animateFrame = () => {
+          if (isShuttingDown.current || !currentTtsSourceRef.current) return;
+          
+          if (frameIndex < animationNumbers.length) {
+            const level = Math.max(0.1, Math.min(1.0, animationNumbers[frameIndex] || 0.1));
+            directAudioAnimationService.notifyAudioLevel(level);
+            frameIndex++;
+            setTimeout(animateFrame, frameMs);
+          }
+        };
+        
+        // Start animation sequence after first frame
+        setTimeout(animateFrame, frameMs);
+      } else {
+        console.warn('[ConversationOverlay] ⚠️ No animation numbers received - using minimal animation');
+        directAudioAnimationService.notifyAudioLevel(0.1);
+      }
       
              // 🎯 STATE DRIVEN: Return to listening when done
        source.onended = () => {
@@ -193,7 +189,7 @@ export const ConversationOverlay: React.FC = () => {
           // 🎵 Stop animation service when TTS ends
           directAudioAnimationService.stop();
          
-         // 🎵 PHONEME-BASED: No envelope player to stop
+                   // 🎯 SIMPLE: No envelope player to stop
          
          conversationTtsService.setAudioLevelForAnimation(0);
          setState('listening');
@@ -242,7 +238,7 @@ export const ConversationOverlay: React.FC = () => {
       // 🎯 DIRECT: WebSocket → Audio + Envelope
       connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
         if (payload.audioBytes) {
-          playAudioImmediately(payload.audioBytes, payload.text, payload.phonemes, payload.frameDurationMs);
+          playAudioImmediately(payload.audioBytes, payload.text, payload.animationNumbers, payload.frameDurationMs);
         }
       });
       
@@ -372,7 +368,7 @@ export const ConversationOverlay: React.FC = () => {
      // 🚀 Stop animation service
      directAudioAnimationService.stop();
      
-     // 🎵 PHONEME-BASED: No envelope player to stop
+           // 🎯 SIMPLE: No envelope player to stop
     
     // Stop microphone and release all resources
     conversationMicrophoneService.stopRecording();

@@ -14,7 +14,34 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-// 🎵 PHONEME-BASED: No envelope calculation functions needed
+// 🎯 SIMPLE: Generate animation numbers from MP3 duration (no complex audio analysis)
+function generateSimpleAnimationNumbers(durationMs: number, frameMs: number = 50): number[] {
+  const numFrames = Math.ceil(durationMs / frameMs);
+  const animationNumbers: number[] = [];
+  
+  // Generate simple wave pattern for visual appeal
+  for (let i = 0; i < numFrames; i++) {
+    const progress = i / numFrames;
+    // Simple sine wave with some randomness for natural feel
+    const baseLevel = Math.sin(progress * Math.PI * 4) * 0.3 + 0.4;
+    const randomVariation = (Math.random() - 0.5) * 0.2;
+    const finalLevel = Math.max(0.1, Math.min(1.0, baseLevel + randomVariation));
+    animationNumbers.push(finalLevel);
+  }
+  
+  console.log(`[google-tts] 🎯 Generated ${animationNumbers.length} simple animation numbers for ${durationMs}ms audio`);
+  return animationNumbers;
+}
+
+// Utility: Uint8Array → base64
+function uint8ToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
 
 serve(async (req) => {
   const startTime = Date.now();
@@ -43,16 +70,9 @@ serve(async (req) => {
     const voiceName = `en-US-Chirp3-HD-${voice}`;
     console.log(`[google-tts] Using voice: ${voiceName}`);
 
-    // Create SSML with word marks for timing (hardened)
-    const tokens = text.trim().split(/\s+/); // No empty tokens
-    const escapeXml = (str: string) => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const ssml = `<speak>${tokens.map((word, i) => `<mark name="w${i}"/>${escapeXml(word)}`).join(' ')}</speak>`;
-    
-    console.log(`[google-tts] 🎵 Generated SSML with ${tokens.length} word marks:`, ssml);
-
-    // Call Google Text-to-Speech API for MP3 (playback) with SSML marks
+    // Call Google Text-to-Speech API for MP3 (playback)
     const ttsResponse = await fetch(
-      `https://texttospeech.googleapis.com/v1beta1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
+      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
       {
         method: "POST",
         headers: {
@@ -61,7 +81,7 @@ serve(async (req) => {
           "User-Agent": "TheRAI-TTS/1.0",
         },
         body: JSON.stringify({
-          input: { ssml },
+          input: { text },
           voice: {
             languageCode: "en-US",
             name: voiceName,
@@ -72,7 +92,6 @@ serve(async (req) => {
             pitch: 0.0,
             sampleRateHertz: 22050
           },
-          enableTimePointing: ["SSML_MARK"], // Enable SSML mark timing
         }),
       }
     );
@@ -85,7 +104,6 @@ serve(async (req) => {
     
     const ttsData = await ttsResponse.json();
     const audioContent = ttsData.audioContent;
-    const timepoints = ttsData.timepoints || []; // Phoneme alignment data
 
     if (!audioContent) {
       throw new Error("No audio content received from Google TTS API");
@@ -93,46 +111,13 @@ serve(async (req) => {
 
     // Decode base64 MP3 audio content to raw bytes
     const audioBytes = Uint8Array.from(atob(audioContent), c => c.charCodeAt(0));
-    
-    // Process SSML mark timing data for animation
-    console.log('[google-tts] 🔍 Raw timepoints:', JSON.stringify(timepoints, null, 2));
-    
-    // Fail fast if timepoints missing
-    if (!Array.isArray(timepoints)) {
-      throw new Error("No timepoints returned (enableTimePointing requires v1beta1)");
-    }
-    
-    // Validate we got the expected number of timepoints
-    if (timepoints.length !== tokens.length) {
-      throw new Error(`Expected ${tokens.length} timepoints but got ${timepoints.length}`);
-    }
-    
-    const phonemes = timepoints.map((tp: any, index: number) => {
-      // Google TTS SSML mark format: { timeSeconds: number, markName: string }
-      const start = tp.timeSeconds || 0;
-      const nextTimepoint = timepoints[index + 1];
-      const end = nextTimepoint ? nextTimepoint.timeSeconds : start + 0.5; // Use next timepoint or default 500ms
-      
-      // Get the actual word for intensity calculation
-      const word = tokens[index] || '';
-      const intensity = word.match(/[aeiou]/i) ? 0.8 : 0.4; // Vowels = higher intensity
-      
-      return {
-        symbol: word,
-        start: start,
-        end: end,
-        intensity: intensity
-      };
-    });
-    
-    console.log(`[google-tts] 🎵 Generated ${phonemes.length} phoneme timepoints for animation`);
-    
-    // 🚫 NO FALLBACKS: Fail fast if no timepoints
-    if (phonemes.length === 0) {
-      throw new Error('No timepoints received from Google TTS - API may not support timepointing');
-    }
 
-    // 🎵 PHONEME-BASED: No envelope generation needed - using Google TTS timepoints
+    // 🎯 SIMPLE: Generate animation numbers based on estimated audio duration
+    // Estimate duration from text length (rough approximation: ~150 words per minute)
+    const wordsPerMinute = 150;
+    const words = text.split(/\s+/).length;
+    const estimatedDurationMs = (words / wordsPerMinute) * 60 * 1000;
+    const animationNumbers = generateSimpleAnimationNumbers(estimatedDurationMs, 50); // 20fps
     
     // Pure streaming approach - no storage, no DB
     const responseData = {
@@ -141,7 +126,30 @@ serve(async (req) => {
       storagePath: null
     };
 
-    // 🎵 PHONEME-BASED: No DB storage needed for conversation mode
+    // Save TTS audio clip to dedicated audio table in background (non-blocking)
+    // COMMENTED OUT: No longer saving to DB for conversation mode
+    /*
+    EdgeRuntime.waitUntil(
+      supabase.from("chat_audio_clips").insert({
+        chat_id: chat_id,
+        role: "assistant",
+        audio_url: signedUrl,
+        storage_path: fileName,
+        voice: voiceName,
+        provider: "google",
+        meta: { 
+          tts_status: 'ready',
+          processing_time_ms: Date.now() - startTime
+        },
+      }).then(({ error }) => {
+        if (error) {
+          console.error("[google-tts] Background DB insert failed:", error);
+        } else {
+          console.log(`[google-tts] Background DB insert completed`);
+        }
+      })
+    );
+    */
 
     const processingTime = Date.now() - startTime;
     console.log(`[google-tts] TTS completed in ${processingTime}ms`);
@@ -158,7 +166,8 @@ serve(async (req) => {
           event: 'tts-ready',
           payload: {
             audioBytes: Array.from(audioBytes), // Raw MP3 bytes as array
-            phonemes: phonemes, // Phoneme alignment data for animation
+            animationNumbers: animationNumbers, // Simple animation numbers (0-1)
+            frameDurationMs: 50, // 20fps animation
             audioUrl: null, // No URL since we're not storing
             text: text,
             chat_id: chat_id,
