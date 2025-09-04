@@ -319,8 +319,13 @@ export const ConversationOverlay: React.FC = () => {
       // 🎯 STATE DRIVEN: Processing state
       setState('thinking');
       
-      // Transcribe audio
-      const result = await sttService.transcribe(audioBlob, chat_id, {}, 'conversation', chat_id);
+      // Transcribe audio with timeout
+      const sttPromise = sttService.transcribe(audioBlob, chat_id, {}, 'conversation', chat_id);
+      const sttTimeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('STT timeout after 10 seconds')), 10000)
+      );
+      
+      const result = await Promise.race([sttPromise, sttTimeout]) as { transcript: string };
       const transcript = result.transcript?.trim();
       
       if (!transcript) {
@@ -330,7 +335,12 @@ export const ConversationOverlay: React.FC = () => {
       
       // 🎯 OPTIMIZED: Create WebSocket connection NOW (after STT, before LLM)
       console.log('[ConversationOverlay] 🎯 Creating WebSocket connection after STT');
-      const connectionSuccess = await establishConnection();
+      const connectionPromise = establishConnection();
+      const connectionTimeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('WebSocket connection timeout after 5 seconds')), 5000)
+      );
+      
+      const connectionSuccess = await Promise.race([connectionPromise, connectionTimeout]);
       if (!connectionSuccess) {
         console.error('[ConversationOverlay] ❌ Failed to establish WebSocket connection');
         setState('listening');
@@ -338,12 +348,18 @@ export const ConversationOverlay: React.FC = () => {
       }
       
       // Send to chat-send via the existing working llmService (handles LLM → TTS → WebSocket automatically)
-      const response = await llmService.sendMessage({
+      // 🚨 CRITICAL: LLM call is NOT fire-and-forget - it blocks for LLM + TTS processing!
+      const llmPromise = llmService.sendMessage({
         chat_id,
         text: transcript,
         client_msg_id: uuidv4(),
         mode: 'conversation'
       });
+      const llmTimeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('LLM+TTS timeout after 30 seconds')), 30000)
+      );
+      
+      const response = await Promise.race([llmPromise, llmTimeout]);
       
       // 🎯 STATE DRIVEN: Replying state (TTS will come via WebSocket from chat-send)
       setState('replying');
