@@ -8,14 +8,12 @@ interface Props {
 export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive, audioLevel = 0 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // 🎯 DIRECT: Update CSS variables for GPU-accelerated animation
+  // 🎯 DUMB: Just update CSS variables directly from precomputed envelope (no math!)
   useEffect(() => {
     if (!isActive || !containerRef.current) return;
 
-    // Calculate scale values for the bars
-    const minScale = 0.45;
-    const extra = Math.min(0.75, audioLevel * 1.2); // Dramatic movement
-    const scaleY = minScale + extra;
+    // 🎯 DIRECT: Use precomputed envelope value directly (backend already calculated everything!)
+    const scaleY = audioLevel; // Backend already normalized to 0-1 range
     
     // Update CSS variable for smooth GPU animation
     containerRef.current.style.setProperty('--bar-scale', scaleY.toString());

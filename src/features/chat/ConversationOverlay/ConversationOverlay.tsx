@@ -150,32 +150,21 @@ export const ConversationOverlay: React.FC = () => {
       source.start(0);
       currentTtsSourceRef.current = source;
       
-      // 🎵 SYNC: Generate envelope AFTER audio starts for perfect timing
-      setTimeout(() => {
-        if (!isShuttingDown.current && envelopePlayerRef.current) {
-          // Generate preview envelope from first PCM chunk
-          const previewEnvelope = EnvelopeGenerator.generatePreviewEnvelope(audioBuffer);
-          
-          if (previewEnvelope.isValid) {
-            console.log(`[ConversationOverlay] 🚀 Preview envelope ready: level ${previewEnvelope.level.toFixed(3)}`);
-            envelopePlayerRef.current.startWithPreview(previewEnvelope.level);
-          } else {
-            console.error('[ConversationOverlay] ❌ Preview envelope failed:', previewEnvelope.error);
-            // Continue with minimal animation
-            envelopePlayerRef.current.startWithPreview(0.1);
-          }
-          
-          // Generate full envelope in background
-          const fullEnvelopeResult = EnvelopeGenerator.generateFullEnvelope(audioBuffer);
-          
-          if (fullEnvelopeResult.isValid) {
-            console.log(`[ConversationOverlay] 📊 Full envelope generated: ${fullEnvelopeResult.envelope.length} frames`);
-            envelopePlayerRef.current.setFullEnvelope(fullEnvelopeResult.envelope);
-          } else {
-            console.error('[ConversationOverlay] ❌ Full envelope generation failed:', fullEnvelopeResult.error);
-          }
-        }
-      }, 10); // Minimal delay to ensure audio has started
+      // 🎵 EDGE-FIRST: Use precomputed envelope from backend (no frontend processing!)
+      if (envelope && envelope.length > 0) {
+        console.log(`[ConversationOverlay] 🚀 Using precomputed envelope: ${envelope.length} frames`);
+        
+        // Start with first envelope value for instant animation
+        const previewLevel = envelope[0] || 0.1;
+        envelopePlayerRef.current.startWithPreview(previewLevel);
+        
+        // Set full precomputed envelope immediately
+        envelopePlayerRef.current.setFullEnvelope(envelope);
+      } else {
+        console.warn('[ConversationOverlay] ⚠️ No precomputed envelope received from backend');
+        // Fallback to minimal animation
+        envelopePlayerRef.current.startWithPreview(0.1);
+      }
       
              // 🎯 STATE DRIVEN: Return to listening when done
        source.onended = () => {

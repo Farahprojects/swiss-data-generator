@@ -56,7 +56,7 @@ export class EnvelopePlayer {
   }
 
   /**
-   * Start progressive envelope playback with smooth interpolation and audio sync
+   * Start progressive envelope playback - just tick through precomputed values
    */
   private startProgressivePlayback(): void {
     if (this.rafId) return;
@@ -69,24 +69,14 @@ export class EnvelopePlayer {
         return;
       }
 
-      // Calculate timing based on audio progress
-      const now = performance.now();
-      const elapsed = now - this.startTime;
-      const progress = Math.min(elapsed / this.duration, 1.0);
+      // 🎯 DUMB: Just use precomputed envelope value directly (no math!)
+      const level = this.envelope[this.currentFrame] || 0;
       
-      // Map progress to envelope frame index
-      const targetFrame = Math.floor(progress * this.envelope.length);
-      const targetLevel = this.envelope[targetFrame] || 0;
+      // Send precomputed level to callback
+      this.callback(level);
       
-      // Smooth interpolation between frames to prevent jerky animation
-      const interpolatedLevel = this.lastLevel * 0.7 + targetLevel * 0.3;
-      
-      // Send interpolated level to callback
-      this.callback(interpolatedLevel);
-      
-      // Update for next frame
-      this.lastLevel = interpolatedLevel;
-      this.currentFrame = targetFrame;
+      // Move to next frame
+      this.currentFrame++;
       
       // Continue animation loop
       this.rafId = requestAnimationFrame(step);
