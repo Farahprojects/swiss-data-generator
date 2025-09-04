@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const GOOGLE_TTS_API_KEY = Deno.env.get("GOOGLE-TTS") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
@@ -15,29 +16,24 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const BROADCAST_ENDPOINT = `${SUPABASE_URL}/realtime/v1/api/broadcast`;
+// Create Supabase client for broadcasting
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  auth: { persistSession: false }
+});
 
 function log(...args: unknown[]) {
   if (DEBUG) console.log(...args);
 }
 
 async function broadcast(channel: string, event: string, payload: unknown) {
-  const res = await fetch(BROADCAST_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-      "apikey": SUPABASE_SERVICE_ROLE_KEY,
-    },
-    body: JSON.stringify({
-      channel,
-      event,
-      payload,
-    }),
+  const { error } = await supabase.channel(channel).send({
+    type: 'broadcast',
+    event,
+    payload,
   });
-  if (!res.ok) {
-    const txt = await res.text().catch(() => "");
-    throw new Error(`Realtime HTTP broadcast failed: ${res.status} ${res.statusText} - ${txt}`);
+  
+  if (error) {
+    throw new Error(`Realtime broadcast failed: ${error.message}`);
   }
 }
 
