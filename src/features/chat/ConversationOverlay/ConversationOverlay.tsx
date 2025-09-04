@@ -261,13 +261,8 @@ export const ConversationOverlay: React.FC = () => {
     hasStarted.current = true;
     
     try {
-      // 🎯 STATE DRIVEN: Establish connection
+      // 🎯 STATE DRIVEN: Get microphone (WebSocket will be created after STT)
       setState('establishing');
-      const success = await establishConnection();
-      if (!success) {
-        setState('connecting');
-        return;
-      }
       
       // 🎯 STATE DRIVEN: Get microphone
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -333,6 +328,15 @@ export const ConversationOverlay: React.FC = () => {
         return;
       }
       
+      // 🎯 OPTIMIZED: Create WebSocket connection NOW (after STT, before LLM)
+      console.log('[ConversationOverlay] 🎯 Creating WebSocket connection after STT');
+      const connectionSuccess = await establishConnection();
+      if (!connectionSuccess) {
+        console.error('[ConversationOverlay] ❌ Failed to establish WebSocket connection');
+        setState('listening');
+        return;
+      }
+      
       // Send to chat-send via the existing working llmService (handles LLM → TTS → WebSocket automatically)
       const response = await llmService.sendMessage({
         chat_id,
@@ -348,7 +352,7 @@ export const ConversationOverlay: React.FC = () => {
       console.error('[ConversationOverlay] ❌ Processing failed:', error);
       setState('listening');
     }
-  }, [chat_id]);
+  }, [chat_id, establishConnection]);
 
   // 🎯 CLEANUP: Master shutdown - Browser APIs FIRST, then everything else
   const handleModalClose = useCallback(async () => {
