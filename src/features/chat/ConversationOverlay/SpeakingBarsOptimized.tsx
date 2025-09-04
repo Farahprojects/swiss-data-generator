@@ -53,7 +53,7 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive }) => {
           style={{
             width: '16px', // All bars same width
             transformOrigin: 'center', // Scale from center outward (up and down)
-            transform: `scaleY(var(--bar${idx+1}-scale, 1))`,
+            transform: `scaleY(var(--bar${idx+1}-scale, 0.2))`,
             willChange: 'transform', // GPU acceleration hint
             transition: 'none !important', // Disable any CSS transitions
           }}

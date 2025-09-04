@@ -176,7 +176,10 @@ export const ConversationOverlay: React.FC = () => {
         for (let i = 0; i < frequencyData.length; i++) {
           totalLevel += frequencyData[i];
         }
-        const overallLevel = totalLevel / (frequencyData.length * 255); // Normalize to 0-1
+        const rawLevel = totalLevel / (frequencyData.length * 255); // Normalize to 0-1
+        
+        // 🎯 FIXED: Scale and clamp to prevent huge bars
+        const overallLevel = Math.min(1, Math.max(0.2, rawLevel * 0.8 + 0.2)); // Scale to 0.2-1.0 range
         
         // 🎯 SIMPLIFIED: All bars use the same signal for synchronized movement
         const barLevels: FourBarLevels = [
@@ -591,7 +594,7 @@ export const ConversationOverlay: React.FC = () => {
                  ? 'Listening…'
                  : state === 'thinking'
                  ? 'Thinking…'
-                 : 'Replying…'}
+                 : 'Speaking…'}
             </p>
 
             <button

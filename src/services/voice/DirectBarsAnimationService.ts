@@ -6,7 +6,7 @@ export type FourBarLevels = [number, number, number, number];
 export class DirectBarsAnimationService {
   private listeners = new Set<(levels: FourBarLevels) => void>();
   private isProcessing = false;
-  private currentLevels: FourBarLevels = [0, 0, 0, 0];
+  private currentLevels: FourBarLevels = [0.2, 0.2, 0.2, 0.2]; // Start at minimum scale
 
   public subscribe(listener: (levels: FourBarLevels) => void): () => void {
     this.listeners.add(listener);
@@ -30,7 +30,7 @@ export class DirectBarsAnimationService {
 
   public stop(): void {
     this.isProcessing = false;
-    this.currentLevels = [0, 0, 0, 0];
+    this.currentLevels = [0.2, 0.2, 0.2, 0.2]; // Return to minimum scale
     this.listeners.forEach((listener) => listener(this.currentLevels));
   }
 
