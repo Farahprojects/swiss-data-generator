@@ -91,7 +91,7 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
       {/* Time Picker */}
       <div className="relative">
         <Input
-          type="time"
+          type="text"
           value={timeValue || ''}
           onChange={handleTimeChange}
           className={cn(
