@@ -160,8 +160,8 @@ export const ConversationOverlay: React.FC = () => {
         const firstLevel = (rmsValues[0] ?? 0) / 255;
         directAudioAnimationService.notifyAudioLevel(firstLevel);
         
-        // Play RMS values in sequence (speech-synced!)
-        const frameMs = frameDurationMs || 20;
+        // Dynamic frame duration: stretch RMS sequence to match audio length
+        const frameMs = (audioBuffer.duration * 1000) / rmsValues.length;
         let frameIndex = 1;
         
         const animateFrame = () => {
