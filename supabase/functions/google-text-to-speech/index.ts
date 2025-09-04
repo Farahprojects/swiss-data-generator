@@ -110,51 +110,68 @@ serve(async (req) => {
     const voiceName = `en-US-Chirp3-HD-${voice}`;
     console.log(`[google-tts] Using voice: ${voiceName}`);
 
-    // Call Google Text-to-Speech API for MP3 (playback)
-    const ttsResponse = await fetch(
-      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "User-Agent": "TheRAI-TTS/1.0",
-        },
-        body: JSON.stringify({
-          input: { text },
-          voice: {
-            languageCode: "en-US",
-            name: voiceName,
-          },
-          audioConfig: {
-            audioEncoding: "MP3",
-            speakingRate: 1.0,
-            pitch: 0.0,
-            sampleRateHertz: 22050
-          },
-        }),
+    // 🎵 FETCH MP3 + PCM IN PARALLEL
+    const [mp3Resp, pcmResp] = await Promise.all([
+      fetch(
+        `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ input: { text }, voice: { languageCode: "en-US", name: voiceName }, audioConfig: { audioEncoding: "MP3" } })
+        }
+      ),
+      fetch(
+        `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ input: { text }, voice: { languageCode: "en-US", name: voiceName }, audioConfig: { audioEncoding: "LINEAR16", sampleRateHertz: 24000 } })
+        }
+      )
+    ]);
+
+    if (!mp3Resp.ok || !pcmResp.ok) {
+      throw new Error("Google TTS API error fetching MP3 or PCM");
+    }
+
+    const mp3Json = await mp3Resp.json();
+    const pcmJson = await pcmResp.json();
+
+    const audioBytes = Uint8Array.from(atob(mp3Json.audioContent), c => c.charCodeAt(0));
+    const pcmBytes = Uint8Array.from(atob(pcmJson.audioContent), c => c.charCodeAt(0));
+
+    // 🎵 Compute RMS envelope from PCM (20 ms window)
+    const winSamples = Math.floor((24000 * 20) / 1000);
+    const frames = Math.floor(pcmBytes.length / 2 / winSamples);
+    const rms = new Float32Array(frames);
+    let maxRms = 0;
+    for (let f = 0; f < frames; f++) {
+      let sum = 0;
+      const base = f * winSamples * 2;
+      for (let i = 0; i < winSamples; i++) {
+        const lo = pcmBytes[base + i * 2];
+        const hi = pcmBytes[base + i * 2 + 1];
+        let s = (hi << 8) | lo;
+        if (s & 0x8000) s = s - 0x10000; // sign
+        const v = s / 32768;
+        sum += v * v;
       }
-    );
-
-    if (!ttsResponse.ok) {
-      const errorText = await ttsResponse.text();
-      console.error("[google-tts] Google TTS API error:", ttsResponse.status, errorText);
-      throw new Error(`Google TTS API error: ${ttsResponse.status} - ${errorText}`);
+      const val = Math.sqrt(sum / winSamples);
+      rms[f] = val;
+      if (val > maxRms) maxRms = val;
     }
-    
-    const ttsData = await ttsResponse.json();
-    const audioContent = ttsData.audioContent;
+    for (let i = 0; i < rms.length; i++) rms[i] = maxRms ? rms[i] / maxRms : 0;
 
-    if (!audioContent) {
-      throw new Error("No audio content received from Google TTS API");
+    // Downsample stride 2 (≈40 ms / ~25 fps)
+    const stride = 2;
+    const downLen = Math.ceil(rms.length / stride);
+    const q = new Uint8Array(downLen);
+    for (let i = 0; i < downLen; i++) {
+      q[i] = Math.round((rms[i * stride] || 0) * 255);
     }
 
-    // Decode base64 MP3 audio content to raw bytes
-    const audioBytes = Uint8Array.from(atob(audioContent), c => c.charCodeAt(0));
+    const frameDurationMs = 20 * stride; // 40ms
 
-    // 🎵 RMS: Calculate real audio envelope from MP3 for speech-synced animation
-    const rmsValues = await calculateRMSFromMP3(audioBytes, 20); // 20ms frames = 50fps
-    
     // Pure streaming approach - no storage, no DB
     const responseData = {
       success: true,
@@ -201,9 +218,9 @@ serve(async (req) => {
           type: 'broadcast',
           event: 'tts-ready',
           payload: {
-            audioBytes: Array.from(audioBytes), // Raw MP3 bytes as array
-            rmsValues: rmsValues, // Real RMS envelope (0-1) for speech-synced animation
-            frameDurationMs: 20, // 20ms frames = 50fps
+            audioBytes: Array.from(audioBytes),
+            rmsValues: Array.from(q),
+            frameDurationMs,
             audioUrl: null, // No URL since we're not storing
             text: text,
             chat_id: chat_id,
