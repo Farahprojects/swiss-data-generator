@@ -21,7 +21,13 @@ class ChatTextMicrophoneServiceClass {
   private analyser: AnalyserNode | null = null;
   private mediaStreamSource: MediaStreamAudioSourceNode | null = null;
   
-  private audioChunks: Blob[] = []; // Simple chunk collection
+  // Rolling buffer for VAD lookback
+  private preBufferChunks: Blob[] = [];
+  private activeChunks: Blob[] = [];
+  private lookbackWindowMs = 750; // 750ms rolling buffer
+  private timeSliceMs = 250; // Chunk every 250ms
+  private voiceStarted = false;
+  
   private isRecording = false;
   private isProcessing = false;
   private audioLevel = 0;
@@ -80,30 +86,45 @@ class ChatTextMicrophoneServiceClass {
       this.mediaStreamSource.connect(this.analyser);
       // reduced detailed analyser config logging
 
-      // Set up MediaRecorder - mobile optimized for speed
+      // Set up MediaRecorder - mobile optimized for rolling buffer
       this.mediaRecorder = new MediaRecorder(this.stream, {
         mimeType: 'audio/webm;codecs=opus',
         audioBitsPerSecond: 64000 // Mobile-first: 50% smaller files for faster upload
       });
 
-      this.audioChunks = [];
+      // Reset rolling buffer state
+      this.preBufferChunks = [];
+      this.activeChunks = [];
+      this.voiceStarted = false;
       this.isRecording = true;
 
-      // Simple chunk collection - no manipulation
+      // Rolling buffer implementation with VAD lookback
       this.mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          this.audioChunks.push(event.data);
+          if (!this.voiceStarted) {
+            // Pre-voice: maintain rolling buffer
+            this.preBufferChunks.push(event.data);
+            
+            // Keep only last lookbackWindowMs worth of chunks
+            const maxChunks = Math.ceil(this.lookbackWindowMs / this.timeSliceMs);
+            if (this.preBufferChunks.length > maxChunks) {
+              this.preBufferChunks.shift();
+            }
+          } else {
+            // Post-voice: collect active recording
+            this.activeChunks.push(event.data);
+          }
         }
       };
 
       this.mediaRecorder.onstop = async () => {
-        // Process clean audio before cleanup
+        // Process audio with rolling buffer
         await this.processAudio();
         this.cleanup();
       };
 
-      // Start recording - let MediaRecorder handle chunking naturally
-      this.mediaRecorder.start();
+      // Start recording with time slicing for rolling buffer
+      this.mediaRecorder.start(this.timeSliceMs);
       // minimal start log
       
       // Set 45-second timeout to automatically stop recording
@@ -204,10 +225,11 @@ class ChatTextMicrophoneServiceClass {
           if (voiceStartTime === null) {
             voiceStartTime = now;
           } else if (now - voiceStartTime >= VOICE_START_DURATION) {
-            // Voice confirmed! Switch to silence monitoring
+            // Voice confirmed! Mark voice started for rolling buffer
+            this.voiceStarted = true;
             phase = 'monitoring_silence';
             voiceStartTime = null;
-            this.log(`🎤 Voice activity confirmed - now monitoring for ${SILENCE_TIMEOUT}ms silence`);
+            this.log(`🎤 Voice activity confirmed - capturing with ${this.lookbackWindowMs}ms lookback`);
           }
         } else {
           voiceStartTime = null; // Reset if signal drops
@@ -242,21 +264,30 @@ class ChatTextMicrophoneServiceClass {
   }
 
   /**
-   * PROCESS AUDIO - Domain-specific transcription
+   * PROCESS AUDIO - Domain-specific transcription with rolling buffer
    */
   private async processAudio(): Promise<void> {
-    if (this.audioChunks.length === 0) return;
+    // If voice was never detected, don't process anything
+    if (!this.voiceStarted || this.activeChunks.length === 0) {
+      this.log('📵 No voice detected, skipping processing');
+      return;
+    }
 
     try {
       this.isProcessing = true;
       this.notifyListeners();
       
-      const finalBlob = new Blob(this.audioChunks, { type: 'audio/webm;codecs=opus' });
+      // Combine pre-buffer (lookback) + active chunks for complete audio
+      const allChunks = [...this.preBufferChunks, ...this.activeChunks];
+      const finalBlob = new Blob(allChunks, { type: 'audio/webm;codecs=opus' });
       const measuredDurationMs = this.recordingStartedAt ? Date.now() - this.recordingStartedAt : 0;
 
-      this.log('🔄 Processing clean audio', { 
+      this.log('🔄 Processing audio with VAD lookback', { 
         finalBlobSize: finalBlob.size,
         measuredDurationMs,
+        preBufferChunks: this.preBufferChunks.length,
+        activeChunks: this.activeChunks.length,
+        lookbackMs: this.lookbackWindowMs
       });
       
       // Use supabase.functions.invoke, which handles auth transparently and now works
@@ -325,6 +356,11 @@ class ChatTextMicrophoneServiceClass {
     this.audioLevel = 0;
     this.currentTraceId = null;
     this.recordingStartedAt = null;
+    
+    // Reset rolling buffer state
+    this.preBufferChunks = [];
+    this.activeChunks = [];
+    this.voiceStarted = false;
 
     // Clear any remaining timers
     if (this.recordingTimeout) {
