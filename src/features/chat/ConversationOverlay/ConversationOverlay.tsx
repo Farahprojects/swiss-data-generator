@@ -434,15 +434,13 @@ export const ConversationOverlay: React.FC = () => {
             mode: 'conversation'
           }).then(() => {
             console.log('[ConversationOverlay] ✅ llmService.sendMessage completed');
-            // 🎯 STATE DRIVEN: Replying state (TTS will come via WebSocket from chat-send)
-            setState('replying');
+            // 🎯 NOTE: Replying state will be set when WebSocket receives TTS audio
           }).catch(error => {
             console.error('[ConversationOverlay] ❌ LLM processing failed:', error);
             setState('listening');
           });
           
-          // 🎯 IMMEDIATE: Set replying state since LLM call is fire-and-forget
-          setState('replying');
+          // 🎯 KEEP THINKING: Don't set replying until we have actual audio from WebSocket
         })
         .catch(error => {
           console.error('[ConversationOverlay] ❌ STT or LLM processing failed:', error);
