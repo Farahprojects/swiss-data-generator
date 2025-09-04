@@ -7,13 +7,15 @@ import { useState, useEffect } from 'react';
 import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
 import { directAudioAnimationService } from '@/services/voice/DirectAudioAnimationService';
 
-export const useConversationAudioLevel = () => {
+export const useConversationAudioLevel = (enabled: boolean = true) => {
   const [audioLevel, setAudioLevel] = useState(0);
 
   useEffect(() => {
-    let animationFrame: number;
+    let animationFrame: number | null = null;
 
     const updateAudioLevel = () => {
+      if (!enabled) return; // Skip updates when disabled
+
       // Get audio level from microphone service (for listening state)
       const micLevel = conversationMicrophoneService.getCurrentAudioLevel();
       
@@ -28,15 +30,20 @@ export const useConversationAudioLevel = () => {
       animationFrame = requestAnimationFrame(updateAudioLevel);
     };
 
-    // Start monitoring when component mounts
-    updateAudioLevel();
+    if (enabled) {
+      updateAudioLevel();
+    } else {
+      // If disabled, reset to 0 and ensure RAF is not running
+      setAudioLevel(0);
+    }
 
     return () => {
       if (animationFrame) {
         cancelAnimationFrame(animationFrame);
+        animationFrame = null;
       }
     };
-  }, []);
+  }, [enabled]);
 
   return audioLevel;
 };

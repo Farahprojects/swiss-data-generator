@@ -159,6 +159,19 @@ serve(async (req) => {
     const pcmContent = pcmJson.audioContent as string;
     const pcmBytes = Uint8Array.from(atob(pcmContent), c => c.charCodeAt(0));
     const { envelope, frameDurationMs } = calculateEnvelopeFromLinear16(pcmBytes, pcmSampleRate, 20);
+
+    // 📉 Downsample envelope to ~30 fps to reduce WS payload size (keep client payload shape)
+    const TARGET_FPS = 30;
+    const desiredFrameMs = 1000 / TARGET_FPS;
+    const stride = Math.max(1, Math.round(desiredFrameMs / frameDurationMs));
+    const downsampledEnvelope: number[] = [];
+    for (let i = 0; i < envelope.length; i += stride) {
+      downsampledEnvelope.push(envelope[i]);
+    }
+    const downsampledFrameDurationMs = frameDurationMs * stride;
+    console.log(
+      `[google-tts] 📉 Downsampled envelope: ${downsampledEnvelope.length} frames @ ${downsampledFrameDurationMs.toFixed(2)}ms (stride=${stride})`
+    );
     
     // Pure streaming approach - no storage, no DB
     const responseData = {
@@ -207,8 +220,8 @@ serve(async (req) => {
           event: 'tts-ready',
           payload: {
             audioBytes: Array.from(audioBytes), // Raw MP3 bytes as array (no base64)
-            envelope: envelope, // 🎵 Pre-calculated loudness values from PCM
-            frameDurationMs: frameDurationMs,
+            envelope: downsampledEnvelope, // 🎵 Pre-calculated loudness values from PCM (downsampled)
+            frameDurationMs: downsampledFrameDurationMs,
             audioUrl: null, // No URL since we're not storing
             text: text,
             chat_id: chat_id,

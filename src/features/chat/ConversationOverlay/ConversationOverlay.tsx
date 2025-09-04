@@ -43,10 +43,11 @@ const safelyCloseAudioContext = (audioContext: AudioContext | null): void => {
 export const ConversationOverlay: React.FC = () => {
   const { isConversationOpen, closeConversation } = useConversationUIStore();
   const chat_id = useChatStore((state) => state.chat_id);
-  const audioLevel = useConversationAudioLevel();
-  
   // 🎯 PRIMARY: State machine drives everything
   const [state, setState] = useState<ConversationState>('listening');
+  const audioLevel = useConversationAudioLevel(state !== 'replying');
+  
+  // 🎯 PRIMARY: State machine drives everything
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   
@@ -125,6 +126,13 @@ export const ConversationOverlay: React.FC = () => {
       source.buffer = audioBuffer;
       source.connect(audioContext.destination);
       
+      // 🔇 Suspend microphone capture during TTS playback (mutual exclusivity)
+      try {
+        conversationMicrophoneService.suspendForPlayback();
+      } catch (e) {
+        console.warn('[ConversationOverlay] Could not suspend mic for playback', e);
+      }
+      
       // 🎵 ENVELOPE-DRIVEN: Start animation service
       directAudioAnimationService.start();
       
@@ -181,6 +189,13 @@ export const ConversationOverlay: React.FC = () => {
          
          conversationTtsService.setAudioLevelForAnimation(0);
          setState('listening');
+         
+         // 🔊 Resume microphone capture after playback ends
+         try {
+           conversationMicrophoneService.resumeAfterPlayback();
+         } catch (e) {
+           console.warn('[ConversationOverlay] Could not resume mic after playback', e);
+         }
          
          // 🚨 CHECK: Only restart microphone if we're not shutting down
          if (!isShuttingDown.current) {

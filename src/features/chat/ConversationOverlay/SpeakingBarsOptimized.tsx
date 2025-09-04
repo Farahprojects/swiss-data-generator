@@ -1,24 +1,31 @@
 import React, { useEffect, useRef } from 'react';
+import { directAudioAnimationService } from '@/services/voice/DirectAudioAnimationService';
 
 interface Props {
   isActive: boolean;
-  audioLevel?: number;
+  audioLevel?: number; // Deprecated path; kept for compatibility
 }
 
 export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive, audioLevel = 0 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // 🎯 DUMB: Just update CSS variables directly from precomputed envelope (no math!)
+  // 🎯 Subscribe directly to animation service to avoid React per-frame updates
   useEffect(() => {
     if (!isActive || !containerRef.current) return;
 
-    // 🎯 BASELINE: Start with visible height, then add audio level for movement
-    const baselineHeight = 0.4; // Always visible baseline (40% of bar height)
-    const audioMovement = audioLevel * 0.6; // Audio adds up to 60% more height
-    const scaleY = baselineHeight + audioMovement; // Total: 40% + 0-60% = 40-100%
-    
-    // Update CSS variable for smooth GPU animation
-    containerRef.current.style.setProperty('--bar-scale', scaleY.toString());
+    const baselineHeight = 0.4; // Always visible baseline (40%)
+    const maxMovement = 0.6;    // Up to +60%
+
+    const update = (level: number) => {
+      const scaleY = baselineHeight + Math.max(0, Math.min(1, level)) * maxMovement;
+      containerRef.current!.style.setProperty('--bar-scale', scaleY.toString());
+    };
+
+    // Initialize with provided prop for immediate visual while service emits
+    update(audioLevel);
+
+    const unsubscribe = directAudioAnimationService.subscribe(update);
+    return unsubscribe;
   }, [isActive, audioLevel]);
 
   // Four bars with different base heights: small, big, big, small

@@ -11,16 +11,7 @@ interface Props {
 }
 
 export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
-  // Subscribe to direct audio animation service for smooth audio level updates
-  useEffect(() => {
-    if (state === 'replying') {
-      const unsubscribe = directAudioAnimationService.subscribe((level) => {
-        // The audio level will be passed down as a prop to SpeakingBarsOptimized
-      });
-      
-      return unsubscribe;
-    }
-  }, [state]);
+  // No per-frame React subscriptions here; SpeakingBarsOptimized subscribes directly
 
   // Show the appropriate component based on the current state
   if (state === 'replying') {
