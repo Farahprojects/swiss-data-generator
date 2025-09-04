@@ -30,6 +30,7 @@ class ChatTextMicrophoneServiceClass {
   private monitoringRef = { current: false };
   private currentTraceId: string | null = null;
   private recordingStartedAt: number | null = null;
+  private mediaRecorderStartedAt: number | null = null;
   
   private options: ChatTextMicrophoneOptions = {};
   private listeners = new Set<() => void>();
@@ -102,9 +103,8 @@ class ChatTextMicrophoneServiceClass {
         this.cleanup();
       };
 
-      // Start recording - let MediaRecorder handle chunking naturally
-      this.mediaRecorder.start();
-      // minimal start log
+      // 🎯 VAD-GATED: Don't start MediaRecorder yet - wait for voice detection
+      this.log('🎯 VAD-GATED: MediaRecorder ready, waiting for voice detection...');
       
       // Set 45-second timeout to automatically stop recording
       this.recordingTimeout = setTimeout(() => {
@@ -112,7 +112,7 @@ class ChatTextMicrophoneServiceClass {
         this.stopRecording();
       }, 45000);
       
-      // Start two-phase Voice Activity Detection
+      // Start two-phase Voice Activity Detection - this will gate MediaRecorder
       this.startVoiceActivityDetection();
       
       this.notifyListeners();
@@ -204,7 +204,16 @@ class ChatTextMicrophoneServiceClass {
           if (voiceStartTime === null) {
             voiceStartTime = now;
           } else if (now - voiceStartTime >= VOICE_START_DURATION) {
-            // Voice confirmed! Switch to silence monitoring
+            // Voice confirmed! Start MediaRecorder NOW (VAD-gated)
+            if (this.mediaRecorder && this.mediaRecorder.state === 'inactive') {
+              this.mediaRecorderStartedAt = Date.now();
+              this.mediaRecorder.start();
+              this.log('🎤 Voice confirmed - MediaRecorder started (VAD-gated)', {
+                vadDelayMs: this.mediaRecorderStartedAt - this.recordingStartedAt!
+              });
+            }
+            
+            // Switch to silence monitoring
             phase = 'monitoring_silence';
             voiceStartTime = null;
             this.log(`🎤 Voice activity confirmed - now monitoring for ${SILENCE_TIMEOUT}ms silence`);
@@ -254,9 +263,16 @@ class ChatTextMicrophoneServiceClass {
       const finalBlob = new Blob(this.audioChunks, { type: 'audio/webm;codecs=opus' });
       const measuredDurationMs = this.recordingStartedAt ? Date.now() - this.recordingStartedAt : 0;
 
-      this.log('🔄 Processing clean audio', { 
+      const actualRecordingDurationMs = this.mediaRecorderStartedAt ? Date.now() - this.mediaRecorderStartedAt : 0;
+      const vadDelayMs = this.mediaRecorderStartedAt ? this.mediaRecorderStartedAt - this.recordingStartedAt! : 0;
+      
+      this.log('🔄 Processing VAD-gated audio', { 
         finalBlobSize: finalBlob.size,
-        measuredDurationMs,
+        totalDurationMs: measuredDurationMs,
+        actualRecordingDurationMs,
+        vadDelayMs,
+        chunks: this.audioChunks.length,
+        traceId: this.currentTraceId
       });
       
       // Use supabase.functions.invoke, which handles auth transparently and now works
@@ -325,6 +341,7 @@ class ChatTextMicrophoneServiceClass {
     this.audioLevel = 0;
     this.currentTraceId = null;
     this.recordingStartedAt = null;
+    this.mediaRecorderStartedAt = null;
 
     // Clear any remaining timers
     if (this.recordingTimeout) {
