@@ -14,22 +14,62 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-// 🎯 SIMPLE: Generate animation numbers from MP3 duration (no complex audio analysis)
-function generateSimpleAnimationNumbers(durationMs: number, frameMs: number = 50): number[] {
+// 🎵 RMS: Calculate real audio envelope from MP3 for speech-synced animation
+async function calculateRMSFromMP3(mp3Bytes: Uint8Array, frameMs: number = 20): Promise<number[]> {
+  try {
+    // Decode MP3 to get audio buffer
+    const audioContext = new (globalThis.AudioContext || (globalThis as any).webkitAudioContext)();
+    const arrayBuffer = mp3Bytes.buffer.slice(mp3Bytes.byteOffset, mp3Bytes.byteOffset + mp3Bytes.byteLength);
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    
+    // Get audio data
+    const channelData = audioBuffer.getChannelData(0); // Use first channel
+    const sampleRate = audioBuffer.sampleRate;
+    const frameSize = Math.floor((sampleRate * frameMs) / 1000); // Samples per frame
+    
+    // Calculate RMS for each frame
+    const rmsValues: number[] = [];
+    for (let i = 0; i < channelData.length; i += frameSize) {
+      const end = Math.min(i + frameSize, channelData.length);
+      let sum = 0;
+      const len = end - i;
+      
+      for (let j = i; j < end; j++) {
+        sum += channelData[j] * channelData[j];
+      }
+      
+      const rms = Math.sqrt(sum / len);
+      rmsValues.push(rms);
+    }
+    
+    // Normalize to [0, 1] range
+    const maxRms = Math.max(...rmsValues);
+    const normalizedRms = rmsValues.map(rms => maxRms > 0 ? rms / maxRms : 0);
+    
+    console.log(`[google-tts] 🎵 Calculated RMS envelope: ${normalizedRms.length} frames @ ${frameMs}ms`);
+    return normalizedRms;
+  } catch (error) {
+    console.error('[google-tts] ❌ Failed to calculate RMS from MP3:', error);
+    // Fallback to simple animation if RMS calculation fails
+    const durationMs = (mp3Bytes.length / 16000) * 1000; // Rough estimate
+    return generateFallbackAnimation(durationMs, frameMs);
+  }
+}
+
+// 🎯 FALLBACK: Simple animation if RMS calculation fails
+function generateFallbackAnimation(durationMs: number, frameMs: number): number[] {
   const numFrames = Math.ceil(durationMs / frameMs);
   const animationNumbers: number[] = [];
   
-  // Generate simple wave pattern for visual appeal
   for (let i = 0; i < numFrames; i++) {
     const progress = i / numFrames;
-    // Simple sine wave with some randomness for natural feel
     const baseLevel = Math.sin(progress * Math.PI * 4) * 0.3 + 0.4;
     const randomVariation = (Math.random() - 0.5) * 0.2;
     const finalLevel = Math.max(0.1, Math.min(1.0, baseLevel + randomVariation));
     animationNumbers.push(finalLevel);
   }
   
-  console.log(`[google-tts] 🎯 Generated ${animationNumbers.length} simple animation numbers for ${durationMs}ms audio`);
+  console.log(`[google-tts] 🎯 Generated fallback animation: ${animationNumbers.length} frames`);
   return animationNumbers;
 }
 
@@ -112,12 +152,8 @@ serve(async (req) => {
     // Decode base64 MP3 audio content to raw bytes
     const audioBytes = Uint8Array.from(atob(audioContent), c => c.charCodeAt(0));
 
-    // 🎯 SIMPLE: Generate animation numbers based on estimated audio duration
-    // Estimate duration from text length (rough approximation: ~150 words per minute)
-    const wordsPerMinute = 150;
-    const words = text.split(/\s+/).length;
-    const estimatedDurationMs = (words / wordsPerMinute) * 60 * 1000;
-    const animationNumbers = generateSimpleAnimationNumbers(estimatedDurationMs, 50); // 20fps
+    // 🎵 RMS: Calculate real audio envelope from MP3 for speech-synced animation
+    const rmsValues = await calculateRMSFromMP3(audioBytes, 20); // 20ms frames = 50fps
     
     // Pure streaming approach - no storage, no DB
     const responseData = {
@@ -166,8 +202,8 @@ serve(async (req) => {
           event: 'tts-ready',
           payload: {
             audioBytes: Array.from(audioBytes), // Raw MP3 bytes as array
-            animationNumbers: animationNumbers, // Simple animation numbers (0-1)
-            frameDurationMs: 50, // 20fps animation
+            rmsValues: rmsValues, // Real RMS envelope (0-1) for speech-synced animation
+            frameDurationMs: 20, // 20ms frames = 50fps
             audioUrl: null, // No URL since we're not storing
             text: text,
             chat_id: chat_id,

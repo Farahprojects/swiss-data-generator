@@ -99,8 +99,8 @@ export const ConversationOverlay: React.FC = () => {
     };
   }, []);
 
-  // 🎯 SIMPLE: WebSocket → Browser Audio + Direct animation numbers
-  const playAudioImmediately = useCallback(async (audioBytes: number[], text?: string, animationNumbers?: number[], frameDurationMs?: number) => {
+  // 🎵 RMS: WebSocket → Browser Audio + Real speech-synced animation
+  const playAudioImmediately = useCallback(async (audioBytes: number[], text?: string, rmsValues?: number[], frameDurationMs?: number) => {
     if (isShuttingDown.current) return;
     
 
@@ -152,23 +152,23 @@ export const ConversationOverlay: React.FC = () => {
       source.start(0);
       currentTtsSourceRef.current = source;
       
-      // 🎯 SIMPLE: Use precomputed animation numbers directly (no processing!)
-      if (Array.isArray(animationNumbers) && animationNumbers.length > 0) {
-        console.log(`[ConversationOverlay] 🎯 Using ${animationNumbers.length} precomputed animation numbers`);
+      // 🎵 RMS: Use real speech-synced RMS values (no processing!)
+      if (Array.isArray(rmsValues) && rmsValues.length > 0) {
+        console.log(`[ConversationOverlay] 🎵 Using ${rmsValues.length} RMS values for speech-synced animation`);
         
-        // Start animation immediately with first number
-        const firstLevel = Math.max(0.1, Math.min(1.0, animationNumbers[0] || 0.1));
+        // Start animation immediately with first RMS value
+        const firstLevel = Math.max(0.1, Math.min(1.0, rmsValues[0] || 0.1));
         directAudioAnimationService.notifyAudioLevel(firstLevel);
         
-        // Play animation numbers in sequence
-        const frameMs = frameDurationMs || 50;
+        // Play RMS values in sequence (speech-synced!)
+        const frameMs = frameDurationMs || 20;
         let frameIndex = 1;
         
         const animateFrame = () => {
           if (isShuttingDown.current || !currentTtsSourceRef.current) return;
           
-          if (frameIndex < animationNumbers.length) {
-            const level = Math.max(0.1, Math.min(1.0, animationNumbers[frameIndex] || 0.1));
+          if (frameIndex < rmsValues.length) {
+            const level = Math.max(0.1, Math.min(1.0, rmsValues[frameIndex] || 0.1));
             directAudioAnimationService.notifyAudioLevel(level);
             frameIndex++;
             setTimeout(animateFrame, frameMs);
@@ -178,7 +178,7 @@ export const ConversationOverlay: React.FC = () => {
         // Start animation sequence after first frame
         setTimeout(animateFrame, frameMs);
       } else {
-        console.warn('[ConversationOverlay] ⚠️ No animation numbers received - using minimal animation');
+        console.warn('[ConversationOverlay] ⚠️ No RMS values received - using minimal animation');
         directAudioAnimationService.notifyAudioLevel(0.1);
       }
       
@@ -238,7 +238,7 @@ export const ConversationOverlay: React.FC = () => {
       // 🎯 DIRECT: WebSocket → Audio + Envelope
       connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
         if (payload.audioBytes) {
-          playAudioImmediately(payload.audioBytes, payload.text, payload.animationNumbers, payload.frameDurationMs);
+          playAudioImmediately(payload.audioBytes, payload.text, payload.rmsValues, payload.frameDurationMs);
         }
       });
       
