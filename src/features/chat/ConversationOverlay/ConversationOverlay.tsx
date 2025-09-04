@@ -53,6 +53,7 @@ export const ConversationOverlay: React.FC = () => {
   const isShuttingDown = useRef(false);
   const connectionRef = useRef<any>(null);
   const currentTtsSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const animationTimeoutRef = useRef<number | null>(null);
   
   // 🎵 AUDIO: Single context for all audio
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -151,7 +152,11 @@ export const ConversationOverlay: React.FC = () => {
       // 🎵 REAL-TIME: Live audio analysis loop (25fps for mobile performance)
       const frequencyData = new Uint8Array(analyser.frequencyBinCount);
       const animate = () => {
-        if (isShuttingDown.current || !currentTtsSourceRef.current) return;
+        if (isShuttingDown.current || !currentTtsSourceRef.current) {
+          // 🛑 CLEANUP: Clear timeout reference when stopping
+          animationTimeoutRef.current = null;
+          return;
+        }
         
         // Get live frequency data from the analyzer
         analyser.getByteFrequencyData(frequencyData);
@@ -168,16 +173,22 @@ export const ConversationOverlay: React.FC = () => {
         // Send live data to bars
         directBarsAnimationService.notifyBars(barLevels);
         
-        // 25fps = 40ms intervals for mobile performance
-        setTimeout(animate, 40);
+        // 🛑 SECURE: Store timeout ID for proper cleanup
+        animationTimeoutRef.current = window.setTimeout(animate, 40);
       };
       
       // Start the real-time animation loop
-      setTimeout(animate, 40);
+      animationTimeoutRef.current = window.setTimeout(animate, 40);
       
       // 🎯 STATE DRIVEN: Return to listening when done
       source.onended = () => {
         console.log('[ConversationOverlay] 🎵 TTS audio finished, returning to listening mode');
+        
+        // 🛑 CLEANUP: Cancel animation timeout to prevent CPU leak
+        if (animationTimeoutRef.current) {
+          clearTimeout(animationTimeoutRef.current);
+          animationTimeoutRef.current = null;
+        }
         
         // 🎵 Stop animation service when TTS ends
         directBarsAnimationService.stop();
@@ -344,6 +355,13 @@ export const ConversationOverlay: React.FC = () => {
     console.log('[ConversationOverlay] 🚨 X Button pressed - Master shutdown starting');
     isShuttingDown.current = true;
     
+    // 🛑 STEP 0: Cancel animation timeout to prevent CPU leak
+    if (animationTimeoutRef.current) {
+      clearTimeout(animationTimeoutRef.current);
+      animationTimeoutRef.current = null;
+      console.log('[ConversationOverlay] 🛑 Animation timeout cancelled');
+    }
+    
     // 🎵 STEP 1: Stop Web Audio API source
     if (currentTtsSourceRef.current) {
       try {
@@ -389,6 +407,26 @@ export const ConversationOverlay: React.FC = () => {
     
     closeConversation();
   }, [closeConversation]);
+
+  // 🛑 CLEANUP: Handle component unmounting to prevent CPU leaks
+  useEffect(() => {
+    return () => {
+      // Cancel any running animation timeout
+      if (animationTimeoutRef.current) {
+        clearTimeout(animationTimeoutRef.current);
+        animationTimeoutRef.current = null;
+      }
+      
+      // Stop animation service
+      directBarsAnimationService.stop();
+      
+      // Clean up audio context
+      if (audioContextRef.current) {
+        safelyCloseAudioContext(audioContextRef.current);
+        audioContextRef.current = null;
+      }
+    };
+  }, []);
 
   // 🎯 MICROPHONE: Service is now initialized in handleStart, no need for separate useEffect
 
