@@ -9,22 +9,13 @@ import { directBarsAnimationService, FourBarLevels } from '@/services/voice/Dire
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
 import { v4 as uuidv4 } from 'uuid';
+import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mic } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 
 // 🎯 CORE STATE MACHINE: This drives everything
 type ConversationState = 'listening' | 'thinking' | 'replying' | 'connecting' | 'establishing';
 
-// 🎯 SIMPLIFIED: Only what we need for state transitions
-type Message = {
-  id: string;
-  chat_id: string;
-  role: 'user' | 'assistant';
-  text: string;
-  createdAt: string;
-  client_msg_id: string;
-};
 
 // 🎵 UTILITY: Safely close AudioContext with proper state checking
 const safelyCloseAudioContext = (audioContext: AudioContext | null): void => {
@@ -44,26 +35,20 @@ export const ConversationOverlay: React.FC = () => {
   const [state, setState] = useState<ConversationState>('listening');
   const audioLevel = useConversationAudioLevel(state !== 'replying');
   
-  // 🎯 PRIMARY: State machine drives everything
-  const [permissionGranted, setPermissionGranted] = useState(false);
-  const [isStarting, setIsStarting] = useState(false);
-  const [isWebSocketInitializing, setIsWebSocketInitializing] = useState(false);
   
   // 🎯 ESSENTIAL: Only what we need for state transitions
   const hasStarted = useRef(false);
   const isShuttingDown = useRef(false);
   const connectionRef = useRef<any>(null);
   const currentTtsSourceRef = useRef<AudioBufferSourceNode | null>(null);
-  const animationTimeoutRef = useRef<number | null>(null);
   const isProcessingRef = useRef<boolean>(false);
   const pingIntervalRef = useRef<number | null>(null);
+  const animationTimeoutRef = useRef<number | null>(null);
   
   // 🎵 AUDIO: Single context for all audio
   const audioContextRef = useRef<AudioContext | null>(null);
   
   
-  // 🎯 STATE-DRIVEN: Local messages follow state changes
-  const [localMessages, setLocalMessages] = useState<Message[]>([]);
 
   // 🎯 CORE STATE MACHINE: Initialize when overlay opens
   useEffect(() => {
@@ -328,10 +313,9 @@ export const ConversationOverlay: React.FC = () => {
 
   // 🎯 START: Initialize conversation with warm connections
   const handleStart = useCallback(async () => {
-    if (isStarting || hasStarted.current) return;
+    if (hasStarted.current) return;
     if (!chat_id) return;
     
-    setIsStarting(true);
     hasStarted.current = true;
     
     try {
@@ -340,17 +324,14 @@ export const ConversationOverlay: React.FC = () => {
       
       // 🚀 WARM START: Initialize WebSocket and AudioContext immediately
       console.log('[ConversationOverlay] 🚀 Warming up connections...');
-      setIsWebSocketInitializing(true);
       
       await establishConnection();
       await pingAudioContext();
       
-      setIsWebSocketInitializing(false);
       console.log('[ConversationOverlay] 🚀 Connections warmed up and ready');
       
       // 🎯 STATE DRIVEN: Get microphone
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      setPermissionGranted(true);
       
       // 🎯 STATE DRIVEN: Cache the stream for the microphone service
       conversationMicrophoneService.cacheStream(stream);
@@ -387,10 +368,8 @@ export const ConversationOverlay: React.FC = () => {
     } catch (error) {
       console.error('[ConversationOverlay] Start failed:', error);
       setState('connecting');
-    } finally {
-      setIsStarting(false);
     }
-  }, [chat_id, isStarting, establishConnection, pingAudioContext]);
+  }, [chat_id, establishConnection, pingAudioContext]);
 
   // 🎯 PROCESSING: Handle recording completion
   const processRecording = useCallback(async (audioBlob: Blob) => {
@@ -514,7 +493,6 @@ export const ConversationOverlay: React.FC = () => {
     
     // 🎯 STEP 6: Reset UI state (after all browser APIs are closed)
     setState('listening');
-    setPermissionGranted(false);
     hasStarted.current = false;
     isShuttingDown.current = false;
     console.log('[ConversationOverlay] 🎯 UI state reset');
@@ -522,37 +500,6 @@ export const ConversationOverlay: React.FC = () => {
     closeConversation();
   }, [closeConversation]);
 
-  // 🛑 CLEANUP: Handle component unmounting to prevent CPU leaks
-  useEffect(() => {
-    return () => {
-      // Cancel any running animation timeout
-      if (animationTimeoutRef.current) {
-        clearTimeout(animationTimeoutRef.current);
-        animationTimeoutRef.current = null;
-      }
-      
-      // Clear ping interval
-      if (pingIntervalRef.current) {
-        clearInterval(pingIntervalRef.current);
-        pingIntervalRef.current = null;
-      }
-      
-      // Stop animation service
-      directBarsAnimationService.stop();
-      
-      // Clean up audio context
-      if (audioContextRef.current) {
-        safelyCloseAudioContext(audioContextRef.current);
-        audioContextRef.current = null;
-      }
-      
-      // Clean up WebSocket connection
-      if (connectionRef.current) {
-        connectionRef.current.unsubscribe();
-        connectionRef.current = null;
-      }
-    };
-  }, []);
 
   // 🎯 MICROPHONE: Service is now initialized in handleStart, no need for separate useEffect
 
@@ -565,17 +512,17 @@ export const ConversationOverlay: React.FC = () => {
       data-conversation-overlay
     >
       <div className="h-full w-full flex items-center justify-center px-6">
-        {!permissionGranted ? (
+        {state === 'connecting' ? (
           <div className="text-center text-gray-800 flex flex-col items-center gap-4">
             <div
-              className={`flex flex-col items-center gap-4 ${isWebSocketInitializing ? 'cursor-not-allowed' : 'cursor-pointer'}`}
-              onClick={isWebSocketInitializing ? undefined : handleStart}
+              className="flex flex-col items-center gap-4 cursor-pointer"
+              onClick={handleStart}
             >
-              <div className={`w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center transition-colors ${isWebSocketInitializing ? 'websocket-spinning-border' : 'hover:bg-gray-200'}`}>
+              <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center transition-colors hover:bg-gray-200">
                 <Mic className="w-10 h-10 text-gray-600" />
               </div>
               <h2 className="text-2xl font-light">
-                {isWebSocketInitializing ? 'Initializing...' : 'Tap to Start Conversation'}
+                Tap to Start Conversation
               </h2>
             </div>
             <button
