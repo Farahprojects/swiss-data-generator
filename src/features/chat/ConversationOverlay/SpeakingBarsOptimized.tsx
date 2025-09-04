@@ -8,7 +8,11 @@ interface Props {
 
 export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive, audioLevel = 0 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const smoothRef = useRef(0);
+  const targetLevelRef = useRef(0);
+  const currentLevelRef = useRef(0);
+  const velocityRef = useRef(0);
+  const rafIdRef = useRef<number | null>(null);
+  const lastTsRef = useRef<number | null>(null);
 
   // 🎯 Subscribe directly to animation service to avoid React per-frame updates
   useEffect(() => {
@@ -16,21 +20,66 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive, audioLevel = 
 
     const baselineHeight = 0.4; // Always visible baseline (40%)
     const maxMovement = 0.6;    // Up to +60%
-    const ALPHA = 0.35;         // Smoothing constant (0=butter smooth, 1=raw)
+    // Minimal spring constants (critically damped feel)
+    const stiffness = 16; // lower = softer
+    const damping = 0.85; // 0..1 (1 = no damping)
+
+    // Initialize levels so bars show immediately
+    targetLevelRef.current = Math.max(0, Math.min(1, audioLevel));
+    currentLevelRef.current = targetLevelRef.current;
+    containerRef.current!.style.setProperty(
+      '--bar-scale',
+      (baselineHeight + currentLevelRef.current * maxMovement).toString()
+    );
 
     const update = (level: number) => {
-      // Exponential moving average to reduce jitter
-      smoothRef.current = smoothRef.current + ALPHA * (level - smoothRef.current);
-      const clamped = Math.max(0, Math.min(1, smoothRef.current));
-      const scaleY = baselineHeight + clamped * maxMovement;
-      containerRef.current!.style.setProperty('--bar-scale', scaleY.toString());
+      // Update only the target; RAF loop performs the spring advance
+      targetLevelRef.current = Math.max(0, Math.min(1, level));
     };
 
     // Initialize with provided prop for immediate visual while service emits
     update(audioLevel);
 
     const unsubscribe = directAudioAnimationService.subscribe(update);
-    return unsubscribe;
+
+    // Single RAF loop that springs currentLevel towards targetLevel
+    const tick = (ts: number) => {
+      if (!containerRef.current) return;
+      const last = lastTsRef.current ?? ts;
+      let dt = (ts - last) / 1000; // seconds
+      lastTsRef.current = ts;
+      // Clamp dt to avoid large jumps on tab switch
+      if (dt < 0.001) dt = 0.001;
+      if (dt > 0.05) dt = 0.05;
+
+      const target = targetLevelRef.current;
+      let x = currentLevelRef.current;
+      let v = velocityRef.current;
+
+      // Minimal spring: accelerate towards target, apply damping
+      const acceleration = (target - x) * stiffness;
+      v = (v + acceleration * dt) * damping;
+      x = x + v * dt;
+
+      // Clamp and apply
+      if (x < 0) { x = 0; v = 0; }
+      if (x > 1) { x = 1; v = 0; }
+      currentLevelRef.current = x;
+      velocityRef.current = v;
+
+      const scaleY = baselineHeight + x * maxMovement;
+      containerRef.current.style.setProperty('--bar-scale', scaleY.toString());
+
+      rafIdRef.current = requestAnimationFrame(tick);
+    };
+    rafIdRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      unsubscribe();
+      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+      lastTsRef.current = null;
+    };
   }, [isActive, audioLevel]);
 
   // Four bars with different base heights: small, big, big, small
@@ -55,10 +104,10 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive, audioLevel = 
           key={bar.id}
           className={`bg-black rounded-full ${bar.className} transition-transform duration-75`}
           style={{
-            width: '16px',
+            width: '16px', // All bars same width
             transformOrigin: 'center',
             transform: `scaleY(var(--bar-scale, 1))`,
-            willChange: 'transform',
+            willChange: 'transform', // GPU acceleration hint
             transitionTimingFunction: 'cubic-bezier(.2,.8,.4,1)',
           }}
         />
