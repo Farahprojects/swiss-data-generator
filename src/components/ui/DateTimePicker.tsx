@@ -90,17 +90,46 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
 
       {/* Time Picker */}
       <div className="relative">
-        <Input
-          type="text"
-          value={timeValue || ''}
-          onChange={handleTimeChange}
-          className={cn(
-            "h-12 rounded-lg border-gray-200 focus:border-gray-400 pl-10",
-            hasTimeError && "border-red-500"
-          )}
-          placeholder="HH:MM"
-        />
-        <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <div className="flex">
+          <div className="relative flex-1">
+            <Input
+              type="text"
+              value={timeValue || ''}
+              onChange={handleTimeChange}
+              className={cn(
+                "h-12 rounded-l-lg border-gray-200 focus:border-gray-400 pl-10 border-r-0",
+                hasTimeError && "border-red-500"
+              )}
+              placeholder="HH:MM"
+              maxLength={5}
+            />
+            <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          </div>
+          <select
+            value={timeValue ? (parseInt(timeValue.split(':')[0]) >= 12 ? 'PM' : 'AM') : 'AM'}
+            onChange={(e) => {
+              if (timeValue) {
+                const [hours, minutes] = timeValue.split(':');
+                let newHours = parseInt(hours);
+                
+                if (e.target.value === 'PM' && newHours < 12) {
+                  newHours += 12;
+                } else if (e.target.value === 'AM' && newHours >= 12) {
+                  newHours -= 12;
+                }
+                
+                onTimeChange(`${newHours.toString().padStart(2, '0')}:${minutes}`);
+              }
+            }}
+            className={cn(
+              "h-12 px-3 border border-gray-200 rounded-r-lg focus:border-gray-400 bg-white text-sm font-medium",
+              hasTimeError && "border-red-500"
+            )}
+          >
+            <option value="AM">AM</option>
+            <option value="PM">PM</option>
+          </select>
+        </div>
       </div>
     </div>
   );
