@@ -38,13 +38,6 @@ export class ConversationMicrophoneServiceClass {
   private monitoringRef = { current: false };
   private audioLevel = 0;
   
-  // 🎯 ROLLING BUFFER VAD - Industry standard pre-buffer lookback
-  private rollingBufferRecorder: MediaRecorder | null = null;
-  private rollingBufferChunks: Blob[] = [];
-  private isRollingBufferActive = false;
-  private rollingBufferSizeMs = 800; // 800ms lookback window (mobile-optimized)
-  private rollingBufferMaxChunks = 8; // 8 chunks of 100ms each = 800ms
-  
   private options: ConversationMicrophoneOptions = {};
   private listeners = new Set<() => void>();
 
@@ -67,61 +60,6 @@ export class ConversationMicrophoneServiceClass {
     this.log('🎤 Caching microphone stream for session reuse');
     this.cachedStream = stream;
     this.stream = stream; // Set as current stream
-  }
-
-  /**
-   * 🎯 ROLLING BUFFER VAD - Start continuous pre-buffer recording
-   */
-  private startRollingBuffer(): void {
-    if (!this.stream || this.isRollingBufferActive) return;
-    
-    this.log('🔄 Starting rolling buffer (800ms lookback window)');
-    
-    // Create rolling buffer recorder
-    this.rollingBufferRecorder = new MediaRecorder(this.stream, {
-      mimeType: 'audio/webm;codecs=opus',
-      audioBitsPerSecond: 64000 // Mobile-first: 50% smaller files
-    });
-    
-    this.rollingBufferChunks = [];
-    this.isRollingBufferActive = true;
-    
-    // Handle rolling buffer chunks with size limit
-    this.rollingBufferRecorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        this.rollingBufferChunks.push(event.data);
-        
-        // 🎯 ROLLING BUFFER: Keep only last N chunks (800ms window)
-        if (this.rollingBufferChunks.length > this.rollingBufferMaxChunks) {
-          this.rollingBufferChunks.shift(); // Remove oldest chunk
-        }
-      }
-    };
-    
-    // Start rolling buffer with 100ms chunks
-    this.rollingBufferRecorder.start(100);
-    this.log('✅ Rolling buffer active - continuously recording 800ms window');
-  }
-
-  /**
-   * 🎯 ROLLING BUFFER VAD - Stop rolling buffer and get pre-buffer
-   */
-  private stopRollingBuffer(): Blob[] {
-    if (!this.rollingBufferRecorder || !this.isRollingBufferActive) {
-      return [];
-    }
-    
-    this.log('🛑 Stopping rolling buffer - capturing pre-buffer');
-    this.rollingBufferRecorder.stop();
-    this.isRollingBufferActive = false;
-    
-    // Return copy of rolling buffer chunks
-    const preBufferChunks = [...this.rollingBufferChunks];
-    this.rollingBufferChunks = [];
-    this.rollingBufferRecorder = null;
-    
-    this.log(`📦 Pre-buffer captured: ${preBufferChunks.length} chunks (${preBufferChunks.length * 100}ms lookback)`);
-    return preBufferChunks;
   }
 
   /**
@@ -271,10 +209,8 @@ export class ConversationMicrophoneServiceClass {
         this.cleanup();
       };
 
-      // 🎯 ROLLING BUFFER VAD: Start continuous pre-buffer recording
-      this.startRollingBuffer();
-      
-      // Start VAD monitoring (will trigger main recording when voice detected)
+      // Start recording and VAD
+      this.mediaRecorder.start(100); // 100ms chunks
       this.startVoiceActivityDetection();
       
       this.notifyListeners();
@@ -428,15 +364,6 @@ export class ConversationMicrophoneServiceClass {
       this.isRecording = false;
     }
 
-    // 🎯 ROLLING BUFFER: Stop rolling buffer if active
-    if (this.isRollingBufferActive && this.rollingBufferRecorder) {
-      this.rollingBufferRecorder.stop();
-      this.isRollingBufferActive = false;
-      this.rollingBufferChunks = [];
-      this.rollingBufferRecorder = null;
-      this.log('🛑 Rolling buffer stopped and cleared');
-    }
-
     // Release microphone stream (both current and cached)
     if (this.stream) {
       this.stream.getTracks().forEach(track => {
@@ -472,10 +399,6 @@ export class ConversationMicrophoneServiceClass {
     // Clear data
     this.audioChunks = [];
     this.mediaRecorder = null;
-    
-    // 🎯 ROLLING BUFFER: Clear rolling buffer data
-    this.rollingBufferChunks = [];
-    this.rollingBufferRecorder = null;
     
     // Release microphone from arbitrator
     microphoneArbitrator.release('conversation');
@@ -660,26 +583,10 @@ export class ConversationMicrophoneServiceClass {
           if (voiceStartTime === null) {
             voiceStartTime = now;
           } else if (now - voiceStartTime >= VOICE_START_DURATION) {
-            // 🎯 VOICE CONFIRMED! Start main recording with pre-buffer
-            this.log(`🎤 Voice activity confirmed (RMS: ${rms.toFixed(4)}, dB: ${dB.toFixed(1)}) - starting main recording with pre-buffer`);
-            
-            // Stop rolling buffer and get pre-buffer chunks
-            const preBufferChunks = this.stopRollingBuffer();
-            
-            // Start main recording
-            if (this.mediaRecorder && this.mediaRecorder.state === 'inactive') {
-              this.mediaRecorder.start(100); // 100ms chunks
-              this.log('🎙️ Main recording started');
-            }
-            
-            // Prepend pre-buffer to main recording chunks
-            this.audioChunks = [...preBufferChunks];
-            this.log(`📦 Pre-buffer prepended: ${preBufferChunks.length} chunks (${preBufferChunks.length * 100}ms lookback)`);
-            
-            // Switch to silence monitoring phase
+            // Voice confirmed! Switch to silence monitoring
             phase = 'monitoring_silence';
             voiceStartTime = null;
-            this.log(`🧠 Now monitoring for ${SILENCE_TIMEOUT}ms silence`);
+            this.log(`🎤 Voice activity confirmed (RMS: ${rms.toFixed(4)}, dB: ${dB.toFixed(1)}) - now monitoring for ${SILENCE_TIMEOUT}ms silence`);
           }
         } else {
           voiceStartTime = null; // Reset if signal drops
