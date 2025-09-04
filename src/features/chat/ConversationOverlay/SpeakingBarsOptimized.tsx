@@ -30,18 +30,18 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive }) => {
     return unsubscribe;
   }, [isActive]);
 
-  // 🎯 SIMPLIFIED: All bars identical for perfect synchronization
+  // 🎯 DESIGN: Two middle bars 2x taller than outer bars, all taller starting point
   const bars = [
-    { id: 0, className: 'h-20' }, // All bars same height
-    { id: 1, className: 'h-20' }, // All bars same height
-    { id: 2, className: 'h-20' }, // All bars same height
-    { id: 3, className: 'h-20' }, // All bars same height
+    { id: 0, className: 'h-24' }, // Outer bar - taller starting point
+    { id: 1, className: 'h-48' }, // Middle bar - 2x taller than outer
+    { id: 2, className: 'h-48' }, // Middle bar - 2x taller than outer
+    { id: 3, className: 'h-24' }, // Outer bar - taller starting point
   ];
 
   return (
     <div 
       ref={containerRef}
-      className="flex items-center justify-center gap-3 h-24 w-28"
+      className="flex items-center justify-center gap-3 h-48 w-28"
       style={{
         willChange: 'transform', // GPU acceleration hint
       } as React.CSSProperties}
