@@ -37,8 +37,54 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
     }
   };
 
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+    
+    // Auto-format as YYYY-MM-DD
+    if (value.length >= 5) {
+      value = value.slice(0, 4) + '-' + value.slice(4, 6) + (value.length > 6 ? '-' + value.slice(6, 8) : '');
+    } else if (value.length >= 3) {
+      value = value.slice(0, 4) + '-' + value.slice(4);
+    }
+    
+    onDateChange(value);
+    
+    // Try to parse and set selected date if valid
+    if (value.length === 10) {
+      try {
+        const parsedDate = new Date(value);
+        if (!isNaN(parsedDate.getTime())) {
+          setSelectedDate(parsedDate);
+        }
+      } catch (error) {
+        // Invalid date format, ignore
+      }
+    }
+  };
+
   const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onTimeChange(e.target.value);
+    let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+    
+    // Auto-format as HH:MM
+    if (value.length >= 3) {
+      value = value.slice(0, 2) + ':' + value.slice(2, 4);
+    }
+    
+    // Validate hours (00-23) and minutes (00-59)
+    if (value.length === 5) {
+      const [hours, minutes] = value.split(':');
+      const h = parseInt(hours);
+      const m = parseInt(minutes);
+      
+      if (h > 23) {
+        value = '23:' + minutes;
+      }
+      if (m > 59) {
+        value = hours + ':59';
+      }
+    }
+    
+    onTimeChange(value);
   };
 
   return (
@@ -48,21 +94,13 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
         <Input
           type="text"
           value={dateValue || ''}
-          onChange={(e) => {
-            onDateChange(e.target.value);
-            if (e.target.value) {
-              try {
-                setSelectedDate(new Date(e.target.value));
-              } catch (error) {
-                // Invalid date format, ignore
-              }
-            }
-          }}
+          onChange={handleDateChange}
           className={cn(
-            "h-12 rounded-lg border-gray-200 focus:border-gray-400 pr-10",
+            "h-12 rounded-lg border-gray-200 focus:border-gray-400 pr-10 font-mono",
             hasDateError && "border-red-500"
           )}
           placeholder="YYYY-MM-DD"
+          maxLength={10}
         />
         <Popover open={isDateOpen} onOpenChange={setIsDateOpen}>
           <PopoverTrigger asChild>
@@ -96,7 +134,7 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
             value={timeValue || ''}
             onChange={handleTimeChange}
             className={cn(
-              "h-12 rounded-lg border-gray-200 focus:border-gray-400 pl-10 pr-16",
+              "h-12 rounded-lg border-gray-200 focus:border-gray-400 pl-10 pr-16 font-mono",
               hasTimeError && "border-red-500"
             )}
             placeholder="HH:MM"
@@ -104,9 +142,9 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
           />
           <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <select
-            value={timeValue ? (parseInt(timeValue.split(':')[0]) >= 12 ? 'PM' : 'AM') : 'AM'}
+            value={timeValue && timeValue.includes(':') ? (parseInt(timeValue.split(':')[0]) >= 12 ? 'PM' : 'AM') : 'AM'}
             onChange={(e) => {
-              if (timeValue) {
+              if (timeValue && timeValue.includes(':')) {
                 const [hours, minutes] = timeValue.split(':');
                 let newHours = parseInt(hours);
                 
@@ -114,6 +152,8 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
                   newHours += 12;
                 } else if (e.target.value === 'AM' && newHours >= 12) {
                   newHours -= 12;
+                } else if (e.target.value === 'AM' && newHours === 0) {
+                  newHours = 0; // midnight
                 }
                 
                 onTimeChange(`${newHours.toString().padStart(2, '0')}:${minutes}`);
