@@ -138,7 +138,7 @@ export class ConversationMicrophoneServiceClass {
       
       // SINGLE-GESTURE FLOW: Reuse AudioContext if it exists, otherwise create new
       if (!this.audioContext || this.audioContext.state === 'closed') {
-        this.audioContext = new AudioContext({ sampleRate: 48000 });
+        this.audioContext = new AudioContext({ sampleRate: 16000 }); // Mobile-first: 16kHz for faster processing
 
       } else {
 
@@ -159,8 +159,8 @@ export class ConversationMicrophoneServiceClass {
       if (!this.analyser) {
         this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
         this.analyser = this.audioContext.createAnalyser();
-        // Lighter settings for mobile/desktop unified flow
-        this.analyser.fftSize = 1024;
+        // Mobile-first: Optimized settings for faster processing
+        this.analyser.fftSize = 1024; // Mobile-first: Smaller FFT for faster analysis
         this.analyser.smoothingTimeConstant = 0.8;
         this.mediaStreamSource.connect(this.analyser);
 
@@ -179,7 +179,7 @@ export class ConversationMicrophoneServiceClass {
       
       this.mediaRecorder = new MediaRecorder(this.stream, {
         mimeType: 'audio/webm;codecs=opus',
-        audioBitsPerSecond: 128000
+        audioBitsPerSecond: 64000 // Mobile-first: 50% smaller files for faster upload
       });
 
 
