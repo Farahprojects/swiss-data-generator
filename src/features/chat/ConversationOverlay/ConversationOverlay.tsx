@@ -32,7 +32,7 @@ export const ConversationOverlay: React.FC = () => {
   const { isConversationOpen, closeConversation } = useConversationUIStore();
   const chat_id = useChatStore((state) => state.chat_id);
   // 🎯 PRIMARY: State machine drives everything
-  const [state, setState] = useState<ConversationState>('listening');
+  const [state, setState] = useState<ConversationState>('connecting');
   const audioLevel = useConversationAudioLevel(state !== 'replying');
   
   
@@ -53,7 +53,7 @@ export const ConversationOverlay: React.FC = () => {
   // 🎯 CORE STATE MACHINE: Initialize when overlay opens
   useEffect(() => {
     if (isConversationOpen && chat_id) {
-      setState('listening');
+      // State starts as 'connecting' to show start button
     }
     
     return () => {
