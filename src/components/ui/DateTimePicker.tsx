@@ -44,20 +44,31 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({
   return (
     <div className="grid grid-cols-2 gap-4">
       {/* Date Picker */}
-      <div>
+      <div className="relative">
+        <Input
+          type="date"
+          value={dateValue || ''}
+          onChange={(e) => {
+            onDateChange(e.target.value);
+            if (e.target.value) {
+              setSelectedDate(new Date(e.target.value));
+            }
+          }}
+          className={cn(
+            "h-12 rounded-lg border-gray-200 focus:border-gray-400 pr-10",
+            hasDateError && "border-red-500"
+          )}
+          placeholder="YYYY-MM-DD"
+        />
         <Popover open={isDateOpen} onOpenChange={setIsDateOpen}>
           <PopoverTrigger asChild>
             <Button
               type="button"
-              variant="outline"
-              className={cn(
-                "w-full h-12 justify-start text-left font-normal rounded-lg border-gray-200 focus:border-gray-400",
-                !selectedDate && "text-gray-500",
-                hasDateError && "border-red-500"
-              )}
+              variant="ghost"
+              size="sm"
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-gray-100"
             >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {selectedDate ? format(selectedDate, "MMM dd, yyyy") : "Select date"}
+              <CalendarIcon className="h-4 w-4 text-gray-400" />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
