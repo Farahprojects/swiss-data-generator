@@ -9,17 +9,13 @@ interface Props {
 export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive, audioLevel = 0 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // 🎯 Subscribe directly and map level → CSS var without client-side smoothing
+  // 🎯 PURE SERVER-DRIVEN: No client-side math, just direct server values
   useEffect(() => {
     if (!isActive || !containerRef.current) return;
 
-    const baselineHeight = 0.2; // visual baseline
-    const maxMovement = 0.8;    // visual range
-
-    const applyLevel = (level01: number) => {
-      const clamped = level01 < 0 ? 0 : level01 > 1 ? 1 : level01;
-      const scaleY = baselineHeight + clamped * maxMovement;
-      containerRef.current!.style.setProperty('--bar-scale', scaleY.toString());
+    const applyLevel = (serverValue: number) => {
+      // NO MATH - server already calculated the final scale value
+      containerRef.current!.style.setProperty('--bar-scale', serverValue.toString());
     };
 
     // Set initial visual immediately

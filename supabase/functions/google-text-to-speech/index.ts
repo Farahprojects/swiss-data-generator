@@ -119,10 +119,18 @@ serve(async (req) => {
     const mp3Json=await mp3Resp.json();
     const audioBytes=Uint8Array.from(atob(mp3Json.audioContent),c=>c.charCodeAt(0));
 
-    // 🔹 Synthetic envelope (lightweight)
+    // 🔹 Synthetic envelope (lightweight) - SERVER CALCULATES FINAL SCALE VALUES
     const buildEnvelope=(durMs:number,frameMs=40)=>{const n=Math.ceil(durMs/frameMs);const u=new Uint8Array(n);for(let i=0;i<n;i++){const t=i/n;const base=Math.sin(t*Math.PI*3)*0.4+0.6;const jitter=(Math.random()-.5)*0.15;u[i]=Math.max(0,Math.min(255,Math.round((base+jitter)*255)));}return u;};
     const estDurMs=text.split(/\s+/).length/150*60*1000;
-    const levelsArr=Array.from(buildEnvelope(estDurMs));
+    const rawLevels=buildEnvelope(estDurMs);
+    
+    // SERVER CALCULATES FINAL SCALE VALUES - NO CLIENT MATH
+    const baselineHeight = 0.2;
+    const maxMovement = 0.8;
+    const levelsArr = Array.from(rawLevels).map(raw => {
+      const normalized = raw / 255; // 0-1
+      return baselineHeight + normalized * maxMovement; // Final scale value
+    });
     const frameDurationMs=40;
 
     // Pure streaming approach - no storage, no DB
