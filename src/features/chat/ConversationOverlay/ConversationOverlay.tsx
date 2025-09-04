@@ -154,7 +154,7 @@ export const ConversationOverlay: React.FC = () => {
       source.start(0);
       currentTtsSourceRef.current = source;
       
-      // 🎵 NEW: 4-bar payload takes precedence
+      // 🎵 NEW: 4-bar payload takes precedence (only when provided)
       if (Array.isArray(bars) && bars.length === 4 && bars.every(arr => Array.isArray(arr) && arr.length > 0)) {
         const barLengths = bars.map(b => b.length);
         const minLen = Math.min(...barLengths);
@@ -202,8 +202,7 @@ export const ConversationOverlay: React.FC = () => {
         // Start animation sequence after first frame
         setTimeout(animateFrame, frameMs);
       } else {
-        console.warn('[ConversationOverlay] ⚠️ No RMS values received - using minimal animation');
-        directAudioAnimationService.notifyAudioLevel(0.1);
+        console.warn('[ConversationOverlay] ⚠️ No animation values received');
       }
       
              // 🎯 STATE DRIVEN: Return to listening when done

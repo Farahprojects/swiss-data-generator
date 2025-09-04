@@ -189,8 +189,7 @@ serve(async (req) => {
       function smoothStep(x: number) { const t = x < 0 ? 0 : x > 1 ? 1 : x; return t * t * (3 - 2 * t); }
     }
 
-    const estDurMs=text.split(/\s+/).length/150*60*1000;
-    const { frameMs: frameDurationMs, bars } = buildBars(estDurMs, 40, 1337);
+    // NOTE: Removing synthetic animation generation to reduce server work
 
     // Pure streaming approach - no storage, no DB
     const responseData = {
@@ -239,8 +238,6 @@ serve(async (req) => {
           event: 'tts-ready',
           payload: {
             audioBytes: Array.from(audioBytes),
-            bars: bars.map(b => Array.from(b)),
-            frameDurationMs,
             audioUrl: null, // No URL since we're not storing
             text: text,
             chat_id: chat_id,
