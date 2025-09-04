@@ -42,7 +42,7 @@ export const ChatInput = () => {
     toggleRecording: toggleMicRecording 
   } = useChatTextMicrophone({
     onTranscriptReady: handleTranscriptReady,
-    silenceTimeoutMs: 800  // 🚀 MOBILE-FIRST: Faster silence detection for mobile responsiveness
+    silenceTimeoutMs: 1500
   });
 
   const handleSend = () => {
@@ -113,7 +113,12 @@ export const ChatInput = () => {
       return <Loader2 size={18} className="animate-spin text-gray-500" />;
     }
     if (isMicRecording) {
-      return null; // Don't show mic button during recording (waveform is shown)
+      return (
+        <div className="w-4 h-4 flex items-center justify-center">
+          <div className="w-3 h-0.5 bg-black transform rotate-45 absolute"></div>
+          <div className="w-3 h-0.5 bg-black transform -rotate-45 absolute"></div>
+        </div>
+      );
     }
     return <Mic size={18} className="text-gray-500" />;
   };
@@ -123,7 +128,7 @@ export const ChatInput = () => {
       return 'Processing audio...';
     }
     if (isMicRecording) {
-      return 'Recording...';
+      return 'Stop recording';
     }
     return 'Start voice recording';
   };
@@ -152,16 +157,14 @@ export const ChatInput = () => {
             />
           )}
           <div className="absolute right-1 inset-y-0 flex items-center gap-1" style={{ transform: 'translateY(-4px) translateX(-4px)' }}>
-            {!isMicRecording && (
-              <button 
-                className="w-8 h-8 text-gray-500 hover:text-gray-900 transition-all duration-200 ease-in-out flex items-center justify-center"
-                onClick={toggleMicRecording}
-                disabled={isMicProcessing}
-                title={getMicButtonTitle()}
-              >
-                {getMicButtonContent()}
-              </button>
-            )}
+            <button 
+              className="w-8 h-8 text-gray-500 hover:text-gray-900 transition-all duration-200 ease-in-out flex items-center justify-center"
+              onClick={toggleMicRecording}
+              disabled={isMicProcessing}
+              title={getMicButtonTitle()}
+            >
+              {getMicButtonContent()}
+            </button>
             <button 
               className={`transition-colors ${
                 isAssistantTyping || isAssistantGenerating
