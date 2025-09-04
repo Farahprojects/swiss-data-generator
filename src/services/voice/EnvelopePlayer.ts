@@ -58,7 +58,7 @@ export class EnvelopePlayer {
   }
 
   /**
-   * Start progressive envelope playback - sync to audio clock
+   * Start progressive envelope playback - sync to audio clock for perfect timing
    */
   private startProgressivePlayback(): void {
     if (this.rafId) return;

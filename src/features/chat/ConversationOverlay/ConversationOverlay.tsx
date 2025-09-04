@@ -62,10 +62,12 @@ export const ConversationOverlay: React.FC = () => {
   // 🎵 ENVELOPE: Player for smooth, synced animation
   const envelopePlayerRef = useRef<EnvelopePlayer | null>(null);
   
-  // 🎵 STREAMING: Audio buffer management
+  // 🎵 STREAMING: Audio and envelope chunk management
   const audioChunksRef = useRef<number[][]>([]);
+  const envelopeChunksRef = useRef<number[][]>([]);
   const audioBlobRef = useRef<Blob | null>(null);
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
+  const frameDurationMsRef = useRef<number>(20);
   const isStreamingRef = useRef(false);
   
   // 🎯 STATE-DRIVEN: Local messages follow state changes
@@ -211,23 +213,62 @@ export const ConversationOverlay: React.FC = () => {
     }
   }, []);
 
-  // 🎵 STREAMING: Handle preview envelope for immediate bar animation
-  const handlePreviewEnvelope = useCallback((envelope: number[], frameDurationMs: number) => {
+  // 🎵 STREAMING: Handle envelope chunks for progressive animation
+  const handleEnvelopeChunk = useCallback((chunk: number[], chunkIndex: number, totalChunks: number, frameDurationMs: number) => {
     if (isShuttingDown.current) return;
     
-    console.log(`[ConversationOverlay] 🚀 Starting preview animation: ${envelope.length} frames`);
+    console.log(`[ConversationOverlay] 🎵 Envelope chunk ${chunkIndex + 1}/${totalChunks} received`);
+    
+    // Store envelope chunk
+    envelopeChunksRef.current[chunkIndex] = chunk;
+    frameDurationMsRef.current = frameDurationMs;
+    
+    // If first chunk, start envelope animation immediately
+    if (chunkIndex === 0) {
+      startEnvelopeAnimation();
+    }
+    
+    // If last chunk, finalize envelope
+    if (chunkIndex === totalChunks - 1) {
+      finalizeEnvelope();
+    }
+  }, []);
+
+  // 🎵 STREAMING: Handle audio chunks for streaming playback
+  const handleAudioChunk = useCallback((chunk: number[], chunkIndex: number, totalChunks: number, mimeType: string) => {
+    if (isShuttingDown.current) return;
+    
+    console.log(`[ConversationOverlay] 🎵 Audio chunk ${chunkIndex + 1}/${totalChunks} received`);
+    
+    // Store audio chunk
+    audioChunksRef.current[chunkIndex] = chunk;
+    
+    // If first chunk, start streaming audio
+    if (chunkIndex === 0) {
+      startStreamingAudio();
+    }
+    
+    // If last chunk, finalize audio
+    if (chunkIndex === totalChunks - 1) {
+      finalizeStreamingAudio();
+    }
+  }, []);
+
+  // 🎵 STREAMING: Start envelope animation with first chunk
+  const startEnvelopeAnimation = useCallback(() => {
+    console.log('[ConversationOverlay] 🎵 Starting envelope animation');
     
     // Start animation service
     directAudioAnimationService.start();
     
-    // Create envelope player for preview
+    // Create envelope player
     if (envelopePlayerRef.current) {
       envelopePlayerRef.current.stop();
     }
     
     envelopePlayerRef.current = new EnvelopePlayer(
-      200, // Preview duration
-      frameDurationMs,
+      10000, // Long duration for streaming
+      frameDurationMsRef.current,
       (level) => {
         if (!isShuttingDown.current) {
           directAudioAnimationService.notifyAudioLevel(level);
@@ -235,40 +276,33 @@ export const ConversationOverlay: React.FC = () => {
       }
     );
     
-    // Start with preview envelope
-    envelopePlayerRef.current.startWithPreview(envelope[0] || 0.1);
-    envelopePlayerRef.current.setFullEnvelope(envelope);
-    
     // Set replying state for immediate UI feedback
     setState('replying');
   }, []);
 
-  // 🎵 STREAMING: Handle audio chunks for non-blocking playback
-  const handleAudioChunk = useCallback((chunk: number[], chunkIndex: number, totalChunks: number, isLast: boolean) => {
-    if (isShuttingDown.current) return;
+  // 🎵 STREAMING: Finalize envelope when all chunks received
+  const finalizeEnvelope = useCallback(() => {
+    if (!envelopePlayerRef.current) return;
     
-    console.log(`[ConversationOverlay] 📦 Received chunk ${chunkIndex + 1}/${totalChunks}`);
+    console.log('[ConversationOverlay] 🎵 Finalizing envelope');
     
-    // Store chunk
-    audioChunksRef.current[chunkIndex] = chunk;
+    // Combine all envelope chunks
+    const fullEnvelope = envelopeChunksRef.current.flat();
     
-    // If first chunk, start streaming playback
-    if (chunkIndex === 0) {
-      startStreamingPlayback();
-    }
+    // Start with first value for immediate animation
+    const previewLevel = fullEnvelope[0] || 0.1;
+    envelopePlayerRef.current.startWithPreview(previewLevel);
     
-    // If last chunk, finalize audio
-    if (isLast) {
-      finalizeStreamingAudio();
-    }
+    // Set full envelope
+    envelopePlayerRef.current.setFullEnvelope(fullEnvelope);
   }, []);
 
-  // 🎵 STREAMING: Start streaming playback with first chunk
-  const startStreamingPlayback = useCallback(() => {
+  // 🎵 STREAMING: Start streaming audio with first chunk
+  const startStreamingAudio = useCallback(() => {
     if (isStreamingRef.current) return;
     
     isStreamingRef.current = true;
-    console.log('[ConversationOverlay] 🎵 Starting streaming playback');
+    console.log('[ConversationOverlay] 🎵 Starting streaming audio');
     
     // Create audio element for streaming
     if (audioElementRef.current) {
@@ -282,7 +316,7 @@ export const ConversationOverlay: React.FC = () => {
     // Handle audio events
     audioElementRef.current.onended = () => {
       console.log('[ConversationOverlay] 🎵 Streaming audio finished');
-      handleAudioEnd();
+      handleStreamingEnd();
     };
     
     audioElementRef.current.onerror = (error) => {
@@ -297,7 +331,7 @@ export const ConversationOverlay: React.FC = () => {
     
     console.log('[ConversationOverlay] 🎵 Finalizing streaming audio');
     
-    // Combine all chunks into single blob
+    // Combine all audio chunks into single blob
     const allChunks = audioChunksRef.current.flat();
     const audioBlob = new Blob([new Uint8Array(allChunks)], { type: 'audio/mpeg' });
     const audioUrl = URL.createObjectURL(audioBlob);
@@ -313,19 +347,9 @@ export const ConversationOverlay: React.FC = () => {
     audioChunksRef.current = [];
   }, []);
 
-  // 🎵 STREAMING: Handle full envelope for complete animation
-  const handleFullEnvelope = useCallback((envelope: number[], frameDurationMs: number) => {
-    if (isShuttingDown.current || !envelopePlayerRef.current) return;
-    
-    console.log(`[ConversationOverlay] 📊 Updating with full envelope: ${envelope.length} frames`);
-    
-    // Update envelope player with full envelope
-    envelopePlayerRef.current.setFullEnvelope(envelope);
-  }, []);
-
-  // 🎵 STREAMING: Handle audio end
-  const handleAudioEnd = useCallback(() => {
-    console.log('[ConversationOverlay] 🎵 Audio finished, returning to listening mode');
+  // 🎵 STREAMING: Handle streaming end
+  const handleStreamingEnd = useCallback(() => {
+    console.log('[ConversationOverlay] 🎵 Streaming finished, returning to listening mode');
     
     // Stop animation service
     directAudioAnimationService.stop();
@@ -344,6 +368,7 @@ export const ConversationOverlay: React.FC = () => {
     // Reset streaming state
     isStreamingRef.current = false;
     audioChunksRef.current = [];
+    envelopeChunksRef.current = [];
     
     // Return to listening
     setState('listening');
@@ -366,21 +391,14 @@ export const ConversationOverlay: React.FC = () => {
     try {
       const connection = supabase.channel(`conversation:${chat_id}`);
       
-      // 🎵 STREAMING: Handle preview envelope for immediate bar animation
-      connection.on('broadcast', { event: 'tts-preview' }, ({ payload }) => {
-        console.log(`[ConversationOverlay] 🚀 Preview envelope received: ${payload.envelope.length} frames`);
-        handlePreviewEnvelope(payload.envelope, payload.frameDurationMs);
+      // 🎵 STREAMING: Handle envelope chunks for progressive animation
+      connection.on('broadcast', { event: 'envelope-chunk' }, ({ payload }) => {
+        handleEnvelopeChunk(payload.chunk, payload.chunkIndex, payload.totalChunks, payload.frameDurationMs);
       });
       
-      // 🎵 STREAMING: Handle MP3 chunks for non-blocking playback
-      connection.on('broadcast', { event: 'tts-chunk' }, ({ payload }) => {
-        handleAudioChunk(payload.chunk, payload.chunkIndex, payload.totalChunks, payload.isLast);
-      });
-      
-      // 🎵 STREAMING: Handle full envelope for complete animation
-      connection.on('broadcast', { event: 'tts-envelope' }, ({ payload }) => {
-        console.log(`[ConversationOverlay] 📊 Full envelope received: ${payload.envelope.length} frames`);
-        handleFullEnvelope(payload.envelope, payload.frameDurationMs);
+      // 🎵 STREAMING: Handle audio chunks for streaming playback
+      connection.on('broadcast', { event: 'audio-chunk' }, ({ payload }) => {
+        handleAudioChunk(payload.chunk, payload.chunkIndex, payload.totalChunks, payload.mimeType);
       });
       
       connection.subscribe();
@@ -390,7 +408,7 @@ export const ConversationOverlay: React.FC = () => {
       console.error('[ConversationOverlay] Connection failed:', error);
       return false;
     }
-  }, [chat_id]);
+  }, [chat_id, playAudioImmediately]);
 
   // 🎯 START: Initialize conversation
   const handleStart = useCallback(async () => {
@@ -523,6 +541,7 @@ export const ConversationOverlay: React.FC = () => {
     // Reset streaming state
     isStreamingRef.current = false;
     audioChunksRef.current = [];
+    envelopeChunksRef.current = [];
     
     // Stop microphone and release all resources
     conversationMicrophoneService.stopRecording();

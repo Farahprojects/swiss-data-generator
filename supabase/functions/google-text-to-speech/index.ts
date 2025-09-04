@@ -195,87 +195,70 @@ serve(async (req) => {
     const processingTime = Date.now() - startTime;
     console.log(`[google-tts] TTS completed in ${processingTime}ms`);
 
-        // 📞 Make the phone call - stream MP3 chunks + envelope data via WebSocket
-    try {
-      console.log(`[google-tts] 📞 Making phone call with streaming MP3 + envelope to chat: ${chat_id}`);
-      
-      // 🎵 Send preview envelope first (first 100-200ms) for immediate bar animation
-      const previewDuration = Math.min(200, frameDurationMs * 10); // First ~200ms
-      const previewFrames = Math.min(envelope.length, Math.ceil(previewDuration / frameDurationMs));
-      const previewEnvelope = envelope.slice(0, previewFrames);
-      
-      // Send preview envelope immediately
-      const { error: previewError } = await supabase
-        .channel(`conversation:${chat_id}`)
-        .send({
-          type: 'broadcast',
-          event: 'tts-preview',
-          payload: {
-            envelope: previewEnvelope,
-            frameDurationMs: frameDurationMs,
-            totalFrames: envelope.length,
-            chat_id: chat_id
-          }
-        });
-
-      if (previewError) {
-        console.error('[google-tts] ❌ Failed to send preview envelope:', previewError);
-      } else {
-        console.log(`[google-tts] ✅ Preview envelope sent: ${previewFrames} frames`);
-      }
-
-      // 🎵 Stream MP3 in chunks for non-blocking playback
-      const chunkSize = 8192; // 8KB chunks
-      const totalChunks = Math.ceil(audioBytes.length / chunkSize);
-      
-      for (let i = 0; i < totalChunks; i++) {
-        const start = i * chunkSize;
-        const end = Math.min(start + chunkSize, audioBytes.length);
-        const chunk = audioBytes.slice(start, end);
-        
-        const { error: chunkError } = await supabase
-          .channel(`conversation:${chat_id}`)
-          .send({
-            type: 'broadcast',
-            event: 'tts-chunk',
-            payload: {
-              chunk: Array.from(chunk),
-              chunkIndex: i,
-              totalChunks: totalChunks,
-              isLast: i === totalChunks - 1,
-              chat_id: chat_id
+                // 📞 Make the phone call - stream MP3 chunks + envelope chunks for progressive playback
+        try {
+          console.log(`[google-tts] 📞 Making streaming phone call to chat: ${chat_id}`);
+          
+          // 🎵 Stream A: Send envelope chunks first for immediate bar animation
+          const envelopeChunkSize = 128; // Small chunks for smooth progressive animation
+          const totalEnvelopeChunks = Math.ceil(envelope.length / envelopeChunkSize);
+          
+          for (let i = 0; i < totalEnvelopeChunks; i++) {
+            const start = i * envelopeChunkSize;
+            const end = Math.min(start + envelopeChunkSize, envelope.length);
+            const envelopeChunk = envelope.slice(start, end);
+            
+            const { error: envelopeError } = await supabase
+              .channel(`conversation:${chat_id}`)
+              .send({
+                type: 'broadcast',
+                event: 'envelope-chunk',
+                payload: {
+                  chunk: envelopeChunk,
+                  chunkIndex: i,
+                  totalChunks: totalEnvelopeChunks,
+                  frameDurationMs: frameDurationMs,
+                  chat_id: chat_id
+                }
+              });
+            
+            if (envelopeError) {
+              console.error(`[google-tts] ❌ Failed to send envelope chunk ${i}:`, envelopeError);
             }
-          });
-
-        if (chunkError) {
-          console.error(`[google-tts] ❌ Failed to send chunk ${i}:`, chunkError);
-          break;
-        }
-      }
-
-      // 🎵 Send full envelope after streaming starts
-      const { error: envelopeError } = await supabase
-        .channel(`conversation:${chat_id}`)
-        .send({
-          type: 'broadcast',
-          event: 'tts-envelope',
-          payload: {
-            envelope: envelope,
-            frameDurationMs: frameDurationMs,
-            chat_id: chat_id
           }
-        });
-
-      if (envelopeError) {
-        console.error('[google-tts] ❌ Failed to send full envelope:', envelopeError);
-      } else {
-        console.log(`[google-tts] ✅ Full envelope sent: ${envelope.length} frames`);
-      }
-
-      console.log('[google-tts] ✅ Streaming phone call successful');
-    } catch (broadcastError) {
-      console.error('[google-tts] ❌ Error making streaming phone call:', broadcastError);
-    }
+          
+          // 🎵 Stream B: Send MP3 chunks for streaming audio playback
+          const audioChunkSize = 8192; // 8KB chunks for smooth streaming
+          const totalAudioChunks = Math.ceil(audioBytes.length / audioChunkSize);
+          
+          for (let i = 0; i < totalAudioChunks; i++) {
+            const start = i * audioChunkSize;
+            const end = Math.min(start + audioChunkSize, audioBytes.length);
+            const audioChunk = audioBytes.slice(start, end);
+            
+            const { error: audioError } = await supabase
+              .channel(`conversation:${chat_id}`)
+              .send({
+                type: 'broadcast',
+                event: 'audio-chunk',
+                payload: {
+                  chunk: Array.from(audioChunk),
+                  chunkIndex: i,
+                  totalChunks: totalAudioChunks,
+                  mimeType: 'audio/mpeg',
+                  chat_id: chat_id
+                }
+              });
+            
+            if (audioError) {
+              console.error(`[google-tts] ❌ Failed to send audio chunk ${i}:`, audioError);
+            }
+          }
+          
+          console.log(`[google-tts] ✅ Streaming phone call successful - ${totalEnvelopeChunks} envelope chunks, ${totalAudioChunks} audio chunks`);
+        } catch (broadcastError) {
+          console.error('[google-tts] ❌ Error making streaming phone call:', broadcastError);
+        }
 
     // Return success response with performance timing
     return new Response(JSON.stringify(responseData), {
