@@ -55,6 +55,7 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive, audioLevel = 
             transformOrigin: 'bottom',
             transform: `scaleY(var(--bar-scale, 1))`,
             willChange: 'transform', // GPU acceleration hint
+            transition: 'none !important', // Disable any CSS transitions
           }}
         />
       ))}
