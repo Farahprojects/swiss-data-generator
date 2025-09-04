@@ -83,6 +83,51 @@ function uint8ToBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
+// 🚀 OPTIMIZATION: Pre-process text specifically for TTS to improve performance
+function optimizeTextForTTS(text: string): string {
+  if (!text || typeof text !== 'string') return '';
+  
+  let optimized = text
+    // Remove all markdown formatting completely
+    .replace(/[#*_`~\[\](){}]/g, '')
+    // Remove URLs (TTS doesn't need them)
+    .replace(/https?:\/\/[^\s]+/g, '')
+    // Remove email addresses
+    .replace(/\S+@\S+\.\S+/g, '')
+    // Simplify punctuation that might slow TTS
+    .replace(/[;:]/g, ',')
+    // Normalize quotes for better TTS pronunciation
+    .replace(/[""''`]/g, '"')
+    // Remove excessive punctuation
+    .replace(/[!]{2,}/g, '!')
+    .replace(/[?]{2,}/g, '?')
+    .replace(/[.]{3,}/g, '...')
+    // Remove extra whitespace and normalize
+    .replace(/\s+/g, ' ')
+    // Trim and ensure we have content
+    .trim();
+  
+  // 🚀 LENGTH OPTIMIZATION: Truncate very long text for faster TTS
+  const MAX_TTS_LENGTH = 1000; // Characters
+  if (optimized.length > MAX_TTS_LENGTH) {
+    // Find a good breaking point (end of sentence)
+    const truncated = optimized.substring(0, MAX_TTS_LENGTH);
+    const lastSentenceEnd = Math.max(
+      truncated.lastIndexOf('.'),
+      truncated.lastIndexOf('!'),
+      truncated.lastIndexOf('?')
+    );
+    
+    if (lastSentenceEnd > MAX_TTS_LENGTH * 0.7) {
+      optimized = truncated.substring(0, lastSentenceEnd + 1);
+    } else {
+      optimized = truncated + '...';
+    }
+  }
+  
+  return optimized;
+}
+
 serve(async (req) => {
   const startTime = Date.now();
 
@@ -110,10 +155,14 @@ serve(async (req) => {
     const voiceName = `en-US-Chirp3-HD-${voice}`;
     console.log(`[google-tts] Using voice: ${voiceName}`);
 
+    // 🚀 OPTIMIZATION: Pre-process text for TTS performance
+    const optimizedText = optimizeTextForTTS(text);
+    console.log(`[google-tts] Text optimized: ${text.length} → ${optimizedText.length} chars`);
+
     // 🎵 FETCH MP3 + PCM IN PARALLEL
     const mp3Resp = await fetch(
       `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
-      {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({input:{text},voice:{languageCode:"en-US",name:voiceName},audioConfig:{audioEncoding:"MP3"}})}
+      {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({input:{text:optimizedText},voice:{languageCode:"en-US",name:voiceName},audioConfig:{audioEncoding:"MP3"}})}
     );
     if(!mp3Resp.ok){throw new Error("Google TTS API error");}
     const mp3Json=await mp3Resp.json();
@@ -157,12 +206,12 @@ serve(async (req) => {
     const processingTime = Date.now() - startTime;
     console.log(`[google-tts] TTS completed in ${processingTime}ms`);
 
-        // 📞 Make the phone call - push raw MP3 bytes + envelope data directly to browser via WebSocket
-    try {
-      console.log(`[google-tts] 📞 Making phone call with binary MP3 bytes + envelope to chat: ${chat_id}`);
-      
-      // Send raw MP3 bytes + envelope data via WebSocket
-      const { data: broadcastData, error: broadcastError } = await supabase
+        // 🚀 FIRE-AND-FORGET: WebSocket broadcast (non-blocking for faster response)
+    console.log(`[google-tts] 📞 Making phone call with binary MP3 bytes to chat: ${chat_id}`);
+    
+    // Use EdgeRuntime.waitUntil for fire-and-forget WebSocket broadcast
+    EdgeRuntime.waitUntil(
+      supabase
         .channel(`conversation:${chat_id}`)
         .send({
           type: 'broadcast',
@@ -170,21 +219,23 @@ serve(async (req) => {
           payload: {
             audioBytes: Array.from(audioBytes),
             audioUrl: null, // No URL since we're not storing
-            text: text,
+            text: text, // Keep original text for display
             chat_id: chat_id,
             mimeType: 'audio/mpeg',
             size: audioBytes.length
           }
-        });
-
-      if (broadcastError) {
-        console.error('[google-tts] ❌ Failed to make phone call:', broadcastError);
-      } else {
-        console.log('[google-tts] ✅ Phone call successful - binary MP3 bytes delivered directly');
-      }
-    } catch (broadcastError) {
-      console.error('[google-tts] ❌ Error making phone call:', broadcastError);
-    }
+        })
+        .then(({ error: broadcastError }) => {
+          if (broadcastError) {
+            console.error('[google-tts] ❌ Failed to make phone call:', broadcastError);
+          } else {
+            console.log('[google-tts] ✅ Phone call successful - binary MP3 bytes delivered directly');
+          }
+        })
+        .catch((broadcastError) => {
+          console.error('[google-tts] ❌ Error making phone call:', broadcastError);
+        })
+    );
 
     // Return success response with performance timing
     return new Response(JSON.stringify(responseData), {

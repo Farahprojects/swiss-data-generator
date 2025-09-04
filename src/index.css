@@ -131,7 +131,6 @@
   body {
     @apply bg-background text-foreground antialiased; /* ensure font smoothing */
   }
-}
 
 /* -------------------------------------------------------------------------- */
 /*  MOBILE VIEWPORT UTILS (Fix for iOS Safari 100vh)                           */
