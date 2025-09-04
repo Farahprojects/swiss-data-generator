@@ -55,6 +55,7 @@ export const ConversationOverlay: React.FC = () => {
   const currentTtsSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const animationTimeoutRef = useRef<number | null>(null);
   const isProcessingRef = useRef<boolean>(false);
+  const pingIntervalRef = useRef<number | null>(null);
   
   // 🎵 AUDIO: Single context for all audio
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -147,6 +148,12 @@ export const ConversationOverlay: React.FC = () => {
         console.warn('[ConversationOverlay] Could not suspend mic for playback', e);
       }
       
+      // 🌐 PAUSE: Pause WebSocket during TTS playback to prevent interference
+      if (connectionRef.current && connectionRef.current.state === 'SUBSCRIBED') {
+        connectionRef.current.unsubscribe();
+        console.log('[ConversationOverlay] 🌐 WebSocket paused during TTS playback');
+      }
+      
       // 🎵 REAL-TIME: Start bars animation service for live data
       directBarsAnimationService.start();
       
@@ -210,6 +217,12 @@ export const ConversationOverlay: React.FC = () => {
            console.warn('[ConversationOverlay] Could not resume mic after playback', e);
          }
          
+         // 🌐 RESUME: Resume WebSocket after TTS playback ends
+         if (connectionRef.current && connectionRef.current.state === 'CLOSED') {
+           connectionRef.current.subscribe();
+           console.log('[ConversationOverlay] 🌐 WebSocket resumed after TTS playback');
+         }
+         
          // 🚨 CHECK: Only restart microphone if we're not shutting down
          if (!isShuttingDown.current) {
            // 🎤 Restart microphone recording with timing buffer to align VAD with TTS end
@@ -237,22 +250,48 @@ export const ConversationOverlay: React.FC = () => {
     }
   }, []);
 
-  // 🎯 CONNECTION: Simple WebSocket setup
+  // 🎯 CONNECTION: Persistent WebSocket with pause/resume and ping
   const establishConnection = useCallback(async () => {
     if (!chat_id) return false;
     
     try {
-      const connection = supabase.channel(`conversation:${chat_id}`);
-      
-      // 🎯 DIRECT: WebSocket → Audio + Real-time Analysis
-      connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
-        if (payload.audioBytes) {
-          playAudioImmediately(payload.audioBytes, payload.text);
+      // 🚀 OPTIMIZATION: Create WebSocket once at start, reuse for all turns
+      if (!connectionRef.current) {
+        const connection = supabase.channel(`conversation:${chat_id}`);
+        
+        // 🎯 DIRECT: WebSocket → Audio + Real-time Analysis
+        connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
+          if (payload.audioBytes) {
+            playAudioImmediately(payload.audioBytes, payload.text);
+          }
+        });
+        
+        connection.subscribe();
+        connectionRef.current = connection;
+        console.log('[ConversationOverlay] 🌐 WebSocket connection established and subscribed');
+      } else {
+        // 🔄 RESUME: Re-subscribe if already exists but paused
+        if (connectionRef.current.state === 'CLOSED') {
+          connectionRef.current.subscribe();
+          console.log('[ConversationOverlay] 🌐 WebSocket connection resumed');
         }
-      });
+      }
       
-      connection.subscribe();
-      connectionRef.current = connection;
+      // 🏓 PING: Keep WebSocket warm with periodic ping
+      if (!pingIntervalRef.current) {
+        pingIntervalRef.current = window.setInterval(() => {
+          if (connectionRef.current && connectionRef.current.state === 'SUBSCRIBED') {
+            // Send a lightweight ping to keep connection alive
+            connectionRef.current.send({
+              type: 'broadcast',
+              event: 'ping',
+              payload: { timestamp: Date.now() }
+            });
+          }
+        }, 30000); // Ping every 30 seconds
+        console.log('[ConversationOverlay] 🏓 WebSocket ping interval started');
+      }
+      
       return true;
     } catch (error) {
       console.error('[ConversationOverlay] Connection failed:', error);
@@ -260,7 +299,26 @@ export const ConversationOverlay: React.FC = () => {
     }
   }, [chat_id, playAudioImmediately]);
 
-  // 🎯 START: Initialize conversation
+  // 🎵 AUDIO: Ping AudioContext to keep it warm
+  const pingAudioContext = useCallback(async () => {
+    if (!audioContextRef.current) {
+      try {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ latencyHint: 'playback' });
+      } catch (e) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+    }
+    
+    // 🏓 PING: Resume AudioContext if suspended to keep it warm
+    if (audioContextRef.current.state === 'suspended') {
+      await audioContextRef.current.resume();
+      console.log('[ConversationOverlay] 🎵 AudioContext pinged and resumed');
+    }
+    
+    return audioContextRef.current;
+  }, []);
+
+  // 🎯 START: Initialize conversation with warm connections
   const handleStart = useCallback(async () => {
     if (isStarting || hasStarted.current) return;
     if (!chat_id) return;
@@ -269,8 +327,14 @@ export const ConversationOverlay: React.FC = () => {
     hasStarted.current = true;
     
     try {
-      // 🎯 STATE DRIVEN: Get microphone (WebSocket will be created after STT)
+      // 🎯 STATE DRIVEN: Get microphone
       setState('establishing');
+      
+      // 🚀 WARM START: Initialize WebSocket and AudioContext immediately
+      console.log('[ConversationOverlay] 🚀 Warming up connections...');
+      await establishConnection();
+      await pingAudioContext();
+      console.log('[ConversationOverlay] 🚀 Connections warmed up and ready');
       
       // 🎯 STATE DRIVEN: Get microphone
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -314,7 +378,7 @@ export const ConversationOverlay: React.FC = () => {
     } finally {
       setIsStarting(false);
     }
-  }, [chat_id, isStarting, establishConnection]);
+  }, [chat_id, isStarting, establishConnection, pingAudioContext]);
 
   // 🎯 PROCESSING: Handle recording completion
   const processRecording = useCallback(async (audioBlob: Blob) => {
@@ -344,14 +408,8 @@ export const ConversationOverlay: React.FC = () => {
         return;
       }
       
-      // 🎯 OPTIMIZED: Create WebSocket connection NOW (after STT, before LLM)
-      console.log('[ConversationOverlay] 🎯 Creating WebSocket connection after STT');
-      const connectionSuccess = await establishConnection();
-      if (!connectionSuccess) {
-        console.error('[ConversationOverlay] ❌ Failed to establish WebSocket connection');
-        setState('listening');
-        return;
-      }
+      // 🚀 OPTIMIZED: WebSocket already established at start, just ensure it's active
+      console.log('[ConversationOverlay] 🚀 WebSocket already warmed up, proceeding with LLM call');
       
       // Send to chat-send via the existing working llmService (handles LLM → TTS → WebSocket automatically)
       console.log('[ConversationOverlay] 🎯 Calling llmService.sendMessage for TTS generation');
@@ -412,7 +470,13 @@ export const ConversationOverlay: React.FC = () => {
       console.warn('[ConversationOverlay] Could not cleanup microphone:', e);
     }
     
-    // 🌐 STEP 4: Close WebSocket connection
+    // 🌐 STEP 4: Close WebSocket connection and ping interval
+    if (pingIntervalRef.current) {
+      clearInterval(pingIntervalRef.current);
+      pingIntervalRef.current = null;
+      console.log('[ConversationOverlay] 🏓 WebSocket ping interval cleared');
+    }
+    
     if (connectionRef.current) {
       connectionRef.current.unsubscribe();
       connectionRef.current = null;
@@ -442,6 +506,12 @@ export const ConversationOverlay: React.FC = () => {
         animationTimeoutRef.current = null;
       }
       
+      // Clear ping interval
+      if (pingIntervalRef.current) {
+        clearInterval(pingIntervalRef.current);
+        pingIntervalRef.current = null;
+      }
+      
       // Stop animation service
       directBarsAnimationService.stop();
       
@@ -449,6 +519,12 @@ export const ConversationOverlay: React.FC = () => {
       if (audioContextRef.current) {
         safelyCloseAudioContext(audioContextRef.current);
         audioContextRef.current = null;
+      }
+      
+      // Clean up WebSocket connection
+      if (connectionRef.current) {
+        connectionRef.current.unsubscribe();
+        connectionRef.current = null;
       }
     };
   }, []);
