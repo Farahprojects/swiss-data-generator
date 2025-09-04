@@ -100,7 +100,7 @@ export const ConversationOverlay: React.FC = () => {
   }, []);
 
   // 🎵 RMS: WebSocket → Browser Audio + Real speech-synced animation
-  const playAudioImmediately = useCallback(async (audioBytes: number[], text?: string, rmsValues?: number[], frameDurationMs?: number) => {
+  const playAudioImmediately = useCallback(async (audioBytes: number[], text?: string, levels?: number[], frameDurationMs?: number) => {
     if (isShuttingDown.current) return;
     
 
@@ -153,22 +153,22 @@ export const ConversationOverlay: React.FC = () => {
       currentTtsSourceRef.current = source;
       
       // 🎵 RMS: Use real speech-synced RMS values (no processing!)
-      if (Array.isArray(rmsValues) && rmsValues.length > 0) {
-        console.log(`[ConversationOverlay] 🎵 Using ${rmsValues.length} RMS values for speech-synced animation`);
+      if (Array.isArray(levels) && levels.length > 0) {
+        console.log(`[ConversationOverlay] 🎵 Using ${levels.length} envelope levels for animation`);
         
         // Start animation immediately with first RMS value
-        const firstLevel = (rmsValues[0] ?? 0) / 255;
+        const firstLevel = (levels[0] ?? 0) / 255;
         directAudioAnimationService.notifyAudioLevel(firstLevel);
         
         // Dynamic frame duration: stretch RMS sequence to match audio length
-        const frameMs = (audioBuffer.duration * 1000) / rmsValues.length;
+        const frameMs = (audioBuffer.duration * 1000) / levels.length;
         let frameIndex = 1;
         
         const animateFrame = () => {
           if (isShuttingDown.current || !currentTtsSourceRef.current) return;
           
-          if (frameIndex < rmsValues.length) {
-            const level = (rmsValues[frameIndex] ?? 0) / 255;
+          if (frameIndex < levels.length) {
+            const level = (levels[frameIndex] ?? 0) / 255;
             directAudioAnimationService.notifyAudioLevel(level);
             frameIndex++;
             setTimeout(animateFrame, frameMs);
@@ -238,7 +238,7 @@ export const ConversationOverlay: React.FC = () => {
       // 🎯 DIRECT: WebSocket → Audio + Envelope
       connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
         if (payload.audioBytes) {
-          playAudioImmediately(payload.audioBytes, payload.text, payload.rmsValues, payload.frameDurationMs);
+          playAudioImmediately(payload.audioBytes, payload.text, payload.levels, payload.frameDurationMs);
         }
       });
       

@@ -111,66 +111,19 @@ serve(async (req) => {
     console.log(`[google-tts] Using voice: ${voiceName}`);
 
     // 🎵 FETCH MP3 + PCM IN PARALLEL
-    const [mp3Resp, pcmResp] = await Promise.all([
-      fetch(
-        `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ input: { text }, voice: { languageCode: "en-US", name: voiceName }, audioConfig: { audioEncoding: "MP3" } })
-        }
-      ),
-      fetch(
-        `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ input: { text }, voice: { languageCode: "en-US", name: voiceName }, audioConfig: { audioEncoding: "LINEAR16", sampleRateHertz: 24000 } })
-        }
-      )
-    ]);
+    const mp3Resp = await fetch(
+      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
+      {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({input:{text},voice:{languageCode:"en-US",name:voiceName},audioConfig:{audioEncoding:"MP3"}})}
+    );
+    if(!mp3Resp.ok){throw new Error("Google TTS API error");}
+    const mp3Json=await mp3Resp.json();
+    const audioBytes=Uint8Array.from(atob(mp3Json.audioContent),c=>c.charCodeAt(0));
 
-    if (!mp3Resp.ok || !pcmResp.ok) {
-      throw new Error("Google TTS API error fetching MP3 or PCM");
-    }
-
-    const mp3Json = await mp3Resp.json();
-    const pcmJson = await pcmResp.json();
-
-    const audioBytes = Uint8Array.from(atob(mp3Json.audioContent), c => c.charCodeAt(0));
-    const pcmBytes = Uint8Array.from(atob(pcmJson.audioContent), c => c.charCodeAt(0));
-
-    // 🎵 Compute RMS envelope from PCM (20 ms window)
-    const winSamples = Math.floor((24000 * 20) / 1000);
-    const frames = Math.floor(pcmBytes.length / 2 / winSamples);
-    const rms = new Float32Array(frames);
-    let maxRms = 0;
-    for (let f = 0; f < frames; f++) {
-      let sum = 0;
-      const base = f * winSamples * 2;
-      for (let i = 0; i < winSamples; i++) {
-        const lo = pcmBytes[base + i * 2];
-        const hi = pcmBytes[base + i * 2 + 1];
-        let s = (hi << 8) | lo;
-        if (s & 0x8000) s = s - 0x10000; // sign
-        const v = s / 32768;
-        sum += v * v;
-      }
-      const val = Math.sqrt(sum / winSamples);
-      rms[f] = val;
-      if (val > maxRms) maxRms = val;
-    }
-    for (let i = 0; i < rms.length; i++) rms[i] = maxRms ? rms[i] / maxRms : 0;
-
-    // Downsample stride 2 (≈40 ms / ~25 fps)
-    const stride = 2;
-    const downLen = Math.ceil(rms.length / stride);
-    const q = new Uint8Array(downLen);
-    for (let i = 0; i < downLen; i++) {
-      q[i] = Math.round((rms[i * stride] || 0) * 255);
-    }
-
-    const frameDurationMs = 20 * stride; // 40ms
+    // 🔹 Synthetic envelope (lightweight)
+    const buildEnvelope=(durMs:number,frameMs=40)=>{const n=Math.ceil(durMs/frameMs);const u=new Uint8Array(n);for(let i=0;i<n;i++){const t=i/n;const base=Math.sin(t*Math.PI*3)*0.4+0.6;const jitter=(Math.random()-.5)*0.15;u[i]=Math.max(0,Math.min(255,Math.round((base+jitter)*255)));}return u;};
+    const estDurMs=text.split(/\s+/).length/150*60*1000;
+    const levelsArr=Array.from(buildEnvelope(estDurMs));
+    const frameDurationMs=40;
 
     // Pure streaming approach - no storage, no DB
     const responseData = {
@@ -219,7 +172,7 @@ serve(async (req) => {
           event: 'tts-ready',
           payload: {
             audioBytes: Array.from(audioBytes),
-            rmsValues: Array.from(q),
+            levels: levelsArr,
             frameDurationMs,
             audioUrl: null, // No URL since we're not storing
             text: text,
