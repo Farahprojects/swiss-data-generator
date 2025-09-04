@@ -43,15 +43,16 @@ serve(async (req) => {
     const voiceName = `en-US-Chirp3-HD-${voice}`;
     console.log(`[google-tts] Using voice: ${voiceName}`);
 
-    // Create SSML with word marks for timing
-    const words = text.split(' ');
-    const ssml = `<speak>${words.map((word, i) => `<mark name="w${i}"/>${word}`).join(' ')}</speak>`;
+    // Create SSML with word marks for timing (hardened)
+    const tokens = text.trim().split(/\s+/); // No empty tokens
+    const escapeXml = (str: string) => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const ssml = `<speak>${tokens.map((word, i) => `<mark name="w${i}"/>${escapeXml(word)}`).join(' ')}</speak>`;
     
-    console.log(`[google-tts] 🎵 Generated SSML with ${words.length} word marks:`, ssml);
+    console.log(`[google-tts] 🎵 Generated SSML with ${tokens.length} word marks:`, ssml);
 
     // Call Google Text-to-Speech API for MP3 (playback) with SSML marks
     const ttsResponse = await fetch(
-      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
+      `https://texttospeech.googleapis.com/v1beta1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
       {
         method: "POST",
         headers: {
@@ -96,9 +97,14 @@ serve(async (req) => {
     // Process SSML mark timing data for animation
     console.log('[google-tts] 🔍 Raw timepoints:', JSON.stringify(timepoints, null, 2));
     
+    // Fail fast if timepoints missing
+    if (!Array.isArray(timepoints)) {
+      throw new Error("No timepoints returned (enableTimePointing requires v1beta1)");
+    }
+    
     // Validate we got the expected number of timepoints
-    if (timepoints.length !== words.length) {
-      throw new Error(`Expected ${words.length} timepoints but got ${timepoints.length}`);
+    if (timepoints.length !== tokens.length) {
+      throw new Error(`Expected ${tokens.length} timepoints but got ${timepoints.length}`);
     }
     
     const phonemes = timepoints.map((tp: any, index: number) => {
@@ -108,7 +114,7 @@ serve(async (req) => {
       const end = nextTimepoint ? nextTimepoint.timeSeconds : start + 0.5; // Use next timepoint or default 500ms
       
       // Get the actual word for intensity calculation
-      const word = words[index] || '';
+      const word = tokens[index] || '';
       const intensity = word.match(/[aeiou]/i) ? 0.8 : 0.4; // Vowels = higher intensity
       
       return {
