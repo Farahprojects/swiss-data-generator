@@ -49,10 +49,18 @@ async function sha1(input: string): Promise<string> {
 }
 
 function buildVoiceName(voice: string): string {
-  // If the client passes a fully-qualified Google voice, use as-is.
-  // Otherwise, default to en-US-{voice} to keep compatibility with the caller's pattern.
-  if (voice.includes("-")) return voice;
-  return `en-US-${voice}`;
+  const v = voice.trim();
+  // If already fully-qualified (e.g., en-US-Chirp3-HD-Puck, en-GB-Studio-B)
+  if (/^[a-z]{2}-[A-Z]{2}-/.test(v)) return v;
+  // If caller sends family + name (e.g., Chirp3-HD-Puck)
+  if (v.startsWith("Chirp3-HD-")) return `en-US-${v}`;
+  // Back-compat with your previous scheme (e.g., "Puck" -> "en-US-Chirp3-HD-Puck")
+  return `en-US-Chirp3-HD-${v}`;
+}
+
+function languageFromVoiceName(name: string): string {
+  const m = name.match(/^([a-z]{2}-[A-Z]{2})-/);
+  return m ? m[1] : "en-US";
 }
 
 serve(async (req) => {
@@ -74,7 +82,8 @@ serve(async (req) => {
 
     // Use exact HD voice name provided by client, or construct it if you standardize internally.
     const voiceName = buildVoiceName(voice);
-    log("[google-tts] request", { chat_id, len: text.length, voiceName });
+    const languageCode = languageFromVoiceName(voiceName);
+    log("[google-tts] request", { chat_id, len: text.length, voiceName, languageCode });
 
     // Call Google TTS (single shot). Keep the payload minimal.
     const controller = new AbortController();
@@ -82,7 +91,7 @@ serve(async (req) => {
 
     const ttsBody = {
       input: { text },
-      voice: { languageCode: "en-US", name: voiceName },
+      voice: { languageCode, name: voiceName },
       audioConfig: { audioEncoding: "MP3" },
     };
 
