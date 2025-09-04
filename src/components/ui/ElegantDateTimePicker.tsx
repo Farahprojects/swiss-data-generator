@@ -92,56 +92,72 @@ export const ElegantDateTimePicker: React.FC<ElegantDateTimePickerProps> = ({
     }
   };
 
-  // Handle manual date input
+  // Handle manual date input - Fixed to avoid double state updates
   const handleDateInput = (value: string, field: 'day' | 'month' | 'year', nextRef?: React.RefObject<HTMLInputElement>) => {
     const numValue = value.replace(/\D/g, '');
     
     if (field === 'day') {
       const validDay = Math.min(parseInt(numValue) || 0, 31).toString();
       if (numValue.length === 2 && parseInt(numValue) > 0 && parseInt(numValue) <= 31) {
-        updateDate(validDay, month, year);
+        // Get current values from refs to avoid stale state
+        const currentMonth = monthRef.current?.value || month;
+        const currentYear = yearRef.current?.value || year;
+        updateDate(validDay, currentMonth, currentYear);
         nextRef?.current?.focus();
       } else if (numValue.length <= 2) {
-        updateDate(validDay, month, year);
+        const currentMonth = monthRef.current?.value || month;
+        const currentYear = yearRef.current?.value || year;
+        updateDate(validDay, currentMonth, currentYear);
       }
       return validDay;
     } else if (field === 'month') {
       const validMonth = Math.min(parseInt(numValue) || 0, 12).toString();
       if (numValue.length === 2 && parseInt(numValue) > 0 && parseInt(numValue) <= 12) {
-        updateDate(day, validMonth, year);
+        const currentDay = dayRef.current?.value || day;
+        const currentYear = yearRef.current?.value || year;
+        updateDate(currentDay, validMonth, currentYear);
         nextRef?.current?.focus();
       } else if (numValue.length <= 2) {
-        updateDate(day, validMonth, year);
+        const currentDay = dayRef.current?.value || day;
+        const currentYear = yearRef.current?.value || year;
+        updateDate(currentDay, validMonth, currentYear);
       }
       return validMonth;
     } else if (field === 'year') {
       if (numValue.length === 4) {
-        updateDate(day, month, numValue);
+        const currentDay = dayRef.current?.value || day;
+        const currentMonth = monthRef.current?.value || month;
+        updateDate(currentDay, currentMonth, numValue);
       }
       return numValue;
     }
     return value;
   };
 
-  // Handle manual time input
+  // Handle manual time input - Fixed to avoid double state updates
   const handleTimeInput = (value: string, field: 'hour' | 'minute', nextRef?: React.RefObject<HTMLInputElement>) => {
     const numValue = value.replace(/\D/g, '');
     
     if (field === 'hour') {
       const validHour = Math.min(parseInt(numValue) || 1, 12).toString();
       if (numValue.length === 2 && parseInt(numValue) > 0 && parseInt(numValue) <= 12) {
-        updateTime(validHour, minute, ampm);
+        // Get current values from refs to avoid stale state
+        const currentMinute = minuteRef.current?.value || minute;
+        updateTime(validHour, currentMinute, ampm);
         nextRef?.current?.focus();
       } else if (numValue.length <= 2) {
-        updateTime(validHour, minute, ampm);
+        const currentMinute = minuteRef.current?.value || minute;
+        updateTime(validHour, currentMinute, ampm);
       }
       return validHour;
     } else if (field === 'minute') {
       const validMinute = Math.min(parseInt(numValue) || 0, 59).toString().padStart(2, '0');
       if (numValue.length === 2) {
-        updateTime(hour, validMinute, ampm);
+        const currentHour = hourRef.current?.value || hour;
+        updateTime(currentHour, validMinute, ampm);
       } else if (numValue.length <= 2) {
-        updateTime(hour, validMinute, ampm);
+        const currentHour = hourRef.current?.value || hour;
+        updateTime(currentHour, validMinute, ampm);
       }
       return validMinute;
     }
@@ -165,10 +181,9 @@ export const ElegantDateTimePicker: React.FC<ElegantDateTimePickerProps> = ({
             <input
               ref={dayRef}
               type="text"
-              value={day}
+              defaultValue={day}
               onChange={(e) => {
-                const newValue = handleDateInput(e.target.value, 'day', monthRef);
-                updateDate(newValue, month, year);
+                handleDateInput(e.target.value, 'day', monthRef);
               }}
               className={cn(inputClass, "w-8")}
               placeholder="DD"
@@ -178,10 +193,9 @@ export const ElegantDateTimePicker: React.FC<ElegantDateTimePickerProps> = ({
             <input
               ref={monthRef}
               type="text"
-              value={month}
+              defaultValue={month}
               onChange={(e) => {
-                const newValue = handleDateInput(e.target.value, 'month', yearRef);
-                updateDate(day, newValue, year);
+                handleDateInput(e.target.value, 'month', yearRef);
               }}
               className={cn(inputClass, "w-8")}
               placeholder="MM"
@@ -191,10 +205,9 @@ export const ElegantDateTimePicker: React.FC<ElegantDateTimePickerProps> = ({
             <input
               ref={yearRef}
               type="text"
-              value={year}
+              defaultValue={year}
               onChange={(e) => {
-                const newValue = handleDateInput(e.target.value, 'year');
-                updateDate(day, month, newValue);
+                handleDateInput(e.target.value, 'year');
               }}
               className={cn(inputClass, "w-12")}
               placeholder="YYYY"
@@ -238,10 +251,9 @@ export const ElegantDateTimePicker: React.FC<ElegantDateTimePickerProps> = ({
             <input
               ref={hourRef}
               type="text"
-              value={hour ? (parseInt(hour) > 12 ? (parseInt(hour) - 12).toString() : (parseInt(hour) === 0 ? '12' : hour)) : ''}
+              defaultValue={hour ? (parseInt(hour) > 12 ? (parseInt(hour) - 12).toString() : (parseInt(hour) === 0 ? '12' : hour)) : ''}
               onChange={(e) => {
-                const newValue = handleTimeInput(e.target.value, 'hour', minuteRef);
-                updateTime(newValue, minute, ampm);
+                handleTimeInput(e.target.value, 'hour', minuteRef);
               }}
               className={cn(inputClass, "w-8")}
               placeholder="HH"
@@ -251,10 +263,9 @@ export const ElegantDateTimePicker: React.FC<ElegantDateTimePickerProps> = ({
             <input
               ref={minuteRef}
               type="text"
-              value={minute}
+              defaultValue={minute}
               onChange={(e) => {
-                const newValue = handleTimeInput(e.target.value, 'minute');
-                updateTime(hour, newValue, ampm);
+                handleTimeInput(e.target.value, 'minute');
               }}
               className={cn(inputClass, "w-8")}
               placeholder="MM"
@@ -264,7 +275,9 @@ export const ElegantDateTimePicker: React.FC<ElegantDateTimePickerProps> = ({
               value={ampm}
               onChange={(e) => {
                 setAmpm(e.target.value);
-                updateTime(hour, minute, e.target.value);
+                const currentHour = hourRef.current?.value || hour;
+                const currentMinute = minuteRef.current?.value || minute;
+                updateTime(currentHour, currentMinute, e.target.value);
               }}
               className="ml-2 bg-transparent border-0 focus:outline-none text-sm font-light text-gray-700 cursor-pointer"
             >
