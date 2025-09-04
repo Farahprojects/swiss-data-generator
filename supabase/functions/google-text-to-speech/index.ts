@@ -43,7 +43,13 @@ serve(async (req) => {
     const voiceName = `en-US-Chirp3-HD-${voice}`;
     console.log(`[google-tts] Using voice: ${voiceName}`);
 
-    // Call Google Text-to-Speech API for MP3 (playback) with alignment data
+    // Create SSML with word marks for timing
+    const words = text.split(' ');
+    const ssml = `<speak>${words.map((word, i) => `<mark name="w${i}"/>${word}`).join(' ')}</speak>`;
+    
+    console.log(`[google-tts] 🎵 Generated SSML with ${words.length} word marks:`, ssml);
+
+    // Call Google Text-to-Speech API for MP3 (playback) with SSML marks
     const ttsResponse = await fetch(
       `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
       {
@@ -54,7 +60,7 @@ serve(async (req) => {
           "User-Agent": "TheRAI-TTS/1.0",
         },
         body: JSON.stringify({
-          input: { text },
+          input: { ssml },
           voice: {
             languageCode: "en-US",
             name: voiceName,
@@ -65,7 +71,7 @@ serve(async (req) => {
             pitch: 0.0,
             sampleRateHertz: 22050
           },
-          timepointing: ["WORD", "PHONEME"], // Enable word and phoneme alignment
+          enableTimePointing: ["SSML_MARK"], // Enable SSML mark timing
         }),
       }
     );
@@ -87,25 +93,26 @@ serve(async (req) => {
     // Decode base64 MP3 audio content to raw bytes
     const audioBytes = Uint8Array.from(atob(audioContent), c => c.charCodeAt(0));
     
-    // Process phoneme alignment data for animation
+    // Process SSML mark timing data for animation
     console.log('[google-tts] 🔍 Raw timepoints:', JSON.stringify(timepoints, null, 2));
     
+    // Validate we got the expected number of timepoints
+    if (timepoints.length !== words.length) {
+      throw new Error(`Expected ${words.length} timepoints but got ${timepoints.length}`);
+    }
+    
     const phonemes = timepoints.map((tp: any, index: number) => {
-      // Google TTS timepoints format: { timeSeconds: number, markName?: string, type?: string }
+      // Google TTS SSML mark format: { timeSeconds: number, markName: string }
       const start = tp.timeSeconds || 0;
       const nextTimepoint = timepoints[index + 1];
-      const end = nextTimepoint ? nextTimepoint.timeSeconds : start + 0.1; // Use next timepoint or default 100ms
+      const end = nextTimepoint ? nextTimepoint.timeSeconds : start + 0.5; // Use next timepoint or default 500ms
       
-      // Determine intensity based on type and content
-      let intensity = 0.5; // Default
-      if (tp.type === 'PHONEME' && tp.markName) {
-        intensity = tp.markName.match(/[aeiou]/i) ? 0.8 : 0.4; // Vowels = higher intensity
-      } else if (tp.type === 'WORD') {
-        intensity = 0.6; // Words get medium intensity
-      }
+      // Get the actual word for intensity calculation
+      const word = words[index] || '';
+      const intensity = word.match(/[aeiou]/i) ? 0.8 : 0.4; // Vowels = higher intensity
       
       return {
-        symbol: tp.markName || `${tp.type || 'phoneme'}_${index}`,
+        symbol: word,
         start: start,
         end: end,
         intensity: intensity
