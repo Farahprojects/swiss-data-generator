@@ -12,7 +12,7 @@ const TheraiChatGPTSection = () => {
             <div className="relative">
               <div className="relative overflow-hidden rounded-2xl shadow-2xl bg-white p-8">
                 <img 
-                  src={normalizeStorageUrl("https://auth.theraiastro.com/storage/v1/object/public/feature-images/phone.png")}
+                  src={normalizeStorageUrl("https://wrvqqvqvwqmfdqvqmaar.supabase.co/storage/v1/object/public/feature-images/phone.png")}
                   alt="Therai Phone Interface"
                   className="w-full h-auto rounded-xl"
                   loading="lazy"

@@ -53,7 +53,7 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
     slug: "Essence",
     time: "5 min",
     color: "bg-blue-500",
-    imageSrc: normalizeStorageUrl("https://auth.theraiastro.com/storage/v1/object/public/feature-images//waterfall.png")
+    imageSrc: normalizeStorageUrl("https://wrvqqvqvwqmfdqvqmaar.supabase.co/storage/v1/object/public/feature-images/waterfall.png")
   },
   {
     id: "Compatibility",
@@ -66,7 +66,7 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
     slug: "relationships",
     time: "10 min",
     color: "bg-pink-500",
-    imageSrc: normalizeStorageUrl("https://auth.theraiastro.com/storage/v1/object/public/feature-images//hand.png")
+    imageSrc: normalizeStorageUrl("https://wrvqqvqvwqmfdqvqmaar.supabase.co/storage/v1/object/public/feature-images/hand.png")
   },
   {
     id: "AstroData",
@@ -79,7 +79,7 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
     slug: "life-shift",
     time: "10 min",
             color: "bg-gray-900",
-    imageSrc: normalizeStorageUrl("https://auth.theraiastro.com/storage/v1/object/public/feature-images//focus.png")
+    imageSrc: normalizeStorageUrl("https://wrvqqvqvwqmfdqvqmaar.supabase.co/storage/v1/object/public/feature-images/focus.png")
   },
   {
     id: "SnapShot",
@@ -92,7 +92,7 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
     slug: "Monthly",
     time: "12 min",
     color: "bg-orange-500",
-    imageSrc: normalizeStorageUrl("https://auth.theraiastro.com/storage/v1/object/public/feature-images//month.png")
+    imageSrc: normalizeStorageUrl("https://wrvqqvqvwqmfdqvqmaar.supabase.co/storage/v1/object/public/feature-images/month.png")
   },
 ];
 
