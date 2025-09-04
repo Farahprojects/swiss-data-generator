@@ -163,10 +163,10 @@ serve(async (req) => {
       // ---- 2) add tiny, cheap variation so bars don't move identically ----
       // lightweight "wobble" via two sines with small amplitudes
       const twoPi = Math.PI * 2;
-      const hzA = 1.6 + rnd() * 0.6; // ~1.6–2.2 Hz
-      const hzB = 3.0 + rnd() * 0.7; // ~3.0–3.7 Hz
-      const ampA = 0.06; // subtle
-      const ampB = 0.03; // very subtle
+      const hzA = 1.2 + rnd() * 0.4; // ~1.2–1.6 Hz (slower)
+      const hzB = 2.0 + rnd() * 0.5; // ~2.0–2.5 Hz (slower)
+      const ampA = 0.03; // more subtle (was 0.06)
+      const ampB = 0.015; // very subtle (was 0.03)
       const phase2 = rnd() * twoPi;
       const phase3 = rnd() * twoPi;
 
@@ -223,7 +223,7 @@ serve(async (req) => {
     };
 
     const estDurMs = text.split(/\s+/).length / 150 * 60 * 1000;
-    const animationData = buildBars(estDurMs, 40, 1337);
+    const animationData = buildBars(estDurMs, 60, 1337); // Slower: 60ms = ~16.7fps
     const frameDurationMs = animationData.frameMs;
 
     // Pure streaming approach - no storage, no DB
