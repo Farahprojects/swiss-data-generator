@@ -18,11 +18,11 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive, audioLevel = 
   useEffect(() => {
     if (!isActive || !containerRef.current) return;
 
-    const baselineHeight = 0.4; // Always visible baseline (40%)
-    const maxMovement = 0.6;    // Up to +60%
+    const baselineHeight = 0.2; // Lower baseline to increase visible range
+    const maxMovement = 0.8;    // Increase travel for stronger motion
     // Minimal spring constants (critically damped feel)
-    const stiffness = 16; // lower = softer
-    const damping = 0.85; // 0..1 (1 = no damping)
+    const stiffness = 36; // snappier follow
+    const damping = 0.78; // slightly less damping for liveliness
 
     // Initialize levels so bars show immediately
     targetLevelRef.current = Math.max(0, Math.min(1, audioLevel));
@@ -102,13 +102,12 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive, audioLevel = 
       {bars.map((bar) => (
         <div
           key={bar.id}
-          className={`bg-black rounded-full ${bar.className} transition-transform duration-75`}
+          className={`bg-black rounded-full ${bar.className}`}
           style={{
             width: '16px', // All bars same width
-            transformOrigin: 'center',
+            transformOrigin: 'bottom',
             transform: `scaleY(var(--bar-scale, 1))`,
             willChange: 'transform', // GPU acceleration hint
-            transitionTimingFunction: 'cubic-bezier(.2,.8,.4,1)',
           }}
         />
       ))}
