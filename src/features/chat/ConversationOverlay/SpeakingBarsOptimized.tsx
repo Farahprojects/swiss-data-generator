@@ -12,8 +12,10 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive, audioLevel = 
   useEffect(() => {
     if (!isActive || !containerRef.current) return;
 
-    // 🎯 DIRECT: Use precomputed envelope value directly (backend already calculated everything!)
-    const scaleY = audioLevel; // Backend already normalized to 0-1 range
+    // 🎯 BASELINE: Start with visible height, then add audio level for movement
+    const baselineHeight = 0.4; // Always visible baseline (40% of bar height)
+    const audioMovement = audioLevel * 0.6; // Audio adds up to 60% more height
+    const scaleY = baselineHeight + audioMovement; // Total: 40% + 0-60% = 40-100%
     
     // Update CSS variable for smooth GPU animation
     containerRef.current.style.setProperty('--bar-scale', scaleY.toString());
