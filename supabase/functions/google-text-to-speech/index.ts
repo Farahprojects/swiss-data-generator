@@ -25,7 +25,7 @@ const cache = new Map<string, CacheEntry>();
 const inflight = new Map<string, Promise<Uint8Array>>();
 
 function cacheKey(text: string, voiceName: string) {
-return ${voiceName}::${text};
+return `${voiceName}::${text}`;
 }
 function getFromCache(key: string): Uint8Array | undefined {
 const entry = cache.get(key);
@@ -47,8 +47,8 @@ for (let i = 0; i < drop; i++) cache.delete(oldest[i][0]);
 }
 
 async function synthesizeMP3(text: string, voiceName: string, signal?: AbortSignal): Promise<Uint8Array> {
-const resp = await fetch(
-https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY},
+  const resp = await fetch(
+    `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
 {
 method: "POST",
 headers: { "Content-Type": "application/json" },
@@ -63,7 +63,7 @@ signal,
 
 if (!resp.ok) {
 const errText = await resp.text().catch(() => "");
-throw new Error(Google TTS API error (${resp.status}): ${errText});
+throw new Error(`Google TTS API error (${resp.status}): ${errText}`);
 }
 
 const json = await resp.json();
