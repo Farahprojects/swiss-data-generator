@@ -114,22 +114,9 @@ serve(async (req) => {
     
     console.log(`[google-tts] 🎵 Generated ${phonemes.length} phoneme timepoints for animation`);
     
-    // Fallback: If no timepoints, create simple word-based timing
+    // 🚫 NO FALLBACKS: Fail fast if no timepoints
     if (phonemes.length === 0) {
-      console.log('[google-tts] ⚠️ No timepoints received, creating fallback word-based timing');
-      const words = text.split(' ');
-      const avgWordDuration = 0.5; // 500ms per word average
-      
-      for (let i = 0; i < words.length; i++) {
-        const start = i * avgWordDuration;
-        const end = (i + 1) * avgWordDuration;
-        phonemes.push({
-          symbol: `word_${i}`,
-          start: start,
-          end: end,
-          intensity: 0.6 // Medium intensity for words
-        });
-      }
+      throw new Error('No timepoints received from Google TTS - API may not support timepointing');
     }
 
     // 🎵 PHONEME-BASED: No envelope generation needed - using Google TTS timepoints

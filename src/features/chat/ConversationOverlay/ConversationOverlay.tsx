@@ -174,8 +174,7 @@ export const ConversationOverlay: React.FC = () => {
         // Start animation after a short delay to sync with audio
         setTimeout(startPhonemeAnimation, 50);
       } else {
-        console.warn('[ConversationOverlay] ⚠️ No phoneme data received, using static animation');
-        directAudioAnimationService.notifyAudioLevel(0.3); // Static level
+        throw new Error('No phoneme data received from TTS - cannot animate');
       }
       
       // 🎯 STATE DRIVEN: Set replying state FIRST
