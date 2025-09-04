@@ -309,7 +309,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="fixed inset-0 bg-white z-50 overflow-auto"
+      className="bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden"
     >
       {/* Header */}
       <div className="flex items-center justify-between p-6 border-b border-gray-200">
