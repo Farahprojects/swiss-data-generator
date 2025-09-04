@@ -40,12 +40,13 @@ serve(async (req) => {
       throw new Error('Google STT API key not configured');
     }
 
-    // Simple configuration with essential settings only
+    // 🚀 MOBILE-FIRST: Optimized configuration for mobile performance
     const sttConfig = {
       encoding: 'WEBM_OPUS',
       languageCode: 'en-US',
       enableAutomaticPunctuation: true,
       model: 'latest_long',
+      sampleRateHertz: 16000,  // Mobile-optimized sample rate
       ...config
     };
 

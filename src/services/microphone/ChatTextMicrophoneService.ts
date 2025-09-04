@@ -71,19 +71,19 @@ class ChatTextMicrophoneServiceClass {
       const trackSettings = this.stream.getAudioTracks()[0]?.getSettings?.() || {};
       this.log('🎛️ getUserMedia acquired. Track settings:', trackSettings);
 
-      // Set up audio analysis
-      this.audioContext = new AudioContext({ sampleRate: 48000 });
+      // Set up audio analysis - 🚀 MOBILE-FIRST: Optimized for mobile performance
+      this.audioContext = new AudioContext({ sampleRate: 16000 }); // 16kHz for mobile efficiency
       this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
       this.analyser = this.audioContext.createAnalyser();
-      this.analyser.fftSize = 2048;
+      this.analyser.fftSize = 1024; // 🚀 MOBILE-FIRST: Smaller FFT for mobile performance
       this.analyser.smoothingTimeConstant = 0.8;
       this.mediaStreamSource.connect(this.analyser);
       // reduced detailed analyser config logging
 
-      // Set up MediaRecorder - simple and clean
+      // Set up MediaRecorder - 🚀 MOBILE-FIRST: Lower bitrate for faster uploads
       this.mediaRecorder = new MediaRecorder(this.stream, {
         mimeType: 'audio/webm;codecs=opus',
-        audioBitsPerSecond: 128000
+        audioBitsPerSecond: 64000  // 50% smaller files for mobile
       });
 
       this.audioChunks = [];
@@ -172,11 +172,11 @@ class ChatTextMicrophoneServiceClass {
     let voiceStartTime: number | null = null;
     let silenceStartTime: number | null = null;
     
-    // Optimized thresholds for natural conversation flow
-    const VOICE_START_THRESHOLD = 0.012;  // RMS threshold to detect voice start
-    const VOICE_START_DURATION = 300;     // Duration to confirm voice (300ms)
-    const SILENCE_THRESHOLD = 0.008;      // Lower threshold for silence (hysteresis)
-    const SILENCE_TIMEOUT = this.options.silenceTimeoutMs || 1500; // 1.5 seconds for responsive conversation
+    // 🚀 MOBILE-FIRST: Optimized thresholds for mobile responsiveness
+    const VOICE_START_THRESHOLD = 0.008;  // More sensitive for mobile microphones
+    const VOICE_START_DURATION = 200;     // Faster voice confirmation for mobile
+    const SILENCE_THRESHOLD = 0.005;      // More sensitive silence detection
+    const SILENCE_TIMEOUT = this.options.silenceTimeoutMs || 800; // Mobile-optimized timeout
     
     this.log(`🧠 VAD started - waiting for voice (>${VOICE_START_THRESHOLD} RMS for ${VOICE_START_DURATION}ms, silence <${SILENCE_THRESHOLD} RMS for ${SILENCE_TIMEOUT}ms)`);
 

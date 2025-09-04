@@ -42,7 +42,7 @@ export const ChatInput = () => {
     toggleRecording: toggleMicRecording 
   } = useChatTextMicrophone({
     onTranscriptReady: handleTranscriptReady,
-    silenceTimeoutMs: 1500
+    silenceTimeoutMs: 800  // 🚀 MOBILE-FIRST: Faster silence detection for mobile responsiveness
   });
 
   const handleSend = () => {
