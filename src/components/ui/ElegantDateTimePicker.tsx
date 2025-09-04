@@ -1,4 +1,9 @@
 import React, { useState, useRef } from 'react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
+import { CalendarIcon, Clock } from 'lucide-react';
+import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 interface ElegantDateTimePickerProps {
@@ -18,6 +23,11 @@ export const ElegantDateTimePicker: React.FC<ElegantDateTimePickerProps> = ({
   hasDateError = false,
   hasTimeError = false
 }) => {
+  const [isDateOpen, setIsDateOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+    dateValue ? new Date(dateValue) : undefined
+  );
+
   // Parse existing values
   const [day, month, year] = dateValue ? dateValue.split('-').reverse() : ['', '', ''];
   const [hour, minute] = timeValue ? timeValue.split(':') : ['', ''];
@@ -34,9 +44,19 @@ export const ElegantDateTimePicker: React.FC<ElegantDateTimePickerProps> = ({
   const hourRef = useRef<HTMLInputElement>(null);
   const minuteRef = useRef<HTMLInputElement>(null);
 
+  const handleDateSelect = (newDate: Date | undefined) => {
+    if (newDate) {
+      setSelectedDate(newDate);
+      onDateChange(format(newDate, 'yyyy-MM-dd'));
+      setIsDateOpen(false);
+    }
+  };
+
   const updateDate = (newDay: string, newMonth: string, newYear: string) => {
     if (newDay && newMonth && newYear) {
-      onDateChange(`${newYear}-${newMonth.padStart(2, '0')}-${newDay.padStart(2, '0')}`);
+      const dateStr = `${newYear}-${newMonth.padStart(2, '0')}-${newDay.padStart(2, '0')}`;
+      onDateChange(dateStr);
+      setSelectedDate(new Date(dateStr));
     }
   };
 
@@ -106,16 +126,16 @@ export const ElegantDateTimePicker: React.FC<ElegantDateTimePickerProps> = ({
     return value;
   };
 
-  const inputClass = "w-full h-12 text-center border-0 bg-transparent focus:outline-none focus:ring-0 text-base font-light";
+  const inputClass = "w-full h-10 text-center border-0 bg-transparent focus:outline-none focus:ring-0 text-sm font-light";
   const containerClass = (hasError: boolean) => cn(
-    "flex items-center bg-white border-2 rounded-xl transition-all duration-200",
+    "inline-flex items-center bg-white border-2 rounded-xl transition-all duration-200 px-3 py-1",
     hasError ? "border-red-300" : "border-gray-200 focus-within:border-gray-400"
   );
 
   return (
     <div className="grid grid-cols-2 gap-4">
       {/* Date Picker */}
-      <div>
+      <div className="flex items-center gap-2">
         <div className={containerClass(hasDateError)}>
           <input
             ref={dayRef}
@@ -125,11 +145,11 @@ export const ElegantDateTimePicker: React.FC<ElegantDateTimePickerProps> = ({
               const newValue = handleDateInput(e.target.value, 'day', monthRef);
               updateDate(newValue, month, year);
             }}
-            className={inputClass}
+            className={cn(inputClass, "w-8")}
             placeholder="DD"
             maxLength={2}
           />
-          <span className="text-gray-400 px-1">/</span>
+          <span className="text-gray-400 text-sm">/</span>
           <input
             ref={monthRef}
             type="text"
@@ -138,11 +158,11 @@ export const ElegantDateTimePicker: React.FC<ElegantDateTimePickerProps> = ({
               const newValue = handleDateInput(e.target.value, 'month', yearRef);
               updateDate(day, newValue, year);
             }}
-            className={inputClass}
+            className={cn(inputClass, "w-8")}
             placeholder="MM"
             maxLength={2}
           />
-          <span className="text-gray-400 px-1">/</span>
+          <span className="text-gray-400 text-sm">/</span>
           <input
             ref={yearRef}
             type="text"
@@ -151,15 +171,38 @@ export const ElegantDateTimePicker: React.FC<ElegantDateTimePickerProps> = ({
               const newValue = handleDateInput(e.target.value, 'year');
               updateDate(day, month, newValue);
             }}
-            className={inputClass}
+            className={cn(inputClass, "w-12")}
             placeholder="YYYY"
             maxLength={4}
           />
         </div>
+        
+        <Popover open={isDateOpen} onOpenChange={setIsDateOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-10 w-10 p-0 hover:bg-gray-100 rounded-xl"
+            >
+              <CalendarIcon className="h-4 w-4 text-gray-400" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={handleDateSelect}
+              initialFocus
+              className="p-3 pointer-events-auto"
+              disabled={(date) => date > new Date()}
+            />
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Time Picker */}
-      <div>
+      <div className="flex items-center gap-2">
         <div className={containerClass(hasTimeError)}>
           <input
             ref={hourRef}
@@ -169,11 +212,11 @@ export const ElegantDateTimePicker: React.FC<ElegantDateTimePickerProps> = ({
               const newValue = handleTimeInput(e.target.value, 'hour', minuteRef);
               updateTime(newValue, minute, ampm);
             }}
-            className={inputClass}
+            className={cn(inputClass, "w-8")}
             placeholder="HH"
             maxLength={2}
           />
-          <span className="text-gray-400 px-1">:</span>
+          <span className="text-gray-400 text-sm">:</span>
           <input
             ref={minuteRef}
             type="text"
@@ -182,7 +225,7 @@ export const ElegantDateTimePicker: React.FC<ElegantDateTimePickerProps> = ({
               const newValue = handleTimeInput(e.target.value, 'minute');
               updateTime(hour, newValue, ampm);
             }}
-            className={inputClass}
+            className={cn(inputClass, "w-8")}
             placeholder="MM"
             maxLength={2}
           />
@@ -192,12 +235,21 @@ export const ElegantDateTimePicker: React.FC<ElegantDateTimePickerProps> = ({
               setAmpm(e.target.value);
               updateTime(hour, minute, e.target.value);
             }}
-            className="ml-2 bg-transparent border-0 focus:outline-none text-base font-light text-gray-700 cursor-pointer"
+            className="ml-2 bg-transparent border-0 focus:outline-none text-sm font-light text-gray-700 cursor-pointer"
           >
             <option value="AM">AM</option>
             <option value="PM">PM</option>
           </select>
         </div>
+        
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-10 w-10 p-0 hover:bg-gray-100 rounded-xl"
+        >
+          <Clock className="h-4 w-4 text-gray-400" />
+        </Button>
       </div>
     </div>
   );
