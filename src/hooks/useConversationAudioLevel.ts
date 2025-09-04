@@ -11,7 +11,7 @@ export const useConversationAudioLevel = (enabled: boolean = true) => {
   const [audioLevel, setAudioLevel] = useState(0);
 
   useEffect(() => {
-    let animationFrame: number | null = null;
+    let timeoutId: number | null = null;
 
     const updateAudioLevel = () => {
       if (!enabled) return; // Skip updates when disabled
@@ -27,20 +27,21 @@ export const useConversationAudioLevel = (enabled: boolean = true) => {
       
       setAudioLevel(level);
       
-      animationFrame = requestAnimationFrame(updateAudioLevel);
+      // 25fps = 40ms intervals
+      timeoutId = window.setTimeout(updateAudioLevel, 40);
     };
 
     if (enabled) {
       updateAudioLevel();
     } else {
-      // If disabled, reset to 0 and ensure RAF is not running
+      // If disabled, reset to 0 and ensure timeout is not running
       setAudioLevel(0);
     }
 
     return () => {
-      if (animationFrame) {
-        cancelAnimationFrame(animationFrame);
-        animationFrame = null;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
       }
     };
   }, [enabled]);
