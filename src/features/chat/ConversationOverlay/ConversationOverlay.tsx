@@ -122,7 +122,7 @@ export const ConversationOverlay: React.FC = () => {
       
       // 🎵 REAL-TIME: Create analyzer for live audio analysis
       const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 256; // Good balance of frequency resolution and performance
+      analyser.fftSize = 128; // Reduced for better mobile performance
       analyser.smoothingTimeConstant = 0.8; // Smooth the data
       
       // 🎯 DIRECT: Create source and connect to analyzer + destination
@@ -148,7 +148,7 @@ export const ConversationOverlay: React.FC = () => {
       source.start(0);
       currentTtsSourceRef.current = source;
       
-      // 🎵 REAL-TIME: Live audio analysis loop
+      // 🎵 REAL-TIME: Live audio analysis loop (25fps for mobile performance)
       const frequencyData = new Uint8Array(analyser.frequencyBinCount);
       const animate = () => {
         if (isShuttingDown.current || !currentTtsSourceRef.current) return;
@@ -170,12 +170,12 @@ export const ConversationOverlay: React.FC = () => {
         // Send live data to bars
         directBarsAnimationService.notifyBars(barLevels);
         
-        // Continue animation loop
-        requestAnimationFrame(animate);
+        // 25fps = 40ms intervals for mobile performance
+        setTimeout(animate, 40);
       };
       
       // Start the real-time animation loop
-      requestAnimationFrame(animate);
+      setTimeout(animate, 40);
       
       // 🎯 STATE DRIVEN: Return to listening when done
       source.onended = () => {
