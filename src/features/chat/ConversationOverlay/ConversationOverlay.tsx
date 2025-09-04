@@ -263,11 +263,55 @@ export const ConversationOverlay: React.FC = () => {
       if (!connectionRef.current) {
         const connection = supabase.channel(`conversation:${chat_id}`);
         
-        // 🎯 DIRECT: WebSocket → Audio + Real-time Analysis
-        connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
-          if (payload.audioBytes) {
-            playAudioImmediately(payload.audioBytes, payload.text);
+        // 🎯 CHUNKED: Handle new chunked TTS events
+        let ttsChunks: { [key: string]: string } = {};
+        let ttsMetadata: any = null;
+        
+        connection.on('broadcast', { event: 'tts-start' }, ({ payload }) => {
+          console.log('[ConversationOverlay] 🎵 TTS started:', payload.id);
+          ttsMetadata = payload;
+          ttsChunks = {};
+        });
+        
+        connection.on('broadcast', { event: 'tts-chunk' }, ({ payload }) => {
+          if (payload.id && payload.data) {
+            ttsChunks[payload.index] = payload.data;
+            console.log(`[ConversationOverlay] 🎵 TTS chunk ${payload.index + 1}/${payload.total} received`);
           }
+        });
+        
+        connection.on('broadcast', { event: 'tts-end' }, ({ payload }) => {
+          if (payload.id && ttsMetadata && ttsMetadata.id === payload.id) {
+            // Reassemble all chunks in order
+            const totalChunks = payload.total;
+            let completeBase64 = '';
+            
+            for (let i = 0; i < totalChunks; i++) {
+              if (ttsChunks[i]) {
+                completeBase64 += ttsChunks[i];
+              } else {
+                console.error(`[ConversationOverlay] ❌ Missing chunk ${i}`);
+                return;
+              }
+            }
+            
+            console.log(`[ConversationOverlay] 🎵 TTS complete, ${completeBase64.length} chars base64`);
+            
+            // Convert base64 to Uint8Array for playAudioImmediately
+            const audioBytes = Uint8Array.from(atob(completeBase64), c => c.charCodeAt(0));
+            playAudioImmediately(audioBytes, ttsMetadata.text);
+            
+            // Cleanup
+            ttsChunks = {};
+            ttsMetadata = null;
+          }
+        });
+        
+        connection.on('broadcast', { event: 'tts-error' }, ({ payload }) => {
+          console.error('[ConversationOverlay] ❌ TTS error:', payload.error);
+          // Cleanup on error
+          ttsChunks = {};
+          ttsMetadata = null;
         });
         
         connection.subscribe();
