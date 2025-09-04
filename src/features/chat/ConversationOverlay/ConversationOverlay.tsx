@@ -157,7 +157,7 @@ export const ConversationOverlay: React.FC = () => {
         console.log(`[ConversationOverlay] 🎵 Using ${rmsValues.length} RMS values for speech-synced animation`);
         
         // Start animation immediately with first RMS value
-        const firstLevel = Math.max(0.1, Math.min(1.0, rmsValues[0] || 0.1));
+        const firstLevel = (rmsValues[0] ?? 0) / 255;
         directAudioAnimationService.notifyAudioLevel(firstLevel);
         
         // Play RMS values in sequence (speech-synced!)
@@ -168,7 +168,7 @@ export const ConversationOverlay: React.FC = () => {
           if (isShuttingDown.current || !currentTtsSourceRef.current) return;
           
           if (frameIndex < rmsValues.length) {
-            const level = Math.max(0.1, Math.min(1.0, rmsValues[frameIndex] || 0.1));
+            const level = (rmsValues[frameIndex] ?? 0) / 255;
             directAudioAnimationService.notifyAudioLevel(level);
             frameIndex++;
             setTimeout(animateFrame, frameMs);
