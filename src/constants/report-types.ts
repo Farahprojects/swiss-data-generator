@@ -1,5 +1,5 @@
 import { ReportTypeOption } from '@/types/public-report';
-import { User, Heart, Target, Brain, Briefcase, Camera } from 'lucide-react';
+import { User, Heart, Target, Brain, Briefcase, Camera, Users } from 'lucide-react';
 
 export const reportTypes: ReportTypeOption[] = [
   { value: 'sync', label: 'Compatibility Report' },
@@ -33,7 +33,7 @@ export const reportCategories = [
     value: 'compatibility',
     title: 'Compatibility',
     description: 'Discover relationship dynamics & unlock deeper connections',
-    icon: Heart,
+    icon: Users,
     reportType: 'sync',
   },
   {
@@ -73,7 +73,7 @@ export const detailedRelationshipTypes = [
     value: 'personal',
     title: 'Personal',
     description: 'Romantic chemistry and build deeper personal bonds',
-    icon: Heart,
+    icon: Users,
   },
   {
     value: 'professional',
@@ -96,7 +96,7 @@ export const astroRequestCategories = [
     value: 'sync',
     title: 'Compatibility',
     description: 'Synastry + composite + transits',
-    icon: Heart,
+    icon: Users,
     request: 'sync',
   },
 ];

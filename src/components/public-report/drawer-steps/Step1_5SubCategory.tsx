@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Controller, UseFormSetValue } from 'react-hook-form';
 import { motion } from 'framer-motion';
-import { User, Briefcase, Heart, Target, Calendar, Brain, ArrowLeft } from 'lucide-react';
+import { User, Briefcase, Heart, Target, Calendar, Brain, ArrowLeft, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ReportFormData } from '@/types/public-report';
 import { usePriceFetch } from '@/hooks/usePriceFetch';
@@ -44,7 +44,7 @@ const subCategoryOptions = {
       value: 'personal',
       title: 'Personal',
       description: 'Romantic chemistry and build deeper personal bonds',
-      icon: Heart,
+      icon: Users,
       relationshipType: 'personal',
     },
     {
