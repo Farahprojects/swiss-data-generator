@@ -447,7 +447,7 @@ class ChatController {
       this.turnRestartTimeout = null;
     }
     
-    conversationMicrophoneService.forceCleanup();
+    chatTextMicrophoneService.forceCleanup();
     this.resetTurn(true);
   }
 
@@ -464,7 +464,7 @@ class ChatController {
       this.resetTimeout = null;
     }
     
-    conversationMicrophoneService.forceCleanup();
+    chatTextMicrophoneService.forceCleanup();
     this.conversationServiceInitialized = false;
     this.isUnlocked = false; // Lock on reset
     this.isTurnActive = false;
@@ -489,7 +489,7 @@ class ChatController {
     }
     
     // Stop any active conversation
-    conversationMicrophoneService.forceCleanup();
+    chatTextMicrophoneService.forceCleanup();
     
     // Clean up realtime subscription
     this.cleanupRealtimeSubscription();

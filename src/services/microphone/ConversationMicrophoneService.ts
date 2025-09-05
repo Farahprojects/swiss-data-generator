@@ -165,11 +165,10 @@ export class ConversationMicrophoneServiceClass {
   /**
    * Stop recording
    */
-  private async stopRecording(expectedTurnId: string): Promise<Blob | null> {
-    if (this.currentTurnId !== expectedTurnId) {
+  public async stopRecording(expectedTurnId?: string): Promise<Blob | null> {
+    if (expectedTurnId && this.currentTurnId !== expectedTurnId) {
       return null;
     }
-
     if (!this.isRecording || !this.rollingBufferVAD) {
       return null;
     }
@@ -257,6 +256,13 @@ export class ConversationMicrophoneServiceClass {
   subscribe(listener: () => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
+  }
+
+  /**
+   * Cancel recording
+   */
+  cancelRecording(): void {
+    this.forceCleanup();
   }
 
   /**

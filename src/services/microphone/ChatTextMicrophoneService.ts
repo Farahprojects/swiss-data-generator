@@ -95,12 +95,15 @@ class ChatTextMicrophoneServiceClass {
         onVoiceStart: () => {
           this.log('🎤 Rolling buffer VAD: Voice activity confirmed');
         },
-        onSilenceDetected: () => {
+        onSilenceDetected: async () => {
           this.log('🧘‍♂️ Rolling buffer VAD: Silence detected - stopping recording');
           if (this.options.onSilenceDetected) {
             this.options.onSilenceDetected();
           }
-          this.stopRecording();
+          const audioBlob = await this.stopRecording();
+          if (audioBlob) {
+            await this.processAudio(audioBlob);
+          }
         },
         onError: (error: Error) => {
           this.error('❌ Rolling buffer VAD error:', error);
@@ -113,9 +116,12 @@ class ChatTextMicrophoneServiceClass {
       await this.rollingBufferVAD.start(this.stream, this.audioContext, this.analyser);
       
       // Set 45-second timeout to automatically stop recording
-      this.recordingTimeout = setTimeout(() => {
+      this.recordingTimeout = setTimeout(async () => {
         this.log('⏰ 45-second recording timeout reached - stopping automatically');
-        this.stopRecording();
+        const audioBlob = await this.stopRecording();
+        if (audioBlob) {
+          await this.processAudio(audioBlob);
+        }
       }, 45000);
       
       this.notifyListeners();
@@ -132,7 +138,7 @@ class ChatTextMicrophoneServiceClass {
   /**
    * STOP RECORDING - Clean domain-specific stop
    */
-  async stopRecording(): Promise<void> {
+  async stopRecording(): Promise<Blob | null> {
     if (!this.isRecording) return;
 
     this.log('🛑 Stopping recording');
@@ -160,13 +166,6 @@ class ChatTextMicrophoneServiceClass {
     // Notify listeners after isRecording becomes false
     this.notifyListeners();
 
-    // Process audio if we have a recording
-    if (finalBlob) {
-      await this.processAudio(finalBlob);
-    } else {
-      this.log('📵 No audio recorded');
-    }
-
     // ✅ VAD is self-cleaning - no need to call cleanup() here
     // The VAD.stop() method already calls cleanup() internally
     if (this.rollingBufferVAD) {
@@ -181,6 +180,8 @@ class ChatTextMicrophoneServiceClass {
     
     // Keep AudioContext and stream alive for next speech
     // Only call full cleanup() when the service is completely done
+    
+    return finalBlob;
   }
 
   /**
