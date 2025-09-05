@@ -1,7 +1,7 @@
 // src/features/chat/ChatController.ts
 import { supabase } from '@/integrations/supabase/client';
 import { useChatStore } from '@/core/store';
-import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
+import { chatTextMicrophoneService } from '@/services/microphone/ChatTextMicrophoneService';
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
 
@@ -250,7 +250,7 @@ class ChatController {
   private initializeConversationService() {
     if (this.conversationServiceInitialized) return;
     
-    conversationMicrophoneService.initialize({
+    chatTextMicrophoneService.initialize({
       onSilenceDetected: () => this.endTurn(),
       silenceTimeoutMs: 1500 // 1.5 seconds for responsive conversation
     });
@@ -299,7 +299,7 @@ class ChatController {
 
     
     try {
-      const ok = await conversationMicrophoneService.startRecording();
+      const ok = await chatTextMicrophoneService.startRecording();
       if (!ok) {
         // Fail fast if microphone doesn't start
         useChatStore.getState().setStatus('idle');
@@ -342,7 +342,7 @@ class ChatController {
 
     
     try {
-      const audioBlob = await conversationMicrophoneService.stopRecording();
+      const audioBlob = await chatTextMicrophoneService.stopRecording();
       
       // ✅ ADDED: Validate audio blob before processing
       if (!audioBlob || audioBlob.size === 0) {
@@ -412,17 +412,17 @@ class ChatController {
     
     if (endConversationFlow) {
       // End conversation completely - full cleanup
-      conversationMicrophoneService.forceCleanup();
+      chatTextMicrophoneService.forceCleanup();
     } else {
       // Turn transition - stop current recording and VAD, but keep stream for next turn
-      if (conversationMicrophoneService.getState().isRecording) {
-        conversationMicrophoneService.stopRecording().catch((error) => {
+      if (chatTextMicrophoneService.getState().isRecording) {
+        chatTextMicrophoneService.stopRecording().catch((error) => {
           // Ignore errors during graceful stop
           console.warn('[ChatController] Graceful stop error (ignored):', error);
         });
       } else {
         // Even if not recording, we need to stop any running VAD loop
-        conversationMicrophoneService.forceCleanup();
+        chatTextMicrophoneService.forceCleanup();
       }
     }
     
