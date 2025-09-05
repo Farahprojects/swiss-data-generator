@@ -18,6 +18,7 @@ export interface RollingBufferVADOptions {
   onVoiceStart?: () => void;     // Called when voice activity starts
   onSilenceDetected?: () => void; // Called when silence timeout reached
   onError?: (error: Error) => void; // Called on errors
+  detectionOnly?: boolean;       // If true, don't own MediaRecorder or chunks; act as pure detector
 }
 
 export interface RollingBufferVADState {
@@ -59,6 +60,7 @@ export class RollingBufferVAD {
       onVoiceStart: () => {},
       onSilenceDetected: () => {},
       onError: () => {},
+      detectionOnly: false,
       ...options
     };
   }
@@ -85,36 +87,38 @@ export class RollingBufferVAD {
       voiceStartTime: null,
       silenceStartTime: null
     };
+    // In detectionOnly mode we don't own a MediaRecorder; otherwise set one up for rolling buffer
+    if (!this.options.detectionOnly) {
+      // Create MediaRecorder with small time slices for rolling buffer
+      // Prefer opus-in-webm for STT; fall back to browser default if unsupported
+      let options: MediaRecorderOptions = { audioBitsPerSecond: 64000 };
+      try {
+        const preferred = 'audio/webm;codecs=opus';
+        const isSupported = (typeof MediaRecorder !== 'undefined' &&
+          // @ts-ignore
+          typeof MediaRecorder.isTypeSupported === 'function' && MediaRecorder.isTypeSupported(preferred));
+        if (isSupported) {
+          options.mimeType = preferred;
+        }
+      } catch {}
 
-    // Create MediaRecorder with small time slices for rolling buffer
-    // Prefer opus-in-webm for STT; fall back to browser default if unsupported
-    let options: MediaRecorderOptions = { audioBitsPerSecond: 64000 };
-    try {
-      const preferred = 'audio/webm;codecs=opus';
-      const isSupported = (typeof MediaRecorder !== 'undefined' &&
-        // @ts-ignore
-        typeof MediaRecorder.isTypeSupported === 'function' && MediaRecorder.isTypeSupported(preferred));
-      if (isSupported) {
-        options.mimeType = preferred;
-      }
-    } catch {}
+      this.mediaRecorder = new MediaRecorder(stream, options);
 
-    this.mediaRecorder = new MediaRecorder(stream, options);
+      // Handle data chunks for rolling buffer
+      this.mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          this.handleAudioChunk(event.data);
+        }
+      };
 
-    // Handle data chunks for rolling buffer
-    this.mediaRecorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        this.handleAudioChunk(event.data);
-      }
-    };
+      this.mediaRecorder.onerror = (event) => {
+        this.error('❌ MediaRecorder error:', event);
+        this.options.onError(new Error('Recording failed'));
+      };
 
-    this.mediaRecorder.onerror = (event) => {
-      this.error('❌ MediaRecorder error:', event);
-      this.options.onError(new Error('Recording failed'));
-    };
-
-    // Start recording with small time slices
-    this.mediaRecorder.start(this.options.chunkDurationMs);
+      // Start recording with small time slices
+      this.mediaRecorder.start(this.options.chunkDurationMs);
+    }
     
     // Start VAD monitoring
     this.startVADMonitoring();
@@ -228,12 +232,14 @@ export class RollingBufferVAD {
    */
   stop(): Promise<Blob | null> {
     return new Promise((resolve) => {
-      if (!this.mediaRecorder) {
+      this.monitoringRef.current = false;
+
+      if (this.options.detectionOnly || !this.mediaRecorder) {
+        // Detector-only mode: just cleanup and return null (no ownership of chunks)
+        this.cleanup();
         resolve(null);
         return;
       }
-
-      this.monitoringRef.current = false;
 
       this.mediaRecorder.onstop = () => {
         const finalBlob = this.createFinalBlob();
