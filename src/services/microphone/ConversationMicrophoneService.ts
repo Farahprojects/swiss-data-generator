@@ -80,10 +80,10 @@ export class ConversationMicrophoneServiceClass {
       return false;
     }
     
-    // 🔄 RESUME LOGIC: If paused (after TTS), resume the audio chain first
+    // 🔄 UNPAUSE: If paused (after TTS), unpause first (no control request)
     if (this.isPaused) {
-      this.log('🎤 Microphone is paused, resuming audio chain before starting recording');
-      await this.internalResumeAudioChain();
+      this.log('🎤 Microphone is paused, unpausing before starting recording');
+      await this.unpause(false);
     }
     
     // Defensively reset stale state flags
@@ -470,114 +470,66 @@ export class ConversationMicrophoneServiceClass {
   }
 
   /**
-   * SUSPEND FOR PLAYBACK - Stop mic stream during TTS playback
+   * PAUSE - Stop everything for TTS playback
    */
-  suspendForPlayback(): void {
-    this.log('🔇 Suspending microphone for TTS playback');
+  pause(): void {
+    this.log('🔇 Pausing microphone for TTS playback');
     
     // 🎵 RELEASE AUDIO CONTROL - Allow TTS to take over
     audioArbitrator.releaseControl('microphone');
     
-    // ✅ PROPER PAUSE: Stop the VAD first to prevent processing muted frames
+    // Stop VAD
     if (this.rollingBufferVAD) {
-      this.rollingBufferVAD.stop().catch(() => {
-        // Ignore errors during pause - VAD will be restarted on resume
-      });
+      this.rollingBufferVAD.stop().catch(() => {});
       this.rollingBufferVAD = null;
-      this.log('🔇 VAD stopped for TTS playback');
     }
     
-    // ✅ PROPER PAUSE: Stop the microphone stream completely
+    // Stop mic stream
     if (this.stream) {
-      this.stream.getAudioTracks().forEach(track => {
-        track.stop(); // Stop the track completely, don't just disable
-        this.log('🔇 Stopped audio track for playback');
-      });
+      this.stream.getAudioTracks().forEach(track => track.stop());
       this.stream = null;
     }
     
-    // ✅ PROPER PAUSE: Close AudioContext to free up all audio resources
+    // Close AudioContext
     if (this.audioContext && this.audioContext.state !== 'closed') {
-      this.audioContext.close().then(() => {
-        this.log('🔇 AudioContext closed for playback');
-      }).catch((error) => {
-        this.error('❌ Failed to close AudioContext:', error);
-      });
+      this.audioContext.close().catch(() => {});
       this.audioContext = null;
     }
 
-    // Mark paused and notify listeners
     this.isPaused = true;
     this.notifyListeners();
   }
 
   /**
-   * RESUME AFTER PLAYBACK - Restart mic stream after TTS playback
+   * UNPAUSE - Restart everything after TTS playback
    */
-  async resumeAfterPlayback(): Promise<void> {
-    this.log('🔊 Resuming microphone after TTS playback');
+  async unpause(requestControl: boolean = true): Promise<void> {
+    this.log('🔊 Unpausing microphone after TTS playback');
     
-    // 🎵 REQUEST AUDIO CONTROL - Take back control from TTS
-    if (!audioArbitrator.requestControl('microphone')) {
-      this.error('❌ Cannot resume microphone - TTS still active');
+    // 🎵 REQUEST AUDIO CONTROL - Take back control from TTS (unless called internally)
+    if (requestControl && !audioArbitrator.requestControl('microphone')) {
+      this.error('❌ Cannot unpause microphone - TTS still active');
       return;
     }
     
-    // ✅ PROPER RESUME: Recreate the microphone stream from cached stream
+    // Recreate mic stream
     if (this.cachedStream) {
-      // Clone a fresh audio track from the cached stream
       const originalTrack = this.cachedStream.getAudioTracks()[0];
       const clonedTrack = originalTrack.clone();
       this.stream = new MediaStream([clonedTrack]);
-      this.log('🔊 Recreated microphone stream from cached stream');
     } else {
-      this.error('❌ No cached stream available for resume');
+      this.error('❌ No cached stream available for unpause');
       return;
     }
     
-    // ✅ PROPER RESUME: Create fresh AudioContext and analysis chain
+    // Recreate AudioContext and analysis chain
     this.audioContext = new AudioContext({ sampleRate: 16000 });
     this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
     this.analyser = this.audioContext.createAnalyser();
     this.analyser.fftSize = 1024;
     this.analyser.smoothingTimeConstant = 0.8;
     this.mediaStreamSource.connect(this.analyser);
-    this.log('🔊 Recreated audio analysis chain');
 
-    // Clear paused state and notify listeners
-    this.isPaused = false;
-    this.notifyListeners();
-  }
-
-  /**
-   * INTERNAL RESUME AUDIO CHAIN - Resume audio chain without requesting control
-   * Used internally by startRecording when microphone is paused
-   */
-  private async internalResumeAudioChain(): Promise<void> {
-    this.log('🔊 Internal resume of audio chain (no control request)');
-    
-    // ✅ PROPER RESUME: Recreate the microphone stream from cached stream
-    if (this.cachedStream) {
-      // Clone a fresh audio track from the cached stream
-      const originalTrack = this.cachedStream.getAudioTracks()[0];
-      const clonedTrack = originalTrack.clone();
-      this.stream = new MediaStream([clonedTrack]);
-      this.log('🔊 Recreated microphone stream from cached stream');
-    } else {
-      this.error('❌ No cached stream available for internal resume');
-      return;
-    }
-    
-    // ✅ PROPER RESUME: Create fresh AudioContext and analysis chain
-    this.audioContext = new AudioContext({ sampleRate: 16000 });
-    this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
-    this.analyser = this.audioContext.createAnalyser();
-    this.analyser.fftSize = 1024;
-    this.analyser.smoothingTimeConstant = 0.8;
-    this.mediaStreamSource.connect(this.analyser);
-    this.log('🔊 Recreated audio analysis chain');
-
-    // Clear paused state and notify listeners
     this.isPaused = false;
     this.notifyListeners();
   }

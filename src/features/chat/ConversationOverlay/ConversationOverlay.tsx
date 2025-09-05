@@ -96,8 +96,8 @@ export const ConversationOverlay: React.FC = () => {
       // Set replying state
       setState('replying');
 
-      // Suspend mic capture during playback
-      try { conversationMicrophoneService.suspendForPlayback(); } catch {}
+      // Pause mic during playback
+      try { conversationMicrophoneService.pause(); } catch {}
 
       // Pause WebSocket during playback
       if (connectionRef.current && connectionRef.current.state === 'SUBSCRIBED') {
