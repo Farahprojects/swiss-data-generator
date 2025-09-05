@@ -73,11 +73,13 @@ export const ConversationOverlay: React.FC = () => {
           connectionRef.current.subscribe();
         }
 
-        // Unmute microphone for next turn
+        // Unmute microphone and start recording for next turn
         if (!isShuttingDown.current) {
-          setTimeout(() => {
+          setTimeout(async () => {
             if (!isShuttingDown.current) {
               conversationMicrophoneService.unmute();
+              // Start recording to actually begin listening
+              await conversationMicrophoneService.startRecording();
             }
           }, 200);
         }
@@ -144,8 +146,9 @@ export const ConversationOverlay: React.FC = () => {
       
       if (!transcript) {
         setState('listening');
-        // Unmute microphone for next turn even if no transcript
+        // Unmute microphone and start recording for next turn even if no transcript
         conversationMicrophoneService.unmute();
+        await conversationMicrophoneService.startRecording();
         return;
       }
       
@@ -160,8 +163,9 @@ export const ConversationOverlay: React.FC = () => {
     } catch (error) {
       console.error('[ConversationOverlay] Processing failed:', error);
       setState('connecting');
-      // Unmute microphone even on error to allow retry
+      // Unmute microphone and start recording even on error to allow retry
       conversationMicrophoneService.unmute();
+      await conversationMicrophoneService.startRecording();
     } finally {
       isProcessingRef.current = false;
     }
