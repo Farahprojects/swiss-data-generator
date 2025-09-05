@@ -199,11 +199,12 @@ export const ConversationOverlay: React.FC = () => {
           
           setState('listening');
          
-         // 🔊 Resume microphone capture after playback ends
+         // 🔄 Reset microphone service for next turn (preserves stream/AudioContext)
          try {
-           conversationMicrophoneService.resumeAfterPlayback();
+           conversationMicrophoneService.resetForNextTurn();
+           console.log('[ConversationOverlay] 🔄 Microphone service reset for next turn');
          } catch (e) {
-           console.warn('[ConversationOverlay] Could not resume mic after playback', e);
+           console.warn('[ConversationOverlay] Could not reset microphone service:', e);
          }
          
          // 🌐 RESUME: Resume WebSocket after TTS playback ends
