@@ -62,10 +62,6 @@ export class WebWorkerVAD {
   async start(stream: MediaStream): Promise<void> {
     this.log('🎯 Starting Web Worker VAD');
     
-    // Check stream
-    console.log('[WebWorkerVAD] Stream tracks:', stream.getAudioTracks().length);
-    console.log('[WebWorkerVAD] Track enabled:', stream.getAudioTracks()[0]?.enabled);
-    console.log('[WebWorkerVAD] Track readyState:', stream.getAudioTracks()[0]?.readyState);
     
     // Create AudioContext with lower sample rate for VAD
     this.audioContext = new AudioContext({ 
@@ -81,14 +77,9 @@ export class WebWorkerVAD {
     const source = this.audioContext.createMediaStreamSource(stream);
     source.connect(this.analyser);
     
-    console.log('[WebWorkerVAD] AudioContext state:', this.audioContext.state);
-    console.log('[WebWorkerVAD] Analyser connected:', !!this.analyser);
-    
     // Ensure AudioContext is running
     if (this.audioContext.state === 'suspended') {
-      console.log('[WebWorkerVAD] Resuming suspended AudioContext...');
       await this.audioContext.resume();
-      console.log('[WebWorkerVAD] AudioContext state after resume:', this.audioContext.state);
     }
     
     // Create Web Worker
@@ -133,15 +124,6 @@ export class WebWorkerVAD {
     // Start recording with small chunks
     this.mediaRecorder.start(100); // 100ms chunks
     
-    // Test if we can read audio data immediately
-    const testArray = new Uint8Array(this.analyser.fftSize);
-    this.analyser.getByteTimeDomainData(testArray);
-    let testSum = 0;
-    for (let i = 0; i < testArray.length; i++) {
-      testSum += Math.abs(testArray[i] - 128);
-    }
-    const testRMS = testSum / testArray.length;
-    console.log('[WebWorkerVAD] Initial audio test RMS:', testRMS);
     
     // Set active state BEFORE starting monitoring
     this.isActive = true;
@@ -204,7 +186,6 @@ export class WebWorkerVAD {
     
     const checkVAD = () => {
       if (!this.isActive || !this.analyser || !this.worker) {
-        console.log('[WebWorkerVAD] checkVAD stopped - isActive:', this.isActive, 'analyser:', !!this.analyser, 'worker:', !!this.worker);
         return;
       }
       
@@ -219,12 +200,6 @@ export class WebWorkerVAD {
       }
       const rms = Math.sqrt(sumSquares / bufferLength);
       
-      // Debug logging - show first few iterations
-      if (rms > 0.001) {
-        console.log('[WebWorkerVAD] Audio data RMS:', rms);
-      } else if (Math.random() < 0.01) { // Log occasionally even with no audio
-        console.log('[WebWorkerVAD] Audio data RMS (no audio):', rms);
-      }
       
       // Send to worker for processing
       this.worker.postMessage({

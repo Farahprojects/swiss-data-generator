@@ -30,7 +30,6 @@ export const useConversationRealtimeAudioLevel = ({
   const initializeAudioContext = useCallback(async () => {
     // WebWorkerVAD handles audio level detection internally
     // We just need to start polling the service's audio level
-    console.log('[useConversationRealtimeAudioLevel] ✅ Initialized with WebWorkerVAD');
   }, []);
 
   // 🎵 Cleanup (no AudioContext to clean up since we reuse the service's)
@@ -65,11 +64,6 @@ export const useConversationRealtimeAudioLevel = ({
       // Apply smoothing to prevent jittery animations
       smoothedLevelRef.current = smoothedLevelRef.current * smoothingFactor + currentLevel * (1 - smoothingFactor);
 
-      // Debug logging
-      if (currentLevel > 0.001) {
-        console.log('[useConversationRealtimeAudioLevel] Audio level:', currentLevel, 'smoothed:', smoothedLevelRef.current);
-      }
-
     } catch (error) {
       console.error('[useConversationRealtimeAudioLevel] ❌ Error getting audio level:', error);
     }
@@ -88,7 +82,6 @@ export const useConversationRealtimeAudioLevel = ({
     const handleMicStateChange = () => {
       const micState = conversationMicrophoneService.getState();
       // Enabled whenever VAD is active (not just when recording)
-      console.log('[useConversationRealtimeAudioLevel] Mic state changed:', micState);
       setIsEnabled(micState.hasVAD && micState.hasStream);
     };
 

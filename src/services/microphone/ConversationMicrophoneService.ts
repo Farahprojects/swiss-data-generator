@@ -110,9 +110,6 @@ export class ConversationMicrophoneServiceClass {
           },
           onAudioLevel: (level: number) => {
             this.audioLevel = level;
-            if (level > 0.001) {
-              console.log('[ConversationMic] Audio level:', level);
-            }
             this.notifyListeners(); // Notify React components of audio level changes
           },
           onError: (error: Error) => {
@@ -124,9 +121,7 @@ export class ConversationMicrophoneServiceClass {
         });
 
         // Start continuous VAD
-        console.log('[ConversationMic] Starting WebWorkerVAD...');
         await this.webWorkerVAD.start(this.cachedStream);
-        console.log('[ConversationMic] WebWorkerVAD started successfully');
       }
 
       audioArbitrator.setMicrophoneState('active');
