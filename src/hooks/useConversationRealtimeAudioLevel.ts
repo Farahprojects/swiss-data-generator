@@ -1,7 +1,7 @@
 /**
  * 🎵 CONVERSATION REALTIME AUDIO LEVEL HOOK
  * 
- * Custom hook that provides real-time audio level for conversation mode.
+ * Auto-attaches when microphone starts recording, auto-detaches when stops.
  * Uses the same Web Audio API + AnalyserNode approach as the main mic button flow.
  * Updates React state at a reasonable rate (not per frame) for smooth animation.
  */
@@ -10,17 +10,16 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
 
 interface UseConversationRealtimeAudioLevelOptions {
-  enabled: boolean;
   updateIntervalMs?: number; // How often to update React state (default: 50ms = 20fps)
   smoothingFactor?: number;
 }
 
 export const useConversationRealtimeAudioLevel = ({
-  enabled,
   updateIntervalMs = 50, // 20fps for React state updates
   smoothingFactor = 0.8
-}: UseConversationRealtimeAudioLevelOptions) => {
+}: UseConversationRealtimeAudioLevelOptions = {}) => {
   const [audioLevel, setAudioLevel] = useState<number>(0);
+  const [isEnabled, setIsEnabled] = useState<boolean>(false);
   
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -76,7 +75,7 @@ export const useConversationRealtimeAudioLevel = ({
 
   // 🎵 Real-time audio level detection loop
   const updateAudioLevel = useCallback(() => {
-    if (!enabled || !analyserRef.current) {
+    if (!isEnabled || !analyserRef.current) {
       animationFrameRef.current = null;
       return;
     }
@@ -104,16 +103,32 @@ export const useConversationRealtimeAudioLevel = ({
 
     // Continue the loop
     animationFrameRef.current = requestAnimationFrame(updateAudioLevel);
-  }, [enabled, smoothingFactor]);
+  }, [isEnabled, smoothingFactor]);
 
   // 🎵 Update React state at reasonable interval
   const updateReactState = useCallback(() => {
     setAudioLevel(smoothedLevelRef.current);
   }, []);
 
+  // 🎵 Effect: Auto-attach/detach based on microphone service state
+  useEffect(() => {
+    const handleMicStateChange = () => {
+      const micState = conversationMicrophoneService.getState();
+      setIsEnabled(micState.isRecording);
+    };
+
+    // Subscribe to microphone service state changes
+    const unsubscribe = conversationMicrophoneService.subscribe(handleMicStateChange);
+    
+    // Initialize with current state
+    handleMicStateChange();
+
+    return unsubscribe;
+  }, []);
+
   // 🎵 Effect: Initialize when enabled
   useEffect(() => {
-    if (enabled) {
+    if (isEnabled) {
       initializeAudioContext();
     } else {
       cleanupAudioContext();
@@ -121,13 +136,13 @@ export const useConversationRealtimeAudioLevel = ({
     }
 
     return cleanupAudioContext;
-  }, [enabled, initializeAudioContext, cleanupAudioContext]);
+  }, [isEnabled, initializeAudioContext, cleanupAudioContext]);
 
   // 🎵 Effect: Start/stop audio level detection
   useEffect(() => {
-    if (enabled && analyserRef.current && !animationFrameRef.current) {
+    if (isEnabled && analyserRef.current && !animationFrameRef.current) {
       updateAudioLevel();
-    } else if (!enabled && animationFrameRef.current) {
+    } else if (!isEnabled && animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
     }
@@ -138,13 +153,13 @@ export const useConversationRealtimeAudioLevel = ({
         animationFrameRef.current = null;
       }
     };
-  }, [enabled, updateAudioLevel]);
+  }, [isEnabled, updateAudioLevel]);
 
   // 🎵 Effect: Start/stop React state updates
   useEffect(() => {
-    if (enabled && !intervalRef.current) {
+    if (isEnabled && !intervalRef.current) {
       intervalRef.current = window.setInterval(updateReactState, updateIntervalMs);
-    } else if (!enabled && intervalRef.current) {
+    } else if (!isEnabled && intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
@@ -155,7 +170,7 @@ export const useConversationRealtimeAudioLevel = ({
         intervalRef.current = null;
       }
     };
-  }, [enabled, updateIntervalMs, updateReactState]);
+  }, [isEnabled, updateIntervalMs, updateReactState]);
 
   return audioLevel;
 };

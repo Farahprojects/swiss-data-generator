@@ -34,9 +34,8 @@ export const ConversationOverlay: React.FC = () => {
   // 🎯 PRIMARY: State machine drives everything
   const [state, setState] = useState<ConversationState>('connecting');
   
-  // 🎵 REALTIME AUDIO LEVEL - Direct MediaStream analysis (mobile-friendly)
+  // 🎵 REALTIME AUDIO LEVEL - Auto-attaches to microphone lifecycle
   const audioLevel = useConversationRealtimeAudioLevel({
-    enabled: state === 'listening', // Only enable when actively listening
     updateIntervalMs: 50, // 20fps for React state updates (smooth but not excessive)
     smoothingFactor: 0.8, // Smooth animations
   });

@@ -236,6 +236,9 @@ export class ConversationMicrophoneServiceClass {
     // Cleanup should only be called on cancel/reset/overlay close
     this.log('🎤 Stream and analyser kept alive for next turn');
     
+    // Notify listeners after isRecording becomes false
+    this.notifyListeners();
+    
     return blob;
   }
 
