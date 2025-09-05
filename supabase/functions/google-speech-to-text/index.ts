@@ -26,7 +26,9 @@ serve(async (req) => {
       audioSize: audioBuffer.length,
       mode: meta.mode,
       chat_id: meta.chat_id,
-      config: config
+      config: config,
+      firstBytes: Array.from(audioBuffer.slice(0, 16)).map(b => b.toString(16).padStart(2, '0')).join(' '),
+      lastBytes: Array.from(audioBuffer.slice(-16)).map(b => b.toString(16).padStart(2, '0')).join(' ')
     });
     
     // Validate audio data
@@ -90,10 +92,13 @@ serve(async (req) => {
     const result = await response.json();
     transcript = result.results?.[0]?.alternatives?.[0]?.transcript || '';
 
-    console.log('[google-stt] 📤 SENDING:', {
+    console.log('[google-stt] 📤 GOOGLE API RESPONSE:', {
+      fullResponse: result,
       transcriptLength: transcript.length,
       transcript: transcript.substring(0, 100) + (transcript.length > 100 ? '...' : ''),
-      mode: meta.mode
+      mode: meta.mode,
+      hasResults: !!result.results,
+      resultsLength: result.results?.length || 0
     });
 
     // Handle empty transcription results

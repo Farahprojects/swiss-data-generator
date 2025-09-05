@@ -27,6 +27,21 @@ class SttService {
       throw new Error(`Audio blob too small (${audioBlob.size} bytes). Expected at least 1000 bytes.`);
     }
     
+    // CRITICAL: Log detailed payload being sent to Google STT
+    console.log('[STT] 📤 SENDING TO GOOGLE STT:', {
+      blobSize: audioBlob.size,
+      blobType: audioBlob.type,
+      blobConstructor: audioBlob.constructor.name,
+      mode,
+      chat_id,
+      config: {
+        encoding: 'WEBM_OPUS',
+        languageCode: 'en-US',
+        enableAutomaticPunctuation: true,
+        model: 'latest_short'
+      }
+    });
+
     // Send raw binary audio directly, with config in headers. This mirrors the
     // ChatTextMicrophoneService and aligns both STT pathways.
     const { data, error } = await supabase.functions.invoke('google-speech-to-text', {
