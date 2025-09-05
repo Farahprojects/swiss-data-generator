@@ -37,8 +37,9 @@ export class WebWorkerVAD {
     isActive: false
   };
   
-  // Audio chunks for final blob
-  private audioChunks: Blob[] = [];
+  // Audio chunks for current turn
+  private currentTurnChunks: Blob[] = [];
+  private allChunks: Blob[] = [];
 
   constructor(options: WebWorkerVADOptions = {}) {
     this.options = {
@@ -199,13 +200,17 @@ export class WebWorkerVAD {
    * HANDLE AUDIO CHUNK - Store for final blob creation
    */
   private handleAudioChunk(chunk: Blob): void {
+    // Always store all chunks for continuous recording
+    this.allChunks.push(chunk);
+    
+    // Store current turn chunks when recording
     if (this.state.isRecording) {
-      this.audioChunks.push(chunk);
+      this.currentTurnChunks.push(chunk);
     }
   }
 
   /**
-   * STOP - Stop recording and return final blob
+   * STOP - Get current recording blob but continue VAD operation
    */
   stop(): Promise<Blob | null> {
     return new Promise((resolve) => {
@@ -214,42 +219,31 @@ export class WebWorkerVAD {
         return;
       }
 
-      this.isActive = false;
-      this.state.isActive = false;
-      
-      // Stop worker
+      // Reset worker state for next recording
       if (this.worker) {
-        this.worker.postMessage({ type: 'stop' });
+        this.worker.postMessage({ type: 'reset' });
       }
 
-      this.mediaRecorder.onstop = () => {
-        const finalBlob = this.createFinalBlob();
-        resolve(finalBlob);
-      };
-
-      if (this.mediaRecorder.state !== 'inactive') {
-        this.mediaRecorder.stop();
-      } else {
-        const finalBlob = this.createFinalBlob();
-        resolve(finalBlob);
-      }
+      // Get current blob without stopping MediaRecorder
+      const finalBlob = this.createFinalBlob();
+      resolve(finalBlob);
     });
   }
 
   /**
-   * CREATE FINAL BLOB - Combine recorded chunks
+   * CREATE FINAL BLOB - Combine current turn chunks
    */
   private createFinalBlob(): Blob | null {
-    if (this.audioChunks.length === 0) {
-      this.log('⚠️ No audio chunks recorded');
+    if (this.currentTurnChunks.length === 0) {
+      this.log('⚠️ No audio chunks recorded for this turn');
       return null;
     }
 
-    const finalBlob = new Blob(this.audioChunks, { type: 'audio/webm;codecs=opus' });
+    const finalBlob = new Blob(this.currentTurnChunks, { type: 'audio/webm;codecs=opus' });
     this.log(`✅ Final blob created: ${finalBlob.size} bytes`);
     
-    // Clear chunks for next recording
-    this.audioChunks = [];
+    // Clear current turn chunks for next recording
+    this.currentTurnChunks = [];
     
     return finalBlob;
   }
@@ -290,7 +284,8 @@ export class WebWorkerVAD {
     this.mediaRecorder = null;
     this.audioContext = null;
     this.analyser = null;
-    this.audioChunks = [];
+    this.currentTurnChunks = [];
+    this.allChunks = [];
     
     this.state = {
       isRecording: false,

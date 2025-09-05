@@ -20,7 +20,6 @@ export class ConversationMicrophoneServiceClass {
   private cachedStream: MediaStream | null = null;
   private webWorkerVAD: WebWorkerVAD | null = null;
   private isRecording = false;
-  private isPaused = false;
   private audioLevel = 0;
   private currentTurnId: string | null = null;
   private options: ConversationMicrophoneOptions = {};
@@ -46,7 +45,7 @@ export class ConversationMicrophoneServiceClass {
   }
 
   /**
-   * Start recording
+   * Start recording - Creates continuous VAD that runs for entire conversation
    */
   public async startRecording(): Promise<boolean> {
     // Request audio control
@@ -99,38 +98,41 @@ export class ConversationMicrophoneServiceClass {
         return false;
       }
 
-      // Create Web Worker VAD for mobile-optimized performance
-      this.webWorkerVAD = new WebWorkerVAD({
-        voiceThreshold: 0.01,
-        silenceThreshold: 0.005,
-        silenceTimeoutMs: this.options.silenceTimeoutMs || 1500,
-        bufferWindowMs: 200,
-        sampleRate: 16000, // Lower sample rate for VAD analysis
-        onVoiceStart: () => {
-          // Voice detected
-        },
-        onSilenceDetected: () => {
-          if (this.currentTurnId === turnId) {
-            this.stopRecording(turnId);
+      // Create continuous VAD if not already created
+      if (!this.webWorkerVAD) {
+        this.webWorkerVAD = new WebWorkerVAD({
+          voiceThreshold: 0.01,
+          silenceThreshold: 0.005,
+          silenceTimeoutMs: this.options.silenceTimeoutMs || 1500,
+          bufferWindowMs: 200,
+          sampleRate: 16000, // Lower sample rate for VAD analysis
+          onVoiceStart: () => {
+            // Voice detected - start recording this turn
+            this.isRecording = true;
+            this.notifyListeners();
+          },
+          onSilenceDetected: () => {
+            // Silence detected - stop recording this turn
+            if (this.currentTurnId === turnId) {
+              this.stopRecording(turnId);
+            }
+          },
+          onAudioLevel: (level: number) => {
+            this.audioLevel = level;
+          },
+          onError: (error: Error) => {
+            console.error('[ConversationMic] VAD error:', error);
+            if (this.options.onError) {
+              this.options.onError(error);
+            }
           }
-        },
-        onAudioLevel: (level: number) => {
-          this.audioLevel = level;
-        },
-        onError: (error: Error) => {
-          console.error('[ConversationMic] VAD error:', error);
-          if (this.options.onError) {
-            this.options.onError(error);
-          }
-        }
-      });
+        });
 
-      this.isRecording = true;
+        // Start continuous VAD
+        await this.webWorkerVAD.start(this.stream);
+      }
+
       audioArbitrator.setMicrophoneState('active');
-
-      // Start Web Worker VAD
-      await this.webWorkerVAD.start(this.stream);
-
       this.notifyListeners();
       return true;
 
@@ -145,7 +147,7 @@ export class ConversationMicrophoneServiceClass {
   }
 
   /**
-   * Stop recording
+   * Stop recording - VAD continues running for next turn
    */
   public async stopRecording(expectedTurnId?: string): Promise<Blob | null> {
     if (expectedTurnId && this.currentTurnId !== expectedTurnId) {
@@ -156,17 +158,11 @@ export class ConversationMicrophoneServiceClass {
     }
 
     try {
-      // Stop VAD and get audio blob
+      // Get audio blob from VAD (VAD continues running)
       const audioBlob = await this.webWorkerVAD.stop();
       
-      // Clean up VAD after getting the blob to prevent race conditions
-      if (this.webWorkerVAD) {
-        this.webWorkerVAD.cleanup();
-        this.webWorkerVAD = null;
-      }
-
+      // Reset recording state but keep VAD running
       this.isRecording = false;
-      this.audioLevel = 0;
       this.currentTurnId = null;
 
       this.notifyListeners();
@@ -184,7 +180,7 @@ export class ConversationMicrophoneServiceClass {
   }
 
   /**
-   * Mute microphone during TTS playback
+   * Mute microphone during TTS playback - VAD naturally gets silence
    */
   mute(): void {
     if (this.stream) {
@@ -192,13 +188,12 @@ export class ConversationMicrophoneServiceClass {
         track.enabled = false;
       });
     }
-    this.isPaused = true;
     audioArbitrator.setMicrophoneState('muted');
     this.notifyListeners();
   }
 
   /**
-   * Unmute microphone after TTS playback
+   * Unmute microphone after TTS playback - VAD naturally gets voice again
    */
   unmute(): void {
     if (this.stream) {
@@ -206,7 +201,6 @@ export class ConversationMicrophoneServiceClass {
         track.enabled = true;
       });
     }
-    this.isPaused = false;
     
     // Request audio control again if we don't have it
     if (audioArbitrator.getCurrentSystem() === 'none') {
@@ -230,10 +224,9 @@ export class ConversationMicrophoneServiceClass {
   getState() {
     return {
       isRecording: this.isRecording,
-      isPaused: this.isPaused,
       audioLevel: this.audioLevel,
       hasStream: !!this.stream,
-      hasAnalyser: !!this.analyser
+      hasVAD: !!this.webWorkerVAD
     };
   }
 
