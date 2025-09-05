@@ -491,7 +491,41 @@ export class ConversationMicrophoneServiceClass {
   }
 
   /**
-   * PAUSE - Stop everything for TTS playback
+   * MUTE - Simply mute audio tracks during TTS playback
+   */
+  mute(): void {
+    this.log('🔇 Muting microphone for TTS playback');
+    
+    if (this.stream) {
+      this.stream.getAudioTracks().forEach(track => {
+        track.enabled = false;
+        this.log(`🔇 Muted track: ${track.kind}`);
+      });
+    }
+    
+    this.isPaused = true;
+    this.notifyListeners();
+  }
+
+  /**
+   * UNMUTE - Simply unmute audio tracks after TTS playback
+   */
+  unmute(): void {
+    this.log('🔊 Unmuting microphone after TTS playback');
+    
+    if (this.stream) {
+      this.stream.getAudioTracks().forEach(track => {
+        track.enabled = true;
+        this.log(`🔊 Unmuted track: ${track.kind}`);
+      });
+    }
+    
+    this.isPaused = false;
+    this.notifyListeners();
+  }
+
+  /**
+   * PAUSE - Stop everything for TTS playback (LEGACY - keeping for compatibility)
    */
   pause(): void {
     this.log('🔇 Pausing microphone for TTS playback');

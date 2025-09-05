@@ -96,8 +96,8 @@ export const ConversationOverlay: React.FC = () => {
       // Set replying state
       setState('replying');
 
-      // Pause mic during playback
-      try { conversationMicrophoneService.pause(); } catch {}
+      // Mute mic during playback (simple track.enabled = false)
+      try { conversationMicrophoneService.mute(); } catch {}
 
       // Pause WebSocket during playback
       if (connectionRef.current && connectionRef.current.state === 'SUBSCRIBED') {
@@ -115,20 +115,20 @@ export const ConversationOverlay: React.FC = () => {
           console.log('[ConversationOverlay] 🌐 WebSocket resumed after TTS playback');
         }
 
-        // Resume mic recording after a small buffer (just unpause, don't restart)
+        // Simply unmute the microphone for next turn (no complex pause/unpause)
         if (!isShuttingDown.current) {
-          setTimeout(async () => {
+          setTimeout(() => {
             if (!isShuttingDown.current) {
               try {
-                await conversationMicrophoneService.unpause();
-                console.log('[ConversationOverlay] 🎤 Microphone resumed for next turn (with timing buffer)');
+                conversationMicrophoneService.unmute();
+                console.log('[ConversationOverlay] 🎤 Microphone unmuted for next turn');
               } catch (error) {
-                console.error('[ConversationOverlay] ❌ Failed to resume microphone:', error);
+                console.error('[ConversationOverlay] ❌ Failed to unmute microphone:', error);
               }
             }
           }, 200);
         } else {
-          console.log('[ConversationOverlay] 🎤 Shutting down, skipping microphone resume');
+          console.log('[ConversationOverlay] 🎤 Shutting down, skipping microphone unmute');
         }
       });
     } catch (error) {
