@@ -62,6 +62,11 @@ export class WebWorkerVAD {
   async start(stream: MediaStream): Promise<void> {
     this.log('🎯 Starting Web Worker VAD');
     
+    // Check stream
+    console.log('[WebWorkerVAD] Stream tracks:', stream.getAudioTracks().length);
+    console.log('[WebWorkerVAD] Track enabled:', stream.getAudioTracks()[0]?.enabled);
+    console.log('[WebWorkerVAD] Track readyState:', stream.getAudioTracks()[0]?.readyState);
+    
     // Create AudioContext with lower sample rate for VAD
     this.audioContext = new AudioContext({ 
       sampleRate: this.options.sampleRate 
@@ -75,6 +80,9 @@ export class WebWorkerVAD {
     // Connect stream to analyser
     const source = this.audioContext.createMediaStreamSource(stream);
     source.connect(this.analyser);
+    
+    console.log('[WebWorkerVAD] AudioContext state:', this.audioContext.state);
+    console.log('[WebWorkerVAD] Analyser connected:', !!this.analyser);
     
     // Create Web Worker
     this.worker = new Worker('/vad-worker.js');
