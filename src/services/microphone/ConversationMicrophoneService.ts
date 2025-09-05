@@ -134,37 +134,27 @@ export class ConversationMicrophoneServiceClass {
       const track = this.stream.getAudioTracks()[0];
       const trackSettings = track.getSettings();
       
-      // SINGLE-GESTURE FLOW: Reuse AudioContext if it exists, otherwise create new
-      if (!this.audioContext || this.audioContext.state === 'closed') {
-        this.audioContext = new AudioContext({ sampleRate: 16000 }); // Mobile-first: 16kHz for faster processing
-
-      } else {
-
+      // 🔥 FIX: Always create fresh AudioContext for each conversation turn
+      // This prevents sample rate corruption from suspend/resume cycles during TTS
+      if (this.audioContext && this.audioContext.state !== 'closed') {
+        // Disconnect existing chain before creating new one
+        if (this.mediaStreamSource) {
+          this.mediaStreamSource.disconnect();
+        }
+        await safelyCloseAudioContext(this.audioContext);
+        this.log('🔥 [CONVERSATION-TURN] Closed previous AudioContext to prevent corruption');
       }
       
-      // Defensively resume AudioContext if suspended (helps on iOS)
-      if (this.audioContext.state === 'suspended') {
-        await this.audioContext.resume();
-      }
+      // Create completely fresh audio analysis chain
+      this.audioContext = new AudioContext({ sampleRate: 16000 });
+      this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
+      this.analyser = this.audioContext.createAnalyser();
+      // Mobile-first: Optimized settings for faster processing
+      this.analyser.fftSize = 1024; // Mobile-first: Smaller FFT for faster analysis
+      this.analyser.smoothingTimeConstant = 0.8;
+      this.mediaStreamSource.connect(this.analyser);
       
-      // Ensure AudioContext is fully running
-      if (this.audioContext.state !== 'running') {
-        this.error('❌ AudioContext not running after resume:', this.audioContext.state);
-        return false;
-      }
-      
-      // SINGLE-GESTURE FLOW: Reuse analyser if it exists, otherwise create new
-      if (!this.analyser) {
-        this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
-        this.analyser = this.audioContext.createAnalyser();
-        // Mobile-first: Optimized settings for faster processing
-        this.analyser.fftSize = 1024; // Mobile-first: Smaller FFT for faster analysis
-        this.analyser.smoothingTimeConstant = 0.8;
-        this.mediaStreamSource.connect(this.analyser);
-
-      } else {
-
-      }
+      this.log('🔥 [CONVERSATION-TURN] Fresh audio analysis chain created');
 
       // Initialize rolling buffer VAD
       this.rollingBufferVAD = new RollingBufferVAD({
