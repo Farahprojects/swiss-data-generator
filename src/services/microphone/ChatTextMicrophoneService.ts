@@ -167,9 +167,9 @@ class ChatTextMicrophoneServiceClass {
       this.log('📵 No audio recorded');
     }
 
-    // ✅ VAD CLEANUP ONLY: keep browser mic alive, only clean up VAD state
+    // ✅ VAD is self-cleaning - no need to call cleanup() here
+    // The VAD.stop() method already calls cleanup() internally
     if (this.rollingBufferVAD) {
-      this.rollingBufferVAD.cleanup();
       this.rollingBufferVAD = null;
     }
     
@@ -239,9 +239,9 @@ class ChatTextMicrophoneServiceClass {
   private cleanup(): void {
     this.log('🧹 Cleaning up chat text microphone');
 
-    // Cleanup rolling buffer VAD
+    // VAD is self-cleaning - no need to call cleanup() here
+    // The VAD.stop() method already calls cleanup() internally
     if (this.rollingBufferVAD) {
-      this.rollingBufferVAD.cleanup();
       this.rollingBufferVAD = null;
     }
 

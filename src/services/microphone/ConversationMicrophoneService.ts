@@ -301,7 +301,8 @@ export class ConversationMicrophoneServiceClass {
       this.rollingBufferVAD.stop();
     }
     
-    this.cleanup();
+    // Only teardown capture chain, don't do full cleanup
+    this.teardownCaptureChain();
   }
 
   /**
@@ -321,9 +322,9 @@ export class ConversationMicrophoneServiceClass {
   private teardownCaptureChain(): void {
     this.log('🔥 [TEARDOWN] Cleaning up capture chain for fresh next turn');
     
-    // Clean up VAD
+    // VAD is self-cleaning - no need to call cleanup() here
+    // The VAD.stop() method already calls cleanup() internally
     if (this.rollingBufferVAD) {
-      this.rollingBufferVAD.cleanup();
       this.rollingBufferVAD = null;
     }
 
@@ -368,9 +369,9 @@ export class ConversationMicrophoneServiceClass {
       this.isRecording = false;
     }
 
-    // Cleanup rolling buffer VAD
+    // VAD is self-cleaning - no need to call cleanup() here
+    // The VAD.stop() method already calls cleanup() internally
     if (this.rollingBufferVAD) {
-      this.rollingBufferVAD.cleanup();
       this.rollingBufferVAD = null;
     }
 
@@ -523,7 +524,8 @@ export class ConversationMicrophoneServiceClass {
     this.isStartingRecording = false;
     this.audioLevel = 0;
     
-    this.cleanup();
+    // Only teardown capture chain, don't do full cleanup
+    this.teardownCaptureChain();
   }
 
   // ----- Logging helpers (gated) -----
