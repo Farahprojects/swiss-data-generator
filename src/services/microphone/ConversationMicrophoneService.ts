@@ -16,7 +16,6 @@ export interface ConversationMicrophoneOptions {
 }
 
 export class ConversationMicrophoneServiceClass {
-  private stream: MediaStream | null = null;
   private cachedStream: MediaStream | null = null;
   private webWorkerVAD: WebWorkerVAD | null = null;
   private isRecording = false;
@@ -36,12 +35,12 @@ export class ConversationMicrophoneServiceClass {
     this.options = { ...this.options, ...options };
   }
 
+
   /**
    * Cache microphone stream for session reuse
    */
   public cacheStream(stream: MediaStream): void {
     this.cachedStream = stream;
-    this.stream = stream;
   }
 
   /**
@@ -71,28 +70,20 @@ export class ConversationMicrophoneServiceClass {
     this.currentTurnId = turnId;
 
     // Ensure tracks are enabled
-    if (this.stream) {
-      this.stream.getAudioTracks().forEach(track => {
+    if (this.cachedStream) {
+      this.cachedStream.getAudioTracks().forEach(track => {
         track.enabled = true;
       });
     }
 
     try {
-      // Use cached stream
-      if (this.cachedStream) {
-        this.stream = this.cachedStream;
-      } else {
+      // Validate cached stream
+      if (!this.cachedStream || this.cachedStream.getAudioTracks().length === 0) {
         console.error('[ConversationMic] No cached stream available');
         return false;
       }
 
-      // Validate stream
-      if (!this.stream || this.stream.getAudioTracks().length === 0) {
-        console.error('[ConversationMic] No audio tracks available');
-        return false;
-      }
-
-      const audioTrack = this.stream.getAudioTracks()[0];
+      const audioTrack = this.cachedStream.getAudioTracks()[0];
       if (audioTrack.readyState !== 'live') {
         console.error('[ConversationMic] Audio track not ready:', audioTrack.readyState);
         return false;
@@ -129,7 +120,7 @@ export class ConversationMicrophoneServiceClass {
         });
 
         // Start continuous VAD
-        await this.webWorkerVAD.start(this.stream);
+        await this.webWorkerVAD.start(this.cachedStream);
       }
 
       audioArbitrator.setMicrophoneState('active');
@@ -183,8 +174,8 @@ export class ConversationMicrophoneServiceClass {
    * Mute microphone during TTS playback - VAD naturally gets silence
    */
   mute(): void {
-    if (this.stream) {
-      this.stream.getAudioTracks().forEach(track => {
+    if (this.cachedStream) {
+      this.cachedStream.getAudioTracks().forEach(track => {
         track.enabled = false;
       });
     }
@@ -196,8 +187,8 @@ export class ConversationMicrophoneServiceClass {
    * Unmute microphone after TTS playback - VAD naturally gets voice again
    */
   unmute(): void {
-    if (this.stream) {
-      this.stream.getAudioTracks().forEach(track => {
+    if (this.cachedStream) {
+      this.cachedStream.getAudioTracks().forEach(track => {
         track.enabled = true;
       });
     }
@@ -211,12 +202,6 @@ export class ConversationMicrophoneServiceClass {
     this.notifyListeners();
   }
 
-  /**
-   * Get current analyser for audio level detection
-   */
-  getAnalyser(): AnalyserNode | null {
-    return this.webWorkerVAD?.getState().isActive ? null : null; // Web Worker VAD handles this internally
-  }
 
   /**
    * Get current state
@@ -225,7 +210,7 @@ export class ConversationMicrophoneServiceClass {
     return {
       isRecording: this.isRecording,
       audioLevel: this.audioLevel,
-      hasStream: !!this.stream,
+      hasStream: !!this.cachedStream,
       hasVAD: !!this.webWorkerVAD
     };
   }
@@ -257,9 +242,9 @@ export class ConversationMicrophoneServiceClass {
       this.webWorkerVAD = null;
     }
 
-    if (this.stream) {
-      this.stream.getAudioTracks().forEach(track => track.stop());
-      this.stream = null;
+    if (this.cachedStream) {
+      this.cachedStream.getAudioTracks().forEach(track => track.stop());
+      this.cachedStream = null;
     }
 
     audioArbitrator.releaseControl('microphone');

@@ -73,15 +73,9 @@ export const ConversationOverlay: React.FC = () => {
           connectionRef.current.subscribe();
         }
 
-        // Unmute microphone and start recording for next turn
+        // Unmute microphone for next turn (VAD automatically resumes)
         if (!isShuttingDown.current) {
-          setTimeout(async () => {
-            if (!isShuttingDown.current) {
-              conversationMicrophoneService.unmute();
-              // Start recording to actually begin listening
-              await conversationMicrophoneService.startRecording();
-            }
-          }, 200);
+          conversationMicrophoneService.unmute();
         }
       });
     } catch (error) {
@@ -113,7 +107,7 @@ export const ConversationOverlay: React.FC = () => {
       });
       conversationMicrophoneService.cacheStream(stream);
       
-      // Initialize microphone service
+      // Set up microphone service callbacks
       conversationMicrophoneService.initialize({
         onRecordingComplete: (audioBlob: Blob) => processRecording(audioBlob),
         onError: (error: Error) => {
@@ -154,9 +148,8 @@ export const ConversationOverlay: React.FC = () => {
       
       if (!transcript) {
         setState('listening');
-        // Unmute microphone and start recording for next turn even if no transcript
+        // Unmute microphone for next turn (VAD automatically resumes)
         conversationMicrophoneService.unmute();
-        await conversationMicrophoneService.startRecording();
         return;
       }
       
@@ -171,9 +164,8 @@ export const ConversationOverlay: React.FC = () => {
     } catch (error) {
       console.error('[ConversationOverlay] Processing failed:', error);
       setState('connecting');
-      // Unmute microphone and start recording even on error to allow retry
+      // Unmute microphone for retry (VAD automatically resumes)
       conversationMicrophoneService.unmute();
-      await conversationMicrophoneService.startRecording();
     } finally {
       isProcessingRef.current = false;
     }
