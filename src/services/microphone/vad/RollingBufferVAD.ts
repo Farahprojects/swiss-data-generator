@@ -237,8 +237,8 @@ export class RollingBufferVAD {
 
       this.mediaRecorder.onstop = () => {
         const finalBlob = this.createFinalBlob();
-        // Ensure VAD is fully reset after each turn to avoid stale buffers
-        this.cleanup();
+        // Reset internal VAD state for next turn while keeping graph references
+        this.reset();
         resolve(finalBlob);
       };
 
@@ -246,8 +246,8 @@ export class RollingBufferVAD {
         this.mediaRecorder.stop();
       } else {
         const finalBlob = this.createFinalBlob();
-        // Ensure VAD is fully reset after each turn to avoid stale buffers
-        this.cleanup();
+        // Reset internal VAD state for next turn while keeping graph references
+        this.reset();
         resolve(finalBlob);
       }
     });
@@ -273,6 +273,29 @@ export class RollingBufferVAD {
     }
 
     return new Blob(allChunks, { type: 'audio/webm;codecs=opus' });
+  }
+
+  /**
+   * RESET - Clear buffers and timers; keep audio graph references intact
+   * Optionally accept a new stream in the future (not used presently)
+   */
+  reset(_newStream?: MediaStream): void {
+    this.monitoringRef.current = false;
+    // Do not stop tracks or close contexts; only reset algorithmic state
+    this.mediaRecorder = null;
+
+    this.state = {
+      phase: 'waiting_for_voice',
+      voiceStarted: false,
+      audioLevel: 0,
+      preBufferChunks: [],
+      activeChunks: []
+    };
+
+    this.vadState = {
+      voiceStartTime: null,
+      silenceStartTime: null
+    };
   }
 
   /**

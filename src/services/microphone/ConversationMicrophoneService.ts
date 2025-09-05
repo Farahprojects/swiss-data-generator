@@ -248,9 +248,9 @@ export class ConversationMicrophoneServiceClass {
     
     // 🔥 FIX: Properly tear down capture chain after each turn
     // This ensures fresh MediaRecorder for next turn (prevents sample rate corruption)
+    // Reset VAD for next turn but keep the graph alive (stream/context)
     if (this.rollingBufferVAD) {
-      // VAD stop already performs cleanup; just drop our reference
-      this.rollingBufferVAD = null;
+      try { this.rollingBufferVAD.reset(); } catch {}
     }
     
     if (this.mediaStreamSource) {
@@ -340,20 +340,13 @@ export class ConversationMicrophoneServiceClass {
       this.analyser = null;
     }
 
-    // Stop current cloned stream tracks but keep cachedStream for next turn
+    // Keep cachedStream alive for single-gesture session; replace the cloned turn stream only
     if (this.stream && this.stream !== this.cachedStream) {
       this.stream.getTracks().forEach(track => track.stop());
-      this.stream = null;
+      this.stream = this.cachedStream; // revert to cached base stream
     }
 
-    // Leave AudioContext for safe close on next start (it will be closed there),
-    // or optionally close immediately if running
-    if (this.audioContext && this.audioContext.state !== 'closed') {
-      try {
-        await this.audioContext.close();
-      } catch {}
-    }
-    this.audioContext = null;
+    // Keep AudioContext alive for low-latency next turn (do not close)
     
     this.log('🎤 Recording complete - capture chain torn down for fresh next turn');
   }
