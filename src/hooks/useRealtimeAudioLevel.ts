@@ -59,8 +59,6 @@ export const useRealtimeAudioLevel = ({
       if (audioContextRef.current.state === 'suspended') {
         await audioContextRef.current.resume();
       }
-
-      console.log('[useRealtimeAudioLevel] ✅ AudioContext initialized');
     } catch (error) {
       console.error('[useRealtimeAudioLevel] ❌ Failed to initialize AudioContext:', error);
     }
@@ -86,8 +84,6 @@ export const useRealtimeAudioLevel = ({
     analyserRef.current = null;
     smoothedLevelRef.current = 0;
     lastUpdateTimeRef.current = 0;
-
-    console.log('[useRealtimeAudioLevel] 🧹 AudioContext cleaned up');
   }, []);
 
   // 🎵 Real-time audio level detection loop
