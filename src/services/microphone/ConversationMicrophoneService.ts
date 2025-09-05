@@ -221,6 +221,12 @@ export class ConversationMicrophoneServiceClass {
       });
     }
     this.isPaused = false;
+    
+    // Request audio control again if we don't have it
+    if (audioArbitrator.getCurrentSystem() === 'none') {
+      audioArbitrator.requestControl('microphone');
+    }
+    
     audioArbitrator.setMicrophoneState('active');
     this.notifyListeners();
   }

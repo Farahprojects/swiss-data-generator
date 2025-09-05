@@ -144,6 +144,8 @@ export const ConversationOverlay: React.FC = () => {
       
       if (!transcript) {
         setState('listening');
+        // Unmute microphone for next turn even if no transcript
+        conversationMicrophoneService.unmute();
         return;
       }
       
@@ -158,6 +160,8 @@ export const ConversationOverlay: React.FC = () => {
     } catch (error) {
       console.error('[ConversationOverlay] Processing failed:', error);
       setState('connecting');
+      // Unmute microphone even on error to allow retry
+      conversationMicrophoneService.unmute();
     } finally {
       isProcessingRef.current = false;
     }
