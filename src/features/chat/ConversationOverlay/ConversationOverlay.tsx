@@ -108,10 +108,7 @@ export const ConversationOverlay: React.FC = () => {
           channelCount: 1,          // CRITICAL: Mono for STT efficiency
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true,
-          // Additional constraints to ensure webm/opus compatibility
-          latency: 0.01,            // Low latency for real-time
-          volume: 1.0               // Full volume
+          autoGainControl: true
         }
       });
 

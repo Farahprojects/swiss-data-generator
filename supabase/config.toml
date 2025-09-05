@@ -49,7 +49,7 @@ verify_jwt = false
 [functions.google-places-autocomplete]
 verify_jwt = false
 
-[functions.google-speech-to-text]
+[functions.openai-whisper]
 verify_jwt = false
 
 [functions.initiate-report-flow]

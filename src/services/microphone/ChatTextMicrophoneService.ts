@@ -62,10 +62,7 @@ class ChatTextMicrophoneServiceClass {
           echoCancellation: true,    // Clean input
           noiseSuppression: true,    // Remove background noise
           autoGainControl: true,     // Consistent levels
-          sampleRate: 48000,         // CRITICAL: Must match opus codec requirements
-          // Additional constraints to ensure webm/opus compatibility
-          latency: 0.01,             // Low latency for real-time
-          volume: 1.0                // Full volume
+          sampleRate: 48000         // CRITICAL: Must match opus codec requirements
         }
       });
 
