@@ -93,8 +93,8 @@ class TTSPlaybackService {
       const ctx = this.ensureAudioContext();
       if (ctx.state === 'suspended') await ctx.resume();
 
-      // Teardown existing
-      this.stop();
+      // Teardown existing (without releasing control)
+      this.internalStop();
 
       const buffer = await this.decodeToBuffer(audioBytes);
       const source = ctx.createBufferSource();
@@ -129,7 +129,7 @@ class TTSPlaybackService {
 
       source.start(0);
     } catch (e) {
-      this.stop();
+      this.internalStop();
       // 🎵 RELEASE CONTROL on error
       audioArbitrator.releaseControl('tts');
       throw e;
@@ -148,7 +148,7 @@ class TTSPlaybackService {
     }
   }
 
-  stop(): void {
+  private internalStop(): void {
     if (this.currentSource) {
       try { this.currentSource.stop(0); } catch {}
       this.currentSource.disconnect();
@@ -161,15 +161,17 @@ class TTSPlaybackService {
     this.stopAnimation();
     this.isPlaying = false;
     this.isPaused = false;
-    
-    // 🎵 RELEASE AUDIO CONTROL when manually stopped
-    audioArbitrator.releaseControl('tts');
-    
     this.notify();
   }
 
+  stop(): void {
+    this.internalStop();
+    // 🎵 RELEASE AUDIO CONTROL when manually stopped
+    audioArbitrator.releaseControl('tts');
+  }
+
   async destroy(): Promise<void> {
-    this.stop();
+    this.internalStop();
     if (this.audioContext && this.audioContext.state !== 'closed') {
       try { await this.audioContext.close(); } catch {}
     }
