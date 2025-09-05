@@ -84,6 +84,13 @@ export class WebWorkerVAD {
     console.log('[WebWorkerVAD] AudioContext state:', this.audioContext.state);
     console.log('[WebWorkerVAD] Analyser connected:', !!this.analyser);
     
+    // Ensure AudioContext is running
+    if (this.audioContext.state === 'suspended') {
+      console.log('[WebWorkerVAD] Resuming suspended AudioContext...');
+      await this.audioContext.resume();
+      console.log('[WebWorkerVAD] AudioContext state after resume:', this.audioContext.state);
+    }
+    
     // Create Web Worker
     this.worker = new Worker('/vad-worker.js');
     this.setupWorkerHandlers();
@@ -125,6 +132,16 @@ export class WebWorkerVAD {
     
     // Start recording with small chunks
     this.mediaRecorder.start(100); // 100ms chunks
+    
+    // Test if we can read audio data immediately
+    const testArray = new Uint8Array(this.analyser.fftSize);
+    this.analyser.getByteTimeDomainData(testArray);
+    let testSum = 0;
+    for (let i = 0; i < testArray.length; i++) {
+      testSum += Math.abs(testArray[i] - 128);
+    }
+    const testRMS = testSum / testArray.length;
+    console.log('[WebWorkerVAD] Initial audio test RMS:', testRMS);
     
     // Start VAD monitoring
     this.startVADMonitoring();
