@@ -115,20 +115,20 @@ export const ConversationOverlay: React.FC = () => {
           console.log('[ConversationOverlay] 🌐 WebSocket resumed after TTS playback');
         }
 
-        // Restart mic recording after a small buffer
+        // Resume mic recording after a small buffer (just unpause, don't restart)
         if (!isShuttingDown.current) {
-          setTimeout(() => {
+          setTimeout(async () => {
             if (!isShuttingDown.current) {
               try {
-                conversationMicrophoneService.startRecording();
-                console.log('[ConversationOverlay] 🎤 Microphone recording restarted for next turn (with timing buffer)');
+                await conversationMicrophoneService.unpause();
+                console.log('[ConversationOverlay] 🎤 Microphone resumed for next turn (with timing buffer)');
               } catch (error) {
-                console.error('[ConversationOverlay] ❌ Failed to restart microphone recording:', error);
+                console.error('[ConversationOverlay] ❌ Failed to resume microphone:', error);
               }
             }
           }, 200);
         } else {
-          console.log('[ConversationOverlay] 🎤 Shutting down, skipping microphone restart');
+          console.log('[ConversationOverlay] 🎤 Shutting down, skipping microphone resume');
         }
       });
     } catch (error) {
