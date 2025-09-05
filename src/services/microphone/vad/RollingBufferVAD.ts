@@ -86,14 +86,11 @@ export class RollingBufferVAD {
       silenceStartTime: null
     };
 
-    // Create MediaRecorder with explicit sample rate configuration
-    const mediaRecorderOptions: MediaRecorderOptions = {
+    // Create MediaRecorder with small time slices for rolling buffer
+    this.mediaRecorder = new MediaRecorder(stream, {
       mimeType: 'audio/webm;codecs=opus',
-      audioBitsPerSecond: 48000 // Lower bitrate for mobile efficiency
-    };
-    
-    // Ensure MediaRecorder uses proper sample rate
-    this.mediaRecorder = new MediaRecorder(stream, mediaRecorderOptions);
+      audioBitsPerSecond: 64000
+    });
 
     // Handle data chunks for rolling buffer
     this.mediaRecorder.ondataavailable = (event) => {
@@ -244,7 +241,7 @@ export class RollingBufferVAD {
   }
 
   /**
-   * CREATE FINAL BLOB - Combine pre-buffer and active chunks with proper metadata
+   * CREATE FINAL BLOB - Combine pre-buffer and active chunks
    */
   private createFinalBlob(): Blob | null {
     let allChunks: Blob[] = [];
@@ -262,13 +259,7 @@ export class RollingBufferVAD {
       return null;
     }
 
-    // Create final blob with proper MIME type to preserve audio metadata
-    const finalBlob = new Blob(allChunks, { 
-      type: 'audio/webm;codecs=opus'
-    });
-    
-    this.log(`📼 Final blob created: ${finalBlob.size} bytes, type: ${finalBlob.type}`);
-    return finalBlob;
+    return new Blob(allChunks, { type: 'audio/webm;codecs=opus' });
   }
 
   /**
