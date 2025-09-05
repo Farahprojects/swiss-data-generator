@@ -87,9 +87,9 @@ export const useConversationRealtimeAudioLevel = ({
   useEffect(() => {
     const handleMicStateChange = () => {
       const micState = conversationMicrophoneService.getState();
-      // Enabled only while actively capturing (recording)
+      // Enabled whenever VAD is active (not just when recording)
       console.log('[useConversationRealtimeAudioLevel] Mic state changed:', micState);
-      setIsEnabled(micState.isRecording);
+      setIsEnabled(micState.hasVAD && micState.hasStream);
     };
 
     // Subscribe to microphone service state changes
