@@ -80,6 +80,12 @@ export class ConversationMicrophoneServiceClass {
       return false;
     }
     
+    // 🔄 RESUME LOGIC: If paused (after TTS), resume the audio chain first
+    if (this.isPaused) {
+      this.log('🎤 Microphone is paused, resuming audio chain before starting recording');
+      await this.internalResumeAudioChain();
+    }
+    
     // Defensively reset stale state flags
     this.audioLevel = 0;
     
@@ -526,6 +532,39 @@ export class ConversationMicrophoneServiceClass {
       this.log('🔊 Recreated microphone stream from cached stream');
     } else {
       this.error('❌ No cached stream available for resume');
+      return;
+    }
+    
+    // ✅ PROPER RESUME: Create fresh AudioContext and analysis chain
+    this.audioContext = new AudioContext({ sampleRate: 16000 });
+    this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
+    this.analyser = this.audioContext.createAnalyser();
+    this.analyser.fftSize = 1024;
+    this.analyser.smoothingTimeConstant = 0.8;
+    this.mediaStreamSource.connect(this.analyser);
+    this.log('🔊 Recreated audio analysis chain');
+
+    // Clear paused state and notify listeners
+    this.isPaused = false;
+    this.notifyListeners();
+  }
+
+  /**
+   * INTERNAL RESUME AUDIO CHAIN - Resume audio chain without requesting control
+   * Used internally by startRecording when microphone is paused
+   */
+  private async internalResumeAudioChain(): Promise<void> {
+    this.log('🔊 Internal resume of audio chain (no control request)');
+    
+    // ✅ PROPER RESUME: Recreate the microphone stream from cached stream
+    if (this.cachedStream) {
+      // Clone a fresh audio track from the cached stream
+      const originalTrack = this.cachedStream.getAudioTracks()[0];
+      const clonedTrack = originalTrack.clone();
+      this.stream = new MediaStream([clonedTrack]);
+      this.log('🔊 Recreated microphone stream from cached stream');
+    } else {
+      this.error('❌ No cached stream available for internal resume');
       return;
     }
     

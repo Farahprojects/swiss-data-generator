@@ -109,8 +109,7 @@ export const ConversationOverlay: React.FC = () => {
         console.log('[ConversationOverlay] 🎵 TTS audio finished, returning to listening mode');
         setState('listening');
 
-        // Resume mic and WebSocket
-        try { conversationMicrophoneService.resumeAfterPlayback(); } catch {}
+        // Resume WebSocket (mic will be resumed by startRecording below)
         if (connectionRef.current && connectionRef.current.state === 'CLOSED') {
           connectionRef.current.subscribe();
           console.log('[ConversationOverlay] 🌐 WebSocket resumed after TTS playback');
