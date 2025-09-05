@@ -238,16 +238,14 @@ export const ConversationOverlay: React.FC = () => {
       // 🎯 STATE DRIVEN: Initialize microphone service BEFORE starting recording
       conversationMicrophoneService.initialize({
         onRecordingComplete: (audioBlob: Blob) => {
-          // Process recording when callback fires
+          // Process recording when callback fires (unified path like chat-bar)
           processRecording(audioBlob);
         },
         onError: (error: Error) => {
           console.error('[ConversationOverlay] Microphone error:', error);
           setState('connecting');
         },
-        onSilenceDetected: () => {
-          conversationMicrophoneService.stopRecording();
-        },
+        // 🔥 REMOVED: onSilenceDetected wiring - VAD handles this internally now
         silenceTimeoutMs: 1200,
       });
       

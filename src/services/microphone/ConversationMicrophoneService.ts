@@ -38,6 +38,10 @@ export class ConversationMicrophoneServiceClass {
   private mediaStreamSource: MediaStreamAudioSourceNode | null = null;
   private audioLevel = 0;
   
+  // 🔥 FIX: Turn tracking to prevent stale VAD callbacks
+  private currentTurnId: string | null = null;
+  private isStopping = false; // Prevent double processing during stop
+  
   private options: ConversationMicrophoneOptions = {};
   private listeners = new Set<() => void>();
 
@@ -161,7 +165,13 @@ export class ConversationMicrophoneServiceClass {
       
       this.log('🔥 [CONVERSATION-TURN] Fresh audio analysis chain created with existing AudioContext');
 
-      // Initialize rolling buffer VAD
+      // 🔥 FIX: Generate turn ID to prevent stale callbacks
+      this.currentTurnId = crypto.randomUUID();
+      this.isStopping = false;
+      const turnId = this.currentTurnId;
+      this.log(`🔥 [CONVERSATION-TURN] Starting turn ${turnId}`);
+
+      // Initialize rolling buffer VAD with turn-aware callbacks
       this.rollingBufferVAD = new RollingBufferVAD({
         lookbackWindowMs: 750,
         chunkDurationMs: 250,
@@ -170,15 +180,22 @@ export class ConversationMicrophoneServiceClass {
         voiceConfirmMs: 300,
         silenceTimeoutMs: this.options.silenceTimeoutMs || 1500,
         onVoiceStart: () => {
-          this.log('🎤 Rolling buffer VAD: Voice activity confirmed');
+          // Only log if this is still the current turn
+          if (this.currentTurnId === turnId) {
+            this.log(`🎤 Rolling buffer VAD [${turnId}]: Voice activity confirmed`);
+          }
         },
         onSilenceDetected: () => {
-          this.log('🧘‍♂️ Rolling buffer VAD: Silence detected - stopping recording');
-          this.isRecording = false;
-          this.handleRecordingComplete();
+          // 🔥 FIX: Only process if this is still the current turn and not already stopping
+          if (this.currentTurnId === turnId && !this.isStopping) {
+            this.log(`🧘‍♂️ Rolling buffer VAD [${turnId}]: Silence detected - unified stop`);
+            this.unifiedStopRecording(turnId);
+          } else {
+            this.log(`🧘‍♂️ Rolling buffer VAD [${turnId}]: Silence detected but ignoring (stale callback)`);
+          }
         },
         onError: (error: Error) => {
-          this.error('❌ Rolling buffer VAD error:', error);
+          this.error(`❌ Rolling buffer VAD [${turnId}] error:`, error);
           if (this.options.onError) {
             this.options.onError(error);
           }
@@ -217,15 +234,22 @@ export class ConversationMicrophoneServiceClass {
   }
 
   /**
-   * STOP RECORDING - Complete domain-specific recording
+   * 🔥 UNIFIED STOP RECORDING - Single path for all stop scenarios
    */
-  async stopRecording(): Promise<Blob | null> {
+  private async unifiedStopRecording(expectedTurnId: string): Promise<Blob | null> {
+    // Guard against stale calls or already stopping
+    if (this.currentTurnId !== expectedTurnId || this.isStopping) {
+      this.log(`🛡️ Ignoring stale stop call for turn ${expectedTurnId} (current: ${this.currentTurnId}, stopping: ${this.isStopping})`);
+      return null;
+    }
+
     if (!this.isRecording || !this.rollingBufferVAD) {
       this.log('❌ Cannot stop - not recording');
       return null;
     }
 
-    this.log('🛑 Stopping conversation recording');
+    this.log(`🛑 [UNIFIED-STOP] Stopping turn ${expectedTurnId}`);
+    this.isStopping = true; // Prevent duplicate processing
     this.isRecording = false;
 
     // Stop rolling buffer VAD and get final blob
@@ -233,39 +257,34 @@ export class ConversationMicrophoneServiceClass {
     
     if (blob) {
       this.log(`✅ Recording complete: ${blob.size} bytes`);
+      
+      // Call the recording complete callback (mimics chat-bar flow)
+      if (this.options.onRecordingComplete) {
+        this.options.onRecordingComplete(blob);
+      }
     } else {
       this.log('⚠️ No audio collected');
     }
     
-    // 🔥 FIX: Properly tear down capture chain after each turn
-    // This ensures fresh MediaRecorder for next turn (prevents sample rate corruption)
-    if (this.rollingBufferVAD) {
-      this.rollingBufferVAD.cleanup();
-      this.rollingBufferVAD = null;
-    }
-    
-    if (this.mediaStreamSource) {
-      this.mediaStreamSource.disconnect();
-      this.mediaStreamSource = null;
-    }
-    
-    if (this.analyser) {
-      this.analyser.disconnect();
-      this.analyser = null;
-    }
-    
-    // Close the current stream (cloned track) but keep cachedStream for next turn
-    if (this.stream && this.stream !== this.cachedStream) {
-      this.stream.getTracks().forEach(track => track.stop());
-      this.stream = null;
-    }
-    
-    this.log('🔥 [CONVERSATION-TURN] Capture chain torn down, ready for fresh start next turn');
+    // Clean up capture chain after each turn
+    this.teardownCaptureChain();
     
     // Notify listeners after isRecording becomes false
     this.notifyListeners();
     
     return blob;
+  }
+
+  /**
+   * STOP RECORDING - Public interface (now delegates to unified path)
+   */
+  async stopRecording(): Promise<Blob | null> {
+    if (!this.currentTurnId) {
+      this.log('❌ No active turn to stop');
+      return null;
+    }
+    
+    return this.unifiedStopRecording(this.currentTurnId);
   }
 
   /**
@@ -297,31 +316,18 @@ export class ConversationMicrophoneServiceClass {
   }
 
   /**
-   * HANDLE RECORDING COMPLETE - Process finished recording
+   * 🔥 TEARDOWN CAPTURE CHAIN - Shared cleanup logic
    */
-  private async handleRecordingComplete(): Promise<void> {
-    // Guard against duplicate callbacks
-    if (this.isRecording) {
-      this.log('🎤 Recording complete callback called but still recording, stopping VAD first');
-      this.isRecording = false; // Mark as not recording before callback
-    }
+  private teardownCaptureChain(): void {
+    this.log('🔥 [TEARDOWN] Cleaning up capture chain for fresh next turn');
     
-    let finalBlob: Blob | null = null;
-    
-    if (this.rollingBufferVAD) {
-      finalBlob = await this.rollingBufferVAD.stop();
-    }
-    
-    if (finalBlob && this.options.onRecordingComplete) {
-      this.options.onRecordingComplete(finalBlob);
-    }
-    // ✅ TEARDOWN AFTER TURN: ensure a fresh chain next time to avoid sample rate corruption
-    // Only clean up VAD and analysis chain - keep browser microphone AudioContext alive
+    // Clean up VAD
     if (this.rollingBufferVAD) {
       this.rollingBufferVAD.cleanup();
       this.rollingBufferVAD = null;
     }
 
+    // Disconnect audio analysis nodes
     if (this.mediaStreamSource) {
       this.mediaStreamSource.disconnect();
       this.mediaStreamSource = null;
@@ -338,11 +344,11 @@ export class ConversationMicrophoneServiceClass {
       this.stream = null;
     }
 
-    // 🚫 DO NOT close AudioContext - keep browser microphone alive between turns
-    // The AudioContext will be reused for the next turn, preventing sample rate issues
-    // Only disconnect the analysis nodes, not the entire context
-    
-    this.log('🎤 Recording complete - capture chain torn down for fresh next turn');
+    // Reset turn tracking
+    this.currentTurnId = null;
+    this.isStopping = false;
+
+    this.log('🔥 [TEARDOWN] Capture chain cleaned, ready for fresh start');
   }
 
   /**
