@@ -37,24 +37,24 @@ class SttService {
 
     if (error) {
       console.error('[STT] Google STT error:', error);
-      console.log('🔴 [MICROPHONE-KILLER] STT service calling audioCleanup() due to STT error');
-      try { audioCaptureManager.audioCleanup(); } catch {}
+      console.log('🟡 [STT] STT error occurred - but keeping mic alive for retry');
+      // No longer calling audioCleanup() on STT errors - mic stays alive
       throw new Error(`Error invoking google-speech-to-text: ${error.message}`);
     }
 
     if (!data) {
       console.error('[STT] No data in response');
-      console.log('🔴 [MICROPHONE-KILLER] STT service calling audioCleanup() due to no data response');
-      try { audioCaptureManager.audioCleanup(); } catch {}
+      console.log('🟡 [STT] No data response - but keeping mic alive for retry');
+      // No longer calling audioCleanup() on no data - mic stays alive
       throw new Error('No data received from Google STT');
     }
 
 
 
-    // Deterministic cleanup from backend flag
+    // Backend cleanup flag received - but we don't kill the mic anymore
     if ((data as any).cleanup) {
-      console.log('🔴 [MICROPHONE-KILLER] STT service calling audioCleanup() due to backend cleanup flag');
-      try { audioCaptureManager.audioCleanup(); } catch {}
+      console.log('🟡 [STT] Backend cleanup flag received - but keeping mic alive for next turn');
+      // No longer calling audioCleanup() - mic stays alive between turns
     }
 
     // Return the transcript
