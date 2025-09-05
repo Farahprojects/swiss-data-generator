@@ -270,6 +270,13 @@ class ChatTextMicrophoneServiceClass {
   }
 
   /**
+   * GET STREAM - Return current MediaStream for real-time audio analysis
+   */
+  getStream(): MediaStream | null {
+    return this.stream;
+  }
+
+  /**
    * SUBSCRIBE - For React state updates
    */
   subscribe(listener: () => void): () => void {
