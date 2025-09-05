@@ -1,4 +1,5 @@
 import { directBarsAnimationService, FourBarLevels } from '@/services/voice/DirectBarsAnimationService';
+import { audioArbitrator } from '@/services/audio/AudioArbitrator';
 
 class TTSPlaybackService {
   private audioContext: AudioContext | null = null;
@@ -84,6 +85,11 @@ class TTSPlaybackService {
 
   async play(audioBytes: number[], onEnded?: () => void): Promise<void> {
     try {
+      // 🎵 REQUEST AUDIO CONTROL - Ensure no conflicts
+      if (!audioArbitrator.requestControl('tts')) {
+        throw new Error('Cannot start TTS playback - microphone is active');
+      }
+
       const ctx = this.ensureAudioContext();
       if (ctx.state === 'suspended') await ctx.resume();
 
@@ -113,6 +119,10 @@ class TTSPlaybackService {
         this.analyser = null;
         this.isPlaying = false;
         this.isPaused = false;
+        
+        // 🎵 RELEASE AUDIO CONTROL when TTS finishes
+        audioArbitrator.releaseControl('tts');
+        
         this.notify();
         if (onEnded) onEnded();
       };
@@ -120,6 +130,8 @@ class TTSPlaybackService {
       source.start(0);
     } catch (e) {
       this.stop();
+      // 🎵 RELEASE CONTROL on error
+      audioArbitrator.releaseControl('tts');
       throw e;
     }
   }
@@ -149,6 +161,10 @@ class TTSPlaybackService {
     this.stopAnimation();
     this.isPlaying = false;
     this.isPaused = false;
+    
+    // 🎵 RELEASE AUDIO CONTROL when manually stopped
+    audioArbitrator.releaseControl('tts');
+    
     this.notify();
   }
 
@@ -159,6 +175,9 @@ class TTSPlaybackService {
     }
     this.audioContext = null;
     this.listeners.clear();
+    
+    // 🎵 RELEASE AUDIO CONTROL on destroy
+    audioArbitrator.releaseControl('tts');
   }
 }
 

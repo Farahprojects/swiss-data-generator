@@ -6,6 +6,7 @@
  */
 
 import { microphoneArbitrator } from './MicrophoneArbitrator';
+import { audioArbitrator } from '@/services/audio/AudioArbitrator';
 import { RollingBufferVAD, RollingBufferVADOptions } from './vad/RollingBufferVAD';
 
 export interface ConversationMicrophoneOptions {
@@ -72,6 +73,12 @@ export class ConversationMicrophoneServiceClass {
   public async startRecording(): Promise<boolean> {
     this.log('[CONVERSATION-TURN] startRecording called - checking state flags');
     this.log(`[CONVERSATION-TURN] isStartingRecording: ${this.isStartingRecording}, isRecording: ${this.isRecording}`);
+    
+    // 🎵 REQUEST AUDIO CONTROL - Ensure no conflicts with TTS
+    if (!audioArbitrator.requestControl('microphone')) {
+      this.error('❌ Cannot start microphone - TTS is active');
+      return false;
+    }
     
     // Defensively reset stale state flags
     this.audioLevel = 0;
@@ -361,6 +368,9 @@ export class ConversationMicrophoneServiceClass {
     this.log('🧹 Cleaning up conversation microphone service');
     this.log('[CONVERSATION-TURN] cleanup called - resetting all state flags');
     
+    // 🎵 RELEASE AUDIO CONTROL on cleanup
+    audioArbitrator.releaseControl('microphone');
+    
     // Reset state flags immediately
     this.isStartingRecording = false;
     this.audioLevel = 0;
@@ -459,6 +469,9 @@ export class ConversationMicrophoneServiceClass {
   suspendForPlayback(): void {
     this.log('🔇 Suspending microphone for TTS playback');
     
+    // 🎵 RELEASE AUDIO CONTROL - Allow TTS to take over
+    audioArbitrator.releaseControl('microphone');
+    
     // ✅ PROPER PAUSE: Stop the VAD first to prevent processing muted frames
     if (this.rollingBufferVAD) {
       this.rollingBufferVAD.stop().catch(() => {
@@ -497,6 +510,12 @@ export class ConversationMicrophoneServiceClass {
    */
   async resumeAfterPlayback(): Promise<void> {
     this.log('🔊 Resuming microphone after TTS playback');
+    
+    // 🎵 REQUEST AUDIO CONTROL - Take back control from TTS
+    if (!audioArbitrator.requestControl('microphone')) {
+      this.error('❌ Cannot resume microphone - TTS still active');
+      return;
+    }
     
     // ✅ PROPER RESUME: Recreate the microphone stream from cached stream
     if (this.cachedStream) {
