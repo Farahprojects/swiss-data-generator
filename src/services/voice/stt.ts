@@ -21,6 +21,12 @@ class SttService {
       throw new Error(`Invalid audio format: ${audioBlob.type}. Expected webm/opus format.`);
     }
     
+    // CRITICAL: Validate audio blob size to prevent empty transcripts
+    if (audioBlob.size < 1000) {
+      console.error(`[STT] CRITICAL: Audio blob too small (${audioBlob.size} bytes) - likely corrupted or empty`);
+      throw new Error(`Audio blob too small (${audioBlob.size} bytes). Expected at least 1000 bytes.`);
+    }
+    
     // Send raw binary audio directly, with config in headers. This mirrors the
     // ChatTextMicrophoneService and aligns both STT pathways.
     const { data, error } = await supabase.functions.invoke('google-speech-to-text', {

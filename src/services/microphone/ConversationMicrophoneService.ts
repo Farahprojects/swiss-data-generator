@@ -6,7 +6,7 @@
  */
 
 import { audioArbitrator } from '@/services/audio/AudioArbitrator';
-import { GoldStandardVAD } from './vad/GoldStandardVAD';
+import { RollingBufferVAD } from './vad/RollingBufferVAD';
 
 export interface ConversationMicrophoneOptions {
   onRecordingComplete?: (audioBlob: Blob) => void;
@@ -16,9 +16,14 @@ export interface ConversationMicrophoneOptions {
 }
 
 export class ConversationMicrophoneServiceClass {
+  private stream: MediaStream | null = null;
   private cachedStream: MediaStream | null = null;
-  private goldStandardVAD: GoldStandardVAD | null = null;
+  private rollingBufferVAD: RollingBufferVAD | null = null;
   private isRecording = false;
+  private isPaused = false;
+  private audioContext: AudioContext | null = null;
+  private analyser: AnalyserNode | null = null;
+  private mediaStreamSource: MediaStreamAudioSourceNode | null = null;
   private audioLevel = 0;
   private currentTurnId: string | null = null;
   private options: ConversationMicrophoneOptions = {};
@@ -35,16 +40,16 @@ export class ConversationMicrophoneServiceClass {
     this.options = { ...this.options, ...options };
   }
 
-
   /**
    * Cache microphone stream for session reuse
    */
   public cacheStream(stream: MediaStream): void {
     this.cachedStream = stream;
+    this.stream = stream;
   }
 
   /**
-   * Start recording - Creates continuous VAD that runs for entire conversation
+   * Start recording
    */
   public async startRecording(): Promise<boolean> {
     // Request audio control
@@ -70,62 +75,79 @@ export class ConversationMicrophoneServiceClass {
     this.currentTurnId = turnId;
 
     // Ensure tracks are enabled
-    if (this.cachedStream) {
-      this.cachedStream.getAudioTracks().forEach(track => {
+    if (this.stream) {
+      this.stream.getAudioTracks().forEach(track => {
         track.enabled = true;
       });
     }
 
     try {
-      // Validate cached stream
-      if (!this.cachedStream || this.cachedStream.getAudioTracks().length === 0) {
+      // Use cached stream
+      if (this.cachedStream) {
+        this.stream = this.cachedStream;
+      } else {
         console.error('[ConversationMic] No cached stream available');
         return false;
       }
 
-      const audioTrack = this.cachedStream.getAudioTracks()[0];
+      // Validate stream
+      if (!this.stream || this.stream.getAudioTracks().length === 0) {
+        console.error('[ConversationMic] No audio tracks available');
+        return false;
+      }
+
+      const audioTrack = this.stream.getAudioTracks()[0];
       if (audioTrack.readyState !== 'live') {
         console.error('[ConversationMic] Audio track not ready:', audioTrack.readyState);
         return false;
       }
 
-      // Create continuous VAD if not already created
-      if (!this.goldStandardVAD) {
-        this.goldStandardVAD = new GoldStandardVAD({
-          voiceThreshold: 0.01,
-          silenceThreshold: 0.005,
-          silenceTimeoutMs: this.options.silenceTimeoutMs || 1200,
-          bufferDurationMs: 500, // 0.5s rolling buffer
-          sampleRate: 16000, // Lower sample rate for VAD analysis
-          onVoiceStart: () => {
-            // Voice detected - start recording this turn
-            this.isRecording = true;
-            this.notifyListeners();
-          },
-          onVoiceStop: (audioBlob: Blob) => {
-            // Voice stopped - send combined audio to STT
-            console.log('[ConversationMic] Voice stopped, sending audio blob size:', audioBlob.size);
-            if (this.currentTurnId === turnId && this.options.onRecordingComplete) {
-              this.options.onRecordingComplete(audioBlob);
-            }
-            // Reset recording state
-            this.isRecording = false;
-            this.currentTurnId = null;
-            this.notifyListeners();
-          },
-          onError: (error: Error) => {
-            console.error('[ConversationMic] VAD error:', error);
-            if (this.options.onError) {
-              this.options.onError(error);
-            }
-          }
-        });
-
-        // Start continuous VAD
-        await this.goldStandardVAD.start(this.cachedStream);
+      // Create fresh AudioContext for each turn to prevent stale data
+      if (this.audioContext && this.audioContext.state !== 'closed') {
+        this.audioContext.close().catch(() => {});
       }
+      this.audioContext = new AudioContext({ sampleRate: 48000 });
 
+      // Use original stream directly - no cloning to prevent format issues
+      this.stream = this.cachedStream;
+
+      // Create audio analysis chain
+      this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
+      this.analyser = this.audioContext.createAnalyser();
+      this.analyser.fftSize = 1024;
+      this.analyser.smoothingTimeConstant = 0.8;
+      this.mediaStreamSource.connect(this.analyser);
+
+      // Create VAD
+      this.rollingBufferVAD = new RollingBufferVAD({
+        lookbackWindowMs: 750,
+        chunkDurationMs: 250,
+        voiceThreshold: 0.012,
+        silenceThreshold: 0.008,
+        voiceConfirmMs: 300,
+        silenceTimeoutMs: this.options.silenceTimeoutMs || 1500,
+        onVoiceStart: () => {
+          // Voice detected
+        },
+        onSilenceDetected: () => {
+          if (this.currentTurnId === turnId) {
+            this.stopRecording(turnId);
+          }
+        },
+        onError: (error: Error) => {
+          console.error('[ConversationMic] VAD error:', error);
+          if (this.options.onError) {
+            this.options.onError(error);
+          }
+        }
+      });
+
+      this.isRecording = true;
       audioArbitrator.setMicrophoneState('active');
+
+      // Start VAD
+      await this.rollingBufferVAD.start(this.stream, this.audioContext, this.analyser);
+
       this.notifyListeners();
       return true;
 
@@ -140,36 +162,68 @@ export class ConversationMicrophoneServiceClass {
   }
 
   /**
-   * Stop recording - Not needed with GoldStandardVAD (handles automatically)
+   * Stop recording
    */
   public async stopRecording(expectedTurnId?: string): Promise<Blob | null> {
-    // GoldStandardVAD handles recording automatically
-    // This method is kept for compatibility but does nothing
-    return null;
+    if (expectedTurnId && this.currentTurnId !== expectedTurnId) {
+      return null;
+    }
+    if (!this.isRecording || !this.rollingBufferVAD) {
+      return null;
+    }
+
+    try {
+      // Stop VAD and get audio blob
+      const audioBlob = await this.rollingBufferVAD.stop();
+      
+      // Clean up VAD after getting the blob to prevent race conditions
+      if (this.rollingBufferVAD) {
+        this.rollingBufferVAD.cleanup();
+        this.rollingBufferVAD = null;
+      }
+
+      this.isRecording = false;
+      this.audioLevel = 0;
+      this.currentTurnId = null;
+
+      this.notifyListeners();
+
+      // Call completion callback
+      if (audioBlob && this.options.onRecordingComplete) {
+        this.options.onRecordingComplete(audioBlob);
+      }
+
+      return audioBlob;
+    } catch (error) {
+      console.error('[ConversationMic] Stop recording failed:', error);
+      return null;
+    }
   }
 
   /**
-   * Mute microphone during TTS playback - VAD naturally gets silence
+   * Mute microphone during TTS playback
    */
   mute(): void {
-    if (this.cachedStream) {
-      this.cachedStream.getAudioTracks().forEach(track => {
+    if (this.stream) {
+      this.stream.getAudioTracks().forEach(track => {
         track.enabled = false;
       });
     }
+    this.isPaused = true;
     audioArbitrator.setMicrophoneState('muted');
     this.notifyListeners();
   }
 
   /**
-   * Unmute microphone after TTS playback - VAD naturally gets voice again
+   * Unmute microphone after TTS playback
    */
   unmute(): void {
-    if (this.cachedStream) {
-      this.cachedStream.getAudioTracks().forEach(track => {
+    if (this.stream) {
+      this.stream.getAudioTracks().forEach(track => {
         track.enabled = true;
       });
     }
+    this.isPaused = false;
     
     // Request audio control again if we don't have it
     if (audioArbitrator.getCurrentSystem() === 'none') {
@@ -180,6 +234,12 @@ export class ConversationMicrophoneServiceClass {
     this.notifyListeners();
   }
 
+  /**
+   * Get current analyser for audio level detection
+   */
+  getAnalyser(): AnalyserNode | null {
+    return this.analyser;
+  }
 
   /**
    * Get current state
@@ -187,9 +247,10 @@ export class ConversationMicrophoneServiceClass {
   getState() {
     return {
       isRecording: this.isRecording,
+      isPaused: this.isPaused,
       audioLevel: this.audioLevel,
-      hasStream: !!this.cachedStream,
-      hasVAD: !!this.goldStandardVAD
+      hasStream: !!this.stream,
+      hasAnalyser: !!this.analyser
     };
   }
 
@@ -215,14 +276,24 @@ export class ConversationMicrophoneServiceClass {
     this.isRecording = false;
     this.audioLevel = 0;
 
-    if (this.goldStandardVAD) {
-      this.goldStandardVAD.cleanup();
-      this.goldStandardVAD = null;
+    if (this.rollingBufferVAD) {
+      this.rollingBufferVAD.stop().catch(() => {});
+      this.rollingBufferVAD = null;
     }
 
-    if (this.cachedStream) {
-      this.cachedStream.getAudioTracks().forEach(track => track.stop());
-      this.cachedStream = null;
+    if (this.stream) {
+      this.stream.getAudioTracks().forEach(track => track.stop());
+      this.stream = null;
+    }
+
+    if (this.mediaStreamSource) {
+      this.mediaStreamSource.disconnect();
+      this.mediaStreamSource = null;
+    }
+
+    if (this.audioContext && this.audioContext.state !== 'closed') {
+      this.audioContext.close().catch(() => {});
+      this.audioContext = null;
     }
 
     audioArbitrator.releaseControl('microphone');

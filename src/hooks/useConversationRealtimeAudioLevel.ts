@@ -21,15 +21,37 @@ export const useConversationRealtimeAudioLevel = ({
   const [audioLevel, setAudioLevel] = useState<number>(0);
   const [isEnabled, setIsEnabled] = useState<boolean>(false);
   
+  const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const lastUpdateTimeRef = useRef<number>(0);
   const smoothedLevelRef = useRef<number>(0);
   const intervalRef = useRef<number | null>(null);
 
-  // 🎵 Initialize (WebWorkerVAD handles audio level internally)
+  // 🎵 Initialize (reuse existing AnalyserNode from microphone service)
   const initializeAudioContext = useCallback(async () => {
-    // WebWorkerVAD handles audio level detection internally
-    // We just need to start polling the service's audio level
+    if (analyserRef.current) {
+      // Already initialized
+      return;
+    }
+
+    try {
+      // Get the existing AnalyserNode from the microphone service
+      // This is read-only and won't interfere with the service's recording chain
+      const existingAnalyser = conversationMicrophoneService.getAnalyser();
+      if (!existingAnalyser) {
+        // Analyser not available yet
+        return;
+      }
+
+      // Reuse the existing AnalyserNode (read-only access)
+      analyserRef.current = existingAnalyser;
+      
+      // No need to create our own AudioContext or MediaStreamSource
+      // We're just reading from the existing analysis chain
+      
+    } catch (error) {
+      console.error('[useConversationRealtimeAudioLevel] ❌ Failed to initialize:', error);
+    }
   }, []);
 
   // 🎵 Cleanup (no AudioContext to clean up since we reuse the service's)
@@ -44,28 +66,39 @@ export const useConversationRealtimeAudioLevel = ({
       intervalRef.current = null;
     }
 
-    // No cleanup needed since WebWorkerVAD handles everything internally
+    // No need to disconnect or close anything since we're reusing the service's AnalyserNode
+    // Just clear our reference
+    analyserRef.current = null;
     smoothedLevelRef.current = 0;
     lastUpdateTimeRef.current = 0;
   }, []);
 
-  // 🎵 Real-time audio level detection loop (get from service)
+  // 🎵 Real-time audio level detection loop
   const updateAudioLevel = useCallback(() => {
-    if (!isEnabled) {
+    if (!isEnabled || !analyserRef.current) {
       animationFrameRef.current = null;
       return;
     }
 
     try {
-      // Get audio level from the microphone service (WebWorkerVAD)
-      const micState = conversationMicrophoneService.getState();
-      const currentLevel = micState.audioLevel || 0;
+      // Get audio data
+      const bufferLength = analyserRef.current.fftSize;
+      const dataArray = new Uint8Array(bufferLength);
+      analyserRef.current.getByteTimeDomainData(dataArray);
+
+      // Calculate RMS (Root Mean Square) for audio level
+      let sumSquares = 0;
+      for (let i = 0; i < bufferLength; i++) {
+        const centered = (dataArray[i] - 128) / 128; // Center around 0
+        sumSquares += centered * centered;
+      }
+      const rms = Math.sqrt(sumSquares / bufferLength);
 
       // Apply smoothing to prevent jittery animations
-      smoothedLevelRef.current = smoothedLevelRef.current * smoothingFactor + currentLevel * (1 - smoothingFactor);
+      smoothedLevelRef.current = smoothedLevelRef.current * smoothingFactor + rms * (1 - smoothingFactor);
 
     } catch (error) {
-      console.error('[useConversationRealtimeAudioLevel] ❌ Error getting audio level:', error);
+      console.error('[useConversationRealtimeAudioLevel] ❌ Error reading audio data:', error);
     }
 
     // Continue the loop
@@ -81,8 +114,8 @@ export const useConversationRealtimeAudioLevel = ({
   useEffect(() => {
     const handleMicStateChange = () => {
       const micState = conversationMicrophoneService.getState();
-      // Enabled whenever VAD is active (not just when recording)
-      setIsEnabled(micState.hasVAD && micState.hasStream);
+      // Enabled only while actively capturing (recording and not paused)
+      setIsEnabled(micState.isRecording && !micState.isPaused);
     };
 
     // Subscribe to microphone service state changes
@@ -108,7 +141,7 @@ export const useConversationRealtimeAudioLevel = ({
 
   // 🎵 Effect: Start/stop audio level detection
   useEffect(() => {
-    if (isEnabled && !animationFrameRef.current) {
+    if (isEnabled && analyserRef.current && !animationFrameRef.current) {
       updateAudioLevel();
     } else if (!isEnabled && animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);

@@ -274,12 +274,27 @@ export class RollingBufferVAD {
       return null;
     }
 
-    // STRICT: Always create blob with webm/opus type to ensure format consistency
-    const finalBlob = new Blob(allChunks, { type: 'audio/webm;codecs=opus' });
+    // CRITICAL: Validate that all chunks have the same format before combining
+    for (const chunk of allChunks) {
+      if (chunk.type !== 'audio/webm;codecs=opus') {
+        this.error(`❌ CRITICAL: Chunk format mismatch! Expected 'audio/webm;codecs=opus', got '${chunk.type}'`);
+        return null;
+      }
+    }
     
-    // Validate blob type
+    // Create final blob - let browser determine the type from chunks
+    const finalBlob = new Blob(allChunks);
+    
+    // Validate final blob
     if (finalBlob.type !== 'audio/webm;codecs=opus') {
-      this.error(`❌ CRITICAL: Blob type mismatch! Expected 'audio/webm;codecs=opus', got '${finalBlob.type}'`);
+      this.error(`❌ CRITICAL: Final blob format mismatch! Expected 'audio/webm;codecs=opus', got '${finalBlob.type}'`);
+      return null;
+    }
+    
+    // Additional validation: Check if blob is too small (likely corrupted)
+    if (finalBlob.size < 1000) {
+      this.error(`❌ CRITICAL: Final blob too small (${finalBlob.size} bytes) - likely corrupted`);
+      return null;
     }
     
     this.log(`✅ Final blob created: ${finalBlob.size} bytes, type: ${finalBlob.type}`);
