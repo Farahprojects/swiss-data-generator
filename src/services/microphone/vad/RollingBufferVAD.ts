@@ -98,9 +98,28 @@ export class RollingBufferVAD {
           typeof MediaRecorder.isTypeSupported === 'function' && 
           MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
         this.log('✅ Using optimal webm/opus format');
+        // Ensure we use the exact format that Google STT expects
+        options = { 
+          audioBitsPerSecond: 48000,
+          mimeType: 'audio/webm;codecs=opus'
+        };
       } else {
-        this.log('⚠️ webm/opus not supported, using browser default');
-        options = { audioBitsPerSecond: 48000 };
+        this.log('⚠️ webm/opus not supported, trying alternative formats');
+        // Try alternative formats that might work better
+        if (MediaRecorder.isTypeSupported('audio/webm')) {
+          options = { 
+            audioBitsPerSecond: 48000,
+            mimeType: 'audio/webm'
+          };
+        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+          options = { 
+            audioBitsPerSecond: 48000,
+            mimeType: 'audio/mp4'
+          };
+        } else {
+          this.log('⚠️ Using browser default format');
+          options = { audioBitsPerSecond: 48000 };
+        }
       }
     } catch (error) {
       this.log('⚠️ Format detection failed, using browser default');

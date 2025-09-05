@@ -26,7 +26,8 @@ serve(async (req) => {
       audioSize: audioBuffer.length,
       mode: meta.mode,
       sessionId: meta.sessionId,
-      config: config
+      config: config,
+      audioHeader: Array.from(audioBuffer.slice(0, 8)).map(b => '0x' + b.toString(16).padStart(2, '0')).join(' ')
     });
     
     // Validate audio data
@@ -40,10 +41,37 @@ serve(async (req) => {
       throw new Error('Google STT API key not configured');
     }
 
-    // Optimal configuration for webm/opus at 48kHz
+    // Detect audio format and configure accordingly
+    let encoding = 'WEBM_OPUS';
+    let sampleRateHertz = 48000;
+    
+    // Try to detect format from audio data or use defaults
+    if (audioBuffer.length > 0) {
+      // Check for common audio format headers
+      const header = Array.from(audioBuffer.slice(0, 12));
+      
+      // WebM/Opus detection
+      if (header[0] === 0x1A && header[1] === 0x45 && header[2] === 0xDF && header[3] === 0xA3) {
+        encoding = 'WEBM_OPUS';
+        sampleRateHertz = 48000;
+        console.log('[google-stt] 🎯 Detected WebM/Opus format');
+      }
+      // MP4 detection
+      else if (header[4] === 0x66 && header[5] === 0x74 && header[6] === 0x79 && header[7] === 0x70) {
+        encoding = 'MP4';
+        sampleRateHertz = 48000;
+        console.log('[google-stt] 🎯 Detected MP4 format');
+      }
+      // Default to WebM/Opus for mobile optimization
+      else {
+        console.log('[google-stt] 🎯 Using default WebM/Opus format');
+      }
+    }
+
+    // Optimal configuration for detected format
     const sttConfig = {
-      encoding: 'WEBM_OPUS',
-      sampleRateHertz: 48000,        // Explicit sample rate for opus
+      encoding: encoding,
+      sampleRateHertz: sampleRateHertz,
       languageCode: 'en-US',
       enableAutomaticPunctuation: true,
       model: 'latest_short',         // Mobile-first: Faster model
@@ -83,7 +111,13 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[google-stt] Google API error:', errorText);
+      console.error('[google-stt] Google API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+        config: sttConfig,
+        audioSize: audioBuffer.length
+      });
       throw new Error(`Google Speech-to-Text API error: ${response.status} - ${errorText}`);
     }
 
