@@ -7,21 +7,68 @@ interface Props {
 
 export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const barRefs = useRef<HTMLDivElement[]>([]);
+  const targetLevelsRef = useRef<FourBarLevels>([0.2, 0.2, 0.2, 0.2]);
+  const currentLevelsRef = useRef<FourBarLevels>([0.2, 0.2, 0.2, 0.2]);
+  const rafRef = useRef<number | null>(null);
+  const lastTsRef = useRef<number>(0);
 
-  // 🎯 REAL-TIME: 4-bar updates from browser audio analysis
+  // Per-bar phase offsets for subtle desync
+  const phaseRef = useRef<number[]>([0.0, 0.5, 1.1, 1.7]);
+
+  // Subscribe to analyser-driven levels (read-only)
   useEffect(() => {
-    if (!isActive || !containerRef.current) return;
+    if (!isActive) return;
+    const onLevels = (levels: FourBarLevels) => {
+      targetLevelsRef.current = levels;
+    };
+    const unsubscribe = directBarsAnimationService.subscribe(onLevels);
+    return unsubscribe;
+  }, [isActive]);
 
-    const applyBars = (levels: FourBarLevels) => {
-      // levels are 0..1 final scale values per bar from real-time analysis
-      containerRef.current!.style.setProperty('--bar1-scale', levels[0].toString());
-      containerRef.current!.style.setProperty('--bar2-scale', levels[1].toString());
-      containerRef.current!.style.setProperty('--bar3-scale', levels[2].toString());
-      containerRef.current!.style.setProperty('--bar4-scale', levels[3].toString());
+  // Lightweight RAF loop with easing and wobble
+  useEffect(() => {
+    if (!isActive) return;
+    if (!containerRef.current) return;
+
+    const animate = (ts: number) => {
+      const prev = lastTsRef.current || ts;
+      const dt = Math.min(0.05, (ts - prev) / 1000); // clamp dt for stability
+      lastTsRef.current = ts;
+
+      const wobbleFreq = 4.2; // Hz-like feel (scaled by time below)
+      const wobbleAmp = 0.08; // small wobble around target
+      const ease = 12; // responsiveness for exponential smoothing
+      const t = ts * 0.001;
+
+      const target = targetLevelsRef.current;
+      const current = currentLevelsRef.current;
+
+      for (let i = 0; i < 4; i++) {
+        // Base target with subtle per-bar phase wobble
+        const wobble = 1 + wobbleAmp * Math.sin(t * wobbleFreq + phaseRef.current[i]);
+        const targetWithWobble = Math.min(1, Math.max(0.15, target[i] * wobble));
+
+        // Exponential smoothing toward target (spring-like without heavy physics)
+        const alpha = 1 - Math.exp(-ease * dt);
+        current[i] = current[i] + (targetWithWobble - current[i]) * alpha;
+
+        // Apply transform directly to each bar
+        const barEl = barRefs.current[i];
+        if (barEl) {
+          barEl.style.transform = `scaleY(${current[i].toFixed(4)})`;
+        }
+      }
+
+      rafRef.current = requestAnimationFrame(animate);
     };
 
-    const unsubscribe = directBarsAnimationService.subscribe(applyBars);
-    return unsubscribe;
+    rafRef.current = requestAnimationFrame(animate);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+      lastTsRef.current = 0;
+    };
   }, [isActive]);
 
   // 🎯 DESIGN: Two middle bars 2x taller than outer bars, all taller starting point
@@ -36,20 +83,19 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive }) => {
     <div 
       ref={containerRef}
       className="flex items-center justify-center gap-3 h-48 w-28"
-      style={{
-        willChange: 'transform', // GPU acceleration hint
-      } as React.CSSProperties}
+      style={{ willChange: 'transform' } as React.CSSProperties}
     >
       {bars.map((bar, idx) => (
         <div
           key={bar.id}
+          ref={(el) => { if (el) barRefs.current[idx] = el; }}
           className={`bg-black rounded-full ${bar.className}`}
           style={{
-            width: '16px', // All bars same width
-            transformOrigin: 'center', // Scale from center outward (up and down)
-            transform: `scaleY(var(--bar${idx+1}-scale, 0.2))`,
-            willChange: 'transform', // GPU acceleration hint
-            transition: 'none !important', // Disable any CSS transitions
+            width: '16px',
+            transformOrigin: 'center',
+            transform: 'scaleY(0.2)',
+            willChange: 'transform',
+            transition: 'none',
           }}
         />
       ))}
