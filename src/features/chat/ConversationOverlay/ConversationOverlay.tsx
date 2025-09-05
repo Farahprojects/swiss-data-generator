@@ -373,10 +373,10 @@ export const ConversationOverlay: React.FC = () => {
     // 🎤 STEP 3: Stop microphone and release MediaStream (browser API)
     try {
       conversationMicrophoneService.stopRecording();
-      conversationMicrophoneService.cleanup();
-      console.log('[ConversationOverlay] 🎤 Microphone and MediaStream released');
+      // VAD cleanup is handled internally by the microphone service - no external calls needed
+      console.log('[ConversationOverlay] 🎤 Microphone stopped');
     } catch (e) {
-      console.warn('[ConversationOverlay] Could not cleanup microphone:', e);
+      console.warn('[ConversationOverlay] Could not stop microphone:', e);
     }
     
     // 🌐 STEP 4: Close WebSocket connection and ping interval
