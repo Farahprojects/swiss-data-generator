@@ -113,11 +113,12 @@ export class GoldStandardVAD {
       }
     });
     
-    // Start VAD monitoring
-    this.startVADMonitoring();
-    
+    // Set active state BEFORE starting monitoring
     this.isActive = true;
     this.state.isActive = true;
+    
+    // Start VAD monitoring
+    this.startVADMonitoring();
   }
 
   /**
