@@ -87,67 +87,36 @@ export class RollingBufferVAD {
       silenceStartTime: null
     };
 
-    // Create MediaRecorder with AGGRESSIVE webm/opus configuration
+    // Google STT V2: Simplified MediaRecorder configuration - let Google auto-detect
     const options: MediaRecorderOptions = { 
-      audioBitsPerSecond: 48000,  // Optimal bitrate for speech
-      mimeType: 'audio/webm;codecs=opus'
+      mimeType: 'audio/webm;codecs=opus'  // Preferred format, but Google V2 can handle others
     };
     
-    // AGGRESSIVE: Only use webm/opus format - no fallbacks to prevent format inconsistencies
+    // Google STT V2: Check if webm/opus is supported, but don't fail if not
     if (typeof MediaRecorder !== 'undefined' && 
         typeof MediaRecorder.isTypeSupported === 'function') {
       
-      // Log all supported types for debugging
-      const supportedTypes = [
-        'audio/webm;codecs=opus',
-        'audio/webm',
-        'audio/mp4',
-        'audio/ogg;codecs=opus',
-        'audio/wav'
-      ];
-      
-      this.log('🔍 MediaRecorder supported types:');
-      supportedTypes.forEach(type => {
-        const supported = MediaRecorder.isTypeSupported(type);
-        this.log(`  ${supported ? '✅' : '❌'} ${type}`);
-      });
-      
       if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-        this.log('✅ Using AGGRESSIVE webm/opus format');
+        this.log('✅ Using webm/opus format for Google STT V2');
       } else {
-        this.error('❌ CRITICAL: webm/opus not supported - this will cause STT format errors');
-        throw new Error('Browser does not support audio/webm;codecs=opus format required for STT');
+        this.log('⚠️ webm/opus not supported, using browser default - Google STT V2 will auto-detect');
+        delete options.mimeType; // Let browser choose
       }
     } else {
-      this.error('❌ CRITICAL: MediaRecorder not available');
+      this.error('❌ MediaRecorder not available');
       throw new Error('MediaRecorder not available in this browser');
     }
 
     this.mediaRecorder = new MediaRecorder(stream, options);
 
-    // CRITICAL: Validate MediaRecorder is using the correct format
-    if (this.mediaRecorder.mimeType !== 'audio/webm;codecs=opus') {
-      this.error(`❌ CRITICAL: MediaRecorder format mismatch! Expected 'audio/webm;codecs=opus', got '${this.mediaRecorder.mimeType}'`);
-      throw new Error(`MediaRecorder not using correct format: ${this.mediaRecorder.mimeType}`);
-    }
-    this.log(`✅ MediaRecorder confirmed using: ${this.mediaRecorder.mimeType}`);
+    // Google STT V2: Log format being used - Google will auto-detect
+    this.log(`✅ MediaRecorder using: ${this.mediaRecorder.mimeType}`);
 
     // Handle data chunks for rolling buffer
     this.mediaRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) {
-        // CRITICAL: Log chunk details for debugging
+        // Google STT V2: Simple chunk logging
         this.log(`📦 Chunk received: size=${event.data.size}, type=${event.data.type}`);
-        
-        // Log first few bytes of chunk to verify format
-        const reader = new FileReader();
-        reader.onload = () => {
-          const arrayBuffer = reader.result as ArrayBuffer;
-          const firstBytes = Array.from(new Uint8Array(arrayBuffer.slice(0, 16)))
-            .map(b => b.toString(16).padStart(2, '0')).join(' ');
-          this.log(`📦 Chunk first bytes: ${firstBytes}`);
-        };
-        reader.readAsArrayBuffer(event.data.slice(0, 16));
-        
         this.handleAudioChunk(event.data);
       }
     };
@@ -318,26 +287,12 @@ export class RollingBufferVAD {
     this.log(`🎵 Audio level during recording: ${this.state.audioLevel.toFixed(4)} (threshold: ${this.options.voiceThreshold})`);
     this.log(`🎵 Voice started: ${this.state.voiceStarted}, Phase: ${this.state.phase}`);
 
-    // CRITICAL: Validate that all chunks have the same format before combining
-    for (const chunk of allChunks) {
-      if (chunk.type !== 'audio/webm;codecs=opus') {
-        this.error(`❌ CRITICAL: Chunk format mismatch! Expected 'audio/webm;codecs=opus', got '${chunk.type}'`);
-        return null;
-      }
-    }
+    // Google STT V2: Create final blob - Google will auto-detect format
+    const finalBlob = new Blob(allChunks, { type: allChunks[0]?.type || 'audio/webm' });
     
-    // Create final blob with explicit type - all chunks are validated to be webm/opus
-    const finalBlob = new Blob(allChunks, { type: 'audio/webm;codecs=opus' });
-    
-    // Validate final blob
-    if (finalBlob.type !== 'audio/webm;codecs=opus') {
-      this.error(`❌ CRITICAL: Final blob format mismatch! Expected 'audio/webm;codecs=opus', got '${finalBlob.type}'`);
-      return null;
-    }
-    
-    // Additional validation: Check if blob is too small (likely corrupted)
-    if (finalBlob.size < 1000) {
-      this.error(`❌ CRITICAL: Final blob too small (${finalBlob.size} bytes) - likely corrupted`);
+    // Simple size check
+    if (finalBlob.size < 100) {
+      this.error(`❌ Final blob too small (${finalBlob.size} bytes) - likely empty`);
       return null;
     }
     

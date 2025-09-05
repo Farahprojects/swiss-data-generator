@@ -42,36 +42,25 @@ serve(async (req) => {
       throw new Error('Google STT API key not configured');
     }
 
-    // Optimal configuration for webm/opus at 48kHz
+    // Google STT V2: Simplified configuration - let Google auto-detect format
     const sttConfig = {
-      encoding: 'WEBM_OPUS',
-      sampleRateHertz: 48000,        // Explicit sample rate for opus
       languageCode: 'en-US',
       enableAutomaticPunctuation: true,
       model: 'latest_short',         // Mobile-first: Faster model
       ...config
     };
 
-    // Mobile-first: Optimized base64 conversion for smaller files
-    let binaryString = '';
-    const chunkSize = 16384; // Mobile-first: Larger chunks for faster processing
-    for (let i = 0; i < audioBuffer.length; i += chunkSize) {
-      const chunk = audioBuffer.slice(i, i + chunkSize);
-      binaryString += String.fromCharCode(...chunk);
-    }
-    const base64Audio = btoa(binaryString);
-    
+    // Google STT V2: Send raw binary data directly - no base64 conversion needed
     const requestBody = {
       audio: {
-        content: base64Audio
+        content: Array.from(audioBuffer)  // Send raw bytes directly
       },
       config: sttConfig
     };
 
-
-    
+    // Google STT V2 API endpoint
     let response = await fetch(
-      `https://speech.googleapis.com/v1/speech:recognize?key=${googleApiKey}`,
+      `https://speech.googleapis.com/v2/speech:recognize?key=${googleApiKey}`,
       {
         method: 'POST',
         headers: {

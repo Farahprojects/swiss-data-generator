@@ -15,35 +15,21 @@ class SttService {
       throw new Error('Recording too short - please speak for longer');
     }
     
-    // CRITICAL: Validate audio format to prevent STT errors
-    if (audioBlob.type !== 'audio/webm;codecs=opus') {
-      console.error(`[STT] CRITICAL: Audio format mismatch! Expected 'audio/webm;codecs=opus', got '${audioBlob.type}'`);
-      throw new Error(`Invalid audio format: ${audioBlob.type}. Expected webm/opus format.`);
+    // Google STT V2: Simplified validation - just check size
+    if (audioBlob.size < 100) {
+      console.error(`[STT] Audio blob too small (${audioBlob.size} bytes) - likely empty`);
+      throw new Error(`Audio blob too small (${audioBlob.size} bytes). Expected at least 100 bytes.`);
     }
     
-    // CRITICAL: Validate audio blob size to prevent empty transcripts
-    if (audioBlob.size < 1000) {
-      console.error(`[STT] CRITICAL: Audio blob too small (${audioBlob.size} bytes) - likely corrupted or empty`);
-      throw new Error(`Audio blob too small (${audioBlob.size} bytes). Expected at least 1000 bytes.`);
-    }
-    
-    // CRITICAL: Log detailed payload being sent to Google STT
-    console.log('[STT] 📤 SENDING TO GOOGLE STT:', {
+    // Google STT V2: Log simplified payload - Google will auto-detect format
+    console.log('[STT] 📤 SENDING TO GOOGLE STT V2:', {
       blobSize: audioBlob.size,
       blobType: audioBlob.type,
-      blobConstructor: audioBlob.constructor.name,
       mode,
-      chat_id,
-      config: {
-        encoding: 'WEBM_OPUS',
-        languageCode: 'en-US',
-        enableAutomaticPunctuation: true,
-        model: 'latest_short'
-      }
+      chat_id
     });
 
-    // Send raw binary audio directly, with config in headers. This mirrors the
-    // ChatTextMicrophoneService and aligns both STT pathways.
+    // Google STT V2: Send raw binary audio directly - Google will auto-detect format
     const { data, error } = await supabase.functions.invoke('google-speech-to-text', {
       body: audioBlob,
       headers: {
@@ -52,7 +38,6 @@ class SttService {
           mode,
           chat_id,
           config: {
-            encoding: 'WEBM_OPUS',
             languageCode: 'en-US',
             enableAutomaticPunctuation: true,
             model: 'latest_short' // Mobile-first: Faster model for quicker response
