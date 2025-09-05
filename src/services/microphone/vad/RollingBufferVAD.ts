@@ -1,13 +1,16 @@
 /**
- * 🎯 SIMPLE VAD - Voice Activity Detection Only
+ * 🎯 ROLLING BUFFER VAD - Shared Core Logic
  * 
- * Simplified VAD implementation that can be used
+ * Professional rolling buffer VAD implementation that can be used
  * across different microphone domains (chat, conversation, journal).
  * 
- * No rolling buffer - just voice activity detection and recording.
+ * This solves the "clipped first syllable" problem by maintaining
+ * a rolling lookback buffer that gets prepended when voice starts.
  */
 
 export interface RollingBufferVADOptions {
+  lookbackWindowMs?: number;     // How much audio to keep in rolling buffer (default: 750ms)
+  chunkDurationMs?: number;      // How often to slice chunks (default: 250ms)
   voiceThreshold?: number;       // RMS threshold for voice detection (default: 0.012)
   silenceThreshold?: number;     // RMS threshold for silence (default: 0.008)
   voiceConfirmMs?: number;       // Duration to confirm voice start (default: 300ms)
@@ -21,7 +24,8 @@ export interface RollingBufferVADState {
   phase: 'waiting_for_voice' | 'monitoring_silence';
   voiceStarted: boolean;
   audioLevel: number;
-  audioChunks: Blob[];
+  preBufferChunks: Blob[];
+  activeChunks: Blob[];
 }
 
 export class RollingBufferVAD {
@@ -29,12 +33,14 @@ export class RollingBufferVAD {
   private audioContext: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
   private monitoringRef = { current: false };
+  private animationFrameId: number | null = null;
   
   private state: RollingBufferVADState = {
     phase: 'waiting_for_voice',
     voiceStarted: false,
     audioLevel: 0,
-    audioChunks: []
+    preBufferChunks: [],
+    activeChunks: []
   };
   
   private options: Required<RollingBufferVADOptions>;
@@ -45,6 +51,8 @@ export class RollingBufferVAD {
 
   constructor(options: RollingBufferVADOptions = {}) {
     this.options = {
+      lookbackWindowMs: 750,
+      chunkDurationMs: 250,       // Consistent 250ms chunks for all domains
       voiceThreshold: 0.012,
       silenceThreshold: 0.008,
       voiceConfirmMs: 300,
@@ -57,10 +65,10 @@ export class RollingBufferVAD {
   }
 
   /**
-   * START - Begin simple VAD recording
+   * START - Begin rolling buffer recording and VAD
    */
   async start(stream: MediaStream, audioContext: AudioContext, analyser: AnalyserNode): Promise<void> {
-    this.log('🎯 Starting simple VAD');
+    this.log('🎯 Starting rolling buffer VAD');
     
     this.audioContext = audioContext;
     this.analyser = analyser;
@@ -70,7 +78,8 @@ export class RollingBufferVAD {
       phase: 'waiting_for_voice',
       voiceStarted: false,
       audioLevel: 0,
-      audioChunks: []
+      preBufferChunks: [],
+      activeChunks: []
     };
     
     this.vadState = {
@@ -108,20 +117,29 @@ export class RollingBufferVAD {
       this.options.onError(new Error('Recording failed'));
     };
 
-    // Start recording with 1 second time slices
-    this.mediaRecorder.start(1000);
+    // Start recording with small time slices
+    this.mediaRecorder.start(this.options.chunkDurationMs);
     
     // Start VAD monitoring
     this.startVADMonitoring();
   }
 
   /**
-   * HANDLE AUDIO CHUNK - Simple audio collection
+   * HANDLE AUDIO CHUNK - Manage rolling buffer logic
    */
   private handleAudioChunk(chunk: Blob): void {
-    // Only collect audio after voice is detected
-    if (this.state.voiceStarted) {
-      this.state.audioChunks.push(chunk);
+    if (!this.state.voiceStarted) {
+      // Pre-voice: Add to rolling buffer
+      this.state.preBufferChunks.push(chunk);
+      
+      // Maintain rolling window by removing old chunks
+      const maxChunks = Math.ceil(this.options.lookbackWindowMs / this.options.chunkDurationMs);
+      if (this.state.preBufferChunks.length > maxChunks) {
+        this.state.preBufferChunks.shift();
+      }
+    } else {
+      // Post-voice: Add to active recording
+      this.state.activeChunks.push(chunk);
     }
   }
 
@@ -202,7 +220,7 @@ export class RollingBufferVAD {
       }
 
       if (this.monitoringRef.current) {
-        requestAnimationFrame(checkVAD);
+        this.animationFrameId = requestAnimationFrame(checkVAD);
       }
     };
 
@@ -219,12 +237,12 @@ export class RollingBufferVAD {
         return;
       }
 
+      // Stop monitoring immediately to prevent race conditions
       this.monitoringRef.current = false;
 
       this.mediaRecorder.onstop = () => {
         const finalBlob = this.createFinalBlob();
-        // Ensure VAD is fully reset after each turn to avoid stale buffers
-        this.cleanup();
+        // Don't call cleanup here - let the caller handle it
         resolve(finalBlob);
       };
 
@@ -232,31 +250,39 @@ export class RollingBufferVAD {
         this.mediaRecorder.stop();
       } else {
         const finalBlob = this.createFinalBlob();
-        // Ensure VAD is fully reset after each turn to avoid stale buffers
-        this.cleanup();
         resolve(finalBlob);
       }
     });
   }
 
   /**
-   * CREATE FINAL BLOB - Simple audio blob creation
+   * CREATE FINAL BLOB - Combine pre-buffer and active chunks
    */
   private createFinalBlob(): Blob | null {
-    if (this.state.audioChunks.length === 0) {
+    let allChunks: Blob[] = [];
+    
+    if (this.state.voiceStarted && this.state.preBufferChunks.length > 0) {
+      // Voice was detected: prepend lookback buffer
+      allChunks = [...this.state.preBufferChunks, ...this.state.activeChunks];
+      this.log(`📼 Final blob with lookback: ${this.state.preBufferChunks.length} pre + ${this.state.activeChunks.length} active chunks`);
+    } else if (this.state.activeChunks.length > 0) {
+      // No voice detected but we have chunks
+      allChunks = this.state.activeChunks;
+      this.log(`📼 Final blob without lookback: ${this.state.activeChunks.length} chunks`);
+    } else {
       this.log('⚠️ No audio chunks collected');
       return null;
     }
 
     // STRICT: Always create blob with webm/opus type to ensure format consistency
-    const finalBlob = new Blob(this.state.audioChunks, { type: 'audio/webm;codecs=opus' });
+    const finalBlob = new Blob(allChunks, { type: 'audio/webm;codecs=opus' });
     
     // Validate blob type
     if (finalBlob.type !== 'audio/webm;codecs=opus') {
       this.error(`❌ CRITICAL: Blob type mismatch! Expected 'audio/webm;codecs=opus', got '${finalBlob.type}'`);
     }
     
-    this.log(`✅ Final blob created: ${finalBlob.size} bytes, type: ${finalBlob.type}, chunks: ${this.state.audioChunks.length}`);
+    this.log(`✅ Final blob created: ${finalBlob.size} bytes, type: ${finalBlob.type}`);
     return finalBlob;
   }
 
@@ -273,7 +299,12 @@ export class RollingBufferVAD {
   cleanup(): void {
     this.log('🧹 Cleaning up rolling buffer VAD');
     
+    // Stop monitoring and cancel any pending animation frames
     this.monitoringRef.current = false;
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
     
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
       this.mediaRecorder.stop();
@@ -287,7 +318,8 @@ export class RollingBufferVAD {
       phase: 'waiting_for_voice',
       voiceStarted: false,
       audioLevel: 0,
-      audioChunks: []
+      preBufferChunks: [],
+      activeChunks: []
     };
     
     this.vadState = {

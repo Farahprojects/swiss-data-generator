@@ -102,15 +102,14 @@ export class ConversationMicrophoneServiceClass {
         return false;
       }
 
-      // Create or reuse AudioContext with optimal sample rate
-      if (!this.audioContext || this.audioContext.state === 'closed') {
-        this.audioContext = new AudioContext({ sampleRate: 48000 });
+      // Create fresh AudioContext for each turn to prevent stale data
+      if (this.audioContext && this.audioContext.state !== 'closed') {
+        this.audioContext.close().catch(() => {});
       }
+      this.audioContext = new AudioContext({ sampleRate: 48000 });
 
-      // Create fresh stream for this turn
-      const originalTrack = this.cachedStream.getAudioTracks()[0];
-      const clonedTrack = originalTrack.clone();
-      this.stream = new MediaStream([clonedTrack]);
+      // Use original stream directly - no cloning to prevent format issues
+      this.stream = this.cachedStream;
 
       // Create audio analysis chain
       this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
@@ -176,7 +175,12 @@ export class ConversationMicrophoneServiceClass {
     try {
       // Stop VAD and get audio blob
       const audioBlob = await this.rollingBufferVAD.stop();
-      this.rollingBufferVAD = null;
+      
+      // Clean up VAD after getting the blob to prevent race conditions
+      if (this.rollingBufferVAD) {
+        this.rollingBufferVAD.cleanup();
+        this.rollingBufferVAD = null;
+      }
 
       this.isRecording = false;
       this.audioLevel = 0;
