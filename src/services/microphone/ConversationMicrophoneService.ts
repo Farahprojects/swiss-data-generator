@@ -6,7 +6,7 @@
  */
 
 import { audioArbitrator } from '@/services/audio/AudioArbitrator';
-import { WebWorkerVAD } from './vad/WebWorkerVAD';
+import { GoldStandardVAD } from './vad/GoldStandardVAD';
 
 export interface ConversationMicrophoneOptions {
   onRecordingComplete?: (audioBlob: Blob) => void;
@@ -17,7 +17,7 @@ export interface ConversationMicrophoneOptions {
 
 export class ConversationMicrophoneServiceClass {
   private cachedStream: MediaStream | null = null;
-  private webWorkerVAD: WebWorkerVAD | null = null;
+  private goldStandardVAD: GoldStandardVAD | null = null;
   private isRecording = false;
   private audioLevel = 0;
   private currentTurnId: string | null = null;
@@ -90,28 +90,28 @@ export class ConversationMicrophoneServiceClass {
       }
 
       // Create continuous VAD if not already created
-      if (!this.webWorkerVAD) {
-        this.webWorkerVAD = new WebWorkerVAD({
+      if (!this.goldStandardVAD) {
+        this.goldStandardVAD = new GoldStandardVAD({
           voiceThreshold: 0.01,
           silenceThreshold: 0.005,
           silenceTimeoutMs: this.options.silenceTimeoutMs || 1200,
-          bufferWindowMs: 200,
+          bufferDurationMs: 500, // 0.5s rolling buffer
           sampleRate: 16000, // Lower sample rate for VAD analysis
           onVoiceStart: () => {
             // Voice detected - start recording this turn
             this.isRecording = true;
             this.notifyListeners();
           },
-          onSilenceDetected: () => {
-            // Silence detected - stop recording this turn
-            console.log('[ConversationMic] Silence detected, stopping recording for turn:', turnId);
-            if (this.currentTurnId === turnId) {
-              this.stopRecording(turnId);
+          onVoiceStop: (audioBlob: Blob) => {
+            // Voice stopped - send combined audio to STT
+            console.log('[ConversationMic] Voice stopped, sending audio blob size:', audioBlob.size);
+            if (this.currentTurnId === turnId && this.options.onRecordingComplete) {
+              this.options.onRecordingComplete(audioBlob);
             }
-          },
-          onAudioLevel: (level: number) => {
-            this.audioLevel = level;
-            this.notifyListeners(); // Notify React components of audio level changes
+            // Reset recording state
+            this.isRecording = false;
+            this.currentTurnId = null;
+            this.notifyListeners();
           },
           onError: (error: Error) => {
             console.error('[ConversationMic] VAD error:', error);
@@ -122,7 +122,7 @@ export class ConversationMicrophoneServiceClass {
         });
 
         // Start continuous VAD
-        await this.webWorkerVAD.start(this.cachedStream);
+        await this.goldStandardVAD.start(this.cachedStream);
       }
 
       audioArbitrator.setMicrophoneState('active');
@@ -140,37 +140,12 @@ export class ConversationMicrophoneServiceClass {
   }
 
   /**
-   * Stop recording - VAD continues running for next turn
+   * Stop recording - Not needed with GoldStandardVAD (handles automatically)
    */
   public async stopRecording(expectedTurnId?: string): Promise<Blob | null> {
-    if (expectedTurnId && this.currentTurnId !== expectedTurnId) {
-      return null;
-    }
-    if (!this.isRecording || !this.webWorkerVAD) {
-      return null;
-    }
-
-    try {
-      // Get audio blob from VAD (VAD continues running)
-      const audioBlob = await this.webWorkerVAD.stop();
-      
-      // Reset recording state but keep VAD running
-      this.isRecording = false;
-      this.currentTurnId = null;
-
-      this.notifyListeners();
-
-      // Call completion callback
-      if (audioBlob && this.options.onRecordingComplete) {
-        console.log('[ConversationMic] Calling onRecordingComplete with blob size:', audioBlob.size);
-        this.options.onRecordingComplete(audioBlob);
-      }
-
-      return audioBlob;
-    } catch (error) {
-      console.error('[ConversationMic] Stop recording failed:', error);
-      return null;
-    }
+    // GoldStandardVAD handles recording automatically
+    // This method is kept for compatibility but does nothing
+    return null;
   }
 
   /**
@@ -214,7 +189,7 @@ export class ConversationMicrophoneServiceClass {
       isRecording: this.isRecording,
       audioLevel: this.audioLevel,
       hasStream: !!this.cachedStream,
-      hasVAD: !!this.webWorkerVAD
+      hasVAD: !!this.goldStandardVAD
     };
   }
 
@@ -240,9 +215,9 @@ export class ConversationMicrophoneServiceClass {
     this.isRecording = false;
     this.audioLevel = 0;
 
-    if (this.webWorkerVAD) {
-      this.webWorkerVAD.cleanup();
-      this.webWorkerVAD = null;
+    if (this.goldStandardVAD) {
+      this.goldStandardVAD.cleanup();
+      this.goldStandardVAD = null;
     }
 
     if (this.cachedStream) {
