@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { useChatStore } from '@/core/store';
-import { useConversationAudioLevel } from '@/hooks/useConversationAudioLevel';
+import { useConversationRealtimeAudioLevel } from '@/hooks/useConversationRealtimeAudioLevel';
 import { VoiceBubble } from './VoiceBubble';
 import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
 import { directBarsAnimationService, FourBarLevels } from '@/services/voice/DirectBarsAnimationService';
@@ -33,7 +33,13 @@ export const ConversationOverlay: React.FC = () => {
   const chat_id = useChatStore((state) => state.chat_id);
   // 🎯 PRIMARY: State machine drives everything
   const [state, setState] = useState<ConversationState>('connecting');
-  const audioLevel = useConversationAudioLevel(state !== 'replying');
+  
+  // 🎵 REALTIME AUDIO LEVEL - Direct MediaStream analysis (mobile-friendly)
+  const audioLevel = useConversationRealtimeAudioLevel({
+    enabled: state !== 'replying', // Enable when not replying (listening/thinking states)
+    updateIntervalMs: 50, // 20fps for React state updates (smooth but not excessive)
+    smoothingFactor: 0.8, // Smooth animations
+  });
   
   
   // 🎯 ESSENTIAL: Only what we need for state transitions
