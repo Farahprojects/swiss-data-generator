@@ -32,21 +32,22 @@ export const useConversationRealtimeAudioLevel = ({
 
   // 🎵 Initialize AudioContext and AnalyserNode
   const initializeAudioContext = useCallback(async () => {
-    // Get the existing AudioContext and AnalyserNode from the conversation microphone service
-    // This prevents conflicts with the service's own audio analysis chain
-    const serviceState = conversationMicrophoneService.getState();
-    if (!serviceState.hasStream || audioContextRef.current) {
+    const stream = conversationMicrophoneService.getStream();
+    if (!stream || audioContextRef.current) {
       // Stream not available yet or already initialized
       return;
     }
 
     try {
-      // Get the existing AudioContext and AnalyserNode from the service
+      // Get the existing AudioContext and AnalyserNode from the conversation microphone service
+      // This prevents conflicts with the service's own audio analysis chain
+      const serviceState = conversationMicrophoneService.getState();
+      if (!serviceState.hasStream) {
+        return;
+      }
+
       // We need to access the service's internal audio analysis chain
       // For now, we'll create our own but use the same stream
-      const stream = conversationMicrophoneService.getStream();
-      if (!stream) return;
-
       // Create AudioContext with mobile-optimized settings
       audioContextRef.current = new AudioContext({ 
         sampleRate: 16000, // Mobile-first: 16kHz for faster processing
