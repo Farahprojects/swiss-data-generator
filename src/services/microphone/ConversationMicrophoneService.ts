@@ -303,27 +303,6 @@ export class ConversationMicrophoneServiceClass {
   }
 
   /**
-   * RESET FOR NEXT TURN - Reset state without destroying stream/AudioContext
-   * Call this between conversation turns to prepare for next recording
-   */
-  resetForNextTurn(): void {
-    this.log('🔄 Resetting microphone service for next turn');
-    
-    // Reset state flags
-    this.isStartingRecording = false;
-    this.isRecording = false;
-    this.audioLevel = 0;
-    
-    // Cleanup rolling buffer VAD but keep stream/AudioContext alive
-    if (this.rollingBufferVAD) {
-      this.rollingBufferVAD.cleanup();
-      this.rollingBufferVAD = null;
-    }
-    
-    this.log('✅ Microphone service reset for next turn (stream/AudioContext preserved)');
-  }
-
-  /**
    * CLEANUP - Only call this when conversation is completely done
    * (cancel, reset, or overlay close)
    */
