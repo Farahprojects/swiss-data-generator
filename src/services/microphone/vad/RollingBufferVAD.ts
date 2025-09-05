@@ -51,7 +51,7 @@ export class RollingBufferVAD {
   constructor(options: RollingBufferVADOptions = {}) {
     this.options = {
       lookbackWindowMs: 750,
-      chunkDurationMs: 250,
+      chunkDurationMs: 1000,      // 1-2s chunks for optimal streaming
       voiceThreshold: 0.012,
       silenceThreshold: 0.008,
       voiceConfirmMs: 300,
@@ -86,18 +86,26 @@ export class RollingBufferVAD {
       silenceStartTime: null
     };
 
-    // Create MediaRecorder with small time slices for rolling buffer
-    // Prefer opus-in-webm for STT; fall back to browser default if unsupported
-    let options: MediaRecorderOptions = { audioBitsPerSecond: 64000 };
+    // Create MediaRecorder with optimal webm/opus configuration
+    let options: MediaRecorderOptions = { 
+      audioBitsPerSecond: 48000,  // Optimal bitrate for speech
+      mimeType: 'audio/webm;codecs=opus'
+    };
+    
     try {
-      const preferred = 'audio/webm;codecs=opus';
-      const isSupported = (typeof MediaRecorder !== 'undefined' &&
-        // @ts-ignore
-        typeof MediaRecorder.isTypeSupported === 'function' && MediaRecorder.isTypeSupported(preferred));
-      if (isSupported) {
-        options.mimeType = preferred;
+      // Verify support for optimal format
+      if (typeof MediaRecorder !== 'undefined' && 
+          typeof MediaRecorder.isTypeSupported === 'function' && 
+          MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        this.log('✅ Using optimal webm/opus format');
+      } else {
+        this.log('⚠️ webm/opus not supported, using browser default');
+        options = { audioBitsPerSecond: 48000 };
       }
-    } catch {}
+    } catch (error) {
+      this.log('⚠️ Format detection failed, using browser default');
+      options = { audioBitsPerSecond: 48000 };
+    }
 
     this.mediaRecorder = new MediaRecorder(stream, options);
 

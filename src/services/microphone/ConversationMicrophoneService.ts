@@ -102,9 +102,9 @@ export class ConversationMicrophoneServiceClass {
         return false;
       }
 
-      // Create or reuse AudioContext
+      // Create or reuse AudioContext with optimal sample rate
       if (!this.audioContext || this.audioContext.state === 'closed') {
-        this.audioContext = new AudioContext({ sampleRate: 16000 });
+        this.audioContext = new AudioContext({ sampleRate: 48000 });
       }
 
       // Create fresh stream for this turn

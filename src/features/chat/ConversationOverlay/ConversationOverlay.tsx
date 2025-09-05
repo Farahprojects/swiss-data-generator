@@ -101,8 +101,16 @@ export const ConversationOverlay: React.FC = () => {
       // Setup WebSocket
       await establishConnection();
       
-      // Get microphone permission
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Get microphone permission with optimal audio constraints
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          sampleRate: 48000,        // Optimal for opus codec
+          channelCount: 1,          // Mono for STT
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
       conversationMicrophoneService.cacheStream(stream);
       
       // Initialize microphone service

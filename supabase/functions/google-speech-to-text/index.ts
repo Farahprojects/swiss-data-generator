@@ -40,12 +40,13 @@ serve(async (req) => {
       throw new Error('Google STT API key not configured');
     }
 
-    // Mobile-first configuration for speed
+    // Optimal configuration for webm/opus at 48kHz
     const sttConfig = {
       encoding: 'WEBM_OPUS',
+      sampleRateHertz: 48000,        // Explicit sample rate for opus
       languageCode: 'en-US',
       enableAutomaticPunctuation: true,
-      model: 'latest_short', // Mobile-first: Faster model
+      model: 'latest_short',         // Mobile-first: Faster model
       ...config
     };
 

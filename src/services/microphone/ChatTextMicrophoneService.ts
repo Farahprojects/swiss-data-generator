@@ -62,7 +62,7 @@ class ChatTextMicrophoneServiceClass {
           echoCancellation: true,    // Clean input
           noiseSuppression: true,    // Remove background noise
           autoGainControl: true,     // Consistent levels
-          sampleRate: 48000,         // High quality
+          sampleRate: 48000,         // Optimal for opus codec
         }
       });
 
@@ -72,7 +72,7 @@ class ChatTextMicrophoneServiceClass {
       // Set up audio analysis - mobile optimized
       // Reuse existing AudioContext if available, only create new one if needed
       if (!this.audioContext || this.audioContext.state === 'closed') {
-        this.audioContext = new AudioContext({ sampleRate: 16000 }); // Mobile-first: 16kHz for faster processing
+        this.audioContext = new AudioContext({ sampleRate: 48000 }); // Optimal for opus codec
         this.log('🎛️ Created new AudioContext for chat text microphone');
       } else {
         this.log('🎛️ Reusing existing AudioContext for chat text microphone');
