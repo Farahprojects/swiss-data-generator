@@ -89,9 +89,10 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive }) => {
         <div
           key={bar.id}
           ref={(el) => { if (el) barRefs.current[idx] = el; }}
-          className={`bg-black rounded-full ${bar.className}`}
+          className={`bg-black ${bar.className}`}
           style={{
             width: '16px',
+            borderRadius: '8px', // Half the width for truly round ends
             transformOrigin: 'center',
             transform: 'scaleY(0.2)',
             willChange: 'transform',
