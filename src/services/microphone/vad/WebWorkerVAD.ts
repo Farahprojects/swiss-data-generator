@@ -185,6 +185,7 @@ export class WebWorkerVAD {
     
     const checkVAD = () => {
       if (!this.isActive || !this.analyser || !this.worker) {
+        console.log('[WebWorkerVAD] checkVAD stopped - isActive:', this.isActive, 'analyser:', !!this.analyser, 'worker:', !!this.worker);
         return;
       }
       
@@ -199,9 +200,11 @@ export class WebWorkerVAD {
       }
       const rms = Math.sqrt(sumSquares / bufferLength);
       
-      // Debug logging
+      // Debug logging - show first few iterations
       if (rms > 0.001) {
         console.log('[WebWorkerVAD] Audio data RMS:', rms);
+      } else if (Math.random() < 0.01) { // Log occasionally even with no audio
+        console.log('[WebWorkerVAD] Audio data RMS (no audio):', rms);
       }
       
       // Send to worker for processing
