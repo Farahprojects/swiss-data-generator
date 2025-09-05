@@ -530,6 +530,29 @@ export class ConversationMicrophoneServiceClass {
     this.analyser.smoothingTimeConstant = 0.8;
     this.mediaStreamSource.connect(this.analyser);
 
+    // 🔄 CRITICAL: Create new VAD for the unpaused audio chain
+    this.rollingBufferVAD = new RollingBufferVAD({
+      lookbackWindowMs: 750,
+      chunkDurationMs: 250,
+      voiceThreshold: 0.012,
+      silenceThreshold: 0.008,
+      voiceConfirmMs: 300,
+      silenceTimeoutMs: this.options.silenceTimeoutMs || 1500,
+      onVoiceStart: () => {
+        this.log('🎤 Rolling buffer VAD: Voice activity confirmed after unpause');
+      },
+      onSilenceDetected: () => {
+        this.log('🧘‍♂️ Rolling buffer VAD: Silence detected after unpause - unified stop');
+        this.unifiedStopRecording(this.currentTurnId);
+      },
+      onError: (error: Error) => {
+        this.error('❌ Rolling buffer VAD error after unpause:', error);
+        if (this.options.onError) {
+          this.options.onError(error);
+        }
+      }
+    });
+
     this.isPaused = false;
     this.notifyListeners();
   }
