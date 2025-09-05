@@ -183,6 +183,19 @@ export class WebWorkerVAD {
       // Get audio data
       this.analyser.getByteTimeDomainData(dataArray);
       
+      // Calculate RMS for debugging
+      let sumSquares = 0;
+      for (let i = 0; i < bufferLength; i++) {
+        const centered = (dataArray[i] - 128) / 128;
+        sumSquares += centered * centered;
+      }
+      const rms = Math.sqrt(sumSquares / bufferLength);
+      
+      // Debug logging
+      if (rms > 0.001) {
+        console.log('[WebWorkerVAD] Audio data RMS:', rms);
+      }
+      
       // Send to worker for processing
       this.worker.postMessage({
         type: 'audioData',
