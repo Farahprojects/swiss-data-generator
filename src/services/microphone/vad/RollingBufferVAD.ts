@@ -87,23 +87,30 @@ export class RollingBufferVAD {
       silenceStartTime: null
     };
 
-    // Create MediaRecorder with STRICT webm/opus configuration
-    let options: MediaRecorderOptions = { 
+    // Create MediaRecorder with AGGRESSIVE webm/opus configuration
+    const options: MediaRecorderOptions = { 
       audioBitsPerSecond: 48000,  // Optimal bitrate for speech
       mimeType: 'audio/webm;codecs=opus'
     };
     
-    // STRICT: Only use webm/opus format - no fallbacks to prevent format inconsistencies
+    // AGGRESSIVE: Only use webm/opus format - no fallbacks to prevent format inconsistencies
     if (typeof MediaRecorder !== 'undefined' && 
         typeof MediaRecorder.isTypeSupported === 'function' && 
         MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-      this.log('✅ Using STRICT webm/opus format');
+      this.log('✅ Using AGGRESSIVE webm/opus format');
     } else {
       this.error('❌ CRITICAL: webm/opus not supported - this will cause STT format errors');
       throw new Error('Browser does not support audio/webm;codecs=opus format required for STT');
     }
 
     this.mediaRecorder = new MediaRecorder(stream, options);
+
+    // CRITICAL: Validate MediaRecorder is using the correct format
+    if (this.mediaRecorder.mimeType !== 'audio/webm;codecs=opus') {
+      this.error(`❌ CRITICAL: MediaRecorder format mismatch! Expected 'audio/webm;codecs=opus', got '${this.mediaRecorder.mimeType}'`);
+      throw new Error(`MediaRecorder not using correct format: ${this.mediaRecorder.mimeType}`);
+    }
+    this.log(`✅ MediaRecorder confirmed using: ${this.mediaRecorder.mimeType}`);
 
     // Handle data chunks for rolling buffer
     this.mediaRecorder.ondataavailable = (event) => {

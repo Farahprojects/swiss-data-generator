@@ -55,19 +55,31 @@ class ChatTextMicrophoneServiceClass {
       this.recordingStartedAt = Date.now();
       this.log('🎤 Starting chat text voice recording');
       
-      // Create our own stream - no sharing
+      // Create our own stream with AGGRESSIVE constraints for webm/opus
       this.stream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          channelCount: 1,           // Mono for efficiency
+          channelCount: 1,           // CRITICAL: Mono for efficiency
           echoCancellation: true,    // Clean input
           noiseSuppression: true,    // Remove background noise
           autoGainControl: true,     // Consistent levels
-          sampleRate: 48000,         // Optimal for opus codec
+          sampleRate: 48000,         // CRITICAL: Must match opus codec requirements
+          // Additional constraints to ensure webm/opus compatibility
+          latency: 0.01,             // Low latency for real-time
+          volume: 1.0                // Full volume
         }
       });
 
       const trackSettings = this.stream.getAudioTracks()[0]?.getSettings?.() || {};
       this.log('🎛️ getUserMedia acquired. Track settings:', trackSettings);
+      
+      // CRITICAL: Validate the stream has the correct audio format
+      if (trackSettings.sampleRate && trackSettings.sampleRate !== 48000) {
+        this.log(`⚠️ Sample rate mismatch! Expected 48000, got ${trackSettings.sampleRate}`);
+      }
+      
+      if (trackSettings.channelCount && trackSettings.channelCount !== 1) {
+        this.log(`⚠️ Channel count mismatch! Expected 1, got ${trackSettings.channelCount}`);
+      }
 
       // Set up audio analysis - mobile optimized
       // Reuse existing AudioContext if available, only create new one if needed
