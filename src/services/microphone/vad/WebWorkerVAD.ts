@@ -143,11 +143,13 @@ export class WebWorkerVAD {
     const testRMS = testSum / testArray.length;
     console.log('[WebWorkerVAD] Initial audio test RMS:', testRMS);
     
+    // Set active state BEFORE starting monitoring
+    this.isActive = true;
+    this.state.isActive = true;
+    
     // Start VAD monitoring
     this.startVADMonitoring();
     
-    this.isActive = true;
-    this.state.isActive = true;
     this.log('✅ Web Worker VAD started');
   }
 
