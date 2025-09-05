@@ -74,6 +74,9 @@ export class ConversationMicrophoneServiceClass {
     this.log('[CONVERSATION-TURN] startRecording called - checking state flags');
     this.log(`[CONVERSATION-TURN] isStartingRecording: ${this.isStartingRecording}, isRecording: ${this.isRecording}`);
     
+    // 🔍 VAD STATE CHECK: Log current VAD state before starting
+    this.log(`🔍 VAD STATE CHECK: rollingBufferVAD=${this.rollingBufferVAD ? 'EXISTS' : 'NULL'}, isPaused=${this.isPaused}, currentTurnId=${this.currentTurnId}`);
+    
     // 🎵 REQUEST AUDIO CONTROL - Ensure no conflicts with TTS
     if (!audioArbitrator.requestControl('microphone')) {
       this.error('❌ Cannot start microphone - TTS is active');
@@ -84,6 +87,7 @@ export class ConversationMicrophoneServiceClass {
     if (this.isPaused) {
       this.log('🎤 Microphone is paused, unpausing before starting recording');
       await this.unpause(false);
+      this.log(`🔍 AFTER UNPAUSE: rollingBufferVAD=${this.rollingBufferVAD ? 'EXISTS' : 'NULL'}, isPaused=${this.isPaused}`);
     }
     
     // Defensively reset stale state flags
@@ -184,6 +188,9 @@ export class ConversationMicrophoneServiceClass {
       const turnId = this.currentTurnId;
       this.log(`🔥 [CONVERSATION-TURN] Starting turn ${turnId}`);
 
+      // 🔍 PRE-VAD CREATION: Log state before creating new VAD
+      this.log(`🔍 PRE-VAD CREATION: rollingBufferVAD=${this.rollingBufferVAD ? 'EXISTS' : 'NULL'}, stream=${this.stream ? 'EXISTS' : 'NULL'}, audioContext=${this.audioContext ? 'EXISTS' : 'NULL'}`);
+
       // Initialize rolling buffer VAD with turn-aware callbacks
       this.rollingBufferVAD = new RollingBufferVAD({
         lookbackWindowMs: 750,
@@ -215,10 +222,17 @@ export class ConversationMicrophoneServiceClass {
         }
       });
 
+      this.log(`🔍 POST-VAD CREATION: rollingBufferVAD=${this.rollingBufferVAD ? 'EXISTS' : 'NULL'}, turnId=${turnId}`);
+
       this.isRecording = true;
+
+      // 🔍 PRE-VAD START: Log state before starting VAD
+      this.log(`🔍 PRE-VAD START: rollingBufferVAD=${this.rollingBufferVAD ? 'EXISTS' : 'NULL'}, stream=${this.stream ? 'EXISTS' : 'NULL'}, audioContext=${this.audioContext ? 'EXISTS' : 'NULL'}`);
 
       // Start rolling buffer VAD
       await this.rollingBufferVAD.start(this.stream, this.audioContext, this.analyser);
+      
+      this.log(`🔍 POST-VAD START: VAD started successfully for turn ${turnId}`);
       
       this.notifyListeners();
       this.log('🎙️ Recording started successfully');
@@ -265,12 +279,19 @@ export class ConversationMicrophoneServiceClass {
     this.isStopping = true; // Prevent duplicate processing
     this.isRecording = false;
 
+    // 🔍 PRE-VAD STOP: Log VAD state before stopping
+    this.log(`🔍 PRE-VAD STOP: rollingBufferVAD=${this.rollingBufferVAD ? 'EXISTS' : 'NULL'}, expectedTurnId=${expectedTurnId}`);
+
     // Stop rolling buffer VAD and get final blob
     const blob = await this.rollingBufferVAD.stop();
+    
+    this.log(`🔍 POST-VAD STOP: VAD stopped, blob size=${blob ? blob.size : 'NULL'}`);
     
     // ✅ SAFE CLEANUP: VAD.stop() has completed and called cleanup() internally
     // Now it's safe to set the reference to null immediately
     this.rollingBufferVAD = null;
+    
+    this.log(`🔍 VAD SET TO NULL after stop`);
     
     if (blob) {
       this.log(`✅ Recording complete: ${blob.size} bytes`);
@@ -475,13 +496,18 @@ export class ConversationMicrophoneServiceClass {
   pause(): void {
     this.log('🔇 Pausing microphone for TTS playback');
     
+    // 🔍 PAUSE VAD STATE: Log VAD state before pausing
+    this.log(`🔍 PAUSE VAD STATE: rollingBufferVAD=${this.rollingBufferVAD ? 'EXISTS' : 'NULL'}, currentTurnId=${this.currentTurnId}`);
+    
     // 🎵 RELEASE AUDIO CONTROL - Allow TTS to take over
     audioArbitrator.releaseControl('microphone');
     
     // Stop VAD
     if (this.rollingBufferVAD) {
+      this.log('🔍 STOPPING VAD during pause');
       this.rollingBufferVAD.stop().catch(() => {});
       this.rollingBufferVAD = null;
+      this.log('🔍 VAD STOPPED and set to NULL during pause');
     }
     
     // Stop mic stream
@@ -506,6 +532,9 @@ export class ConversationMicrophoneServiceClass {
   async unpause(requestControl: boolean = true): Promise<void> {
     this.log('🔊 Unpausing microphone after TTS playback');
     
+    // 🔍 UNPAUSE VAD STATE: Log VAD state before unpausing
+    this.log(`🔍 UNPAUSE VAD STATE: rollingBufferVAD=${this.rollingBufferVAD ? 'EXISTS' : 'NULL'}, currentTurnId=${this.currentTurnId}`);
+    
     // 🎵 REQUEST AUDIO CONTROL - Take back control from TTS (unless called internally)
     if (requestControl && !audioArbitrator.requestControl('microphone')) {
       this.error('❌ Cannot unpause microphone - TTS still active');
@@ -517,6 +546,7 @@ export class ConversationMicrophoneServiceClass {
       const originalTrack = this.cachedStream.getAudioTracks()[0];
       const clonedTrack = originalTrack.clone();
       this.stream = new MediaStream([clonedTrack]);
+      this.log('🔍 RECREATED STREAM during unpause');
     } else {
       this.error('❌ No cached stream available for unpause');
       return;
@@ -529,6 +559,11 @@ export class ConversationMicrophoneServiceClass {
     this.analyser.fftSize = 1024;
     this.analyser.smoothingTimeConstant = 0.8;
     this.mediaStreamSource.connect(this.analyser);
+
+    this.log('🔍 RECREATED AUDIO CHAIN during unpause');
+
+    // 🔍 PRE-UNPAUSE VAD CREATION: Log state before creating new VAD in unpause
+    this.log(`🔍 PRE-UNPAUSE VAD CREATION: rollingBufferVAD=${this.rollingBufferVAD ? 'EXISTS' : 'NULL'}, stream=${this.stream ? 'EXISTS' : 'NULL'}, audioContext=${this.audioContext ? 'EXISTS' : 'NULL'}`);
 
     // 🔄 CRITICAL: Create new VAD for the unpaused audio chain
     this.rollingBufferVAD = new RollingBufferVAD({
@@ -552,6 +587,8 @@ export class ConversationMicrophoneServiceClass {
         }
       }
     });
+
+    this.log(`🔍 POST-UNPAUSE VAD CREATION: rollingBufferVAD=${this.rollingBufferVAD ? 'EXISTS' : 'NULL'}, isPaused=${this.isPaused}`);
 
     this.isPaused = false;
     this.notifyListeners();
