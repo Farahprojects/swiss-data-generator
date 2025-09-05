@@ -36,7 +36,7 @@ export const ConversationOverlay: React.FC = () => {
   
   // 🎵 REALTIME AUDIO LEVEL - Direct MediaStream analysis (mobile-friendly)
   const audioLevel = useConversationRealtimeAudioLevel({
-    enabled: state !== 'replying', // Enable when not replying (listening/thinking states)
+    enabled: state === 'listening', // Only enable when actively listening
     updateIntervalMs: 50, // 20fps for React state updates (smooth but not excessive)
     smoothingFactor: 0.8, // Smooth animations
   });

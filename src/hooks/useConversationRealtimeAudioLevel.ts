@@ -33,7 +33,10 @@ export const useConversationRealtimeAudioLevel = ({
   // 🎵 Initialize AudioContext and AnalyserNode
   const initializeAudioContext = useCallback(async () => {
     const stream = conversationMicrophoneService.getStream();
-    if (!stream || audioContextRef.current) return;
+    if (!stream || audioContextRef.current) {
+      // Stream not available yet or already initialized
+      return;
+    }
 
     try {
       // Create AudioContext with mobile-optimized settings
