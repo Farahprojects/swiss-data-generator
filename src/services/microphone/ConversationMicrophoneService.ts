@@ -6,7 +6,7 @@
  */
 
 import { audioArbitrator } from '@/services/audio/AudioArbitrator';
-import { RollingBufferVAD } from './vad/RollingBufferVAD';
+import { WebWorkerVAD } from './vad/WebWorkerVAD';
 
 export interface ConversationMicrophoneOptions {
   onRecordingComplete?: (audioBlob: Blob) => void;
@@ -18,12 +18,9 @@ export interface ConversationMicrophoneOptions {
 export class ConversationMicrophoneServiceClass {
   private stream: MediaStream | null = null;
   private cachedStream: MediaStream | null = null;
-  private rollingBufferVAD: RollingBufferVAD | null = null;
+  private webWorkerVAD: WebWorkerVAD | null = null;
   private isRecording = false;
   private isPaused = false;
-  private audioContext: AudioContext | null = null;
-  private analyser: AnalyserNode | null = null;
-  private mediaStreamSource: MediaStreamAudioSourceNode | null = null;
   private audioLevel = 0;
   private currentTurnId: string | null = null;
   private options: ConversationMicrophoneOptions = {};
@@ -102,30 +99,13 @@ export class ConversationMicrophoneServiceClass {
         return false;
       }
 
-      // Create fresh AudioContext for each turn to prevent stale data
-      if (this.audioContext && this.audioContext.state !== 'closed') {
-        this.audioContext.close().catch(() => {});
-      }
-      this.audioContext = new AudioContext({ sampleRate: 48000 });
-
-      // Use original stream directly - no cloning to prevent format issues
-      this.stream = this.cachedStream;
-
-      // Create audio analysis chain
-      this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
-      this.analyser = this.audioContext.createAnalyser();
-      this.analyser.fftSize = 1024;
-      this.analyser.smoothingTimeConstant = 0.8;
-      this.mediaStreamSource.connect(this.analyser);
-
-      // Create VAD
-      this.rollingBufferVAD = new RollingBufferVAD({
-        lookbackWindowMs: 750,
-        chunkDurationMs: 250,
-        voiceThreshold: 0.012,
-        silenceThreshold: 0.008,
-        voiceConfirmMs: 300,
+      // Create Web Worker VAD for mobile-optimized performance
+      this.webWorkerVAD = new WebWorkerVAD({
+        voiceThreshold: 0.01,
+        silenceThreshold: 0.005,
         silenceTimeoutMs: this.options.silenceTimeoutMs || 1500,
+        bufferWindowMs: 200,
+        sampleRate: 16000, // Lower sample rate for VAD analysis
         onVoiceStart: () => {
           // Voice detected
         },
@@ -133,6 +113,9 @@ export class ConversationMicrophoneServiceClass {
           if (this.currentTurnId === turnId) {
             this.stopRecording(turnId);
           }
+        },
+        onAudioLevel: (level: number) => {
+          this.audioLevel = level;
         },
         onError: (error: Error) => {
           console.error('[ConversationMic] VAD error:', error);
@@ -145,8 +128,8 @@ export class ConversationMicrophoneServiceClass {
       this.isRecording = true;
       audioArbitrator.setMicrophoneState('active');
 
-      // Start VAD
-      await this.rollingBufferVAD.start(this.stream, this.audioContext, this.analyser);
+      // Start Web Worker VAD
+      await this.webWorkerVAD.start(this.stream);
 
       this.notifyListeners();
       return true;
@@ -168,18 +151,18 @@ export class ConversationMicrophoneServiceClass {
     if (expectedTurnId && this.currentTurnId !== expectedTurnId) {
       return null;
     }
-    if (!this.isRecording || !this.rollingBufferVAD) {
+    if (!this.isRecording || !this.webWorkerVAD) {
       return null;
     }
 
     try {
       // Stop VAD and get audio blob
-      const audioBlob = await this.rollingBufferVAD.stop();
+      const audioBlob = await this.webWorkerVAD.stop();
       
       // Clean up VAD after getting the blob to prevent race conditions
-      if (this.rollingBufferVAD) {
-        this.rollingBufferVAD.cleanup();
-        this.rollingBufferVAD = null;
+      if (this.webWorkerVAD) {
+        this.webWorkerVAD.cleanup();
+        this.webWorkerVAD = null;
       }
 
       this.isRecording = false;
@@ -238,7 +221,7 @@ export class ConversationMicrophoneServiceClass {
    * Get current analyser for audio level detection
    */
   getAnalyser(): AnalyserNode | null {
-    return this.analyser;
+    return this.webWorkerVAD?.getState().isActive ? null : null; // Web Worker VAD handles this internally
   }
 
   /**
@@ -276,24 +259,14 @@ export class ConversationMicrophoneServiceClass {
     this.isRecording = false;
     this.audioLevel = 0;
 
-    if (this.rollingBufferVAD) {
-      this.rollingBufferVAD.stop().catch(() => {});
-      this.rollingBufferVAD = null;
+    if (this.webWorkerVAD) {
+      this.webWorkerVAD.cleanup();
+      this.webWorkerVAD = null;
     }
 
     if (this.stream) {
       this.stream.getAudioTracks().forEach(track => track.stop());
       this.stream = null;
-    }
-
-    if (this.mediaStreamSource) {
-      this.mediaStreamSource.disconnect();
-      this.mediaStreamSource = null;
-    }
-
-    if (this.audioContext && this.audioContext.state !== 'closed') {
-      this.audioContext.close().catch(() => {});
-      this.audioContext = null;
     }
 
     audioArbitrator.releaseControl('microphone');
