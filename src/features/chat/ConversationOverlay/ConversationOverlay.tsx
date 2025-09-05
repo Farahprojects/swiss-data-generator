@@ -8,6 +8,7 @@ import { conversationMicrophoneService } from '@/services/microphone/Conversatio
 import { directBarsAnimationService, FourBarLevels } from '@/services/voice/DirectBarsAnimationService';
 import { ttsPlaybackService } from '@/services/voice/TTSPlaybackService';
 import { sttService } from '@/services/voice/stt';
+import { audioCaptureManager } from '@/services/voice/AudioCaptureManager';
 import { llmService } from '@/services/llm/chat';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
@@ -356,29 +357,12 @@ export const ConversationOverlay: React.FC = () => {
       console.log('[ConversationOverlay] 🛑 Animation timeout cancelled');
     }
     
-    // 🎵 STEP 1: Stop Web Audio API source
-    if (currentTtsSourceRef.current) {
-      try {
-        (currentTtsSourceRef.current as AudioBufferSourceNode).stop();
-        console.log('[ConversationOverlay] 🎵 Web Audio API source stopped');
-      } catch (e) {
-        console.warn('[ConversationOverlay] Could not stop Web Audio API source:', e);
-      }
-      currentTtsSourceRef.current = null;
-    }
-    
-    // 🎵 STEP 2: Close AudioContext (browser API)
-    safelyCloseAudioContext(audioContextRef.current);
-    audioContextRef.current = null;
-    console.log('[ConversationOverlay] 🎵 AudioContext closed');
-    
-    // 🎤 STEP 3: Stop microphone and release MediaStream (browser API)
+    // 🎤 STEP 1: Global audio cleanup via single authority
     try {
-      conversationMicrophoneService.stopRecording();
-      conversationMicrophoneService.cleanup();
-      console.log('[ConversationOverlay] 🎤 Microphone and MediaStream released');
+      audioCaptureManager.audioCleanup();
+      console.log('[ConversationOverlay] 🎤 Global audio cleanup completed');
     } catch (e) {
-      console.warn('[ConversationOverlay] Could not cleanup microphone:', e);
+      console.warn('[ConversationOverlay] Global audio cleanup failed:', e);
     }
     
     // 🌐 STEP 4: Close WebSocket connection and ping interval

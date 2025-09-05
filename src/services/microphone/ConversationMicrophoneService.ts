@@ -249,7 +249,7 @@ export class ConversationMicrophoneServiceClass {
     // 🔥 FIX: Properly tear down capture chain after each turn
     // This ensures fresh MediaRecorder for next turn (prevents sample rate corruption)
     if (this.rollingBufferVAD) {
-      this.rollingBufferVAD.cleanup();
+      // VAD stop already performs cleanup; just drop our reference
       this.rollingBufferVAD = null;
     }
     

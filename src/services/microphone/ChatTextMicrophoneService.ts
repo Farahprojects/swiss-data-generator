@@ -222,7 +222,7 @@ class ChatTextMicrophoneServiceClass {
 
     // Cleanup rolling buffer VAD
     if (this.rollingBufferVAD) {
-      this.rollingBufferVAD.cleanup();
+      // VAD stop already performs cleanup; just drop our reference
       this.rollingBufferVAD = null;
     }
 
