@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { useChatStore } from '@/core/store';
-import { useConversationRealtimeAudioLevel } from '@/hooks/useConversationRealtimeAudioLevel';
 import { VoiceBubble } from './VoiceBubble';
 import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
 import { directBarsAnimationService, FourBarLevels } from '@/services/voice/DirectBarsAnimationService';
@@ -34,12 +33,23 @@ export const ConversationOverlay: React.FC = () => {
   // 🎯 PRIMARY: State machine drives everything
   const [state, setState] = useState<ConversationState>('connecting');
   
-  // 🎵 REALTIME AUDIO LEVEL - Direct MediaStream analysis (mobile-friendly)
-  const audioLevel = useConversationRealtimeAudioLevel({
-    enabled: state === 'listening', // Only enable when actively listening
-    updateIntervalMs: 50, // 20fps for React state updates (smooth but not excessive)
-    smoothingFactor: 0.8, // Smooth animations
-  });
+  // 🎵 AUDIO LEVEL - Use microphone service's existing audio level (no conflicts)
+  const [audioLevel, setAudioLevel] = useState<number>(0);
+  
+  // Update audio level from microphone service (lightweight polling)
+  useEffect(() => {
+    if (state !== 'listening') {
+      setAudioLevel(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const level = conversationMicrophoneService.getCurrentAudioLevel();
+      setAudioLevel(level);
+    }, 50); // 20fps updates
+
+    return () => clearInterval(interval);
+  }, [state]);
   
   
   // 🎯 ESSENTIAL: Only what we need for state transitions
