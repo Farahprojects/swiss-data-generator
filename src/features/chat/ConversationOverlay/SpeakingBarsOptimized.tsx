@@ -53,10 +53,13 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive }) => {
         const alpha = 1 - Math.exp(-ease * dt);
         current[i] = current[i] + (targetWithWobble - current[i]) * alpha;
 
-        // Apply transform directly to each bar
+        // Apply height directly to each bar (preserves border radius)
         const barEl = barRefs.current[i];
         if (barEl) {
-          barEl.style.transform = `scaleY(${current[i].toFixed(4)})`;
+          // Make outer bars (0,3) smaller than middle bars (1,2)
+          const maxHeight = (i === 0 || i === 3) ? 96 : 192; // Outer bars max 96px, middle bars max 192px
+          const height = Math.max(8, current[i] * maxHeight);
+          barEl.style.height = `${height}px`;
         }
       }
 
@@ -82,7 +85,7 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive }) => {
   return (
     <div 
       ref={containerRef}
-      className="flex items-center justify-center gap-3 h-48 w-28"
+      className="flex items-center justify-center gap-3 h-48 w-40"
       style={{ willChange: 'transform' } as React.CSSProperties}
     >
       {bars.map((bar, idx) => (
@@ -91,11 +94,10 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive }) => {
           ref={(el) => { if (el) barRefs.current[idx] = el; }}
           className={`bg-black ${bar.className}`}
           style={{
-            width: '16px',
-            borderRadius: '7px', // Softly rounded caps - less pointy than 50%
-            transformOrigin: 'center',
-            transform: 'scaleY(0.2)',
-            willChange: 'transform',
+            width: '32px',
+            height: idx === 0 || idx === 3 ? '19px' : '38px', // Initial height: outer bars 19px (0.2 * 96px), middle bars 38px (0.2 * 192px)
+            borderRadius: '16px', // Half the width for perfectly round ends
+            willChange: 'height',
             transition: 'none',
           }}
         />
