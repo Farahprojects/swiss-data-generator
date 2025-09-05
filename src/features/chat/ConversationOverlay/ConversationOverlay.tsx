@@ -134,7 +134,9 @@ export const ConversationOverlay: React.FC = () => {
 
   // Process recording
   const processRecording = useCallback(async (audioBlob: Blob) => {
+    console.log('[ConversationOverlay] processRecording called with blob size:', audioBlob.size);
     if (!chat_id || isProcessingRef.current || state === 'thinking' || state === 'replying') {
+      console.log('[ConversationOverlay] processRecording blocked - chat_id:', !!chat_id, 'isProcessing:', isProcessingRef.current, 'state:', state);
       return;
     }
     

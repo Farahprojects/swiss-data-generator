@@ -94,7 +94,7 @@ export class ConversationMicrophoneServiceClass {
         this.webWorkerVAD = new WebWorkerVAD({
           voiceThreshold: 0.01,
           silenceThreshold: 0.005,
-          silenceTimeoutMs: this.options.silenceTimeoutMs || 1500,
+          silenceTimeoutMs: this.options.silenceTimeoutMs || 1200,
           bufferWindowMs: 200,
           sampleRate: 16000, // Lower sample rate for VAD analysis
           onVoiceStart: () => {
@@ -104,6 +104,7 @@ export class ConversationMicrophoneServiceClass {
           },
           onSilenceDetected: () => {
             // Silence detected - stop recording this turn
+            console.log('[ConversationMic] Silence detected, stopping recording for turn:', turnId);
             if (this.currentTurnId === turnId) {
               this.stopRecording(turnId);
             }
@@ -161,6 +162,7 @@ export class ConversationMicrophoneServiceClass {
 
       // Call completion callback
       if (audioBlob && this.options.onRecordingComplete) {
+        console.log('[ConversationMic] Calling onRecordingComplete with blob size:', audioBlob.size);
         this.options.onRecordingComplete(audioBlob);
       }
 
