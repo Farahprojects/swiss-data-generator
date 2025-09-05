@@ -92,7 +92,7 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive }) => {
           className={`bg-black ${bar.className}`}
           style={{
             width: '16px',
-            borderRadius: '12px', // Larger radius for tic-tac pill shape
+            borderRadius: '50%', // Perfect pill shape - fully round caps
             transformOrigin: 'center',
             transform: 'scaleY(0.2)',
             willChange: 'transform',
