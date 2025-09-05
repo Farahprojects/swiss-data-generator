@@ -8,6 +8,8 @@
 import { supabase } from '@/integrations/supabase/client';
 import { microphoneArbitrator } from './MicrophoneArbitrator';
 import { RollingBufferVAD } from './vad/RollingBufferVAD';
+import { eventBus } from '@/core/eventBus';
+import { CHAT_EVENTS } from '@/core/events';
 
 export interface ChatTextMicrophoneOptions {
   onTranscriptReady?: (transcript: string) => void;
@@ -112,6 +114,7 @@ class ChatTextMicrophoneServiceClass {
       }, 45000);
       
       this.notifyListeners();
+      eventBus.emit(CHAT_EVENTS.RECORDING_START);
       this.log('✅ Recording started');
       return true;
 
@@ -152,6 +155,7 @@ class ChatTextMicrophoneServiceClass {
 
     // Notify listeners after isRecording becomes false
     this.notifyListeners();
+    eventBus.emit(CHAT_EVENTS.RECORDING_STOP);
 
     // Process audio if we have a recording
     if (finalBlob) {

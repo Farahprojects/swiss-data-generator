@@ -12,6 +12,8 @@ import { llmService } from '@/services/llm/chat';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
+import { eventBus } from '@/core/eventBus';
+import { CHAT_EVENTS } from '@/core/events';
 import { Mic } from 'lucide-react';
 
 // 🎯 CORE STATE MACHINE: This drives everything
@@ -105,9 +107,11 @@ export const ConversationOverlay: React.FC = () => {
         console.log('[ConversationOverlay] 🌐 WebSocket paused during TTS playback');
       }
 
+      eventBus.emit(CHAT_EVENTS.TTS_AUDIO_PLAYING);
       await ttsPlaybackService.play(audioBytes, () => {
         console.log('[ConversationOverlay] 🎵 TTS audio finished, returning to listening mode');
         setState('listening');
+        eventBus.emit(CHAT_EVENTS.TTS_AUDIO_ENDED);
 
         // Resume mic and WebSocket
         try { conversationMicrophoneService.resumeAfterPlayback(); } catch {}

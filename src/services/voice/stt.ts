@@ -1,5 +1,7 @@
 // src/services/voice/stt.ts
 import { supabase } from '@/integrations/supabase/client';
+import { eventBus } from '@/core/eventBus';
+import { CHAT_EVENTS } from '@/core/events';
 
 class SttService {
   async transcribe(audioBlob: Blob, chat_id?: string, meta?: Record<string, any>, mode?: string, sessionId?: string): Promise<{ transcript: string }> {
@@ -36,6 +38,7 @@ class SttService {
 
     if (error) {
       console.error('[STT] Google STT error:', error);
+      eventBus.emit(CHAT_EVENTS.STT_ERROR, { error });
       throw new Error(`Error invoking google-speech-to-text: ${error.message}`);
     }
 
@@ -47,9 +50,11 @@ class SttService {
 
 
     // Return the transcript
-    return {
+    const result = {
       transcript: data.transcript || '',
     };
+    eventBus.emit(CHAT_EVENTS.STT_COMPLETE, { transcript: result.transcript });
+    return result;
   }
 
   private async blobToBase64(blob: Blob): Promise<string> {
