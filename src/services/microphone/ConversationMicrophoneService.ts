@@ -134,16 +134,29 @@ export class ConversationMicrophoneServiceClass {
       const track = this.stream.getAudioTracks()[0];
       const trackSettings = track.getSettings();
       
-      // 🔥 FIX: Always create fresh AudioContext for each conversation turn
+      // 🔥 FIX: Always create fresh MediaRecorder + AudioContext for each conversation turn
       // This prevents sample rate corruption from suspend/resume cycles during TTS
       if (this.audioContext && this.audioContext.state !== 'closed') {
         // Disconnect existing chain before creating new one
         if (this.mediaStreamSource) {
           this.mediaStreamSource.disconnect();
+          this.mediaStreamSource = null;
+        }
+        if (this.analyser) {
+          this.analyser.disconnect();
+          this.analyser = null;
         }
         await safelyCloseAudioContext(this.audioContext);
         this.log('🔥 [CONVERSATION-TURN] Closed previous AudioContext to prevent corruption');
       }
+      
+      // Create completely fresh MediaStream by cloning the audio track
+      // This ensures MediaRecorder isn't tied to a suspended/resumed AudioContext
+      const originalTrack = this.cachedStream.getAudioTracks()[0];
+      const clonedTrack = originalTrack.clone();
+      this.stream = new MediaStream([clonedTrack]);
+      
+      this.log('🔥 [CONVERSATION-TURN] Created fresh MediaStream with cloned audio track');
       
       // Create completely fresh audio analysis chain
       this.audioContext = new AudioContext({ sampleRate: 16000 });
@@ -232,9 +245,30 @@ export class ConversationMicrophoneServiceClass {
       this.log('⚠️ No audio collected');
     }
     
-    // IMPORTANT: Do NOT call cleanup here - keep stream and analyser alive
-    // Cleanup should only be called on cancel/reset/overlay close
-    this.log('🎤 Stream and analyser kept alive for next turn');
+    // 🔥 FIX: Properly tear down capture chain after each turn
+    // This ensures fresh MediaRecorder for next turn (prevents sample rate corruption)
+    if (this.rollingBufferVAD) {
+      this.rollingBufferVAD.cleanup();
+      this.rollingBufferVAD = null;
+    }
+    
+    if (this.mediaStreamSource) {
+      this.mediaStreamSource.disconnect();
+      this.mediaStreamSource = null;
+    }
+    
+    if (this.analyser) {
+      this.analyser.disconnect();
+      this.analyser = null;
+    }
+    
+    // Close the current stream (cloned track) but keep cachedStream for next turn
+    if (this.stream && this.stream !== this.cachedStream) {
+      this.stream.getTracks().forEach(track => track.stop());
+      this.stream = null;
+    }
+    
+    this.log('🔥 [CONVERSATION-TURN] Capture chain torn down, ready for fresh start next turn');
     
     // Notify listeners after isRecording becomes false
     this.notifyListeners();

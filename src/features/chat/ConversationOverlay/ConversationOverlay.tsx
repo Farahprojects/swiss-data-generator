@@ -219,17 +219,17 @@ export const ConversationOverlay: React.FC = () => {
          
          // 🚨 CHECK: Only restart microphone if we're not shutting down
          if (!isShuttingDown.current) {
-           // 🎤 Restart microphone recording with timing buffer to align VAD with TTS end
-           setTimeout(() => {
-             if (!isShuttingDown.current) {
-               try {
-                 conversationMicrophoneService.startRecording();
-                 console.log('[ConversationOverlay] 🎤 Microphone recording restarted for next turn (with timing buffer)');
-               } catch (error) {
-                 console.error('[ConversationOverlay] ❌ Failed to restart microphone recording:', error);
-               }
-             }
-           }, 100); // 100ms buffer to align VAD with TTS timing
+            // 🎤 Restart microphone recording with timing buffer to align VAD with TTS end
+            setTimeout(() => {
+              if (!isShuttingDown.current) {
+                try {
+                  conversationMicrophoneService.startRecording();
+                  console.log('[ConversationOverlay] 🎤 Microphone recording restarted for next turn (with timing buffer)');
+                } catch (error) {
+                  console.error('[ConversationOverlay] ❌ Failed to restart microphone recording:', error);
+                }
+              }
+            }, 200); // 200ms buffer for more reliable restart after cleanup
          } else {
            // 🚫 Shutting down - no auto-restart
            console.log('[ConversationOverlay] 🎤 Shutting down, skipping microphone restart');
