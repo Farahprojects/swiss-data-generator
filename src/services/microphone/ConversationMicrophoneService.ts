@@ -136,10 +136,11 @@ export class ConversationMicrophoneServiceClass {
       
       // SINGLE-GESTURE FLOW: Reuse AudioContext if it exists, otherwise create new
       if (!this.audioContext || this.audioContext.state === 'closed') {
-        this.audioContext = new AudioContext({ sampleRate: 16000 }); // Mobile-first: 16kHz for faster processing
-
+        // Use 48kHz to match MediaRecorder capabilities and avoid sample rate issues
+        this.audioContext = new AudioContext({ sampleRate: 48000 });
+        this.log(`🎵 Created new AudioContext with sample rate: ${this.audioContext.sampleRate}Hz`);
       } else {
-
+        this.log(`🎵 Reusing existing AudioContext with sample rate: ${this.audioContext.sampleRate}Hz`);
       }
       
       // Defensively resume AudioContext if suspended (helps on iOS)
