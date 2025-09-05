@@ -21,16 +21,16 @@ class SttService {
       throw new Error(`Audio blob too small (${audioBlob.size} bytes). Expected at least 100 bytes.`);
     }
     
-    // Google STT V2: Log simplified payload - Google will auto-detect format
-    console.log('[STT] 📤 SENDING TO GOOGLE STT V2:', {
+    // OpenAI Whisper: Log simplified payload
+    console.log('[STT] 📤 SENDING TO OPENAI WHISPER:', {
       blobSize: audioBlob.size,
       blobType: audioBlob.type,
       mode,
       chat_id
     });
 
-    // Google STT V2: Send raw binary audio directly - Google will auto-detect format
-    const { data, error } = await supabase.functions.invoke('google-speech-to-text', {
+    // OpenAI Whisper: Send raw binary audio directly
+    const { data, error } = await supabase.functions.invoke('openai-whisper', {
       body: audioBlob,
       headers: {
         'X-Meta': JSON.stringify({
@@ -38,22 +38,21 @@ class SttService {
           mode,
           chat_id,
           config: {
-            languageCode: 'en-US',
-            enableAutomaticPunctuation: true,
-            model: 'latest_short' // Mobile-first: Faster model for quicker response
+            mimeType: audioBlob.type,
+            languageCode: 'en'
           }
         })
       }
     });
 
     if (error) {
-      console.error('[STT] Google STT error:', error);
-      throw new Error(`Error invoking google-speech-to-text: ${error.message}`);
+      console.error('[STT] OpenAI Whisper error:', error);
+      throw new Error(`Error invoking openai-whisper: ${error.message}`);
     }
 
     if (!data) {
       console.error('[STT] No data in response');
-      throw new Error('No data received from Google STT');
+      throw new Error('No data received from OpenAI Whisper');
     }
 
 

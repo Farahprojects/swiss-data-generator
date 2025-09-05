@@ -22,77 +22,68 @@ serve(async (req) => {
     const meta = metaHeader ? JSON.parse(metaHeader) : {};
     const config = meta.config || {};
     
-    console.log('[google-stt] 📥 RECEIVED:', {
+    console.log('[openai-whisper] 📥 RECEIVED:', {
       audioSize: audioBuffer.length,
       mode: meta.mode,
       chat_id: meta.chat_id,
-      config: config,
-      firstBytes: Array.from(audioBuffer.slice(0, 16)).map(b => b.toString(16).padStart(2, '0')).join(' '),
-      lastBytes: Array.from(audioBuffer.slice(-16)).map(b => b.toString(16).padStart(2, '0')).join(' ')
+      config: config
     });
     
     // Validate audio data
     if (!audioBuffer || audioBuffer.length === 0) {
-      console.error('[google-stt] Empty audio buffer');
+      console.error('[openai-whisper] Empty audio buffer');
       throw new Error('Empty audio data - please try recording again');
     }
 
-    const googleApiKey = Deno.env.get('GOOGLE-STT');
-    if (!googleApiKey) {
-      throw new Error('Google STT API key not configured');
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openaiApiKey) {
+      throw new Error('OpenAI API key not configured');
     }
 
-    // Google STT V2: Simplified configuration - let Google auto-detect format
-    const sttConfig = {
-      languageCode: 'en-US',
-      enableAutomaticPunctuation: true,
-      model: 'latest_short',         // Mobile-first: Faster model
-      ...config
-    };
+    // Create FormData for OpenAI Whisper API
+    const formData = new FormData();
+    
+    // Create a Blob from the audio buffer with appropriate MIME type
+    const audioBlob = new Blob([audioBuffer], { 
+      type: config.mimeType || 'audio/webm' 
+    });
+    
+    // Add file to FormData
+    formData.append('file', audioBlob, 'audio.webm');
+    formData.append('model', 'whisper-1');
+    formData.append('language', config.languageCode || 'en');
+    formData.append('response_format', 'json');
 
-    // Google STT V2: Send raw binary data directly - no base64 conversion needed
-    const requestBody = {
-      audio: {
-        content: Array.from(audioBuffer)  // Send raw bytes directly
-      },
-      config: sttConfig
-    };
-
-    // Google STT V2 API endpoint
-    let response = await fetch(
-      `https://speech.googleapis.com/v2/speech:recognize?key=${googleApiKey}`,
+    // Call OpenAI Whisper API
+    const response = await fetch(
+      'https://api.openai.com/v1/audio/transcriptions',
       {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openaiApiKey}`,
         },
-        body: JSON.stringify(requestBody),
+        body: formData,
       }
     );
 
-    let transcript;
-
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[google-stt] Google API error:', errorText);
-      throw new Error(`Google Speech-to-Text API error: ${response.status} - ${errorText}`);
+      console.error('[openai-whisper] OpenAI API error:', errorText);
+      throw new Error(`OpenAI Whisper API error: ${response.status} - ${errorText}`);
     }
 
     const result = await response.json();
-    transcript = result.results?.[0]?.alternatives?.[0]?.transcript || '';
+    const transcript = result.text || '';
 
-    console.log('[google-stt] 📤 GOOGLE API RESPONSE:', {
-      fullResponse: result,
+    console.log('[openai-whisper] 📤 OPENAI API RESPONSE:', {
       transcriptLength: transcript.length,
       transcript: transcript.substring(0, 100) + (transcript.length > 100 ? '...' : ''),
-      mode: meta.mode,
-      hasResults: !!result.results,
-      resultsLength: result.results?.length || 0
+      mode: meta.mode
     });
 
     // Handle empty transcription results
     if (!transcript || transcript.trim().length === 0) {
-      console.log('[google-stt] ⚠️ Empty transcript - returning empty result');
+      console.log('[openai-whisper] ⚠️ Empty transcript - returning empty result');
       return new Response(
         JSON.stringify({ transcript: '' }),
         {
@@ -102,7 +93,7 @@ serve(async (req) => {
     }
 
     // Return simple transcript result
-    console.log('[google-stt] ✅ FIRE-AND-FORGET: Transcript sent, function complete');
+    console.log('[openai-whisper] ✅ SUCCESS: Transcript received');
     return new Response(
       JSON.stringify({ transcript }),
       {
@@ -111,7 +102,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in google-speech-to-text function:', error);
+    console.error('Error in openai-whisper function:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {
