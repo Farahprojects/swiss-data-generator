@@ -6,6 +6,7 @@ import { useConversationRealtimeAudioLevel } from '@/hooks/useConversationRealti
 import { VoiceBubble } from './VoiceBubble';
 import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
 import { directBarsAnimationService, FourBarLevels } from '@/services/voice/DirectBarsAnimationService';
+import { ttsPlaybackService } from '@/services/voice/TTSPlaybackService';
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
 import { v4 as uuidv4 } from 'uuid';
@@ -88,158 +89,51 @@ export const ConversationOverlay: React.FC = () => {
     };
   }, []);
 
-  // 🎵 WEB AUDIO API: Real-time analysis with AnalyserNode for authentic bars
+  // 🎵 TTS PLAYBACK: Delegated to TTSPlaybackService (owns analyser + animation)
   const playAudioImmediately = useCallback(async (audioBytes: number[], text?: string) => {
     if (isShuttingDown.current) return;
-    
     try {
-      // 🎯 CHECK: Ensure AudioContext is available and running
-      if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
-        console.log('[ConversationOverlay] 🎵 AudioContext closed or missing, recreating...');
-        try {
-          audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ latencyHint: 'playback' });
-        } catch (e) {
-          audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-        }
-      }
-      
-      const audioContext = audioContextRef.current;
-      
-      // 🎯 CHECK: Ensure AudioContext is running (resume if suspended)
-      if (audioContext.state === 'suspended') {
-        await audioContext.resume();
-      }
-      
-      // 🎯 DIRECT: Convert bytes to ArrayBuffer and decode
-      const arrayBuffer = new Uint8Array(audioBytes).buffer;
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      
-      // 🎵 REAL-TIME: Create analyzer for live audio analysis
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 256; // Good resolution for 4 bars
-      analyser.smoothingTimeConstant = 0.8; // Smooth the data
-      
-      // 🎯 DIRECT: Create source and connect to analyzer + destination
-      const source = audioContext.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(analyser);
-      analyser.connect(audioContext.destination);
-      
-      // 🚀 PLAY AUDIO IMMEDIATELY - No waiting for anything else
-      source.start(0);
-      currentTtsSourceRef.current = source;
-      
-      // 🎯 STATE DRIVEN: Set replying state
+      // Set replying state
       setState('replying');
-      
-      // 🔇 Suspend microphone capture during TTS playback (mutual exclusivity)
-      try {
-        conversationMicrophoneService.suspendForPlayback();
-      } catch (e) {
-        console.warn('[ConversationOverlay] Could not suspend mic for playback', e);
-      }
-      
-      // 🌐 PAUSE: Pause WebSocket during TTS playback to prevent interference
+
+      // Suspend mic capture during playback
+      try { conversationMicrophoneService.suspendForPlayback(); } catch {}
+
+      // Pause WebSocket during playback
       if (connectionRef.current && connectionRef.current.state === 'SUBSCRIBED') {
         connectionRef.current.unsubscribe();
         console.log('[ConversationOverlay] 🌐 WebSocket paused during TTS playback');
       }
-      
-      // 🎵 REAL-TIME: Start bars animation service for live data
-      directBarsAnimationService.start();
-      
-      // 🎵 REAL-TIME: Live audio analysis loop (25fps for mobile performance)
-      const frequencyData = new Uint8Array(analyser.frequencyBinCount);
-      const animate = () => {
-        if (isShuttingDown.current || !currentTtsSourceRef.current) {
-          // 🛑 CLEANUP: Clear timeout reference when stopping
-          animationTimeoutRef.current = null;
-          return;
-        }
-        
-        // Get live frequency data from the analyzer
-        analyser.getByteFrequencyData(frequencyData);
-        
-        // 🎵 REAL-TIME: Calculate overall audio level for synchronized bars
-        // Sum all frequency bins to get overall audio intensity
-        let totalLevel = 0;
-        for (let i = 0; i < frequencyData.length; i++) {
-          totalLevel += frequencyData[i];
-        }
-        const rawLevel = totalLevel / (frequencyData.length * 255); // Normalize to 0-1
-        
-        // 🎯 FIXED: Scale and clamp to prevent huge bars
-        const overallLevel = Math.min(1, Math.max(0.2, rawLevel * 0.8 + 0.2)); // Scale to 0.2-1.0 range
-        
-        // 🎯 SIMPLIFIED: All bars use the same signal for synchronized movement
-        const barLevels: FourBarLevels = [
-          overallLevel,  // All bars move together
-          overallLevel,  // All bars move together
-          overallLevel,  // All bars move together
-          overallLevel   // All bars move together
-        ];
-        
-        // Send live data to bars
-        directBarsAnimationService.notifyBars(barLevels);
-        
-        // 🛑 SECURE: Store timeout ID for proper cleanup
-        animationTimeoutRef.current = window.setTimeout(animate, 40);
-      };
-      
-      // Start the real-time animation loop
-      animationTimeoutRef.current = window.setTimeout(animate, 40);
-      
-              // 🎯 STATE DRIVEN: Return to listening when done
-        source.onended = () => {
-          console.log('[ConversationOverlay] 🎵 TTS audio finished, returning to listening mode');
-          
-          // 🛑 CLEANUP: Cancel animation timeout to prevent CPU leak
-          if (animationTimeoutRef.current) {
-            clearTimeout(animationTimeoutRef.current);
-            animationTimeoutRef.current = null;
-          }
-          
-          // 🎵 Stop animation service when TTS ends
-          directBarsAnimationService.stop();
-          
-          setState('listening');
-         
-         // 🔊 Resume microphone capture after playback ends
-         try {
-           conversationMicrophoneService.resumeAfterPlayback();
-         } catch (e) {
-           console.warn('[ConversationOverlay] Could not resume mic after playback', e);
-         }
-         
-         // 🌐 RESUME: Resume WebSocket after TTS playback ends
-         if (connectionRef.current && connectionRef.current.state === 'CLOSED') {
-           connectionRef.current.subscribe();
-           console.log('[ConversationOverlay] 🌐 WebSocket resumed after TTS playback');
-         }
-         
-         // 🚨 CHECK: Only restart microphone if we're not shutting down
-         if (!isShuttingDown.current) {
-            // 🎤 Restart microphone recording with timing buffer to align VAD with TTS end
-            setTimeout(() => {
-              if (!isShuttingDown.current) {
-                try {
-                  conversationMicrophoneService.startRecording();
-                  console.log('[ConversationOverlay] 🎤 Microphone recording restarted for next turn (with timing buffer)');
-                } catch (error) {
-                  console.error('[ConversationOverlay] ❌ Failed to restart microphone recording:', error);
-                }
-              }
-            }, 200); // 200ms buffer for more reliable restart after cleanup
-         } else {
-           // 🚫 Shutting down - no auto-restart
-           console.log('[ConversationOverlay] 🎤 Shutting down, skipping microphone restart');
-         }
-       };
-      
 
-      
+      await ttsPlaybackService.play(audioBytes, () => {
+        console.log('[ConversationOverlay] 🎵 TTS audio finished, returning to listening mode');
+        setState('listening');
+
+        // Resume mic and WebSocket
+        try { conversationMicrophoneService.resumeAfterPlayback(); } catch {}
+        if (connectionRef.current && connectionRef.current.state === 'CLOSED') {
+          connectionRef.current.subscribe();
+          console.log('[ConversationOverlay] 🌐 WebSocket resumed after TTS playback');
+        }
+
+        // Restart mic recording after a small buffer
+        if (!isShuttingDown.current) {
+          setTimeout(() => {
+            if (!isShuttingDown.current) {
+              try {
+                conversationMicrophoneService.startRecording();
+                console.log('[ConversationOverlay] 🎤 Microphone recording restarted for next turn (with timing buffer)');
+              } catch (error) {
+                console.error('[ConversationOverlay] ❌ Failed to restart microphone recording:', error);
+              }
+            }
+          }, 200);
+        } else {
+          console.log('[ConversationOverlay] 🎤 Shutting down, skipping microphone restart');
+        }
+      });
     } catch (error) {
-      console.error('[ConversationOverlay] ❌ Web Audio API failed:', error);
+      console.error('[ConversationOverlay] ❌ TTS playback failed:', error);
       setState('connecting');
     }
   }, []);

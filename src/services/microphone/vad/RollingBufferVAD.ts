@@ -237,6 +237,8 @@ export class RollingBufferVAD {
 
       this.mediaRecorder.onstop = () => {
         const finalBlob = this.createFinalBlob();
+        // Ensure VAD is fully reset after each turn to avoid stale buffers
+        this.cleanup();
         resolve(finalBlob);
       };
 
@@ -244,6 +246,8 @@ export class RollingBufferVAD {
         this.mediaRecorder.stop();
       } else {
         const finalBlob = this.createFinalBlob();
+        // Ensure VAD is fully reset after each turn to avoid stale buffers
+        this.cleanup();
         resolve(finalBlob);
       }
     });
