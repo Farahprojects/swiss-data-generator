@@ -25,7 +25,7 @@ serve(async (req) => {
     console.log('[google-stt] 📥 RECEIVED:', {
       audioSize: audioBuffer.length,
       mode: meta.mode,
-      sessionId: meta.sessionId,
+      chat_id: meta.chat_id,
       config: config
     });
     

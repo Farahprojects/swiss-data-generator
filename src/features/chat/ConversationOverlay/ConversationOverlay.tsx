@@ -149,7 +149,7 @@ export const ConversationOverlay: React.FC = () => {
     
     try {
       // STT transcription
-      const result = await sttService.transcribe(audioBlob, chat_id, {}, 'conversation', chat_id);
+      const result = await sttService.transcribe(audioBlob, chat_id, {}, 'conversation');
       const transcript = result.transcript?.trim();
       
       if (!transcript) {
