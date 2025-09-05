@@ -49,34 +49,53 @@ serve(async (req) => {
     if (audioBuffer.length > 0) {
       // Check for common audio format headers
       const header = Array.from(audioBuffer.slice(0, 12));
+      const headerHex = header.map(b => '0x' + b.toString(16).padStart(2, '0')).join(' ');
       
-      // WebM/Opus detection
+      console.log('[google-stt] 🔍 Analyzing audio header:', headerHex);
+      
+      // WebM/Opus detection (EBML header)
       if (header[0] === 0x1A && header[1] === 0x45 && header[2] === 0xDF && header[3] === 0xA3) {
         encoding = 'WEBM_OPUS';
         sampleRateHertz = 48000;
-        console.log('[google-stt] 🎯 Detected WebM/Opus format');
+        console.log('[google-stt] 🎯 Detected WebM/Opus format (EBML header)');
       }
-      // MP4 detection
+      // MP4 detection (ftyp box)
       else if (header[4] === 0x66 && header[5] === 0x74 && header[6] === 0x79 && header[7] === 0x70) {
         encoding = 'MP4';
         sampleRateHertz = 48000;
-        console.log('[google-stt] 🎯 Detected MP4 format');
+        console.log('[google-stt] 🎯 Detected MP4 format (ftyp box)');
+      }
+      // OGG/Opus detection
+      else if (header[0] === 0x4F && header[1] === 0x67 && header[2] === 0x67 && header[3] === 0x53) {
+        encoding = 'OGG_OPUS';
+        sampleRateHertz = 48000;
+        console.log('[google-stt] 🎯 Detected OGG/Opus format');
+      }
+      // Try different encodings based on header patterns
+      else if (header[0] === 0x41 && header[1] === 0x01) {
+        // This looks like it might be a different WebM variant or Opus stream
+        encoding = 'WEBM_OPUS';
+        sampleRateHertz = 48000;
+        console.log('[google-stt] 🎯 Detected potential WebM/Opus variant (0x41 0x01 header)');
       }
       // Default to WebM/Opus for mobile optimization
       else {
-        console.log('[google-stt] 🎯 Using default WebM/Opus format');
+        console.log('[google-stt] 🎯 Unknown format, using default WebM/Opus');
+        console.log('[google-stt] 🔍 Full header analysis:', headerHex);
       }
     }
 
-    // Optimal configuration for detected format
-    const sttConfig = {
-      encoding: encoding,
-      sampleRateHertz: sampleRateHertz,
-      languageCode: 'en-US',
-      enableAutomaticPunctuation: true,
-      model: 'latest_short',         // Mobile-first: Faster model
-      ...config
-    };
+    // Try multiple encoding configurations if needed
+    const encodingConfigs = [
+      { encoding: encoding, sampleRateHertz: sampleRateHertz },
+      { encoding: 'WEBM_OPUS', sampleRateHertz: 48000 },
+      { encoding: 'WEBM_OPUS', sampleRateHertz: 16000 },
+      { encoding: 'MP4', sampleRateHertz: 48000 },
+      { encoding: 'OGG_OPUS', sampleRateHertz: 48000 }
+    ];
+
+    let result = null;
+    let transcript = '';
 
     // Mobile-first: Optimized base64 conversion for smaller files
     let binaryString = '';
@@ -86,48 +105,74 @@ serve(async (req) => {
       binaryString += String.fromCharCode(...chunk);
     }
     const base64Audio = btoa(binaryString);
-    
-    const requestBody = {
-      audio: {
-        content: base64Audio
-      },
-      config: sttConfig
-    };
 
+    // Try each encoding configuration until one works
+    for (let i = 0; i < encodingConfigs.length; i++) {
+      const config = encodingConfigs[i];
+      const sttConfig = {
+        encoding: config.encoding,
+        sampleRateHertz: config.sampleRateHertz,
+        languageCode: 'en-US',
+        enableAutomaticPunctuation: true,
+        model: 'latest_short',         // Mobile-first: Faster model
+        ...config
+      };
 
-    
-    let response = await fetch(
-      `https://speech.googleapis.com/v1/speech:recognize?key=${googleApiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      console.log(`[google-stt] 🎯 Trying encoding config ${i + 1}/${encodingConfigs.length}:`, sttConfig);
+      
+      const requestBody = {
+        audio: {
+          content: base64Audio
         },
-        body: JSON.stringify(requestBody),
+        config: sttConfig
+      };
+
+      try {
+        let response = await fetch(
+          `https://speech.googleapis.com/v1/speech:recognize?key=${googleApiKey}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody),
+          }
+        );
+
+        if (response.ok) {
+          result = await response.json();
+          transcript = result.results?.[0]?.alternatives?.[0]?.transcript || '';
+          
+          if (transcript && transcript.trim().length > 0) {
+            console.log(`[google-stt] ✅ Success with config ${i + 1}: ${config.encoding}@${config.sampleRateHertz}Hz`);
+            break;
+          } else {
+            console.log(`[google-stt] ⚠️ Config ${i + 1} succeeded but no transcript: ${config.encoding}@${config.sampleRateHertz}Hz`);
+          }
+        } else {
+          const errorText = await response.text();
+          console.log(`[google-stt] ❌ Config ${i + 1} failed: ${config.encoding}@${config.sampleRateHertz}Hz - ${response.status}: ${errorText}`);
+        }
+      } catch (error) {
+        console.log(`[google-stt] ❌ Config ${i + 1} error: ${config.encoding}@${config.sampleRateHertz}Hz - ${error.message}`);
       }
-    );
-
-    let transcript;
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[google-stt] Google API error:', {
-        status: response.status,
-        statusText: response.statusText,
-        error: errorText,
-        config: sttConfig,
-        audioSize: audioBuffer.length
-      });
-      throw new Error(`Google Speech-to-Text API error: ${response.status} - ${errorText}`);
     }
 
-    const result = await response.json();
-    transcript = result.results?.[0]?.alternatives?.[0]?.transcript || '';
+    // If no successful result, throw an error
+    if (!result) {
+      throw new Error('All encoding configurations failed - unable to process audio');
+    }
 
     console.log('[google-stt] 📤 SENDING:', {
       transcriptLength: transcript.length,
       transcript: transcript.substring(0, 100) + (transcript.length > 100 ? '...' : ''),
-      mode: meta.mode
+      mode: meta.mode,
+      googleResponse: {
+        resultsCount: result.results?.length || 0,
+        hasResults: !!result.results,
+        firstResult: result.results?.[0] || null,
+        fullResponse: result
+      }
     });
 
     // Handle empty transcription results
