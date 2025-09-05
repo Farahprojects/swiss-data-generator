@@ -341,6 +341,14 @@ export const ConversationOverlay: React.FC = () => {
     console.log('[ConversationOverlay] 🚨 X Button pressed - Master shutdown starting');
     isShuttingDown.current = true;
     
+    // 🎵 STEP 0.1: Kill TTS playback service (own AudioContext + animation)
+    try {
+      await ttsPlaybackService.destroy();
+      console.log('[ConversationOverlay] 🎵 TTSPlaybackService destroyed');
+    } catch (e) {
+      console.warn('[ConversationOverlay] Could not destroy TTSPlaybackService:', e);
+    }
+
     // 🛑 STEP 0: Cancel animation timeout to prevent CPU leak
     if (animationTimeoutRef.current) {
       clearTimeout(animationTimeoutRef.current);
