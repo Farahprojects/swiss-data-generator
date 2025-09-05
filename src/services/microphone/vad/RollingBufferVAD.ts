@@ -282,8 +282,8 @@ export class RollingBufferVAD {
       }
     }
     
-    // Create final blob - let browser determine the type from chunks
-    const finalBlob = new Blob(allChunks);
+    // Create final blob with explicit type - all chunks are validated to be webm/opus
+    const finalBlob = new Blob(allChunks, { type: 'audio/webm;codecs=opus' });
     
     // Validate final blob
     if (finalBlob.type !== 'audio/webm;codecs=opus') {
