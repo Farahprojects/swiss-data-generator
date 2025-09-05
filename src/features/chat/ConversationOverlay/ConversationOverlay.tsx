@@ -229,10 +229,11 @@ export const ConversationOverlay: React.FC = () => {
       
       console.log('[ConversationOverlay] 🚀 Connections warmed up and ready');
       
-      // 🎯 STATE DRIVEN: Initialize global audio capture (handles microphone internally)
-      const { AudioCaptureManager } = await import('@/services/voice/AudioCaptureManager');
-      const audioCaptureManager = AudioCaptureManager.getInstance();
-      await audioCaptureManager.initialize();
+      // 🎯 STATE DRIVEN: Get microphone
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      // 🎯 STATE DRIVEN: Cache the stream for the microphone service
+      conversationMicrophoneService.cacheStream(stream);
       
       // 🎯 STATE DRIVEN: Initialize microphone service BEFORE starting recording
       conversationMicrophoneService.initialize({

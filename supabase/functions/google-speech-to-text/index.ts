@@ -99,17 +99,17 @@ serve(async (req) => {
     if (!transcript || transcript.trim().length === 0) {
       console.log('[google-stt] ⚠️ Empty transcript - returning empty result');
       return new Response(
-        JSON.stringify({ transcript: '', cleanup: true }),
+        JSON.stringify({ transcript: '' }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
       );
     }
 
-    // Return simple transcript result with deterministic cleanup flag
+    // Return simple transcript result
     console.log('[google-stt] ✅ FIRE-AND-FORGET: Transcript sent, function complete');
     return new Response(
-      JSON.stringify({ transcript, cleanup: true }),
+      JSON.stringify({ transcript }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
@@ -118,7 +118,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in google-speech-to-text function:', error);
     return new Response(
-      JSON.stringify({ error: error.message, cleanup: true }),
+      JSON.stringify({ error: error.message }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

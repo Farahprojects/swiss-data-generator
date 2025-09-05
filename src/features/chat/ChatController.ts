@@ -412,19 +412,16 @@ class ChatController {
     
     if (endConversationFlow) {
       // End conversation completely - full cleanup
-      console.log('🔴 [MICROPHONE-KILLER] ChatController.resetTurn() calling forceCleanup() - END CONVERSATION FLOW');
       conversationMicrophoneService.forceCleanup();
     } else {
       // Turn transition - stop current recording and VAD, but keep stream for next turn
       if (conversationMicrophoneService.getState().isRecording) {
-        console.log('🔴 [MICROPHONE-KILLER] ChatController.resetTurn() calling stopRecording() - TURN TRANSITION');
         conversationMicrophoneService.stopRecording().catch((error) => {
           // Ignore errors during graceful stop
           console.warn('[ChatController] Graceful stop error (ignored):', error);
         });
       } else {
         // Even if not recording, we need to stop any running VAD loop
-        console.log('🔴 [MICROPHONE-KILLER] ChatController.resetTurn() calling forceCleanup() - NOT RECORDING');
         conversationMicrophoneService.forceCleanup();
       }
     }
@@ -450,7 +447,6 @@ class ChatController {
       this.turnRestartTimeout = null;
     }
     
-    console.log('🔴 [MICROPHONE-KILLER] ChatController.cancelTurn() calling forceCleanup()');
     conversationMicrophoneService.forceCleanup();
     this.resetTurn(true);
   }
@@ -468,7 +464,6 @@ class ChatController {
       this.resetTimeout = null;
     }
     
-    console.log('🔴 [MICROPHONE-KILLER] ChatController.resetConversationService() calling forceCleanup()');
     conversationMicrophoneService.forceCleanup();
     this.conversationServiceInitialized = false;
     this.isUnlocked = false; // Lock on reset
@@ -494,7 +489,6 @@ class ChatController {
     }
     
     // Stop any active conversation
-    console.log('🔴 [MICROPHONE-KILLER] ChatController.cleanup() calling forceCleanup()');
     conversationMicrophoneService.forceCleanup();
     
     // Clean up realtime subscription

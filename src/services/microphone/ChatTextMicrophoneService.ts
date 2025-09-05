@@ -70,7 +70,14 @@ class ChatTextMicrophoneServiceClass {
       this.log('🎛️ getUserMedia acquired. Track settings:', trackSettings);
 
       // Set up audio analysis - mobile optimized
-      this.audioContext = new AudioContext({ sampleRate: 16000 }); // Mobile-first: 16kHz for faster processing
+      // Reuse existing AudioContext if available, only create new one if needed
+      if (!this.audioContext || this.audioContext.state === 'closed') {
+        this.audioContext = new AudioContext({ sampleRate: 16000 }); // Mobile-first: 16kHz for faster processing
+        this.log('🎛️ Created new AudioContext for chat text microphone');
+      } else {
+        this.log('🎛️ Reusing existing AudioContext for chat text microphone');
+      }
+      
       this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
       this.analyser = this.audioContext.createAnalyser();
       this.analyser.fftSize = 1024; // Mobile-first: Smaller FFT for faster analysis
@@ -160,8 +167,20 @@ class ChatTextMicrophoneServiceClass {
       this.log('📵 No audio recorded');
     }
 
-    // ✅ FULL TEARDOWN: turn off browser mic after each submission
-    this.cleanup();
+    // ✅ VAD CLEANUP ONLY: keep browser mic alive, only clean up VAD state
+    if (this.rollingBufferVAD) {
+      this.rollingBufferVAD.cleanup();
+      this.rollingBufferVAD = null;
+    }
+    
+    // Disconnect analysis nodes but keep AudioContext alive
+    if (this.mediaStreamSource) {
+      this.mediaStreamSource.disconnect();
+      this.mediaStreamSource = null;
+    }
+    
+    // Keep AudioContext and stream alive for next speech
+    // Only call full cleanup() when the service is completely done
   }
 
   /**
@@ -222,7 +241,7 @@ class ChatTextMicrophoneServiceClass {
 
     // Cleanup rolling buffer VAD
     if (this.rollingBufferVAD) {
-      // VAD stop already performs cleanup; just drop our reference
+      this.rollingBufferVAD.cleanup();
       this.rollingBufferVAD = null;
     }
 

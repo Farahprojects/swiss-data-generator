@@ -1,6 +1,5 @@
 // src/services/voice/stt.ts
 import { supabase } from '@/integrations/supabase/client';
-import { audioCaptureManager } from '@/services/voice/AudioCaptureManager';
 
 class SttService {
   async transcribe(audioBlob: Blob, chat_id?: string, meta?: Record<string, any>, mode?: string, sessionId?: string): Promise<{ transcript: string }> {
@@ -37,25 +36,15 @@ class SttService {
 
     if (error) {
       console.error('[STT] Google STT error:', error);
-      console.log('🟡 [STT] STT error occurred - but keeping mic alive for retry');
-      // No longer calling audioCleanup() on STT errors - mic stays alive
       throw new Error(`Error invoking google-speech-to-text: ${error.message}`);
     }
 
     if (!data) {
       console.error('[STT] No data in response');
-      console.log('🟡 [STT] No data response - but keeping mic alive for retry');
-      // No longer calling audioCleanup() on no data - mic stays alive
       throw new Error('No data received from Google STT');
     }
 
 
-
-    // Backend cleanup flag received - but we don't kill the mic anymore
-    if ((data as any).cleanup) {
-      console.log('🟡 [STT] Backend cleanup flag received - but keeping mic alive for next turn');
-      // No longer calling audioCleanup() - mic stays alive between turns
-    }
 
     // Return the transcript
     return {
