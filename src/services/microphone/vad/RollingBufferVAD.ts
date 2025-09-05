@@ -95,12 +95,32 @@ export class RollingBufferVAD {
     
     // AGGRESSIVE: Only use webm/opus format - no fallbacks to prevent format inconsistencies
     if (typeof MediaRecorder !== 'undefined' && 
-        typeof MediaRecorder.isTypeSupported === 'function' && 
-        MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-      this.log('✅ Using AGGRESSIVE webm/opus format');
+        typeof MediaRecorder.isTypeSupported === 'function') {
+      
+      // Log all supported types for debugging
+      const supportedTypes = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/mp4',
+        'audio/ogg;codecs=opus',
+        'audio/wav'
+      ];
+      
+      this.log('🔍 MediaRecorder supported types:');
+      supportedTypes.forEach(type => {
+        const supported = MediaRecorder.isTypeSupported(type);
+        this.log(`  ${supported ? '✅' : '❌'} ${type}`);
+      });
+      
+      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        this.log('✅ Using AGGRESSIVE webm/opus format');
+      } else {
+        this.error('❌ CRITICAL: webm/opus not supported - this will cause STT format errors');
+        throw new Error('Browser does not support audio/webm;codecs=opus format required for STT');
+      }
     } else {
-      this.error('❌ CRITICAL: webm/opus not supported - this will cause STT format errors');
-      throw new Error('Browser does not support audio/webm;codecs=opus format required for STT');
+      this.error('❌ CRITICAL: MediaRecorder not available');
+      throw new Error('MediaRecorder not available in this browser');
     }
 
     this.mediaRecorder = new MediaRecorder(stream, options);
@@ -115,6 +135,19 @@ export class RollingBufferVAD {
     // Handle data chunks for rolling buffer
     this.mediaRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) {
+        // CRITICAL: Log chunk details for debugging
+        this.log(`📦 Chunk received: size=${event.data.size}, type=${event.data.type}`);
+        
+        // Log first few bytes of chunk to verify format
+        const reader = new FileReader();
+        reader.onload = () => {
+          const arrayBuffer = reader.result as ArrayBuffer;
+          const firstBytes = Array.from(new Uint8Array(arrayBuffer.slice(0, 16)))
+            .map(b => b.toString(16).padStart(2, '0')).join(' ');
+          this.log(`📦 Chunk first bytes: ${firstBytes}`);
+        };
+        reader.readAsArrayBuffer(event.data.slice(0, 16));
+        
         this.handleAudioChunk(event.data);
       }
     };
@@ -280,6 +313,10 @@ export class RollingBufferVAD {
       this.log('⚠️ No audio chunks collected');
       return null;
     }
+
+    // CRITICAL: Log audio level information
+    this.log(`🎵 Audio level during recording: ${this.state.audioLevel.toFixed(4)} (threshold: ${this.options.voiceThreshold})`);
+    this.log(`🎵 Voice started: ${this.state.voiceStarted}, Phase: ${this.state.phase}`);
 
     // CRITICAL: Validate that all chunks have the same format before combining
     for (const chunk of allChunks) {
