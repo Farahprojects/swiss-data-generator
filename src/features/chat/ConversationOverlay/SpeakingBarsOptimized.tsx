@@ -73,16 +73,16 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive }) => {
 
   // 🎯 DESIGN: Two middle bars 2x taller than outer bars, all taller starting point
   const bars = [
-    { id: 0, className: 'h-24' }, // Outer bar - taller starting point
-    { id: 1, className: 'h-48' }, // Middle bar - 2x taller than outer
-    { id: 2, className: 'h-48' }, // Middle bar - 2x taller than outer
-    { id: 3, className: 'h-24' }, // Outer bar - taller starting point
+    { id: 0, className: 'h-28' }, // Outer bar - 20% taller approx (from h-24)
+    { id: 1, className: 'h-56' }, // Middle bar - 20% taller approx (from h-48)
+    { id: 2, className: 'h-56' }, // Middle bar - 20% taller approx (from h-48)
+    { id: 3, className: 'h-28' }, // Outer bar - 20% taller approx (from h-24)
   ];
 
   return (
     <div 
       ref={containerRef}
-      className="flex items-center justify-center gap-3 h-48 w-28"
+      className="flex items-center justify-center gap-3 h-56 w-40"
       style={{ willChange: 'transform' } as React.CSSProperties}
     >
       {bars.map((bar, idx) => (
@@ -91,7 +91,7 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive }) => {
           ref={(el) => { if (el) barRefs.current[idx] = el; }}
           className={`bg-black rounded-full ${bar.className}`}
           style={{
-            width: '16px',
+            width: '32px',
             transformOrigin: 'center',
             transform: 'scaleY(0.2)',
             willChange: 'transform',
