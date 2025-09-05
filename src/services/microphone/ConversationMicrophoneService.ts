@@ -255,6 +255,10 @@ export class ConversationMicrophoneServiceClass {
     // Stop rolling buffer VAD and get final blob
     const blob = await this.rollingBufferVAD.stop();
     
+    // ✅ SAFE CLEANUP: VAD.stop() has completed and called cleanup() internally
+    // Now it's safe to set the reference to null immediately
+    this.rollingBufferVAD = null;
+    
     if (blob) {
       this.log(`✅ Recording complete: ${blob.size} bytes`);
       
@@ -266,7 +270,7 @@ export class ConversationMicrophoneServiceClass {
       this.log('⚠️ No audio collected');
     }
     
-    // Clean up capture chain after each turn
+    // Clean up capture chain after each turn (VAD already cleaned up)
     this.teardownCaptureChain();
     
     // Notify listeners after isRecording becomes false
@@ -322,11 +326,8 @@ export class ConversationMicrophoneServiceClass {
   private teardownCaptureChain(): void {
     this.log('🔥 [TEARDOWN] Cleaning up capture chain for fresh next turn');
     
-    // VAD is self-cleaning - no need to call cleanup() here
-    // The VAD.stop() method already calls cleanup() internally
-    if (this.rollingBufferVAD) {
-      this.rollingBufferVAD = null;
-    }
+    // VAD reference is already set to null in the calling method after stop() completes
+    // No need to set it to null here
 
     // Disconnect audio analysis nodes
     if (this.mediaStreamSource) {
