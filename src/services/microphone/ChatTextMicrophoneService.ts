@@ -144,6 +144,9 @@ class ChatTextMicrophoneServiceClass {
       finalBlob = await this.rollingBufferVAD.stop();
     }
 
+    // Notify listeners after isRecording becomes false
+    this.notifyListeners();
+
     // Process audio if we have a recording
     if (finalBlob) {
       await this.processAudio(finalBlob);

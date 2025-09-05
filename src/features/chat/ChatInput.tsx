@@ -6,7 +6,7 @@ import { useChatStore } from '@/core/store';
 import { chatController } from './ChatController';
 import { useConversationUIStore } from './conversation-ui-store';
 import { useChatTextMicrophone } from '@/hooks/microphone/useChatTextMicrophone';
-import { useRealtimeAudioLevel } from '@/hooks/useRealtimeAudioLevel';
+import { useChatTextRealtimeAudioLevel } from '@/hooks/useChatTextRealtimeAudioLevel';
 import { VoiceWaveform } from './VoiceWaveform';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
 
@@ -46,17 +46,10 @@ export const ChatInput = () => {
     silenceTimeoutMs: 1500
   });
 
-  // 🎵 REALTIME AUDIO LEVEL - Direct MediaStream analysis (mobile-friendly)
-  const audioLevelRef = useRef<number>(0);
-  const { getCurrentAudioLevel } = useRealtimeAudioLevel({
-    stream: microphoneService.getStream(),
-    enabled: isMicRecording,
+  // 🎵 REALTIME AUDIO LEVEL - Auto-attaches to microphone lifecycle
+  const audioLevelRef = useChatTextRealtimeAudioLevel({
     targetFPS: 30, // Mobile-optimized frame rate
     smoothingFactor: 0.8, // Smooth animations
-    onAudioLevel: (level) => {
-      // Store audio level in ref for direct access (no React state updates per frame)
-      audioLevelRef.current = level;
-    }
   });
 
   const handleSend = () => {
