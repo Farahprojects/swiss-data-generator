@@ -15,6 +15,37 @@ class SttService {
       throw new Error('Recording too short - please speak for longer');
     }
     
+    // DETAILED FRONTEND LOGGING FOR INVESTIGATION
+    console.log('[STT] 🔍 FRONTEND AUDIO BLOB DETAILS:', {
+      size: audioBlob.size,
+      type: audioBlob.type,
+      chat_id,
+      mode,
+      sessionId,
+      meta
+    });
+    
+    // Read first few bytes to see what we're actually sending
+    const arrayBuffer = await audioBlob.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    console.log('[STT] 🔍 AUDIO BLOB BINARY HEADER:', {
+      firstBytes: Array.from(uint8Array.slice(0, 16)).map(b => '0x' + b.toString(16).padStart(2, '0')).join(' '),
+      lastBytes: Array.from(uint8Array.slice(-16)).map(b => '0x' + b.toString(16).padStart(2, '0')).join(' ')
+    });
+    
+    const config = {
+      encoding: 'WEBM_OPUS',
+      languageCode: 'en-US',
+      enableAutomaticPunctuation: true,
+      model: 'latest_short' // Mobile-first: Faster model for quicker response
+    };
+    
+    console.log('[STT] 🔍 SENDING TO GOOGLE STT:', {
+      config,
+      mode,
+      sessionId
+    });
+    
     // Send raw binary audio directly, with config in headers. This mirrors the
     // ChatTextMicrophoneService and aligns both STT pathways.
     const { data, error } = await supabase.functions.invoke('google-speech-to-text', {
@@ -24,12 +55,7 @@ class SttService {
           ...(meta || {}), // Pass along any additional meta from the controller
           mode,
           sessionId,
-          config: {
-            encoding: 'WEBM_OPUS',
-            languageCode: 'en-US',
-            enableAutomaticPunctuation: true,
-            model: 'latest_short' // Mobile-first: Faster model for quicker response
-          }
+          config
         })
       }
     });

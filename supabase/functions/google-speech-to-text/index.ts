@@ -85,83 +85,76 @@ serve(async (req) => {
       }
     }
 
-    // Try multiple encoding configurations if needed
-    const encodingConfigs = [
-      { encoding: encoding, sampleRateHertz: sampleRateHertz },
-      { encoding: 'WEBM_OPUS', sampleRateHertz: 48000 },
-      { encoding: 'WEBM_OPUS', sampleRateHertz: 16000 },
-      { encoding: 'MP4', sampleRateHertz: 48000 },
-      { encoding: 'OGG_OPUS', sampleRateHertz: 48000 }
-    ];
+    // Single configuration - fail fast for investigation
+    const sttConfig = {
+      encoding: encoding,
+      sampleRateHertz: sampleRateHertz,
+      languageCode: 'en-US',
+      enableAutomaticPunctuation: true,
+      model: 'latest_short',
+      ...config
+    };
 
-    let result = null;
-    let transcript = '';
+    console.log('[google-stt] 🔍 FINAL CONFIG:', sttConfig);
+    console.log('[google-stt] 🔍 AUDIO BUFFER DETAILS:', {
+      length: audioBuffer.length,
+      firstBytes: Array.from(audioBuffer.slice(0, 16)).map(b => '0x' + b.toString(16).padStart(2, '0')).join(' '),
+      lastBytes: Array.from(audioBuffer.slice(-16)).map(b => '0x' + b.toString(16).padStart(2, '0')).join(' ')
+    });
 
-    // Mobile-first: Optimized base64 conversion for smaller files
+    // Convert to base64
     let binaryString = '';
-    const chunkSize = 16384; // Mobile-first: Larger chunks for faster processing
+    const chunkSize = 16384;
     for (let i = 0; i < audioBuffer.length; i += chunkSize) {
       const chunk = audioBuffer.slice(i, i + chunkSize);
       binaryString += String.fromCharCode(...chunk);
     }
     const base64Audio = btoa(binaryString);
+    
+    console.log('[google-stt] 🔍 BASE64 AUDIO:', {
+      length: base64Audio.length,
+      firstChars: base64Audio.substring(0, 50),
+      lastChars: base64Audio.substring(base64Audio.length - 50)
+    });
+    
+    const requestBody = {
+      audio: {
+        content: base64Audio
+      },
+      config: sttConfig
+    };
 
-    // Try each encoding configuration until one works
-    for (let i = 0; i < encodingConfigs.length; i++) {
-      const config = encodingConfigs[i];
-      const sttConfig = {
-        encoding: config.encoding,
-        sampleRateHertz: config.sampleRateHertz,
-        languageCode: 'en-US',
-        enableAutomaticPunctuation: true,
-        model: 'latest_short',         // Mobile-first: Faster model
-        ...config
-      };
-
-      console.log(`[google-stt] 🎯 Trying encoding config ${i + 1}/${encodingConfigs.length}:`, sttConfig);
-      
-      const requestBody = {
-        audio: {
-          content: base64Audio
+    console.log('[google-stt] 🔍 REQUEST BODY SIZE:', JSON.stringify(requestBody).length);
+    
+    let response = await fetch(
+      `https://speech.googleapis.com/v1/speech:recognize?key=${googleApiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        config: sttConfig
-      };
-
-      try {
-        let response = await fetch(
-          `https://speech.googleapis.com/v1/speech:recognize?key=${googleApiKey}`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestBody),
-          }
-        );
-
-        if (response.ok) {
-          result = await response.json();
-          transcript = result.results?.[0]?.alternatives?.[0]?.transcript || '';
-          
-          if (transcript && transcript.trim().length > 0) {
-            console.log(`[google-stt] ✅ Success with config ${i + 1}: ${config.encoding}@${config.sampleRateHertz}Hz`);
-            break;
-          } else {
-            console.log(`[google-stt] ⚠️ Config ${i + 1} succeeded but no transcript: ${config.encoding}@${config.sampleRateHertz}Hz`);
-          }
-        } else {
-          const errorText = await response.text();
-          console.log(`[google-stt] ❌ Config ${i + 1} failed: ${config.encoding}@${config.sampleRateHertz}Hz - ${response.status}: ${errorText}`);
-        }
-      } catch (error) {
-        console.log(`[google-stt] ❌ Config ${i + 1} error: ${config.encoding}@${config.sampleRateHertz}Hz - ${error.message}`);
+        body: JSON.stringify(requestBody),
       }
+    );
+
+    let result;
+    let transcript = '';
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[google-stt] ❌ GOOGLE API ERROR:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+        config: sttConfig,
+        audioSize: audioBuffer.length,
+        base64Size: base64Audio.length
+      });
+      throw new Error(`Google Speech-to-Text API error: ${response.status} - ${errorText}`);
     }
 
-    // If no successful result, throw an error
-    if (!result) {
-      throw new Error('All encoding configurations failed - unable to process audio');
-    }
+    result = await response.json();
+    transcript = result.results?.[0]?.alternatives?.[0]?.transcript || '';
 
     console.log('[google-stt] 📤 SENDING:', {
       transcriptLength: transcript.length,
