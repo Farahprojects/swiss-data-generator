@@ -1,22 +1,24 @@
 /**
- * 🎙️ CONVERSATION MICROPHONE SERVICE - Simplified Version
+ * 🎙️ CONVERSATION MICROPHONE SERVICE - Streamlined Version
  * 
  * Handles microphone functionality for AI conversation recording.
- * Uses simple MediaRecorder - no complex VAD.
+ * Simplified to essential functionality only.
  */
 
 import { audioArbitrator } from '@/services/audio/AudioArbitrator';
+import { RollingBufferVAD } from './vad/RollingBufferVAD';
 
 export interface ConversationMicrophoneOptions {
   onRecordingComplete?: (audioBlob: Blob) => void;
   onError?: (error: Error) => void;
+  onSilenceDetected?: () => void;
+  silenceTimeoutMs?: number;
 }
 
 export class ConversationMicrophoneServiceClass {
   private stream: MediaStream | null = null;
   private cachedStream: MediaStream | null = null;
-  private mediaRecorder: MediaRecorder | null = null;
-  private audioChunks: Blob[] = [];
+  private rollingBufferVAD: RollingBufferVAD | null = null;
   private isRecording = false;
   private isPaused = false;
   private audioContext: AudioContext | null = null;
@@ -72,6 +74,13 @@ export class ConversationMicrophoneServiceClass {
     const turnId = `turn-${Date.now()}`;
     this.currentTurnId = turnId;
 
+    // Ensure tracks are enabled
+    if (this.stream) {
+      this.stream.getAudioTracks().forEach(track => {
+        track.enabled = true;
+      });
+    }
+
     try {
       // Use cached stream
       if (this.cachedStream) {
@@ -87,10 +96,21 @@ export class ConversationMicrophoneServiceClass {
         return false;
       }
 
-      // Create or reuse AudioContext
+      const audioTrack = this.stream.getAudioTracks()[0];
+      if (audioTrack.readyState !== 'live') {
+        console.error('[ConversationMic] Audio track not ready:', audioTrack.readyState);
+        return false;
+      }
+
+      // Create or reuse AudioContext with optimal sample rate
       if (!this.audioContext || this.audioContext.state === 'closed') {
         this.audioContext = new AudioContext({ sampleRate: 48000 });
       }
+
+      // Create fresh stream for this turn
+      const originalTrack = this.cachedStream.getAudioTracks()[0];
+      const clonedTrack = originalTrack.clone();
+      this.stream = new MediaStream([clonedTrack]);
 
       // Create audio analysis chain
       this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
@@ -99,39 +119,35 @@ export class ConversationMicrophoneServiceClass {
       this.analyser.smoothingTimeConstant = 0.8;
       this.mediaStreamSource.connect(this.analyser);
 
-      // Create simple MediaRecorder
-      this.mediaRecorder = new MediaRecorder(this.stream, {
-        mimeType: 'audio/webm;codecs=opus',
-        audioBitsPerSecond: 48000
+      // Create VAD
+      this.rollingBufferVAD = new RollingBufferVAD({
+        lookbackWindowMs: 750,
+        chunkDurationMs: 250,
+        voiceThreshold: 0.012,
+        silenceThreshold: 0.008,
+        voiceConfirmMs: 300,
+        silenceTimeoutMs: this.options.silenceTimeoutMs || 1500,
+        onVoiceStart: () => {
+          // Voice detected
+        },
+        onSilenceDetected: () => {
+          if (this.currentTurnId === turnId) {
+            this.stopRecording(turnId);
+          }
+        },
+        onError: (error: Error) => {
+          console.error('[ConversationMic] VAD error:', error);
+          if (this.options.onError) {
+            this.options.onError(error);
+          }
+        }
       });
-
-      // Handle audio chunks
-      this.audioChunks = [];
-      this.mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          this.audioChunks.push(event.data);
-        }
-      };
-
-      this.mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm;codecs=opus' });
-        if (this.options.onRecordingComplete) {
-          this.options.onRecordingComplete(audioBlob);
-        }
-      };
-
-      this.mediaRecorder.onerror = (event) => {
-        console.error('[ConversationMic] MediaRecorder error:', event);
-        if (this.options.onError) {
-          this.options.onError(new Error('Recording failed'));
-        }
-      };
 
       this.isRecording = true;
       audioArbitrator.setMicrophoneState('active');
 
-      // Start recording
-      this.mediaRecorder.start(100); // 100ms chunks
+      // Start VAD
+      await this.rollingBufferVAD.start(this.stream, this.audioContext, this.analyser);
 
       this.notifyListeners();
       return true;
@@ -149,37 +165,35 @@ export class ConversationMicrophoneServiceClass {
   /**
    * Stop recording
    */
-  public async stopRecording(): Promise<Blob | null> {
-    if (!this.isRecording || !this.mediaRecorder) {
+  public async stopRecording(expectedTurnId?: string): Promise<Blob | null> {
+    if (expectedTurnId && this.currentTurnId !== expectedTurnId) {
+      return null;
+    }
+    if (!this.isRecording || !this.rollingBufferVAD) {
       return null;
     }
 
-    return new Promise((resolve) => {
-      this.mediaRecorder!.onstop = () => {
-        const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm;codecs=opus' });
-        
-        this.isRecording = false;
-        this.audioLevel = 0;
-        this.currentTurnId = null;
-        this.mediaRecorder = null;
-        this.audioChunks = [];
+    try {
+      // Stop VAD and get audio blob
+      const audioBlob = await this.rollingBufferVAD.stop();
+      this.rollingBufferVAD = null;
 
-        this.notifyListeners();
+      this.isRecording = false;
+      this.audioLevel = 0;
+      this.currentTurnId = null;
 
-        // Call completion callback
-        if (audioBlob && this.options.onRecordingComplete) {
-          this.options.onRecordingComplete(audioBlob);
-        }
+      this.notifyListeners();
 
-        resolve(audioBlob);
-      };
-
-      if (this.mediaRecorder.state !== 'inactive') {
-        this.mediaRecorder.stop();
-      } else {
-        resolve(null);
+      // Call completion callback
+      if (audioBlob && this.options.onRecordingComplete) {
+        this.options.onRecordingComplete(audioBlob);
       }
-    });
+
+      return audioBlob;
+    } catch (error) {
+      console.error('[ConversationMic] Stop recording failed:', error);
+      return null;
+    }
   }
 
   /**
@@ -245,17 +259,23 @@ export class ConversationMicrophoneServiceClass {
   }
 
   /**
+   * Cancel recording
+   */
+  cancelRecording(): void {
+    this.forceCleanup();
+  }
+
+  /**
    * Cleanup everything
    */
   forceCleanup(): void {
     this.isRecording = false;
     this.audioLevel = 0;
 
-    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      this.mediaRecorder.stop();
+    if (this.rollingBufferVAD) {
+      this.rollingBufferVAD.stop().catch(() => {});
+      this.rollingBufferVAD = null;
     }
-    this.mediaRecorder = null;
-    this.audioChunks = [];
 
     if (this.stream) {
       this.stream.getAudioTracks().forEach(track => track.stop());

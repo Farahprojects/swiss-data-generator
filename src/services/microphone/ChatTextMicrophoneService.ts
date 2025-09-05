@@ -2,11 +2,12 @@
  * 💬 CHAT TEXT MICROPHONE SERVICE - Complete Domain Isolation
  * 
  * Handles ALL microphone functionality for chat text area voice input.
- * Completely isolated from other domains. Uses simple MediaRecorder.
+ * Completely isolated from other domains. Now uses shared RollingBufferVAD.
  */
 
 import { supabase } from '@/integrations/supabase/client';
 import { microphoneArbitrator } from './MicrophoneArbitrator';
+import { RollingBufferVAD } from './vad/RollingBufferVAD';
 
 export interface ChatTextMicrophoneOptions {
   onTranscriptReady?: (transcript: string) => void;
@@ -16,8 +17,7 @@ export interface ChatTextMicrophoneOptions {
 
 class ChatTextMicrophoneServiceClass {
   private stream: MediaStream | null = null;
-  private mediaRecorder: MediaRecorder | null = null;
-  private audioChunks: Blob[] = [];
+  private rollingBufferVAD: RollingBufferVAD | null = null;
   private audioContext: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
   private mediaStreamSource: MediaStreamAudioSourceNode | null = null;
@@ -84,38 +84,36 @@ class ChatTextMicrophoneServiceClass {
       this.analyser.smoothingTimeConstant = 0.8;
       this.mediaStreamSource.connect(this.analyser);
 
-      // Create simple MediaRecorder
-      this.mediaRecorder = new MediaRecorder(this.stream, {
-        mimeType: 'audio/webm;codecs=opus',
-        audioBitsPerSecond: 48000
+      // Initialize rolling buffer VAD
+      this.rollingBufferVAD = new RollingBufferVAD({
+        lookbackWindowMs: 750,
+        chunkDurationMs: 250,
+        voiceThreshold: 0.012,
+        silenceThreshold: 0.008,
+        voiceConfirmMs: 300,
+        silenceTimeoutMs: this.options.silenceTimeoutMs || 1500,
+        onVoiceStart: () => {
+          this.log('🎤 Rolling buffer VAD: Voice activity confirmed');
+        },
+        onSilenceDetected: async () => {
+          this.log('🧘‍♂️ Rolling buffer VAD: Silence detected - stopping recording');
+          if (this.options.onSilenceDetected) {
+            this.options.onSilenceDetected();
+          }
+          const audioBlob = await this.stopRecording();
+          if (audioBlob) {
+            await this.processAudio(audioBlob);
+          }
+        },
+        onError: (error: Error) => {
+          this.error('❌ Rolling buffer VAD error:', error);
+        }
       });
-
-      // Handle audio chunks
-      this.audioChunks = [];
-      this.mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          this.audioChunks.push(event.data);
-        }
-      };
-
-      this.mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm;codecs=opus' });
-        if (this.options.onSilenceDetected) {
-          this.options.onSilenceDetected();
-        }
-        if (audioBlob) {
-          await this.processAudio(audioBlob);
-        }
-      };
-
-      this.mediaRecorder.onerror = (event) => {
-        this.error('❌ MediaRecorder error:', event);
-      };
 
       this.isRecording = true;
 
-      // Start recording
-      this.mediaRecorder.start(100); // 100ms chunks
+      // Start rolling buffer VAD
+      await this.rollingBufferVAD.start(this.stream, this.audioContext, this.analyser);
       
       // Set 45-second timeout to automatically stop recording
       this.recordingTimeout = setTimeout(async () => {
@@ -141,11 +139,17 @@ class ChatTextMicrophoneServiceClass {
    * STOP RECORDING - Clean domain-specific stop
    */
   async stopRecording(): Promise<Blob | null> {
-    if (!this.isRecording || !this.mediaRecorder) return null;
+    if (!this.isRecording) return;
 
     this.log('🛑 Stopping recording');
     
     this.isRecording = false;
+
+    // 🔧 Ensure VAD monitoring stops immediately
+    if (this.rollingBufferVAD) {
+      // stop() will resolve with final blob and stop MediaRecorder
+      // cleanup() later resets internal state
+    }
 
     // Clear recording timeout
     if (this.recordingTimeout) {
@@ -153,38 +157,35 @@ class ChatTextMicrophoneServiceClass {
       this.recordingTimeout = null;
     }
 
-    return new Promise((resolve) => {
-      this.mediaRecorder!.onstop = () => {
-        const finalBlob = new Blob(this.audioChunks, { type: 'audio/webm;codecs=opus' });
-        
-        this.mediaRecorder = null;
-        this.audioChunks = [];
+    // Stop rolling buffer VAD and get final blob
+    let finalBlob: Blob | null = null;
+    if (this.rollingBufferVAD) {
+      finalBlob = await this.rollingBufferVAD.stop();
+    }
 
-        // Notify listeners after isRecording becomes false
-        this.notifyListeners();
-        
-        // Disconnect analysis nodes but keep AudioContext alive
-        if (this.mediaStreamSource) {
-          this.mediaStreamSource.disconnect();
-          this.mediaStreamSource = null;
-        }
-        
-        // Keep AudioContext and stream alive for next speech
-        // Only call full cleanup() when the service is completely done
-        
-        resolve(finalBlob);
-      };
+    // Notify listeners after isRecording becomes false
+    this.notifyListeners();
 
-      if (this.mediaRecorder.state !== 'inactive') {
-        this.mediaRecorder.stop();
-      } else {
-        resolve(null);
-      }
-    });
+    // ✅ VAD is self-cleaning - no need to call cleanup() here
+    // The VAD.stop() method already calls cleanup() internally
+    if (this.rollingBufferVAD) {
+      this.rollingBufferVAD = null;
+    }
+    
+    // Disconnect analysis nodes but keep AudioContext alive
+    if (this.mediaStreamSource) {
+      this.mediaStreamSource.disconnect();
+      this.mediaStreamSource = null;
+    }
+    
+    // Keep AudioContext and stream alive for next speech
+    // Only call full cleanup() when the service is completely done
+    
+    return finalBlob;
   }
 
   /**
-   * PROCESS AUDIO - Domain-specific transcription
+   * PROCESS AUDIO - Domain-specific transcription with rolling buffer
    */
   private async processAudio(audioBlob: Blob): Promise<void> {
     try {
@@ -239,12 +240,11 @@ class ChatTextMicrophoneServiceClass {
   private cleanup(): void {
     this.log('🧹 Cleaning up chat text microphone');
 
-    // Stop MediaRecorder
-    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      this.mediaRecorder.stop();
+    // VAD is self-cleaning - no need to call cleanup() here
+    // The VAD.stop() method already calls cleanup() internally
+    if (this.rollingBufferVAD) {
+      this.rollingBufferVAD = null;
     }
-    this.mediaRecorder = null;
-    this.audioChunks = [];
 
     // Disconnect audio nodes
     if (this.mediaStreamSource) {
@@ -286,6 +286,12 @@ class ChatTextMicrophoneServiceClass {
    * GET STATE - For React hooks
    */
   getState() {
+    // Get audio level from rolling buffer VAD if available
+    if (this.rollingBufferVAD) {
+      const vadState = this.rollingBufferVAD.getState();
+      this.audioLevel = vadState.audioLevel;
+    }
+    
     return {
       isRecording: this.isRecording,
       isProcessing: this.isProcessing,
