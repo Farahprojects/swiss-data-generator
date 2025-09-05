@@ -372,9 +372,8 @@ export const ConversationOverlay: React.FC = () => {
     
     // 🎤 STEP 3: Stop microphone and release MediaStream (browser API)
     try {
-      conversationMicrophoneService.stopRecording();
-      // VAD cleanup is handled internally by the microphone service - no external calls needed
-      console.log('[ConversationOverlay] 🎤 Microphone stopped');
+      conversationMicrophoneService.cleanup();
+      console.log('[ConversationOverlay] 🎤 Microphone stopped and browser mic turned off');
     } catch (e) {
       console.warn('[ConversationOverlay] Could not stop microphone:', e);
     }
