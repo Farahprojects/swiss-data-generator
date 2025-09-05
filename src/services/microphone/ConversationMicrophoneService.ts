@@ -357,6 +357,7 @@ export class ConversationMicrophoneServiceClass {
    */
   cleanup(): void {
     this.log('🧹 Cleaning up conversation microphone service');
+    this.log('🔴 [MICROPHONE-KILLER] ConversationMicrophoneService.cleanup() called - WHO IS KILLING THE MIC?');
     this.log('[CONVERSATION-TURN] cleanup called - resetting all state flags');
     
     // Reset state flags immediately
@@ -516,6 +517,7 @@ export class ConversationMicrophoneServiceClass {
    */
   forceCleanup(): void {
     this.log('🚨 Force cleanup');
+    this.log('🔴 [MICROPHONE-KILLER] ConversationMicrophoneService.forceCleanup() called - WHO IS KILLING THE MIC?');
     this.log('[CONVERSATION-TURN] forceCleanup called - resetting all state flags');
     
     // Reset all state flags immediately  

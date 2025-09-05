@@ -37,12 +37,14 @@ class SttService {
 
     if (error) {
       console.error('[STT] Google STT error:', error);
+      console.log('🔴 [MICROPHONE-KILLER] STT service calling audioCleanup() due to STT error');
       try { audioCaptureManager.audioCleanup(); } catch {}
       throw new Error(`Error invoking google-speech-to-text: ${error.message}`);
     }
 
     if (!data) {
       console.error('[STT] No data in response');
+      console.log('🔴 [MICROPHONE-KILLER] STT service calling audioCleanup() due to no data response');
       try { audioCaptureManager.audioCleanup(); } catch {}
       throw new Error('No data received from Google STT');
     }
@@ -51,6 +53,7 @@ class SttService {
 
     // Deterministic cleanup from backend flag
     if ((data as any).cleanup) {
+      console.log('🔴 [MICROPHONE-KILLER] STT service calling audioCleanup() due to backend cleanup flag');
       try { audioCaptureManager.audioCleanup(); } catch {}
     }
 
