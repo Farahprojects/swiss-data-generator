@@ -114,7 +114,8 @@ export const useConversationRealtimeAudioLevel = ({
   useEffect(() => {
     const handleMicStateChange = () => {
       const micState = conversationMicrophoneService.getState();
-      setIsEnabled(micState.isRecording);
+      // Enabled only while actively capturing (recording and not paused)
+      setIsEnabled(micState.isRecording && !micState.isPaused);
     };
 
     // Subscribe to microphone service state changes

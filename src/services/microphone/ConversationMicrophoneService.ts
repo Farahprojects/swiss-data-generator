@@ -32,6 +32,7 @@ export class ConversationMicrophoneServiceClass {
   private rollingBufferVAD: RollingBufferVAD | null = null;
   private isRecording = false;
   private isStartingRecording = false; // NEW: Guard against concurrent recording starts
+  private isPaused = false; // NEW: Explicit pause flag during TTS playback
   private audioContext: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
   private mediaStreamSource: MediaStreamAudioSourceNode | null = null;
@@ -323,10 +324,38 @@ export class ConversationMicrophoneServiceClass {
     if (finalBlob && this.options.onRecordingComplete) {
       this.options.onRecordingComplete(finalBlob);
     }
+    // ✅ TEARDOWN AFTER TURN: ensure a fresh chain next time to avoid sample rate corruption
+    if (this.rollingBufferVAD) {
+      this.rollingBufferVAD.cleanup();
+      this.rollingBufferVAD = null;
+    }
+
+    if (this.mediaStreamSource) {
+      this.mediaStreamSource.disconnect();
+      this.mediaStreamSource = null;
+    }
+
+    if (this.analyser) {
+      this.analyser.disconnect();
+      this.analyser = null;
+    }
+
+    // Stop current cloned stream tracks but keep cachedStream for next turn
+    if (this.stream && this.stream !== this.cachedStream) {
+      this.stream.getTracks().forEach(track => track.stop());
+      this.stream = null;
+    }
+
+    // Leave AudioContext for safe close on next start (it will be closed there),
+    // or optionally close immediately if running
+    if (this.audioContext && this.audioContext.state !== 'closed') {
+      try {
+        await this.audioContext.close();
+      } catch {}
+    }
+    this.audioContext = null;
     
-    // IMPORTANT: Do NOT call cleanup here - keep stream and analyser alive
-    // Cleanup should only be called on cancel/reset/overlay close
-    this.log('🎤 Recording complete - stream and analyser kept alive for next turn');
+    this.log('🎤 Recording complete - capture chain torn down for fresh next turn');
   }
 
   /**
@@ -397,7 +426,8 @@ export class ConversationMicrophoneServiceClass {
     return {
       isRecording: this.isRecording,
       hasStream: !!this.stream,
-      audioLevel: this.audioLevel
+      audioLevel: this.audioLevel,
+      isPaused: this.isPaused
     };
   }
 
@@ -450,6 +480,10 @@ export class ConversationMicrophoneServiceClass {
         this.error('❌ Failed to suspend AudioContext:', error);
       });
     }
+
+    // Mark paused and notify listeners
+    this.isPaused = true;
+    this.notifyListeners();
   }
 
   /**
@@ -478,6 +512,10 @@ export class ConversationMicrophoneServiceClass {
     
     // 🔥 FIXED: Remove onReady callback to prevent duplicate state setting
     // The TTS onComplete callback will handle state transitions
+
+    // Clear paused state and notify listeners
+    this.isPaused = false;
+    this.notifyListeners();
   }
 
   /**

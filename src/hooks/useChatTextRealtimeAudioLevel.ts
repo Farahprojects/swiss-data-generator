@@ -21,62 +21,30 @@ export const useChatTextRealtimeAudioLevel = ({
   const audioLevelRef = useRef<number>(0);
   const [isEnabled, setIsEnabled] = useState<boolean>(false);
   
-  const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const mediaStreamSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const lastUpdateTimeRef = useRef<number>(0);
   const smoothedLevelRef = useRef<number>(0);
 
-  // 🎵 Initialize AudioContext and AnalyserNode
-  const initializeAudioContext = useCallback(async () => {
-    if (audioContextRef.current) return;
-
+  // 🎵 Initialize analyser by reusing service's AnalyserNode (read-only)
+  const initializeAnalyser = useCallback(async () => {
+    if (analyserRef.current) return;
     try {
-      const stream = chatTextMicrophoneService.getStream();
-      if (!stream) return;
-
-      // Create AudioContext with mobile-optimized settings
-      audioContextRef.current = new AudioContext({ 
-        sampleRate: 16000, // Mobile-first: 16kHz for faster processing
-        latencyHint: 'interactive'
-      });
-
-      // Create AnalyserNode with mobile-optimized settings
-      analyserRef.current = audioContextRef.current.createAnalyser();
-      analyserRef.current.fftSize = 1024; // Mobile-first: Smaller FFT for faster analysis
-      analyserRef.current.smoothingTimeConstant = smoothingFactor;
-
-      // Create MediaStreamSource and connect to analyser
-      mediaStreamSourceRef.current = audioContextRef.current.createMediaStreamSource(stream);
-      mediaStreamSourceRef.current.connect(analyserRef.current);
-
-      // Resume AudioContext if suspended (helps on iOS)
-      if (audioContextRef.current.state === 'suspended') {
-        await audioContextRef.current.resume();
-      }
+      const existingAnalyser = chatTextMicrophoneService.getAnalyser();
+      if (!existingAnalyser) return;
+      existingAnalyser.smoothingTimeConstant = smoothingFactor;
+      analyserRef.current = existingAnalyser;
     } catch (error) {
-      console.error('[useChatTextRealtimeAudioLevel] ❌ Failed to initialize AudioContext:', error);
+      console.error('[useChatTextRealtimeAudioLevel] ❌ Failed to initialize analyser:', error);
     }
   }, [smoothingFactor]);
 
-  // 🎵 Cleanup AudioContext
-  const cleanupAudioContext = useCallback(() => {
+  // 🎵 Cleanup local refs (service owns the graph)
+  const cleanupAnalyser = useCallback(() => {
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
     }
-
-    if (mediaStreamSourceRef.current) {
-      mediaStreamSourceRef.current.disconnect();
-      mediaStreamSourceRef.current = null;
-    }
-
-    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
-
     analyserRef.current = null;
     smoothedLevelRef.current = 0;
     audioLevelRef.current = 0;
@@ -148,13 +116,13 @@ export const useChatTextRealtimeAudioLevel = ({
   // 🎵 Effect: Initialize when enabled
   useEffect(() => {
     if (isEnabled) {
-      initializeAudioContext();
+      initializeAnalyser();
     } else {
-      cleanupAudioContext();
+      cleanupAnalyser();
     }
 
-    return cleanupAudioContext;
-  }, [isEnabled, initializeAudioContext, cleanupAudioContext]);
+    return cleanupAnalyser;
+  }, [isEnabled, initializeAnalyser, cleanupAnalyser]);
 
   // 🎵 Effect: Start/stop audio level detection
   useEffect(() => {

@@ -132,6 +132,12 @@ class ChatTextMicrophoneServiceClass {
     
     this.isRecording = false;
 
+    // 🔧 Ensure VAD monitoring stops immediately
+    if (this.rollingBufferVAD) {
+      // stop() will resolve with final blob and stop MediaRecorder
+      // cleanup() later resets internal state
+    }
+
     // Clear recording timeout
     if (this.recordingTimeout) {
       clearTimeout(this.recordingTimeout);
@@ -154,6 +160,7 @@ class ChatTextMicrophoneServiceClass {
       this.log('📵 No audio recorded');
     }
 
+    // ✅ FULL TEARDOWN: turn off browser mic after each submission
     this.cleanup();
   }
 
@@ -277,6 +284,13 @@ class ChatTextMicrophoneServiceClass {
    */
   getStream(): MediaStream | null {
     return this.stream;
+  }
+
+  /**
+   * GET ANALYSER - Return current AnalyserNode for read-only realtime analysis
+   */
+  getAnalyser(): AnalyserNode | null {
+    return this.analyser;
   }
 
   /**

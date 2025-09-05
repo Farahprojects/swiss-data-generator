@@ -87,10 +87,19 @@ export class RollingBufferVAD {
     };
 
     // Create MediaRecorder with small time slices for rolling buffer
-    this.mediaRecorder = new MediaRecorder(stream, {
-      mimeType: 'audio/webm;codecs=opus',
-      audioBitsPerSecond: 64000
-    });
+    // Prefer opus-in-webm for STT; fall back to browser default if unsupported
+    let options: MediaRecorderOptions = { audioBitsPerSecond: 64000 };
+    try {
+      const preferred = 'audio/webm;codecs=opus';
+      const isSupported = (typeof MediaRecorder !== 'undefined' &&
+        // @ts-ignore
+        typeof MediaRecorder.isTypeSupported === 'function' && MediaRecorder.isTypeSupported(preferred));
+      if (isSupported) {
+        options.mimeType = preferred;
+      }
+    } catch {}
+
+    this.mediaRecorder = new MediaRecorder(stream, options);
 
     // Handle data chunks for rolling buffer
     this.mediaRecorder.ondataavailable = (event) => {
