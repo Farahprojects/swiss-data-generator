@@ -56,8 +56,8 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive }) => {
         // Apply height directly to each bar (preserves border radius)
         const barEl = barRefs.current[i];
         if (barEl) {
-          // Make outer bars (0,3) smaller than middle bars (1,2)
-          const maxHeight = (i === 0 || i === 3) ? 96 : 192; // Outer bars max 96px, middle bars max 192px
+          // Make outer bars (0,3) a bit bigger than before, but still smaller than middle bars (1,2)
+          const maxHeight = (i === 0 || i === 3) ? 128 : 192; // Outer bars max 128px, middle bars max 192px
           const height = Math.max(8, current[i] * maxHeight);
           barEl.style.height = `${height}px`;
         }
@@ -95,7 +95,7 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive }) => {
           className={`bg-black ${bar.className}`}
           style={{
             width: '32px',
-            height: idx === 0 || idx === 3 ? '19px' : '38px', // Initial height: outer bars 19px (0.2 * 96px), middle bars 38px (0.2 * 192px)
+            height: idx === 0 || idx === 3 ? '26px' : '38px', // Initial height: outer bars 26px (0.2 * 128px), middle bars 38px (0.2 * 192px)
             borderRadius: '16px', // Half the width for perfectly round ends
             willChange: 'height',
             transition: 'none',
