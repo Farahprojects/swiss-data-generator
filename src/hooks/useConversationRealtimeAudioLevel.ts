@@ -22,57 +22,40 @@ export const useConversationRealtimeAudioLevel = ({
 }: UseConversationRealtimeAudioLevelOptions) => {
   const [audioLevel, setAudioLevel] = useState<number>(0);
   
-  const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const mediaStreamSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const lastUpdateTimeRef = useRef<number>(0);
   const smoothedLevelRef = useRef<number>(0);
   const intervalRef = useRef<number | null>(null);
 
-  // 🎵 Initialize AudioContext and AnalyserNode
+  // 🎵 Initialize (reuse existing AnalyserNode from microphone service)
   const initializeAudioContext = useCallback(async () => {
-    const stream = conversationMicrophoneService.getStream();
-    if (!stream || audioContextRef.current) {
-      // Stream not available yet or already initialized
+    if (analyserRef.current) {
+      // Already initialized
       return;
     }
 
     try {
-      // Get the existing AudioContext and AnalyserNode from the conversation microphone service
-      // This prevents conflicts with the service's own audio analysis chain
-      const serviceState = conversationMicrophoneService.getState();
-      if (!serviceState.hasStream) {
+      // Get the existing AnalyserNode from the microphone service
+      // This is read-only and won't interfere with the service's recording chain
+      const existingAnalyser = conversationMicrophoneService.getAnalyser();
+      if (!existingAnalyser) {
+        // Analyser not available yet
         return;
       }
 
-      // We need to access the service's internal audio analysis chain
-      // For now, we'll create our own but use the same stream
-      // Create AudioContext with mobile-optimized settings
-      audioContextRef.current = new AudioContext({ 
-        sampleRate: 16000, // Mobile-first: 16kHz for faster processing
-        latencyHint: 'interactive'
-      });
-
-      // Create AnalyserNode with mobile-optimized settings
-      analyserRef.current = audioContextRef.current.createAnalyser();
-      analyserRef.current.fftSize = 1024; // Mobile-first: Smaller FFT for faster analysis
-      analyserRef.current.smoothingTimeConstant = smoothingFactor;
-
-      // Create MediaStreamSource and connect to analyser
-      mediaStreamSourceRef.current = audioContextRef.current.createMediaStreamSource(stream);
-      mediaStreamSourceRef.current.connect(analyserRef.current);
-
-      // Resume AudioContext if suspended (helps on iOS)
-      if (audioContextRef.current.state === 'suspended') {
-        await audioContextRef.current.resume();
-      }
+      // Reuse the existing AnalyserNode (read-only access)
+      analyserRef.current = existingAnalyser;
+      
+      // No need to create our own AudioContext or MediaStreamSource
+      // We're just reading from the existing analysis chain
+      
     } catch (error) {
-      console.error('[useConversationRealtimeAudioLevel] ❌ Failed to initialize AudioContext:', error);
+      console.error('[useConversationRealtimeAudioLevel] ❌ Failed to initialize:', error);
     }
-  }, [smoothingFactor]);
+  }, []);
 
-  // 🎵 Cleanup AudioContext
+  // 🎵 Cleanup (no AudioContext to clean up since we reuse the service's)
   const cleanupAudioContext = useCallback(() => {
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
@@ -84,16 +67,8 @@ export const useConversationRealtimeAudioLevel = ({
       intervalRef.current = null;
     }
 
-    if (mediaStreamSourceRef.current) {
-      mediaStreamSourceRef.current.disconnect();
-      mediaStreamSourceRef.current = null;
-    }
-
-    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
-
+    // No need to disconnect or close anything since we're reusing the service's AnalyserNode
+    // Just clear our reference
     analyserRef.current = null;
     smoothedLevelRef.current = 0;
     lastUpdateTimeRef.current = 0;

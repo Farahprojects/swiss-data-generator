@@ -373,6 +373,13 @@ export class ConversationMicrophoneServiceClass {
   }
 
   /**
+   * GET ANALYSER - For external audio level analysis (read-only)
+   */
+  getAnalyser(): AnalyserNode | null {
+    return this.analyser;
+  }
+
+  /**
    * SUBSCRIBE - For React state updates
    */
   subscribe(listener: () => void): () => void {
