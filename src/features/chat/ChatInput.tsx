@@ -1,11 +1,12 @@
 // src/features/chat/ChatInput.tsx
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 import { Mic, AudioLines, ArrowRight, Loader2 } from 'lucide-react';
 import { useChatStore } from '@/core/store';
 import { chatController } from './ChatController';
 import { useConversationUIStore } from './conversation-ui-store';
 import { useChatTextMicrophone } from '@/hooks/microphone/useChatTextMicrophone';
+import { useRealtimeAudioLevel } from '@/hooks/useRealtimeAudioLevel';
 import { VoiceWaveform } from './VoiceWaveform';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
 
@@ -38,11 +39,24 @@ export const ChatInput = () => {
   const { 
     isRecording: isMicRecording, 
     isProcessing: isMicProcessing,
-    audioLevel,
+    service: microphoneService,
     toggleRecording: toggleMicRecording 
   } = useChatTextMicrophone({
     onTranscriptReady: handleTranscriptReady,
     silenceTimeoutMs: 1500
+  });
+
+  // 🎵 REALTIME AUDIO LEVEL - Direct MediaStream analysis (mobile-friendly)
+  const audioLevelRef = useRef<number>(0);
+  const { getCurrentAudioLevel } = useRealtimeAudioLevel({
+    stream: microphoneService.getStream(),
+    enabled: isMicRecording,
+    targetFPS: 30, // Mobile-optimized frame rate
+    smoothingFactor: 0.8, // Smooth animations
+    onAudioLevel: (level) => {
+      // Store audio level in ref for direct access (no React state updates per frame)
+      audioLevelRef.current = level;
+    }
   });
 
   const handleSend = () => {
@@ -139,7 +153,7 @@ export const ChatInput = () => {
         <div className="flex-1 relative">
           {isMicRecording ? (
             <div className="w-full h-[46px] flex items-center justify-center bg-white border-2 border-black rounded-3xl">
-              <VoiceWaveform audioLevel={audioLevel} />
+              <VoiceWaveform audioLevelRef={audioLevelRef} />
             </div>
           ) : (
             <TextareaAutosize
