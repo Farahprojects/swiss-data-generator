@@ -86,44 +86,20 @@ export class RollingBufferVAD {
       silenceStartTime: null
     };
 
-    // Create MediaRecorder with optimal webm/opus configuration
+    // Create MediaRecorder with STRICT webm/opus configuration
     let options: MediaRecorderOptions = { 
       audioBitsPerSecond: 48000,  // Optimal bitrate for speech
       mimeType: 'audio/webm;codecs=opus'
     };
     
-    try {
-      // Verify support for optimal format
-      if (typeof MediaRecorder !== 'undefined' && 
-          typeof MediaRecorder.isTypeSupported === 'function' && 
-          MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-        this.log('✅ Using optimal webm/opus format');
-        // Ensure we use the exact format that Google STT expects
-        options = { 
-          audioBitsPerSecond: 48000,
-          mimeType: 'audio/webm;codecs=opus'
-        };
-      } else {
-        this.log('⚠️ webm/opus not supported, trying alternative formats');
-        // Try alternative formats that might work better
-        if (MediaRecorder.isTypeSupported('audio/webm')) {
-          options = { 
-            audioBitsPerSecond: 48000,
-            mimeType: 'audio/webm'
-          };
-        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-          options = { 
-            audioBitsPerSecond: 48000,
-            mimeType: 'audio/mp4'
-          };
-        } else {
-          this.log('⚠️ Using browser default format');
-          options = { audioBitsPerSecond: 48000 };
-        }
-      }
-    } catch (error) {
-      this.log('⚠️ Format detection failed, using browser default');
-      options = { audioBitsPerSecond: 48000 };
+    // STRICT: Only use webm/opus format - no fallbacks to prevent format inconsistencies
+    if (typeof MediaRecorder !== 'undefined' && 
+        typeof MediaRecorder.isTypeSupported === 'function' && 
+        MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+      this.log('✅ Using STRICT webm/opus format');
+    } else {
+      this.error('❌ CRITICAL: webm/opus not supported - this will cause STT format errors');
+      throw new Error('Browser does not support audio/webm;codecs=opus format required for STT');
     }
 
     this.mediaRecorder = new MediaRecorder(stream, options);
@@ -299,7 +275,16 @@ export class RollingBufferVAD {
       return null;
     }
 
-    return new Blob(allChunks, { type: 'audio/webm;codecs=opus' });
+    // STRICT: Always create blob with webm/opus type to ensure format consistency
+    const finalBlob = new Blob(allChunks, { type: 'audio/webm;codecs=opus' });
+    
+    // Validate blob type
+    if (finalBlob.type !== 'audio/webm;codecs=opus') {
+      this.error(`❌ CRITICAL: Blob type mismatch! Expected 'audio/webm;codecs=opus', got '${finalBlob.type}'`);
+    }
+    
+    this.log(`✅ Final blob created: ${finalBlob.size} bytes, type: ${finalBlob.type}`);
+    return finalBlob;
   }
 
   /**
