@@ -4,9 +4,11 @@
  */
 
 type AudioSystem = 'microphone' | 'tts' | 'none';
+type MicrophoneState = 'active' | 'muted' | 'inactive';
 
 class AudioArbitrator {
   private currentSystem: AudioSystem = 'none';
+  private microphoneState: MicrophoneState = 'inactive';
   private listeners = new Set<(system: AudioSystem) => void>();
 
   /**
@@ -14,6 +16,15 @@ class AudioArbitrator {
    * Returns true if successful, false if another system is active
    */
   requestControl(system: AudioSystem): boolean {
+    // Allow TTS if microphone is muted (not actively recording)
+    if (system === 'tts' && this.currentSystem === 'microphone' && this.microphoneState === 'muted') {
+      this.currentSystem = system;
+      this.notifyListeners();
+      console.log(`🎵 [AudioArbitrator] ${system.toUpperCase()} took control (microphone muted)`);
+      return true;
+    }
+
+    // Standard logic for other cases
     if (this.currentSystem === 'none' || this.currentSystem === system) {
       this.currentSystem = system;
       this.notifyListeners();
@@ -26,6 +37,7 @@ class AudioArbitrator {
       `🚨🚨🚨 AUDIO CONFLICT DETECTED 🚨🚨🚨\n` +
       `Current system: ${this.currentSystem.toUpperCase()}\n` +
       `Requested system: ${system.toUpperCase()}\n` +
+      `Microphone state: ${this.microphoneState.toUpperCase()}\n` +
       `ONLY ONE AUDIO SYSTEM CAN RUN AT A TIME!\n` +
       `🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨`
     );
@@ -41,6 +53,21 @@ class AudioArbitrator {
       this.notifyListeners();
       console.log(`🎵 [AudioArbitrator] ${system.toUpperCase()} released control`);
     }
+  }
+
+  /**
+   * Set microphone state (active, muted, inactive)
+   */
+  setMicrophoneState(state: MicrophoneState): void {
+    this.microphoneState = state;
+    console.log(`🎵 [AudioArbitrator] Microphone state: ${state.toUpperCase()}`);
+  }
+
+  /**
+   * Get microphone state
+   */
+  getMicrophoneState(): MicrophoneState {
+    return this.microphoneState;
   }
 
   /**

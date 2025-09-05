@@ -225,6 +225,7 @@ export class ConversationMicrophoneServiceClass {
       this.log(`🔍 POST-VAD CREATION: rollingBufferVAD=${this.rollingBufferVAD ? 'EXISTS' : 'NULL'}, turnId=${turnId}`);
 
       this.isRecording = true;
+      audioArbitrator.setMicrophoneState('active');
 
       // 🔍 PRE-VAD START: Log state before starting VAD
       this.log(`🔍 PRE-VAD START: rollingBufferVAD=${this.rollingBufferVAD ? 'EXISTS' : 'NULL'}, stream=${this.stream ? 'EXISTS' : 'NULL'}, audioContext=${this.audioContext ? 'EXISTS' : 'NULL'}`);
@@ -504,6 +505,7 @@ export class ConversationMicrophoneServiceClass {
     }
     
     this.isPaused = true;
+    audioArbitrator.setMicrophoneState('muted');
     this.notifyListeners();
   }
 
@@ -521,6 +523,7 @@ export class ConversationMicrophoneServiceClass {
     }
     
     this.isPaused = false;
+    audioArbitrator.setMicrophoneState('active');
     this.notifyListeners();
   }
 
