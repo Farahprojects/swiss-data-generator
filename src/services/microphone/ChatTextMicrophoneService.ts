@@ -6,7 +6,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
-import { microphoneArbitrator } from './MicrophoneArbitrator';
+import { audioArbitrator } from '@/services/audio/AudioArbitrator';
 import { RollingBufferVAD } from './vad/RollingBufferVAD';
 
 export interface ChatTextMicrophoneOptions {
@@ -42,9 +42,9 @@ class ChatTextMicrophoneServiceClass {
    * START RECORDING - Complete domain-specific recording with rolling buffer VAD
    */
   async startRecording(): Promise<boolean> {
-    // Check permission from arbitrator
-    if (!microphoneArbitrator.claim('chat-text')) {
-      this.error('❌ Cannot start - microphone in use by another domain');
+    // Check permission from audio arbitrator
+    if (!audioArbitrator.requestControl('microphone')) {
+      this.error('❌ Cannot start - microphone in use by another system');
       return false;
     }
 
@@ -134,7 +134,7 @@ class ChatTextMicrophoneServiceClass {
 
     } catch (error) {
       this.error('❌ Failed to start recording:', error);
-      microphoneArbitrator.release('chat-text');
+      audioArbitrator.releaseControl('microphone');
       return false;
     }
   }
@@ -289,8 +289,8 @@ class ChatTextMicrophoneServiceClass {
       this.recordingTimeout = null;
     }
 
-    // Release arbitrator
-    microphoneArbitrator.release('chat-text');
+    // Release audio arbitrator
+    audioArbitrator.releaseControl('microphone');
     
     this.notifyListeners();
   }
