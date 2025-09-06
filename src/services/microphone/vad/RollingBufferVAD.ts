@@ -22,14 +22,10 @@ export interface RollingBufferVADOptions {
 
 export interface RollingBufferVADState {
   audioLevel: number;
-  preBufferChunks: Blob[];
-  activeChunks: Blob[];
 }
 
-interface AudioChunk {
-  data: Blob;
-  timestamp: number;
-}
+// Simple audio chunk - no metadata
+type AudioChunk = Blob;
 
 export class RollingBufferVAD {
   private mediaRecorder: MediaRecorder | null = null;
@@ -45,9 +41,7 @@ export class RollingBufferVAD {
   private isRecordingContinuously = false;
   
   private state: RollingBufferVADState = {
-    audioLevel: 0,
-    preBufferChunks: [],
-    activeChunks: []
+    audioLevel: 0
   };
   
   private options: Required<RollingBufferVADOptions>;
@@ -83,9 +77,7 @@ export class RollingBufferVAD {
     
     // Reset state
     this.state = {
-      audioLevel: 0,
-      preBufferChunks: [],
-      activeChunks: []
+      audioLevel: 0
     };
     
     this.vadState = {
@@ -125,21 +117,17 @@ export class RollingBufferVAD {
     // CONTINUOUS RECORDING: Handle data chunks for rolling buffer
     this.mediaRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) {
-        // Add to continuous rolling buffer
-        this.audioBuffer.push({
-          data: event.data,
-          timestamp: Date.now()
-        });
+        // Add to continuous rolling buffer (no metadata)
+        this.audioBuffer.push(event.data);
         
         // Remove old chunks beyond buffer duration
-        const cutoff = Date.now() - this.bufferDurationMs;
-        while (this.audioBuffer[0]?.timestamp < cutoff) {
+        const maxChunks = Math.ceil(this.bufferDurationMs / this.options.chunkDurationMs);
+        while (this.audioBuffer.length > maxChunks) {
           this.audioBuffer.shift();
         }
         
         // OpenAI Whisper: Simple chunk logging
         this.log(`📦 Chunk received: size=${event.data.size}, type=${event.data.type}, buffer size=${this.audioBuffer.length}`);
-        this.handleAudioChunk(event.data);
       }
     };
 
@@ -157,30 +145,7 @@ export class RollingBufferVAD {
     this.startVADMonitoring();
   }
 
-  /**
-   * HANDLE AUDIO CHUNK - Simple chunk processing with race condition protection
-   */
-  private handleAudioChunk(chunk: Blob): void {
-    // CRITICAL: Prevent chunks from being added during stop() to avoid corruption
-    if (this.stopping) {
-      this.log('⚠️ Ignoring chunk during stop() to prevent corruption');
-      return;
-    }
-    
-    // Always add to pre-buffer (rolling window)
-    this.state.preBufferChunks.push(chunk);
-    
-    // Maintain rolling window by removing old chunks
-    const maxChunks = Math.ceil(this.options.lookbackWindowMs / this.options.chunkDurationMs);
-    if (this.state.preBufferChunks.length > maxChunks) {
-      this.state.preBufferChunks.shift();
-    }
-    
-    // If we're recording voice, also add to active chunks
-    if (this.isRecordingVoice) {
-      this.state.activeChunks.push(chunk);
-    }
-  }
+  // REMOVED: Old VAD chunking system - using continuous rolling buffer instead
 
   /**
    * START VAD MONITORING - Simple voice activity detection
@@ -272,19 +237,20 @@ export class RollingBufferVAD {
   extractSpeechFromBuffer(speechStartTime: number, speechEndTime: number): Blob | null {
     this.log(`🎯 Extracting speech from buffer: ${speechStartTime} to ${speechEndTime}`);
     
-    // Find chunks within the speech time window
-    const speechChunks = this.audioBuffer.filter(chunk => 
-      chunk.timestamp >= speechStartTime && chunk.timestamp <= speechEndTime
-    );
+    // Calculate how many recent chunks to include (last ~2-3 seconds)
+    const speechDurationMs = speechEndTime - speechStartTime;
+    const chunksToInclude = Math.ceil(speechDurationMs / this.options.chunkDurationMs);
+    
+    // Get recent chunks from buffer
+    const speechChunks = this.audioBuffer.slice(-chunksToInclude);
     
     if (speechChunks.length === 0) {
-      this.log('⚠️ No chunks found in speech time window');
+      this.log('⚠️ No chunks found in buffer');
       return null;
     }
     
     // Combine chunks into final blob
-    const allChunks = speechChunks.map(chunk => chunk.data);
-    const finalBlob = new Blob(allChunks, { 
+    const finalBlob = new Blob(speechChunks, { 
       type: this.mediaRecorder?.mimeType || 'audio/webm' 
     });
     
@@ -311,7 +277,10 @@ export class RollingBufferVAD {
       this.mediaRecorder.onstop = () => {
         // CRITICAL: Wait 50ms to ensure last chunk is processed
         setTimeout(() => {
-          const finalBlob = this.createFinalBlob();
+          // Use recent chunks from buffer
+          const finalBlob = new Blob(this.audioBuffer, { 
+            type: this.mediaRecorder?.mimeType || 'audio/webm' 
+          });
           // CRITICAL: Always cleanup MediaRecorder after STT processing
           this.cleanup();
           resolve(finalBlob);
@@ -323,7 +292,10 @@ export class RollingBufferVAD {
       } else {
         // CRITICAL: Wait 50ms even for inactive recorder
         setTimeout(() => {
-          const finalBlob = this.createFinalBlob();
+          // Use recent chunks from buffer
+          const finalBlob = new Blob(this.audioBuffer, { 
+            type: this.mediaRecorder?.mimeType || 'audio/webm' 
+          });
           // CRITICAL: Always cleanup MediaRecorder after STT processing
           this.cleanup();
           resolve(finalBlob);
@@ -332,48 +304,7 @@ export class RollingBufferVAD {
     });
   }
 
-  /**
-   * CREATE FINAL BLOB - Combine pre-buffer and active chunks
-   */
-  private createFinalBlob(): Blob | null {
-    let allChunks: Blob[] = [];
-    
-    if (this.isRecordingVoice && this.state.preBufferChunks.length > 0) {
-      // Voice was detected: prepend lookback buffer
-      allChunks = [...this.state.preBufferChunks, ...this.state.activeChunks];
-      this.log(`📼 Final blob with lookback: ${this.state.preBufferChunks.length} pre + ${this.state.activeChunks.length} active chunks`);
-    } else if (this.state.activeChunks.length > 0) {
-      // No voice detected but we have chunks
-      allChunks = this.state.activeChunks;
-      this.log(`📼 Final blob without lookback: ${this.state.activeChunks.length} chunks`);
-    } else {
-      this.log('⚠️ No audio chunks collected');
-      return null;
-    }
-
-    // CRITICAL: Log audio level information
-    this.log(`🎵 Audio level during recording: ${this.state.audioLevel.toFixed(4)} (threshold: ${this.options.voiceThreshold})`);
-    this.log(`🎵 Recording voice: ${this.isRecordingVoice}`);
-
-    // OpenAI Whisper: Create final blob - plain webm format
-    // UNIVERSAL: Use the same format that MediaRecorder used
-    const finalBlob = new Blob(allChunks, { 
-      type: this.mediaRecorder?.mimeType || 'audio/webm' 
-    });
-    
-    // UNIVERSAL: Log final blob details
-    this.log(`🔍 Final blob - size: ${finalBlob.size}, type: ${finalBlob.type}`);
-    this.log(`🔍 MediaRecorder mimeType was: ${this.mediaRecorder?.mimeType}`);
-    
-    // Simple size check
-    if (finalBlob.size < 100) {
-      this.error(`❌ Final blob too small (${finalBlob.size} bytes) - likely empty`);
-      return null;
-    }
-    
-    this.log(`✅ Final blob created: ${finalBlob.size} bytes, type: ${finalBlob.type}`);
-    return finalBlob;
-  }
+  // REMOVED: Old createFinalBlob method - using extractSpeechFromBuffer instead
 
   /**
    * GET STATE - Current VAD state
@@ -421,9 +352,7 @@ export class RollingBufferVAD {
     
     // CRITICAL: Clear all cached audio chunks
     this.state = {
-      audioLevel: 0,
-      preBufferChunks: [],    // Clear cached pre-buffer chunks
-      activeChunks: []        // Clear cached active chunks
+      audioLevel: 0
     };
     
     this.isRecordingVoice = false;
