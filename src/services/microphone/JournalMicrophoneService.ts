@@ -49,45 +49,28 @@ class JournalMicrophoneServiceClass {
     }
 
     try {
-      // CHROME COMPATIBILITY: Chrome is picky about constraints for predictable frames
-      const chromeAudioConstraints: MediaTrackConstraints = {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-        sampleRate: { ideal: 48000 },  // Chrome prefers 48kHz - ensures predictable MediaRecorder frames
-        channelCount: { ideal: 1 }     // Mono for STT - avoids RMS scaling inconsistencies
-      };
-      
-      // Create our own stream - no sharing
+      // WHISPER-FRIENDLY: Universal audio constraints for all browsers
       this.stream = await navigator.mediaDevices.getUserMedia({
-        audio: chromeAudioConstraints
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: { ideal: 48000 },  // Whisper-optimized: 48kHz
+          channelCount: { ideal: 1 }     // Whisper-optimized: Mono
+        }
       });
 
-      // Set up audio analysis
-      this.audioContext = new AudioContext(); // Mobile-friendly: Let browser choose sample rate
+      // WHISPER-OPTIMIZED: Set up audio analysis with consistent sample rate
+      this.audioContext = new AudioContext({ sampleRate: 48000 }); // Whisper-optimized: 48kHz
       this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
       this.analyser = this.audioContext.createAnalyser();
       this.analyser.fftSize = 2048;
       this.analyser.smoothingTimeConstant = 0.8;
       this.mediaStreamSource.connect(this.analyser);
 
-      // CHROME COMPATIBILITY: Explicit MIME type is critical for predictable frames
-      const mediaRecorderOptions: MediaRecorderOptions = {};
-      
-      // CRITICAL: Explicit MIME type ensures Chrome produces predictable frames
-      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-        mediaRecorderOptions.mimeType = 'audio/webm;codecs=opus';  // Explicit opus ensures compression + cross-browser playback
-        console.log('[JournalMic] ✅ Chrome: Using explicit audio/webm;codecs=opus for predictable frames');
-      } else if (MediaRecorder.isTypeSupported('audio/webm')) {
-        mediaRecorderOptions.mimeType = 'audio/webm';  // Fallback webm
-        console.log('[JournalMic] ✅ Chrome: Using audio/webm fallback');
-      } else {
-        console.log('[JournalMic] ⚠️ Chrome: No webm support, using browser default');
-      }
-      
-      // Set up MediaRecorder
+      // WHISPER-OPTIMIZED: Set up MediaRecorder with explicit format
       this.mediaRecorder = new MediaRecorder(this.stream, {
-        ...mediaRecorderOptions,
+        mimeType: 'audio/webm;codecs=opus',  // Whisper-optimized: Universal webm/opus
         audioBitsPerSecond: 128000
       });
 

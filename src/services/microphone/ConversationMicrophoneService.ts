@@ -74,17 +74,17 @@ export class ConversationMicrophoneServiceClass {
       // CACHE-FREE: Create fresh MediaStream for each turn to prevent format issues
       console.log('[ConversationMic] 🆕 Creating fresh MediaStream for turn:', turnId);
       
-      // CHROME COMPATIBILITY: Chrome is picky about constraints for predictable frames
-      const chromeAudioConstraints: MediaTrackConstraints = {
+      // WHISPER-FRIENDLY: Universal audio constraints for all browsers
+      const audioConstraints: MediaTrackConstraints = {
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true,
-        sampleRate: { ideal: 48000 },  // Chrome prefers 48kHz - ensures predictable MediaRecorder frames
-        channelCount: { ideal: 1 }     // Mono for STT - avoids RMS scaling inconsistencies
+        sampleRate: { ideal: 48000 },  // Whisper-optimized: 48kHz
+        channelCount: { ideal: 1 }     // Whisper-optimized: Mono
       };
       
       this.stream = await navigator.mediaDevices.getUserMedia({
-        audio: chromeAudioConstraints
+        audio: audioConstraints
       });
 
       // Validate fresh stream
@@ -107,8 +107,8 @@ export class ConversationMicrophoneServiceClass {
       if (this.audioContext && this.audioContext.state !== 'closed') {
         this.audioContext.close().catch(() => {});
       }
-      // Mobile-friendly: Let browser choose optimal sample rate
-      this.audioContext = new AudioContext();
+      // WHISPER-OPTIMIZED: Consistent sample rate for all browsers
+      this.audioContext = new AudioContext({ sampleRate: 48000 }); // Whisper-optimized: 48kHz
 
       // Create audio analysis chain
       this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
