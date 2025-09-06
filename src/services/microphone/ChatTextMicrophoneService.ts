@@ -18,6 +18,7 @@ export interface ChatTextMicrophoneOptions {
 class ChatTextMicrophoneServiceClass {
   private stream: MediaStream | null = null;
   private rollingBufferVAD: RollingBufferVAD | null = null;
+  private mediaRecorder: MediaRecorder | null = null; // Added
   private audioContext: AudioContext | null = null;
   
   private isRecording = false;
@@ -52,35 +53,59 @@ class ChatTextMicrophoneServiceClass {
       this.currentTraceId = this.generateTraceId();
       this.recordingStartedAt = Date.now();
       this.log('🎤 Starting chat text voice recording');
-      
-      // Create our own stream with Chrome-optimized constraints
-      this.stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          // Chrome-optimized: Explicit sample rate and channel count
-          sampleRate: { ideal: 48000 },    // 48kHz for Whisper compatibility
-          channelCount: { ideal: 1 },      // Mono channel
-          echoCancellation: true,          // Clean input
-          noiseSuppression: true,          // Remove background noise
-          autoGainControl: true            // Consistent levels
+
+      // SESSION-BASED: Create MediaStream only if we don't have one
+      if (!this.stream) {
+        this.log('🆕 Creating MediaStream for session (first use)');
+        // Create our own stream with Chrome-optimized constraints
+        this.stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            // Chrome-optimized: Explicit sample rate and channel count
+            sampleRate: { ideal: 48000 },    // 48kHz for Whisper compatibility
+            channelCount: { ideal: 1 },      // Mono channel
+            echoCancellation: true,          // Clean input
+            noiseSuppression: true,          // Remove background noise
+            autoGainControl: true            // Consistent levels
+          }
+        });
+        
+        const trackSettings = this.stream.getAudioTracks()[0]?.getSettings?.() || {};
+        this.log('🎛️ getUserMedia acquired. Track settings:', trackSettings);
+        
+        // Log actual settings for debugging
+        this.log(`🎛️ Actual sample rate: ${trackSettings.sampleRate || 'unknown'}`);
+        this.log(`🎛️ Actual channel count: ${trackSettings.channelCount || 'unknown'}`);
+
+        // Set up audio analysis - universal approach
+        if (!this.audioContext || this.audioContext.state === 'closed') {
+          this.audioContext = new AudioContext(); // Universal: Let browser choose optimal settings
+          this.log('🎛️ Created new AudioContext for chat text microphone');
+        } else {
+          this.log('🎛️ Reusing existing AudioContext for chat text microphone');
         }
-      });
 
-      const trackSettings = this.stream.getAudioTracks()[0]?.getSettings?.() || {};
-      this.log('🎛️ getUserMedia acquired. Track settings:', trackSettings);
-      
-      // Log actual settings for debugging
-      this.log(`🎛️ Actual sample rate: ${trackSettings.sampleRate || 'unknown'}`);
-      this.log(`🎛️ Actual channel count: ${trackSettings.channelCount || 'unknown'}`);
-
-      // Set up audio analysis - universal approach
-      // Reuse existing AudioContext if available, only create new one if needed
-      if (!this.audioContext || this.audioContext.state === 'closed') {
-        this.audioContext = new AudioContext(); // Universal: Let browser choose optimal settings
-        this.log('🎛️ Created new AudioContext for chat text microphone');
+        // Create MediaRecorder with Chrome-optimized format
+        const mrOptions: MediaRecorderOptions = {};
+        if (typeof MediaRecorder !== 'undefined' && typeof MediaRecorder.isTypeSupported === 'function') {
+          const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+          if (isChrome) {
+            this.log('🌐 CHROME DETECTED - Using Chrome mode for media source');
+          }
+          if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+            mrOptions.mimeType = 'audio/webm;codecs=opus';
+            this.log('✅ Using audio/webm;codecs=opus (Chrome-optimized)');
+          } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+            mrOptions.mimeType = 'audio/webm';
+            this.log('⚠️ Using audio/webm (fallback)');
+          } else {
+            this.log('⚠️ Using browser default mimeType');
+          }
+        }
+        this.mediaRecorder = new MediaRecorder(this.stream, mrOptions);
       } else {
-        this.log('🎛️ Reusing existing AudioContext for chat text microphone');
+        this.log('♻️ Reusing existing MediaStream for session');
       }
-      
+
       // Note: New VAD system handles its own audio analysis internally
 
       // Initialize rolling buffer VAD with team's approach
@@ -118,8 +143,12 @@ class ChatTextMicrophoneServiceClass {
 
       this.isRecording = true;
 
-      // Start rolling buffer VAD (new interface - no need to pass analyser)
-      await this.rollingBufferVAD.start(this.stream, this.audioContext);
+      // Start rolling buffer VAD (new interface - pass MediaRecorder)
+      if (!this.mediaRecorder) {
+        this.error('❌ CRITICAL: MediaRecorder not initialized before starting VAD');
+        return false;
+      }
+      await this.rollingBufferVAD.start(this.stream, this.mediaRecorder, this.audioContext);
       
       // Set 45-second timeout to automatically stop recording
       this.recordingTimeout = setTimeout(async () => {
@@ -218,10 +247,11 @@ class ChatTextMicrophoneServiceClass {
         headers: {
           'X-Trace-Id': this.currentTraceId || '',
           'X-Meta': JSON.stringify({
+            mode: 'chat-text',
             measuredDurationMs,
             blobSize: audioBlob.size,
             config: {
-              mimeType: 'audio/webm',
+              mimeType: this.mediaRecorder?.mimeType || 'audio/webm',
               languageCode: 'en'
             }
           })
@@ -265,6 +295,9 @@ class ChatTextMicrophoneServiceClass {
     if (this.rollingBufferVAD) {
       this.rollingBufferVAD = null;
     }
+
+    // Clean up MediaRecorder
+    this.mediaRecorder = null;
 
     // Note: New VAD system handles its own audio analysis cleanup
 
