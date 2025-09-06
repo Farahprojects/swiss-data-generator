@@ -9,6 +9,7 @@ import { MobileViewportLock } from '@/features/chat/MobileViewportLock';
 import { supabase } from '@/integrations/supabase/client';
 import { useChatStore } from '@/core/store';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
+import { startReportReadyListener, stopReportReadyListener } from '@/services/report/reportReadyListener';
 
 // Import ChatBox directly for immediate rendering
 import { ChatBox } from '@/features/chat/ChatBox';
@@ -122,85 +123,25 @@ const ReportChatScreen = () => {
 
   }, [guestId]);
 
-  // 🎯 POLLING: Check for report ready signals every 2 seconds
+  // 🎯 WebSocket-based report ready detection (no polling)
   useEffect(() => {
     if (!guestId) return;
 
-    // 🚫 GUARD: Don't start polling if report is already ready (prevents refresh loops)
+    // 🚫 GUARD: Don't start if report is already ready (prevents refresh loops)
     if (useReportReadyStore.getState().isReportReady) {
+      console.log(`[ChatPage] 🚫 Report already ready, skipping WebSocket setup for: ${guestId}`);
       return;
     }
 
-    console.log(`[ChatPage] 🔄 Starting report ready polling for guest_id: ${guestId}`);
+    console.log(`[ChatPage] 🔄 Starting WebSocket report ready listener for: ${guestId}`);
     
-    const pollInterval = setInterval(async () => {
-      try {
-        // 🚫 GUARD: Stop polling if report became ready between intervals
-        if (useReportReadyStore.getState().isReportReady) {
-          console.log(`[ChatPage] 🚫 Stopping polling - report became ready for: ${guestId}`);
-          clearInterval(pollInterval);
-          return;
-        }
-
-        console.log(`[ChatPage] 🔍 Polling report_ready_signals for: ${guestId}`);
-        
-        const { data: signals, error } = await supabase
-          .from('report_ready_signals')
-          .select('guest_report_id, created_at')
-          .eq('guest_report_id', guestId)
-          .limit(1);
-
-        if (error) {
-          console.error(`[ChatPage] ❌ Polling error:`, error);
-          return;
-        }
-
-        if (signals && signals.length > 0) {
-          console.log(`[ChatPage] 🎉 Report ready signal detected for: ${guestId}!`);
-          clearInterval(pollInterval);
-          
-          // Trigger context injection
-          console.log(`[ChatPage] 💉 Calling context-injector for: ${guestId}`);
-          const { data: contextData, error: contextError } = await supabase.functions.invoke('context-injector', {
-            body: { guest_report_id: guestId }
-          });
-
-          if (contextError) {
-            console.error(`[ChatPage] ❌ Context injection failed:`, contextError);
-            return;
-          }
-
-          console.log(`[ChatPage] ✅ Context injection successful:`, contextData);
-          hasTriggeredGenerationRef.current = true;
-          
-          // Set report ready state in store for persistence
-          useReportReadyStore.getState().setReportReady(true);
-          console.log(`[ChatPage] 📊 Report ready state set in store`);
-          
-          // Show success message to user
-          console.log(`[ChatPage] 🎯 Astro data successfully injected into chat!`);
-          
-          // 🎯 Set chat ID in store for conversation mode
-          const finalChatId = urlChatId || chat_id;
-          if (finalChatId) {
-            console.log(`[ChatPage] 🔑 Setting chat_id and guest_id in store: ${finalChatId}, ${guestId}`);
-            // Start conversation in store with both chat_id and guest_id
-            useChatStore.getState().startConversation(finalChatId, guestId);
-          }
-          
-          // 🎯 Show guest thread on left panel - system is ready!
-          console.log(`[ChatPage] 🧵 Guest thread ready - showing on left panel`);
-          setIsGuestThreadReady(true);
-        }
-      } catch (error) {
-        console.error(`[ChatPage] ❌ Polling error:`, error);
-      }
-    }, 2000); // Poll every 2 seconds
+    // Use the WebSocket-based report ready listener
+    startReportReadyListener(guestId);
 
     // Cleanup on unmount or guestId change
     return () => {
-      console.log(`[ChatPage] 🧹 Cleaning up polling for guest_id: ${guestId}`);
-      clearInterval(pollInterval);
+      console.log(`[ChatPage] 🧹 Cleaning up WebSocket listener for guest_id: ${guestId}`);
+      stopReportReadyListener(guestId);
     };
 
   }, [guestId, urlChatId, chat_id]);

@@ -35,6 +35,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   const [isValidatingPromo, setIsValidatingPromo] = useState(false);
   const [promoError, setPromoError] = useState<string>('');
   const [trustedPricing, setTrustedPricing] = useState<any>(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const isMobile = useIsMobile();
   
   const { toast } = useToast();
@@ -162,6 +163,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   };
 
   const handlePaymentSubmit = async () => {
+    setIsProcessingPayment(true);
     try {
       const formData = form.getValues();
       const currentPromoCode = formData.promoCode?.trim() || '';
@@ -282,6 +284,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     } catch (error) {
       console.error('Error initiating report flow:', error);
       // TODO: Show error toast
+      setIsProcessingPayment(false);
     }
   };
 
@@ -761,9 +764,10 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                 <Button
                   type="button"
                   onClick={handlePaymentSubmit}
+                  disabled={isProcessingPayment}
                   className="flex-1 bg-gray-900 hover:bg-gray-800"
                 >
-                  Proceed to Payment
+                  {isProcessingPayment ? 'Processing...' : 'Proceed to Payment'}
                 </Button>
               </div>
             </motion.div>

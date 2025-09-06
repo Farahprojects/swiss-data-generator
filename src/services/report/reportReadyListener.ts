@@ -12,11 +12,31 @@ const activeListeners: Record<string, {
 }> = {};
 
 // Trigger context injection for chat when report is ready
-// DISABLED: Now handled by ReportChatScreen polling to prevent duplicate injection
 async function triggerContextInjection(guestReportId: string): Promise<void> {
-  console.log('[ReportReady] Context injection disabled - now handled by ReportChatScreen polling');
-  // Context injection is now handled by the ReportChatScreen polling system
-  // to prevent duplicate injections
+  console.log('[ReportReady] 💉 Calling context-injector for:', guestReportId);
+  
+  try {
+    const { data: contextData, error: contextError } = await supabase.functions.invoke('context-injector', {
+      body: { guest_report_id: guestReportId }
+    });
+
+    if (contextError) {
+      console.error('[ReportReady] ❌ Context injection failed:', contextError);
+      return;
+    }
+
+    console.log('[ReportReady] ✅ Context injection successful:', contextData);
+    
+    // Set report ready state in store for persistence
+    useReportReadyStore.getState().setReportReady(true);
+    console.log('[ReportReady] 📊 Report ready state set in store');
+    
+    // Show success message to user
+    console.log('[ReportReady] 🎯 Astro data successfully injected into chat!');
+    
+  } catch (error) {
+    console.error('[ReportReady] ❌ Context injection error:', error);
+  }
 }
 
 // Check if report exists in report_ready_signals table
@@ -250,63 +270,9 @@ function handleReportReady(guestReportId: string, startedAt: number): void {
 }
 
 function fallbackToPolling(guestReportId: string, startedAt: number): void {
-  let attempts = 0;
-  const poll = async () => {
-    // Check if listener is still active before proceeding
-    if (!activeListeners[guestReportId]) {
-      console.log('[ReportReady] Polling stopped - listener no longer active');
-      return;
-    }
-
-    attempts++;
-    try {
-      const { data, error } = await supabase
-        .from('report_ready_signals')
-        .select('guest_report_id')
-        .eq('guest_report_id', guestReportId)
-        .limit(1);
-
-      if (!error && data && data.length > 0) {
-        handleReportReady(guestReportId, startedAt);
-        return;
-      }
-    } catch (error) {
-      console.warn('[ReportReady] Polling error:', error);
-    }
-
-    // Check total elapsed time (15-second hard limit)
-    const totalElapsed = Date.now() - startedAt;
-    
-    if (totalElapsed >= 15000) {
-      // 15 seconds total reached - stop listener and let 8-second polling fallback handle errors
-      console.log('[ReportReady] 15-second total timeout reached, stopping listener for polling fallback');
-      stopReportReadyListener(guestReportId);
-      return;
-    }
-
-    // Continue polling if still active and under 15 seconds total
-    if (activeListeners[guestReportId] && !useReportReadyStore.getState().isReportReady && totalElapsed < 15000) {
-      // Store polling timeout ID for cleanup
-      const pollingTimeoutId = setTimeout(poll, 2000); // Poll every 2 seconds
-      activeListeners[guestReportId].pollingTimeoutId = pollingTimeoutId;
-    } else if (totalElapsed >= 13000 && totalElapsed < 15000) {
-      // 13-15 seconds: check for errors but continue if no error
-      const { hasError, errorMessage } = await checkReportLogsForError(guestReportId);
-      
-      if (hasError) {
-        // Only trigger error handler for actual errors, not timeouts
-        await triggerErrorHandler(guestReportId, errorMessage || 'Unknown error');
-        stopReportReadyListener(guestReportId);
-      } else if (activeListeners[guestReportId]) {
-        // Continue polling only if still active and under 15 seconds
-        const pollingTimeoutId = setTimeout(poll, 2000);
-        activeListeners[guestReportId].pollingTimeoutId = pollingTimeoutId;
-      }
-    }
-  };
-
-  // Start polling
-  poll();
+  console.log('[ReportReady] WebSocket failed, but polling fallback is disabled');
+  // Polling fallback removed - WebSocket-only approach
+  stopReportReadyListener(guestReportId);
 }
 
 export function stopReportReadyListener(guestReportId: string): void {
