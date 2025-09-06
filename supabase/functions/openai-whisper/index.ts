@@ -124,6 +124,7 @@ serve(async (req) => {
           body: JSON.stringify({
             chat_id: meta.chat_id,
             text: transcript,
+            client_msg_id: crypto.randomUUID(),
             mode: 'conversation'
           })
         });
