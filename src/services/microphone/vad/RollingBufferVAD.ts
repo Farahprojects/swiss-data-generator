@@ -83,20 +83,20 @@ export class RollingBufferVAD {
       silenceStartTime: null
     };
 
-    // WHISPER-FRIENDLY: Explicit webm/opus format for all browsers
-    const options: MediaRecorderOptions = {
-      mimeType: 'audio/webm;codecs=opus'  // Whisper-optimized: Universal webm/opus
-    };
+    // UNIVERSAL: Simple, clean format selection (Safari-style)
+    const options: MediaRecorderOptions = {};
     
-    // Validate format support
+    // Simple format check - let browser choose
     if (typeof MediaRecorder !== 'undefined' && 
         typeof MediaRecorder.isTypeSupported === 'function') {
       
-      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-        this.log('✅ Using Whisper-optimized format: audio/webm;codecs=opus');
+      // Try webm first, fallback to browser default
+      if (MediaRecorder.isTypeSupported('audio/webm')) {
+        options.mimeType = 'audio/webm';
+        this.log('✅ Using audio/webm format');
       } else {
-        this.log('⚠️ webm/opus not supported, using browser default');
-        delete options.mimeType; // Let browser choose
+        this.log('⚠️ webm not supported, using browser default');
+        // Let browser choose - works for all browsers
       }
     } else {
       this.error('❌ MediaRecorder not available');
@@ -105,15 +105,17 @@ export class RollingBufferVAD {
 
     this.mediaRecorder = new MediaRecorder(stream, options);
     
-    // WHISPER DEBUG: Log what format MediaRecorder actually gave us
+    // UNIVERSAL: Log MediaRecorder details
     this.log(`🔍 MediaRecorder created with mimeType: ${this.mediaRecorder.mimeType}`);
     this.log(`🔍 MediaRecorder state: ${this.mediaRecorder.state}`);
-    this.log(`✅ Whisper-optimized MediaRecorder using: ${this.mediaRecorder.mimeType}`);
+
+    // OpenAI Whisper: Log format being used
+    this.log(`✅ MediaRecorder using: ${this.mediaRecorder.mimeType}`);
 
     // Handle data chunks for rolling buffer
     this.mediaRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) {
-        // WHISPER: Simple chunk logging
+        // OpenAI Whisper: Simple chunk logging
         this.log(`📦 Chunk received: size=${event.data.size}, type=${event.data.type}`);
         this.handleAudioChunk(event.data);
       }
@@ -303,13 +305,14 @@ export class RollingBufferVAD {
     this.log(`🎵 Audio level during recording: ${this.state.audioLevel.toFixed(4)} (threshold: ${this.options.voiceThreshold})`);
     this.log(`🎵 Recording voice: ${this.isRecordingVoice}`);
 
-    // WHISPER-OPTIMIZED: Create final blob with MediaRecorder's actual format
+    // OpenAI Whisper: Create final blob - plain webm format
+    // UNIVERSAL: Use the same format that MediaRecorder used
     const finalBlob = new Blob(allChunks, { 
-      type: this.mediaRecorder?.mimeType || 'audio/webm;codecs=opus' 
+      type: this.mediaRecorder?.mimeType || 'audio/webm' 
     });
     
-    // WHISPER DEBUG: Log final blob details
-    this.log(`🔍 Whisper final blob - size: ${finalBlob.size}, type: ${finalBlob.type}`);
+    // UNIVERSAL: Log final blob details
+    this.log(`🔍 Final blob - size: ${finalBlob.size}, type: ${finalBlob.type}`);
     this.log(`🔍 MediaRecorder mimeType was: ${this.mediaRecorder?.mimeType}`);
     
     // Simple size check

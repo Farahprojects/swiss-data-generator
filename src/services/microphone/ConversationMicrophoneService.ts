@@ -74,13 +74,12 @@ export class ConversationMicrophoneServiceClass {
       // CACHE-FREE: Create fresh MediaStream for each turn to prevent format issues
       console.log('[ConversationMic] 🆕 Creating fresh MediaStream for turn:', turnId);
       
-      // WHISPER-FRIENDLY: Universal audio constraints for all browsers
-      const audioConstraints: MediaTrackConstraints = {
+      // UNIVERSAL: Clean, simple audio constraints (Safari-style)
+      const audioConstraints = {
         echoCancellation: true,
         noiseSuppression: true,
-        autoGainControl: true,
-        sampleRate: { ideal: 48000 },  // Whisper-optimized: 48kHz
-        channelCount: { ideal: 1 }     // Whisper-optimized: Mono
+        autoGainControl: true
+        // Let browser choose optimal settings (works for all browsers)
       };
       
       this.stream = await navigator.mediaDevices.getUserMedia({
@@ -107,8 +106,8 @@ export class ConversationMicrophoneServiceClass {
       if (this.audioContext && this.audioContext.state !== 'closed') {
         this.audioContext.close().catch(() => {});
       }
-      // WHISPER-OPTIMIZED: Consistent sample rate for all browsers
-      this.audioContext = new AudioContext({ sampleRate: 48000 }); // Whisper-optimized: 48kHz
+      // Universal: Let browser choose optimal settings
+      this.audioContext = new AudioContext();
 
       // Create audio analysis chain
       this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);

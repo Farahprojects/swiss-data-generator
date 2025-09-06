@@ -55,14 +55,13 @@ class ChatTextMicrophoneServiceClass {
       this.recordingStartedAt = Date.now();
       this.log('🎤 Starting chat text voice recording');
       
-      // WHISPER-FRIENDLY: Universal audio constraints for all browsers
+      // Create our own stream with universal constraints
       this.stream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: { ideal: 48000 },  // Whisper-optimized: 48kHz
-          channelCount: { ideal: 1 }     // Whisper-optimized: Mono
+          // Universal: Clean, simple settings (works for all browsers)
+          echoCancellation: true,    // Clean input
+          noiseSuppression: true,    // Remove background noise
+          autoGainControl: true      // Consistent levels
         }
       });
 
@@ -73,10 +72,10 @@ class ChatTextMicrophoneServiceClass {
       this.log(`🎛️ Actual sample rate: ${trackSettings.sampleRate || 'unknown'}`);
       this.log(`🎛️ Actual channel count: ${trackSettings.channelCount || 'unknown'}`);
 
-      // WHISPER-OPTIMIZED: Set up audio analysis with consistent sample rate
+      // Set up audio analysis - universal approach
       // Reuse existing AudioContext if available, only create new one if needed
       if (!this.audioContext || this.audioContext.state === 'closed') {
-        this.audioContext = new AudioContext({ sampleRate: 48000 }); // Whisper-optimized: 48kHz
+        this.audioContext = new AudioContext(); // Universal: Let browser choose optimal settings
         this.log('🎛️ Created new AudioContext for chat text microphone');
       } else {
         this.log('🎛️ Reusing existing AudioContext for chat text microphone');
