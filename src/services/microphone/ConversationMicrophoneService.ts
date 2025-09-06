@@ -28,12 +28,7 @@ export class ConversationMicrophoneServiceClass {
   private options: ConversationMicrophoneOptions = {};
   private listeners = new Set<() => void>();
   
-  // CONTINUOUS RECORDING: VAD state tracking
-  private isRecordingVoice = false;
-  private vadState = {
-    voiceStartTime: null as number | null,
-    silenceStartTime: null as number | null
-  };
+  // REMOVED: Old VAD state tracking - handled by new VAD system
 
   constructor(options: ConversationMicrophoneOptions = {}) {
     this.options = options;
@@ -125,21 +120,30 @@ export class ConversationMicrophoneServiceClass {
 
       // Create VAD
       this.rollingBufferVAD = new RollingBufferVAD({
-        lookbackWindowMs: 1000,
-        chunkDurationMs: 100,
+        lookbackWindowMs: 15000,
+        chunkDurationMs: 200,
+        preRollMs: 250,
+        postRollMs: 150,
+        pruneOnUtterance: true,
         voiceThreshold: 0.012,
         silenceThreshold: 0.008,
         voiceConfirmMs: 300,
         silenceTimeoutMs: this.options.silenceTimeoutMs || 1500,
+        maxUtteranceMs: 15000,
+        minUtteranceMs: 250,
         onVoiceStart: () => {
           console.log('[ConversationMic] 🎤 Voice activity detected');
-          this.isRecordingVoice = true;
-          this.vadState.voiceStartTime = Date.now();
         },
-        onSilenceDetected: () => {
-          console.log('[ConversationMic] 🔇 Silence detected, extracting speech from buffer');
-          if (this.currentTurnId === turnId) {
-            this.extractAndProcessSpeech(turnId);
+        onUtterance: (blob: Blob) => {
+          console.log('[ConversationMic] 🔇 Utterance detected, processing speech');
+          if (this.currentTurnId === turnId && this.options.onRecordingComplete) {
+            this.options.onRecordingComplete(blob);
+          }
+        },
+        onSilenceDetected: (blob?: Blob) => {
+          // Back-compat: also handle onSilenceDetected
+          if (blob && this.currentTurnId === turnId && this.options.onRecordingComplete) {
+            this.options.onRecordingComplete(blob);
           }
         },
         onError: (error: Error) => {
@@ -153,8 +157,8 @@ export class ConversationMicrophoneServiceClass {
       this.isRecording = true;
       audioArbitrator.setMicrophoneState('active');
 
-      // Start VAD
-      await this.rollingBufferVAD.start(this.stream, this.audioContext, this.analyser);
+      // Start VAD (new interface - no need to pass analyser)
+      await this.rollingBufferVAD.start(this.stream, this.audioContext);
 
       this.notifyListeners();
       return true;
@@ -169,48 +173,7 @@ export class ConversationMicrophoneServiceClass {
     }
   }
 
-  /**
-   * Extract and process speech from continuous buffer
-   */
-  private async extractAndProcessSpeech(turnId: string): Promise<void> {
-    if (!this.rollingBufferVAD || !this.vadState.voiceStartTime) {
-      console.log('[ConversationMic] ⚠️ No VAD or voice start time available');
-      return;
-    }
-
-    const speechEndTime = Date.now();
-    const speechStartTime = this.vadState.voiceStartTime;
-
-    console.log(`[ConversationMic] 🎯 Extracting speech from ${speechStartTime} to ${speechEndTime}`);
-
-    // Extract speech from continuous buffer
-    const speechBlob = this.rollingBufferVAD.extractSpeechFromBuffer(speechStartTime, speechEndTime);
-    
-    if (!speechBlob || speechBlob.size < 100) {
-      console.log('[ConversationMic] ⚠️ No valid speech data extracted');
-      this.resetVADState();
-      return;
-    }
-
-    console.log(`[ConversationMic] ✅ Extracted speech: ${speechBlob.size} bytes`);
-
-    // Process the speech blob
-    if (speechBlob && this.options.onRecordingComplete) {
-      this.options.onRecordingComplete(speechBlob);
-    }
-    
-    // Reset VAD state for next speech
-    this.resetVADState();
-  }
-
-  /**
-   * Reset VAD state after processing
-   */
-  private resetVADState(): void {
-    this.isRecordingVoice = false;
-    this.vadState.voiceStartTime = null;
-    this.vadState.silenceStartTime = null;
-  }
+  // REMOVED: extractAndProcessSpeech and resetVADState - handled by new VAD system
 
   /**
    * Stop recording

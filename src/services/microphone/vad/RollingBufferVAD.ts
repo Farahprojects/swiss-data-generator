@@ -1,383 +1,381 @@
 /**
- * 🎯 ROLLING BUFFER VAD - Shared Core Logic
+ * 🎯 ROLLING BUFFER VAD - Team's Clean Implementation
  * 
- * Professional rolling buffer VAD implementation that can be used
- * across different microphone domains (chat, conversation, journal).
- * 
- * This solves the "clipped first syllable" problem by maintaining
- * a rolling lookback buffer that gets prepended when voice starts.
+ * Professional rolling buffer VAD implementation based on team's proven approach.
+ * Uses index-based selection, no timestamps, proper memory management.
  */
 
 export interface RollingBufferVADOptions {
-  lookbackWindowMs?: number;     // How much audio to keep in rolling buffer (default: 750ms)
-  chunkDurationMs?: number;      // How often to slice chunks (default: 250ms)
-  voiceThreshold?: number;       // RMS threshold for voice detection (default: 0.012)
-  silenceThreshold?: number;     // RMS threshold for silence (default: 0.008)
-  voiceConfirmMs?: number;       // Duration to confirm voice start (default: 300ms)
-  silenceTimeoutMs?: number;     // Silence timeout duration (default: 1500ms)
-  onVoiceStart?: () => void;     // Called when voice activity starts
-  onSilenceDetected?: () => void; // Called when silence timeout reached
-  onError?: (error: Error) => void; // Called on errors
+  // Buffering and chunking
+  lookbackWindowMs?: number;   // Total audio to keep in rolling buffer (default 15000ms)
+  chunkDurationMs?: number;    // Desired MediaRecorder timeslice (default 200ms, clamped >= 100ms)
+  preRollMs?: number;          // Include a bit before voice start (default 250ms)
+  postRollMs?: number;         // Include a bit after silence (default 150ms)
+  pruneOnUtterance?: boolean;  // Drop used chunks after emitting (default true)
+
+  // VAD thresholds and timings (RMS on analyser)
+  voiceThreshold?: number;     // Start speaking threshold (default 0.012)
+  silenceThreshold?: number;   // Silence threshold (default 0.008)
+  voiceConfirmMs?: number;     // How long above voiceThreshold to confirm speech (default 300ms)
+  silenceTimeoutMs?: number;   // How long below silenceThreshold to end utterance (default 1500ms)
+  maxUtteranceMs?: number;     // Force-cut very long utterances (default 15000ms)
+  minUtteranceMs?: number;     // Drop very short utterances (default 250ms)
+
+  // Lifecycle
+  onVoiceStart?: () => void;
+  // New: pass Blob on each utterance; use this for your STT
+  onUtterance?: (blob: Blob) => void;
+  // Back-compat: also fires with the utterance Blob
+  onSilenceDetected?: (blob?: Blob) => void;
+  onError?: (error: Error) => void;
+
+  // Resources
+  stopTracksOnCleanup?: boolean; // If true, stops MediaStream tracks (default false)
 }
 
 export interface RollingBufferVADState {
-  audioLevel: number;
+  audioLevel: number;  // RMS 0..1
+  isSpeaking: boolean;
 }
 
-// Simple audio chunk - no metadata
 type AudioChunk = Blob;
 
 export class RollingBufferVAD {
   private mediaRecorder: MediaRecorder | null = null;
   private audioContext: AudioContext | null = null;
+  private sourceNode: MediaStreamAudioSourceNode | null = null;
   private analyser: AnalyserNode | null = null;
-  private monitoringRef = { current: false };
-  private animationFrameId: number | null = null;
-  private stopping = false; // CRITICAL: Prevents race conditions during stop()
-  
-  // CONTINUOUS RECORDING: Rolling buffer of recent chunks
-  private audioBuffer: AudioChunk[] = [];
-  private bufferDurationMs = 30000; // Keep 30s of audio
-  private isRecordingContinuously = false;
-  
-  private state: RollingBufferVADState = {
-    audioLevel: 0
-  };
-  
-  private options: Required<RollingBufferVADOptions>;
-  private isRecordingVoice = false;
-  private vadState = {
-    voiceStartTime: null as number | null,
-    silenceStartTime: null as number | null
-  };
+  private monitorTimer: number | null = null;
 
-  constructor(options: RollingBufferVADOptions = {}) {
+  // Rolling buffer (no timestamps; index-based extraction)
+  private chunks: AudioChunk[] = [];
+  private utteranceStartIndex: number | null = null;
+  private utteranceStartWallMs: number | null = null;
+
+  private options: Required<RollingBufferVADOptions>;
+  private state: RollingBufferVADState = { audioLevel: 0, isSpeaking: false };
+  private stream: MediaStream | null = null;
+
+  constructor(opts: RollingBufferVADOptions = {}) {
     this.options = {
-      lookbackWindowMs: 1000,     // Increased for better voice detection (prevents clipping)
-      chunkDurationMs: 100,       // Mobile-friendly: Smaller chunks for better compatibility
+      lookbackWindowMs: 15000,
+      chunkDurationMs: 200,
+      preRollMs: 250,
+      postRollMs: 150,
+      pruneOnUtterance: true,
+
       voiceThreshold: 0.012,
       silenceThreshold: 0.008,
       voiceConfirmMs: 300,
       silenceTimeoutMs: 1500,
+      maxUtteranceMs: 15000,
+      minUtteranceMs: 250,
+
       onVoiceStart: () => {},
+      onUtterance: () => {},
       onSilenceDetected: () => {},
       onError: () => {},
-      ...options
+      stopTracksOnCleanup: false,
+      ...opts
     };
   }
 
-  /**
-   * START - Begin rolling buffer recording and VAD
-   */
-  async start(stream: MediaStream, audioContext: AudioContext, analyser: AnalyserNode): Promise<void> {
-    this.log('🎯 Starting rolling buffer VAD');
-    
-    this.audioContext = audioContext;
-    this.analyser = analyser;
-    
-    // Reset state
-    this.state = {
-      audioLevel: 0
-    };
-    
-    this.vadState = {
-      voiceStartTime: null,
-      silenceStartTime: null
-    };
-
-    // UNIVERSAL: Simple, clean format selection (Safari-style)
-    const options: MediaRecorderOptions = {};
-    
-    // Simple format check - let browser choose
-    if (typeof MediaRecorder !== 'undefined' && 
-        typeof MediaRecorder.isTypeSupported === 'function') {
-      
-      // Try webm first, fallback to browser default
-      if (MediaRecorder.isTypeSupported('audio/webm')) {
-        options.mimeType = 'audio/webm';
-        this.log('✅ Using audio/webm format');
-      } else {
-        this.log('⚠️ webm not supported, using browser default');
-        // Let browser choose - works for all browsers
-      }
-    } else {
-      this.error('❌ MediaRecorder not available');
-      throw new Error('MediaRecorder not available in this browser');
-    }
-
-    this.mediaRecorder = new MediaRecorder(stream, options);
-    
-    // UNIVERSAL: Log MediaRecorder details
-    this.log(`🔍 MediaRecorder created with mimeType: ${this.mediaRecorder.mimeType}`);
-    this.log(`🔍 MediaRecorder state: ${this.mediaRecorder.state}`);
-
-    // OpenAI Whisper: Log format being used
-    this.log(`✅ MediaRecorder using: ${this.mediaRecorder.mimeType}`);
-
-    // CONTINUOUS RECORDING: Handle data chunks for rolling buffer
-    this.mediaRecorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        // Add to continuous rolling buffer (no metadata)
-        this.audioBuffer.push(event.data);
-        
-        // Remove old chunks beyond buffer duration
-        const maxChunks = Math.ceil(this.bufferDurationMs / this.options.chunkDurationMs);
-        while (this.audioBuffer.length > maxChunks) {
-          this.audioBuffer.shift();
-        }
-        
-        // OpenAI Whisper: Simple chunk logging
-        this.log(`📦 Chunk received: size=${event.data.size}, type=${event.data.type}, buffer size=${this.audioBuffer.length}`);
-      }
-    };
-
-    this.mediaRecorder.onerror = (event) => {
-      this.error('❌ MediaRecorder error:', event);
-      this.options.onError(new Error('Recording failed'));
-    };
-
-    // CONTINUOUS RECORDING: Start recording continuously with small time slices
-    this.mediaRecorder.start(this.options.chunkDurationMs);
-    this.isRecordingContinuously = true;
-    this.log(`🔄 Started continuous recording with ${this.options.chunkDurationMs}ms chunks`);
-    
-    // Start VAD monitoring
-    this.startVADMonitoring();
-  }
-
-  // REMOVED: Old VAD chunking system - using continuous rolling buffer instead
-
-  /**
-   * START VAD MONITORING - Simple voice activity detection
-   */
-  private startVADMonitoring(): void {
-    if (!this.analyser || this.monitoringRef.current) {
-      return;
-    }
-    
-    this.monitoringRef.current = true;
-    this.log('✅ VAD monitoring started');
-
-    const bufferLength = this.analyser.fftSize;
-    const dataArray = new Uint8Array(bufferLength);
-    
-    let lastSampleTime = 0;
-    const targetIntervalMs = 33; // ~30 fps sampling
-    
-    const checkVAD = () => {
-      if (!this.monitoringRef.current || !this.analyser) {
-        return;
-      }
-      
-      // Throttle sampling for performance
-      const nowHr = performance.now();
-      if (nowHr - lastSampleTime < targetIntervalMs) {
-        if (this.monitoringRef.current) requestAnimationFrame(checkVAD);
-        return;
-      }
-      lastSampleTime = nowHr;
-
-      // Calculate RMS audio level
-      this.analyser.getByteTimeDomainData(dataArray);
-      let sumSquares = 0;
-      for (let i = 0; i < bufferLength; i++) {
-        const centered = (dataArray[i] - 128) / 128;
-        sumSquares += centered * centered;
-      }
-      const rms = Math.sqrt(sumSquares / bufferLength);
-      this.state.audioLevel = rms;
-      
-      const now = Date.now();
-      
-      if (!this.isRecordingVoice) {
-        // Waiting for voice activity
-        if (rms > this.options.voiceThreshold) {
-          if (this.vadState.voiceStartTime === null) {
-            this.vadState.voiceStartTime = now;
-          } else if (now - this.vadState.voiceStartTime >= this.options.voiceConfirmMs) {
-            // Voice confirmed! Start recording
-            this.isRecordingVoice = true;
-            this.vadState.voiceStartTime = null;
-            this.log(`🎤 Voice activity confirmed - starting recording`);
-            this.options.onVoiceStart();
-          }
-        } else {
-          this.vadState.voiceStartTime = null;
-        }
-        
-      } else {
-        // Recording voice - monitor for silence timeout
-        if (rms < this.options.silenceThreshold) {
-          if (this.vadState.silenceStartTime === null) {
-            this.vadState.silenceStartTime = now;
-          } else if (now - this.vadState.silenceStartTime >= this.options.silenceTimeoutMs) {
-            // Silence timeout reached - stop recording
-            this.log(`🔇 Silence timeout reached - stopping recording`);
-            this.monitoringRef.current = false;
-            this.options.onSilenceDetected();
-            return;
-          }
-        } else {
-          // Voice detected again - reset silence timer
-          this.vadState.silenceStartTime = null;
-        }
-      }
-
-      if (this.monitoringRef.current) {
-        this.animationFrameId = requestAnimationFrame(checkVAD);
-      }
-    };
-
-    checkVAD();
-  }
-
-  /**
-   * EXTRACT SPEECH FROM BUFFER - VAD-triggered extraction from continuous buffer
-   */
-  extractSpeechFromBuffer(speechStartTime: number, speechEndTime: number): Blob | null {
-    this.log(`🎯 Extracting speech from buffer: ${speechStartTime} to ${speechEndTime}`);
-    
-    // Calculate how many recent chunks to include (last ~2-3 seconds)
-    const speechDurationMs = speechEndTime - speechStartTime;
-    const chunksToInclude = Math.ceil(speechDurationMs / this.options.chunkDurationMs);
-    
-    // Get recent chunks from buffer
-    const speechChunks = this.audioBuffer.slice(-chunksToInclude);
-    
-    if (speechChunks.length === 0) {
-      this.log('⚠️ No chunks found in buffer');
-      return null;
-    }
-    
-    // Combine chunks into final blob
-    const finalBlob = new Blob(speechChunks, { 
-      type: this.mediaRecorder?.mimeType || 'audio/webm' 
-    });
-    
-    this.log(`✅ Extracted speech: ${finalBlob.size} bytes, ${speechChunks.length} chunks`);
-    return finalBlob;
-  }
-
-  /**
-   * STOP - Stop recording and return final blob with race condition protection
-   */
-  stop(): Promise<Blob | null> {
-    return new Promise((resolve) => {
-      if (!this.mediaRecorder) {
-        resolve(null);
-        return;
-      }
-
-      // CRITICAL: Set stopping flag to prevent new chunks during stop()
-      this.stopping = true;
-      
-      // Stop monitoring immediately to prevent race conditions
-      this.monitoringRef.current = false;
-
-      this.mediaRecorder.onstop = () => {
-        // CRITICAL: Wait 50ms to ensure last chunk is processed
-        setTimeout(() => {
-          // Use recent chunks from buffer
-          const finalBlob = new Blob(this.audioBuffer, { 
-            type: this.mediaRecorder?.mimeType || 'audio/webm' 
-          });
-          // CRITICAL: Always cleanup MediaRecorder after STT processing
-          this.cleanup();
-          resolve(finalBlob);
-        }, 50);
-      };
-
-      if (this.mediaRecorder.state !== 'inactive') {
-        this.mediaRecorder.stop();
-      } else {
-        // CRITICAL: Wait 50ms even for inactive recorder
-        setTimeout(() => {
-          // Use recent chunks from buffer
-          const finalBlob = new Blob(this.audioBuffer, { 
-            type: this.mediaRecorder?.mimeType || 'audio/webm' 
-          });
-          // CRITICAL: Always cleanup MediaRecorder after STT processing
-          this.cleanup();
-          resolve(finalBlob);
-        }, 50);
-      }
-    });
-  }
-
-  // REMOVED: Old createFinalBlob method - using extractSpeechFromBuffer instead
-
-  /**
-   * GET STATE - Current VAD state
-   */
   getState(): RollingBufferVADState {
     return { ...this.state };
   }
 
-  /**
-   * CLEANUP - Reset all state and destroy MediaRecorder completely
-   */
-  cleanup(): void {
-    this.log('🧹 CACHE-FREE: Complete cleanup of RollingBufferVAD');
-    
-    // CRITICAL: Reset stopping flag
-    this.stopping = false;
-    
-    // Stop monitoring and cancel any pending animation frames
-    this.monitoringRef.current = false;
-    if (this.animationFrameId !== null) {
-      cancelAnimationFrame(this.animationFrameId);
-      this.animationFrameId = null;
-    }
-    
-    // CONTINUOUS RECORDING: Stop continuous recording
-    this.isRecordingContinuously = false;
-    
-    // CRITICAL: Completely destroy MediaRecorder to prevent format state retention
-    if (this.mediaRecorder) {
-      if (this.mediaRecorder.state !== 'inactive') {
-        this.mediaRecorder.stop();
+  async start(stream: MediaStream, audioContext?: AudioContext): Promise<void> {
+    this.cleanup(); // ensure clean start
+    this.stream = stream;
+
+    // Prepare AudioContext + analyser (create if not provided)
+    this.audioContext = audioContext ?? new (window.AudioContext || (window as any).webkitAudioContext)();
+    this.sourceNode = this.audioContext.createMediaStreamSource(stream);
+    this.analyser = this.audioContext.createAnalyser();
+    this.analyser.fftSize = 1024; // light CPU
+    this.sourceNode.connect(this.analyser);
+
+    // Select a safe mimeType
+    const mrOptions: MediaRecorderOptions = {};
+    try {
+      if (typeof MediaRecorder !== 'undefined' && typeof MediaRecorder.isTypeSupported === 'function') {
+        if (MediaRecorder.isTypeSupported('audio/webm')) {
+          mrOptions.mimeType = 'audio/webm';
+          this.log('Using audio/webm');
+        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+          mrOptions.mimeType = 'audio/mp4';
+          this.log('Using audio/mp4');
+        } else if (MediaRecorder.isTypeSupported('audio/mpeg')) {
+          mrOptions.mimeType = 'audio/mpeg';
+          this.log('Using audio/mpeg');
+        } else {
+          this.log('Using browser default mimeType');
+        }
+      } else {
+        throw new Error('MediaRecorder not available');
       }
-      // Remove all event listeners to prevent memory leaks
+      this.mediaRecorder = new MediaRecorder(stream, mrOptions);
+    } catch (e) {
+      this.error('Failed to create MediaRecorder', e);
+      throw e;
+    }
+
+    // Rolling buffer: keep only N recent chunks
+    const chunkMs = Math.max(100, this.options.chunkDurationMs);
+    const maxChunks = Math.max(1, Math.ceil(this.options.lookbackWindowMs / chunkMs));
+    const preRollChunks = Math.max(0, Math.ceil(this.options.preRollMs / chunkMs));
+    const postRollChunks = Math.max(0, Math.ceil(this.options.postRollMs / chunkMs));
+
+    this.mediaRecorder.ondataavailable = (evt) => {
+      if (evt.data && evt.data.size > 0) {
+        this.chunks.push(evt.data);
+        // trim to rolling window
+        while (this.chunks.length > maxChunks) this.chunks.shift();
+      }
+    };
+
+    this.mediaRecorder.onerror = (evt: any) => {
+      this.error('MediaRecorder error', evt?.error || evt);
+      this.options.onError(new Error('MediaRecorder error'));
+    };
+
+    this.mediaRecorder.onstop = () => {
+      // no-op; stop() aggregates explicitly
+    };
+
+    // Start continuous recording with timeSlice; retry without timeslice if needed
+    try {
+      this.mediaRecorder.start(chunkMs);
+      this.log(`MediaRecorder started with ${chunkMs}ms slices; mimeType=${this.mediaRecorder.mimeType}`);
+    } catch (e) {
+      this.warn(`start(${chunkMs}) failed; retrying without timeslice`, e);
+      try {
+        this.mediaRecorder.start();
+        this.log(`MediaRecorder started without timeslice; mimeType=${this.mediaRecorder.mimeType}`);
+      } catch (e2) {
+        this.error('MediaRecorder failed to start', e2);
+        this.options.onError(new Error('Unable to start MediaRecorder'));
+        throw e2;
+      }
+    }
+
+    // VAD monitor: low CPU, steady cadence
+    this.startMonitoring({
+      preRollChunks,
+      postRollChunks,
+      chunkMs,
+    });
+  }
+
+  // Stop and return a single Blob of whatever remains in the buffer
+  stop(): Promise<Blob | null> {
+    return new Promise((resolve) => {
+      const finish = () => {
+        const blob = this.chunks.length
+          ? new Blob(this.chunks, { type: this.mediaRecorder?.mimeType || 'audio/webm' })
+          : null;
+        this.cleanup();
+        resolve(blob);
+      };
+
+      try {
+        if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+          const mr = this.mediaRecorder;
+          mr.addEventListener('stop', () => setTimeout(finish, 30), { once: true });
+          mr.stop();
+        } else {
+          setTimeout(finish, 30);
+        }
+      } catch {
+        setTimeout(finish, 30);
+      }
+    });
+  }
+
+  cleanup(): void {
+    // Stop monitor
+    if (this.monitorTimer !== null) {
+      clearInterval(this.monitorTimer);
+      this.monitorTimer = null;
+    }
+
+    // Stop MediaRecorder
+    if (this.mediaRecorder) {
+      try {
+        if (this.mediaRecorder.state !== 'inactive') this.mediaRecorder.stop();
+      } catch {}
       this.mediaRecorder.ondataavailable = null;
-      this.mediaRecorder.onstop = null;
       this.mediaRecorder.onerror = null;
+      this.mediaRecorder.onstop = null;
       this.mediaRecorder = null;
     }
-    
-    this.audioContext = null;
-    this.analyser = null;
-    
-    // CONTINUOUS RECORDING: Clear continuous audio buffer
-    this.audioBuffer = [];
-    
-    // CRITICAL: Clear all cached audio chunks
-    this.state = {
-      audioLevel: 0
-    };
-    
-    this.isRecordingVoice = false;
-    
-    this.vadState = {
-      voiceStartTime: null,
-      silenceStartTime: null
-    };
-    
-    this.log('✅ CACHE-FREE: All VAD data cleared, MediaRecorder destroyed, continuous buffer cleared');
-  }
 
-  private log(message: string, ...args: any[]): void {
+    // Disconnect audio graph
     try {
-      if (typeof localStorage !== 'undefined') {
-        const enabled = localStorage.getItem('debugAudio') === '1';
-        if (!enabled) return;
-      }
-    } catch (error) {
-      // Ignore localStorage errors
+      if (this.sourceNode) this.sourceNode.disconnect();
+      if (this.analyser) this.analyser.disconnect();
+    } catch {}
+
+    // Optionally stop mic tracks
+    if (this.options.stopTracksOnCleanup && this.stream) {
+      this.stream.getTracks().forEach((t) => t.stop());
     }
-    console.log('[RollingBufferVAD]', message, ...args);
+
+    this.sourceNode = null;
+    this.analyser = null;
+    // Do not close provided AudioContext; just null it to avoid interfering with app
+    this.audioContext = null;
+
+    // Reset buffers and state
+    this.chunks = [];
+    this.utteranceStartIndex = null;
+    this.utteranceStartWallMs = null;
+    this.state = { audioLevel: 0, isSpeaking: false };
   }
 
-  private error(message: string, ...args: any[]): void {
-    console.error('[RollingBufferVAD]', message, ...args);
+  // Internal
+
+  private startMonitoring(cfg: { preRollChunks: number; postRollChunks: number; chunkMs: number }) {
+    if (!this.analyser) return;
+    const analyser = this.analyser;
+    const bufLen = analyser.fftSize;
+    const data = new Uint8Array(bufLen);
+
+    let voiceStartWall: number | null = null;
+    let silenceStartWall: number | null = null;
+
+    const sampleEveryMs = 40; // ~25Hz, good for mobile
+    this.monitorTimer = window.setInterval(() => {
+      try {
+        if (!this.analyser) return;
+
+        analyser.getByteTimeDomainData(data);
+        let sum = 0;
+        for (let i = 0; i < bufLen; i++) {
+          const centered = (data[i] - 128) / 128;
+          sum += centered * centered;
+        }
+        const rms = Math.sqrt(sum / bufLen);
+        this.state.audioLevel = rms;
+
+        const now = Date.now();
+        const { voiceThreshold, silenceThreshold, voiceConfirmMs, silenceTimeoutMs, maxUtteranceMs } = this.options;
+
+        if (!this.state.isSpeaking) {
+          // Waiting for confirmed voice
+          if (rms > voiceThreshold) {
+            if (voiceStartWall === null) voiceStartWall = now;
+            if (now - voiceStartWall >= voiceConfirmMs) {
+              // Confirm voice and mark utterance start at current buffer end - preRoll
+              this.state.isSpeaking = true;
+              this.utteranceStartWallMs = now;
+              // Place start index a few chunks back (pre-roll), clamp at 0
+              const startIdx = Math.max(0, this.chunks.length - cfg.preRollChunks);
+              this.utteranceStartIndex = startIdx;
+              silenceStartWall = null;
+              voiceStartWall = null;
+              this.safeCall(() => this.options.onVoiceStart());
+              this.log(`Voice confirmed. StartIndex=${startIdx}, chunks=${this.chunks.length}`);
+            }
+          } else {
+            voiceStartWall = null;
+          }
+        } else {
+          // Currently speaking: check for silence end or max length
+          const elapsed = this.utteranceStartWallMs ? now - this.utteranceStartWallMs : 0;
+
+          if (rms < silenceThreshold) {
+            if (silenceStartWall === null) silenceStartWall = now;
+            if (now - silenceStartWall >= silenceTimeoutMs) {
+              // End utterance due to silence
+              this.emitUtterance(cfg.postRollChunks, cfg.chunkMs, 'silence');
+              // Reset for next utterance
+              this.state.isSpeaking = false;
+              this.utteranceStartIndex = null;
+              this.utteranceStartWallMs = null;
+              voiceStartWall = null;
+              silenceStartWall = null;
+            }
+          } else {
+            silenceStartWall = null;
+          }
+
+          // Hard cap very long utterances
+          if (elapsed >= maxUtteranceMs) {
+            this.emitUtterance(cfg.postRollChunks, cfg.chunkMs, 'maxLength');
+            this.state.isSpeaking = false;
+            this.utteranceStartIndex = null;
+            this.utteranceStartWallMs = null;
+            voiceStartWall = null;
+            silenceStartWall = null;
+          }
+        }
+      } catch (e) {
+        this.error('VAD monitor error', e);
+      }
+    }, sampleEveryMs);
+  }
+
+  private emitUtterance(postRollChunks: number, chunkMs: number, reason: 'silence' | 'maxLength') {
+    const startIdx = this.utteranceStartIndex ?? Math.max(0, this.chunks.length - 1);
+    const endIdx = Math.min(this.chunks.length - 1, this.chunks.length - 1 + postRollChunks);
+    const sliceEnd = Math.min(this.chunks.length, endIdx + 1 + postRollChunks);
+
+    // Since we don't have timestamps, include everything from startIdx to near-end with a small post-roll
+    const finalEnd = Math.min(this.chunks.length, this.chunks.length + postRollChunks);
+    const selection = this.chunks.slice(startIdx, finalEnd);
+
+    // Estimate duration for minUtterance check
+    const estMs = selection.length * chunkMs;
+    if (estMs < this.options.minUtteranceMs) {
+      this.log(`Dropping short utterance (${Math.round(estMs)}ms) reason=${reason}`);
+      if (this.options.pruneOnUtterance && startIdx > 0) {
+        // prune pre-roll to avoid growth
+        this.chunks.splice(0, startIdx);
+      }
+      return;
+    }
+
+    const blob = selection.length
+      ? new Blob(selection, { type: this.mediaRecorder?.mimeType || 'audio/webm' })
+      : null;
+
+    if (blob) {
+      this.safeCall(() => this.options.onUtterance(blob));
+      // Back-compat: pass blob to onSilenceDetected as well
+      this.safeCall(() => this.options.onSilenceDetected(blob));
+      this.log(`Utterance emitted (${Math.round(estMs)}ms, ${selection.length} chunks) reason=${reason}`);
+    }
+
+    // Prune used chunks to keep memory small on mobile
+    if (this.options.pruneOnUtterance) {
+      const used = Math.min(this.chunks.length, finalEnd);
+      this.chunks.splice(0, used);
+      this.log(`Pruned ${used} chunks after utterance; remaining=${this.chunks.length}`);
+    }
+  }
+
+  // Utils
+
+  private safeCall(fn: () => void) {
+    try { fn(); } catch (e) { this.error('Callback error', e); }
+  }
+
+  private log(msg: string, ...args: any[]) {
+    try {
+      if (typeof localStorage !== 'undefined' && localStorage.getItem('debugAudio') !== '1') return;
+    } catch {}
+    console.log('[RollingBufferVAD]', msg, ...args);
+  }
+
+  private warn(msg: string, ...args: any[]) {
+    try {
+      if (typeof localStorage !== 'undefined' && localStorage.getItem('debugAudio') !== '1') return;
+    } catch {}
+    console.warn('[RollingBufferVAD]', msg, ...args);
+  }
+
+  private error(msg: string, ...args: any[]) {
+    console.error('[RollingBufferVAD]', msg, ...args);
   }
 }
