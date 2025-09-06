@@ -21,8 +21,6 @@ export interface RollingBufferVADOptions {
 }
 
 export interface RollingBufferVADState {
-  phase: 'waiting_for_voice' | 'monitoring_silence';
-  voiceStarted: boolean;
   audioLevel: number;
   preBufferChunks: Blob[];
   activeChunks: Blob[];
@@ -36,14 +34,13 @@ export class RollingBufferVAD {
   private animationFrameId: number | null = null;
   
   private state: RollingBufferVADState = {
-    phase: 'waiting_for_voice',
-    voiceStarted: false,
     audioLevel: 0,
     preBufferChunks: [],
     activeChunks: []
   };
   
   private options: Required<RollingBufferVADOptions>;
+  private isRecordingVoice = false;
   private vadState = {
     voiceStartTime: null as number | null,
     silenceStartTime: null as number | null
@@ -75,8 +72,6 @@ export class RollingBufferVAD {
     
     // Reset state
     this.state = {
-      phase: 'waiting_for_voice',
-      voiceStarted: false,
       audioLevel: 0,
       preBufferChunks: [],
       activeChunks: []
@@ -134,26 +129,26 @@ export class RollingBufferVAD {
   }
 
   /**
-   * HANDLE AUDIO CHUNK - Manage rolling buffer logic
+   * HANDLE AUDIO CHUNK - Simple chunk processing
    */
   private handleAudioChunk(chunk: Blob): void {
-    if (!this.state.voiceStarted) {
-      // Pre-voice: Add to rolling buffer
-      this.state.preBufferChunks.push(chunk);
-      
-      // Maintain rolling window by removing old chunks
-      const maxChunks = Math.ceil(this.options.lookbackWindowMs / this.options.chunkDurationMs);
-      if (this.state.preBufferChunks.length > maxChunks) {
-        this.state.preBufferChunks.shift();
-      }
-    } else {
-      // Post-voice: Add to active recording
+    // Always add to pre-buffer (rolling window)
+    this.state.preBufferChunks.push(chunk);
+    
+    // Maintain rolling window by removing old chunks
+    const maxChunks = Math.ceil(this.options.lookbackWindowMs / this.options.chunkDurationMs);
+    if (this.state.preBufferChunks.length > maxChunks) {
+      this.state.preBufferChunks.shift();
+    }
+    
+    // If we're recording voice, also add to active chunks
+    if (this.isRecordingVoice) {
       this.state.activeChunks.push(chunk);
     }
   }
 
   /**
-   * START VAD MONITORING - Two-phase voice activity detection
+   * START VAD MONITORING - Simple voice activity detection
    */
   private startVADMonitoring(): void {
     if (!this.analyser || this.monitoringRef.current) {
@@ -194,36 +189,36 @@ export class RollingBufferVAD {
       
       const now = Date.now();
       
-      if (this.state.phase === 'waiting_for_voice') {
-        // Phase 1: Wait for voice activity
+      if (!this.isRecordingVoice) {
+        // Waiting for voice activity
         if (rms > this.options.voiceThreshold) {
           if (this.vadState.voiceStartTime === null) {
             this.vadState.voiceStartTime = now;
           } else if (now - this.vadState.voiceStartTime >= this.options.voiceConfirmMs) {
-            // Voice confirmed! Switch to active recording
-            this.state.phase = 'monitoring_silence';
-            this.state.voiceStarted = true;
+            // Voice confirmed! Start recording
+            this.isRecordingVoice = true;
             this.vadState.voiceStartTime = null;
-            this.log(`🎤 Voice activity confirmed - switching to active recording`);
+            this.log(`🎤 Voice activity confirmed - starting recording`);
             this.options.onVoiceStart();
           }
         } else {
           this.vadState.voiceStartTime = null;
         }
         
-      } else if (this.state.phase === 'monitoring_silence') {
-        // Phase 2: Monitor for silence after voice
+      } else {
+        // Recording voice - monitor for silence timeout
         if (rms < this.options.silenceThreshold) {
           if (this.vadState.silenceStartTime === null) {
             this.vadState.silenceStartTime = now;
           } else if (now - this.vadState.silenceStartTime >= this.options.silenceTimeoutMs) {
-            // Natural silence detected
-            this.log(`🧘‍♂️ Silence detected - stopping recording`);
+            // Silence timeout reached - stop recording
+            this.log(`🔇 Silence timeout reached - stopping recording`);
             this.monitoringRef.current = false;
             this.options.onSilenceDetected();
             return;
           }
         } else {
+          // Voice detected again - reset silence timer
           this.vadState.silenceStartTime = null;
         }
       }
@@ -285,7 +280,7 @@ export class RollingBufferVAD {
 
     // CRITICAL: Log audio level information
     this.log(`🎵 Audio level during recording: ${this.state.audioLevel.toFixed(4)} (threshold: ${this.options.voiceThreshold})`);
-    this.log(`🎵 Voice started: ${this.state.voiceStarted}, Phase: ${this.state.phase}`);
+    this.log(`🎵 Recording voice: ${this.isRecordingVoice}`);
 
     // Google STT V2: Create final blob - Google will auto-detect format
     const finalBlob = new Blob(allChunks, { type: allChunks[0]?.type || 'audio/webm' });
@@ -337,12 +332,12 @@ export class RollingBufferVAD {
     
     // CRITICAL: Clear all cached audio chunks
     this.state = {
-      phase: 'waiting_for_voice',
-      voiceStarted: false,
       audioLevel: 0,
       preBufferChunks: [],    // Clear cached pre-buffer chunks
       activeChunks: []        // Clear cached active chunks
     };
+    
+    this.isRecordingVoice = false;
     
     this.vadState = {
       voiceStartTime: null,
