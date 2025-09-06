@@ -294,27 +294,6 @@ serve(async (req)=>{
     const txt = await swiss.text();
     const swissData = (()=>{ try{return JSON.parse(txt);}catch{return { raw:txt }; }})();
 
-    // Fire report-orchestrator if we have reportType
-    if(body.reportType && swiss.ok){
-      const orchestratorUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/report-orchestrator`;
-      const orchestratorPayload = {
-        endpoint: body.request,
-        report_type: body.reportType,
-        user_id: body.user_id,
-        chartData: swissData,
-        ...body
-      };
-      
-      // Fire and forget - no await, no error handling
-      fetch(orchestratorUrl, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
-        },
-        body: JSON.stringify(orchestratorPayload),
-      }).catch(() => {}); // Silent fail
-    }
 
     await logTranslator({ request_type:canon, request_payload:body, swiss_data:swissData, swiss_status:swiss.status, processing_ms:Date.now()-t0, error: swiss.ok?undefined:`Swiss ${swiss.status}`, google_geo:googleGeo, translator_payload:payload, user_id:body.user_id, is_guest:body.is_guest });
     
