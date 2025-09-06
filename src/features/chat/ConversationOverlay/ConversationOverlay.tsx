@@ -209,6 +209,9 @@ export const ConversationOverlay: React.FC = () => {
         connectionRef.current.unsubscribe();
         connectionRef.current = null;
       }
+      // Reset state so user sees "Tap to Start" when they return
+      hasStarted.current = false;
+      isShuttingDown.current = false;
     };
   }, []);
 
