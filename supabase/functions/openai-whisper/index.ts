@@ -115,7 +115,7 @@ serve(async (req) => {
       
       // Fire and forget to LLM
       try {
-        await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/llm-chat`, {
+        await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/llm-handler-openai`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
