@@ -98,9 +98,9 @@ export const ConversationOverlay: React.FC = () => {
     setState('establishing');
     
     try {
-      // USER GESTURE ENFORCEMENT: Initialize and start recording IMMEDIATELY
-      // No async operations before getUserMedia() to maintain gesture context
-      console.log('[ConversationOverlay] 🆕 Cache-free mode: Microphone service will create fresh streams per turn');
+      // 🎯 USER GESTURE CAPTURED: Log the gesture event
+      console.log('[ConversationOverlay] 👆 USER GESTURE CAPTURED: Starting conversation mode');
+      console.log('[ConversationOverlay] 🎯 GESTURE LIFECYCLE: Capturing user tap/click for microphone access');
       
       // Initialize microphone service
       conversationMicrophoneService.initialize({
@@ -113,6 +113,7 @@ export const ConversationOverlay: React.FC = () => {
       });
       
       // 1️⃣ IMMEDIATELY request microphone access inside the gesture
+      console.log('[ConversationOverlay] 🎤 GESTURE → MEDIA SOURCE: Handing gesture to microphone service');
       const recordingStarted = await conversationMicrophoneService.startRecording();
       
       // 2️⃣ Setup WebSocket AFTER we have the stream (outside gesture context is OK now)

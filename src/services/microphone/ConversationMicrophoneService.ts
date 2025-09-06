@@ -47,12 +47,16 @@ export class ConversationMicrophoneServiceClass {
    * Start recording - ATOMIC: Clean then start
    */
   public async startRecording(): Promise<boolean> {
+    console.log('[ConversationMic] 🎯 RECEIVED USER GESTURE: Processing microphone access request');
+    
     // SESSION-BASED: Only clean if we don't have a stream (first turn)
     if (!this.stream) {
       this.forceCleanup();
       console.log('[ConversationMic] 🧹 Media source cleaned before start (first turn)');
+      console.log('[ConversationMic] 🎤 GESTURE → MEDIA SOURCE: Creating fresh MediaStream from user gesture');
     } else {
       console.log('[ConversationMic] ♻️ Reusing existing MediaStream for turn');
+      console.log('[ConversationMic] 🎤 GESTURE → MEDIA SOURCE: Using existing MediaStream (session-based)');
     }
     
     // Request audio control
@@ -98,9 +102,11 @@ export class ConversationMicrophoneServiceClass {
         };
         
         // USER GESTURE ENFORCEMENT: getUserMedia only called on user tap/click
+        console.log('[ConversationMic] 🎤 GESTURE → getUserMedia: Calling navigator.mediaDevices.getUserMedia() with user gesture context');
         this.stream = await navigator.mediaDevices.getUserMedia({
           audio: audioConstraints
         });
+        console.log('[ConversationMic] ✅ GESTURE SUCCESS: MediaStream created from user gesture');
 
         // Validate fresh stream
         if (!this.stream || this.stream.getAudioTracks().length === 0) {
@@ -188,9 +194,12 @@ export class ConversationMicrophoneServiceClass {
 
       this.isRecording = true;
       audioArbitrator.setMicrophoneState('active');
+      console.log('[ConversationMic] 🎤 MICROPHONE TURNED ON: MediaStream active and recording started');
 
       // Start VAD with MediaRecorder (created by service layer for user gesture enforcement)
+      console.log('[ConversationMic] 🎤 GESTURE → VAD: Starting voice activity detection with MediaStream');
       await this.rollingBufferVAD.start(this.stream, this.mediaRecorder, this.audioContext);
+      console.log('[ConversationMic] ✅ GESTURE LIFECYCLE COMPLETE: User gesture → MediaStream → Microphone ON → VAD Active');
 
       this.notifyListeners();
       return true;
