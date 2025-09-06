@@ -115,18 +115,27 @@ serve(async (req) => {
       
       // Fire and forget to LLM
       try {
+        const llmPayload = {
+          chat_id: meta.chat_id,
+          text: transcript,
+          client_msg_id: crypto.randomUUID(),
+          mode: 'conversation'
+        };
+        
+        console.log('[openai-whisper] 📤 SENDING TO LLM:', {
+          chat_id: llmPayload.chat_id,
+          text: llmPayload.text.substring(0, 100) + (llmPayload.text.length > 100 ? '...' : ''),
+          client_msg_id: llmPayload.client_msg_id,
+          mode: llmPayload.mode
+        });
+        
         await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/llm-handler-openai`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            chat_id: meta.chat_id,
-            text: transcript,
-            client_msg_id: crypto.randomUUID(),
-            mode: 'conversation'
-          })
+          body: JSON.stringify(llmPayload)
         });
         console.log('[openai-whisper] ✅ LLM call sent (fire and forget)');
       } catch (error) {
