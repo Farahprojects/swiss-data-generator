@@ -175,8 +175,7 @@ class ChatTextMicrophoneServiceClass {
     // Notify listeners after isRecording becomes false
     this.notifyListeners();
 
-    // ✅ VAD is self-cleaning - no need to call cleanup() here
-    // The VAD.stop() method already calls cleanup() internally
+    // ✅ VAD is now self-cleaning - MediaRecorder auto-cleaned after STT
     if (this.rollingBufferVAD) {
       this.rollingBufferVAD = null;
     }

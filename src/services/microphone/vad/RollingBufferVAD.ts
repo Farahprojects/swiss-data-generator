@@ -246,7 +246,8 @@ export class RollingBufferVAD {
 
       this.mediaRecorder.onstop = () => {
         const finalBlob = this.createFinalBlob();
-        // Don't call cleanup here - let the caller handle it
+        // CRITICAL: Always cleanup MediaRecorder after STT processing
+        this.cleanup();
         resolve(finalBlob);
       };
 
@@ -254,6 +255,8 @@ export class RollingBufferVAD {
         this.mediaRecorder.stop();
       } else {
         const finalBlob = this.createFinalBlob();
+        // CRITICAL: Always cleanup MediaRecorder after STT processing
+        this.cleanup();
         resolve(finalBlob);
       }
     });

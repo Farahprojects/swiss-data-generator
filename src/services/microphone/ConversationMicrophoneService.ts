@@ -76,10 +76,7 @@ export class ConversationMicrophoneServiceClass {
           channelCount: 1,          // CRITICAL: Mono for STT efficiency
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true,
-          // Additional constraints to ensure webm/opus compatibility
-          latency: 0.01,            // Low latency for real-time
-          volume: 1.0               // Full volume
+          autoGainControl: true
         }
       });
 
@@ -167,14 +164,11 @@ export class ConversationMicrophoneServiceClass {
     }
 
     try {
-      // Stop VAD and get audio blob
+      // Stop VAD and get audio blob (VAD now auto-cleans MediaRecorder)
       const audioBlob = await this.rollingBufferVAD.stop();
       
-      // Clean up VAD after getting the blob to prevent race conditions
-      if (this.rollingBufferVAD) {
-        this.rollingBufferVAD.cleanup();
-        this.rollingBufferVAD = null;
-      }
+      // VAD is now self-cleaning - just null the reference
+      this.rollingBufferVAD = null;
 
       this.isRecording = false;
       this.audioLevel = 0;

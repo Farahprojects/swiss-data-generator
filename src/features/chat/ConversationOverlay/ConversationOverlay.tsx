@@ -105,6 +105,10 @@ export const ConversationOverlay: React.FC = () => {
       // The ConversationMicrophoneService will create fresh streams for each turn
       console.log('[ConversationOverlay] 🆕 Cache-free mode: Microphone service will create fresh streams per turn');
       
+      // CRITICAL: Clean media source on guest gesture (modal open)
+      conversationMicrophoneService.forceCleanup();
+      console.log('[ConversationOverlay] 🧹 Media source cleaned on modal open');
+      
       // Initialize microphone service
       conversationMicrophoneService.initialize({
         onRecordingComplete: (audioBlob: Blob) => processRecording(audioBlob),
