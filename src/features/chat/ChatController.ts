@@ -143,7 +143,7 @@ class ChatController {
     };
   }
 
-  private cleanupRealtimeSubscription() {
+  public cleanupRealtimeSubscription() {
     if (this.realtimeChannel) {
       supabase.removeChannel(this.realtimeChannel);
       this.realtimeChannel = null;

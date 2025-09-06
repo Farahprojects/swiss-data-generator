@@ -107,6 +107,15 @@ export const ConversationOverlay: React.FC = () => {
     try {
       // User gesture captured
       
+      // 🚫 CLEANUP: Stop ChatController WebSocket to prevent interference
+      try {
+        const { chatController } = await import('@/features/chat/ChatController');
+        chatController.cleanupRealtimeSubscription();
+        console.log('[ConversationOverlay] 🧹 Cleaned up ChatController WebSocket');
+      } catch (error) {
+        console.warn('[ConversationOverlay] Could not cleanup ChatController WebSocket:', error);
+      }
+      
       // Initialize microphone service
       conversationMicrophoneService.initialize({
         onRecordingComplete: (audioBlob: Blob) => processRecording(audioBlob),
@@ -196,6 +205,18 @@ export const ConversationOverlay: React.FC = () => {
     if (connectionRef.current) {
       connectionRef.current.unsubscribe();
       connectionRef.current = null;
+    }
+    
+    // 🔄 RESTORE: Restart ChatController WebSocket for normal chat mode
+    try {
+      const { chatController } = await import('@/features/chat/ChatController');
+      const { chat_id } = useChatStore.getState();
+      if (chat_id) {
+        chatController.initializeConversation(chat_id);
+        console.log('[ConversationOverlay] 🔄 Restored ChatController WebSocket');
+      }
+    } catch (error) {
+      console.warn('[ConversationOverlay] Could not restore ChatController WebSocket:', error);
     }
     
     // Reset state
