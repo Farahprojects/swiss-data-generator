@@ -98,9 +98,7 @@ export const ConversationOverlay: React.FC = () => {
     setState('establishing');
     
     try {
-      // 🎯 USER GESTURE CAPTURED: Log the gesture event
-      console.log('[ConversationOverlay] 👆 USER GESTURE CAPTURED: Starting conversation mode');
-      console.log('[ConversationOverlay] 🎯 GESTURE LIFECYCLE: Capturing user tap/click for microphone access');
+      // User gesture captured
       
       // Initialize microphone service
       conversationMicrophoneService.initialize({
@@ -113,7 +111,6 @@ export const ConversationOverlay: React.FC = () => {
       });
       
       // 1️⃣ IMMEDIATELY request microphone access inside the gesture
-      console.log('[ConversationOverlay] 🎤 GESTURE → MEDIA SOURCE: Handing gesture to microphone service');
       const recordingStarted = await conversationMicrophoneService.startRecording();
       
       // 2️⃣ Setup WebSocket AFTER we have the stream (outside gesture context is OK now)
@@ -203,6 +200,17 @@ export const ConversationOverlay: React.FC = () => {
     
     closeConversation();
   }, [closeConversation]);
+
+  // Cleanup on unmount to prevent WebSocket race condition
+  useEffect(() => {
+    return () => {
+      // Cleanup on unmount
+      if (connectionRef.current) {
+        connectionRef.current.unsubscribe();
+        connectionRef.current = null;
+      }
+    };
+  }, []);
 
   // SSR guard
   if (!isConversationOpen || typeof document === 'undefined') return null;
