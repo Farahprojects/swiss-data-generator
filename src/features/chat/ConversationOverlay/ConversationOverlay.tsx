@@ -77,9 +77,8 @@ export const ConversationOverlay: React.FC = () => {
         if (!isShuttingDown.current) {
           setTimeout(async () => {
             if (!isShuttingDown.current) {
-              conversationMicrophoneService.unmute();
-              // Start recording to actually begin listening
-              await conversationMicrophoneService.startRecording();
+              // AUTOMATED: Service will handle its own lifecycle - no manual state management needed
+              console.log('[ConversationOverlay] 🤖 AUTOMATED: TTS finished, service will auto-continue');
             }
           }, 200);
         }
@@ -105,7 +104,7 @@ export const ConversationOverlay: React.FC = () => {
       // The ConversationMicrophoneService will create fresh streams for each turn
       console.log('[ConversationOverlay] 🆕 Cache-free mode: Microphone service will create fresh streams per turn');
       
-      // Initialize microphone service
+      // AUTOMATED: Initialize microphone service with self-managing lifecycle
       conversationMicrophoneService.initialize({
         onRecordingComplete: (audioBlob: Blob) => processRecording(audioBlob),
         onError: (error: Error) => {
@@ -115,11 +114,12 @@ export const ConversationOverlay: React.FC = () => {
         silenceTimeoutMs: 1200,
       });
       
-      // Start recording
+      // AUTOMATED: Start recording - service will handle its own lifecycle
       const recordingStarted = await conversationMicrophoneService.startRecording();
       
       if (recordingStarted) {
         setState('listening');
+        console.log('[ConversationOverlay] 🤖 AUTOMATED: Recording started with self-managing lifecycle');
       } else {
         setState('connecting');
       }
@@ -146,9 +146,8 @@ export const ConversationOverlay: React.FC = () => {
       
       if (!transcript) {
         setState('listening');
-        // Unmute microphone and start recording for next turn even if no transcript
-        conversationMicrophoneService.unmute();
-        await conversationMicrophoneService.startRecording();
+        // AUTOMATED: Service will handle its own lifecycle - no manual state management needed
+        console.log('[ConversationOverlay] 🤖 AUTOMATED: No transcript, service will auto-continue');
         return;
       }
       
@@ -163,9 +162,8 @@ export const ConversationOverlay: React.FC = () => {
     } catch (error) {
       console.error('[ConversationOverlay] Processing failed:', error);
       setState('connecting');
-      // Unmute microphone and start recording even on error to allow retry
-      conversationMicrophoneService.unmute();
-      await conversationMicrophoneService.startRecording();
+      // AUTOMATED: Service will handle its own lifecycle - no manual state management needed
+      console.log('[ConversationOverlay] 🤖 AUTOMATED: Error occurred, service will auto-recover');
     } finally {
       isProcessingRef.current = false;
     }
