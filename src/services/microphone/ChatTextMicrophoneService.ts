@@ -19,8 +19,6 @@ class ChatTextMicrophoneServiceClass {
   private stream: MediaStream | null = null;
   private rollingBufferVAD: RollingBufferVAD | null = null;
   private audioContext: AudioContext | null = null;
-  private analyser: AnalyserNode | null = null;
-  private mediaStreamSource: MediaStreamAudioSourceNode | null = null;
   
   private isRecording = false;
   private isProcessing = false;
@@ -81,31 +79,36 @@ class ChatTextMicrophoneServiceClass {
         this.log('🎛️ Reusing existing AudioContext for chat text microphone');
       }
       
-      this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
-      this.analyser = this.audioContext.createAnalyser();
-      this.analyser.fftSize = 1024; // Mobile-first: Smaller FFT for faster analysis
-      this.analyser.smoothingTimeConstant = 0.8;
-      this.mediaStreamSource.connect(this.analyser);
+      // Note: New VAD system handles its own audio analysis internally
 
-      // Initialize rolling buffer VAD
+      // Initialize rolling buffer VAD with team's approach
       this.rollingBufferVAD = new RollingBufferVAD({
-        lookbackWindowMs: 750,
-        chunkDurationMs: 250,
+        lookbackWindowMs: 15000,
+        chunkDurationMs: 200,
+        preRollMs: 250,
+        postRollMs: 150,
+        pruneOnUtterance: true,
         voiceThreshold: 0.012,
         silenceThreshold: 0.008,
         voiceConfirmMs: 300,
         silenceTimeoutMs: this.options.silenceTimeoutMs || 1500,
+        maxUtteranceMs: 15000,
+        minUtteranceMs: 250,
         onVoiceStart: () => {
           this.log('🎤 Rolling buffer VAD: Voice activity confirmed');
         },
-        onSilenceDetected: async () => {
-          this.log('🧘‍♂️ Rolling buffer VAD: Silence detected - stopping recording');
+        onUtterance: async (blob: Blob) => {
+          this.log('🧘‍♂️ Rolling buffer VAD: Utterance detected - processing speech');
+          await this.processAudioBlob(blob);
+        },
+        onSilenceDetected: async (blob?: Blob) => {
+          // Back-compat: also handle onSilenceDetected
+          if (blob) {
+            this.log('🧘‍♂️ Rolling buffer VAD: Silence detected - processing speech');
+            await this.processAudioBlob(blob);
+          }
           if (this.options.onSilenceDetected) {
             this.options.onSilenceDetected();
-          }
-          const audioBlob = await this.stopRecording();
-          if (audioBlob) {
-            await this.processAudio(audioBlob);
           }
         },
         onError: (error: Error) => {
@@ -115,8 +118,8 @@ class ChatTextMicrophoneServiceClass {
 
       this.isRecording = true;
 
-      // Start rolling buffer VAD
-      await this.rollingBufferVAD.start(this.stream, this.audioContext, this.analyser);
+      // Start rolling buffer VAD (new interface - no need to pass analyser)
+      await this.rollingBufferVAD.start(this.stream, this.audioContext);
       
       // Set 45-second timeout to automatically stop recording
       this.recordingTimeout = setTimeout(async () => {
@@ -174,16 +177,25 @@ class ChatTextMicrophoneServiceClass {
       this.rollingBufferVAD = null;
     }
     
-    // Disconnect analysis nodes but keep AudioContext alive
-    if (this.mediaStreamSource) {
-      this.mediaStreamSource.disconnect();
-      this.mediaStreamSource = null;
-    }
+    // Note: New VAD system handles its own audio analysis cleanup
     
     // Keep AudioContext and stream alive for next speech
     // Only call full cleanup() when the service is completely done
     
     return finalBlob;
+  }
+
+  /**
+   * PROCESS AUDIO BLOB - Handle audio blob from new VAD system
+   */
+  private async processAudioBlob(audioBlob: Blob): Promise<void> {
+    if (this.isProcessing) {
+      this.log('⚠️ Already processing audio, skipping');
+      return;
+    }
+
+    this.log(`🎵 Processing audio blob: ${audioBlob.size} bytes, type: ${audioBlob.type}`);
+    await this.processAudio(audioBlob);
   }
 
   /**
@@ -246,11 +258,7 @@ class ChatTextMicrophoneServiceClass {
       this.rollingBufferVAD = null;
     }
 
-    // Disconnect audio nodes
-    if (this.mediaStreamSource) {
-      this.mediaStreamSource.disconnect();
-      this.mediaStreamSource = null;
-    }
+    // Note: New VAD system handles its own audio analysis cleanup
 
     // Close AudioContext
     if (this.audioContext && this.audioContext.state !== 'closed') {
@@ -265,7 +273,6 @@ class ChatTextMicrophoneServiceClass {
     }
 
     // Clear refs
-    this.analyser = null;
     this.audioLevel = 0;
     this.currentTraceId = null;
     this.recordingStartedAt = null;
@@ -307,10 +314,11 @@ class ChatTextMicrophoneServiceClass {
   }
 
   /**
-   * GET ANALYSER - Return current AnalyserNode for read-only realtime analysis
+   * GET ANALYSER - Note: New VAD system handles its own audio analysis
    */
   getAnalyser(): AnalyserNode | null {
-    return this.analyser;
+    // New VAD system handles its own audio analysis internally
+    return null;
   }
 
   /**
