@@ -141,14 +141,25 @@ export class ConversationMicrophoneServiceClass {
         // Create MediaRecorder with Chrome-optimized format
         const mrOptions: MediaRecorderOptions = {};
         if (typeof MediaRecorder !== 'undefined' && typeof MediaRecorder.isTypeSupported === 'function') {
-          if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-            mrOptions.mimeType = 'audio/webm;codecs=opus';
-            console.log('[ConversationMic] ✅ Using audio/webm;codecs=opus (Chrome-optimized)');
-          } else if (MediaRecorder.isTypeSupported('audio/webm')) {
-            mrOptions.mimeType = 'audio/webm';
-            console.log('[ConversationMic] ⚠️ Using audio/webm (fallback)');
+          if (isChrome) {
+            // Chrome: Use WAV format (mobile-friendly, reliable)
+            if (MediaRecorder.isTypeSupported('audio/wav')) {
+              mrOptions.mimeType = 'audio/wav';
+              console.log('[ConversationMic] ✅ Using audio/wav (Chrome-optimized)');
+            } else {
+              console.log('[ConversationMic] ⚠️ WAV not supported, using browser default');
+            }
           } else {
-            console.log('[ConversationMic] ⚠️ Using browser default mimeType');
+            // Safari/Others: Use WebM format
+            if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+              mrOptions.mimeType = 'audio/webm;codecs=opus';
+              console.log('[ConversationMic] ✅ Using audio/webm;codecs=opus (Safari-optimized)');
+            } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+              mrOptions.mimeType = 'audio/webm';
+              console.log('[ConversationMic] ⚠️ Using audio/webm (fallback)');
+            } else {
+              console.log('[ConversationMic] ⚠️ Using browser default mimeType');
+            }
           }
         }
         this.mediaRecorder = new MediaRecorder(this.stream, mrOptions);

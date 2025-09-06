@@ -90,15 +90,24 @@ class ChatTextMicrophoneServiceClass {
           const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
           if (isChrome) {
             this.log('🌐 CHROME DETECTED - Using Chrome mode for media source');
-          }
-          if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-            mrOptions.mimeType = 'audio/webm;codecs=opus';
-            this.log('✅ Using audio/webm;codecs=opus (Chrome-optimized)');
-          } else if (MediaRecorder.isTypeSupported('audio/webm')) {
-            mrOptions.mimeType = 'audio/webm';
-            this.log('⚠️ Using audio/webm (fallback)');
+            // Chrome: Use WAV format (mobile-friendly, reliable)
+            if (MediaRecorder.isTypeSupported('audio/wav')) {
+              mrOptions.mimeType = 'audio/wav';
+              this.log('✅ Using audio/wav (Chrome-optimized)');
+            } else {
+              this.log('⚠️ WAV not supported, using browser default');
+            }
           } else {
-            this.log('⚠️ Using browser default mimeType');
+            // Safari/Others: Use WebM format
+            if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+              mrOptions.mimeType = 'audio/webm;codecs=opus';
+              this.log('✅ Using audio/webm;codecs=opus (Safari-optimized)');
+            } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+              mrOptions.mimeType = 'audio/webm';
+              this.log('⚠️ Using audio/webm (fallback)');
+            } else {
+              this.log('⚠️ Using browser default mimeType');
+            }
           }
         }
         this.mediaRecorder = new MediaRecorder(this.stream, mrOptions);
