@@ -109,6 +109,49 @@ serve(async (req) => {
       );
     }
 
+    // For conversation mode: Fire and forget to LLM, then broadcast thinking-mode
+    if (meta.mode === 'conversation' && meta.chat_id) {
+      console.log('[openai-whisper] 🔄 CONVERSATION MODE: Calling LLM and broadcasting thinking-mode');
+      
+      // Fire and forget to LLM
+      try {
+        await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/llm-chat`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            chat_id: meta.chat_id,
+            text: transcript,
+            mode: 'conversation'
+          })
+        });
+        console.log('[openai-whisper] ✅ LLM call sent (fire and forget)');
+      } catch (error) {
+        console.error('[openai-whisper] ❌ LLM call failed:', error);
+      }
+
+      // Broadcast thinking-mode to WebSocket
+      try {
+        await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/broadcast`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            channel: `conversation:${meta.chat_id}`,
+            event: 'thinking-mode',
+            payload: { transcript }
+          })
+        });
+        console.log('[openai-whisper] ✅ thinking-mode broadcast sent');
+      } catch (error) {
+        console.error('[openai-whisper] ❌ thinking-mode broadcast failed:', error);
+      }
+    }
+
     // Return simple transcript result
     console.log('[openai-whisper] ✅ SUCCESS: Transcript received');
     return new Response(

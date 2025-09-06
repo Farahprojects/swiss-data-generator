@@ -43,6 +43,12 @@ export const ConversationOverlay: React.FC = () => {
         }
       });
       
+      connection.on('broadcast', { event: 'thinking-mode' }, ({ payload }) => {
+        if (!isShuttingDown.current) {
+          setState('thinking');
+        }
+      });
+      
       connection.subscribe();
       connectionRef.current = connection;
       return true;
@@ -150,13 +156,8 @@ export const ConversationOverlay: React.FC = () => {
         return;
       }
       
-      // Send to LLM
-      await llmService.sendMessage({
-        chat_id,
-        text: transcript,
-        client_msg_id: uuidv4(),
-        mode: 'conversation'
-      });
+      // STT will handle LLM call and broadcast thinking-mode
+      // No need to call LLM from frontend anymore
       
     } catch (error) {
       console.error('[ConversationOverlay] Processing failed:', error);
