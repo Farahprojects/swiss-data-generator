@@ -84,7 +84,7 @@ export class RollingBufferVAD {
     return { ...this.state };
   }
 
-  async start(stream: MediaStream, audioContext?: AudioContext): Promise<void> {
+  async start(stream: MediaStream, mediaRecorder: MediaRecorder, audioContext?: AudioContext): Promise<void> {
     this.cleanup(); // ensure clean start
     this.stream = stream;
 
@@ -95,37 +95,8 @@ export class RollingBufferVAD {
     this.analyser.fftSize = 1024; // light CPU
     this.sourceNode.connect(this.analyser);
 
-    // Select a safe mimeType
-    const mrOptions: MediaRecorderOptions = {};
-    try {
-      // Detect Chrome and log Chrome mode
-      const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
-      if (isChrome) {
-        this.log('🌐 CHROME DETECTED - Using Chrome mode for media source');
-      }
-      
-      // Force Chrome to use audio/webm;codecs=opus for Whisper compatibility
-      if (typeof MediaRecorder !== 'undefined' && typeof MediaRecorder.isTypeSupported === 'function') {
-        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-          mrOptions.mimeType = 'audio/webm;codecs=opus';
-          this.log('✅ Using audio/webm;codecs=opus (Chrome-optimized)');
-        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
-          mrOptions.mimeType = 'audio/webm';
-          this.log('⚠️ Using audio/webm (fallback)');
-        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-          mrOptions.mimeType = 'audio/mp4';
-          this.log('⚠️ Using audio/mp4 (fallback)');
-        } else {
-          this.log('⚠️ Using browser default mimeType');
-        }
-      } else {
-        throw new Error('MediaRecorder not available');
-      }
-      this.mediaRecorder = new MediaRecorder(stream, mrOptions);
-    } catch (e) {
-      this.error('Failed to create MediaRecorder', e);
-      throw e;
-    }
+    // Use provided MediaRecorder (created by service layer for user gesture enforcement)
+    this.mediaRecorder = mediaRecorder;
 
     // Rolling buffer: keep only N recent chunks
     const chunkMs = Math.max(100, this.options.chunkDurationMs);

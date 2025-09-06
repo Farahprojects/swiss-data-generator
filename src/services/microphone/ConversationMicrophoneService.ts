@@ -18,6 +18,7 @@ export interface ConversationMicrophoneOptions {
 export class ConversationMicrophoneServiceClass {
   private stream: MediaStream | null = null;
   private rollingBufferVAD: RollingBufferVAD | null = null;
+  private mediaRecorder: MediaRecorder | null = null;
   private isRecording = false;
   private isPaused = false;
   private audioContext: AudioContext | null = null;
@@ -76,6 +77,12 @@ export class ConversationMicrophoneServiceClass {
       // CACHE-FREE: Create fresh MediaStream for each turn to prevent format issues
       console.log('[ConversationMic] 🆕 Creating fresh MediaStream for turn:', turnId);
       
+      // Detect Chrome and log Chrome mode
+      const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+      if (isChrome) {
+        console.log('[ConversationMic] 🌐 CHROME DETECTED - Using Chrome mode for media source');
+      }
+      
       // Chrome-optimized: Explicit sample rate and channel count
       const audioConstraints = {
         sampleRate: { ideal: 48000 },    // 48kHz for Whisper compatibility
@@ -85,6 +92,7 @@ export class ConversationMicrophoneServiceClass {
         autoGainControl: true            // Consistent levels
       };
       
+      // USER GESTURE ENFORCEMENT: getUserMedia only called on user tap/click
       this.stream = await navigator.mediaDevices.getUserMedia({
         audio: audioConstraints
       });
@@ -118,6 +126,21 @@ export class ConversationMicrophoneServiceClass {
       this.analyser.fftSize = 1024;
       this.analyser.smoothingTimeConstant = 0.8;
       this.mediaStreamSource.connect(this.analyser);
+      
+      // Create MediaRecorder with Chrome-optimized format
+      const mrOptions: MediaRecorderOptions = {};
+      if (typeof MediaRecorder !== 'undefined' && typeof MediaRecorder.isTypeSupported === 'function') {
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+          mrOptions.mimeType = 'audio/webm;codecs=opus';
+          console.log('[ConversationMic] ✅ Using audio/webm;codecs=opus (Chrome-optimized)');
+        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+          mrOptions.mimeType = 'audio/webm';
+          console.log('[ConversationMic] ⚠️ Using audio/webm (fallback)');
+        } else {
+          console.log('[ConversationMic] ⚠️ Using browser default mimeType');
+        }
+      }
+      this.mediaRecorder = new MediaRecorder(this.stream, mrOptions);
 
       // Create VAD
       this.rollingBufferVAD = new RollingBufferVAD({
@@ -158,8 +181,8 @@ export class ConversationMicrophoneServiceClass {
       this.isRecording = true;
       audioArbitrator.setMicrophoneState('active');
 
-      // Start VAD (new interface - no need to pass analyser)
-      await this.rollingBufferVAD.start(this.stream, this.audioContext);
+      // Start VAD with MediaRecorder (created by service layer for user gesture enforcement)
+      await this.rollingBufferVAD.start(this.stream, this.mediaRecorder, this.audioContext);
 
       this.notifyListeners();
       return true;
@@ -295,9 +318,12 @@ export class ConversationMicrophoneServiceClass {
 
     if (this.rollingBufferVAD) {
       this.rollingBufferVAD.stop().catch(() => {});
-      this.rollingBufferVAD.cleanup(); // This now completely destroys MediaRecorder
+      this.rollingBufferVAD.cleanup();
       this.rollingBufferVAD = null;
     }
+    
+    // Clean up MediaRecorder
+    this.mediaRecorder = null;
 
     if (this.stream) {
       this.stream.getAudioTracks().forEach(track => track.stop());
