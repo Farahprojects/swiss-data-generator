@@ -202,7 +202,7 @@ class ChatTextMicrophoneServiceClass {
       });
       
       // Use supabase.functions.invoke for transcription
-      const { data, error } = await supabase.functions.invoke('google-speech-to-text', {
+      const { data, error } = await supabase.functions.invoke('openai-whisper', {
         body: audioBlob,
         headers: {
           'X-Trace-Id': this.currentTraceId || '',
@@ -210,10 +210,8 @@ class ChatTextMicrophoneServiceClass {
             measuredDurationMs,
             blobSize: audioBlob.size,
             config: {
-              encoding: 'WEBM_OPUS',
-              languageCode: 'en-US',
-              enableAutomaticPunctuation: true,
-              model: 'latest_long'
+              mimeType: 'audio/webm',
+              languageCode: 'en'
             }
           })
         }

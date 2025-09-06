@@ -6,7 +6,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
-import { microphoneArbitrator } from './MicrophoneArbitrator';
+import { audioArbitrator } from '@/services/audio/AudioArbitrator';
 
 export interface JournalMicrophoneOptions {
   onTranscriptReady?: (transcript: string) => void;
@@ -43,7 +43,7 @@ class JournalMicrophoneServiceClass {
    */
   async startRecording(): Promise<boolean> {
     // Check permission from arbitrator
-    if (!microphoneArbitrator.claim('journal')) {
+    if (!audioArbitrator.requestControl('microphone')) {
       console.error('[JournalMic] ❌ Cannot start - microphone in use by another domain');
       return false;
     }
@@ -95,7 +95,7 @@ class JournalMicrophoneServiceClass {
 
     } catch (error) {
       console.error('[JournalMic] ❌ Failed to start recording:', error);
-      microphoneArbitrator.release('journal');
+      audioArbitrator.releaseControl('microphone');
       return false;
     }
   }
@@ -184,43 +184,27 @@ class JournalMicrophoneServiceClass {
       this.isProcessing = true;
       this.notifyListeners();
       
-      const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm;codecs=opus' });
+      const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
       
-      // Convert to base64
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        try {
-          const base64Audio = (reader.result as string).split(',')[1];
-          
-          const { data, error } = await supabase.functions.invoke('google-speech-to-text', {
-            body: {
-              audioData: base64Audio,
-              config: {
-                encoding: 'WEBM_OPUS',
-                languageCode: 'en-US',
-                enableAutomaticPunctuation: true,
-                model: 'latest_long'
-              }
+      const { data, error } = await supabase.functions.invoke('openai-whisper', {
+        body: audioBlob,
+        headers: {
+          'X-Meta': JSON.stringify({
+            config: {
+              mimeType: 'audio/webm',
+              languageCode: 'en'
             }
-          });
-
-          if (error) throw error;
-          
-          const transcript = data?.transcript || '';
-          
-          if (this.options.onTranscriptReady && transcript) {
-            this.options.onTranscriptReady(transcript);
-          }
-          
-        } catch (error) {
-          console.error('[JournalMic] ❌ Transcription failed:', error);
-        } finally {
-          this.isProcessing = false;
-          this.notifyListeners();
+          })
         }
-      };
+      });
+
+      if (error) throw error;
       
-      reader.readAsDataURL(audioBlob);
+      const transcript = data?.transcript || '';
+      
+      if (this.options.onTranscriptReady && transcript) {
+        this.options.onTranscriptReady(transcript);
+      }
       
     } catch (error) {
       console.error('[JournalMic] ❌ Audio processing failed:', error);
@@ -258,7 +242,7 @@ class JournalMicrophoneServiceClass {
     this.audioLevel = 0;
 
     // Release arbitrator
-    microphoneArbitrator.release('journal');
+    audioArbitrator.releaseControl('microphone');
     
     this.notifyListeners();
   }
