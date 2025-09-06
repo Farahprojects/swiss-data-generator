@@ -32,6 +32,7 @@ export class RollingBufferVAD {
   private analyser: AnalyserNode | null = null;
   private monitoringRef = { current: false };
   private animationFrameId: number | null = null;
+  private stopping = false; // CRITICAL: Prevents race conditions during stop()
   
   private state: RollingBufferVADState = {
     audioLevel: 0,
@@ -48,7 +49,7 @@ export class RollingBufferVAD {
 
   constructor(options: RollingBufferVADOptions = {}) {
     this.options = {
-      lookbackWindowMs: 750,
+      lookbackWindowMs: 1000,     // Increased for better voice detection (prevents clipping)
       chunkDurationMs: 100,       // Mobile-friendly: Smaller chunks for better compatibility
       voiceThreshold: 0.012,
       silenceThreshold: 0.008,
@@ -129,9 +130,15 @@ export class RollingBufferVAD {
   }
 
   /**
-   * HANDLE AUDIO CHUNK - Simple chunk processing
+   * HANDLE AUDIO CHUNK - Simple chunk processing with race condition protection
    */
   private handleAudioChunk(chunk: Blob): void {
+    // CRITICAL: Prevent chunks from being added during stop() to avoid corruption
+    if (this.stopping) {
+      this.log('⚠️ Ignoring chunk during stop() to prevent corruption');
+      return;
+    }
+    
     // Always add to pre-buffer (rolling window)
     this.state.preBufferChunks.push(chunk);
     
@@ -232,7 +239,7 @@ export class RollingBufferVAD {
   }
 
   /**
-   * STOP - Stop recording and return final blob
+   * STOP - Stop recording and return final blob with race condition protection
    */
   stop(): Promise<Blob | null> {
     return new Promise((resolve) => {
@@ -241,23 +248,32 @@ export class RollingBufferVAD {
         return;
       }
 
+      // CRITICAL: Set stopping flag to prevent new chunks during stop()
+      this.stopping = true;
+      
       // Stop monitoring immediately to prevent race conditions
       this.monitoringRef.current = false;
 
       this.mediaRecorder.onstop = () => {
-        const finalBlob = this.createFinalBlob();
-        // CRITICAL: Always cleanup MediaRecorder after STT processing
-        this.cleanup();
-        resolve(finalBlob);
+        // CRITICAL: Wait 50ms to ensure last chunk is processed
+        setTimeout(() => {
+          const finalBlob = this.createFinalBlob();
+          // CRITICAL: Always cleanup MediaRecorder after STT processing
+          this.cleanup();
+          resolve(finalBlob);
+        }, 50);
       };
 
       if (this.mediaRecorder.state !== 'inactive') {
         this.mediaRecorder.stop();
       } else {
-        const finalBlob = this.createFinalBlob();
-        // CRITICAL: Always cleanup MediaRecorder after STT processing
-        this.cleanup();
-        resolve(finalBlob);
+        // CRITICAL: Wait 50ms even for inactive recorder
+        setTimeout(() => {
+          const finalBlob = this.createFinalBlob();
+          // CRITICAL: Always cleanup MediaRecorder after STT processing
+          this.cleanup();
+          resolve(finalBlob);
+        }, 50);
       }
     });
   }
@@ -310,6 +326,9 @@ export class RollingBufferVAD {
    */
   cleanup(): void {
     this.log('🧹 CACHE-FREE: Complete cleanup of RollingBufferVAD');
+    
+    // CRITICAL: Reset stopping flag
+    this.stopping = false;
     
     // Stop monitoring and cancel any pending animation frames
     this.monitoringRef.current = false;
