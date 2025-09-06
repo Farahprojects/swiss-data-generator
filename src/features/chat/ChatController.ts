@@ -150,6 +150,20 @@ class ChatController {
     }
   }
 
+  public pauseRealtimeSubscription() {
+    if (this.realtimeChannel) {
+      this.realtimeChannel.unsubscribe();
+      console.log('[ChatController] ⏸️ Paused WebSocket subscription');
+    }
+  }
+
+  public resumeRealtimeSubscription() {
+    if (this.realtimeChannel) {
+      this.realtimeChannel.subscribe();
+      console.log('[ChatController] ▶️ Resumed WebSocket subscription');
+    }
+  }
+
 
   /**
    * Initialize conversation (called when modal closes)
