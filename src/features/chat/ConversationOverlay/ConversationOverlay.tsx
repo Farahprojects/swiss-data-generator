@@ -101,32 +101,9 @@ export const ConversationOverlay: React.FC = () => {
       // Setup WebSocket
       await establishConnection();
       
-      // Get microphone permission with AGGRESSIVE audio constraints for webm/opus
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          sampleRate: 48000,        // CRITICAL: Must match opus codec requirements
-          channelCount: 1,          // CRITICAL: Mono for STT efficiency
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        }
-      });
-
-      // CRITICAL: Validate the stream has the correct audio format
-      const audioTrack = stream.getAudioTracks()[0];
-      const trackSettings = audioTrack.getSettings();
-      console.log('[ConversationOverlay] 🎛️ Stream acquired with settings:', trackSettings);
-      
-      // Validate sample rate matches our requirements
-      if (trackSettings.sampleRate && trackSettings.sampleRate !== 48000) {
-        console.warn(`[ConversationOverlay] ⚠️ Sample rate mismatch! Expected 48000, got ${trackSettings.sampleRate}`);
-      }
-      
-      // Validate channel count
-      if (trackSettings.channelCount && trackSettings.channelCount !== 1) {
-        console.warn(`[ConversationOverlay] ⚠️ Channel count mismatch! Expected 1, got ${trackSettings.channelCount}`);
-      }
-      conversationMicrophoneService.cacheStream(stream);
+      // CACHE-FREE: No need to get microphone permission here anymore
+      // The ConversationMicrophoneService will create fresh streams for each turn
+      console.log('[ConversationOverlay] 🆕 Cache-free mode: Microphone service will create fresh streams per turn');
       
       // Initialize microphone service
       conversationMicrophoneService.initialize({

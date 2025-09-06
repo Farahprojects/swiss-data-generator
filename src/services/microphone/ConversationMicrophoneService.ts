@@ -17,7 +17,6 @@ export interface ConversationMicrophoneOptions {
 
 export class ConversationMicrophoneServiceClass {
   private stream: MediaStream | null = null;
-  private cachedStream: MediaStream | null = null;
   private rollingBufferVAD: RollingBufferVAD | null = null;
   private isRecording = false;
   private isPaused = false;
@@ -40,13 +39,6 @@ export class ConversationMicrophoneServiceClass {
     this.options = { ...this.options, ...options };
   }
 
-  /**
-   * Cache microphone stream for session reuse
-   */
-  public cacheStream(stream: MediaStream): void {
-    this.cachedStream = stream;
-    this.stream = stream;
-  }
 
   /**
    * Start recording
@@ -74,42 +66,44 @@ export class ConversationMicrophoneServiceClass {
     const turnId = `turn-${Date.now()}`;
     this.currentTurnId = turnId;
 
-    // Ensure tracks are enabled
-    if (this.stream) {
-      this.stream.getAudioTracks().forEach(track => {
-        track.enabled = true;
-      });
-    }
-
     try {
-      // Use cached stream
-      if (this.cachedStream) {
-        this.stream = this.cachedStream;
-      } else {
-        console.error('[ConversationMic] No cached stream available');
-        return false;
-      }
+      // CACHE-FREE: Create fresh MediaStream for each turn to prevent format issues
+      console.log('[ConversationMic] 🆕 Creating fresh MediaStream for turn:', turnId);
+      
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          sampleRate: 48000,        // CRITICAL: Must match opus codec requirements
+          channelCount: 1,          // CRITICAL: Mono for STT efficiency
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          // Additional constraints to ensure webm/opus compatibility
+          latency: 0.01,            // Low latency for real-time
+          volume: 1.0               // Full volume
+        }
+      });
 
-      // Validate stream
+      // Validate fresh stream
       if (!this.stream || this.stream.getAudioTracks().length === 0) {
-        console.error('[ConversationMic] No audio tracks available');
+        console.error('[ConversationMic] No audio tracks available in fresh stream');
         return false;
       }
 
       const audioTrack = this.stream.getAudioTracks()[0];
       if (audioTrack.readyState !== 'live') {
-        console.error('[ConversationMic] Audio track not ready:', audioTrack.readyState);
+        console.error('[ConversationMic] Fresh audio track not ready:', audioTrack.readyState);
         return false;
       }
+
+      // Log fresh stream settings for debugging
+      const trackSettings = audioTrack.getSettings();
+      console.log('[ConversationMic] 🎛️ Fresh stream settings:', trackSettings);
 
       // Create fresh AudioContext for each turn to prevent stale data
       if (this.audioContext && this.audioContext.state !== 'closed') {
         this.audioContext.close().catch(() => {});
       }
       this.audioContext = new AudioContext({ sampleRate: 48000 });
-
-      // Use original stream directly - no cloning to prevent format issues
-      this.stream = this.cachedStream;
 
       // Create audio analysis chain
       this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
@@ -270,14 +264,18 @@ export class ConversationMicrophoneServiceClass {
   }
 
   /**
-   * Cleanup everything
+   * Cleanup everything - CACHE-FREE: Complete cleanup of all resources
    */
   forceCleanup(): void {
+    console.log('[ConversationMic] 🧹 CACHE-FREE: Complete cleanup of all resources');
+    
     this.isRecording = false;
     this.audioLevel = 0;
+    this.currentTurnId = null;
 
     if (this.rollingBufferVAD) {
       this.rollingBufferVAD.stop().catch(() => {});
+      this.rollingBufferVAD.cleanup();
       this.rollingBufferVAD = null;
     }
 
@@ -289,6 +287,11 @@ export class ConversationMicrophoneServiceClass {
     if (this.mediaStreamSource) {
       this.mediaStreamSource.disconnect();
       this.mediaStreamSource = null;
+    }
+
+    if (this.analyser) {
+      this.analyser.disconnect();
+      this.analyser = null;
     }
 
     if (this.audioContext && this.audioContext.state !== 'closed') {
