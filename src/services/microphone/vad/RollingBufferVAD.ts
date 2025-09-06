@@ -82,19 +82,19 @@ export class RollingBufferVAD {
       silenceStartTime: null
     };
 
-    // Google STT V2: Simplified MediaRecorder configuration - let Google auto-detect
+    // OpenAI Whisper: Use mobile-friendly format that OpenAI supports
     const options: MediaRecorderOptions = { 
-      mimeType: 'audio/webm;codecs=opus'  // Preferred format, but Google V2 can handle others
+      mimeType: 'audio/webm'  // Plain webm - OpenAI Whisper compatible
     };
     
-    // Google STT V2: Check if webm/opus is supported, but don't fail if not
+    // Check if webm is supported (mobile-friendly)
     if (typeof MediaRecorder !== 'undefined' && 
         typeof MediaRecorder.isTypeSupported === 'function') {
       
-      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-        this.log('✅ Using webm/opus format for Google STT V2');
+      if (MediaRecorder.isTypeSupported('audio/webm')) {
+        this.log('✅ Using webm format for OpenAI Whisper');
       } else {
-        this.log('⚠️ webm/opus not supported, using browser default - Google STT V2 will auto-detect');
+        this.log('⚠️ webm not supported, using browser default - OpenAI Whisper will auto-detect');
         delete options.mimeType; // Let browser choose
       }
     } else {
@@ -104,13 +104,13 @@ export class RollingBufferVAD {
 
     this.mediaRecorder = new MediaRecorder(stream, options);
 
-    // Google STT V2: Log format being used - Google will auto-detect
+    // OpenAI Whisper: Log format being used
     this.log(`✅ MediaRecorder using: ${this.mediaRecorder.mimeType}`);
 
     // Handle data chunks for rolling buffer
     this.mediaRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) {
-        // Google STT V2: Simple chunk logging
+        // OpenAI Whisper: Simple chunk logging
         this.log(`📦 Chunk received: size=${event.data.size}, type=${event.data.type}`);
         this.handleAudioChunk(event.data);
       }
@@ -285,8 +285,8 @@ export class RollingBufferVAD {
     this.log(`🎵 Audio level during recording: ${this.state.audioLevel.toFixed(4)} (threshold: ${this.options.voiceThreshold})`);
     this.log(`🎵 Recording voice: ${this.isRecordingVoice}`);
 
-    // Google STT V2: Create final blob - Google will auto-detect format
-    const finalBlob = new Blob(allChunks, { type: allChunks[0]?.type || 'audio/webm' });
+    // OpenAI Whisper: Create final blob - plain webm format
+    const finalBlob = new Blob(allChunks, { type: 'audio/webm' });
     
     // Simple size check
     if (finalBlob.size < 100) {
