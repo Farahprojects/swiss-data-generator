@@ -141,6 +141,9 @@ export const ConversationOverlay: React.FC = () => {
       return;
     }
     
+    // 🎤 IMMEDIATELY pause microphone when silence detected to prevent race condition
+    conversationMicrophoneService.mute();
+    
     isProcessingRef.current = true;
     setState('thinking');
     
