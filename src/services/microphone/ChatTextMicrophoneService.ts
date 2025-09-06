@@ -35,7 +35,6 @@ class ChatTextMicrophoneServiceClass {
    * INITIALIZE - Set up service with options
    */
   initialize(options: ChatTextMicrophoneOptions): void {
-    this.log('🔧 Initializing service with options', options);
     this.options = options;
   }
 
@@ -52,11 +51,11 @@ class ChatTextMicrophoneServiceClass {
     try {
       this.currentTraceId = this.generateTraceId();
       this.recordingStartedAt = Date.now();
-      this.log('🎤 Starting chat text voice recording');
+      // Starting chat text voice recording
 
       // SESSION-BASED: Create MediaStream only if we don't have one
       if (!this.stream) {
-        this.log('🆕 Creating MediaStream for session (first use)');
+        // Creating MediaStream for session (first use)
         // Create our own stream with Chrome-optimized constraints
         this.stream = await navigator.mediaDevices.getUserMedia({
           audio: {
@@ -70,18 +69,10 @@ class ChatTextMicrophoneServiceClass {
         });
         
         const trackSettings = this.stream.getAudioTracks()[0]?.getSettings?.() || {};
-        this.log('🎛️ getUserMedia acquired. Track settings:', trackSettings);
-        
-        // Log actual settings for debugging
-        this.log(`🎛️ Actual sample rate: ${trackSettings.sampleRate || 'unknown'}`);
-        this.log(`🎛️ Actual channel count: ${trackSettings.channelCount || 'unknown'}`);
 
         // Set up audio analysis - universal approach
         if (!this.audioContext || this.audioContext.state === 'closed') {
           this.audioContext = new AudioContext(); // Universal: Let browser choose optimal settings
-          this.log('🎛️ Created new AudioContext for chat text microphone');
-        } else {
-          this.log('🎛️ Reusing existing AudioContext for chat text microphone');
         }
 
         // Create MediaRecorder with Chrome-optimized format
@@ -89,13 +80,10 @@ class ChatTextMicrophoneServiceClass {
         if (typeof MediaRecorder !== 'undefined' && typeof MediaRecorder.isTypeSupported === 'function') {
           const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
           if (isChrome) {
-            this.log('🌐 CHROME DETECTED - Using Chrome mode for media source');
-            // Chrome: Use WebM format
-            if (MediaRecorder.isTypeSupported('audio/webm')) {
-              mrOptions.mimeType = 'audio/webm';
-              this.log('✅ Using audio/webm (Chrome-optimized)');
-            } else {
-              this.log('⚠️ WebM not supported, using browser default');
+            // Chrome: Use MP3 format (no header fragmentation issues)
+            if (MediaRecorder.isTypeSupported('audio/mp4')) {
+              mrOptions.mimeType = 'audio/mp4';
+              mrOptions.audioBitsPerSecond = 128000;
             }
           } else {
             // Safari/Others: Use WebM format
@@ -112,7 +100,7 @@ class ChatTextMicrophoneServiceClass {
         }
         this.mediaRecorder = new MediaRecorder(this.stream, mrOptions);
       } else {
-        this.log('♻️ Reusing existing MediaStream for session');
+        // Reusing existing MediaStream for session
       }
 
       // Note: New VAD system handles its own audio analysis internally
@@ -120,9 +108,8 @@ class ChatTextMicrophoneServiceClass {
       // Initialize rolling buffer VAD with team's approach
       this.rollingBufferVAD = new RollingBufferVAD({
         lookbackWindowMs: 15000,
-        chunkDurationMs: 200,
+        chunkDurationMs: 300,
         preRollMs: 250,
-        postRollMs: 150,
         pruneOnUtterance: true,
         voiceThreshold: 0.012,
         silenceThreshold: 0.008,
@@ -131,7 +118,7 @@ class ChatTextMicrophoneServiceClass {
         maxUtteranceMs: 15000,
         minUtteranceMs: 250,
         onVoiceStart: () => {
-          this.log('🎤 Rolling buffer VAD: Voice activity confirmed');
+          // Voice activity confirmed
         },
         onUtterance: async (blob: Blob) => {
           await this.processAudioBlob(blob);
@@ -169,7 +156,6 @@ class ChatTextMicrophoneServiceClass {
       }, 45000);
       
       this.notifyListeners();
-      this.log('✅ Recording started');
       return true;
 
     } catch (error) {
@@ -185,7 +171,7 @@ class ChatTextMicrophoneServiceClass {
   async stopRecording(): Promise<Blob | null> {
     if (!this.isRecording) return;
 
-    this.log('🛑 Stopping recording');
+    // Stopping recording
     
     this.isRecording = false;
 
@@ -228,7 +214,6 @@ class ChatTextMicrophoneServiceClass {
    */
   private async processAudioBlob(audioBlob: Blob): Promise<void> {
     if (this.isProcessing) {
-      this.log('⚠️ Already processing audio, skipping');
       return;
     }
 
@@ -245,10 +230,7 @@ class ChatTextMicrophoneServiceClass {
       
       const measuredDurationMs = this.recordingStartedAt ? Date.now() - this.recordingStartedAt : 0;
 
-      this.log('🔄 Processing audio with VAD lookback', { 
-        finalBlobSize: audioBlob.size,
-        measuredDurationMs
-      });
+      // Audio processing started
       
       // Use supabase.functions.invoke for transcription
       const { data, error } = await supabase.functions.invoke('openai-whisper', {
@@ -270,7 +252,7 @@ class ChatTextMicrophoneServiceClass {
       if (error) throw error;
       
       const transcript = data?.transcript || '';
-      this.log('📝 Transcript received', { length: transcript.length });
+      // Transcript received
       
       if (this.options.onTranscriptReady && transcript) {
         this.options.onTranscriptReady(transcript);
@@ -297,7 +279,6 @@ class ChatTextMicrophoneServiceClass {
    * CLEANUP - Complete domain cleanup
    */
   private cleanup(): void {
-    this.log('🧹 Cleaning up chat text microphone');
 
     // VAD is self-cleaning - no need to call cleanup() here
     // The VAD.stop() method already calls cleanup() internally
@@ -398,7 +379,6 @@ class ChatTextMicrophoneServiceClass {
    * FORCE CLEANUP - Emergency cleanup
    */
   forceCleanup(): void {
-    this.log('🚨 Force cleanup');
     this.isRecording = false;
     this.isProcessing = false;
     this.cleanup();

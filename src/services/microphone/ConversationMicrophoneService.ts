@@ -47,16 +47,13 @@ export class ConversationMicrophoneServiceClass {
    * Start recording - ATOMIC: Clean then start
    */
   public async startRecording(): Promise<boolean> {
-    console.log('[ConversationMic] 🎯 RECEIVED USER GESTURE: Processing microphone access request');
     
     // SESSION-BASED: Only clean if we don't have a stream (first turn)
     if (!this.stream) {
       this.forceCleanup();
-      console.log('[ConversationMic] 🧹 Media source cleaned before start (first turn)');
-      console.log('[ConversationMic] 🎤 GESTURE → MEDIA SOURCE: Creating fresh MediaStream from user gesture');
+      // Media source cleaned before start (first turn)
     } else {
-      console.log('[ConversationMic] ♻️ Reusing existing MediaStream for turn');
-      console.log('[ConversationMic] 🎤 GESTURE → MEDIA SOURCE: Using existing MediaStream (session-based)');
+      // Reusing existing MediaStream for turn
     }
     
     // Request audio control
@@ -84,12 +81,12 @@ export class ConversationMicrophoneServiceClass {
     try {
       // SESSION-BASED: Create MediaStream only if we don't have one (first turn)
       if (!this.stream) {
-        console.log('[ConversationMic] 🆕 Creating MediaStream for session (first turn):', turnId);
+        // Creating MediaStream for session (first turn)
         
         // Detect Chrome and log Chrome mode
         const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
         if (isChrome) {
-          console.log('[ConversationMic] 🌐 CHROME DETECTED - Using Chrome mode for media source');
+          // Chrome detected
         }
         
         // Chrome-optimized: Explicit sample rate and channel count
@@ -102,11 +99,9 @@ export class ConversationMicrophoneServiceClass {
         };
         
         // USER GESTURE ENFORCEMENT: getUserMedia only called on user tap/click
-        console.log('[ConversationMic] 🎤 GESTURE → getUserMedia: Calling navigator.mediaDevices.getUserMedia() with user gesture context');
         this.stream = await navigator.mediaDevices.getUserMedia({
           audio: audioConstraints
         });
-        console.log('[ConversationMic] ✅ GESTURE SUCCESS: MediaStream created from user gesture');
 
         // Validate fresh stream
         if (!this.stream || this.stream.getAudioTracks().length === 0) {
@@ -122,7 +117,6 @@ export class ConversationMicrophoneServiceClass {
 
         // Log fresh stream settings for debugging
         const trackSettings = audioTrack.getSettings();
-        console.log('[ConversationMic] 🎛️ Fresh stream settings:', trackSettings);
 
         // Create AudioContext for session
         if (this.audioContext && this.audioContext.state !== 'closed') {
@@ -142,12 +136,10 @@ export class ConversationMicrophoneServiceClass {
         const mrOptions: MediaRecorderOptions = {};
         if (typeof MediaRecorder !== 'undefined' && typeof MediaRecorder.isTypeSupported === 'function') {
           if (isChrome) {
-            // Chrome: Use WebM format
-            if (MediaRecorder.isTypeSupported('audio/webm')) {
-              mrOptions.mimeType = 'audio/webm';
-              console.log('[ConversationMic] ✅ Using audio/webm (Chrome-optimized)');
-            } else {
-              console.log('[ConversationMic] ⚠️ WebM not supported, using browser default');
+            // Chrome: Use MP3 format (no header fragmentation issues)
+            if (MediaRecorder.isTypeSupported('audio/mp4')) {
+              mrOptions.mimeType = 'audio/mp4';
+              mrOptions.audioBitsPerSecond = 128000;
             }
           } else {
             // Safari/Others: Use WebM format
@@ -175,9 +167,8 @@ export class ConversationMicrophoneServiceClass {
       // Create VAD
       this.rollingBufferVAD = new RollingBufferVAD({
         lookbackWindowMs: 15000,
-        chunkDurationMs: 200,
+        chunkDurationMs: 300,
         preRollMs: 250,
-        postRollMs: 150,
         pruneOnUtterance: true,
         voiceThreshold: 0.012,
         silenceThreshold: 0.008,
@@ -210,12 +201,9 @@ export class ConversationMicrophoneServiceClass {
 
       this.isRecording = true;
       audioArbitrator.setMicrophoneState('active');
-      console.log('[ConversationMic] 🎤 MICROPHONE TURNED ON: MediaStream active and recording started');
 
       // Start VAD with MediaRecorder (created by service layer for user gesture enforcement)
-      console.log('[ConversationMic] 🎤 GESTURE → VAD: Starting voice activity detection with MediaStream');
       await this.rollingBufferVAD.start(this.stream, this.mediaRecorder, this.audioContext);
-      console.log('[ConversationMic] ✅ GESTURE LIFECYCLE COMPLETE: User gesture → MediaStream → Microphone ON → VAD Active');
 
       this.notifyListeners();
       return true;
@@ -288,7 +276,7 @@ export class ConversationMicrophoneServiceClass {
   unmute(): void {
     // CRITICAL: Clean media source BEFORE unmuting to prevent race conditions
     this.forceCleanup();
-    console.log('[ConversationMic] 🧹 Media source cleaned before unmute');
+    // Media source cleaned before unmute
     
     if (this.stream) {
       this.stream.getAudioTracks().forEach(track => {
@@ -343,7 +331,7 @@ export class ConversationMicrophoneServiceClass {
    * Cleanup everything - CACHE-FREE: Complete cleanup of all resources
    */
   forceCleanup(): void {
-    console.log('[ConversationMic] 🧹 CACHE-FREE: Complete cleanup of all resources');
+    // Complete cleanup of all resources
     
     this.isRecording = false;
     this.audioLevel = 0;
