@@ -235,6 +235,9 @@ class ChatTextMicrophoneServiceClass {
         this.options.onTranscriptReady(transcript);
       }
       
+      // Stop recording after STT processing (whether transcript is empty or not)
+      await this.stopRecording();
+      
     } catch (error) {
       this.error('❌ Transcription failed:', error);
     } finally {
