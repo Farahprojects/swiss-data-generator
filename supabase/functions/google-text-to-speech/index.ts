@@ -94,6 +94,8 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 serve(async (req) => {
 const startTime = Date.now();
 
+console.log('[google-tts] 🚀 FIRST: Function started - processing TTS request');
+
 if (req.method === "OPTIONS") {
 return new Response(null, { status: 204, headers: CORS_HEADERS });
 }
@@ -158,6 +160,7 @@ fireAndForget(
 
 // Minimal response
 const responseData = { success: true, audioUrl: null, storagePath: null };
+console.log('[google-tts] ✅ LAST: Function completed - returning response with TTS audio broadcast');
 return new Response(JSON.stringify(responseData), {
   headers: {
     ...CORS_HEADERS,
