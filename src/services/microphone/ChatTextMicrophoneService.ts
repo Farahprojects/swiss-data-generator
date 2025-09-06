@@ -98,14 +98,11 @@ class ChatTextMicrophoneServiceClass {
           this.log('🎤 Rolling buffer VAD: Voice activity confirmed');
         },
         onUtterance: async (blob: Blob) => {
-          this.log('🎤 Rolling buffer VAD: Utterance detected - processing speech', { blobSize: blob.size, blobType: blob.type });
           await this.processAudioBlob(blob);
         },
         onSilenceDetected: async (blob?: Blob) => {
-          this.log('🔇 Rolling buffer VAD: Silence detected', { hasBlob: !!blob, blobSize: blob?.size, blobType: blob?.type });
           // Back-compat: also handle onSilenceDetected
           if (blob) {
-            this.log('🔇 Rolling buffer VAD: Processing speech from silence detection');
             await this.processAudioBlob(blob);
           }
           if (this.options.onSilenceDetected) {
@@ -120,9 +117,7 @@ class ChatTextMicrophoneServiceClass {
       this.isRecording = true;
 
       // Start rolling buffer VAD (new interface - no need to pass analyser)
-      this.log('🚀 Starting rolling buffer VAD...');
       await this.rollingBufferVAD.start(this.stream, this.audioContext);
-      this.log('✅ Rolling buffer VAD started successfully');
       
       // Set 45-second timeout to automatically stop recording
       this.recordingTimeout = setTimeout(async () => {
@@ -197,7 +192,6 @@ class ChatTextMicrophoneServiceClass {
       return;
     }
 
-    this.log(`🎵 PROCESSING AUDIO BLOB: ${audioBlob.size} bytes, type: ${audioBlob.type}`);
     await this.processAudio(audioBlob);
   }
 

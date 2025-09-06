@@ -43,7 +43,7 @@ export const ChatInput = () => {
     toggleRecording: toggleMicRecording 
   } = useChatTextMicrophone({
     onTranscriptReady: handleTranscriptReady,
-    silenceTimeoutMs: 1500
+    silenceTimeoutMs: 1200
   });
 
   // 🎵 REALTIME AUDIO LEVEL - Auto-attaches to microphone lifecycle

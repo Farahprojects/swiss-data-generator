@@ -29,7 +29,6 @@ export const useChatTextRealtimeAudioLevel = ({
   const initializeAnalyser = useCallback(async () => {
     // New VAD system provides audio level through service state
     // No need to access AnalyserNode directly
-    console.log('[useChatTextRealtimeAudioLevel] ✅ Initialized with new VAD approach');
   }, []);
 
   // 🎵 Cleanup local refs
@@ -66,10 +65,6 @@ export const useChatTextRealtimeAudioLevel = ({
       const serviceState = chatTextMicrophoneService.getState();
       const rawLevel = serviceState.audioLevel;
 
-      // Debug logging (remove after testing)
-      if (rawLevel > 0.01) {
-        console.log('[useChatTextRealtimeAudioLevel] 🎵 Audio level:', rawLevel);
-      }
 
       // Apply smoothing to prevent jittery animations
       smoothedLevelRef.current = smoothedLevelRef.current * smoothingFactor + rawLevel * (1 - smoothingFactor);
