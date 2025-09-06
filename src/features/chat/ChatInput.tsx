@@ -6,7 +6,6 @@ import { useChatStore } from '@/core/store';
 import { chatController } from './ChatController';
 import { useConversationUIStore } from './conversation-ui-store';
 import { useChatTextMicrophone } from '@/hooks/microphone/useChatTextMicrophone';
-import { useChatTextRealtimeAudioLevel } from '@/hooks/useChatTextRealtimeAudioLevel';
 import { VoiceWaveform } from './VoiceWaveform';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
 
@@ -40,14 +39,11 @@ export const ChatInput = () => {
     isRecording: isMicRecording, 
     isProcessing: isMicProcessing,
     service: microphoneService,
-    toggleRecording: toggleMicRecording 
+    toggleRecording: toggleMicRecording,
+    audioLevelRef
   } = useChatTextMicrophone({
     onTranscriptReady: handleTranscriptReady,
-    silenceTimeoutMs: 1200
-  });
-
-  // 🎵 REALTIME AUDIO LEVEL - Auto-attaches to microphone lifecycle
-  const audioLevelRef = useChatTextRealtimeAudioLevel({
+    silenceTimeoutMs: 1200,
     targetFPS: 30, // Mobile-optimized frame rate
     smoothingFactor: 0.8, // Smooth animations
   });

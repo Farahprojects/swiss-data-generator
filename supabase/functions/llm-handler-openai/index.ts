@@ -45,16 +45,6 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    
-    // Log all incoming payloads to confirm shape
-    console.log('[llm-handler-openai] 📥 RECEIVED PAYLOAD:', {
-      chat_id: body.chat_id,
-      text: body.text ? body.text.substring(0, 100) + (body.text.length > 100 ? '...' : '') : 'NO_TEXT',
-      client_msg_id: body.client_msg_id,
-      mode: body.mode,
-      fullPayload: body
-    });
-    
     const { chat_id, text } = body;
 
     if (!chat_id || !text) {

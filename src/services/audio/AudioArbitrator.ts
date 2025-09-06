@@ -20,7 +20,7 @@ class AudioArbitrator {
     if (system === 'tts' && this.currentSystem === 'microphone' && this.microphoneState === 'muted') {
       this.currentSystem = system;
       this.notifyListeners();
-      console.log(`🎵 [AudioArbitrator] ${system.toUpperCase()} took control (microphone muted)`);
+      // Audio control taken (microphone muted)
       return true;
     }
 
@@ -28,7 +28,7 @@ class AudioArbitrator {
     if (this.currentSystem === 'none' || this.currentSystem === system) {
       this.currentSystem = system;
       this.notifyListeners();
-      console.log(`🎵 [AudioArbitrator] ${system.toUpperCase()} took control`);
+      // Audio control taken
       return true;
     }
 
@@ -51,7 +51,7 @@ class AudioArbitrator {
     if (this.currentSystem === system) {
       this.currentSystem = 'none';
       this.notifyListeners();
-      console.log(`🎵 [AudioArbitrator] ${system.toUpperCase()} released control`);
+      // Audio control released
     }
   }
 
@@ -60,7 +60,7 @@ class AudioArbitrator {
    */
   setMicrophoneState(state: MicrophoneState): void {
     this.microphoneState = state;
-    console.log(`🎵 [AudioArbitrator] Microphone state: ${state.toUpperCase()}`);
+    // Microphone state updated
   }
 
   /**

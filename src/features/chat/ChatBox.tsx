@@ -76,7 +76,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ isGuestThreadReady = false, gu
   useEffect(() => {
     return () => {
       // Ensure all listeners are cleaned up when component unmounts
-      console.log('[ChatBox] Component unmounting, cleaning up all listeners');
+      // Component unmounting, cleaning up all listeners
     };
   }, []);
 
