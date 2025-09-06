@@ -238,8 +238,14 @@ class ChatTextMicrophoneServiceClass {
       // Stop recording after STT processing (whether transcript is empty or not)
       await this.stopRecording();
       
+      // Ensure browser microphone is turned off
+      this.cleanup();
+      
     } catch (error) {
       this.error('❌ Transcription failed:', error);
+      // Stop recording and browser mic even if STT fails
+      await this.stopRecording();
+      this.cleanup();
     } finally {
       this.isProcessing = false;
       this.notifyListeners();
