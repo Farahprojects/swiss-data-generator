@@ -47,9 +47,13 @@ export class ConversationMicrophoneServiceClass {
    * Start recording - ATOMIC: Clean then start
    */
   public async startRecording(): Promise<boolean> {
-    // CRITICAL: Clean media source BEFORE starting to prevent race conditions
-    this.forceCleanup();
-    console.log('[ConversationMic] 🧹 Media source cleaned before start');
+    // SESSION-BASED: Only clean if we don't have a stream (first turn)
+    if (!this.stream) {
+      this.forceCleanup();
+      console.log('[ConversationMic] 🧹 Media source cleaned before start (first turn)');
+    } else {
+      console.log('[ConversationMic] ♻️ Reusing existing MediaStream for turn');
+    }
     
     // Request audio control
     if (!audioArbitrator.requestControl('microphone')) {
@@ -74,73 +78,77 @@ export class ConversationMicrophoneServiceClass {
     this.currentTurnId = turnId;
 
     try {
-      // CACHE-FREE: Create fresh MediaStream for each turn to prevent format issues
-      console.log('[ConversationMic] 🆕 Creating fresh MediaStream for turn:', turnId);
-      
-      // Detect Chrome and log Chrome mode
-      const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
-      if (isChrome) {
-        console.log('[ConversationMic] 🌐 CHROME DETECTED - Using Chrome mode for media source');
-      }
-      
-      // Chrome-optimized: Explicit sample rate and channel count
-      const audioConstraints = {
-        sampleRate: { ideal: 48000 },    // 48kHz for Whisper compatibility
-        channelCount: { ideal: 1 },      // Mono channel
-        echoCancellation: true,          // Clean input
-        noiseSuppression: true,          // Remove background noise
-        autoGainControl: true            // Consistent levels
-      };
-      
-      // USER GESTURE ENFORCEMENT: getUserMedia only called on user tap/click
-      this.stream = await navigator.mediaDevices.getUserMedia({
-        audio: audioConstraints
-      });
-
-      // Validate fresh stream
-      if (!this.stream || this.stream.getAudioTracks().length === 0) {
-        console.error('[ConversationMic] No audio tracks available in fresh stream');
-        return false;
-      }
-
-      const audioTrack = this.stream.getAudioTracks()[0];
-      if (audioTrack.readyState !== 'live') {
-        console.error('[ConversationMic] Fresh audio track not ready:', audioTrack.readyState);
-        return false;
-      }
-
-      // Log fresh stream settings for debugging
-      const trackSettings = audioTrack.getSettings();
-      console.log('[ConversationMic] 🎛️ Fresh stream settings:', trackSettings);
-
-      // Create fresh AudioContext for each turn to prevent stale data
-      if (this.audioContext && this.audioContext.state !== 'closed') {
-        this.audioContext.close().catch(() => {});
-      }
-      // Universal: Let browser choose optimal settings
-      this.audioContext = new AudioContext();
-
-      // Create audio analysis chain
-      this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
-      this.analyser = this.audioContext.createAnalyser();
-      this.analyser.fftSize = 1024;
-      this.analyser.smoothingTimeConstant = 0.8;
-      this.mediaStreamSource.connect(this.analyser);
-      
-      // Create MediaRecorder with Chrome-optimized format
-      const mrOptions: MediaRecorderOptions = {};
-      if (typeof MediaRecorder !== 'undefined' && typeof MediaRecorder.isTypeSupported === 'function') {
-        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-          mrOptions.mimeType = 'audio/webm;codecs=opus';
-          console.log('[ConversationMic] ✅ Using audio/webm;codecs=opus (Chrome-optimized)');
-        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
-          mrOptions.mimeType = 'audio/webm';
-          console.log('[ConversationMic] ⚠️ Using audio/webm (fallback)');
-        } else {
-          console.log('[ConversationMic] ⚠️ Using browser default mimeType');
+      // SESSION-BASED: Create MediaStream only if we don't have one (first turn)
+      if (!this.stream) {
+        console.log('[ConversationMic] 🆕 Creating MediaStream for session (first turn):', turnId);
+        
+        // Detect Chrome and log Chrome mode
+        const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+        if (isChrome) {
+          console.log('[ConversationMic] 🌐 CHROME DETECTED - Using Chrome mode for media source');
         }
+        
+        // Chrome-optimized: Explicit sample rate and channel count
+        const audioConstraints = {
+          sampleRate: { ideal: 48000 },    // 48kHz for Whisper compatibility
+          channelCount: { ideal: 1 },      // Mono channel
+          echoCancellation: true,          // Clean input
+          noiseSuppression: true,          // Remove background noise
+          autoGainControl: true            // Consistent levels
+        };
+        
+        // USER GESTURE ENFORCEMENT: getUserMedia only called on user tap/click
+        this.stream = await navigator.mediaDevices.getUserMedia({
+          audio: audioConstraints
+        });
+
+        // Validate fresh stream
+        if (!this.stream || this.stream.getAudioTracks().length === 0) {
+          console.error('[ConversationMic] No audio tracks available in fresh stream');
+          return false;
+        }
+
+        const audioTrack = this.stream.getAudioTracks()[0];
+        if (audioTrack.readyState !== 'live') {
+          console.error('[ConversationMic] Fresh audio track not ready:', audioTrack.readyState);
+          return false;
+        }
+
+        // Log fresh stream settings for debugging
+        const trackSettings = audioTrack.getSettings();
+        console.log('[ConversationMic] 🎛️ Fresh stream settings:', trackSettings);
+
+        // Create AudioContext for session
+        if (this.audioContext && this.audioContext.state !== 'closed') {
+          this.audioContext.close().catch(() => {});
+        }
+        // Universal: Let browser choose optimal settings
+        this.audioContext = new AudioContext();
+
+        // Create audio analysis chain
+        this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
+        this.analyser = this.audioContext.createAnalyser();
+        this.analyser.fftSize = 1024;
+        this.analyser.smoothingTimeConstant = 0.8;
+        this.mediaStreamSource.connect(this.analyser);
+        
+        // Create MediaRecorder with Chrome-optimized format
+        const mrOptions: MediaRecorderOptions = {};
+        if (typeof MediaRecorder !== 'undefined' && typeof MediaRecorder.isTypeSupported === 'function') {
+          if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+            mrOptions.mimeType = 'audio/webm;codecs=opus';
+            console.log('[ConversationMic] ✅ Using audio/webm;codecs=opus (Chrome-optimized)');
+          } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+            mrOptions.mimeType = 'audio/webm';
+            console.log('[ConversationMic] ⚠️ Using audio/webm (fallback)');
+          } else {
+            console.log('[ConversationMic] ⚠️ Using browser default mimeType');
+          }
+        }
+        this.mediaRecorder = new MediaRecorder(this.stream, mrOptions);
+      } else {
+        console.log('[ConversationMic] ♻️ Reusing existing MediaStream for turn:', turnId);
       }
-      this.mediaRecorder = new MediaRecorder(this.stream, mrOptions);
 
       // Create VAD
       this.rollingBufferVAD = new RollingBufferVAD({
