@@ -98,6 +98,12 @@ export class RollingBufferVAD {
     // Select a safe mimeType
     const mrOptions: MediaRecorderOptions = {};
     try {
+      // Detect Chrome and log Chrome mode
+      const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+      if (isChrome) {
+        this.log('🌐 CHROME DETECTED - Using Chrome mode for media source');
+      }
+      
       // Force Chrome to use audio/webm;codecs=opus for Whisper compatibility
       if (typeof MediaRecorder !== 'undefined' && typeof MediaRecorder.isTypeSupported === 'function') {
         if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
