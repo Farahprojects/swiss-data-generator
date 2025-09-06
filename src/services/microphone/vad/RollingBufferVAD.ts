@@ -26,6 +26,11 @@ export interface RollingBufferVADState {
   activeChunks: Blob[];
 }
 
+interface AudioChunk {
+  data: Blob;
+  timestamp: number;
+}
+
 export class RollingBufferVAD {
   private mediaRecorder: MediaRecorder | null = null;
   private audioContext: AudioContext | null = null;
@@ -33,6 +38,11 @@ export class RollingBufferVAD {
   private monitoringRef = { current: false };
   private animationFrameId: number | null = null;
   private stopping = false; // CRITICAL: Prevents race conditions during stop()
+  
+  // CONTINUOUS RECORDING: Rolling buffer of recent chunks
+  private audioBuffer: AudioChunk[] = [];
+  private bufferDurationMs = 30000; // Keep 30s of audio
+  private isRecordingContinuously = false;
   
   private state: RollingBufferVADState = {
     audioLevel: 0,
@@ -112,11 +122,23 @@ export class RollingBufferVAD {
     // OpenAI Whisper: Log format being used
     this.log(`✅ MediaRecorder using: ${this.mediaRecorder.mimeType}`);
 
-    // Handle data chunks for rolling buffer
+    // CONTINUOUS RECORDING: Handle data chunks for rolling buffer
     this.mediaRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) {
+        // Add to continuous rolling buffer
+        this.audioBuffer.push({
+          data: event.data,
+          timestamp: Date.now()
+        });
+        
+        // Remove old chunks beyond buffer duration
+        const cutoff = Date.now() - this.bufferDurationMs;
+        while (this.audioBuffer[0]?.timestamp < cutoff) {
+          this.audioBuffer.shift();
+        }
+        
         // OpenAI Whisper: Simple chunk logging
-        this.log(`📦 Chunk received: size=${event.data.size}, type=${event.data.type}`);
+        this.log(`📦 Chunk received: size=${event.data.size}, type=${event.data.type}, buffer size=${this.audioBuffer.length}`);
         this.handleAudioChunk(event.data);
       }
     };
@@ -126,8 +148,10 @@ export class RollingBufferVAD {
       this.options.onError(new Error('Recording failed'));
     };
 
-    // Start recording with small time slices
+    // CONTINUOUS RECORDING: Start recording continuously with small time slices
     this.mediaRecorder.start(this.options.chunkDurationMs);
+    this.isRecordingContinuously = true;
+    this.log(`🔄 Started continuous recording with ${this.options.chunkDurationMs}ms chunks`);
     
     // Start VAD monitoring
     this.startVADMonitoring();
@@ -243,6 +267,32 @@ export class RollingBufferVAD {
   }
 
   /**
+   * EXTRACT SPEECH FROM BUFFER - VAD-triggered extraction from continuous buffer
+   */
+  extractSpeechFromBuffer(speechStartTime: number, speechEndTime: number): Blob | null {
+    this.log(`🎯 Extracting speech from buffer: ${speechStartTime} to ${speechEndTime}`);
+    
+    // Find chunks within the speech time window
+    const speechChunks = this.audioBuffer.filter(chunk => 
+      chunk.timestamp >= speechStartTime && chunk.timestamp <= speechEndTime
+    );
+    
+    if (speechChunks.length === 0) {
+      this.log('⚠️ No chunks found in speech time window');
+      return null;
+    }
+    
+    // Combine chunks into final blob
+    const allChunks = speechChunks.map(chunk => chunk.data);
+    const finalBlob = new Blob(allChunks, { 
+      type: this.mediaRecorder?.mimeType || 'audio/webm' 
+    });
+    
+    this.log(`✅ Extracted speech: ${finalBlob.size} bytes, ${speechChunks.length} chunks`);
+    return finalBlob;
+  }
+
+  /**
    * STOP - Stop recording and return final blob with race condition protection
    */
   stop(): Promise<Blob | null> {
@@ -348,6 +398,9 @@ export class RollingBufferVAD {
       this.animationFrameId = null;
     }
     
+    // CONTINUOUS RECORDING: Stop continuous recording
+    this.isRecordingContinuously = false;
+    
     // CRITICAL: Completely destroy MediaRecorder to prevent format state retention
     if (this.mediaRecorder) {
       if (this.mediaRecorder.state !== 'inactive') {
@@ -363,6 +416,9 @@ export class RollingBufferVAD {
     this.audioContext = null;
     this.analyser = null;
     
+    // CONTINUOUS RECORDING: Clear continuous audio buffer
+    this.audioBuffer = [];
+    
     // CRITICAL: Clear all cached audio chunks
     this.state = {
       audioLevel: 0,
@@ -377,7 +433,7 @@ export class RollingBufferVAD {
       silenceStartTime: null
     };
     
-    this.log('✅ CACHE-FREE: All VAD data cleared, MediaRecorder destroyed');
+    this.log('✅ CACHE-FREE: All VAD data cleared, MediaRecorder destroyed, continuous buffer cleared');
   }
 
   private log(message: string, ...args: any[]): void {
