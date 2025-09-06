@@ -49,7 +49,7 @@ export class RollingBufferVAD {
   constructor(options: RollingBufferVADOptions = {}) {
     this.options = {
       lookbackWindowMs: 750,
-      chunkDurationMs: 250,       // Consistent 250ms chunks for all domains
+      chunkDurationMs: 100,       // Mobile-friendly: Smaller chunks for better compatibility
       voiceThreshold: 0.012,
       silenceThreshold: 0.008,
       voiceConfirmMs: 300,
@@ -82,20 +82,20 @@ export class RollingBufferVAD {
       silenceStartTime: null
     };
 
-    // OpenAI Whisper: Force exact format - no guesswork
+    // OpenAI Whisper: Use mobile-friendly format that OpenAI supports
     const options: MediaRecorderOptions = { 
       mimeType: 'audio/webm'  // Plain webm - OpenAI Whisper compatible
     };
     
-    // CRITICAL: Validate MediaRecorder can create the exact format we need
+    // Check if webm is supported (mobile-friendly)
     if (typeof MediaRecorder !== 'undefined' && 
         typeof MediaRecorder.isTypeSupported === 'function') {
       
       if (MediaRecorder.isTypeSupported('audio/webm')) {
         this.log('✅ Using webm format for OpenAI Whisper');
       } else {
-        this.error('❌ audio/webm not supported - cannot create compatible format');
-        throw new Error('audio/webm format not supported by this browser');
+        this.log('⚠️ webm not supported, using browser default - OpenAI Whisper will auto-detect');
+        delete options.mimeType; // Let browser choose
       }
     } else {
       this.error('❌ MediaRecorder not available');
@@ -288,19 +288,13 @@ export class RollingBufferVAD {
     // OpenAI Whisper: Create final blob - plain webm format
     const finalBlob = new Blob(allChunks, { type: 'audio/webm' });
     
-    // CRITICAL: Validate blob format and size
+    // Simple size check
     if (finalBlob.size < 100) {
       this.error(`❌ Final blob too small (${finalBlob.size} bytes) - likely empty`);
       return null;
     }
     
-    // CRITICAL: Validate MIME type is exactly what we expect
-    if (finalBlob.type !== 'audio/webm') {
-      this.error(`❌ Final blob has wrong type: ${finalBlob.type}, expected: audio/webm`);
-      return null;
-    }
-    
-    this.log(`✅ Final blob created: ${finalBlob.size} bytes, type: ${finalBlob.type} (OpenAI compatible)`);
+    this.log(`✅ Final blob created: ${finalBlob.size} bytes, type: ${finalBlob.type}`);
     return finalBlob;
   }
 

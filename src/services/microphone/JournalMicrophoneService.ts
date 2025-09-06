@@ -54,13 +54,12 @@ class JournalMicrophoneServiceClass {
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: 48000,
+          autoGainControl: true
         }
       });
 
       // Set up audio analysis
-      this.audioContext = new AudioContext({ sampleRate: 48000 });
+      this.audioContext = new AudioContext(); // Mobile-friendly: Let browser choose sample rate
       this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);
       this.analyser = this.audioContext.createAnalyser();
       this.analyser.fftSize = 2048;
@@ -69,7 +68,7 @@ class JournalMicrophoneServiceClass {
 
       // Set up MediaRecorder
       this.mediaRecorder = new MediaRecorder(this.stream, {
-        mimeType: 'audio/webm;codecs=opus',
+        mimeType: 'audio/webm',  // OpenAI Whisper compatible
         audioBitsPerSecond: 128000
       });
 

@@ -76,8 +76,7 @@ export class ConversationMicrophoneServiceClass {
       
       this.stream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          sampleRate: 48000,        // CRITICAL: Must match opus codec requirements
-          channelCount: 1,          // CRITICAL: Mono for STT efficiency
+          // Mobile-friendly: Let browser choose optimal sample rate
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true
@@ -104,7 +103,8 @@ export class ConversationMicrophoneServiceClass {
       if (this.audioContext && this.audioContext.state !== 'closed') {
         this.audioContext.close().catch(() => {});
       }
-      this.audioContext = new AudioContext({ sampleRate: 48000 });
+      // Mobile-friendly: Let browser choose optimal sample rate
+      this.audioContext = new AudioContext();
 
       // Create audio analysis chain
       this.mediaStreamSource = this.audioContext.createMediaStreamSource(this.stream);

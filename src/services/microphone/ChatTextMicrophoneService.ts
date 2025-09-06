@@ -55,33 +55,27 @@ class ChatTextMicrophoneServiceClass {
       this.recordingStartedAt = Date.now();
       this.log('🎤 Starting chat text voice recording');
       
-      // Create our own stream with AGGRESSIVE constraints for webm/opus
+      // Create our own stream with mobile-friendly constraints
       this.stream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          channelCount: 1,           // CRITICAL: Mono for efficiency
+          // Mobile-friendly: Let browser choose optimal settings
           echoCancellation: true,    // Clean input
           noiseSuppression: true,    // Remove background noise
-          autoGainControl: true,     // Consistent levels
-          sampleRate: 48000         // CRITICAL: Must match opus codec requirements
+          autoGainControl: true      // Consistent levels
         }
       });
 
       const trackSettings = this.stream.getAudioTracks()[0]?.getSettings?.() || {};
       this.log('🎛️ getUserMedia acquired. Track settings:', trackSettings);
       
-      // CRITICAL: Validate the stream has the correct audio format
-      if (trackSettings.sampleRate && trackSettings.sampleRate !== 48000) {
-        this.log(`⚠️ Sample rate mismatch! Expected 48000, got ${trackSettings.sampleRate}`);
-      }
-      
-      if (trackSettings.channelCount && trackSettings.channelCount !== 1) {
-        this.log(`⚠️ Channel count mismatch! Expected 1, got ${trackSettings.channelCount}`);
-      }
+      // Log actual settings for debugging
+      this.log(`🎛️ Actual sample rate: ${trackSettings.sampleRate || 'unknown'}`);
+      this.log(`🎛️ Actual channel count: ${trackSettings.channelCount || 'unknown'}`);
 
       // Set up audio analysis - mobile optimized
       // Reuse existing AudioContext if available, only create new one if needed
       if (!this.audioContext || this.audioContext.state === 'closed') {
-        this.audioContext = new AudioContext({ sampleRate: 48000 }); // Optimal for opus codec
+        this.audioContext = new AudioContext(); // Mobile-friendly: Let browser choose sample rate
         this.log('🎛️ Created new AudioContext for chat text microphone');
       } else {
         this.log('🎛️ Reusing existing AudioContext for chat text microphone');
