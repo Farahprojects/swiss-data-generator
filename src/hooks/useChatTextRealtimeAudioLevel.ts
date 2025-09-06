@@ -21,39 +21,31 @@ export const useChatTextRealtimeAudioLevel = ({
   const audioLevelRef = useRef<number>(0);
   const [isEnabled, setIsEnabled] = useState<boolean>(false);
   
-  const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const lastUpdateTimeRef = useRef<number>(0);
   const smoothedLevelRef = useRef<number>(0);
 
-  // 🎵 Initialize analyser by reusing service's AnalyserNode (read-only)
+  // 🎵 Initialize by subscribing to service state (new VAD approach)
   const initializeAnalyser = useCallback(async () => {
-    if (analyserRef.current) return;
-    try {
-      const existingAnalyser = chatTextMicrophoneService.getAnalyser();
-      if (!existingAnalyser) return;
-      existingAnalyser.smoothingTimeConstant = smoothingFactor;
-      analyserRef.current = existingAnalyser;
-    } catch (error) {
-      console.error('[useChatTextRealtimeAudioLevel] ❌ Failed to initialize analyser:', error);
-    }
-  }, [smoothingFactor]);
+    // New VAD system provides audio level through service state
+    // No need to access AnalyserNode directly
+    console.log('[useChatTextRealtimeAudioLevel] ✅ Initialized with new VAD approach');
+  }, []);
 
-  // 🎵 Cleanup local refs (service owns the graph)
+  // 🎵 Cleanup local refs
   const cleanupAnalyser = useCallback(() => {
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
     }
-    analyserRef.current = null;
     smoothedLevelRef.current = 0;
     audioLevelRef.current = 0;
     lastUpdateTimeRef.current = 0;
   }, []);
 
-  // 🎵 Real-time audio level detection loop
+  // 🎵 Real-time audio level detection loop (new VAD approach)
   const updateAudioLevel = useCallback(() => {
-    if (!isEnabled || !analyserRef.current) {
+    if (!isEnabled) {
       animationFrameRef.current = null;
       return;
     }
@@ -70,27 +62,23 @@ export const useChatTextRealtimeAudioLevel = ({
     lastUpdateTimeRef.current = now;
 
     try {
-      // Get audio data
-      const bufferLength = analyserRef.current.fftSize;
-      const dataArray = new Uint8Array(bufferLength);
-      analyserRef.current.getByteTimeDomainData(dataArray);
+      // Get audio level from service state (new VAD approach)
+      const serviceState = chatTextMicrophoneService.getState();
+      const rawLevel = serviceState.audioLevel;
 
-      // Calculate RMS (Root Mean Square) for audio level
-      let sumSquares = 0;
-      for (let i = 0; i < bufferLength; i++) {
-        const centered = (dataArray[i] - 128) / 128; // Center around 0
-        sumSquares += centered * centered;
+      // Debug logging (remove after testing)
+      if (rawLevel > 0.01) {
+        console.log('[useChatTextRealtimeAudioLevel] 🎵 Audio level:', rawLevel);
       }
-      const rms = Math.sqrt(sumSquares / bufferLength);
 
       // Apply smoothing to prevent jittery animations
-      smoothedLevelRef.current = smoothedLevelRef.current * smoothingFactor + rms * (1 - smoothingFactor);
+      smoothedLevelRef.current = smoothedLevelRef.current * smoothingFactor + rawLevel * (1 - smoothingFactor);
 
       // Store in ref for direct access (no React state updates per frame)
       audioLevelRef.current = smoothedLevelRef.current;
 
     } catch (error) {
-      console.error('[useChatTextRealtimeAudioLevel] ❌ Error reading audio data:', error);
+      console.error('[useChatTextRealtimeAudioLevel] ❌ Error reading audio level:', error);
     }
 
     // Continue the loop
@@ -126,7 +114,7 @@ export const useChatTextRealtimeAudioLevel = ({
 
   // 🎵 Effect: Start/stop audio level detection
   useEffect(() => {
-    if (isEnabled && analyserRef.current && !animationFrameRef.current) {
+    if (isEnabled && !animationFrameRef.current) {
       updateAudioLevel();
     } else if (!isEnabled && animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
