@@ -41,9 +41,13 @@ export class ConversationMicrophoneServiceClass {
 
 
   /**
-   * Start recording
+   * Start recording - ATOMIC: Clean then start
    */
   public async startRecording(): Promise<boolean> {
+    // CRITICAL: Clean media source BEFORE starting to prevent race conditions
+    this.forceCleanup();
+    console.log('[ConversationMic] 🧹 Media source cleaned before start');
+    
     // Request audio control
     if (!audioArbitrator.requestControl('microphone')) {
       console.error('[ConversationMic] Cannot start - TTS is active');
@@ -203,9 +207,13 @@ export class ConversationMicrophoneServiceClass {
   }
 
   /**
-   * Unmute microphone after TTS playback
+   * Unmute microphone after TTS playback - ATOMIC: Clean then unmute
    */
   unmute(): void {
+    // CRITICAL: Clean media source BEFORE unmuting to prevent race conditions
+    this.forceCleanup();
+    console.log('[ConversationMic] 🧹 Media source cleaned before unmute');
+    
     if (this.stream) {
       this.stream.getAudioTracks().forEach(track => {
         track.enabled = true;
