@@ -308,10 +308,10 @@ export class RollingBufferVAD {
   }
 
   /**
-   * CLEANUP - Reset all state
+   * CLEANUP - Reset all state and destroy MediaRecorder completely
    */
   cleanup(): void {
-    this.log('🧹 Cleaning up rolling buffer VAD');
+    this.log('🧹 CACHE-FREE: Complete cleanup of RollingBufferVAD');
     
     // Stop monitoring and cancel any pending animation frames
     this.monitoringRef.current = false;
@@ -320,26 +320,36 @@ export class RollingBufferVAD {
       this.animationFrameId = null;
     }
     
-    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      this.mediaRecorder.stop();
+    // CRITICAL: Completely destroy MediaRecorder to prevent format state retention
+    if (this.mediaRecorder) {
+      if (this.mediaRecorder.state !== 'inactive') {
+        this.mediaRecorder.stop();
+      }
+      // Remove all event listeners to prevent memory leaks
+      this.mediaRecorder.ondataavailable = null;
+      this.mediaRecorder.onstop = null;
+      this.mediaRecorder.onerror = null;
+      this.mediaRecorder = null;
     }
     
-    this.mediaRecorder = null;
     this.audioContext = null;
     this.analyser = null;
     
+    // CRITICAL: Clear all cached audio chunks
     this.state = {
       phase: 'waiting_for_voice',
       voiceStarted: false,
       audioLevel: 0,
-      preBufferChunks: [],
-      activeChunks: []
+      preBufferChunks: [],    // Clear cached pre-buffer chunks
+      activeChunks: []        // Clear cached active chunks
     };
     
     this.vadState = {
       voiceStartTime: null,
       silenceStartTime: null
     };
+    
+    this.log('✅ CACHE-FREE: All VAD data cleared, MediaRecorder destroyed');
   }
 
   private log(message: string, ...args: any[]): void {

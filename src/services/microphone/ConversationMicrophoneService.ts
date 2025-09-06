@@ -275,7 +275,7 @@ export class ConversationMicrophoneServiceClass {
 
     if (this.rollingBufferVAD) {
       this.rollingBufferVAD.stop().catch(() => {});
-      this.rollingBufferVAD.cleanup();
+      this.rollingBufferVAD.cleanup(); // This now completely destroys MediaRecorder
       this.rollingBufferVAD = null;
     }
 
