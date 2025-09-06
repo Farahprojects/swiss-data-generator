@@ -156,6 +156,11 @@ export class ConversationMicrophoneServiceClass {
         console.log('[ConversationMic] ♻️ Reusing existing MediaStream for turn:', turnId);
       }
 
+      // Enable debug logging for Chrome investigation
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('debugAudio', '1');
+      }
+
       // Create VAD
       this.rollingBufferVAD = new RollingBufferVAD({
         lookbackWindowMs: 15000,

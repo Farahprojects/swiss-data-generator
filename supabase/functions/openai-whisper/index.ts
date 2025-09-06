@@ -44,12 +44,29 @@ serve(async (req) => {
     const formData = new FormData();
     
     // Create a Blob from the audio buffer with appropriate MIME type
-    const audioBlob = new Blob([audioBuffer], { 
-      type: config.mimeType || 'audio/webm' 
+    const mimeType = config.mimeType || 'audio/webm';
+    const audioBlob = new Blob([audioBuffer], { type: mimeType });
+    
+    // Determine appropriate file extension based on MIME type
+    let filename = 'audio.webm';
+    if (mimeType.includes('mp4')) {
+      filename = 'audio.mp4';
+    } else if (mimeType.includes('ogg')) {
+      filename = 'audio.ogg';
+    } else if (mimeType.includes('wav')) {
+      filename = 'audio.wav';
+    }
+    
+    // Log detailed audio info for debugging
+    console.log('[openai-whisper] 🔍 AUDIO DETAILS:', {
+      mimeType,
+      filename,
+      audioSize: audioBuffer.length,
+      firstBytes: Array.from(audioBuffer.slice(0, 16)).map(b => b.toString(16).padStart(2, '0')).join(' ')
     });
     
-    // Add file to FormData
-    formData.append('file', audioBlob, 'audio.webm');
+    // Add file to FormData with correct filename
+    formData.append('file', audioBlob, filename);
     formData.append('model', 'whisper-1');
     formData.append('language', config.languageCode || 'en');
     formData.append('response_format', 'json');
