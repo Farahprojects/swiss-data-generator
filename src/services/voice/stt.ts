@@ -21,27 +21,30 @@ class SttService {
       throw new Error(`Audio blob too small (${audioBlob.size} bytes). Expected at least 100 bytes.`);
     }
     
-    // OpenAI Whisper: Log simplified payload
+    // OpenAI Whisper: Log detailed payload being sent
+    const payload = {
+      ...(meta || {}), // Pass along any additional meta from the controller
+      mode,
+      chat_id,
+      config: {
+        mimeType: audioBlob.type,
+        languageCode: 'en'
+      }
+    };
+    
     console.log('[STT] 📤 SENDING TO OPENAI WHISPER:', {
       blobSize: audioBlob.size,
       blobType: audioBlob.type,
       mode,
-      chat_id
+      chat_id,
+      fullPayload: payload
     });
 
     // OpenAI Whisper: Send raw binary audio directly
     const { data, error } = await supabase.functions.invoke('openai-whisper', {
       body: audioBlob,
       headers: {
-        'X-Meta': JSON.stringify({
-          ...(meta || {}), // Pass along any additional meta from the controller
-          mode,
-          chat_id,
-          config: {
-            mimeType: audioBlob.type,
-            languageCode: 'en'
-          }
-        })
+        'X-Meta': JSON.stringify(payload)
       }
     });
 
