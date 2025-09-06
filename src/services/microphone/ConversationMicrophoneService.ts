@@ -27,9 +27,49 @@ export class ConversationMicrophoneServiceClass {
   private currentTurnId: string | null = null;
   private options: ConversationMicrophoneOptions = {};
   private listeners = new Set<() => void>();
+  private cleanupTimeout: NodeJS.Timeout | null = null;
+  private isCleaningUp = false;
 
   constructor(options: ConversationMicrophoneOptions = {}) {
     this.options = options;
+    
+    // DEFENSIVE: Handle browser edge cases
+    this.setupDefensiveCleanup();
+  }
+
+  /**
+   * DEFENSIVE: Setup cleanup for browser edge cases
+   */
+  private setupDefensiveCleanup(): void {
+    // Handle browser tab close/refresh
+    const handleBeforeUnload = () => {
+      console.log('[ConversationMic] 🛡️ DEFENSIVE: Browser closing, forcing cleanup');
+      this.forceCleanup();
+    };
+
+    // Handle page visibility change (tab switching)
+    const handleVisibilityChange = () => {
+      if (document.hidden && this.isRecording) {
+        console.log('[ConversationMic] 🛡️ DEFENSIVE: Tab hidden during recording, forcing cleanup');
+        this.forceCleanup();
+      }
+    };
+
+    // Handle online/offline changes
+    const handleOnlineChange = () => {
+      if (!navigator.onLine && this.isRecording) {
+        console.log('[ConversationMic] 🛡️ DEFENSIVE: Network offline during recording, forcing cleanup');
+        this.forceCleanup();
+      }
+    };
+
+    // Add event listeners
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      window.addEventListener('online', handleOnlineChange);
+      window.addEventListener('offline', handleOnlineChange);
+    }
   }
 
   /**
@@ -148,6 +188,10 @@ export class ConversationMicrophoneServiceClass {
     } catch (error) {
       console.error('[ConversationMic] Recording setup failed:', error);
       this.audioLevel = 0;
+      
+      // DEFENSIVE: Cleanup on error to prevent cached data
+      this.performCleanup();
+      
       if (this.options.onError) {
         this.options.onError(error);
       }
@@ -190,6 +234,10 @@ export class ConversationMicrophoneServiceClass {
       return audioBlob;
     } catch (error) {
       console.error('[ConversationMic] Stop recording failed:', error);
+      
+      // DEFENSIVE: Cleanup on error to prevent cached data
+      this.performCleanup();
+      
       return null;
     }
   }
@@ -267,41 +315,94 @@ export class ConversationMicrophoneServiceClass {
    * Cleanup everything - CACHE-FREE: Complete cleanup of all resources
    */
   forceCleanup(): void {
+    if (this.isCleaningUp) {
+      console.log('[ConversationMic] 🚫 Cleanup already in progress, skipping');
+      return;
+    }
+    
+    this.isCleaningUp = true;
     console.log('[ConversationMic] 🧹 CACHE-FREE: Complete cleanup of all resources');
+    
+    // Clear any pending cleanup timeout
+    if (this.cleanupTimeout) {
+      clearTimeout(this.cleanupTimeout);
+      this.cleanupTimeout = null;
+    }
     
     this.isRecording = false;
     this.audioLevel = 0;
     this.currentTurnId = null;
 
-    if (this.rollingBufferVAD) {
-      this.rollingBufferVAD.stop().catch(() => {});
-      this.rollingBufferVAD.cleanup(); // This now completely destroys MediaRecorder
-      this.rollingBufferVAD = null;
-    }
-
-    if (this.stream) {
-      this.stream.getAudioTracks().forEach(track => track.stop());
-      this.stream = null;
-    }
-
-    if (this.mediaStreamSource) {
-      this.mediaStreamSource.disconnect();
-      this.mediaStreamSource = null;
-    }
-
-    if (this.analyser) {
-      this.analyser.disconnect();
-      this.analyser = null;
-    }
-
-    if (this.audioContext && this.audioContext.state !== 'closed') {
-      this.audioContext.close().catch(() => {});
-      this.audioContext = null;
-    }
+    // DEFENSIVE: Multiple cleanup attempts to handle edge cases
+    this.performCleanup();
+    
+    // DEFENSIVE: Set timeout to ensure cleanup completes even if errors occur
+    this.cleanupTimeout = setTimeout(() => {
+      console.log('[ConversationMic] 🛡️ DEFENSIVE: Forcing final cleanup after timeout');
+      this.performCleanup();
+      this.isCleaningUp = false;
+    }, 1000);
 
     audioArbitrator.releaseControl('microphone');
     audioArbitrator.setMicrophoneState('inactive');
     this.notifyListeners();
+  }
+
+  /**
+   * DEFENSIVE: Perform actual cleanup with error handling
+   */
+  private performCleanup(): void {
+    try {
+      if (this.rollingBufferVAD) {
+        this.rollingBufferVAD.stop().catch(() => {});
+        this.rollingBufferVAD.cleanup(); // This now completely destroys MediaRecorder
+        this.rollingBufferVAD = null;
+      }
+    } catch (error) {
+      console.error('[ConversationMic] Error cleaning up VAD:', error);
+    }
+
+    try {
+      if (this.stream) {
+        this.stream.getAudioTracks().forEach(track => {
+          try {
+            track.stop();
+          } catch (error) {
+            console.error('[ConversationMic] Error stopping track:', error);
+          }
+        });
+        this.stream = null;
+      }
+    } catch (error) {
+      console.error('[ConversationMic] Error cleaning up stream:', error);
+    }
+
+    try {
+      if (this.mediaStreamSource) {
+        this.mediaStreamSource.disconnect();
+        this.mediaStreamSource = null;
+      }
+    } catch (error) {
+      console.error('[ConversationMic] Error cleaning up mediaStreamSource:', error);
+    }
+
+    try {
+      if (this.analyser) {
+        this.analyser.disconnect();
+        this.analyser = null;
+      }
+    } catch (error) {
+      console.error('[ConversationMic] Error cleaning up analyser:', error);
+    }
+
+    try {
+      if (this.audioContext && this.audioContext.state !== 'closed') {
+        this.audioContext.close().catch(() => {});
+        this.audioContext = null;
+      }
+    } catch (error) {
+      console.error('[ConversationMic] Error cleaning up audioContext:', error);
+    }
   }
 
   private notifyListeners(): void {
