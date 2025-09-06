@@ -66,17 +66,13 @@ export const ConversationOverlay: React.FC = () => {
       setState('replying');
       conversationMicrophoneService.mute();
 
-      // Pause WebSocket during playback
-      if (connectionRef.current?.state === 'SUBSCRIBED') {
-        connectionRef.current.unsubscribe();
-      }
-
+      // Keep WebSocket active during playback - pause only when playback ends
       await ttsPlaybackService.play(audioBytes, () => {
         setState('listening');
         
-        // Resume WebSocket
-        if (connectionRef.current?.state === 'CLOSED') {
-          connectionRef.current.subscribe();
+        // Pause WebSocket after playback ends
+        if (connectionRef.current?.state === 'SUBSCRIBED') {
+          connectionRef.current.unsubscribe();
         }
 
         // Unmute microphone and start recording for next turn
@@ -86,6 +82,11 @@ export const ConversationOverlay: React.FC = () => {
               conversationMicrophoneService.unmute();
               // Start recording to actually begin listening
               await conversationMicrophoneService.startRecording();
+              
+              // Resume WebSocket after starting recording
+              if (connectionRef.current?.state === 'CLOSED') {
+                connectionRef.current.subscribe();
+              }
             }
           }, 200);
         }
