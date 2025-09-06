@@ -83,20 +83,35 @@ export class RollingBufferVAD {
       silenceStartTime: null
     };
 
-    // OpenAI Whisper: Use mobile-friendly format that OpenAI supports
-    const options: MediaRecorderOptions = { 
-      mimeType: 'audio/webm'  // Plain webm - OpenAI Whisper compatible
-    };
+    // CHROME COMPATIBILITY: Chrome is picky about audio formats
+    const options: MediaRecorderOptions = {};
     
-    // Check if webm is supported (mobile-friendly)
+    // Check Chrome-specific format support
     if (typeof MediaRecorder !== 'undefined' && 
         typeof MediaRecorder.isTypeSupported === 'function') {
       
-      if (MediaRecorder.isTypeSupported('audio/webm')) {
-        this.log('✅ Using webm format for OpenAI Whisper');
+      // Chrome prefers these formats in order of preference
+      const chromeFormats = [
+        'audio/webm;codecs=opus',  // Chrome's preferred format
+        'audio/webm',              // Fallback webm
+        'audio/mp4',               // Chrome fallback
+        'audio/wav'                // Last resort
+      ];
+      
+      let selectedFormat = null;
+      for (const format of chromeFormats) {
+        if (MediaRecorder.isTypeSupported(format)) {
+          selectedFormat = format;
+          break;
+        }
+      }
+      
+      if (selectedFormat) {
+        options.mimeType = selectedFormat;
+        this.log(`✅ Chrome-compatible format: ${selectedFormat}`);
       } else {
-        this.log('⚠️ webm not supported, using browser default - OpenAI Whisper will auto-detect');
-        delete options.mimeType; // Let browser choose
+        this.log('⚠️ No Chrome-compatible format found, using browser default');
+        // Let browser choose - Chrome will pick something
       }
     } else {
       this.error('❌ MediaRecorder not available');
@@ -104,6 +119,10 @@ export class RollingBufferVAD {
     }
 
     this.mediaRecorder = new MediaRecorder(stream, options);
+    
+    // CHROME DEBUG: Log what format Chrome actually gave us
+    this.log(`🔍 Chrome MediaRecorder created with mimeType: ${this.mediaRecorder.mimeType}`);
+    this.log(`🔍 Chrome MediaRecorder state: ${this.mediaRecorder.state}`);
 
     // OpenAI Whisper: Log format being used
     this.log(`✅ MediaRecorder using: ${this.mediaRecorder.mimeType}`);
@@ -302,7 +321,14 @@ export class RollingBufferVAD {
     this.log(`🎵 Recording voice: ${this.isRecordingVoice}`);
 
     // OpenAI Whisper: Create final blob - plain webm format
-    const finalBlob = new Blob(allChunks, { type: 'audio/webm' });
+    // CHROME COMPATIBILITY: Use the same format that MediaRecorder used
+    const finalBlob = new Blob(allChunks, { 
+      type: this.mediaRecorder?.mimeType || 'audio/webm' 
+    });
+    
+    // CHROME DEBUG: Log final blob details
+    this.log(`🔍 Chrome final blob - size: ${finalBlob.size}, type: ${finalBlob.type}`);
+    this.log(`🔍 Chrome MediaRecorder mimeType was: ${this.mediaRecorder?.mimeType}`);
     
     // Simple size check
     if (finalBlob.size < 100) {
