@@ -268,7 +268,7 @@ export class RollingBufferVAD {
   private createFinalBlob(): Blob | null {
     let allChunks: Blob[] = [];
     
-    if (this.state.voiceStarted && this.state.preBufferChunks.length > 0) {
+    if (this.isRecordingVoice && this.state.preBufferChunks.length > 0) {
       // Voice was detected: prepend lookback buffer
       allChunks = [...this.state.preBufferChunks, ...this.state.activeChunks];
       this.log(`📼 Final blob with lookback: ${this.state.preBufferChunks.length} pre + ${this.state.activeChunks.length} active chunks`);
