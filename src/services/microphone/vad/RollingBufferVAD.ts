@@ -30,7 +30,6 @@ export interface RollingBufferVADOptions {
   onError?: (error: Error) => void;
 
   // Resources
-  stopTracksOnCleanup?: boolean; // If true, stops MediaStream tracks (default false)
 }
 
 export interface RollingBufferVADState {
@@ -52,9 +51,6 @@ export class RollingBufferVAD {
   private utteranceStartIndex: number | null = null;
   private utteranceStartWallMs: number | null = null;
   
-  // Chrome WebM header preservation
-  private webmHeaderChunk: AudioChunk | null = null;
-  private needsHeaderPreservation: boolean = false;
   
   private options: Required<RollingBufferVADOptions>;
   private state: RollingBufferVADState = { audioLevel: 0, isSpeaking: false };
@@ -79,7 +75,6 @@ export class RollingBufferVAD {
       onUtterance: () => {},
       onSilenceDetected: () => {},
       onError: () => {},
-      stopTracksOnCleanup: false,
       ...opts
     };
   }
@@ -110,11 +105,6 @@ export class RollingBufferVAD {
 
     this.mediaRecorder.ondataavailable = (evt) => {
       if (evt.data && evt.data.size > 0) {
-        // Chrome WebM header preservation: cache first chunk with header
-        if (!this.webmHeaderChunk && this.needsHeaderPreservation && this.chunks.length === 0) {
-          this.webmHeaderChunk = evt.data;
-          this.log(`WebM header chunk cached (${evt.data.size} bytes)`);
-        }
         
         this.chunks.push(evt.data);
         // trim to rolling window
@@ -131,20 +121,16 @@ export class RollingBufferVAD {
       // no-op; stop() aggregates explicitly
     };
 
-    // Detect if we need WebM header preservation (Chrome with WebM)
-    const mimeType = this.mediaRecorder.mimeType || '';
-    this.needsHeaderPreservation = mimeType.includes('webm') && !mimeType.includes('mp4');
-    this.log(`Header preservation needed: ${this.needsHeaderPreservation} (mimeType: ${mimeType})`);
 
     // Start continuous recording with timeSlice; retry without timeslice if needed
     try {
       this.mediaRecorder.start(chunkMs);
-      this.log(`MediaRecorder started with ${chunkMs}ms slices; mimeType=${this.mediaRecorder.mimeType}`);
+      // MediaRecorder started
     } catch (e) {
       this.warn(`start(${chunkMs}) failed; retrying without timeslice`, e);
       try {
         this.mediaRecorder.start();
-        this.log(`MediaRecorder started without timeslice; mimeType=${this.mediaRecorder.mimeType}`);
+        // MediaRecorder started without timeslice
       } catch (e2) {
         this.error('MediaRecorder failed to start', e2);
         this.options.onError(new Error('Unable to start MediaRecorder'));
@@ -210,9 +196,6 @@ export class RollingBufferVAD {
     } catch {}
 
     // Optionally stop mic tracks
-    if (this.options.stopTracksOnCleanup && this.stream) {
-      this.stream.getTracks().forEach((t) => t.stop());
-    }
 
     this.sourceNode = null;
     this.analyser = null;
@@ -223,8 +206,6 @@ export class RollingBufferVAD {
     this.chunks = [];
     this.utteranceStartIndex = null;
     this.utteranceStartWallMs = null;
-    this.webmHeaderChunk = null;
-    this.needsHeaderPreservation = false;
     this.state = { audioLevel: 0, isSpeaking: false };
   }
 
@@ -270,7 +251,7 @@ export class RollingBufferVAD {
               silenceStartWall = null;
               voiceStartWall = null;
               this.safeCall(() => this.options.onVoiceStart());
-              this.log(`Voice confirmed. StartIndex=${startIdx}, chunks=${this.chunks.length}`);
+              // Voice confirmed
             }
           } else {
             voiceStartWall = null;
@@ -331,40 +312,21 @@ export class RollingBufferVAD {
       return;
     }
 
-    // Chrome WebM header fix: prepend header if needed and missing
-    let finalSelection = selection;
-    if (this.needsHeaderPreservation && this.webmHeaderChunk && selection.length > 0) {
-      // Check if first chunk has header (contains EBML signature)
-      const firstChunk = selection[0];
-      const hasHeader = this.checkForWebMHeader(firstChunk);
-      
-      if (!hasHeader) {
-        finalSelection = [this.webmHeaderChunk, ...selection];
-        this.log(`WebM header prepended to utterance (${selection.length} -> ${finalSelection.length} chunks)`);
-      } else {
-        this.log(`WebM header already present in utterance`);
-      }
-    }
-
-    const blob = finalSelection.length
-      ? new Blob(finalSelection, { type: this.mediaRecorder?.mimeType || 'audio/webm' })
+    const blob = selection.length
+      ? new Blob(selection, { type: this.mediaRecorder?.mimeType || 'audio/webm' })
       : null;
 
     if (blob) {
-      // Log blob diagnostics for debugging
-      this.logBlobDiagnostics(blob, reason);
-      
       this.safeCall(() => this.options.onUtterance(blob));
       // Back-compat: pass blob to onSilenceDetected as well
       this.safeCall(() => this.options.onSilenceDetected(blob));
-      this.log(`Utterance emitted (${Math.round(estMs)}ms, ${finalSelection.length} chunks) reason=${reason}`);
     }
 
     // Prune used chunks to keep memory small on mobile
     if (this.options.pruneOnUtterance) {
       const used = Math.min(this.chunks.length, finalEnd);
       this.chunks.splice(0, used);
-      this.log(`Pruned ${used} chunks after utterance; remaining=${this.chunks.length}`);
+      // Pruned chunks after utterance
     }
   }
 
@@ -392,39 +354,5 @@ export class RollingBufferVAD {
     console.error('[RollingBufferVAD]', msg, ...args);
   }
 
-  // Chrome WebM header detection (simplified for synchronous use)
-  private checkForWebMHeader(chunk: AudioChunk): boolean {
-    // For VAD use case, we'll use a simple heuristic:
-    // If chunk size is very small (< 100 bytes), likely missing header
-    // This is a pragmatic approach for real-time processing
-    return chunk.size >= 100;
-  }
 
-  // Blob diagnostics for debugging
-  private async logBlobDiagnostics(blob: Blob, reason: string) {
-    try {
-      if (typeof localStorage !== 'undefined' && localStorage.getItem('debugAudio') !== '1') return;
-      
-      const arrayBuffer = await blob.arrayBuffer();
-      const view = new Uint8Array(arrayBuffer);
-      
-      // Check first 16 bytes for header signatures
-      const first16 = Array.from(view.slice(0, 16))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join(' ');
-      
-      const hasEBML = view.length >= 4 && 
-        view[0] === 0x1A && view[1] === 0x45 && 
-        view[2] === 0xDF && view[3] === 0xA3;
-      
-      this.log(`Blob diagnostics (${reason}):`, {
-        size: blob.size,
-        type: blob.type,
-        hasEBML,
-        first16Bytes: first16
-      });
-    } catch (e) {
-      this.warn('Failed to analyze blob:', e);
-    }
-  }
 }
