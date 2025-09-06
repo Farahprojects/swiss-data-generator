@@ -98,11 +98,8 @@ export const ConversationOverlay: React.FC = () => {
     setState('establishing');
     
     try {
-      // Setup WebSocket
-      await establishConnection();
-      
-      // CACHE-FREE: No need to get microphone permission here anymore
-      // The ConversationMicrophoneService will create fresh streams for each turn
+      // USER GESTURE ENFORCEMENT: Initialize and start recording IMMEDIATELY
+      // No async operations before getUserMedia() to maintain gesture context
       console.log('[ConversationOverlay] 🆕 Cache-free mode: Microphone service will create fresh streams per turn');
       
       // Initialize microphone service
@@ -115,8 +112,11 @@ export const ConversationOverlay: React.FC = () => {
         silenceTimeoutMs: 1200,
       });
       
-      // Start recording
+      // 1️⃣ IMMEDIATELY request microphone access inside the gesture
       const recordingStarted = await conversationMicrophoneService.startRecording();
+      
+      // 2️⃣ Setup WebSocket AFTER we have the stream (outside gesture context is OK now)
+      await establishConnection();
       
       if (recordingStarted) {
         setState('listening');
