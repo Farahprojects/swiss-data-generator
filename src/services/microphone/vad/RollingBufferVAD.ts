@@ -51,7 +51,7 @@ export class RollingBufferVAD {
   private chunks: AudioChunk[] = [];
   private utteranceStartIndex: number | null = null;
   private utteranceStartWallMs: number | null = null;
-
+  
   private options: Required<RollingBufferVADOptions>;
   private state: RollingBufferVADState = { audioLevel: 0, isSpeaking: false };
   private stream: MediaStream | null = null;
@@ -98,18 +98,19 @@ export class RollingBufferVAD {
     // Select a safe mimeType
     const mrOptions: MediaRecorderOptions = {};
     try {
+      // Force Chrome to use audio/webm;codecs=opus for Whisper compatibility
       if (typeof MediaRecorder !== 'undefined' && typeof MediaRecorder.isTypeSupported === 'function') {
-        if (MediaRecorder.isTypeSupported('audio/webm')) {
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+          mrOptions.mimeType = 'audio/webm;codecs=opus';
+          this.log('✅ Using audio/webm;codecs=opus (Chrome-optimized)');
+        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
           mrOptions.mimeType = 'audio/webm';
-          this.log('Using audio/webm');
+          this.log('⚠️ Using audio/webm (fallback)');
         } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
           mrOptions.mimeType = 'audio/mp4';
-          this.log('Using audio/mp4');
-        } else if (MediaRecorder.isTypeSupported('audio/mpeg')) {
-          mrOptions.mimeType = 'audio/mpeg';
-          this.log('Using audio/mpeg');
+          this.log('⚠️ Using audio/mp4 (fallback)');
         } else {
-          this.log('Using browser default mimeType');
+          this.log('⚠️ Using browser default mimeType');
         }
       } else {
         throw new Error('MediaRecorder not available');
@@ -256,9 +257,9 @@ export class RollingBufferVAD {
           sum += centered * centered;
         }
         const rms = Math.sqrt(sum / bufLen);
-        this.state.audioLevel = rms;
-
-        const now = Date.now();
+      this.state.audioLevel = rms;
+      
+      const now = Date.now();
         const { voiceThreshold, silenceThreshold, voiceConfirmMs, silenceTimeoutMs, maxUtteranceMs } = this.options;
 
         if (!this.state.isSpeaking) {

@@ -53,13 +53,15 @@ class ChatTextMicrophoneServiceClass {
       this.recordingStartedAt = Date.now();
       this.log('🎤 Starting chat text voice recording');
       
-      // Create our own stream with universal constraints
+      // Create our own stream with Chrome-optimized constraints
       this.stream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          // Universal: Clean, simple settings (works for all browsers)
-          echoCancellation: true,    // Clean input
-          noiseSuppression: true,    // Remove background noise
-          autoGainControl: true      // Consistent levels
+          // Chrome-optimized: Explicit sample rate and channel count
+          sampleRate: { ideal: 48000 },    // 48kHz for Whisper compatibility
+          channelCount: { ideal: 1 },      // Mono channel
+          echoCancellation: true,          // Clean input
+          noiseSuppression: true,          // Remove background noise
+          autoGainControl: true            // Consistent levels
         }
       });
 

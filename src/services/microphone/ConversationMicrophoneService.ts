@@ -76,12 +76,13 @@ export class ConversationMicrophoneServiceClass {
       // CACHE-FREE: Create fresh MediaStream for each turn to prevent format issues
       console.log('[ConversationMic] 🆕 Creating fresh MediaStream for turn:', turnId);
       
-      // UNIVERSAL: Clean, simple audio constraints (Safari-style)
+      // Chrome-optimized: Explicit sample rate and channel count
       const audioConstraints = {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
-        // Let browser choose optimal settings (works for all browsers)
+        sampleRate: { ideal: 48000 },    // 48kHz for Whisper compatibility
+        channelCount: { ideal: 1 },      // Mono channel
+        echoCancellation: true,          // Clean input
+        noiseSuppression: true,          // Remove background noise
+        autoGainControl: true            // Consistent levels
       };
       
       this.stream = await navigator.mediaDevices.getUserMedia({
