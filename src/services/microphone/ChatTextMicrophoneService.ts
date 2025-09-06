@@ -55,14 +55,17 @@ class ChatTextMicrophoneServiceClass {
       this.recordingStartedAt = Date.now();
       this.log('🎤 Starting chat text voice recording');
       
-      // Create our own stream with mobile-friendly constraints
+      // CHROME COMPATIBILITY: Chrome is picky about constraints
+      const chromeAudioConstraints: MediaTrackConstraints = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        sampleRate: { ideal: 48000 }, // Chrome prefers 48kHz
+        channelCount: { ideal: 1 }    // Mono for STT
+      };
+      
       this.stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          // Mobile-friendly: Let browser choose optimal settings
-          echoCancellation: true,    // Clean input
-          noiseSuppression: true,    // Remove background noise
-          autoGainControl: true      // Consistent levels
-        }
+        audio: chromeAudioConstraints
       });
 
       const trackSettings = this.stream.getAudioTracks()[0]?.getSettings?.() || {};
@@ -87,10 +90,10 @@ class ChatTextMicrophoneServiceClass {
       this.analyser.smoothingTimeConstant = 0.8;
       this.mediaStreamSource.connect(this.analyser);
 
-      // Initialize rolling buffer VAD
+      // Initialize rolling buffer VAD with Chrome-compatible timing
       this.rollingBufferVAD = new RollingBufferVAD({
-        lookbackWindowMs: 750,
-        chunkDurationMs: 250,
+        lookbackWindowMs: 1000,
+        chunkDurationMs: 100, // CHROME COMPATIBILITY: 100ms chunks
         voiceThreshold: 0.012,
         silenceThreshold: 0.008,
         voiceConfirmMs: 300,

@@ -127,10 +127,10 @@ export class RollingBufferVAD {
     // OpenAI Whisper: Log format being used
     this.log(`✅ MediaRecorder using: ${this.mediaRecorder.mimeType}`);
 
-    // Handle data chunks for rolling buffer
+    // CHROME DEBUG: Log everything for validation
     this.mediaRecorder.ondataavailable = (event) => {
+      console.log('🔍 Chrome chunk - size:', event.data.size, 'type:', event.data.type, 'timestamp:', Date.now());
       if (event.data.size > 0) {
-        // OpenAI Whisper: Simple chunk logging
         this.log(`📦 Chunk received: size=${event.data.size}, type=${event.data.type}`);
         this.handleAudioChunk(event.data);
       }
@@ -274,6 +274,7 @@ export class RollingBufferVAD {
       this.monitoringRef.current = false;
 
       this.mediaRecorder.onstop = () => {
+        console.log('🔍 Chrome recording stopped, ready for new session');
         // CRITICAL: Wait 50ms to ensure last chunk is processed
         setTimeout(() => {
           const finalBlob = this.createFinalBlob();
@@ -327,6 +328,7 @@ export class RollingBufferVAD {
     });
     
     // CHROME DEBUG: Log final blob details
+    console.log('🔍 Chrome final blob - size:', finalBlob.size, 'type:', finalBlob.type, 'timestamp:', Date.now());
     this.log(`🔍 Chrome final blob - size: ${finalBlob.size}, type: ${finalBlob.type}`);
     this.log(`🔍 Chrome MediaRecorder mimeType was: ${this.mediaRecorder?.mimeType}`);
     

@@ -49,13 +49,17 @@ class JournalMicrophoneServiceClass {
     }
 
     try {
-      // Create our own stream - no sharing
+      // CHROME COMPATIBILITY: Chrome is picky about constraints
+      const chromeAudioConstraints: MediaTrackConstraints = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        sampleRate: { ideal: 48000 }, // Chrome prefers 48kHz
+        channelCount: { ideal: 1 }    // Mono for STT
+      };
+      
       this.stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        }
+        audio: chromeAudioConstraints
       });
 
       // Set up audio analysis
@@ -66,25 +70,28 @@ class JournalMicrophoneServiceClass {
       this.analyser.smoothingTimeConstant = 0.8;
       this.mediaStreamSource.connect(this.analyser);
 
-      // Set up MediaRecorder
+      // CHROME COMPATIBILITY: Explicit MIME type is critical
       this.mediaRecorder = new MediaRecorder(this.stream, {
-        mimeType: 'audio/webm',  // OpenAI Whisper compatible
-        audioBitsPerSecond: 128000
+        mimeType: 'audio/webm;codecs=opus'  // Chrome's preferred format
       });
 
       this.audioChunks = [];
       this.isRecording = true;
 
+      // CHROME DEBUG: Log everything for validation
       this.mediaRecorder.ondataavailable = (event) => {
+        console.log('🔍 Chrome chunk - size:', event.data.size, 'type:', event.data.type, 'timestamp:', Date.now());
         if (event.data.size > 0) {
           this.audioChunks.push(event.data);
         }
       };
 
       this.mediaRecorder.onstop = () => {
+        console.log('🔍 Chrome recording stopped, ready for new session');
         this.processAudio();
       };
 
+      // CHROME COMPATIBILITY: 100ms chunks for reliable timing
       this.mediaRecorder.start(100);
       
       // Start silence monitoring
@@ -115,9 +122,16 @@ class JournalMicrophoneServiceClass {
       this.silenceTimer = null;
     }
 
-    // Stop MediaRecorder
+    // CHROME COMPATIBILITY: Clean start/stop cycles
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
       this.mediaRecorder.stop();
+    }
+
+    // CHROME COMPATIBILITY: Remove event listeners after stop
+    if (this.mediaRecorder) {
+      this.mediaRecorder.ondataavailable = null;
+      this.mediaRecorder.onstop = null;
+      this.mediaRecorder.onerror = null;
     }
 
     this.cleanup();
