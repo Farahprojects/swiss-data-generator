@@ -142,12 +142,12 @@ export class ConversationMicrophoneServiceClass {
         const mrOptions: MediaRecorderOptions = {};
         if (typeof MediaRecorder !== 'undefined' && typeof MediaRecorder.isTypeSupported === 'function') {
           if (isChrome) {
-            // Chrome: Use WAV format (mobile-friendly, reliable)
-            if (MediaRecorder.isTypeSupported('audio/wav')) {
-              mrOptions.mimeType = 'audio/wav';
-              console.log('[ConversationMic] ✅ Using audio/wav (Chrome-optimized)');
+            // Chrome: Use WebM format
+            if (MediaRecorder.isTypeSupported('audio/webm')) {
+              mrOptions.mimeType = 'audio/webm';
+              console.log('[ConversationMic] ✅ Using audio/webm (Chrome-optimized)');
             } else {
-              console.log('[ConversationMic] ⚠️ WAV not supported, using browser default');
+              console.log('[ConversationMic] ⚠️ WebM not supported, using browser default');
             }
           } else {
             // Safari/Others: Use WebM format

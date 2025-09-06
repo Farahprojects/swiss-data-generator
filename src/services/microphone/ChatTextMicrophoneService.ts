@@ -90,12 +90,12 @@ class ChatTextMicrophoneServiceClass {
           const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
           if (isChrome) {
             this.log('🌐 CHROME DETECTED - Using Chrome mode for media source');
-            // Chrome: Use WAV format (mobile-friendly, reliable)
-            if (MediaRecorder.isTypeSupported('audio/wav')) {
-              mrOptions.mimeType = 'audio/wav';
-              this.log('✅ Using audio/wav (Chrome-optimized)');
+            // Chrome: Use WebM format
+            if (MediaRecorder.isTypeSupported('audio/webm')) {
+              mrOptions.mimeType = 'audio/webm';
+              this.log('✅ Using audio/webm (Chrome-optimized)');
             } else {
-              this.log('⚠️ WAV not supported, using browser default');
+              this.log('⚠️ WebM not supported, using browser default');
             }
           } else {
             // Safari/Others: Use WebM format
