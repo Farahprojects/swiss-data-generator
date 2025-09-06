@@ -74,18 +74,17 @@ export class ConversationMicrophoneServiceClass {
       // CACHE-FREE: Create fresh MediaStream for each turn to prevent format issues
       console.log('[ConversationMic] 🆕 Creating fresh MediaStream for turn:', turnId);
       
-      // CHROME COMPATIBILITY: Chrome needs specific audio constraints
-      const audioConstraints: MediaTrackConstraints = {
+      // CHROME COMPATIBILITY: Chrome is picky about constraints for predictable frames
+      const chromeAudioConstraints: MediaTrackConstraints = {
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true,
-        // Chrome-specific: Let Chrome choose optimal settings
-        sampleRate: { ideal: 48000 },  // Chrome prefers 48kHz
-        channelCount: { ideal: 1 }     // Mono for STT
+        sampleRate: { ideal: 48000 },  // Chrome prefers 48kHz - ensures predictable MediaRecorder frames
+        channelCount: { ideal: 1 }     // Mono for STT - avoids RMS scaling inconsistencies
       };
       
       this.stream = await navigator.mediaDevices.getUserMedia({
-        audio: audioConstraints
+        audio: chromeAudioConstraints
       });
 
       // Validate fresh stream

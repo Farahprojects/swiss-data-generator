@@ -83,35 +83,23 @@ export class RollingBufferVAD {
       silenceStartTime: null
     };
 
-    // CHROME COMPATIBILITY: Chrome is picky about audio formats
+    // CHROME COMPATIBILITY: Explicit MIME type is critical for predictable frames
     const options: MediaRecorderOptions = {};
     
-    // Check Chrome-specific format support
+    // CRITICAL: Explicit MIME type ensures Chrome produces predictable frames
     if (typeof MediaRecorder !== 'undefined' && 
         typeof MediaRecorder.isTypeSupported === 'function') {
       
-      // Chrome prefers these formats in order of preference
-      const chromeFormats = [
-        'audio/webm;codecs=opus',  // Chrome's preferred format
-        'audio/webm',              // Fallback webm
-        'audio/mp4',               // Chrome fallback
-        'audio/wav'                // Last resort
-      ];
-      
-      let selectedFormat = null;
-      for (const format of chromeFormats) {
-        if (MediaRecorder.isTypeSupported(format)) {
-          selectedFormat = format;
-          break;
-        }
-      }
-      
-      if (selectedFormat) {
-        options.mimeType = selectedFormat;
-        this.log(`✅ Chrome-compatible format: ${selectedFormat}`);
+      // Chrome defaults may differ between platforms/OS versions - enforce explicit format
+      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        options.mimeType = 'audio/webm;codecs=opus';  // Explicit opus ensures compression + cross-browser playback
+        this.log('✅ Chrome: Using explicit audio/webm;codecs=opus for predictable frames');
+      } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+        options.mimeType = 'audio/webm';  // Fallback webm
+        this.log('✅ Chrome: Using audio/webm fallback');
       } else {
-        this.log('⚠️ No Chrome-compatible format found, using browser default');
-        // Let browser choose - Chrome will pick something
+        this.log('⚠️ Chrome: No webm support, using browser default');
+        // Let browser choose - but log what it picks
       }
     } else {
       this.error('❌ MediaRecorder not available');
@@ -127,10 +115,10 @@ export class RollingBufferVAD {
     // OpenAI Whisper: Log format being used
     this.log(`✅ MediaRecorder using: ${this.mediaRecorder.mimeType}`);
 
-    // CHROME DEBUG: Log everything for validation
+    // Handle data chunks for rolling buffer
     this.mediaRecorder.ondataavailable = (event) => {
-      console.log('🔍 Chrome chunk - size:', event.data.size, 'type:', event.data.type, 'timestamp:', Date.now());
       if (event.data.size > 0) {
+        // OpenAI Whisper: Simple chunk logging
         this.log(`📦 Chunk received: size=${event.data.size}, type=${event.data.type}`);
         this.handleAudioChunk(event.data);
       }
@@ -274,7 +262,6 @@ export class RollingBufferVAD {
       this.monitoringRef.current = false;
 
       this.mediaRecorder.onstop = () => {
-        console.log('🔍 Chrome recording stopped, ready for new session');
         // CRITICAL: Wait 50ms to ensure last chunk is processed
         setTimeout(() => {
           const finalBlob = this.createFinalBlob();
@@ -328,7 +315,6 @@ export class RollingBufferVAD {
     });
     
     // CHROME DEBUG: Log final blob details
-    console.log('🔍 Chrome final blob - size:', finalBlob.size, 'type:', finalBlob.type, 'timestamp:', Date.now());
     this.log(`🔍 Chrome final blob - size: ${finalBlob.size}, type: ${finalBlob.type}`);
     this.log(`🔍 Chrome MediaRecorder mimeType was: ${this.mediaRecorder?.mimeType}`);
     

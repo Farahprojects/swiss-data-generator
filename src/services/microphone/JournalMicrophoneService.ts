@@ -49,15 +49,16 @@ class JournalMicrophoneServiceClass {
     }
 
     try {
-      // CHROME COMPATIBILITY: Chrome is picky about constraints
+      // CHROME COMPATIBILITY: Chrome is picky about constraints for predictable frames
       const chromeAudioConstraints: MediaTrackConstraints = {
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true,
-        sampleRate: { ideal: 48000 }, // Chrome prefers 48kHz
-        channelCount: { ideal: 1 }    // Mono for STT
+        sampleRate: { ideal: 48000 },  // Chrome prefers 48kHz - ensures predictable MediaRecorder frames
+        channelCount: { ideal: 1 }     // Mono for STT - avoids RMS scaling inconsistencies
       };
       
+      // Create our own stream - no sharing
       this.stream = await navigator.mediaDevices.getUserMedia({
         audio: chromeAudioConstraints
       });
@@ -70,28 +71,39 @@ class JournalMicrophoneServiceClass {
       this.analyser.smoothingTimeConstant = 0.8;
       this.mediaStreamSource.connect(this.analyser);
 
-      // CHROME COMPATIBILITY: Explicit MIME type is critical
+      // CHROME COMPATIBILITY: Explicit MIME type is critical for predictable frames
+      const mediaRecorderOptions: MediaRecorderOptions = {};
+      
+      // CRITICAL: Explicit MIME type ensures Chrome produces predictable frames
+      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        mediaRecorderOptions.mimeType = 'audio/webm;codecs=opus';  // Explicit opus ensures compression + cross-browser playback
+        console.log('[JournalMic] ✅ Chrome: Using explicit audio/webm;codecs=opus for predictable frames');
+      } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+        mediaRecorderOptions.mimeType = 'audio/webm';  // Fallback webm
+        console.log('[JournalMic] ✅ Chrome: Using audio/webm fallback');
+      } else {
+        console.log('[JournalMic] ⚠️ Chrome: No webm support, using browser default');
+      }
+      
+      // Set up MediaRecorder
       this.mediaRecorder = new MediaRecorder(this.stream, {
-        mimeType: 'audio/webm;codecs=opus'  // Chrome's preferred format
+        ...mediaRecorderOptions,
+        audioBitsPerSecond: 128000
       });
 
       this.audioChunks = [];
       this.isRecording = true;
 
-      // CHROME DEBUG: Log everything for validation
       this.mediaRecorder.ondataavailable = (event) => {
-        console.log('🔍 Chrome chunk - size:', event.data.size, 'type:', event.data.type, 'timestamp:', Date.now());
         if (event.data.size > 0) {
           this.audioChunks.push(event.data);
         }
       };
 
       this.mediaRecorder.onstop = () => {
-        console.log('🔍 Chrome recording stopped, ready for new session');
         this.processAudio();
       };
 
-      // CHROME COMPATIBILITY: 100ms chunks for reliable timing
       this.mediaRecorder.start(100);
       
       // Start silence monitoring
@@ -122,16 +134,9 @@ class JournalMicrophoneServiceClass {
       this.silenceTimer = null;
     }
 
-    // CHROME COMPATIBILITY: Clean start/stop cycles
+    // Stop MediaRecorder
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
       this.mediaRecorder.stop();
-    }
-
-    // CHROME COMPATIBILITY: Remove event listeners after stop
-    if (this.mediaRecorder) {
-      this.mediaRecorder.ondataavailable = null;
-      this.mediaRecorder.onstop = null;
-      this.mediaRecorder.onerror = null;
     }
 
     this.cleanup();
