@@ -60,16 +60,38 @@ const ReportChatScreen = () => {
           console.log(`[ChatPage] ✅ Report already exists for: ${guestId}`);
           hasTriggeredGenerationRef.current = true;
           
-          // Set report ready in store and prepare the thread
-          useReportReadyStore.getState().setReportReady(true);
-          setIsGuestThreadReady(true);
-          
-          // Ensure chat session is initialized
+          // Ensure chat session is initialized FIRST
           const finalChatId = urlChatId || chat_id;
           if (finalChatId) {
             console.log(`[ChatPage] 🔑 Report ready - initializing chat session: ${finalChatId}`);
             useChatStore.getState().startConversation(finalChatId, guestId);
           }
+          
+          // Check if context has been injected, if not trigger it
+          const { data: contextCheck } = await supabase
+            .from('messages')
+            .select('id')
+            .eq('chat_id', finalChatId)
+            .eq('context_injected', true)
+            .limit(1);
+          
+          if (!contextCheck || contextCheck.length === 0) {
+            console.log(`[ChatPage] 🔄 Context not injected yet, triggering injection for: ${guestId}`);
+            try {
+              await supabase.functions.invoke('context-injector', {
+                body: { guest_report_id: guestId }
+              });
+              console.log(`[ChatPage] ✅ Context injection completed for: ${guestId}`);
+            } catch (error) {
+              console.error(`[ChatPage] ❌ Context injection failed for ${guestId}:`, error);
+            }
+          } else {
+            console.log(`[ChatPage] ✅ Context already injected for: ${guestId}`);
+          }
+          
+          // Now set report ready in store and prepare the thread
+          useReportReadyStore.getState().setReportReady(true);
+          setIsGuestThreadReady(true);
           
           return;
         }
@@ -213,6 +235,27 @@ const ReportChatScreen = () => {
             
           if (readySignal && readySignal.length > 0) {
             console.log(`[ChatPage] ✅ Report ready signal found during rehydration`);
+            
+            // Check if context has been injected
+            const { data: contextCheck } = await supabase
+              .from('messages')
+              .select('id')
+              .eq('chat_id', finalChatId)
+              .eq('context_injected', true)
+              .limit(1);
+            
+            if (!contextCheck || contextCheck.length === 0) {
+              console.log(`[ChatPage] 🔄 Context not injected during rehydration, triggering injection for: ${guestId}`);
+              try {
+                await supabase.functions.invoke('context-injector', {
+                  body: { guest_report_id: guestId }
+                });
+                console.log(`[ChatPage] ✅ Context injection completed during rehydration for: ${guestId}`);
+              } catch (error) {
+                console.error(`[ChatPage] ❌ Context injection failed during rehydration for ${guestId}:`, error);
+              }
+            }
+            
             useReportReadyStore.getState().setReportReady(true);
             setIsGuestThreadReady(true);
           }
