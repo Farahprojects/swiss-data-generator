@@ -667,7 +667,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                 <div className="space-y-3">
                   <div className="flex justify-between text-base text-gray-700">
                     <span>
-                      {selectedAstroType === 'essence' ? 'The Self - Astro Data' : selectedAstroType === 'sync' ? 'Compatibility - Astro Data' : 'Astro Data'}
+                      {selectedAstroType === 'essence' ? 'The Self' : selectedAstroType === 'sync' ? 'Compatibility' : 'Discovery'}
                     </span>
                     <span>${pricesLoading ? '...' : (trustedPricing?.trusted_base_price_usd || getBasePrice()).toFixed(2)}</span>
                   </div>
