@@ -3,14 +3,13 @@ import { ChatThreadsSidebar } from './ChatThreadsSidebar';
 
 interface ChatSidebarControlsProps {
   isGuestThreadReady?: boolean;
-  guestReportId?: string;
 }
 
-export const ChatSidebarControls: React.FC<ChatSidebarControlsProps> = ({ isGuestThreadReady = false, guestReportId }) => {
+export const ChatSidebarControls: React.FC<ChatSidebarControlsProps> = ({ isGuestThreadReady = false }) => {
   return (
     <div className="w-full flex flex-col gap-4">
       {/* Chat Threads */}
-      <ChatThreadsSidebar isGuestThreadReady={isGuestThreadReady} guestReportId={guestReportId} />
+      <ChatThreadsSidebar isGuestThreadReady={isGuestThreadReady} />
     </div>
   );
 };

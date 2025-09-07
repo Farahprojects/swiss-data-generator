@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useChatStore } from '@/core/store';
 import { useAuth } from '@/contexts/AuthContext';
 import { Trash2, Sparkles, AlertTriangle, MoreHorizontal } from 'lucide-react';
@@ -18,10 +19,12 @@ import {
 interface ChatThreadsSidebarProps {
   className?: string;
   isGuestThreadReady?: boolean;
-  guestReportId?: string; // Add this to pass the actual guest_report_id
 }
 
-export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ className, isGuestThreadReady = false, guestReportId }) => {
+export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ className, isGuestThreadReady = false }) => {
+  // Get guestReportId directly from URL - no more prop drilling!
+  const [searchParams] = useSearchParams();
+  const guestReportId = searchParams.get('guest_id');
   const { messages, chat_id, clearChat } = useChatStore();
   const { user } = useAuth();
   const { open: openReportModal } = useReportModal();
@@ -58,23 +61,20 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
 
 
 
-  const handleClearSession = () => {
-    console.log('[ChatThreadsSidebar] 🧹 Starting complete session cleanup...');
+  const handleClearSession = async () => {
+    console.log('[ChatThreadsSidebar] 🧹 Starting streamlined session cleanup...');
     
-    // Clear chat store (this clears messages, chat_id, guest_id, etc.)
-    clearChat();
-    
-    // Clear chat tokens from storage
-    clearChatTokens();
-    
-    // Clear any URL search parameters and chat-specific params to ensure clean state
-    console.log('[ChatThreadsSidebar] 🔄 Clearing URL parameters and redirecting to clean home');
-    
-    // Navigate to clean home page (/) - this clears the persisted URL completely
-    window.history.replaceState({}, '', '/');
-    window.location.href = '/';
-    
-    console.log('[ChatThreadsSidebar] ✅ Session cleanup complete, redirecting to clean home page');
+    try {
+      // Use the streamlined reset function
+      const { streamlinedSessionReset } = await import('@/utils/streamlinedSessionReset');
+      await streamlinedSessionReset({ redirectTo: '/' });
+      
+      console.log('[ChatThreadsSidebar] ✅ Streamlined session cleanup completed');
+    } catch (error) {
+      console.error('[ChatThreadsSidebar] ❌ Session cleanup failed:', error);
+      // Fallback: Force navigation anyway
+      window.location.href = '/';
+    }
   };
 
   return (

@@ -13,7 +13,7 @@ import { useConversationUIStore } from './conversation-ui-store';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { logUserError } from '@/services/errorService';
 import { SignInPrompt } from '@/components/auth/SignInPrompt';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { UserAvatar } from '@/components/settings/UserAvatar';
 import { useSettingsModal } from '@/contexts/SettingsModalContext';
@@ -26,15 +26,18 @@ const ChatSidebarControls = lazy(() => import('./ChatSidebarControls').then(modu
 
 interface ChatBoxProps {
   isGuestThreadReady?: boolean;
-  guestReportId?: string;
 }
 
-export const ChatBox: React.FC<ChatBoxProps> = ({ isGuestThreadReady = false, guestReportId }) => {
+export const ChatBox: React.FC<ChatBoxProps> = ({ isGuestThreadReady = false }) => {
   const { error } = useChatStore();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { uuid } = getChatTokens();
   const isConversationOpen = useConversationUIStore((s) => s.isConversationOpen);
+  
+  // Get guestReportId directly from URL - no more prop drilling!
+  const [searchParams] = useSearchParams();
+  const guestReportId = searchParams.get('guest_id');
   
   // Initialize ChatController for realtime updates (both text and conversation modes)
   const { startTurn, sendTextMessage, endTurn, cancelTurn } = useChat(guestReportId ? undefined : uuid, guestReportId);
@@ -98,33 +101,23 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ isGuestThreadReady = false, gu
     }
   };
 
-  // Handle session cleanup
-  const handleCleanupSession = async () => {
-    console.log('[ChatBox] Starting comprehensive session cleanup');
-    
-    try {
-      // Clear error state
-      setErrorState(null);
+    // Handle session cleanup
+    const handleCleanupSession = async () => {
+      console.log('[ChatBox] Starting streamlined session cleanup');
       
-      // Clear chat store
-      const { clearChat } = useChatStore.getState();
-      clearChat();
-      
-      // Clear conversation UI store
-      const { closeConversation } = useConversationUIStore.getState();
-      closeConversation();
-      
-      // Clear session storage
-      const sessionKeys = ['therai_chat_id', 'report_generation_status'];
-      sessionKeys.forEach(key => {
-        sessionStorage.removeItem(key);
-      });
-      
-      console.log('[ChatBox] Session cleanup completed');
-    } catch (error) {
-      console.error('[ChatBox] Error during session cleanup:', error);
-    }
-  };
+      try {
+        // Clear error state first
+        setErrorState(null);
+        
+        // Use the streamlined reset function
+        const { streamlinedSessionReset } = await import('@/utils/streamlinedSessionReset');
+        await streamlinedSessionReset({ redirectTo: '/', preserveNavigation: true });
+        
+        console.log('[ChatBox] Streamlined session cleanup completed');
+      } catch (error) {
+        console.error('[ChatBox] Error during session cleanup:', error);
+      }
+    };
 
   // Loading skeleton for message area
   const MessageListSkeleton = () => (
@@ -179,7 +172,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ isGuestThreadReady = false, gu
               
               <div className="flex-1">
                 <Suspense fallback={<div className="space-y-4"><div className="h-8 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div></div>}>
-                  <ChatSidebarControls isGuestThreadReady={isGuestThreadReady} guestReportId={guestReportId} />
+                  <ChatSidebarControls isGuestThreadReady={isGuestThreadReady} />
                 </Suspense>
               </div>
             </div>
@@ -244,7 +237,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ isGuestThreadReady = false, gu
                       <h2 className="text-lg font-light italic">Settings</h2>
                     </div>
                     <Suspense fallback={<div className="space-y-4"><div className="h-8 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div></div>}>
-                      <ChatSidebarControls isGuestThreadReady={isGuestThreadReady} guestReportId={guestReportId} />
+                      <ChatSidebarControls isGuestThreadReady={isGuestThreadReady} />
                     </Suspense>
                   </div>
                 </SheetContent>

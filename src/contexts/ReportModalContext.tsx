@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ReportSlideOver } from '@/components/public-report/ReportSlideOver';
 
 interface ModalContext {
@@ -10,31 +11,40 @@ interface ModalContext {
 const ReportModalContext = createContext<ModalContext | null>(null);
 
 export const ReportModalProvider = ({ children }: { children: ReactNode }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [onLoadCallback, setOnLoadCallback] = useState<((error?: string | null) => void) | null>(null);
-  const [shouldFetch, setShouldFetch] = useState(false);
-  const [guestReportId, setGuestReportId] = useState<string>('');
+  
+  // Get modal state from URL parameters - this automatically persists across refreshes
+  const isOpen = searchParams.get('modal') === 'astro';
+  const guestReportId = searchParams.get('report_id') || '';
+  const shouldFetch = isOpen && guestReportId && guestReportId !== 'new';
 
   const open = useCallback((guestReportId: string, onLoad?: (error?: string | null) => void) => {
     if (!guestReportId) {
       console.warn('[ReportModal] No guest report ID provided');
       return;
     }
-    setGuestReportId(guestReportId);
+    
+    // Update URL parameters to open modal
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.set('modal', 'astro');
+    newSearchParams.set('report_id', guestReportId);
+    setSearchParams(newSearchParams);
+    
     if (onLoad) {
       setOnLoadCallback(() => onLoad);
     }
-    setIsOpen(true);
-    // Only trigger fetch for existing reports, not for 'new' reports
-    setShouldFetch(guestReportId !== 'new');
-  }, []);
+  }, [searchParams, setSearchParams]);
 
   const close = useCallback(() => {
-    setIsOpen(false);
+    // Remove modal parameters from URL
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.delete('modal');
+    newSearchParams.delete('report_id');
+    setSearchParams(newSearchParams);
+    
     setOnLoadCallback(null); // Clear callback on close
-    setShouldFetch(false); // Reset fetch trigger
-    setGuestReportId(''); // Clear guest report ID
-  }, []);
+  }, [searchParams, setSearchParams]);
 
   return (
     <ReportModalContext.Provider value={{ open, close, isOpen }}>

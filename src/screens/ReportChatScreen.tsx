@@ -242,7 +242,7 @@ const ReportChatScreen = () => {
         <ReportModalProvider>
           <MobileViewportLock active>
             <div className="font-sans antialiased text-gray-800 bg-gray-50 fixed inset-0 flex flex-col">
-              <ChatBox isGuestThreadReady={isGuestThreadReady} guestReportId={guestId} />
+              <ChatBox isGuestThreadReady={isGuestThreadReady} />
             </div>
           </MobileViewportLock>
         </ReportModalProvider>
