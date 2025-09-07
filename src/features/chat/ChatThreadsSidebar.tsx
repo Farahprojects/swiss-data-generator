@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useChatStore } from '@/core/store';
 import { useAuth } from '@/contexts/AuthContext';
-import { Trash2, Sparkles, AlertTriangle, MoreHorizontal } from 'lucide-react';
+import { Trash2, Sparkles, AlertTriangle, MoreHorizontal, UserPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReportModal } from '@/contexts/ReportModalContext';
 import { getChatTokens, clearChatTokens } from '@/services/auth/chatTokens';
@@ -34,10 +34,19 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const [hoveredThread, setHoveredThread] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [astroChoiceMade, setAstroChoiceMade] = useState(false);
   
   // For guest users, show current thread
   // For signed-in users, this will be replaced with conversations list later
   const isGuest = !user;
+
+  // Check if user has made astro choice (same logic as MessageList)
+  React.useEffect(() => {
+    const userMessages = messages.filter(m => m.role === 'user');
+    if (userMessages.length > 0) {
+      setAstroChoiceMade(true);
+    }
+  }, [messages]);
 
   // Generate thread title from first user message (same for both guest and signed-in users)
   const threadTitle = useMemo(() => {
@@ -72,6 +81,14 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
       console.error('[ChatThreadsSidebar] ❌ Session cleanup failed:', error);
       // Fallback: Force navigation anyway
       window.location.href = '/';
+    }
+  };
+
+  const handleBackupAstroData = () => {
+    setAstroChoiceMade(true);
+    // Open the astro data modal
+    if (guestReportId) {
+      openReportModal(guestReportId);
     }
   };
 
@@ -152,7 +169,21 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
 
       {/* Guest user info */}
       {isGuest && (
-        <div className="mt-auto pt-4 border-t border-gray-200">
+        <div className="mt-auto pt-4 border-t border-gray-200 space-y-3">
+          {/* Backup Add Astro Data Button */}
+          <button
+            onClick={handleBackupAstroData}
+            disabled={astroChoiceMade}
+            className={cn(
+              "w-full px-3 py-2 text-sm rounded-lg transition-colors font-light border",
+              astroChoiceMade 
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-300" 
+                : "bg-white text-black border-black hover:bg-gray-50"
+            )}
+          >
+            Add Astro Data
+          </button>
+          
           <button
             onClick={() => setShowAuthModal(true)}
             className="w-full px-3 py-2 text-sm bg-gray-900 text-white hover:bg-gray-800 rounded-lg transition-colors font-light"
