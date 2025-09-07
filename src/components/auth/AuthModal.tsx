@@ -44,7 +44,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         </div>
 
         {/* Mode Toggle */}
-        <div className="py-6 px-4 border-t border-gray-200 text-center flex items-center justify-center">
+        <div className="p-4 pb-6 border-t border-gray-200 text-center">
           {mode === 'login' ? (
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}
