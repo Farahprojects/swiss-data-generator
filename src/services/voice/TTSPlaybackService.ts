@@ -23,14 +23,23 @@ class TTSPlaybackService {
     return { isPlaying: this.isPlaying, isPaused: this.isPaused };
   }
 
-  // Warmup method to pre-initialize audio context and resume it
+  // Warmup method to pre-initialize audio context and warm the decode path
   async warmup(): Promise<void> {
     try {
       const ctx = this.ensureAudioContext();
       if (ctx.state === 'suspended') {
         await ctx.resume();
       }
-      console.log('[TTSPlaybackService] 🔥 Audio context warmed up');
+      
+      // Pre-warm the decode path with a tiny silent buffer
+      const silentBuffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+      const source = ctx.createBufferSource();
+      source.buffer = silentBuffer;
+      source.connect(ctx.destination);
+      source.start(0);
+      source.stop(0.001); // Stop immediately
+      
+      console.log('[TTSPlaybackService] 🔥 Audio context and decode path warmed up');
     } catch (error) {
       console.error('[TTSPlaybackService] Warmup failed:', error);
     }

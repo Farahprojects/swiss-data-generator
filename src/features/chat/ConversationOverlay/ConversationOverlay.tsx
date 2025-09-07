@@ -70,23 +70,13 @@ export const ConversationOverlay: React.FC = () => {
       await ttsPlaybackService.play(audioBytes, () => {
         setState('listening');
         
-        // Pause WebSocket after playback ends
-        if (connectionRef.current?.state === 'SUBSCRIBED') {
-          connectionRef.current.unsubscribe();
-        }
-
-        // Unmute microphone and start recording for next turn
+        // Unmute microphone and start recording for next turn (keep WebSocket connected)
         if (!isShuttingDown.current) {
           setTimeout(async () => {
             if (!isShuttingDown.current) {
               conversationMicrophoneService.unmute();
               // Start recording to actually begin listening
               await conversationMicrophoneService.startRecording();
-              
-              // Resume WebSocket after starting recording
-              if (connectionRef.current?.state === 'CLOSED') {
-                connectionRef.current.subscribe();
-              }
             }
           }, 200);
         }
@@ -118,7 +108,22 @@ export const ConversationOverlay: React.FC = () => {
       // 🔥 WARMUP: Pre-warm audio system for faster first response
       console.log('[ConversationOverlay] 🔥 Starting audio warmup...');
       const { ttsPlaybackService } = await import('@/services/voice/TTSPlaybackService');
-      await ttsPlaybackService.warmup();
+      
+      // Warm up both TTS and STT in parallel
+      const warmupPromises = [
+        ttsPlaybackService.warmup(),
+        // Fire-and-forget STT warmup to prevent cold-start
+        fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/openai-whisper`, {
+          method: 'POST',
+          headers: {
+            'X-Warmup': '1',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+          },
+          body: new ArrayBuffer(0) // Empty body for warmup
+        }).catch(() => {}) // Ignore warmup errors
+      ];
+      
+      await Promise.all(warmupPromises);
       
       // Initialize microphone service
       conversationMicrophoneService.initialize({

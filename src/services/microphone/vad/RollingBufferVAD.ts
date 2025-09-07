@@ -52,14 +52,14 @@ export class RollingBufferVAD {
   constructor(options: RollingBufferVADOptions = {}) {
     this.opts = {
       lookbackWindowMs: 15000,
-      chunkDurationMs: 200,
+      chunkDurationMs: 160,
       preRollMs: 250,
       pruneOnUtterance: true,
 
       voiceThreshold: 0.012,
       silenceThreshold: 0.008,
-      voiceConfirmMs: 300,
-      silenceTimeoutMs: 1500,
+      voiceConfirmMs: 200,
+      silenceTimeoutMs: 1000,
       maxUtteranceMs: 15000,
       minUtteranceMs: 250,
 

@@ -13,6 +13,15 @@ serve(async (req) => {
   }
 
   try {
+    // Handle warmup request
+    const warmupHeader = req.headers.get('X-Warmup');
+    if (warmupHeader === '1') {
+      console.log('[openai-whisper] 🔥 Warmup request received');
+      return new Response(JSON.stringify({ status: 'warmed up' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     // Get raw binary audio data
     const arrayBuffer = await req.arrayBuffer();
     const audioBuffer = new Uint8Array(arrayBuffer);

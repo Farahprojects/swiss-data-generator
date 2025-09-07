@@ -257,7 +257,7 @@ export class ConversationMicrophoneServiceClass {
   }
 
   /**
-   * Mute microphone during TTS playback
+   * Mute microphone during TTS playback - use pauseListening for better performance
    */
   mute(): void {
     if (this.stream) {
@@ -265,25 +265,23 @@ export class ConversationMicrophoneServiceClass {
         track.enabled = false;
       });
     }
-    this.isPaused = true;
+    this.pauseListening();
     audioArbitrator.setMicrophoneState('muted');
     this.notifyListeners();
   }
 
   /**
-   * Unmute microphone after TTS playback - ATOMIC: Clean then unmute
+   * Unmute microphone after TTS playback - use resumeListening for better performance
    */
   unmute(): void {
-    // CRITICAL: Clean media source BEFORE unmuting to prevent race conditions
-    this.forceCleanup();
-    // Media source cleaned before unmute
-    
     if (this.stream) {
       this.stream.getAudioTracks().forEach(track => {
         track.enabled = true;
       });
     }
-    this.isPaused = false;
+    
+    // Resume listening using existing stream/AudioContext
+    this.resumeListening();
     
     // Request audio control again if we don't have it
     if (audioArbitrator.getCurrentSystem() === 'none') {
@@ -292,6 +290,47 @@ export class ConversationMicrophoneServiceClass {
     
     audioArbitrator.setMicrophoneState('active');
     this.notifyListeners();
+  }
+
+  /**
+   * Pause listening - stop VAD/MediaRecorder but keep stream and AudioContext alive
+   */
+  pauseListening(): void {
+    if (this.rollingBufferVAD) {
+      this.rollingBufferVAD.stop();
+    }
+    
+    if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+      this.mediaRecorder.stop();
+    }
+    
+    this.isRecording = false;
+    this.isPaused = true;
+    console.log('[ConversationMic] ⏸️ Paused listening (stream/AudioContext kept alive)');
+  }
+
+  /**
+   * Resume listening - create new MediaRecorder on existing stream and restart VAD
+   */
+  resumeListening(): void {
+    if (!this.stream || !this.audioContext) {
+      console.warn('[ConversationMic] Cannot resume - no stream or AudioContext');
+      return;
+    }
+
+    // Create new MediaRecorder on existing stream
+    this.mediaRecorder = new MediaRecorder(this.stream, {
+      mimeType: 'audio/webm;codecs=opus'
+    });
+
+    // Restart VAD with existing stream and AudioContext
+    if (this.rollingBufferVAD) {
+      this.rollingBufferVAD.start(this.stream, this.mediaRecorder, this.audioContext);
+    }
+
+    this.isRecording = true;
+    this.isPaused = false;
+    console.log('[ConversationMic] ▶️ Resumed listening (reused stream/AudioContext)');
   }
 
   /**
