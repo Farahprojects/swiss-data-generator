@@ -154,7 +154,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
 
       {/* Guest user info */}
       {isGuest && (
-        <div className="mt-auto pt-4 border-t border-gray-200">
+        <div className="flex-1 flex items-center justify-center">
           <button
             onClick={() => setShowAuthModal(true)}
             className="w-full px-3 py-2 text-sm bg-gray-900 text-white hover:bg-gray-800 rounded-lg transition-colors font-light"
