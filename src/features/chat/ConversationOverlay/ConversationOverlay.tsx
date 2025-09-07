@@ -192,37 +192,40 @@ export const ConversationOverlay: React.FC = () => {
     }
   }, [chat_id, state]);
 
-  // Cleanup on modal close
+  // Cleanup on modal close - graceful release with fire-and-forget
   const handleModalClose = useCallback(async () => {
     isShuttingDown.current = true;
     
-    // Stop TTS
-    try {
-      await ttsPlaybackService.destroy();
-    } catch (e) {
-      console.warn('[ConversationOverlay] Could not destroy TTS:', e);
-    }
+    // Fire-and-forget TTS release
+    ttsPlaybackService.destroy().catch(() => {});
 
-    // Stop microphone
+    // Fire-and-forget microphone release
     try {
       conversationMicrophoneService.forceCleanup();
     } catch (e) {
-      console.warn('[ConversationOverlay] Could not stop microphone:', e);
+      // Ignore microphone cleanup errors
     }
     
-    // Close WebSocket
+    // Fire-and-forget WebSocket cleanup
     if (connectionRef.current) {
-      connectionRef.current.unsubscribe();
+      try {
+        connectionRef.current.unsubscribe();
+      } catch (e) {
+        // Ignore WebSocket cleanup errors
+      }
       connectionRef.current = null;
     }
     
-    // ▶️ RESUME: Resume ChatController WebSocket for normal chat mode
-    try {
-      const { chatController } = await import('@/features/chat/ChatController');
-      chatController.resumeRealtimeSubscription();
-    } catch (error) {
-      console.warn('[ConversationOverlay] Could not resume ChatController WebSocket:', error);
-    }
+    // ▶️ RESUME: Resume ChatController WebSocket for normal chat mode (fire-and-forget)
+    import('@/features/chat/ChatController').then(({ chatController }) => {
+      try {
+        chatController.resumeRealtimeSubscription();
+      } catch (error) {
+        // Ignore resume errors
+      }
+    }).catch(() => {
+      // Ignore import errors
+    });
     
     // Reset state
     setState('connecting');

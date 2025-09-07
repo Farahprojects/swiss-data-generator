@@ -367,46 +367,71 @@ export class ConversationMicrophoneServiceClass {
   }
 
   /**
-   * Cleanup everything - CACHE-FREE: Complete cleanup of all resources
+   * Graceful release - Release resources without aggressive cleanup
    */
   forceCleanup(): void {
-    // Complete cleanup of all resources
+    // Graceful release of resources (fire-and-forget to prevent hanging)
     
     this.isRecording = false;
     this.audioLevel = 0;
     this.currentTurnId = null;
 
+    // Fire-and-forget VAD cleanup
     if (this.rollingBufferVAD) {
       this.rollingBufferVAD.stop().catch(() => {});
       this.rollingBufferVAD.cleanup();
       this.rollingBufferVAD = null;
     }
     
-    // Clean up MediaRecorder
+    // Release MediaRecorder (don't force cleanup)
     this.mediaRecorder = null;
 
+    // Release microphone browser resources (fire-and-forget)
     if (this.stream) {
-      this.stream.getAudioTracks().forEach(track => track.stop());
+      this.stream.getAudioTracks().forEach(track => {
+        try {
+          track.stop();
+        } catch (e) {
+          // Ignore track stop errors
+        }
+      });
       this.stream = null;
     }
 
+    // Release media source (fire-and-forget)
     if (this.mediaStreamSource) {
-      this.mediaStreamSource.disconnect();
+      try {
+        this.mediaStreamSource.disconnect();
+      } catch (e) {
+        // Ignore disconnect errors
+      }
       this.mediaStreamSource = null;
     }
 
+    // Release analyser (fire-and-forget)
     if (this.analyser) {
-      this.analyser.disconnect();
+      try {
+        this.analyser.disconnect();
+      } catch (e) {
+        // Ignore disconnect errors
+      }
       this.analyser = null;
     }
 
+    // Release AudioContext (fire-and-forget)
     if (this.audioContext && this.audioContext.state !== 'closed') {
       this.audioContext.close().catch(() => {});
       this.audioContext = null;
     }
 
-    audioArbitrator.releaseControl('microphone');
-    audioArbitrator.setMicrophoneState('inactive');
+    // Release audio control (fire-and-forget)
+    try {
+      audioArbitrator.releaseControl('microphone');
+      audioArbitrator.setMicrophoneState('inactive');
+    } catch (e) {
+      // Ignore arbitrator errors
+    }
+    
     this.notifyListeners();
   }
 
