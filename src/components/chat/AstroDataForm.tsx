@@ -623,9 +623,6 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                 </div>
 
                 <div>
-                  <Label htmlFor="secondPersonBirthLocation" className="text-sm font-medium text-gray-700">
-                    Birth Location *
-                  </Label>
                   <CleanPlaceAutocomplete
                     value={formValues.secondPersonBirthLocation || ''}
                     onChange={(val) => setValue('secondPersonBirthLocation', val)}
