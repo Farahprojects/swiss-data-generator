@@ -44,7 +44,7 @@ const getReportPrice = (reportType: string, getPriceById: any): string => {
 const getTestDataWithPricing = (getPriceById: any): Test[] => [
   {
     id: "TheSelf",
-    name: `The Self ${getReportPrice('TheSelf', getPriceById)}`,
+    name: "The Self",
     description: "Uncover insights",
     subDescriptions: [
       "Know yourself",
@@ -57,7 +57,7 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
   },
   {
     id: "Compatibility",
-    name: `Compatibility ${getReportPrice('Compatibility', getPriceById)}`,
+    name: "Compatibility",
     description: "Discover synergies",
     subDescriptions: [
       "Connection guide",
@@ -70,21 +70,21 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
   },
   {
     id: "AstroData",
-    name: `Astro Data ${getReportPrice('AstroData', getPriceById)}`,
-    description: "Raw planetary data and alignments",
+    name: "Focus",
+    description: "Clarity to move past resistance",
     subDescriptions: [
-      "Pure facts",
+      "Break through barriers",
       "The Self – Compatibility"
     ],
     slug: "life-shift",
     time: "10 min",
-            color: "bg-gray-900",
+    color: "bg-gray-900",
     imageSrc: normalizeStorageUrl("https://wrvqqvqvwqmfdqvqmaar.supabase.co/storage/v1/object/public/feature-images/focus.png")
   },
   {
     id: "SnapShot",
-    name: `Monthly ${getReportPrice('SnapShot', getPriceById)}`,
-    description: "Your personalized forecast and timing guidance",
+    name: "Timing",
+    description: "Ride your energy swings, don't fight them",
     subDescriptions: [
       "Month ahead",
       "daily energy swings"
