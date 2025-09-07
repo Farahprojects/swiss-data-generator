@@ -980,6 +980,48 @@ export type Database = {
         }
         Relationships: []
       }
+      message_block_summaries: {
+        Row: {
+          block_index: number
+          chat_id: string
+          created_at: string
+          end_message_id: string | null
+          id: string
+          message_count: number
+          meta: Json
+          model: string | null
+          start_message_id: string | null
+          summary: string
+          updated_at: string
+        }
+        Insert: {
+          block_index: number
+          chat_id: string
+          created_at?: string
+          end_message_id?: string | null
+          id?: string
+          message_count?: number
+          meta?: Json
+          model?: string | null
+          start_message_id?: string | null
+          summary: string
+          updated_at?: string
+        }
+        Update: {
+          block_index?: number
+          chat_id?: string
+          created_at?: string
+          end_message_id?: string | null
+          id?: string
+          message_count?: number
+          meta?: Json
+          model?: string | null
+          start_message_id?: string | null
+          summary?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           chat_id: string
