@@ -1,17 +1,4 @@
 {
-  "redirects": [
-    {
-      "source": "/",
-      "has": [
-        {
-          "type": "host",
-          "value": "www.theraiastro.com"
-        }
-      ],
-      "destination": "/report",
-      "statusCode": 308
-    }
-  ],
   "rewrites": [
     {
       "source": "/:path*",

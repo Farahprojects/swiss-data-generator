@@ -139,8 +139,8 @@ serve(async (req) => {
     
     // 2. Prepare data for the support email
     const emailPayload = {
-      to: "support@theraiastro.com",
-      from: "Theria Contact <no-reply@theraiastro.com>",
+      to: "support@therai.co",
+      from: "Therai Contact <no-reply@therai.co>",
       subject: `Contact Form: ${payload.subject}`,
       html: `
         <h2>New Contact Message</h2>

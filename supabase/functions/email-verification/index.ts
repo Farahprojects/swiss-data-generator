@@ -230,7 +230,7 @@ serve(async (req) => {
       to: newEmail,
       subject: templateData.subject,
       html,
-      from: "Theria Astro <no-reply@theraiastro.com>",
+      from: "Therai <no-reply@therai.co>",
     };
 
     const send = await fetch(smtpEndpoint, {

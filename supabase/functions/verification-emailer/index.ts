@@ -39,7 +39,7 @@ serve(async (req) => {
       );
     }
 
-    const payload = { to, subject, html, text, from: from ?? "Theria Astro <no-reply@theraiastro.com>" };
+    const payload = { to, subject, html, text, from: from ?? "Therai <no-reply@therai.co>" };
 
     const r = await fetch(endpoint, {
       method: "POST",

@@ -99,7 +99,7 @@ serve(async (req) => {
       to: email,
       subject: templateData.subject,
       html,
-      from: "Theria Astro <no-reply@theraiastro.com>",
+      from: "Therai <no-reply@therai.co>",
     }
   });
 

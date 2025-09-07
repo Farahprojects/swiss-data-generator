@@ -452,7 +452,7 @@ async function processGuestReportPdf(guestReportId: string, requestId: string, r
     subject: tmpl.subject,
     html: tmpl.body_html,
     text: tmpl.body_text ?? "",
-    from: "Theria Astro <no-reply@theraiastro.com>",
+    from: "Therai <no-reply@therai.co>",
     attachments: [{
       filename,
       content: pdfBase64,
