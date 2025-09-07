@@ -46,7 +46,15 @@ const SignupModal: React.FC<SignupModalProps> = ({ onSuccess }) => {
 
     try {
       console.log('[SignupModal] Attempting signup for:', email);
-      const result = await signUp(email, password);
+      
+      // Add timeout to catch hanging requests
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout - please try again')), 15000)
+      );
+      
+      const signupPromise = signUp(email, password);
+      const result = await Promise.race([signupPromise, timeoutPromise]) as Awaited<ReturnType<typeof signUp>>;
+      
       console.log('[SignupModal] Signup result:', { hasError: !!result.error, hasUser: !!result.user });
       
       if (result.error) {
@@ -62,9 +70,9 @@ const SignupModal: React.FC<SignupModalProps> = ({ onSuccess }) => {
           description: 'Please check your email to verify your account.',
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.log('[SignupModal] Signup exception:', error);
-      setErrorMsg('An unexpected error occurred. Please try again.');
+      setErrorMsg(error.message || 'An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
