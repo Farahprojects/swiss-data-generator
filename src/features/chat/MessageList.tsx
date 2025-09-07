@@ -6,6 +6,7 @@ import { RefreshCw, AlertTriangle } from 'lucide-react';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { Button } from '@/components/ui/button';
 import { AstroDataPromptMessage } from '@/components/chat/AstroDataPromptMessage';
+import { AstroDataForm } from '@/components/chat/AstroDataForm';
 
 // Lazy load TypewriterText for better performance
 const TypewriterText = lazy(() => import('@/components/ui/TypewriterText').then(module => ({ default: module.TypewriterText })));
@@ -196,9 +197,15 @@ export const MessageList = () => {
             <div className="flex-1 flex flex-col justify-end">
               <div className="p-4">
                 {!astroChoiceMade && !chat_id ? (
-                  <AstroDataPromptMessage
-                    onAddAstroData={handleAddAstroData}
-                  />
+                  <div className="w-full max-w-2xl lg:max-w-4xl">
+                    <AstroDataForm
+                      onClose={() => {}}
+                      onSubmit={(data) => {
+                        console.log('Astro data submitted:', data);
+                        handleAddAstroData();
+                      }}
+                    />
+                  </div>
                 ) : (
                   <div className="text-center text-gray-500">
                     <p className="text-sm">Ready to chat! Type your message below.</p>
