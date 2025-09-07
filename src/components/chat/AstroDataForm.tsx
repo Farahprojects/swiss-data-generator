@@ -16,7 +16,7 @@ import { ReportFormData } from '@/types/public-report';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { usePricing } from '@/contexts/PricingContext';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useChatStore } from '@/core/store';
 
 interface AstroDataFormProps {
@@ -38,7 +38,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const isMobile = useIsMobile();
   
-  const { toast } = useToast();
+  
   const { getPriceById, isLoading: pricesLoading } = usePricing();
 
   const form = useForm<ReportFormData>({
@@ -233,57 +233,61 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
 
       if (error) {
         console.error('Failed to initiate report flow:', error);
-        // TODO: Show error toast
+        toast.error('Failed to initiate report flow. Please try again.');
         return;
       }
 
       if (response) {
         console.log('Report flow initiated successfully:', response);
         
-        // If this is a paid report, trigger report generation immediately
-        if (response.paymentStatus === 'paid') {
-          console.log(`[AstroForm] 💰 Paid report detected, triggering report generation for: ${response.guestReportId}`);
+        // Check if we need to redirect to Stripe checkout
+        if (response.checkoutUrl) {
+          console.log(`[AstroForm] 💳 Redirecting to Stripe checkout: ${response.checkoutUrl}`);
+          toast.success('Redirecting to payment...');
           
+          // Redirect to Stripe checkout
           try {
-            const { error: triggerError } = await supabase.functions.invoke('trigger-report-generation', { 
-              body: { guest_report_id: response.guestReportId } 
-            });
-
-            if (triggerError) {
-              console.error(`[AstroForm] ❌ Failed to trigger report generation:`, triggerError);
-            } else {
-              console.log(`[AstroForm] ✅ Report generation triggered successfully for: ${response.guestReportId}`);
-            }
-          } catch (error) {
-            console.error(`[AstroForm] ❌ Error triggering report generation:`, error);
+            window.open(response.checkoutUrl, '_self');
+          } catch (redirectError) {
+            console.warn('[AstroForm] Failed to redirect with window.open, falling back to location.href');
+            window.location.href = response.checkoutUrl;
           }
+          return;
         }
         
-        // Update URL with guest_id and chat_id for session persistence (no page reload)
-        const currentUrl = window.location.pathname;
-        const newUrl = `${currentUrl}?guest_id=${response.guestReportId}&chat_id=${response.chatId}`;
-        window.history.replaceState({}, "", newUrl);
-        
-        console.log(`[AstroForm] 🔗 URL updated for session persistence: ${newUrl}`);
-        
-        // Hydrate chat store immediately so chat is usable right away
-        try {
-          useChatStore.getState().startConversation(response.chatId, response.guestReportId);
-          console.log(`[AstroForm] 🧠 Store hydrated with chat_id and guest_id: ${response.chatId}, ${response.guestReportId}`);
-        } catch (e) {
-          console.error('[AstroForm] ❌ Failed to hydrate chat store:', e);
+        // If this is a free report, proceed with chat setup
+        if (response.paymentStatus === 'paid' || pricingResult.final_price_usd === 0) {
+          console.log(`[AstroForm] ✅ Report ready (${pricingResult.final_price_usd === 0 ? 'free' : 'paid'}), setting up chat for: ${response.guestReportId}`);
+          
+          // Update URL with guest_id and chat_id for session persistence (no page reload)
+          const currentUrl = window.location.pathname;
+          const newUrl = `${currentUrl}?guest_id=${response.guestReportId}&chat_id=${response.chatId}`;
+          window.history.replaceState({}, "", newUrl);
+          
+          console.log(`[AstroForm] 🔗 URL updated for session persistence: ${newUrl}`);
+          
+          // Hydrate chat store immediately so chat is usable right away
+          try {
+            useChatStore.getState().startConversation(response.chatId, response.guestReportId);
+            console.log(`[AstroForm] 🧠 Store hydrated with chat_id and guest_id: ${response.chatId}, ${response.guestReportId}`);
+          } catch (e) {
+            console.error('[AstroForm] ❌ Failed to hydrate chat store:', e);
+          }
+          
+          // Store the chat_id and guest_report_id for the chat session
+          onSubmit({
+            ...formData,
+            chat_id: response.chatId,
+            guest_report_id: response.guestReportId
+          });
+        } else {
+          console.error('[AstroForm] ❌ Unexpected response - no checkout URL and not paid/free');
+          toast.error('Unexpected response from server');
         }
-        
-        // Store the chat_id and guest_report_id for the chat session
-        onSubmit({
-          ...formData,
-          chat_id: response.chatId,
-          guest_report_id: response.guestReportId
-        });
       }
     } catch (error) {
       console.error('Error initiating report flow:', error);
-      // TODO: Show error toast
+      toast.error('Something went wrong. Please try again.');
       setIsProcessingPayment(false);
     }
   };
