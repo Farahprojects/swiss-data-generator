@@ -566,60 +566,55 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                   {errors.secondPersonName && <ErrorMsg msg={errors.secondPersonName.message || ''} />}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="secondPersonBirthDate" className="text-sm font-medium text-gray-700">
-                      Birth Date *
-                    </Label>
-                    {isMobile ? (
-                      <InlineDateTimeSelector
-                        type="date"
-                        value={formValues.secondPersonBirthDate || ''}
-                        onChange={(date) => setValue('secondPersonBirthDate', date)}
-                        onConfirm={() => setActiveSelector(null)}
-                        onCancel={() => setActiveSelector(null)}
-                        isOpen={activeSelector === 'secondDate'}
-                        placeholder="Select date"
-                        hasError={!!errors.secondPersonBirthDate}
-                        onOpen={() => setActiveSelector('secondDate')}
-                      />
-                    ) : (
-                      <Input
-                        id="secondPersonBirthDate"
-                        type="date"
-                        {...register('secondPersonBirthDate', { required: 'Second person birth date is required' })}
-                        className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
-                      />
-                    )}
-                    {errors.secondPersonBirthDate && <ErrorMsg msg={errors.secondPersonBirthDate.message || ''} />}
-                  </div>
+                <div>
+                  {isMobile ? (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <InlineDateTimeSelector
+                          type="date"
+                          value={formValues.secondPersonBirthDate || ''}
+                          onChange={(date) => setValue('secondPersonBirthDate', date)}
+                          onConfirm={() => setActiveSelector(null)}
+                          onCancel={() => setActiveSelector(null)}
+                          isOpen={activeSelector === 'secondDate'}
+                          placeholder="Select date"
+                          hasError={!!errors.secondPersonBirthDate}
+                          onOpen={() => setActiveSelector('secondDate')}
+                        />
+                        {errors.secondPersonBirthDate && <ErrorMsg msg={errors.secondPersonBirthDate.message || ''} />}
+                      </div>
 
-                  <div>
-                    <Label htmlFor="secondPersonBirthTime" className="text-sm font-medium text-gray-700">
-                      Birth Time *
-                    </Label>
-                    {isMobile ? (
-                      <InlineDateTimeSelector
-                        type="time"
-                        value={formValues.secondPersonBirthTime || ''}
-                        onChange={(time) => setValue('secondPersonBirthTime', time)}
-                        onConfirm={() => setActiveSelector(null)}
-                        onCancel={() => setActiveSelector(null)}
-                        isOpen={activeSelector === 'secondTime'}
-                        placeholder="Select time"
-                        hasError={!!errors.secondPersonBirthTime}
-                        onOpen={() => setActiveSelector('secondTime')}
-                      />
-                    ) : (
-                      <Input
-                        id="secondPersonBirthTime"
-                        type="time"
-                        {...register('secondPersonBirthTime', { required: 'Second person birth time is required' })}
-                        className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
-                      />
-                    )}
-                    {errors.secondPersonBirthTime && <ErrorMsg msg={errors.secondPersonBirthTime.message || ''} />}
-                  </div>
+                      <div>
+                        <InlineDateTimeSelector
+                          type="time"
+                          value={formValues.secondPersonBirthTime || ''}
+                          onChange={(time) => setValue('secondPersonBirthTime', time)}
+                          onConfirm={() => setActiveSelector(null)}
+                          onCancel={() => setActiveSelector(null)}
+                          isOpen={activeSelector === 'secondTime'}
+                          placeholder="Select time"
+                          hasError={!!errors.secondPersonBirthTime}
+                          onOpen={() => setActiveSelector('secondTime')}
+                        />
+                        {errors.secondPersonBirthTime && <ErrorMsg msg={errors.secondPersonBirthTime.message || ''} />}
+                      </div>
+                    </div>
+                  ) : (
+                    <SimpleDateTimePicker
+                      dateValue={formValues.secondPersonBirthDate || ''}
+                      timeValue={formValues.secondPersonBirthTime || ''}
+                      onDateChange={(date) => setValue('secondPersonBirthDate', date)}
+                      onTimeChange={(time) => setValue('secondPersonBirthTime', time)}
+                      hasDateError={!!errors.secondPersonBirthDate}
+                      hasTimeError={!!errors.secondPersonBirthTime}
+                    />
+                  )}
+                  {(errors.secondPersonBirthDate || errors.secondPersonBirthTime) && (
+                    <div className="mt-2 space-y-1">
+                      {errors.secondPersonBirthDate && <ErrorMsg msg={errors.secondPersonBirthDate.message || ''} />}
+                      {errors.secondPersonBirthTime && <ErrorMsg msg={errors.secondPersonBirthTime.message || ''} />}
+                    </div>
+                  )}
                 </div>
 
                 <div>
