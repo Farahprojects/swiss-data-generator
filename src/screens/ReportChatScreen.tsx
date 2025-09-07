@@ -129,7 +129,6 @@ const ReportChatScreen = () => {
 
     // 🚫 GUARD: Don't start if report is already ready (prevents refresh loops)
     if (useReportReadyStore.getState().isReportReady) {
-      console.log(`[ChatPage] 🚫 Report already ready, skipping WebSocket setup for: ${guestId}`);
       return;
     }
 

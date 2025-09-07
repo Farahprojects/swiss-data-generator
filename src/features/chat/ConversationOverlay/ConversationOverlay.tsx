@@ -111,7 +111,6 @@ export const ConversationOverlay: React.FC = () => {
       try {
         const { chatController } = await import('@/features/chat/ChatController');
         chatController.pauseRealtimeSubscription();
-        console.log('[ConversationOverlay] ⏸️ Paused ChatController WebSocket');
       } catch (error) {
         console.warn('[ConversationOverlay] Could not pause ChatController WebSocket:', error);
       }
@@ -211,7 +210,6 @@ export const ConversationOverlay: React.FC = () => {
     try {
       const { chatController } = await import('@/features/chat/ChatController');
       chatController.resumeRealtimeSubscription();
-      console.log('[ConversationOverlay] ▶️ Resumed ChatController WebSocket');
     } catch (error) {
       console.warn('[ConversationOverlay] Could not resume ChatController WebSocket:', error);
     }

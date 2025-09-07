@@ -105,12 +105,11 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                   <MoreHorizontal className="w-4 h-4 text-gray-600" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg">
+              <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg w-24">
                 <DropdownMenuItem
                   onClick={() => {
                     if (isGuest) {
                       // For guest users, always allow opening report modal
-                      console.log('[ChatThreadsSidebar] Opening report modal for guest user');
                       if (guestReportId) {
                         // Existing guest with report - view astro data
                         openReportModal(guestReportId);
@@ -123,20 +122,18 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                       openReportModal(uuid);
                     }
                   }}
-                  className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer"
+                  className="px-3 py-2 text-sm text-black hover:bg-gray-200 cursor-pointer focus:bg-gray-200"
                 >
-                  <Sparkles className="w-4 h-4 text-blue-600" />
-                  {isGuest ? (isGuestThreadReady ? "View Astro Data" : "Add Astro Data") : "Generate Astro Report"}
+                  Astro
                 </DropdownMenuItem>
                 
                 {/* Delete option only for guest users */}
                 {isGuest && (
                   <DropdownMenuItem
                     onClick={() => setShowDeleteConfirm(true)}
-                    className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer text-red-600"
+                    className="px-3 py-2 text-sm text-black hover:bg-gray-200 cursor-pointer focus:bg-gray-200"
                   >
-                    <Trash2 className="w-4 h-4" />
-                    Clear Session
+                    Delete
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
