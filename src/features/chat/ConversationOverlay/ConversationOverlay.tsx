@@ -325,10 +325,11 @@ export const ConversationOverlay: React.FC = () => {
           </div>
         ) : state === 'establishing' ? (
           <div className="text-center text-gray-800 flex flex-col items-center gap-4">
-            <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center relative">
-              <Mic className="w-10 h-10 text-gray-600" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+            <div className="relative flex items-center justify-center">
+              {/* Spinner ring around the grey circle (not overlaying the mic) */}
+              <div className="absolute -inset-2 rounded-full border-2 border-gray-300 border-t-gray-600 animate-spin"></div>
+              <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center relative z-10">
+                <Mic className="w-10 h-10 text-gray-600" />
               </div>
             </div>
             <h2 className="text-2xl font-light">
