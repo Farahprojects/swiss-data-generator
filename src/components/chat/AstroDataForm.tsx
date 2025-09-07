@@ -539,7 +539,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                               type="submit"
                               className="flex-1 bg-gray-900 hover:bg-gray-800"
                             >
-                              {selectedAstroType === 'sync' ? 'Continue to Second Person' : 'Next'}
+                              Next
                             </Button>
               </div>
             </motion.form>
