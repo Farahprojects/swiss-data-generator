@@ -105,7 +105,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                   <MoreHorizontal className="w-4 h-4 text-gray-600" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg w-24">
+              <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg min-w-fit">
                 <DropdownMenuItem
                   onClick={() => {
                     if (isGuest) {
