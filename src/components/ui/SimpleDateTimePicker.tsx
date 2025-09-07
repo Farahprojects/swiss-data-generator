@@ -133,11 +133,11 @@ export const SimpleDateTimePicker: React.FC<SimpleDateTimePickerProps> = ({
   };
 
   const containerClass = (hasError: boolean) => cn(
-    "inline-flex items-center bg-white border-2 rounded-xl transition-all duration-200 px-4 py-2",
+    "inline-flex items-center bg-white border-2 rounded-xl transition-all duration-200 px-3 py-1",
     hasError ? "border-red-300" : "border-gray-200 focus-within:border-gray-400"
   );
 
-  const inputClass = "w-full h-10 text-center border-0 bg-transparent focus:outline-none focus:ring-0 text-sm font-light";
+  const inputClass = "w-full h-8 text-center border-0 bg-transparent focus:outline-none focus:ring-0 text-sm font-light";
 
   return (
     <div className="grid grid-cols-2 gap-4">
@@ -192,7 +192,7 @@ export const SimpleDateTimePicker: React.FC<SimpleDateTimePickerProps> = ({
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="h-10 w-10 p-0 hover:bg-gray-100 rounded-xl"
+                className="h-8 w-8 p-0 hover:bg-gray-100 rounded-xl"
               >
                 <CalendarIcon className="h-4 w-4 text-gray-400" />
               </Button>
@@ -259,7 +259,7 @@ export const SimpleDateTimePicker: React.FC<SimpleDateTimePickerProps> = ({
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="h-10 w-10 p-0 hover:bg-gray-100 rounded-xl"
+                className="h-8 w-8 p-0 hover:bg-gray-100 rounded-xl"
               >
                 <Clock className="h-4 w-4 text-gray-400" />
               </Button>
