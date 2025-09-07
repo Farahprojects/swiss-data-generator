@@ -338,7 +338,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
           )}
           <h2 className="text-xl font-medium text-gray-900">
             {currentStep === 'type' 
-              ? 'Choose Astro Data Type' 
+              ? 'Choose Discovery Type' 
               : currentStep === 'details'
               ? 'Your Details'
               : currentStep === 'secondPerson'
