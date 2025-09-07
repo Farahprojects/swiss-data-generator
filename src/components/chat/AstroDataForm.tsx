@@ -519,7 +519,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                     value={formValues.birthLocation || ''}
                     onChange={(val) => setValue('birthLocation', val)}
                     onPlaceSelect={handlePlaceSelect}
-                     placeholder="Enter birth city, state, country *"
+                     placeholder="Enter birth city, state, country"
                     className="h-12 rounded-lg border-gray-200 focus:border-gray-400 mt-1"
                   />
                   {errors.birthLocation && <ErrorMsg msg={errors.birthLocation.message || ''} />}
