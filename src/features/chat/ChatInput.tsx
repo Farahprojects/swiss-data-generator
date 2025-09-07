@@ -141,7 +141,7 @@ export const ChatInput = () => {
       <div className="flex items-end gap-2 max-w-4xl mx-auto">
         <div className="flex-1 relative">
           {isMicRecording ? (
-            <div className="w-full h-[46px] flex items-center justify-center bg-white border-2 border-black rounded-3xl">
+            <div className="w-full h-[46px] flex items-center justify-center bg-white border-2 border-gray-300 rounded-3xl">
               <VoiceWaveform audioLevelRef={audioLevelRef} />
             </div>
           ) : (
@@ -149,7 +149,7 @@ export const ChatInput = () => {
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="Share your thoughts..."
-              className="w-full px-4 py-2.5 pr-24 text-base font-light bg-white border-2 border-black rounded-3xl focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-black resize-none text-black placeholder-gray-500 overflow-y-auto"
+              className="w-full px-4 py-2.5 pr-24 text-base font-light bg-white border-2 border-gray-300 rounded-3xl focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-400 resize-none text-black placeholder-gray-500 overflow-y-auto"
               maxRows={4}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
