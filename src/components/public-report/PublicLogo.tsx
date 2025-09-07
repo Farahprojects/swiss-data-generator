@@ -26,7 +26,7 @@ export const PublicLogo = ({ className, linkClassName, size = 'md', asLink = tru
   const logoElement = (
     <div className={cn('flex items-center gap-2', className)}>
       <img 
-        src="https://wrvqqvqvwqmfdqvqmaar.supabase.co/storage/v1/object/public/therai-assets/logowhite.jpeg" 
+        src="https://auth.therai.co/storage/v1/object/public/therai-assets/Therailogoblack.png" 
         alt="TheRAI Logo" 
         className={cn('object-contain', logoSizeClasses[size])}
       />
