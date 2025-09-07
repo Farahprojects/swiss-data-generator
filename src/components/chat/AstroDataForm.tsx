@@ -744,7 +744,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                   onClick={() => {
                     selectedAstroType === 'sync' ? setCurrentStep('secondPerson') : setCurrentStep('details');
                   }}
-                  className="flex-1"
+                  className="flex-1 hover:bg-gray-100 hover:text-gray-700 border-gray-200"
                 >
                   Back
                 </Button>
