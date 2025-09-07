@@ -45,7 +45,7 @@ const TheraiChatGPTSection = () => {
 
                 <div className="flex items-center gap-4">
                   <div className="w-2 h-2 bg-gray-400 rounded-full flex-shrink-0"></div>
-                  <h3 className="text-xl font-medium text-gray-900">Works with All Reports</h3>
+                  <h3 className="text-xl font-medium text-gray-900">Works Across All Ages</h3>
                 </div>
               </div>
 
