@@ -33,8 +33,8 @@ export const initiateStripeCheckout = async ({
         amount,
         priceId,
         productId,
-        successUrl: successUrl || window.location.origin + '/report?status=success',
-        cancelUrl: cancelUrl || window.location.origin + '/report?status=cancelled',
+        successUrl: successUrl || window.location.origin + '/chat?status=success',
+        cancelUrl: cancelUrl || window.location.origin + '/chat?status=cancelled',
         returnPath: currentPath,
         isGuest: false, // This is for authenticated users
       },

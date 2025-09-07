@@ -24,8 +24,8 @@ export default function StripeReturn() {
     } else if (sessionId) {
       console.log('✅ [StripeReturn] Found session_id, navigating to report page');
       const reportUrl = status 
-        ? `/report?session_id=${sessionId}&status=${status}`
-        : `/report?session_id=${sessionId}`;
+        ? `/chat?session_id=${sessionId}&status=${status}`
+        : `/chat?session_id=${sessionId}`;
       navigate(reportUrl, { replace: true });
     } else {
       console.log('⚠️ [StripeReturn] No guest_id or session_id found, navigating to home');
