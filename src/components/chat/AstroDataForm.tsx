@@ -657,7 +657,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
               {/* Payment Step */}
               <div className="text-center mb-6">
                 <p className="text-gray-600">
-                  Almost there! Review your order and proceed to payment.
+                  Everything's in position. Complete your journey.
                 </p>
               </div>
 
