@@ -457,9 +457,6 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                 </div>
 
                 <div>
-                  <Label className="text-sm font-medium text-gray-700 mb-1 block">
-                    Birth Date & Time *
-                  </Label>
                   {isMobile ? (
                     <div className="grid grid-cols-2 gap-4">
                       <div>
