@@ -298,9 +298,7 @@ export const ConversationOverlay: React.FC = () => {
             </AnimatePresence>
 
             <p className="text-gray-500 font-light">
-              {state === 'establishing'
-                ? 'Establishing connection…'
-                : state === 'listening'
+              {state === 'listening'
                 ? 'Listening…'
                 : state === 'thinking'
                 ? 'Thinking…'
