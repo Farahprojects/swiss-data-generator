@@ -159,7 +159,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
             onClick={() => setShowAuthModal(true)}
             className="w-full px-3 py-2 text-sm bg-gray-900 text-white hover:bg-gray-800 rounded-lg transition-colors font-light"
           >
-            Sign in to save chat history
+            Sign in
           </button>
         </div>
       )}
