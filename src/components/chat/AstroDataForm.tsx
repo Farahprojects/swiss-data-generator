@@ -634,7 +634,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                   type="button"
                   variant="outline"
                   onClick={() => setCurrentStep('details')}
-                  className="flex-1"
+                  className="flex-1 hover:bg-gray-100 hover:text-gray-700 border-gray-200"
                 >
                   Back
                 </Button>
