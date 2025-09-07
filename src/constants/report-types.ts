@@ -95,7 +95,7 @@ export const astroRequestCategories = [
   {
     value: 'sync',
     title: 'Compatibility',
-    description: 'Synastry + composite + transits',
+    description: 'Explore dynamics and shared potential',
     icon: Users,
     request: 'sync',
   },
