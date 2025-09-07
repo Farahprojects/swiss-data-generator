@@ -122,7 +122,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                       openReportModal(uuid);
                     }
                   }}
-                  className="px-3 py-2 text-sm text-black hover:bg-gray-200 cursor-pointer focus:bg-gray-200"
+                  className="px-3 py-2 text-sm text-black hover:bg-gray-200 hover:text-black focus:bg-gray-200 focus:text-black cursor-pointer"
                 >
                   Astro
                 </DropdownMenuItem>
@@ -131,7 +131,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                 {isGuest && (
                   <DropdownMenuItem
                     onClick={() => setShowDeleteConfirm(true)}
-                    className="px-3 py-2 text-sm text-black hover:bg-gray-200 hover:text-black cursor-pointer focus:bg-gray-200"
+                    className="px-3 py-2 text-sm text-black hover:bg-gray-200 hover:text-black focus:bg-gray-200 focus:text-black cursor-pointer"
                   >
                     Delete
                   </DropdownMenuItem>
