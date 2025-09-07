@@ -74,7 +74,7 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
     description: "Clarity to move past resistance",
     subDescriptions: [
       "Break through mental barriers",
-      "The Self – Compatibility"
+      "and ride limitless energy"
     ],
     slug: "life-shift",
     time: "10 min",
