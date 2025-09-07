@@ -259,7 +259,13 @@ export const ConversationOverlay: React.FC = () => {
           <div className="text-center text-gray-800 flex flex-col items-center gap-4">
             <div
               className="flex flex-col items-center gap-4 cursor-pointer"
-              onClick={handleStart}
+              onClick={() => {
+                // Reset state and restart the entire flow
+                hasStarted.current = false;
+                isShuttingDown.current = false;
+                setState('connecting');
+                handleStart();
+              }}
             >
               <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center transition-colors hover:bg-gray-200 relative">
                 <Mic className="w-10 h-10 text-gray-600" />
@@ -269,7 +275,7 @@ export const ConversationOverlay: React.FC = () => {
               </h2>
             </div>
             <button
-              onClick={closeConversation}
+              onClick={handleModalClose}
               aria-label="Close conversation"
               className="w-10 h-10 bg-black rounded-full flex items-center justify-center text-white hover:bg-gray-800 transition-colors"
             >
