@@ -220,8 +220,7 @@ export const CleanPlaceAutocomplete = ({
       <div ref={wrapperRef} className={`relative space-y-2 ${className}`}>
         {label && (
           <Label htmlFor={id} className="block">
-            {label}
-            {required && <span className="text-red-500 ml-1">*</span>}
+            {label} *
           </Label>
         )}
         
