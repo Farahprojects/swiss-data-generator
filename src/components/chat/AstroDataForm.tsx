@@ -366,7 +366,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
               className="space-y-4"
             >
               <p className="text-gray-600 text-center mb-6 col-span-full">
-                Select the type of astrological data you'd like to generate
+                How would you like to explore today
               </p>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
