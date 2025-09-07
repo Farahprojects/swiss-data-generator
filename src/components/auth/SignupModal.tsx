@@ -45,11 +45,16 @@ const SignupModal: React.FC<SignupModalProps> = ({ onSuccess }) => {
     setErrorMsg('');
 
     try {
+      console.log('[SignupModal] Attempting signup for:', email);
       const result = await signUp(email, password);
+      console.log('[SignupModal] Signup result:', { hasError: !!result.error, hasUser: !!result.user });
       
       if (result.error) {
+        console.log('[SignupModal] Signup error:', result.error);
         setErrorMsg(result.error.message || 'Sign up failed');
-      } else if (result.user) {
+      } else {
+        // Pre-auth flow doesn't return a user until email verification
+        console.log('[SignupModal] Pre-auth signup successful, verification email sent');
         setSignupSuccess(true);
         setVerificationEmail(email);
         toast({
@@ -58,6 +63,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ onSuccess }) => {
         });
       }
     } catch (error) {
+      console.log('[SignupModal] Signup exception:', error);
       setErrorMsg('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
