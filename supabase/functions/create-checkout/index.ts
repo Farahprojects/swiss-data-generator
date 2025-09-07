@@ -83,10 +83,10 @@ serve(async (req) => {
       }
 
       /* -------- Success & cancel URLs - USE PASSED URLS -------- */
-      const baseOrigin = req.headers.get("origin") || Deno.env.get("SUPABASE_URL") || "https://theraiastro.com";
+      const baseOrigin = req.headers.get("origin") || Deno.env.get("SUPABASE_URL") || "https://therai.co";
       
-      // Use /stripe-return for better UX control
-      const finalSuccessUrl = successUrl ?? `${baseOrigin}/stripe-return?guest_id=${guest_report_id}&session_id={CHECKOUT_SESSION_ID}&status=success`;
+      // Use /chat for better UX control  
+      const finalSuccessUrl = successUrl ?? `${baseOrigin}/chat?guest_id=${guest_report_id}&session_id={CHECKOUT_SESSION_ID}&status=success`;
       const finalCancelUrl = cancelUrl ?? `${baseOrigin}/stripe-return?guest_id=${guest_report_id}&status=cancelled`;
       
       console.log("🔗 Success URL:", finalSuccessUrl);
@@ -251,7 +251,7 @@ serve(async (req) => {
     }
 
     /* -------- Success & cancel URLs -------- */
-    const baseOrigin = req.headers.get("origin") || Deno.env.get("SUPABASE_URL") || "https://theraiastro.com";
+    const baseOrigin = req.headers.get("origin") || Deno.env.get("SUPABASE_URL") || "https://therai.co";
     const paymentStatus = mode === "payment" ? "success" : "setup-success";
     const cancelStatus  = mode === "payment" ? "cancelled" : "setup-cancelled";
 
