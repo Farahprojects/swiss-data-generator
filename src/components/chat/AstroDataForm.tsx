@@ -316,7 +316,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       className="bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden"
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-6 border-b border-gray-200">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200">
         <div className="flex items-center gap-3">
           {(currentStep === 'details' || currentStep === 'secondPerson' || currentStep === 'payment') && (
             <button
