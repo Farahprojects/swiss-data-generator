@@ -88,7 +88,7 @@ export const astroRequestCategories = [
   {
     value: 'essence',
     title: 'The Self',
-    description: 'Your birth chart + current transits',
+    description: 'Discover your unique internal world',
     icon: User,
     request: 'essence',
   },
