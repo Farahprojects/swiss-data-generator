@@ -179,7 +179,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
               Are you sure you want to delete this chat session? All messages and data will be permanently removed.
             </p>
             
-            <div className="flex gap-3 justify-end">
+            <div className="flex gap-3 justify-between">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
