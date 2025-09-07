@@ -62,14 +62,12 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
 
 
   const handleClearSession = async () => {
-    console.log('[ChatThreadsSidebar] 🧹 Starting streamlined session cleanup...');
     
     try {
       // Use the streamlined reset function
       const { streamlinedSessionReset } = await import('@/utils/streamlinedSessionReset');
       await streamlinedSessionReset({ redirectTo: '/' });
       
-      console.log('[ChatThreadsSidebar] ✅ Streamlined session cleanup completed');
     } catch (error) {
       console.error('[ChatThreadsSidebar] ❌ Session cleanup failed:', error);
       // Fallback: Force navigation anyway
