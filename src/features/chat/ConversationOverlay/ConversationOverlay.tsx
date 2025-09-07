@@ -312,7 +312,7 @@ export const ConversationOverlay: React.FC = () => {
                 <Mic className="w-10 h-10 text-gray-600" />
               </div>
               <h2 className="text-2xl font-light">
-                Tap to Start Conversation
+                Tap to Start
               </h2>
             </div>
             <button
@@ -326,15 +326,12 @@ export const ConversationOverlay: React.FC = () => {
         ) : state === 'establishing' ? (
           <div className="text-center text-gray-800 flex flex-col items-center gap-4">
             <div className="relative flex items-center justify-center">
-              {/* Spinner ring around the grey circle (not overlaying the mic) */}
-              <div className="absolute -inset-2 rounded-full border-2 border-gray-300 border-t-gray-600 animate-spin"></div>
+              {/* Slow single-rotation spinner ring around the grey circle */}
+              <div className="absolute -inset-2 rounded-full border-2 border-gray-300 border-t-gray-600" style={{ animation: 'spin 2s linear 1' }}></div>
               <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center relative z-10">
                 <Mic className="w-10 h-10 text-gray-600" />
               </div>
             </div>
-            <h2 className="text-2xl font-light">
-              Warming up audio...
-            </h2>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center gap-6 relative">
