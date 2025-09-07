@@ -28,7 +28,7 @@ const TheraiChatGPTSection = () => {
                   <span className="block text-gray-700">Therai</span>
                 </h2>
                 <p className="text-lg text-gray-600 leading-relaxed mb-8">
-                  Take your reports even further with our deep thinking AI model to unlock instant, deeper analysis and personalized guidance. Talk with your report today.
+                  Your insights, brought to life — an intelligent conversation that moves with you and stays focused on what matters most.
                 </p>
               </div>
 
