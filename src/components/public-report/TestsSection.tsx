@@ -47,7 +47,7 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
     name: "The Self",
     description: "Uncover insights",
     subDescriptions: [
-      "Know yourself",
+      "Discover your authentic self",
       "Personal – Professional – Relational"
     ],
     slug: "Essence",
@@ -60,7 +60,7 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
     name: "Compatibility",
     description: "Discover synergies",
     subDescriptions: [
-      "Connection guide",
+      "Understand connection dynamics",
       "Personal or Professional"
     ],
     slug: "relationships",
@@ -73,7 +73,7 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
     name: "Focus",
     description: "Clarity to move past resistance",
     subDescriptions: [
-      "Break through barriers",
+      "Break through mental barriers",
       "The Self – Compatibility"
     ],
     slug: "life-shift",
@@ -86,8 +86,8 @@ const getTestDataWithPricing = (getPriceById: any): Test[] => [
     name: "Timing",
     description: "Ride your energy swings, don't fight them",
     subDescriptions: [
-      "Month ahead",
-      "daily energy swings"
+      "Navigate energy cycles naturally",
+      "Daily energy swings"
     ],
     slug: "Monthly",
     time: "12 min",
