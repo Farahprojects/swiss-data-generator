@@ -23,6 +23,19 @@ class TTSPlaybackService {
     return { isPlaying: this.isPlaying, isPaused: this.isPaused };
   }
 
+  // Warmup method to pre-initialize audio context and resume it
+  async warmup(): Promise<void> {
+    try {
+      const ctx = this.ensureAudioContext();
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+      }
+      console.log('[TTSPlaybackService] 🔥 Audio context warmed up');
+    } catch (error) {
+      console.error('[TTSPlaybackService] Warmup failed:', error);
+    }
+  }
+
   private ensureAudioContext(): AudioContext {
     if (!this.audioContext || this.audioContext.state === 'closed') {
       try {

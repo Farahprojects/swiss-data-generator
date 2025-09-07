@@ -115,6 +115,11 @@ export const ConversationOverlay: React.FC = () => {
         console.warn('[ConversationOverlay] Could not pause ChatController WebSocket:', error);
       }
       
+      // 🔥 WARMUP: Pre-warm audio system for faster first response
+      console.log('[ConversationOverlay] 🔥 Starting audio warmup...');
+      const { ttsPlaybackService } = await import('@/services/voice/TTSPlaybackService');
+      await ttsPlaybackService.warmup();
+      
       // Initialize microphone service
       conversationMicrophoneService.initialize({
         onRecordingComplete: (audioBlob: Blob) => processRecording(audioBlob),
@@ -251,7 +256,7 @@ export const ConversationOverlay: React.FC = () => {
               className="flex flex-col items-center gap-4 cursor-pointer"
               onClick={handleStart}
             >
-              <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center transition-colors hover:bg-gray-200">
+              <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center transition-colors hover:bg-gray-200 relative">
                 <Mic className="w-10 h-10 text-gray-600" />
               </div>
               <h2 className="text-2xl font-light">
@@ -265,6 +270,18 @@ export const ConversationOverlay: React.FC = () => {
             >
               ✕
             </button>
+          </div>
+        ) : state === 'establishing' ? (
+          <div className="text-center text-gray-800 flex flex-col items-center gap-4">
+            <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center relative">
+              <Mic className="w-10 h-10 text-gray-600" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+              </div>
+            </div>
+            <h2 className="text-2xl font-light">
+              Warming up audio...
+            </h2>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center gap-6 relative">
