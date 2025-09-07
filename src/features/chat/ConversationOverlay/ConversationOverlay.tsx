@@ -30,6 +30,42 @@ export const ConversationOverlay: React.FC = () => {
   const connectionRef = useRef<any>(null);
   const isProcessingRef = useRef<boolean>(false);
 
+  // 🚨 RESET TO TAP TO START - Elegant single function for all error recovery
+  const resetToTapToStart = useCallback((reason: string) => {
+    console.log(`[ConversationOverlay] 🔄 Reset to tap-to-start: ${reason}`);
+    
+    // Stop any ongoing operations
+    isShuttingDown.current = true;
+    isProcessingRef.current = false;
+    
+    // Force cleanup all resources (fire-and-forget)
+    ttsPlaybackService.destroy().catch(() => {});
+    conversationMicrophoneService.forceCleanup();
+    
+    // Cleanup WebSocket connection
+    if (connectionRef.current) {
+      try {
+        connectionRef.current.unsubscribe();
+      } catch (e) {
+        // Ignore WebSocket cleanup errors
+      }
+      connectionRef.current = null;
+    }
+    
+    // Reset audio arbitrator
+    try {
+      const { audioArbitrator } = require('@/services/audio/AudioArbitrator');
+      audioArbitrator.forceReleaseAll();
+    } catch (e) {
+      // Ignore arbitrator errors
+    }
+    
+    // Always return to tap-to-start state (no error UI)
+    setState('connecting');
+    hasStarted.current = false;
+    isShuttingDown.current = false;
+  }, []);
+
   // WebSocket connection setup
   const establishConnection = useCallback(async () => {
     if (!chat_id || connectionRef.current) return true;
@@ -54,6 +90,7 @@ export const ConversationOverlay: React.FC = () => {
       return true;
     } catch (error) {
       console.error('[ConversationOverlay] Connection failed:', error);
+      resetToTapToStart('WebSocket connection failed');
       return false;
     }
   }, [chat_id]);
@@ -83,7 +120,7 @@ export const ConversationOverlay: React.FC = () => {
       });
     } catch (error) {
       console.error('[ConversationOverlay] TTS playback failed:', error);
-      setState('connecting');
+      resetToTapToStart('TTS playback failed');
     }
   }, []);
 
@@ -130,7 +167,7 @@ export const ConversationOverlay: React.FC = () => {
         onRecordingComplete: (audioBlob: Blob) => processRecording(audioBlob),
         onError: (error: Error) => {
           console.error('[ConversationOverlay] Microphone error:', error);
-          setState('connecting');
+          resetToTapToStart('Microphone error');
         },
         silenceTimeoutMs: 1200,
       });
@@ -144,12 +181,12 @@ export const ConversationOverlay: React.FC = () => {
       if (recordingStarted) {
         setState('listening');
       } else {
-        setState('connecting');
+        resetToTapToStart('Microphone access denied');
       }
       
     } catch (error) {
       console.error('[ConversationOverlay] Start failed:', error);
-      setState('connecting');
+      resetToTapToStart('Conversation start failed');
     }
   }, [chat_id, establishConnection]);
 
@@ -183,10 +220,7 @@ export const ConversationOverlay: React.FC = () => {
       
     } catch (error) {
       console.error('[ConversationOverlay] Processing failed:', error);
-      setState('connecting');
-      // Unmute microphone and start recording even on error to allow retry
-      conversationMicrophoneService.unmute();
-      await conversationMicrophoneService.startRecording();
+      resetToTapToStart('STT processing failed');
     } finally {
       isProcessingRef.current = false;
     }
@@ -235,19 +269,25 @@ export const ConversationOverlay: React.FC = () => {
     closeConversation();
   }, [closeConversation]);
 
+  // Reset to tap-to-start when entering connecting state (idempotent cleanup)
+  useEffect(() => {
+    if (state === 'connecting') {
+      // Idempotent cleanup when returning to tap-to-start
+      if (connectionRef.current) {
+        connectionRef.current.unsubscribe().catch(() => {});
+        connectionRef.current = null;
+      }
+      conversationMicrophoneService.forceCleanup();
+      ttsPlaybackService.destroy().catch(() => {});
+    }
+  }, [state]);
+
   // Cleanup on unmount to prevent WebSocket race condition
   useEffect(() => {
     return () => {
-      // Cleanup on unmount
-      if (connectionRef.current) {
-        connectionRef.current.unsubscribe();
-        connectionRef.current = null;
-      }
-      // Reset state so user sees "Tap to Start" when they return
-      hasStarted.current = false;
-      isShuttingDown.current = false;
+      resetToTapToStart('Component unmounted');
     };
-  }, []);
+  }, [resetToTapToStart]);
 
   // SSR guard
   if (!isConversationOpen || typeof document === 'undefined') return null;
@@ -263,10 +303,8 @@ export const ConversationOverlay: React.FC = () => {
             <div
               className="flex flex-col items-center gap-4 cursor-pointer"
               onClick={() => {
-                // Reset state and restart the entire flow
-                hasStarted.current = false;
-                isShuttingDown.current = false;
-                setState('connecting');
+                // Reset everything before restarting
+                resetToTapToStart('User tapped to restart');
                 handleStart();
               }}
             >

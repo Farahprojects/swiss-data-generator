@@ -28,8 +28,33 @@ export class ConversationMicrophoneServiceClass {
   private currentTurnId: string | null = null;
   private options: ConversationMicrophoneOptions = {};
   private listeners = new Set<() => void>();
-  
-  // REMOVED: Old VAD state tracking - handled by new VAD system
+
+  /**
+   * Get consistent MediaRecorder options across the service
+   */
+  private getMediaRecorderOptions(): MediaRecorderOptions {
+    const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+    const mrOptions: MediaRecorderOptions = {};
+    
+    if (typeof MediaRecorder !== 'undefined' && typeof MediaRecorder.isTypeSupported === 'function') {
+      if (isChrome) {
+        // Chrome: Use MP3 format (no header fragmentation issues)
+        if (MediaRecorder.isTypeSupported('audio/mp4')) {
+          mrOptions.mimeType = 'audio/mp4';
+          mrOptions.audioBitsPerSecond = 128000;
+        }
+      } else {
+        // Safari/Others: Use WebM format
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+          mrOptions.mimeType = 'audio/webm;codecs=opus';
+        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+          mrOptions.mimeType = 'audio/webm';
+        }
+      }
+    }
+    
+    return mrOptions;
+  }
 
   constructor(options: ConversationMicrophoneOptions = {}) {
     this.options = options;
@@ -132,31 +157,12 @@ export class ConversationMicrophoneServiceClass {
         this.analyser.smoothingTimeConstant = 0.8;
         this.mediaStreamSource.connect(this.analyser);
         
-        // Create MediaRecorder with Chrome-optimized format
-        const mrOptions: MediaRecorderOptions = {};
-        if (typeof MediaRecorder !== 'undefined' && typeof MediaRecorder.isTypeSupported === 'function') {
-          if (isChrome) {
-            // Chrome: Use MP3 format (no header fragmentation issues)
-            if (MediaRecorder.isTypeSupported('audio/mp4')) {
-              mrOptions.mimeType = 'audio/mp4';
-              mrOptions.audioBitsPerSecond = 128000;
-            }
-          } else {
-            // Safari/Others: Use WebM format
-            if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-              mrOptions.mimeType = 'audio/webm;codecs=opus';
-              console.log('[ConversationMic] ✅ Using audio/webm;codecs=opus (Safari-optimized)');
-            } else if (MediaRecorder.isTypeSupported('audio/webm')) {
-              mrOptions.mimeType = 'audio/webm';
-              console.log('[ConversationMic] ⚠️ Using audio/webm (fallback)');
-            } else {
-              console.log('[ConversationMic] ⚠️ Using browser default mimeType');
-            }
-          }
-        }
-        this.mediaRecorder = new MediaRecorder(this.stream, mrOptions);
+        // ALWAYS create NEW MediaRecorder (fixes Invalid format errors)
+        this.mediaRecorder = new MediaRecorder(this.stream, this.getMediaRecorderOptions());
       } else {
         console.log('[ConversationMic] ♻️ Reusing existing MediaStream for turn:', turnId);
+        // ALWAYS create NEW MediaRecorder even when reusing stream (fixes Invalid format)
+        this.mediaRecorder = new MediaRecorder(this.stream, this.getMediaRecorderOptions());
       }
 
       // Enable debug logging for Chrome investigation
@@ -318,10 +324,8 @@ export class ConversationMicrophoneServiceClass {
       return;
     }
 
-    // Create new MediaRecorder on existing stream
-    this.mediaRecorder = new MediaRecorder(this.stream, {
-      mimeType: 'audio/webm;codecs=opus'
-    });
+    // Create new MediaRecorder on existing stream (use consistent options)
+    this.mediaRecorder = new MediaRecorder(this.stream, this.getMediaRecorderOptions());
 
     // Restart VAD with existing stream and AudioContext
     if (this.rollingBufferVAD) {
