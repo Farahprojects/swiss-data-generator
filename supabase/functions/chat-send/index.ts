@@ -94,16 +94,13 @@ serve(async (req) => {
     }
     console.log('[chat-send] User message inserted');
 
-    // 🎯 CONVERSATION MODE: Orchestrate the full flow
+    // 🎯 CONVERSATION MODE: Call LLM handler (fire-and-forget)
     if (mode === 'conversation') {
-      try {
-        console.log('[chat-send] 🎤 Starting conversation mode orchestration');
-        
-
-        
-        // Step 2: Call LLM handler to get assistant response
-        console.log('[chat-send] 🤖 Calling LLM handler...');
-        const llmResponse = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/llm-handler-openai`, {
+      console.log('[chat-send] 🎤 Starting conversation mode - calling LLM handler...');
+      
+      // Fire-and-forget LLM call - llm-handler-openai will handle TTS and DB save
+      EdgeRuntime.waitUntil(
+        fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/llm-handler-openai`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -113,102 +110,26 @@ serve(async (req) => {
             chat_id,
             text: text
           })
-        });
-
-        if (!llmResponse.ok) {
-          const errorText = await llmResponse.text();
-          console.error('[chat-send] ❌ LLM handler failed:', errorText);
-          throw new Error(`LLM handler failed: ${llmResponse.status}`);
-        }
-
-        const llmData = await llmResponse.json();
-        const { text: assistantText, usage, latency_ms } = llmData;
-        
-        if (!assistantText) {
-          console.error('[chat-send] ❌ No assistant text received from LLM');
-          throw new Error('No assistant response received');
-        }
-
-        console.log('[chat-send] ✅ LLM response received, length:', assistantText.length);
-
-        // Step 3: Save assistant message to DB
-        const assistantMessageData = {
-          chat_id,
-          role: "assistant",
-          text: assistantText,
-          client_msg_id: crypto.randomUUID(),
-          status: "complete",
-          meta: { 
-            llm_provider: "openai", 
-            model: "gpt-4.1-mini-2025-04-14",
-            latency_ms,
-            input_tokens: usage?.input_tokens,
-            output_tokens: usage?.output_tokens,
-            total_tokens: usage?.total_tokens,
-            mode: 'conversation'
+        }).then(async (llmResponse) => {
+          if (!llmResponse.ok) {
+            const errorText = await llmResponse.text();
+            console.error('[chat-send] ❌ LLM handler failed:', errorText);
+          } else {
+            console.log('[chat-send] ✅ LLM handler completed in background');
           }
-        };
+        }).catch((error) => {
+          console.error('[chat-send] ❌ LLM handler error:', error);
+        })
+      );
 
-        console.log('[chat-send] 💾 Saving assistant message to DB...');
-        const { error: assistantError } = await supabase
-          .from("messages")
-          .upsert(assistantMessageData, {
-            onConflict: "client_msg_id"
-          });
-
-        if (assistantError) {
-          console.error('[chat-send] ❌ Assistant message save failed:', assistantError);
-          // Continue anyway - we can still return the response
-        } else {
-          console.log('[chat-send] ✅ Assistant message saved to DB');
-        }
-
-        // Step 4: Call TTS to generate audio (fire-and-forget)
-        console.log('[chat-send] 🎵 Starting TTS service (fire-and-forget)...');
-        EdgeRuntime.waitUntil(
-          fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
-            },
-            body: JSON.stringify({
-              text: assistantText,
-              voice: 'Puck',
-              chat_id: chat_id
-            })
-          }).then(async (ttsResponse) => {
-            if (!ttsResponse.ok) {
-              const errorText = await ttsResponse.text();
-              console.error('[chat-send] ❌ TTS service failed:', errorText);
-            } else {
-              console.log('[chat-send] ✅ TTS completed in background');
-            }
-          }).catch((error) => {
-            console.error('[chat-send] ❌ TTS service error:', error);
-          })
-        );
-
-        // Step 5: Return response immediately - TTS will make phone call when ready
-        const responseData = {
-          message: "Assistant response ready",
-          text: assistantText,
-          client_msg_id: userMessageData.client_msg_id
-        };
-        return new Response(JSON.stringify(responseData), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        });
-
-      } catch (error) {
-        console.error('[chat-send] ❌ Conversation mode error:', error);
-        return new Response(JSON.stringify({
-          error: `Conversation mode failed: ${error.message}`,
-          client_msg_id: userMessageData.client_msg_id
-        }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        });
-      }
+      // Return immediate response - LLM handler will handle the rest
+      const responseData = {
+        message: "Message saved, processing assistant response",
+        client_msg_id: userMessageData.client_msg_id
+      };
+      return new Response(JSON.stringify(responseData), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
     }
 
     // For non-conversation modes, use the old fire-and-forget approach

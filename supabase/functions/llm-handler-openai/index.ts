@@ -160,6 +160,63 @@ Content Rules:
 
     const latency_ms = Date.now() - startTime;
 
+    // Save assistant message to DB
+    const assistantMessageData = {
+      chat_id,
+      role: "assistant",
+      text: sanitizedText,
+      client_msg_id: crypto.randomUUID(),
+      status: "complete",
+      meta: { 
+        llm_provider: "openai", 
+        model: "gpt-4.1-mini-2025-04-14",
+        latency_ms,
+        input_tokens: usage.input_tokens,
+        output_tokens: usage.output_tokens,
+        total_tokens: usage.total_tokens,
+        mode: 'conversation'
+      }
+    };
+
+    console.log('[llm-handler-openai] 💾 Saving assistant message to DB...');
+    const { error: assistantError } = await supabase
+      .from("messages")
+      .upsert(assistantMessageData, {
+        onConflict: "client_msg_id"
+      });
+
+    if (assistantError) {
+      console.error('[llm-handler-openai] ❌ Assistant message save failed:', assistantError);
+    } else {
+      console.log('[llm-handler-openai] ✅ Assistant message saved to DB');
+    }
+
+    // Fire-and-forget TTS call
+    console.log('[llm-handler-openai] 🎵 Starting TTS service (fire-and-forget)...');
+    EdgeRuntime.waitUntil(
+      fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
+        },
+        body: JSON.stringify({
+          text: sanitizedText,
+          voice: 'Puck',
+          chat_id: chat_id
+        })
+      }).then(async (ttsResponse) => {
+        if (!ttsResponse.ok) {
+          const errorText = await ttsResponse.text();
+          console.error('[llm-handler-openai] ❌ TTS service failed:', errorText);
+        } else {
+          console.log('[llm-handler-openai] ✅ TTS completed in background');
+        }
+      }).catch((error) => {
+        console.error('[llm-handler-openai] ❌ TTS service error:', error);
+      })
+    );
+
     // Return clean response for chat-send to handle
     return new Response(JSON.stringify({ 
       text: sanitizedText,
