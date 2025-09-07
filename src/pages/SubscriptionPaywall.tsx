@@ -188,7 +188,7 @@ const SubscriptionPaywall: React.FC = () => {
                   disabled={loading}
                   className="w-full bg-gray-900 hover:bg-gray-800 text-white font-light py-4 rounded-xl text-lg transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50"
                 >
-                  {loading ? 'Processing...' : isCancelled ? 'Try Again' : 'Unlock'}
+                  {loading ? 'Processing...' : isCancelled ? 'Try Again' : 'Begin'}
                 </Button>
               </motion.div>
 
