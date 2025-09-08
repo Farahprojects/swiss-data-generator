@@ -75,8 +75,8 @@ export const SettingsModal = () => {
         <div className="flex justify-between items-center p-6 border-b">
           <h2 className="text-2xl font-semibold">Settings</h2>
           <DialogClose asChild>
-            <Button variant="ghost" size="icon" onClick={closeSettings}>
-              <X size={20} className="text-gray-800 hover:text-gray-900" />
+            <Button variant="ghost" size="icon" onClick={closeSettings} className="hover:bg-gray-100 hover:text-gray-900">
+              <X size={20} className="text-gray-800" />
             </Button>
           </DialogClose>
         </div>
@@ -88,8 +88,8 @@ export const SettingsModal = () => {
                   <Button
                     key={tab.id}
                     variant="ghost"
-                    className={`w-full justify-start ${
-                      activePanel === tab.id ? "bg-muted font-semibold" : "text-gray-700 hover:bg-gray-100"
+                    className={`w-full justify-start hover:bg-gray-100 hover:text-gray-900 ${
+                      activePanel === tab.id ? "bg-muted font-semibold" : "text-gray-700"
                     }`}
                     onClick={() => handleGuestAction(tab.id)}
                   >
