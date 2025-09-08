@@ -27,12 +27,12 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const guestReportId = searchParams.get('guest_id');
   const userId = searchParams.get('user_id');
   
+  const { messages, chat_id, clearChat } = useChatStore();
+  const { user } = useAuth();
+  
   // Determine user type - use both auth state and URL for consistency
   const isAuthenticated = !!user && !!userId; // Both auth state and URL must match
   const isGuest = !!guestReportId;
-  
-  const { messages, chat_id, clearChat } = useChatStore();
-  const { user } = useAuth();
   const { open: openReportModal } = useReportModal();
   const { uuid } = getChatTokens();
   const { isPolling, isReportReady } = useReportReadyStore();
