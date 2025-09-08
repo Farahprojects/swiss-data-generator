@@ -198,13 +198,13 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                   Astro
                 </DropdownMenuItem>
                 
-                {/* Delete option only for guest users */}
+                {/* Clear option only for guest users */}
                 {isGuest && (
                   <DropdownMenuItem
-                    onClick={() => setShowDeleteConfirm(true)}
+                    onClick={handleClearSession}
                     className="px-3 py-2 text-sm text-black hover:bg-gray-200 hover:text-black focus:bg-gray-200 focus:text-black cursor-pointer"
                   >
-                    Delete
+                    Clear
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
