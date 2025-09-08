@@ -61,7 +61,7 @@ serve(async (req) => {
       );
     }
 
-    const payload = { to, subject, html, text, from: from ?? "Therai <no-reply@therai.co>" };
+    const payload = { to, subject, html, text, from: from ?? "Therai <no-reply@theraiastro.com>" };
     console.log('[verification-emailer] Prepared SMTP payload:', { 
       to: payload.to, 
       subject: payload.subject, 
