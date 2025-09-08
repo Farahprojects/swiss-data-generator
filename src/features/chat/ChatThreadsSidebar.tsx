@@ -188,9 +188,9 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                         // Fresh guest - create new report
                         openReportModal('new');
                       }
-                    } else if (uuid) {
-                      // For signed-in users, use the uuid
-                      openReportModal(uuid);
+                    } else if (chat_id) {
+                      // For signed-in users, use the current chat_id
+                      openReportModal(chat_id);
                     }
                   }}
                   className="px-3 py-2 text-sm text-black hover:bg-gray-200 hover:text-black focus:bg-gray-200 focus:text-black cursor-pointer"
@@ -237,8 +237,8 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
           
           <button
             onClick={() => {
-              // TODO: Implement astro data functionality
-              console.log('Astro data clicked');
+              // Open astro data form for current chat
+              openReportModal('new');
             }}
             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-black hover:bg-gray-100 rounded-lg transition-colors font-light"
           >
@@ -285,9 +285,8 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                         <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg min-w-fit">
                           <DropdownMenuItem
                             onClick={() => {
-                              if (uuid) {
-                                openReportModal(uuid);
-                              }
+                              // Open astro data form for this specific conversation
+                              openReportModal(conversation.id);
                             }}
                             className="px-3 py-2 text-sm text-black hover:bg-gray-200 hover:text-black focus:bg-gray-200 focus:text-black cursor-pointer"
                           >
