@@ -7,6 +7,8 @@ import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { Button } from '@/components/ui/button';
 import { AstroDataPromptMessage } from '@/components/chat/AstroDataPromptMessage';
 import { AstroDataForm } from '@/components/chat/AstroDataForm';
+import { useAuth } from '@/contexts/AuthContext';
+import { useSearchParams } from 'react-router-dom';
 
 // Lazy load TypewriterText for better performance
 const TypewriterText = lazy(() => import('@/components/ui/TypewriterText').then(module => ({ default: module.TypewriterText })));
@@ -110,6 +112,14 @@ export const MessageList = () => {
   const lastMessagesFetch = useChatStore((state) => state.lastMessagesFetch);
   const chat_id = useChatStore((state) => state.chat_id);
   
+  // Auth detection
+  const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const userId = searchParams.get('user_id');
+  const guestReportId = searchParams.get('guest_id');
+  const isAuthenticated = !!user && !!userId;
+  const isGuest = !!guestReportId;
+  
   const { containerRef, bottomRef, onContentChange } = useAutoScroll();
   const [initialMessageCount, setInitialMessageCount] = useState<number | null>(null);
   const [hasUserSentMessage, setHasUserSentMessage] = useState(false);
@@ -199,7 +209,14 @@ export const MessageList = () => {
                 {!astroChoiceMade && !chat_id ? (
                   <div className="w-full max-w-2xl lg:max-w-4xl">
                     <AstroDataForm
-                      onClose={() => {}}
+                      onClose={() => {
+                        // Allow authenticated users to close the form, but require it for guests
+                        if (isAuthenticated) {
+                          setAstroChoiceMade(true);
+                          console.log('Authenticated user closed astro form - can chat without astro data');
+                        }
+                        // For guests, onClose does nothing (form is required)
+                      }}
                       onSubmit={(data) => {
                         console.log('Astro data submitted:', data);
                         handleAddAstroData();

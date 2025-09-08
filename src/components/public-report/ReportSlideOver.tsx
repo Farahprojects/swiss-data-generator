@@ -109,8 +109,16 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
         <SheetContent side="right" className="w-full sm:max-w-2xl p-0">
           <div className="flex flex-col h-full">
             <SheetHeader className="flex flex-row items-center justify-between px-6 py-4 border-b bg-white">
-              <SheetTitle className="text-lg font-medium text-gray-900">Add Astro Data</SheetTitle>
-              <SheetDescription className="text-sm text-gray-600">Enter your birth details to get started</SheetDescription>
+              <div>
+                <SheetTitle className="text-lg font-medium text-gray-900">Add Astro Data</SheetTitle>
+                <SheetDescription className="text-sm text-gray-600">Enter your birth details to get started</SheetDescription>
+              </div>
+              <button
+                onClick={onClose}
+                className="p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </SheetHeader>
             <div className="flex-1 overflow-auto">
               <AstroDataForm
