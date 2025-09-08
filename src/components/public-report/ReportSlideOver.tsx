@@ -11,6 +11,7 @@ import { ReportData, extractReportContent, getPersonName } from '@/utils/reportC
 import { renderUnifiedContentAsText } from '@/utils/componentToTextRenderer';
 import { useReportData } from '@/hooks/useReportData';
 import { AstroDataRenderer } from './AstroDataRenderer';
+import { AstroDataForm } from '@/components/chat/AstroDataForm';
 
 interface ReportSlideOverProps {
   isOpen: boolean;
@@ -111,12 +112,16 @@ export const ReportSlideOver: React.FC<ReportSlideOverProps> = ({
               <SheetTitle className="text-lg font-medium text-gray-900">Add Astro Data</SheetTitle>
               <SheetDescription className="text-sm text-gray-600">Enter your birth details to get started</SheetDescription>
             </SheetHeader>
-            <div className="flex-1 p-6">
-              {/* Import and use the existing AstroDataForm component */}
-              <div className="text-center py-8 text-gray-500">
-                <p>Astro data form will be integrated here</p>
-                <p className="text-sm mt-2">This will allow fresh users to add their birth details</p>
-              </div>
+            <div className="flex-1 overflow-auto">
+              <AstroDataForm
+                onClose={onClose}
+                onSubmit={(data) => {
+                  console.log('Astro data submitted:', data);
+                  // For authenticated users, we don't need to do anything special
+                  // The form submission will be handled by the AstroDataForm itself
+                  onClose();
+                }}
+              />
             </div>
           </div>
         </SheetContent>
