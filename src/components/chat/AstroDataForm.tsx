@@ -162,12 +162,11 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     
     try {
       // Ensure we have a chat_id
-      let currentChatId = chat_id || sessionStorage.getItem('therai_chat_id');
+      let currentChatId = chat_id;
       
       if (!currentChatId) {
         // Create a new conversation
         currentChatId = await addConversation(user.id, 'New Chat');
-        sessionStorage.setItem('therai_chat_id', currentChatId);
         chatController.initializeConversation(currentChatId);
       }
 

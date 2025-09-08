@@ -9,6 +9,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useChatStore } from '@/core/store';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { startReportReadyListener, stopReportReadyListener } from '@/services/report/reportReadyListener';
+import { useUserConversationsStore } from '@/stores/userConversationsStore';
+import { chatController } from '@/features/chat/ChatController';
 
 // Import ChatBox directly for immediate rendering
 import { ChatBox } from '@/features/chat/ChatBox';
@@ -19,10 +21,15 @@ const ReportChatScreen = () => {
 
   const { user } = useAuth();
   
-  // Get guest_id and chat_id from URL if present
+  // Get guest_id, user_id, and chat_id from URL if present
   const guestId = searchParams.get('guest_id');
+  const userId = searchParams.get('user_id');
   const urlChatId = searchParams.get('chat_id');
   const hasTriggeredGenerationRef = useRef(false);
+  
+  // Auth detection
+  const isAuthenticated = !!user && !!userId;
+  const isGuest = !!guestId;
   
   // 🎯 Track when guest thread is ready to show
   const [isGuestThreadReady, setIsGuestThreadReady] = useState(false);
@@ -275,6 +282,54 @@ const ReportChatScreen = () => {
     // Run rehydration on page load
     rehydrateSession();
   }, [guestId, urlChatId, chat_id]);
+
+  // Auth user hydration - restore conversation on page load
+  useEffect(() => {
+    if (!isAuthenticated || !user) return;
+
+    const hydrateAuthUser = async () => {
+      try {
+        console.log(`[ChatPage] 🔄 Hydrating auth user session for user_id: ${userId}`);
+        
+        // Check if we already have a chat_id in store
+        const store = useChatStore.getState();
+        if (store.chat_id) {
+          console.log(`[ChatPage] ✅ Auth user already has chat_id in store: ${store.chat_id}`);
+          return;
+        }
+
+        // If URL has a chat_id, use it
+        if (urlChatId || chat_id) {
+          const chatIdToUse = urlChatId || chat_id;
+          console.log(`[ChatPage] 🔍 Using chat_id from URL: ${chatIdToUse}`);
+          
+          // Verify this conversation belongs to the user
+          const { data: conversation, error } = await supabase
+            .from('conversations')
+            .select('id, user_id')
+            .eq('id', chatIdToUse)
+            .eq('user_id', user.id)
+            .single();
+
+          if (error || !conversation) {
+            console.error(`[ChatPage] ❌ Conversation not found or access denied: ${chatIdToUse}`, error);
+            return;
+          }
+
+          // Initialize the conversation
+          chatController.initializeConversation(chatIdToUse);
+          console.log(`[ChatPage] ✅ Auth user conversation restored: ${chatIdToUse}`);
+        } else {
+          // No chat_id in URL - this is a fresh auth user session
+          console.log(`[ChatPage] 🆕 Fresh auth user session - no conversation to restore`);
+        }
+      } catch (error) {
+        console.error(`[ChatPage] ❌ Error during auth user hydration:`, error);
+      }
+    };
+
+    hydrateAuthUser();
+  }, [isAuthenticated, user, userId, urlChatId, chat_id]);
 
 
 

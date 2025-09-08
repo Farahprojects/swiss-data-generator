@@ -83,10 +83,7 @@ export const ChatInput = () => {
           console.log('[ChatInput] Creating new conversation for authenticated user');
           const newChatId = await addConversation(user.id, 'New Chat');
           
-          // Store chat_id in sessionStorage
-          sessionStorage.setItem('therai_chat_id', newChatId);
-          
-          // Initialize the conversation in chatController
+          // Initialize the conversation in chatController (store will handle state)
           chatController.initializeConversation(newChatId);
           
           console.log('[ChatInput] New conversation created and initialized:', newChatId);

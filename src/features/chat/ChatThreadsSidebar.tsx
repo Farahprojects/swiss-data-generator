@@ -73,10 +73,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     try {
       const newChatId = await addConversation(user.id, 'New Chat');
       
-      // Store chat_id in sessionStorage
-      sessionStorage.setItem('therai_chat_id', newChatId);
-      
-      // Initialize the conversation in chatController
+      // Initialize the conversation in chatController (store will handle state)
       chatController.initializeConversation(newChatId);
       
       // Optionally open astro modal (user can close it)
@@ -90,10 +87,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
 
   // Handle switching to a different conversation
   const handleSwitchToChat = (conversationId: string) => {
-    // Store chat_id in sessionStorage
-    sessionStorage.setItem('therai_chat_id', conversationId);
-    
-    // Initialize the conversation in chatController
+    // Initialize the conversation in chatController (store will handle state)
     chatController.initializeConversation(conversationId);
     
     console.log('[ChatThreadsSidebar] Switched to chat:', conversationId);
