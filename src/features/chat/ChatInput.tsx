@@ -8,6 +8,9 @@ import { useConversationUIStore } from './conversation-ui-store';
 import { useChatTextMicrophone } from '@/hooks/microphone/useChatTextMicrophone';
 import { VoiceWaveform } from './VoiceWaveform';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
+import { useAuth } from '@/contexts/AuthContext';
+import { useSearchParams } from 'react-router-dom';
+import { useUserConversationsStore } from '@/stores/userConversationsStore';
 
 // Stop icon component
 const StopIcon = () => (
@@ -22,6 +25,15 @@ export const ChatInput = () => {
   const [isMuted, setIsMuted] = useState(false);
   const { isConversationOpen, openConversation, closeConversation } = useConversationUIStore();
   const chat_id = useChatStore((state) => state.chat_id);
+  
+  // Auth detection
+  const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const userId = searchParams.get('user_id');
+  const isAuthenticated = !!user && !!userId;
+  
+  // Conversation management
+  const { addConversation } = useUserConversationsStore();
 
   // Get report generation state
   const isPolling = useReportReadyStore((state) => state.isPolling);
@@ -48,7 +60,7 @@ export const ChatInput = () => {
     smoothingFactor: 0.8, // Smooth animations
   });
 
-  const handleSend = () => {
+  const handleSend = async () => {
     // 🚫 GUARD: Don't send if conversation overlay is open
     if (isConversationOpen) {
       console.log('[ChatInput] 🔥 BLOCKED: handleSend - conversation mode active');
@@ -64,6 +76,26 @@ export const ChatInput = () => {
 
     if (text.trim()) {
       console.log('[ChatInput] 🔥 PROCESSING: handleSend - normal chat mode');
+      
+      // For authenticated users: create conversation if no chat_id exists
+      if (isAuthenticated && !chat_id && user) {
+        try {
+          console.log('[ChatInput] Creating new conversation for authenticated user');
+          const newChatId = await addConversation(user.id, 'New Chat');
+          
+          // Store chat_id in sessionStorage
+          sessionStorage.setItem('therai_chat_id', newChatId);
+          
+          // Initialize the conversation in chatController
+          chatController.initializeConversation(newChatId);
+          
+          console.log('[ChatInput] New conversation created and initialized:', newChatId);
+        } catch (error) {
+          console.error('[ChatInput] Failed to create conversation:', error);
+          return; // Don't send message if conversation creation failed
+        }
+      }
+      
       // Immediately show stop icon when sending message
       setAssistantTyping(true);
       chatController.sendTextMessage(text);

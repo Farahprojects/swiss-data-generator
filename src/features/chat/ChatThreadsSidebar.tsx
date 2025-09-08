@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useChatStore } from '@/core/store';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,6 +8,8 @@ import { useReportModal } from '@/contexts/ReportModalContext';
 import { getChatTokens, clearChatTokens } from '@/services/auth/chatTokens';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { AuthModal } from '@/components/auth/AuthModal';
+import { useUserConversationsStore } from '@/stores/userConversationsStore';
+import { chatController } from './ChatController';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,16 +38,83 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const { open: openReportModal } = useReportModal();
   const { uuid } = getChatTokens();
   const { isPolling, isReportReady } = useReportReadyStore();
+  
+  // Conversation management for authenticated users
+  const { 
+    conversations, 
+    isLoading: conversationsLoading, 
+    loadConversations, 
+    addConversation, 
+    removeConversation 
+  } = useUserConversationsStore();
 
   const [hoveredThread, setHoveredThread] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
   
   // For guest users, show current thread
   // For signed-in users, this will be replaced with conversations list later
   // Use actual auth state and URL parameters to determine user type
   const isGuestUser = isGuest;
   const isUnauthenticated = !isAuthenticated && !isGuest;
+
+  // Load conversations for authenticated users
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadConversations();
+    }
+  }, [isAuthenticated, loadConversations]);
+
+  // Handle new chat creation for authenticated users
+  const handleNewChat = async () => {
+    if (!user) return;
+    
+    try {
+      const newChatId = await addConversation(user.id, 'New Chat');
+      
+      // Store chat_id in sessionStorage
+      sessionStorage.setItem('therai_chat_id', newChatId);
+      
+      // Initialize the conversation in chatController
+      chatController.initializeConversation(newChatId);
+      
+      // Optionally open astro modal (user can close it)
+      openReportModal('new');
+      
+      console.log('[ChatThreadsSidebar] New chat created:', newChatId);
+    } catch (error) {
+      console.error('[ChatThreadsSidebar] Failed to create new chat:', error);
+    }
+  };
+
+  // Handle switching to a different conversation
+  const handleSwitchToChat = (conversationId: string) => {
+    // Store chat_id in sessionStorage
+    sessionStorage.setItem('therai_chat_id', conversationId);
+    
+    // Initialize the conversation in chatController
+    chatController.initializeConversation(conversationId);
+    
+    console.log('[ChatThreadsSidebar] Switched to chat:', conversationId);
+  };
+
+  // Handle deleting a conversation
+  const handleDeleteConversation = async (conversationId: string) => {
+    try {
+      await removeConversation(conversationId);
+      
+      // If this was the current chat, clear the session
+      if (chat_id === conversationId) {
+        const { streamlinedSessionReset } = await import('@/utils/streamlinedSessionReset');
+        await streamlinedSessionReset({ preserveNavigation: true });
+      }
+      
+      console.log('[ChatThreadsSidebar] Conversation deleted:', conversationId);
+    } catch (error) {
+      console.error('[ChatThreadsSidebar] Failed to delete conversation:', error);
+    }
+  };
 
 
   // Generate thread title from first user message (same for both guest and signed-in users)
@@ -154,10 +223,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
       {isAuthenticated && (
         <div className="space-y-2">
           <button
-            onClick={() => {
-              // TODO: Implement new chat functionality
-              console.log('New chat clicked');
-            }}
+            onClick={handleNewChat}
             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-black hover:bg-gray-100 rounded-lg transition-colors font-light"
           >
             <Plus className="w-4 h-4" />
@@ -192,8 +258,46 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
           {/* Chat history section */}
           <div className="space-y-1">
             <div className="text-xs text-gray-600 font-medium px-3 py-1">Chat history</div>
-            {/* TODO: Add actual chat history items here */}
-            <div className="text-xs text-gray-500 px-3 py-1">No previous chats</div>
+            {conversationsLoading ? (
+              <div className="text-xs text-gray-500 px-3 py-1">Loading...</div>
+            ) : conversations.length === 0 ? (
+              <div className="text-xs text-gray-500 px-3 py-1">No previous chats</div>
+            ) : (
+              <div className="space-y-1">
+                {conversations.map((conversation) => (
+                  <div
+                    key={conversation.id}
+                    className={cn(
+                      "group flex items-center justify-between px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 rounded-lg transition-colors",
+                      chat_id === conversation.id && "bg-gray-100 font-medium"
+                    )}
+                  >
+                    <div 
+                      onClick={() => handleSwitchToChat(conversation.id)}
+                      className="flex-1 cursor-pointer"
+                    >
+                      <div className="truncate" title={conversation.title || 'New Chat'}>
+                        {conversation.title || 'New Chat'}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {new Date(conversation.updated_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setConversationToDelete(conversation.id);
+                        setShowDeleteConfirm(true);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded transition-all"
+                      title="Delete conversation"
+                    >
+                      <Trash2 className="w-3 h-3 text-gray-500" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -229,13 +333,18 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm mx-4">
             <div className="flex items-center gap-3 mb-4">
               <div>
-                <h3 className="text-lg font-medium text-gray-900">Delete Chat Session</h3>
+                <h3 className="text-lg font-medium text-gray-900">
+                  {isAuthenticated ? 'Delete Conversation' : 'Delete Chat Session'}
+                </h3>
                 <p className="text-sm text-gray-500">This action cannot be undone</p>
               </div>
             </div>
             
             <p className="text-gray-700 mb-6">
-              Are you sure you want to delete this chat session? All messages and data will be permanently removed.
+              {isAuthenticated 
+                ? 'Are you sure you want to delete this conversation? All messages and data will be permanently removed.'
+                : 'Are you sure you want to delete this chat session? All messages and data will be permanently removed.'
+              }
             </p>
             
             <div className="flex gap-3 justify-between">
@@ -246,13 +355,20 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  handleClearSession();
+                onClick={async () => {
+                  if (isAuthenticated && conversationToDelete) {
+                    // Delete specific conversation for authenticated users
+                    await handleDeleteConversation(conversationToDelete);
+                  } else {
+                    // Clear session for guest users
+                    handleClearSession();
+                  }
                   setShowDeleteConfirm(false);
+                  setConversationToDelete(null);
                 }}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
               >
-                Delete Session
+                {isAuthenticated ? 'Delete Conversation' : 'Delete Session'}
               </button>
             </div>
           </div>
