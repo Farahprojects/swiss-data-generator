@@ -18,6 +18,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { usePricing } from '@/contexts/PricingContext';
 import { toast } from 'sonner';
 import { useChatStore } from '@/core/store';
+import { useAuth } from '@/contexts/AuthContext';
+import { useSearchParams } from 'react-router-dom';
+import { useUserConversationsStore } from '@/stores/userConversationsStore';
+import { chatController } from '@/features/chat/ChatController';
 
 interface AstroDataFormProps {
   onClose: () => void;
@@ -37,6 +41,16 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   const [trustedPricing, setTrustedPricing] = useState<any>(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const isMobile = useIsMobile();
+  
+  // Auth detection
+  const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const userId = searchParams.get('user_id');
+  const isAuthenticated = !!user && !!userId;
+  
+  // Conversation management for authenticated users
+  const { addConversation } = useUserConversationsStore();
+  const chat_id = useChatStore((state) => state.chat_id);
   
   
   const { getPriceById, isLoading: pricesLoading } = usePricing();
@@ -142,17 +156,117 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     if (place.placeId) setValue('birthPlaceId', place.placeId);
   };
 
+  // Handle form submission for authenticated users
+  const handleAuthenticatedSubmit = async (data: ReportFormData) => {
+    if (!user) return;
+    
+    try {
+      // Ensure we have a chat_id
+      let currentChatId = chat_id || sessionStorage.getItem('therai_chat_id');
+      
+      if (!currentChatId) {
+        // Create a new conversation
+        currentChatId = await addConversation(user.id, 'New Chat');
+        sessionStorage.setItem('therai_chat_id', currentChatId);
+        chatController.initializeConversation(currentChatId);
+      }
+
+      // Build payload for translator-edge
+      const payload = buildTranslatorPayload(data, currentChatId);
+      
+      // Invoke translator-edge
+      const { data: result, error } = await supabase.functions.invoke('translator-edge', {
+        body: payload
+      });
+
+      if (error) {
+        console.error('[AstroDataForm] Translator-edge error:', error);
+        toast.error('Failed to process astro data. Please try again.');
+        return;
+      }
+
+      // Success - show toast and close modal
+      toast.success('Astro data submitted successfully!');
+      onClose();
+      
+    } catch (error) {
+      console.error('[AstroDataForm] Error submitting astro data:', error);
+      toast.error('Failed to submit astro data. Please try again.');
+    }
+  };
+
+  // Build payload for translator-edge
+  const buildTranslatorPayload = (data: ReportFormData, chatId: string) => {
+    const basePayload = {
+      user_id: chatId,
+      is_guest: false,
+      reportType: selectedAstroType,
+      email: user?.email,
+      name: data.name,
+    };
+
+    // Build person_a data
+    const personA = {
+      birth_date: data.birthDate,
+      birth_time: data.birthTime,
+      location: data.birthLocation,
+      latitude: data.birthLatitude,
+      longitude: data.birthLongitude,
+      name: data.name,
+    };
+
+    // Add optional fields if present
+    if (data.timezone) personA.timezone = data.timezone;
+    if (data.houseSystem) personA.house_system = data.houseSystem;
+
+    if (selectedAstroType === 'sync' && data.secondPersonName) {
+      // Compatibility request with second person
+      const personB = {
+        birth_date: data.secondPersonBirthDate,
+        birth_time: data.secondPersonBirthTime,
+        location: data.secondPersonBirthLocation,
+        latitude: data.secondPersonLatitude,
+        longitude: data.secondPersonLongitude,
+        name: data.secondPersonName,
+      };
+
+      return {
+        ...basePayload,
+        request: 'sync',
+        person_a: personA,
+        person_b: personB,
+      };
+    } else {
+      // Single person request
+      return {
+        ...basePayload,
+        request: data.request || selectedAstroType,
+        person_a: personA,
+      };
+    }
+  };
+
   const handleFormSubmit = (data: ReportFormData) => {
     // If compatibility type is selected, go to second person form
     if (selectedAstroType === 'sync') {
       setCurrentStep('secondPerson');
     } else {
-      setCurrentStep('payment');
+      // For authenticated users, skip payment step and submit directly
+      if (isAuthenticated) {
+        handleAuthenticatedSubmit(data);
+      } else {
+        setCurrentStep('payment');
+      }
     }
   };
 
   const handleSecondPersonSubmit = (data: ReportFormData) => {
-    setCurrentStep('payment');
+    // For authenticated users, skip payment step and submit directly
+    if (isAuthenticated) {
+      handleAuthenticatedSubmit(data);
+    } else {
+      setCurrentStep('payment');
+    }
   };
 
   const handleSecondPlaceSelect = (place: PlaceData) => {
@@ -642,11 +756,11 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                   type="submit"
                   className="flex-1 bg-gray-900 hover:bg-gray-800"
                 >
-                  Continue to Payment
+                  {isAuthenticated ? 'Create Astro Data' : 'Continue to Payment'}
                 </Button>
               </div>
             </motion.form>
-          ) : (
+          ) : !isAuthenticated ? (
             <motion.div
               key="payment"
               initial={{ opacity: 0, x: 20 }}
@@ -758,7 +872,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                 </Button>
               </div>
             </motion.div>
-          )}
+          ) : null}
         </AnimatePresence>
       </div>
     </motion.div>
