@@ -24,7 +24,7 @@ serve(async (req) => {
 
     const { data: reportData, error: reportError } = await supabaseAdmin
       .from('guest_reports')
-      .select('report_data, report_type, is_ai_report, email')
+      .select('report_data, report_type, is_ai_report, email, chat_id')
       .eq('id', guest_report_id)
       .single();
 
@@ -40,7 +40,7 @@ serve(async (req) => {
       reportType: reportData.report_type,
       is_guest: true,
       is_ai_report: reportData.is_ai_report,
-      user_id: guest_report_id,
+      user_id: reportData.chat_id,
       request_id: crypto.randomUUID().slice(0, 8),
       email: reportData.email,
       name: reportData.report_data?.name,

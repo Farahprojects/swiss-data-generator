@@ -67,7 +67,7 @@ serve(async (req) => {
     });
 
     // Step 2: Pass to translator-edge (fire-and-forget)
-    console.log(`🔄 [verify-guest-payment] Passing to translator-edge: ${sessionId}`);
+    console.log(`🔄 [verify-guest-payment] Passing to translator-edge with chat_id: ${guestReport.chat_id}`);
     
     const translatorPayload = {
       ...guestReport.report_data,
@@ -75,7 +75,7 @@ serve(async (req) => {
       reportType: guestReport.report_type,
       is_guest: true,
       is_ai_report: guestReport.is_ai_report,
-      user_id: sessionId,
+      user_id: guestReport.chat_id,
       request_id: crypto.randomUUID().slice(0, 8),
       email: guestReport.email,
       name: guestReport.report_data?.person_a?.name || guestReport.report_data?.name
@@ -90,7 +90,7 @@ serve(async (req) => {
       })
     );
 
-    console.log(`✅ [verify-guest-payment] Successfully passed to translator-edge: ${sessionId}`);
+    console.log(`✅ [verify-guest-payment] Successfully passed to translator-edge with chat_id: ${guestReport.chat_id}`);
 
     return new Response(JSON.stringify({
       success: true,
