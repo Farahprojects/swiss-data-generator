@@ -267,33 +267,51 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                 {conversations.map((conversation) => (
                   <div
                     key={conversation.id}
-                    className={cn(
-                      "group flex items-center justify-between px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 rounded-lg transition-colors",
-                      chat_id === conversation.id && "bg-gray-100 font-medium"
-                    )}
+                    className="relative group"
+                    onMouseEnter={() => setHoveredThread(conversation.id)}
+                    onMouseLeave={() => setHoveredThread(null)}
                   >
-                    <div 
-                      onClick={() => handleSwitchToChat(conversation.id)}
-                      className="flex-1 cursor-pointer"
-                    >
-                      <div className="truncate" title={conversation.title || 'New Chat'}>
-                        {conversation.title || 'New Chat'}
+                    <div className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded-lg transition-colors">
+                      <div 
+                        className="flex-1 min-w-0 cursor-pointer"
+                        onClick={() => handleSwitchToChat(conversation.id)}
+                      >
+                        <div className="text-sm font-medium text-gray-900 truncate" title={conversation.title || 'New Chat'}>
+                          {conversation.title || 'New Chat'}
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {new Date(conversation.updated_at).toLocaleDateString()}
-                      </div>
+                      
+                      {/* Three dots menu */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="p-1 hover:bg-gray-200 rounded transition-colors">
+                            <MoreHorizontal className="w-4 h-4 text-gray-600" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg min-w-fit">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              if (uuid) {
+                                openReportModal(uuid);
+                              }
+                            }}
+                            className="px-3 py-2 text-sm text-black hover:bg-gray-200 hover:text-black focus:bg-gray-200 focus:text-black cursor-pointer"
+                          >
+                            Astro
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setConversationToDelete(conversation.id);
+                              setShowDeleteConfirm(true);
+                            }}
+                            className="px-3 py-2 text-sm text-black hover:bg-gray-200 hover:text-black focus:bg-gray-200 focus:text-black cursor-pointer"
+                          >
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setConversationToDelete(conversation.id);
-                        setShowDeleteConfirm(true);
-                      }}
-                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded transition-all"
-                      title="Delete conversation"
-                    >
-                      <Trash2 className="w-3 h-3 text-gray-500" />
-                    </button>
                   </div>
                 ))}
               </div>
