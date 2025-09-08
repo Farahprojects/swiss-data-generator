@@ -21,6 +21,15 @@ const ReportChatScreen = () => {
 
   const { user } = useAuth();
   
+  // 🎯 LOG: Track when ReportChatScreen is called
+  console.log('🚀 [ReportChatScreen] Component called with:', {
+    timestamp: new Date().toISOString(),
+    chat_id_from_params: chat_id,
+    searchParams: Object.fromEntries(searchParams.entries()),
+    user_id: user?.id || 'no_user',
+    url: window.location.href
+  });
+  
   // Get guest_id, user_id, and chat_id from URL if present
   const guestId = searchParams.get('guest_id');
   const userId = searchParams.get('user_id');
@@ -42,10 +51,17 @@ const ReportChatScreen = () => {
   
   // Main report flow checker - purely URL-driven (triggers when guest_id appears in URL)
   useEffect(() => {
+    console.log('🔄 [ReportChatScreen] Payment validation useEffect triggered:', {
+      guestId,
+      hasTriggeredGeneration: hasTriggeredGenerationRef.current,
+      isReportReady: useReportReadyStore.getState().isReportReady
+    });
+    
     if (!guestId || hasTriggeredGenerationRef.current) return;
 
     // 🚫 GUARD: Don't check if report is already ready in store (prevents refresh loops)
     if (useReportReadyStore.getState().isReportReady) {
+      console.log('🚫 [ReportChatScreen] Skipping payment check - report already ready');
       return;
     }
 
@@ -285,6 +301,12 @@ const ReportChatScreen = () => {
 
   // Auth user hydration - restore conversation on page load
   useEffect(() => {
+    console.log('🔄 [ReportChatScreen] Auth user hydration useEffect triggered:', {
+      isAuthenticated,
+      user_id: user?.id || 'no_user',
+      userId_from_url: userId
+    });
+    
     if (!isAuthenticated || !user) return;
 
     const hydrateAuthUser = async () => {
