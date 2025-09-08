@@ -178,26 +178,26 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ isGuestThreadReady = false }) 
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuItem onClick={() => handleOpenSettings('general')} className="hover:bg-gray-100 text-black">
-                      <Settings className="mr-2 h-4 w-4 text-black" />
+                    <DropdownMenuItem onClick={() => handleOpenSettings('general')}>
+                      <Settings className="mr-2 h-4 w-4" />
                       General
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleOpenSettings('account')} className="hover:bg-gray-100 text-black">
-                      <User className="mr-2 h-4 w-4 text-black" />
+                    <DropdownMenuItem onClick={() => handleOpenSettings('account')}>
+                      <User className="mr-2 h-4 w-4" />
                       Account
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => handleOpenSettings('billing')} className="hover:bg-gray-100 text-black">
-                      <CreditCard className="mr-2 h-4 w-4 text-black" />
+                    <DropdownMenuItem onClick={() => handleOpenSettings('billing')}>
+                      <CreditCard className="mr-2 h-4 w-4" />
                       Billing
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleOpenSettings('notifications')} className="hover:bg-gray-100 text-black">
-                      <Bell className="mr-2 h-4 w-4 text-black" />
+                    <DropdownMenuItem onClick={() => handleOpenSettings('notifications')}>
+                      <Bell className="mr-2 h-4 w-4" />
                       Notifications
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleSignOut} className="hover:bg-gray-100 text-black">
-                      <LogOut className="mr-2 h-4 w-4 text-black" />
+                    <DropdownMenuItem onClick={handleSignOut}>
+                      <LogOut className="mr-2 h-4 w-4" />
                       Sign Out
                     </DropdownMenuItem>
                   </DropdownMenuContent>
