@@ -19,7 +19,7 @@ import { usePricing } from '@/contexts/PricingContext';
 import { toast } from 'sonner';
 import { useChatStore } from '@/core/store';
 import { useAuth } from '@/contexts/AuthContext';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useUserConversationsStore } from '@/stores/userConversationsStore';
 import { chatController } from '@/features/chat/ChatController';
 
@@ -45,6 +45,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   // Auth detection
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const userId = searchParams.get('user_id');
   const isAuthenticated = !!user && !!userId;
   
@@ -369,12 +370,11 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
         if (response.paymentStatus === 'paid' || pricingResult.final_price_usd === 0) {
           console.log(`[AstroForm] ✅ Report ready (${pricingResult.final_price_usd === 0 ? 'free' : 'paid'}), setting up chat for: ${response.guestReportId}`);
           
-          // Update URL with guest_id and chat_id for session persistence (no page reload)
-          const currentUrl = window.location.pathname;
-          const newUrl = `${currentUrl}?guest_id=${response.guestReportId}&chat_id=${response.chatId}`;
-          window.history.replaceState({}, "", newUrl);
+          // Navigate to chat page with guest_id and chat_id for session persistence
+          const newUrl = `/chat?guest_id=${response.guestReportId}&chat_id=${response.chatId}`;
+          navigate(newUrl, { replace: true });
           
-          console.log(`[AstroForm] 🔗 URL updated for session persistence: ${newUrl}`);
+          console.log(`[AstroForm] 🔗 Navigating to chat page: ${newUrl}`);
           
           // Hydrate chat store immediately so chat is usable right away
           try {
