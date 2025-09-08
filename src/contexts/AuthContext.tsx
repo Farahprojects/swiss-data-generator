@@ -291,31 +291,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error, data: null };
       }
       
-      // Check verification status in profiles table
-      if (data?.user) {
-        try {
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('verification_status, email_verified')
-            .eq('id', data.user.id)
-            .maybeSingle();
-          
-          // Block signin if profile exists and not verified
-          if (!profileError && profile && !profile.email_verified) {
-            return { 
-              error: new Error('Please verify your email address before signing in'), 
-              data: null 
-            };
-          }
-        } catch (profileErr) {
-          // Log profile fetch error but don't block signin
-          console.warn('Could not fetch profile for verification check:', profileErr);
+        // TEMPORARY: Skip email verification check for signin
+        // TODO: Re-enable verification check once SMTP is configured
+        if (data?.user) {
+          setUser(data.user);
+          setSession(data.session);
+          setLoading(false);
         }
-        
-        setUser(data.user);
-        setSession(data.session);
-        setLoading(false);
-      }
       
       return { error: null, data };
     } catch (err: unknown) {
@@ -326,31 +308,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string) => {
     try {
-      // Use the new pre-auth signup flow
-      const { data, error } = await supabase.functions.invoke('start-signup', {
-        body: { email, password }
+      // TEMPORARY: Skip email verification - create user directly
+      // TODO: Re-enable email verification once SMTP is configured
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`
+        }
       });
 
-      log('debug', 'Pre-auth signup response', { hasError: !!error, data }, 'auth');
+      log('debug', 'Direct signup response', { hasError: !!error, data }, 'auth');
       
       if (error) {
+        // Handle existing user case
+        if (error.message?.includes('already been registered') || error.message?.includes('already exists')) {
+          return { error: new Error('An account with this email already exists. Please sign in instead.') };
+        }
         return { error: new Error(error.message || 'Signup failed') };
       }
 
-      // Check for structured error response
-      if (data?.success === false) {
-        if (data.errorCode === 'email_exists') {
-          return { error: new Error('An account with this email already exists. Please sign in instead.') };
-        }
-        return { error: new Error(data.error || 'Signup failed') };
+      // User is created and automatically signed in
+      if (data?.user) {
+        setUser(data.user);
+        setSession(data.session);
+        setLoading(false);
       }
 
-      if (data?.error) {
-        return { error: new Error(data.error) };
-      }
-
-      // No user/session is created until email verification is complete
-      return { error: null, user: null };
+      return { error: null, user: data?.user || null };
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error('Unexpected sign-up error');
       return { error };
