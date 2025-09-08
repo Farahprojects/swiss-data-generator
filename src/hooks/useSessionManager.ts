@@ -1,41 +1,46 @@
-import { useEffect, useCallback } from 'react';
-import { sessionManager } from '@/utils/sessionManager';
+import { useCallback } from 'react';
+import { getCurrentSessionInfo, SessionInfo } from '@/services/auth/session';
+import { useAuth } from '@/contexts/AuthContext';
 
 /**
- * Hook to provide easy access to SessionManager functionality
+ * Hook to provide unified session management for both guest and authenticated users
  */
-export const useSessionManager = (componentId: string) => {
-  const registerStateReset = useCallback((callback: () => void) => {
-    sessionManager.registerStateReset(componentId, callback);
-  }, [componentId]);
+export const useSessionManager = () => {
+  const { user, session } = useAuth();
 
-  const unregisterStateReset = useCallback(() => {
-    sessionManager.unregisterStateReset(componentId);
-  }, [componentId]);
-
-  const clearSession = useCallback(async (options?: {
-    showProgress?: boolean;
-    redirectTo?: string;
-    preserveNavigation?: boolean;
-  }) => {
-    return sessionManager.clearSession(options);
+  const getSessionInfo = useCallback((): SessionInfo => {
+    return getCurrentSessionInfo();
   }, []);
 
-  const getSessionStatus = useCallback(() => {
-    return sessionManager.getSessionStatus();
+  const isAuthenticated = useCallback((): boolean => {
+    return !!user && !!session;
+  }, [user, session]);
+
+  const isGuest = useCallback((): boolean => {
+    return !user || !session;
+  }, [user, session]);
+
+  const getCurrentUserId = useCallback((): string => {
+    const sessionInfo = getCurrentSessionInfo();
+    return sessionInfo.userId;
   }, []);
 
-  // Auto-unregister on unmount
-  useEffect(() => {
-    return () => {
-      sessionManager.unregisterStateReset(componentId);
-    };
-  }, [componentId]);
+  const getUserType = useCallback((): 'guest' | 'authenticated' => {
+    return isAuthenticated() ? 'authenticated' : 'guest';
+  }, [isAuthenticated]);
 
   return {
-    registerStateReset,
-    unregisterStateReset,
-    clearSession,
-    getSessionStatus
+    // Session info
+    getSessionInfo,
+    getCurrentUserId,
+    getUserType,
+    
+    // Status checks
+    isAuthenticated,
+    isGuest,
+    
+    // Current state
+    user,
+    session,
   };
-}; 
+};

@@ -103,8 +103,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       log('debug', 'Auth state change', { event, hasSession: !!supaSession }, 'auth');
       
       // Set user and session state - let features decide access based on email_confirmed_at
-      setUser(supaSession?.user ?? null);
-      setSession(supaSession);
+        setUser(supaSession?.user ?? null);
+        setSession(supaSession);
+        
+        // Persist authenticated user ID
+        if (supaSession?.user?.id) {
+          const { setAuthUserId } = await import('@/services/auth/session');
+          setAuthUserId(supaSession.user.id);
+        } else {
+          const { clearAuthUserId } = await import('@/services/auth/session');
+          clearAuthUserId();
+        }
       setLoading(false);
 
       // Validate session after any auth state change (deferred to avoid deadlocks)
@@ -202,6 +211,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Set user and session state initially
       setUser(supaSession?.user ?? null);
       setSession(supaSession);
+      
+      // Persist authenticated user ID on initial load
+      if (supaSession?.user?.id) {
+        const { setAuthUserId } = await import('@/services/auth/session');
+        setAuthUserId(supaSession.user.id);
+      }
       setLoading(false);
 
       // Immediate validation if we have a session (deferred to avoid deadlocks)
@@ -430,6 +445,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsPendingEmailCheck(false);
       clearNavigationState();
 
+      // Clear persisted auth user ID
+      const { clearAuthUserId } = await import('@/services/auth/session');
+      clearAuthUserId();
+      
       // Import and use cleanup utility
       const { cleanupAuthState } = await import('@/utils/authCleanup');
       cleanupAuthState();
