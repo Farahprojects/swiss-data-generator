@@ -13,9 +13,9 @@ export const PublicOnlyGuard: React.FC<PublicOnlyGuardProps> = ({ children }) =>
     return <div>Loading...</div>;
   }
 
-  // If user is authenticated, redirect to chat
+  // If user is authenticated, redirect to chat with user_id
   if (user) {
-    return <Navigate to="/chat" replace />;
+    return <Navigate to={`/chat?user_id=${user.id}`} replace />;
   }
 
   // If not authenticated, show public content

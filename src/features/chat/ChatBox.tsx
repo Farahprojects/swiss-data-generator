@@ -4,7 +4,7 @@ import { useChatStore } from '@/core/store';
 import { useAuth } from '@/contexts/AuthContext';
 import { useChat } from './useChat';
 
-import { Menu, Calendar, Sparkles, Settings, User, CreditCard, Bell, LogOut } from 'lucide-react';
+import { Menu, Sparkles, Settings, User, CreditCard, Bell, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { getChatTokens } from '@/services/auth/chatTokens';
@@ -35,9 +35,15 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ isGuestThreadReady = false }) 
   const { uuid } = getChatTokens();
   const isConversationOpen = useConversationUIStore((s) => s.isConversationOpen);
   
-  // Get guestReportId directly from URL - no more prop drilling!
+  // Get user type from URL parameters - supports both guest and auth users
   const [searchParams] = useSearchParams();
   const guestReportId = searchParams.get('guest_id');
+  const userId = searchParams.get('user_id');
+  
+  // Determine user type and ID
+  const isAuthenticated = !!userId;
+  const isGuest = !!guestReportId;
+  const currentUserId = userId || guestReportId;
   
   // Initialize ChatController for realtime updates (both text and conversation modes)
   const { startTurn, sendTextMessage, endTurn, cancelTurn } = useChat(guestReportId ? undefined : uuid, guestReportId);
@@ -64,14 +70,6 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ isGuestThreadReady = false }) 
     }
   };
 
-  // Handle auth-gated features
-  const handleCalendarClick = () => {
-    if (user) {
-      navigate('/calendar');
-    } else {
-      setSignInPrompt({ show: true, feature: 'Calendar' });
-    }
-  };
 
 
 
@@ -156,19 +154,6 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ isGuestThreadReady = false }) 
           {/* Left Sidebar (Desktop) */}
           <div className="hidden md:flex w-64 border-r border-gray-100 flex-col bg-gray-50/50">
             <div className="p-4 h-full flex flex-col">
-              {/* Calendar Button for Desktop - Only for Auth Users */}
-              {user && (
-                <div className="mb-4">
-                  <Button
-                    variant="outline"
-                    onClick={handleCalendarClick}
-                    className="w-full justify-start font-light text-sm"
-                  >
-                    <Calendar className="w-4 h-4 mr-2" />
-                    Calendar
-                  </Button>
-                </div>
-              )}
               
               <div className="flex-1">
                 <Suspense fallback={<div className="space-y-4"><div className="h-8 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div></div>}>
@@ -193,26 +178,26 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ isGuestThreadReady = false }) 
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuItem onClick={() => handleOpenSettings('general')}>
-                      <Settings className="mr-2 h-4 w-4" />
-                      Settings
+                    <DropdownMenuItem onClick={() => handleOpenSettings('general')} className="hover:bg-gray-100 text-black">
+                      <Settings className="mr-2 h-4 w-4 text-black" />
+                      General
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleOpenSettings('account')}>
-                      <User className="mr-2 h-4 w-4" />
-                      Account Settings
+                    <DropdownMenuItem onClick={() => handleOpenSettings('account')} className="hover:bg-gray-100 text-black">
+                      <User className="mr-2 h-4 w-4 text-black" />
+                      Account
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => handleOpenSettings('billing')}>
-                      <CreditCard className="mr-2 h-4 w-4" />
+                    <DropdownMenuItem onClick={() => handleOpenSettings('billing')} className="hover:bg-gray-100 text-black">
+                      <CreditCard className="mr-2 h-4 w-4 text-black" />
                       Billing
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleOpenSettings('notifications')}>
-                      <Bell className="mr-2 h-4 w-4" />
+                    <DropdownMenuItem onClick={() => handleOpenSettings('notifications')} className="hover:bg-gray-100 text-black">
+                      <Bell className="mr-2 h-4 w-4 text-black" />
                       Notifications
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleSignOut} className="text-red-600">
-                      <LogOut className="mr-2 h-4 w-4" />
+                    <DropdownMenuItem onClick={handleSignOut} className="hover:bg-gray-100 text-black">
+                      <LogOut className="mr-2 h-4 w-4 text-black" />
                       Sign Out
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -245,18 +230,6 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ isGuestThreadReady = false }) 
               
               <div className="flex-1" />
               
-              {/* Calendar Button for Mobile - Only for Auth Users */}
-              {user && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCalendarClick}
-                  className="px-3 py-1.5 text-xs font-light"
-                >
-                  <Calendar className="w-4 h-4 mr-1.5" />
-                  Calendar
-                </Button>
-              )}
             </div>
 
             {/* Message List - Lazy Loaded */}

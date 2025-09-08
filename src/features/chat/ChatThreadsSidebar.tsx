@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useChatStore } from '@/core/store';
 import { useAuth } from '@/contexts/AuthContext';
-import { Trash2, Sparkles, AlertTriangle, MoreHorizontal, UserPlus } from 'lucide-react';
+import { Trash2, Sparkles, AlertTriangle, MoreHorizontal, UserPlus, Plus, Search, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReportModal } from '@/contexts/ReportModalContext';
 import { getChatTokens, clearChatTokens } from '@/services/auth/chatTokens';
@@ -22,9 +22,15 @@ interface ChatThreadsSidebarProps {
 }
 
 export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ className, isGuestThreadReady = false }) => {
-  // Get guestReportId directly from URL - no more prop drilling!
+  // Get user type from URL parameters - supports both guest and auth users
   const [searchParams] = useSearchParams();
   const guestReportId = searchParams.get('guest_id');
+  const userId = searchParams.get('user_id');
+  
+  // Determine user type
+  const isAuthenticated = !!userId;
+  const isGuest = !!guestReportId;
+  
   const { messages, chat_id, clearChat } = useChatStore();
   const { user } = useAuth();
   const { open: openReportModal } = useReportModal();
@@ -38,7 +44,9 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   
   // For guest users, show current thread
   // For signed-in users, this will be replaced with conversations list later
-  const isGuest = !user;
+  // Use URL parameters to determine user type (overrides auth context)
+  const isGuestUser = isGuest;
+  const isUnauthenticated = !isAuthenticated && !isGuest;
 
   // Check if user has made astro choice (same logic as MessageList)
   React.useEffect(() => {
@@ -157,18 +165,56 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         </div>
       )}
 
-
-
-      {/* Placeholder for future conversations list */}
-      {!isGuest && (
-        <div className="text-center py-8 text-gray-500">
-          <div className="text-sm">Conversations coming soon</div>
-          <div className="text-xs mt-1">Your chat history will appear here</div>
+      {/* Authenticated user buttons */}
+      {isAuthenticated && (
+        <div className="space-y-2">
+          <button
+            onClick={() => {
+              // TODO: Implement new chat functionality
+              console.log('New chat clicked');
+            }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-black hover:bg-gray-100 rounded-lg transition-colors font-light"
+          >
+            <Plus className="w-4 h-4" />
+            New chat
+          </button>
+          
+          <button
+            onClick={() => {
+              // TODO: Implement search chat functionality
+              console.log('Search chat clicked');
+            }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-black hover:bg-gray-100 rounded-lg transition-colors font-light"
+          >
+            <Search className="w-4 h-4" />
+            Search chat
+          </button>
+          
+          <button
+            onClick={() => {
+              // TODO: Implement astro data functionality
+              console.log('Astro data clicked');
+            }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-black hover:bg-gray-100 rounded-lg transition-colors font-light"
+          >
+            <User className="w-4 h-4" />
+            Astro data
+          </button>
+          
+          {/* Dark gray line separator */}
+          <div className="border-t border-gray-400 my-3"></div>
+          
+          {/* Chat history section */}
+          <div className="space-y-1">
+            <div className="text-xs text-gray-600 font-medium px-3 py-1">Chat history</div>
+            {/* TODO: Add actual chat history items here */}
+            <div className="text-xs text-gray-500 px-3 py-1">No previous chats</div>
+          </div>
         </div>
       )}
 
       {/* Guest user info */}
-      {isGuest && (
+      {isGuestUser && (
         <div className="mt-auto pt-4 border-t border-gray-200 space-y-3">
           {/* Backup Add Astro Data Button */}
           <button
@@ -184,6 +230,19 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
             Add Astro Data
           </button>
           
+          <button
+            onClick={() => setShowAuthModal(true)}
+            className="w-full px-3 py-2 text-sm bg-gray-900 text-white hover:bg-gray-800 rounded-lg transition-colors font-light"
+          >
+            Sign in
+          </button>
+        </div>
+      )}
+
+
+      {/* Unauthenticated user info (no URL parameters) */}
+      {isUnauthenticated && (
+        <div className="mt-auto pt-4 border-t border-gray-200 space-y-3">
           <button
             onClick={() => setShowAuthModal(true)}
             className="w-full px-3 py-2 text-sm bg-gray-900 text-white hover:bg-gray-800 rounded-lg transition-colors font-light"
