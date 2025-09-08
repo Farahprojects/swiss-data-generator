@@ -171,16 +171,16 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
         chatController.initializeConversation(currentChatId);
       }
 
-      // Build payload for translator-edge
-      const payload = buildTranslatorPayload(data, currentChatId);
+      // Build payload for initiate-auth-report
+      const payload = buildAuthReportPayload(data, currentChatId);
       
-      // Invoke translator-edge
-      const { data: result, error } = await supabase.functions.invoke('translator-edge', {
+      // Invoke initiate-auth-report edge function
+      const { data: result, error } = await supabase.functions.invoke('initiate-auth-report', {
         body: payload
       });
 
       if (error) {
-        console.error('[AstroDataForm] Translator-edge error:', error);
+        console.error('[AstroDataForm] Initiate-auth-report error:', error);
         toast.error('Failed to process astro data. Please try again.');
         return;
       }
@@ -195,16 +195,8 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     }
   };
 
-  // Build payload for translator-edge
-  const buildTranslatorPayload = (data: ReportFormData, chatId: string) => {
-    const basePayload = {
-      user_id: chatId,
-      is_guest: false,
-      reportType: selectedAstroType,
-      email: user?.email,
-      name: data.name,
-    };
-
+  // Build payload for initiate-auth-report
+  const buildAuthReportPayload = (data: ReportFormData, chatId: string) => {
     // Build person_a data
     const personA = {
       birth_date: data.birthDate,
@@ -219,8 +211,14 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     if (data.timezone) personA.timezone = data.timezone;
     if (data.houseSystem) personA.house_system = data.houseSystem;
 
+    const reportData = {
+      request: data.request || selectedAstroType,
+      reportType: selectedAstroType,
+      person_a: personA,
+    };
+
+    // Add person_b for compatibility requests
     if (selectedAstroType === 'sync' && data.secondPersonName) {
-      // Compatibility request with second person
       const personB = {
         birth_date: data.secondPersonBirthDate,
         birth_time: data.secondPersonBirthTime,
@@ -229,21 +227,20 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
         longitude: data.secondPersonLongitude,
         name: data.secondPersonName,
       };
-
-      return {
-        ...basePayload,
-        request: 'sync',
-        person_a: personA,
-        person_b: personB,
-      };
-    } else {
-      // Single person request
-      return {
-        ...basePayload,
-        request: data.request || selectedAstroType,
-        person_a: personA,
-      };
+      
+      // Add optional fields for person_b if present
+      if (data.secondPersonTimezone) personB.timezone = data.secondPersonTimezone;
+      if (data.secondPersonHouseSystem) personB.house_system = data.secondPersonHouseSystem;
+      
+      reportData.person_b = personB;
     }
+
+    return {
+      chat_id: chatId,
+      report_data: reportData,
+      email: user?.email || '',
+      name: data.name,
+    };
   };
 
   const handleFormSubmit = (data: ReportFormData) => {
