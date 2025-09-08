@@ -22,13 +22,13 @@ interface ChatThreadsSidebarProps {
 }
 
 export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ className, isGuestThreadReady = false }) => {
-  // Get user type from URL parameters - supports both guest and auth users
+  // Get user type from URL parameters and auth context
   const [searchParams] = useSearchParams();
   const guestReportId = searchParams.get('guest_id');
   const userId = searchParams.get('user_id');
   
-  // Determine user type
-  const isAuthenticated = !!userId;
+  // Determine user type - use both auth state and URL for consistency
+  const isAuthenticated = !!user && !!userId; // Both auth state and URL must match
   const isGuest = !!guestReportId;
   
   const { messages, chat_id, clearChat } = useChatStore();
@@ -43,7 +43,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   
   // For guest users, show current thread
   // For signed-in users, this will be replaced with conversations list later
-  // Use URL parameters to determine user type (overrides auth context)
+  // Use actual auth state and URL parameters to determine user type
   const isGuestUser = isGuest;
   const isUnauthenticated = !isAuthenticated && !isGuest;
 
