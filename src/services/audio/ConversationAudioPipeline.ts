@@ -46,10 +46,24 @@ export class ConversationAudioPipeline {
     if (this.started) return;
 
     try {
-      this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1 }, video: false });
+      this.mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1,
+          noiseSuppression: false,
+          echoCancellation: false,
+          autoGainControl: false,
+          sampleRate: 48000
+        },
+        video: false
+      });
       const source = this.audioContext.createMediaStreamSource(this.mediaStream);
       this.workletNode = new AudioWorkletNode(this.audioContext, 'conversation-audio-processor');
-      source.connect(this.workletNode).connect(this.audioContext.destination);
+      // Prevent feedback: route to a zero-gain node instead of speakers
+      const gain = this.audioContext.createGain();
+      gain.gain.value = 0;
+      source.connect(this.workletNode);
+      this.workletNode.connect(gain);
+      gain.connect(this.audioContext.destination);
 
       // Forward frames from worklet to worker
       this.workletNode.port.onmessage = (event: MessageEvent) => {

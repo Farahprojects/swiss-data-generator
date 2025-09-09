@@ -22,13 +22,20 @@ class ConversationAudioProcessor extends AudioWorkletProcessor {
       return true;
     }
 
-    // Downmix to mono
-    const channelData = input[0];
-    if (!channelData) return true;
-    const numFrames = channelData.length;
+    // input is an array of channels: [Float32Array, Float32Array, ...]
+    const channels = input;
+    const firstChannel = channels[0];
+    if (!firstChannel) return true;
+    const numFrames = firstChannel.length;
 
     for (let i = 0; i < numFrames; i++) {
-      const monoSample = channelData[i];
+      // Average available channels to mono (handles 1..N channels)
+      let sum = 0;
+      for (let c = 0; c < channels.length; c++) {
+        const ch = channels[c];
+        sum += ch ? ch[i] : 0;
+      }
+      const monoSample = sum / Math.max(1, channels.length);
 
       // Naive resampler: pick samples based on accumulator
       this._resampleAccumulator += 1;
