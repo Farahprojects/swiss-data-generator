@@ -21,7 +21,7 @@ export class ConversationAudioPipeline {
   public async init(): Promise<void> {
     if (this.audioContext) return;
     try {
-      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 48000 });
+      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 48000, latencyHint: 'interactive' as any });
       await this.audioContext.audioWorklet.addModule(new URL('../../workers/audio/ConversationAudioProcessor.js', import.meta.url));
       this.worker = new Worker(new URL('../../workers/audio/conversation-audio-worker.js', import.meta.url));
 
@@ -34,6 +34,17 @@ export class ConversationAudioPipeline {
           this.events.onSpeechSegment?.(pcm);
         }
       };
+      // Mobile visibility handling: ensure context resumes on return
+      const handleVisibility = () => {
+        if (!this.audioContext) return;
+        if (document.visibilityState === 'visible' && this.audioContext.state === 'suspended') {
+          this.audioContext.resume().catch(() => {});
+        }
+      };
+      document.addEventListener('visibilitychange', handleVisibility);
+      // Store remover on the instance for cleanup
+      (this as any)._removeVisibility = () => document.removeEventListener('visibilitychange', handleVisibility);
+
     } catch (e: any) {
       this.events.onError?.(e);
       throw e;
@@ -102,6 +113,11 @@ export class ConversationAudioPipeline {
       if (this.audioContext) {
         await this.audioContext.close();
         this.audioContext = null;
+      }
+      // Remove visibility listener if present
+      if ((this as any)._removeVisibility) {
+        try { (this as any)._removeVisibility(); } catch {}
+        (this as any)._removeVisibility = null;
       }
     } catch {}
   }
