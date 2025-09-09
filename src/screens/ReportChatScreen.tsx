@@ -174,20 +174,24 @@ const ReportChatScreen = () => {
   useEffect(() => {
     if (!guestId) return;
 
+    // Get chat_id from URL or params
+    const currentChatId = urlChatId || chat_id;
+    if (!currentChatId) return;
+
     // 🚫 GUARD: Don't start if report is already ready (prevents refresh loops)
     if (useReportReadyStore.getState().isReportReady) {
       return;
     }
 
-    console.log(`[ChatPage] 🔄 Starting WebSocket report ready listener for: ${guestId}`);
+    console.log(`[ChatPage] 🔄 Starting WebSocket report ready listener for chat_id: ${currentChatId}`);
     
-    // Use the WebSocket-based report ready listener
-    startReportReadyListener(guestId);
+    // Use the WebSocket-based report ready listener with chat_id
+    startReportReadyListener(currentChatId);
 
     // Cleanup on unmount or guestId change
     return () => {
-      console.log(`[ChatPage] 🧹 Cleaning up WebSocket listener for guest_id: ${guestId}`);
-      stopReportReadyListener(guestId);
+      console.log(`[ChatPage] 🧹 Cleaning up WebSocket listener for chat_id: ${currentChatId}`);
+      stopReportReadyListener(currentChatId);
     };
 
   }, [guestId, urlChatId, chat_id]);

@@ -311,7 +311,7 @@ serve(async (req)=>{
         // If it's astro data only (not AI report), add to report_ready_signals
         if (!isAIReport) {
           const { error } = await sb.from('report_ready_signals').insert({
-            guest_report_id: body.user_id,
+            chat_id: body.user_id,
             is_ai_report: false,
             created_at: new Date().toISOString()
           });
