@@ -22,10 +22,8 @@ export const ConversationOverlay: React.FC = () => {
   const chat_id = useChatStore((state) => state.chat_id);
   const [state, setState] = useState<ConversationState>('connecting');
   
-  const audioLevel = useConversationRealtimeAudioLevel({
-    updateIntervalMs: 50,
-    smoothingFactor: 0.8,
-  });
+  // Realtime level driven by worker (not React polling)
+  const [audioLevel, setAudioLevel] = useState(0);
   
   const hasStarted = useRef(false);
   const isShuttingDown = useRef(false);
@@ -168,6 +166,9 @@ export const ConversationOverlay: React.FC = () => {
           } finally {
             isProcessingRef.current = false;
           }
+        },
+        onLevel: (level) => {
+          if (!isShuttingDown.current) setAudioLevel(level);
         },
         onError: (error: Error) => {
           console.error('[ConversationOverlay] Audio pipeline error:', error);

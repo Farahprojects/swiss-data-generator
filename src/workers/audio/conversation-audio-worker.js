@@ -65,6 +65,10 @@ self.onmessage = (event) => {
     const energy = computeEnergy(frame);
     const isSpeech = energy > ENERGY_THRESHOLD;
 
+    // Emit audio level for UI (RMS approx, clamp 0..1)
+    const level = Math.min(1, Math.sqrt(energy) * 4);
+    try { self.postMessage({ type: 'level', value: level }); } catch {}
+
     if (isSpeech) {
       aboveCount++;
       belowCount = 0;

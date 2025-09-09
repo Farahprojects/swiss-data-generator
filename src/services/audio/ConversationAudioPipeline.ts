@@ -3,6 +3,7 @@
 export type ConversationAudioEvents = {
   onSpeechStart?: () => void;
   onSpeechSegment?: (float32Pcm: Float32Array) => void;
+  onLevel?: (level01: number) => void;
   onError?: (error: Error) => void;
 };
 
@@ -32,6 +33,8 @@ export class ConversationAudioPipeline {
         } else if (type === 'segment' && evt.data.buffer) {
           const pcm = new Float32Array(evt.data.buffer);
           this.events.onSpeechSegment?.(pcm);
+        } else if (type === 'level') {
+          this.events.onLevel?.(evt.data.value ?? 0);
         }
       };
       // Mobile visibility handling: ensure context resumes on return
