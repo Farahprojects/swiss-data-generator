@@ -116,6 +116,23 @@ serve(async (req) => {
             const errorText = await llmResponse.text();
             console.error('[chat-send] ❌ LLM handler failed:', errorText);
           } else {
+            const llmData = await llmResponse.json();
+            const { assistantMessageData } = llmData;
+            
+            if (assistantMessageData) {
+              console.log('[chat-send] 💾 Saving assistant message to DB (conversation mode)...');
+              const { error: assistantError } = await supabase
+                .from("messages")
+                .upsert(assistantMessageData, {
+                  onConflict: "client_msg_id"
+                });
+              
+              if (assistantError) {
+                console.error('[chat-send] ❌ Assistant message save failed:', assistantError);
+              } else {
+                console.log('[chat-send] ✅ Assistant message saved to DB (conversation mode)');
+              }
+            }
             console.log('[chat-send] ✅ LLM handler completed in background');
           }
         }).catch((error) => {
@@ -158,30 +175,14 @@ serve(async (req) => {
         }
 
         const llmData = await llmResponse.json();
-        const { text: assistantText, usage, latency_ms } = llmData;
+        const { assistantMessageData } = llmData;
 
-        if (!assistantText) {
-          console.error('[chat-send] ❌ No assistant text received from background LLM');
+        if (!assistantMessageData) {
+          console.error('[chat-send] ❌ No assistant message data received from LLM handler');
           return;
         }
 
-        // Save assistant message to DB
-        const assistantMessageData = {
-          chat_id,
-          role: "assistant",
-          text: assistantText,
-          client_msg_id: crypto.randomUUID(),
-          status: "complete",
-          meta: { 
-            llm_provider: "openai", 
-            model: "gpt-4.1-mini-2025-04-14",
-            latency_ms,
-            input_tokens: usage?.input_tokens,
-            output_tokens: usage?.output_tokens,
-            total_tokens: usage?.total_tokens,
-            mode: mode || 'background'
-          }
-        };
+        console.log('[chat-send] 💾 Saving assistant message to DB...');
 
         const { error: assistantError } = await supabase
           .from("messages")

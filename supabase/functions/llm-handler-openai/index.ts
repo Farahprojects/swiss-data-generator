@@ -160,36 +160,8 @@ Content Rules:
 
     const latency_ms = Date.now() - startTime;
 
-    // Save assistant message to DB
-    const assistantMessageData = {
-      chat_id,
-      role: "assistant",
-      text: sanitizedText,
-      client_msg_id: crypto.randomUUID(),
-      status: "complete",
-      meta: { 
-        llm_provider: "openai", 
-        model: "gpt-4.1-mini-2025-04-14",
-        latency_ms,
-        input_tokens: usage.input_tokens,
-        output_tokens: usage.output_tokens,
-        total_tokens: usage.total_tokens,
-        mode: 'conversation'
-      }
-    };
-
-    console.log('[llm-handler-openai] 💾 Saving assistant message to DB...');
-    const { error: assistantError } = await supabase
-      .from("messages")
-      .upsert(assistantMessageData, {
-        onConflict: "client_msg_id"
-      });
-
-    if (assistantError) {
-      console.error('[llm-handler-openai] ❌ Assistant message save failed:', assistantError);
-    } else {
-      console.log('[llm-handler-openai] ✅ Assistant message saved to DB');
-    }
+    // Don't save to DB - let chat-send handle that
+    console.log('[llm-handler-openai] 📤 Returning response to chat-send for DB saving...');
 
     // Fire-and-forget TTS call - ONLY for conversation mode
     if (mode === 'conversation') {
@@ -221,11 +193,27 @@ Content Rules:
       console.log('[llm-handler-openai] 🚫 Skipping TTS - not conversation mode (mode:', mode, ')');
     }
 
-    // Return clean response for chat-send to handle
+    // Return response with assistant message data for chat-send to save
     return new Response(JSON.stringify({ 
       text: sanitizedText,
       usage,
-      latency_ms
+      latency_ms,
+      assistantMessageData: {
+        chat_id,
+        role: "assistant",
+        text: sanitizedText,
+        client_msg_id: crypto.randomUUID(),
+        status: "complete",
+        meta: { 
+          llm_provider: "openai", 
+          model: "gpt-4.1-mini-2025-04-14",
+          latency_ms,
+          input_tokens: usage.input_tokens,
+          output_tokens: usage.output_tokens,
+          total_tokens: usage.total_tokens,
+          mode: mode || 'text'
+        }
+      }
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
