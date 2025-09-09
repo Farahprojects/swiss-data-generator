@@ -3,7 +3,7 @@ import { useReportReadyStore } from './reportReadyStore';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { logUserError } from '@/services/errorService';
 
-// Track active listeners to prevent duplicates
+// Track active listeners to prevent duplicates (WebSocket-based)
 const activeListeners: Record<string, { 
   channel: RealtimeChannel; 
   startedAt: number; 

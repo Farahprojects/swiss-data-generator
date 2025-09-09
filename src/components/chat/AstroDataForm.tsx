@@ -198,7 +198,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   // Build payload for initiate-auth-report
   const buildAuthReportPayload = (data: ReportFormData, chatId: string) => {
     // Build person_a data
-    const personA = {
+    const personA: any = {
       birth_date: data.birthDate,
       birth_time: data.birthTime,
       location: data.birthLocation,
@@ -206,12 +206,12 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       longitude: data.birthLongitude,
       name: data.name,
     };
-
+    
     // Add optional fields if present
     if (data.timezone) personA.timezone = data.timezone;
     if (data.houseSystem) personA.house_system = data.houseSystem;
 
-    const reportData = {
+    const reportData: any = {
       request: data.request || selectedAstroType,
       reportType: selectedAstroType,
       person_a: personA,
@@ -219,7 +219,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
 
     // Add person_b for compatibility requests
     if (selectedAstroType === 'sync' && data.secondPersonName) {
-      const personB = {
+      const personB: any = {
         birth_date: data.secondPersonBirthDate,
         birth_time: data.secondPersonBirthTime,
         location: data.secondPersonBirthLocation,

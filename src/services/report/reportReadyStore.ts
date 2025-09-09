@@ -10,6 +10,7 @@ interface ErrorState {
   requires_cleanup?: boolean;
   requires_error_logging?: boolean;
   guest_report_id?: string;
+  chat_id?: string;
   email?: string;
 }
 

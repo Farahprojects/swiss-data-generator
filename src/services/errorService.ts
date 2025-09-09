@@ -2,7 +2,8 @@
 import { supabase } from '@/integrations/supabase/client';
 
 export interface LogErrorPayload {
-  guestReportId: string;
+  guestReportId?: string;
+  chatId?: string;
   errorType: string;
   errorMessage?: string;
   timestamp?: string;
@@ -11,7 +12,7 @@ export interface LogErrorPayload {
 const loggedErrors = new Set<string>();
 
 export async function logUserError(payload: LogErrorPayload): Promise<string | null> {
-  const errorKey = `${payload.guestReportId}-${payload.errorType}`;
+  const errorKey = `${payload.guestReportId || payload.chatId}-${payload.errorType}`;
   
   // Prevent duplicate logging
   if (loggedErrors.has(errorKey)) {

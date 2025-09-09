@@ -32,6 +32,11 @@ export interface ReportFormData {
   secondPersonLatitude?: number;
   secondPersonLongitude?: number;
   secondPersonPlaceId?: string;
+  // Astrology-specific fields
+  timezone?: string;
+  houseSystem?: string;
+  secondPersonTimezone?: string;
+  secondPersonHouseSystem?: string;
   returnYear?: string;
   notes?: string;
   promoCode?: string;
