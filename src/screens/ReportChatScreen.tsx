@@ -22,13 +22,6 @@ const ReportChatScreen = () => {
   const { user } = useAuth();
   
   // 🎯 LOG: Track when ReportChatScreen is called
-  console.log('🚀 [ReportChatScreen] Component called with:', {
-    timestamp: new Date().toISOString(),
-    chat_id_from_params: chat_id,
-    searchParams: Object.fromEntries(searchParams.entries()),
-    user_id: user?.id || 'no_user',
-    url: window.location.href
-  });
   
   // Get parameters - use centralized storage for guest_id
   const { getGuestId } = useChatStore();
@@ -53,12 +46,6 @@ const ReportChatScreen = () => {
   
   // Main report flow checker - only triggers when payment is completed (not on every refresh)
   useEffect(() => {
-    console.log('🔄 [ReportChatScreen] Payment validation useEffect triggered:', {
-      guestId,
-      paymentCompleted,
-      hasTriggeredGeneration: hasTriggeredGenerationRef.current,
-      isReportReady: useReportReadyStore.getState().isReportReady
-    });
     
     // Only run payment validation if payment was just completed
     if (!guestId || !paymentCompleted || hasTriggeredGenerationRef.current) return;
@@ -299,11 +286,6 @@ const ReportChatScreen = () => {
 
   // Auth user hydration - restore conversation on page load
   useEffect(() => {
-    console.log('🔄 [ReportChatScreen] Auth user hydration useEffect triggered:', {
-      isAuthenticated,
-      user_id: user?.id || 'no_user',
-      userId_from_url: userId
-    });
     
     if (!isAuthenticated || !user) return;
 

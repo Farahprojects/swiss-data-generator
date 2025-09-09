@@ -78,7 +78,6 @@ class PricingService {
   async fetchPrices(): Promise<PriceData[]> {
     // Return cached data if still valid
     if (cachedPrices && (Date.now() - lastFetchTime) < CACHE_DURATION) {
-      console.log('📦 Using cached prices (age:', Math.round((Date.now() - lastFetchTime) / 1000), 's)');
       return cachedPrices;
     }
 
