@@ -80,6 +80,14 @@ export const streamlinedSessionReset = async (options: StreamlinedResetOptions =
       }
     });
     
+    // One-time cleanup: Remove old unused guest ID from localStorage
+    try {
+      localStorage.removeItem('therai_guest_id');
+      console.log('[StreamlinedReset] Cleaned up old unused guest ID from localStorage');
+    } catch (error) {
+      console.warn('[StreamlinedReset] Could not clear old guest ID:', error);
+    }
+    
     // 6. Clear URL Parameters (clean slate)
     if (!preserveNavigation) {
       const cleanUrl = new URL(window.location.origin + redirectTo);
