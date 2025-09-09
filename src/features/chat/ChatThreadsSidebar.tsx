@@ -19,10 +19,9 @@ import {
 
 interface ChatThreadsSidebarProps {
   className?: string;
-  isGuestThreadReady?: boolean;
 }
 
-export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ className, isGuestThreadReady = false }) => {
+export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ className }) => {
   // Use centralized user type detection
   const userType = useUserType();
   const userPermissions = useUserPermissions();
@@ -143,8 +142,8 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         <h3 className="text-sm font-medium text-gray-700">Chats</h3>
       </div>
 
-      {/* Current Chat - Show for auth users always, guests only when ready */}
-      {(chat_id && (userType.isAuthenticated || (userType.isGuest && isGuestThreadReady))) && (
+      {/* Current Chat - Show for auth users always, guests when they have a chat_id */}
+      {(chat_id && (userType.isAuthenticated || userType.isGuest)) && (
         <div 
           className="relative group"
           onMouseEnter={() => setHoveredThread(chat_id)}

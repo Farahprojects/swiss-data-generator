@@ -160,6 +160,13 @@ const ReportChatScreen = () => {
             }
 
             console.log(`[ChatPage] ✅ Report generation triggered successfully for ${guestId}`);
+            
+            // Start WebSocket listener immediately after triggering report generation
+            const currentChatId = urlChatId || chat_id;
+            if (currentChatId) {
+              console.log(`[ChatPage] 🔄 Starting WebSocket listener for chat_id: ${currentChatId}`);
+              startReportReadyListener(currentChatId);
+            }
           }
         }
         else if (data?.payment_status === 'pending') {
@@ -178,31 +185,6 @@ const ReportChatScreen = () => {
 
   }, [guestId, paymentCompleted]);
 
-  // 🎯 WebSocket-based report ready detection (no polling)
-  useEffect(() => {
-    if (!guestId) return;
-
-    // Get chat_id from URL or params
-    const currentChatId = urlChatId || chat_id;
-    if (!currentChatId) return;
-
-    // 🚫 GUARD: Don't start if report is already ready (prevents refresh loops)
-    if (useReportReadyStore.getState().isReportReady) {
-      return;
-    }
-
-    console.log(`[ChatPage] 🔄 Starting WebSocket report ready listener for chat_id: ${currentChatId}`);
-    
-    // Use the WebSocket-based report ready listener with chat_id
-    startReportReadyListener(currentChatId);
-
-    // Cleanup on unmount or guestId change
-    return () => {
-      console.log(`[ChatPage] 🧹 Cleaning up WebSocket listener for chat_id: ${currentChatId}`);
-      stopReportReadyListener(currentChatId);
-    };
-
-  }, [guestId, urlChatId, chat_id]);
 
   // URL change listener - React will automatically re-render when URL params change
   // This is just for logging and debugging
@@ -377,7 +359,7 @@ const ReportChatScreen = () => {
       <ReportModalProvider>
         <MobileViewportLock active>
           <div className="font-sans antialiased text-gray-800 bg-gray-50 fixed inset-0 flex flex-col">
-            <ChatBox isGuestThreadReady={isGuestThreadReady} />
+            <ChatBox />
           </div>
         </MobileViewportLock>
       </ReportModalProvider>
