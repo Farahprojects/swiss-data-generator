@@ -9,10 +9,12 @@ import { useChatStore } from '@/core/store';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { clearChatTokens } from '@/services/auth/chatTokens';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface StreamlinedResetOptions {
   redirectTo?: string;
   preserveNavigation?: boolean;
+  cleanDatabase?: boolean; // New option to clean guest data from database
 }
 
 /**
@@ -20,10 +22,27 @@ export interface StreamlinedResetOptions {
  * Does NOT touch other app parts that have their own cleanup
  */
 export const streamlinedSessionReset = async (options: StreamlinedResetOptions = {}): Promise<void> => {
-  const { redirectTo = '/', preserveNavigation = false } = options;
+  const { redirectTo = '/', preserveNavigation = false, cleanDatabase = false } = options;
   
   
   try {
+    // 0. Clean database if requested (for guest users)
+    if (cleanDatabase) {
+      const { chat_id } = useChatStore.getState();
+      if (chat_id) {
+        console.log('[StreamlinedReset] Cleaning guest data from database...');
+        try {
+          await supabase.functions.invoke('clean-guest-chat-data', {
+            body: { chat_id }
+          });
+          console.log('[StreamlinedReset] Database cleanup completed');
+        } catch (dbError) {
+          console.error('[StreamlinedReset] Database cleanup failed:', dbError);
+          // Continue with local cleanup even if database cleanup fails
+        }
+      }
+    }
+
     // 1. Clear Chat Store (messages, chat_id, guest_id, etc.)
     const { clearChat } = useChatStore.getState();
     clearChat();

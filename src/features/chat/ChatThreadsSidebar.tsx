@@ -104,9 +104,9 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         const { clearChat } = useChatStore.getState();
         clearChat();
         
-        // Clear session storage
+        // Clear session storage AND database
         const { streamlinedSessionReset } = await import('@/utils/streamlinedSessionReset');
-        await streamlinedSessionReset({ redirectTo: '/' });
+        await streamlinedSessionReset({ redirectTo: '/', cleanDatabase: true });
       } catch (error) {
         console.error('[ChatThreadsSidebar] ❌ Session cleanup failed:', error);
         // Fallback: Force navigation anyway
