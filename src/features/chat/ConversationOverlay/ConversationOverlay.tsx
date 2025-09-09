@@ -112,6 +112,7 @@ export const ConversationOverlay: React.FC = () => {
         if (!isShuttingDown.current) {
           setTimeout(() => {
             if (!isShuttingDown.current) {
+              console.log('[ConversationOverlay] Resuming pipeline after TTS');
               try { pipelineRef.current?.resume(); } catch {}
             }
           }, 200);
@@ -154,11 +155,16 @@ export const ConversationOverlay: React.FC = () => {
           if (!isShuttingDown.current) setState('listening');
         },
         onSpeechSegment: async (pcm: Float32Array) => {
-          if (isShuttingDown.current || isProcessingRef.current || state === 'thinking' || state === 'replying') return;
+          console.log('[ConversationOverlay] Speech segment received, current state:', state);
+          if (isShuttingDown.current || isProcessingRef.current || state === 'thinking' || state === 'replying') {
+            console.log('[ConversationOverlay] Skipping segment - already processing or wrong state');
+            return;
+          }
           isProcessingRef.current = true;
           setState('thinking');
           try {
             // Pause capture during STT to avoid overlapping input
+            console.log('[ConversationOverlay] Pausing pipeline for STT');
             try { pipelineRef.current?.pause(); } catch {}
             const wav = encodeWav16kMono(pcm, 16000);
             await sttService.transcribe(wav, chat_id, {}, 'conversation');

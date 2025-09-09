@@ -95,11 +95,28 @@ export class ConversationAudioPipeline {
   }
 
   public pause(): void {
-    if (this.audioContext?.state === 'running') this.audioContext.suspend();
+    console.log('[AudioPipeline] Pausing - AudioContext state:', this.audioContext?.state);
+    if (this.audioContext?.state === 'running') {
+      this.audioContext.suspend();
+    }
+    // Also disconnect the worklet to stop audio flow
+    if (this.workletNode) {
+      this.workletNode.disconnect();
+    }
   }
 
   public resume(): void {
-    if (this.audioContext?.state === 'suspended') this.audioContext.resume();
+    console.log('[AudioPipeline] Resuming - AudioContext state:', this.audioContext?.state);
+    if (this.audioContext?.state === 'suspended') {
+      this.audioContext.resume();
+    }
+    // Reconnect the worklet to resume audio flow
+    if (this.workletNode && this.audioContext) {
+      const gain = this.audioContext.createGain();
+      gain.gain.value = 0;
+      this.workletNode.connect(gain);
+      gain.connect(this.audioContext.destination);
+    }
   }
 
   public async stop(): Promise<void> {
