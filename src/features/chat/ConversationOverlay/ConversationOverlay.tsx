@@ -158,8 +158,11 @@ export const ConversationOverlay: React.FC = () => {
           isProcessingRef.current = true;
           setState('thinking');
           try {
+            // Pause capture during STT to avoid overlapping input
+            try { pipelineRef.current?.pause(); } catch {}
             const wav = encodeWav16kMono(pcm, 16000);
             await sttService.transcribe(wav, chat_id, {}, 'conversation');
+            // TTS will arrive over WS and after it plays, we resume in playAudioImmediately
           } catch (error) {
             console.error('[ConversationOverlay] Processing failed:', error);
             resetToTapToStart('STT processing failed');

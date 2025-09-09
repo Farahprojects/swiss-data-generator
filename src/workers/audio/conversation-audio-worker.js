@@ -10,7 +10,7 @@ const FRAME_MS = 10; // matches worklet frame
 const FRAME_SAMPLES = (SAMPLE_RATE * FRAME_MS) / 1000; // 160
 const ENERGY_THRESHOLD = 0.005; // conservative threshold
 const SPEECH_START_FRAMES = 5; // 50ms
-const SPEECH_END_FRAMES = 12; // 120ms
+const SPEECH_END_FRAMES = 120; // 1200ms (1.2s)
 
 let ringBuffer = new Float32Array(MAX_SAMPLES);
 let writeIndex = 0;
