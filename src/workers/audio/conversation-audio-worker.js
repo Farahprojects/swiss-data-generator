@@ -8,7 +8,7 @@ const MAX_SAMPLES = ROLLING_SECONDS * SAMPLE_RATE;
 // Simple energy-based VAD
 const FRAME_MS = 10; // matches worklet frame
 const FRAME_SAMPLES = (SAMPLE_RATE * FRAME_MS) / 1000; // 160
-const ENERGY_THRESHOLD = 0.005; // conservative threshold
+const ENERGY_THRESHOLD = 0.001; // lowered threshold
 const SPEECH_START_FRAMES = 5; // 50ms
 const SPEECH_END_FRAMES = 120; // 1200ms (1.2s)
 
@@ -19,6 +19,7 @@ let filled = false;
 let speechActive = false;
 let aboveCount = 0;
 let belowCount = 0;
+let frameCount = 0;
 
 function appendFrame(frame) {
   const samples = new Float32Array(frame);
@@ -58,6 +59,11 @@ function extractRollingWindow(seconds) {
 self.onmessage = (event) => {
   const { type } = event.data || {};
   if (type === 'audio') {
+    frameCount++;
+    if (frameCount === 1) {
+      console.log('[AudioWorker] ✅ First frame received - worker is active');
+    }
+    
     appendFrame(event.data.buffer);
 
     // VAD step
@@ -93,6 +99,7 @@ self.onmessage = (event) => {
     speechActive = false;
     aboveCount = 0;
     belowCount = 0;
+    frameCount = 0;
   }
 };
 
