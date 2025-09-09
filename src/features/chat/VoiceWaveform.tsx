@@ -35,6 +35,11 @@ export const VoiceWaveform: React.FC<VoiceWaveformProps> = ({ audioLevelRef }) =
 
     const audioLevel = audioLevelRef.current;
     const bars = containerRef.current.children;
+    
+    // Debug: Log audio level occasionally
+    if (Math.random() < 0.01) { // ~1% chance = every ~100th frame
+      console.log('[VoiceWaveform] Audio level:', audioLevel, 'Bars count:', bars.length);
+    }
 
     // Update each bar using CSS transforms for better performance
     for (let i = 0; i < bars.length; i++) {
