@@ -143,6 +143,9 @@ export const useChatInputMicrophone = (options: UseChatInputMicrophoneOptions = 
 
       await pipelineRef.current.init();
       await pipelineRef.current.start();
+      
+      // Set recording state immediately when pipeline starts
+      setIsRecording(true);
       return true;
     } catch (error) {
       console.error('[useChatInputMicrophone] Start failed:', error);
