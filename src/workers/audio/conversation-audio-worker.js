@@ -15,7 +15,7 @@ const MAX_THRESHOLD = 0.05; // Maximum threshold for noisy environments
 const ADAPTATION_FACTOR = 0.1; // How quickly to adapt (0.1 = slow adaptation)
 
 const SPEECH_START_FRAMES = 3; // 60ms (3 * 20ms) - still responsive
-const SPEECH_END_FRAMES = 15; // 300ms (15 * 20ms) - faster timeout for testing
+const SPEECH_END_FRAMES = 30; // 600ms (30 * 20ms) - good balance for production
 
 let ringBuffer = new Float32Array(MAX_SAMPLES);
 let writeIndex = 0;
@@ -113,11 +113,6 @@ self.onmessage = (event) => {
     // Emit audio level for UI (RMS approx, clamp 0..1)
     const level = Math.min(1, Math.sqrt(energy) * 4);
     try { self.postMessage({ type: 'level', value: level }); } catch {}
-    
-    // Debug: Log energy and threshold every 50 frames to see what's happening
-    if (frameCount % 50 === 0) {
-      console.log(`[AudioWorker] Energy: ${energy.toFixed(6)}, Threshold: ${currentThreshold.toFixed(6)}, Speech: ${isSpeech}`);
-    }
 
     if (isSpeech) {
       aboveCount++;
