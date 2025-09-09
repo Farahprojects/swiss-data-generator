@@ -147,21 +147,8 @@ export const ConversationOverlay: React.FC = () => {
       console.log('[ConversationOverlay] 🔥 Starting audio warmup...');
       const { ttsPlaybackService } = await import('@/services/voice/TTSPlaybackService');
       
-      // Warm up both TTS and STT in parallel
-      const warmupPromises = [
-        ttsPlaybackService.warmup(),
-        // Fire-and-forget STT warmup to prevent cold-start
-        fetch(`${SUPABASE_URL}/functions/v1/openai-whisper`, {
-          method: 'POST',
-          headers: {
-            'X-Warmup': '1',
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-          },
-          body: new ArrayBuffer(0) // Empty body for warmup
-        }).catch(() => {}) // Ignore warmup errors
-      ];
-      
-      await Promise.all(warmupPromises);
+      // Warm up TTS only
+      await ttsPlaybackService.warmup();
       
       // Initialize microphone service
       conversationMicrophoneService.initialize({
