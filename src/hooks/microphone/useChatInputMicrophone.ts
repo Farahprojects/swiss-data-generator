@@ -63,10 +63,12 @@ export const useChatInputMicrophone = (options: UseChatInputMicrophoneOptions = 
   const startRecording = useCallback(async (): Promise<boolean> => {
     if (isRecording || isProcessing) return false;
 
+    console.log('[useChatInputMicrophone] 🎤 Starting recording...');
     try {
       // Initialize pipeline
       pipelineRef.current = new ConversationAudioPipeline({
         onSpeechStart: () => {
+          console.log('[useChatInputMicrophone] 🗣️ Speech start detected');
           setIsRecording(true);
           // Clear any existing silence timeout
           if (silenceTimeoutRef.current) {
@@ -75,6 +77,7 @@ export const useChatInputMicrophone = (options: UseChatInputMicrophoneOptions = 
           }
         },
         onSpeechSegment: async (pcm: Float32Array) => {
+          console.log('[useChatInputMicrophone] 📝 Speech segment received, processing...');
           if (isProcessing) return;
           setIsProcessing(true);
           try {
@@ -100,6 +103,11 @@ export const useChatInputMicrophone = (options: UseChatInputMicrophoneOptions = 
         onLevel: (level) => {
           // Update ref directly - no React state updates per audio frame
           levelRef.current = level;
+          
+          // Debug: Log first few audio levels to verify signal
+          if (levelRef.current > 0) {
+            console.log('[useChatInputMicrophone] 🎵 Audio level received:', levelRef.current);
+          }
           
           // Silence detection: if level is very low for extended period
           const silenceThreshold = 0.01; // Adjust as needed
