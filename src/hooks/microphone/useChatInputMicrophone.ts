@@ -3,9 +3,14 @@
  * 
  * Uses the same AudioWorklet + WebWorker pipeline as Conversation Mode
  * for consistent audio processing across the app.
+ * 
+ * Performance-optimized with ref-based animation pattern:
+ * - Worker updates levelRef directly (no re-renders)
+ * - requestAnimationFrame loop syncs to React state
+ * - Proper silence detection integration
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { ConversationAudioPipeline, encodeWav16kMono } from '@/services/audio/ConversationAudioPipeline';
 import { sttService } from '@/services/voice/stt';
 import { useChatStore } from '@/core/store';
@@ -19,10 +24,41 @@ interface UseChatInputMicrophoneOptions {
 export const useChatInputMicrophone = (options: UseChatInputMicrophoneOptions = {}) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [audioLevel, setAudioLevel] = useState(0);
   const pipelineRef = useRef<ConversationAudioPipeline | null>(null);
-  const audioLevelRef = useRef<number>(0);
+  const levelRef = useRef(0);
+  const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const rafRef = useRef<number | null>(null);
   const { toast } = useToast();
   const chat_id = useChatStore((state) => state.chat_id);
+
+  // RequestAnimationFrame loop for smooth UI animations
+  useEffect(() => {
+    const tick = () => {
+      setAudioLevel(levelRef.current);
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+    };
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (silenceTimeoutRef.current) {
+        clearTimeout(silenceTimeoutRef.current);
+      }
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, []);
 
   const startRecording = useCallback(async (): Promise<boolean> => {
     if (isRecording || isProcessing) return false;
@@ -32,6 +68,11 @@ export const useChatInputMicrophone = (options: UseChatInputMicrophoneOptions = 
       pipelineRef.current = new ConversationAudioPipeline({
         onSpeechStart: () => {
           setIsRecording(true);
+          // Clear any existing silence timeout
+          if (silenceTimeoutRef.current) {
+            clearTimeout(silenceTimeoutRef.current);
+            silenceTimeoutRef.current = null;
+          }
         },
         onSpeechSegment: async (pcm: Float32Array) => {
           if (isProcessing) return;
@@ -58,7 +99,28 @@ export const useChatInputMicrophone = (options: UseChatInputMicrophoneOptions = 
         },
         onLevel: (level) => {
           // Update ref directly - no React state updates per audio frame
-          audioLevelRef.current = level;
+          levelRef.current = level;
+          
+          // Silence detection: if level is very low for extended period
+          const silenceThreshold = 0.01; // Adjust as needed
+          const silenceTimeout = options.silenceTimeoutMs || 1200;
+          
+          if (level < silenceThreshold && isRecording && !isProcessing) {
+            // Start or extend silence timeout
+            if (silenceTimeoutRef.current) {
+              clearTimeout(silenceTimeoutRef.current);
+            }
+            silenceTimeoutRef.current = setTimeout(() => {
+              console.log('[useChatInputMicrophone] Silence detected, stopping recording');
+              stopRecording();
+            }, silenceTimeout);
+          } else if (level >= silenceThreshold) {
+            // Clear silence timeout when speech is detected
+            if (silenceTimeoutRef.current) {
+              clearTimeout(silenceTimeoutRef.current);
+              silenceTimeoutRef.current = null;
+            }
+          }
         },
         onError: (error: Error) => {
           console.error('[useChatInputMicrophone] Pipeline error:', error);
@@ -83,16 +145,22 @@ export const useChatInputMicrophone = (options: UseChatInputMicrophoneOptions = 
       });
       return false;
     }
-  }, [isRecording, isProcessing, chat_id, options.onTranscriptReady, toast]);
+  }, [isRecording, isProcessing, chat_id, options.onTranscriptReady, options.silenceTimeoutMs, toast]);
 
   const stopRecording = useCallback(() => {
+    // Clear silence timeout
+    if (silenceTimeoutRef.current) {
+      clearTimeout(silenceTimeoutRef.current);
+      silenceTimeoutRef.current = null;
+    }
+
     if (pipelineRef.current) {
       pipelineRef.current.dispose();
       pipelineRef.current = null;
     }
     setIsRecording(false);
     setIsProcessing(false);
-    audioLevelRef.current = 0;
+    levelRef.current = 0;
   }, []);
 
   const toggleRecording = useCallback(async () => {
@@ -107,13 +175,14 @@ export const useChatInputMicrophone = (options: UseChatInputMicrophoneOptions = 
     // State
     isRecording,
     isProcessing,
+    audioLevel, // Now properly synced via requestAnimationFrame
     
     // Actions
     startRecording,
     stopRecording,
     toggleRecording,
     
-    // Audio level ref for animation (no React state updates per frame)
-    audioLevelRef
+    // Audio level ref for direct access (if needed)
+    audioLevelRef: { current: audioLevel }
   };
 };
