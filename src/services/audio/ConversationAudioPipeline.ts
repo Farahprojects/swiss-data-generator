@@ -14,6 +14,8 @@ export class ConversationAudioPipeline {
   private worker: Worker | null = null;
   private started: boolean = false;
   private events: ConversationAudioEvents;
+  private isBackground: boolean = false;
+  private backgroundThrottleInterval: number | null = null;
 
   constructor(events: ConversationAudioEvents = {}) {
     this.events = events;
@@ -37,22 +39,21 @@ export class ConversationAudioPipeline {
           this.events.onLevel?.(evt.data.value ?? 0);
         }
       };
-      // 🚀 MOBILE OPTIMIZATION: Enhanced visibility handling with background processing reduction
+      // Mobile visibility handling: ensure context resumes on return + background throttling
       const handleVisibility = () => {
         if (!this.audioContext) return;
         
-        const isVisible = document.visibilityState === 'visible';
-        
-        if (isVisible && this.audioContext.state === 'suspended') {
-          this.audioContext.resume().catch(() => {});
-        }
-        
-        // 🚀 MOBILE OPTIMIZATION: Notify worker about background state changes
-        if (this.worker) {
-          this.worker.postMessage({ 
-            type: 'background', 
-            isBackground: !isVisible 
-          });
+        if (document.visibilityState === 'visible') {
+          // App became visible - resume context and stop background throttling
+          if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume().catch(() => {});
+          }
+          this.isBackground = false;
+          this.stopBackgroundThrottling();
+        } else {
+          // App went to background - start throttling
+          this.isBackground = true;
+          this.startBackgroundThrottling();
         }
       };
       document.addEventListener('visibilitychange', handleVisibility);
@@ -149,8 +150,33 @@ export class ConversationAudioPipeline {
     } catch {}
   }
 
+  private startBackgroundThrottling(): void {
+    if (this.backgroundThrottleInterval) return;
+    
+    // Throttle processing to 50% frequency when in background
+    this.backgroundThrottleInterval = window.setInterval(() => {
+      if (this.worker && this.isBackground) {
+        // Send a throttle signal to worker
+        this.worker.postMessage({ type: 'throttle', enabled: true });
+      }
+    }, 100); // Check every 100ms
+  }
+
+  private stopBackgroundThrottling(): void {
+    if (this.backgroundThrottleInterval) {
+      clearInterval(this.backgroundThrottleInterval);
+      this.backgroundThrottleInterval = null;
+    }
+    
+    // Tell worker to stop throttling
+    if (this.worker) {
+      this.worker.postMessage({ type: 'throttle', enabled: false });
+    }
+  }
+
   public dispose(): void {
     this.stop();
+    this.stopBackgroundThrottling();
     if (this.worker) {
       this.worker.terminate();
       this.worker = null;
