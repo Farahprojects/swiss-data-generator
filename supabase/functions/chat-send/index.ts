@@ -108,7 +108,8 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             chat_id,
-            text: text
+            text: text,
+            mode: mode
           })
         }).then(async (llmResponse) => {
           if (!llmResponse.ok) {
@@ -145,7 +146,8 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             chat_id,
-            text: text
+            text: text,
+            mode: mode
           })
         });
 

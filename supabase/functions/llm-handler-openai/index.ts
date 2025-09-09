@@ -45,7 +45,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { chat_id, text } = body;
+    const { chat_id, text, mode } = body;
 
     if (!chat_id || !text) {
       throw new Error("Missing 'chat_id' or 'text' in request body.");
@@ -191,31 +191,35 @@ Content Rules:
       console.log('[llm-handler-openai] ✅ Assistant message saved to DB');
     }
 
-    // Fire-and-forget TTS call
-    console.log('[llm-handler-openai] 🎵 Starting TTS service (fire-and-forget)...');
-    EdgeRuntime.waitUntil(
-      fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
-        },
-        body: JSON.stringify({
-          text: sanitizedText,
-          voice: 'Puck',
-          chat_id: chat_id
+    // Fire-and-forget TTS call - ONLY for conversation mode
+    if (mode === 'conversation') {
+      console.log('[llm-handler-openai] 🎵 Starting TTS service (conversation mode)...');
+      EdgeRuntime.waitUntil(
+        fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/google-text-to-speech`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
+          },
+          body: JSON.stringify({
+            text: sanitizedText,
+            voice: 'Puck',
+            chat_id: chat_id
+          })
+        }).then(async (ttsResponse) => {
+          if (!ttsResponse.ok) {
+            const errorText = await ttsResponse.text();
+            console.error('[llm-handler-openai] ❌ TTS service failed:', errorText);
+          } else {
+            console.log('[llm-handler-openai] ✅ TTS completed in background');
+          }
+        }).catch((error) => {
+          console.error('[llm-handler-openai] ❌ TTS service error:', error);
         })
-      }).then(async (ttsResponse) => {
-        if (!ttsResponse.ok) {
-          const errorText = await ttsResponse.text();
-          console.error('[llm-handler-openai] ❌ TTS service failed:', errorText);
-        } else {
-          console.log('[llm-handler-openai] ✅ TTS completed in background');
-        }
-      }).catch((error) => {
-        console.error('[llm-handler-openai] ❌ TTS service error:', error);
-      })
-    );
+      );
+    } else {
+      console.log('[llm-handler-openai] 🚫 Skipping TTS - not conversation mode (mode:', mode, ')');
+    }
 
     // Return clean response for chat-send to handle
     return new Response(JSON.stringify({ 
