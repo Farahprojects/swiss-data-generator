@@ -56,8 +56,8 @@ export class RollingBufferVAD {
       preRollMs: 250,
       pruneOnUtterance: true,
 
-      voiceThreshold: 0.012,
-      silenceThreshold: 0.008,
+      voiceThreshold: 0.005, // More sensitive for speech start
+      silenceThreshold: 0.001, // More sensitive for silence detection
       voiceConfirmMs: 200,
       silenceTimeoutMs: 1000,
       maxUtteranceMs: 15000,

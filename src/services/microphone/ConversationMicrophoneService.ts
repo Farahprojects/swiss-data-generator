@@ -176,8 +176,8 @@ export class ConversationMicrophoneServiceClass {
         chunkDurationMs: 300,
         preRollMs: 250,
         pruneOnUtterance: true,
-        voiceThreshold: 0.012,
-        silenceThreshold: 0.008,
+        voiceThreshold: 0.005, // More sensitive for speech start
+        silenceThreshold: 0.001, // More sensitive for silence detection
         voiceConfirmMs: 300,
         silenceTimeoutMs: this.options.silenceTimeoutMs || 1500,
         maxUtteranceMs: 15000,
