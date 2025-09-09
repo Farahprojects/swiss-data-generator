@@ -193,7 +193,7 @@ export const useChatInputMicrophone = (options: UseChatInputMicrophoneOptions = 
     stopRecording,
     toggleRecording,
     
-    // Audio level ref for direct access (if needed)
-    audioLevelRef: { current: audioLevel }
+    // Audio level ref for direct access (updated by worker)
+    audioLevelRef: levelRef
   };
 };
