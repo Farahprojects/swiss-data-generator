@@ -13,7 +13,6 @@ const activeListeners: Record<string, {
 
 // Trigger context injection for chat when report is ready
 async function triggerContextInjection(chatId: string): Promise<void> {
-  console.log('[ReportReady] 💉 Calling context-injector for chat_id:', chatId);
   
   try {
     const { data: contextData, error: contextError } = await supabase.functions.invoke('context-injector', {
@@ -25,7 +24,6 @@ async function triggerContextInjection(chatId: string): Promise<void> {
       return;
     }
 
-    console.log('[ReportReady] ✅ Context injection successful:', contextData);
     
     // Set report ready state in store for persistence
     useReportReadyStore.getState().setReportReady(true);
