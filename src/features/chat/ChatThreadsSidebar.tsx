@@ -68,15 +68,17 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     }
   }, [isAuthenticated, loadThreads]);
 
-  // Handle new chat creation for authenticated users
+  // Handle new chat creation for authenticated users  
   const handleNewChat = async () => {
     if (!user) return;
     
     try {
-      const newChatId = await addThread(user.id, 'New Chat');
+      // Use the unified store method
+      const store = useChatStore.getState();
+      const newChatId = await store.startNewConversation(user.id);
       
-      // Initialize the conversation in chatController (store will handle state)
-      chatController.initializeConversation(newChatId);
+      // Load threads to update the list
+      await loadThreads();
       
       // Optionally open astro modal (user can close it)
       openReportModal('new');
@@ -89,8 +91,9 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
 
   // Handle switching to a different conversation
   const handleSwitchToChat = (conversationId: string) => {
-    // Initialize the conversation in chatController (store will handle state)
-    chatController.initializeConversation(conversationId);
+    // Use the unified store method - auth users don't have guest_id
+    const store = useChatStore.getState();
+    store.startConversation(conversationId);
     
     console.log('[ChatThreadsSidebar] Switched to chat:', conversationId);
   };

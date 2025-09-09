@@ -30,8 +30,9 @@ const ReportChatScreen = () => {
     url: window.location.href
   });
   
-  // Get user_id and chat_id from URL, guest_id from storage
-  const guestId = sessionStorage.getItem('therai_guest_report_id');
+  // Get parameters - use centralized storage for guest_id
+  const { getGuestId } = useChatStore();
+  const guestId = getGuestId();
   const userId = searchParams.get('user_id');
   const urlChatId = searchParams.get('chat_id');
   const paymentCompleted = searchParams.get('payment_completed') === 'true';
@@ -92,9 +93,11 @@ const ReportChatScreen = () => {
           hasTriggeredGenerationRef.current = true;
           
           // Ensure chat session is initialized FIRST
-          if (finalChatId) {
+          if (finalChatId && guestId) {
             console.log(`[ChatPage] 🔑 Report ready - initializing chat session: ${finalChatId}`);
-            useChatStore.getState().startConversation(finalChatId, guestId);
+            const store = useChatStore.getState();
+            store.startConversation(finalChatId, guestId);
+            store.setGuestId(guestId);
           }
           
           // Check if context has been injected, if not trigger it
@@ -256,9 +259,10 @@ const ReportChatScreen = () => {
         }
 
         // Now we have both IDs - restore to store
-        if (finalChatId) {
+        if (finalChatId && guestId) {
           console.log(`[ChatPage] 🔄 Restoring session to store - chat_id: ${finalChatId}, guest_id: ${guestId}`);
           store.startConversation(finalChatId, guestId);
+          store.setGuestId(guestId);
           
           // Check if report is already ready and update thread visibility
           const { data: readySignal } = await supabase
@@ -350,8 +354,9 @@ const ReportChatScreen = () => {
             return;
           }
 
-          // Initialize the conversation
-          chatController.initializeConversation(chatIdToUse);
+          // Initialize the conversation using unified store method
+          const store = useChatStore.getState();
+          store.startConversation(chatIdToUse);
           console.log(`[ChatPage] ✅ Auth user conversation restored: ${chatIdToUse}`);
         } else {
           // No chat_id in URL - this is a fresh auth user session

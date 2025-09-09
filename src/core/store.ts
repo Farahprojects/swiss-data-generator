@@ -30,9 +30,9 @@ interface ChatState {
   isLoadingThreads: boolean;
   threadsError: string | null;
 
-  // Chat actions
-  startConversation: (id: string, guest_id?: string) => void;
-  startNewGuestConversation: () => void;
+  // Chat actions (unified for both auth and guest)
+  startConversation: (chat_id: string, guest_id?: string) => void;
+  startNewConversation: (user_id?: string) => Promise<string>;
   loadMessages: (messages: Message[]) => void;
   addMessage: (message: Message) => void;
   updateMessage: (id: string, updates: Partial<Message>) => void;
@@ -92,17 +92,40 @@ export const useChatStore = create<ChatState>((set, get) => ({
     });
   },
 
-  startNewGuestConversation: () => {
-    const newChatId = crypto.randomUUID();
-    set({ 
-      chat_id: newChatId, 
-      messages: [], 
-      status: 'idle', 
-      error: null,
-      messageLoadError: null,
-      lastMessagesFetch: null,
-      isAssistantTyping: false
-    });
+  startNewConversation: async (user_id?: string) => {
+    if (user_id) {
+      // Auth user: create persistent conversation
+      const { createConversation } = await import('@/services/conversations');
+      const conversationId = await createConversation(user_id, 'New Chat');
+      
+      set({ 
+        chat_id: conversationId,
+        guest_id: null,
+        messages: [], 
+        status: 'idle', 
+        error: null,
+        messageLoadError: null,
+        lastMessagesFetch: null,
+        isAssistantTyping: false
+      });
+      
+      return conversationId;
+    } else {
+      // Guest user: create temporary chat_id
+      const newChatId = crypto.randomUUID();
+      set({ 
+        chat_id: newChatId,
+        guest_id: null, // Will be set when guest_id is known
+        messages: [], 
+        status: 'idle', 
+        error: null,
+        messageLoadError: null,
+        lastMessagesFetch: null,
+        isAssistantTyping: false
+      });
+      
+      return newChatId;
+    }
   },
 
   loadMessages: (messages) => {
@@ -186,17 +209,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  clearChat: () => set({ 
-    chat_id: null, 
-    guest_id: null, // Clear guest_id when clearing chat
-    messages: [], 
-    status: 'idle', 
-    error: null,
-    isLoadingMessages: false,
-    messageLoadError: null,
-    lastMessagesFetch: null,
-    isAssistantTyping: false
-  }),
+  clearChat: () => {
+    set({ 
+      chat_id: null, 
+      guest_id: null,
+      messages: [], 
+      status: 'idle', 
+      error: null,
+      isLoadingMessages: false,
+      messageLoadError: null,
+      lastMessagesFetch: null,
+      isAssistantTyping: false
+    });
+    
+    // Clear guest data from storage as well
+    get().clearGuestData();
+  },
 
   setAssistantTyping: (isTyping) => set({ isAssistantTyping: isTyping }),
 
