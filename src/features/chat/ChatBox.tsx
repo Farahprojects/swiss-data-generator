@@ -35,9 +35,9 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ isGuestThreadReady = false }) 
   const { uuid } = getChatTokens();
   const isConversationOpen = useConversationUIStore((s) => s.isConversationOpen);
   
-  // Get user type from URL parameters - supports both guest and auth users
+  // Get user type from URL parameters and storage - supports both guest and auth users
   const [searchParams] = useSearchParams();
-  const guestReportId = searchParams.get('guest_id');
+  const guestReportId = sessionStorage.getItem('therai_guest_report_id');
   const userId = searchParams.get('user_id');
   
   // Determine user type and ID

@@ -232,8 +232,8 @@ serve(async (req) => {
         amount: final,
         email: reportData.email,
         description: `Astrology Report: ${reportData.reportType}`,
-        successUrl: `${SITE_URL}/chat?guest_id=${guestReportId}&payment_status=success`,
-        cancelUrl: `${SITE_URL}/chat?guest_id=${guestReportId}&payment_status=cancelled`,
+        successUrl: `${SITE_URL}/stripe-return?guest_id=${guestReportId}&payment_status=success`,
+        cancelUrl: `${SITE_URL}/stripe-return?guest_id=${guestReportId}&payment_status=cancelled`,
       };
       
       const { data: checkoutData, error: checkoutError } = await supabaseAdmin.functions.invoke('create-checkout', {

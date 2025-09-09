@@ -20,7 +20,9 @@ export default function StripeReturn() {
     if (guestId) {
       console.log('✅ [StripeReturn] Found guest_id, navigating to chat page');
       // Navigate to chat with guest_id and payment_completed flag
-      navigate(`/chat?guest_id=${guestId}&payment_completed=true`, { replace: true });
+      // Store guest data in sessionStorage instead of URL
+      sessionStorage.setItem('therai_guest_report_id', guestId);
+      navigate(`/chat?payment_completed=true`, { replace: true });
     } else if (sessionId) {
       console.log('✅ [StripeReturn] Found session_id, navigating to report page');
       const reportUrl = status 

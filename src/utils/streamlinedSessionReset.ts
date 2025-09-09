@@ -40,14 +40,16 @@ export const streamlinedSessionReset = async (options: StreamlinedResetOptions =
     // 4. Clear Chat Tokens
     clearChatTokens();
     
-    // 5. Clear Essential Session Storage (chat-specific only)
+    // 5. Clear Essential Session Storage (chat-specific only) - using namespaced keys
     const chatStorageKeys = [
-      'therai_chat_id',           // Chat session ID
-      'report_generation_status', // Report generation state
-      'therai_chat_uuid',         // Chat UUID
-      'therai_chat_token',        // Chat token
-      'therai_conversation_id',   // Conversation ID
+      'therai_guest_chat_id',     // Guest chat session ID
+      'therai_auth_chat_id',      // Auth chat session ID
+      'therai_guest_report_id',   // Guest report ID
+      'therai_guest_session_token', // Guest session token
+      'therai_auth_session_token',  // Auth session token
+      'therai_chat_uuid',         // Chat UUID (shared)
       'therai_report_ready',      // Report ready state
+      'therai_report_generation_status', // Report generation state
     ];
     
     chatStorageKeys.forEach(key => {

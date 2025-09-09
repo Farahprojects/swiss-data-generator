@@ -30,8 +30,8 @@ const ReportChatScreen = () => {
     url: window.location.href
   });
   
-  // Get guest_id, user_id, and chat_id from URL if present
-  const guestId = searchParams.get('guest_id');
+  // Get user_id and chat_id from URL, guest_id from storage
+  const guestId = sessionStorage.getItem('therai_guest_report_id');
   const userId = searchParams.get('user_id');
   const urlChatId = searchParams.get('chat_id');
   const paymentCompleted = searchParams.get('payment_completed') === 'true';

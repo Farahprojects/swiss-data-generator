@@ -372,7 +372,9 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
           
           // Navigate to chat page with guest_id and chat_id for session persistence
           // Add payment_completed flag to trigger validation only when needed
-          const newUrl = `/chat?guest_id=${response.guestReportId}&chat_id=${response.chatId}&payment_completed=true`;
+          // Store guest data in sessionStorage instead of URL
+          sessionStorage.setItem('therai_guest_report_id', response.guestReportId);
+          const newUrl = `/chat?chat_id=${response.chatId}&payment_completed=true`;
           navigate(newUrl, { replace: true });
           
           console.log(`[AstroForm] 🔗 Navigating to chat page: ${newUrl}`);
