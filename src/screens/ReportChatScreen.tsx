@@ -37,6 +37,8 @@ const ReportChatScreen = () => {
   
   // 🎯 Track when guest thread is ready to show
   const [isGuestThreadReady, setIsGuestThreadReady] = useState(false);
+  const [isRehydrated, setIsRehydrated] = useState(false);
+  const [isDeleted, setIsDeleted] = useState(false);
 
   // 🎯 COMPLETE FLOW:
   // 1. User completes Astro form → guest_id stored in sessionStorage, URL updates with chat_id
@@ -47,8 +49,8 @@ const ReportChatScreen = () => {
   // Main report flow checker - only triggers when payment is completed (not on every refresh)
   useEffect(() => {
     
-    // Only run payment validation if payment was just completed
-    if (!guestId || !paymentCompleted || hasTriggeredGenerationRef.current) return;
+    // Only run payment validation if payment was just completed AND rehydration is complete
+    if (!guestId || !paymentCompleted || !isRehydrated || isDeleted || hasTriggeredGenerationRef.current) return;
 
     // 🚫 GUARD: Don't check if report is already ready in store (prevents refresh loops)
     if (useReportReadyStore.getState().isReportReady) {
@@ -170,7 +172,7 @@ const ReportChatScreen = () => {
     // Start the check immediately
     checkAndTriggerReport();
 
-  }, [guestId, paymentCompleted]);
+  }, [guestId, paymentCompleted, isRehydrated, isDeleted]);
 
 
   // URL change listener - React will automatically re-render when URL params change
@@ -185,7 +187,7 @@ const ReportChatScreen = () => {
 
   // 🔄 STREAMLINED REHYDRATION: Simple session restoration on page load
   useEffect(() => {
-    if (!guestId) return;
+    if (!guestId || isDeleted) return;
 
     // 🚫 GUARD: Don't rehydrate if report is already ready (prevents refresh loops)
     if (useReportReadyStore.getState().isReportReady) {
@@ -201,7 +203,7 @@ const ReportChatScreen = () => {
         const hasCompleteSession = store.chat_id && store.guest_id;
         
         if (hasCompleteSession) {
-          console.log(`[ChatPage] ✅ Session already complete in store`);
+          setIsRehydrated(true);
           return;
         }
 
@@ -275,14 +277,18 @@ const ReportChatScreen = () => {
             console.log(`[ChatPage] 🚫 Skipping context injection check - already handled`);
           }
         }
+        
+        // Mark rehydration as complete
+        setIsRehydrated(true);
       } catch (error) {
         console.error(`[ChatPage] ❌ Error during session rehydration:`, error);
+        setIsRehydrated(true); // Still mark as complete to prevent hanging
       }
     };
 
     // Run rehydration on page load
     rehydrateSession();
-  }, [guestId, urlChatId, chat_id]);
+  }, [guestId, urlChatId, chat_id, isDeleted]);
 
   // Auth user hydration - restore conversation on page load
   useEffect(() => {
@@ -341,7 +347,7 @@ const ReportChatScreen = () => {
       <ReportModalProvider>
         <MobileViewportLock active>
           <div className="font-sans antialiased text-gray-800 bg-gray-50 fixed inset-0 flex flex-col">
-            <ChatBox />
+            <ChatBox onDelete={() => setIsDeleted(true)} />
           </div>
         </MobileViewportLock>
       </ReportModalProvider>

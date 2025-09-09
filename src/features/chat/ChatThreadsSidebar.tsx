@@ -19,9 +19,10 @@ import {
 
 interface ChatThreadsSidebarProps {
   className?: string;
+  onDelete?: () => void;
 }
 
-export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ className }) => {
+export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ className, onDelete }) => {
   // Use centralized user type detection
   const userType = useUserType();
   const userPermissions = useUserPermissions();
@@ -100,6 +101,11 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     } else if (userType.isGuest) {
       // Guest user: Clear session and redirect to main page for clean slate
       try {
+        // Set delete flag to prevent rehydration
+        if (onDelete) {
+          onDelete();
+        }
+        
         // Clear store state immediately for instant UI feedback
         const { clearChat } = useChatStore.getState();
         clearChat();

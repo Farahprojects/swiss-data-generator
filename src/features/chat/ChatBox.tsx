@@ -17,6 +17,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { UserAvatar } from '@/components/settings/UserAvatar';
 import { useSettingsModal } from '@/contexts/SettingsModalContext';
+import { TestChatInputIsolation } from '@/components/TestChatInputIsolation';
 
 // Lazy load components for better performance
 const MessageList = lazy(() => import('./MessageList').then(module => ({ default: module.MessageList })));
@@ -26,14 +27,23 @@ const ChatSidebarControls = lazy(() => import('./ChatSidebarControls').then(modu
 
 interface ChatBoxProps {
   className?: string;
+  onDelete?: () => void;
 }
 
-export const ChatBox: React.FC<ChatBoxProps> = () => {
+export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
   const { error } = useChatStore();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { uuid } = getChatTokens();
   const isConversationOpen = useConversationUIStore((s) => s.isConversationOpen);
+  
+  // Debug logging to compare re-render frequency (remove in production)
+  console.log('[ChatBox] 🔄 Re-render - parent component:', {
+    error: !!error,
+    user: !!user,
+    isConversationOpen,
+    timestamp: new Date().toISOString()
+  });
   
   // Get user type from URL parameters and storage - supports both guest and auth users
   const [searchParams] = useSearchParams();
@@ -143,6 +153,8 @@ export const ChatBox: React.FC<ChatBoxProps> = () => {
 
   return (
     <>
+      {/* Test component for isolation verification */}
+      <TestChatInputIsolation />
       <MotionConfig
         transition={{
           type: "spring",
@@ -157,7 +169,7 @@ export const ChatBox: React.FC<ChatBoxProps> = () => {
               
               <div className="flex-1">
                 <Suspense fallback={<div className="space-y-4"><div className="h-8 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div></div>}>
-                  <ChatSidebarControls />
+                  <ChatSidebarControls onDelete={onDelete} />
                 </Suspense>
               </div>
             </div>
@@ -222,7 +234,7 @@ export const ChatBox: React.FC<ChatBoxProps> = () => {
                       <h2 className="text-lg font-light italic">Settings</h2>
                     </div>
                     <Suspense fallback={<div className="space-y-4"><div className="h-8 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div><div className="h-6 bg-gray-200 rounded animate-pulse"></div></div>}>
-                      <ChatSidebarControls />
+                      <ChatSidebarControls onDelete={onDelete} />
                     </Suspense>
                   </div>
                 </SheetContent>

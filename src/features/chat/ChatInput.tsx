@@ -2,14 +2,12 @@
 import React, { useState, useRef } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 import { Mic, AudioLines, ArrowRight, Loader2 } from 'lucide-react';
-import { useChatStore } from '@/core/store';
 import { chatController } from './ChatController';
-import { useConversationUIStore } from './conversation-ui-store';
 import { useChatInputMicrophone } from '@/hooks/microphone/useChatInputMicrophone';
 import { VoiceWaveform } from './VoiceWaveform';
-import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSearchParams } from 'react-router-dom';
+import { useChatInputState } from '@/hooks/useChatInputState';
 // Removed - using single source of truth in useChatStore
 
 // Stop icon component
@@ -19,25 +17,38 @@ const StopIcon = () => (
 
 export const ChatInput = () => {
   const [text, setText] = useState('');
-  const status = useChatStore((state) => state.status);
-  const isAssistantTyping = useChatStore((state) => state.isAssistantTyping);
-  const setAssistantTyping = useChatStore((state) => state.setAssistantTyping);
   const [isMuted, setIsMuted] = useState(false);
-  const { isConversationOpen, openConversation, closeConversation } = useConversationUIStore();
-  const chat_id = useChatStore((state) => state.chat_id);
   
-  // Auth detection
+  // Use isolated state management to prevent unnecessary re-renders
+  const {
+    status,
+    isAssistantTyping,
+    setAssistantTyping,
+    chat_id,
+    addThread,
+    isPolling,
+    isReportReady,
+    isConversationOpen,
+    openConversation,
+    closeConversation,
+    isAssistantGenerating,
+    isRecording,
+  } = useChatInputState();
+  
+  // Debug logging to verify isolation (remove in production)
+  console.log('[ChatInput] 🔄 Re-render - isolated state:', {
+    status,
+    isAssistantTyping,
+    isPolling,
+    isAssistantGenerating,
+    timestamp: new Date().toISOString()
+  });
+  
+  // Auth detection (still needed for user-specific logic)
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const userId = searchParams.get('user_id');
   const isAuthenticated = !!user && !!userId;
-  
-  // Conversation management
-  const { addThread } = useChatStore();
-
-  // Get report generation state
-  const isPolling = useReportReadyStore((state) => state.isPolling);
-  const isReportReady = useReportReadyStore((state) => state.isReportReady);
 
   // Handle transcript ready - add to text area
   const handleTranscriptReady = (transcript: string) => {
@@ -114,10 +125,7 @@ export const ChatInput = () => {
     }
   };
 
-  const isRecording = status === 'recording';
-
-  // Determine if assistant is generating content (report generation or text generation)
-  const isAssistantGenerating = isPolling || status === 'thinking' || status === 'transcribing' || status === 'speaking';
+  // isRecording and isAssistantGenerating are now provided by useChatInputState
 
   // Custom solid black square component
   const SolidBlackSquare = () => (
