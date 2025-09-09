@@ -71,10 +71,6 @@ self.onmessage = (event) => {
     const energy = computeEnergy(frame);
     const isSpeech = energy > ENERGY_THRESHOLD;
     
-    // Debug: Log energy values occasionally
-    if (frameCount % 100 === 0) {
-      console.log(`[AudioWorker] Energy: ${energy.toFixed(6)}, Threshold: ${ENERGY_THRESHOLD}, isSpeech: ${isSpeech}`);
-    }
 
     // Emit audio level for UI (RMS approx, clamp 0..1)
     const level = Math.min(1, Math.sqrt(energy) * 4);
