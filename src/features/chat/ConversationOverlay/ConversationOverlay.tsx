@@ -4,7 +4,8 @@ import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { useChatStore } from '@/core/store';
 import { useConversationRealtimeAudioLevel } from '@/hooks/useConversationRealtimeAudioLevel';
 import { VoiceBubble } from './VoiceBubble';
-import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
+// New audio pipeline (AudioWorklet + WebWorker)
+import { ConversationAudioPipeline, encodeWav16kMono } from '@/services/audio/ConversationAudioPipeline';
 import { ttsPlaybackService } from '@/services/voice/TTSPlaybackService';
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
@@ -30,6 +31,7 @@ export const ConversationOverlay: React.FC = () => {
   const isShuttingDown = useRef(false);
   const connectionRef = useRef<any>(null);
   const isProcessingRef = useRef<boolean>(false);
+  const pipelineRef = useRef<ConversationAudioPipeline | null>(null);
 
   // 🚨 RESET TO TAP TO START - Elegant single function for all error recovery
   const resetToTapToStart = useCallback((reason: string) => {
@@ -41,7 +43,7 @@ export const ConversationOverlay: React.FC = () => {
     
     // Force cleanup all resources (fire-and-forget)
     ttsPlaybackService.destroy().catch(() => {});
-    conversationMicrophoneService.forceCleanup();
+    try { pipelineRef.current?.dispose(); } catch {}
     
     // Cleanup WebSocket connection
     if (connectionRef.current) {
@@ -102,19 +104,17 @@ export const ConversationOverlay: React.FC = () => {
     
     try {
       setState('replying');
-      conversationMicrophoneService.mute();
+      try { pipelineRef.current?.pause(); } catch {}
 
       // Keep WebSocket active during playback - pause only when playback ends
       await ttsPlaybackService.play(audioBytes, () => {
         setState('listening');
         
-        // Unmute microphone and start recording for next turn (keep WebSocket connected)
+        // Resume capture for next turn (keep WebSocket connected)
         if (!isShuttingDown.current) {
-          setTimeout(async () => {
+          setTimeout(() => {
             if (!isShuttingDown.current) {
-              conversationMicrophoneService.unmute();
-              // Start recording to actually begin listening
-              await conversationMicrophoneService.startRecording();
+              try { pipelineRef.current?.resume(); } catch {}
             }
           }, 200);
         }
@@ -150,27 +150,37 @@ export const ConversationOverlay: React.FC = () => {
       // Warm up TTS only
       await ttsPlaybackService.warmup();
       
-      // Initialize microphone service
-      conversationMicrophoneService.initialize({
-        onRecordingComplete: (audioBlob: Blob) => processRecording(audioBlob),
-        onError: (error: Error) => {
-          console.error('[ConversationOverlay] Microphone error:', error);
-          resetToTapToStart('Microphone error');
+      // Initialize AudioWorklet/WebWorker pipeline
+      pipelineRef.current = new ConversationAudioPipeline({
+        onSpeechStart: () => {
+          if (!isShuttingDown.current) setState('listening');
         },
-        silenceTimeoutMs: 1200,
+        onSpeechSegment: async (pcm: Float32Array) => {
+          if (isShuttingDown.current || isProcessingRef.current || state === 'thinking' || state === 'replying') return;
+          isProcessingRef.current = true;
+          setState('thinking');
+          try {
+            const wav = encodeWav16kMono(pcm, 16000);
+            await sttService.transcribe(wav, chat_id, {}, 'conversation');
+          } catch (error) {
+            console.error('[ConversationOverlay] Processing failed:', error);
+            resetToTapToStart('STT processing failed');
+          } finally {
+            isProcessingRef.current = false;
+          }
+        },
+        onError: (error: Error) => {
+          console.error('[ConversationOverlay] Audio pipeline error:', error);
+          resetToTapToStart('Audio pipeline error');
+        }
       });
-      
-      // 1️⃣ IMMEDIATELY request microphone access inside the gesture
-      const recordingStarted = await conversationMicrophoneService.startRecording();
+      await pipelineRef.current.init();
+      await pipelineRef.current.start();
       
       // 2️⃣ Setup WebSocket AFTER we have the stream (outside gesture context is OK now)
       await establishConnection();
       
-      if (recordingStarted) {
-        setState('listening');
-      } else {
-        resetToTapToStart('Microphone access denied');
-      }
+      setState('listening');
       
     } catch (error) {
       console.error('[ConversationOverlay] Start failed:', error);
@@ -178,41 +188,7 @@ export const ConversationOverlay: React.FC = () => {
     }
   }, [chat_id, establishConnection]);
 
-  // Process recording
-  const processRecording = useCallback(async (audioBlob: Blob) => {
-    if (!chat_id || isProcessingRef.current || state === 'thinking' || state === 'replying') {
-      return;
-    }
-    
-    // 🎤 IMMEDIATELY pause microphone when silence detected to prevent race condition
-    conversationMicrophoneService.mute();
-    
-    isProcessingRef.current = true;
-    setState('thinking');
-    
-    try {
-      // STT transcription
-      const result = await sttService.transcribe(audioBlob, chat_id, {}, 'conversation');
-      const transcript = result.transcript?.trim();
-      
-      if (!transcript) {
-        setState('listening');
-        // Unmute microphone and start recording for next turn even if no transcript
-        conversationMicrophoneService.unmute();
-        await conversationMicrophoneService.startRecording();
-        return;
-      }
-      
-      // STT will handle LLM call and broadcast thinking-mode
-      // No need to call LLM from frontend anymore
-      
-    } catch (error) {
-      console.error('[ConversationOverlay] Processing failed:', error);
-      resetToTapToStart('STT processing failed');
-    } finally {
-      isProcessingRef.current = false;
-    }
-  }, [chat_id, state]);
+  // Legacy recording path handled by pipeline via onSpeechSegment
 
   // Cleanup on modal close - graceful release with fire-and-forget
   const handleModalClose = useCallback(async () => {
@@ -222,11 +198,7 @@ export const ConversationOverlay: React.FC = () => {
     ttsPlaybackService.destroy().catch(() => {});
 
     // Fire-and-forget microphone release
-    try {
-      conversationMicrophoneService.forceCleanup();
-    } catch (e) {
-      // Ignore microphone cleanup errors
-    }
+    try { pipelineRef.current?.dispose(); } catch {}
     
     // Fire-and-forget WebSocket cleanup
     if (connectionRef.current) {
@@ -265,7 +237,7 @@ export const ConversationOverlay: React.FC = () => {
         connectionRef.current.unsubscribe().catch(() => {});
         connectionRef.current = null;
       }
-      conversationMicrophoneService.forceCleanup();
+      try { pipelineRef.current?.dispose(); } catch {}
       ttsPlaybackService.destroy().catch(() => {});
     }
   }, [state]);
