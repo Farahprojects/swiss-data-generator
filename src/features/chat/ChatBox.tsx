@@ -46,7 +46,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ isGuestThreadReady = false }) 
   const currentUserId = userId || guestReportId;
   
   // Initialize ChatController for realtime updates (both text and conversation modes)
-  const { startTurn, sendTextMessage, endTurn, cancelTurn } = useChat(guestReportId ? undefined : uuid, guestReportId);
+  const { initializeAudioPipeline, pauseMic, unpauseMic, sendTextMessage, cancelMic } = useChat(guestReportId ? undefined : uuid, guestReportId);
   const [signInPrompt, setSignInPrompt] = useState<{ show: boolean; feature: string }>({ 
     show: false, 
     feature: '' 

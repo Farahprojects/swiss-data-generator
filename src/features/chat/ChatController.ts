@@ -1,9 +1,9 @@
 // src/features/chat/ChatController.ts
 import { supabase } from '@/integrations/supabase/client';
 import { useChatStore } from '@/core/store';
-import { chatTextMicrophoneService } from '@/services/microphone/ChatTextMicrophoneService';
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
+import { ConversationAudioPipeline, encodeWav16kMono } from '@/services/audio/ConversationAudioPipeline';
 
 
 import { getMessagesForConversation } from '@/services/api/messages';
@@ -11,12 +11,12 @@ import { Message } from '@/core/types';
 import { v4 as uuidv4 } from 'uuid';
 
 class ChatController {
-  private isTurnActive = false;
   private conversationServiceInitialized = false;
   private isResetting = false;
-  private turnRestartTimeout: NodeJS.Timeout | null = null;
   private resetTimeout: NodeJS.Timeout | null = null;
   private isUnlocked = false; // New flag to control microphone access
+  private audioPipeline: ConversationAudioPipeline | null = null;
+  private isProcessingRef = false;
 
 
   constructor() {
@@ -262,11 +262,6 @@ class ChatController {
   private initializeConversationService() {
     if (this.conversationServiceInitialized) return;
     
-    chatTextMicrophoneService.initialize({
-      onSilenceDetected: () => this.endTurn(),
-      silenceTimeoutMs: 1500 // 1.5 seconds for responsive conversation
-    });
-    
     this.conversationServiceInitialized = true;
   }
 
@@ -274,212 +269,109 @@ class ChatController {
     this.isUnlocked = true;
   }
 
-  async startTurn() {
-    // Guard: Don't start if conversation overlay is open
-    const { useConversationUIStore } = await import('@/features/chat/conversation-ui-store');
-    if (useConversationUIStore.getState().isConversationOpen) {
-      console.log('[ChatController] 🔥 BLOCKED: startTurn - conversation mode active');
-      return;
-    }
-
-    console.log('[ChatController] 🔥 PROCESSING: startTurn - normal chat mode');
-    if (this.isTurnActive) {
-      console.log('[ChatController] Turn already active, skipping startTurn');
-      return;
-    }
-
-    // ✅ GUARD: Prevent premature microphone activation
-    if (!this.isUnlocked) {
-      return;
-    }
-
-
-
-    if (this.isTurnActive) return;
-    this.isTurnActive = true;
+  public async initializeAudioPipeline() {
+    if (this.audioPipeline || !this.isUnlocked) return;
     
     const { chat_id } = useChatStore.getState();
     if (!chat_id) {
-      console.error('[ChatController] startTurn: No chat_id in store.');
-      this.isTurnActive = false;
+      console.error('[ChatController] initializeAudioPipeline: No chat_id in store.');
       return;
     }
-    
-    this.initializeConversationService();
 
-    useChatStore.getState().setStatus('recording');
-
-    
     try {
-      const ok = await chatTextMicrophoneService.startRecording();
-      if (!ok) {
-        // Fail fast if microphone doesn't start
-        useChatStore.getState().setStatus('idle');
-        this.isTurnActive = false;
-        throw new Error('Failed to start microphone');
-      }
-      // Reset auto-recovery on successful start
-      // conversationFlowMonitor.resetAutoRecovery();
-    } catch (error: any) {
-
-      useChatStore.getState().setStatus('idle');
-      this.isTurnActive = false;
-      useChatStore.getState().setError(error.message);
-      throw error; // Re-throw so overlay can catch and handle UI
-    }
-  }
-
-  async endTurn() {
-    // 🚫 GUARD: Don't process if conversation overlay is open
-    const { useConversationUIStore } = await import('@/features/chat/conversation-ui-store');
-    const conversationStore = useConversationUIStore.getState();
-    
-    if (conversationStore.isConversationOpen) {
-      console.log('[ChatController] endTurn: Blocked - conversation mode active');
-      return;
-    }
-    
-    // 🚫 ADDITIONAL GUARD: Check if there's an active conversation overlay in DOM
-    if (typeof document !== 'undefined') {
-      const conversationOverlay = document.querySelector('[data-conversation-overlay]');
-      if (conversationOverlay) {
-        console.log('[ChatController] endTurn: Blocked - conversation overlay detected in DOM');
-        return;
-      }
-    }
-
-    if (!this.isTurnActive) return;
-    
-    useChatStore.getState().setStatus('transcribing');
-
-    
-    try {
-      const audioBlob = await chatTextMicrophoneService.stopRecording();
-      
-      // ✅ ADDED: Validate audio blob before processing
-      if (!audioBlob || audioBlob.size === 0) {
-        console.warn('[ChatController] Empty audio blob received - restarting turn');
-        this.resetTurn(false); // Restart turn to give user another chance
-        return;
-      }
-      
-  
-      
-      const { transcript } = await sttService.transcribe(
-        audioBlob, 
-        useChatStore.getState().chat_id!
-      );
-
-      if (!transcript || transcript.trim().length === 0) {
-        console.warn('[ChatController] Empty transcript received - restarting turn');
-        this.resetTurn(false); // Restart turn to give user another chance
-        return;
-      }
-
-      const chat_id = useChatStore.getState().chat_id!;
-      const client_msg_id = uuidv4();
-      const audioUrl = URL.createObjectURL(audioBlob);
-
-      this.addOptimisticMessages(chat_id, transcript, client_msg_id, audioUrl);
-      
-
-      await llmService.sendMessage({ 
-        chat_id, 
-        text: transcript, 
-        client_msg_id
+      this.audioPipeline = new ConversationAudioPipeline({
+        onSpeechStart: () => {
+          useChatStore.getState().setStatus('recording');
+        },
+        onSpeechSegment: async (pcm: Float32Array) => {
+          if (this.isProcessingRef) return;
+          this.isProcessingRef = true;
+          useChatStore.getState().setStatus('transcribing');
+          
+          try {
+            // Pause mic during STT
+            this.pauseMic();
+            const wav = encodeWav16kMono(pcm, 16000);
+            const { transcript } = await sttService.transcribe(wav, chat_id);
+            
+            if (transcript && transcript.trim().length > 0) {
+              const client_msg_id = uuidv4();
+              this.addOptimisticMessages(chat_id, transcript, client_msg_id);
+              await llmService.sendMessage({ chat_id, text: transcript, client_msg_id });
+            }
+          } catch (error) {
+            console.error('[ChatController] Error processing voice input:', error);
+            useChatStore.getState().setError('Failed to process audio.');
+          } finally {
+            this.isProcessingRef = false;
+            useChatStore.getState().setStatus('idle');
+            // Resume mic for next input
+            this.unpauseMic();
+          }
+        },
+        onLevel: (level) => {
+          // Audio level available for UI animation if needed
+          // No React state updates per frame - use refs for smooth animation
+        },
+        onError: (error: Error) => {
+          console.error('[ChatController] Audio pipeline error:', error);
+          useChatStore.getState().setError('Audio error occurred.');
+        }
       });
       
-      // Assistant response and TTS will be triggered via realtime events
-      
-      // Reset auto-recovery on successful turn completion
-      // conversationFlowMonitor.resetAutoRecovery();
+      await this.audioPipeline.init();
+      await this.audioPipeline.start();
+      console.log('[ChatController] Audio pipeline initialized successfully');
+    } catch (error) {
+      console.error('[ChatController] Failed to initialize audio pipeline:', error);
+      useChatStore.getState().setError('Failed to initialize microphone.');
+    }
+  }
 
-    } catch (error: any) {
+  // Simple pause/unpause - no turn management needed
+  public pauseMic() {
+    console.log('[ChatController] pauseMic: Pausing audio pipeline');
+    if (this.audioPipeline) {
+      this.audioPipeline.pause();
+    }
+  }
 
-      console.error("[ChatController] Error processing voice input:", error);
-      useChatStore.getState().setError('Failed to process audio.');
-      this.resetTurn();
+  public unpauseMic() {
+    console.log('[ChatController] unpauseMic: Unpausing audio pipeline');
+    if (this.audioPipeline) {
+      this.audioPipeline.resume();
     }
   }
 
 
 
-  private resetTurn(endConversationFlow: boolean = true) {
 
-    
-    if (endConversationFlow) {
-      useChatStore.getState().setStatus('idle');
-    } else {
-      // Keep status as 'idle' briefly before starting next turn
-      useChatStore.getState().setStatus('idle');
-    }
-    
-    this.isTurnActive = false;
-    
-    // Clear any existing turn restart timeout
-    if (this.turnRestartTimeout) {
-      clearTimeout(this.turnRestartTimeout);
-      this.turnRestartTimeout = null;
-    }
-    
-    if (endConversationFlow) {
-      // End conversation completely - full cleanup
-      chatTextMicrophoneService.forceCleanup();
-    } else {
-      // Turn transition - stop current recording and VAD, but keep stream for next turn
-      if (chatTextMicrophoneService.getState().isRecording) {
-        chatTextMicrophoneService.stopRecording().catch((error) => {
-          // Ignore errors during graceful stop
-          console.warn('[ChatController] Graceful stop error (ignored):', error);
-        });
-      } else {
-        // Even if not recording, we need to stop any running VAD loop
-        chatTextMicrophoneService.forceCleanup();
-      }
-    }
-    
-    if (!endConversationFlow && !this.isResetting) {
-      // Short delay before starting next turn
-  
-      this.turnRestartTimeout = setTimeout(() => { 
-        if (!this.isResetting) {
-      
-          this.startTurn(); 
-        }
-      }, 500);
+
+  public cancelMic() {
+    console.log('[ChatController] cancelMic: Canceling audio pipeline');
+    if (this.audioPipeline) {
+      this.audioPipeline.dispose();
+      this.audioPipeline = null;
     }
   }
 
-    cancelTurn() {
-    if (!this.isTurnActive) return;
-  
-    // Clear any pending timeouts
-    if (this.turnRestartTimeout) {
-      clearTimeout(this.turnRestartTimeout);
-      this.turnRestartTimeout = null;
-    }
-    
-    chatTextMicrophoneService.forceCleanup();
-    this.resetTurn(true);
-  }
-
-    resetConversationService() {
+  public resetConversationService() {
     this.isResetting = true;
   
     // Clear any existing timeouts
-    if (this.turnRestartTimeout) {
-      clearTimeout(this.turnRestartTimeout);
-      this.turnRestartTimeout = null;
-    }
     if (this.resetTimeout) {
       clearTimeout(this.resetTimeout);
       this.resetTimeout = null;
     }
     
-    chatTextMicrophoneService.forceCleanup();
+    // Reset AudioWorklet + WebWorker pipeline
+    if (this.audioPipeline) {
+      this.audioPipeline.dispose();
+      this.audioPipeline = null;
+    }
     this.conversationServiceInitialized = false;
     this.isUnlocked = false; // Lock on reset
-    this.isTurnActive = false;
+    this.isProcessingRef = false;
     useChatStore.getState().setStatus('idle');
 
     this.resetTimeout = setTimeout(() => {
@@ -488,20 +380,19 @@ class ChatController {
   }
 
   // Add cleanup method for component unmount
-  cleanup() {
+  public cleanup() {
     console.log('[ChatController] 🔥 CLEANUP: Starting ChatController cleanup');
     // Clear all timeouts
-    if (this.turnRestartTimeout) {
-      clearTimeout(this.turnRestartTimeout);
-      this.turnRestartTimeout = null;
-    }
     if (this.resetTimeout) {
       clearTimeout(this.resetTimeout);
       this.resetTimeout = null;
     }
     
-    // Stop any active conversation
-    chatTextMicrophoneService.forceCleanup();
+    // Clean up AudioWorklet + WebWorker pipeline
+    if (this.audioPipeline) {
+      this.audioPipeline.dispose();
+      this.audioPipeline = null;
+    }
     
     // Clean up realtime subscription
     this.cleanupRealtimeSubscription();
@@ -511,7 +402,6 @@ class ChatController {
     console.log('[ChatController] 🔥 CLEANUP: ChatController cleanup complete');
   }
 
-  // Removed private startAssistantMessageListener and stopAssistantMessageListener
 }
 
 export const chatController = new ChatController();

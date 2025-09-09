@@ -95,27 +95,23 @@ export class ConversationAudioPipeline {
   }
 
   public pause(): void {
-    console.log('[AudioPipeline] Pausing - AudioContext state:', this.audioContext?.state);
-    if (this.audioContext?.state === 'running') {
-      this.audioContext.suspend();
-    }
-    // Also disconnect the worklet to stop audio flow
+    console.log('[AudioPipeline] Pausing - stopping data flow to WebWorker');
+    // Keep media stream and AudioContext active, just stop forwarding to WebWorker
     if (this.workletNode) {
-      this.workletNode.disconnect();
+      this.workletNode.port.onmessage = null as any;
     }
   }
 
   public resume(): void {
-    console.log('[AudioPipeline] Resuming - AudioContext state:', this.audioContext?.state);
-    if (this.audioContext?.state === 'suspended') {
-      this.audioContext.resume();
-    }
-    // Reconnect the worklet to resume audio flow
-    if (this.workletNode && this.audioContext) {
-      const gain = this.audioContext.createGain();
-      gain.gain.value = 0;
-      this.workletNode.connect(gain);
-      gain.connect(this.audioContext.destination);
+    console.log('[AudioPipeline] Resuming - restarting data flow to WebWorker');
+    // Restart forwarding to WebWorker
+    if (this.workletNode) {
+      this.workletNode.port.onmessage = (event: MessageEvent) => {
+        const { type, buffer } = event.data || {};
+        if (type === 'audio' && buffer && this.worker) {
+          this.worker.postMessage({ type: 'audio', buffer }, [buffer]);
+        }
+      };
     }
   }
 

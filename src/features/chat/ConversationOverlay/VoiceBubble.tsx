@@ -6,10 +6,10 @@ import TorusListening from './TorusListening';
 
 interface Props {
   state: 'listening' | 'processing' | 'replying' | 'connecting' | 'thinking' | 'establishing';
-  audioLevel?: number;
+  audioLevelRef?: React.MutableRefObject<number>;
 }
 
-export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
+export const VoiceBubble: React.FC<Props> = ({ state, audioLevelRef }) => {
   // Show the appropriate component based on the current state
   if (state === 'replying') {
     return <SpeakingBarsOptimized isActive={true} />;
@@ -22,7 +22,7 @@ export const VoiceBubble: React.FC<Props> = ({ state, audioLevel = 0 }) => {
 
   if (state === 'listening') {
     // Render the TorusListening component in its 'listening' state
-    return <TorusListening active={true} size={128} isThinking={false} audioLevel={audioLevel} />;
+    return <TorusListening active={true} size={128} isThinking={false} audioLevelRef={audioLevelRef} />;
   }
 
   if (state === 'establishing') {

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { useChatStore } from '@/core/store';
-import { useConversationRealtimeAudioLevel } from '@/hooks/useConversationRealtimeAudioLevel';
+// Old audio level hook removed - using AudioWorklet + WebWorker pipeline
 import { VoiceBubble } from './VoiceBubble';
 // New audio pipeline (AudioWorklet + WebWorker)
 import { ConversationAudioPipeline, encodeWav16kMono } from '@/services/audio/ConversationAudioPipeline';
@@ -22,8 +22,8 @@ export const ConversationOverlay: React.FC = () => {
   const chat_id = useChatStore((state) => state.chat_id);
   const [state, setState] = useState<ConversationState>('connecting');
   
-  // Realtime level driven by worker (not React polling)
-  const [audioLevel, setAudioLevel] = useState(0);
+  // Realtime level driven by worker (not React polling) - use ref for smooth animation
+  const audioLevelRef = useRef<number>(0);
   
   const hasStarted = useRef(false);
   const isShuttingDown = useRef(false);
@@ -101,18 +101,16 @@ export const ConversationOverlay: React.FC = () => {
     if (isShuttingDown.current) return;
     
     try {
-      setState('replying');
-      try { pipelineRef.current?.pause(); } catch {}
-
-      // Keep WebSocket active during playback - pause only when playback ends
+      setState('replying'); // 7. Change UI to "speaking"
+      
+      // 7. Unpause media source for TTS
       await ttsPlaybackService.play(audioBytes, () => {
         setState('listening');
         
-        // Resume capture for next turn (keep WebSocket connected)
+        // Resume mic for next turn
         if (!isShuttingDown.current) {
           setTimeout(() => {
             if (!isShuttingDown.current) {
-              console.log('[ConversationOverlay] Resuming pipeline after TTS');
               try { pipelineRef.current?.resume(); } catch {}
             }
           }, 200);
@@ -132,43 +130,32 @@ export const ConversationOverlay: React.FC = () => {
     setState('establishing');
     
     try {
-      // User gesture captured
+      // 1. User gesture captured
       
-      // ⏸️ PAUSE: Pause ChatController WebSocket to prevent interference
-      try {
-        const { chatController } = await import('@/features/chat/ChatController');
-        chatController.pauseRealtimeSubscription();
-      } catch (error) {
-        console.warn('[ConversationOverlay] Could not pause ChatController WebSocket:', error);
-      }
-      
-      // 🔥 WARMUP: Pre-warm audio system for faster first response
-      console.log('[ConversationOverlay] 🔥 Starting audio warmup...');
+      // 2. Initialize WS + Audio Warmup
       const { ttsPlaybackService } = await import('@/services/voice/TTSPlaybackService');
-      
-      // Warm up TTS only
       await ttsPlaybackService.warmup();
       
-      // Initialize AudioWorklet/WebWorker pipeline
+      // Setup WebSocket connection
+      await establishConnection();
+      
+      // 3. Initialize AudioWorklet + WebWorker
       pipelineRef.current = new ConversationAudioPipeline({
         onSpeechStart: () => {
           if (!isShuttingDown.current) setState('listening');
         },
         onSpeechSegment: async (pcm: Float32Array) => {
-          console.log('[ConversationOverlay] Speech segment received, current state:', state);
           if (isShuttingDown.current || isProcessingRef.current || state === 'thinking' || state === 'replying') {
-            console.log('[ConversationOverlay] Skipping segment - already processing or wrong state');
             return;
           }
           isProcessingRef.current = true;
-          setState('thinking');
+          setState('thinking'); // 6. Pause mic after silence → Change UI to "thinking"
           try {
-            // Pause capture during STT to avoid overlapping input
-            console.log('[ConversationOverlay] Pausing pipeline for STT');
+            // Pause mic during STT
             try { pipelineRef.current?.pause(); } catch {}
             const wav = encodeWav16kMono(pcm, 16000);
             await sttService.transcribe(wav, chat_id, {}, 'conversation');
-            // TTS will arrive over WS and after it plays, we resume in playAudioImmediately
+            // TTS will arrive over WS and change UI to "speaking"
           } catch (error) {
             console.error('[ConversationOverlay] Processing failed:', error);
             resetToTapToStart('STT processing failed');
@@ -177,7 +164,7 @@ export const ConversationOverlay: React.FC = () => {
           }
         },
         onLevel: (level) => {
-          if (!isShuttingDown.current) setAudioLevel(level);
+          if (!isShuttingDown.current) audioLevelRef.current = level; // 5. Monitor energy signal for animation
         },
         onError: (error: Error) => {
           console.error('[ConversationOverlay] Audio pipeline error:', error);
@@ -187,9 +174,7 @@ export const ConversationOverlay: React.FC = () => {
       await pipelineRef.current.init();
       await pipelineRef.current.start();
       
-      // 2️⃣ Setup WebSocket AFTER we have the stream (outside gesture context is OK now)
-      await establishConnection();
-      
+      // 4. Ready State → Mic on → Proceed to listening
       setState('listening');
       
     } catch (error) {
@@ -313,7 +298,7 @@ export const ConversationOverlay: React.FC = () => {
                 exit={{ opacity: 0, scale: 0.98 }}
                 transition={{ duration: 0.2, ease: 'easeInOut' }}
               >
-                <VoiceBubble state={state} audioLevel={audioLevel} />
+                <VoiceBubble state={state} audioLevelRef={audioLevelRef} />
               </motion.div>
             </AnimatePresence>
 

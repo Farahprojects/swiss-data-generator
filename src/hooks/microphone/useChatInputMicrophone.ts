@@ -19,8 +19,8 @@ interface UseChatInputMicrophoneOptions {
 export const useChatInputMicrophone = (options: UseChatInputMicrophoneOptions = {}) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [audioLevel, setAudioLevel] = useState(0);
   const pipelineRef = useRef<ConversationAudioPipeline | null>(null);
+  const audioLevelRef = useRef<number>(0);
   const { toast } = useToast();
   const chat_id = useChatStore((state) => state.chat_id);
 
@@ -57,7 +57,8 @@ export const useChatInputMicrophone = (options: UseChatInputMicrophoneOptions = 
           }
         },
         onLevel: (level) => {
-          setAudioLevel(level);
+          // Update ref directly - no React state updates per audio frame
+          audioLevelRef.current = level;
         },
         onError: (error: Error) => {
           console.error('[useChatInputMicrophone] Pipeline error:', error);
@@ -91,7 +92,7 @@ export const useChatInputMicrophone = (options: UseChatInputMicrophoneOptions = 
     }
     setIsRecording(false);
     setIsProcessing(false);
-    setAudioLevel(0);
+    audioLevelRef.current = 0;
   }, []);
 
   const toggleRecording = useCallback(async () => {
@@ -106,14 +107,13 @@ export const useChatInputMicrophone = (options: UseChatInputMicrophoneOptions = 
     // State
     isRecording,
     isProcessing,
-    audioLevel,
     
     // Actions
     startRecording,
     stopRecording,
     toggleRecording,
     
-    // Audio level ref for animation (compatibility)
-    audioLevelRef: { current: audioLevel }
+    // Audio level ref for animation (no React state updates per frame)
+    audioLevelRef
   };
 };

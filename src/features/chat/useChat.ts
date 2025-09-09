@@ -98,9 +98,10 @@ export const useChat = (chat_id?: string, guestId?: string) => {
 
   return {
     ...state,
-    startTurn: chatController.startTurn,
+    initializeAudioPipeline: chatController.initializeAudioPipeline,
+    pauseMic: chatController.pauseMic,
+    unpauseMic: chatController.unpauseMic,
     sendTextMessage: chatController.sendTextMessage,
-    endTurn: chatController.endTurn,
-    cancelTurn: chatController.cancelTurn,
+    cancelMic: chatController.cancelMic,
   };
 };

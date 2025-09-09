@@ -53,7 +53,7 @@ type TorusListeningProps = {
   active: boolean;
   size?: number;
   isThinking?: boolean;
-  audioLevel?: number; // Use external audio level instead of getUserMedia
+  audioLevelRef?: React.MutableRefObject<number>; // Use external audio level ref instead of getUserMedia
 };
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -62,13 +62,13 @@ export default function TorusListening({
   active,
   size = 180,
   isThinking = false,
-  audioLevel = 0, // External audio level
+  audioLevelRef,
 }: TorusListeningProps) {
   const [time, setTime] = useState(0);
   const rafRef = useRef<number | null>(null);
   
-  // Use external audio level instead of managing our own stream
-  const level = audioLevel;
+  // Use external audio level ref instead of managing our own stream
+  const level = audioLevelRef?.current || 0;
 
   const dots = useMemo(() => {
     return torusData.dots
