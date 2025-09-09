@@ -80,39 +80,6 @@ serve(async (req) => {
     // Initialize Supabase client with service role
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch the guest report data
-    console.log(`[get-report-data][${requestId}] 🔍 Fetching guest report data...`);
-    const { data: guestReport, error: fetchError } = await supabase
-      .from("guest_reports")
-      .select("id, email, report_type, is_ai_report, created_at, payment_status, report_data")
-      .eq("id", guest_report_id)
-      .single();
-
-    if (fetchError) {
-      console.error("[get-report-data] Database error:", fetchError);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "Database error while fetching guest report",
-          details: fetchError.message,
-          timestamp: new Date().toISOString()
-        }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!guestReport) {
-      console.warn("[get-report-data] Guest report not found:", guest_report_id);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "Guest report not found",
-          timestamp: new Date().toISOString()
-        }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     // Fetch report data from report_logs where user_id = guest_report_id
     console.log(`[get-report-data][${requestId}] 🔍 Fetching report_logs data...`);
     const { data: reportLogs, error: reportLogsError } = await supabase
@@ -143,10 +110,12 @@ serve(async (req) => {
       console.warn(`[get-report-data] Could not fetch translator_logs:`, translatorLogsError);
     }
 
-    // Check if we have the required data based on report type
-    const isAIReport = guestReport.is_ai_report || false;
+    // Check if we have the required data
     const hasReportText = !!reportLogData?.report_text;
     const hasSwissData = !!translatorLogData?.swiss_data;
+    
+    // Determine if this is an AI report based on whether report_text exists
+    const isAIReport = hasReportText;
     
     // For AI reports, we need report_text. For astro data only, we need swiss_data
     const isReady = isAIReport ? hasReportText : hasSwissData;
@@ -165,7 +134,6 @@ serve(async (req) => {
 
     // Prepare complete report data for frontend
     const reportData = {
-      guest_report: guestReport,
       report_content: reportLogData?.report_text || null,
       swiss_data: translatorLogData?.swiss_data || null,
       metadata: {
@@ -173,7 +141,7 @@ serve(async (req) => {
         has_ai_report: isAIReport,
         has_swiss_data: hasSwissData,
         is_ready: true,
-        report_type: guestReport.report_type // Add report_type for parser routing
+        report_type: 'unknown' // No longer available from guest_reports
       }
     };
 
