@@ -9,13 +9,13 @@ const MAX_SAMPLES = ROLLING_SECONDS * SAMPLE_RATE;
 const FRAME_MS = 20; // matches worklet frame - sweet spot for mobile/desktop
 const FRAME_SAMPLES = (SAMPLE_RATE * FRAME_MS) / 1000; // 320
 // Adaptive VAD threshold - starts with sane default, adapts to environment
-const BASE_ENERGY_THRESHOLD = 0.008; // 0.008 RMS - more sensitive for desktop testing
-const MIN_THRESHOLD = 0.002; // Minimum threshold for very quiet environments
+const BASE_ENERGY_THRESHOLD = 0.005; // 0.005 RMS - more sensitive for speech start
+const MIN_THRESHOLD = 0.001; // Minimum threshold for very quiet environments
 const MAX_THRESHOLD = 0.05; // Maximum threshold for noisy environments
 const ADAPTATION_FACTOR = 0.1; // How quickly to adapt (0.1 = slow adaptation)
 
-const SPEECH_START_FRAMES = 3; // 60ms (3 * 20ms) - still responsive
-const SPEECH_END_FRAMES = 30; // 600ms (30 * 20ms) - good balance for production
+const SPEECH_START_FRAMES = 2; // 40ms (2 * 20ms) - more responsive to speech start
+const SPEECH_END_FRAMES = 50; // 1000ms (50 * 20ms) - 1 second timeout
 
 let ringBuffer = new Float32Array(MAX_SAMPLES);
 let writeIndex = 0;
@@ -119,6 +119,7 @@ self.onmessage = (event) => {
       belowCount = 0;
       if (!speechActive && aboveCount >= SPEECH_START_FRAMES) {
         speechActive = true;
+        console.log(`[AudioWorker] 🎤 Speech started! Energy: ${energy.toFixed(6)}, Threshold: ${currentThreshold.toFixed(6)}`);
         self.postMessage({ type: 'vad', state: 'speech_start' });
       }
     } else {
