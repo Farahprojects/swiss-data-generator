@@ -8,8 +8,7 @@ import { useReportModal } from '@/contexts/ReportModalContext';
 import { getChatTokens, clearChatTokens } from '@/services/auth/chatTokens';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { AuthModal } from '@/components/auth/AuthModal';
-// Removed separate store - using single source of truth in useChatStore
-import { chatController } from './ChatController';
+import { useUserType, getUserTypeConfig, useUserPermissions } from '@/hooks/useUserType';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,10 +23,10 @@ interface ChatThreadsSidebarProps {
 }
 
 export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ className, isGuestThreadReady = false }) => {
-  // Get user type from URL parameters and auth context
-  const [searchParams] = useSearchParams();
-  const guestReportId = searchParams.get('guest_id');
-  const userId = searchParams.get('user_id');
+  // Use centralized user type detection
+  const userType = useUserType();
+  const userPermissions = useUserPermissions();
+  const uiConfig = getUserTypeConfig(userType.type);
   
   const { 
     messages, 
@@ -43,9 +42,6 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   } = useChatStore();
   const { user } = useAuth();
   
-  // Determine user type - use both auth state and URL for consistency
-  const isAuthenticated = !!user && !!userId; // Both auth state and URL must match
-  const isGuest = !!guestReportId;
   const { open: openReportModal } = useReportModal();
   const { uuid } = getChatTokens();
   const { isPolling, isReportReady } = useReportReadyStore();
@@ -54,19 +50,13 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
-  
-  // For guest users, show current thread
-  // For signed-in users, this will be replaced with conversations list later
-  // Use actual auth state and URL parameters to determine user type
-  const isGuestUser = isGuest;
-  const isUnauthenticated = !isAuthenticated && !isGuest;
 
   // Load threads for authenticated users
   useEffect(() => {
-    if (isAuthenticated) {
+    if (userType.isAuthenticated) {
       loadThreads();
     }
-  }, [isAuthenticated, loadThreads]);
+  }, [userType.isAuthenticated, loadThreads]);
 
   // Handle new chat creation for authenticated users  
   const handleNewChat = async () => {
@@ -98,13 +88,26 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     console.log('[ChatThreadsSidebar] Switched to chat:', conversationId);
   };
 
-  // Handle deleting a conversation
-  const handleDeleteConversation = async (conversationId: string) => {
-    try {
-      await removeThread(conversationId);
-      console.log('[ChatThreadsSidebar] Conversation deleted:', conversationId);
-    } catch (error) {
-      console.error('[ChatThreadsSidebar] Failed to delete conversation:', error);
+  // Handle deleting/clearing based on user type
+  const handleDeleteOrClearChat = async () => {
+    if (userType.isAuthenticated && conversationToDelete) {
+      // Authenticated user: Delete specific conversation
+      try {
+        await removeThread(conversationToDelete);
+        console.log('[ChatThreadsSidebar] Conversation deleted:', conversationToDelete);
+      } catch (error) {
+        console.error('[ChatThreadsSidebar] Failed to delete conversation:', error);
+      }
+    } else if (userType.isGuest) {
+      // Guest user: Clear session (same as before, but labeled as "Delete")
+      try {
+        const { streamlinedSessionReset } = await import('@/utils/streamlinedSessionReset');
+        await streamlinedSessionReset({ redirectTo: '/' });
+      } catch (error) {
+        console.error('[ChatThreadsSidebar] ❌ Session cleanup failed:', error);
+        // Fallback: Force navigation anyway
+        window.location.href = '/';
+      }
     }
   };
 
@@ -131,19 +134,6 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
 
 
 
-  const handleClearSession = async () => {
-    
-    try {
-      // Use the streamlined reset function
-      const { streamlinedSessionReset } = await import('@/utils/streamlinedSessionReset');
-      await streamlinedSessionReset({ redirectTo: '/' });
-      
-    } catch (error) {
-      console.error('[ChatThreadsSidebar] ❌ Session cleanup failed:', error);
-      // Fallback: Force navigation anyway
-      window.location.href = '/';
-    }
-  };
 
 
   return (
@@ -153,8 +143,8 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         <h3 className="text-sm font-medium text-gray-700">Chats</h3>
       </div>
 
-      {/* Current Chat - Show for both signed-in and guest users */}
-      {(chat_id || (isGuest && isGuestThreadReady)) && (
+      {/* Current Chat - Show for auth users always, guests only when ready */}
+      {(chat_id && (userType.isAuthenticated || (userType.isGuest && isGuestThreadReady))) && (
         <div 
           className="relative group"
           onMouseEnter={() => setHoveredThread(chat_id)}
@@ -191,13 +181,18 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                   Astro
                 </DropdownMenuItem>
                 
-                {/* Clear option only for guest users */}
-                {isGuest && (
+                {/* Delete/Clear option - shown for both auth and guest users */}
+                {userPermissions.canDeleteCurrentChat && uiConfig.chatMenuActions.delete && (
                   <DropdownMenuItem
-                    onClick={handleClearSession}
+                    onClick={() => {
+                      if (userType.isAuthenticated) {
+                        setConversationToDelete(chat_id);
+                      }
+                      setShowDeleteConfirm(true);
+                    }}
                     className="px-3 py-2 text-sm text-black hover:bg-gray-200 hover:text-black focus:bg-gray-200 focus:text-black cursor-pointer"
                   >
-                    Clear
+                    {uiConfig.chatMenuActions.delete.label}
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
@@ -206,45 +201,51 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         </div>
       )}
 
-      {/* Authenticated user buttons */}
-      {isAuthenticated && (
+      {/* Authenticated user controls */}
+      {userType.isAuthenticated && uiConfig.showThreadHistory && (
         <div className="space-y-2">
-          <button
-            onClick={handleNewChat}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-black hover:bg-gray-100 rounded-lg transition-colors font-light"
-          >
-            <Plus className="w-4 h-4" />
-            New chat
-          </button>
+          {uiConfig.newChatLabel && (
+            <button
+              onClick={handleNewChat}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-black hover:bg-gray-100 rounded-lg transition-colors font-light"
+            >
+              <Plus className="w-4 h-4" />
+              {uiConfig.newChatLabel}
+            </button>
+          )}
           
-          <button
-            onClick={() => {
-              // TODO: Implement search chat functionality
-              console.log('Search chat clicked');
-            }}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-black hover:bg-gray-100 rounded-lg transition-colors font-light"
-          >
-            <Search className="w-4 h-4" />
-            Search chat
-          </button>
+          {uiConfig.showSearchChat && (
+            <button
+              onClick={() => {
+                // TODO: Implement search chat functionality
+                console.log('Search chat clicked');
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-black hover:bg-gray-100 rounded-lg transition-colors font-light"
+            >
+              <Search className="w-4 h-4" />
+              Search chat
+            </button>
+          )}
           
-          <button
-            onClick={() => {
-              // Open astro data form for current chat
-              openReportModal('new');
-            }}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-black hover:bg-gray-100 rounded-lg transition-colors font-light"
-          >
-            <User className="w-4 h-4" />
-            Astro data
-          </button>
+          {uiConfig.showAstroData && (
+            <button
+              onClick={() => {
+                // Open astro data form for current chat
+                openReportModal('new');
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-black hover:bg-gray-100 rounded-lg transition-colors font-light"
+            >
+              <User className="w-4 h-4" />
+              Astro data
+            </button>
+          )}
           
           {/* Dark gray line separator */}
           <div className="border-t border-gray-400 my-3"></div>
           
           {/* Chat history section */}
           <div className="space-y-1">
-            <div className="text-xs text-gray-600 font-medium px-3 py-1">Chat history</div>
+            <div className="text-xs text-gray-600 font-medium px-3 py-1">{uiConfig.threadSectionLabel}</div>
             {isLoadingThreads ? (
               <div className="text-xs text-gray-500 px-3 py-1">Loading...</div>
             ) : threads.length === 0 ? (
@@ -306,49 +307,33 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         </div>
       )}
 
-      {/* Guest user info */}
-      {isGuestUser && (
+      {/* Guest/Unauthenticated user sign in */}
+      {uiConfig.authButtonLabel && (
         <div className="mt-auto pt-4 border-t border-gray-200">
           <button
             onClick={() => setShowAuthModal(true)}
             className="w-full px-3 py-2 text-sm bg-gray-900 text-white hover:bg-gray-800 rounded-lg transition-colors font-light"
           >
-            Sign in
-          </button>
-        </div>
-      )}
-
-
-      {/* Unauthenticated user info (no URL parameters) */}
-      {isUnauthenticated && (
-        <div className="mt-auto pt-4 border-t border-gray-200 space-y-3">
-          <button
-            onClick={() => setShowAuthModal(true)}
-            className="w-full px-3 py-2 text-sm bg-gray-900 text-white hover:bg-gray-800 rounded-lg transition-colors font-light"
-          >
-            Sign in
+            {uiConfig.authButtonLabel}
           </button>
         </div>
       )}
 
       {/* Delete Confirmation Dialog */}
-      {showDeleteConfirm && (
+      {showDeleteConfirm && uiConfig.chatMenuActions.delete && (
         <div className="fixed inset-0 bg-white/20 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm mx-4">
             <div className="flex items-center gap-3 mb-4">
               <div>
                 <h3 className="text-lg font-medium text-gray-900">
-                  {isAuthenticated ? 'Delete Conversation' : 'Delete Chat Session'}
+                  {uiConfig.chatMenuActions.delete.confirmTitle}
                 </h3>
                 <p className="text-sm text-gray-500">This action cannot be undone</p>
               </div>
             </div>
             
             <p className="text-gray-700 mb-6">
-              {isAuthenticated 
-                ? 'Are you sure you want to delete this conversation? All messages and data will be permanently removed.'
-                : 'Are you sure you want to delete this chat session? All messages and data will be permanently removed.'
-              }
+              {uiConfig.chatMenuActions.delete.confirmMessage}
             </p>
             
             <div className="flex gap-3 justify-between">
@@ -360,19 +345,13 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
               </button>
               <button
                 onClick={async () => {
-                  if (isAuthenticated && conversationToDelete) {
-                    // Delete specific conversation for authenticated users
-                    await handleDeleteConversation(conversationToDelete);
-                  } else {
-                    // Clear session for guest users
-                    handleClearSession();
-                  }
+                  await handleDeleteOrClearChat();
                   setShowDeleteConfirm(false);
                   setConversationToDelete(null);
                 }}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
               >
-                {isAuthenticated ? 'Delete Conversation' : 'Delete Session'}
+                {uiConfig.chatMenuActions.delete.confirmButton}
               </button>
             </div>
           </div>
