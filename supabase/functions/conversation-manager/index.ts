@@ -115,6 +115,75 @@ serve(async (req) => {
         result = { success: true, conversation_id };
         break;
 
+      case 'list_conversations':
+        // List all conversations for authenticated user
+        const { data: conversations, error: listError } = await supabaseClient
+          .from('conversations')
+          .select('id, user_id, title, created_at, updated_at')
+          .eq('user_id', user_id)
+          .order('updated_at', { ascending: false });
+
+        if (listError) throw listError;
+        result = conversations || [];
+        break;
+
+      case 'delete_conversation':
+        // Delete conversation and all its messages
+        if (!conversation_id) {
+          return new Response('conversation_id is required for delete', { 
+            status: 400, 
+            headers: corsHeaders 
+          });
+        }
+
+        // First delete all messages in this conversation
+        const { error: messagesError } = await supabaseClient
+          .from('messages')
+          .delete()
+          .eq('chat_id', conversation_id);
+
+        if (messagesError) throw messagesError;
+
+        // Then delete the conversation itself
+        const { error: deleteError } = await supabaseClient
+          .from('conversations')
+          .delete()
+          .eq('id', conversation_id)
+          .eq('user_id', user_id);
+
+        if (deleteError) throw deleteError;
+        result = { success: true, conversation_id };
+        break;
+
+      case 'update_conversation_title':
+        // Update conversation title
+        if (!conversation_id) {
+          return new Response('conversation_id is required for title update', { 
+            status: 400, 
+            headers: corsHeaders 
+          });
+        }
+
+        if (!title) {
+          return new Response('title is required for title update', { 
+            status: 400, 
+            headers: corsHeaders 
+          });
+        }
+
+        const { error: titleUpdateError } = await supabaseClient
+          .from('conversations')
+          .update({ 
+            title,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', conversation_id)
+          .eq('user_id', user_id);
+
+        if (titleUpdateError) throw titleUpdateError;
+        result = { success: true, conversation_id };
+        break;
+
       default:
         return new Response('Invalid action', { 
           status: 400, 

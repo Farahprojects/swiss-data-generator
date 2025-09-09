@@ -9,17 +9,15 @@ export interface Conversation {
 }
 
 /**
- * Create a new conversation for an authenticated user
+ * Create a new conversation for an authenticated user using edge function
  */
 export const createConversation = async (userId: string, title?: string): Promise<string> => {
-  const { data, error } = await supabase
-    .from('conversations')
-    .insert({
+  const { data, error } = await supabase.functions.invoke('conversation-manager?action=create_conversation', {
+    body: {
       user_id: userId,
       title: title || 'New Chat'
-    })
-    .select('id')
-    .single();
+    }
+  });
 
   if (error) {
     console.error('[Conversations] Error creating conversation:', error);
@@ -30,13 +28,20 @@ export const createConversation = async (userId: string, title?: string): Promis
 };
 
 /**
- * List all conversations for an authenticated user
+ * List all conversations for an authenticated user using edge function
  */
 export const listConversations = async (): Promise<Conversation[]> => {
-  const { data, error } = await supabase
-    .from('conversations')
-    .select('id, user_id, title, created_at, updated_at')
-    .order('updated_at', { ascending: false });
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const { data, error } = await supabase.functions.invoke('conversation-manager?action=list_conversations', {
+    body: {
+      user_id: user.id
+    }
+  });
 
   if (error) {
     console.error('[Conversations] Error listing conversations:', error);
@@ -47,43 +52,45 @@ export const listConversations = async (): Promise<Conversation[]> => {
 };
 
 /**
- * Delete a conversation and all its messages
+ * Delete a conversation and all its messages using edge function
  */
 export const deleteConversation = async (conversationId: string): Promise<void> => {
-  // First delete all messages in this conversation
-  const { error: messagesError } = await supabase
-    .from('messages')
-    .delete()
-    .eq('chat_id', conversationId);
-
-  if (messagesError) {
-    console.error('[Conversations] Error deleting messages:', messagesError);
-    throw new Error('Failed to delete conversation messages');
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
   }
 
-  // Then delete the conversation itself
-  const { error: conversationError } = await supabase
-    .from('conversations')
-    .delete()
-    .eq('id', conversationId);
+  const { error } = await supabase.functions.invoke('conversation-manager?action=delete_conversation', {
+    body: {
+      user_id: user.id,
+      conversation_id: conversationId
+    }
+  });
 
-  if (conversationError) {
-    console.error('[Conversations] Error deleting conversation:', conversationError);
+  if (error) {
+    console.error('[Conversations] Error deleting conversation:', error);
     throw new Error('Failed to delete conversation');
   }
 };
 
 /**
- * Update conversation title
+ * Update conversation title using edge function
  */
 export const updateConversationTitle = async (conversationId: string, title: string): Promise<void> => {
-  const { error } = await supabase
-    .from('conversations')
-    .update({ 
-      title,
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', conversationId);
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const { error } = await supabase.functions.invoke('conversation-manager?action=update_conversation_title', {
+    body: {
+      user_id: user.id,
+      conversation_id: conversationId,
+      title
+    }
+  });
 
   if (error) {
     console.error('[Conversations] Error updating conversation title:', error);
