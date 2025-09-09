@@ -9,7 +9,13 @@ class ConversationAudioProcessor extends AudioWorkletProcessor {
     this._resampleRatio = this.inputSampleRate / this.targetSampleRate;
     this._resampleAccumulator = 0;
     this._buffer = [];
-    this._frameSizeTarget = 160; // 10ms at 16kHz
+    
+    // 🚀 MOBILE OPTIMIZATION: Adaptive frame size based on device type
+    // Mobile devices get larger frames (20ms) for better battery life
+    // Desktop gets smaller frames (10ms) for lower latency
+    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const frameMs = isMobile ? 20 : 10; // 20ms on mobile, 10ms on desktop
+    this._frameSizeTarget = (this.targetSampleRate * frameMs) / 1000; // 320 on mobile, 160 on desktop
   }
 
   static get parameterDescriptors() {

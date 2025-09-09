@@ -37,11 +37,22 @@ export class ConversationAudioPipeline {
           this.events.onLevel?.(evt.data.value ?? 0);
         }
       };
-      // Mobile visibility handling: ensure context resumes on return
+      // 🚀 MOBILE OPTIMIZATION: Enhanced visibility handling with background processing reduction
       const handleVisibility = () => {
         if (!this.audioContext) return;
-        if (document.visibilityState === 'visible' && this.audioContext.state === 'suspended') {
+        
+        const isVisible = document.visibilityState === 'visible';
+        
+        if (isVisible && this.audioContext.state === 'suspended') {
           this.audioContext.resume().catch(() => {});
+        }
+        
+        // 🚀 MOBILE OPTIMIZATION: Notify worker about background state changes
+        if (this.worker) {
+          this.worker.postMessage({ 
+            type: 'background', 
+            isBackground: !isVisible 
+          });
         }
       };
       document.addEventListener('visibilitychange', handleVisibility);

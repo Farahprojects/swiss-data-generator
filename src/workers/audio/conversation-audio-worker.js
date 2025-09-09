@@ -5,10 +5,16 @@ const ROLLING_SECONDS = 12; // keep last 12s
 const SAMPLE_RATE = 16000;
 const MAX_SAMPLES = ROLLING_SECONDS * SAMPLE_RATE;
 
-// Simple energy-based VAD
-const FRAME_MS = 10; // matches worklet frame
-const FRAME_SAMPLES = (SAMPLE_RATE * FRAME_MS) / 1000; // 160
-const ENERGY_THRESHOLD = 0.0001; // much lower threshold for quiet environments
+// 🚀 MOBILE OPTIMIZATION: Adaptive frame size and dynamic VAD
+const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+const FRAME_MS = isMobile ? 20 : 10; // 20ms on mobile, 10ms on desktop
+const FRAME_SAMPLES = (SAMPLE_RATE * FRAME_MS) / 1000; // 320 on mobile, 160 on desktop
+
+// Dynamic VAD threshold - adapts to ambient noise
+const BASE_ENERGY_THRESHOLD = 0.0001;
+const NOISE_ADAPTATION_FACTOR = 2.0; // Threshold scales with noise level
+const NOISE_SAMPLES = 50; // Number of frames to average for noise baseline
+
 const SPEECH_START_FRAMES = 5; // 50ms
 const SPEECH_END_FRAMES = 120; // 1200ms (1.2s)
 
@@ -20,6 +26,13 @@ let speechActive = false;
 let aboveCount = 0;
 let belowCount = 0;
 let frameCount = 0;
+
+// 🚀 MOBILE OPTIMIZATION: Dynamic VAD and background processing
+let noiseBaseline = 0;
+let noiseSamples = [];
+let isBackground = false;
+let backgroundFrameSkip = 0;
+const BACKGROUND_SKIP_FRAMES = 10; // Process every 10th frame in background
 
 function appendFrame(frame) {
   const samples = new Float32Array(frame);
@@ -40,6 +53,27 @@ function computeEnergy(samples) {
     sum += s * s;
   }
   return sum / samples.length;
+}
+
+// 🚀 MOBILE OPTIMIZATION: Update noise baseline for dynamic threshold
+function updateNoiseBaseline(energy) {
+  noiseSamples.push(energy);
+  if (noiseSamples.length > NOISE_SAMPLES) {
+    noiseSamples.shift();
+  }
+  
+  // Calculate average noise level
+  let sum = 0;
+  for (let i = 0; i < noiseSamples.length; i++) {
+    sum += noiseSamples[i];
+  }
+  noiseBaseline = sum / noiseSamples.length;
+}
+
+// 🚀 MOBILE OPTIMIZATION: Get adaptive threshold based on noise level
+function getAdaptiveThreshold() {
+  const adaptiveThreshold = BASE_ENERGY_THRESHOLD + (noiseBaseline * NOISE_ADAPTATION_FACTOR);
+  return Math.max(BASE_ENERGY_THRESHOLD, adaptiveThreshold);
 }
 
 function extractRollingWindow(seconds) {
@@ -64,12 +98,25 @@ self.onmessage = (event) => {
       console.log('[AudioWorker] ✅ First frame received - worker is active');
     }
     
+    // 🚀 MOBILE OPTIMIZATION: Background processing reduction
+    if (isBackground) {
+      backgroundFrameSkip++;
+      if (backgroundFrameSkip < BACKGROUND_SKIP_FRAMES) {
+        return; // Skip processing in background
+      }
+      backgroundFrameSkip = 0;
+    }
+    
     appendFrame(event.data.buffer);
 
-    // VAD step
+    // VAD step with dynamic threshold
     const frame = new Float32Array(event.data.buffer);
     const energy = computeEnergy(frame);
-    const isSpeech = energy > ENERGY_THRESHOLD;
+    
+    // 🚀 MOBILE OPTIMIZATION: Update noise baseline and get adaptive threshold
+    updateNoiseBaseline(energy);
+    const adaptiveThreshold = getAdaptiveThreshold();
+    const isSpeech = energy > adaptiveThreshold;
     
 
     // Emit audio level for UI (RMS approx, clamp 0..1)
@@ -101,6 +148,19 @@ self.onmessage = (event) => {
     aboveCount = 0;
     belowCount = 0;
     frameCount = 0;
+    // 🚀 MOBILE OPTIMIZATION: Reset noise baseline on reset
+    noiseBaseline = 0;
+    noiseSamples = [];
+    backgroundFrameSkip = 0;
+  } else if (type === 'background') {
+    // 🚀 MOBILE OPTIMIZATION: Handle background state changes
+    isBackground = event.data.isBackground || false;
+    if (isBackground) {
+      console.log('[AudioWorker] 📱 Entering background mode - reducing processing');
+    } else {
+      console.log('[AudioWorker] 📱 Returning to foreground - full processing');
+      backgroundFrameSkip = 0;
+    }
   }
 };
 
