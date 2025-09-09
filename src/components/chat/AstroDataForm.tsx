@@ -371,7 +371,8 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
           console.log(`[AstroForm] ✅ Report ready (${pricingResult.final_price_usd === 0 ? 'free' : 'paid'}), setting up chat for: ${response.guestReportId}`);
           
           // Navigate to chat page with guest_id and chat_id for session persistence
-          const newUrl = `/chat?guest_id=${response.guestReportId}&chat_id=${response.chatId}`;
+          // Add payment_completed flag to trigger validation only when needed
+          const newUrl = `/chat?guest_id=${response.guestReportId}&chat_id=${response.chatId}&payment_completed=true`;
           navigate(newUrl, { replace: true });
           
           console.log(`[AstroForm] 🔗 Navigating to chat page: ${newUrl}`);

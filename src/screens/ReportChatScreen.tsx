@@ -34,6 +34,7 @@ const ReportChatScreen = () => {
   const guestId = searchParams.get('guest_id');
   const userId = searchParams.get('user_id');
   const urlChatId = searchParams.get('chat_id');
+  const paymentCompleted = searchParams.get('payment_completed') === 'true';
   const hasTriggeredGenerationRef = useRef(false);
   
   // Auth detection
@@ -49,15 +50,17 @@ const ReportChatScreen = () => {
   // 3. If payment is confirmed → Calls trigger-report-generation
   // 4. Session persists in URL → Survives refresh, shareable, redirectable
   
-  // Main report flow checker - purely URL-driven (triggers when guest_id appears in URL)
+  // Main report flow checker - only triggers when payment is completed (not on every refresh)
   useEffect(() => {
     console.log('🔄 [ReportChatScreen] Payment validation useEffect triggered:', {
       guestId,
+      paymentCompleted,
       hasTriggeredGeneration: hasTriggeredGenerationRef.current,
       isReportReady: useReportReadyStore.getState().isReportReady
     });
     
-    if (!guestId || hasTriggeredGenerationRef.current) return;
+    // Only run payment validation if payment was just completed
+    if (!guestId || !paymentCompleted || hasTriggeredGenerationRef.current) return;
 
     // 🚫 GUARD: Don't check if report is already ready in store (prevents refresh loops)
     if (useReportReadyStore.getState().isReportReady) {
@@ -165,7 +168,7 @@ const ReportChatScreen = () => {
     // Start the check immediately
     checkAndTriggerReport();
 
-  }, [guestId]);
+  }, [guestId, paymentCompleted]);
 
   // 🎯 WebSocket-based report ready detection (no polling)
   useEffect(() => {

@@ -179,18 +179,13 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
               <DropdownMenuContent align="end" className="bg-white border border-gray-200 shadow-lg min-w-fit">
                 <DropdownMenuItem
                   onClick={() => {
-                    if (isGuest) {
-                      // For guest users, always allow opening report modal
-                      if (guestReportId) {
-                        // Existing guest with report - view astro data
-                        openReportModal(guestReportId);
-                      } else {
-                        // Fresh guest - create new report
-                        openReportModal('new');
-                      }
-                    } else if (chat_id) {
-                      // For signed-in users, use the current chat_id
+                    // Always use chat_id if available, otherwise 'new'
+                    if (chat_id) {
+                      // Use the specific chat_id for this thread
                       openReportModal(chat_id);
+                    } else {
+                      // Fresh thread - create new report
+                      openReportModal('new');
                     }
                   }}
                   className="px-3 py-2 text-sm text-black hover:bg-gray-200 hover:text-black focus:bg-gray-200 focus:text-black cursor-pointer"

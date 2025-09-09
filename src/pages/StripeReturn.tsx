@@ -19,8 +19,8 @@ export default function StripeReturn() {
     
     if (guestId) {
       console.log('✅ [StripeReturn] Found guest_id, navigating to chat page');
-      // Navigate to chat with guest_id
-      navigate(`/chat?guest_id=${guestId}`, { replace: true });
+      // Navigate to chat with guest_id and payment_completed flag
+      navigate(`/chat?guest_id=${guestId}&payment_completed=true`, { replace: true });
     } else if (sessionId) {
       console.log('✅ [StripeReturn] Found session_id, navigating to report page');
       const reportUrl = status 
