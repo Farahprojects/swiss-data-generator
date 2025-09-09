@@ -58,21 +58,8 @@ export const ChatInput = () => {
   });
 
   const handleSend = async () => {
-    // 🚫 GUARD: Don't send if conversation overlay is open
-    if (isConversationOpen) {
-      console.log('[ChatInput] 🔥 BLOCKED: handleSend - conversation mode active');
-      return;
-    }
-    
-    // 🚫 ADDITIONAL GUARD: Check if there's an active conversation overlay in DOM
-    const conversationOverlay = document.querySelector('[data-conversation-overlay]');
-    if (conversationOverlay) {
-      console.log('[ChatInput] 🔥 BLOCKED: handleSend - conversation overlay detected in DOM');
-      return;
-    }
-
     if (text.trim()) {
-      console.log('[ChatInput] 🔥 PROCESSING: handleSend - normal chat mode');
+      console.log('[ChatInput] 🔥 PROCESSING: handleSend - text mode');
       
       // For authenticated users: create conversation if no chat_id exists
       if (isAuthenticated && !chat_id && user) {
@@ -92,7 +79,7 @@ export const ChatInput = () => {
       
       // Immediately show stop icon when sending message
       setAssistantTyping(true);
-      chatController.sendTextMessage(text);
+      chatController.sendTextMessage(text, 'text'); // Explicitly pass 'text' mode
       setText('');
     }
   };
@@ -121,9 +108,9 @@ export const ChatInput = () => {
       setAssistantTyping(false);
     } else if (text.trim()) {
       handleSend();
-    } else {
-      handleSpeakerClick();
     }
+    // Don't open conversation mode when clicking send button with no text
+    // Conversation mode should only be opened via dedicated voice button
   };
 
   const isRecording = status === 'recording';

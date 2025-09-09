@@ -172,30 +172,14 @@ class ChatController {
     this.loadExistingMessages(); // Load conversation history
   }
 
-  async sendTextMessage(text: string) {
-    // 🚫 GUARD: Don't send if conversation overlay is open
-    const { useConversationUIStore } = await import('@/features/chat/conversation-ui-store');
-    const conversationStore = useConversationUIStore.getState();
-    
-    if (conversationStore.isConversationOpen) {
-      console.log('[ChatController] 🔥 BLOCKED: sendTextMessage - conversation mode active');
-      return;
-    }
-    
-    // 🚫 ADDITIONAL GUARD: Check if there's an active conversation overlay in DOM
-    const conversationOverlay = document.querySelector('[data-conversation-overlay]');
-    if (conversationOverlay) {
-      console.log('[ChatController] 🔥 BLOCKED: sendTextMessage - conversation overlay detected in DOM');
-      return;
-    }
-
+  async sendTextMessage(text: string, mode?: string) {
     const { chat_id } = useChatStore.getState();
     if (!chat_id) {
       console.error('[ChatController] sendTextMessage: No chat_id in store.');
       return;
     }
 
-    console.log('[ChatController] 🔥 PROCESSING: sendTextMessage - normal chat mode');
+    console.log('[ChatController] 🔥 PROCESSING: sendTextMessage - mode:', mode || 'text');
     const client_msg_id = uuidv4();
     this.addOptimisticMessages(chat_id, text, client_msg_id);
     
@@ -206,7 +190,8 @@ class ChatController {
       const finalMessage = await llmService.sendMessage({ 
         chat_id, 
         text, 
-        client_msg_id
+        client_msg_id,
+        mode: mode // Pass mode to backend
       });
       
       // Stop the listener since we got the response

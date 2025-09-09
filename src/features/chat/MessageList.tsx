@@ -97,6 +97,9 @@ const groupMessagesIntoTurns = (messages: Message[]): Turn[] => {
         turns.push({
           assistantMessage: message
         });
+      } else {
+        // This assistant message should be paired with the last user message
+        lastTurn.assistantMessage = message;
       }
     }
   }
