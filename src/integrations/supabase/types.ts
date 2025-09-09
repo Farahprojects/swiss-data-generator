@@ -1437,22 +1437,22 @@ export type Database = {
       }
       report_ready_signals: {
         Row: {
+          chat_id: string
           created_at: string | null
-          guest_report_id: string
           id: string
           is_ai_report: boolean | null
           seen: boolean
         }
         Insert: {
+          chat_id: string
           created_at?: string | null
-          guest_report_id: string
           id?: string
           is_ai_report?: boolean | null
           seen?: boolean
         }
         Update: {
+          chat_id?: string
           created_at?: string | null
-          guest_report_id?: string
           id?: string
           is_ai_report?: boolean | null
           seen?: boolean
