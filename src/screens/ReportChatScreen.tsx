@@ -72,21 +72,26 @@ const ReportChatScreen = () => {
 
     const checkAndTriggerReport = async () => {
       try {
-        // First check if report is already ready
-        console.log(`[ChatPage] 🔍 Checking if report already exists for: ${guestId}`);
+        // First, we need a chat_id to check the report ready signals
+        const finalChatId = urlChatId || chat_id;
+        if (!finalChatId) {
+          console.warn(`[ChatPage] No chat_id available to check report status`);
+          return;
+        }
+        
+        console.log(`[ChatPage] 🔍 Checking if report already exists for chat_id: ${finalChatId}`);
         
         const { data: existingSignal } = await supabase
           .from('report_ready_signals')
-          .select('guest_report_id')
-          .eq('guest_report_id', guestId)
+          .select('chat_id')
+          .eq('chat_id', finalChatId)
           .limit(1);
         
         if (existingSignal && existingSignal.length > 0) {
-          console.log(`[ChatPage] ✅ Report already exists for: ${guestId}`);
+          console.log(`[ChatPage] ✅ Report already exists for chat_id: ${finalChatId}`);
           hasTriggeredGenerationRef.current = true;
           
           // Ensure chat session is initialized FIRST
-          const finalChatId = urlChatId || chat_id;
           if (finalChatId) {
             console.log(`[ChatPage] 🔑 Report ready - initializing chat session: ${finalChatId}`);
             useChatStore.getState().startConversation(finalChatId, guestId);
@@ -258,8 +263,8 @@ const ReportChatScreen = () => {
           // Check if report is already ready and update thread visibility
           const { data: readySignal } = await supabase
             .from('report_ready_signals')
-            .select('guest_report_id')
-            .eq('guest_report_id', guestId)
+            .select('chat_id')
+            .eq('chat_id', finalChatId)
             .limit(1);
             
           if (readySignal && readySignal.length > 0) {
