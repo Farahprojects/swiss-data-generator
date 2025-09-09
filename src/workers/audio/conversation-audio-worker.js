@@ -9,13 +9,13 @@ const MAX_SAMPLES = ROLLING_SECONDS * SAMPLE_RATE;
 const FRAME_MS = 20; // matches worklet frame - sweet spot for mobile/desktop
 const FRAME_SAMPLES = (SAMPLE_RATE * FRAME_MS) / 1000; // 320
 // Adaptive VAD threshold - starts with sane default, adapts to environment
-const BASE_ENERGY_THRESHOLD = 0.015; // 0.015 RMS - works 90% of the time
-const MIN_THRESHOLD = 0.005; // Minimum threshold for very quiet environments
+const BASE_ENERGY_THRESHOLD = 0.008; // 0.008 RMS - more sensitive for desktop testing
+const MIN_THRESHOLD = 0.002; // Minimum threshold for very quiet environments
 const MAX_THRESHOLD = 0.05; // Maximum threshold for noisy environments
 const ADAPTATION_FACTOR = 0.1; // How quickly to adapt (0.1 = slow adaptation)
 
 const SPEECH_START_FRAMES = 3; // 60ms (3 * 20ms) - still responsive
-const SPEECH_END_FRAMES = 60; // 1200ms (60 * 20ms) - same 1.2s timeout
+const SPEECH_END_FRAMES = 15; // 300ms (15 * 20ms) - faster timeout for testing
 
 let ringBuffer = new Float32Array(MAX_SAMPLES);
 let writeIndex = 0;
@@ -113,6 +113,11 @@ self.onmessage = (event) => {
     // Emit audio level for UI (RMS approx, clamp 0..1)
     const level = Math.min(1, Math.sqrt(energy) * 4);
     try { self.postMessage({ type: 'level', value: level }); } catch {}
+    
+    // Debug: Log energy and threshold every 50 frames to see what's happening
+    if (frameCount % 50 === 0) {
+      console.log(`[AudioWorker] Energy: ${energy.toFixed(6)}, Threshold: ${currentThreshold.toFixed(6)}, Speech: ${isSpeech}`);
+    }
 
     if (isSpeech) {
       aboveCount++;
