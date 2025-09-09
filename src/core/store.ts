@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { Conversation, Message } from './types';
+import { Message } from './types';
+import { Conversation } from '@/services/conversations';
 
 export type ChatStatus =
   | 'idle'
@@ -11,8 +12,9 @@ export type ChatStatus =
   | 'loading_messages';
 
 interface ChatState {
+  // Current active chat
   chat_id: string | null;
-  guest_id: string | null; // Add guest_id to store
+  guest_id: string | null;
   messages: Message[];
   status: ChatStatus;
   error: string | null;
@@ -22,7 +24,13 @@ interface ChatState {
   lastMessagesFetch: number | null;
   isAssistantTyping: boolean;
 
-  startConversation: (id: string, guest_id?: string) => void; // Add guest_id parameter
+  // Thread management (single source of truth)
+  threads: Conversation[];
+  isLoadingThreads: boolean;
+  threadsError: string | null;
+
+  // Chat actions
+  startConversation: (id: string, guest_id?: string) => void;
   startNewGuestConversation: () => void;
   loadMessages: (messages: Message[]) => void;
   addMessage: (message: Message) => void;
@@ -35,11 +43,19 @@ interface ChatState {
   setMessageLoadError: (error: string | null) => void;
   retryLoadMessages: () => Promise<void>;
   setAssistantTyping: (isTyping: boolean) => void;
+
+  // Thread actions
+  loadThreads: () => Promise<void>;
+  addThread: (userId: string, title?: string) => Promise<string>;
+  removeThread: (threadId: string) => Promise<void>;
+  updateThreadTitle: (threadId: string, title: string) => Promise<void>;
+  clearThreadsError: () => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
+  // Current active chat
   chat_id: null,
-  guest_id: null, // Add guest_id to initial state
+  guest_id: null,
   messages: [],
   status: 'idle',
   error: null,
@@ -48,6 +64,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
   messageLoadError: null,
   lastMessagesFetch: null,
   isAssistantTyping: false,
+
+  // Thread management (single source of truth)
+  threads: [],
+  isLoadingThreads: false,
+  threadsError: null,
 
   startConversation: (id, guest_id) => set({ 
     chat_id: id, 
@@ -167,4 +188,75 @@ export const useChatStore = create<ChatState>((set, get) => ({
   }),
 
   setAssistantTyping: (isTyping) => set({ isAssistantTyping: isTyping }),
+
+  // Thread actions
+  loadThreads: async () => {
+    set({ isLoadingThreads: true, threadsError: null });
+    try {
+      const { listConversations } = await import('@/services/conversations');
+      const conversations = await listConversations();
+      set({ threads: conversations, isLoadingThreads: false });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load threads';
+      set({ threadsError: errorMessage, isLoadingThreads: false });
+    }
+  },
+
+  addThread: async (userId: string, title?: string) => {
+    set({ isLoadingThreads: true, threadsError: null });
+    try {
+      const { createConversation } = await import('@/services/conversations');
+      const conversationId = await createConversation(userId, title);
+      // Reload threads to get the new one with proper timestamps
+      await get().loadThreads();
+      return conversationId;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create thread';
+      set({ threadsError: errorMessage, isLoadingThreads: false });
+      throw error;
+    }
+  },
+
+  removeThread: async (threadId: string) => {
+    set({ isLoadingThreads: true, threadsError: null });
+    try {
+      const { deleteConversation } = await import('@/services/conversations');
+      await deleteConversation(threadId);
+      // Remove from local state
+      set(state => ({
+        threads: state.threads.filter(thread => thread.id !== threadId),
+        isLoadingThreads: false
+      }));
+      
+      // If this was the current chat, clear the session
+      if (get().chat_id === threadId) {
+        get().clearChat();
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete thread';
+      set({ threadsError: errorMessage, isLoadingThreads: false });
+      throw error;
+    }
+  },
+
+  updateThreadTitle: async (threadId: string, title: string) => {
+    set({ isLoadingThreads: true, threadsError: null });
+    try {
+      const { updateConversationTitle } = await import('@/services/conversations');
+      await updateConversationTitle(threadId, title);
+      // Update local state
+      set(state => ({
+        threads: state.threads.map(thread => 
+          thread.id === threadId ? { ...thread, title, updated_at: new Date().toISOString() } : thread
+        ),
+        isLoadingThreads: false
+      }));
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update thread title';
+      set({ threadsError: errorMessage, isLoadingThreads: false });
+      throw error;
+    }
+  },
+
+  clearThreadsError: () => set({ threadsError: null }),
 }));

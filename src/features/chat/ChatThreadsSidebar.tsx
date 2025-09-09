@@ -8,7 +8,7 @@ import { useReportModal } from '@/contexts/ReportModalContext';
 import { getChatTokens, clearChatTokens } from '@/services/auth/chatTokens';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { AuthModal } from '@/components/auth/AuthModal';
-import { useUserConversationsStore } from '@/stores/userConversationsStore';
+// Removed separate store - using single source of truth in useChatStore
 import { chatController } from './ChatController';
 import {
   DropdownMenu,
@@ -29,7 +29,18 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const guestReportId = searchParams.get('guest_id');
   const userId = searchParams.get('user_id');
   
-  const { messages, chat_id, clearChat } = useChatStore();
+  const { 
+    messages, 
+    chat_id, 
+    clearChat,
+    // Thread management from single source of truth
+    threads,
+    isLoadingThreads,
+    threadsError,
+    loadThreads,
+    addThread,
+    removeThread
+  } = useChatStore();
   const { user } = useAuth();
   
   // Determine user type - use both auth state and URL for consistency
@@ -38,15 +49,6 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const { open: openReportModal } = useReportModal();
   const { uuid } = getChatTokens();
   const { isPolling, isReportReady } = useReportReadyStore();
-  
-  // Conversation management for authenticated users
-  const { 
-    conversations, 
-    isLoading: conversationsLoading, 
-    loadConversations, 
-    addConversation, 
-    removeConversation 
-  } = useUserConversationsStore();
 
   const [hoveredThread, setHoveredThread] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -59,19 +61,19 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const isGuestUser = isGuest;
   const isUnauthenticated = !isAuthenticated && !isGuest;
 
-  // Load conversations for authenticated users
+  // Load threads for authenticated users
   useEffect(() => {
     if (isAuthenticated) {
-      loadConversations();
+      loadThreads();
     }
-  }, [isAuthenticated, loadConversations]);
+  }, [isAuthenticated, loadThreads]);
 
   // Handle new chat creation for authenticated users
   const handleNewChat = async () => {
     if (!user) return;
     
     try {
-      const newChatId = await addConversation(user.id, 'New Chat');
+      const newChatId = await addThread(user.id, 'New Chat');
       
       // Initialize the conversation in chatController (store will handle state)
       chatController.initializeConversation(newChatId);
@@ -96,14 +98,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   // Handle deleting a conversation
   const handleDeleteConversation = async (conversationId: string) => {
     try {
-      await removeConversation(conversationId);
-      
-      // If this was the current chat, clear the session
-      if (chat_id === conversationId) {
-        const { streamlinedSessionReset } = await import('@/utils/streamlinedSessionReset');
-        await streamlinedSessionReset({ preserveNavigation: true });
-      }
-      
+      await removeThread(conversationId);
       console.log('[ChatThreadsSidebar] Conversation deleted:', conversationId);
     } catch (error) {
       console.error('[ChatThreadsSidebar] Failed to delete conversation:', error);
@@ -247,13 +242,13 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
           {/* Chat history section */}
           <div className="space-y-1">
             <div className="text-xs text-gray-600 font-medium px-3 py-1">Chat history</div>
-            {conversationsLoading ? (
+            {isLoadingThreads ? (
               <div className="text-xs text-gray-500 px-3 py-1">Loading...</div>
-            ) : conversations.length === 0 ? (
+            ) : threads.length === 0 ? (
               <div className="text-xs text-gray-500 px-3 py-1">No previous chats</div>
             ) : (
               <div className="space-y-1">
-                {conversations.map((conversation) => (
+                {threads.map((conversation) => (
                   <div
                     key={conversation.id}
                     className="relative group"
