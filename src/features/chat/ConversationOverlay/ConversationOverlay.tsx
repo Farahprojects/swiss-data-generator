@@ -10,6 +10,7 @@ import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/integrations/supabase/config';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mic } from 'lucide-react';
 
@@ -150,11 +151,11 @@ export const ConversationOverlay: React.FC = () => {
       const warmupPromises = [
         ttsPlaybackService.warmup(),
         // Fire-and-forget STT warmup to prevent cold-start
-        fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/openai-whisper`, {
+        fetch(`${SUPABASE_URL}/functions/v1/openai-whisper`, {
           method: 'POST',
           headers: {
             'X-Warmup': '1',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
           },
           body: new ArrayBuffer(0) // Empty body for warmup
         }).catch(() => {}) // Ignore warmup errors
