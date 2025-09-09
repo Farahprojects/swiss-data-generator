@@ -8,7 +8,7 @@ const MAX_SAMPLES = ROLLING_SECONDS * SAMPLE_RATE;
 // Simple energy-based VAD
 const FRAME_MS = 10; // matches worklet frame
 const FRAME_SAMPLES = (SAMPLE_RATE * FRAME_MS) / 1000; // 160
-const ENERGY_THRESHOLD = 0.001; // lowered threshold
+const ENERGY_THRESHOLD = 0.0001; // much lower threshold for quiet environments
 const SPEECH_START_FRAMES = 5; // 50ms
 const SPEECH_END_FRAMES = 120; // 1200ms (1.2s)
 
