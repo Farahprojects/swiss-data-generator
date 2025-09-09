@@ -14,7 +14,7 @@ interface TypewriterTextProps {
 
 export const TypewriterText: React.FC<TypewriterTextProps> = ({
   text,
-  msPerWord = 80,
+  msPerWord = 64,
   onComplete,
   onInterrupt,
   className = '',
@@ -194,7 +194,7 @@ export const useTypewriter = (
     disabled?: boolean;
   } = {}
 ) => {
-  const { msPerWord = 80, autoStart = true, disabled = false } = options;
+  const { msPerWord = 64, autoStart = true, disabled = false } = options;
   const [displayedText, setDisplayedText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   

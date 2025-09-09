@@ -108,9 +108,10 @@ export const ChatInput = () => {
       setAssistantTyping(false);
     } else if (text.trim()) {
       handleSend();
+    } else {
+      // Open conversation mode when no text is entered
+      handleSpeakerClick();
     }
-    // Don't open conversation mode when clicking send button with no text
-    // Conversation mode should only be opened via dedicated voice button
   };
 
   const isRecording = status === 'recording';
