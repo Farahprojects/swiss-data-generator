@@ -60,60 +60,48 @@ serve(async (req) => {
       );
     }
 
-    const { guest_report_id } = requestBody;
+    const { chat_id } = requestBody;
 
-    // Validate guest_report_id
-    if (!guest_report_id || typeof guest_report_id !== 'string' || !isValidUUID(guest_report_id)) {
-      console.error(`[context-injector][${requestId}] Invalid guest_report_id format:`, guest_report_id);
+    // Validate chat_id
+    if (!chat_id || typeof chat_id !== 'string' || !isValidUUID(chat_id)) {
+      console.error(`[context-injector][${requestId}] Invalid chat_id format:`, chat_id);
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: "guest_report_id must be a valid UUID",
+          error: "chat_id must be a valid UUID",
           timestamp: new Date().toISOString()
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`[context-injector][${requestId}] 📋 Processing context injection for: ${guest_report_id}`);
+    console.log(`[context-injector][${requestId}] 📋 Processing context injection for chat_id: ${chat_id}`);
 
     // Initialize Supabase client with service role
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // First, get the chat_id from guest_reports
-    console.log(`[context-injector][${requestId}] 🔍 Fetching chat_id from guest_reports...`);
+    // Get the guest report using chat_id
+    console.log(`[context-injector][${requestId}] 🔍 Fetching guest report from chat_id...`);
     const { data: guestReport, error: guestError } = await supabase
       .from("guest_reports")
       .select("id, chat_id, email, report_type, is_ai_report, created_at, payment_status, report_data")
-      .eq("id", guest_report_id)
+      .eq("chat_id", chat_id)
       .single();
 
     if (guestError || !guestReport) {
-      console.error(`[context-injector][${requestId}] Guest report not found:`, guestError);
+      console.error(`[context-injector][${requestId}] Guest report not found for chat_id:`, guestError);
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: "Guest report not found",
+          error: "Guest report not found for chat_id",
           timestamp: new Date().toISOString()
         }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const { chat_id } = guestReport;
-    if (!chat_id) {
-      console.error(`[context-injector][${requestId}] No chat_id found for guest:`, guest_report_id);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "No chat_id found for guest report",
-          timestamp: new Date().toISOString()
-        }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log(`[context-injector][${requestId}] 🎯 Target chat_id: ${chat_id}`);
+    const guest_report_id = guestReport.id;
+    console.log(`[context-injector][${requestId}] 🎯 Found guest_report_id: ${guest_report_id} for chat_id: ${chat_id}`);
 
     // Check if context has already been injected for this chat_id
     console.log(`[context-injector][${requestId}] 🔍 Checking if context already injected...`);
@@ -137,19 +125,19 @@ serve(async (req) => {
       );
     }
 
-    // Get report data if it exists
+    // Get report data if it exists (using chat_id via guest_report_id)
     console.log(`[context-injector][${requestId}] 🔍 Fetching report data...`);
     const { data: reportLogs } = await supabase
       .from("report_logs")
       .select("report_text")
-      .eq("user_id", guest_report_id)
+      .eq("user_id", chat_id)
       .single();
 
-    // Get Swiss data if it exists  
+    // Get Swiss data if it exists (using chat_id via guest_report_id)
     const { data: translatorLogs } = await supabase
       .from("translator_logs")
       .select("swiss_data")
-      .eq("user_id", guest_report_id)
+      .eq("user_id", chat_id)
       .single();
 
     // Helper function to extract user-relevant content from report text
