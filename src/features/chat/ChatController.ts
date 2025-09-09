@@ -179,7 +179,6 @@ class ChatController {
       return;
     }
 
-    console.log('[ChatController] 🔥 PROCESSING: sendTextMessage - mode:', mode || 'text');
     const client_msg_id = uuidv4();
     this.addOptimisticMessages(chat_id, text, client_msg_id);
     

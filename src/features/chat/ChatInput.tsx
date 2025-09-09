@@ -35,14 +35,6 @@ export const ChatInput = () => {
     isRecording,
   } = useChatInputState();
   
-  // Debug logging to verify isolation (remove in production)
-  console.log('[ChatInput] 🔄 Re-render - isolated state:', {
-    status,
-    isAssistantTyping,
-    isPolling,
-    isAssistantGenerating,
-    timestamp: new Date().toISOString()
-  });
   
   // Auth detection (still needed for user-specific logic)
   const { user } = useAuth();
@@ -70,8 +62,6 @@ export const ChatInput = () => {
 
   const handleSend = async () => {
     if (text.trim()) {
-      console.log('[ChatInput] 🔥 PROCESSING: handleSend - text mode');
-      
       // For authenticated users: create conversation if no chat_id exists
       if (isAuthenticated && !chat_id && user) {
         try {

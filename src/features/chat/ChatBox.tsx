@@ -17,7 +17,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { UserAvatar } from '@/components/settings/UserAvatar';
 import { useSettingsModal } from '@/contexts/SettingsModalContext';
-import { TestChatInputIsolation } from '@/components/TestChatInputIsolation';
 
 // Lazy load components for better performance
 const MessageList = lazy(() => import('./MessageList').then(module => ({ default: module.MessageList })));
@@ -37,13 +36,6 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
   const { uuid } = getChatTokens();
   const isConversationOpen = useConversationUIStore((s) => s.isConversationOpen);
   
-  // Debug logging to compare re-render frequency (remove in production)
-  console.log('[ChatBox] 🔄 Re-render - parent component:', {
-    error: !!error,
-    user: !!user,
-    isConversationOpen,
-    timestamp: new Date().toISOString()
-  });
   
   // Get user type from URL parameters and storage - supports both guest and auth users
   const [searchParams] = useSearchParams();
@@ -153,8 +145,6 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
 
   return (
     <>
-      {/* Test component for isolation verification */}
-      <TestChatInputIsolation />
       <MotionConfig
         transition={{
           type: "spring",
