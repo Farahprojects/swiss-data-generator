@@ -52,25 +52,12 @@ export const streamlinedSessionReset = async (options: StreamlinedResetOptions =
       'therai_report_generation_status', // Report generation state
     ];
     
-    // Also clear localStorage guest keys
-    const localStorageKeys = [
-      'therai_guest_id',          // Guest ID from session.ts
-    ];
-    
     chatStorageKeys.forEach(key => {
       try {
         sessionStorage.removeItem(key);
         localStorage.removeItem(key);
       } catch (error) {
         console.warn(`[StreamlinedReset] Could not clear ${key}:`, error);
-      }
-    });
-    
-    localStorageKeys.forEach(key => {
-      try {
-        localStorage.removeItem(key);
-      } catch (error) {
-        console.warn(`[StreamlinedReset] Could not clear localStorage ${key}:`, error);
       }
     });
     
