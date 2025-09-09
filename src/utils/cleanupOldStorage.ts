@@ -19,7 +19,8 @@ export const cleanupOldStorage = (): void => {
       'guestId',
       'guest_report_id', 
       'currentGuestReportId',
-      'guest_payment_status'
+      'guest_payment_status',
+      'therai_guest_report_id'  // Current active key - clear it too for fresh start
     ];
     
     legacyKeys.forEach(key => {
