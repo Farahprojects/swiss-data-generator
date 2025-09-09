@@ -28,12 +28,13 @@ export const streamlinedSessionReset = async (options: StreamlinedResetOptions =
   try {
     // 0. Clean database if requested (for guest users)
     if (cleanDatabase) {
-      const { chat_id } = useChatStore.getState();
-      if (chat_id) {
+      const { getGuestId } = useChatStore.getState();
+      const guestId = getGuestId();
+      if (guestId) {
         console.log('[StreamlinedReset] Cleaning guest data from database...');
         try {
-          await supabase.functions.invoke('clean-guest-chat-data', {
-            body: { chat_id }
+          await supabase.functions.invoke('delete-guest-data', {
+            body: { guest_report_id: guestId }
           });
           console.log('[StreamlinedReset] Database cleanup completed');
         } catch (dbError) {
