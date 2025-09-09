@@ -98,8 +98,13 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         console.error('[ChatThreadsSidebar] Failed to delete conversation:', error);
       }
     } else if (userType.isGuest) {
-      // Guest user: Clear session (same as before, but labeled as "Delete")
+      // Guest user: Clear session and redirect to main page for clean slate
       try {
+        // Clear store state immediately for instant UI feedback
+        const { clearChat } = useChatStore.getState();
+        clearChat();
+        
+        // Clear session storage
         const { streamlinedSessionReset } = await import('@/utils/streamlinedSessionReset');
         await streamlinedSessionReset({ redirectTo: '/' });
       } catch (error) {
