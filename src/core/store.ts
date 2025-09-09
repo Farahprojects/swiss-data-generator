@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Message } from './types';
 import { Conversation } from '@/services/conversations';
+import { STORAGE_KEYS } from '@/utils/storageKeys';
 
 export type ChatStatus =
   | 'idle'
@@ -50,6 +51,11 @@ interface ChatState {
   removeThread: (threadId: string) => Promise<void>;
   updateThreadTitle: (threadId: string, title: string) => Promise<void>;
   clearThreadsError: () => void;
+  
+  // Guest management helpers
+  getGuestId: () => string | null;
+  setGuestId: (guestId: string) => void;
+  clearGuestData: () => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -70,16 +76,21 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isLoadingThreads: false,
   threadsError: null,
 
-  startConversation: (id, guest_id) => set({ 
-    chat_id: id, 
-    guest_id: guest_id || null, // Store guest_id if provided
-    messages: [], 
-    status: 'idle', 
-    error: null,
-    messageLoadError: null,
-    lastMessagesFetch: null,
-    isAssistantTyping: false
-  }),
+  startConversation: (id, guest_id) => {
+    // If guest_id not provided, try to get from sessionStorage using centralized key
+    const finalGuestId = guest_id || (typeof window !== 'undefined' ? sessionStorage.getItem(STORAGE_KEYS.CHAT.GUEST.REPORT_ID) : null);
+    
+    set({ 
+      chat_id: id, 
+      guest_id: finalGuestId,
+      messages: [], 
+      status: 'idle', 
+      error: null,
+      messageLoadError: null,
+      lastMessagesFetch: null,
+      isAssistantTyping: false
+    });
+  },
 
   startNewGuestConversation: () => {
     const newChatId = crypto.randomUUID();
@@ -259,4 +270,28 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   clearThreadsError: () => set({ threadsError: null }),
+
+  // Guest management helpers
+  getGuestId: () => {
+    const state = get();
+    return state.guest_id || (typeof window !== 'undefined' ? sessionStorage.getItem(STORAGE_KEYS.CHAT.GUEST.REPORT_ID) : null);
+  },
+  
+  setGuestId: (guestId: string) => {
+    set({ guest_id: guestId });
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(STORAGE_KEYS.CHAT.GUEST.REPORT_ID, guestId);
+    }
+  },
+  
+  clearGuestData: () => {
+    set({ guest_id: null });
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem(STORAGE_KEYS.CHAT.GUEST.REPORT_ID);
+      // Clear other guest-related keys
+      Object.values(STORAGE_KEYS.CHAT.GUEST).forEach(key => {
+        sessionStorage.removeItem(key);
+      });
+    }
+  },
 }));
