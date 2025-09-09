@@ -5,7 +5,7 @@ import { Mic, AudioLines, ArrowRight, Loader2 } from 'lucide-react';
 import { useChatStore } from '@/core/store';
 import { chatController } from './ChatController';
 import { useConversationUIStore } from './conversation-ui-store';
-import { useChatTextMicrophone } from '@/hooks/microphone/useChatTextMicrophone';
+import { useChatInputMicrophone } from '@/hooks/microphone/useChatInputMicrophone';
 import { VoiceWaveform } from './VoiceWaveform';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { useAuth } from '@/contexts/AuthContext';
@@ -46,18 +46,15 @@ export const ChatInput = () => {
     setText(newText);
   };
 
-  // PROFESSIONAL DOMAIN-SPECIFIC MICROPHONE
+  // AudioWorklet + WebWorker microphone pipeline
   const { 
     isRecording: isMicRecording, 
     isProcessing: isMicProcessing,
-    service: microphoneService,
     toggleRecording: toggleMicRecording,
     audioLevelRef
-  } = useChatTextMicrophone({
+  } = useChatInputMicrophone({
     onTranscriptReady: handleTranscriptReady,
     silenceTimeoutMs: 1200,
-    targetFPS: 30, // Mobile-optimized frame rate
-    smoothingFactor: 0.8, // Smooth animations
   });
 
   const handleSend = async () => {
