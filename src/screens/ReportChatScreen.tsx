@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useChatStore } from '@/core/store';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { startReportReadyListener, stopReportReadyListener } from '@/services/report/reportReadyListener';
-import { useUserConversationsStore } from '@/stores/userConversationsStore';
+// Removed - using single source of truth in useChatStore
 import { chatController } from '@/features/chat/ChatController';
 
 // Import ChatBox directly for immediate rendering
@@ -45,8 +45,8 @@ const ReportChatScreen = () => {
   const [isGuestThreadReady, setIsGuestThreadReady] = useState(false);
 
   // 🎯 COMPLETE FLOW:
-  // 1. User completes Astro form → URL updates with ?guest_id=abc123&chat_id=xyz789
-  // 2. This useEffect detects the new guest_id from URL → Triggers report generation check
+  // 1. User completes Astro form → guest_id stored in sessionStorage, URL updates with chat_id
+  // 2. This useEffect detects the guest_id from storage → Triggers report generation check
   // 3. If payment is confirmed → Calls trigger-report-generation
   // 4. Session persists in URL → Survives refresh, shareable, redirectable
   
@@ -233,7 +233,7 @@ const ReportChatScreen = () => {
           return;
         }
 
-        // We need to rehydrate - start with guest_id from URL
+        // We need to rehydrate - start with guest_id from storage
         let finalChatId = urlChatId || chat_id;
         
         // If chat_id is missing, fetch it from backend

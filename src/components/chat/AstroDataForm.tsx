@@ -20,7 +20,7 @@ import { toast } from 'sonner';
 import { useChatStore } from '@/core/store';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useUserConversationsStore } from '@/stores/userConversationsStore';
+// Removed - using single source of truth in useChatStore
 import { chatController } from '@/features/chat/ChatController';
 
 interface AstroDataFormProps {
@@ -50,7 +50,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   const isAuthenticated = !!user && !!userId;
   
   // Conversation management for authenticated users
-  const { addConversation } = useUserConversationsStore();
+  const { addThread } = useChatStore();
   const chat_id = useChatStore((state) => state.chat_id);
   
   
@@ -167,7 +167,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       
       if (!currentChatId) {
         // Create a new conversation
-        currentChatId = await addConversation(user.id, 'New Chat');
+        currentChatId = await addThread(user.id, 'New Chat');
         chatController.initializeConversation(currentChatId);
       }
 

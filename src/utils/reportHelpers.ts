@@ -19,11 +19,10 @@ export const getSwissErrorMessage = (reportType: string | null): string => {
 export const getGuestReportId = (): string | null => {
   if (typeof window === 'undefined') return null;
   
-  // Try URL params first
-  const urlParams = new URLSearchParams(window.location.search);
-  const urlId = urlParams.get('guest_id');
-  if (urlId) return urlId;
+  // Get from sessionStorage (new approach)
+  const storageId = sessionStorage.getItem('therai_guest_report_id');
+  if (storageId) return storageId;
   
-  // Fallback to localStorage
+  // Fallback to localStorage for backward compatibility
   return localStorage.getItem('currentGuestReportId');
 };

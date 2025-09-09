@@ -10,7 +10,7 @@ import { VoiceWaveform } from './VoiceWaveform';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSearchParams } from 'react-router-dom';
-import { useUserConversationsStore } from '@/stores/userConversationsStore';
+// Removed - using single source of truth in useChatStore
 
 // Stop icon component
 const StopIcon = () => (
@@ -33,7 +33,7 @@ export const ChatInput = () => {
   const isAuthenticated = !!user && !!userId;
   
   // Conversation management
-  const { addConversation } = useUserConversationsStore();
+  const { addThread } = useChatStore();
 
   // Get report generation state
   const isPolling = useReportReadyStore((state) => state.isPolling);
@@ -78,7 +78,7 @@ export const ChatInput = () => {
       if (isAuthenticated && !chat_id && user) {
         try {
           console.log('[ChatInput] Creating new conversation for authenticated user');
-          const newChatId = await addConversation(user.id, 'New Chat');
+          const newChatId = await addThread(user.id, 'New Chat');
           
           // Initialize the conversation in chatController (store will handle state)
           chatController.initializeConversation(newChatId);

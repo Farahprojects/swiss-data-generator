@@ -1,6 +1,7 @@
 
 /**
- * URL helper utilities for managing guest report IDs in URLs
+ * URL helper utilities for managing guest report IDs
+ * @deprecated Most functions now use sessionStorage instead of URL parameters
  */
 import { log } from './logUtils';
 
@@ -9,26 +10,28 @@ export const URL_PARAMS = {
 } as const;
 
 /**
- * Get guest report ID from URL parameters
+ * Get guest report ID from sessionStorage (no longer from URL)
  */
-export const getGuestReportIdFromUrl = (): string | null => {
+export const getGuestReportIdFromStorage = (): string | null => {
   if (typeof window === 'undefined') return null;
   
-  const params = new URLSearchParams(window.location.search);
-  return params.get(URL_PARAMS.GUEST_REPORT_ID);
+  return sessionStorage.getItem('therai_guest_report_id');
 };
 
 /**
- * Set guest report ID in URL without triggering navigation
+ * Set guest report ID in sessionStorage (no longer in URL)
  */
-export const setGuestReportIdInUrl = (guestReportId: string): void => {
+export const setGuestReportIdInStorage = (guestReportId: string): void => {
   if (typeof window === 'undefined') return;
   
-  const url = new URL(window.location.href);
-  url.searchParams.set(URL_PARAMS.GUEST_REPORT_ID, guestReportId);
-  
-  // Update URL without triggering navigation
-  window.history.replaceState({}, '', url.toString());
+  sessionStorage.setItem('therai_guest_report_id', guestReportId);
+};
+
+/**
+ * @deprecated Use setGuestReportIdInStorage instead
+ */
+export const setGuestReportIdInUrl = (guestReportId: string): void => {
+  setGuestReportIdInStorage(guestReportId);
 };
 
 /**
@@ -48,9 +51,11 @@ export const clearGuestReportIdFromUrl = (): void => {
  * Clean, production-ready token retrieval
  */
 export const getGuestToken = (): string | null => {
-  const urlToken = new URLSearchParams(window.location.search).get('guest_id');
-  if (urlToken) return urlToken;
+  // Get from sessionStorage (new approach)
+  const storageToken = sessionStorage.getItem('therai_guest_report_id');
+  if (storageToken) return storageToken;
 
+  // Fallback to localStorage for backward compatibility
   return localStorage.getItem('currentGuestReportId');
 };
 
