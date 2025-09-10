@@ -24,6 +24,7 @@ interface ChatState {
   messageLoadError: string | null;
   lastMessagesFetch: number | null;
   isAssistantTyping: boolean;
+  isPaymentFlowStopIcon: boolean;
 
   // Thread management (single source of truth)
   threads: Conversation[];
@@ -36,6 +37,7 @@ interface ChatState {
   loadMessages: (messages: Message[]) => void;
   addMessage: (message: Message) => void;
   updateMessage: (id: string, updates: Partial<Message>) => void;
+  removeMessage: (id: string) => void;
   setStatus: (status: ChatStatus) => void;
   setError: (error: string | null) => void;
   setTtsVoice: (v: string) => void;
@@ -44,6 +46,7 @@ interface ChatState {
   setMessageLoadError: (error: string | null) => void;
   retryLoadMessages: () => Promise<void>;
   setAssistantTyping: (isTyping: boolean) => void;
+  setPaymentFlowStopIcon: (show: boolean) => void;
   
   // Hydration and persistence
   hydrateFromStorage: (authId?: string, guestId?: string) => string | null;
@@ -74,6 +77,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   messageLoadError: null,
   lastMessagesFetch: null,
   isAssistantTyping: false,
+  isPaymentFlowStopIcon: false,
 
   // Thread management (single source of truth)
   threads: [],
@@ -180,6 +184,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
     });
   },
 
+  removeMessage: (id) => {
+    set((state) => ({
+      messages: state.messages.filter(msg => msg.id !== id)
+    }));
+  },
+
   setStatus: (status) => set({ status }),
   
   setError: (error) => set({ error, status: error ? 'error' : get().status }),
@@ -220,7 +230,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       isLoadingMessages: false,
       messageLoadError: null,
       lastMessagesFetch: null,
-      isAssistantTyping: false
+      isAssistantTyping: false,
+      isPaymentFlowStopIcon: false
     });
     
     // Clear guest data from storage as well
@@ -269,6 +280,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   setAssistantTyping: (isTyping) => set({ isAssistantTyping: isTyping }),
+
+  setPaymentFlowStopIcon: (show) => set({ isPaymentFlowStopIcon: show }),
 
   // Thread actions
   loadThreads: async () => {

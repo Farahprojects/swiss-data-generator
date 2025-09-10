@@ -49,10 +49,10 @@ export const useChatInputState = () => {
     })
   );
 
-  // Simplified: Only show stop icon during report generation
+  // Show stop icon during report generation OR when payment flow stop icon is active
   const isAssistantGenerating = useMemo(() => 
-    paymentFlowState.isReportGenerating,
-    [paymentFlowState.isReportGenerating]
+    paymentFlowState.isReportGenerating || chatState.isPaymentFlowStopIcon,
+    [paymentFlowState.isReportGenerating, chatState.isPaymentFlowStopIcon]
   );
 
   const isRecording = useMemo(() => 

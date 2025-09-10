@@ -45,15 +45,19 @@ const TurnItem = ({ turn, isLastTurn, isFromHistory }: { turn: Turn; isLastTurn:
       {assistantMessage && (
         <div className="flex items-end gap-3 justify-start mb-8">
           <div 
-            className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black"
+            className={`px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl ${
+              assistantMessage.role === 'system' 
+                ? 'bg-blue-50 border border-blue-200 text-blue-800' 
+                : 'text-black'
+            }`}
             style={{ overflowAnchor: 'none' }}
           >
             <p className="text-base font-light leading-relaxed text-left">
               <Suspense fallback={<span className="whitespace-pre-wrap">{assistantMessage.text || ''}</span>}>
-Well                 <TypewriterText 
+                <TypewriterText 
                   text={assistantMessage.text || ''} 
                   msPerWord={80}
-                  disabled={!shouldAnimate}
+                  disabled={!shouldAnimate || assistantMessage.role === 'system'}
                   className="whitespace-pre-wrap"
                 />
               </Suspense>
@@ -72,8 +76,13 @@ const groupMessagesIntoTurns = (messages: Message[]): Turn[] => {
   for (let i = 0; i < messages.length; i++) {
     const message = messages[i];
     
-    // Skip system messages for now
-    if (message.role === 'system') continue;
+    // Handle system messages as standalone turns
+    if (message.role === 'system') {
+      turns.push({
+        assistantMessage: message // Treat system messages as assistant messages for display
+      });
+      continue;
+    }
     
     if (message.role === 'user') {
       // Look for the next assistant message

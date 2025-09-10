@@ -62,7 +62,7 @@ export const usePaymentFlow = ({ chatId, enabled }: UsePaymentFlowOptions) => {
     };
   }, [chatId, enabled, setPaymentConfirmed, setReportGenerating, setReportReady, setError]);
 
-  // Listen for typing completion to stop the stop icon
+  // Listen for typing completion to stop the stop icon (only for payment flow, not payment flow stop icon)
   const isAssistantTyping = useChatStore(state => state.isAssistantTyping);
   const { isReportGenerating } = usePaymentFlowStore();
   useEffect(() => {

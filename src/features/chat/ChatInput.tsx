@@ -164,11 +164,16 @@ export const ChatInput = () => {
             <TextareaAutosize
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Share your thoughts..."
-              className="w-full px-4 py-2.5 pr-24 text-base font-light bg-white border-2 border-gray-300 rounded-3xl focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-400 resize-none text-black placeholder-gray-500 overflow-y-auto"
+              placeholder={isAssistantGenerating ? "Setting up your space..." : "Share your thoughts..."}
+              disabled={isAssistantGenerating}
+              className={`w-full px-4 py-2.5 pr-24 text-base font-light bg-white border-2 rounded-3xl focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-400 resize-none text-black placeholder-gray-500 overflow-y-auto ${
+                isAssistantGenerating 
+                  ? 'border-gray-200 bg-gray-50 cursor-not-allowed' 
+                  : 'border-gray-300'
+              }`}
               maxRows={4}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
+                if (e.key === 'Enter' && !e.shiftKey && !isAssistantGenerating) {
                   e.preventDefault();
                   handleSend();
                 }
@@ -177,10 +182,14 @@ export const ChatInput = () => {
           )}
           <div className="absolute right-1 inset-y-0 flex items-center gap-1" style={{ transform: 'translateY(-4px) translateX(-4px)' }}>
             <button 
-              className="w-8 h-8 text-gray-500 hover:text-gray-900 transition-all duration-200 ease-in-out flex items-center justify-center"
+              className={`w-8 h-8 transition-all duration-200 ease-in-out flex items-center justify-center ${
+                isAssistantGenerating 
+                  ? 'text-gray-300 cursor-not-allowed' 
+                  : 'text-gray-500 hover:text-gray-900'
+              }`}
               onClick={toggleMicRecording}
-              disabled={isMicProcessing}
-              title={getMicButtonTitle()}
+              disabled={isMicProcessing || isAssistantGenerating}
+              title={isAssistantGenerating ? "Setting up your space..." : getMicButtonTitle()}
             >
               {getMicButtonContent()}
             </button>
@@ -193,6 +202,7 @@ export const ChatInput = () => {
                     : 'w-8 h-8 text-gray-500 hover:text-gray-900 flex items-center justify-center'
               }`}
               onClick={handleRightButtonClick}
+              disabled={isAssistantGenerating}
             >
               {isAssistantTyping ? (
                 <StopIcon />

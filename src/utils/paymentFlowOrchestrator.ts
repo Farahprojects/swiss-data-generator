@@ -1,6 +1,7 @@
 import { createPaymentPoller, PaymentPoller } from './paymentPoller';
 import { createReportReadyListener, ReportReadyListener } from './reportReadyListener';
 import { supabase } from '@/integrations/supabase/client';
+import { chatController } from '@/features/chat/ChatController';
 
 interface PaymentFlowOptions {
   chatId: string;
@@ -57,6 +58,9 @@ export class PaymentFlowOrchestrator {
   private async handlePaymentConfirmed(chatId: string): Promise<void> {
     console.log(`[PaymentFlowOrchestrator] ✅ Payment confirmed for chat_id: ${chatId}`);
     
+    // Show inline progress message
+    chatController.showPaymentFlowProgress("Payment confirmed! Setting up your personalized space...");
+    
     // Notify UI that payment is confirmed
     this.options.onPaymentConfirmed();
 
@@ -85,12 +89,19 @@ export class PaymentFlowOrchestrator {
 
       if (guestReport?.report_generated === true) {
         console.log(`[PaymentFlowOrchestrator] ✅ Report already generated for chat_id: ${chatId} - skipping verify-guest-payment`);
+        // Show progress and enable stop icon
+        chatController.showPaymentFlowProgress("Generating your personal space...");
+        chatController.setPaymentFlowStopIcon(true);
         // Notify UI that report is generating (since it's already done)
         this.options.onReportGenerating();
         return;
       }
 
       console.log(`[PaymentFlowOrchestrator] Triggering report generation for chat_id: ${chatId}`);
+      
+      // Show progress and enable stop icon when injection starts
+      chatController.showPaymentFlowProgress("Generating your personal space...");
+      chatController.setPaymentFlowStopIcon(true);
       
       const { data, error } = await supabase.functions.invoke('verify-guest-payment', {
         body: { 
@@ -130,6 +141,13 @@ export class PaymentFlowOrchestrator {
   private handleReportReady(chatId: string): void {
     console.log(`[PaymentFlowOrchestrator] ✅ Report ready for chat_id: ${chatId}`);
     
+    // Remove progress messages and disable stop icon
+    chatController.removePaymentFlowProgress();
+    chatController.setPaymentFlowStopIcon(false);
+    
+    // Show completion message
+    chatController.showPaymentFlowProgress("Your session is ready! 🎉");
+    
     // Notify UI that report is ready
     this.options.onReportReady();
     
@@ -139,6 +157,11 @@ export class PaymentFlowOrchestrator {
 
   private handleError(error: string): void {
     console.error(`[PaymentFlowOrchestrator] Error: ${error}`);
+    
+    // Clean up UI state on error
+    chatController.removePaymentFlowProgress();
+    chatController.setPaymentFlowStopIcon(false);
+    
     this.options.onError(error);
     this.stop();
   }

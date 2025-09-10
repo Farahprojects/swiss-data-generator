@@ -449,6 +449,48 @@ class ChatController {
     }
   }
 
+  /**
+   * Payment Flow Control Methods
+   */
+  public showPaymentFlowProgress(message: string): void {
+    const { chat_id, addMessage } = useChatStore.getState();
+    if (!chat_id) return;
+
+    const progressMessage: Message = {
+      id: `payment-progress-${Date.now()}`,
+      chat_id: chat_id,
+      role: 'system',
+      text: message,
+      createdAt: new Date().toISOString(),
+      status: 'thinking',
+      meta: { type: 'payment-progress' }
+    };
+
+    addMessage(progressMessage);
+    console.log(`[ChatController] Added payment progress message: ${message}`);
+  }
+
+  public removePaymentFlowProgress(): void {
+    const { messages, removeMessage } = useChatStore.getState();
+    
+    // Find and remove payment progress messages
+    const progressMessages = messages.filter(m => 
+      m.meta?.type === 'payment-progress'
+    );
+    
+    progressMessages.forEach(msg => {
+      removeMessage(msg.id);
+    });
+    
+    console.log(`[ChatController] Removed ${progressMessages.length} payment progress messages`);
+  }
+
+  public setPaymentFlowStopIcon(show: boolean): void {
+    const { setPaymentFlowStopIcon } = useChatStore.getState();
+    setPaymentFlowStopIcon(show);
+    console.log(`[ChatController] Payment flow stop icon: ${show ? 'ON' : 'OFF'}`);
+  }
+
 }
 
 export const chatController = new ChatController();
