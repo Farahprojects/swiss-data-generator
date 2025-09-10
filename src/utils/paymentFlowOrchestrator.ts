@@ -146,7 +146,7 @@ export class PaymentFlowOrchestrator {
     chatController.setPaymentFlowStopIcon(false);
     
     // Show completion message
-    chatController.showPaymentFlowProgress("Your session is ready! 🎉");
+    chatController.showPaymentFlowProgress("Your session is ready!");
     
     // Notify UI that report is ready
     this.options.onReportReady();
