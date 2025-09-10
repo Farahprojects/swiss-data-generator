@@ -34,7 +34,7 @@ const PublicReport = () => {
 
   const handleGetReportClick = () => {
     // Go directly to chat page, bypassing all forms
-    navigate('/chat');
+    navigate('/c');
   };
 
 
