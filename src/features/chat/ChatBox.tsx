@@ -47,11 +47,10 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
   
   // Determine user type and ID
   const isAuthenticated = !!userId;
-  const isGuest = chat_id && chat_id.startsWith('guest-'); // Guest if chat_id starts with "guest-"
+  const isGuest = window.location.pathname.startsWith('/c/g/'); // Guest if URL starts with "/c/g/"
   const currentUserId = userId;
   
-  // Debug logging
-  console.log(`[ChatBox] User detection - isAuthenticated: ${isAuthenticated}, isGuest: ${isGuest}, chat_id: ${chat_id}`);
+  // User detection complete - no logging needed
   
   // Initialize payment flow for guest users
   usePaymentFlow({
