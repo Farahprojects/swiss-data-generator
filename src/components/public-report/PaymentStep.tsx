@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { UseFormRegister, UseFormWatch, FieldErrors, UseFormSetValue } from 'react-hook-form';
 import { Tag, Loader2 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -47,6 +47,10 @@ const PaymentStep = ({
   const [isValidatingPromo, setIsValidatingPromo] = useState(false);
   const [trustedPricing, setTrustedPricing] = useState<TrustedPricingObject | null>(null);
   
+  // Refs for auto-scroll functionality
+  const paymentButtonRef = useRef<HTMLButtonElement>(null);
+  const promoCodeRef = useRef<HTMLDivElement>(null);
+  
   const { toast } = useToast();
   const { getPriceById, isLoading: pricesLoading } = usePricing();
   
@@ -82,6 +86,18 @@ const PaymentStep = ({
       }
     };
   }, [isProcessing, toast]);
+
+  // Auto-scroll to payment button when processing starts
+  useEffect(() => {
+    if (isProcessing && paymentButtonRef.current) {
+      setTimeout(() => {
+        paymentButtonRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+      }, 100);
+    }
+  }, [isProcessing]);
   
   const reportCategory = watch('reportCategory');
   const reportSubCategory = watch('reportSubCategory');
@@ -284,7 +300,21 @@ const PaymentStep = ({
             <CardContent className="space-y-6">
               {/* Promo Code Section */}
               <div className="space-y-4">
-                <Collapsible open={showPromoCode} onOpenChange={setShowPromoCode}>
+                <Collapsible 
+                  open={showPromoCode} 
+                  onOpenChange={(open) => {
+                    setShowPromoCode(open);
+                    if (open) {
+                      // Auto-scroll to promo code section when it opens
+                      setTimeout(() => {
+                        promoCodeRef.current?.scrollIntoView({ 
+                          behavior: 'smooth', 
+                          block: 'center' 
+                        });
+                      }, 100);
+                    }
+                  }}
+                >
                   <CollapsibleTrigger asChild>
                     <button
                       type="button"
@@ -294,7 +324,7 @@ const PaymentStep = ({
                       <span>Have a promo code?</span>
                     </button>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-4">
+                  <CollapsibleContent ref={promoCodeRef} className="mt-4">
                     <div className="space-y-4">
                       <div className="space-y-3">
                         <Label htmlFor="promoCode" className="text-base font-light text-gray-700">Promo Code</Label>
@@ -331,6 +361,7 @@ const PaymentStep = ({
 
               {/* Submit Button */}
               <Button
+                ref={paymentButtonRef}
                 type="button"
                 onClick={handleButtonClick}
                 disabled={isProcessing || isValidatingPromo}
