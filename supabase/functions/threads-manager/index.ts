@@ -61,7 +61,7 @@ serve(async (req) => {
         break;
 
       case 'create_thread':
-        // Create a new guest chat thread
+        // Create a new guest chat thread - SERVER-SIDE GENERATION
         const newChatId = crypto.randomUUID();
         
         const { data: newReport, error: createError } = await supabaseClient
@@ -79,6 +79,8 @@ serve(async (req) => {
 
         if (createError) throw createError;
 
+        console.log(`[threads-manager] Created new thread ${newChatId} for guest ${guest_id}`);
+
         result = { 
           thread_id: newChatId,
           thread: {
@@ -91,7 +93,7 @@ serve(async (req) => {
         break;
 
       case 'delete_thread':
-        // Delete guest chat thread and its messages
+        // Delete guest chat thread and its messages - VERIFY OWNERSHIP
         if (!thread_id) {
           return new Response('thread_id is required for delete', { 
             status: 400, 
@@ -99,7 +101,22 @@ serve(async (req) => {
           });
         }
 
-        // First delete all messages for this chat_id
+        // First verify the thread belongs to this guest user
+        const { data: ownershipCheck, error: ownershipError } = await supabaseClient
+          .from('guest_reports')
+          .select('id')
+          .eq('chat_id', thread_id)
+          .eq('user_id', guest_id)
+          .single();
+
+        if (ownershipError || !ownershipCheck) {
+          return new Response('Thread not found or unauthorized', { 
+            status: 404, 
+            headers: corsHeaders 
+          });
+        }
+
+        // Delete all messages for this chat_id
         const { error: messagesError } = await supabaseClient
           .from('messages')
           .delete()
@@ -107,7 +124,7 @@ serve(async (req) => {
 
         if (messagesError) throw messagesError;
 
-        // Delete the guest report (thread)
+        // Delete the guest report (thread) - double-check user ownership
         const { error: deleteError } = await supabaseClient
           .from('guest_reports')
           .delete()
@@ -115,6 +132,8 @@ serve(async (req) => {
           .eq('user_id', guest_id);
 
         if (deleteError) throw deleteError;
+
+        console.log(`[threads-manager] Deleted thread ${thread_id} for guest ${guest_id}`);
 
         result = { success: true, thread_id };
         break;

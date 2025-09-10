@@ -77,16 +77,31 @@ const ChatContainer: React.FC = () => {
         // Verify thread belongs to current user and load it
         startConversation(threadId, userType === 'guest' ? guestId : undefined);
       } else {
-        // Thread not found, redirect to /c
+        // Thread not found or doesn't belong to user, redirect to /c
+        console.warn(`Thread ${threadId} not found or unauthorized access`);
         navigate('/c', { replace: true });
       }
+    } else if (threadId && threads.length > 0) {
+      // Thread ID provided but not found in user's threads
+      console.warn(`Thread ${threadId} not found in user's threads`);
+      navigate('/c', { replace: true });
     }
   }, [threadId, threads, startConversation, navigate, userType, guestId]);
 
-  // Initial load
+  // Initial load - always refetch on mount and user changes
   useEffect(() => {
-    fetchThreads();
+    if (userType !== 'unauthenticated') {
+      fetchThreads();
+    }
   }, [userType, user?.id, guestId]);
+
+  // Cleanup function for realtime subscriptions (if any)
+  useEffect(() => {
+    return () => {
+      // Cleanup any realtime subscriptions here when component unmounts
+      console.log('[ChatContainer] Cleaning up realtime subscriptions');
+    };
+  }, []);
 
   const handleNewChat = async () => {
     try {
