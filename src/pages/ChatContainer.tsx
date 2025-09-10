@@ -263,53 +263,16 @@ const ChatContainer: React.FC = () => {
       {/* Main content */}
       <div className="flex-1 flex items-center justify-center">
         {showLoadingInContent ? (
-          <div className="text-center">
-            <div className="text-muted-foreground mb-4">Initializing session...</div>
-            <div className="animate-pulse h-4 w-32 bg-muted rounded mx-auto"></div>
-          </div>
+          <div className="text-muted-foreground">Loading...</div>
         ) : threadId ? (
           <div className="text-center">
             <h2 className="text-xl font-semibold mb-2">Chat Thread: {threadId}</h2>
             <p className="text-muted-foreground">Chat interface will be integrated here</p>
-            {userType === 'unauthenticated' && (
-              <div className="mt-4 p-4 bg-muted/20 rounded-lg">
-                <p className="text-sm text-muted-foreground mb-2">
-                  You're browsing as a guest. Sign in to save your chats!
-                </p>
-                <button className="text-sm text-primary hover:underline">
-                  Sign In
-                </button>
-              </div>
-            )}
           </div>
         ) : (
           <div className="text-center">
             <h2 className="text-xl font-semibold mb-2">Welcome to Chat</h2>
-            <p className="text-muted-foreground mb-4">
-              {userType === 'authenticated' 
-                ? 'Select a thread or create a new chat to get started'
-                : 'Create your first chat to get started'
-              }
-            </p>
-            {userType === 'unauthenticated' && (
-              <div className="mt-4 p-4 bg-muted/20 rounded-lg max-w-md">
-                <p className="text-sm text-muted-foreground mb-2">
-                  You can start chatting as a guest or sign in to save your conversations.
-                </p>
-                <div className="space-x-2">
-                  <button className="text-sm text-primary hover:underline">
-                    Sign In
-                  </button>
-                  <span className="text-muted-foreground">|</span>
-                  <button 
-                    onClick={handleNewChat}
-                    className="text-sm text-primary hover:underline"
-                  >
-                    Continue as Guest
-                  </button>
-                </div>
-              </div>
-            )}
+            <p className="text-muted-foreground">Select a thread or create a new chat to get started</p>
           </div>
         )}
       </div>
