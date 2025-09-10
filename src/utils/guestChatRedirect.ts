@@ -8,6 +8,7 @@
 
 import { useChatStore } from '@/core/store';
 import { STORAGE_KEYS } from '@/utils/storageKeys';
+import { verifyGuestPayment } from '@/utils/guest-checkout';
 
 export interface GuestChatData {
   guest_id: string;
@@ -18,13 +19,28 @@ export interface GuestChatData {
 /**
  * Primary integration point for external systems providing guest chat data
  * This function handles the complete flow from external data to /c/:threadId
+ * Now includes payment verification for security
  */
-export const redirectToGuestChat = (data: GuestChatData): string => {
+export const redirectToGuestChat = async (data: GuestChatData): Promise<string> => {
   const { guest_id, chat_id, payment_completed = false } = data;
   
   console.log(`[GuestChatRedirect] Initiating redirect for guest ${guest_id} to chat ${chat_id}`);
   
-  // 1. Store guest_id in persistent storage (for /c to pick up)
+  // Step 1: Verify payment status before proceeding
+  if (payment_completed) {
+    console.log(`[GuestChatRedirect] Verifying payment for guest ${guest_id}`);
+    
+    const paymentVerification = await verifyGuestPayment(guest_id);
+    
+    if (!paymentVerification.success || !paymentVerification.verified) {
+      console.error(`[GuestChatRedirect] Payment verification failed for guest ${guest_id}:`, paymentVerification.error);
+      throw new Error(paymentVerification.error || 'Payment verification failed. Please complete payment before accessing chat.');
+    }
+    
+    console.log(`[GuestChatRedirect] Payment verified for guest ${guest_id}, proceeding with redirect`);
+  }
+  
+  // Step 2: Store guest_id in persistent storage (for /c to pick up)
   if (typeof window !== 'undefined') {
     sessionStorage.setItem(STORAGE_KEYS.CHAT.GUEST.REPORT_ID, guest_id);
     sessionStorage.setItem(STORAGE_KEYS.CHAT.GUEST.CHAT_ID, chat_id);
@@ -34,7 +50,7 @@ export const redirectToGuestChat = (data: GuestChatData): string => {
     }
   }
   
-  // 2. Hydrate store immediately for smooth UX
+  // Step 3: Hydrate store immediately for smooth UX
   try {
     const store = useChatStore.getState();
     store.setGuestId(guest_id);
@@ -44,7 +60,7 @@ export const redirectToGuestChat = (data: GuestChatData): string => {
     console.error('[GuestChatRedirect] Failed to hydrate store:', error);
   }
   
-  // 3. Return the clean /c/:threadId URL (chat_id becomes threadId)
+  // Step 4: Return the clean /c/:threadId URL (chat_id becomes threadId)
   const targetUrl = `/c/${chat_id}`;
   console.log(`[GuestChatRedirect] Target URL: ${targetUrl}`);
   
