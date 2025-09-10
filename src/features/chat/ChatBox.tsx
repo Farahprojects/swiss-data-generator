@@ -2,7 +2,7 @@ import React, { useEffect, useRef, Suspense, lazy, useState } from 'react';
 import { ChatInput } from './ChatInput';
 import { useChatStore } from '@/core/store';
 import { useAuth } from '@/contexts/AuthContext';
-import { useChat } from './useChat';
+import { chatController } from './ChatController';
 
 import { Menu, Sparkles, Settings, User, CreditCard, Bell, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -47,8 +47,12 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
   const isGuest = !!guestReportId;
   const currentUserId = userId || guestReportId;
   
-  // Initialize ChatController for realtime updates (both text and conversation modes)
-  const { initializeAudioPipeline, pauseMic, unpauseMic, sendTextMessage, cancelMic } = useChat(guestReportId ? undefined : uuid, guestReportId);
+  // ChatController methods for realtime updates (both text and conversation modes)
+  const initializeAudioPipeline = chatController.initializeAudioPipeline.bind(chatController);
+  const pauseMic = chatController.pauseMic.bind(chatController);
+  const unpauseMic = chatController.unpauseMic.bind(chatController);
+  const sendTextMessage = chatController.sendTextMessage.bind(chatController);
+  const cancelMic = chatController.cancelMic.bind(chatController);
   const [signInPrompt, setSignInPrompt] = useState<{ show: boolean; feature: string }>({ 
     show: false, 
     feature: '' 

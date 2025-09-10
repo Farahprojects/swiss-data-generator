@@ -62,7 +62,7 @@ const Footer = () => {
 
               <li>
                 <Link 
-                  to="/report" 
+                  to="/" 
                   className="text-gray-500 hover:text-gray-900 transition-all duration-300 ease-out hover:translate-x-1 transform inline-block font-light group"
                 >
                   <span className="relative">
