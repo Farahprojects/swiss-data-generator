@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Message } from './types';
 import { Conversation } from '@/services/conversations';
 import { STORAGE_KEYS } from '@/utils/storageKeys';
+import { supabase } from '@/integrations/supabase/client';
 
 export type ChatStatus =
   | 'idle'
@@ -221,9 +222,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
   loadThreads: async () => {
     set({ isLoadingThreads: true, threadsError: null });
     try {
-      const { listConversations } = await import('@/services/conversations');
-      const conversations = await listConversations();
-      set({ threads: conversations, isLoadingThreads: false });
+      // Check if this is a guest user (no authenticated user)
+      const { data: { user } } = await supabase.auth.getUser();
+      const isGuest = !user;
+      
+      if (isGuest) {
+        // Guest users are one-shot threads - no thread management needed
+        // They already have chat_id in URL, that's all they need
+        set({ threads: [], isLoadingThreads: false });
+      } else {
+        // For authenticated users, use the existing conversations service
+        const { listConversations } = await import('@/services/conversations');
+        const conversations = await listConversations();
+        set({ threads: conversations, isLoadingThreads: false });
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to load threads';
       set({ threadsError: errorMessage, isLoadingThreads: false });

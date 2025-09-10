@@ -53,12 +53,13 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
 
-  // Load threads for both authenticated and guest users
+  // Load threads only for authenticated users
+  // Guest users are one-shot threads - no thread management needed
   useEffect(() => {
-    if (userType.isAuthenticated || userType.isGuest) {
+    if (userType.isAuthenticated) {
       loadThreads();
     }
-  }, [userType.isAuthenticated, userType.isGuest, loadThreads]);
+  }, [userType.isAuthenticated, loadThreads]);
 
   // Handle new chat creation - redirect to /c for unified handling
   const handleNewChat = async () => {
@@ -68,8 +69,12 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
 
   // Handle switching to a different conversation
   const handleSwitchToChat = (conversationId: string) => {
-    // Navigate to the specific thread in /c
-    window.location.href = `/c/${conversationId}`;
+    // Navigate to the appropriate route based on user type
+    if (userType.isGuest) {
+      window.location.href = `/c/g/${conversationId}`;
+    } else {
+      window.location.href = `/c/${conversationId}`;
+    }
   };
 
   // Handle deleting/clearing based on user type

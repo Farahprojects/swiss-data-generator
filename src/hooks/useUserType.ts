@@ -1,6 +1,6 @@
 import { useChatStore } from '@/core/store';
 import { useAuth } from '@/contexts/AuthContext';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useLocation } from 'react-router-dom';
 
 export type UserType = 'authenticated' | 'guest' | 'unauthenticated';
 
@@ -20,17 +20,18 @@ export interface UserTypeInfo {
 export const useUserType = (): UserTypeInfo => {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
+  const { pathname } = useLocation();
   const { chat_id } = useChatStore();
   
   // Get identifiers
   const urlUserId = searchParams.get('user_id');
   
-  // 🎯 Simple guest detection: chat_id starts with "guest-"
-  const isGuestChat = chat_id && chat_id.startsWith('guest-');
+  // 🎯 Simple guest detection: URL path starts with "/c/g/"
+  const isGuestPath = pathname.startsWith('/c/g/');
   
   // Determine user type with clear priority
   const isAuthenticated = !!user && !!urlUserId;
-  const isGuest = isGuestChat && !isAuthenticated; // Guest only if not authenticated
+  const isGuest = isGuestPath && !isAuthenticated; // Guest only if not authenticated
   const isUnauthenticated = !isAuthenticated && !isGuest;
   
   let type: UserType = 'unauthenticated';
@@ -83,9 +84,9 @@ export const getUserTypeConfig = (userType: UserType) => {
           }
         },
         newChatLabel: null, // Guests can't create new chats
-        threadSectionLabel: 'Chat history', // Show thread history for guests
+        threadSectionLabel: null, // No thread history for guests
         authButtonLabel: 'Sign in',
-        showThreadHistory: true, // Show thread history for guests
+        showThreadHistory: false, // No thread history for guests - they're one-shot
         showSearchChat: false,
         showAstroData: true // Guests can still use astro
       };
