@@ -20,9 +20,7 @@ import SubscriptionPaywall from './pages/SubscriptionPaywall';
 import SubscriptionSuccess from './pages/SubscriptionSuccess';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
-import StripeReturn from './pages/StripeReturn';
 import ChatContainer from './pages/ChatContainer';
-import LegacyChatRedirect from './components/LegacyChatRedirect';
 import NotFound from './pages/NotFound';
 import NavigationStateProvider from '@/contexts/NavigationStateContext';
 
@@ -60,15 +58,10 @@ const AuthedAppShell: React.FC = () => {
               <Route path="/subscription-paywall" element={<PublicOnlyGuard><SubscriptionPaywall /></PublicOnlyGuard>} />
               <Route path="/success" element={<PublicOnlyGuard><SubscriptionSuccess /></PublicOnlyGuard>} />
               <Route path="/cancel" element={<PublicOnlyGuard><SubscriptionPaywall /></PublicOnlyGuard>} />
-              <Route path="/stripe/return" element={<PublicOnlyGuard><StripeReturn /></PublicOnlyGuard>} />
               
               {/* New chat routes with clean /c namespace */}
               <Route path="/c" element={<ChatContainer />} />
               <Route path="/c/:threadId" element={<ChatContainer />} />
-              
-              {/* Legacy chat routes - redirect to /c with guest integration */}
-              <Route path="/chat" element={<LegacyChatRedirect />} />
-              <Route path="/chat/:chat_id" element={<LegacyChatRedirect />} />
               
               {/* Protected routes */}
               <Route path="/settings" element={<AuthGuard><UserSettings /></AuthGuard>} />

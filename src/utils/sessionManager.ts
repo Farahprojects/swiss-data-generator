@@ -109,7 +109,6 @@ export class SessionManager {
       // Guest report data
       'currentGuestReportId',
       'currentGuestReportId_timestamp',
-      'guest_payment_status',
       'guest_report_id',
       'guestId',
       'reportUrl',

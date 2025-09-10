@@ -370,23 +370,9 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
         if (response.paymentStatus === 'paid' || pricingResult.final_price_usd === 0) {
           console.log(`[AstroForm] ✅ Report ready (${pricingResult.final_price_usd === 0 ? 'free' : 'paid'}), setting up chat for: ${response.guestReportId}`);
           
-          // ✅ NEW INTEGRATION: Use the new /c path instead of legacy /chat
-          const { redirectToGuestChat } = await import('@/utils/guestChatRedirect');
-          
-          try {
-            const targetUrl = await redirectToGuestChat({
-              guest_id: response.guestReportId,
-              chat_id: response.chatId,
-              payment_completed: true
-            });
-            
-            console.log(`[AstroForm] 🔗 Navigating to new chat container: ${targetUrl}`);
-            navigate(targetUrl, { replace: true });
-          } catch (error) {
-            console.error('[AstroForm] Payment verification failed:', error);
-            toast.error(error instanceof Error ? error.message : 'Payment verification failed. Please try again.');
-            return;
-          }
+          // Navigate directly to chat
+          console.log(`[AstroForm] 🔗 Navigating to chat: /c/${response.chatId}`);
+          navigate(`/c/${response.chatId}`, { replace: true });
           
           return;
         } else {

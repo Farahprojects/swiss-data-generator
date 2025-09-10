@@ -69,7 +69,7 @@ export const validateGuestToken = async (token: string): Promise<{ isValid: bool
     const { supabase } = await import('@/integrations/supabase/client');
     const { data, error } = await supabase
       .from('guest_reports')
-      .select('id, email, has_report_log, report_data, payment_status')
+      .select('id, email, has_report_log, report_data')
       .eq('id', token)
       .single();
     
@@ -111,7 +111,7 @@ export const resetGuestSessionOn404 = async (): Promise<void> => {
     localStorage.removeItem("reportUrl");
     localStorage.removeItem("pending_report_email");
     localStorage.removeItem("currentGuestReportId");
-    localStorage.removeItem("guest_payment_status");
+    
     localStorage.removeItem("guest_report_id");
     sessionStorage.removeItem("guestId");
     sessionStorage.removeItem("reportUrl");
@@ -176,7 +176,7 @@ export const clearAllSessionData = async (stateResetCallbacks?: (() => void)[]):
     const storageKeys = [
       'currentGuestReportId',
       'currentGuestReportId_timestamp', // New timestamp tracking
-      'guest_payment_status',
+      
       'guest_report_id',
       'last_route',
       'last_route_params',

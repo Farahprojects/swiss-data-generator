@@ -28,7 +28,7 @@ const ReportChatScreen = () => {
   const guestId = getGuestId();
   const userId = searchParams.get('user_id');
   const urlChatId = searchParams.get('chat_id');
-  const paymentCompleted = searchParams.get('payment_completed') === 'true';
+  
   const hasTriggeredGenerationRef = useRef(false);
   
   // Auth detection
@@ -46,11 +46,11 @@ const ReportChatScreen = () => {
   // 3. If payment is confirmed → Calls trigger-report-generation
   // 4. Session persists in URL → Survives refresh, shareable, redirectable
   
-  // Main report flow checker - only triggers when payment is completed (not on every refresh)
+  // Main report flow checker - runs for guests
   useEffect(() => {
     
-    // Only run payment validation if payment was just completed AND rehydration is complete
-    if (!guestId || !paymentCompleted || !isRehydrated || isDeleted || hasTriggeredGenerationRef.current) return;
+    // Only run for guests with rehydration complete
+    if (!guestId || !isRehydrated || isDeleted || hasTriggeredGenerationRef.current) return;
 
     // 🚫 GUARD: Don't check if report is already ready in store (prevents refresh loops)
     if (useReportReadyStore.getState().isReportReady) {
@@ -172,7 +172,7 @@ const ReportChatScreen = () => {
     // Start the check immediately
     checkAndTriggerReport();
 
-  }, [guestId, paymentCompleted, isRehydrated, isDeleted]);
+  }, [guestId, isRehydrated, isDeleted]);
 
 
   // URL change listener - React will automatically re-render when URL params change
