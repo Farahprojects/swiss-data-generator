@@ -24,16 +24,7 @@ export const AuthPage = () => {
     return () => clearTimeout(timer);
   }, [user, session, loading, navigate]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Verifying your email...</p>
-        </div>
-      </div>
-    );
-  }
+  // Always render the UI with lazy loading - no spinners
 
   if (user && session) {
     return (
@@ -41,7 +32,6 @@ export const AuthPage = () => {
         <div className="text-center">
           <h1 className="text-2xl font-semibold mb-4">Email Verified!</h1>
           <p className="text-muted-foreground mb-4">Redirecting you to the app...</p>
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
         </div>
       </div>
     );

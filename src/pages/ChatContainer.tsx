@@ -224,24 +224,16 @@ const ChatContainer: React.FC = () => {
     }
   };
 
-  // Always render the UI, show loading state only in content area if needed
-  const showLoadingInContent = isLoading && userType === 'unauthenticated';
-
+  // Always render the UI with lazy loading - no spinners
   return (
     <div className="flex h-screen">
-      {showLoadingInContent ? (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-muted-foreground">Loading...</div>
-        </div>
-      ) : (
-        <PricingProvider>
-          <ReportModalProvider>
-            <MobileViewportLock active>
-              <ChatBox />
-            </MobileViewportLock>
-          </ReportModalProvider>
-        </PricingProvider>
-      )}
+      <PricingProvider>
+        <ReportModalProvider>
+          <MobileViewportLock active>
+            <ChatBox />
+          </MobileViewportLock>
+        </ReportModalProvider>
+      </PricingProvider>
     </div>
   );
 };

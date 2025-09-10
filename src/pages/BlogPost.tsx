@@ -28,17 +28,7 @@ const BlogPost = () => {
     enabled: !!slug,
   });
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen flex-col bg-white">
-        <UnifiedNavigation />
-        <main className="flex-grow flex items-center justify-center">
-          <TheraLoader />
-        </main>
-        <Footer />
-      </div>
-    );
-  }
+  // Always render the UI with lazy loading - no spinners
 
   if (error || !post) {
     return <Navigate to="/blog" replace />;

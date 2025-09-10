@@ -41,18 +41,9 @@ export const AuthGuard = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to={`/auth/password${location.search}`} replace />;
   }
   
+  // Handle loading states without spinners - just return null for lazy loading
   if (loading || isPendingEmailCheck || isValidating) {
-    // Still loading auth state, checking for pending email, or validating session
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">
-            {isValidating ? 'Validating session...' : 'Loading...'}
-          </p>
-        </div>
-      </div>
-    );
+    return null; // Lazy loading - no spinner
   }
   
   // Not logged in, redirect to login

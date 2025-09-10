@@ -133,20 +133,7 @@ const Pricing: React.FC = () => {
     }
   };
 
-  if (pricingLoading) {
-    return (
-      <div className="flex min-h-screen flex-col">
-        <Navbar />
-        <div className="flex-grow flex items-center justify-center bg-white">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading pricing...</p>
-          </div>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
+  // Always render the UI with lazy loading - no spinners
 
   return (
     <div className="flex min-h-screen flex-col">
