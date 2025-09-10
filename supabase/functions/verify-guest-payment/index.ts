@@ -90,6 +90,21 @@ serve(async (req) => {
       })
     );
 
+    // Fire-and-forget: Update report_generated to TRUE in guest_reports
+    EdgeRuntime.waitUntil(
+      supabase
+        .from("guest_reports")
+        .update({ report_generated: true })
+        .eq("chat_id", chat_id)
+        .then(({ error }) => {
+          if (error) {
+            console.error(`❌ [verify-guest-payment] Failed to update report_generated: ${chat_id}`, error);
+          } else {
+            console.log(`✅ [verify-guest-payment] Updated report_generated=TRUE for chat_id: ${chat_id}`);
+          }
+        })
+    );
+
     console.log(`✅ [verify-guest-payment] Successfully passed to translator-edge with chat_id: ${guestReport.chat_id}`);
 
     return new Response(JSON.stringify({
