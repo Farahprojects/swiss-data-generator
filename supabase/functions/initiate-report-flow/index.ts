@@ -182,8 +182,8 @@ serve(async (req) => {
     const isFreeReport = final === 0;
     const isAI = priceData.is_ai;
 
-    // 4) Generate chat_id for secure guest chat sessions (prefixed with "guest")
-    const chatId = `guest-${crypto.randomUUID()}`;
+    // 4) Generate chat_id for secure guest chat sessions (use regular UUID)
+    const chatId = crypto.randomUUID();
     
     // 5) Upsert with minimal returning (still awaited)
     const guestReportData = {
