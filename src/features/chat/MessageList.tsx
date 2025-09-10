@@ -45,11 +45,7 @@ const TurnItem = ({ turn, isLastTurn, isFromHistory }: { turn: Turn; isLastTurn:
       {assistantMessage && (
         <div className="flex items-end gap-3 justify-start mb-8">
           <div 
-            className={`px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl ${
-              assistantMessage.role === 'system' 
-                ? 'bg-blue-50 border border-blue-200 text-blue-800' 
-                : 'text-black'
-            }`}
+            className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black"
             style={{ overflowAnchor: 'none' }}
           >
             <p className="text-base font-light leading-relaxed text-left">
