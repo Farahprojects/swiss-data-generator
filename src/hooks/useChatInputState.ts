@@ -12,13 +12,7 @@ export const useChatInputState = () => {
   const chatState = useSyncExternalStore(
     useChatStore.subscribe,
     () => useChatStore.getState(),
-    () => ({
-      status: 'idle' as const,
-      isAssistantTyping: false,
-      chat_id: null,
-      setAssistantTyping: () => {},
-      addThread: async () => '',
-    })
+    () => useChatStore.getState()
   );
 
   // Subscribe to report ready store state

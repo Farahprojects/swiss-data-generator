@@ -58,34 +58,16 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     }
   }, [userType.isAuthenticated, loadThreads]);
 
-  // Handle new chat creation for authenticated users  
+  // Handle new chat creation - redirect to /c for unified handling
   const handleNewChat = async () => {
-    if (!user) return;
-    
-    try {
-      // Use the unified store method
-      const store = useChatStore.getState();
-      const newChatId = await store.startNewConversation(user.id);
-      
-      // Load threads to update the list
-      await loadThreads();
-      
-      // Optionally open astro modal (user can close it)
-      openReportModal('new');
-      
-      console.log('[ChatThreadsSidebar] New chat created:', newChatId);
-    } catch (error) {
-      console.error('[ChatThreadsSidebar] Failed to create new chat:', error);
-    }
+    // Navigate to /c which will handle new chat creation
+    window.location.href = '/c';
   };
 
   // Handle switching to a different conversation
   const handleSwitchToChat = (conversationId: string) => {
-    // Use the unified store method - auth users don't have guest_id
-    const store = useChatStore.getState();
-    store.startConversation(conversationId);
-    
-    console.log('[ChatThreadsSidebar] Switched to chat:', conversationId);
+    // Navigate to the specific thread in /c
+    window.location.href = `/c/${conversationId}`;
   };
 
   // Handle deleting/clearing based on user type
@@ -95,6 +77,9 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
       try {
         await removeThread(conversationToDelete);
         console.log('[ChatThreadsSidebar] Conversation deleted:', conversationToDelete);
+        
+        // Navigate back to /c after deletion
+        window.location.href = '/c';
       } catch (error) {
         console.error('[ChatThreadsSidebar] Failed to delete conversation:', error);
       }
@@ -112,11 +97,11 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         
         // Clear session storage AND database
         const { streamlinedSessionReset } = await import('@/utils/streamlinedSessionReset');
-        await streamlinedSessionReset({ redirectTo: '/', cleanDatabase: true });
+        await streamlinedSessionReset({ redirectTo: '/c', cleanDatabase: true });
       } catch (error) {
         console.error('[ChatThreadsSidebar] ❌ Session cleanup failed:', error);
         // Fallback: Force navigation anyway
-        window.location.href = '/';
+        window.location.href = '/c';
       }
     }
   };

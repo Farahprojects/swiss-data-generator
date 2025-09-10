@@ -24,6 +24,7 @@ import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import StripeReturn from './pages/StripeReturn';
 import ReportChatScreen from './screens/ReportChatScreen';
+import ChatContainer from './pages/ChatContainer';
 import NotFound from './pages/NotFound';
 import NavigationStateProvider from '@/contexts/NavigationStateContext';
 
@@ -63,7 +64,11 @@ const AuthedAppShell: React.FC = () => {
               <Route path="/cancel" element={<PublicOnlyGuard><SubscriptionPaywall /></PublicOnlyGuard>} />
               <Route path="/stripe/return" element={<PublicOnlyGuard><StripeReturn /></PublicOnlyGuard>} />
               
-              {/* Chat routes - accessible to both authenticated and guest users */}
+              {/* New chat routes with clean /c namespace */}
+              <Route path="/c" element={<ChatContainer />} />
+              <Route path="/c/:threadId" element={<ChatContainer />} />
+              
+              {/* Legacy chat routes - redirect to /c */}
               <Route path="/chat" element={<ReportChatScreen />} />
               <Route path="/chat/:chat_id" element={<ReportChatScreen />} />
               
