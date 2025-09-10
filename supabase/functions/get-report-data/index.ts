@@ -110,22 +110,17 @@ serve(async (req) => {
       console.warn(`[get-report-data] Could not fetch translator_logs:`, translatorLogsError);
     }
 
-    // Check if we have the required data
+    // Check if we have any data (either report text OR Swiss data)
     const hasReportText = !!reportLogData?.report_text;
     const hasSwissData = !!translatorLogData?.swiss_data;
+    const hasAnyData = hasReportText || hasSwissData;
     
-    // Determine if this is an AI report based on whether report_text exists
-    const isAIReport = hasReportText;
-    
-    // For AI reports, we need report_text. For astro data only, we need swiss_data
-    const isReady = isAIReport ? hasReportText : hasSwissData;
-    
-    if (!isReady) {
-      console.warn(`[get-report-data] Report not ready - ${isAIReport ? 'no report_text' : 'no swiss_data'} found: ${guest_report_id}`);
+    if (!hasAnyData) {
+      console.warn(`[get-report-data] No data found - no report_text or swiss_data: ${guest_report_id}`);
       return new Response(
         JSON.stringify({ 
           ready: false, 
-          error: isAIReport ? "AI report data not yet cached" : "Astro data not yet cached",
+          error: "No report or astro data found",
           timestamp: new Date().toISOString()
         }),
         { status: 202, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -137,8 +132,8 @@ serve(async (req) => {
       report_content: reportLogData?.report_text || null,
       swiss_data: translatorLogData?.swiss_data || null,
       metadata: {
-        content_type: isAIReport ? (hasSwissData ? 'both' : 'ai') : 'astro',
-        has_ai_report: isAIReport,
+        content_type: hasReportText && hasSwissData ? 'both' : (hasReportText ? 'ai' : 'astro'),
+        has_ai_report: hasReportText,
         has_swiss_data: hasSwissData,
         is_ready: true,
         report_type: 'unknown' // No longer available from guest_reports
