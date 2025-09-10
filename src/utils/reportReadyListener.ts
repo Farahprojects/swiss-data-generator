@@ -13,15 +13,55 @@ export class ReportReadyListener {
 
   constructor(private options: ReportReadyListenerOptions) {}
 
-  start(): void {
+  async start(): Promise<void> {
     if (this.isListening) {
       console.warn('[ReportReadyListener] Already listening, ignoring start request');
       return;
     }
 
-    console.log(`[ReportReadyListener] Starting WebSocket listener for chat_id: ${this.options.chatId}`);
+    console.log(`[ReportReadyListener] Starting guaranteed delivery listener for chat_id: ${this.options.chatId}`);
     this.isListening = true;
 
+    // Step 1: Query current state immediately to catch any existing signals
+    await this.checkCurrentState();
+
+    // Step 2: Subscribe to realtime updates for new signals
+    this.setupRealtimeSubscription();
+  }
+
+  private async checkCurrentState(): Promise<void> {
+    try {
+      console.log(`[ReportReadyListener] Checking current state for chat_id: ${this.options.chatId}`);
+      
+      const { data, error } = await supabase
+        .from('report_ready_signals')
+        .select('*')
+        .eq('chat_id', this.options.chatId)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) {
+        console.error(`[ReportReadyListener] Error checking current state:`, error);
+        this.options.onError('Failed to check current report state');
+        return;
+      }
+
+      if (data && data.length > 0) {
+        console.log(`[ReportReadyListener] ✅ Found existing report ready signal for chat_id: ${this.options.chatId}`, data[0]);
+        await this.handleReportReady(data[0]);
+        return; // Don't set up subscription if we already found the signal
+      }
+
+      console.log(`[ReportReadyListener] No existing report ready signal found for chat_id: ${this.options.chatId}`);
+    } catch (error) {
+      console.error(`[ReportReadyListener] Exception checking current state:`, error);
+      this.options.onError('Failed to check current report state');
+    }
+  }
+
+  private setupRealtimeSubscription(): void {
+    console.log(`[ReportReadyListener] Setting up realtime subscription for chat_id: ${this.options.chatId}`);
+    
     // Create a real-time subscription to report_ready_signals table
     this.channel = supabase
       .channel(`report-ready-${this.options.chatId}`)
@@ -34,7 +74,7 @@ export class ReportReadyListener {
           filter: `chat_id=eq.${this.options.chatId}`
         },
         (payload) => {
-          console.log(`[ReportReadyListener] ✅ Report ready signal received for chat_id: ${this.options.chatId}`, payload);
+          console.log(`[ReportReadyListener] ✅ New report ready signal received for chat_id: ${this.options.chatId}`, payload);
           this.handleReportReady(payload.new);
         }
       )

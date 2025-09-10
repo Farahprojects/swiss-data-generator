@@ -64,7 +64,7 @@ export class PaymentFlowOrchestrator {
     await this.triggerReportGeneration(chatId);
 
     // Start listening for report ready signal
-    this.startReportReadyListener(chatId);
+    await this.startReportReadyListener(chatId);
   }
 
   private async triggerReportGeneration(chatId: string): Promise<void> {
@@ -94,7 +94,7 @@ export class PaymentFlowOrchestrator {
     }
   }
 
-  private startReportReadyListener(chatId: string): void {
+  private async startReportReadyListener(chatId: string): Promise<void> {
     console.log(`[PaymentFlowOrchestrator] Starting report ready listener for chat_id: ${chatId}`);
     
     this.reportReadyListener = createReportReadyListener({
@@ -103,7 +103,7 @@ export class PaymentFlowOrchestrator {
       onError: this.handleError.bind(this)
     });
 
-    this.reportReadyListener.start();
+    await this.reportReadyListener.start();
   }
 
   private handleReportReady(chatId: string): void {
