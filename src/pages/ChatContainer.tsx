@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useChatStore } from '@/core/store';
 import { useUserType } from '@/hooks/useUserType';
 import { ChatThreadsSidebar } from '@/features/chat/ChatThreadsSidebar';
-import { Conversation } from '@/services/conversations';
+import { ChatBox } from '@/features/chat/ChatBox';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Thread {
@@ -261,19 +261,13 @@ const ChatContainer: React.FC = () => {
       </div>
       
       {/* Main content */}
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1">
         {showLoadingInContent ? (
-          <div className="text-muted-foreground">Loading...</div>
-        ) : threadId ? (
-          <div className="text-center">
-            <h2 className="text-xl font-semibold mb-2">Chat Thread: {threadId}</h2>
-            <p className="text-muted-foreground">Chat interface will be integrated here</p>
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-muted-foreground">Loading...</div>
           </div>
         ) : (
-          <div className="text-center">
-            <h2 className="text-xl font-semibold mb-2">Welcome to Chat</h2>
-            <p className="text-muted-foreground">Select a thread or create a new chat to get started</p>
-          </div>
+          <ChatBox />
         )}
       </div>
     </div>
