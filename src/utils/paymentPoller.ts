@@ -49,7 +49,7 @@ export class PaymentPoller {
     try {
       const { data, error } = await supabase
         .from('guest_reports')
-        .select('payment_status')
+        .select('payment_status, report_generated')
         .eq('chat_id', this.options.chatId)
         .single();
 
@@ -65,10 +65,18 @@ export class PaymentPoller {
         return;
       }
 
-      console.log(`[PaymentPoller] Payment status for chat_id ${this.options.chatId}: ${data.payment_status}`);
+      console.log(`[PaymentPoller] Payment status for chat_id ${this.options.chatId}: ${data.payment_status}, report_generated: ${data.report_generated}`);
 
       if (data.payment_status === 'paid') {
-        console.log(`[PaymentPoller] ✅ Payment confirmed for chat_id: ${this.options.chatId}`);
+        // Check if report is already generated
+        if (data.report_generated === true) {
+          console.log(`[PaymentPoller] ✅ Payment confirmed and report already generated for chat_id: ${this.options.chatId} - skipping verify-guest-payment`);
+          this.stop();
+          this.options.onPaid(this.options.chatId);
+          return;
+        }
+
+        console.log(`[PaymentPoller] ✅ Payment confirmed for chat_id: ${this.options.chatId} - triggering report generation`);
         this.stop();
         this.options.onPaid(this.options.chatId);
         return;

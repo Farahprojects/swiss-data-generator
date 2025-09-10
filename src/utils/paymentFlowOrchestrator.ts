@@ -69,6 +69,27 @@ export class PaymentFlowOrchestrator {
 
   private async triggerReportGeneration(chatId: string): Promise<void> {
     try {
+      console.log(`[PaymentFlowOrchestrator] Checking report generation status for chat_id: ${chatId}`);
+      
+      // First check if report is already generated
+      const { data: guestReport, error: checkError } = await supabase
+        .from('guest_reports')
+        .select('report_generated')
+        .eq('chat_id', chatId)
+        .single();
+
+      if (checkError) {
+        console.error(`[PaymentFlowOrchestrator] Error checking report status:`, checkError);
+        throw new Error(`Failed to check report status: ${checkError.message}`);
+      }
+
+      if (guestReport?.report_generated === true) {
+        console.log(`[PaymentFlowOrchestrator] ✅ Report already generated for chat_id: ${chatId} - skipping verify-guest-payment`);
+        // Notify UI that report is generating (since it's already done)
+        this.options.onReportGenerating();
+        return;
+      }
+
       console.log(`[PaymentFlowOrchestrator] Triggering report generation for chat_id: ${chatId}`);
       
       const { data, error } = await supabase.functions.invoke('verify-guest-payment', {
