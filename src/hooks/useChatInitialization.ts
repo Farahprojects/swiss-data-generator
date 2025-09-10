@@ -19,11 +19,11 @@ export const useChatInitialization = () => {
   
   useEffect(() => {
     console.log(`[useChatInitialization] useEffect triggered - threadId: ${threadId}, chat_id: ${chat_id}`);
-    if (threadId && threadId !== chat_id) {
+    if (threadId) {
       console.log(`[useChatInitialization] Initializing chat: ${threadId}`);
       chatController.initializeForConversation(threadId);
     } else {
-      console.log(`[useChatInitialization] Skipping initialization - threadId: ${threadId}, chat_id: ${chat_id}`);
+      console.log(`[useChatInitialization] No threadId available`);
     }
-  }, [threadId, chat_id]);
+  }, [threadId]);
 };
