@@ -49,14 +49,10 @@ export const useChatInputState = () => {
     })
   );
 
-  // Memoized derived state to prevent unnecessary recalculations
+  // Simplified: Only show stop icon during report generation
   const isAssistantGenerating = useMemo(() => 
-    reportState.isPolling || 
-    chatState.status === 'thinking' || 
-    chatState.status === 'transcribing' || 
-    chatState.status === 'speaking' ||
     paymentFlowState.isReportGenerating,
-    [reportState.isPolling, chatState.status, paymentFlowState.isReportGenerating]
+    [paymentFlowState.isReportGenerating]
   );
 
   const isRecording = useMemo(() => 

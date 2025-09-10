@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { usePaymentFlowStore } from '@/stores/paymentFlowStore';
 import { createPaymentFlowOrchestrator, PaymentFlowOrchestrator } from '@/utils/paymentFlowOrchestrator';
+import { useChatStore } from '@/core/store';
 
 interface UsePaymentFlowOptions {
   chatId: string | null;
@@ -39,7 +40,7 @@ export const usePaymentFlow = ({ chatId, enabled }: UsePaymentFlowOptions) => {
       onReportReady: () => {
         console.log(`[usePaymentFlow] Report ready for chat_id: ${chatId}`);
         setReportReady(true);
-        setReportGenerating(false);
+        // Don't set setReportGenerating(false) here - let typing completion handle it
       },
       onError: (error) => {
         console.error(`[usePaymentFlow] Error for chat_id: ${chatId}:`, error);
@@ -60,6 +61,16 @@ export const usePaymentFlow = ({ chatId, enabled }: UsePaymentFlowOptions) => {
       }
     };
   }, [chatId, enabled, setPaymentConfirmed, setReportGenerating, setReportReady, setError]);
+
+  // Listen for typing completion to stop the stop icon
+  const isAssistantTyping = useChatStore(state => state.isAssistantTyping);
+  const { isReportGenerating } = usePaymentFlowStore();
+  useEffect(() => {
+    if (!isAssistantTyping && isReportGenerating) {
+      console.log(`[usePaymentFlow] Typing completed, stopping report generating state for chat_id: ${chatId}`);
+      setReportGenerating(false);
+    }
+  }, [isAssistantTyping, isReportGenerating, setReportGenerating, chatId]);
 
   // Reset state when chatId changes
   useEffect(() => {
