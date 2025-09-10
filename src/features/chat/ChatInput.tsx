@@ -76,6 +76,10 @@ export const ChatInput = () => {
           console.error('[ChatInput] Failed to create conversation:', error);
           return; // Don't send message if conversation creation failed
         }
+      } else if (!isAuthenticated && !chat_id) {
+        // Guest users must have chat_id from backend - don't create phantom IDs
+        console.error('[ChatInput] Guest users require chat_id from backend threads-manager');
+        return;
       }
       
       // Immediately show stop icon when sending message

@@ -111,20 +111,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       
       return conversationId;
     } else {
-      // Guest user: create temporary chat_id
-      const newChatId = crypto.randomUUID();
-      set({ 
-        chat_id: newChatId,
-        guest_id: null, // Will be set when guest_id is known
-        messages: [], 
-        status: 'idle', 
-        error: null,
-        messageLoadError: null,
-        lastMessagesFetch: null,
-        isAssistantTyping: false
-      });
-      
-      return newChatId;
+      // Guest user: No longer create chat IDs on frontend
+      // All guest chat IDs must come from backend (threads-manager edge function)
+      throw new Error('Guest users cannot create chat IDs on frontend. Use threads-manager edge function.');
     }
   },
 
