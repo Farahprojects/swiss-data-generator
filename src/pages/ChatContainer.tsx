@@ -88,11 +88,43 @@ const ChatContainer: React.FC = () => {
     }
   }, [threadId, threads, startConversation, navigate, userType, guestId]);
 
-  // Initial load - always refetch on mount and user changes
-  useEffect(() => {
-    if (userType !== 'unauthenticated') {
-      fetchThreads();
+  // Initialize guest ID for unauthenticated users
+  const initializeGuestFlow = async () => {
+    if (userType === 'unauthenticated') {
+      try {
+        // Create or fetch guest session via edge function
+        const { data, error } = await supabase.functions.invoke('threads-manager', {
+          body: { action: 'initialize_guest' }
+        });
+        
+        if (error) throw error;
+        
+        // Store guest_id in session storage for persistence
+        if (data?.guest_id) {
+          sessionStorage.setItem('therai_guest_id', data.guest_id);
+          // Trigger re-evaluation of userType
+          window.dispatchEvent(new Event('guest-initialized'));
+        }
+      } catch (err) {
+        console.error('Error initializing guest flow:', err);
+        setError('Failed to initialize session');
+      }
     }
+  };
+
+  // Initial load - always try to fetch data
+  useEffect(() => {
+    const handleDataLoad = async () => {
+      if (userType === 'authenticated' || userType === 'guest') {
+        await fetchThreads();
+      } else if (userType === 'unauthenticated') {
+        // Initialize guest flow for new unauthenticated users
+        await initializeGuestFlow();
+      }
+      setIsLoading(false);
+    };
+
+    handleDataLoad();
   }, [userType, user?.id, guestId]);
 
   // Cleanup function for realtime subscriptions (if any)
@@ -118,7 +150,10 @@ const ChatContainer: React.FC = () => {
         if (error) throw error;
         newThreadId = data.thread_id;
       } else {
-        throw new Error('No valid user or guest ID');
+        // For unauthenticated users, initialize guest flow first
+        await initializeGuestFlow();
+        // After initialization, the component will re-render with guest ID
+        return;
       }
       
       // Refresh threads and navigate to new thread
@@ -167,22 +202,8 @@ const ChatContainer: React.FC = () => {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex h-screen">
-        <div className="w-64 bg-background border-r border-border p-4">
-          <div className="animate-pulse space-y-2">
-            <div className="h-4 bg-muted rounded"></div>
-            <div className="h-4 bg-muted rounded w-3/4"></div>
-            <div className="h-4 bg-muted rounded w-1/2"></div>
-          </div>
-        </div>
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-muted-foreground">Loading...</div>
-        </div>
-      </div>
-    );
-  }
+  // Always render the UI, show loading state only in content area if needed
+  const showLoadingInContent = isLoading && userType === 'unauthenticated';
 
   return (
     <div className="flex h-screen">
@@ -241,15 +262,54 @@ const ChatContainer: React.FC = () => {
       
       {/* Main content */}
       <div className="flex-1 flex items-center justify-center">
-        {threadId ? (
+        {showLoadingInContent ? (
+          <div className="text-center">
+            <div className="text-muted-foreground mb-4">Initializing session...</div>
+            <div className="animate-pulse h-4 w-32 bg-muted rounded mx-auto"></div>
+          </div>
+        ) : threadId ? (
           <div className="text-center">
             <h2 className="text-xl font-semibold mb-2">Chat Thread: {threadId}</h2>
             <p className="text-muted-foreground">Chat interface will be integrated here</p>
+            {userType === 'unauthenticated' && (
+              <div className="mt-4 p-4 bg-muted/20 rounded-lg">
+                <p className="text-sm text-muted-foreground mb-2">
+                  You're browsing as a guest. Sign in to save your chats!
+                </p>
+                <button className="text-sm text-primary hover:underline">
+                  Sign In
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="text-center">
             <h2 className="text-xl font-semibold mb-2">Welcome to Chat</h2>
-            <p className="text-muted-foreground">Select a thread or create a new chat to get started</p>
+            <p className="text-muted-foreground mb-4">
+              {userType === 'authenticated' 
+                ? 'Select a thread or create a new chat to get started'
+                : 'Create your first chat to get started'
+              }
+            </p>
+            {userType === 'unauthenticated' && (
+              <div className="mt-4 p-4 bg-muted/20 rounded-lg max-w-md">
+                <p className="text-sm text-muted-foreground mb-2">
+                  You can start chatting as a guest or sign in to save your conversations.
+                </p>
+                <div className="space-x-2">
+                  <button className="text-sm text-primary hover:underline">
+                    Sign In
+                  </button>
+                  <span className="text-muted-foreground">|</span>
+                  <button 
+                    onClick={handleNewChat}
+                    className="text-sm text-primary hover:underline"
+                  >
+                    Continue as Guest
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

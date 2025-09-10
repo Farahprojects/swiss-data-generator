@@ -29,17 +29,24 @@ serve(async (req) => {
       });
     }
 
-    if (!guest_id) {
-      return new Response('guest_id is required', { 
-        status: 400, 
-        headers: corsHeaders 
-      });
-    }
-
     let result;
 
     switch (action) {
+      case 'initialize_guest':
+        // Create a new guest_id and return it (no DB operations needed)
+        const newGuestId = crypto.randomUUID();
+        console.log(`[threads-manager] Initialized new guest: ${newGuestId}`);
+        
+        result = { guest_id: newGuestId };
+        break;
       case 'list_threads':
+        if (!guest_id) {
+          return new Response('guest_id is required', { 
+            status: 400, 
+            headers: corsHeaders 
+          });
+        }
+        
         // List all guest chat threads
         const { data: guestReports, error: listError } = await supabaseClient
           .from('guest_reports')
@@ -61,6 +68,13 @@ serve(async (req) => {
         break;
 
       case 'create_thread':
+        if (!guest_id) {
+          return new Response('guest_id is required', { 
+            status: 400, 
+            headers: corsHeaders 
+          });
+        }
+        
         // Create a new guest chat thread - SERVER-SIDE GENERATION
         const newChatId = crypto.randomUUID();
         
@@ -93,6 +107,13 @@ serve(async (req) => {
         break;
 
       case 'delete_thread':
+        if (!guest_id) {
+          return new Response('guest_id is required', { 
+            status: 400, 
+            headers: corsHeaders 
+          });
+        }
+        
         // Delete guest chat thread and its messages - VERIFY OWNERSHIP
         if (!thread_id) {
           return new Response('thread_id is required for delete', { 
