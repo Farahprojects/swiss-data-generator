@@ -370,33 +370,29 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
         if (response.paymentStatus === 'paid' || pricingResult.final_price_usd === 0) {
           console.log(`[AstroForm] ✅ Report ready (${pricingResult.final_price_usd === 0 ? 'free' : 'paid'}), setting up chat for: ${response.guestReportId}`);
           
-          // Navigate to chat page with guest_id and chat_id for session persistence
-          // Add payment_completed flag to trigger validation only when needed
-          // Store guest data in sessionStorage instead of URL
-          sessionStorage.setItem('therai_guest_report_id', response.guestReportId);
-          const newUrl = `/chat?chat_id=${response.chatId}&payment_completed=true`;
-          navigate(newUrl, { replace: true });
+          // ✅ NEW INTEGRATION: Use the new /c path instead of legacy /chat
+          const { redirectToGuestChat } = await import('@/utils/guestChatRedirect');
+          const targetUrl = redirectToGuestChat({
+            guest_id: response.guestReportId,
+            chat_id: response.chatId,
+            payment_completed: true
+          });
           
-          console.log(`[AstroForm] 🔗 Navigating to chat page: ${newUrl}`);
+          console.log(`[AstroForm] 🔗 Navigating to new chat container: ${targetUrl}`);
+          navigate(targetUrl, { replace: true });
           
-          // Hydrate chat store immediately so chat is usable right away
-          try {
-            useChatStore.getState().startConversation(response.chatId, response.guestReportId);
-            console.log(`[AstroForm] 🧠 Store hydrated with chat_id and guest_id: ${response.chatId}, ${response.guestReportId}`);
-          } catch (e) {
-            console.error('[AstroForm] ❌ Failed to hydrate chat store:', e);
-          }
-          
-          // Store the chat_id and guest_report_id for the chat session
+          return;
+        } else {
+          // Handle other cases if needed
           onSubmit({
             ...formData,
             chat_id: response.chatId,
             guest_report_id: response.guestReportId
           });
-        } else {
-          console.error('[AstroForm] ❌ Unexpected response - no checkout URL and not paid/free');
-          toast.error('Unexpected response from server');
         }
+      } else {
+        console.error('[AstroForm] ❌ Unexpected response - no checkout URL and not paid/free');
+        toast.error('Unexpected response from server');
       }
     } catch (error) {
       console.error('Error initiating report flow:', error);

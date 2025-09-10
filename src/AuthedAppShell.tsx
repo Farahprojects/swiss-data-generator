@@ -18,13 +18,11 @@ import About from './pages/About';
 import Legal from './pages/Legal';
 import SubscriptionPaywall from './pages/SubscriptionPaywall';
 import SubscriptionSuccess from './pages/SubscriptionSuccess';
-
-
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import StripeReturn from './pages/StripeReturn';
-import ReportChatScreen from './screens/ReportChatScreen';
 import ChatContainer from './pages/ChatContainer';
+import LegacyChatRedirect from './components/LegacyChatRedirect';
 import NotFound from './pages/NotFound';
 import NavigationStateProvider from '@/contexts/NavigationStateContext';
 
@@ -68,9 +66,9 @@ const AuthedAppShell: React.FC = () => {
               <Route path="/c" element={<ChatContainer />} />
               <Route path="/c/:threadId" element={<ChatContainer />} />
               
-              {/* Legacy chat routes - redirect to /c */}
-              <Route path="/chat" element={<ReportChatScreen />} />
-              <Route path="/chat/:chat_id" element={<ReportChatScreen />} />
+              {/* Legacy chat routes - redirect to /c with guest integration */}
+              <Route path="/chat" element={<LegacyChatRedirect />} />
+              <Route path="/chat/:chat_id" element={<LegacyChatRedirect />} />
               
               {/* Protected routes */}
               <Route path="/settings" element={<AuthGuard><UserSettings /></AuthGuard>} />
