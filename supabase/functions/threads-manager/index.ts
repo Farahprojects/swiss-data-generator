@@ -75,35 +75,74 @@ serve(async (req) => {
           });
         }
         
-        // Create a new guest chat thread - SERVER-SIDE GENERATION
-        const newChatId = crypto.randomUUID();
+        // Step 1: Validate payment status before creating thread
+        console.log(`[threads-manager] Validating payment status for guest ${guest_id}`);
         
-        const { data: newReport, error: createError } = await supabaseClient
+        const { data: existingGuestReport, error: queryError } = await supabaseClient
           .from('guest_reports')
-          .insert({
-            chat_id: newChatId,
-            user_id: guest_id, // guest_id stored in user_id field
-            email: 'guest@temp.email', // placeholder
-            report_data: {},
-            amount_paid: 0,
-            payment_status: 'pending'
-          })
-          .select()
+          .select('id, payment_status, chat_id')
+          .eq('id', guest_id)
           .single();
 
-        if (createError) throw createError;
+        if (queryError || !existingGuestReport) {
+          console.log(`[threads-manager] No guest report found for ${guest_id}, creating new one`);
+          
+          // Create a new guest chat thread - SERVER-SIDE GENERATION
+          const newChatId = crypto.randomUUID();
+          
+          const { data: newReport, error: createError } = await supabaseClient
+            .from('guest_reports')
+            .insert({
+              chat_id: newChatId,
+              user_id: guest_id, // guest_id stored in user_id field
+              email: 'guest@temp.email', // placeholder
+              report_data: {},
+              amount_paid: 0,
+              payment_status: 'pending'
+            })
+            .select()
+            .single();
 
-        console.log(`[threads-manager] Created new thread ${newChatId} for guest ${guest_id}`);
+          if (createError) throw createError;
 
-        result = { 
-          thread_id: newChatId,
-          thread: {
-            id: newChatId,
-            title: title || `Chat ${newChatId.slice(0, 8)}...`,
-            created_at: newReport.created_at,
-            updated_at: newReport.created_at
+          console.log(`[threads-manager] Created new thread ${newChatId} for guest ${guest_id}`);
+
+          result = { 
+            thread_id: newChatId,
+            thread: {
+              id: newChatId,
+              title: title || `Chat ${newChatId.slice(0, 8)}...`,
+              created_at: newReport.created_at,
+              updated_at: newReport.created_at
+            }
+          };
+        } else {
+          // Step 2: Check payment status for existing guest
+          if (existingGuestReport.payment_status !== 'paid') {
+            console.log(`[threads-manager] Payment not completed for guest ${guest_id}, status: ${existingGuestReport.payment_status}`);
+            return new Response(JSON.stringify({
+              error: 'Payment not completed',
+              payment_status: existingGuestReport.payment_status,
+              message: 'Please complete payment before creating a chat thread'
+            }), {
+              status: 402, // Payment Required
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
           }
-        };
+
+          // Step 3: Use existing chat_id if payment is completed
+          console.log(`[threads-manager] Payment verified for guest ${guest_id}, using existing chat_id: ${existingGuestReport.chat_id}`);
+          
+          result = { 
+            thread_id: existingGuestReport.chat_id,
+            thread: {
+              id: existingGuestReport.chat_id,
+              title: title || `Chat ${existingGuestReport.chat_id.slice(0, 8)}...`,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }
+          };
+        }
         break;
 
       case 'delete_thread':

@@ -9,6 +9,7 @@ import { PricingProvider } from '@/contexts/PricingContext';
 import { ReportModalProvider } from '@/contexts/ReportModalContext';
 import { MobileViewportLock } from '@/features/chat/MobileViewportLock';
 import { supabase } from '@/integrations/supabase/client';
+import { verifyGuestPayment } from '@/utils/guest-checkout';
 
 interface Thread {
   id: string;
@@ -145,12 +146,30 @@ const ChatContainer: React.FC = () => {
       if (userType === 'authenticated' && user) {
         newThreadId = await storeAddThread(user.id);
       } else if (userType === 'guest' && guestId) {
-        // Create guest thread via edge function
+        // Step 1: Verify payment status before creating thread
+        console.log(`[ChatContainer] Verifying payment for guest ${guestId} before thread creation`);
+        
+        const paymentVerification = await verifyGuestPayment(guestId);
+        
+        if (!paymentVerification.success || !paymentVerification.verified) {
+          console.error(`[ChatContainer] Payment verification failed for guest ${guestId}:`, paymentVerification.error);
+          throw new Error(paymentVerification.error || 'Payment verification failed. Please complete payment before creating a chat thread.');
+        }
+        
+        console.log(`[ChatContainer] Payment verified for guest ${guestId}, proceeding with thread creation`);
+        
+        // Step 2: Create guest thread via edge function (now with payment validation)
         const { data, error } = await supabase.functions.invoke('threads-manager', {
           body: { action: 'create_thread', guest_id: guestId, title: 'New Chat' }
         });
         
-        if (error) throw error;
+        if (error) {
+          // Handle specific payment-related errors from threads-manager
+          if (error.message?.includes('Payment not completed')) {
+            throw new Error('Payment not completed. Please complete payment before creating a chat thread.');
+          }
+          throw error;
+        }
         newThreadId = data.thread_id;
       } else {
         // For unauthenticated users, initialize guest flow first
