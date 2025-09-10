@@ -210,75 +210,19 @@ const ChatContainer: React.FC = () => {
 
   return (
     <div className="flex h-screen">
-      {/* Sidebar */}
-      <div className="w-64 bg-background border-r border-border">
-        <div className="p-4 border-b border-border">
-          <button 
-            onClick={handleNewChat}
-            className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            New Chat
-          </button>
+      {showLoadingInContent ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-muted-foreground">Loading...</div>
         </div>
-        
-        <div className="p-2">
-          {error && (
-            <div className="mb-4 p-2 bg-destructive/10 text-destructive text-sm rounded">
-              {error}
-            </div>
-          )}
-          
-          <div className="space-y-1">
-            {threads.map((thread) => (
-              <button
-                key={thread.id}
-                onClick={() => handleThreadSelect(thread.id)}
-                className={`w-full p-2 text-left rounded hover:bg-accent/50 transition-colors group ${
-                  threadId === thread.id ? 'bg-accent text-accent-foreground' : ''
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="truncate text-sm">{thread.title}</span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteThread(thread.id);
-                    }}
-                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 rounded transition-opacity"
-                  >
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-                </div>
-              </button>
-            ))}
-          </div>
-          
-          {threads.length === 0 && !isLoading && (
-            <div className="text-center text-muted-foreground text-sm py-8">
-              No chats yet. Create your first chat!
-            </div>
-          )}
-        </div>
-      </div>
-      
-      {/* Main content */}
-      <div className="flex-1">
-        {showLoadingInContent ? (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-muted-foreground">Loading...</div>
-          </div>
-        ) : (
-          <PricingProvider>
-            <ReportModalProvider>
-              <MobileViewportLock active>
-                <ChatBox />
-              </MobileViewportLock>
-            </ReportModalProvider>
-          </PricingProvider>
-        )}
-      </div>
+      ) : (
+        <PricingProvider>
+          <ReportModalProvider>
+            <MobileViewportLock active>
+              <ChatBox />
+            </MobileViewportLock>
+          </ReportModalProvider>
+        </PricingProvider>
+      )}
     </div>
   );
 };
