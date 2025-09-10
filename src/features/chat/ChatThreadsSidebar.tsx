@@ -40,6 +40,8 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
     addThread,
     removeThread
   } = useChatStore();
+
+  // 🎯 Simple guest detection: chat_id starts with "guest-"
   const { user } = useAuth();
   
   const { open: openReportModal } = useReportModal();
@@ -51,12 +53,12 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
 
-  // Load threads for authenticated users
+  // Load threads for both authenticated and guest users
   useEffect(() => {
-    if (userType.isAuthenticated) {
+    if (userType.isAuthenticated || userType.isGuest) {
       loadThreads();
     }
-  }, [userType.isAuthenticated, loadThreads]);
+  }, [userType.isAuthenticated, userType.isGuest, loadThreads]);
 
   // Handle new chat creation - redirect to /c for unified handling
   const handleNewChat = async () => {
@@ -196,8 +198,8 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         </div>
       )}
 
-      {/* Authenticated user controls */}
-      {userType.isAuthenticated && uiConfig.showThreadHistory && (
+      {/* Thread history for both authenticated and guest users */}
+      {(userType.isAuthenticated || userType.isGuest) && uiConfig.showThreadHistory && (
         <div className="space-y-2">
           {uiConfig.newChatLabel && (
             <button
@@ -247,14 +249,20 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
               <div className="text-xs text-gray-500 px-3 py-1">No previous chats</div>
             ) : (
               <div className="space-y-1">
-                {threads.map((conversation) => (
-                  <div
-                    key={conversation.id}
-                    className="relative group"
-                    onMouseEnter={() => setHoveredThread(conversation.id)}
-                    onMouseLeave={() => setHoveredThread(null)}
-                  >
-                    <div className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded-lg transition-colors">
+                {threads.map((conversation) => {
+                  const isActive = conversation.id === chat_id;
+                  return (
+                    <div
+                      key={conversation.id}
+                      className="relative group"
+                      onMouseEnter={() => setHoveredThread(conversation.id)}
+                      onMouseLeave={() => setHoveredThread(null)}
+                    >
+                      <div className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${
+                        isActive 
+                          ? 'bg-gray-100 border-l-2 border-gray-900' 
+                          : 'hover:bg-gray-50'
+                      }`}>
                       <div 
                         className="flex-1 min-w-0 cursor-pointer"
                         onClick={() => handleSwitchToChat(conversation.id)}
@@ -295,7 +303,8 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
                       </DropdownMenu>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
