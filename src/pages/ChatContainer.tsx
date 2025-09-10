@@ -5,6 +5,9 @@ import { useChatStore } from '@/core/store';
 import { useUserType } from '@/hooks/useUserType';
 import { ChatThreadsSidebar } from '@/features/chat/ChatThreadsSidebar';
 import { ChatBox } from '@/features/chat/ChatBox';
+import { PricingProvider } from '@/contexts/PricingContext';
+import { ReportModalProvider } from '@/contexts/ReportModalContext';
+import { MobileViewportLock } from '@/features/chat/MobileViewportLock';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Thread {
@@ -267,7 +270,13 @@ const ChatContainer: React.FC = () => {
             <div className="text-muted-foreground">Loading...</div>
           </div>
         ) : (
-          <ChatBox />
+          <PricingProvider>
+            <ReportModalProvider>
+              <MobileViewportLock active>
+                <ChatBox />
+              </MobileViewportLock>
+            </ReportModalProvider>
+          </PricingProvider>
         )}
       </div>
     </div>
