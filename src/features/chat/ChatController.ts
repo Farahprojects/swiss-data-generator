@@ -220,45 +220,37 @@ class ChatController {
     this.loadExistingMessages(); // Load conversation history
   }
 
-  async sendTextMessage(text: string, mode?: string) {
+  sendTextMessage(text: string, mode?: string) {
     const { chat_id } = useChatStore.getState();
     if (!chat_id) {
       console.error('[ChatController] sendTextMessage: No chat_id in store.');
       return;
     }
 
-    // Wake up realtime before sending the user message
-    await this.ensureRealtimeReady(chat_id);
+    // Wake up realtime before sending the user message (fire-and-forget)
+    this.ensureRealtimeReady(chat_id).catch((error) => {
+      console.warn('[ChatController] Realtime wake-up failed:', error);
+    });
 
     const client_msg_id = uuidv4();
     this.addOptimisticMessages(chat_id, text, client_msg_id);
     
-    // Start listening for assistant message
-    // this.startAssistantMessageListener(chat_id); // Removed real-time listener
-    
-    try {
-      const finalMessage = await llmService.sendMessage({ 
-        chat_id, 
-        text, 
-        client_msg_id,
-        mode: mode // Pass mode to backend
-      });
-      
-      // Stop the listener since we got the response
-      // this.stopAssistantMessageListener(); // Removed real-time listener
-      
-      // Assistant response will come via realtime updates
-      
-    } catch (error) {
+    // Fire-and-forget: Send message to chat-send (don't await)
+    llmService.sendMessage({ 
+      chat_id, 
+      text, 
+      client_msg_id,
+      mode: mode // Pass mode to backend
+    }).catch((error) => {
       // Store the failed message for retry
       this.lastFailedMessage = { text, mode };
       
       // Use network error handler instead of console.error
       networkErrorHandler.handleError(error, 'ChatController.sendTextMessage');
       useChatStore.getState().setError("Failed to send message. Please try again.");
-      // Stop listener on error
-      // this.stopAssistantMessageListener(); // Removed real-time listener
-    }
+    });
+    
+    // Assistant response will come via realtime updates
   }
 
   private addOptimisticMessages(chat_id: string, text: string, client_msg_id: string, audioUrl?: string) {
