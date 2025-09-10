@@ -84,7 +84,7 @@ export const useChatInputState = () => {
     // Payment flow state
     isPaymentConfirmed: paymentFlowState.isPaymentConfirmed,
     isReportGenerating: paymentFlowState.isReportGenerating,
-    isReportReady: paymentFlowState.isReportReady,
+    paymentFlowIsReportReady: paymentFlowState.isReportReady,
     paymentFlowError: paymentFlowState.error,
     
     // Derived state
