@@ -19,9 +19,7 @@ export const getSwissErrorMessage = (reportType: string | null): string => {
 export const getGuestReportId = (): string | null => {
   if (typeof window === 'undefined') return null;
   
-  // Get from sessionStorage (new approach)
-  const storageId = sessionStorage.getItem('therai_guest_report_id');
-  if (storageId) return storageId;
+  // Guest report ID is no longer stored in sessionStorage
   
   // Fallback to localStorage for backward compatibility
   return localStorage.getItem('currentGuestReportId');

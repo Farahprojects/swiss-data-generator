@@ -38,21 +38,20 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
   const isConversationOpen = useConversationUIStore((s) => s.isConversationOpen);
   
   
-  // Get user type from URL parameters and storage - supports both guest and auth users
+  // Get chat_id from store for payment flow
+  const { chat_id } = useChatStore();
+  
+  // Get user type from URL parameters - supports both guest and auth users
   const [searchParams] = useSearchParams();
-  const guestReportId = sessionStorage.getItem('therai_guest_report_id');
   const userId = searchParams.get('user_id');
   
   // Determine user type and ID
   const isAuthenticated = !!userId;
-  const isGuest = !!guestReportId;
-  const currentUserId = userId || guestReportId;
-  
-  // Get chat_id from store for payment flow
-  const { chat_id } = useChatStore();
+  const isGuest = chat_id && chat_id.startsWith('guest-'); // Guest if chat_id starts with "guest-"
+  const currentUserId = userId;
   
   // Debug logging
-  console.log(`[ChatBox] User detection - isAuthenticated: ${isAuthenticated}, isGuest: ${isGuest}, guestReportId: ${guestReportId}, chat_id: ${chat_id}`);
+  console.log(`[ChatBox] User detection - isAuthenticated: ${isAuthenticated}, isGuest: ${isGuest}, chat_id: ${chat_id}`);
   
   // Initialize payment flow for guest users
   usePaymentFlow({

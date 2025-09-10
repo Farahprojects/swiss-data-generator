@@ -13,18 +13,16 @@ export const URL_PARAMS = {
  * Get guest report ID from sessionStorage (no longer from URL)
  */
 export const getGuestReportIdFromStorage = (): string | null => {
-  if (typeof window === 'undefined') return null;
-  
-  return sessionStorage.getItem('therai_guest_report_id');
+  // Guest report ID is no longer stored in sessionStorage
+  return null;
 };
 
 /**
  * Set guest report ID in sessionStorage (no longer in URL)
  */
 export const setGuestReportIdInStorage = (guestReportId: string): void => {
-  if (typeof window === 'undefined') return;
-  
-  sessionStorage.setItem('therai_guest_report_id', guestReportId);
+  // Guest report ID is no longer stored in sessionStorage
+  console.log(`Guest report ID: ${guestReportId} (not stored)`);
 };
 
 /**
@@ -51,10 +49,7 @@ export const clearGuestReportIdFromUrl = (): void => {
  * Clean, production-ready token retrieval
  */
 export const getGuestToken = (): string | null => {
-  // Get from sessionStorage (new approach)
-  const storageToken = sessionStorage.getItem('therai_guest_report_id');
-  if (storageToken) return storageToken;
-
+  // Guest report ID is no longer stored in sessionStorage
   // Fallback to localStorage for backward compatibility
   return localStorage.getItem('currentGuestReportId');
 };

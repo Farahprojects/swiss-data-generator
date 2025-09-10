@@ -9,7 +9,7 @@ export const STORAGE_KEYS = {
     GUEST: {
       CHAT_ID: 'therai_guest_chat_id',
       SESSION_TOKEN: 'therai_guest_session_token',
-      REPORT_ID: 'therai_guest_report_id',
+      REPORT_ID: 'therai_guest_report_id', // Deprecated - no longer used
     },
     AUTH: {
       CHAT_ID: 'therai_auth_chat_id',
