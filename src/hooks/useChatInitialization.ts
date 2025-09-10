@@ -15,10 +15,15 @@ export const useChatInitialization = () => {
   const { threadId } = useParams<{ threadId?: string }>();
   const { chat_id } = useChatStore();
   
+  console.log(`[useChatInitialization] Hook called - threadId: ${threadId}, chat_id: ${chat_id}`);
+  
   useEffect(() => {
+    console.log(`[useChatInitialization] useEffect triggered - threadId: ${threadId}, chat_id: ${chat_id}`);
     if (threadId && threadId !== chat_id) {
       console.log(`[useChatInitialization] Initializing chat: ${threadId}`);
       chatController.initializeForConversation(threadId);
+    } else {
+      console.log(`[useChatInitialization] Skipping initialization - threadId: ${threadId}, chat_id: ${chat_id}`);
     }
   }, [threadId, chat_id]);
 };
