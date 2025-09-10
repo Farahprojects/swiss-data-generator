@@ -20,15 +20,17 @@ export interface UserTypeInfo {
 export const useUserType = (): UserTypeInfo => {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
-  const { getGuestId } = useChatStore();
+  const { chat_id } = useChatStore();
   
   // Get identifiers
   const urlUserId = searchParams.get('user_id');
-  const guestId = getGuestId(); // From centralized store
+  
+  // 🎯 Simple guest detection: chat_id starts with "guest-"
+  const isGuestChat = chat_id && chat_id.startsWith('guest-');
   
   // Determine user type with clear priority
   const isAuthenticated = !!user && !!urlUserId;
-  const isGuest = !!guestId && !isAuthenticated; // Guest only if not authenticated
+  const isGuest = isGuestChat && !isAuthenticated; // Guest only if not authenticated
   const isUnauthenticated = !isAuthenticated && !isGuest;
   
   let type: UserType = 'unauthenticated';
@@ -41,7 +43,7 @@ export const useUserType = (): UserTypeInfo => {
     isGuest,
     isUnauthenticated,
     userId: isAuthenticated ? urlUserId : undefined,
-    guestId: isGuest ? guestId : undefined
+    guestId: isGuest ? chat_id : undefined // Use chat_id as guestId for guests
   };
 };
 
@@ -81,9 +83,9 @@ export const getUserTypeConfig = (userType: UserType) => {
           }
         },
         newChatLabel: null, // Guests can't create new chats
-        threadSectionLabel: null, // No thread history
+        threadSectionLabel: 'Chat history', // Show thread history for guests
         authButtonLabel: 'Sign in',
-        showThreadHistory: false,
+        showThreadHistory: true, // Show thread history for guests
         showSearchChat: false,
         showAstroData: true // Guests can still use astro
       };
