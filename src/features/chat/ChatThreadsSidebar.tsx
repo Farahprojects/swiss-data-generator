@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useParams } from 'react-router-dom';
 import { useChatStore } from '@/core/store';
 import { useAuth } from '@/contexts/AuthContext';
 import { Trash2, Sparkles, AlertTriangle, MoreHorizontal, UserPlus, Plus, Search, User } from 'lucide-react';
@@ -28,9 +28,15 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const userPermissions = useUserPermissions();
   const uiConfig = getUserTypeConfig(userType.type);
   
+  // Get chat_id directly from URL (most reliable source)
+  const { threadId } = useParams<{ threadId?: string }>();
+  const storeChatId = useChatStore((state) => state.chat_id);
+  
+  // Use URL threadId as primary source, fallback to store
+  const chat_id = threadId || storeChatId;
+  
   const { 
     messages, 
-    chat_id, 
     clearChat,
     // Thread management from single source of truth
     threads,
@@ -53,8 +59,7 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null);
 
-  // Load threads only for authenticated users
-  // Guest users are one-shot threads - no thread management needed
+  // Load threads only for authenticated users (skip for guests on /c/g)
   useEffect(() => {
     if (userType.isAuthenticated) {
       loadThreads();
@@ -98,17 +103,26 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
           onDelete();
         }
         
-        // Clear store state immediately for instant UI feedback
+        // 1. Clear all stores first (atomic cleanup)
         const { clearChat } = useChatStore.getState();
         clearChat();
         
-        // Clear session storage AND database
+        // 2. Nuke all storage to prevent race conditions
+        sessionStorage.clear();
+        localStorage.removeItem('chat_id');
+        localStorage.removeItem('therai_active_chat_guest_');
+        localStorage.removeItem('therai_active_chat_auth_');
+        
+        // 3. Run server cleanup and wait for completion
         const { streamlinedSessionReset } = await import('@/utils/streamlinedSessionReset');
         await streamlinedSessionReset({ redirectTo: '/c', cleanDatabase: true });
+        
+        // 4. Now redirect only after cleanup is done (replace prevents history issues)
+        window.location.replace('/c');
       } catch (error) {
         console.error('[ChatThreadsSidebar] ❌ Session cleanup failed:', error);
         // Fallback: Force navigation anyway
-        window.location.href = '/c';
+        window.location.replace('/c');
       }
     }
   };
@@ -203,8 +217,8 @@ export const ChatThreadsSidebar: React.FC<ChatThreadsSidebarProps> = ({ classNam
         </div>
       )}
 
-      {/* Thread history for both authenticated and guest users */}
-      {(userType.isAuthenticated || userType.isGuest) && uiConfig.showThreadHistory && (
+      {/* Thread history (authenticated only). Guests on /c/g skip thread history */}
+      {userType.isAuthenticated && uiConfig.showThreadHistory && (
         <div className="space-y-2">
           {uiConfig.newChatLabel && (
             <button

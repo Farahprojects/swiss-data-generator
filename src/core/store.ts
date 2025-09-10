@@ -253,6 +253,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
           sessionStorage.removeItem(key);
           console.log(`[Store] Cleared namespaced guest chat_id key: ${key}`);
         });
+        
+        // Extra safety: Clear any remaining chat-related keys
+        const chatKeys = Object.keys(sessionStorage).filter(key => 
+          key.includes('chat_id') || key.includes('therai_chat')
+        );
+        chatKeys.forEach(key => {
+          sessionStorage.removeItem(key);
+          console.log(`[Store] Cleared additional chat key: ${key}`);
+        });
       } catch (error) {
         console.error('[Store] Error clearing namespaced chat_id keys:', error);
       }
