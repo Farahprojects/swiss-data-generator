@@ -72,8 +72,12 @@ const groupMessagesIntoTurns = (messages: Message[]): Turn[] => {
   for (let i = 0; i < messages.length; i++) {
     const message = messages[i];
     
-    // Handle system messages as standalone turns
+    // Handle system messages as standalone turns (but skip context-injected messages)
     if (message.role === 'system') {
+      // Skip context-injected messages (they're for the AI, not for display)
+      if (message.context_injected) {
+        continue;
+      }
       turns.push({
         assistantMessage: message // Treat system messages as assistant messages for display
       });

@@ -19,6 +19,7 @@ export interface Message {
   meta?: Record<string, any>;
   client_msg_id?: string;
   status?: 'thinking' | 'complete' | 'error';
+  context_injected?: boolean;
 }
 
 export interface Conversation {

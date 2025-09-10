@@ -187,7 +187,8 @@ class ChatController {
       createdAt: dbMessage.created_at,
       meta: dbMessage.meta,
       client_msg_id: dbMessage.client_msg_id,
-      status: dbMessage.status
+      status: dbMessage.status,
+      context_injected: dbMessage.context_injected
     };
   }
 
