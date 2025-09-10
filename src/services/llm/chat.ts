@@ -1,6 +1,7 @@
 // src/services/llm/chat.ts
 import { supabase } from '@/integrations/supabase/client';
 import { Message } from '@/core/types';
+import { networkErrorHandler } from '@/utils/networkErrorHandler';
 
 interface LlmRequest {
   chat_id: string;
@@ -35,12 +36,14 @@ class LlmService {
     });
 
     if (error) {
-      console.error(`[LLM] chat-send error:`, error);
+      // Use network error handler instead of console.error
+      networkErrorHandler.handleError(error, 'LlmService.sendMessage');
       throw new Error(`Error invoking chat-send: ${error.message}`);
     }
 
     if (data?.error && Object.keys(data.error).length > 0) {
-      console.error(`[LLM] chat-send returned error:`, data.error);
+      // Use network error handler for server-side errors too
+      networkErrorHandler.handleError(data.error, 'LlmService.sendMessage.server');
       const errorMessage = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
       throw new Error(`chat-send error: ${errorMessage}`);
     }

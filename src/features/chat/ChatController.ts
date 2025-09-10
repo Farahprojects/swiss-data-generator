@@ -9,11 +9,13 @@ import { ConversationAudioPipeline, encodeWav16kMono } from '@/services/audio/Co
 import { getMessagesForConversation } from '@/services/api/messages';
 import { Message } from '@/core/types';
 import { v4 as uuidv4 } from 'uuid';
+import { networkErrorHandler } from '@/utils/networkErrorHandler';
 
 class ChatController {
   private conversationServiceInitialized = false;
   private isResetting = false;
   private resetTimeout: NodeJS.Timeout | null = null;
+  private lastFailedMessage: { text: string; mode?: string } | null = null;
   private isUnlocked = false; // New flag to control microphone access
   private audioPipeline: ConversationAudioPipeline | null = null;
   private isProcessingRef = false;
@@ -21,6 +23,9 @@ class ChatController {
 
   constructor() {
     this.loadExistingMessages();
+    
+    // Listen for network retry events
+    window.addEventListener('network-retry', this.handleNetworkRetry.bind(this));
   }
 
   private async loadExistingMessages(retryCount = 0) {
@@ -51,18 +56,24 @@ class ChatController {
       throw new Error('chat_id is required for conversation initialization');
     }
     
+    // Set chat_id in store (single source of truth) - this will persist to sessionStorage
     useChatStore.getState().startConversation(chat_id);
     this.setupRealtimeSubscription(chat_id);
     await this.loadExistingMessages();
   }
 
   private realtimeChannel: any = null;
+  private realtimeStatus: 'SUBSCRIBED' | 'CLOSED' | 'TIMED_OUT' | 'CHANNEL_ERROR' | 'SUBSCRIBING' | null = null;
+  private subscriptionRetryCount: number = 0;
 
   private setupRealtimeSubscription(chat_id: string) {
     // Clean up existing subscription
     this.cleanupRealtimeSubscription();
 
     try {
+      console.log(`[ChatController] 🔌 Setting up realtime subscription for chat_id: ${chat_id}`);
+      this.subscriptionRetryCount = 0;
+
       this.realtimeChannel = supabase
         .channel(`messages:${chat_id}`)
         .on(
@@ -74,6 +85,7 @@ class ChatController {
             filter: `chat_id=eq.${chat_id}`
           },
           (payload) => {
+            console.log('[ChatController] 📥 INSERT message payload received');
             const newMessage = this.transformDatabaseMessage(payload.new);
             const { messages, updateMessage, addMessage } = useChatStore.getState();
             
@@ -102,6 +114,7 @@ class ChatController {
             filter: `chat_id=eq.${chat_id}`
           },
           (payload) => {
+            console.log('[ChatController] ♻️ UPDATE message payload received');
             const updatedMessage = this.transformDatabaseMessage(payload.new);
             const { messages, updateMessage, addMessage } = useChatStore.getState();
             
@@ -121,10 +134,45 @@ class ChatController {
           }
         )
         .subscribe((status) => {
-          // Realtime subscription status
+          this.realtimeStatus = status as any;
+          console.log(`[ChatController] 🔔 Realtime status for chat_id ${chat_id}: ${status}`);
+          if (status === 'SUBSCRIBED') {
+            // Guaranteed delivery: fetch current state after subscribing
+            this.subscriptionRetryCount = 0;
+            this.loadExistingMessages();
+          }
+          if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR') {
+            const retry = Math.min(++this.subscriptionRetryCount, 5);
+            const delay = Math.min(1000 * Math.pow(2, retry), 8000);
+            console.warn(`[ChatController] Realtime ${status}. Retrying subscribe in ${delay}ms (attempt ${retry})`);
+            setTimeout(() => {
+              // Recreate subscription
+              this.setupRealtimeSubscription(chat_id);
+            }, delay);
+          }
+          if (status === 'CLOSED') {
+            console.warn('[ChatController] Realtime channel closed.');
+          }
         });
     } catch (error) {
       console.error('[ChatController] Failed to setup realtime subscription:', error);
+    }
+  }
+
+  private async ensureRealtimeReady(chat_id: string): Promise<void> {
+    try {
+      // If no channel or not subscribed, (re)create it
+      if (!this.realtimeChannel || this.realtimeStatus !== 'SUBSCRIBED') {
+        console.log('[ChatController] ⚠️ Realtime not ready. Reinitializing...');
+        this.setupRealtimeSubscription(chat_id);
+      }
+      // Lightweight ping to wake network/client
+      await supabase
+        .from('messages')
+        .select('id', { head: true, count: 'exact' })
+        .eq('chat_id', chat_id);
+    } catch (error) {
+      console.warn('[ChatController] ensureRealtimeReady ping failed (continuing):', error);
     }
   }
 
@@ -179,6 +227,9 @@ class ChatController {
       return;
     }
 
+    // Wake up realtime before sending the user message
+    await this.ensureRealtimeReady(chat_id);
+
     const client_msg_id = uuidv4();
     this.addOptimisticMessages(chat_id, text, client_msg_id);
     
@@ -199,7 +250,11 @@ class ChatController {
       // Assistant response will come via realtime updates
       
     } catch (error) {
-      console.error("[ChatController] Error sending message:", error);
+      // Store the failed message for retry
+      this.lastFailedMessage = { text, mode };
+      
+      // Use network error handler instead of console.error
+      networkErrorHandler.handleError(error, 'ChatController.sendTextMessage');
       useChatStore.getState().setError("Failed to send message. Please try again.");
       // Stop listener on error
       // this.stopAssistantMessageListener(); // Removed real-time listener
@@ -384,6 +439,22 @@ class ChatController {
     this.isResetting = false;
     this.isUnlocked = false; // Lock on cleanup
     console.log('[ChatController] 🔥 CLEANUP: ChatController cleanup complete');
+  }
+
+  /**
+   * Handle network retry events from the error popup
+   */
+  private handleNetworkRetry = (event: CustomEvent) => {
+    if (this.lastFailedMessage) {
+      console.log('[ChatController] Retrying failed message due to network retry');
+      const { text, mode } = this.lastFailedMessage;
+      this.lastFailedMessage = null; // Clear the stored message
+      
+      // Retry sending the message
+      setTimeout(() => {
+        this.sendTextMessage(text, mode);
+      }, 1000); // Small delay before retry
+    }
   }
 
 }
