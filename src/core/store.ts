@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { Message } from './types';
 import { Conversation } from '@/services/conversations';
 import { STORAGE_KEYS } from '@/utils/storageKeys';
-import { supabase } from '@/integrations/supabase/client';
 
 export type ChatStatus =
   | 'idle'
@@ -45,6 +44,10 @@ interface ChatState {
   setMessageLoadError: (error: string | null) => void;
   retryLoadMessages: () => Promise<void>;
   setAssistantTyping: (isTyping: boolean) => void;
+  
+  // Hydration and persistence
+  hydrateFromStorage: (authId?: string, guestId?: string) => string | null;
+  persistActiveChat: (chat_id: string, authId?: string, guestId?: string) => void;
 
   // Thread actions
   loadThreads: () => Promise<void>;
@@ -91,6 +94,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       lastMessagesFetch: null,
       isAssistantTyping: false
     });
+    
+    // Persist active chat_id to sessionStorage (namespaced by user)
+    get().persistActiveChat(id, undefined, finalGuestId);
   },
 
   startNewConversation: async (user_id?: string) => {
@@ -109,6 +115,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
         lastMessagesFetch: null,
         isAssistantTyping: false
       });
+      
+      // Persist active chat_id to sessionStorage (namespaced by user)
+      get().persistActiveChat(conversationId, user_id, undefined);
       
       return conversationId;
     } else {
@@ -200,6 +209,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   clearChat: () => {
+    const state = get();
+    
     set({ 
       chat_id: null, 
       guest_id: null,
@@ -214,6 +225,38 @@ export const useChatStore = create<ChatState>((set, get) => ({
     
     // Clear guest data from storage as well
     get().clearGuestData();
+    
+    // Clear namespaced chat_id storage keys
+    if (typeof window !== 'undefined') {
+      try {
+        // Clear auth namespaced key if we have auth user
+        if (state.guest_id) {
+          const guestKey = STORAGE_KEYS.CHAT.ACTIVE.GUEST(state.guest_id);
+          sessionStorage.removeItem(guestKey);
+          console.log(`[Store] Cleared namespaced guest chat_id key: ${guestKey}`);
+        }
+        
+        // Clear any auth keys (in case of mixed state)
+        const authKeys = Object.keys(sessionStorage).filter(key => 
+          key.startsWith('therai_active_chat_auth_')
+        );
+        authKeys.forEach(key => {
+          sessionStorage.removeItem(key);
+          console.log(`[Store] Cleared namespaced auth chat_id key: ${key}`);
+        });
+        
+        // Clear any guest keys (in case of mixed state)
+        const guestKeys = Object.keys(sessionStorage).filter(key => 
+          key.startsWith('therai_active_chat_guest_')
+        );
+        guestKeys.forEach(key => {
+          sessionStorage.removeItem(key);
+          console.log(`[Store] Cleared namespaced guest chat_id key: ${key}`);
+        });
+      } catch (error) {
+        console.error('[Store] Error clearing namespaced chat_id keys:', error);
+      }
+    }
   },
 
   setAssistantTyping: (isTyping) => set({ isAssistantTyping: isTyping }),
@@ -222,20 +265,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
   loadThreads: async () => {
     set({ isLoadingThreads: true, threadsError: null });
     try {
-      // Check if this is a guest user (no authenticated user)
-      const { data: { user } } = await supabase.auth.getUser();
-      const isGuest = !user;
-      
-      if (isGuest) {
-        // Guest users are one-shot threads - no thread management needed
-        // They already have chat_id in URL, that's all they need
-        set({ threads: [], isLoadingThreads: false });
-      } else {
-        // For authenticated users, use the existing conversations service
-        const { listConversations } = await import('@/services/conversations');
-        const conversations = await listConversations();
-        set({ threads: conversations, isLoadingThreads: false });
-      }
+      const { listConversations } = await import('@/services/conversations');
+      const conversations = await listConversations();
+      set({ threads: conversations, isLoadingThreads: false });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to load threads';
       set({ threadsError: errorMessage, isLoadingThreads: false });
@@ -321,6 +353,58 @@ export const useChatStore = create<ChatState>((set, get) => ({
       Object.values(STORAGE_KEYS.CHAT.GUEST).forEach(key => {
         sessionStorage.removeItem(key);
       });
+    }
+  },
+
+  // Hydration and persistence methods
+  hydrateFromStorage: (authId?: string, guestId?: string) => {
+    if (typeof window === 'undefined') return null;
+    
+    try {
+      // Try to get from sessionStorage first (namespaced by user)
+      if (authId) {
+        const authKey = STORAGE_KEYS.CHAT.ACTIVE.AUTH(authId);
+        const storedChatId = sessionStorage.getItem(authKey);
+        if (storedChatId) {
+          console.log(`[Store] Hydrated chat_id from sessionStorage (auth): ${storedChatId}`);
+          return storedChatId;
+        }
+      }
+      
+      if (guestId) {
+        const guestKey = STORAGE_KEYS.CHAT.ACTIVE.GUEST(guestId);
+        const storedChatId = sessionStorage.getItem(guestKey);
+        if (storedChatId) {
+          console.log(`[Store] Hydrated chat_id from sessionStorage (guest): ${storedChatId}`);
+          return storedChatId;
+        }
+      }
+      
+      console.log(`[Store] No chat_id found in sessionStorage for authId: ${authId}, guestId: ${guestId}`);
+      return null;
+    } catch (error) {
+      console.error('[Store] Error hydrating from storage:', error);
+      return null;
+    }
+  },
+
+  persistActiveChat: (chat_id: string, authId?: string, guestId?: string) => {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      if (authId) {
+        const authKey = STORAGE_KEYS.CHAT.ACTIVE.AUTH(authId);
+        sessionStorage.setItem(authKey, chat_id);
+        console.log(`[Store] Persisted chat_id to sessionStorage (auth): ${chat_id}`);
+      }
+      
+      if (guestId) {
+        const guestKey = STORAGE_KEYS.CHAT.ACTIVE.GUEST(guestId);
+        sessionStorage.setItem(guestKey, chat_id);
+        console.log(`[Store] Persisted chat_id to sessionStorage (guest): ${chat_id}`);
+      }
+    } catch (error) {
+      console.error('[Store] Error persisting chat_id to storage:', error);
     }
   },
 }));
