@@ -21,6 +21,15 @@ serve(async (req) => {
     const { method } = req;
     const requestBody = await req.json();
     const { action, guest_id, thread_id, title } = requestBody;
+    
+    console.log(`[threads-manager] Function called with:`, {
+      method,
+      action,
+      guest_id,
+      thread_id,
+      title,
+      fullBody: requestBody
+    });
 
     if (method !== 'POST') {
       return new Response('Method not allowed', { 
@@ -40,21 +49,36 @@ serve(async (req) => {
         result = { guest_id: newGuestId };
         break;
       case 'list_threads':
+        console.log(`[threads-manager] list_threads called with guest_id: ${guest_id}`);
+        console.log(`[threads-manager] Request body:`, JSON.stringify(requestBody, null, 2));
+        
         if (!guest_id) {
+          console.log(`[threads-manager] ERROR: guest_id is required but not provided`);
           return new Response('guest_id is required', { 
             status: 400, 
             headers: corsHeaders 
           });
         }
         
+        console.log(`[threads-manager] Querying guest_reports table for user_id: ${guest_id}`);
+        
         // List all guest chat threads
         const { data: guestReports, error: listError } = await supabaseClient
           .from('guest_reports')
-          .select('chat_id, email, created_at, id')
+          .select('chat_id, email, created_at, id, user_id')
           .eq('user_id', guest_id) // guest_id is stored in user_id for guests
           .order('created_at', { ascending: false });
 
-        if (listError) throw listError;
+        console.log(`[threads-manager] Query result:`, {
+          data: guestReports,
+          error: listError,
+          count: guestReports?.length || 0
+        });
+
+        if (listError) {
+          console.log(`[threads-manager] Database error:`, listError);
+          throw listError;
+        }
 
         // Transform to thread format
         const threads = (guestReports || []).map(report => ({
@@ -64,6 +88,7 @@ serve(async (req) => {
           updated_at: report.created_at
         }));
 
+        console.log(`[threads-manager] Transformed threads:`, threads);
         result = { threads };
         break;
 
