@@ -1,13 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React from 'react';
 import { ChatBox } from '@/features/chat/ChatBox';
 import { PricingProvider } from '@/contexts/PricingContext';
 import { ReportModalProvider } from '@/contexts/ReportModalContext';
 import { MobileViewportLock } from '@/features/chat/MobileViewportLock';
 import { useChatInitialization } from '@/hooks/useChatInitialization';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { AlertTriangle } from 'lucide-react';
 
 /**
  * Streamlined ChatContainer - Single Responsibility
