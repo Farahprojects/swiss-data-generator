@@ -3,6 +3,7 @@ import { ChatInput } from './ChatInput';
 import { useChatStore } from '@/core/store';
 import { useAuth } from '@/contexts/AuthContext';
 import { chatController } from './ChatController';
+import { supabase } from '@/integrations/supabase/client';
 
 import { Menu, Sparkles, Settings, User, CreditCard, Bell, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,27 @@ const MessageList = lazy(() => import('./MessageList').then(module => ({ default
 const ConversationOverlay = lazy(() => import('./ConversationOverlay/ConversationOverlay').then(module => ({ default: module.ConversationOverlay })));
 const ErrorStateHandler = lazy(() => import('@/components/public-report/ErrorStateHandler').then(module => ({ default: module.default })));
 const ChatSidebarControls = lazy(() => import('./ChatSidebarControls').then(module => ({ default: module.ChatSidebarControls })));
+
+// Check if report is already generated for a chat_id
+async function checkReportGeneratedStatus(chatId: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from('guest_reports')
+      .select('report_generated')
+      .eq('chat_id', chatId)
+      .single();
+    
+    if (error) {
+      console.warn(`[ChatBox] Error checking report_generated status:`, error);
+      return false; // Default to enabling payment flow if we can't check
+    }
+    
+    return data?.report_generated === true;
+  } catch (error) {
+    console.warn(`[ChatBox] Error checking report_generated status:`, error);
+    return false; // Default to enabling payment flow if we can't check
+  }
+}
 
 interface ChatBoxProps {
   className?: string;
@@ -52,10 +74,24 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
   
   // User detection complete - no logging needed
   
-  // Initialize payment flow for guest users
+  // Initialize payment flow for guest users - only if report not already generated
+  const [shouldEnablePaymentFlow, setShouldEnablePaymentFlow] = useState(false);
+  
+  // Check report_generated status for guest users
+  useEffect(() => {
+    if (isGuest && chat_id) {
+      checkReportGeneratedStatus(chat_id).then((isGenerated) => {
+        setShouldEnablePaymentFlow(!isGenerated);
+        console.log(`[ChatBox] Report generated status: ${isGenerated}, enabling payment flow: ${!isGenerated}`);
+      });
+    } else {
+      setShouldEnablePaymentFlow(false);
+    }
+  }, [isGuest, chat_id]);
+  
   usePaymentFlow({
     chatId: chat_id,
-    enabled: isGuest && !!chat_id
+    enabled: shouldEnablePaymentFlow
   });
   
   // ChatController methods for realtime updates (both text and conversation modes)
