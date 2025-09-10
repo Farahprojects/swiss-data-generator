@@ -370,7 +370,11 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
         if (response.paymentStatus === 'paid' || pricingResult.final_price_usd === 0) {
           console.log(`[AstroForm] ✅ Report ready (${pricingResult.final_price_usd === 0 ? 'free' : 'paid'}), setting up chat for: ${response.guestReportId}`);
           
-          // Navigate directly to chat
+          // Set guest report ID in sessionStorage for guest detection
+          sessionStorage.setItem('therai_guest_report_id', response.guestReportId);
+          console.log(`[AstroForm] Set guest report ID in sessionStorage: ${response.guestReportId}`);
+          
+          // Navigate to chat - payment flow will handle the rest
           console.log(`[AstroForm] 🔗 Navigating to chat: /c/${response.chatId}`);
           navigate(`/c/${response.chatId}`, { replace: true });
           

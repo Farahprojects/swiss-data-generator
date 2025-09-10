@@ -2,6 +2,7 @@ import { useSyncExternalStore, useMemo } from 'react';
 import { useChatStore } from '@/core/store';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
+import { usePaymentFlowStore } from '@/stores/paymentFlowStore';
 
 /**
  * Isolated state management for ChatInput using useSyncExternalStore
@@ -36,13 +37,26 @@ export const useChatInputState = () => {
     })
   );
 
+  // Subscribe to payment flow store state
+  const paymentFlowState = useSyncExternalStore(
+    usePaymentFlowStore.subscribe,
+    () => usePaymentFlowStore.getState(),
+    () => ({
+      isPaymentConfirmed: false,
+      isReportGenerating: false,
+      isReportReady: false,
+      error: null,
+    })
+  );
+
   // Memoized derived state to prevent unnecessary recalculations
   const isAssistantGenerating = useMemo(() => 
     reportState.isPolling || 
     chatState.status === 'thinking' || 
     chatState.status === 'transcribing' || 
-    chatState.status === 'speaking',
-    [reportState.isPolling, chatState.status]
+    chatState.status === 'speaking' ||
+    paymentFlowState.isReportGenerating,
+    [reportState.isPolling, chatState.status, paymentFlowState.isReportGenerating]
   );
 
   const isRecording = useMemo(() => 
@@ -66,6 +80,12 @@ export const useChatInputState = () => {
     isConversationOpen: conversationState.isConversationOpen,
     openConversation: conversationState.openConversation,
     closeConversation: conversationState.closeConversation,
+    
+    // Payment flow state
+    isPaymentConfirmed: paymentFlowState.isPaymentConfirmed,
+    isReportGenerating: paymentFlowState.isReportGenerating,
+    isReportReady: paymentFlowState.isReportReady,
+    paymentFlowError: paymentFlowState.error,
     
     // Derived state
     isAssistantGenerating,

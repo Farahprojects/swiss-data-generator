@@ -9,7 +9,7 @@ const corsHeaders = {
 };
 
 interface VerifyGuestPaymentRequest {
-  sessionId: string;
+  chat_id: string;
   type?: string;
 }
 
@@ -20,12 +20,12 @@ serve(async (req) => {
   }
 
   try {
-    const { sessionId, type } = await req.json() as VerifyGuestPaymentRequest;
+    const { chat_id, type } = await req.json() as VerifyGuestPaymentRequest;
     
-    console.log(`🔄 [verify-guest-payment] Processing request for sessionId: ${sessionId}, type: ${type}`);
+    console.log(`🔄 [verify-guest-payment] Processing request for chat_id: ${chat_id}, type: ${type}`);
 
-    if (!sessionId) {
-      return new Response(JSON.stringify({ error: "sessionId is required" }), {
+    if (!chat_id) {
+      return new Response(JSON.stringify({ error: "chat_id is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
@@ -40,19 +40,19 @@ serve(async (req) => {
     });
 
     // Step 1: Fetch guest report data
-    console.log(`🔍 [verify-guest-payment] Fetching guest report: ${sessionId}`);
+    console.log(`🔍 [verify-guest-payment] Fetching guest report: ${chat_id}`);
     
     const { data: guestReport, error: queryError } = await supabase
       .from("guest_reports")
       .select("*")
-      .eq("id", sessionId)
+      .eq("chat_id", chat_id)
       .single();
 
     if (queryError || !guestReport) {
-      console.error(`❌ [verify-guest-payment] Guest report not found: ${sessionId}`, queryError);
+      console.error(`❌ [verify-guest-payment] Guest report not found: ${chat_id}`, queryError);
       return new Response(JSON.stringify({ 
         error: "Guest report not found",
-        sessionId 
+        chat_id 
       }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -86,7 +86,7 @@ serve(async (req) => {
       supabase.functions.invoke('translator-edge', {
         body: translatorPayload
       }).catch((error) => {
-        console.error(`❌ [verify-guest-payment] Translator-edge failed: ${sessionId}`, error);
+        console.error(`❌ [verify-guest-payment] Translator-edge failed: ${chat_id}`, error);
       })
     );
 
@@ -94,7 +94,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({
       success: true,
-      sessionId,
+      chat_id,
       message: "Report generation triggered successfully",
       processing_time_ms: Date.now() - Date.now() // Placeholder for actual timing
     }), {

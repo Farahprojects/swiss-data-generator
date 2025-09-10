@@ -89,6 +89,11 @@ const ChatContainer: React.FC = () => {
       // Thread ID provided but not found in user's threads
       console.warn(`Thread ${threadId} not found in user's threads`);
       navigate('/c', { replace: true });
+    } else if (threadId && userType === 'guest' && guestId) {
+      // For guest users, if we have a threadId but no threads loaded yet,
+      // directly start the conversation (this handles the astro form flow)
+      console.log(`[ChatContainer] Direct guest conversation start for threadId: ${threadId}`);
+      startConversation(threadId, guestId);
     }
   }, [threadId, threads, startConversation, navigate, userType, guestId]);
 

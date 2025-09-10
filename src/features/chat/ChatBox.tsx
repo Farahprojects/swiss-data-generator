@@ -12,6 +12,7 @@ import { MotionConfig } from 'framer-motion';
 import { useConversationUIStore } from './conversation-ui-store';
 import { useReportReadyStore } from '@/services/report/reportReadyStore';
 import { logUserError } from '@/services/errorService';
+import { usePaymentFlow } from '@/hooks/usePaymentFlow';
 import { SignInPrompt } from '@/components/auth/SignInPrompt';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -46,6 +47,18 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
   const isAuthenticated = !!userId;
   const isGuest = !!guestReportId;
   const currentUserId = userId || guestReportId;
+  
+  // Get chat_id from store for payment flow
+  const { chat_id } = useChatStore();
+  
+  // Debug logging
+  console.log(`[ChatBox] User detection - isAuthenticated: ${isAuthenticated}, isGuest: ${isGuest}, guestReportId: ${guestReportId}, chat_id: ${chat_id}`);
+  
+  // Initialize payment flow for guest users
+  usePaymentFlow({
+    chatId: chat_id,
+    enabled: isGuest && !!chat_id
+  });
   
   // ChatController methods for realtime updates (both text and conversation modes)
   const initializeAudioPipeline = chatController.initializeAudioPipeline.bind(chatController);
