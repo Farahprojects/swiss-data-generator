@@ -71,7 +71,7 @@ export const redirectToGuestChat = async (data: GuestChatData): Promise<string> 
  * Alternative integration for URL-based data
  * Extracts guest_id and chat_id from URL parameters and redirects to /c
  */
-export const handleGuestChatFromUrl = async (searchParams: URLSearchParams): Promise<string | null> => {
+export const handleGuestChatFromUrl = (searchParams: URLSearchParams): string | null => {
   const guest_id = searchParams.get('guest_id');
   const chat_id = searchParams.get('chat_id');
   const payment_completed = searchParams.get('payment_completed') === 'true';
@@ -83,7 +83,7 @@ export const handleGuestChatFromUrl = async (searchParams: URLSearchParams): Pro
   
   console.log(`[GuestChatRedirect] Processing URL-based guest chat data: guest_id=${guest_id}, chat_id=${chat_id}`);
   
-  return await redirectToGuestChat({ guest_id, chat_id, payment_completed });
+  return redirectToGuestChat({ guest_id, chat_id, payment_completed });
 };
 
 /**
