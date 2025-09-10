@@ -18,6 +18,7 @@ import About from './pages/About';
 import Legal from './pages/Legal';
 import SubscriptionPaywall from './pages/SubscriptionPaywall';
 import SubscriptionSuccess from './pages/SubscriptionSuccess';
+import StripeReturn from './pages/StripeReturn';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import ChatContainer from './pages/ChatContainer';
@@ -58,10 +59,12 @@ const AuthedAppShell: React.FC = () => {
               <Route path="/subscription-paywall" element={<PublicOnlyGuard><SubscriptionPaywall /></PublicOnlyGuard>} />
               <Route path="/success" element={<PublicOnlyGuard><SubscriptionSuccess /></PublicOnlyGuard>} />
               <Route path="/cancel" element={<PublicOnlyGuard><SubscriptionPaywall /></PublicOnlyGuard>} />
+              <Route path="/stripe-return" element={<PublicOnlyGuard><StripeReturn /></PublicOnlyGuard>} />
               
               {/* New chat routes with clean /c namespace */}
               <Route path="/c" element={<ChatContainer />} />
               <Route path="/c/:threadId" element={<ChatContainer />} />
+              <Route path="/c/g/:threadId" element={<ChatContainer />} />
               
               {/* Protected routes */}
               <Route path="/settings" element={<AuthGuard><UserSettings /></AuthGuard>} />
