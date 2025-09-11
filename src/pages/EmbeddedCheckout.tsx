@@ -147,6 +147,11 @@ const EmbeddedCheckout: React.FC = () => {
             >
               Return to Therai.co
             </a>
+            <div className="text-xs text-gray-400 mt-6">
+              <div>Therai.co is brand by Farah Projects PTY LTD</div>
+              <div>ACN 676 280 229</div>
+              <div>Australian registered company (fully legit as)</div>
+            </div>
           </div>
         </div>
         
