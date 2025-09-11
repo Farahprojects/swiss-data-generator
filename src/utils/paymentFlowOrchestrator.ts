@@ -43,6 +43,13 @@ export class PaymentFlowOrchestrator {
     if (paymentStatus === 'success') {
       console.log(`[PaymentFlowOrchestrator] Stripe payment success detected - starting polling`);
       chatController.showPaymentFlowProgress("Payment confirmed! Setting up your personalized space...");
+      // Clean payment-related params from URL without navigation
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('payment_status');
+        url.searchParams.delete('guest_id');
+        window.history.replaceState({}, '', url.toString());
+      } catch { /* noop */ }
     } else {
       console.log(`[PaymentFlowOrchestrator] Starting payment polling for pending payment`);
       chatController.showPaymentFlowProgress("We're processing your payment. This usually takes a few seconds...");
