@@ -233,7 +233,6 @@ export const ConversationOverlay: React.FC = () => {
       chatController.setTtsMode(true);
       
       // 6. STEP 4: Initialize Audio Pipeline with validation
-      console.log('[ConversationOverlay] 🚀 Step 4: Initialize audio pipeline...');
       pipelineRef.current = new ConversationAudioPipeline({
         onSpeechStart: () => {
           if (!isShuttingDown.current) setState('listening');
@@ -268,14 +267,11 @@ export const ConversationOverlay: React.FC = () => {
       });
       
       // 7. STEP 5: Initialize and start pipeline with validation
-      console.log('[ConversationOverlay] 🚀 Step 5: Initialize audio pipeline...');
       await pipelineRef.current.init();
       
-      console.log('[ConversationOverlay] 🚀 Step 6: Start audio pipeline...');
       await pipelineRef.current.start();
       
       // 8. STEP 7: Final validation - All systems ready
-      console.log('[ConversationOverlay] 🚀 Step 7: Final validation...');
       if (!connectionRef.current) {
         throw new Error('TTS WebSocket connection lost during setup');
       }

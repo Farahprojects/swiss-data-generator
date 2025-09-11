@@ -534,7 +534,6 @@ class ChatController {
     this.isTtsMode = enabled;
     
     if (enabled) {
-      console.log('[ChatController] 🎤 TTS mode enabled - buffering messages');
     } else {
       console.log('[ChatController] 📝 Text mode enabled - flushing buffered messages');
       this.flushMessageBuffer();
