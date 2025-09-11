@@ -32,8 +32,18 @@ function CheckoutForm() {
     if (error) {
       setErrorMessage(error.message || 'Payment failed.');
     } else {
-      // If no redirect required, treat as success
-      window.location.replace('/c');
+      // Extract guest_id and chat_id from URL for proper redirect
+      const url = new URL(window.location.href);
+      const guest_id = url.searchParams.get('guest_id');
+      const chat_id = url.searchParams.get('chat_id');
+      
+      if (guest_id && chat_id) {
+        // Redirect to guest chat with the specific thread
+        window.location.replace(`/c/g/${chat_id}`);
+      } else {
+        // Fallback to regular chat
+        window.location.replace('/c');
+      }
     }
     setIsSubmitting(false);
   };

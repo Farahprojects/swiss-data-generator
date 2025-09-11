@@ -226,56 +226,48 @@ serve(async (req) => {
         processing_time_ms: ms
       });
     } else {
-      // For paid reports, create the checkout session immediately.
-      const checkoutPayload = {
-        guest_report_id: guestReportId,
+      // For paid reports, create a payment intent for custom embedded checkout
+      const paymentIntentPayload = {
         amount: final,
-        email: reportData.email,
+        currency: 'usd',
+        guest_id: guestReportId,
+        chat_id: chatId,
         description: `Astrology Report: ${reportData.reportType}`,
-        successUrl: `${SITE_URL}/stripe-return?guest_id=${guestReportId}&payment_status=success`,
-        cancelUrl: `${SITE_URL}/stripe-return?guest_id=${guestReportId}&payment_status=cancelled`,
       };
       
-      const { data: checkoutData, error: checkoutError } = await supabaseAdmin.functions.invoke('create-checkout', {
-        body: checkoutPayload,
+      const { data: paymentIntentData, error: paymentIntentError } = await supabaseAdmin.functions.invoke('create-payment-intent', {
+        body: paymentIntentPayload,
       });
 
-      if (checkoutError || !checkoutData?.url) {
-        console.error('❌ [ERROR] Failed to create checkout session:', { 
-          checkoutError, 
-          checkoutData, 
+      if (paymentIntentError || !paymentIntentData?.client_secret) {
+        console.error('❌ [ERROR] Failed to create payment intent:', { 
+          paymentIntentError, 
+          paymentIntentData, 
           guestReportId,
           finalPrice: final,
           reportType: reportData.reportType,
           email: reportData.email
         });
-        return oops('Failed to create checkout session');
+        return oops('Failed to create payment intent');
       }
 
-      // Save the checkout URL to the database for resuming sessions
-      const { error: updateError } = await supabaseAdmin
-        .from("guest_reports")
-        .update({ checkout_url: checkoutData.url })
-        .eq('id', guestReportId);
+      // Create custom checkout URL for embedded checkout
+      const embeddedCheckoutUrl = `${SITE_URL}/embedded-checkout?amount=${final}&guest_id=${guestReportId}&chat_id=${chatId}`;
 
-      if (updateError) {
-        console.error('❌ [ERROR] Failed to save checkout URL:', updateError);
-        // Don't fail the whole flow, just log the error
-      }
-
-      console.log('💳 [PERF] Paid report checkout created', {
+      console.log('💳 [PERF] Paid report payment intent created', {
         timestamp: new Date().toISOString(),
         guestReportId,
-        processing_time_ms: ms,
+        embeddedCheckoutUrl,
         finalPrice: final,
-        reportType: reportData.reportType
+        reportType: reportData.reportType,
+        processing_time_ms: ms
       });
 
       return ok({
         guestReportId,
         chatId, // 🔒 Secure chat_id for frontend
         paymentStatus: 'pending',
-        checkoutUrl: checkoutData.url,
+        checkoutUrl: embeddedCheckoutUrl, // Custom embedded checkout URL
         name: reportData.name,
         email: reportData.email,
         processing_time_ms: ms
