@@ -131,12 +131,14 @@ const EmbeddedCheckout: React.FC = () => {
           </div>
           <h1 className="text-4xl font-light italic">Therai partners with Stripe for simplified billing.</h1>
           {summary && (
-            <div className="mt-4 text-left mx-auto max-w-sm">
-              <div className="text-sm text-gray-500">Your purchase</div>
-              <div className="text-lg text-gray-900">
-                {summary.report ? summary.report.replace(/_/g, ' ') : 'Astrology Report'}
+            <div className="mt-8 mx-auto max-w-sm text-center">
+              <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                <div className="text-sm text-gray-500 mb-2">Your purchase</div>
+                <div className="text-xl font-medium text-gray-900 mb-2">
+                  {summary.report ? summary.report.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Astrology Report'}
+                </div>
+                <div className="text-lg font-semibold text-gray-900">USD ${summary.amount.toFixed(2)}</div>
               </div>
-              <div className="text-sm text-gray-600 mt-1">USD ${summary.amount.toFixed(2)}</div>
             </div>
           )}
           <div className="space-y-4">
