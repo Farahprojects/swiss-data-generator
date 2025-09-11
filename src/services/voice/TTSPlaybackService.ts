@@ -4,6 +4,7 @@ import { audioArbitrator } from '@/services/audio/AudioArbitrator';
 class TTSPlaybackService {
   private audioContext: AudioContext | null = null;
   private externalContextProvider: (() => AudioContext | null) | null = null;
+  private isUsingExternalContext: boolean = false;
   private currentSource: AudioBufferSourceNode | null = null;
   private analyser: AnalyserNode | null = null;
   private animationTimer: number | null = null;
@@ -57,10 +58,12 @@ class TTSPlaybackService {
       const provided = this.externalContextProvider();
       if (provided) {
         this.audioContext = provided;
+        this.isUsingExternalContext = true;
       }
     }
 
     if (!this.audioContext || this.audioContext.state === 'closed') {
+      this.isUsingExternalContext = false;
       try {
         this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ latencyHint: 'playback' });
       } catch {
@@ -208,10 +211,12 @@ class TTSPlaybackService {
 
   async destroy(): Promise<void> {
     this.internalStop();
-    if (this.audioContext && this.audioContext.state !== 'closed') {
+    // Only close when we created/own the context. Never close a shared external context.
+    if (this.audioContext && this.audioContext.state !== 'closed' && !this.isUsingExternalContext) {
       try { await this.audioContext.close(); } catch {}
     }
     this.audioContext = null;
+    this.isUsingExternalContext = false;
     this.listeners.clear();
     
     // 🎵 RELEASE AUDIO CONTROL on destroy
