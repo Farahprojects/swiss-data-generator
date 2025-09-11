@@ -68,8 +68,8 @@ serve(async (req) => {
         break;
 
       case 'create_thread':
-        if (!guest_id) {
-          return new Response('guest_id is required', { 
+        if (!guest_id || !thread_id) {
+          return new Response('guest_id and thread_id are required', { 
             status: 400, 
             headers: corsHeaders 
           });
@@ -87,8 +87,8 @@ serve(async (req) => {
         if (queryError || !existingGuestReport) {
           console.log(`[threads-manager] No guest report found for ${guest_id}, creating new one`);
           
-          // Create a new guest chat thread - SERVER-SIDE GENERATION
-          const newChatId = crypto.randomUUID();
+          // Use the thread_id from URL, not generate a new one
+          const newChatId = thread_id;
           
           const { data: newReport, error: createError } = await supabaseClient
             .from('guest_reports')
