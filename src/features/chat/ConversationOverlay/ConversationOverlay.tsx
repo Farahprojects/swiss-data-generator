@@ -32,12 +32,20 @@ export const ConversationOverlay: React.FC = () => {
   const pipelineRef = useRef<ConversationAudioPipeline | null>(null);
 
   // 🚨 RESET TO TAP TO START - Elegant single function for all error recovery
-  const resetToTapToStart = useCallback((reason: string) => {
+  const resetToTapToStart = useCallback(async (reason: string) => {
     console.log(`[ConversationOverlay] 🔄 Reset to tap-to-start: ${reason}`);
     
     // Stop any ongoing operations
     isShuttingDown.current = true;
     isProcessingRef.current = false;
+    
+    // RESUME TEXT WEBSOCKET FIRST - Restore text message updates
+    try {
+      const { chatController } = await import('@/features/chat/ChatController');
+      chatController.resumeTextWebSocket();
+    } catch (e) {
+      console.error('[ConversationOverlay] Failed to resume text WebSocket:', e);
+    }
     
     // Force cleanup all resources (fire-and-forget)
     ttsPlaybackService.destroy().catch(() => {});
@@ -132,7 +140,11 @@ export const ConversationOverlay: React.FC = () => {
     try {
       // 1. User gesture captured
       
-      // 2. Initialize WS + Audio Warmup
+      // 2. PAUSE TEXT WEBSOCKET FIRST - Stop text message updates
+      const { chatController } = await import('@/features/chat/ChatController');
+      chatController.pauseTextWebSocket();
+      
+      // 3. Initialize WS + Audio Warmup
       const { ttsPlaybackService } = await import('@/services/voice/TTSPlaybackService');
       await ttsPlaybackService.warmup();
       
@@ -205,10 +217,10 @@ export const ConversationOverlay: React.FC = () => {
       connectionRef.current = null;
     }
     
-    // ▶️ RESUME: Resume ChatController WebSocket for normal chat mode (fire-and-forget)
+    // ▶️ RESUME: Resume ChatController text WebSocket for normal chat mode (fire-and-forget)
     import('@/features/chat/ChatController').then(({ chatController }) => {
       try {
-        chatController.resumeRealtimeSubscription();
+        chatController.resumeTextWebSocket();
       } catch (error) {
         // Ignore resume errors
       }

@@ -65,6 +65,7 @@ class ChatController {
   private realtimeChannel: any = null;
   private realtimeStatus: 'SUBSCRIBED' | 'CLOSED' | 'TIMED_OUT' | 'CHANNEL_ERROR' | 'SUBSCRIBING' | null = null;
   private subscriptionRetryCount: number = 0;
+  private isTextWebSocketPaused: boolean = false;
 
   private setupRealtimeSubscription(chat_id: string) {
     // Clean up existing subscription
@@ -490,6 +491,22 @@ class ChatController {
     const { setPaymentFlowStopIcon } = useChatStore.getState();
     setPaymentFlowStopIcon(show);
     console.log(`[ChatController] Payment flow stop icon: ${show ? 'ON' : 'OFF'}`);
+  }
+
+  public pauseTextWebSocket(): void {
+    if (this.realtimeChannel && !this.isTextWebSocketPaused) {
+      console.log('[ChatController] 🔇 Pausing text message WebSocket');
+      this.realtimeChannel.unsubscribe();
+      this.isTextWebSocketPaused = true;
+    }
+  }
+
+  public resumeTextWebSocket(): void {
+    if (this.realtimeChannel && this.isTextWebSocketPaused) {
+      console.log('[ChatController] 🔊 Resuming text message WebSocket');
+      this.realtimeChannel.subscribe();
+      this.isTextWebSocketPaused = false;
+    }
   }
 
 }
