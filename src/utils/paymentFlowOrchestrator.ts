@@ -9,6 +9,8 @@ interface PaymentFlowOptions {
   onReportGenerating: () => void;
   onReportReady: () => void;
   onError: (error: string) => void;
+  onStripeCancel?: () => void;
+  onShowCancelModal?: (guestId: string) => void;
 }
 
 export class PaymentFlowOrchestrator {
@@ -26,6 +28,24 @@ export class PaymentFlowOrchestrator {
 
     console.log(`[PaymentFlowOrchestrator] Starting payment flow for chat_id: ${this.options.chatId}`);
     this.isActive = true;
+
+    // Check if this is a Stripe flow by looking for payment_status in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentStatus = urlParams.get('payment_status');
+    
+    if (paymentStatus === 'cancelled') {
+      console.log(`[PaymentFlowOrchestrator] Stripe payment cancelled detected`);
+      this.handleStripeCancel();
+      return;
+    }
+
+    if (paymentStatus === 'success') {
+      console.log(`[PaymentFlowOrchestrator] Stripe payment success detected - starting polling`);
+      chatController.showPaymentFlowProgress("Payment confirmed! Setting up your personalized space...");
+    } else {
+      console.log(`[PaymentFlowOrchestrator] Starting payment polling for pending payment`);
+      chatController.showPaymentFlowProgress("We're processing your payment. This usually takes a few seconds...");
+    }
 
     // Start payment polling
     this.paymentPoller = createPaymentPoller({
@@ -163,6 +183,31 @@ export class PaymentFlowOrchestrator {
     chatController.setPaymentFlowStopIcon(false);
     
     this.options.onError(error);
+    this.stop();
+  }
+
+  private handleStripeCancel(): void {
+    console.log(`[PaymentFlowOrchestrator] Handling Stripe payment cancellation`);
+    
+    // Show cancellation message in chat
+    chatController.showPaymentFlowProgress("Payment was cancelled. You can try again anytime.");
+    
+    // Clean up URL parameters
+    const url = new URL(window.location.href);
+    url.searchParams.delete('payment_status');
+    window.history.replaceState({}, '', url.toString());
+    
+    // Show CancelNudgeModal to allow user to resume checkout
+    if (this.options.onShowCancelModal) {
+      this.options.onShowCancelModal(this.options.chatId);
+    }
+    
+    // Notify UI of cancellation
+    if (this.options.onStripeCancel) {
+      this.options.onStripeCancel();
+    }
+    
+    // Stop the orchestrator since payment was cancelled
     this.stop();
   }
 }

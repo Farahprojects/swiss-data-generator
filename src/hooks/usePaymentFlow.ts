@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { usePaymentFlowStore } from '@/stores/paymentFlowStore';
 import { createPaymentFlowOrchestrator, PaymentFlowOrchestrator } from '@/utils/paymentFlowOrchestrator';
 import { useChatStore } from '@/core/store';
+import { useCancelModal } from '@/contexts/CancelModalContext';
 
 interface UsePaymentFlowOptions {
   chatId: string | null;
@@ -10,6 +11,7 @@ interface UsePaymentFlowOptions {
 
 export const usePaymentFlow = ({ chatId, enabled }: UsePaymentFlowOptions) => {
   const orchestratorRef = useRef<PaymentFlowOrchestrator | null>(null);
+  const { showCancelModal } = useCancelModal();
   const {
     setPaymentConfirmed,
     setReportGenerating,
@@ -46,6 +48,15 @@ export const usePaymentFlow = ({ chatId, enabled }: UsePaymentFlowOptions) => {
         console.error(`[usePaymentFlow] Error for chat_id: ${chatId}:`, error);
         setError(error);
         setReportGenerating(false);
+      },
+      onStripeCancel: () => {
+        console.log(`[usePaymentFlow] Stripe payment cancelled for chat_id: ${chatId}`);
+        // Reset payment flow state on cancellation
+        reset();
+      },
+      onShowCancelModal: (guestId) => {
+        console.log(`[usePaymentFlow] Showing cancel modal for guest_id: ${guestId}`);
+        showCancelModal(guestId);
       },
     });
 

@@ -1,9 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useChatStore } from '@/core/store';
 import { chatController } from '@/features/chat/ChatController';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserType } from '@/hooks/useUserType';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Centralized chat initialization hook with hydration
@@ -16,13 +17,65 @@ import { useUserType } from '@/hooks/useUserType';
  */
 export const useChatInitialization = (options?: { skipIfPaymentPending?: boolean }) => {
   const { threadId } = useParams<{ threadId?: string }>();
-  const { chat_id, hydrateFromStorage, startConversation } = useChatStore();
+  const { chat_id, hydrateFromStorage, startConversation, setChatLocked } = useChatStore();
   const { user } = useAuth();
   const { guestId } = useUserType();
+  const [isPaymentGateActive, setIsPaymentGateActive] = useState(false);
   
+  // Payment gate for guest routes
+  useEffect(() => {
+    if (!threadId) return;
+
+    // Only apply payment gate to guest routes (/c/g/{threadId})
+    const isGuestRoute = window.location.pathname.startsWith('/c/g/');
+    if (!isGuestRoute) {
+      console.log(`[useChatInitialization] Not a guest route, skipping payment gate`);
+      setIsPaymentGateActive(false);
+      setChatLocked(false);
+      return;
+    }
+
+    const checkPaymentStatus = async () => {
+      try {
+        console.log(`[useChatInitialization] Checking payment status for guest threadId: ${threadId}`);
+        
+        const { data: guestReport, error } = await supabase
+          .from('guest_reports')
+          .select('payment_status')
+          .eq('id', threadId)
+          .single();
+
+        if (error) {
+          console.error(`[useChatInitialization] Error fetching payment status:`, error);
+          setIsPaymentGateActive(false);
+          setChatLocked(false);
+          return;
+        }
+
+        console.log(`[useChatInitialization] Payment status: ${guestReport.payment_status}`);
+
+        if (guestReport.payment_status === 'paid') {
+          console.log(`[useChatInitialization] Payment confirmed - unlocking chat`);
+          setIsPaymentGateActive(false);
+          setChatLocked(false);
+        } else {
+          console.log(`[useChatInitialization] Payment pending - locking chat`);
+          setIsPaymentGateActive(true);
+          setChatLocked(true);
+        }
+      } catch (error) {
+        console.error(`[useChatInitialization] Error in payment status check:`, error);
+        setIsPaymentGateActive(false);
+        setChatLocked(false);
+      }
+    };
+
+    checkPaymentStatus();
+  }, [threadId, setChatLocked]);
+
   useEffect(() => {
     // Payment gate: Skip initialization if payment is pending
-    if (options?.skipIfPaymentPending) {
+    if (isPaymentGateActive) {
       console.log(`[useChatInitialization] Payment gate active - skipping chat initialization`);
       return;
     }
@@ -67,5 +120,5 @@ export const useChatInitialization = (options?: { skipIfPaymentPending?: boolean
       // Then initialize controller
       chatController.initializeForConversation(targetChatId);
     }
-  }, [threadId, chat_id, hydrateFromStorage, startConversation, user?.id, guestId, options?.skipIfPaymentPending]);
+  }, [threadId, chat_id, hydrateFromStorage, startConversation, user?.id, guestId, isPaymentGateActive]);
 };

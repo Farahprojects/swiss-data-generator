@@ -25,6 +25,7 @@ interface ChatState {
   lastMessagesFetch: number | null;
   isAssistantTyping: boolean;
   isPaymentFlowStopIcon: boolean;
+  isChatLocked: boolean;
 
   // Thread management (single source of truth)
   threads: Conversation[];
@@ -47,6 +48,7 @@ interface ChatState {
   retryLoadMessages: () => Promise<void>;
   setAssistantTyping: (isTyping: boolean) => void;
   setPaymentFlowStopIcon: (show: boolean) => void;
+  setChatLocked: (locked: boolean) => void;
   
   // Hydration and persistence
   hydrateFromStorage: (authId?: string, guestId?: string) => string | null;
@@ -78,6 +80,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   lastMessagesFetch: null,
   isAssistantTyping: false,
   isPaymentFlowStopIcon: false,
+  isChatLocked: false,
 
   // Thread management (single source of truth)
   threads: [],
@@ -231,7 +234,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       messageLoadError: null,
       lastMessagesFetch: null,
       isAssistantTyping: false,
-      isPaymentFlowStopIcon: false
+      isPaymentFlowStopIcon: false,
+      isChatLocked: false
     });
     
     // Clear guest data from storage as well
@@ -282,6 +286,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setAssistantTyping: (isTyping) => set({ isAssistantTyping: isTyping }),
 
   setPaymentFlowStopIcon: (show) => set({ isPaymentFlowStopIcon: show }),
+  setChatLocked: (locked) => set({ isChatLocked: locked }),
 
   // Thread actions
   loadThreads: async () => {

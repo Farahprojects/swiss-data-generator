@@ -8,6 +8,7 @@ import { VoiceWaveform } from './VoiceWaveform';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSearchParams } from 'react-router-dom';
 import { useChatInputState } from '@/hooks/useChatInputState';
+import { useChatStore } from '@/core/store';
 // Removed - using single source of truth in useChatStore
 
 // Stop icon component
@@ -18,6 +19,9 @@ const StopIcon = () => (
 export const ChatInput = () => {
   const [text, setText] = useState('');
   const [isMuted, setIsMuted] = useState(false);
+  
+  // Get chat locked state
+  const isChatLocked = useChatStore(state => state.isChatLocked);
   
   // Use isolated state management to prevent unnecessary re-renders
   const {
@@ -165,7 +169,7 @@ export const ChatInput = () => {
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder={isAssistantGenerating ? "Setting up your space..." : "Share your thoughts..."}
-              disabled={isAssistantGenerating}
+              disabled={isAssistantGenerating || isChatLocked}
               className={`w-full px-4 py-2.5 pr-24 text-base font-light bg-white border-2 rounded-3xl focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-400 resize-none text-black placeholder-gray-500 overflow-y-auto ${
                 isAssistantGenerating 
                   ? 'border-gray-200 bg-gray-50 cursor-not-allowed' 
@@ -188,7 +192,7 @@ export const ChatInput = () => {
                   : 'text-gray-500 hover:text-gray-900'
               }`}
               onClick={toggleMicRecording}
-              disabled={isMicProcessing || isAssistantGenerating}
+              disabled={isMicProcessing || isAssistantGenerating || isChatLocked}
               title={isAssistantGenerating ? "Setting up your space..." : getMicButtonTitle()}
             >
               {getMicButtonContent()}
@@ -202,7 +206,7 @@ export const ChatInput = () => {
                     : 'w-8 h-8 text-gray-500 hover:text-gray-900 flex items-center justify-center'
               }`}
               onClick={handleRightButtonClick}
-              disabled={isAssistantGenerating}
+              disabled={isAssistantGenerating || isChatLocked}
             >
               {isAssistantTyping ? (
                 <StopIcon />
