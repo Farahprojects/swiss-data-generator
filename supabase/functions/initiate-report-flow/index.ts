@@ -255,6 +255,20 @@ serve(async (req) => {
       const reportParam = encodeURIComponent(reportData.reportType || normalizedReportData.request || 'report');
       const embeddedCheckoutUrl = `${SITE_URL}/stripe?amount=${final}&guest_id=${guestReportId}&chat_id=${chatId}&report=${reportParam}`;
 
+      // Save checkout URL to guest_reports table (fire-and-forget)
+      supabaseAdmin
+        .from('guest_reports')
+        .update({ checkout_url: embeddedCheckoutUrl })
+        .eq('id', guestReportId)
+        .then(({ error }) => {
+          if (error) {
+            console.error('❌ [ERROR] Failed to save checkout URL to guest_reports:', error);
+          } else {
+            console.log('✅ [SUCCESS] Checkout URL saved to guest_reports:', embeddedCheckoutUrl);
+          }
+        })
+        .catch(err => console.error('❌ [ERROR] Exception saving checkout URL:', err));
+
       console.log('💳 [PERF] Paid report payment intent created', {
         timestamp: new Date().toISOString(),
         guestReportId,
