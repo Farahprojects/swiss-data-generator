@@ -65,7 +65,15 @@ class ChatController {
   private realtimeChannel: any = null;
   private realtimeStatus: 'SUBSCRIBED' | 'CLOSED' | 'TIMED_OUT' | 'CHANNEL_ERROR' | 'SUBSCRIBING' | null = null;
   private subscriptionRetryCount: number = 0;
-  private isTextWebSocketPaused: boolean = false;
+  
+  // Buffering system for TTS mode
+  private messageBuffer: any[] = [];
+  private isTtsMode: boolean = false;
+  private readonly BUFFER_CAPACITY = 100; // Circular buffer limit
+  
+  // Heartbeat system
+  private dbHeartbeatInterval: NodeJS.Timeout | null = null;
+  private readonly DB_HEARTBEAT_INTERVAL = 30000; // 30 seconds
 
   private setupRealtimeSubscription(chat_id: string) {
     // Clean up existing subscription
@@ -88,21 +96,14 @@ class ChatController {
           (payload) => {
             console.log('[ChatController] 📥 INSERT message payload received');
             const newMessage = this.transformDatabaseMessage(payload.new);
-            const { messages, updateMessage, addMessage } = useChatStore.getState();
             
-            // Reconciliation logic: check if this is updating an optimistic message
-            if (newMessage.role === 'user' && newMessage.client_msg_id) {
-              // Find and update the optimistic user message
-              const optimisticMessage = messages.find(m => m.id === newMessage.client_msg_id);
-              if (optimisticMessage) {
-                updateMessage(newMessage.client_msg_id, { ...newMessage });
-                return;
-              }
-            }
-            
-            // Only add if not already present and no reconciliation occurred
-            if (!messages.find(m => m.id === newMessage.id)) {
-              addMessage(newMessage);
+            // Handle message based on TTS mode
+            if (this.isTtsMode) {
+              // Buffer the message when in TTS mode
+              this.bufferMessage(newMessage);
+            } else {
+              // Process immediately when in text mode
+              this.processMessage(newMessage);
             }
           }
         )
@@ -141,6 +142,7 @@ class ChatController {
             // Guaranteed delivery: fetch current state after subscribing
             this.subscriptionRetryCount = 0;
             this.loadExistingMessages();
+            this.startHeartbeat();
           }
           if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR') {
             const retry = Math.min(++this.subscriptionRetryCount, 5);
@@ -194,10 +196,16 @@ class ChatController {
   }
 
   public cleanupRealtimeSubscription() {
+    this.stopHeartbeat(); // Stop heartbeat when cleaning up
+    
     if (this.realtimeChannel) {
       supabase.removeChannel(this.realtimeChannel);
       this.realtimeChannel = null;
     }
+    
+    // Clear buffer and reset TTS mode
+    this.messageBuffer = [];
+    this.isTtsMode = false;
   }
 
   public pauseRealtimeSubscription() {
@@ -493,19 +501,95 @@ class ChatController {
     console.log(`[ChatController] Payment flow stop icon: ${show ? 'ON' : 'OFF'}`);
   }
 
-  public pauseTextWebSocket(): void {
-    if (this.realtimeChannel && !this.isTextWebSocketPaused) {
-      console.log('[ChatController] 🔇 Pausing text message WebSocket');
-      this.realtimeChannel.unsubscribe();
-      this.isTextWebSocketPaused = true;
+  // Buffering system methods
+  private bufferMessage(message: any): void {
+    // Circular buffer: if at capacity, remove oldest message
+    if (this.messageBuffer.length >= this.BUFFER_CAPACITY) {
+      const dropped = this.messageBuffer.shift();
+      console.warn(`[ChatController] Buffer overflow - dropped message: ${dropped?.id}`);
+    }
+    
+    this.messageBuffer.push(message);
+    console.log(`[ChatController] 📦 Buffered message (${this.messageBuffer.length}/${this.BUFFER_CAPACITY}): ${message.id}`);
+  }
+
+  private processMessage(message: any): void {
+    const { messages, updateMessage, addMessage } = useChatStore.getState();
+    
+    // Reconciliation logic: check if this is updating an optimistic message
+    if (message.role === 'user' && message.client_msg_id) {
+      // Find and update the optimistic user message
+      const optimisticMessage = messages.find(m => m.id === message.client_msg_id);
+      if (optimisticMessage) {
+        updateMessage(message.client_msg_id, { ...message });
+        return;
+      }
+    }
+    
+    // Only add if not already present and no reconciliation occurred
+    if (!messages.find(m => m.id === message.id)) {
+      addMessage(message);
     }
   }
 
-  public resumeTextWebSocket(): void {
-    if (this.realtimeChannel && this.isTextWebSocketPaused) {
-      console.log('[ChatController] 🔊 Resuming text message WebSocket');
-      this.realtimeChannel.subscribe();
-      this.isTextWebSocketPaused = false;
+  public setTtsMode(enabled: boolean): void {
+    if (this.isTtsMode === enabled) return;
+    
+    this.isTtsMode = enabled;
+    
+    if (enabled) {
+      console.log('[ChatController] 🎤 TTS mode enabled - buffering messages');
+    } else {
+      console.log('[ChatController] 📝 Text mode enabled - flushing buffered messages');
+      this.flushMessageBuffer();
+    }
+  }
+
+  private flushMessageBuffer(): void {
+    if (this.messageBuffer.length === 0) return;
+    
+    console.log(`[ChatController] 📤 Flushing ${this.messageBuffer.length} buffered messages`);
+    
+    // Process all buffered messages
+    this.messageBuffer.forEach(message => {
+      this.processMessage(message);
+    });
+    
+    // Clear the buffer
+    this.messageBuffer = [];
+  }
+
+  // Heartbeat system
+  private startHeartbeat(): void {
+    this.stopHeartbeat(); // Clear any existing heartbeat
+    
+    this.dbHeartbeatInterval = setInterval(() => {
+      this.sendHeartbeat();
+    }, this.DB_HEARTBEAT_INTERVAL);
+    
+    console.log(`[ChatController] 💓 Started DB heartbeat (${this.DB_HEARTBEAT_INTERVAL}ms)`);
+  }
+
+  private stopHeartbeat(): void {
+    if (this.dbHeartbeatInterval) {
+      clearInterval(this.dbHeartbeatInterval);
+      this.dbHeartbeatInterval = null;
+    }
+  }
+
+  private async sendHeartbeat(): Promise<void> {
+    try {
+      // Lightweight ping to keep connection alive
+      const { error } = await supabase
+        .from('messages')
+        .select('id')
+        .limit(1);
+      
+      if (error) {
+        console.warn('[ChatController] Heartbeat failed:', error);
+      }
+    } catch (error) {
+      console.warn('[ChatController] Heartbeat error:', error);
     }
   }
 

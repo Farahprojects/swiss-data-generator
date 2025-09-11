@@ -39,12 +39,12 @@ export const ConversationOverlay: React.FC = () => {
     isShuttingDown.current = true;
     isProcessingRef.current = false;
     
-    // RESUME TEXT WEBSOCKET FIRST - Restore text message updates
+    // DISABLE TTS MODE - Flush buffered messages back to text mode
     try {
       const { chatController } = await import('@/features/chat/ChatController');
-      chatController.resumeTextWebSocket();
+      chatController.setTtsMode(false);
     } catch (e) {
-      console.error('[ConversationOverlay] Failed to resume text WebSocket:', e);
+      console.error('[ConversationOverlay] Failed to disable TTS mode:', e);
     }
     
     // Force cleanup all resources (fire-and-forget)
@@ -140,9 +140,9 @@ export const ConversationOverlay: React.FC = () => {
     try {
       // 1. User gesture captured
       
-      // 2. PAUSE TEXT WEBSOCKET FIRST - Stop text message updates
+      // 2. ENABLE TTS MODE - Buffer text messages instead of pausing
       const { chatController } = await import('@/features/chat/ChatController');
-      chatController.pauseTextWebSocket();
+      chatController.setTtsMode(true);
       
       // 3. Initialize WS + Audio Warmup
       const { ttsPlaybackService } = await import('@/services/voice/TTSPlaybackService');
@@ -217,12 +217,12 @@ export const ConversationOverlay: React.FC = () => {
       connectionRef.current = null;
     }
     
-    // ▶️ RESUME: Resume ChatController text WebSocket for normal chat mode (fire-and-forget)
+    // ▶️ DISABLE TTS MODE: Flush buffered messages back to text mode (fire-and-forget)
     import('@/features/chat/ChatController').then(({ chatController }) => {
       try {
-        chatController.resumeTextWebSocket();
+        chatController.setTtsMode(false);
       } catch (error) {
-        // Ignore resume errors
+        // Ignore mode switch errors
       }
     }).catch(() => {
       // Ignore import errors

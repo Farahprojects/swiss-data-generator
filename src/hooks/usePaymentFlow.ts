@@ -22,7 +22,6 @@ export const usePaymentFlow = ({ chatId, enabled }: UsePaymentFlowOptions) => {
 
   useEffect(() => {
     if (!enabled || !chatId) {
-      console.log(`[usePaymentFlow] Payment flow not enabled or no chatId. enabled: ${enabled}, chatId: ${chatId}`);
       return;
     }
 

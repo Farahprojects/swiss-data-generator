@@ -17,7 +17,7 @@ import { usePaymentFlowStore } from '@/stores/paymentFlowStore';
  */
 export const useChatInitialization = (options?: { skipIfPaymentPending?: boolean }) => {
   const { threadId } = useParams<{ threadId?: string }>();
-  const { chat_id, hydrateFromStorage, startConversation, setChatLocked } = useChatStore();
+  const { chat_id, hydrateFromStorage, startConversation } = useChatStore();
   const { user } = useAuth();
   const { guestId } = useUserType();
   const { isPaymentConfirmed, isReportReady, error: paymentError } = usePaymentFlowStore();
@@ -32,30 +32,22 @@ export const useChatInitialization = (options?: { skipIfPaymentPending?: boolean
     if (!isGuestRoute) {
       console.log(`[useChatInitialization] Not a guest route, skipping payment gate`);
       setIsPaymentGateActive(false);
-      setChatLocked(false);
       return;
     }
 
     // Wait for payment flow to determine status instead of checking database directly
     if (isPaymentConfirmed || isReportReady) {
-      console.log(`[useChatInitialization] Payment confirmed or report ready - unlocking chat`);
       setIsPaymentGateActive(false);
-      setChatLocked(false);
     } else if (paymentError) {
-      console.log(`[useChatInitialization] Payment error - unlocking chat to allow retry`);
       setIsPaymentGateActive(false);
-      setChatLocked(false);
     } else {
-      console.log(`[useChatInitialization] Payment pending - locking chat until payment flow determines status`);
       setIsPaymentGateActive(true);
-      setChatLocked(true);
     }
-  }, [threadId, isPaymentConfirmed, isReportReady, paymentError, setChatLocked]);
+  }, [threadId, isPaymentConfirmed, isReportReady, paymentError]);
 
   useEffect(() => {
     // Payment gate: Skip initialization if payment is pending
     if (isPaymentGateActive) {
-      console.log(`[useChatInitialization] Payment gate active - skipping chat initialization`);
       return;
     }
 
@@ -65,7 +57,6 @@ export const useChatInitialization = (options?: { skipIfPaymentPending?: boolean
     
     // Double-safety: ensure we never hydrate a deleted session
     if (!threadId && !urlChatId) {
-      console.log(`[useChatInitialization] No threadId or chat_id in URL - ensuring clean state`);
       // Reset store to guarantee clean state
       useChatStore.getState().clearChat();
       return;
