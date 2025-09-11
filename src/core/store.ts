@@ -423,7 +423,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
     try {
       // Always write to sessionStorage as cache (guest/auth agnostic)
       sessionStorage.setItem(STORAGE_KEYS.CHAT.SHARED.UUID, chat_id);
-      console.log(`[Store] Persisted chat_id to sessionStorage (cache): ${chat_id}`);
       
       // Also write to namespaced keys if available (for user-specific caching)
       if (authId) {

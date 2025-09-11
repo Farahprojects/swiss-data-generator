@@ -349,7 +349,6 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       }
 
       if (response) {
-        console.log('Report flow initiated successfully:', response);
         
         // Check if we need to redirect to Stripe checkout
         if (response.checkoutUrl) {
@@ -368,13 +367,10 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
         
         // If this is a free report, proceed with chat setup
         if (response.paymentStatus === 'paid' || pricingResult.final_price_usd === 0) {
-          console.log(`[AstroForm] ✅ Report ready (${pricingResult.final_price_usd === 0 ? 'free' : 'paid'}), setting up chat for: ${response.guestReportId}`);
           
           // Guest report ID is no longer stored in sessionStorage
-          console.log(`[AstroForm] Guest report ID: ${response.guestReportId}`);
           
           // Navigate to guest chat - payment flow will handle the rest
-          console.log(`[AstroForm] 🔗 Navigating to guest chat: /c/g/${response.chatId}`);
           navigate(`/c/g/${response.chatId}`, { replace: true });
           
           return;

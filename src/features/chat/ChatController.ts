@@ -80,7 +80,6 @@ class ChatController {
     this.cleanupRealtimeSubscription();
 
     try {
-      console.log(`[ChatController] 🔌 Setting up realtime subscription for chat_id: ${chat_id}`);
       this.subscriptionRetryCount = 0;
 
       this.realtimeChannel = supabase
@@ -137,7 +136,6 @@ class ChatController {
         )
         .subscribe((status) => {
           this.realtimeStatus = status as any;
-          console.log(`[ChatController] 🔔 Realtime status for chat_id ${chat_id}: ${status}`);
           if (status === 'SUBSCRIBED') {
             // Guaranteed delivery: fetch current state after subscribing
             this.subscriptionRetryCount = 0;
@@ -565,7 +563,6 @@ class ChatController {
       this.sendHeartbeat();
     }, this.DB_HEARTBEAT_INTERVAL);
     
-    console.log(`[ChatController] 💓 Started DB heartbeat (${this.DB_HEARTBEAT_INTERVAL}ms)`);
   }
 
   private stopHeartbeat(): void {

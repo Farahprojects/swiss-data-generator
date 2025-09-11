@@ -68,7 +68,6 @@ export const useChatInitialization = (options?: { skipIfPaymentPending?: boolean
     // 1. URL threadId is primary source of truth
     if (!targetChatId && threadId) {
       targetChatId = threadId;
-      console.log(`[useChatInitialization] Using URL threadId (primary): ${targetChatId}`);
     }
     
     // 2. Fallback to sessionStorage cache
@@ -82,7 +81,6 @@ export const useChatInitialization = (options?: { skipIfPaymentPending?: boolean
     
     // 3. Initialize if we have a chat_id and it's different from current
     if (targetChatId && targetChatId !== chat_id) {
-      console.log(`[useChatInitialization] Initializing chat: ${targetChatId}`);
       
       // Set in store first (this will persist to sessionStorage)
       startConversation(targetChatId, guestId);
