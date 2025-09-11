@@ -93,7 +93,6 @@ class ChatController {
             filter: `chat_id=eq.${chat_id}`
           },
           (payload) => {
-            console.log('[ChatController] 📥 INSERT message payload received');
             const newMessage = this.transformDatabaseMessage(payload.new);
             
             // Handle message based on TTS mode
@@ -506,7 +505,6 @@ class ChatController {
     }
     
     this.messageBuffer.push(message);
-    console.log(`[ChatController] 📦 Buffered message (${this.messageBuffer.length}/${this.BUFFER_CAPACITY}): ${message.id}`);
   }
 
   private processMessage(message: any): void {
@@ -535,7 +533,6 @@ class ChatController {
     
     if (enabled) {
     } else {
-      console.log('[ChatController] 📝 Text mode enabled - flushing buffered messages');
       this.flushMessageBuffer();
     }
   }
@@ -543,7 +540,6 @@ class ChatController {
   private flushMessageBuffer(): void {
     if (this.messageBuffer.length === 0) return;
     
-    console.log(`[ChatController] 📤 Flushing ${this.messageBuffer.length} buffered messages`);
     
     // Process all buffered messages
     this.messageBuffer.forEach(message => {

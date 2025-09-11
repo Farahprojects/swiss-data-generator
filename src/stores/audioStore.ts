@@ -38,7 +38,6 @@ export const useAudioStore = create<AudioState>((set, get) => ({
         return false;
       }
     } else {
-      console.log('[AudioStore] ✅ AudioContext already running');
       set({ isAudioUnlocked: true });
       return true;
     }

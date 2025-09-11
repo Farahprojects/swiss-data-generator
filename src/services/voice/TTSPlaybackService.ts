@@ -41,7 +41,6 @@ class TTSPlaybackService {
       source.start(0);
       source.stop(0.001); // Stop immediately
       
-      console.log('[TTSPlaybackService] 🔥 Audio context and decode path warmed up');
     } catch (error) {
       console.error('[TTSPlaybackService] Warmup failed:', error);
     }

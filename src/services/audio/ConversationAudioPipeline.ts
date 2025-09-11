@@ -107,7 +107,6 @@ export class ConversationAudioPipeline {
   }
 
   public pause(): void {
-    console.log('[AudioPipeline] Pausing - stopping data flow to WebWorker');
     // Keep media stream and AudioContext active, just stop forwarding to WebWorker
     if (this.workletNode) {
       this.workletNode.port.onmessage = null as any;
@@ -115,7 +114,6 @@ export class ConversationAudioPipeline {
   }
 
   public resume(): void {
-    console.log('[AudioPipeline] Resuming - restarting data flow to WebWorker');
     // Restart forwarding to WebWorker
     if (this.workletNode) {
       this.workletNode.port.onmessage = (event: MessageEvent) => {

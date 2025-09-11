@@ -22,12 +22,6 @@ class SttService {
     }
     
     // OpenAI Whisper: Log simplified payload
-    console.log('[STT] 📤 SENDING TO OPENAI WHISPER:', {
-      blobSize: audioBlob.size,
-      blobType: audioBlob.type,
-      mode,
-      chat_id
-    });
 
     // OpenAI Whisper: Send raw binary audio directly
     const { data, error } = await supabase.functions.invoke('openai-whisper', {

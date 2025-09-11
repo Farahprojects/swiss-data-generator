@@ -131,35 +131,11 @@ export const ConversationOverlay: React.FC = () => {
     }
     
     try {
-      console.log(`[ConversationOverlay] 🔌 Establishing TTS WebSocket for chat_id: ${chat_id}`);
       
-      // DIAGNOSTIC: Log all the key information
-      console.log(`[ConversationOverlay] 🔍 DIAGNOSTIC INFO:`);
-      console.log(`[ConversationOverlay] 🔍 - Site URL: ${window.location.origin}`);
-      console.log(`[ConversationOverlay] 🔍 - Site Protocol: ${window.location.protocol}`);
-      console.log(`[ConversationOverlay] 🔍 - Is HTTPS: ${window.location.protocol === 'https:'}`);
-      console.log(`[ConversationOverlay] 🔍 - Supabase URL: ${SUPABASE_URL}`);
-      console.log(`[ConversationOverlay] 🔍 - Supabase Key Present: ${!!SUPABASE_ANON_KEY}`);
-      console.log(`[ConversationOverlay] 🔍 - Channel Name: conversation:${chat_id}`);
-      console.log(`[ConversationOverlay] 🔍 - User Agent: ${navigator.userAgent}`);
-      console.log(`[ConversationOverlay] 🔍 - Browser: ${navigator.userAgent.includes('Chrome') ? 'Chrome' : 'Other'}`);
-      
-      // Try to get CSP headers (if available)
-      try {
-        const metaCSP = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
-        if (metaCSP) {
-          console.log(`[ConversationOverlay] 🔍 - CSP Meta Tag: ${metaCSP.getAttribute('content')}`);
-        } else {
-          console.log(`[ConversationOverlay] 🔍 - No CSP Meta Tag found`);
-        }
-      } catch (e) {
-        console.log(`[ConversationOverlay] 🔍 - Could not read CSP headers`);
-      }
       
       const connection = supabase.channel(`conversation:${chat_id}`);
       
       connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
-        console.log('[ConversationOverlay] 🎵 TTS audio received via WebSocket');
         if (payload.audioBytes && !isShuttingDown.current) {
           playAudioImmediately(payload.audioBytes);
         }
@@ -184,7 +160,6 @@ export const ConversationOverlay: React.FC = () => {
         }, 8000);
         
         connection.subscribe((status) => {
-          console.log(`[ConversationOverlay] 🔌 TTS WebSocket status: ${status}`);
           
           if (status === 'SUBSCRIBED') {
             wasSubscribedRef.current = true;
@@ -192,11 +167,6 @@ export const ConversationOverlay: React.FC = () => {
             if (settled) return;
             settled = true;
             connectionRef.current = connection;
-            console.log(`[ConversationOverlay] 🔍 DIAGNOSTIC - WebSocket Connected:`);
-            console.log(`[ConversationOverlay] 🔍 - Connection Object:`, connection);
-            console.log(`[ConversationOverlay] 🔍 - Channel:`, connection.topic);
-            console.log(`[ConversationOverlay] 🔍 - WebSocket URL:`, (connection as any).socket?.url || 'Not available');
-            console.log('[ConversationOverlay] ✅ TTS WebSocket connected successfully');
             resolve(true);
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
             clearTimeout(timeout);
@@ -266,21 +236,18 @@ export const ConversationOverlay: React.FC = () => {
       await resumeAudioContext();
       
       // 3. STEP 1: Audio Warmup with validation
-      console.log('[ConversationOverlay] 🚀 Step 1: Audio warmup...');
       const { ttsPlaybackService } = await import('@/services/voice/TTSPlaybackService');
       // Provide shared/unlocked AudioContext to TTS service
       ttsPlaybackService.setAudioContextProvider(() => ctx);
       await ttsPlaybackService.warmup();
       
       // 4. STEP 2: WebSocket connection with validation
-      console.log('[ConversationOverlay] 🚀 Step 2: TTS WebSocket connection...');
       const connectionEstablished = await establishConnection();
       if (!connectionEstablished) {
         throw new Error('Failed to establish TTS WebSocket connection');
       }
       
       // 5. STEP 3: Enable TTS mode with validation
-      console.log('[ConversationOverlay] 🚀 Step 3: Enable TTS mode...');
       const { chatController } = await import('@/features/chat/ChatController');
       chatController.setTtsMode(true);
       
@@ -335,7 +302,6 @@ export const ConversationOverlay: React.FC = () => {
       isActiveRef.current = true;
       hasStarted.current = true;
       setState('listening');
-      console.log('[ConversationOverlay] ✅ Conversation setup complete - all systems ready');
       
     } catch (error) {
       console.error('[ConversationOverlay] Start failed:', error);

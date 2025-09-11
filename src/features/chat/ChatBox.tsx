@@ -82,7 +82,6 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
     if (isGuest && chat_id) {
       checkReportGeneratedStatus(chat_id).then((isGenerated) => {
         setShouldEnablePaymentFlow(!isGenerated);
-        console.log(`[ChatBox] Report generated status: ${isGenerated}, enabling payment flow: ${!isGenerated}`);
       });
     } else {
       setShouldEnablePaymentFlow(false);

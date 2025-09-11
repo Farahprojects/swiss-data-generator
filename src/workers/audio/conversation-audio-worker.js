@@ -90,7 +90,6 @@ self.onmessage = (event) => {
   if (type === 'audio') {
     frameCount++;
     if (frameCount === 1) {
-      console.log('[AudioWorker] ✅ First frame received - worker is active');
     }
     
     // Background throttling: skip processing every other frame when throttled
@@ -119,7 +118,6 @@ self.onmessage = (event) => {
       belowCount = 0;
       if (!speechActive && aboveCount >= SPEECH_START_FRAMES) {
         speechActive = true;
-        console.log(`[AudioWorker] 🎤 Speech started! Energy: ${energy.toFixed(6)}, Threshold: ${currentThreshold.toFixed(6)}`);
         self.postMessage({ type: 'vad', state: 'speech_start' });
       }
     } else {
