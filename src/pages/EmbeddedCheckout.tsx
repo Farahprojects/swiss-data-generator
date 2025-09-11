@@ -68,6 +68,7 @@ function CheckoutForm() {
 
 const EmbeddedCheckout: React.FC = () => {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [summary, setSummary] = useState<{ amount: number; report?: string } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -75,12 +76,14 @@ const EmbeddedCheckout: React.FC = () => {
       const amount = Number(url.searchParams.get('amount') || '0');
       const guest_id = url.searchParams.get('guest_id') || undefined;
       const chat_id = url.searchParams.get('chat_id') || undefined;
+      const report = url.searchParams.get('report') || undefined;
 
       const { data, error } = await supabase.functions.invoke('create-payment-intent', {
         body: { amount, currency: 'usd', guest_id, chat_id, description: 'Conversation payment' }
       });
       if (error) return;
       setClientSecret(data?.client_secret || null);
+      setSummary({ amount, report });
     })();
   }, []);
 
@@ -127,6 +130,15 @@ const EmbeddedCheckout: React.FC = () => {
             <Logo size="lg" asLink={false} />
           </div>
           <h1 className="text-4xl font-light italic">Therai partners with Stripe for simplified billing.</h1>
+          {summary && (
+            <div className="mt-4 text-left mx-auto max-w-sm">
+              <div className="text-sm text-gray-500">Your purchase</div>
+              <div className="text-lg text-gray-900">
+                {summary.report ? summary.report.replace(/_/g, ' ') : 'Astrology Report'}
+              </div>
+              <div className="text-sm text-gray-600 mt-1">USD ${summary.amount.toFixed(2)}</div>
+            </div>
+          )}
           <div className="space-y-4">
             <a 
               href={cancelHref}

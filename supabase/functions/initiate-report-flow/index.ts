@@ -251,8 +251,9 @@ serve(async (req) => {
         return oops('Failed to create payment intent');
       }
 
-      // Create custom checkout URL for embedded checkout
-      const embeddedCheckoutUrl = `${SITE_URL}/stripe?amount=${final}&guest_id=${guestReportId}&chat_id=${chatId}`;
+      // Create custom checkout URL for embedded checkout (include report type for UI summary)
+      const reportParam = encodeURIComponent(reportData.reportType || normalizedReportData.request || 'report');
+      const embeddedCheckoutUrl = `${SITE_URL}/stripe?amount=${final}&guest_id=${guestReportId}&chat_id=${chatId}&report=${reportParam}`;
 
       console.log('💳 [PERF] Paid report payment intent created', {
         timestamp: new Date().toISOString(),
