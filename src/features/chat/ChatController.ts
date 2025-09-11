@@ -143,8 +143,7 @@ class ChatController {
             this.subscriptionRetryCount = 0;
             this.loadExistingMessages();
             this.startHeartbeat();
-          }
-          if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR') {
+          } else if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR') {
             const retry = Math.min(++this.subscriptionRetryCount, 5);
             const delay = Math.min(1000 * Math.pow(2, retry), 8000);
             console.warn(`[ChatController] Realtime ${status}. Retrying subscribe in ${delay}ms (attempt ${retry})`);
@@ -152,8 +151,7 @@ class ChatController {
               // Recreate subscription
               this.setupRealtimeSubscription(chat_id);
             }, delay);
-          }
-          if (status === 'CLOSED') {
+          } else if (status === 'CLOSED') {
             console.warn('[ChatController] Realtime channel closed.');
           }
         });
