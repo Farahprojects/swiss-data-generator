@@ -80,21 +80,33 @@ export const ConversationOverlay: React.FC = () => {
     if (!chat_id || connectionRef.current) return true;
     
     try {
+      console.log(`[ConversationOverlay] 🔌 Establishing TTS WebSocket for chat_id: ${chat_id}`);
       const connection = supabase.channel(`conversation:${chat_id}`);
       
       connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
+        console.log('[ConversationOverlay] 🎵 TTS audio received via WebSocket');
         if (payload.audioBytes && !isShuttingDown.current) {
           playAudioImmediately(payload.audioBytes);
         }
       });
       
       connection.on('broadcast', { event: 'thinking-mode' }, ({ payload }) => {
+        console.log('[ConversationOverlay] 🤔 Thinking mode received via WebSocket');
         if (!isShuttingDown.current) {
           setState('thinking');
         }
       });
       
-      connection.subscribe();
+      connection.subscribe((status) => {
+        console.log(`[ConversationOverlay] 🔌 TTS WebSocket status: ${status}`);
+        if (status === 'SUBSCRIBED') {
+          console.log('[ConversationOverlay] ✅ TTS WebSocket connected successfully');
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error(`[ConversationOverlay] ❌ TTS WebSocket failed: ${status}`);
+          resetToTapToStart(`TTS WebSocket ${status}`);
+        }
+      });
+      
       connectionRef.current = connection;
       return true;
     } catch (error) {
@@ -149,7 +161,11 @@ export const ConversationOverlay: React.FC = () => {
       await ttsPlaybackService.warmup();
       
       // Setup WebSocket connection
-      await establishConnection();
+      console.log('[ConversationOverlay] 🚀 Starting conversation setup...');
+      const connectionEstablished = await establishConnection();
+      if (!connectionEstablished) {
+        throw new Error('Failed to establish TTS WebSocket connection');
+      }
       
       // 3. Initialize AudioWorklet + WebWorker
       pipelineRef.current = new ConversationAudioPipeline({
@@ -188,6 +204,7 @@ export const ConversationOverlay: React.FC = () => {
       
       // 4. Ready State → Mic on → Proceed to listening
       setState('listening');
+      console.log('[ConversationOverlay] ✅ Conversation setup complete - ready to listen');
       
     } catch (error) {
       console.error('[ConversationOverlay] Start failed:', error);
