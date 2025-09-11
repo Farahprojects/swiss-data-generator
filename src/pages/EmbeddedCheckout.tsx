@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 import Logo from '@/components/Logo';
 
 const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string;
@@ -78,7 +78,7 @@ const EmbeddedCheckout: React.FC = () => {
       <div className="p-10 flex flex-col justify-center items-center bg-white">
         <div className="max-w-md w-full space-y-8 text-center">
           <div className="flex justify-center mb-6">
-            <Logo width={96} height={96} />
+            <Logo size="lg" asLink={false} />
           </div>
           <h1 className="text-4xl font-light italic">Complete your purchase</h1>
           <p className="text-gray-600">Minimal, elegant, Apple-style layout. Your card is processed securely by Stripe.</p>

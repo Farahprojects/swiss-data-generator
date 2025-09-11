@@ -14,25 +14,19 @@ export function useSubscription() {
         throw new Error('No session found')
       }
 
-      const response = await fetch('/functions/v1/create-subscription-checkout', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('create-subscription-checkout', {
+        body: {
           priceId,
           successUrl,
           cancelUrl
-        })
+        }
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to create checkout')
+      if (error) {
+        throw new Error(error.message || 'Failed to create checkout')
       }
 
-      const { url } = await response.json()
+      const { url } = data
       
       // Redirect to Stripe Checkout
       window.location.href = url
