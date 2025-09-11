@@ -81,6 +81,11 @@ export const ConversationOverlay: React.FC = () => {
     
     try {
       console.log(`[ConversationOverlay] 🔌 Establishing TTS WebSocket for chat_id: ${chat_id}`);
+      
+      // Test if Supabase realtime is working at all
+      console.log(`[ConversationOverlay] 🔍 Supabase URL: ${SUPABASE_URL}`);
+      console.log(`[ConversationOverlay] 🔍 Supabase Key: ${SUPABASE_ANON_KEY ? 'Present' : 'Missing'}`);
+      
       const connection = supabase.channel(`conversation:${chat_id}`);
       
       connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
