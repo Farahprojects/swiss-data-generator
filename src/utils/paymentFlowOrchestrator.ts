@@ -32,10 +32,11 @@ export class PaymentFlowOrchestrator {
     // Check if this is a Stripe flow by looking for payment_status in URL
     const urlParams = new URLSearchParams(window.location.search);
     const paymentStatus = urlParams.get('payment_status');
+    const guestId = urlParams.get('guest_id') || '';
     
-    if (paymentStatus === 'cancelled') {
+    if (paymentStatus === 'cancelled' && guestId) {
       console.log(`[PaymentFlowOrchestrator] Stripe payment cancelled detected`);
-      this.handleStripeCancel();
+      this.handleStripeCancel(guestId);
       return;
     }
 
@@ -186,7 +187,7 @@ export class PaymentFlowOrchestrator {
     this.stop();
   }
 
-  private handleStripeCancel(): void {
+  private handleStripeCancel(guestId: string): void {
     console.log(`[PaymentFlowOrchestrator] Handling Stripe payment cancellation`);
     
     // Show cancellation message in chat
@@ -199,7 +200,7 @@ export class PaymentFlowOrchestrator {
     
     // Show CancelNudgeModal to allow user to resume checkout
     if (this.options.onShowCancelModal) {
-      this.options.onShowCancelModal(this.options.chatId);
+      this.options.onShowCancelModal(guestId);
     }
     
     // Notify UI of cancellation
