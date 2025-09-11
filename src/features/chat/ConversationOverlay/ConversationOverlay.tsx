@@ -39,11 +39,11 @@ export const ConversationOverlay: React.FC = () => {
     isShuttingDown.current = true;
     isProcessingRef.current = false;
     
-    // 2. DISABLE TTS MODE - Flush buffered messages back to text mode
+    // 2. DISABLE TTS MODE - Flush buffered messages back to text mode (COMMENTED OUT FOR TESTING)
     try {
       const { chatController } = await import('@/features/chat/ChatController');
-      chatController.setTtsMode(false);
-      console.log('[ConversationOverlay] ✅ TTS mode disabled');
+      // chatController.setTtsMode(false);
+      console.log('[ConversationOverlay] ✅ TTS mode disabled (SKIPPED - buffering disabled for testing)');
       
       // 3. RESTART TEXT WEBSOCKET - Resume text message WebSocket
       if (chat_id) {
@@ -113,15 +113,27 @@ export const ConversationOverlay: React.FC = () => {
         }
       });
       
-      connection.subscribe((status) => {
+      connection.subscribe((status, err) => {
         console.log(`[ConversationOverlay] 🔌 TTS WebSocket status: ${status}`);
+        if (err) {
+          console.error(`[ConversationOverlay] ❌ TTS WebSocket error details:`, err);
+        }
+        
         if (status === 'SUBSCRIBED') {
           console.log('[ConversationOverlay] ✅ TTS WebSocket connected successfully');
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.error(`[ConversationOverlay] ❌ TTS WebSocket failed: ${status}`);
-          resetToTapToStart(`TTS WebSocket ${status}`);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error(`[ConversationOverlay] ❌ TTS WebSocket CHANNEL_ERROR - Check Supabase Realtime Broadcast settings`);
+          console.error(`[ConversationOverlay] ❌ Error details:`, err);
+          resetToTapToStart(`TTS WebSocket CHANNEL_ERROR`);
+        } else if (status === 'TIMED_OUT') {
+          console.error(`[ConversationOverlay] ❌ TTS WebSocket TIMED_OUT - Network or server issue`);
+          console.error(`[ConversationOverlay] ❌ Error details:`, err);
+          resetToTapToStart(`TTS WebSocket TIMED_OUT`);
         } else if (status === 'CLOSED') {
-          console.warn(`[ConversationOverlay] ⚠️ TTS WebSocket closed`);
+          console.warn(`[ConversationOverlay] ⚠️ TTS WebSocket CLOSED`);
+          if (err) {
+            console.error(`[ConversationOverlay] ❌ Close reason:`, err);
+          }
           if (!isShuttingDown.current && hasStarted.current) {
             console.error(`[ConversationOverlay] ❌ Unexpected WebSocket close during active conversation!`);
             resetToTapToStart('Unexpected WebSocket close');
@@ -210,9 +222,9 @@ export const ConversationOverlay: React.FC = () => {
       const { chatController } = await import('@/features/chat/ChatController');
       chatController.cleanupRealtimeSubscription(); // Stop text WebSocket
       
-      // 6. STEP 4: Enable TTS mode with validation
-      console.log('[ConversationOverlay] 🚀 Step 4: Enable TTS mode...');
-      chatController.setTtsMode(true);
+      // 6. STEP 4: Enable TTS mode with validation (COMMENTED OUT FOR TESTING)
+      console.log('[ConversationOverlay] 🚀 Step 4: Enable TTS mode... (SKIPPED - buffering disabled for testing)');
+      // chatController.setTtsMode(true);
       
       // 7. STEP 5: Initialize Audio Pipeline with validation
       console.log('[ConversationOverlay] 🚀 Step 5: Initialize audio pipeline...');
