@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, User, Heart, Target, ArrowLeft, Loader2, Users } from 'lucide-react';
+import { X, User, Heart, Target, ArrowLeft, Loader2, Users, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -22,6 +22,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 // Removed - using single source of truth in useChatStore
 import { chatController } from '@/features/chat/ChatController';
+import { VoiceFormOverlay } from '@/components/astro-formatters/VoiceFormOverlay';
 
 interface AstroDataFormProps {
   onClose: () => void;
@@ -40,6 +41,8 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   const [promoError, setPromoError] = useState<string>('');
   const [trustedPricing, setTrustedPricing] = useState<any>(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [showVoiceForm, setShowVoiceForm] = useState(false);
+  const [isSecondPersonVoice, setIsSecondPersonVoice] = useState(false);
   const isMobile = useIsMobile();
   
   // Auth detection
@@ -393,6 +396,28 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     }
   };
 
+  const handleVoiceDataReady = (data: any) => {
+    // Fill the form with voice data
+    form.setValue('name', data.name);
+    form.setValue('birthDate', data.dob);
+    form.setValue('birthTime', data.time);
+    form.setValue('birthLocation', data.place);
+    form.setValue('email', data.email);
+    form.setValue('compatibility', data.compatibility);
+    
+    setShowVoiceForm(false);
+    setIsSecondPersonVoice(false);
+    
+    // Move to next step if we're in details step
+    if (currentStep === 'details') {
+      setCurrentStep('secondPerson');
+    }
+  };
+
+  const handleVoiceNextPerson = () => {
+    setIsSecondPersonVoice(true);
+  };
+
   const goBackToType = () => {
     setCurrentStep('type');
     setSelectedAstroType('');
@@ -447,12 +472,21 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
               : 'Review & Payment'}
           </h2>
         </div>
-        <button
-          onClick={onClose}
-          className="p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
-        >
-          <X className="w-5 h-5" />
-        </button>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setShowVoiceForm(true)}
+            className="p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
+            title="Voice Input"
+          >
+            <Mic className="w-5 h-5" />
+          </button>
+          <button
+            onClick={onClose}
+            className="p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
       {/* Content */}
@@ -862,6 +896,18 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
           ) : null}
         </AnimatePresence>
       </div>
+
+      {/* Voice Form Overlay */}
+      <VoiceFormOverlay
+        isOpen={showVoiceForm}
+        onClose={() => {
+          setShowVoiceForm(false);
+          setIsSecondPersonVoice(false);
+        }}
+        onDataReady={handleVoiceDataReady}
+        isSecondPerson={isSecondPersonVoice}
+        onNextPerson={handleVoiceNextPerson}
+      />
     </motion.div>
   );
 };
