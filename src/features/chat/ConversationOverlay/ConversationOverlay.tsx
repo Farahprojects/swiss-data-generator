@@ -195,7 +195,7 @@ export const ConversationOverlay: React.FC = () => {
             console.log(`[ConversationOverlay] 🔍 DIAGNOSTIC - WebSocket Connected:`);
             console.log(`[ConversationOverlay] 🔍 - Connection Object:`, connection);
             console.log(`[ConversationOverlay] 🔍 - Channel:`, connection.topic);
-            console.log(`[ConversationOverlay] 🔍 - WebSocket URL:`, connection.socket?.url || 'Not available');
+            console.log(`[ConversationOverlay] 🔍 - WebSocket URL:`, (connection as any).socket?.url || 'Not available');
             console.log('[ConversationOverlay] ✅ TTS WebSocket connected successfully');
             resolve(true);
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
@@ -260,6 +260,7 @@ export const ConversationOverlay: React.FC = () => {
     isStartingRef.current = true;
     setState('establishing');
     
+    try {
       // 2. AUDIOCONTEXT UNLOCK - Ensure unlock happens within this user gesture
       const ctx = audioContext || initializeAudioContext();
       await resumeAudioContext();
@@ -343,8 +344,6 @@ export const ConversationOverlay: React.FC = () => {
       isStartingRef.current = false;
     }
   }, [chat_id, establishConnection, initializeAudioContext, resumeAudioContext]);
-
-  // Legacy recording path handled by pipeline via onSpeechSegment
 
   // Cleanup on modal close - graceful release with fire-and-forget
   const handleModalClose = useCallback(async () => {
