@@ -255,6 +255,35 @@ async function handleInvoicePayment(invoice: Stripe.Invoice, eventType: string) 
 }
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+  // Check if this is a guest checkout by looking for guest_id in URLs
+  const successUrl = session.success_url
+  const cancelUrl = session.cancel_url
+  
+  // Look for guest_id in either success_url or cancel_url
+  const guestIdMatch = successUrl?.match(/guest_id=([a-f0-9-]+)/) || cancelUrl?.match(/guest_id=([a-f0-9-]+)/)
+  
+  if (guestIdMatch && guestIdMatch[1]) {
+    const guestId = guestIdMatch[1]
+    console.log(`Processing guest checkout completion for guest_id: ${guestId}`)
+    
+    // Update guest_reports payment_status to 'paid'
+    const { error: guestUpdateError } = await supabase
+      .from('guest_reports')
+      .update({ 
+        payment_status: 'paid',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', guestId)
+
+    if (guestUpdateError) {
+      console.error(`Failed to update guest payment status for ${guestId}:`, guestUpdateError)
+    } else {
+      console.log(`✅ Successfully updated guest payment status to 'paid' for ${guestId}`)
+    }
+    return
+  }
+
+  // Handle authenticated user checkout
   const userId = await resolveUserId(session.customer as string, session.client_reference_id, session.metadata)
   if (!userId) return
 

@@ -141,15 +141,16 @@ const ChatContainer: React.FC = () => {
       <PricingProvider>
         <ReportModalProvider>
           <MobileViewportLock active>
-            {/* Payment Gate: Show processing UI or chat based on payment status */}
-            {isPaymentGateActive ? (
-              <PaymentProcessingUI guestId={threadId || ''} />
-            ) : (
-              <ChatBox />
-            )}
+            {/* Always show ChatBox, payment processing is a popup overlay */}
+            <ChatBox />
           </MobileViewportLock>
         </ReportModalProvider>
       </PricingProvider>
+      
+      {/* Payment Processing Popup */}
+      {isPaymentGateActive && threadId && (
+        <PaymentProcessingUI guestId={threadId} />
+      )}
       
       {/* Stripe Payment Cancellation Modal */}
       {showCancelModal && threadId && (
