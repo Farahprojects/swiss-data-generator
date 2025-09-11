@@ -199,9 +199,14 @@ export const ConversationOverlay: React.FC = () => {
     // 1. IDEMPOTENT GUARD - Prevent multiple simultaneous starts
     if (hasStarted.current || !chat_id) return;
     
-    // 2. AUDIOCONTEXT VALIDATION - Ensure AudioContext is unlocked
-    if (!isAudioUnlocked) {
-      throw new Error('AudioContext not unlocked - user gesture required');
+    // 2. AUDIOCONTEXT UNLOCK - Ensure unlock happens within this user gesture
+    const ctx = audioContext || initializeAudioContext();
+    try {
+      await resumeAudioContext();
+    } catch {
+      // If resume fails, abort gracefully without throwing
+      console.warn('[ConversationOverlay] ⚠️ AudioContext resume failed in user gesture');
+      return;
     }
     
     hasStarted.current = true;
@@ -211,6 +216,8 @@ export const ConversationOverlay: React.FC = () => {
       // 3. STEP 1: Audio Warmup with validation
       console.log('[ConversationOverlay] 🚀 Step 1: Audio warmup...');
       const { ttsPlaybackService } = await import('@/services/voice/TTSPlaybackService');
+      // Provide shared/unlocked AudioContext to TTS service
+      ttsPlaybackService.setAudioContextProvider(() => ctx);
       await ttsPlaybackService.warmup();
       
       // 4. STEP 2: WebSocket connection with validation

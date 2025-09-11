@@ -3,6 +3,7 @@ import { audioArbitrator } from '@/services/audio/AudioArbitrator';
 
 class TTSPlaybackService {
   private audioContext: AudioContext | null = null;
+  private externalContextProvider: (() => AudioContext | null) | null = null;
   private currentSource: AudioBufferSourceNode | null = null;
   private analyser: AnalyserNode | null = null;
   private animationTimer: number | null = null;
@@ -45,7 +46,20 @@ class TTSPlaybackService {
     }
   }
 
+  // Allow consumers to inject a shared/unlocked AudioContext
+  setAudioContextProvider(provider: () => AudioContext | null): void {
+    this.externalContextProvider = provider;
+  }
+
   private ensureAudioContext(): AudioContext {
+    // Prefer externally provided/unlocked context when available
+    if (this.externalContextProvider) {
+      const provided = this.externalContextProvider();
+      if (provided) {
+        this.audioContext = provided;
+      }
+    }
+
     if (!this.audioContext || this.audioContext.state === 'closed') {
       try {
         this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ latencyHint: 'playback' });
