@@ -44,6 +44,12 @@ export const ConversationOverlay: React.FC = () => {
       const { chatController } = await import('@/features/chat/ChatController');
       chatController.setTtsMode(false);
       console.log('[ConversationOverlay] ✅ TTS mode disabled');
+      
+      // 3. RESTART TEXT WEBSOCKET - Resume text message WebSocket
+      if (chat_id) {
+        chatController.setupRealtimeSubscription(chat_id);
+        console.log('[ConversationOverlay] ✅ Text WebSocket restarted');
+      }
     } catch (e) {
       console.error('[ConversationOverlay] Failed to disable TTS mode:', e);
     }
@@ -199,13 +205,17 @@ export const ConversationOverlay: React.FC = () => {
         throw new Error('Failed to establish TTS WebSocket connection');
       }
       
-      // 5. STEP 3: Enable TTS mode with validation
-      console.log('[ConversationOverlay] 🚀 Step 3: Enable TTS mode...');
+      // 5. STEP 3: Stop text WebSocket to free up connection for TTS
+      console.log('[ConversationOverlay] 🚀 Step 3: Stop text WebSocket...');
       const { chatController } = await import('@/features/chat/ChatController');
+      chatController.cleanupRealtimeSubscription(); // Stop text WebSocket
+      
+      // 6. STEP 4: Enable TTS mode with validation
+      console.log('[ConversationOverlay] 🚀 Step 4: Enable TTS mode...');
       chatController.setTtsMode(true);
       
-      // 6. STEP 4: Initialize Audio Pipeline with validation
-      console.log('[ConversationOverlay] 🚀 Step 4: Initialize audio pipeline...');
+      // 7. STEP 5: Initialize Audio Pipeline with validation
+      console.log('[ConversationOverlay] 🚀 Step 5: Initialize audio pipeline...');
       pipelineRef.current = new ConversationAudioPipeline({
         onSpeechStart: () => {
           if (!isShuttingDown.current) setState('listening');
@@ -239,15 +249,15 @@ export const ConversationOverlay: React.FC = () => {
         }
       });
       
-      // 7. STEP 5: Initialize and start pipeline with validation
-      console.log('[ConversationOverlay] 🚀 Step 5: Initialize audio pipeline...');
+      // 8. STEP 6: Initialize and start pipeline with validation
+      console.log('[ConversationOverlay] 🚀 Step 6: Initialize audio pipeline...');
       await pipelineRef.current.init();
       
-      console.log('[ConversationOverlay] 🚀 Step 6: Start audio pipeline...');
+      console.log('[ConversationOverlay] 🚀 Step 7: Start audio pipeline...');
       await pipelineRef.current.start();
       
-      // 8. STEP 7: Final validation - All systems ready
-      console.log('[ConversationOverlay] 🚀 Step 7: Final validation...');
+      // 9. STEP 8: Final validation - All systems ready
+      console.log('[ConversationOverlay] 🚀 Step 8: Final validation...');
       if (!connectionRef.current) {
         throw new Error('TTS WebSocket connection lost during setup');
       }
