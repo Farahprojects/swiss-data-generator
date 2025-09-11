@@ -77,17 +77,22 @@ export class ConversationAudioPipeline {
           channelCount: 1,
           noiseSuppression: false,
           echoCancellation: false,
-          autoGainControl: false,
+          // Enable browser AGC to lift quiet input on some devices/browsers
+          autoGainControl: true,
           sampleRate: 48000
         },
         video: false
       });
       const source = this.audioContext.createMediaStreamSource(this.mediaStream);
       this.workletNode = new AudioWorkletNode(this.audioContext, 'conversation-audio-processor');
+      // Add a modest preamp before VAD to improve sensitivity without clipping
+      const preamp = this.audioContext.createGain();
+      preamp.gain.value = 1.5; // +3.5 dB approx
+      source.connect(preamp);
+      preamp.connect(this.workletNode);
       // Prevent feedback: route to a zero-gain node instead of speakers
       const gain = this.audioContext.createGain();
       gain.gain.value = 0;
-      source.connect(this.workletNode);
       this.workletNode.connect(gain);
       gain.connect(this.audioContext.destination);
 

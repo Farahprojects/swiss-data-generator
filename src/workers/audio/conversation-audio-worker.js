@@ -64,8 +64,8 @@ function adaptThreshold(energy, isSpeech) {
     // Slowly adapt noise floor estimate
     noiseFloorEstimate = noiseFloorEstimate * (1 - ADAPTATION_FACTOR) + energy * ADAPTATION_FACTOR;
     
-    // Set threshold slightly above noise floor
-    currentThreshold = Math.max(MIN_THRESHOLD, Math.min(MAX_THRESHOLD, noiseFloorEstimate * 2.5));
+    // Set threshold slightly above noise floor (more sensitive)
+    currentThreshold = Math.max(MIN_THRESHOLD, Math.min(MAX_THRESHOLD, noiseFloorEstimate * 1.5));
   }
   
   return currentThreshold;
