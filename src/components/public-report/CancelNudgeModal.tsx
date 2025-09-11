@@ -61,14 +61,25 @@ export const CancelNudgeModal = ({ isOpen, guestId, onClose }: CancelNudgeModalP
     // Simple tracking - could be extended with analytics service
   };
 
-  const handleClose = () => {
+  const handleClose = async () => {
     trackEvent('cancel_nudge_dismissed');
     
     // Store timestamp in localStorage to prevent re-showing for 7 days
     const timestamp = Date.now();
     localStorage.setItem(`cancel_nudge:${guestId}`, timestamp.toString());
     
-    onClose();
+    // Clean up all temporary session state and redirect to start
+    try {
+      const { streamlinedSessionReset } = await import('@/utils/streamlinedSessionReset');
+      await streamlinedSessionReset({ 
+        redirectTo: '/', 
+        cleanDatabase: true 
+      });
+    } catch (error) {
+      console.error('[CancelNudgeModal] Error during session cleanup:', error);
+      // Fallback: just close modal and redirect
+      window.location.replace('/');
+    }
   };
 
   const handleResumeCheckout = async () => {
