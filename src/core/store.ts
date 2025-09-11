@@ -85,12 +85,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
   threadsError: null,
 
   startConversation: (id, guest_id) => {
-    // If guest_id not provided, try to get from sessionStorage using centralized key
-    const finalGuestId = guest_id || (typeof window !== 'undefined' ? sessionStorage.getItem(STORAGE_KEYS.CHAT.GUEST.REPORT_ID) : null);
-    
     set({ 
       chat_id: id, 
-      guest_id: finalGuestId,
+      guest_id: guest_id,
       messages: [], 
       status: 'idle', 
       error: null,
@@ -99,8 +96,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       isAssistantTyping: false
     });
     
-    // Persist active chat_id to sessionStorage (namespaced by user)
-    get().persistActiveChat(id, undefined, finalGuestId);
+    // Persist active chat_id to sessionStorage (always writes to cache)
+    get().persistActiveChat(id, undefined, guest_id);
   },
 
   startNewConversation: async (user_id?: string) => {
@@ -240,6 +237,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
     // Clear namespaced chat_id storage keys
     if (typeof window !== 'undefined') {
       try {
+        // Clear shared cache
+        sessionStorage.removeItem(STORAGE_KEYS.CHAT.SHARED.UUID);
+        
         // Clear auth namespaced key if we have auth user
         if (state.guest_id) {
           const guestKey = STORAGE_KEYS.CHAT.ACTIVE.GUEST(state.guest_id);
@@ -357,24 +357,24 @@ export const useChatStore = create<ChatState>((set, get) => ({
   // Guest management helpers
   getGuestId: () => {
     const state = get();
-    return state.guest_id || (typeof window !== 'undefined' ? sessionStorage.getItem(STORAGE_KEYS.CHAT.GUEST.REPORT_ID) : null);
+    return state.guest_id;
   },
   
   setGuestId: (guestId: string) => {
     set({ guest_id: guestId });
     if (typeof window !== 'undefined') {
-      sessionStorage.setItem(STORAGE_KEYS.CHAT.GUEST.REPORT_ID, guestId);
+      sessionStorage.setItem(STORAGE_KEYS.CHAT.GUEST.CHAT_ID, guestId);
     }
   },
   
   clearGuestData: () => {
     set({ guest_id: null });
     if (typeof window !== 'undefined') {
-      sessionStorage.removeItem(STORAGE_KEYS.CHAT.GUEST.REPORT_ID);
-      // Clear other guest-related keys
-      Object.values(STORAGE_KEYS.CHAT.GUEST).forEach(key => {
-        sessionStorage.removeItem(key);
-      });
+      // Clear guest-related keys (excluding deprecated ones)
+      sessionStorage.removeItem(STORAGE_KEYS.CHAT.GUEST.CHAT_ID);
+      sessionStorage.removeItem(STORAGE_KEYS.CHAT.GUEST.SESSION_TOKEN);
+      // Clear shared cache as well
+      sessionStorage.removeItem(STORAGE_KEYS.CHAT.SHARED.UUID);
     }
   },
 
@@ -383,7 +383,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (typeof window === 'undefined') return null;
     
     try {
-      // Try to get from sessionStorage first (namespaced by user)
+      // Try shared cache first (guest/auth agnostic)
+      const cachedChatId = sessionStorage.getItem(STORAGE_KEYS.CHAT.SHARED.UUID);
+      if (cachedChatId) {
+        console.log(`[Store] Hydrated chat_id from sessionStorage (cache): ${cachedChatId}`);
+        return cachedChatId;
+      }
+      
+      // Fallback to namespaced keys if available
       if (authId) {
         const authKey = STORAGE_KEYS.CHAT.ACTIVE.AUTH(authId);
         const storedChatId = sessionStorage.getItem(authKey);
@@ -402,7 +409,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
       }
       
-      console.log(`[Store] No chat_id found in sessionStorage for authId: ${authId}, guestId: ${guestId}`);
+      console.log(`[Store] No chat_id found in sessionStorage cache`);
       return null;
     } catch (error) {
       console.error('[Store] Error hydrating from storage:', error);
@@ -414,6 +421,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (typeof window === 'undefined') return;
     
     try {
+      // Always write to sessionStorage as cache (guest/auth agnostic)
+      sessionStorage.setItem(STORAGE_KEYS.CHAT.SHARED.UUID, chat_id);
+      console.log(`[Store] Persisted chat_id to sessionStorage (cache): ${chat_id}`);
+      
+      // Also write to namespaced keys if available (for user-specific caching)
       if (authId) {
         const authKey = STORAGE_KEYS.CHAT.ACTIVE.AUTH(authId);
         sessionStorage.setItem(authKey, chat_id);

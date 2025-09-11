@@ -62,22 +62,22 @@ export const useChatInitialization = (options?: { skipIfPaymentPending?: boolean
       return;
     }
     
-    // Hydration order: sessionStorage → URL → backend
+    // Hydration order: URL → sessionStorage → fresh start
     let targetChatId = chat_id;
     
-    // 1. Try to hydrate from sessionStorage first (fastest)
+    // 1. URL threadId is primary source of truth
+    if (!targetChatId && threadId) {
+      targetChatId = threadId;
+      console.log(`[useChatInitialization] Using URL threadId (primary): ${targetChatId}`);
+    }
+    
+    // 2. Fallback to sessionStorage cache
     if (!targetChatId) {
       const hydratedChatId = hydrateFromStorage(user?.id, guestId);
       if (hydratedChatId) {
         targetChatId = hydratedChatId;
-        console.log(`[useChatInitialization] Hydrated from sessionStorage: ${targetChatId}`);
+        console.log(`[useChatInitialization] Hydrated from sessionStorage (fallback): ${targetChatId}`);
       }
-    }
-    
-    // 2. Fallback to URL threadId
-    if (!targetChatId && threadId) {
-      targetChatId = threadId;
-      console.log(`[useChatInitialization] Using URL threadId: ${targetChatId}`);
     }
     
     // 3. Initialize if we have a chat_id and it's different from current
