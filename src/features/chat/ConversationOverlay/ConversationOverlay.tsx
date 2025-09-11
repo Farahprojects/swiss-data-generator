@@ -34,6 +34,9 @@ export const ConversationOverlay: React.FC = () => {
   const connectionRef = useRef<any>(null);
   const isProcessingRef = useRef<boolean>(false);
   const pipelineRef = useRef<ConversationAudioPipeline | null>(null);
+  const isStartingRef = useRef(false);
+  const isActiveRef = useRef(false);
+  const wasSubscribedRef = useRef(false);
   const overlayRef = useRef<HTMLDivElement>(null);
 
   // 🚨 RESET TO TAP TO START - ROBUST cleanup with validation
@@ -43,6 +46,9 @@ export const ConversationOverlay: React.FC = () => {
     // 1. IMMEDIATE GUARDS - Stop all operations
     isShuttingDown.current = true;
     isProcessingRef.current = false;
+    isStartingRef.current = false;
+    isActiveRef.current = false;
+    wasSubscribedRef.current = false;
     
     // 2. DISABLE TTS MODE - Flush buffered messages back to text mode
     try {
@@ -166,30 +172,53 @@ export const ConversationOverlay: React.FC = () => {
         }
       });
       
-      connection.subscribe((status) => {
-        console.log(`[ConversationOverlay] 🔌 TTS WebSocket status: ${status}`);
+      return new Promise<boolean>((resolve, reject) => {
+        let settled = false;
+        wasSubscribedRef.current = false;
         
-        // DIAGNOSTIC: Log WebSocket connection details
-        if (status === 'SUBSCRIBED') {
-          console.log(`[ConversationOverlay] 🔍 DIAGNOSTIC - WebSocket Connected:`);
-          console.log(`[ConversationOverlay] 🔍 - Connection Object:`, connection);
-          console.log(`[ConversationOverlay] 🔍 - Channel:`, connection.topic);
-          console.log(`[ConversationOverlay] 🔍 - WebSocket URL:`, connection.socket?.url || 'Not available');
-          console.log('[ConversationOverlay] ✅ TTS WebSocket connected successfully');
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.error(`[ConversationOverlay] ❌ TTS WebSocket failed: ${status}`);
-          resetToTapToStart(`TTS WebSocket ${status}`);
-        } else if (status === 'CLOSED') {
-          console.warn(`[ConversationOverlay] ⚠️ TTS WebSocket closed`);
-          if (!isShuttingDown.current && hasStarted.current) {
-            console.error(`[ConversationOverlay] ❌ Unexpected WebSocket close during active conversation!`);
-            resetToTapToStart('Unexpected WebSocket close');
+        const timeout = setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          try { connection.unsubscribe(); } catch {}
+          reject(new Error('subscribe timeout'));
+        }, 8000);
+        
+        connection.subscribe((status) => {
+          console.log(`[ConversationOverlay] 🔌 TTS WebSocket status: ${status}`);
+          
+          if (status === 'SUBSCRIBED') {
+            wasSubscribedRef.current = true;
+            clearTimeout(timeout);
+            if (settled) return;
+            settled = true;
+            connectionRef.current = connection;
+            console.log(`[ConversationOverlay] 🔍 DIAGNOSTIC - WebSocket Connected:`);
+            console.log(`[ConversationOverlay] 🔍 - Connection Object:`, connection);
+            console.log(`[ConversationOverlay] 🔍 - Channel:`, connection.topic);
+            console.log(`[ConversationOverlay] 🔍 - WebSocket URL:`, connection.socket?.url || 'Not available');
+            console.log('[ConversationOverlay] ✅ TTS WebSocket connected successfully');
+            resolve(true);
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            clearTimeout(timeout);
+            if (settled) return;
+            settled = true;
+            reject(new Error(status));
+          } else if (status === 'CLOSED') {
+            // If we never got SUBSCRIBED, treat as connect failure; don't reset UI here.
+            if (!wasSubscribedRef.current) {
+              clearTimeout(timeout);
+              if (settled) return;
+              settled = true;
+              reject(new Error('closed before subscribed'));
+            } else {
+              // Closed after being active: only then reset.
+              if (isActiveRef.current && !isShuttingDown.current) {
+                resetToTapToStart('Unexpected WebSocket close');
+              }
+            }
           }
-        }
+        });
       });
-      
-      connectionRef.current = connection;
-      return true;
     } catch (error) {
       console.error('[ConversationOverlay] Connection failed:', error);
       resetToTapToStart('WebSocket connection failed');
@@ -226,22 +255,15 @@ export const ConversationOverlay: React.FC = () => {
   // Start conversation - ROBUST SEQUENCE with validation
   const handleStart = useCallback(async () => {
     // 1. IDEMPOTENT GUARD - Prevent multiple simultaneous starts
-    if (hasStarted.current || !chat_id) return;
+    if (isStartingRef.current || isActiveRef.current || !chat_id) return;
     
-    // 2. AUDIOCONTEXT UNLOCK - Ensure unlock happens within this user gesture
-    const ctx = audioContext || initializeAudioContext();
-    try {
-      await resumeAudioContext();
-    } catch {
-      // If resume fails, abort gracefully without throwing
-      console.warn('[ConversationOverlay] ⚠️ AudioContext resume failed in user gesture');
-      return;
-    }
-    
-    hasStarted.current = true;
+    isStartingRef.current = true;
     setState('establishing');
     
-    try {
+      // 2. AUDIOCONTEXT UNLOCK - Ensure unlock happens within this user gesture
+      const ctx = audioContext || initializeAudioContext();
+      await resumeAudioContext();
+      
       // 3. STEP 1: Audio Warmup with validation
       console.log('[ConversationOverlay] 🚀 Step 1: Audio warmup...');
       const { ttsPlaybackService } = await import('@/services/voice/TTSPlaybackService');
@@ -308,15 +330,19 @@ export const ConversationOverlay: React.FC = () => {
         throw new Error('Audio pipeline not initialized');
       }
       
-      // 9. SUCCESS - Ready to listen
+      // 9. SUCCESS - Mark active only after everything is ready
+      isActiveRef.current = true;
+      hasStarted.current = true;
       setState('listening');
       console.log('[ConversationOverlay] ✅ Conversation setup complete - all systems ready');
       
     } catch (error) {
       console.error('[ConversationOverlay] Start failed:', error);
       resetToTapToStart('Conversation start failed');
+    } finally {
+      isStartingRef.current = false;
     }
-  }, [chat_id, establishConnection]);
+  }, [chat_id, establishConnection, initializeAudioContext, resumeAudioContext]);
 
   // Legacy recording path handled by pipeline via onSpeechSegment
 
@@ -394,8 +420,6 @@ export const ConversationOverlay: React.FC = () => {
             <div
               className="flex flex-col items-center gap-4 cursor-pointer"
               onClick={() => {
-                // Reset everything before restarting
-                resetToTapToStart('User tapped to restart');
                 handleStart();
               }}
             >
