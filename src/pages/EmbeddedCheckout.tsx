@@ -86,6 +86,35 @@ const EmbeddedCheckout: React.FC = () => {
 
   const options = useMemo(() => ({ clientSecret }), [clientSecret]);
 
+  // Build a canonical cancel URL that always carries IDs back to the app
+  const cancelHref = useMemo(() => {
+    const url = new URL(window.location.href);
+    const guest_id = url.searchParams.get('guest_id');
+    const chat_id = url.searchParams.get('chat_id');
+    return guest_id && chat_id
+      ? `/c/g/${chat_id}?payment_status=cancelled&guest_id=${guest_id}`
+      : '/c?payment_status=cancelled';
+  }, []);
+
+  // Intercept browser back to guarantee cancel redirect with IDs
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const guest_id = url.searchParams.get('guest_id');
+    const chat_id = url.searchParams.get('chat_id');
+    const target = guest_id && chat_id
+      ? `/c/g/${chat_id}?payment_status=cancelled&guest_id=${guest_id}`
+      : '/c?payment_status=cancelled';
+
+    const onPopState = () => {
+      window.location.replace(target);
+    };
+
+    window.addEventListener('popstate', onPopState);
+    // Push a state so the next back triggers popstate here
+    history.pushState(null, '', window.location.href);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
   if (!STRIPE_PUBLISHABLE_KEY) {
     return <div className="p-8">Missing VITE_STRIPE_PUBLISHABLE_KEY</div>;
   }
@@ -100,7 +129,8 @@ const EmbeddedCheckout: React.FC = () => {
           <h1 className="text-4xl font-light italic">Therai partners with Stripe for simplified billing.</h1>
           <div className="space-y-4">
             <a 
-              href={`${window.location.origin}?stripe=cancel`}
+              href={cancelHref}
+              onClick={(e) => { e.preventDefault(); window.location.replace(cancelHref); }}
               className="text-gray-600 hover:text-gray-800 underline"
             >
               Return to Therai.co
