@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useConversationUIStore } from '@/features/chat/conversation-ui-store';
 import { useChatStore } from '@/core/store';
+import { useAudioStore } from '@/stores/audioStore';
 // Old audio level hook removed - using AudioWorklet + WebWorker pipeline
 import { VoiceBubble } from './VoiceBubble';
 // New audio pipeline (AudioWorklet + WebWorker)
@@ -22,6 +23,9 @@ export const ConversationOverlay: React.FC = () => {
   const chat_id = useChatStore((state) => state.chat_id);
   const [state, setState] = useState<ConversationState>('connecting');
   
+  // Audio context management
+  const { audioContext, isAudioUnlocked, initializeAudioContext, resumeAudioContext } = useAudioStore();
+  
   // Realtime level driven by worker (not React polling) - use ref for smooth animation
   const audioLevelRef = useRef<number>(0);
   
@@ -30,6 +34,7 @@ export const ConversationOverlay: React.FC = () => {
   const connectionRef = useRef<any>(null);
   const isProcessingRef = useRef<boolean>(false);
   const pipelineRef = useRef<ConversationAudioPipeline | null>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
 
   // 🚨 RESET TO TAP TO START - ROBUST cleanup with validation
   const resetToTapToStart = useCallback(async (reason: string) => {
@@ -39,17 +44,11 @@ export const ConversationOverlay: React.FC = () => {
     isShuttingDown.current = true;
     isProcessingRef.current = false;
     
-    // 2. DISABLE TTS MODE - Flush buffered messages back to text mode (COMMENTED OUT FOR TESTING)
+    // 2. DISABLE TTS MODE - Flush buffered messages back to text mode
     try {
       const { chatController } = await import('@/features/chat/ChatController');
-      // chatController.setTtsMode(false);
-      console.log('[ConversationOverlay] ✅ TTS mode disabled (SKIPPED - buffering disabled for testing)');
-      
-      // 3. RESTART TEXT WEBSOCKET - Resume text message WebSocket
-      if (chat_id) {
-        chatController.setupRealtimeSubscription(chat_id);
-        console.log('[ConversationOverlay] ✅ Text WebSocket restarted');
-      }
+      chatController.setTtsMode(false);
+      console.log('[ConversationOverlay] ✅ TTS mode disabled');
     } catch (e) {
       console.error('[ConversationOverlay] Failed to disable TTS mode:', e);
     }
@@ -82,6 +81,37 @@ export const ConversationOverlay: React.FC = () => {
     isShuttingDown.current = false;
   }, []);
 
+  // 🎵 AUDIOCONTEXT USER GESTURE LISTENER - Critical for Chrome
+  useEffect(() => {
+    if (!overlayRef.current || isAudioUnlocked) return;
+
+    const handleUserGesture = async () => {
+      console.log('[ConversationOverlay] 👆 User gesture detected - unlocking AudioContext...');
+      
+      // Initialize AudioContext if not exists
+      const ctx = audioContext || initializeAudioContext();
+      
+      // Resume AudioContext
+      const success = await resumeAudioContext();
+      if (success) {
+        console.log('[ConversationOverlay] ✅ AudioContext unlocked successfully!');
+      } else {
+        console.error('[ConversationOverlay] ❌ Failed to unlock AudioContext');
+      }
+    };
+
+    // Add event listeners for user gestures
+    overlayRef.current.addEventListener('click', handleUserGesture, { once: true });
+    overlayRef.current.addEventListener('touchstart', handleUserGesture, { once: true });
+
+    return () => {
+      if (overlayRef.current) {
+        overlayRef.current.removeEventListener('click', handleUserGesture);
+        overlayRef.current.removeEventListener('touchstart', handleUserGesture);
+      }
+    };
+  }, [audioContext, isAudioUnlocked, initializeAudioContext, resumeAudioContext]);
+
   // WebSocket connection setup
   const establishConnection = useCallback(async () => {
     if (!chat_id) {
@@ -113,27 +143,15 @@ export const ConversationOverlay: React.FC = () => {
         }
       });
       
-      connection.subscribe((status, err) => {
+      connection.subscribe((status) => {
         console.log(`[ConversationOverlay] 🔌 TTS WebSocket status: ${status}`);
-        if (err) {
-          console.error(`[ConversationOverlay] ❌ TTS WebSocket error details:`, err);
-        }
-        
         if (status === 'SUBSCRIBED') {
           console.log('[ConversationOverlay] ✅ TTS WebSocket connected successfully');
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error(`[ConversationOverlay] ❌ TTS WebSocket CHANNEL_ERROR - Check Supabase Realtime Broadcast settings`);
-          console.error(`[ConversationOverlay] ❌ Error details:`, err);
-          resetToTapToStart(`TTS WebSocket CHANNEL_ERROR`);
-        } else if (status === 'TIMED_OUT') {
-          console.error(`[ConversationOverlay] ❌ TTS WebSocket TIMED_OUT - Network or server issue`);
-          console.error(`[ConversationOverlay] ❌ Error details:`, err);
-          resetToTapToStart(`TTS WebSocket TIMED_OUT`);
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error(`[ConversationOverlay] ❌ TTS WebSocket failed: ${status}`);
+          resetToTapToStart(`TTS WebSocket ${status}`);
         } else if (status === 'CLOSED') {
-          console.warn(`[ConversationOverlay] ⚠️ TTS WebSocket CLOSED`);
-          if (err) {
-            console.error(`[ConversationOverlay] ❌ Close reason:`, err);
-          }
+          console.warn(`[ConversationOverlay] ⚠️ TTS WebSocket closed`);
           if (!isShuttingDown.current && hasStarted.current) {
             console.error(`[ConversationOverlay] ❌ Unexpected WebSocket close during active conversation!`);
             resetToTapToStart('Unexpected WebSocket close');
@@ -181,24 +199,9 @@ export const ConversationOverlay: React.FC = () => {
     // 1. IDEMPOTENT GUARD - Prevent multiple simultaneous starts
     if (hasStarted.current || !chat_id) return;
     
-    // 2. USER GESTURE COMPLIANCE - Must be triggered from user interaction
-    if (!document.hasFocus()) {
-      console.warn('[ConversationOverlay] ⚠️ Page not focused - user gesture may be invalid');
-    }
-    
-    // 3. CHROME AUDIOCONTEXT CHECK - Ensure AudioContext is not suspended
-    if (typeof window !== 'undefined' && window.AudioContext) {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      if (audioContext.state === 'suspended') {
-        console.warn('[ConversationOverlay] ⚠️ AudioContext suspended - may need user gesture');
-        try {
-          await audioContext.resume();
-          console.log('[ConversationOverlay] ✅ AudioContext resumed');
-        } catch (e) {
-          console.warn('[ConversationOverlay] ⚠️ Failed to resume AudioContext:', e);
-        }
-      }
-      audioContext.close();
+    // 2. AUDIOCONTEXT VALIDATION - Ensure AudioContext is unlocked
+    if (!isAudioUnlocked) {
+      throw new Error('AudioContext not unlocked - user gesture required');
     }
     
     hasStarted.current = true;
@@ -217,17 +220,13 @@ export const ConversationOverlay: React.FC = () => {
         throw new Error('Failed to establish TTS WebSocket connection');
       }
       
-      // 5. STEP 3: Stop text WebSocket to free up connection for TTS
-      console.log('[ConversationOverlay] 🚀 Step 3: Stop text WebSocket...');
+      // 5. STEP 3: Enable TTS mode with validation
+      console.log('[ConversationOverlay] 🚀 Step 3: Enable TTS mode...');
       const { chatController } = await import('@/features/chat/ChatController');
-      chatController.cleanupRealtimeSubscription(); // Stop text WebSocket
+      chatController.setTtsMode(true);
       
-      // 6. STEP 4: Enable TTS mode with validation (COMMENTED OUT FOR TESTING)
-      console.log('[ConversationOverlay] 🚀 Step 4: Enable TTS mode... (SKIPPED - buffering disabled for testing)');
-      // chatController.setTtsMode(true);
-      
-      // 7. STEP 5: Initialize Audio Pipeline with validation
-      console.log('[ConversationOverlay] 🚀 Step 5: Initialize audio pipeline...');
+      // 6. STEP 4: Initialize Audio Pipeline with validation
+      console.log('[ConversationOverlay] 🚀 Step 4: Initialize audio pipeline...');
       pipelineRef.current = new ConversationAudioPipeline({
         onSpeechStart: () => {
           if (!isShuttingDown.current) setState('listening');
@@ -261,15 +260,15 @@ export const ConversationOverlay: React.FC = () => {
         }
       });
       
-      // 8. STEP 6: Initialize and start pipeline with validation
-      console.log('[ConversationOverlay] 🚀 Step 6: Initialize audio pipeline...');
+      // 7. STEP 5: Initialize and start pipeline with validation
+      console.log('[ConversationOverlay] 🚀 Step 5: Initialize audio pipeline...');
       await pipelineRef.current.init();
       
-      console.log('[ConversationOverlay] 🚀 Step 7: Start audio pipeline...');
+      console.log('[ConversationOverlay] 🚀 Step 6: Start audio pipeline...');
       await pipelineRef.current.start();
       
-      // 9. STEP 8: Final validation - All systems ready
-      console.log('[ConversationOverlay] 🚀 Step 8: Final validation...');
+      // 8. STEP 7: Final validation - All systems ready
+      console.log('[ConversationOverlay] 🚀 Step 7: Final validation...');
       if (!connectionRef.current) {
         throw new Error('TTS WebSocket connection lost during setup');
       }
@@ -353,6 +352,7 @@ export const ConversationOverlay: React.FC = () => {
 
   return createPortal(
     <div 
+      ref={overlayRef}
       className="fixed inset-0 z-50 bg-white pt-safe pb-safe"
       data-conversation-overlay
     >

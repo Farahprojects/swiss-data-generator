@@ -75,7 +75,7 @@ class ChatController {
   private dbHeartbeatInterval: NodeJS.Timeout | null = null;
   private readonly DB_HEARTBEAT_INTERVAL = 30000; // 30 seconds
 
-  public setupRealtimeSubscription(chat_id: string) {
+  private setupRealtimeSubscription(chat_id: string) {
     // Clean up existing subscription
     this.cleanupRealtimeSubscription();
 
