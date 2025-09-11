@@ -190,20 +190,20 @@ export const ConversationOverlay: React.FC = () => {
     try {
       // 1. User gesture captured
       
-      // 2. ENABLE TTS MODE - Buffer text messages instead of pausing
-      const { chatController } = await import('@/features/chat/ChatController');
-      chatController.setTtsMode(true);
-      
-      // 3. Initialize WS + Audio Warmup
+      // 2. Initialize WS + Audio Warmup FIRST
       const { ttsPlaybackService } = await import('@/services/voice/TTSPlaybackService');
       await ttsPlaybackService.warmup();
       
-      // Setup WebSocket connection
+      // 3. Setup WebSocket connection BEFORE enabling TTS mode
       console.log('[ConversationOverlay] 🚀 Starting conversation setup...');
       const connectionEstablished = await establishConnection();
       if (!connectionEstablished) {
         throw new Error('Failed to establish TTS WebSocket connection');
       }
+      
+      // 4. ENABLE TTS MODE - Only after WebSocket is established
+      const { chatController } = await import('@/features/chat/ChatController');
+      chatController.setTtsMode(true);
       
       // 3. Initialize AudioWorklet + WebWorker
       pipelineRef.current = new ConversationAudioPipeline({
