@@ -77,7 +77,15 @@ export const ConversationOverlay: React.FC = () => {
 
   // WebSocket connection setup
   const establishConnection = useCallback(async () => {
-    if (!chat_id || connectionRef.current) return true;
+    if (!chat_id) {
+      console.error('[ConversationOverlay] ❌ No chat_id available for WebSocket connection');
+      return false;
+    }
+    
+    if (connectionRef.current) {
+      console.log('[ConversationOverlay] ⚠️ WebSocket connection already exists, skipping...');
+      return true;
+    }
     
     try {
       console.log(`[ConversationOverlay] 🔌 Establishing TTS WebSocket for chat_id: ${chat_id}`);
@@ -110,7 +118,16 @@ export const ConversationOverlay: React.FC = () => {
           console.error(`[ConversationOverlay] ❌ TTS WebSocket failed: ${status}`);
           resetToTapToStart(`TTS WebSocket ${status}`);
         } else if (status === 'CLOSED') {
-          console.warn(`[ConversationOverlay] ⚠️ TTS WebSocket closed - this may be normal after audio playback`);
+          console.warn(`[ConversationOverlay] ⚠️ TTS WebSocket closed - checking if this is expected...`);
+          console.warn(`[ConversationOverlay] 🔍 isShuttingDown: ${isShuttingDown.current}`);
+          console.warn(`[ConversationOverlay] 🔍 hasStarted: ${hasStarted.current}`);
+          console.warn(`[ConversationOverlay] 🔍 current state: ${state}`);
+          
+          // Only reset if we're not supposed to be shutting down
+          if (!isShuttingDown.current && hasStarted.current) {
+            console.error(`[ConversationOverlay] ❌ Unexpected WebSocket close during active conversation!`);
+            resetToTapToStart('Unexpected WebSocket close');
+          }
         }
       });
       
