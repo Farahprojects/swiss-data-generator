@@ -252,7 +252,7 @@ serve(async (req) => {
       }
 
       // Create custom checkout URL for embedded checkout
-      const embeddedCheckoutUrl = `${SITE_URL}/embedded-checkout?amount=${final}&guest_id=${guestReportId}&chat_id=${chatId}`;
+      const embeddedCheckoutUrl = `${SITE_URL}/stripe?amount=${final}&guest_id=${guestReportId}&chat_id=${chatId}`;
 
       console.log('💳 [PERF] Paid report payment intent created', {
         timestamp: new Date().toISOString(),

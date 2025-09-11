@@ -61,7 +61,7 @@ const AuthedAppShell: React.FC = () => {
               <Route path="/success" element={<PublicOnlyGuard><SubscriptionSuccess /></PublicOnlyGuard>} />
               <Route path="/cancel" element={<PublicOnlyGuard><SubscriptionPaywall /></PublicOnlyGuard>} />
               <Route path="/stripe-return" element={<PublicOnlyGuard><StripeReturn /></PublicOnlyGuard>} />
-              <Route path="/embedded-checkout" element={<PublicOnlyGuard><EmbeddedCheckout /></PublicOnlyGuard>} />
+              <Route path="/stripe" element={<PublicOnlyGuard><EmbeddedCheckout /></PublicOnlyGuard>} />
               
               {/* New chat routes with clean /c namespace */}
               <Route path="/c" element={<ChatContainer />} />
