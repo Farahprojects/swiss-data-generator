@@ -90,23 +90,7 @@ export const ConversationOverlay: React.FC = () => {
     try {
       console.log(`[ConversationOverlay] 🔌 Establishing TTS WebSocket for chat_id: ${chat_id}`);
       
-      // Test if Supabase realtime is working at all
-      console.log(`[ConversationOverlay] 🔍 Supabase URL: ${SUPABASE_URL}`);
-      console.log(`[ConversationOverlay] 🔍 Supabase Key: ${SUPABASE_ANON_KEY ? 'Present' : 'Missing'}`);
-      console.log(`[ConversationOverlay] 🔍 Full Supabase Key: ${SUPABASE_ANON_KEY}`);
-      console.log(`[ConversationOverlay] 🔍 Environment: ${import.meta.env.MODE}`);
-      console.log(`[ConversationOverlay] 🔍 VITE_SUPABASE_URL: ${import.meta.env.VITE_SUPABASE_URL}`);
-      console.log(`[ConversationOverlay] 🔍 VITE_SUPABASE_PUBLISHABLE_KEY: ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`);
-      
       const connection = supabase.channel(`conversation:${chat_id}`);
-      
-      // Log WebSocket connection details
-      const wsUrl = SUPABASE_URL.replace('https://', 'wss://').replace('http://', 'ws://');
-      console.log(`[ConversationOverlay] 🔍 WebSocket URL: ${wsUrl}`);
-      console.log(`[ConversationOverlay] 🔍 Channel name: conversation:${chat_id}`);
-      console.log(`[ConversationOverlay] 🔍 Protocol check: ${wsUrl.startsWith('wss://') ? '✅ WSS (secure)' : '❌ WS (insecure)'}`);
-      console.log(`[ConversationOverlay] 🔍 Current page protocol: ${window.location.protocol}`);
-      console.log(`[ConversationOverlay] 🔍 Mixed content check: ${window.location.protocol === 'https:' && !wsUrl.startsWith('wss://') ? '❌ BLOCKED' : '✅ ALLOWED'}`);
       
       connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
         console.log('[ConversationOverlay] 🎵 TTS audio received via WebSocket');
@@ -130,12 +114,7 @@ export const ConversationOverlay: React.FC = () => {
           console.error(`[ConversationOverlay] ❌ TTS WebSocket failed: ${status}`);
           resetToTapToStart(`TTS WebSocket ${status}`);
         } else if (status === 'CLOSED') {
-          console.warn(`[ConversationOverlay] ⚠️ TTS WebSocket closed - checking if this is expected...`);
-          console.warn(`[ConversationOverlay] 🔍 isShuttingDown: ${isShuttingDown.current}`);
-          console.warn(`[ConversationOverlay] 🔍 hasStarted: ${hasStarted.current}`);
-          console.warn(`[ConversationOverlay] 🔍 current state: ${state}`);
-          
-          // Only reset if we're not supposed to be shutting down
+          console.warn(`[ConversationOverlay] ⚠️ TTS WebSocket closed`);
           if (!isShuttingDown.current && hasStarted.current) {
             console.error(`[ConversationOverlay] ❌ Unexpected WebSocket close during active conversation!`);
             resetToTapToStart('Unexpected WebSocket close');
@@ -156,13 +135,11 @@ export const ConversationOverlay: React.FC = () => {
   const playAudioImmediately = useCallback(async (audioBytes: number[]) => {
     if (isShuttingDown.current) return;
     
-    console.log('[ConversationOverlay] 🎵 Starting TTS audio playback...');
     try {
       setState('replying'); // 7. Change UI to "speaking"
       
       // 7. Unpause media source for TTS
       await ttsPlaybackService.play(audioBytes, () => {
-        console.log('[ConversationOverlay] ✅ TTS audio playback complete');
         setState('listening');
         
         // Resume mic for next turn
