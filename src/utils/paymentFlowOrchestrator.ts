@@ -47,7 +47,8 @@ export class PaymentFlowOrchestrator {
         window.history.replaceState({}, '', url.toString());
       } catch { /* noop */ }
     } else {
-      chatController.showPaymentFlowProgress("We're processing your payment. This usually takes a few seconds...");
+      // Pre-polling check: look for checkout_url in guest_reports
+      await this.checkForStripeAbandonment();
     }
 
     // Start payment polling
@@ -55,8 +56,9 @@ export class PaymentFlowOrchestrator {
       chatId: this.options.chatId,
       onPaid: this.handlePaymentConfirmed.bind(this),
       onError: this.handleError.bind(this),
+      onTimeout: this.handlePaymentTimeout.bind(this),
       pollInterval: 1000, // 1 second
-      maxAttempts: 30 // 30 seconds
+      maxAttempts: 8 // 8 seconds for timeout detection
     });
 
     this.paymentPoller.start();
@@ -167,6 +169,59 @@ export class PaymentFlowOrchestrator {
     
     this.options.onError(error);
     this.stop();
+  }
+
+  private async checkForStripeAbandonment(): Promise<void> {
+    try {
+      // Get guest_id from URL or chat_id
+      const urlParams = new URLSearchParams(window.location.search);
+      const guestId = urlParams.get('guest_id');
+      
+      if (!guestId) return;
+
+      // Check if guest_reports has checkout_url (indicates Stripe abandonment)
+      const { data: guestReport, error } = await supabase
+        .from('guest_reports')
+        .select('checkout_url, payment_status')
+        .eq('id', guestId)
+        .single();
+
+      if (error || !guestReport) return;
+
+      // If there's a checkout_url and payment is still pending, user abandoned Stripe
+      if (guestReport.checkout_url && guestReport.payment_status === 'pending') {
+        this.handleStripeAbandonment(guestId);
+        return;
+      }
+
+      // Show normal processing message
+      chatController.showPaymentFlowProgress("We're processing your payment. This usually takes a few seconds...");
+    } catch (error) {
+      // Fallback to normal processing
+      chatController.showPaymentFlowProgress("We're processing your payment. This usually takes a few seconds...");
+    }
+  }
+
+  private handleStripeAbandonment(guestId: string): void {
+    // Show abandonment message and offer options
+    chatController.showPaymentFlowProgress("No payment detected. Would you like to proceed with Stripe or do you have a promo code?");
+    
+    // Show CancelNudgeModal with special options
+    if (this.options.onShowCancelModal) {
+      this.options.onShowCancelModal(guestId);
+    }
+  }
+
+  private async handlePaymentTimeout(): Promise<void> {
+    // After 8 seconds of polling with no payment detected
+    const urlParams = new URLSearchParams(window.location.search);
+    const guestId = urlParams.get('guest_id');
+    
+    if (guestId) {
+      this.handleStripeAbandonment(guestId);
+    } else {
+      this.handleError('Payment timeout - no payment detected');
+    }
   }
 
   private handleStripeCancel(guestId: string): void {

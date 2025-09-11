@@ -112,10 +112,25 @@ const EmbeddedCheckout: React.FC = () => {
       window.location.replace(target);
     };
 
+    const onBeforeUnload = () => {
+      // Mark as cancelled when user leaves the page
+      if (guest_id && chat_id) {
+        // Update guest_reports to mark as cancelled
+        supabase.functions.invoke('mark-payment-cancelled', {
+          body: { guest_id, chat_id }
+        }).catch(() => {}); // Ignore errors
+      }
+    };
+
     window.addEventListener('popstate', onPopState);
+    window.addEventListener('beforeunload', onBeforeUnload);
     // Push a state so the next back triggers popstate here
     history.pushState(null, '', window.location.href);
-    return () => window.removeEventListener('popstate', onPopState);
+    
+    return () => {
+      window.removeEventListener('popstate', onPopState);
+      window.removeEventListener('beforeunload', onBeforeUnload);
+    };
   }, []);
 
   if (!STRIPE_PUBLISHABLE_KEY) {

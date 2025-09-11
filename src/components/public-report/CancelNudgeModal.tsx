@@ -87,12 +87,29 @@ export const CancelNudgeModal = ({ isOpen, guestId, onClose }: CancelNudgeModalP
     setIsProcessing(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('get-checkout-url', {
+      // First try to get existing checkout URL
+      const { data: existingData, error: existingError } = await supabase.functions.invoke('get-checkout-url', {
         body: { guest_id: guestId },
       });
 
+      if (existingData?.checkoutUrl) {
+        // Use existing checkout URL
+        const timestamp = Date.now();
+        localStorage.setItem(`cancel_nudge:${guestId}`, timestamp.toString());
+        window.location.href = existingData.checkoutUrl;
+        return;
+      }
+
+      // If no existing URL, create a new one via resume-stripe-checkout
+      const { data, error } = await supabase.functions.invoke('resume-stripe-checkout', {
+        body: { 
+          guest_id: guestId,
+          chat_id: window.location.pathname.split('/').pop() // Extract chat_id from URL
+        },
+      });
+
       if (error || !data?.checkoutUrl) {
-        console.error('Failed to get checkout URL:', error);
+        console.error('Failed to create checkout URL:', error);
         alert('Unable to resume checkout. Please try again.');
         return;
       }
