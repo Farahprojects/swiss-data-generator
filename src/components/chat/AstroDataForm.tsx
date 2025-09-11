@@ -373,9 +373,9 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
           // Guest report ID is no longer stored in sessionStorage
           console.log(`[AstroForm] Guest report ID: ${response.guestReportId}`);
           
-          // Navigate to chat - payment flow will handle the rest
-          console.log(`[AstroForm] 🔗 Navigating to chat: /c/${response.chatId}`);
-          navigate(`/c/${response.chatId}`, { replace: true });
+          // Navigate to guest chat - payment flow will handle the rest
+          console.log(`[AstroForm] 🔗 Navigating to guest chat: /c/g/${response.chatId}`);
+          navigate(`/c/g/${response.chatId}`, { replace: true });
           
           return;
         } else {

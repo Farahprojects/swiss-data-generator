@@ -84,9 +84,9 @@ export const getUserTypeConfig = (userType: UserType) => {
           }
         },
         newChatLabel: null, // Guests can't create new chats
-        threadSectionLabel: null, // No thread history for guests
+        threadSectionLabel: null, // No thread history for guests on /c/g
         authButtonLabel: 'Sign in',
-        showThreadHistory: false, // No thread history for guests - they're one-shot
+        showThreadHistory: false, // Skip thread history and thread fetching for guests
         showSearchChat: false,
         showAstroData: true // Guests can still use astro
       };

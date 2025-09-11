@@ -16,6 +16,11 @@ export const STORAGE_KEYS = {
       SESSION_TOKEN: 'therai_auth_session_token',
       CONVERSATION_ID: 'therai_auth_conversation_id',
     },
+    // Active chat_id storage (namespaced by user)
+    ACTIVE: {
+      GUEST: (guestId: string) => `therai_active_chat_guest_${guestId}`,
+      AUTH: (authId: string) => `therai_active_chat_auth_${authId}`,
+    },
     SHARED: {
       UUID: 'therai_chat_uuid',
       TTS_VOICE: 'therai_tts_voice',

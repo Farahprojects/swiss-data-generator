@@ -12,14 +12,21 @@ import { useUserType } from '@/hooks/useUserType';
  * Architecture:
  * - Store hydrates from: sessionStorage → URL → backend
  * - Store is single authority, UI always reads from store
+ * - Payment gate: Can skip initialization if payment is pending
  */
-export const useChatInitialization = () => {
+export const useChatInitialization = (options?: { skipIfPaymentPending?: boolean }) => {
   const { threadId } = useParams<{ threadId?: string }>();
   const { chat_id, hydrateFromStorage, startConversation } = useChatStore();
   const { user } = useAuth();
   const { guestId } = useUserType();
   
   useEffect(() => {
+    // Payment gate: Skip initialization if payment is pending
+    if (options?.skipIfPaymentPending) {
+      console.log(`[useChatInitialization] Payment gate active - skipping chat initialization`);
+      return;
+    }
+
     // Extra safety: Check URL params for chat_id
     const urlParams = new URLSearchParams(window.location.search);
     const urlChatId = urlParams.get('chat_id');
@@ -60,5 +67,5 @@ export const useChatInitialization = () => {
       // Then initialize controller
       chatController.initializeForConversation(targetChatId);
     }
-  }, [threadId, chat_id, hydrateFromStorage, startConversation, user?.id, guestId]);
+  }, [threadId, chat_id, hydrateFromStorage, startConversation, user?.id, guestId, options?.skipIfPaymentPending]);
 };
