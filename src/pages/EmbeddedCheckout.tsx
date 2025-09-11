@@ -111,10 +111,15 @@ const EmbeddedCheckout: React.FC = () => {
         <div className="max-w-md w-full space-y-4 text-center text-sm text-gray-500">
           <div className="flex items-center justify-center space-x-2">
             <span>Powered by</span>
-            <svg className="h-4" viewBox="0 0 100 20" fill="none">
-              <path d="M13.5 2.5h-3v15h3v-15zM20.5 2.5h-3v15h3v-15zM27.5 2.5h-3v15h3v-15zM34.5 2.5h-3v15h3v-15zM41.5 2.5h-3v15h3v-15zM48.5 2.5h-3v15h3v-15zM55.5 2.5h-3v15h3v-15zM62.5 2.5h-3v15h3v-15zM69.5 2.5h-3v15h3v-15zM76.5 2.5h-3v15h3v-15z" fill="#635BFF"/>
-              <text x="85" y="12" fontSize="8" fill="#635BFF" fontFamily="system-ui">Stripe</text>
-            </svg>
+            <a 
+              href="https://stripe.com" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-[#635BFF] hover:text-[#4F46E5] font-medium transition-colors"
+              style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
+            >
+              Stripe
+            </a>
           </div>
           <div className="space-x-4">
             <a href="https://stripe.com/billing" target="_blank" rel="noopener noreferrer" className="hover:text-gray-700 underline">Learn more about Stripe Billing</a>
