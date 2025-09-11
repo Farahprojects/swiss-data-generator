@@ -25,36 +25,28 @@ export const usePaymentFlow = ({ chatId, enabled }: UsePaymentFlowOptions) => {
       return;
     }
 
-    console.log(`[usePaymentFlow] Starting payment flow for chat_id: ${chatId}`);
-
     // Create the orchestrator
     orchestratorRef.current = createPaymentFlowOrchestrator({
       chatId,
       onPaymentConfirmed: () => {
-        console.log(`[usePaymentFlow] Payment confirmed for chat_id: ${chatId}`);
         setPaymentConfirmed(true);
       },
       onReportGenerating: () => {
-        console.log(`[usePaymentFlow] Report generating for chat_id: ${chatId}`);
         setReportGenerating(true);
       },
       onReportReady: () => {
-        console.log(`[usePaymentFlow] Report ready for chat_id: ${chatId}`);
         setReportReady(true);
         // Don't set setReportGenerating(false) here - let typing completion handle it
       },
       onError: (error) => {
-        console.error(`[usePaymentFlow] Error for chat_id: ${chatId}:`, error);
         setError(error);
         setReportGenerating(false);
       },
       onStripeCancel: () => {
-        console.log(`[usePaymentFlow] Stripe payment cancelled for chat_id: ${chatId}`);
         // Reset payment flow state on cancellation
         reset();
       },
       onShowCancelModal: (guestId) => {
-        console.log(`[usePaymentFlow] Showing cancel modal for guest_id: ${guestId}`);
         showCancelModal(guestId);
       },
     });
@@ -65,7 +57,6 @@ export const usePaymentFlow = ({ chatId, enabled }: UsePaymentFlowOptions) => {
     // Cleanup function
     return () => {
       if (orchestratorRef.current) {
-        console.log(`[usePaymentFlow] Stopping payment flow for chat_id: ${chatId}`);
         orchestratorRef.current.stop();
         orchestratorRef.current = null;
       }
@@ -77,7 +68,6 @@ export const usePaymentFlow = ({ chatId, enabled }: UsePaymentFlowOptions) => {
   const { isReportGenerating } = usePaymentFlowStore();
   useEffect(() => {
     if (!isAssistantTyping && isReportGenerating) {
-      console.log(`[usePaymentFlow] Typing completed, stopping report generating state for chat_id: ${chatId}`);
       setReportGenerating(false);
     }
   }, [isAssistantTyping, isReportGenerating, setReportGenerating, chatId]);

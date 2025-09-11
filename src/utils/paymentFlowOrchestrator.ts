@@ -22,11 +22,9 @@ export class PaymentFlowOrchestrator {
 
   async start(): Promise<void> {
     if (this.isActive) {
-      console.warn('[PaymentFlowOrchestrator] Already active, ignoring start request');
       return;
     }
 
-    console.log(`[PaymentFlowOrchestrator] Starting payment flow for chat_id: ${this.options.chatId}`);
     this.isActive = true;
 
     // Check if this is a Stripe flow by looking for payment_status in URL
@@ -35,13 +33,11 @@ export class PaymentFlowOrchestrator {
     const guestId = urlParams.get('guest_id') || '';
     
     if (paymentStatus === 'cancelled' && guestId) {
-      console.log(`[PaymentFlowOrchestrator] Stripe payment cancelled detected`);
       this.handleStripeCancel(guestId);
       return;
     }
 
     if (paymentStatus === 'success') {
-      console.log(`[PaymentFlowOrchestrator] Stripe payment success detected - starting polling`);
       chatController.showPaymentFlowProgress("Payment confirmed! Setting up your personalized space...");
       // Clean payment-related params from URL without navigation
       try {
@@ -51,7 +47,6 @@ export class PaymentFlowOrchestrator {
         window.history.replaceState({}, '', url.toString());
       } catch { /* noop */ }
     } else {
-      console.log(`[PaymentFlowOrchestrator] Starting payment polling for pending payment`);
       chatController.showPaymentFlowProgress("We're processing your payment. This usually takes a few seconds...");
     }
 
@@ -68,8 +63,6 @@ export class PaymentFlowOrchestrator {
   }
 
   stop(): void {
-    console.log(`[PaymentFlowOrchestrator] Stopping payment flow for chat_id: ${this.options.chatId}`);
-    
     if (this.paymentPoller) {
       this.paymentPoller.stop();
       this.paymentPoller = null;
@@ -84,8 +77,6 @@ export class PaymentFlowOrchestrator {
   }
 
   private async handlePaymentConfirmed(chatId: string): Promise<void> {
-    console.log(`[PaymentFlowOrchestrator] ✅ Payment confirmed for chat_id: ${chatId}`);
-    
     // Show inline progress message
     chatController.showPaymentFlowProgress("Payment confirmed! Setting up your personalized space...");
     
@@ -101,8 +92,6 @@ export class PaymentFlowOrchestrator {
 
   private async triggerReportGeneration(chatId: string): Promise<void> {
     try {
-      console.log(`[PaymentFlowOrchestrator] Checking report generation status for chat_id: ${chatId}`);
-      
       // First check if report is already generated
       const { data: guestReport, error: checkError } = await supabase
         .from('guest_reports')
@@ -111,12 +100,10 @@ export class PaymentFlowOrchestrator {
         .single();
 
       if (checkError) {
-        console.error(`[PaymentFlowOrchestrator] Error checking report status:`, checkError);
         throw new Error(`Failed to check report status: ${checkError.message}`);
       }
 
       if (guestReport?.report_generated === true) {
-        console.log(`[PaymentFlowOrchestrator] ✅ Report already generated for chat_id: ${chatId} - skipping verify-guest-payment`);
         // Show progress and enable stop icon
         chatController.showPaymentFlowProgress("Generating your personal space...");
         chatController.setPaymentFlowStopIcon(true);
@@ -124,8 +111,6 @@ export class PaymentFlowOrchestrator {
         this.options.onReportGenerating();
         return;
       }
-
-      console.log(`[PaymentFlowOrchestrator] Triggering report generation for chat_id: ${chatId}`);
       
       // Show progress and enable stop icon when injection starts
       chatController.showPaymentFlowProgress("Generating your personal space...");
@@ -139,24 +124,18 @@ export class PaymentFlowOrchestrator {
       });
 
       if (error) {
-        console.error(`[PaymentFlowOrchestrator] Report generation failed:`, error);
         throw new Error(`Report generation failed: ${error.message}`);
       }
-
-      console.log(`[PaymentFlowOrchestrator] ✅ Report generation triggered successfully for chat_id: ${chatId}`);
       
       // Notify UI that report is generating
       this.options.onReportGenerating();
       
     } catch (error) {
-      console.error(`[PaymentFlowOrchestrator] Error triggering report generation:`, error);
       this.handleError('Failed to trigger report generation');
     }
   }
 
   private async startReportReadyListener(chatId: string): Promise<void> {
-    console.log(`[PaymentFlowOrchestrator] Starting report ready listener for chat_id: ${chatId}`);
-    
     this.reportReadyListener = createReportReadyListener({
       chatId: chatId,
       onReportReady: this.handleReportReady.bind(this),
@@ -167,8 +146,6 @@ export class PaymentFlowOrchestrator {
   }
 
   private handleReportReady(chatId: string): void {
-    console.log(`[PaymentFlowOrchestrator] ✅ Report ready for chat_id: ${chatId}`);
-    
     // Remove progress messages and disable stop icon
     chatController.removePaymentFlowProgress();
     chatController.setPaymentFlowStopIcon(false);
@@ -184,8 +161,6 @@ export class PaymentFlowOrchestrator {
   }
 
   private handleError(error: string): void {
-    console.error(`[PaymentFlowOrchestrator] Error: ${error}`);
-    
     // Clean up UI state on error
     chatController.removePaymentFlowProgress();
     chatController.setPaymentFlowStopIcon(false);
@@ -195,8 +170,6 @@ export class PaymentFlowOrchestrator {
   }
 
   private handleStripeCancel(guestId: string): void {
-    console.log(`[PaymentFlowOrchestrator] Handling Stripe payment cancellation`);
-    
     // Show cancellation message in chat
     chatController.showPaymentFlowProgress("Payment was cancelled. You can try again anytime.");
     
