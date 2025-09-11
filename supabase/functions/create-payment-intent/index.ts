@@ -24,15 +24,24 @@ serve(async (req) => {
       });
     }
 
+    const metadata = {
+      guest_id: guest_id || "",
+      chat_id: chat_id || "",
+    };
+
+    console.log('[create-payment-intent] Creating PaymentIntent with metadata:', metadata);
+
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100),
       currency: (currency || "usd") as Stripe.Currency,
       description: description || "Checkout",
-      metadata: {
-        guest_id: guest_id || "",
-        chat_id: chat_id || "",
-      },
+      metadata,
       automatic_payment_methods: { enabled: true },
+    });
+
+    console.log('[create-payment-intent] PaymentIntent created:', {
+      id: paymentIntent.id,
+      metadata: paymentIntent.metadata
     });
 
     return new Response(

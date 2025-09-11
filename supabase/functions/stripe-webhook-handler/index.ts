@@ -111,13 +111,32 @@ async function processWebhookEvent(event: Stripe.Event) {
   }
 }
 async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent) {
-  const guestId = (paymentIntent.metadata?.guest_id as string) || ''
-  if (!guestId) return
+  console.log('[Webhook] Processing payment_intent.succeeded:', {
+    paymentIntentId: paymentIntent.id,
+    metadata: paymentIntent.metadata,
+    amount: paymentIntent.amount,
+    currency: paymentIntent.currency
+  });
 
-  await supabase
+  const guestId = (paymentIntent.metadata?.guest_id as string) || ''
+  
+  if (!guestId) {
+    console.log('[Webhook] No guest_id found in metadata, skipping guest report update');
+    return
+  }
+
+  console.log(`[Webhook] Updating guest_reports for guest_id: ${guestId}`);
+
+  const { error } = await supabase
     .from('guest_reports')
     .update({ payment_status: 'paid', updated_at: new Date().toISOString() })
     .eq('id', guestId)
+
+  if (error) {
+    console.error(`[Webhook] Failed to update guest_reports for ${guestId}:`, error);
+  } else {
+    console.log(`[Webhook] ✅ Successfully updated guest_reports payment_status to 'paid' for ${guestId}`);
+  }
 }
 
 async function resolveUserId(customerId: string, clientReferenceId?: string, metadata?: any): Promise<string | null> {
