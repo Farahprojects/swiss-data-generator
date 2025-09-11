@@ -104,7 +104,7 @@ export const useChatInputMicrophone = (options: UseChatInputMicrophoneOptions = 
           
           // Silence detection: if level is very low for extended period
           const silenceThreshold = 0.01; // Adjust as needed
-          const silenceTimeout = options.silenceTimeoutMs || 1200;
+          const silenceTimeout = options.silenceTimeoutMs || 800;
           
           if (level < silenceThreshold && isRecording && !isProcessing) {
             // Start or extend silence timeout

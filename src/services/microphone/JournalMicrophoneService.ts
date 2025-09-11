@@ -134,7 +134,7 @@ class JournalMicrophoneServiceClass {
     const dataArray = new Uint8Array(bufferLength);
     let silenceStart: number | null = null;
     const silenceThreshold = 8;
-    const timeoutMs = this.options.silenceTimeoutMs || 1500;
+    const timeoutMs = this.options.silenceTimeoutMs || 800;
 
     const checkSilence = () => {
       if (!this.monitoringRef.current || !this.analyser) return;

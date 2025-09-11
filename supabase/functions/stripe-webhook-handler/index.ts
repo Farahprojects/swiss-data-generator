@@ -73,6 +73,9 @@ function getCustomerIdFromEvent(event: Stripe.Event): string | null {
 
 async function processWebhookEvent(event: Stripe.Event) {
   switch (event.type) {
+    case 'payment_intent.succeeded':
+      await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent)
+      break
     case 'customer.subscription.created':
     case 'customer.subscription.updated':
       await handleSubscriptionChange(event.data.object as Stripe.Subscription)
@@ -106,6 +109,15 @@ async function processWebhookEvent(event: Stripe.Event) {
     default:
       console.log(`Unhandled event type: ${event.type}`)
   }
+}
+async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent) {
+  const guestId = (paymentIntent.metadata?.guest_id as string) || ''
+  if (!guestId) return
+
+  await supabase
+    .from('guest_reports')
+    .update({ payment_status: 'paid', updated_at: new Date().toISOString() })
+    .eq('id', guestId)
 }
 
 async function resolveUserId(customerId: string, clientReferenceId?: string, metadata?: any): Promise<string | null> {

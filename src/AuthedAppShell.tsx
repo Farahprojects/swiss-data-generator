@@ -24,6 +24,7 @@ import BlogPost from './pages/BlogPost';
 import ChatContainer from './pages/ChatContainer';
 import NotFound from './pages/NotFound';
 import NavigationStateProvider from '@/contexts/NavigationStateContext';
+import EmbeddedCheckout from './pages/EmbeddedCheckout';
 
 // This shell contains all routes that can rely on AuthContext. It is lazy-loaded.
 const AuthedAppShell: React.FC = () => {
@@ -60,6 +61,7 @@ const AuthedAppShell: React.FC = () => {
               <Route path="/success" element={<PublicOnlyGuard><SubscriptionSuccess /></PublicOnlyGuard>} />
               <Route path="/cancel" element={<PublicOnlyGuard><SubscriptionPaywall /></PublicOnlyGuard>} />
               <Route path="/stripe-return" element={<PublicOnlyGuard><StripeReturn /></PublicOnlyGuard>} />
+              <Route path="/embedded-checkout" element={<PublicOnlyGuard><EmbeddedCheckout /></PublicOnlyGuard>} />
               
               {/* New chat routes with clean /c namespace */}
               <Route path="/c" element={<ChatContainer />} />
