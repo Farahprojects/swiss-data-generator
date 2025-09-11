@@ -109,6 +109,8 @@ export const ConversationOverlay: React.FC = () => {
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           console.error(`[ConversationOverlay] ❌ TTS WebSocket failed: ${status}`);
           resetToTapToStart(`TTS WebSocket ${status}`);
+        } else if (status === 'CLOSED') {
+          console.warn(`[ConversationOverlay] ⚠️ TTS WebSocket closed - this may be normal after audio playback`);
         }
       });
       
@@ -125,11 +127,13 @@ export const ConversationOverlay: React.FC = () => {
   const playAudioImmediately = useCallback(async (audioBytes: number[]) => {
     if (isShuttingDown.current) return;
     
+    console.log('[ConversationOverlay] 🎵 Starting TTS audio playback...');
     try {
       setState('replying'); // 7. Change UI to "speaking"
       
       // 7. Unpause media source for TTS
       await ttsPlaybackService.play(audioBytes, () => {
+        console.log('[ConversationOverlay] ✅ TTS audio playback complete');
         setState('listening');
         
         // Resume mic for next turn
@@ -142,7 +146,7 @@ export const ConversationOverlay: React.FC = () => {
         }
       });
     } catch (error) {
-      console.error('[ConversationOverlay] TTS playback failed:', error);
+      console.error('[ConversationOverlay] ❌ TTS playback failed:', error);
       resetToTapToStart('TTS playback failed');
     }
   }, []);
