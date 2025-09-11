@@ -244,7 +244,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
         if (state.guest_id) {
           const guestKey = STORAGE_KEYS.CHAT.ACTIVE.GUEST(state.guest_id);
           sessionStorage.removeItem(guestKey);
-          console.log(`[Store] Cleared namespaced guest chat_id key: ${guestKey}`);
         }
         
         // Clear any auth keys (in case of mixed state)
@@ -253,7 +252,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
         );
         authKeys.forEach(key => {
           sessionStorage.removeItem(key);
-          console.log(`[Store] Cleared namespaced auth chat_id key: ${key}`);
         });
         
         // Clear any guest keys (in case of mixed state)
@@ -262,7 +260,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
         );
         guestKeys.forEach(key => {
           sessionStorage.removeItem(key);
-          console.log(`[Store] Cleared namespaced guest chat_id key: ${key}`);
         });
         
         // Extra safety: Clear any remaining chat-related keys
@@ -271,7 +268,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
         );
         chatKeys.forEach(key => {
           sessionStorage.removeItem(key);
-          console.log(`[Store] Cleared additional chat key: ${key}`);
         });
       } catch (error) {
         console.error('[Store] Error clearing namespaced chat_id keys:', error);
@@ -386,7 +382,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // Try shared cache first (guest/auth agnostic)
       const cachedChatId = sessionStorage.getItem(STORAGE_KEYS.CHAT.SHARED.UUID);
       if (cachedChatId) {
-        console.log(`[Store] Hydrated chat_id from sessionStorage (cache): ${cachedChatId}`);
         return cachedChatId;
       }
       
@@ -395,7 +390,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
         const authKey = STORAGE_KEYS.CHAT.ACTIVE.AUTH(authId);
         const storedChatId = sessionStorage.getItem(authKey);
         if (storedChatId) {
-          console.log(`[Store] Hydrated chat_id from sessionStorage (auth): ${storedChatId}`);
           return storedChatId;
         }
       }
@@ -404,12 +398,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
         const guestKey = STORAGE_KEYS.CHAT.ACTIVE.GUEST(guestId);
         const storedChatId = sessionStorage.getItem(guestKey);
         if (storedChatId) {
-          console.log(`[Store] Hydrated chat_id from sessionStorage (guest): ${storedChatId}`);
           return storedChatId;
         }
       }
       
-      console.log(`[Store] No chat_id found in sessionStorage cache`);
       return null;
     } catch (error) {
       console.error('[Store] Error hydrating from storage:', error);
@@ -428,13 +420,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
       if (authId) {
         const authKey = STORAGE_KEYS.CHAT.ACTIVE.AUTH(authId);
         sessionStorage.setItem(authKey, chat_id);
-        console.log(`[Store] Persisted chat_id to sessionStorage (auth): ${chat_id}`);
       }
       
       if (guestId) {
         const guestKey = STORAGE_KEYS.CHAT.ACTIVE.GUEST(guestId);
         sessionStorage.setItem(guestKey, chat_id);
-        console.log(`[Store] Persisted chat_id to sessionStorage (guest): ${chat_id}`);
       }
     } catch (error) {
       console.error('[Store] Error persisting chat_id to storage:', error);

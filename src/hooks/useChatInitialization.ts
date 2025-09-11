@@ -75,7 +75,6 @@ export const useChatInitialization = (options?: { skipIfPaymentPending?: boolean
       const hydratedChatId = hydrateFromStorage(user?.id, guestId);
       if (hydratedChatId) {
         targetChatId = hydratedChatId;
-        console.log(`[useChatInitialization] Hydrated from sessionStorage (fallback): ${targetChatId}`);
       }
     }
     

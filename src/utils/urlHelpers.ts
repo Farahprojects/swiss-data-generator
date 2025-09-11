@@ -22,7 +22,6 @@ export const getGuestReportIdFromStorage = (): string | null => {
  */
 export const setGuestReportIdInStorage = (guestReportId: string): void => {
   // Guest report ID is no longer stored in sessionStorage
-  console.log(`Guest report ID: ${guestReportId} (not stored)`);
 };
 
 /**

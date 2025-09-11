@@ -60,7 +60,6 @@ export class ReportReadyListener {
   }
 
   private setupRealtimeSubscription(): void {
-    console.log(`[ReportReadyListener] Setting up realtime subscription for chat_id: ${this.options.chatId}`);
     
     // Create a real-time subscription to report_ready_signals table
     this.channel = supabase
