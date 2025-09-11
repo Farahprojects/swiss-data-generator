@@ -101,8 +101,12 @@ export const ConversationOverlay: React.FC = () => {
       const connection = supabase.channel(`conversation:${chat_id}`);
       
       // Log WebSocket connection details
-      console.log(`[ConversationOverlay] 🔍 WebSocket URL: ${SUPABASE_URL.replace('https://', 'wss://').replace('http://', 'ws://')}`);
+      const wsUrl = SUPABASE_URL.replace('https://', 'wss://').replace('http://', 'ws://');
+      console.log(`[ConversationOverlay] 🔍 WebSocket URL: ${wsUrl}`);
       console.log(`[ConversationOverlay] 🔍 Channel name: conversation:${chat_id}`);
+      console.log(`[ConversationOverlay] 🔍 Protocol check: ${wsUrl.startsWith('wss://') ? '✅ WSS (secure)' : '❌ WS (insecure)'}`);
+      console.log(`[ConversationOverlay] 🔍 Current page protocol: ${window.location.protocol}`);
+      console.log(`[ConversationOverlay] 🔍 Mixed content check: ${window.location.protocol === 'https:' && !wsUrl.startsWith('wss://') ? '❌ BLOCKED' : '✅ ALLOWED'}`);
       
       connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
         console.log('[ConversationOverlay] 🎵 TTS audio received via WebSocket');
