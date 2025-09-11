@@ -93,8 +93,16 @@ export const ConversationOverlay: React.FC = () => {
       // Test if Supabase realtime is working at all
       console.log(`[ConversationOverlay] 🔍 Supabase URL: ${SUPABASE_URL}`);
       console.log(`[ConversationOverlay] 🔍 Supabase Key: ${SUPABASE_ANON_KEY ? 'Present' : 'Missing'}`);
+      console.log(`[ConversationOverlay] 🔍 Full Supabase Key: ${SUPABASE_ANON_KEY}`);
+      console.log(`[ConversationOverlay] 🔍 Environment: ${import.meta.env.MODE}`);
+      console.log(`[ConversationOverlay] 🔍 VITE_SUPABASE_URL: ${import.meta.env.VITE_SUPABASE_URL}`);
+      console.log(`[ConversationOverlay] 🔍 VITE_SUPABASE_PUBLISHABLE_KEY: ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`);
       
       const connection = supabase.channel(`conversation:${chat_id}`);
+      
+      // Log WebSocket connection details
+      console.log(`[ConversationOverlay] 🔍 WebSocket URL: ${SUPABASE_URL.replace('https://', 'wss://').replace('http://', 'ws://')}`);
+      console.log(`[ConversationOverlay] 🔍 Channel name: conversation:${chat_id}`);
       
       connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
         console.log('[ConversationOverlay] 🎵 TTS audio received via WebSocket');
