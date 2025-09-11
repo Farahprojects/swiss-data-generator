@@ -191,37 +191,19 @@ export type Database = {
       }
       chat_audio_clips: {
         Row: {
-          audio_url: string
           chat_id: string
-          created_at: string
+          created_at: string | null
           id: string
-          meta: Json
-          provider: string
-          role: string
-          storage_path: string | null
-          voice: string | null
         }
         Insert: {
-          audio_url: string
           chat_id: string
-          created_at?: string
+          created_at?: string | null
           id?: string
-          meta?: Json
-          provider?: string
-          role?: string
-          storage_path?: string | null
-          voice?: string | null
         }
         Update: {
-          audio_url?: string
           chat_id?: string
-          created_at?: string
+          created_at?: string | null
           id?: string
-          meta?: Json
-          provider?: string
-          role?: string
-          storage_path?: string | null
-          voice?: string | null
         }
         Relationships: []
       }
@@ -370,6 +352,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      conversation_broadcasts: {
+        Row: {
+          channel_name: string
+          created_at: string | null
+          id: string
+          message_type: string | null
+          payload: Json | null
+        }
+        Insert: {
+          channel_name: string
+          created_at?: string | null
+          id?: string
+          message_type?: string | null
+          payload?: Json | null
+        }
+        Update: {
+          channel_name?: string
+          created_at?: string | null
+          id?: string
+          message_type?: string | null
+          payload?: Json | null
+        }
+        Relationships: []
       }
       conversation_folders: {
         Row: {
@@ -743,7 +749,7 @@ export type Database = {
         }
         Insert: {
           amount_paid: number
-          chat_id?: string
+          chat_id: string
           checkout_url?: string | null
           created_at?: string
           email: string
