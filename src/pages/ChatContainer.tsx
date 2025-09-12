@@ -18,6 +18,8 @@ import { CancelNudgeModal } from '@/components/public-report/CancelNudgeModal';
 const ChatContainerContent: React.FC = () => {
   // Single responsibility: Initialize chat when threadId changes
   useChatInitialization();
+  // Ensure bottom padding accounts for dynamic mobile UI
+  try { require('@/hooks/useSafeBottomPadding'); } catch {}
   
   const { isOpen, guestId, hideCancelModal } = useCancelModal();
 

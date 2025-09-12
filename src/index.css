@@ -12,7 +12,7 @@
 /* Mobile safe area padding for phone navigation buttons */
 @supports (padding: max(0px)) {
   .pb-safe {
-    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom), var(--vv-bottom, 0px));
   }
 }
 
