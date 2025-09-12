@@ -233,9 +233,12 @@ export const ConversationOverlay: React.FC = () => {
     setState('establishing');
     
     try {
+      try { performance.mark('userGestureAt'); } catch {}
       // 2. MIC PERMISSION PREFLIGHT - Android requires this before AudioContext
       try {
+        try { performance.mark('gUM.requested'); } catch {}
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        try { performance.mark('gUM.resolved'); } catch {}
         // Immediately stop tracks to release mic
         stream.getTracks().forEach(track => track.stop());
       } catch (error) {
@@ -246,6 +249,7 @@ export const ConversationOverlay: React.FC = () => {
       // 3. AUDIOCONTEXT UNLOCK - Ensure unlock happens within this user gesture
       const ctx = audioContext || initializeAudioContext();
       await resumeAudioContext();
+      try { performance.mark('AC.resumed'); } catch {}
       await unlockOutput();
       
       // 3. STEP 1: Audio Warmup with validation
@@ -300,8 +304,10 @@ export const ConversationOverlay: React.FC = () => {
       
       // 7. STEP 5: Initialize and start pipeline with validation
       await pipelineRef.current.init();
+      try { performance.mark('worklet.constructed'); } catch {}
       
       await pipelineRef.current.start();
+      try { performance.mark('barrier.open'); } catch {}
       
       // 8. STEP 7: Final validation - All systems ready
       if (!connectionRef.current) {

@@ -23,6 +23,8 @@ export class ConversationAudioPipeline {
   private agcMonitorTimer: number | null = null;
   private currentAgcGain: number = 1.0;
   private startupWatchdogTimer: number | null = null;
+  private _removeVisibility?: () => void;
+  private _removeDeviceChange?: () => void;
 
   constructor(events: ConversationAudioEvents = {}) {
     this.events = events;
@@ -32,7 +34,9 @@ export class ConversationAudioPipeline {
     if (this.audioContext) return;
     try {
       this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 48000, latencyHint: 'interactive' as any });
+      try { performance.mark('worklet.addModule.start'); } catch {}
       await this.audioContext.audioWorklet.addModule(new URL('../../workers/audio/ConversationAudioProcessor.js', import.meta.url));
+      try { performance.mark('worklet.addModule.end'); } catch {}
       this.worker = new Worker(new URL('../../workers/audio/conversation-audio-worker.js', import.meta.url));
 
       this.worker.onmessage = (evt: MessageEvent) => {
@@ -70,8 +74,19 @@ export class ConversationAudioPipeline {
         }
       };
       document.addEventListener('visibilitychange', handleVisibility);
-      // Store remover on the instance for cleanup
-      (this as any)._removeVisibility = () => document.removeEventListener('visibilitychange', handleVisibility);
+      this._removeVisibility = () => document.removeEventListener('visibilitychange', handleVisibility);
+
+      // Device change handling
+      const handleDeviceChange = async () => {
+        try {
+          if (!this.started) return;
+          await this.rebindInputStream();
+        } catch {}
+      };
+      try {
+        navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange as any);
+        this._removeDeviceChange = () => navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange as any);
+      } catch {}
 
     } catch (e: any) {
       this.events.onError?.(e);
@@ -200,10 +215,8 @@ export class ConversationAudioPipeline {
         this.audioContext = null;
       }
       // Remove visibility listener if present
-      if ((this as any)._removeVisibility) {
-        try { (this as any)._removeVisibility(); } catch {}
-        (this as any)._removeVisibility = null;
-      }
+      if (this._removeVisibility) { try { this._removeVisibility(); } catch {} this._removeVisibility = undefined; }
+      if (this._removeDeviceChange) { try { this._removeDeviceChange(); } catch {} this._removeDeviceChange = undefined; }
     } catch {}
   }
 
@@ -314,6 +327,32 @@ export class ConversationAudioPipeline {
         }
       } as any;
     }
+  }
+
+  private async rebindInputStream(): Promise<void> {
+    if (!this.audioContext) return;
+    try {
+      // Stop old tracks and source
+      if (this.mediaStream) {
+        try { this.mediaStream.getTracks().forEach(t => t.stop()); } catch {}
+        this.mediaStream = null;
+      }
+      // Acquire new default device stream
+      this.mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1,
+          noiseSuppression: true,
+          echoCancellation: true,
+          autoGainControl: false,
+          sampleRate: 48000
+        },
+        video: false
+      });
+      const source = this.audioContext.createMediaStreamSource(this.mediaStream);
+      if (this.agcGainNode) {
+        source.connect(this.agcGainNode);
+      }
+    } catch {}
   }
 }
 

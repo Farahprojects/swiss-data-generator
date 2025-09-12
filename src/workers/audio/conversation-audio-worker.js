@@ -26,6 +26,8 @@ let aboveCount = 0;
 let belowCount = 0;
 let frameCount = 0;
 
+let reportedFirstFrame = false;
+
 // Start barrier: hold frames for a short pre-roll window, then open
 let barrierOpen = false;
 let barrierOpenAtMs = 0;
@@ -115,6 +117,10 @@ self.onmessage = (event) => {
     }
 
     appendFrame(event.data.buffer);
+    if (!reportedFirstFrame) {
+      reportedFirstFrame = true;
+      try { self.postMessage({ type: 'first_frame_written' }); } catch {}
+    }
 
     // VAD step with adaptive threshold
     const frame = new Float32Array(event.data.buffer);
@@ -162,6 +168,7 @@ self.onmessage = (event) => {
     // Reset barrier
     barrierOpen = false;
     barrierOpenAtMs = 0;
+    reportedFirstFrame = false;
   } else if (type === 'throttle') {
     isThrottled = event.data.enabled;
     throttleCounter = 0;
