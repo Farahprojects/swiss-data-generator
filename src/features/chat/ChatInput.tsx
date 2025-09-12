@@ -159,7 +159,7 @@ export const ChatInput = () => {
       <div className="flex items-end gap-2 max-w-4xl mx-auto">
         <div className="flex-1 relative">
           {isMicRecording ? (
-            <div className="w-full h-[46px] flex items-center justify-center bg-white border-2 border-gray-300 rounded-3xl">
+            <div className="w-full h-[46px] flex items-center justify-center bg-white border-2 border-gray-300 rounded-3xl overflow-hidden">
               <VoiceWaveform audioLevelRef={audioLevelRef} />
             </div>
           ) : (
