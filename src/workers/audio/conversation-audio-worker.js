@@ -14,7 +14,7 @@ const MIN_THRESHOLD = 0.00055; // +10% minimum threshold for very quiet environm
 const MAX_THRESHOLD = 0.05; // Maximum threshold for noisy environments
 const ADAPTATION_FACTOR = 0.1; // How quickly to adapt (0.1 = slow adaptation)
 
-const SPEECH_START_FRAMES = 2; // 40ms (2 * 20ms) - more responsive to speech start
+const SPEECH_START_FRAMES = 3; // 60ms (3 * 20ms) - longer start gate to stabilize onset
 const SPEECH_END_FRAMES = 25; // 500ms (25 * 20ms) - faster processing
 
 let ringBuffer = new Float32Array(MAX_SAMPLES);
