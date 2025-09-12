@@ -1,4 +1,4 @@
-// High-level service that wires AudioWorklet and WebWorker for Conversation Mode
+// Simplified audio pipeline - no heavy processing
 
 export type ConversationAudioEvents = {
   onSpeechStart?: () => void;
@@ -14,14 +14,8 @@ export class ConversationAudioPipeline {
   private worker: Worker | null = null;
   private started: boolean = false;
   private events: ConversationAudioEvents;
-  private isBackground: boolean = false;
-  private backgroundThrottleInterval: number | null = null;
-  // Adaptive gain control chain
-  private agcGainNode: GainNode | null = null;
-  private limiterNode: DynamicsCompressorNode | null = null;
   private analyserNode: AnalyserNode | null = null;
-  private agcMonitorTimer: number | null = null;
-  private currentAgcGain: number = 1.0;
+  private levelMonitorTimer: number | null = null;
 
   constructor(events: ConversationAudioEvents = {}) {
     this.events = events;
@@ -30,7 +24,11 @@ export class ConversationAudioPipeline {
   public async init(): Promise<void> {
     if (this.audioContext) return;
     try {
-      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 48000, latencyHint: 'interactive' as any });
+      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ 
+        sampleRate: 16000, 
+        latencyHint: 'interactive' as any 
+      });
+      
       await this.audioContext.audioWorklet.addModule(new URL('../../workers/audio/ConversationAudioProcessor.js', import.meta.url));
       this.worker = new Worker(new URL('../../workers/audio/conversation-audio-worker.js', import.meta.url));
 
@@ -45,26 +43,6 @@ export class ConversationAudioPipeline {
           this.events.onLevel?.(evt.data.value ?? 0);
         }
       };
-      // Mobile visibility handling: ensure context resumes on return + background throttling
-      const handleVisibility = () => {
-        if (!this.audioContext) return;
-        
-        if (document.visibilityState === 'visible') {
-          // App became visible - resume context and stop background throttling
-          if (this.audioContext.state === 'suspended') {
-            this.audioContext.resume().catch(() => {});
-          }
-          this.isBackground = false;
-          this.stopBackgroundThrottling();
-        } else {
-          // App went to background - start throttling
-          this.isBackground = true;
-          this.startBackgroundThrottling();
-        }
-      };
-      document.addEventListener('visibilitychange', handleVisibility);
-      // Store remover on the instance for cleanup
-      (this as any)._removeVisibility = () => document.removeEventListener('visibilitychange', handleVisibility);
 
     } catch (e: any) {
       this.events.onError?.(e);
@@ -78,50 +56,38 @@ export class ConversationAudioPipeline {
     if (this.started) return;
 
     try {
+      // Simple audio constraints - let browser handle processing
       this.mediaStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           channelCount: 1,
-          // Capture with clean front-end processing; AGC handled in-app
           noiseSuppression: true,
           echoCancellation: true,
-          autoGainControl: false,
-          sampleRate: 48000
+          autoGainControl: true,
+          sampleRate: 16000
         },
         video: false
       });
+
       const source = this.audioContext.createMediaStreamSource(this.mediaStream);
       this.workletNode = new AudioWorkletNode(this.audioContext, 'conversation-audio-processor');
 
-      // Adaptive Gain Control (AGC): source -> agcGain -> limiter -> worklet
-      this.agcGainNode = this.audioContext.createGain();
-      this.agcGainNode.gain.value = this.currentAgcGain;
-
-      // Hard limiter to prevent clipping from sudden peaks
-      this.limiterNode = this.audioContext.createDynamicsCompressor();
-      this.limiterNode.threshold.setValueAtTime(-3, this.audioContext.currentTime); // dB
-      this.limiterNode.knee.setValueAtTime(0, this.audioContext.currentTime);
-      this.limiterNode.ratio.setValueAtTime(20, this.audioContext.currentTime);
-      this.limiterNode.attack.setValueAtTime(0.003, this.audioContext.currentTime);
-      this.limiterNode.release.setValueAtTime(0.05, this.audioContext.currentTime);
-
-      // Analyser for RMS metering (monitor post-gain, pre-limiter)
+      // Simple analyser for level monitoring
       this.analyserNode = this.audioContext.createAnalyser();
-      this.analyserNode.fftSize = 1024;
+      this.analyserNode.fftSize = 256;
       this.analyserNode.smoothingTimeConstant = 0.8;
 
-      source.connect(this.agcGainNode);
-      this.agcGainNode.connect(this.analyserNode);
-      this.agcGainNode.connect(this.limiterNode);
-      this.limiterNode.connect(this.workletNode);
+      // Direct connection: source -> analyser -> worklet
+      source.connect(this.analyserNode);
+      this.analyserNode.connect(this.workletNode);
 
-      // Prevent feedback: route to a zero-gain node instead of speakers
+      // Prevent feedback: route to zero-gain node
       const sinkMuteGain = this.audioContext.createGain();
       sinkMuteGain.gain.value = 0;
       this.workletNode.connect(sinkMuteGain);
       sinkMuteGain.connect(this.audioContext.destination);
 
-      // Start AGC monitor loop (RMS-based, attack/release smoothing)
-      this.startAgcMonitor();
+      // Start simple level monitoring
+      this.startLevelMonitor();
 
       // Forward frames from worklet to worker
       this.workletNode.port.onmessage = (event: MessageEvent) => {
@@ -139,14 +105,12 @@ export class ConversationAudioPipeline {
   }
 
   public pause(): void {
-    // Keep media stream and AudioContext active, just stop forwarding to WebWorker
     if (this.workletNode) {
       this.workletNode.port.onmessage = null as any;
     }
   }
 
   public resume(): void {
-    // Restart forwarding to WebWorker
     if (this.workletNode) {
       this.workletNode.port.onmessage = (event: MessageEvent) => {
         const { type, buffer } = event.data || {};
@@ -159,14 +123,11 @@ export class ConversationAudioPipeline {
 
   public async stop(): Promise<void> {
     try {
-      // Stop AGC monitor
-      if (this.agcMonitorTimer) {
-        clearInterval(this.agcMonitorTimer);
-        this.agcMonitorTimer = null;
+      if (this.levelMonitorTimer) {
+        clearInterval(this.levelMonitorTimer);
+        this.levelMonitorTimer = null;
       }
       this.analyserNode = null;
-      this.limiterNode = null;
-      this.agcGainNode = null;
 
       if (this.workletNode) {
         this.workletNode.port.onmessage = null as any;
@@ -181,41 +142,11 @@ export class ConversationAudioPipeline {
         await this.audioContext.close();
         this.audioContext = null;
       }
-      // Remove visibility listener if present
-      if ((this as any)._removeVisibility) {
-        try { (this as any)._removeVisibility(); } catch {}
-        (this as any)._removeVisibility = null;
-      }
     } catch {}
-  }
-
-  private startBackgroundThrottling(): void {
-    if (this.backgroundThrottleInterval) return;
-    
-    // Throttle processing to 50% frequency when in background
-    this.backgroundThrottleInterval = window.setInterval(() => {
-      if (this.worker && this.isBackground) {
-        // Send a throttle signal to worker
-        this.worker.postMessage({ type: 'throttle', enabled: true });
-      }
-    }, 100); // Check every 100ms
-  }
-
-  private stopBackgroundThrottling(): void {
-    if (this.backgroundThrottleInterval) {
-      clearInterval(this.backgroundThrottleInterval);
-      this.backgroundThrottleInterval = null;
-    }
-    
-    // Tell worker to stop throttling
-    if (this.worker) {
-      this.worker.postMessage({ type: 'throttle', enabled: false });
-    }
   }
 
   public dispose(): void {
     this.stop();
-    this.stopBackgroundThrottling();
     if (this.worker) {
       this.worker.terminate();
       this.worker = null;
@@ -223,48 +154,26 @@ export class ConversationAudioPipeline {
     this.started = false;
   }
 
-  // --- AGC Implementation ---------------------------------------------------
-  private startAgcMonitor(): void {
-    if (!this.audioContext || !this.analyserNode || !this.agcGainNode) return;
-    if (this.agcMonitorTimer) return;
+  // Simple level monitoring - no AGC
+  private startLevelMonitor(): void {
+    if (!this.analyserNode) return;
+    if (this.levelMonitorTimer) return;
 
     const analyser = this.analyserNode;
-    const gainNode = this.agcGainNode;
-    const ctx = this.audioContext;
     const buffer = new Float32Array(analyser.fftSize);
 
-    // Target loudness and bounds
-    const targetRms = 0.18; // ~ -15 dBFS
-    const minGain = 0.5;    // -6 dB min
-    const maxGain = 8.0;    // +18 dB max
-
-    // Time constants (seconds)
-    const attackTc = 0.05;  // speed up when too quiet
-    const releaseTc = 0.25; // slow down when too loud
-
-    this.agcMonitorTimer = window.setInterval(() => {
+    this.levelMonitorTimer = window.setInterval(() => {
       try {
         analyser.getFloatTimeDomainData(buffer);
-        // Compute RMS
+        // Simple RMS calculation
         let sumSq = 0;
         for (let i = 0; i < buffer.length; i++) {
           const s = buffer[i];
           sumSq += s * s;
         }
         const rms = Math.sqrt(sumSq / buffer.length) || 0.000001;
-
-        // Desired gain to reach target
-        let desired = targetRms / rms;
-        desired = Math.min(Math.max(desired, minGain), maxGain);
-
-        // Choose time constant based on direction (faster up than down)
-        const tc = desired > this.currentAgcGain ? attackTc : releaseTc;
-
-        // Smoothly approach desired gain
-        const now = ctx.currentTime;
-        gainNode.gain.cancelScheduledValues(now);
-        gainNode.gain.setTargetAtTime(desired, now, tc);
-        this.currentAgcGain = desired;
+        const level = Math.min(1, rms * 10); // Simple scaling
+        this.events.onLevel?.(level);
       } catch {}
     }, 50); // 20 Hz updates
   }
@@ -313,5 +222,3 @@ export function encodeWav16kMono(pcm: Float32Array, sampleRate: number = 16000):
     }
   }
 }
-
-
