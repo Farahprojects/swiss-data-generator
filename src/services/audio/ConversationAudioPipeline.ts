@@ -81,10 +81,10 @@ export class ConversationAudioPipeline {
       this.mediaStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           channelCount: 1,
-          noiseSuppression: false,
-          echoCancellation: false,
-          // Enable browser AGC to lift quiet input on some devices/browsers
-          autoGainControl: true,
+          // Capture with clean front-end processing; AGC handled in-app
+          noiseSuppression: true,
+          echoCancellation: true,
+          autoGainControl: false,
           sampleRate: 48000
         },
         video: false
