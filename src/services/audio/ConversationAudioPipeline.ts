@@ -25,6 +25,9 @@ export class ConversationAudioPipeline {
   private startupWatchdogTimer: number | null = null;
   private _removeVisibility?: () => void;
   private _removeDeviceChange?: () => void;
+  private rawAnalyserNode: AnalyserNode | null = null;
+  private rawLevelTimer: number | null = null;
+  private driftMonitorTimer: number | null = null;
 
   constructor(events: ConversationAudioEvents = {}) {
     this.events = events;
@@ -126,11 +129,19 @@ export class ConversationAudioPipeline {
       this.limiterNode.attack.setValueAtTime(0.003, this.audioContext.currentTime);
       this.limiterNode.release.setValueAtTime(0.05, this.audioContext.currentTime);
 
-      // Analyser for RMS metering (monitor post-gain, pre-limiter)
+      // Raw analyser (pre-AGC) for baseline + UI energy
+      this.rawAnalyserNode = this.audioContext.createAnalyser();
+      this.rawAnalyserNode.fftSize = 1024;
+      this.rawAnalyserNode.smoothingTimeConstant = 0.8;
+
+      // Post-AGC analyser can remain for debug but will not drive logic
       this.analyserNode = this.audioContext.createAnalyser();
       this.analyserNode.fftSize = 1024;
       this.analyserNode.smoothingTimeConstant = 0.8;
 
+      // Branch: Source -> rawAnalyser (tap)
+      source.connect(this.rawAnalyserNode);
+      // Branch: Source -> AGC -> analyser -> limiter -> worklet
       source.connect(this.agcGainNode);
       this.agcGainNode.connect(this.analyserNode);
       this.agcGainNode.connect(this.limiterNode);
@@ -145,8 +156,11 @@ export class ConversationAudioPipeline {
       // Ensure fresh state: reset worker VAD/ring buffer before streaming
       try { this.worker?.postMessage({ type: 'reset' }); } catch {}
 
-      // Start AGC monitor loop (RMS-based, attack/release smoothing)
-      this.startAgcMonitor();
+      // Start raw energy/UI level monitor (no dynamic AGC adjustment)
+      this.startRawLevelMonitor();
+
+      // Calibrate baseline and lock AGC + worker VAD threshold
+      await this.calibrateBaselineAndLock();
 
       // Forward frames from worklet to worker
       this.workletNode.port.onmessage = (event: MessageEvent) => {
@@ -196,16 +210,16 @@ export class ConversationAudioPipeline {
 
   public async stop(): Promise<void> {
     try {
-      // Stop AGC monitor
-      if (this.agcMonitorTimer) {
-        clearInterval(this.agcMonitorTimer);
-        this.agcMonitorTimer = null;
-      }
+      // Stop monitors
+      if (this.agcMonitorTimer) { clearInterval(this.agcMonitorTimer); this.agcMonitorTimer = null; }
+      if (this.rawLevelTimer) { clearInterval(this.rawLevelTimer); this.rawLevelTimer = null; }
+      if (this.driftMonitorTimer) { clearInterval(this.driftMonitorTimer); this.driftMonitorTimer = null; }
       if (this.startupWatchdogTimer) {
         clearTimeout(this.startupWatchdogTimer);
         this.startupWatchdogTimer = null;
       }
       this.analyserNode = null;
+      this.rawAnalyserNode = null;
       this.limiterNode = null;
       this.agcGainNode = null;
 
@@ -262,54 +276,77 @@ export class ConversationAudioPipeline {
     this.started = false;
   }
 
-  // --- AGC Implementation ---------------------------------------------------
-  private startAgcMonitor(): void {
-    if (!this.audioContext || !this.analyserNode || !this.agcGainNode) return;
-    if (this.agcMonitorTimer) return;
+  // --- Raw energy monitor (pre-AGC) -----------------------------------------
+  private startRawLevelMonitor(): void {
+    if (!this.audioContext || !this.rawAnalyserNode) return;
+    if (this.rawLevelTimer) return;
 
-    const analyser = this.analyserNode;
-    const gainNode = this.agcGainNode;
-    const ctx = this.audioContext;
+    const analyser = this.rawAnalyserNode;
     const buffer = new Float32Array(analyser.fftSize);
 
-    // Target loudness and bounds
-    const targetRms = 0.18; // ~ -15 dBFS
-    const minGain = 0.5;    // -6 dB min
-    const maxGain = 8.0;    // +18 dB max
-
-    // Time constants (seconds)
-    const attackTc = 0.05;  // speed up when too quiet
-    const releaseTc = 0.25; // slow down when too loud
-
-    this.agcMonitorTimer = window.setInterval(() => {
+    this.rawLevelTimer = window.setInterval(() => {
       try {
         analyser.getFloatTimeDomainData(buffer);
-        // Compute RMS
         let sumSq = 0;
         for (let i = 0; i < buffer.length; i++) {
           const s = buffer[i];
           sumSq += s * s;
         }
         const rms = Math.sqrt(sumSq / buffer.length) || 0.000001;
-
-        // Desired gain to reach target
-        let desired = targetRms / rms;
-        desired = Math.min(Math.max(desired, minGain), maxGain);
-
-        // Choose time constant based on direction (faster up than down)
-        const tc = desired > this.currentAgcGain ? attackTc : releaseTc;
-
-        // Smoothly approach desired gain
-        const now = ctx.currentTime;
-        gainNode.gain.cancelScheduledValues(now);
-        gainNode.gain.setTargetAtTime(desired, now, tc);
-        this.currentAgcGain = desired;
-
-        // Emit UI level based on post-AGC RMS (match previous visual scale)
-        const uiLevel = Math.min(1, rms * 4);
+        // Drive UI from raw RMS only
+        const uiLevel = Math.min(1, rms * 6);
         this.events.onLevel?.(uiLevel);
       } catch {}
-    }, 50); // 20 Hz updates
+    }, 50);
+  }
+
+  // Calibrate baseline from raw analyser, lock AGC and inform worker
+  private async calibrateBaselineAndLock(): Promise<void> {
+    if (!this.audioContext || !this.rawAnalyserNode || !this.agcGainNode) return;
+    const analyser = this.rawAnalyserNode;
+    const buffer = new Float32Array(analyser.fftSize);
+    const sampleWindows = 30; // ~1.5s at 50ms
+    let energySum = 0;
+    let frames = 0;
+
+    await new Promise<void>((resolve) => {
+      const timer = window.setInterval(() => {
+        try {
+          analyser.getFloatTimeDomainData(buffer);
+          let sumSq = 0;
+          for (let i = 0; i < buffer.length; i++) {
+            const s = buffer[i];
+            sumSq += s * s;
+          }
+          const energy = sumSq / buffer.length;
+          energySum += energy;
+          frames++;
+          if (frames >= sampleWindows) {
+            clearInterval(timer);
+            resolve();
+          }
+        } catch {
+          clearInterval(timer);
+          resolve();
+        }
+      }, 50);
+    });
+
+    const avgEnergy = energySum / Math.max(1, frames);
+    const noiseRms = Math.sqrt(Math.max(avgEnergy, 1e-9));
+
+    // Lock AGC once based on baseline (no continuous adjustment)
+    const targetRms = 0.18; // desired operating point
+    const minGain = 0.5;
+    const maxGain = 8.0;
+    const desired = Math.min(Math.max(targetRms / Math.max(noiseRms, 1e-6), minGain), maxGain);
+    const now = this.audioContext.currentTime;
+    this.agcGainNode.gain.cancelScheduledValues(now);
+    this.agcGainNode.gain.setValueAtTime(desired, now);
+    this.currentAgcGain = desired;
+
+    // Inform worker to lock VAD threshold via recalibration path
+    try { this.worker?.postMessage({ type: 'recalibrate' }); } catch {}
   }
 
   // --- Startup watchdog ------------------------------------------------------
