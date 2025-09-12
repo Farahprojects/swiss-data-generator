@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Calendar, Clock, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calendar, Clock } from 'lucide-react';
 import InlineDateWheel from './InlineDateWheel';
 import InlineTimeWheel from './InlineTimeWheel';
 
@@ -31,7 +31,6 @@ const InlineDateTimeSelector = ({
   onOpen
 }: InlineDateTimeSelectorProps) => {
   const [localValue, setLocalValue] = useState(value);
-  const [inputMode, setInputMode] = useState<'text' | 'picker'>('text');
   const [isAm, setIsAm] = useState(true);
 
   useEffect(() => {
@@ -51,7 +50,7 @@ const InlineDateTimeSelector = ({
   const handleTextInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let inputValue = e.target.value;
     
-    // Format date input (MM/DD/YYYY)
+    // Format date input (DD/MM/YYYY)
     if (type === 'date') {
       // Remove non-numeric characters except slashes
       inputValue = inputValue.replace(/[^\d/]/g, '');
@@ -117,20 +116,17 @@ const InlineDateTimeSelector = ({
     }
   };
 
-  const toggleInputMode = () => {
-    setInputMode(inputMode === 'text' ? 'picker' : 'text');
-  };
-
   const formatDisplayValue = (val: string) => {
     if (!val) return placeholder;
     
     if (type === 'date') {
+      // Format as DD/MM/YYYY for display
       const date = new Date(val);
-      return date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      });
+      if (isNaN(date.getTime())) return val; // Return raw value if invalid date
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
     } else {
       const [hours, minutes] = val.split(':');
       const hour24 = parseInt(hours, 10);
@@ -141,7 +137,7 @@ const InlineDateTimeSelector = ({
   };
 
   const getInputPlaceholder = () => {
-    if (type === 'date') return 'MM/DD/YYYY';
+    if (type === 'date') return 'DD/MM/YYYY';
     return 'HH:MM';
   };
 
@@ -149,71 +145,37 @@ const InlineDateTimeSelector = ({
 
   return (
     <div className="relative">
-      {inputMode === 'text' ? (
-        <div className="flex items-center gap-2">
-          <div className="flex-1 relative">
-            <Input
-              type={type === 'date' ? 'text' : 'text'}
-              value={localValue}
-              onChange={handleTextInputChange}
-              placeholder={getInputPlaceholder()}
-              className={`h-12 text-base font-light ${
-                hasError ? 'border-red-500 bg-red-50' : 'border-gray-200 focus:border-gray-400'
-              }`}
-            />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2">
-              <Icon className="h-4 w-4 text-gray-400" />
-            </div>
-          </div>
-          
-          {type === 'time' && localValue && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleAmPmToggle}
-              className="h-12 px-3 text-sm font-medium border-gray-200 hover:bg-gray-50"
-            >
-              {isAm ? 'AM' : 'PM'}
-            </Button>
-          )}
-          
+      <div className="flex items-center gap-2">
+        <div className="flex-1 relative">
+          <Input
+            type="text"
+            value={localValue}
+            onChange={handleTextInputChange}
+            placeholder={getInputPlaceholder()}
+            className={`h-12 text-base font-light ${
+              hasError ? 'border-red-500 bg-red-50' : 'border-gray-200 focus:border-gray-400'
+            }`}
+          />
+          <button
+            type="button"
+            onClick={handleTriggerClick}
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 rounded"
+          >
+            <Icon className="h-4 w-4 text-gray-500" />
+          </button>
+        </div>
+        
+        {type === 'time' && localValue && (
           <Button
             type="button"
             variant="outline"
-            onClick={toggleInputMode}
-            className="h-12 px-3 border-gray-200 hover:bg-gray-50"
-            title="Switch to picker"
+            onClick={handleAmPmToggle}
+            className="h-12 px-3 text-sm font-medium border-gray-200 hover:bg-gray-50"
           >
-            <ChevronDown className="h-4 w-4" />
+            {isAm ? 'AM' : 'PM'}
           </Button>
-        </div>
-      ) : (
-        <Button
-          type="button"
-          variant="outline"
-          onClick={handleTriggerClick}
-          className={`flex w-full items-center gap-2 px-3 h-12 justify-start font-normal ${
-            hasError ? 'border-red-500 bg-red-50' : 'hover:bg-gray-50'
-          } ${isOpen ? 'border-blue-500 ring-1 ring-blue-500' : ''}`}
-        >
-          <Icon className="h-4 w-4 shrink-0 text-gray-500" />
-          <span className="text-left text-sm text-gray-900 flex-1">
-            {formatDisplayValue(localValue)}
-          </span>
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleInputMode();
-            }}
-            className="h-8 w-8 p-0 hover:bg-gray-100"
-            title="Switch to text input"
-          >
-            <ChevronUp className="h-4 w-4" />
-          </Button>
-        </Button>
-      )}
+        )}
+      </div>
 
       <AnimatePresence>
         {isOpen && (
