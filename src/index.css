@@ -16,6 +16,9 @@
   }
 }
 
+/* Global safe-area baseline for iOS home indicator */
+body { padding-bottom: env(safe-area-inset-bottom); }
+
 /* -------------------------------------------------------------------------- */
 /*  CSS CUSTOM PROPERTIES                                                     */
 /*  ------------------------------------------------------------------------- */
