@@ -16,6 +16,12 @@ export class ConversationAudioPipeline {
   private events: ConversationAudioEvents;
   private isBackground: boolean = false;
   private backgroundThrottleInterval: number | null = null;
+  // Adaptive gain control chain
+  private agcGainNode: GainNode | null = null;
+  private limiterNode: DynamicsCompressorNode | null = null;
+  private analyserNode: AnalyserNode | null = null;
+  private agcMonitorTimer: number | null = null;
+  private currentAgcGain: number = 1.0;
 
   constructor(events: ConversationAudioEvents = {}) {
     this.events = events;
@@ -85,16 +91,37 @@ export class ConversationAudioPipeline {
       });
       const source = this.audioContext.createMediaStreamSource(this.mediaStream);
       this.workletNode = new AudioWorkletNode(this.audioContext, 'conversation-audio-processor');
-      // Add a modest preamp before VAD to improve sensitivity without clipping
-      const preamp = this.audioContext.createGain();
-      preamp.gain.value = 1.5; // +3.5 dB approx
-      source.connect(preamp);
-      preamp.connect(this.workletNode);
+
+      // Adaptive Gain Control (AGC): source -> agcGain -> limiter -> worklet
+      this.agcGainNode = this.audioContext.createGain();
+      this.agcGainNode.gain.value = this.currentAgcGain;
+
+      // Hard limiter to prevent clipping from sudden peaks
+      this.limiterNode = this.audioContext.createDynamicsCompressor();
+      this.limiterNode.threshold.setValueAtTime(-3, this.audioContext.currentTime); // dB
+      this.limiterNode.knee.setValueAtTime(0, this.audioContext.currentTime);
+      this.limiterNode.ratio.setValueAtTime(20, this.audioContext.currentTime);
+      this.limiterNode.attack.setValueAtTime(0.003, this.audioContext.currentTime);
+      this.limiterNode.release.setValueAtTime(0.05, this.audioContext.currentTime);
+
+      // Analyser for RMS metering (monitor post-gain, pre-limiter)
+      this.analyserNode = this.audioContext.createAnalyser();
+      this.analyserNode.fftSize = 1024;
+      this.analyserNode.smoothingTimeConstant = 0.8;
+
+      source.connect(this.agcGainNode);
+      this.agcGainNode.connect(this.analyserNode);
+      this.agcGainNode.connect(this.limiterNode);
+      this.limiterNode.connect(this.workletNode);
+
       // Prevent feedback: route to a zero-gain node instead of speakers
-      const gain = this.audioContext.createGain();
-      gain.gain.value = 0;
-      this.workletNode.connect(gain);
-      gain.connect(this.audioContext.destination);
+      const sinkMuteGain = this.audioContext.createGain();
+      sinkMuteGain.gain.value = 0;
+      this.workletNode.connect(sinkMuteGain);
+      sinkMuteGain.connect(this.audioContext.destination);
+
+      // Start AGC monitor loop (RMS-based, attack/release smoothing)
+      this.startAgcMonitor();
 
       // Forward frames from worklet to worker
       this.workletNode.port.onmessage = (event: MessageEvent) => {
@@ -132,6 +159,15 @@ export class ConversationAudioPipeline {
 
   public async stop(): Promise<void> {
     try {
+      // Stop AGC monitor
+      if (this.agcMonitorTimer) {
+        clearInterval(this.agcMonitorTimer);
+        this.agcMonitorTimer = null;
+      }
+      this.analyserNode = null;
+      this.limiterNode = null;
+      this.agcGainNode = null;
+
       if (this.workletNode) {
         this.workletNode.port.onmessage = null as any;
         this.workletNode.disconnect();
@@ -185,6 +221,52 @@ export class ConversationAudioPipeline {
       this.worker = null;
     }
     this.started = false;
+  }
+
+  // --- AGC Implementation ---------------------------------------------------
+  private startAgcMonitor(): void {
+    if (!this.audioContext || !this.analyserNode || !this.agcGainNode) return;
+    if (this.agcMonitorTimer) return;
+
+    const analyser = this.analyserNode;
+    const gainNode = this.agcGainNode;
+    const ctx = this.audioContext;
+    const buffer = new Float32Array(analyser.fftSize);
+
+    // Target loudness and bounds
+    const targetRms = 0.18; // ~ -15 dBFS
+    const minGain = 0.5;    // -6 dB min
+    const maxGain = 8.0;    // +18 dB max
+
+    // Time constants (seconds)
+    const attackTc = 0.05;  // speed up when too quiet
+    const releaseTc = 0.25; // slow down when too loud
+
+    this.agcMonitorTimer = window.setInterval(() => {
+      try {
+        analyser.getFloatTimeDomainData(buffer);
+        // Compute RMS
+        let sumSq = 0;
+        for (let i = 0; i < buffer.length; i++) {
+          const s = buffer[i];
+          sumSq += s * s;
+        }
+        const rms = Math.sqrt(sumSq / buffer.length) || 0.000001;
+
+        // Desired gain to reach target
+        let desired = targetRms / rms;
+        desired = Math.min(Math.max(desired, minGain), maxGain);
+
+        // Choose time constant based on direction (faster up than down)
+        const tc = desired > this.currentAgcGain ? attackTc : releaseTc;
+
+        // Smoothly approach desired gain
+        const now = ctx.currentTime;
+        gainNode.gain.cancelScheduledValues(now);
+        gainNode.gain.setTargetAtTime(desired, now, tc);
+        this.currentAgcGain = desired;
+      } catch {}
+    }, 50); // 20 Hz updates
   }
 }
 
