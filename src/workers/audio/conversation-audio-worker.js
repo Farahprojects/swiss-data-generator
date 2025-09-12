@@ -211,9 +211,9 @@ self.onmessage = (event) => {
         speechActive = false;
         aboveCount = 0;
         belowCount = 0;
-        // Emit last N seconds as a segment (e.g., 4 seconds - mobile optimized)
+        // Emit last N seconds as a segment (e.g., 6 seconds to preserve early words on longer utterances)
         if (frameCount >= suppressUntilFrame) {
-          const segment = extractRollingWindow(4);
+          const segment = extractRollingWindow(6);
           self.postMessage({ type: 'segment', buffer: segment.buffer }, [segment.buffer]);
         }
       }
