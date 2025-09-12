@@ -76,6 +76,18 @@ const InlineDateTimeSelector = ({
     }
     
     setLocalValue(inputValue);
+    
+    // Convert DD/MM/YYYY to YYYY-MM-DD for date inputs before calling onChange
+    if (type === 'date' && inputValue.includes('/')) {
+      const parts = inputValue.split('/');
+      if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
+        const [day, month, year] = parts;
+        const isoDate = `${year}-${month}-${day}`;
+        onChange(isoDate);
+        return;
+      }
+    }
+    
     onChange(inputValue);
   };
 
@@ -120,13 +132,27 @@ const InlineDateTimeSelector = ({
     if (!val) return placeholder;
     
     if (type === 'date') {
-      // Format as DD/MM/YYYY for display
-      const date = new Date(val);
-      if (isNaN(date.getTime())) return val; // Return raw value if invalid date
-      const day = date.getDate().toString().padStart(2, '0');
-      const month = (date.getMonth() + 1).toString().padStart(2, '0');
-      const year = date.getFullYear();
-      return `${day}/${month}/${year}`;
+      // Handle both ISO format (YYYY-MM-DD) and DD/MM/YYYY format
+      if (val.includes('/')) {
+        // Already in DD/MM/YYYY format
+        return val;
+      } else if (val.includes('-')) {
+        // ISO format (YYYY-MM-DD) - convert to DD/MM/YYYY for display
+        const date = new Date(val);
+        if (isNaN(date.getTime())) return val; // Return raw value if invalid date
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+      } else {
+        // Try to parse as regular date
+        const date = new Date(val);
+        if (isNaN(date.getTime())) return val; // Return raw value if invalid date
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+      }
     } else {
       const [hours, minutes] = val.split(':');
       const hour24 = parseInt(hours, 10);
