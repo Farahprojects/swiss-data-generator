@@ -31,14 +31,28 @@ export class UniversalSTTRecorder {
     if (this.isRecording) return;
 
     try {
-      // Request mic access
+      // Check for secure context (HTTPS)
+      if (!window.isSecureContext && location.hostname !== 'localhost') {
+        throw new Error('Microphone access requires HTTPS or localhost');
+      }
+
+      // Check for getUserMedia support
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('getUserMedia is not supported in this browser');
+      }
+
+      // Request mic access with optimal settings
       this.mediaStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           noiseSuppression: true,
           echoCancellation: true,
-          autoGainControl: true
+          autoGainControl: true,
+          sampleRate: 16000, // Optimal for STT
+          channelCount: 1,   // Mono for better processing
         }
       });
+
+      console.log('[UniversalSTTRecorder] Microphone access granted');
 
       // Set up MediaRecorder
       this.mediaRecorder = new MediaRecorder(this.mediaStream, {
@@ -95,31 +109,40 @@ export class UniversalSTTRecorder {
     if (!this.analyser) return;
 
     const buffer = new Float32Array(this.analyser.fftSize);
+    let lastLevel = 0;
     
     const checkLevel = () => {
       if (!this.isRecording || !this.analyser) return;
 
       this.analyser.getFloatTimeDomainData(buffer);
       
-      // Calculate RMS energy
+      // Calculate RMS energy (lightweight)
       let sum = 0;
       for (let i = 0; i < buffer.length; i++) {
         sum += buffer[i] * buffer[i];
       }
       const rms = Math.sqrt(sum / buffer.length);
-      const level = Math.min(1, rms * 10);
+      
+      // Smooth level changes for UI (prevent jittery animation)
+      const rawLevel = Math.min(1, rms * 15); // Boost sensitivity
+      const smoothedLevel = lastLevel * 0.7 + rawLevel * 0.3; // Smoothing
+      lastLevel = smoothedLevel;
 
-      this.options.onLevel?.(level);
+      this.options.onLevel?.(smoothedLevel);
 
-      // Check for silence
-      if (level < this.options.silenceThreshold!) {
-        if (this.silenceTimer) {
-          clearTimeout(this.silenceTimer);
+      // Voice Activity Detection (VAD)
+      const isSpeaking = smoothedLevel > this.options.silenceThreshold!;
+      
+      if (!isSpeaking) {
+        // Start silence timer
+        if (!this.silenceTimer) {
+          this.silenceTimer = setTimeout(() => {
+            console.log('[UniversalSTTRecorder] Silence detected, stopping recording');
+            this.stop();
+          }, this.options.silenceDuration);
         }
-        this.silenceTimer = setTimeout(() => {
-          this.stop();
-        }, this.options.silenceDuration);
       } else {
+        // Clear silence timer (voice detected)
         if (this.silenceTimer) {
           clearTimeout(this.silenceTimer);
           this.silenceTimer = null;
@@ -144,13 +167,21 @@ export class UniversalSTTRecorder {
 
   private async sendToSTT(audioBlob: Blob): Promise<void> {
     try {
-      // Placeholder - replace with your STT service
-      const transcript = "Hello, this is a test transcription";
+      // Import STT service dynamically to avoid circular dependencies
+      const { sttService } = await import('@/services/voice/stt');
+      const { chat_id } = (await import('@/core/store')).useChatStore.getState();
       
-      if (transcript && this.options.onTranscriptReady) {
-        this.options.onTranscriptReady(transcript);
+      if (!chat_id) {
+        throw new Error('No chat_id available for STT');
+      }
+      
+      const { transcript } = await sttService.transcribe(audioBlob, chat_id);
+      
+      if (transcript && transcript.trim().length > 0 && this.options.onTranscriptReady) {
+        this.options.onTranscriptReady(transcript.trim());
       }
     } catch (error) {
+      console.error('[UniversalSTTRecorder] STT failed:', error);
       this.options.onError?.(error as Error);
     }
   }

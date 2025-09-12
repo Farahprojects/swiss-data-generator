@@ -32,30 +32,49 @@ export const useUniversalMic = (options: UseUniversalMicOptions = {}) => {
     if (isRecording || isProcessing) return false;
 
     try {
-      // Skip HTTPS check for now - allow HTTP for testing
-      console.log('[useUniversalMic] Checking getUserMedia support...');
+      console.log('[useUniversalMic] Checking permissions and support...');
+
+      // Check secure context
+      if (!window.isSecureContext && location.hostname !== 'localhost') {
+        throw new Error('Microphone requires HTTPS or localhost');
+      }
 
       // Check getUserMedia support
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        console.error('[useUniversalMic] getUserMedia not supported');
-        toast({
-          title: 'Microphone Unsupported',
-          description: 'getUserMedia is not available in this browser.',
-          variant: 'destructive',
-        });
-        return false;
+        throw new Error('getUserMedia not supported');
       }
-      console.log('[useUniversalMic] getUserMedia is supported');
+
+      // Check current permission state
+      let permissionState = 'unknown';
+      try {
+        const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+        permissionState = result.state;
+        console.log('[useUniversalMic] Permission state:', permissionState);
+      } catch (permError) {
+        console.log('[useUniversalMic] Permission query not supported, proceeding with getUserMedia');
+      }
 
       recorderRef.current = new UniversalSTTRecorder({
         onTranscriptReady: (transcript) => {
+          console.log('[useUniversalMic] Transcript ready:', transcript);
           setIsProcessing(false);
           options.onTranscriptReady?.(transcript);
         },
         onError: (error) => {
+          console.error('[useUniversalMic] Recorder error:', error);
+          
+          let errorMessage = 'Could not access microphone.';
+          if (error.message.includes('Permission denied') || error.message.includes('NotAllowedError')) {
+            errorMessage = 'Microphone permission denied. Please allow microphone access in your browser settings.';
+          } else if (error.message.includes('NotFoundError')) {
+            errorMessage = 'No microphone found. Please connect a microphone and try again.';
+          } else if (error.message.includes('NotReadableError')) {
+            errorMessage = 'Microphone is being used by another application.';
+          }
+          
           toast({
             title: 'Microphone Error',
-            description: 'Could not access microphone. Please check permissions.',
+            description: errorMessage,
             variant: 'destructive',
           });
           setIsRecording(false);
@@ -64,20 +83,37 @@ export const useUniversalMic = (options: UseUniversalMicOptions = {}) => {
         onLevel: (level) => {
           levelRef.current = level;
         },
-        silenceThreshold: options.silenceThreshold || 0.01,
+        silenceThreshold: options.silenceThreshold || 0.02,
         silenceDuration: options.silenceDuration || 1200,
       });
 
       await recorderRef.current.start();
       setIsRecording(true);
+      console.log('[useUniversalMic] Recording started successfully');
       return true;
 
     } catch (error) {
+      console.error('[useUniversalMic] Start recording failed:', error);
+      
+      let errorMessage = 'Please allow microphone access and try again.';
+      if (error instanceof Error) {
+        if (error.message.includes('Permission denied') || error.message.includes('NotAllowedError')) {
+          errorMessage = 'Microphone permission denied. Please allow microphone access in your browser settings.';
+        } else if (error.message.includes('NotFoundError')) {
+          errorMessage = 'No microphone found. Please connect a microphone and try again.';
+        } else if (error.message.includes('NotReadableError')) {
+          errorMessage = 'Microphone is being used by another application.';
+        } else if (error.message.includes('HTTPS')) {
+          errorMessage = 'Microphone access requires HTTPS. Please use a secure connection.';
+        }
+      }
+      
       toast({
-        title: 'Microphone Access Denied',
-        description: 'Please allow microphone access and try again.',
+        title: 'Microphone Access Failed',
+        description: errorMessage,
         variant: 'destructive',
       });
+      setIsProcessing(false);
       return false;
     }
   }, [isRecording, isProcessing, options, toast]);
