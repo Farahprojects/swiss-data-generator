@@ -43,7 +43,7 @@ let isCalibrating = false;
 let calibrationFrames = 0;
 let calibrationEnergySum = 0;
 let calibrated = false;
-const THRESH_MULTIPLIER = 4.4; // +10% vs prior -> slightly less sensitive
+const THRESH_MULTIPLIER = 4.0; // revert to original -> reduces locked threshold after calibration
 
 // Drift detection
 let driftAvgEnergy = 0;
