@@ -403,7 +403,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     form.setValue('birthTime', data.time);
     form.setValue('birthLocation', data.place);
     form.setValue('email', data.email);
-    form.setValue('compatibility', data.compatibility);
+    // Note: compatibility is handled by selecting 'sync' report type
     
     setShowVoiceForm(false);
     setIsSecondPersonVoice(false);

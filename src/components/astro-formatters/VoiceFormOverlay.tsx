@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ConversationAudioPipeline } from '@/services/audio/ConversationAudioPipeline';
+import { ConversationAudioPipeline, encodeWav16kMono } from '@/services/audio/ConversationAudioPipeline';
 import { sttService } from '@/services/voice/stt';
 import { useAudioStore } from '@/stores/audioStore';
 
@@ -164,14 +164,15 @@ export const VoiceFormOverlay: React.FC<VoiceFormOverlayProps> = ({
         onSpeechStart: () => {
           console.log('Speech started');
         },
-        onSpeechEnd: async (audioBlob) => {
-          console.log('Speech ended, processing...');
+        onSpeechSegment: async (audioData: Float32Array) => {
+          console.log('Speech segment received, processing...');
           setIsProcessing(true);
           
           try {
-            // Send to STT service
-            const result = await sttService.transcribe(audioBlob, 'conversation', '');
-            const text = result.text;
+            // Convert Float32Array to audio blob for STT service - use encodeWav16kMono function
+            const audioBlob = encodeWav16kMono(audioData);
+            const result = await sttService.transcribe(audioBlob, 'conversation', {});
+            const text = result.transcript;
             setTranscription(text);
             
             // Parse the transcription
