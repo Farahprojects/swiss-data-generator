@@ -14,6 +14,9 @@ export const VoiceWaveform: React.FC<VoiceWaveformProps> = ({ audioLevelRef }) =
   const containerRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
   const lastUpdateTimeRef = useRef<number>(0);
+  // Safari-only UI smoothing/clamp (UI layer only; does not change signal)
+  const isSafari = typeof navigator !== 'undefined' && /safari/i.test(navigator.userAgent) && !/chrome|chromium|android/i.test(navigator.userAgent);
+  const uiLevelRef = useRef<number>(0);
 
   // 🎵 Real-time animation loop (no React state updates per frame)
   const animate = () => {
@@ -33,7 +36,14 @@ export const VoiceWaveform: React.FC<VoiceWaveformProps> = ({ audioLevelRef }) =
       return;
     }
 
-    const audioLevel = audioLevelRef.current;
+    // Read raw level from pipeline (do not mutate it)
+    let level = audioLevelRef.current;
+    // Safari-only: apply gentle UI smoothing + soft cap (UI only)
+    if (isSafari) {
+      const alpha = 0.18; // smoothing factor for UI animation only
+      uiLevelRef.current = uiLevelRef.current + (level - uiLevelRef.current) * alpha;
+      level = Math.min(uiLevelRef.current, 0.25); // soft cap keeps bars subtle on Safari
+    }
     const bars = containerRef.current.children;
     
 
@@ -44,10 +54,10 @@ export const VoiceWaveform: React.FC<VoiceWaveformProps> = ({ audioLevelRef }) =
       // Create a wavier, more organic effect
       const distance = Math.abs(i - NUM_BARS / 2);
       const damping = 1 - (distance / (NUM_BARS / 2)) ** 2;
-      const multiplier = Math.max(0, damping * (Math.sin(distance / 2 + audioLevel * 20) + 1));
+      const multiplier = Math.max(0, damping * (Math.sin(distance / 2 + level * 20) + 1));
       
       // Use direct height changes for wave-like up and down movement
-      const height = BASE_BAR_HEIGHT + Math.min(MAX_BAR_HEIGHT, audioLevel * 150 * multiplier);
+      const height = BASE_BAR_HEIGHT + Math.min(MAX_BAR_HEIGHT, level * 150 * multiplier);
       bar.style.height = `${height}px`;
     }
 
