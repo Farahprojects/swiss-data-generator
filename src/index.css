@@ -147,9 +147,10 @@ body { padding-bottom: env(safe-area-inset-bottom); }
 /* -------------------------------------------------------------------------- */
 @layer utilities {
   /* Modern viewport units with fallback */
-  .h-screen-safe       { height: 100svh; height: calc(var(--vh, 1vh) * 100); }
-  .min-h-screen-safe   { min-height: 100svh; min-height: calc(var(--vh, 1vh) * 100); }
-  .max-h-screen-safe   { max-height: 100svh; max-height: calc(var(--vh, 1vh) * 100); }
+  /* Prefer 100dvh when available, fallback to svh then JS‑backed var(--vh) */
+  .h-screen-safe       { height: 100dvh; height: 100svh; height: calc(var(--vh, 1vh) * 100); }
+  .min-h-screen-safe   { min-height: 100dvh; min-height: 100svh; min-height: calc(var(--vh, 1vh) * 100); }
+  .max-h-screen-safe   { max-height: 100dvh; max-height: 100svh; max-height: calc(var(--vh, 1vh) * 100); }
   
   /* Safe area padding utilities */
   .safe-area-pb { padding-bottom: env(safe-area-inset-bottom, 0px); }
@@ -163,6 +164,7 @@ html, body {
   touch-action: manipulation;            /* Remove double‑tap zoom delay */
   overscroll-behavior: contain;          /* Disable pull‑to‑refresh */
   -webkit-overflow-scrolling: touch;     /* Momentum scroll iOS */
+  height: 100%;
 }
 
 /* Prevent iOS from auto‑zooming form fields */
@@ -382,7 +384,7 @@ gmp-place-autocomplete::part(result-item) {
 }
 
 /* Sheet root/backdrop per guidance */
-.sheet-root { position: fixed; inset: 0; display: flex; flex-direction: column; min-height: 100dvh; }
+.sheet-root { position: fixed; inset: 0; display: flex; flex-direction: column; min-height: 100dvh; min-height: 100svh; }
 .sheet-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.5); overscroll-behavior: contain; touch-action: none; }
 
 /* Scroll area padding and input margins already added as .sheet__scroll rules */

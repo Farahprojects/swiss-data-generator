@@ -183,7 +183,8 @@ export const MessageList = () => {
     <div 
       className="chat-scroll-container h-full flex flex-col overflow-y-auto"
       style={{ 
-        scrollBehavior: 'smooth'
+        scrollBehavior: 'smooth',
+        overflowAnchor: 'none'
       }}
       ref={containerRef}
       id="chat-scroll-container"

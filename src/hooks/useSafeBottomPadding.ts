@@ -7,22 +7,43 @@ import { useEffect } from 'react';
  */
 export function useSafeBottomPadding(): void {
   useEffect(() => {
-    const update = () => {
-      try {
-        const vv = (window as any).visualViewport as VisualViewport | undefined;
-        if (vv) {
-          const extra = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
-          document.documentElement.style.setProperty('--vv-bottom', `${extra}px`);
-        } else {
+    let rafId: number | null = null;
+    const scheduleUpdate = () => {
+      if (rafId != null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        try {
+          const vv = (window as any).visualViewport as VisualViewport | undefined;
+          const layoutH = window.innerHeight || document.documentElement.clientHeight;
+          const layoutW = window.innerWidth || document.documentElement.clientWidth;
+          if (vv) {
+            const extraBottom = Math.max(0, Math.round(layoutH - vv.height - vv.offsetTop));
+            const extraRight = Math.max(0, Math.round(layoutW - vv.width - vv.offsetLeft));
+            const kb = Math.max(0, Math.round(layoutH - vv.height));
+            document.documentElement.style.setProperty('--vv-bottom', `${extraBottom}px`);
+            document.documentElement.style.setProperty('--vv-top', `${Math.max(0, Math.round(vv.offsetTop))}px`);
+            document.documentElement.style.setProperty('--vv-left', `${Math.max(0, Math.round(vv.offsetLeft))}px`);
+            document.documentElement.style.setProperty('--vv-right', `${extraRight}px`);
+            document.documentElement.style.setProperty('--kb', `${kb}px`);
+          } else {
+            document.documentElement.style.setProperty('--vv-bottom', '0px');
+            document.documentElement.style.setProperty('--vv-top', '0px');
+            document.documentElement.style.setProperty('--vv-left', '0px');
+            document.documentElement.style.setProperty('--vv-right', '0px');
+            document.documentElement.style.setProperty('--kb', '0px');
+          }
+        } catch {
           document.documentElement.style.setProperty('--vv-bottom', '0px');
+          document.documentElement.style.setProperty('--vv-top', '0px');
+          document.documentElement.style.setProperty('--vv-left', '0px');
+          document.documentElement.style.setProperty('--vv-right', '0px');
+          document.documentElement.style.setProperty('--kb', '0px');
         }
-      } catch {
-        document.documentElement.style.setProperty('--vv-bottom', '0px');
-      }
+      });
     };
 
     // Initial pass and a small Samsung baseline buffer
-    update();
+    scheduleUpdate();
     const ua = navigator.userAgent || '';
     if (/SamsungBrowser/i.test(ua)) {
       const current = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--vv-bottom')) || 0;
@@ -31,17 +52,36 @@ export function useSafeBottomPadding(): void {
     }
     const vv = (window as any).visualViewport as VisualViewport | undefined;
     if (vv) {
-      vv.addEventListener('resize', update);
-      vv.addEventListener('scroll', update);
+      vv.addEventListener('resize', scheduleUpdate, { passive: true } as AddEventListenerOptions);
+      vv.addEventListener('scroll', scheduleUpdate, { passive: true } as AddEventListenerOptions);
     }
-    window.addEventListener('resize', update);
+    window.addEventListener('resize', scheduleUpdate, { passive: true });
+
+    // Try enabling VirtualKeyboard overlays (Android, Samsung, Chrome)
+    try {
+      const anyNav = navigator as any;
+      if (anyNav && anyNav.virtualKeyboard) {
+        anyNav.virtualKeyboard.overlaysContent = true;
+        const onGeometry = () => {
+          try {
+            const rect = anyNav.virtualKeyboard.boundingRect;
+            const height = rect ? Math.max(0, Math.round(rect.height)) : 0;
+            document.documentElement.style.setProperty('--kb', `${height}px`);
+          } catch {}
+        };
+        anyNav.virtualKeyboard.addEventListener('geometrychange', onGeometry);
+        // Seed once
+        onGeometry();
+      }
+    } catch {}
 
     return () => {
       if (vv) {
-        vv.removeEventListener('resize', update);
-        vv.removeEventListener('scroll', update);
+        vv.removeEventListener('resize', scheduleUpdate as EventListener);
+        vv.removeEventListener('scroll', scheduleUpdate as EventListener);
       }
-      window.removeEventListener('resize', update);
+      window.removeEventListener('resize', scheduleUpdate as EventListener);
+      if (rafId != null) cancelAnimationFrame(rafId);
     };
   }, []);
 }

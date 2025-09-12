@@ -202,7 +202,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
           duration: 0.6
         }}
       >
-        <div className="flex flex-row flex-1 bg-white max-w-6xl w-full mx-auto md:border-x border-gray-100 min-h-0">
+        <div className="flex flex-row flex-1 bg-white max-w-6xl w-full mx-auto md:border-x border-gray-100 min-h-0" style={{ scrollBehavior: 'smooth', overscrollBehavior: 'contain' as any }}>
           {/* Left Sidebar (Desktop) */}
           <div className="hidden md:flex w-64 border-r border-gray-100 flex-col bg-gray-50/50">
             <div className="p-4 h-full flex flex-col">
@@ -285,14 +285,14 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
             </div>
 
             {/* Message List - Lazy Loaded */}
-            <div className="flex-1 min-h-0">
+            <div className="flex-1 min-h-0" style={{ overflowAnchor: 'none' as any }}>
               <Suspense fallback={<MessageListSkeleton />}>
                 <MessageList />
               </Suspense>
             </div>
 
             {/* Footer Area */}
-            <div className="pb-safe">
+            <div className="pb-safe sticky bottom-0 left-0 right-0 z-10" style={{ transform: 'none' as any }}>
               {error && (
                 <div className="p-3 text-sm font-medium text-red-700 bg-red-100 border-t border-red-200">
                   {error}
