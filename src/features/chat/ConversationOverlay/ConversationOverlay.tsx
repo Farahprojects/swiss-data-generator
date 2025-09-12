@@ -231,7 +231,17 @@ export const ConversationOverlay: React.FC = () => {
     setState('establishing');
     
     try {
-      // 2. AUDIOCONTEXT UNLOCK - Ensure unlock happens within this user gesture
+      // 2. MIC PERMISSION PREFLIGHT - Android requires this before AudioContext
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Immediately stop tracks to release mic
+        stream.getTracks().forEach(track => track.stop());
+      } catch (error) {
+        console.error('[ConversationOverlay] Mic permission denied:', error);
+        throw new Error('Microphone permission required for conversation mode');
+      }
+      
+      // 3. AUDIOCONTEXT UNLOCK - Ensure unlock happens within this user gesture
       const ctx = audioContext || initializeAudioContext();
       await resumeAudioContext();
       
