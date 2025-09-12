@@ -22,7 +22,7 @@ const ChatContainerContent: React.FC = () => {
   const { isOpen, guestId, hideCancelModal } = useCancelModal();
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen pb-safe">
       <PricingProvider>
         <ReportModalProvider>
           <MobileViewportLock active>

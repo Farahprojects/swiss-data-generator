@@ -9,6 +9,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Mobile safe area padding for phone navigation buttons */
+@supports (padding: max(0px)) {
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
 /* -------------------------------------------------------------------------- */
 /*  CSS CUSTOM PROPERTIES                                                     */
 /*  ------------------------------------------------------------------------- */
