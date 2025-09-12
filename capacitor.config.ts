@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.farahprojects.therai',
-  appName: 'therai-co',
+  appName: 'Therai',
   webDir: 'dist'
 };
 
