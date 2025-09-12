@@ -14,6 +14,11 @@ class ConversationAudioProcessor extends AudioWorkletProcessor {
     this._dcPrevIn = 0;
     this._dcPrevOut = 0;
     this._dcR = 0.995;
+    // One-pole low-pass (~7 kHz at 48 kHz) to reduce aliasing before downsample
+    const lpfCut = 7000; // Hz
+    const twoPi = 2 * Math.PI;
+    this._lpfAlpha = (twoPi * lpfCut) / (twoPi * lpfCut + this.inputSampleRate);
+    this._lpfPrevOut = 0;
   }
 
   static get parameterDescriptors() {
@@ -42,14 +47,18 @@ class ConversationAudioProcessor extends AudioWorkletProcessor {
       const monoSample = sum / Math.max(1, channels.length);
 
       // DC-blocking high-pass filter
-      const y = monoSample - this._dcPrevIn + this._dcR * this._dcPrevOut;
+      const yHP = monoSample - this._dcPrevIn + this._dcR * this._dcPrevOut;
       this._dcPrevIn = monoSample;
-      this._dcPrevOut = y;
+      this._dcPrevOut = yHP;
 
-      // Naive resampler: pick samples based on accumulator (post HPF)
+      // One-pole low-pass filter before decimation
+      const yLP = this._lpfPrevOut + this._lpfAlpha * (yHP - this._lpfPrevOut);
+      this._lpfPrevOut = yLP;
+
+      // Resampler (decimation after LPF)
       this._resampleAccumulator += 1;
       while (this._resampleAccumulator >= this._resampleRatio) {
-        this._buffer.push(y);
+        this._buffer.push(yLP);
         this._resampleAccumulator -= this._resampleRatio;
 
         if (this._buffer.length >= this._frameSizeTarget) {

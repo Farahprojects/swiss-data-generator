@@ -121,13 +121,13 @@ export class ConversationAudioPipeline {
       this.agcGainNode = this.audioContext.createGain();
       this.agcGainNode.gain.value = this.currentAgcGain;
 
-      // Hard limiter to prevent clipping from sudden peaks
+      // Softer compressor to preserve transients and intelligibility
       this.limiterNode = this.audioContext.createDynamicsCompressor();
-      this.limiterNode.threshold.setValueAtTime(-3, this.audioContext.currentTime); // dB
-      this.limiterNode.knee.setValueAtTime(0, this.audioContext.currentTime);
-      this.limiterNode.ratio.setValueAtTime(20, this.audioContext.currentTime);
-      this.limiterNode.attack.setValueAtTime(0.003, this.audioContext.currentTime);
-      this.limiterNode.release.setValueAtTime(0.05, this.audioContext.currentTime);
+      this.limiterNode.threshold.setValueAtTime(-6, this.audioContext.currentTime); // dB
+      this.limiterNode.knee.setValueAtTime(3, this.audioContext.currentTime);
+      this.limiterNode.ratio.setValueAtTime(4, this.audioContext.currentTime);
+      this.limiterNode.attack.setValueAtTime(0.005, this.audioContext.currentTime);
+      this.limiterNode.release.setValueAtTime(0.12, this.audioContext.currentTime);
 
       // Analyser for RMS metering (monitor post-gain, pre-limiter)
       this.analyserNode = this.audioContext.createAnalyser();
