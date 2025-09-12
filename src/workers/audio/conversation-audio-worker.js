@@ -9,8 +9,8 @@ const MAX_SAMPLES = ROLLING_SECONDS * SAMPLE_RATE;
 const FRAME_MS = 20; // matches worklet frame - sweet spot for mobile/desktop
 const FRAME_SAMPLES = (SAMPLE_RATE * FRAME_MS) / 1000; // 320
 // Adaptive VAD threshold - starts with sane default, adapts to environment
-const BASE_ENERGY_THRESHOLD = 0.002; // 0.002 RMS - more sensitive for speech start
-const MIN_THRESHOLD = 0.0005; // Minimum threshold for very quiet environments
+const BASE_ENERGY_THRESHOLD = 0.0022; // +10% higher -> slightly less sensitive to noise
+const MIN_THRESHOLD = 0.00055; // +10% minimum threshold for very quiet environments
 const MAX_THRESHOLD = 0.05; // Maximum threshold for noisy environments
 const ADAPTATION_FACTOR = 0.1; // How quickly to adapt (0.1 = slow adaptation)
 
@@ -43,7 +43,7 @@ let isCalibrating = false;
 let calibrationFrames = 0;
 let calibrationEnergySum = 0;
 let calibrated = false;
-const THRESH_MULTIPLIER = 4.0; // noise -> threshold multiplier - more conservative
+const THRESH_MULTIPLIER = 4.4; // +10% vs prior -> slightly less sensitive
 
 // Drift detection
 let driftAvgEnergy = 0;
@@ -88,8 +88,8 @@ function adaptThreshold(energy, isSpeech) {
     // Slowly adapt noise floor estimate
     noiseFloorEstimate = noiseFloorEstimate * (1 - ADAPTATION_FACTOR) + energy * ADAPTATION_FACTOR;
     
-    // Set threshold slightly above noise floor (more sensitive)
-    currentThreshold = Math.max(MIN_THRESHOLD, Math.min(MAX_THRESHOLD, noiseFloorEstimate * 1.5));
+    // Set threshold slightly above noise floor (less sensitive by ~10%)
+    currentThreshold = Math.max(MIN_THRESHOLD, Math.min(MAX_THRESHOLD, noiseFloorEstimate * 1.65));
   }
   
   return currentThreshold;
