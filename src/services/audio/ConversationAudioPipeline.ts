@@ -22,6 +22,7 @@ export class ConversationAudioPipeline {
   private analyserNode: AnalyserNode | null = null;
   private agcMonitorTimer: number | null = null;
   private currentAgcGain: number = 1.0;
+  private startupWatchdogTimer: number | null = null;
 
   constructor(events: ConversationAudioEvents = {}) {
     this.events = events;
@@ -57,6 +58,11 @@ export class ConversationAudioPipeline {
           }
           this.isBackground = false;
           this.stopBackgroundThrottling();
+          // Freshen VAD/ring upon foreground to avoid stale segments
+          try {
+            this.worker?.postMessage({ type: 'reset' });
+            this.worker?.postMessage({ type: 'barrier_open' });
+          } catch {}
         } else {
           // App went to background - start throttling
           this.isBackground = true;
@@ -135,6 +141,10 @@ export class ConversationAudioPipeline {
         }
       };
 
+      // Start-up barrier and watchdog
+      try { this.worker?.postMessage({ type: 'barrier_open' }); } catch {}
+      this.startStartupWatchdog();
+
       this.started = true;
     } catch (e: any) {
       this.events.onError?.(e);
@@ -167,6 +177,10 @@ export class ConversationAudioPipeline {
       if (this.agcMonitorTimer) {
         clearInterval(this.agcMonitorTimer);
         this.agcMonitorTimer = null;
+      }
+      if (this.startupWatchdogTimer) {
+        clearTimeout(this.startupWatchdogTimer);
+        this.startupWatchdogTimer = null;
       }
       this.analyserNode = null;
       this.limiterNode = null;
@@ -275,6 +289,31 @@ export class ConversationAudioPipeline {
         this.events.onLevel?.(uiLevel);
       } catch {}
     }, 50); // 20 Hz updates
+  }
+
+  // --- Startup watchdog ------------------------------------------------------
+  private startStartupWatchdog(): void {
+    if (this.startupWatchdogTimer) return;
+    // If we don't see any segment callback within 2s, nudge the worker to reset
+    this.startupWatchdogTimer = window.setTimeout(() => {
+      try { this.worker?.postMessage({ type: 'reset' }); this.worker?.postMessage({ type: 'barrier_open' }); } catch {}
+      this.startupWatchdogTimer = null;
+    }, 2000);
+
+    // Clear watchdog on first segment
+    if (this.workletNode) {
+      const original = this.workletNode.port.onmessage;
+      this.workletNode.port.onmessage = (event: MessageEvent) => {
+        if (event.data?.type === 'segment' && this.startupWatchdogTimer) {
+          clearTimeout(this.startupWatchdogTimer);
+          this.startupWatchdogTimer = null;
+        }
+        // Forward to existing handler
+        if (typeof original === 'function') {
+          (original as any)(event);
+        }
+      } as any;
+    }
   }
 }
 

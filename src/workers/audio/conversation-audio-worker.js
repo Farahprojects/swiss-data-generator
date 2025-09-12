@@ -26,6 +26,10 @@ let aboveCount = 0;
 let belowCount = 0;
 let frameCount = 0;
 
+// Start barrier: hold frames for a short pre-roll window, then open
+let barrierOpen = false;
+let barrierOpenAtMs = 0;
+
 // Adaptive threshold state
 let currentThreshold = BASE_ENERGY_THRESHOLD;
 let noiseFloorEstimate = BASE_ENERGY_THRESHOLD;
@@ -100,11 +104,12 @@ self.onmessage = (event) => {
       }
     }
     
-    // Drop stale frames if input backlog occurs
+    // Drop stale frames if input backlog occurs, but allow pre-roll
     // Accept frames not older than 500ms relative to our internal frameCount clock
     const incomingTs = event.data.ts || 0; // ~ms
     const approxNowMs = frameCount * FRAME_MS;
-    if (incomingTs && approxNowMs - incomingTs > 500) {
+    const isWithinPreroll = !barrierOpen || (incomingTs >= barrierOpenAtMs - 300);
+    if (incomingTs && approxNowMs - incomingTs > 500 && !isWithinPreroll) {
       // Too old; drop to avoid late-processing old audio
       return;
     }
@@ -154,9 +159,15 @@ self.onmessage = (event) => {
     // Reset throttling
     isThrottled = false;
     throttleCounter = 0;
+    // Reset barrier
+    barrierOpen = false;
+    barrierOpenAtMs = 0;
   } else if (type === 'throttle') {
     isThrottled = event.data.enabled;
     throttleCounter = 0;
+  } else if (type === 'barrier_open') {
+    barrierOpen = true;
+    barrierOpenAtMs = frameCount * FRAME_MS;
   }
 };
 
