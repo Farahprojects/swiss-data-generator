@@ -4,6 +4,8 @@
 const IS_ANDROID_CHROME = (typeof self !== 'undefined' && typeof navigator !== 'undefined')
   ? (/Android/i.test(navigator.userAgent) && /Chrome\/\d+/i.test(navigator.userAgent) && /Mobile/i.test(navigator.userAgent))
   : false;
+// Use rolling buffer only on non-Android Chrome paths
+const USE_ROLLING = !IS_ANDROID_CHROME;
 
 // Config
 const ROLLING_SECONDS = 12; // keep last 12s
@@ -20,7 +22,7 @@ const MAX_THRESHOLD = 0.05; // Maximum threshold for noisy environments
 const ADAPTATION_FACTOR = 0.1; // How quickly to adapt (0.1 = slow adaptation)
 
 const SPEECH_START_FRAMES = 2; // 40ms (2 * 20ms)
-const SPEECH_END_FRAMES = IS_ANDROID_CHROME ? 10 : 12; // 200ms (Android) / 240ms (others)
+const SPEECH_END_FRAMES = IS_ANDROID_CHROME ? 50 : 12; // 1000ms on Android Chrome, 240ms elsewhere
 const PRE_ROLL_FRAMES = SPEECH_START_FRAMES; // include frames that triggered start
 
 let ringBuffer = new Float32Array(MAX_SAMPLES);
@@ -47,6 +49,7 @@ let utteranceFrames = [];
 let utteranceSamples = 0;
 
 function appendFrame(frame) {
+  if (!USE_ROLLING) return; // Android Chrome path: skip rolling buffer
   const samples = new Float32Array(frame);
   const len = samples.length;
   for (let i = 0; i < len; i++) {
