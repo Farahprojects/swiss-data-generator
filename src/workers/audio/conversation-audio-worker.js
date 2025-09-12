@@ -100,6 +100,15 @@ self.onmessage = (event) => {
       }
     }
     
+    // Drop stale frames if input backlog occurs
+    // Accept frames not older than 500ms relative to our internal frameCount clock
+    const incomingTs = event.data.ts || 0; // ~ms
+    const approxNowMs = frameCount * FRAME_MS;
+    if (incomingTs && approxNowMs - incomingTs > 500) {
+      // Too old; drop to avoid late-processing old audio
+      return;
+    }
+
     appendFrame(event.data.buffer);
 
     // VAD step with adaptive threshold

@@ -121,6 +121,9 @@ export class ConversationAudioPipeline {
       this.workletNode.connect(sinkMuteGain);
       sinkMuteGain.connect(this.audioContext.destination);
 
+      // Ensure fresh state: reset worker VAD/ring buffer before streaming
+      try { this.worker?.postMessage({ type: 'reset' }); } catch {}
+
       // Start AGC monitor loop (RMS-based, attack/release smoothing)
       this.startAgcMonitor();
 
