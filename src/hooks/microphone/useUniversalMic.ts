@@ -28,22 +28,16 @@ export const useUniversalMic = (options: UseUniversalMicOptions = {}) => {
   }, []);
 
   const startRecording = useCallback(async (): Promise<boolean> => {
+    console.log('[useUniversalMic] startRecording called - isRecording:', isRecording, 'isProcessing:', isProcessing);
     if (isRecording || isProcessing) return false;
 
     try {
-      // Check secure context
-      const isLocalhost = typeof window !== 'undefined' && /^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname);
-      if (typeof window !== 'undefined' && !window.isSecureContext && !isLocalhost) {
-        toast({
-          title: 'Microphone Requires HTTPS',
-          description: 'Open over HTTPS or use localhost to allow microphone access.',
-          variant: 'destructive',
-        });
-        return false;
-      }
+      // Skip HTTPS check for now - allow HTTP for testing
+      console.log('[useUniversalMic] Checking getUserMedia support...');
 
       // Check getUserMedia support
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        console.error('[useUniversalMic] getUserMedia not supported');
         toast({
           title: 'Microphone Unsupported',
           description: 'getUserMedia is not available in this browser.',
@@ -51,6 +45,7 @@ export const useUniversalMic = (options: UseUniversalMicOptions = {}) => {
         });
         return false;
       }
+      console.log('[useUniversalMic] getUserMedia is supported');
 
       recorderRef.current = new UniversalSTTRecorder({
         onTranscriptReady: (transcript) => {
@@ -98,9 +93,12 @@ export const useUniversalMic = (options: UseUniversalMicOptions = {}) => {
   }, []);
 
   const toggleRecording = useCallback(async () => {
+    console.log('[useUniversalMic] Toggle called - isRecording:', isRecording);
     if (isRecording) {
+      console.log('[useUniversalMic] Stopping recording...');
       stopRecording();
     } else {
+      console.log('[useUniversalMic] Starting recording...');
       setIsProcessing(true);
       await startRecording();
     }

@@ -5,10 +5,9 @@ import { useChatStore } from '@/core/store';
 import { useAudioStore } from '@/stores/audioStore';
 // Old audio level hook removed - using AudioWorklet + WebWorker pipeline
 import { VoiceBubble } from './VoiceBubble';
-// New audio pipeline (AudioWorklet + WebWorker)
-import { ConversationAudioPipeline, encodeWav16kMono } from '@/services/audio/ConversationAudioPipeline';
+// Universal audio pipeline
+import { UniversalSTTRecorder } from '@/services/audio/UniversalSTTRecorder';
 import { ttsPlaybackService } from '@/services/voice/TTSPlaybackService';
-import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
@@ -33,7 +32,7 @@ export const ConversationOverlay: React.FC = () => {
   const isShuttingDown = useRef(false);
   const connectionRef = useRef<any>(null);
   const isProcessingRef = useRef<boolean>(false);
-  const pipelineRef = useRef<ConversationAudioPipeline | null>(null);
+  const recorderRef = useRef<UniversalSTTRecorder | null>(null);
   const isStartingRef = useRef(false);
   const isActiveRef = useRef(false);
   const wasSubscribedRef = useRef(false);
@@ -61,7 +60,7 @@ export const ConversationOverlay: React.FC = () => {
     
     // Force cleanup all resources (fire-and-forget)
     ttsPlaybackService.destroy().catch(() => {});
-    try { pipelineRef.current?.dispose(); } catch {}
+    try { recorderRef.current?.dispose(); } catch {}
     
     // Cleanup WebSocket connection
     if (connectionRef.current) {
@@ -211,7 +210,7 @@ export const ConversationOverlay: React.FC = () => {
         if (!isShuttingDown.current) {
           setTimeout(() => {
             if (!isShuttingDown.current) {
-              try { pipelineRef.current?.resume(); } catch {}
+              // Universal recorder doesn't need resume
             }
           }, 200);
         }
@@ -261,23 +260,19 @@ export const ConversationOverlay: React.FC = () => {
       const { chatController } = await import('@/features/chat/ChatController');
       chatController.setTtsMode(true);
       
-      // 6. STEP 4: Initialize Audio Pipeline with validation
-      pipelineRef.current = new ConversationAudioPipeline({
-        onSpeechStart: () => {
-          if (!isShuttingDown.current) setState('listening');
-        },
-        onSpeechSegment: async (pcm: Float32Array) => {
-          // ROBUST GUARD - Use refs instead of React state for critical logic
+      // 6. STEP 4: Initialize Universal Recorder
+      recorderRef.current = new UniversalSTTRecorder({
+        onTranscriptReady: async (transcript: string) => {
           if (isShuttingDown.current || isProcessingRef.current) {
             return;
           }
           isProcessingRef.current = true;
           setState('thinking');
           try {
-            // Pause mic during STT
-            try { pipelineRef.current?.pause(); } catch {}
-            const wav = encodeWav16kMono(pcm, 16000);
-            await sttService.transcribe(wav, chat_id, {}, 'conversation');
+            // Transcript is already processed by universal mic system
+            // Send to LLM for response
+            const client_msg_id = uuidv4();
+            await llmService.sendMessage({ chat_id, text: transcript, client_msg_id });
             // TTS will arrive over WS and change UI to "speaking"
           } catch (error) {
             console.error('[ConversationOverlay] Processing failed:', error);
@@ -287,25 +282,23 @@ export const ConversationOverlay: React.FC = () => {
           }
         },
         onLevel: (level) => {
-          if (!isShuttingDown.current) audioLevelRef.current = level; // 5. Monitor energy signal for animation
+          if (!isShuttingDown.current) audioLevelRef.current = level;
         },
         onError: (error: Error) => {
-          console.error('[ConversationOverlay] Audio pipeline error:', error);
-          resetToTapToStart('Audio pipeline error');
+          console.error('[ConversationOverlay] Audio recorder error:', error);
+          resetToTapToStart('Audio recorder error');
         }
       });
       
-      // 7. STEP 5: Initialize and start pipeline with validation
-      await pipelineRef.current.init();
-      
-      await pipelineRef.current.start();
+      // 7. STEP 5: Start recorder
+      await recorderRef.current.start();
       
       // 8. STEP 7: Final validation - All systems ready
       if (!connectionRef.current) {
         throw new Error('TTS WebSocket connection lost during setup');
       }
-      if (!pipelineRef.current) {
-        throw new Error('Audio pipeline not initialized');
+      if (!recorderRef.current) {
+        throw new Error('Audio recorder not initialized');
       }
       
       // 9. SUCCESS - Mark active only after everything is ready
@@ -329,7 +322,7 @@ export const ConversationOverlay: React.FC = () => {
     ttsPlaybackService.destroy().catch(() => {});
 
     // Fire-and-forget microphone release
-    try { pipelineRef.current?.dispose(); } catch {}
+    try { recorderRef.current?.dispose(); } catch {}
     
     // Fire-and-forget WebSocket cleanup
     if (connectionRef.current) {
@@ -368,7 +361,7 @@ export const ConversationOverlay: React.FC = () => {
         connectionRef.current.unsubscribe().catch(() => {});
         connectionRef.current = null;
       }
-      try { pipelineRef.current?.dispose(); } catch {}
+      try { recorderRef.current?.dispose(); } catch {}
       ttsPlaybackService.destroy().catch(() => {});
     }
   }, [state]);

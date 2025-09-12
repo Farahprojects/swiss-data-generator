@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useChatStore } from '@/core/store';
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
-import { ConversationAudioPipeline, encodeWav16kMono } from '@/services/audio/ConversationAudioPipeline';
+// Removed - using universal mic system
 
 
 import { getMessagesForConversation } from '@/services/api/messages';
@@ -17,7 +17,7 @@ class ChatController {
   private resetTimeout: NodeJS.Timeout | null = null;
   private lastFailedMessage: { text: string; mode?: string } | null = null;
   private isUnlocked = false; // New flag to control microphone access
-  private audioPipeline: ConversationAudioPipeline | null = null;
+  // Removed - using universal mic system
   private isProcessingRef = false;
 
 
@@ -305,78 +305,19 @@ class ChatController {
     this.isUnlocked = true;
   }
 
+  // Audio pipeline methods removed - using universal mic system
   public async initializeAudioPipeline() {
-    if (this.audioPipeline || !this.isUnlocked) return;
-    
-    const { chat_id } = useChatStore.getState();
-    if (!chat_id) {
-      console.error('[ChatController] initializeAudioPipeline: No chat_id in store.');
-      return;
-    }
-
-    try {
-      this.audioPipeline = new ConversationAudioPipeline({
-        onSpeechStart: () => {
-          useChatStore.getState().setStatus('recording');
-        },
-        onSpeechSegment: async (pcm: Float32Array) => {
-          if (this.isProcessingRef) return;
-          this.isProcessingRef = true;
-          useChatStore.getState().setStatus('transcribing');
-          
-          try {
-            // Pause mic during STT
-            this.pauseMic();
-            const wav = encodeWav16kMono(pcm, 16000);
-            const { transcript } = await sttService.transcribe(wav, chat_id);
-            
-            if (transcript && transcript.trim().length > 0) {
-              const client_msg_id = uuidv4();
-              this.addOptimisticMessages(chat_id, transcript, client_msg_id);
-              await llmService.sendMessage({ chat_id, text: transcript, client_msg_id });
-            }
-          } catch (error) {
-            console.error('[ChatController] Error processing voice input:', error);
-            useChatStore.getState().setError('Failed to process audio.');
-          } finally {
-            this.isProcessingRef = false;
-            useChatStore.getState().setStatus('idle');
-            // Resume mic for next input
-            this.unpauseMic();
-          }
-        },
-        onLevel: (level) => {
-          // Audio level available for UI animation if needed
-          // No React state updates per frame - use refs for smooth animation
-        },
-        onError: (error: Error) => {
-          console.error('[ChatController] Audio pipeline error:', error);
-          useChatStore.getState().setError('Audio error occurred.');
-        }
-      });
-      
-      await this.audioPipeline.init();
-      await this.audioPipeline.start();
-      console.log('[ChatController] Audio pipeline initialized successfully');
-    } catch (error) {
-      console.error('[ChatController] Failed to initialize audio pipeline:', error);
-      useChatStore.getState().setError('Failed to initialize microphone.');
-    }
+    // Audio pipeline removed - using universal mic system
+    console.log('[ChatController] Audio pipeline removed - using universal mic system');
   }
 
   // Simple pause/unpause - no turn management needed
   public pauseMic() {
-    console.log('[ChatController] pauseMic: Pausing audio pipeline');
-    if (this.audioPipeline) {
-      this.audioPipeline.pause();
-    }
+    console.log('[ChatController] pauseMic: Using universal mic system');
   }
 
   public unpauseMic() {
-    console.log('[ChatController] unpauseMic: Unpausing audio pipeline');
-    if (this.audioPipeline) {
-      this.audioPipeline.resume();
-    }
+    console.log('[ChatController] unpauseMic: Using universal mic system');
   }
 
 
@@ -384,11 +325,7 @@ class ChatController {
 
 
   public cancelMic() {
-    console.log('[ChatController] cancelMic: Canceling audio pipeline');
-    if (this.audioPipeline) {
-      this.audioPipeline.dispose();
-      this.audioPipeline = null;
-    }
+    console.log('[ChatController] cancelMic: Using universal mic system');
   }
 
   public resetConversationService() {
@@ -400,11 +337,7 @@ class ChatController {
       this.resetTimeout = null;
     }
     
-    // Reset AudioWorklet + WebWorker pipeline
-    if (this.audioPipeline) {
-      this.audioPipeline.dispose();
-      this.audioPipeline = null;
-    }
+    // Audio pipeline removed - using universal mic system
     this.conversationServiceInitialized = false;
     this.isUnlocked = false; // Lock on reset
     this.isProcessingRef = false;
@@ -424,11 +357,7 @@ class ChatController {
       this.resetTimeout = null;
     }
     
-    // Clean up AudioWorklet + WebWorker pipeline
-    if (this.audioPipeline) {
-      this.audioPipeline.dispose();
-      this.audioPipeline = null;
-    }
+    // Audio pipeline removed - using universal mic system
     
     // Clean up realtime subscription
     this.cleanupRealtimeSubscription();
