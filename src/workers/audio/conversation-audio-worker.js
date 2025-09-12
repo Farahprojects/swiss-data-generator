@@ -19,8 +19,9 @@ const MIN_THRESHOLD = 0.0004; // Minimum threshold for very quiet environments
 const MAX_THRESHOLD = 0.05; // Maximum threshold for noisy environments
 const ADAPTATION_FACTOR = 0.1; // How quickly to adapt (0.1 = slow adaptation)
 
-const SPEECH_START_FRAMES = IS_ANDROID_CHROME ? 2 : 2; // keep 40ms start
-const SPEECH_END_FRAMES = IS_ANDROID_CHROME ? 18 : 25; // end sooner on Android (360ms)
+const SPEECH_START_FRAMES = 2; // 40ms (2 * 20ms)
+const SPEECH_END_FRAMES = IS_ANDROID_CHROME ? 10 : 12; // 200ms (Android) / 240ms (others)
+const PRE_ROLL_FRAMES = SPEECH_START_FRAMES; // include frames that triggered start
 
 let ringBuffer = new Float32Array(MAX_SAMPLES);
 let writeIndex = 0;
@@ -39,6 +40,11 @@ let adaptationFrames = 0;
 // Background throttling state
 let isThrottled = false;
 let throttleCounter = 0;
+
+// Utterance collection (precise start->end)
+let preRoll = [];
+let utteranceFrames = [];
+let utteranceSamples = 0;
 
 function appendFrame(frame) {
   const samples = new Float32Array(frame);
@@ -63,29 +69,21 @@ function computeEnergy(samples) {
 
 function adaptThreshold(energy, isSpeech) {
   adaptationFrames++;
-  
-  // Only adapt during non-speech periods to avoid adapting to speech
-  if (!isSpeech && adaptationFrames > 10) { // Wait 10 frames before adapting
-    // Slowly adapt noise floor estimate
+  if (!isSpeech && adaptationFrames > 10) {
     noiseFloorEstimate = noiseFloorEstimate * (1 - ADAPTATION_FACTOR) + energy * ADAPTATION_FACTOR;
-    
-    // Set threshold slightly above noise floor (more sensitive)
     currentThreshold = Math.max(MIN_THRESHOLD, Math.min(MAX_THRESHOLD, noiseFloorEstimate * 1.5));
   }
-  
   return currentThreshold;
 }
 
-function extractRollingWindow(seconds) {
-  const want = Math.min(seconds * SAMPLE_RATE, filled ? MAX_SAMPLES : writeIndex);
-  const out = new Float32Array(want);
-  const start = (writeIndex - want + MAX_SAMPLES) % MAX_SAMPLES;
-  if (start + want <= MAX_SAMPLES) {
-    out.set(ringBuffer.subarray(start, start + want));
-  } else {
-    const first = MAX_SAMPLES - start;
-    out.set(ringBuffer.subarray(start, MAX_SAMPLES), 0);
-    out.set(ringBuffer.subarray(0, want - first), first);
+function concatFrames(frames) {
+  let total = 0;
+  for (let i = 0; i < frames.length; i++) total += frames[i].length;
+  const out = new Float32Array(total);
+  let offset = 0;
+  for (let i = 0; i < frames.length; i++) {
+    out.set(frames[i], offset);
+    offset += frames[i].length;
   }
   return out;
 }
@@ -94,9 +92,7 @@ self.onmessage = (event) => {
   const { type } = event.data || {};
   if (type === 'audio') {
     frameCount++;
-    if (frameCount === 1) {
-    }
-    
+
     // Background throttling: skip processing every other frame when throttled
     if (isThrottled) {
       throttleCounter++;
@@ -104,37 +100,48 @@ self.onmessage = (event) => {
         return; // Skip this frame
       }
     }
-    
+
     appendFrame(event.data.buffer);
 
-    // VAD step with adaptive threshold
     const frame = new Float32Array(event.data.buffer);
     const energy = computeEnergy(frame);
     const isSpeech = energy > currentThreshold;
-    adaptThreshold(energy, isSpeech); // Update threshold based on current speech state
-    
+    adaptThreshold(energy, isSpeech);
 
-    // Emit audio level for UI (RMS approx, clamp 0..1)
-      const level = Math.min(1, Math.sqrt(energy) * 2);
+    // Level for UI (RMS approx, clamp 0..1)
+    const level = Math.min(1, Math.sqrt(energy) * 2);
     try { self.postMessage({ type: 'level', value: level }); } catch {}
+
+    // Maintain small pre-roll of the most recent frames
+    preRoll.push(frame);
+    if (preRoll.length > PRE_ROLL_FRAMES) preRoll.shift();
 
     if (isSpeech) {
       aboveCount++;
       belowCount = 0;
       if (!speechActive && aboveCount >= SPEECH_START_FRAMES) {
+        // Start of utterance: seed with pre-roll
         speechActive = true;
-        self.postMessage({ type: 'vad', state: 'speech_start' });
+        utteranceFrames = preRoll.slice();
+        utteranceSamples = utteranceFrames.reduce((n, f) => n + f.length, 0);
+        try { self.postMessage({ type: 'vad', state: 'speech_start' }); } catch {}
+      }
+      // If active, collect current frame
+      if (speechActive) {
+        utteranceFrames.push(frame);
+        utteranceSamples += frame.length;
       }
     } else {
       belowCount++;
       if (speechActive && belowCount >= SPEECH_END_FRAMES) {
+        // End of utterance: emit precise start->end audio
         speechActive = false;
         aboveCount = 0;
         belowCount = 0;
-        // Emit last N seconds as a segment (shorter on Android)
-        const segmentSeconds = IS_ANDROID_CHROME ? 4 : 6;
-        const segment = extractRollingWindow(segmentSeconds);
-        self.postMessage({ type: 'segment', buffer: segment.buffer }, [segment.buffer]);
+        const segment = concatFrames(utteranceFrames);
+        utteranceFrames = [];
+        utteranceSamples = 0;
+        try { self.postMessage({ type: 'segment', buffer: segment.buffer }, [segment.buffer]); } catch {}
       }
     }
   } else if (type === 'reset') {
@@ -144,13 +151,14 @@ self.onmessage = (event) => {
     aboveCount = 0;
     belowCount = 0;
     frameCount = 0;
-    // Reset adaptive threshold
     currentThreshold = BASE_ENERGY_THRESHOLD;
     noiseFloorEstimate = BASE_ENERGY_THRESHOLD;
     adaptationFrames = 0;
-    // Reset throttling
     isThrottled = false;
     throttleCounter = 0;
+    preRoll = [];
+    utteranceFrames = [];
+    utteranceSamples = 0;
   } else if (type === 'throttle') {
     isThrottled = event.data.enabled;
     throttleCounter = 0;
