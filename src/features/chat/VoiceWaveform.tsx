@@ -2,95 +2,109 @@
 import React, { useEffect, useRef } from 'react';
 
 interface VoiceWaveformProps {
-  audioLevelRef: React.MutableRefObject<number>; // Ref to real-time audio level
+  audioLevelRef: React.MutableRefObject<number>; // Real-time level (0..1)
 }
 
-const NUM_BARS = 30;
-const MAX_BAR_HEIGHT = 28;
-const BASE_BAR_HEIGHT = 2;
-const TARGET_FPS = 30;
-
+// Canvas-based scrolling "reel" waveform for maximum smoothness on mobile/Safari.
+// UI-only smoothing and clamping applied; raw signal is untouched.
 export const VoiceWaveform: React.FC<VoiceWaveformProps> = ({ audioLevelRef }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const animationFrameRef = useRef<number | null>(null);
-  const lastUpdateTimeRef = useRef<number>(0);
-  // Safari-only UI smoothing/clamp (UI layer only; does not change signal)
-  const isSafari = typeof navigator !== 'undefined' && /safari/i.test(navigator.userAgent) && !/chrome|chromium|android/i.test(navigator.userAgent);
+  const rafRef = useRef<number | null>(null);
+  const lastTickRef = useRef<number>(0);
+  const xRef = useRef<number>(0);
   const uiLevelRef = useRef<number>(0);
 
-  // 🎵 Real-time animation loop (no React state updates per frame)
-  const animate = () => {
-    const now = performance.now();
-    const frameInterval = 1000 / TARGET_FPS;
+  const isSafari = typeof navigator !== 'undefined'
+    && /safari/i.test(navigator.userAgent)
+    && !/chrome|chromium|android/i.test(navigator.userAgent);
 
-    // Throttle to target FPS for smoother animation
-    if (now - lastUpdateTimeRef.current < frameInterval) {
-      animationFrameRef.current = requestAnimationFrame(animate);
-      return;
+  // Resize canvas to container with devicePixelRatio for crisp rendering
+  const resizeCanvas = () => {
+    if (!canvasRef.current || !containerRef.current) return;
+    const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+    const { clientWidth, clientHeight } = containerRef.current;
+    canvasRef.current.width = Math.max(1, Math.floor(clientWidth * dpr));
+    canvasRef.current.height = Math.max(1, Math.floor(clientHeight * dpr));
+    const ctx = canvasRef.current.getContext('2d');
+    if (ctx) {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, clientWidth, clientHeight);
+      xRef.current = clientWidth - 1; // start drawing at right edge
     }
-
-    lastUpdateTimeRef.current = now;
-
-    if (!containerRef.current) {
-      animationFrameRef.current = requestAnimationFrame(animate);
-      return;
-    }
-
-    // Read raw level from pipeline (do not mutate it)
-    let level = audioLevelRef.current;
-    // Safari-only: apply gentle UI smoothing + soft cap (UI only)
-    if (isSafari) {
-      const alpha = 0.18; // smoothing factor for UI animation only
-      uiLevelRef.current = uiLevelRef.current + (level - uiLevelRef.current) * alpha;
-      level = Math.min(uiLevelRef.current, 0.25); // soft cap keeps bars subtle on Safari
-    }
-    const bars = containerRef.current.children;
-    
-
-    // Update each bar using CSS transforms for better performance
-    for (let i = 0; i < bars.length; i++) {
-      const bar = bars[i] as HTMLElement;
-      
-      // Create a wavier, more organic effect
-      const distance = Math.abs(i - NUM_BARS / 2);
-      const damping = 1 - (distance / (NUM_BARS / 2)) ** 2;
-      const multiplier = Math.max(0, damping * (Math.sin(distance / 2 + level * 20) + 1));
-      
-      // Use direct height changes for wave-like up and down movement
-      const height = BASE_BAR_HEIGHT + Math.min(MAX_BAR_HEIGHT, level * 150 * multiplier);
-      bar.style.height = `${height}px`;
-    }
-
-    animationFrameRef.current = requestAnimationFrame(animate);
   };
 
-  // Start animation when component mounts
-  useEffect(() => {
-    animationFrameRef.current = requestAnimationFrame(animate);
+  // Animation loop: scroll content left by 1px, draw new vertical line at right
+  const animate = () => {
+    const now = performance.now();
+    const targetFps = 30; // steady 30fps is sufficient and smooth
+    const frameInterval = 1000 / targetFps;
+    if (now - lastTickRef.current < frameInterval) {
+      rafRef.current = requestAnimationFrame(animate);
+      return;
+    }
+    lastTickRef.current = now;
 
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      rafRef.current = requestAnimationFrame(animate);
+      return;
+    }
+
+    const ctx = canvas.getContext('2d');
+    const container = containerRef.current;
+    if (!ctx || !container) {
+      rafRef.current = requestAnimationFrame(animate);
+      return;
+    }
+
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+
+    // Smooth UI level (UI only; do not modify audioLevelRef)
+    const raw = audioLevelRef.current; // 0..1
+    const alpha = isSafari ? 0.18 : 0.12; // Safari a bit more smoothing
+    uiLevelRef.current = uiLevelRef.current + (raw - uiLevelRef.current) * alpha;
+    const level = isSafari ? Math.min(uiLevelRef.current, 0.25) : uiLevelRef.current;
+
+    // Scroll existing content 1px to the left
+    ctx.globalCompositeOperation = 'copy';
+    ctx.drawImage(canvas, 1, 0, width - 1, height, 0, 0, width - 1, height);
+    ctx.globalCompositeOperation = 'source-over';
+
+    // Clear rightmost 1px column
+    ctx.clearRect(width - 1, 0, 1, height);
+
+    // Map level to vertical line height around center baseline
+    const centerY = height / 2;
+    const maxLineHeight = Math.max(6, Math.floor(height * 0.8));
+    const total = Math.max(2, Math.min(maxLineHeight, Math.floor(level * maxLineHeight)));
+    const top = centerY - total / 2;
+
+    // Draw the new line at right edge
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(width - 1, top, 1, total);
+
+    rafRef.current = requestAnimationFrame(animate);
+  };
+
+  useEffect(() => {
+    resizeCanvas();
+    const ro = new (window as any).ResizeObserver?.(() => resizeCanvas());
+    if (ro && containerRef.current) ro.observe(containerRef.current);
+
+    rafRef.current = requestAnimationFrame(animate);
     return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+      if (ro && containerRef.current) ro.unobserve(containerRef.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
-    <div 
-      ref={containerRef}
-      className="flex items-center justify-center gap-1 w-full h-full px-4"
-    >
-      {Array.from({ length: NUM_BARS }).map((_, i) => (
-        <div
-          key={i}
-          className="w-1 bg-gray-400 rounded-full transition-none"
-          style={{ 
-            height: `${BASE_BAR_HEIGHT}px`,
-            willChange: 'height' // GPU acceleration hint for height changes
-          }}
-        />
-      ))}
+    <div ref={containerRef} className="w-full h-full px-4">
+      <canvas ref={canvasRef} className="w-full h-full block" />
     </div>
   );
 };
