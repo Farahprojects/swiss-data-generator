@@ -327,7 +327,7 @@ export class ConversationAudioPipeline {
     // Clear watchdog on first segment
     if (this.workletNode) {
       const original = this.workletNode.port.onmessage;
-      this.workletNode.port.onmessage = (event: MessageEvent) => {
+      (this.workletNode.port as any).onmessage = (event: MessageEvent) => {
         if (event.data?.type === 'segment' && this.startupWatchdogTimer) {
           clearTimeout(this.startupWatchdogTimer);
           this.startupWatchdogTimer = null;
@@ -336,7 +336,7 @@ export class ConversationAudioPipeline {
         if (typeof original === 'function') {
           (original as any)(event);
         }
-      } as any;
+      };
     }
   }
 
