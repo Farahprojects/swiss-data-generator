@@ -1,14 +1,12 @@
-// Simplified VAD worker - basic threshold detection
+// Simple VAD: start recording on speech, send after 1.2s silence
 
 let isRecording = false;
 let speechBuffer = [];
 let silenceFrames = 0;
-let speechStartFrame = 0;
 
 // Simple thresholds
-const SPEECH_THRESHOLD = 0.01; // Simple energy threshold
-const SILENCE_FRAMES = 15; // ~300ms at 50fps
-const MIN_SPEECH_FRAMES = 5; // ~100ms minimum
+const SPEECH_THRESHOLD = 0.02; // Higher threshold to avoid background noise
+const SILENCE_FRAMES = 60; // 1.2 seconds at 50fps (60 * 20ms = 1200ms)
 
 self.onmessage = (event) => {
   const { type, buffer } = event.data || {};
@@ -35,26 +33,26 @@ function processAudioFrame(pcm) {
   const isSpeaking = level > SPEECH_THRESHOLD;
   
   if (isSpeaking && !isRecording) {
-    // Speech start
+    // Speech start - start collecting
     isRecording = true;
     speechBuffer = [];
     silenceFrames = 0;
-    speechStartFrame = 0;
     self.postMessage({ type: 'vad', state: 'speech_start' });
   }
   
   if (isRecording) {
+    // Always collect audio while recording
     speechBuffer.push(...pcm);
     
     if (isSpeaking) {
-      silenceFrames = 0;
+      silenceFrames = 0; // Reset silence counter
     } else {
       silenceFrames++;
     }
     
-    // Check for speech end
-    if (silenceFrames >= SILENCE_FRAMES && speechBuffer.length > MIN_SPEECH_FRAMES * 320) {
-      // Send the complete speech segment
+    // Send after 1.2 seconds of silence
+    if (silenceFrames >= SILENCE_FRAMES) {
+      // Send the complete audio segment
       const segment = new Float32Array(speechBuffer);
       self.postMessage({ 
         type: 'segment', 
