@@ -1,7 +1,7 @@
 // WebWorker: maintains a rolling buffer and simple VAD; emits speech segments.
 
-// Config
-const ROLLING_SECONDS = 12; // keep last 12s
+// Config - mobile optimized
+const ROLLING_SECONDS = 8; // keep last 8s (reduced from 12s for mobile)
 const SAMPLE_RATE = 16000;
 const MAX_SAMPLES = ROLLING_SECONDS * SAMPLE_RATE;
 
@@ -192,9 +192,11 @@ self.onmessage = (event) => {
     }
     
 
-    // Emit audio level for UI (RMS approx, clamp 0..1)
-    const level = Math.min(1, Math.sqrt(energy) * 4);
-    try { self.postMessage({ type: 'level', value: level }); } catch {}
+    // Emit audio level for UI (RMS approx, clamp 0..1) - reduced frequency for mobile
+    if (frameCount % 3 === 0) { // Only every 3rd frame (60ms instead of 20ms)
+      const level = Math.min(1, Math.sqrt(energy) * 4);
+      try { self.postMessage({ type: 'level', value: level }); } catch {}
+    }
 
     if (isSpeech) {
       aboveCount++;
@@ -209,9 +211,9 @@ self.onmessage = (event) => {
         speechActive = false;
         aboveCount = 0;
         belowCount = 0;
-        // Emit last N seconds as a segment (e.g., 6 seconds)
+        // Emit last N seconds as a segment (e.g., 4 seconds - mobile optimized)
         if (frameCount >= suppressUntilFrame) {
-          const segment = extractRollingWindow(6);
+          const segment = extractRollingWindow(4);
           self.postMessage({ type: 'segment', buffer: segment.buffer }, [segment.buffer]);
         }
       }

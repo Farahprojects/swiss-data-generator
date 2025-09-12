@@ -134,10 +134,10 @@ export class ConversationAudioPipeline {
       this.limiterNode.attack.setValueAtTime(0.003, this.audioContext.currentTime);
       this.limiterNode.release.setValueAtTime(0.05, this.audioContext.currentTime);
 
-      // Raw analyser (pre-AGC) for baseline + UI energy
+      // Raw analyser (pre-AGC) for baseline + UI energy - mobile optimized
       this.rawAnalyserNode = this.audioContext.createAnalyser();
-      this.rawAnalyserNode.fftSize = 1024;
-      this.rawAnalyserNode.smoothingTimeConstant = 0.8;
+      this.rawAnalyserNode.fftSize = 256; // Smaller FFT for mobile
+      this.rawAnalyserNode.smoothingTimeConstant = 0.6; // Less smoothing
 
       // Post-AGC analyser can remain for debug but will not drive logic
       this.analyserNode = this.audioContext.createAnalyser();
@@ -302,7 +302,7 @@ export class ConversationAudioPipeline {
         const uiLevel = Math.min(1, rms * 6);
         this.events.onLevel?.(uiLevel);
       } catch {}
-    }, 50);
+    }, 100); // Reduced frequency for mobile (50ms -> 100ms)
   }
 
   // Set reasonable fixed AGC gain - worker handles energy calibration
