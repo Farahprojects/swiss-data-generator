@@ -38,12 +38,12 @@ let noiseFloorEstimate = BASE_ENERGY_THRESHOLD;
 let adaptationFrames = 0;
 
 // Calibration/locking state
-const CALIBRATION_FRAMES = 75; // ~1500ms at 20ms/frame
+const CALIBRATION_FRAMES = 150; // ~3000ms at 20ms/frame - longer for better baseline
 let isCalibrating = false;
 let calibrationFrames = 0;
 let calibrationEnergySum = 0;
 let calibrated = false;
-const THRESH_MULTIPLIER = 2.5; // noise -> threshold multiplier
+const THRESH_MULTIPLIER = 4.0; // noise -> threshold multiplier - more conservative
 
 // Drift detection
 let driftAvgEnergy = 0;

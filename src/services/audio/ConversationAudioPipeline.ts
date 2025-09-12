@@ -87,8 +87,8 @@ export class ConversationAudioPipeline {
           // AEC warmup while device settles and request worker recalibration
           try { this.aecWarmup(400); } catch {}
           try { this.worker?.postMessage({ type: 'recalibrate' }); } catch {}
-          // Non-blocking baseline recalibration to re-lock AGC under new device/DSP
-          try { this.calibrateBaselineAndLock(); } catch {}
+          // Re-set fixed AGC gain for new device
+          try { this.setFixedAgcGain(); } catch {}
         } catch {}
       };
       try {
@@ -164,8 +164,8 @@ export class ConversationAudioPipeline {
       // Start raw energy/UI level monitor (no dynamic AGC adjustment)
       this.startRawLevelMonitor();
 
-      // Calibrate baseline and lock AGC + worker VAD threshold
-      await this.calibrateBaselineAndLock();
+      // Set reasonable fixed AGC gain - let worker handle energy calibration
+      this.setFixedAgcGain();
 
       // Forward frames from worklet to worker
       this.workletNode.port.onmessage = (event: MessageEvent) => {
@@ -305,53 +305,14 @@ export class ConversationAudioPipeline {
     }, 50);
   }
 
-  // Calibrate baseline from raw analyser, lock AGC and inform worker
-  private async calibrateBaselineAndLock(): Promise<void> {
-    if (!this.audioContext || !this.rawAnalyserNode || !this.agcGainNode) return;
-    const analyser = this.rawAnalyserNode;
-    const buffer = new Float32Array(analyser.fftSize);
-    const sampleWindows = 30; // ~1.5s at 50ms
-    let energySum = 0;
-    let frames = 0;
-
-    await new Promise<void>((resolve) => {
-      const timer = window.setInterval(() => {
-        try {
-          analyser.getFloatTimeDomainData(buffer);
-          let sumSq = 0;
-          for (let i = 0; i < buffer.length; i++) {
-            const s = buffer[i];
-            sumSq += s * s;
-          }
-          const energy = sumSq / buffer.length;
-          energySum += energy;
-          frames++;
-          if (frames >= sampleWindows) {
-            clearInterval(timer);
-            resolve();
-          }
-        } catch {
-          clearInterval(timer);
-          resolve();
-        }
-      }, 50);
-    });
-
-    const avgEnergy = energySum / Math.max(1, frames);
-    const noiseRms = Math.sqrt(Math.max(avgEnergy, 1e-9));
-
-    // Lock AGC once based on baseline (no continuous adjustment)
-    const targetRms = 0.18; // desired operating point
-    const minGain = 0.5;
-    const maxGain = 8.0;
-    const desired = Math.min(Math.max(targetRms / Math.max(noiseRms, 1e-6), minGain), maxGain);
+  // Set reasonable fixed AGC gain - worker handles energy calibration
+  private setFixedAgcGain(): void {
+    if (!this.audioContext || !this.agcGainNode) return;
+    const fixedGain = 2.5; // Reasonable fixed gain
     const now = this.audioContext.currentTime;
     this.agcGainNode.gain.cancelScheduledValues(now);
-    this.agcGainNode.gain.setValueAtTime(desired, now);
-    this.currentAgcGain = desired;
-
-    // Inform worker to lock VAD threshold via recalibration path
-    try { this.worker?.postMessage({ type: 'recalibrate' }); } catch {}
+    this.agcGainNode.gain.setValueAtTime(fixedGain, now);
+    this.currentAgcGain = fixedGain;
   }
 
   // --- Startup watchdog ------------------------------------------------------
