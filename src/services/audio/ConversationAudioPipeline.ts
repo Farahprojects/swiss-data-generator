@@ -84,6 +84,11 @@ export class ConversationAudioPipeline {
         try {
           if (!this.started) return;
           await this.rebindInputStream();
+          // AEC warmup while device settles and request worker recalibration
+          try { this.aecWarmup(400); } catch {}
+          try { this.worker?.postMessage({ type: 'recalibrate' }); } catch {}
+          // Non-blocking baseline recalibration to re-lock AGC under new device/DSP
+          try { this.calibrateBaselineAndLock(); } catch {}
         } catch {}
       };
       try {
