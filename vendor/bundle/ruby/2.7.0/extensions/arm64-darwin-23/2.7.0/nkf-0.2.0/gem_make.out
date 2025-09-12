@@ -1,0 +1,15 @@
+current directory: /Users/peterfarrah/therai-celestial-nexus/vendor/bundle/ruby/2.7.0/gems/nkf-0.2.0/ext/nkf
+/Users/peterfarrah/.rbenv/versions/2.7.6/bin/ruby -I /Users/peterfarrah/.rbenv/versions/2.7.6/lib/ruby/2.7.0 -r ./siteconf20250912-19402-1rzen60.rb extconf.rb
+creating Makefile
+
+current directory: /Users/peterfarrah/therai-celestial-nexus/vendor/bundle/ruby/2.7.0/gems/nkf-0.2.0/ext/nkf
+make "DESTDIR=" clean
+
+current directory: /Users/peterfarrah/therai-celestial-nexus/vendor/bundle/ruby/2.7.0/gems/nkf-0.2.0/ext/nkf
+make "DESTDIR="
+compiling nkf.c
+linking shared-object nkf.bundle
+
+current directory: /Users/peterfarrah/therai-celestial-nexus/vendor/bundle/ruby/2.7.0/gems/nkf-0.2.0/ext/nkf
+make "DESTDIR=" install
+/usr/bin/install -c -m 0755 nkf.bundle ./.gem.20250912-19402-lmxqsc
