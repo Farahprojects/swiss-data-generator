@@ -35,8 +35,8 @@ export const useChatInitialization = (options?: { skipIfPaymentPending?: boolean
       return;
     }
 
-    // Wait for payment flow to determine status instead of checking database directly
-    if (isPaymentConfirmed || isReportReady) {
+    // Wait for full report readiness before unlocking chat init (prevents messages WS overlap)
+    if (isReportReady) {
       setIsPaymentGateActive(false);
     } else if (paymentError) {
       setIsPaymentGateActive(false);
@@ -46,10 +46,6 @@ export const useChatInitialization = (options?: { skipIfPaymentPending?: boolean
   }, [threadId, isPaymentConfirmed, isReportReady, paymentError]);
 
   useEffect(() => {
-    // Payment gate: Skip initialization if payment is pending
-    if (isPaymentGateActive) {
-      return;
-    }
 
     // Extra safety: Check URL params for chat_id
     const urlParams = new URLSearchParams(window.location.search);
@@ -78,14 +74,16 @@ export const useChatInitialization = (options?: { skipIfPaymentPending?: boolean
       }
     }
     
-    // 3. Initialize if we have a chat_id and it's different from current
+    // 3. Start conversation in store if needed (always set chat_id early)
     if (targetChatId && targetChatId !== chat_id) {
-      
-      // Set in store first (this will persist to sessionStorage)
       startConversation(targetChatId, guestId);
-      
-      // Then initialize controller
-      chatController.initializeForConversation(targetChatId);
     }
-  }, [threadId, chat_id, hydrateFromStorage, startConversation, user?.id, guestId, isPaymentGateActive]);
+
+    // 4. Initialize controller (messages WS) only when allowed
+    const isGuestRoute = window.location.pathname.startsWith('/c/g/');
+    const readyToInit = targetChatId && (!isGuestRoute || isReportReady || paymentError);
+    if (readyToInit && targetChatId !== undefined) {
+      chatController.initializeForConversation(targetChatId as string);
+    }
+  }, [threadId, chat_id, hydrateFromStorage, startConversation, user?.id, guestId, isReportReady, paymentError]);
 };

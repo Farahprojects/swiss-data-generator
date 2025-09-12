@@ -18,6 +18,17 @@ interface Turn {
   assistantMessage?: Message;
 }
 
+const InlineEllipsis = () => {
+  const [dots, setDots] = React.useState('');
+  React.useEffect(() => {
+    const id = setInterval(() => {
+      setDots((prev) => (prev.length >= 3 ? '' : prev + '.'));
+    }, 500);
+    return () => clearInterval(id);
+  }, []);
+  return <span aria-hidden="true">{dots}</span>;
+};
+
 const TurnItem = ({ turn, isLastTurn, isFromHistory }: { turn: Turn; isLastTurn: boolean; isFromHistory?: boolean }) => {
   const { userMessage, assistantMessage } = turn;
   const { isConversationOpen } = useConversationUIStore();
@@ -49,14 +60,21 @@ const TurnItem = ({ turn, isLastTurn, isFromHistory }: { turn: Turn; isLastTurn:
             style={{ overflowAnchor: 'none' }}
           >
             <p className="text-base font-light leading-relaxed text-left">
-              <Suspense fallback={<span className="whitespace-pre-wrap">{assistantMessage.text || ''}</span>}>
-                <TypewriterText 
-                  text={assistantMessage.text || ''} 
-                  msPerWord={80}
-                  disabled={!shouldAnimate || assistantMessage.role === 'system'}
-                  className="whitespace-pre-wrap"
-                />
-              </Suspense>
+              {assistantMessage.meta?.type === 'payment-progress' ? (
+                <span className="whitespace-pre-wrap">
+                  {(assistantMessage.text || 'Generating your personal space')}
+                  <InlineEllipsis />
+                </span>
+              ) : (
+                <Suspense fallback={<span className="whitespace-pre-wrap">{assistantMessage.text || ''}</span>}>
+                  <TypewriterText 
+                    text={assistantMessage.text || ''} 
+                    msPerWord={80}
+                    disabled={!shouldAnimate || assistantMessage.role === 'system'}
+                    className="whitespace-pre-wrap"
+                  />
+                </Suspense>
+              )}
             </p>
           </div>
         </div>
