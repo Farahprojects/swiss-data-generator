@@ -399,9 +399,9 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   const handleVoiceDataReady = (data: any) => {
     // Fill the form with voice data
     form.setValue('name', data.name);
-    form.setValue('birthDate', data.dob);
-    form.setValue('birthTime', data.time);
-    form.setValue('birthLocation', data.place);
+    form.setValue('birthDate', data.birthDate);
+    form.setValue('birthTime', data.birthTime);
+    form.setValue('birthLocation', data.birthLocation);
     form.setValue('email', data.email);
     // Note: compatibility is handled by selecting 'sync' report type
     

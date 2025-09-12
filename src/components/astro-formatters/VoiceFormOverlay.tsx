@@ -10,9 +10,9 @@ import { useAudioStore } from '@/stores/audioStore';
 
 interface VoiceFormData {
   name: string;
-  dob: string;
-  time: string;
-  place: string;
+  birthDate: string;
+  birthTime: string;
+  birthLocation: string;
   email: string;
   compatibility: boolean;
 }
@@ -36,9 +36,9 @@ export const VoiceFormOverlay: React.FC<VoiceFormOverlayProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [formData, setFormData] = useState<VoiceFormData>({
     name: '',
-    dob: '',
-    time: '',
-    place: '',
+    birthDate: '',
+    birthTime: '',
+    birthLocation: '',
     email: '',
     compatibility: false
   });
@@ -83,7 +83,7 @@ export const VoiceFormOverlay: React.FC<VoiceFormOverlayProps> = ({
             const month = String(monthIndex + 1).padStart(2, '0');
             const day = match[2].padStart(2, '0');
             const year = match[3];
-            result.dob = `${year}-${month}-${day}`;
+            result.birthDate = `${year}-${month}-${day}`;
             break;
           }
         } else {
@@ -91,10 +91,10 @@ export const VoiceFormOverlay: React.FC<VoiceFormOverlayProps> = ({
           const [, part1, part2, part3] = match;
           if (part1.length === 4) {
             // YYYY-MM-DD format
-            result.dob = `${part1}-${part2.padStart(2, '0')}-${part3.padStart(2, '0')}`;
+            result.birthDate = `${part1}-${part2.padStart(2, '0')}-${part3.padStart(2, '0')}`;
           } else {
             // MM/DD/YYYY or MM-DD-YYYY format
-            result.dob = `${part3}-${part1.padStart(2, '0')}-${part2.padStart(2, '0')}`;
+            result.birthDate = `${part3}-${part1.padStart(2, '0')}-${part2.padStart(2, '0')}`;
           }
           break;
         }
@@ -118,7 +118,7 @@ export const VoiceFormOverlay: React.FC<VoiceFormOverlayProps> = ({
         if (ampm === 'pm' && hours !== 12) hours += 12;
         if (ampm === 'am' && hours === 12) hours = 0;
         
-        result.time = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        result.birthTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
         break;
       }
     }
@@ -132,17 +132,17 @@ export const VoiceFormOverlay: React.FC<VoiceFormOverlayProps> = ({
     for (const pattern of placePatterns) {
       const match = cleanText.match(pattern);
       if (match) {
-        result.place = match[1].trim().replace(/\b\w/g, l => l.toUpperCase());
+        result.birthLocation = match[1].trim().replace(/\b\w/g, l => l.toUpperCase());
         break;
       }
     }
     
     // If no specific place pattern, try to find city/state/country after date/time
-    if (!result.place) {
+    if (!result.birthLocation) {
       const afterDateTime = cleanText.replace(/^[^,]*?(?:\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|january|february|march|april|may|june|july|august|september|october|november|december).*?(?:\d{1,2}:\d{2}|\d{1,2}\s*(am|pm))/i, '');
       const placeMatch = afterDateTime.match(/([a-z\s]+)/i);
       if (placeMatch && placeMatch[1].trim().length > 2) {
-        result.place = placeMatch[1].trim().replace(/\b\w/g, l => l.toUpperCase());
+        result.birthLocation = placeMatch[1].trim().replace(/\b\w/g, l => l.toUpperCase());
       }
     }
     
@@ -187,9 +187,9 @@ export const VoiceFormOverlay: React.FC<VoiceFormOverlayProps> = ({
             // Check for parsing errors
             const newErrors: string[] = [];
             if (!parsedData.name) newErrors.push('Name not detected');
-            if (!parsedData.dob) newErrors.push('Date of birth not detected');
-            if (!parsedData.time) newErrors.push('Time of birth not detected');
-            if (!parsedData.place) newErrors.push('Place of birth not detected');
+            if (!parsedData.birthDate) newErrors.push('Date of birth not detected');
+            if (!parsedData.birthTime) newErrors.push('Time of birth not detected');
+            if (!parsedData.birthLocation) newErrors.push('Place of birth not detected');
             
             setErrors(newErrors);
             
@@ -312,31 +312,31 @@ export const VoiceFormOverlay: React.FC<VoiceFormOverlayProps> = ({
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="dob">Date of Birth</Label>
+                <Label htmlFor="birthDate">Date of Birth</Label>
                 <Input
-                  id="dob"
+                  id="birthDate"
                   type="date"
-                  value={formData.dob}
-                  onChange={(e) => handleFieldChange('dob', e.target.value)}
+                  value={formData.birthDate}
+                  onChange={(e) => handleFieldChange('birthDate', e.target.value)}
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="time">Time of Birth</Label>
+                <Label htmlFor="birthTime">Time of Birth</Label>
                 <Input
-                  id="time"
+                  id="birthTime"
                   type="time"
-                  value={formData.time}
-                  onChange={(e) => handleFieldChange('time', e.target.value)}
+                  value={formData.birthTime}
+                  onChange={(e) => handleFieldChange('birthTime', e.target.value)}
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="place">Place of Birth</Label>
+                <Label htmlFor="birthLocation">Place of Birth</Label>
                 <Input
-                  id="place"
-                  value={formData.place}
-                  onChange={(e) => handleFieldChange('place', e.target.value)}
+                  id="birthLocation"
+                  value={formData.birthLocation}
+                  onChange={(e) => handleFieldChange('birthLocation', e.target.value)}
                   placeholder="Enter place of birth"
                 />
               </div>
