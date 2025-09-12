@@ -84,7 +84,7 @@ export const VoiceWaveform: React.FC<VoiceWaveformProps> = ({ audioLevelRef }) =
   }, [audioLevelRef]);
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-full pointer-events-none" aria-hidden>
       <canvas
         ref={canvasRef}
         className="w-full h-full"

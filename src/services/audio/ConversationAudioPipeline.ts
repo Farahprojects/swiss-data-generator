@@ -24,13 +24,22 @@ export class ConversationAudioPipeline {
   public async init(): Promise<void> {
     if (this.audioContext) return;
     try {
+      console.log('[ConversationAudioPipeline] Creating AudioContext...');
       this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ 
         sampleRate: 16000, 
         latencyHint: 'interactive' as any 
       });
+      console.log('[ConversationAudioPipeline] AudioContext created:', this.audioContext.state);
       
-      await this.audioContext.audioWorklet.addModule(new URL('../../workers/audio/ConversationAudioProcessor.js', import.meta.url));
+      console.log('[ConversationAudioPipeline] Adding audio worklet module...');
+      const workletUrl = new URL('../../workers/audio/ConversationAudioProcessor.js', import.meta.url);
+      console.log('[ConversationAudioPipeline] Worklet URL:', workletUrl.href);
+      await this.audioContext.audioWorklet.addModule(workletUrl);
+      console.log('[ConversationAudioPipeline] Audio worklet module added');
+      
+      console.log('[ConversationAudioPipeline] Creating worker...');
       this.worker = new Worker(new URL('../../workers/audio/conversation-audio-worker.js', import.meta.url));
+      console.log('[ConversationAudioPipeline] Worker created');
 
       this.worker.onmessage = (evt: MessageEvent) => {
         const { type } = evt.data || {};
@@ -45,6 +54,7 @@ export class ConversationAudioPipeline {
       };
 
     } catch (e: any) {
+      console.error('[ConversationAudioPipeline] Init failed:', e);
       this.events.onError?.(e);
       throw e;
     }
@@ -56,6 +66,20 @@ export class ConversationAudioPipeline {
     if (this.started) return;
 
     try {
+      console.log('[ConversationAudioPipeline] Requesting microphone access...');
+      console.log('[ConversationAudioPipeline] MediaDevices available:', !!navigator.mediaDevices);
+      console.log('[ConversationAudioPipeline] getUserMedia available:', !!navigator.mediaDevices?.getUserMedia);
+      
+      // Check permissions first
+      if (navigator.permissions) {
+        try {
+          const permission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+          console.log('[ConversationAudioPipeline] Microphone permission state:', permission.state);
+        } catch (permError) {
+          console.log('[ConversationAudioPipeline] Permission query failed:', permError);
+        }
+      }
+      
       // Simple audio constraints - let browser handle processing
       this.mediaStream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -67,6 +91,7 @@ export class ConversationAudioPipeline {
         },
         video: false
       });
+      console.log('[ConversationAudioPipeline] Microphone access granted');
 
       const source = this.audioContext.createMediaStreamSource(this.mediaStream);
       this.workletNode = new AudioWorkletNode(this.audioContext, 'conversation-audio-processor');

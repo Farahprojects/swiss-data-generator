@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    https: true,
     cors: {
       origin: true,
       credentials: true
@@ -22,4 +23,10 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  worker: {
+    format: 'es'
+  },
+  optimizeDeps: {
+    exclude: ['src/workers/audio/ConversationAudioProcessor.js']
+  }
 }));

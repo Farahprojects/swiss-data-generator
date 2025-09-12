@@ -3,7 +3,7 @@ import React, { useState, useRef } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 import { Mic, AudioLines, ArrowRight, Loader2 } from 'lucide-react';
 import { chatController } from './ChatController';
-import { useChatInputMicrophone } from '@/hooks/microphone/useChatInputMicrophone';
+import { useUniversalMic } from '@/hooks/microphone/useUniversalMic';
 import { VoiceWaveform } from './VoiceWaveform';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSearchParams } from 'react-router-dom';
@@ -52,15 +52,16 @@ export const ChatInput = () => {
     setText(newText);
   };
 
-  // AudioWorklet + WebWorker microphone pipeline
+  // Universal microphone pipeline
   const { 
     isRecording: isMicRecording, 
     isProcessing: isMicProcessing,
     toggleRecording: toggleMicRecording,
     audioLevelRef
-  } = useChatInputMicrophone({
+  } = useUniversalMic({
     onTranscriptReady: handleTranscriptReady,
-    silenceTimeoutMs: 1200,
+    silenceThreshold: 0.01,
+    silenceDuration: 1200,
   });
 
   const handleSend = async () => {
@@ -182,9 +183,9 @@ export const ChatInput = () => {
               }}
             />
           )}
-          <div className="absolute right-1 inset-y-0 flex items-center gap-1" style={{ transform: 'translateY(-4px) translateX(-4px)' }}>
+          <div className="absolute right-1 inset-y-0 flex items-center gap-1 z-10" style={{ transform: 'translateY(-4px) translateX(-4px)' }}>
             <button 
-              className={`w-8 h-8 transition-all duration-200 ease-in-out flex items-center justify-center ${
+              className={`mic-button w-8 h-8 transition-all duration-200 ease-in-out flex items-center justify-center ${
                 isAssistantGenerating 
                   ? 'text-gray-300 cursor-not-allowed' 
                   : 'text-gray-500 hover:text-gray-900'
@@ -196,7 +197,7 @@ export const ChatInput = () => {
               {getMicButtonContent()}
             </button>
             <button 
-              className={`transition-colors ${
+              className={`audio-button transition-colors ${
                 isAssistantTyping || isAssistantGenerating
                   ? 'w-8 h-8 bg-white border border-black rounded-full text-black flex items-center justify-center' 
                   : text.trim() 

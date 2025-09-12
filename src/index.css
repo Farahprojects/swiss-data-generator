@@ -167,6 +167,53 @@ html, body {
   height: 100%;
 }
 
+/* -------------------------------------------------------------------------- */
+/*  BROWSER CONTROL - BLOCK ALL INTERFERENCE                                  */
+/* -------------------------------------------------------------------------- */
+* {
+  -webkit-touch-callout: none;           /* Disable iOS callout menu */
+  -webkit-user-select: none;             /* Disable text selection */
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent; /* Remove tap highlights */
+  touch-action: manipulation;            /* Force immediate touch response */
+}
+
+/* Allow text selection only in inputs */
+input, textarea, [contenteditable] {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
+/* Force all buttons to respond immediately */
+button, [role="button"], [onclick] {
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+/* Allow mic buttons to trigger media permissions */
+.mic-button, .audio-button, button[title*="mic"], button[title*="recording"] {
+  touch-action: auto !important;
+  -webkit-touch-callout: default !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+
+/* Prevent context menus on all interactive elements */
+button, [role="button"], [onclick], a {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 /* Prevent iOS from auto‑zooming form fields */
 input,
 select,

@@ -64,6 +64,67 @@ export const useChatInputMicrophone = (options: UseChatInputMicrophoneOptions = 
     if (isRecording || isProcessing) return false;
 
     try {
+      // Step 1: Ensure mic permission and secure context
+      const ensureMicPermission = async (): Promise<boolean> => {
+        // Secure context check (HTTPS or localhost)
+        const isLocalhost = typeof window !== 'undefined' && /^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname);
+        if (typeof window !== 'undefined' && !window.isSecureContext && !isLocalhost) {
+          console.error('[useChatInputMicrophone] Insecure context - HTTPS required for mic');
+          toast({
+            title: 'Microphone Requires HTTPS',
+            description: 'Open over HTTPS or use localhost to allow microphone access.',
+            variant: 'destructive',
+          });
+          return false;
+        }
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          console.error('[useChatInputMicrophone] mediaDevices.getUserMedia unavailable');
+          toast({
+            title: 'Microphone Unsupported',
+            description: 'getUserMedia is not available in this browser.',
+            variant: 'destructive',
+          });
+          return false;
+        }
+
+        // Best-effort permission introspection
+        if ((navigator as any).permissions?.query) {
+          try {
+            const perm: any = await (navigator as any).permissions.query({ name: 'microphone' as any });
+            console.log('[useChatInputMicrophone] Permission state:', perm?.state);
+            if (perm?.state === 'denied') {
+              toast({
+                title: 'Microphone Blocked',
+                description: 'Enable mic in site settings, then try again.',
+                variant: 'destructive',
+              });
+              return false;
+            }
+          } catch {}
+        }
+
+        // Trigger the permission prompt with a minimal request
+        try {
+          console.log('[useChatInputMicrophone] Probing mic permission via getUserMedia');
+          const tmp = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+          // Immediately stop tracks; we just needed the permission
+          tmp.getTracks().forEach(t => t.stop());
+          return true;
+        } catch (err: any) {
+          console.error('[useChatInputMicrophone] Mic permission probe failed:', err);
+          toast({
+            title: 'Microphone Access Denied',
+            description: 'Please allow microphone access and try again.',
+            variant: 'destructive',
+          });
+          return false;
+        }
+      };
+
+      const permitted = await ensureMicPermission();
+      if (!permitted) return false;
+
       // Initialize pipeline
       pipelineRef.current = new ConversationAudioPipeline({
         onSpeechStart: () => {
@@ -134,8 +195,11 @@ export const useChatInputMicrophone = (options: UseChatInputMicrophoneOptions = 
         }
       });
 
+      console.log('[useChatInputMicrophone] Initializing pipeline...');
       await pipelineRef.current.init();
+      console.log('[useChatInputMicrophone] Pipeline initialized, starting...');
       await pipelineRef.current.start();
+      console.log('[useChatInputMicrophone] Pipeline started successfully');
       
       // Set recording state immediately when pipeline starts
       setIsRecording(true);
