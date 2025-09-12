@@ -439,14 +439,32 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
   );
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden"
-    >
+    <>
+      {/* Mobile backdrop */}
+      {isMobile && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 z-40"
+          onClick={onClose}
+        />
+      )}
+      
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        className={`bg-white border border-gray-200 shadow-lg overflow-hidden ${
+          isMobile 
+            ? 'fixed inset-0 z-50 rounded-none flex flex-col' 
+            : 'rounded-2xl'
+        }`}
+      >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+      <div className={`flex items-center justify-between border-b border-gray-200 ${
+        isMobile ? 'p-4 pt-safe' : 'p-4'
+      }`}>
         <div className="flex items-center gap-3">
           {(currentStep === 'details' || currentStep === 'secondPerson' || currentStep === 'payment') && (
             <button
@@ -490,7 +508,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       </div>
 
       {/* Content */}
-      <div className="p-6">
+      <div className={`${isMobile ? 'flex-1 overflow-y-auto p-4 pb-safe' : 'p-6'}`}>
         <AnimatePresence mode="wait">
           {currentStep === 'type' ? (
             <motion.div
@@ -661,7 +679,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <div className={`flex gap-3 ${isMobile ? 'sticky bottom-0 bg-white pt-4 pb-safe' : 'pt-4'}`}>
                 <Button
                   type="button"
                   variant="outline"
@@ -670,12 +688,12 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                 >
                   Back
                 </Button>
-                                            <Button
-                              type="submit"
-                              className="flex-1 bg-gray-900 hover:bg-gray-800"
-                            >
-                              Next
-                            </Button>
+                <Button
+                  type="submit"
+                  className="flex-1 bg-gray-900 hover:bg-gray-800"
+                >
+                  Next
+                </Button>
               </div>
             </motion.form>
           ) : currentStep === 'secondPerson' ? (
@@ -764,7 +782,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <div className={`flex gap-3 ${isMobile ? 'sticky bottom-0 bg-white pt-4 pb-safe' : 'pt-4'}`}>
                 <Button
                   type="button"
                   variant="outline"
@@ -872,7 +890,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
               </Collapsible>
 
               {/* Action Buttons */}
-              <div className="flex gap-3 pt-4">
+              <div className={`flex gap-3 ${isMobile ? 'sticky bottom-0 bg-white pt-4 pb-safe' : 'pt-4'}`}>
                 <Button
                   type="button"
                   variant="outline"
@@ -908,6 +926,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
         isSecondPerson={isSecondPersonVoice}
         onNextPerson={handleVoiceNextPerson}
       />
-    </motion.div>
+      </motion.div>
+    </>
   );
 };
