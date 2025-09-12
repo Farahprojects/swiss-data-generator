@@ -1,4 +1,5 @@
 import React from 'react';
+import { useSafeBottomPadding } from '@/hooks/useSafeBottomPadding';
 import { ChatBox } from '@/features/chat/ChatBox';
 import { PricingProvider } from '@/contexts/PricingContext';
 import { ReportModalProvider } from '@/contexts/ReportModalContext';
@@ -18,8 +19,8 @@ import { CancelNudgeModal } from '@/components/public-report/CancelNudgeModal';
 const ChatContainerContent: React.FC = () => {
   // Single responsibility: Initialize chat when threadId changes
   useChatInitialization();
-  // Ensure bottom padding accounts for dynamic mobile UI
-  try { require('@/hooks/useSafeBottomPadding'); } catch {}
+  // Ensure bottom padding accounts for dynamic mobile UI (must run as a hook)
+  useSafeBottomPadding();
   
   const { isOpen, guestId, hideCancelModal } = useCancelModal();
 

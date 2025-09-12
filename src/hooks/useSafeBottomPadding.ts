@@ -21,7 +21,14 @@ export function useSafeBottomPadding(): void {
       }
     };
 
+    // Initial pass and a small Samsung baseline buffer
     update();
+    const ua = navigator.userAgent || '';
+    if (/SamsungBrowser/i.test(ua)) {
+      const current = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--vv-bottom')) || 0;
+      const padded = Math.max(current, 50);
+      document.documentElement.style.setProperty('--vv-bottom', `${padded}px`);
+    }
     const vv = (window as any).visualViewport as VisualViewport | undefined;
     if (vv) {
       vv.addEventListener('resize', update);
