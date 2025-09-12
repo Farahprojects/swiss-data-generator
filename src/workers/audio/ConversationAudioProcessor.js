@@ -10,6 +10,10 @@ class ConversationAudioProcessor extends AudioWorkletProcessor {
     this._resampleAccumulator = 0;
     this._buffer = [];
     this._frameSizeTarget = 320; // 20ms at 16kHz - sweet spot for mobile/desktop
+    // DC-blocking high-pass filter state (y[n] = x[n] - x[n-1] + R*y[n-1])
+    this._dcPrevIn = 0;
+    this._dcPrevOut = 0;
+    this._dcR = 0.995;
   }
 
   static get parameterDescriptors() {
@@ -37,10 +41,15 @@ class ConversationAudioProcessor extends AudioWorkletProcessor {
       }
       const monoSample = sum / Math.max(1, channels.length);
 
-      // Naive resampler: pick samples based on accumulator
+      // DC-blocking high-pass filter
+      const y = monoSample - this._dcPrevIn + this._dcR * this._dcPrevOut;
+      this._dcPrevIn = monoSample;
+      this._dcPrevOut = y;
+
+      // Naive resampler: pick samples based on accumulator (post HPF)
       this._resampleAccumulator += 1;
       while (this._resampleAccumulator >= this._resampleRatio) {
-        this._buffer.push(monoSample);
+        this._buffer.push(y);
         this._resampleAccumulator -= this._resampleRatio;
 
         if (this._buffer.length >= this._frameSizeTarget) {

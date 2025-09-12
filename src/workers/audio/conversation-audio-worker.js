@@ -1,5 +1,10 @@
 // WebWorker: maintains a rolling buffer and simple VAD; emits speech segments.
 
+// UA detection for Android Chrome tuning
+const IS_ANDROID_CHROME = (typeof self !== 'undefined' && typeof navigator !== 'undefined')
+  ? (/Android/i.test(navigator.userAgent) && /Chrome\/\d+/i.test(navigator.userAgent) && /Mobile/i.test(navigator.userAgent))
+  : false;
+
 // Config
 const ROLLING_SECONDS = 12; // keep last 12s
 const SAMPLE_RATE = 16000;
@@ -9,13 +14,13 @@ const MAX_SAMPLES = ROLLING_SECONDS * SAMPLE_RATE;
 const FRAME_MS = 20; // matches worklet frame - sweet spot for mobile/desktop
 const FRAME_SAMPLES = (SAMPLE_RATE * FRAME_MS) / 1000; // 320
 // Adaptive VAD threshold - starts with sane default, adapts to environment
-const BASE_ENERGY_THRESHOLD = 0.002; // 0.002 RMS - more sensitive for speech start
-const MIN_THRESHOLD = 0.0005; // Minimum threshold for very quiet environments
+const BASE_ENERGY_THRESHOLD = IS_ANDROID_CHROME ? 0.0015 : 0.002; // more sensitive on Android
+const MIN_THRESHOLD = 0.0004; // Minimum threshold for very quiet environments
 const MAX_THRESHOLD = 0.05; // Maximum threshold for noisy environments
 const ADAPTATION_FACTOR = 0.1; // How quickly to adapt (0.1 = slow adaptation)
 
-const SPEECH_START_FRAMES = 2; // 40ms (2 * 20ms) - more responsive to speech start
-const SPEECH_END_FRAMES = 25; // 500ms (25 * 20ms) - faster processing
+const SPEECH_START_FRAMES = IS_ANDROID_CHROME ? 2 : 2; // keep 40ms start
+const SPEECH_END_FRAMES = IS_ANDROID_CHROME ? 18 : 25; // end sooner on Android (360ms)
 
 let ringBuffer = new Float32Array(MAX_SAMPLES);
 let writeIndex = 0;
@@ -126,8 +131,9 @@ self.onmessage = (event) => {
         speechActive = false;
         aboveCount = 0;
         belowCount = 0;
-        // Emit last N seconds as a segment (e.g., 6 seconds)
-        const segment = extractRollingWindow(6);
+        // Emit last N seconds as a segment (shorter on Android)
+        const segmentSeconds = IS_ANDROID_CHROME ? 4 : 6;
+        const segment = extractRollingWindow(segmentSeconds);
         self.postMessage({ type: 'segment', buffer: segment.buffer }, [segment.buffer]);
       }
     }
