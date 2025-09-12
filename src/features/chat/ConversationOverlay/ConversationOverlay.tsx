@@ -24,7 +24,7 @@ export const ConversationOverlay: React.FC = () => {
   const [state, setState] = useState<ConversationState>('connecting');
   
   // Audio context management
-  const { audioContext, isAudioUnlocked, initializeAudioContext, resumeAudioContext } = useAudioStore();
+  const { audioContext, isAudioUnlocked, initializeAudioContext, resumeAudioContext, unlockOutput } = useAudioStore();
   
   // Realtime level driven by worker (not React polling) - use ref for smooth animation
   const audioLevelRef = useRef<number>(0);
@@ -100,7 +100,9 @@ export const ConversationOverlay: React.FC = () => {
       // Resume AudioContext
       const success = await resumeAudioContext();
       if (success) {
-        console.log('[ConversationOverlay] ✅ AudioContext unlocked successfully!');
+        // Play short silent buffer to unlock output on iOS/Safari
+        await unlockOutput();
+        console.log('[ConversationOverlay] ✅ Audio output unlocked');
       } else {
         console.error('[ConversationOverlay] ❌ Failed to unlock AudioContext');
       }
@@ -244,6 +246,7 @@ export const ConversationOverlay: React.FC = () => {
       // 3. AUDIOCONTEXT UNLOCK - Ensure unlock happens within this user gesture
       const ctx = audioContext || initializeAudioContext();
       await resumeAudioContext();
+      await unlockOutput();
       
       // 3. STEP 1: Audio Warmup with validation
       const { ttsPlaybackService } = await import('@/services/voice/TTSPlaybackService');
