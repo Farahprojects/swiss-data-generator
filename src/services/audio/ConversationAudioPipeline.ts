@@ -42,7 +42,8 @@ export class ConversationAudioPipeline {
           const pcm = new Float32Array(evt.data.buffer);
           this.events.onSpeechSegment?.(pcm);
         } else if (type === 'level') {
-          this.events.onLevel?.(evt.data.value ?? 0);
+          // UI level is driven by analyser (post-AGC) for smooth, consistent animation.
+          // Ignore worker-provided level to avoid double updates.
         }
       };
       // Mobile visibility handling: ensure context resumes on return + background throttling
@@ -265,6 +266,10 @@ export class ConversationAudioPipeline {
         gainNode.gain.cancelScheduledValues(now);
         gainNode.gain.setTargetAtTime(desired, now, tc);
         this.currentAgcGain = desired;
+
+        // Emit UI level based on post-AGC RMS (match previous visual scale)
+        const uiLevel = Math.min(1, rms * 4);
+        this.events.onLevel?.(uiLevel);
       } catch {}
     }, 50); // 20 Hz updates
   }
