@@ -10,35 +10,32 @@ class ConversationAudioProcessor extends AudioWorkletProcessor {
     this._resampleAccumulator = 0;
     this._buffer = [];
     this._frameSizeTarget = 320; // 20ms at 16kHz - sweet spot for mobile/desktop
+    // Pre-emphasis state
+    this._prePrevIn = 0;
+    this._preA = 0.97;
     // DC-blocking high-pass filter state (y[n] = x[n] - x[n-1] + R*y[n-1])
     this._dcPrevIn = 0;
     this._dcPrevOut = 0;
     this._dcR = 0.995;
-    // One-pole low-pass (~7 kHz at 48 kHz) to reduce aliasing before downsample
+    // One-pole low-pass (~7 kHz at 48 kHz)
     const lpfCut = 7000; // Hz
     const twoPi = 2 * Math.PI;
     this._lpfAlpha = (twoPi * lpfCut) / (twoPi * lpfCut + this.inputSampleRate);
     this._lpfPrevOut = 0;
   }
 
-  static get parameterDescriptors() {
-    return [];
-  }
+  static get parameterDescriptors() { return []; }
 
   process(inputs) {
     const input = inputs[0];
-    if (!input || input.length === 0) {
-      return true;
-    }
+    if (!input || input.length === 0) return true;
 
-    // input is an array of channels: [Float32Array, Float32Array, ...]
     const channels = input;
     const firstChannel = channels[0];
     if (!firstChannel) return true;
     const numFrames = firstChannel.length;
 
     for (let i = 0; i < numFrames; i++) {
-      // Average available channels to mono (handles 1..N channels)
       let sum = 0;
       for (let c = 0; c < channels.length; c++) {
         const ch = channels[c];
@@ -46,21 +43,24 @@ class ConversationAudioProcessor extends AudioWorkletProcessor {
       }
       const monoSample = sum / Math.max(1, channels.length);
 
-      // DC-blocking high-pass filter
-      const yHP = monoSample - this._dcPrevIn + this._dcR * this._dcPrevOut;
-      this._dcPrevIn = monoSample;
+      // Pre-emphasis to boost high frequencies important for ASR
+      const yPre = monoSample - this._preA * this._prePrevIn;
+      this._prePrevIn = monoSample;
+
+      // DC-blocking high-pass
+      const yHP = yPre - this._dcPrevIn + this._dcR * this._dcPrevOut;
+      this._dcPrevIn = yPre;
       this._dcPrevOut = yHP;
 
-      // One-pole low-pass filter before decimation
+      // One-pole low-pass before decimation
       const yLP = this._lpfPrevOut + this._lpfAlpha * (yHP - this._lpfPrevOut);
       this._lpfPrevOut = yLP;
 
-      // Resampler (decimation after LPF)
+      // Downsample
       this._resampleAccumulator += 1;
       while (this._resampleAccumulator >= this._resampleRatio) {
         this._buffer.push(yLP);
         this._resampleAccumulator -= this._resampleRatio;
-
         if (this._buffer.length >= this._frameSizeTarget) {
           const frame = new Float32Array(this._buffer);
           this.port.postMessage({ type: 'audio', buffer: frame.buffer }, [frame.buffer]);

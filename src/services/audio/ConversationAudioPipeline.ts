@@ -22,6 +22,9 @@ export class ConversationAudioPipeline {
   private analyserNode: AnalyserNode | null = null;
   private agcMonitorTimer: number | null = null;
   private currentAgcGain: number = 1.0;
+  private targetRms: number = 0.18;
+  private minAgcGain: number = 0.5;
+  private maxAgcGain: number = 8.0;
 
   // Android Chrome detection for mobile-specific tuning
   private isAndroidChrome(): boolean {
@@ -35,6 +38,9 @@ export class ConversationAudioPipeline {
     // Slightly higher initial gain on Android Chrome for better pickup
     if (this.isAndroidChrome()) {
       this.currentAgcGain = 1.6; // ~+4 dB start; AGC monitor will adapt
+      this.targetRms = 0.24; // louder target
+      this.minAgcGain = 0.8;
+      this.maxAgcGain = 12.0;
     }
   }
 
@@ -102,11 +108,16 @@ export class ConversationAudioPipeline {
         ? ({
             ...baseAudio,
             autoGainControl: true,
+            echoCancellation: 'system' as any,
             // Hints recognized by Chromium; safe to include as optional
             // @ts-ignore
             googAutoGainControl: true,
             // @ts-ignore
-            googNoiseSuppression: true
+            googNoiseSuppression: true,
+            // @ts-ignore
+            googEchoCancellation: true,
+            // @ts-ignore
+            googHighpassFilter: true
           } as any)
         : baseAudio;
 
@@ -121,13 +132,20 @@ export class ConversationAudioPipeline {
       this.agcGainNode = this.audioContext.createGain();
       this.agcGainNode.gain.value = this.currentAgcGain;
 
-      // Softer compressor to preserve transients and intelligibility
+      // Compressor node
       this.limiterNode = this.audioContext.createDynamicsCompressor();
-      this.limiterNode.threshold.setValueAtTime(-6, this.audioContext.currentTime); // dB
-      this.limiterNode.knee.setValueAtTime(3, this.audioContext.currentTime);
-      this.limiterNode.ratio.setValueAtTime(4, this.audioContext.currentTime);
-      this.limiterNode.attack.setValueAtTime(0.005, this.audioContext.currentTime);
-      this.limiterNode.release.setValueAtTime(0.12, this.audioContext.currentTime);
+      if (this.isAndroidChrome()) {
+        // Disable compressor entirely on Android Chrome: route agc -> worklet directly
+        this.limiterNode.threshold.setValueAtTime(0, this.audioContext.currentTime);
+        this.limiterNode.ratio.setValueAtTime(1, this.audioContext.currentTime);
+      } else {
+        // Softer dynamics for non-Android
+        this.limiterNode.threshold.setValueAtTime(-6, this.audioContext.currentTime); // dB
+        this.limiterNode.knee.setValueAtTime(3, this.audioContext.currentTime);
+        this.limiterNode.ratio.setValueAtTime(4, this.audioContext.currentTime);
+        this.limiterNode.attack.setValueAtTime(0.005, this.audioContext.currentTime);
+        this.limiterNode.release.setValueAtTime(0.12, this.audioContext.currentTime);
+      }
 
       // Analyser for RMS metering (monitor post-gain, pre-limiter)
       this.analyserNode = this.audioContext.createAnalyser();
@@ -137,8 +155,13 @@ export class ConversationAudioPipeline {
 
       source.connect(this.agcGainNode);
       this.agcGainNode.connect(this.analyserNode);
-      this.agcGainNode.connect(this.limiterNode);
-      this.limiterNode.connect(this.workletNode);
+      if (this.isAndroidChrome()) {
+        // Bypass compressor on Android Chrome
+        this.agcGainNode.connect(this.workletNode);
+      } else {
+        this.agcGainNode.connect(this.limiterNode);
+        this.limiterNode.connect(this.workletNode);
+      }
 
       // Prevent feedback: route to a zero-gain node instead of speakers
       const sinkMuteGain = this.audioContext.createGain();
@@ -260,9 +283,9 @@ export class ConversationAudioPipeline {
     const buffer = new Float32Array(analyser.fftSize);
 
     // Target loudness and bounds
-    const targetRms = 0.18; // ~ -15 dBFS
-    const minGain = 0.5;    // -6 dB min
-    const maxGain = 8.0;    // +18 dB max
+    const targetRms = this.targetRms;
+    const minGain = this.minAgcGain;
+    const maxGain = this.maxAgcGain;
 
     // Time constants (seconds)
     const attackTc = 0.05;  // speed up when too quiet
