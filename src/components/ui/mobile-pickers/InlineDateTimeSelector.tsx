@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Calendar, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import InlineDateWheel from './InlineDateWheel';
 import InlineTimeWheel from './InlineTimeWheel';
 
@@ -30,13 +31,74 @@ const InlineDateTimeSelector = ({
   onOpen
 }: InlineDateTimeSelectorProps) => {
   const [localValue, setLocalValue] = useState(value);
+  const [inputMode, setInputMode] = useState<'text' | 'picker'>('text');
+  const [isAm, setIsAm] = useState(true);
 
   useEffect(() => {
     setLocalValue(value);
-  }, [value]);
+    // Parse AM/PM from existing time value
+    if (type === 'time' && value) {
+      const [hours] = value.split(':');
+      const hour24 = parseInt(hours, 10);
+      setIsAm(hour24 < 12);
+    }
+  }, [value, type]);
 
   const handleLocalChange = (newValue: string) => {
     setLocalValue(newValue);
+  };
+
+  const handleTextInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let inputValue = e.target.value;
+    
+    // Format date input (MM/DD/YYYY)
+    if (type === 'date') {
+      // Remove non-numeric characters except slashes
+      inputValue = inputValue.replace(/[^\d/]/g, '');
+      
+      // Auto-format with slashes
+      if (inputValue.length >= 2 && !inputValue.includes('/')) {
+        inputValue = inputValue.slice(0, 2) + '/' + inputValue.slice(2);
+      }
+      if (inputValue.length >= 5 && inputValue.split('/').length === 2) {
+        inputValue = inputValue.slice(0, 5) + '/' + inputValue.slice(5, 9);
+      }
+    }
+    
+    // Format time input (HH:MM)
+    if (type === 'time') {
+      // Remove non-numeric characters except colons
+      inputValue = inputValue.replace(/[^\d:]/g, '');
+      
+      // Auto-format with colon
+      if (inputValue.length >= 2 && !inputValue.includes(':')) {
+        inputValue = inputValue.slice(0, 2) + ':' + inputValue.slice(2, 4);
+      }
+    }
+    
+    setLocalValue(inputValue);
+    onChange(inputValue);
+  };
+
+  const handleAmPmToggle = () => {
+    if (type === 'time' && localValue) {
+      const [hours, minutes] = localValue.split(':');
+      const hour24 = parseInt(hours, 10);
+      let newHour24;
+      
+      if (isAm && hour24 >= 12) {
+        newHour24 = hour24 - 12;
+      } else if (!isAm && hour24 < 12) {
+        newHour24 = hour24 + 12;
+      } else {
+        newHour24 = hour24;
+      }
+      
+      const newValue = `${newHour24.toString().padStart(2, '0')}:${minutes}`;
+      setLocalValue(newValue);
+      onChange(newValue);
+    }
+    setIsAm(!isAm);
   };
 
   const handleConfirm = (e: React.MouseEvent) => {
@@ -53,6 +115,10 @@ const InlineDateTimeSelector = ({
     if (onOpen) {
       onOpen();
     }
+  };
+
+  const toggleInputMode = () => {
+    setInputMode(inputMode === 'text' ? 'picker' : 'text');
   };
 
   const formatDisplayValue = (val: string) => {
@@ -74,23 +140,80 @@ const InlineDateTimeSelector = ({
     }
   };
 
+  const getInputPlaceholder = () => {
+    if (type === 'date') return 'MM/DD/YYYY';
+    return 'HH:MM';
+  };
+
   const Icon = type === 'date' ? Calendar : Clock;
 
   return (
     <div className="relative">
-      <Button
-        type="button"
-        variant="outline"
-        onClick={handleTriggerClick}
-        className={`flex w-full items-center gap-2 px-3 h-12 justify-start font-normal ${
-          hasError ? 'border-red-500 bg-red-50' : 'hover:bg-gray-50'
-        } ${isOpen ? 'border-blue-500 ring-1 ring-blue-500' : ''}`}
-      >
-        <Icon className="h-4 w-4 shrink-0 text-gray-500" />
-        <span className="text-left text-sm text-gray-900">
-          {formatDisplayValue(localValue)}
-        </span>
-      </Button>
+      {inputMode === 'text' ? (
+        <div className="flex items-center gap-2">
+          <div className="flex-1 relative">
+            <Input
+              type={type === 'date' ? 'text' : 'text'}
+              value={localValue}
+              onChange={handleTextInputChange}
+              placeholder={getInputPlaceholder()}
+              className={`h-12 text-base font-light ${
+                hasError ? 'border-red-500 bg-red-50' : 'border-gray-200 focus:border-gray-400'
+              }`}
+            />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <Icon className="h-4 w-4 text-gray-400" />
+            </div>
+          </div>
+          
+          {type === 'time' && localValue && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleAmPmToggle}
+              className="h-12 px-3 text-sm font-medium border-gray-200 hover:bg-gray-50"
+            >
+              {isAm ? 'AM' : 'PM'}
+            </Button>
+          )}
+          
+          <Button
+            type="button"
+            variant="outline"
+            onClick={toggleInputMode}
+            className="h-12 px-3 border-gray-200 hover:bg-gray-50"
+            title="Switch to picker"
+          >
+            <ChevronDown className="h-4 w-4" />
+          </Button>
+        </div>
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleTriggerClick}
+          className={`flex w-full items-center gap-2 px-3 h-12 justify-start font-normal ${
+            hasError ? 'border-red-500 bg-red-50' : 'hover:bg-gray-50'
+          } ${isOpen ? 'border-blue-500 ring-1 ring-blue-500' : ''}`}
+        >
+          <Icon className="h-4 w-4 shrink-0 text-gray-500" />
+          <span className="text-left text-sm text-gray-900 flex-1">
+            {formatDisplayValue(localValue)}
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleInputMode();
+            }}
+            className="h-8 w-8 p-0 hover:bg-gray-100"
+            title="Switch to text input"
+          >
+            <ChevronUp className="h-4 w-4" />
+          </Button>
+        </Button>
+      )}
 
       <AnimatePresence>
         {isOpen && (
