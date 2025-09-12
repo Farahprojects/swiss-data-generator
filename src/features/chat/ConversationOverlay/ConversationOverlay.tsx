@@ -204,6 +204,8 @@ export const ConversationOverlay: React.FC = () => {
     
     try {
       setState('replying'); // 7. Change UI to "speaking"
+      // Hint AEC: suppress mic segments for ~400ms while far-end starts
+      try { pipelineRef.current?.aecWarmup(400); } catch {}
       
       // 7. Unpause media source for TTS
       await ttsPlaybackService.play(audioBytes, () => {

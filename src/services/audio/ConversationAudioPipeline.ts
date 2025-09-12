@@ -153,6 +153,10 @@ export class ConversationAudioPipeline {
         const { type, buffer } = event.data || {};
         if (type === 'audio' && buffer && this.worker) {
           this.worker.postMessage({ type: 'audio', buffer }, [buffer]);
+        } else if (type === 'calibration_done') {
+          try { window.dispatchEvent(new CustomEvent('telemetry', { detail: { key: 'calibration.done', t: performance.now(), baseline: event.data?.baseline } })); } catch {}
+        } else if (type === 'recalibrate_needed') {
+          try { window.dispatchEvent(new CustomEvent('telemetry', { detail: { key: 'recalibrate.requested', t: performance.now() } })); } catch {}
         }
       };
 
@@ -181,6 +185,10 @@ export class ConversationAudioPipeline {
         const { type, buffer } = event.data || {};
         if (type === 'audio' && buffer && this.worker) {
           this.worker.postMessage({ type: 'audio', buffer }, [buffer]);
+        } else if (type === 'calibration_done') {
+          try { window.dispatchEvent(new CustomEvent('telemetry', { detail: { key: 'calibration.done', t: performance.now(), baseline: event.data?.baseline } })); } catch {}
+        } else if (type === 'recalibrate_needed') {
+          try { window.dispatchEvent(new CustomEvent('telemetry', { detail: { key: 'recalibrate.requested', t: performance.now() } })); } catch {}
         }
       };
     }
@@ -353,6 +361,11 @@ export class ConversationAudioPipeline {
         source.connect(this.agcGainNode);
       }
     } catch {}
+  }
+
+  // AEC warmup hint for far-end playback start or device change
+  public aecWarmup(ms: number = 400): void {
+    try { this.worker?.postMessage({ type: 'aec_warmup', ms }); } catch {}
   }
 }
 

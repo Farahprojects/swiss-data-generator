@@ -37,6 +37,24 @@ let currentThreshold = BASE_ENERGY_THRESHOLD;
 let noiseFloorEstimate = BASE_ENERGY_THRESHOLD;
 let adaptationFrames = 0;
 
+// Calibration/locking state
+const CALIBRATION_FRAMES = 75; // ~1500ms at 20ms/frame
+let isCalibrating = false;
+let calibrationFrames = 0;
+let calibrationEnergySum = 0;
+let calibrated = false;
+const THRESH_MULTIPLIER = 2.5; // noise -> threshold multiplier
+
+// Drift detection
+let driftAvgEnergy = 0;
+const DRIFT_ALPHA = 0.02; // EWMA for drift monitoring
+const DRIFT_FACTOR = 2.0; // trigger recalibration if noise floor ~2x
+let driftCounter = 0;
+const DRIFT_FRAMES = 50; // sustained frames to confirm drift
+
+// AEC warmup suppression: block segment emission for N frames
+let suppressUntilFrame = 0;
+
 // Background throttling state
 let isThrottled = false;
 let throttleCounter = 0;
@@ -122,11 +140,56 @@ self.onmessage = (event) => {
       try { self.postMessage({ type: 'first_frame_written' }); } catch {}
     }
 
-    // VAD step with adaptive threshold
+    // VAD step with adaptive threshold / locked threshold
     const frame = new Float32Array(event.data.buffer);
     const energy = computeEnergy(frame);
     const isSpeech = energy > currentThreshold;
-    adaptThreshold(energy, isSpeech); // Update threshold based on current speech state
+    if (!calibrated) {
+      // During uncalibrated phase, adapt only on non-speech
+      adaptThreshold(energy, isSpeech);
+    }
+
+    // Calibration window (non-speech frames only)
+    if (isCalibrating && !isSpeech) {
+      calibrationEnergySum += energy;
+      calibrationFrames++;
+      if (calibrationFrames >= CALIBRATION_FRAMES) {
+        const avgEnergy = calibrationEnergySum / Math.max(1, calibrationFrames);
+        const noiseRms = Math.sqrt(Math.max(avgEnergy, 1e-9));
+        // Lock threshold based on calibrated noise
+        currentThreshold = Math.max(MIN_THRESHOLD, Math.min(MAX_THRESHOLD, noiseRms * THRESH_MULTIPLIER));
+        calibrated = true;
+        isCalibrating = false;
+        calibrationFrames = 0;
+        calibrationEnergySum = 0;
+        // Seed drift monitor
+        driftAvgEnergy = avgEnergy;
+        try { self.postMessage({ type: 'calibration_done', baseline: { noiseRms } }); } catch {}
+      }
+    }
+
+    // Drift monitoring when not in speech and calibrated
+    if (calibrated && !isCalibrating && !isSpeech) {
+      driftAvgEnergy = (1 - DRIFT_ALPHA) * driftAvgEnergy + DRIFT_ALPHA * energy;
+      // Compare RMS (sqrt of energy) ratios to detect environmental drift
+      const driftRms = Math.sqrt(Math.max(driftAvgEnergy, 1e-9));
+      const lockedRms = Math.max(currentThreshold / THRESH_MULTIPLIER, 1e-9);
+      const ratio = driftRms / lockedRms;
+      if (ratio > DRIFT_FACTOR || ratio < 1 / DRIFT_FACTOR) {
+        driftCounter++;
+        if (driftCounter >= DRIFT_FRAMES) {
+          // Trigger recalibration sequence
+          isCalibrating = true;
+          calibrated = false;
+          calibrationFrames = 0;
+          calibrationEnergySum = 0;
+          driftCounter = 0;
+          try { self.postMessage({ type: 'recalibrate_needed' }); } catch {}
+        }
+      } else if (driftCounter > 0) {
+        driftCounter = 0;
+      }
+    }
     
 
     // Emit audio level for UI (RMS approx, clamp 0..1)
@@ -147,8 +210,10 @@ self.onmessage = (event) => {
         aboveCount = 0;
         belowCount = 0;
         // Emit last N seconds as a segment (e.g., 6 seconds)
-        const segment = extractRollingWindow(6);
-        self.postMessage({ type: 'segment', buffer: segment.buffer }, [segment.buffer]);
+        if (frameCount >= suppressUntilFrame) {
+          const segment = extractRollingWindow(6);
+          self.postMessage({ type: 'segment', buffer: segment.buffer }, [segment.buffer]);
+        }
       }
     }
   } else if (type === 'reset') {
@@ -169,12 +234,35 @@ self.onmessage = (event) => {
     barrierOpen = false;
     barrierOpenAtMs = 0;
     reportedFirstFrame = false;
+    // Reset calibration/drift
+    isCalibrating = false;
+    calibrated = false;
+    calibrationFrames = 0;
+    calibrationEnergySum = 0;
+    driftAvgEnergy = 0;
+    driftCounter = 0;
+    suppressUntilFrame = 0;
   } else if (type === 'throttle') {
     isThrottled = event.data.enabled;
     throttleCounter = 0;
   } else if (type === 'barrier_open') {
     barrierOpen = true;
     barrierOpenAtMs = frameCount * FRAME_MS;
+    // Start calibration on barrier open
+    isCalibrating = true;
+    calibrated = false;
+    calibrationFrames = 0;
+    calibrationEnergySum = 0;
+  } else if (type === 'recalibrate') {
+    // External request to recalibrate
+    isCalibrating = true;
+    calibrated = false;
+    calibrationFrames = 0;
+    calibrationEnergySum = 0;
+  } else if (type === 'aec_warmup') {
+    const ms = Math.max(0, Number(event.data?.ms || 0));
+    const addFrames = Math.ceil(ms / FRAME_MS);
+    suppressUntilFrame = Math.max(suppressUntilFrame, frameCount + addFrames);
   }
 };
 
