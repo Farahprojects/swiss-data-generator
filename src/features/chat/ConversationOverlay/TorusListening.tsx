@@ -106,7 +106,7 @@ export default function TorusListening({
     };
   }, [active]);
 
-  const energy = Math.min(1, level * 10);
+  const energy = Math.min(1, level * 3);
   const t = time / 4000;
   const rotation = isThinking ? (time / 50) % 360 : 0;
   const scale = size / torusData.image_width;
@@ -146,7 +146,7 @@ export default function TorusListening({
               const dynamicDotCount = (dots.length - baseDotCount) * energy;
               const visibleDots = baseDotCount + dynamicDotCount;
               opacity = idx < visibleDots ? 0.9 : 0.3; // Show inactive dots in light grey
-              dotScale = idx < visibleDots ? 1 + energy * 0.2 : 1;
+              dotScale = idx < visibleDots ? 1 + energy * 0.1 : 1;
             }
             
             // Determine dot color based on whether it's active or inactive

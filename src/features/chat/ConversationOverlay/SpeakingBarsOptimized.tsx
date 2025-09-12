@@ -36,8 +36,8 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive }) => {
       const dt = Math.min(0.05, (ts - prev) / 1000); // clamp dt for stability
       lastTsRef.current = ts;
 
-      const wobbleFreq = 4.2; // Hz-like feel (scaled by time below)
-      const wobbleAmp = 0.08; // small wobble around target
+      const wobbleFreq = 3.0; // Hz-like feel (scaled by time below)
+      const wobbleAmp = 0.04; // small wobble around target
       const ease = 12; // responsiveness for exponential smoothing
       const t = ts * 0.001;
 
@@ -47,7 +47,7 @@ export const SpeakingBarsOptimized: React.FC<Props> = ({ isActive }) => {
       for (let i = 0; i < 4; i++) {
         // Base target with subtle per-bar phase wobble
         const wobble = 1 + wobbleAmp * Math.sin(t * wobbleFreq + phaseRef.current[i]);
-        const targetWithWobble = Math.min(1, Math.max(0.15, target[i] * wobble));
+        const targetWithWobble = Math.min(1, Math.max(0.2, target[i] * wobble * 0.7));
 
         // Exponential smoothing toward target (spring-like without heavy physics)
         const alpha = 1 - Math.exp(-ease * dt);

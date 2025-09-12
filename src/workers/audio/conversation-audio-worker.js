@@ -110,7 +110,7 @@ self.onmessage = (event) => {
     
 
     // Emit audio level for UI (RMS approx, clamp 0..1)
-    const level = Math.min(1, Math.sqrt(energy) * 4);
+      const level = Math.min(1, Math.sqrt(energy) * 2);
     try { self.postMessage({ type: 'level', value: level }); } catch {}
 
     if (isSpeech) {
