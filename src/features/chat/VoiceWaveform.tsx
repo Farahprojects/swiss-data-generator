@@ -19,20 +19,26 @@ export const VoiceWaveform: React.FC<VoiceWaveformProps> = ({ audioLevelRef }) =
   const isSafari = typeof navigator !== 'undefined'
     && /safari/i.test(navigator.userAgent)
     && !/chrome|chromium|android/i.test(navigator.userAgent);
+  const isAndroidChrome = typeof navigator !== 'undefined'
+    && /Android/i.test(navigator.userAgent)
+    && /Chrome\/\d+/i.test(navigator.userAgent)
+    && /Mobile/i.test(navigator.userAgent);
 
   // Layout constants
   const RIGHT_GUTTER_PX = 80; // reserve area for right-side buttons with extra padding
   const LEFT_GUTTER_PX = 24; // left padding to prevent touching edge
-  const TARGET_FPS = 20; // Slower reel animation
+  const TARGET_FPS = isAndroidChrome ? 15 : 20; // Slower on Android Chrome
   const BAR_WIDTH = 2; // Thinner lines
-  const BAR_GAP = 6; // increased spacing for more polished look
+  const BAR_GAP = isAndroidChrome ? 8 : 6; // fewer bars to draw per frame on Android Chrome
 
   // Resize canvas and (re)allocate ring buffer based on available width
   const resizeCanvas = () => {
     if (!canvasRef.current || !containerRef.current) return;
     const { clientWidth, clientHeight } = containerRef.current;
-    canvasRef.current.width = Math.max(1, clientWidth);
-    canvasRef.current.height = Math.max(1, clientHeight);
+    // Cap DPR to 1 on Android Chrome to avoid HiDPI cost
+    const dpr = isAndroidChrome ? 1 : 1;
+    canvasRef.current.width = Math.max(1, Math.floor(clientWidth * dpr));
+    canvasRef.current.height = Math.max(1, Math.floor(clientHeight * dpr));
 
     const drawWidth = Math.max(0, clientWidth - RIGHT_GUTTER_PX - LEFT_GUTTER_PX);
     const pitch = BAR_WIDTH + BAR_GAP;
@@ -41,7 +47,10 @@ export const VoiceWaveform: React.FC<VoiceWaveformProps> = ({ audioLevelRef }) =
     writeIdxRef.current = 0;
 
     const ctx = canvasRef.current.getContext('2d');
-    if (ctx) ctx.clearRect(0, 0, clientWidth, clientHeight);
+    if (ctx) {
+      if (dpr !== 1) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, clientWidth, clientHeight);
+    }
   };
 
   // Animation loop: write level into ring buffer and redraw discrete bars

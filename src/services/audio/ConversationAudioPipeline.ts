@@ -23,8 +23,19 @@ export class ConversationAudioPipeline {
   private agcMonitorTimer: number | null = null;
   private currentAgcGain: number = 1.0;
 
+  // Android Chrome detection for mobile-specific tuning
+  private isAndroidChrome(): boolean {
+    if (typeof navigator === 'undefined') return false;
+    const ua = navigator.userAgent || '';
+    return /Android/i.test(ua) && /Chrome\/\d+/i.test(ua) && /Mobile/i.test(ua);
+  }
+
   constructor(events: ConversationAudioEvents = {}) {
     this.events = events;
+    // Slightly higher initial gain on Android Chrome for better pickup
+    if (this.isAndroidChrome()) {
+      this.currentAgcGain = 1.6; // ~+4 dB start; AGC monitor will adapt
+    }
   }
 
   public async init(): Promise<void> {
@@ -78,15 +89,29 @@ export class ConversationAudioPipeline {
     if (this.started) return;
 
     try {
+      // Base constraints
+      const baseAudio: MediaTrackConstraints = {
+        channelCount: 1,
+        noiseSuppression: true,
+        echoCancellation: true,
+        autoGainControl: false,
+        sampleRate: 48000
+      };
+      // Android Chrome: rely on browser AGC + NS, reduces missed speech on mobile mics
+      const audioConstraints: MediaTrackConstraints = this.isAndroidChrome()
+        ? ({
+            ...baseAudio,
+            autoGainControl: true,
+            // Hints recognized by Chromium; safe to include as optional
+            // @ts-ignore
+            googAutoGainControl: true,
+            // @ts-ignore
+            googNoiseSuppression: true
+          } as any)
+        : baseAudio;
+
       this.mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: 1,
-          // Capture with clean front-end processing; AGC handled in-app
-          noiseSuppression: true,
-          echoCancellation: true,
-          autoGainControl: false,
-          sampleRate: 48000
-        },
+        audio: audioConstraints,
         video: false
       });
       const source = this.audioContext.createMediaStreamSource(this.mediaStream);
@@ -107,7 +132,8 @@ export class ConversationAudioPipeline {
       // Analyser for RMS metering (monitor post-gain, pre-limiter)
       this.analyserNode = this.audioContext.createAnalyser();
       this.analyserNode.fftSize = 1024;
-      this.analyserNode.smoothingTimeConstant = 0.8;
+      // Slightly more smoothing on Android Chrome to stabilize mobile level flicker
+      this.analyserNode.smoothingTimeConstant = this.isAndroidChrome() ? 0.85 : 0.8;
 
       source.connect(this.agcGainNode);
       this.agcGainNode.connect(this.analyserNode);
