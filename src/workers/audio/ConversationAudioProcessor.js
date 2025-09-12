@@ -10,7 +10,6 @@ class ConversationAudioProcessor extends AudioWorkletProcessor {
     this._resampleAccumulator = 0;
     this._buffer = [];
     this._frameSizeTarget = 320; // 20ms at 16kHz - sweet spot for mobile/desktop
-    this._ts = 0; // monotonically increasing frame timestamp (ms @ 50fps)
   }
 
   static get parameterDescriptors() {
@@ -46,9 +45,7 @@ class ConversationAudioProcessor extends AudioWorkletProcessor {
 
         if (this._buffer.length >= this._frameSizeTarget) {
           const frame = new Float32Array(this._buffer);
-          // Attach lightweight timestamp to support stale-frame dropping in worker
-          this._ts += 20; // ~20ms per frame
-          this.port.postMessage({ type: 'audio', buffer: frame.buffer, ts: this._ts }, [frame.buffer]);
+          this.port.postMessage({ type: 'audio', buffer: frame.buffer }, [frame.buffer]);
           this._buffer.length = 0;
         }
       }

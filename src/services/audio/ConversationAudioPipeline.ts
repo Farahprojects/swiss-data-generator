@@ -22,12 +22,6 @@ export class ConversationAudioPipeline {
   private analyserNode: AnalyserNode | null = null;
   private agcMonitorTimer: number | null = null;
   private currentAgcGain: number = 1.0;
-  private startupWatchdogTimer: number | null = null;
-  private _removeVisibility?: () => void;
-  private _removeDeviceChange?: () => void;
-  private rawAnalyserNode: AnalyserNode | null = null;
-  private rawLevelTimer: number | null = null;
-  private driftMonitorTimer: number | null = null;
 
   constructor(events: ConversationAudioEvents = {}) {
     this.events = events;
@@ -37,9 +31,7 @@ export class ConversationAudioPipeline {
     if (this.audioContext) return;
     try {
       this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 48000, latencyHint: 'interactive' as any });
-      try { performance.mark('worklet.addModule.start'); } catch {}
       await this.audioContext.audioWorklet.addModule(new URL('../../workers/audio/ConversationAudioProcessor.js', import.meta.url));
-      try { performance.mark('worklet.addModule.end'); } catch {}
       this.worker = new Worker(new URL('../../workers/audio/conversation-audio-worker.js', import.meta.url));
 
       this.worker.onmessage = (evt: MessageEvent) => {
@@ -50,8 +42,7 @@ export class ConversationAudioPipeline {
           const pcm = new Float32Array(evt.data.buffer);
           this.events.onSpeechSegment?.(pcm);
         } else if (type === 'level') {
-          // UI level is driven by analyser (post-AGC) for smooth, consistent animation.
-          // Ignore worker-provided level to avoid double updates.
+          this.events.onLevel?.(evt.data.value ?? 0);
         }
       };
       // Mobile visibility handling: ensure context resumes on return + background throttling
@@ -65,11 +56,6 @@ export class ConversationAudioPipeline {
           }
           this.isBackground = false;
           this.stopBackgroundThrottling();
-          // Freshen VAD/ring upon foreground to avoid stale segments
-          try {
-            this.worker?.postMessage({ type: 'reset' });
-            this.worker?.postMessage({ type: 'barrier_open' });
-          } catch {}
         } else {
           // App went to background - start throttling
           this.isBackground = true;
@@ -77,24 +63,8 @@ export class ConversationAudioPipeline {
         }
       };
       document.addEventListener('visibilitychange', handleVisibility);
-      this._removeVisibility = () => document.removeEventListener('visibilitychange', handleVisibility);
-
-      // Device change handling
-      const handleDeviceChange = async () => {
-        try {
-          if (!this.started) return;
-          await this.rebindInputStream();
-          // AEC warmup while device settles and request worker recalibration
-          try { this.aecWarmup(400); } catch {}
-          try { this.worker?.postMessage({ type: 'recalibrate' }); } catch {}
-          // Re-set fixed AGC gain for new device
-          try { this.setFixedAgcGain(); } catch {}
-        } catch {}
-      };
-      try {
-        navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange as any);
-        this._removeDeviceChange = () => navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange as any);
-      } catch {}
+      // Store remover on the instance for cleanup
+      (this as any)._removeVisibility = () => document.removeEventListener('visibilitychange', handleVisibility);
 
     } catch (e: any) {
       this.events.onError?.(e);
@@ -134,19 +104,11 @@ export class ConversationAudioPipeline {
       this.limiterNode.attack.setValueAtTime(0.003, this.audioContext.currentTime);
       this.limiterNode.release.setValueAtTime(0.05, this.audioContext.currentTime);
 
-      // Raw analyser (pre-AGC) for baseline + UI energy - mobile optimized
-      this.rawAnalyserNode = this.audioContext.createAnalyser();
-      this.rawAnalyserNode.fftSize = 256; // Smaller FFT for mobile
-      this.rawAnalyserNode.smoothingTimeConstant = 0.6; // Less smoothing
-
-      // Post-AGC analyser can remain for debug but will not drive logic
+      // Analyser for RMS metering (monitor post-gain, pre-limiter)
       this.analyserNode = this.audioContext.createAnalyser();
       this.analyserNode.fftSize = 1024;
       this.analyserNode.smoothingTimeConstant = 0.8;
 
-      // Branch: Source -> rawAnalyser (tap)
-      source.connect(this.rawAnalyserNode);
-      // Branch: Source -> AGC -> analyser -> limiter -> worklet
       source.connect(this.agcGainNode);
       this.agcGainNode.connect(this.analyserNode);
       this.agcGainNode.connect(this.limiterNode);
@@ -158,30 +120,16 @@ export class ConversationAudioPipeline {
       this.workletNode.connect(sinkMuteGain);
       sinkMuteGain.connect(this.audioContext.destination);
 
-      // Ensure fresh state: reset worker VAD/ring buffer before streaming
-      try { this.worker?.postMessage({ type: 'reset' }); } catch {}
-
-      // Start raw energy/UI level monitor (no dynamic AGC adjustment)
-      this.startRawLevelMonitor();
-
-      // Set reasonable fixed AGC gain - let worker handle energy calibration
-      this.setFixedAgcGain();
+      // Start AGC monitor loop (RMS-based, attack/release smoothing)
+      this.startAgcMonitor();
 
       // Forward frames from worklet to worker
       this.workletNode.port.onmessage = (event: MessageEvent) => {
         const { type, buffer } = event.data || {};
         if (type === 'audio' && buffer && this.worker) {
           this.worker.postMessage({ type: 'audio', buffer }, [buffer]);
-        } else if (type === 'calibration_done') {
-          try { window.dispatchEvent(new CustomEvent('telemetry', { detail: { key: 'calibration.done', t: performance.now(), baseline: event.data?.baseline } })); } catch {}
-        } else if (type === 'recalibrate_needed') {
-          try { window.dispatchEvent(new CustomEvent('telemetry', { detail: { key: 'recalibrate.requested', t: performance.now() } })); } catch {}
         }
       };
-
-      // Start-up barrier and watchdog
-      try { this.worker?.postMessage({ type: 'barrier_open' }); } catch {}
-      this.startStartupWatchdog();
 
       this.started = true;
     } catch (e: any) {
@@ -204,10 +152,6 @@ export class ConversationAudioPipeline {
         const { type, buffer } = event.data || {};
         if (type === 'audio' && buffer && this.worker) {
           this.worker.postMessage({ type: 'audio', buffer }, [buffer]);
-        } else if (type === 'calibration_done') {
-          try { window.dispatchEvent(new CustomEvent('telemetry', { detail: { key: 'calibration.done', t: performance.now(), baseline: event.data?.baseline } })); } catch {}
-        } else if (type === 'recalibrate_needed') {
-          try { window.dispatchEvent(new CustomEvent('telemetry', { detail: { key: 'recalibrate.requested', t: performance.now() } })); } catch {}
         }
       };
     }
@@ -215,16 +159,12 @@ export class ConversationAudioPipeline {
 
   public async stop(): Promise<void> {
     try {
-      // Stop monitors
-      if (this.agcMonitorTimer) { clearInterval(this.agcMonitorTimer); this.agcMonitorTimer = null; }
-      if (this.rawLevelTimer) { clearInterval(this.rawLevelTimer); this.rawLevelTimer = null; }
-      if (this.driftMonitorTimer) { clearInterval(this.driftMonitorTimer); this.driftMonitorTimer = null; }
-      if (this.startupWatchdogTimer) {
-        clearTimeout(this.startupWatchdogTimer);
-        this.startupWatchdogTimer = null;
+      // Stop AGC monitor
+      if (this.agcMonitorTimer) {
+        clearInterval(this.agcMonitorTimer);
+        this.agcMonitorTimer = null;
       }
       this.analyserNode = null;
-      this.rawAnalyserNode = null;
       this.limiterNode = null;
       this.agcGainNode = null;
 
@@ -242,8 +182,10 @@ export class ConversationAudioPipeline {
         this.audioContext = null;
       }
       // Remove visibility listener if present
-      if (this._removeVisibility) { try { this._removeVisibility(); } catch {} this._removeVisibility = undefined; }
-      if (this._removeDeviceChange) { try { this._removeDeviceChange(); } catch {} this._removeDeviceChange = undefined; }
+      if ((this as any)._removeVisibility) {
+        try { (this as any)._removeVisibility(); } catch {}
+        (this as any)._removeVisibility = null;
+      }
     } catch {}
   }
 
@@ -281,94 +223,50 @@ export class ConversationAudioPipeline {
     this.started = false;
   }
 
-  // --- Raw energy monitor (pre-AGC) -----------------------------------------
-  private startRawLevelMonitor(): void {
-    if (!this.audioContext || !this.rawAnalyserNode) return;
-    if (this.rawLevelTimer) return;
+  // --- AGC Implementation ---------------------------------------------------
+  private startAgcMonitor(): void {
+    if (!this.audioContext || !this.analyserNode || !this.agcGainNode) return;
+    if (this.agcMonitorTimer) return;
 
-    const analyser = this.rawAnalyserNode;
+    const analyser = this.analyserNode;
+    const gainNode = this.agcGainNode;
+    const ctx = this.audioContext;
     const buffer = new Float32Array(analyser.fftSize);
 
-    this.rawLevelTimer = window.setInterval(() => {
+    // Target loudness and bounds
+    const targetRms = 0.18; // ~ -15 dBFS
+    const minGain = 0.5;    // -6 dB min
+    const maxGain = 8.0;    // +18 dB max
+
+    // Time constants (seconds)
+    const attackTc = 0.05;  // speed up when too quiet
+    const releaseTc = 0.25; // slow down when too loud
+
+    this.agcMonitorTimer = window.setInterval(() => {
       try {
         analyser.getFloatTimeDomainData(buffer);
+        // Compute RMS
         let sumSq = 0;
         for (let i = 0; i < buffer.length; i++) {
           const s = buffer[i];
           sumSq += s * s;
         }
         const rms = Math.sqrt(sumSq / buffer.length) || 0.000001;
-        // Drive UI from raw RMS only
-        const uiLevel = Math.min(1, rms * 6);
-        this.events.onLevel?.(uiLevel);
+
+        // Desired gain to reach target
+        let desired = targetRms / rms;
+        desired = Math.min(Math.max(desired, minGain), maxGain);
+
+        // Choose time constant based on direction (faster up than down)
+        const tc = desired > this.currentAgcGain ? attackTc : releaseTc;
+
+        // Smoothly approach desired gain
+        const now = ctx.currentTime;
+        gainNode.gain.cancelScheduledValues(now);
+        gainNode.gain.setTargetAtTime(desired, now, tc);
+        this.currentAgcGain = desired;
       } catch {}
-    }, 100); // Reduced frequency for mobile (50ms -> 100ms)
-  }
-
-  // Set reasonable fixed AGC gain - worker handles energy calibration
-  private setFixedAgcGain(): void {
-    if (!this.audioContext || !this.agcGainNode) return;
-    const fixedGain = 2.5; // Reasonable fixed gain
-    const now = this.audioContext.currentTime;
-    this.agcGainNode.gain.cancelScheduledValues(now);
-    this.agcGainNode.gain.setValueAtTime(fixedGain, now);
-    this.currentAgcGain = fixedGain;
-  }
-
-  // --- Startup watchdog ------------------------------------------------------
-  private startStartupWatchdog(): void {
-    if (this.startupWatchdogTimer) return;
-    // If we don't see any segment callback within 2s, nudge the worker to reset
-    this.startupWatchdogTimer = window.setTimeout(() => {
-      try { this.worker?.postMessage({ type: 'reset' }); this.worker?.postMessage({ type: 'barrier_open' }); } catch {}
-      this.startupWatchdogTimer = null;
-    }, 2000);
-
-    // Clear watchdog on first segment
-    if (this.workletNode) {
-      const original = this.workletNode.port.onmessage;
-      (this.workletNode.port as any).onmessage = (event: MessageEvent) => {
-        if (event.data?.type === 'segment' && this.startupWatchdogTimer) {
-          clearTimeout(this.startupWatchdogTimer);
-          this.startupWatchdogTimer = null;
-        }
-        // Forward to existing handler
-        if (typeof original === 'function') {
-          (original as any)(event);
-        }
-      };
-    }
-  }
-
-  private async rebindInputStream(): Promise<void> {
-    if (!this.audioContext) return;
-    try {
-      // Stop old tracks and source
-      if (this.mediaStream) {
-        try { this.mediaStream.getTracks().forEach(t => t.stop()); } catch {}
-        this.mediaStream = null;
-      }
-      // Acquire new default device stream
-      this.mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: 1,
-          noiseSuppression: true,
-          echoCancellation: true,
-          autoGainControl: false,
-          sampleRate: 48000
-        },
-        video: false
-      });
-      const source = this.audioContext.createMediaStreamSource(this.mediaStream);
-      if (this.agcGainNode) {
-        source.connect(this.agcGainNode);
-      }
-    } catch {}
-  }
-
-  // AEC warmup hint for far-end playback start or device change
-  public aecWarmup(ms: number = 400): void {
-    try { this.worker?.postMessage({ type: 'aec_warmup', ms }); } catch {}
+    }, 50); // 20 Hz updates
   }
 }
 

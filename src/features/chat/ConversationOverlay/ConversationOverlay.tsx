@@ -24,7 +24,7 @@ export const ConversationOverlay: React.FC = () => {
   const [state, setState] = useState<ConversationState>('connecting');
   
   // Audio context management
-  const { audioContext, isAudioUnlocked, initializeAudioContext, resumeAudioContext, unlockOutput } = useAudioStore();
+  const { audioContext, isAudioUnlocked, initializeAudioContext, resumeAudioContext } = useAudioStore();
   
   // Realtime level driven by worker (not React polling) - use ref for smooth animation
   const audioLevelRef = useRef<number>(0);
@@ -100,9 +100,7 @@ export const ConversationOverlay: React.FC = () => {
       // Resume AudioContext
       const success = await resumeAudioContext();
       if (success) {
-        // Play short silent buffer to unlock output on iOS/Safari
-        await unlockOutput();
-        console.log('[ConversationOverlay] ✅ Audio output unlocked');
+        console.log('[ConversationOverlay] ✅ AudioContext unlocked successfully!');
       } else {
         console.error('[ConversationOverlay] ❌ Failed to unlock AudioContext');
       }
@@ -204,8 +202,6 @@ export const ConversationOverlay: React.FC = () => {
     
     try {
       setState('replying'); // 7. Change UI to "speaking"
-      // Hint AEC: suppress mic segments for ~400ms while far-end starts
-      try { pipelineRef.current?.aecWarmup(400); } catch {}
       
       // 7. Unpause media source for TTS
       await ttsPlaybackService.play(audioBytes, () => {
@@ -235,12 +231,9 @@ export const ConversationOverlay: React.FC = () => {
     setState('establishing');
     
     try {
-      try { performance.mark('userGestureAt'); } catch {}
       // 2. MIC PERMISSION PREFLIGHT - Android requires this before AudioContext
       try {
-        try { performance.mark('gUM.requested'); } catch {}
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        try { performance.mark('gUM.resolved'); } catch {}
         // Immediately stop tracks to release mic
         stream.getTracks().forEach(track => track.stop());
       } catch (error) {
@@ -251,8 +244,6 @@ export const ConversationOverlay: React.FC = () => {
       // 3. AUDIOCONTEXT UNLOCK - Ensure unlock happens within this user gesture
       const ctx = audioContext || initializeAudioContext();
       await resumeAudioContext();
-      try { performance.mark('AC.resumed'); } catch {}
-      await unlockOutput();
       
       // 3. STEP 1: Audio Warmup with validation
       const { ttsPlaybackService } = await import('@/services/voice/TTSPlaybackService');
@@ -306,10 +297,8 @@ export const ConversationOverlay: React.FC = () => {
       
       // 7. STEP 5: Initialize and start pipeline with validation
       await pipelineRef.current.init();
-      try { performance.mark('worklet.constructed'); } catch {}
       
       await pipelineRef.current.start();
-      try { performance.mark('barrier.open'); } catch {}
       
       // 8. STEP 7: Final validation - All systems ready
       if (!connectionRef.current) {
