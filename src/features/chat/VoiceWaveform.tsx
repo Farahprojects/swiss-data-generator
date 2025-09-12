@@ -22,9 +22,9 @@ export const VoiceWaveform: React.FC<VoiceWaveformProps> = ({ audioLevelRef }) =
 
   // Layout constants
   const RIGHT_GUTTER_PX = 80; // reserve area for right-side buttons with extra padding
-  const LEFT_GUTTER_PX = 16; // left padding to prevent touching edge
-  const TARGET_FPS = 30;
-  const BAR_WIDTH = 3;
+  const LEFT_GUTTER_PX = 24; // left padding to prevent touching edge
+  const TARGET_FPS = 20; // Slower reel animation
+  const BAR_WIDTH = 2; // Thinner lines
   const BAR_GAP = 6; // increased spacing for more polished look
 
   // Resize canvas and (re)allocate ring buffer based on available width
@@ -99,8 +99,10 @@ export const VoiceWaveform: React.FC<VoiceWaveformProps> = ({ audioLevelRef }) =
     for (let i = 0; i < cols; i++) {
       const srcIdx = (writeIdxRef.current + i) % cols; // oldest -> newest left -> right
       const v = bufferRef.current[srcIdx];
+      // Boost sensitivity: multiply by 7 to make bars reach full height with normal speech
+      const boostedLevel = Math.min(1.0, v * 7.0);
       // Apple-like design touch: non-linear mapping boosts low signals for a more "live" feel
-      const h = Math.max(2, Math.min(maxBarHeight, Math.floor(Math.pow(v, 0.6) * maxBarHeight)));
+      const h = Math.max(2, Math.min(maxBarHeight, Math.floor(Math.pow(boostedLevel, 0.6) * maxBarHeight)));
       const x = leftPad + i * pitch;
       if (x + BAR_WIDTH > leftPad + drawWidth) break; // enforce boundaries
       const y = centerY - h / 2;
