@@ -9,7 +9,7 @@ import { AstroDataPromptMessage } from '@/components/chat/AstroDataPromptMessage
 import { AstroDataForm } from '@/components/chat/AstroDataForm';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Dialog, DialogContent, DialogOverlay } from '@/components/ui/dialog';
+import { WelcomeBackModal } from '@/components/auth/WelcomeBackModal';
 
 // Lazy load TypewriterText for better performance
 const TypewriterText = lazy(() => import('@/components/ui/TypewriterText').then(module => ({ default: module.TypewriterText })));
@@ -295,46 +295,11 @@ export const MessageList = () => {
     </div>
     
     {/* Welcome overlay after closing astro form (guests) */}
-    <Dialog open={showWelcomeOverlay} onOpenChange={() => {}}>
-      <DialogOverlay className="bg-white/95" />
-      <DialogContent className="sm:max-w-md rounded-2xl p-6">
-        <div className="text-center space-y-4">
-          <h3 className="text-2xl font-light text-gray-900">Welcome Back</h3>
-          <p className="text-gray-600 font-light">Log in or sign up to know yourself better</p>
-          <div className="space-y-3 pt-2">
-            <Button
-              className="w-full rounded-full bg-gray-900 text-white hover:bg-gray-800"
-              onClick={() => {
-                setShowWelcomeOverlay(false);
-                navigate('/login');
-              }}
-            >
-              Log in
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full rounded-full border-gray-900 text-gray-900 hover:bg-gray-50"
-              onClick={() => {
-                setShowWelcomeOverlay(false);
-                navigate('/signup');
-              }}
-            >
-              Sign up
-            </Button>
-            <button
-              type="button"
-              className="block w-full text-sm text-gray-500 underline underline-offset-4 pt-2"
-              onClick={() => {
-                setShowWelcomeOverlay(false);
-                setAstroChoiceMade(false); // reopen the astro report form
-              }}
-            >
-              Back to astro form
-            </button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <WelcomeBackModal
+      isOpen={showWelcomeOverlay}
+      onClose={() => setShowWelcomeOverlay(false)}
+      onBackToForm={() => setAstroChoiceMade(false)}
+    />
     </>
   );
 };
