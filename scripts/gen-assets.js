@@ -1,27 +1,51 @@
 /*
-  Generate Capacitor assets from existing SVG logo.
-  - Reads public/bimi-logo.svg
+  Generate Capacitor assets from SVG logo.
+  - Tries remote SVG URL first (Supabase bucket)
+  - Fallback to public/app-icon.svg if remote unavailable
   - Produces assets/icon.png (1024x1024)
   - Produces assets/splash.png (2732x2732)
 */
 
 const fs = require('fs');
 const path = require('path');
+const https = require('https');
 const sharp = require('sharp');
+
+const REMOTE_SVG_URL = process.env.SVG_URL || 'https://auth.therai.co/storage/v1/object/public/therai-assets/theraiicon.svg';
 
 async function ensureDir(dir) {
   await fs.promises.mkdir(dir, { recursive: true });
 }
 
+function fetchRemote(url) {
+  return new Promise((resolve, reject) => {
+    https.get(url, (res) => {
+      if (res.statusCode !== 200) {
+        reject(new Error(`Failed to fetch SVG: ${res.statusCode}`));
+        res.resume();
+        return;
+      }
+      const data = [];
+      res.on('data', (chunk) => data.push(chunk));
+      res.on('end', () => resolve(Buffer.concat(data)));
+    }).on('error', reject);
+  });
+}
+
 async function generate() {
-  const svgPath = path.resolve(__dirname, '..', 'public', 'bimi-logo.svg');
+  const fallbackPath = path.resolve(__dirname, '..', 'public', 'app-icon.svg');
   const assetsDir = path.resolve(__dirname, '..', 'assets');
-  if (!fs.existsSync(svgPath)) {
-    throw new Error(`SVG not found at ${svgPath}`);
-  }
   await ensureDir(assetsDir);
 
-  const svgBuffer = await fs.promises.readFile(svgPath);
+  let svgBuffer;
+  try {
+    svgBuffer = await fetchRemote(REMOTE_SVG_URL);
+  } catch (e) {
+    if (!fs.existsSync(fallbackPath)) {
+      throw new Error(`Failed to fetch remote SVG and no fallback found at ${fallbackPath}`);
+    }
+    svgBuffer = await fs.promises.readFile(fallbackPath);
+  }
 
   // ICON 1024x1024, white background, centered logo
   const iconSize = 1024;
