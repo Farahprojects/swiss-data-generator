@@ -57,8 +57,18 @@ export const useUniversalMic = (options: UseUniversalMicOptions = {}) => {
       recorderRef.current = new UniversalSTTRecorder({
         onTranscriptReady: (transcript) => {
           console.log('[useUniversalMic] Transcript ready:', transcript);
+          
+          // 1. First: Turn off browser mic (dispose recorder)
+          if (recorderRef.current) {
+            recorderRef.current.dispose();
+            recorderRef.current = null;
+          }
+          
+          // 2. Second: Stop wave animation (set recording state)
           setIsRecording(false);
           setIsProcessing(false);
+          
+          // 3. Third: Show text in UI
           options.onTranscriptReady?.(transcript);
         },
         onError: (error) => {
