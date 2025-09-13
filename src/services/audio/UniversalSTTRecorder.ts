@@ -199,8 +199,10 @@ export class UniversalSTTRecorder {
       // Always sample analyser while the graph exists
       if (!this.analyser || !this.dataArray) return;
 
-      // Get current audio data
-      this.analyser.getFloatTimeDomainData(this.dataArray);
+      // Get current audio data - create a fresh array to avoid type issues
+      const tempArray = new Float32Array(this.analyser.fftSize);
+      this.analyser.getFloatTimeDomainData(tempArray);
+      this.dataArray = tempArray;
       
       // Calculate RMS energy (lightweight)
       let sum = 0;

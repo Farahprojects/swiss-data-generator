@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { UseFormSetValue } from 'react-hook-form';
-import { useJournalMicrophone } from './microphone/useJournalMicrophone';
+// import { useJournalMicrophone } from './microphone/useJournalMicrophone';
 import { useToast } from './use-toast';
 import { ReportFormData } from '@/types/public-report';
 
@@ -167,38 +167,11 @@ export const useSpeechOrchestrator = (setValue: UseFormSetValue<ReportFormData>)
     return results;
   }, []);
 
-  // PROFESSIONAL DOMAIN-SPECIFIC MICROPHONE FOR JOURNAL
-  const {
-    isRecording,
-    isProcessing,
-    audioLevel,
-    toggleRecording,
-  } = useJournalMicrophone({
-    onTranscriptReady: (transcript) => {
-      pendingTranscript.current = transcript;
-      setTranscript(transcript);
-      
-      if (currentFlow) {
-        const extracted = extractFields(transcript, currentFlow.expectedFields);
-        setMappedFields(extracted);
-        
-        if (extracted.length > 0) {
-          setIsShowingConfirmation(true);
-          toast({
-            title: 'Speech captured!',
-            description: `Found ${extracted.length} field${extracted.length > 1 ? 's' : ''}. Please confirm the mapping.`,
-          });
-        } else {
-          toast({
-            title: 'Try again',
-            description: 'Could not extract the expected information. Please try speaking more clearly.',
-            variant: 'destructive',
-          });
-        }
-      }
-    },
-    silenceTimeoutMs: 3000
-  });
+  // Temporarily disable microphone functionality
+  const isRecording = false;
+  const isProcessing = false;
+  const audioLevel = 0;
+  const toggleRecording = () => {};
 
   const startFlow = useCallback((flowId: string) => {
     const flow = SPEECH_FLOWS[flowId];

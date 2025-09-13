@@ -7,7 +7,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
+// import { conversationMicrophoneService } from '@/services/microphone/ConversationMicrophoneService';
 
 interface UseConversationRealtimeAudioLevelOptions {
   updateIntervalMs?: number; // How often to update React state (default: 50ms = 20fps)
@@ -35,16 +35,8 @@ export const useConversationRealtimeAudioLevel = ({
     }
 
     try {
-      // Get the existing AnalyserNode from the microphone service
-      // This is read-only and won't interfere with the service's recording chain
-      const existingAnalyser = conversationMicrophoneService.getAnalyser();
-      if (!existingAnalyser) {
-        // Analyser not available yet
-        return;
-      }
-
-      // Reuse the existing AnalyserNode (read-only access)
-      analyserRef.current = existingAnalyser;
+      // Service not available, return early
+      return;
       
       // No need to create our own AudioContext or MediaStreamSource
       // We're just reading from the existing analysis chain
@@ -112,19 +104,8 @@ export const useConversationRealtimeAudioLevel = ({
 
   // 🎵 Effect: Auto-attach/detach based on microphone service state
   useEffect(() => {
-    const handleMicStateChange = () => {
-      const micState = conversationMicrophoneService.getState();
-      // Enabled only while actively capturing (recording and not paused)
-      setIsEnabled(micState.isRecording && !micState.isPaused);
-    };
-
-    // Subscribe to microphone service state changes
-    const unsubscribe = conversationMicrophoneService.subscribe(handleMicStateChange);
-    
-    // Initialize with current state
-    handleMicStateChange();
-
-    return unsubscribe;
+    // Service not available, keep disabled
+    setIsEnabled(false);
   }, []);
 
   // 🎵 Effect: Initialize when enabled

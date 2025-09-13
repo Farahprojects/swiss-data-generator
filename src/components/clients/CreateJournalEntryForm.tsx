@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { ProcessingIndicator } from '@/components/ui/ProcessingIndicator';
 import { TypingCursor } from '@/components/ui/TypingCursor';
-import { useJournalMicrophone } from '@/hooks/microphone/useJournalMicrophone';
+// import { useJournalMicrophone } from '@/hooks/microphone/useJournalMicrophone';
 import { useTypewriter } from '@/components/ui/TypewriterText';
 import { useToast } from '@/hooks/use-toast';
 import { X, Mic } from 'lucide-react';
@@ -142,11 +142,10 @@ const CreateJournalEntryForm = ({
     setExistingText('');
   }, [stop, existingText, newTranscriptToType, setValue]);
 
-  const { isRecording, isProcessing, toggleRecording } = useJournalMicrophone({
-    onTranscriptReady: handleTranscriptReady,
-    onSilenceDetected: handleSilenceDetected,
-    silenceTimeoutMs: 3000
-  });
+  // Temporarily disable microphone functionality
+  const isRecording = false;
+  const isProcessing = false;
+  const toggleRecording = () => {};
 
   // Handle user typing during animation
   const handleTextareaChange = (value: string) => {
