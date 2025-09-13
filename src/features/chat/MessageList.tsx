@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { AstroDataPromptMessage } from '@/components/chat/AstroDataPromptMessage';
 import { AstroDataForm } from '@/components/chat/AstroDataForm';
 import { useAuth } from '@/contexts/AuthContext';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 // Lazy load TypewriterText for better performance
 const TypewriterText = lazy(() => import('@/components/ui/TypewriterText').then(module => ({ default: module.TypewriterText })));
@@ -154,6 +155,8 @@ export const MessageList = () => {
   const [initialMessageCount, setInitialMessageCount] = useState<number | null>(null);
   const [hasUserSentMessage, setHasUserSentMessage] = useState(false);
   const [astroChoiceMade, setAstroChoiceMade] = useState(false);
+  const [showWelcomeOverlay, setShowWelcomeOverlay] = useState(false);
+  const navigate = useNavigate();
   
   const handleAddAstroData = () => {
     setAstroChoiceMade(true);
@@ -198,6 +201,7 @@ export const MessageList = () => {
   };
 
   return (
+    <>
     <div 
       className="chat-scroll-container h-full flex flex-col overflow-y-auto"
       style={{ 
@@ -241,12 +245,11 @@ export const MessageList = () => {
                   <div className="w-full max-w-2xl lg:max-w-4xl">
                     <AstroDataForm
                       onClose={() => {
-                        // Allow authenticated users to close the form, but require it for guests
-                        if (isAuthenticated) {
-                          setAstroChoiceMade(true);
-                          console.log('Authenticated user closed astro form - can chat without astro data');
+                        // Close form and show auth overlay for guests; authenticated users simply close
+                        setAstroChoiceMade(true);
+                        if (!isAuthenticated) {
+                          setShowWelcomeOverlay(true);
                         }
-                        // For guests, onClose does nothing (form is required)
                       }}
                       onSubmit={(data) => {
                         console.log('Astro data submitted:', data);
@@ -290,5 +293,47 @@ export const MessageList = () => {
         </>
       )}
     </div>
+    
+    {/* Welcome overlay after closing astro form (guests) */}
+    <Dialog open={showWelcomeOverlay} onOpenChange={setShowWelcomeOverlay}>
+      <DialogContent className="sm:max-w-md rounded-2xl p-6">
+        <div className="text-center space-y-4">
+          <h3 className="text-2xl font-light text-gray-900">Welcome Back</h3>
+          <p className="text-gray-600 font-light">Log in or sign up to know yourself better</p>
+          <div className="space-y-3 pt-2">
+            <Button
+              className="w-full rounded-full bg-gray-900 text-white hover:bg-gray-800"
+              onClick={() => {
+                setShowWelcomeOverlay(false);
+                navigate('/login');
+              }}
+            >
+              Log in
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full rounded-full border-gray-900 text-gray-900 hover:bg-gray-50"
+              onClick={() => {
+                setShowWelcomeOverlay(false);
+                navigate('/signup');
+              }}
+            >
+              Sign up
+            </Button>
+            <button
+              type="button"
+              className="block w-full text-sm text-gray-500 underline underline-offset-4 pt-2"
+              onClick={() => {
+                setShowWelcomeOverlay(false);
+                setAstroChoiceMade(false); // reopen the astro report form
+              }}
+            >
+              No, go back to the astro report form
+            </button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 };

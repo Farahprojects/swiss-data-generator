@@ -273,7 +273,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     if (place.placeId) setValue('secondPersonPlaceId', place.placeId);
   };
 
-  // Unified close handler for mobile overlay: restore page state and navigate home
+  // Unified close handler for mobile overlay: restore page state and let parent handle routing/modal
   const handleClose = () => {
     try {
       const html = document.documentElement;
@@ -286,7 +286,6 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
       document.body.classList.remove('astro-form-open');
     } catch {}
     onClose();
-    navigate('/', { replace: true });
   };
 
   const handlePaymentSubmit = async () => {
