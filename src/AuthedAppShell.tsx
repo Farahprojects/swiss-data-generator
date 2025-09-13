@@ -18,6 +18,7 @@ import About from './pages/About';
 import Legal from './pages/Legal';
 import MobileLanding from './pages/MobileLanding';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsNativeApp } from '@/hooks/use-native-app';
 import SubscriptionPaywall from './pages/SubscriptionPaywall';
 import SubscriptionSuccess from './pages/SubscriptionSuccess';
 import StripeReturn from './pages/StripeReturn';
@@ -37,6 +38,7 @@ const AuthedAppShell: React.FC = () => {
   }
 
   const isMobile = useIsMobile();
+  const isNativeApp = useIsNativeApp();
 
   return (
     <NavigationStateProvider>
@@ -45,7 +47,7 @@ const AuthedAppShell: React.FC = () => {
           <SettingsModalProvider>
             <Routes>
               {/* Public routes - redirect authenticated users to chat */}
-              <Route path="/" element={<PublicOnlyGuard>{isMobile ? <MobileLanding /> : <PublicReport />}</PublicOnlyGuard>} />
+              <Route path="/" element={<PublicOnlyGuard>{isMobile ? (isNativeApp ? <MobileLanding /> : <ChatContainer />) : <PublicReport />}</PublicOnlyGuard>} />
               <Route path="/pricing" element={<PublicOnlyGuard><PricingProvider><Pricing /></PricingProvider></PublicOnlyGuard>} />
               <Route path="/about" element={<PublicOnlyGuard><About /></PublicOnlyGuard>} />
               <Route path="/contact" element={<PublicOnlyGuard><Contact /></PublicOnlyGuard>} />
