@@ -1,6 +1,6 @@
-// Simplified voice waveform - basic energy display with debug
+// Simplified voice waveform - basic energy display
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 interface VoiceWaveformProps {
   audioLevelRef: React.MutableRefObject<number>;
@@ -10,8 +10,6 @@ export const VoiceWaveform: React.FC<VoiceWaveformProps> = ({ audioLevelRef }) =
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>();
   const barsRef = useRef<number[]>([]);
-  const [debugLevel, setDebugLevel] = useState(0);
-  const [isSpeaking, setIsSpeaking] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -42,10 +40,6 @@ export const VoiceWaveform: React.FC<VoiceWaveformProps> = ({ audioLevelRef }) =
       // Get current audio level
       const level = audioLevelRef.current || 0;
       
-      // Update debug state
-      setDebugLevel(level);
-      setIsSpeaking(level > 0.02);
-      
       // Add new bar
       barsRef.current.push(level);
       
@@ -65,8 +59,8 @@ export const VoiceWaveform: React.FC<VoiceWaveformProps> = ({ audioLevelRef }) =
         const barHeight = Math.max(2, barLevel * maxHeight);
         const y = (height - barHeight) / 2;
         
-        // Color based on speaking threshold
-        ctx.fillStyle = barLevel > 0.02 ? '#ef4444' : '#6b7280';
+        // Use gray color for all bars
+        ctx.fillStyle = '#6b7280';
         ctx.fillRect(x, y, barWidth, barHeight);
       });
       
@@ -90,13 +84,6 @@ export const VoiceWaveform: React.FC<VoiceWaveformProps> = ({ audioLevelRef }) =
         className="w-full h-full"
         style={{ width: '100%', height: '100%' }}
       />
-      
-      {/* Debug overlay */}
-      <div className="absolute top-2 left-2 bg-black/80 text-white text-xs p-2 rounded font-mono">
-        <div>Level: {debugLevel.toFixed(4)}</div>
-        <div>Speaking: {isSpeaking ? 'YES' : 'NO'}</div>
-        <div>Threshold: 0.02</div>
-      </div>
     </div>
   );
 };
