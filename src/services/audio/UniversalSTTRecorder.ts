@@ -28,7 +28,7 @@ export class UniversalSTTRecorder {
 
   constructor(options: STTRecorderOptions = {}) {
     this.options = {
-      silenceThreshold: 0.01,
+      silenceThreshold: 0.02,
       silenceDuration: 1000, // 1.0 second
       ...options
     };
@@ -183,7 +183,7 @@ export class UniversalSTTRecorder {
       const rms = Math.sqrt(sum / this.dataArray.length);
       
       // Smooth level changes for UI (prevent jittery animation)
-      const rawLevel = Math.min(1, rms * 15); // Boost sensitivity
+      const rawLevel = Math.min(1, rms * 12); // Slightly reduced sensitivity
       const smoothedLevel = lastLevel * 0.85 + rawLevel * 0.15; // Heavier smoothing
       lastLevel = smoothedLevel;
 
