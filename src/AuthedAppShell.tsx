@@ -16,6 +16,8 @@ import Pricing from './pages/Pricing';
 import Contact from './pages/Contact';
 import About from './pages/About';
 import Legal from './pages/Legal';
+import MobileLanding from './pages/MobileLanding';
+import { useIsMobile } from '@/hooks/use-mobile';
 import SubscriptionPaywall from './pages/SubscriptionPaywall';
 import SubscriptionSuccess from './pages/SubscriptionSuccess';
 import StripeReturn from './pages/StripeReturn';
@@ -34,6 +36,8 @@ const AuthedAppShell: React.FC = () => {
     (window as any).__authTrace.shellLoads = ((window as any).__authTrace.shellLoads || 0) + 1;
   }
 
+  const isMobile = useIsMobile();
+
   return (
     <NavigationStateProvider>
       <AuthProvider>
@@ -41,7 +45,7 @@ const AuthedAppShell: React.FC = () => {
           <SettingsModalProvider>
             <Routes>
               {/* Public routes - redirect authenticated users to chat */}
-              <Route path="/" element={<PublicOnlyGuard><PublicReport /></PublicOnlyGuard>} />
+              <Route path="/" element={<PublicOnlyGuard>{isMobile ? <MobileLanding /> : <PublicReport />}</PublicOnlyGuard>} />
               <Route path="/pricing" element={<PublicOnlyGuard><PricingProvider><Pricing /></PricingProvider></PublicOnlyGuard>} />
               <Route path="/about" element={<PublicOnlyGuard><About /></PublicOnlyGuard>} />
               <Route path="/contact" element={<PublicOnlyGuard><Contact /></PublicOnlyGuard>} />
