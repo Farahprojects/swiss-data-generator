@@ -306,7 +306,8 @@ export const ConversationOverlay: React.FC = () => {
   const handleModalClose = useCallback(async () => {
     isShuttingDown.current = true;
     
-    // Fire-and-forget TTS release
+    // IMMEDIATE audio stop - no race condition
+    ttsPlaybackService.stop();
     ttsPlaybackService.destroy().catch(() => {});
 
     // Fire-and-forget microphone release
