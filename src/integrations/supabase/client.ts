@@ -11,10 +11,16 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
+    detectSessionInUrl: false, // Don't auto-detect session from URL
   },
   realtime: {
     params: {
       eventsPerSecond: 10,
+    },
+  },
+  global: {
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
     },
   }
 });
