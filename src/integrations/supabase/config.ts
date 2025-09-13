@@ -16,9 +16,12 @@ const FALLBACK_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 export const SUPABASE_URL = SUPABASE_URL_ENV || FALLBACK_URL;
 export const SUPABASE_ANON_KEY = SUPABASE_ANON_KEY_ENV || FALLBACK_ANON_KEY;
 
-// Log warning if using fallbacks (for security awareness)
+// Log warning if using fallbacks (for security awareness) - hidden in production
 if (!SUPABASE_URL_ENV || !SUPABASE_ANON_KEY_ENV) {
-  console.warn('⚠️ Using fallback Supabase credentials. Set environment variables for production.');
+  // Only show in development
+  if (import.meta.env.DEV) {
+    console.warn('⚠️ Using fallback Supabase credentials. Set environment variables for production.');
+  }
 }
 
 // Validation helper
