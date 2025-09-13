@@ -18,6 +18,15 @@ class TTSPlaybackService {
     this.listeners.forEach((l) => l());
   }
 
+  // Safari detection for UI-only gain adjustments
+  private isSafari(): boolean {
+    const ua = navigator.userAgent || '';
+    const vendor = (navigator as any).vendor || '';
+    const isSafariUA = /Safari/i.test(ua) && !/Chrome|CriOS|Chromium/i.test(ua);
+    const isAppleVendor = /Apple/i.test(vendor);
+    return isSafariUA && isAppleVendor;
+  }
+
   subscribe(listener: () => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
@@ -100,7 +109,12 @@ class TTSPlaybackService {
       let total = 0;
       for (let i = 0; i < frequencyData.length; i++) total += frequencyData[i];
       const raw = total / (frequencyData.length * 255);
-      const overall = Math.min(1, Math.max(0.2, raw * 0.8 + 0.2));
+      // Base mapping with floor to keep small movement
+      let overall = Math.min(1, Math.max(0.2, raw * 0.8 + 0.2));
+      // Safari-only visual boost
+      if (this.isSafari()) {
+        overall = Math.min(1, Math.max(0.2, overall * 1.35));
+      }
       const levels: FourBarLevels = [overall, overall, overall, overall];
       directBarsAnimationService.notifyBars(levels);
       this.animationTimer = window.setTimeout(step, 40);
