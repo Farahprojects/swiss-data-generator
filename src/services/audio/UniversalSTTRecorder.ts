@@ -9,13 +9,19 @@ export interface STTRecorderOptions {
 }
 
 export class UniversalSTTRecorder {
+  // Recording components
   private mediaRecorder: MediaRecorder | null = null;
   private mediaStream: MediaStream | null = null;
+  private audioBlob: Blob | null = null;
+  
+  // Energy monitoring components (separate from recording)
   private audioContext: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
   private animationFrame: number | null = null;
+  private dataArray: Float32Array | null = null;
+  
+  // Control
   private silenceTimer: NodeJS.Timeout | null = null;
-  private audioChunks: Blob[] = [];
   private isRecording = false;
   private options: STTRecorderOptions;
 
@@ -31,73 +37,52 @@ export class UniversalSTTRecorder {
     if (this.isRecording) return;
 
     try {
-      // Check for secure context (HTTPS)
-      if (!window.isSecureContext && location.hostname !== 'localhost') {
-        throw new Error('Microphone access requires HTTPS or localhost');
-      }
-
-      // Check for getUserMedia support
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('getUserMedia is not supported in this browser');
-      }
-
-      // Request mic access with optimal settings
-      this.mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          noiseSuppression: true,
-          echoCancellation: true,
-          autoGainControl: true,
-          sampleRate: 16000, // Optimal for STT
-          channelCount: 1,   // Mono for better processing
-        }
-      });
-
-      console.log('[UniversalSTTRecorder] Microphone access granted');
-      console.log('[UniversalSTTRecorder] MediaStream tracks:', this.mediaStream.getTracks().length);
-
-      // Set up MediaRecorder
-      const mimeType = this.getSupportedMimeType();
-      console.log('[UniversalSTTRecorder] Using MIME type:', mimeType);
+      // Step 1: Request mic access
+      console.log('[UniversalSTTRecorder] Step 1: Requesting mic access...');
+      this.mediaStream = await this.requestMicrophoneAccess();
       
-      this.mediaRecorder = new MediaRecorder(this.mediaStream, {
-        mimeType: mimeType
-      });
-
-      this.audioChunks = [];
-      this.mediaRecorder.ondataavailable = (event) => {
-        console.log('[UniversalSTTRecorder] Data available, size:', event.data.size);
-        if (event.data.size > 0) {
-          this.audioChunks.push(event.data);
-        }
-      };
-
-      this.mediaRecorder.onstop = () => {
-        console.log('[UniversalSTTRecorder] Recording stopped, processing', this.audioChunks.length, 'chunks');
-        this.processRecording();
-      };
-
-      this.mediaRecorder.onstart = () => {
-        console.log('[UniversalSTTRecorder] MediaRecorder started');
-      };
-
-      this.mediaRecorder.onerror = (event) => {
-        console.error('[UniversalSTTRecorder] MediaRecorder error:', event);
-      };
-
-      // Set up silence detection
-      console.log('[UniversalSTTRecorder] Setting up silence detection...');
-      this.setupSilenceDetection();
-
-      // Start recording
-      console.log('[UniversalSTTRecorder] Starting MediaRecorder...');
-      this.mediaRecorder.start();
+      // Step 2: Setup MediaRecorder for single blob recording
+      console.log('[UniversalSTTRecorder] Step 2: Setting up MediaRecorder...');
+      this.setupMediaRecorder();
+      
+      // Step 3: Setup energy signal for animation (separate from recording)
+      console.log('[UniversalSTTRecorder] Step 3: Setting up energy monitoring...');
+      this.setupEnergyMonitoring();
+      
+      // Step 4: Start recording
+      console.log('[UniversalSTTRecorder] Step 4: Starting recording...');
+      this.mediaRecorder!.start();
       this.isRecording = true;
-      console.log('[UniversalSTTRecorder] Recording state set to true');
+      console.log('[UniversalSTTRecorder] Recording started successfully');
 
     } catch (error) {
       this.options.onError?.(error as Error);
       throw error;
     }
+  }
+
+  private async requestMicrophoneAccess(): Promise<MediaStream> {
+    // Check for secure context (HTTPS)
+    if (!window.isSecureContext && location.hostname !== 'localhost') {
+      throw new Error('Microphone access requires HTTPS or localhost');
+    }
+
+    // Check for getUserMedia support
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error('getUserMedia is not supported in this browser');
+    }
+
+    // Request mic access - simple approach
+    const stream = await navigator.mediaDevices.getUserMedia({ 
+      audio: {
+        noiseSuppression: true,
+        echoCancellation: true,
+        autoGainControl: true,
+      }
+    });
+
+    console.log('[UniversalSTTRecorder] Microphone access granted, tracks:', stream.getTracks().length);
+    return stream;
   }
 
   stop(): void {
@@ -108,13 +93,45 @@ export class UniversalSTTRecorder {
     this.cleanup();
   }
 
-  private setupSilenceDetection(): void {
+  private setupMediaRecorder(): void {
+    const mimeType = this.getSupportedMimeType();
+    console.log('[UniversalSTTRecorder] Using MIME type:', mimeType);
+    
+    this.mediaRecorder = new MediaRecorder(this.mediaStream!, {
+      mimeType: mimeType
+    });
+
+    // Single blob storage (not chunks)
+    this.audioBlob = null;
+    this.mediaRecorder.ondataavailable = (event) => {
+      console.log('[UniversalSTTRecorder] Data available, size:', event.data.size);
+      if (event.data.size > 0) {
+        this.audioBlob = event.data; // Store the entire recording as one blob
+      }
+    };
+
+    this.mediaRecorder.onstop = () => {
+      console.log('[UniversalSTTRecorder] Recording stopped, processing blob...');
+      this.processRecording();
+    };
+
+    this.mediaRecorder.onstart = () => {
+      console.log('[UniversalSTTRecorder] MediaRecorder started');
+    };
+
+    this.mediaRecorder.onerror = (event) => {
+      console.error('[UniversalSTTRecorder] MediaRecorder error:', event);
+    };
+  }
+
+  private setupEnergyMonitoring(): void {
     if (!this.mediaStream) {
-      console.error('[UniversalSTTRecorder] No mediaStream for silence detection');
+      console.error('[UniversalSTTRecorder] No mediaStream for energy monitoring');
       return;
     }
 
-    console.log('[UniversalSTTRecorder] Creating AudioContext...');
+    // Step 3: Setup energy signal for animation (separate from recording)
+    console.log('[UniversalSTTRecorder] Creating AudioContext for energy monitoring...');
     this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     const source = this.audioContext.createMediaStreamSource(this.mediaStream);
     
@@ -123,41 +140,46 @@ export class UniversalSTTRecorder {
     this.analyser.smoothingTimeConstant = 0.8;
     
     source.connect(this.analyser);
-    console.log('[UniversalSTTRecorder] Starting audio level monitoring...');
-    this.monitorAudioLevel();
+    
+    // Create data array for energy calculation
+    this.dataArray = new Float32Array(this.analyser.fftSize);
+    
+    console.log('[UniversalSTTRecorder] Starting energy monitoring...');
+    this.startEnergyMonitoring();
   }
 
-  private monitorAudioLevel(): void {
-    if (!this.analyser) return;
+  private startEnergyMonitoring(): void {
+    if (!this.analyser || !this.dataArray) return;
 
-    const buffer = new Float32Array(this.analyser.fftSize);
     let lastLevel = 0;
     
-    const checkLevel = () => {
-      if (!this.isRecording || !this.analyser) return;
+    const updateAnimation = () => {
+      if (!this.isRecording || !this.analyser || !this.dataArray) return;
 
-      this.analyser.getFloatTimeDomainData(buffer);
+      // Get current audio data
+      this.analyser.getFloatTimeDomainData(this.dataArray);
       
       // Calculate RMS energy (lightweight)
       let sum = 0;
-      for (let i = 0; i < buffer.length; i++) {
-        sum += buffer[i] * buffer[i];
+      for (let i = 0; i < this.dataArray.length; i++) {
+        sum += this.dataArray[i] * this.dataArray[i];
       }
-      const rms = Math.sqrt(sum / buffer.length);
+      const rms = Math.sqrt(sum / this.dataArray.length);
       
       // Smooth level changes for UI (prevent jittery animation)
       const rawLevel = Math.min(1, rms * 15); // Boost sensitivity
       const smoothedLevel = lastLevel * 0.7 + rawLevel * 0.3; // Smoothing
       lastLevel = smoothedLevel;
 
-      // Log first few energy levels for debugging
-      if (Math.random() < 0.01) { // Log ~1% of the time to avoid spam
-        console.log('[UniversalSTTRecorder] Energy level:', smoothedLevel.toFixed(4), 'isSpeaking:', smoothedLevel > this.options.silenceThreshold!);
-      }
-      
+      // Feed energy signal to animation
       this.options.onLevel?.(smoothedLevel);
 
-      // Voice Activity Detection (VAD)
+      // Log occasionally for debugging
+      if (Math.random() < 0.01) {
+        console.log('[UniversalSTTRecorder] Energy level:', smoothedLevel.toFixed(4), 'isSpeaking:', smoothedLevel > this.options.silenceThreshold!);
+      }
+
+      // Voice Activity Detection (VAD) for silence detection
       const isSpeaking = smoothedLevel > this.options.silenceThreshold!;
       
       if (!isSpeaking) {
@@ -176,20 +198,22 @@ export class UniversalSTTRecorder {
         }
       }
 
-      this.animationFrame = requestAnimationFrame(checkLevel);
+      this.animationFrame = requestAnimationFrame(updateAnimation);
     };
 
-    checkLevel();
+    updateAnimation(); // Start the energy monitoring loop
   }
 
   private processRecording(): void {
-    if (this.audioChunks.length === 0) return;
+    if (!this.audioBlob) {
+      console.log('[UniversalSTTRecorder] No audio blob to process');
+      return;
+    }
 
-    // Create single blob from all chunks
-    const audioBlob = new Blob(this.audioChunks, { type: this.getSupportedMimeType() });
+    console.log('[UniversalSTTRecorder] Processing single audio blob, size:', this.audioBlob.size);
     
-    // Send to STT
-    this.sendToSTT(audioBlob);
+    // Send single blob to STT
+    this.sendToSTT(this.audioBlob);
   }
 
   private async sendToSTT(audioBlob: Blob): Promise<void> {
@@ -252,8 +276,9 @@ export class UniversalSTTRecorder {
     }
 
     this.analyser = null;
+    this.dataArray = null;
     this.mediaRecorder = null;
-    this.audioChunks = [];
+    this.audioBlob = null;
   }
 
   dispose(): void {
