@@ -328,7 +328,7 @@ export const MessageList = () => {
                 setAstroChoiceMade(false); // reopen the astro report form
               }}
             >
-              No, go back to the astro report form
+              Back to astro form
             </button>
           </div>
         </div>
