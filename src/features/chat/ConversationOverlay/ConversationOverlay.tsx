@@ -11,7 +11,6 @@ import { ttsPlaybackService } from '@/services/voice/TTSPlaybackService';
 import { llmService } from '@/services/llm/chat';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
-import { WSAuthService } from '@/services/auth/wsAuth';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/integrations/supabase/config';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mic } from 'lucide-react';
@@ -124,25 +123,9 @@ export const ConversationOverlay: React.FC = () => {
     }
     
     try {
-      // Get authenticated token for WebSocket
-      const wsToken = await WSAuthService.getWSToken();
       
-      // Create authenticated Supabase client for WebSocket
-      const { createClient } = await import('@supabase/supabase-js');
-      const authSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        global: {
-          headers: {
-            Authorization: `Bearer ${wsToken}`
-          }
-        },
-        realtime: {
-          params: {
-            eventsPerSecond: 10,
-          },
-        }
-      });
       
-      const connection = authSupabase.channel(`conversation:${chat_id}`);
+      const connection = supabase.channel(`conversation:${chat_id}`);
       
       connection.on('broadcast', { event: 'tts-ready' }, ({ payload }) => {
         if (payload.audioBytes && !isShuttingDown.current) {
