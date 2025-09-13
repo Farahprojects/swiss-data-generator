@@ -22,20 +22,14 @@ export class UniversalSTTRecorder {
   private animationFrame: number | null = null;
   private dataArray: Float32Array | null = null;
   private highPassFilter: BiquadFilterNode | null = null;
-  private notchFilter: BiquadFilterNode | null = null;
   private lowPassFilter: BiquadFilterNode | null = null;
   private mediaStreamDestination: MediaStreamAudioDestinationNode | null = null;
   private filteredStream: MediaStream | null = null;
-  private freqDataArray: Uint8Array | null = null;
-  private speechBandStartBin: number | null = null;
-  private speechBandEndBin: number | null = null;
   
   // Control
   private silenceTimer: NodeJS.Timeout | null = null;
   private isRecording = false;
   private options: STTRecorderOptions;
-  private speechAboveMs = 0;
-  private lastFrameTimeMs: number | null = null;
 
   constructor(options: STTRecorderOptions = {}) {
     this.options = {
@@ -58,14 +52,9 @@ export class UniversalSTTRecorder {
       // Step 3: Setup MediaRecorder against filtered output stream (falls back to raw if needed)
       this.setupMediaRecorder(this.filteredStream || this.mediaStream!);
       
-      // Step 4: Start recording (immediately for chat bar; VAD-gated for conversation)
-      if (this.options.mode === 'conversation') {
-        // Do not start recording yet; wait for VAD speechstart
-        this.isRecording = false;
-      } else {
-        this.mediaRecorder!.start();
-        this.isRecording = true;
-      }
+      // Step 4: Start recording
+      this.mediaRecorder!.start();
+      this.isRecording = true;
 
     } catch (error) {
       this.options.onError?.(error as Error);
@@ -167,48 +156,37 @@ export class UniversalSTTRecorder {
     this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     const sourceNode = this.audioContext.createMediaStreamSource(this.mediaStream);
 
-    // High-pass filter: cut low-frequency rumble (cheap)
+    // High-pass filter: cut low-frequency rumble
     this.highPassFilter = this.audioContext.createBiquadFilter();
     this.highPassFilter.type = 'highpass';
-    this.highPassFilter.frequency.value = 80; // Hz
+    this.highPassFilter.frequency.value = 100; // Hz
     this.highPassFilter.Q.value = 0.8;
-
-    // Notch filter: remove mains hum (optional)
-    const notch = this.audioContext.createBiquadFilter();
-    notch.type = 'notch';
-    notch.frequency.value = 60; // set to 50 in EU if needed
-    notch.Q.value = 10;
 
     // Low-pass filter: tame high-frequency hiss
     this.lowPassFilter = this.audioContext.createBiquadFilter();
     this.lowPassFilter.type = 'lowpass';
     this.lowPassFilter.frequency.value = 8000; // Hz
-    this.lowPassFilter.Q.value = 0.8;
+    this.lowPassFilter.Q.value = 0.7;
 
     // Analyser for energy monitoring
     this.analyser = this.audioContext.createAnalyser();
-    this.analyser.fftSize = 2048; // allow cheap band energy estimate
+    this.analyser.fftSize = 256;
     this.analyser.smoothingTimeConstant = 0.8;
 
     // Destination for MediaRecorder (record filtered audio)
     this.mediaStreamDestination = this.audioContext.createMediaStreamDestination();
 
-    // Wire graph: source -> HPF -> Notch -> LPF -> analyser & destination
+    // Wire graph: source -> HPF -> LPF -> analyser & destination
     sourceNode.connect(this.highPassFilter);
-    this.highPassFilter.connect(notch);
-    notch.connect(this.lowPassFilter);
+    this.highPassFilter.connect(this.lowPassFilter);
     this.lowPassFilter.connect(this.analyser);
     this.lowPassFilter.connect(this.mediaStreamDestination);
 
     // Expose filtered stream for recording
     this.filteredStream = this.mediaStreamDestination.stream;
 
-    // Prepare data arrays and start monitoring
+    // Prepare data array and start monitoring
     this.dataArray = new Float32Array(this.analyser.fftSize);
-    const freqDataArray = new Uint8Array(this.analyser.frequencyBinCount);
-    // Attach as any to reuse in monitoring closure
-    (this as any)._freqDataArray = freqDataArray;
-    (this as any)._speechBand = { start: 300, end: 3400 };
     this.startEnergyMonitoring();
   }
 
@@ -216,25 +194,13 @@ export class UniversalSTTRecorder {
     if (!this.analyser || !this.dataArray) return;
 
     let lastLevel = 0;
-    let lastFrameTimeMs: number | null = null;
-    let speechAboveMs = 0;
-    let speechBelowMs = 0;
     
     const updateAnimation = () => {
       // Always sample analyser while the graph exists
       if (!this.analyser || !this.dataArray) return;
 
-      // Compute frame delta
-      const nowMs = performance.now();
-      const deltaMs = lastFrameTimeMs == null ? 16 : Math.max(0, nowMs - lastFrameTimeMs);
-      lastFrameTimeMs = nowMs;
-
-      // Get current audio data (time and frequency)
+      // Get current audio data
       this.analyser.getFloatTimeDomainData(this.dataArray);
-      const freqDataArray: Uint8Array | undefined = (this as any)._freqDataArray;
-      if (freqDataArray) {
-        this.analyser.getByteFrequencyData(freqDataArray);
-      }
       
       // Calculate RMS energy (lightweight)
       let sum = 0;
@@ -251,71 +217,26 @@ export class UniversalSTTRecorder {
       // Feed energy signal to animation
       this.options.onLevel?.(smoothedLevel);
 
-      // Lightweight speech-band energy ratio (300–3400 Hz)
-      let speechRatio = 0;
-      const speechBand = (this as any)._speechBand as { start: number; end: number } | undefined;
-      if (freqDataArray && speechBand) {
-        // Map frequencies to bins based on current analyser config
-        const binHz = (this.audioContext ? this.audioContext.sampleRate : 44100) / (this.analyser.fftSize);
-        const startBin = Math.max(0, Math.floor(speechBand.start / binHz));
-        const endBin = Math.min(freqDataArray.length - 1, Math.ceil(speechBand.end / binHz));
-        let total = 0;
-        let speech = 0;
-        for (let i = 0; i < freqDataArray.length; i++) {
-          const v = freqDataArray[i];
-          total += v;
-          if (i >= startBin && i <= endBin) speech += v;
-        }
-        speechRatio = total > 0 ? speech / total : 0;
-      }
+      // Log occasionally for debugging (removed to reduce noise)
+      // if (Math.random() < 0.01) {
+      //   console.log('[UniversalSTTRecorder] Energy level:', smoothedLevel.toFixed(4), 'isSpeaking:', smoothedLevel > this.options.silenceThreshold!);
+      // }
 
-      // Temporal smoothing and thresholds
-      const ratioStart = 0.55;
-      const ratioEnd = 0.40;
-      const minRms = 0.005;
-      const speechStartHoldMs = 180;
-      const above = (speechRatio > ratioStart) && (rms > minRms);
-      if (above) {
-        speechAboveMs += deltaMs;
-      } else {
-        speechAboveMs = Math.max(0, speechAboveMs - deltaMs * 0.5);
-      }
-      const sustainedBandActive = speechAboveMs >= speechStartHoldMs;
-
-      // VAD-driven behavior differs by mode
-      if (this.options.mode === 'conversation') {
-        const vadActive = sustainedBandActive && (speechRatio > ratioEnd) && (smoothedLevel > this.options.silenceThreshold!);
-        if (vadActive) {
-          // speech detected
-          speechBelowMs = 0;
-          if (!this.isRecording && this.mediaRecorder) {
-            try { this.mediaRecorder.start(); this.isRecording = true; } catch {}
+      // Only run VAD/silence stop logic while actively recording
+      if (this.isRecording) {
+        const isSpeaking = smoothedLevel > this.options.silenceThreshold!;
+        if (!isSpeaking) {
+          // Start silence timer
+          if (!this.silenceTimer) {
+            this.silenceTimer = setTimeout(() => {
+              this.stop();
+            }, this.options.silenceDuration);
           }
         } else {
-          // potential silence
-          if (this.isRecording) {
-            speechBelowMs += deltaMs;
-            if (speechBelowMs >= (this.options.silenceDuration || 1200)) {
-              this.stop();
-              speechBelowMs = 0;
-            }
-          }
-        }
-      } else {
-        // Chat bar: use silence timer while recording
-        if (this.isRecording) {
-          const isSpeaking = sustainedBandActive && (speechRatio > ratioEnd) && (smoothedLevel > this.options.silenceThreshold!);
-          if (!isSpeaking) {
-            if (!this.silenceTimer) {
-              this.silenceTimer = setTimeout(() => {
-                this.stop();
-              }, this.options.silenceDuration);
-            }
-          } else {
-            if (this.silenceTimer) {
-              clearTimeout(this.silenceTimer);
-              this.silenceTimer = null;
-            }
+          // Clear silence timer (voice detected)
+          if (this.silenceTimer) {
+            clearTimeout(this.silenceTimer);
+            this.silenceTimer = null;
           }
         }
       }
