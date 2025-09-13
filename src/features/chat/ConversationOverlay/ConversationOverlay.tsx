@@ -199,14 +199,13 @@ export const ConversationOverlay: React.FC = () => {
       await ttsPlaybackService.play(audioBytes, () => {
         setState('listening');
         
-        // Resume mic for next turn
+        // Resume mic input only; VAD will decide when to start a new recording segment
         if (!isShuttingDown.current) {
           setTimeout(() => {
             if (!isShuttingDown.current) {
               try {
-                // Ensure mic input is on and immediately start a fresh recording segment
                 recorderRef.current?.resumeInput();
-                recorderRef.current?.startNewRecording();
+                // do not call startNewRecording; conversation mode records on VAD speechstart
               } catch {}
             }
           }, 200);

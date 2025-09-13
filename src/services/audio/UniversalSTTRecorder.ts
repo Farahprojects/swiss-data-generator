@@ -58,9 +58,14 @@ export class UniversalSTTRecorder {
       // Step 3: Setup MediaRecorder against filtered output stream (falls back to raw if needed)
       this.setupMediaRecorder(this.filteredStream || this.mediaStream!);
       
-      // Step 4: Start recording
-      this.mediaRecorder!.start();
-      this.isRecording = true;
+      // Step 4: Start recording (immediately for chat bar; VAD-gated for conversation)
+      if (this.options.mode === 'conversation') {
+        // Do not start recording yet; wait for VAD speechstart
+        this.isRecording = false;
+      } else {
+        this.mediaRecorder!.start();
+        this.isRecording = true;
+      }
 
     } catch (error) {
       this.options.onError?.(error as Error);
@@ -276,21 +281,29 @@ export class UniversalSTTRecorder {
       }
       const sustainedBandActive = speechAboveMs >= speechStartHoldMs;
 
-      // Only run VAD/silence stop logic while actively recording
-      if (this.isRecording) {
-        const isSpeaking = sustainedBandActive && (speechRatio > ratioEnd) && (smoothedLevel > this.options.silenceThreshold!);
-        if (!isSpeaking) {
-          // Start silence timer
-          if (!this.silenceTimer) {
-            this.silenceTimer = setTimeout(() => {
-              this.stop();
-            }, this.options.silenceDuration);
-          }
-        } else {
-          // Clear silence timer (voice detected)
-          if (this.silenceTimer) {
-            clearTimeout(this.silenceTimer);
-            this.silenceTimer = null;
+      // VAD-driven behavior differs by mode
+      if (this.options.mode === 'conversation') {
+        const vadActive = sustainedBandActive && (speechRatio > ratioEnd) && (smoothedLevel > this.options.silenceThreshold!);
+        if (vadActive && !this.isRecording && this.mediaRecorder) {
+          try { this.mediaRecorder.start(); this.isRecording = true; } catch {}
+        } else if (!vadActive && this.isRecording) {
+          this.stop();
+        }
+      } else {
+        // Chat bar: use silence timer while recording
+        if (this.isRecording) {
+          const isSpeaking = sustainedBandActive && (speechRatio > ratioEnd) && (smoothedLevel > this.options.silenceThreshold!);
+          if (!isSpeaking) {
+            if (!this.silenceTimer) {
+              this.silenceTimer = setTimeout(() => {
+                this.stop();
+              }, this.options.silenceDuration);
+            }
+          } else {
+            if (this.silenceTimer) {
+              clearTimeout(this.silenceTimer);
+              this.silenceTimer = null;
+            }
           }
         }
       }
