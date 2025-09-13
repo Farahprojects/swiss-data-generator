@@ -6,6 +6,7 @@ export interface STTRecorderOptions {
   onLevel?: (level: number) => void;
   silenceThreshold?: number;
   silenceDuration?: number;
+  mode?: string; // e.g., 'conversation'
 }
 
 export class UniversalSTTRecorder {
@@ -244,7 +245,12 @@ export class UniversalSTTRecorder {
         throw new Error('No chat_id available for STT');
       }
       
-      const { transcript } = await sttService.transcribe(audioBlob, chat_id);
+      const { transcript } = await sttService.transcribe(
+        audioBlob,
+        chat_id,
+        {},
+        this.options.mode
+      );
       
       if (transcript && transcript.trim().length > 0 && this.options.onTranscriptReady) {
         this.options.onTranscriptReady(transcript.trim());
