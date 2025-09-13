@@ -39,22 +39,17 @@ export class UniversalSTTRecorder {
 
     try {
       // Step 1: Request mic access
-      console.log('[UniversalSTTRecorder] Step 1: Requesting mic access...');
       this.mediaStream = await this.requestMicrophoneAccess();
       
       // Step 2: Setup MediaRecorder for single blob recording
-      console.log('[UniversalSTTRecorder] Step 2: Setting up MediaRecorder...');
       this.setupMediaRecorder();
       
       // Step 3: Setup energy signal for animation (separate from recording)
-      console.log('[UniversalSTTRecorder] Step 3: Setting up energy monitoring...');
       this.setupEnergyMonitoring();
       
       // Step 4: Start recording
-      console.log('[UniversalSTTRecorder] Step 4: Starting recording...');
       this.mediaRecorder!.start();
       this.isRecording = true;
-      console.log('[UniversalSTTRecorder] Recording started successfully');
 
     } catch (error) {
       this.options.onError?.(error as Error);
@@ -82,7 +77,6 @@ export class UniversalSTTRecorder {
       }
     });
 
-    console.log('[UniversalSTTRecorder] Microphone access granted, tracks:', stream.getTracks().length);
     return stream;
   }
 
@@ -102,7 +96,6 @@ export class UniversalSTTRecorder {
       this.resumeInput();
       this.mediaRecorder.start();
       this.isRecording = true;
-      console.log('[UniversalSTTRecorder] New recording segment started');
     } catch (e) {
       console.error('[UniversalSTTRecorder] Failed to start new recording segment:', e);
     }
@@ -126,7 +119,6 @@ export class UniversalSTTRecorder {
 
   private setupMediaRecorder(): void {
     const mimeType = this.getSupportedMimeType();
-    console.log('[UniversalSTTRecorder] Using MIME type:', mimeType);
     
     this.mediaRecorder = new MediaRecorder(this.mediaStream!, {
       mimeType: mimeType
@@ -135,19 +127,13 @@ export class UniversalSTTRecorder {
     // Single blob storage (not chunks)
     this.audioBlob = null;
     this.mediaRecorder.ondataavailable = (event) => {
-      console.log('[UniversalSTTRecorder] Data available, size:', event.data.size);
       if (event.data.size > 0) {
         this.audioBlob = event.data; // Store the entire recording as one blob
       }
     };
 
     this.mediaRecorder.onstop = () => {
-      console.log('[UniversalSTTRecorder] Recording stopped, processing blob...');
       this.processRecording();
-    };
-
-    this.mediaRecorder.onstart = () => {
-      console.log('[UniversalSTTRecorder] MediaRecorder started');
     };
 
     this.mediaRecorder.onerror = (event) => {
@@ -162,7 +148,6 @@ export class UniversalSTTRecorder {
     }
 
     // Step 3: Setup energy signal for animation (separate from recording)
-    console.log('[UniversalSTTRecorder] Creating AudioContext for energy monitoring...');
     this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     const source = this.audioContext.createMediaStreamSource(this.mediaStream);
     
@@ -175,7 +160,6 @@ export class UniversalSTTRecorder {
     // Create data array for energy calculation
     this.dataArray = new Float32Array(this.analyser.fftSize);
     
-    console.log('[UniversalSTTRecorder] Starting energy monitoring...');
     this.startEnergyMonitoring();
   }
 
@@ -218,7 +202,6 @@ export class UniversalSTTRecorder {
           // Start silence timer
           if (!this.silenceTimer) {
             this.silenceTimer = setTimeout(() => {
-              console.log('[UniversalSTTRecorder] Silence detected, stopping recording');
               this.stop();
             }, this.options.silenceDuration);
           }
@@ -239,15 +222,12 @@ export class UniversalSTTRecorder {
 
   private processRecording(): void {
     if (!this.audioBlob) {
-      console.log('[UniversalSTTRecorder] No audio blob to process');
       return;
     }
 
     // Snapshot and clear early to free memory
     const blob = this.audioBlob;
     this.audioBlob = null;
-
-    console.log('[UniversalSTTRecorder] Processing single audio blob, size:', blob.size);
     
     // Fire-and-forget STT: schedule to avoid blocking UI thread
     try {
@@ -275,8 +255,6 @@ export class UniversalSTTRecorder {
       
       // In conversation mode, STT is fire-and-forget - no transcript return
       if (this.options.mode === 'conversation') {
-        console.log('[UniversalSTTRecorder] Conversation mode: sending audio blob fire-and-forget');
-        
         // Immediately trigger thinking state via callback
         if (this.options.onTranscriptReady) {
           this.options.onTranscriptReady(''); // Empty string triggers thinking state

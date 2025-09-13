@@ -467,7 +467,6 @@ class ChatController {
       // Pause realtime DB subscription work during conversation mode
       this.pauseRealtimeSubscription();
       this.stopHeartbeat();
-      console.log('[ChatController] TTS mode enabled: paused DB realtime/heartbeat');
     } else {
       this.flushMessageBuffer();
       // Resume realtime and prime history after TTS mode ends
@@ -476,7 +475,6 @@ class ChatController {
         this.resumeRealtimeSubscription();
         this.loadExistingMessages();
         this.startHeartbeat();
-        console.log('[ChatController] TTS mode disabled: resumed DB realtime/heartbeat');
       }
     }
   }

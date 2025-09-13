@@ -40,7 +40,6 @@ export const ConversationOverlay: React.FC = () => {
 
   // 🚨 RESET TO TAP TO START - ROBUST cleanup with validation
   const resetToTapToStart = useCallback(async (reason: string) => {
-    console.log(`[ConversationOverlay] 🔄 Reset to tap-to-start: ${reason}`);
     
     // 1. IMMEDIATE GUARDS - Stop all operations
     isShuttingDown.current = true;
@@ -53,7 +52,6 @@ export const ConversationOverlay: React.FC = () => {
     try {
       const { chatController } = await import('@/features/chat/ChatController');
       chatController.setTtsMode(false);
-      console.log('[ConversationOverlay] ✅ TTS mode disabled');
     } catch (e) {
       console.error('[ConversationOverlay] Failed to disable TTS mode:', e);
     }
@@ -91,16 +89,12 @@ export const ConversationOverlay: React.FC = () => {
     if (!overlayRef.current || isAudioUnlocked) return;
 
     const handleUserGesture = async () => {
-      console.log('[ConversationOverlay] 👆 User gesture detected - unlocking AudioContext...');
-      
       // Initialize AudioContext if not exists
       const ctx = audioContext || initializeAudioContext();
       
       // Resume AudioContext
       const success = await resumeAudioContext();
-      if (success) {
-        console.log('[ConversationOverlay] ✅ AudioContext unlocked successfully!');
-      } else {
+      if (!success) {
         console.error('[ConversationOverlay] ❌ Failed to unlock AudioContext');
       }
     };
@@ -125,7 +119,6 @@ export const ConversationOverlay: React.FC = () => {
     }
     
     if (connectionRef.current) {
-      console.log('[ConversationOverlay] ⚠️ WebSocket connection already exists, skipping...');
       return true;
     }
     
@@ -141,7 +134,6 @@ export const ConversationOverlay: React.FC = () => {
       });
       
       connection.on('broadcast', { event: 'thinking-mode' }, ({ payload }) => {
-        console.log('[ConversationOverlay] 🤔 Thinking mode received via WebSocket');
         if (!isShuttingDown.current) {
           setState('thinking');
         }
@@ -263,7 +255,6 @@ export const ConversationOverlay: React.FC = () => {
       // 5. STEP 3: Enable TTS mode with validation (pauses DB realtime)
       const { chatController } = await import('@/features/chat/ChatController');
       chatController.setTtsMode(true);
-      console.log('[ConversationOverlay] 🛰️ TTS mode ON - DB realtime paused');
       
       // 6. STEP 4: Initialize Universal Recorder
       recorderRef.current = new UniversalSTTRecorder({
@@ -274,7 +265,6 @@ export const ConversationOverlay: React.FC = () => {
           }
           isProcessingRef.current = true;
           setState('thinking');
-          console.log('[ConversationOverlay] STT fired-and-forgotten, UI flipped to thinking');
           // TTS will arrive over WS and change UI to "speaking" asynchronously
           isProcessingRef.current = false;
         },
@@ -297,7 +287,6 @@ export const ConversationOverlay: React.FC = () => {
       if (!recorderRef.current) {
         throw new Error('Audio recorder not initialized');
       }
-      console.log('[ConversationOverlay] ✅ TTS WebSocket established and recorder ready');
       
       // 9. SUCCESS - Mark active only after everything is ready
       isActiveRef.current = true;
@@ -336,7 +325,6 @@ export const ConversationOverlay: React.FC = () => {
     import('@/features/chat/ChatController').then(({ chatController }) => {
       try {
         chatController.setTtsMode(false);
-        console.log('[ConversationOverlay] 🛰️ TTS mode OFF - DB realtime resumed');
       } catch (error) {
         // Ignore mode switch errors
       }
