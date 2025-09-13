@@ -93,6 +93,22 @@ export class UniversalSTTRecorder {
     // Intentionally DO NOT cleanup here so energy monitoring continues
   }
 
+  // Pause mic input without tearing down the stream
+  pauseInput(): void {
+    if (!this.mediaStream) return;
+    this.mediaStream.getAudioTracks().forEach(track => {
+      track.enabled = false;
+    });
+  }
+
+  // Resume mic input
+  resumeInput(): void {
+    if (!this.mediaStream) return;
+    this.mediaStream.getAudioTracks().forEach(track => {
+      track.enabled = true;
+    });
+  }
+
   private setupMediaRecorder(): void {
     const mimeType = this.getSupportedMimeType();
     console.log('[UniversalSTTRecorder] Using MIME type:', mimeType);

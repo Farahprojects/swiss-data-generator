@@ -120,7 +120,8 @@ export const useUniversalMic = (options: UseUniversalMicOptions = {}) => {
 
   const stopRecording = useCallback(() => {
     if (recorderRef.current) {
-      recorderRef.current.stop();
+      // Fully stop media source for chat bar use-case
+      recorderRef.current.dispose();
       recorderRef.current = null;
     }
     setIsRecording(false);

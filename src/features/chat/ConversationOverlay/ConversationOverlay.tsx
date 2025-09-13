@@ -366,6 +366,19 @@ export const ConversationOverlay: React.FC = () => {
     }
   }, [state]);
 
+  // Manage mic state based on conversation UI state
+  useEffect(() => {
+    if (!recorderRef.current) return;
+
+    if (state === 'listening') {
+      // Resume mic input so user can speak
+      try { recorderRef.current.resumeInput(); } catch {}
+    } else {
+      // Pause mic input during thinking/replying/connecting/establishing
+      try { recorderRef.current.pauseInput(); } catch {}
+    }
+  }, [state]);
+
   // Cleanup on unmount to prevent WebSocket race condition
   useEffect(() => {
     return () => {
