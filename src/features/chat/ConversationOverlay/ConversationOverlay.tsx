@@ -210,7 +210,11 @@ export const ConversationOverlay: React.FC = () => {
         if (!isShuttingDown.current) {
           setTimeout(() => {
             if (!isShuttingDown.current) {
-              // Universal recorder doesn't need resume
+              try {
+                // Ensure mic input is on and immediately start a fresh recording segment
+                recorderRef.current?.resumeInput();
+                recorderRef.current?.startNewRecording();
+              } catch {}
             }
           }, 200);
         }

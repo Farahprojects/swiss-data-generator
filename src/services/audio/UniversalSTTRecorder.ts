@@ -94,6 +94,20 @@ export class UniversalSTTRecorder {
     // Intentionally DO NOT cleanup here so energy monitoring continues
   }
 
+  // Start a new recording segment quickly using existing MediaRecorder/stream
+  startNewRecording(): void {
+    if (!this.mediaRecorder || this.isRecording) return;
+    try {
+      // Ensure input is enabled
+      this.resumeInput();
+      this.mediaRecorder.start();
+      this.isRecording = true;
+      console.log('[UniversalSTTRecorder] New recording segment started');
+    } catch (e) {
+      console.error('[UniversalSTTRecorder] Failed to start new recording segment:', e);
+    }
+  }
+
   // Pause mic input without tearing down the stream
   pauseInput(): void {
     if (!this.mediaStream) return;
@@ -229,10 +243,24 @@ export class UniversalSTTRecorder {
       return;
     }
 
-    console.log('[UniversalSTTRecorder] Processing single audio blob, size:', this.audioBlob.size);
+    // Snapshot and clear early to free memory
+    const blob = this.audioBlob;
+    this.audioBlob = null;
+
+    console.log('[UniversalSTTRecorder] Processing single audio blob, size:', blob.size);
     
-    // Send single blob to STT
-    this.sendToSTT(this.audioBlob);
+    // Fire-and-forget STT: schedule to avoid blocking UI thread
+    try {
+      // Prefer microtask if available
+      if (typeof queueMicrotask === 'function') {
+        queueMicrotask(() => { this.sendToSTT(blob).catch(() => {}); });
+      } else {
+        setTimeout(() => { this.sendToSTT(blob).catch(() => {}); }, 0);
+      }
+    } catch {
+      // Fallback
+      setTimeout(() => { this.sendToSTT(blob).catch(() => {}); }, 0);
+    }
   }
 
   private async sendToSTT(audioBlob: Blob): Promise<void> {
