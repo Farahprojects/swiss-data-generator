@@ -116,6 +116,47 @@ class TTSPlaybackService {
     directBarsAnimationService.stop();
   }
 
+  // Safari fallback: decode full buffer and play via BufferSource
+  private async playWithBufferAudio(audioBytes: number[], onEnded?: () => void): Promise<void> {
+    const ctx = this.ensureAudioContext();
+    if (ctx.state === 'suspended') await ctx.resume();
+    const buffer = await this.decodeToBuffer(audioBytes);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.8;
+    source.connect(analyser);
+    analyser.connect(ctx.destination);
+
+    // For fallback path, we don't use HTMLAudioElement
+    this.currentSource = null;
+    this.mediaElementNode = null;
+    this.analyser = analyser;
+    this.isPlaying = true;
+    this.isPaused = false;
+    this.notify();
+
+    // Start animation slightly delayed to align with audible start
+    const startTimer = window.setTimeout(() => this.startAnimation(analyser), 80);
+
+    source.onended = () => {
+      window.clearTimeout(startTimer);
+      this.stopAnimation();
+      if (this.analyser) {
+        try { this.analyser.disconnect(); } catch {}
+      }
+      this.analyser = null;
+      this.isPlaying = false;
+      this.isPaused = false;
+      audioArbitrator.releaseControl('tts');
+      this.notify();
+      if (onEnded) onEnded();
+    };
+
+    source.start(0);
+  }
+
   private async decodeToBuffer(audioBytes: number[]): Promise<AudioBuffer> {
     const ctx = this.ensureAudioContext();
     if (ctx.state === 'suspended') await ctx.resume();
@@ -139,11 +180,12 @@ class TTSPlaybackService {
       // Create streaming audio element and connect to analyser
       const audioBlob = new Blob([new Uint8Array(audioBytes)], { type: 'audio/mpeg' });
       const audioUrl = URL.createObjectURL(audioBlob);
-      const audioEl = new Audio(audioUrl);
+      const audioEl = new Audio();
       audioEl.preload = 'auto';
-      audioEl.muted = false; // Play through element's normal output path
+      audioEl.muted = false; // audible
       audioEl.volume = 1.0;
-      (audioEl as any).playsInline = true; // iOS inline playback
+      (audioEl as any).playsInline = true; // iOS inline
+      audioEl.src = audioUrl;
 
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 256;
@@ -166,7 +208,7 @@ class TTSPlaybackService {
         this.startAnimation(analyser);
       };
 
-      const finalize = () => {
+      const cleanupElement = () => {
         this.stopAnimation();
         if (this.mediaElementNode) {
           try { this.mediaElementNode.disconnect(); } catch {}
@@ -181,6 +223,10 @@ class TTSPlaybackService {
         }
         this.currentUrl = null;
         this.currentSource = null;
+      };
+
+      const finalize = () => {
+        cleanupElement();
         this.isPlaying = false;
         this.isPaused = false;
         
@@ -192,14 +238,27 @@ class TTSPlaybackService {
       };
 
       audioEl.onended = finalize;
-      audioEl.onerror = finalize;
+      audioEl.onerror = async () => {
+        // Safari sometimes fails blob URLs; fallback to buffer decode path
+        cleanupElement();
+        try {
+          await this.playWithBufferAudio(audioBytes, onEnded);
+        } catch {
+          finalize();
+        }
+      };
 
       // Start playback (stream-decoding by the browser)
       try {
+        // Improve Safari reliability by waiting briefly if needed
+        if (audioEl.readyState < 2) {
+          await new Promise<void>((resolve) => setTimeout(resolve, 50));
+        }
         await audioEl.play();
       } catch (e) {
-        // Autoplay restriction or other play error: finalize gracefully
-        finalize();
+        // Autoplay restriction or other play error: try fallback decode path
+        cleanupElement();
+        await this.playWithBufferAudio(audioBytes, onEnded);
       }
     } catch (e) {
       this.internalStop();
