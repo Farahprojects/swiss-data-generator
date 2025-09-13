@@ -95,7 +95,8 @@ export const useUniversalMic = (options: UseUniversalMicOptions = {}) => {
           levelRef.current = level;
         },
         onProcessingStart: () => {
-          // Show spinner only during processing (recording state unchanged)
+          // Silence detected - stop recording UI, show spinner for STT processing
+          setIsRecording(false);
           setIsProcessing(true);
         },
         silenceThreshold: options.silenceThreshold || 0.02,
@@ -151,7 +152,6 @@ export const useUniversalMic = (options: UseUniversalMicOptions = {}) => {
       stopRecording();
     } else {
       console.log('[useUniversalMic] Starting recording...');
-      setIsProcessing(true);
       await startRecording();
     }
   }, [isRecording, startRecording, stopRecording]);
