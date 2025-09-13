@@ -95,8 +95,7 @@ export const useUniversalMic = (options: UseUniversalMicOptions = {}) => {
           levelRef.current = level;
         },
         onProcessingStart: () => {
-          // Stop showing X; show spinner only during processing
-          setIsRecording(false);
+          // Show spinner only during processing (recording state unchanged)
           setIsProcessing(true);
         },
         silenceThreshold: options.silenceThreshold || 0.02,
