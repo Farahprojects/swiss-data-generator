@@ -9,7 +9,7 @@ import { AstroDataPromptMessage } from '@/components/chat/AstroDataPromptMessage
 import { AstroDataForm } from '@/components/chat/AstroDataForm';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogOverlay } from '@/components/ui/dialog';
 
 // Lazy load TypewriterText for better performance
 const TypewriterText = lazy(() => import('@/components/ui/TypewriterText').then(module => ({ default: module.TypewriterText })));
@@ -295,7 +295,8 @@ export const MessageList = () => {
     </div>
     
     {/* Welcome overlay after closing astro form (guests) */}
-    <Dialog open={showWelcomeOverlay} onOpenChange={setShowWelcomeOverlay}>
+    <Dialog open={showWelcomeOverlay} onOpenChange={() => {}}>
+      <DialogOverlay className="bg-white/95" />
       <DialogContent className="sm:max-w-md rounded-2xl p-6">
         <div className="text-center space-y-4">
           <h3 className="text-2xl font-light text-gray-900">Welcome Back</h3>
