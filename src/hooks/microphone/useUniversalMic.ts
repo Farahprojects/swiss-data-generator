@@ -57,6 +57,7 @@ export const useUniversalMic = (options: UseUniversalMicOptions = {}) => {
       recorderRef.current = new UniversalSTTRecorder({
         onTranscriptReady: (transcript) => {
           console.log('[useUniversalMic] Transcript ready:', transcript);
+          setIsRecording(false);
           setIsProcessing(false);
           options.onTranscriptReady?.(transcript);
         },
