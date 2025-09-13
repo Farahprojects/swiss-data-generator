@@ -268,9 +268,16 @@ export const ConversationOverlay: React.FC = () => {
       // 6. STEP 4: Initialize Universal Recorder
       recorderRef.current = new UniversalSTTRecorder({
         mode: 'conversation',
-        // No onTranscriptReady callback - conversation mode is fire-and-forget
-        // STT service handles: audio → chat-send → llm-handler → TTS
-        // TTS will arrive over WS and change UI to "speaking"
+        onTranscriptReady: (transcript: string) => {
+          if (isShuttingDown.current || isProcessingRef.current) {
+            return;
+          }
+          isProcessingRef.current = true;
+          setState('thinking');
+          console.log('[ConversationOverlay] STT fired-and-forgotten, UI flipped to thinking');
+          // TTS will arrive over WS and change UI to "speaking" asynchronously
+          isProcessingRef.current = false;
+        },
         onLevel: (level) => {
           if (!isShuttingDown.current) audioLevelRef.current = level;
         },
