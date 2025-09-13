@@ -192,9 +192,10 @@ export const ConversationOverlay: React.FC = () => {
     if (isShuttingDown.current) return;
     
     try {
-      setState('replying'); // 7. Change UI to "speaking"
+      // Set state to 'replying' immediately when TTS starts
+      // Animation will be driven by actual audio output from TTS service
+      setState('replying');
       
-      // 7. Unpause media source for TTS
       await ttsPlaybackService.play(audioBytes, () => {
         setState('listening');
         
