@@ -97,7 +97,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
   const initializeAudioPipeline = chatController.initializeAudioPipeline.bind(chatController);
   const pauseMic = chatController.pauseMic.bind(chatController);
   const unpauseMic = chatController.unpauseMic.bind(chatController);
-  const sendTextMessage = chatController.sendTextMessage.bind(chatController);
+  // sendTextMessage removed - using unifiedWebSocketService.sendMessageDirect() directly
   const cancelMic = chatController.cancelMic.bind(chatController);
   const [signInPrompt, setSignInPrompt] = useState<{ show: boolean; feature: string }>({ 
     show: false, 

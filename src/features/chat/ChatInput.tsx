@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSearchParams } from 'react-router-dom';
 import { useChatInputState } from '@/hooks/useChatInputState';
 import { useChatStore } from '@/core/store';
+import { unifiedWebSocketService } from '@/services/websocket/UnifiedWebSocketService';
 // Removed - using single source of truth in useChatStore
 
 // Stop icon component
@@ -73,7 +74,7 @@ export const ChatInput = () => {
           const newChatId = await addThread(user.id, 'New Chat');
           
           // Initialize the conversation in chatController (store will handle state)
-          chatController.initializeConversation(newChatId);
+          await chatController.initializeConversation(newChatId);
           
           console.log('[ChatInput] New conversation created and initialized:', newChatId);
         } catch (error) {
@@ -87,7 +88,11 @@ export const ChatInput = () => {
       
       // Immediately show stop icon when sending message
       setAssistantTyping(true);
-      chatController.sendTextMessage(text, 'text'); // Explicitly pass 'text' mode
+      
+      // Fire-and-forget direct send to WebSocket - fastest possible
+      unifiedWebSocketService.sendMessageDirect(text, 'text');
+      
+      // Clear the text immediately
       setText('');
     }
   };

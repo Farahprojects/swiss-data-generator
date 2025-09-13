@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useChatStore } from '@/core/store';
 import { sttService } from '@/services/voice/stt';
 import { llmService } from '@/services/llm/chat';
+import { unifiedWebSocketService } from '@/services/websocket/UnifiedWebSocketService';
 // Removed - using universal mic system
 
 
@@ -58,115 +59,89 @@ class ChatController {
     
     // Set chat_id in store (single source of truth) - this will persist to sessionStorage
     useChatStore.getState().startConversation(chat_id);
-    this.setupRealtimeSubscription(chat_id);
+    
+    // Initialize unified WebSocket service
+    await unifiedWebSocketService.initialize(chat_id, {
+      onMessageReceived: this.handleMessageReceived.bind(this),
+      onMessageUpdated: this.handleMessageUpdated.bind(this),
+      onStatusChange: this.handleStatusChange.bind(this),
+      onOptimisticMessage: this.handleOptimisticMessage.bind(this)
+    });
+    
     await this.loadExistingMessages();
   }
 
-  private realtimeChannel: any = null;
-  private realtimeStatus: 'SUBSCRIBED' | 'CLOSED' | 'TIMED_OUT' | 'CHANNEL_ERROR' | 'SUBSCRIBING' | null = null;
-  private subscriptionRetryCount: number = 0;
-  
-  // Buffering system for TTS mode
-  private messageBuffer: any[] = [];
-  private isTtsMode: boolean = false;
-  private readonly BUFFER_CAPACITY = 100; // Circular buffer limit
-  
   // Heartbeat system
   private dbHeartbeatInterval: NodeJS.Timeout | null = null;
   private readonly DB_HEARTBEAT_INTERVAL = 30000; // 30 seconds
 
-  private setupRealtimeSubscription(chat_id: string) {
-    // Clean up existing subscription
-    this.cleanupRealtimeSubscription();
-
-    try {
-      this.subscriptionRetryCount = 0;
-
-      this.realtimeChannel = supabase
-        .channel(`messages:${chat_id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'messages',
-            filter: `chat_id=eq.${chat_id}`
-          },
-          (payload) => {
-            const newMessage = this.transformDatabaseMessage(payload.new);
-            
-            // Handle message based on TTS mode
-            if (this.isTtsMode) {
-              // Buffer the message when in TTS mode
-              this.bufferMessage(newMessage);
-            } else {
-              // Process immediately when in text mode
-              this.processMessage(newMessage);
-            }
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'messages',
-            filter: `chat_id=eq.${chat_id}`
-          },
-          (payload) => {
-            console.log('[ChatController] ♻️ UPDATE message payload received');
-            const updatedMessage = this.transformDatabaseMessage(payload.new);
-            const { messages, updateMessage, addMessage } = useChatStore.getState();
-            
-            // Skip context_injected system updates
-            if (updatedMessage.role === 'assistant' && payload.new.context_injected) {
-              return;
-            }
-            
-            // Find existing message and update, or add if missing
-            const existingMessage = messages.find(m => m.id === updatedMessage.id);
-            if (existingMessage) {
-              updateMessage(updatedMessage.id, updatedMessage);
-            } else {
-              // Message not in store yet, add it
-              addMessage(updatedMessage);
-            }
-          }
-        )
-        .subscribe((status) => {
-          this.realtimeStatus = status as any;
-          if (status === 'SUBSCRIBED') {
-            // Guaranteed delivery: fetch current state after subscribing
-            this.subscriptionRetryCount = 0;
-            // During TTS mode (conversation mode), defer history fetch and heartbeat
-            if (!this.isTtsMode) {
-              this.loadExistingMessages();
-              this.startHeartbeat();
-            }
-          } else if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR') {
-            const retry = Math.min(++this.subscriptionRetryCount, 5);
-            const delay = Math.min(1000 * Math.pow(2, retry), 8000);
-            console.warn(`[ChatController] Realtime ${status}. Retrying subscribe in ${delay}ms (attempt ${retry})`);
-            setTimeout(() => {
-              // Recreate subscription
-              this.setupRealtimeSubscription(chat_id);
-            }, delay);
-          } else if (status === 'CLOSED') {
-            console.warn('[ChatController] Realtime channel closed.');
-          }
-        });
-    } catch (error) {
-      console.error('[ChatController] Failed to setup realtime subscription:', error);
+  /**
+   * Handle incoming messages from unified WebSocket
+   */
+  private handleMessageReceived(message: Message) {
+    const { messages, updateMessage, addMessage } = useChatStore.getState();
+    
+    // Reconciliation logic: check if this is updating an optimistic message
+    if (message.role === 'user' && message.client_msg_id) {
+      // Find and update the optimistic user message
+      const optimisticMessage = messages.find(m => m.id === message.client_msg_id);
+      if (optimisticMessage) {
+        updateMessage(message.client_msg_id, { ...message });
+        return;
+      }
     }
+    
+    // Only add if not already present and no reconciliation occurred
+    if (!messages.find(m => m.id === message.id)) {
+      addMessage(message);
+    }
+  }
+
+  /**
+   * Handle message updates from unified WebSocket
+   */
+  private handleMessageUpdated(message: Message) {
+    console.log('[ChatController] ♻️ UPDATE message received from unified WebSocket');
+    const { messages, updateMessage, addMessage } = useChatStore.getState();
+    
+    // Skip context_injected system updates
+    if (message.role === 'assistant' && message.context_injected) {
+      return;
+    }
+    
+    // Find existing message and update, or add if missing
+    const existingMessage = messages.find(m => m.id === message.id);
+    if (existingMessage) {
+      updateMessage(message.id, message);
+    } else {
+      // Message not in store yet, add it
+      addMessage(message);
+    }
+  }
+
+  /**
+   * Handle WebSocket status changes
+   */
+  private handleStatusChange(status: string) {
+    if (status === 'SUBSCRIBED') {
+      // Start heartbeat for non-TTS mode
+      this.startHeartbeat();
+    } else if (status === 'CLOSED') {
+      console.warn('[ChatController] Unified WebSocket channel closed.');
+    }
+  }
+
+  /**
+   * Handle optimistic messages (immediate UI updates)
+   */
+  private handleOptimisticMessage(message: Message) {
+    const { addMessage } = useChatStore.getState();
+    addMessage(message);
+    console.log('[ChatController] Added optimistic message:', message.text);
   }
 
   private async ensureRealtimeReady(chat_id: string): Promise<void> {
     try {
-      // If no channel or not subscribed, (re)create it
-      if (!this.realtimeChannel || this.realtimeStatus !== 'SUBSCRIBED') {
-        console.log('[ChatController] ⚠️ Realtime not ready. Reinitializing...');
-        this.setupRealtimeSubscription(chat_id);
-      }
       // Lightweight ping to wake network/client
       await supabase
         .from('messages')
@@ -177,109 +152,35 @@ class ChatController {
     }
   }
 
-  private transformDatabaseMessage(dbMessage: any): Message {
-    return {
-      id: dbMessage.id,
-      chat_id: dbMessage.chat_id,
-      role: dbMessage.role,
-      text: dbMessage.text,
-      audioUrl: dbMessage.audio_url,
-      timings: dbMessage.timings,
-      createdAt: dbMessage.created_at,
-      meta: dbMessage.meta,
-      client_msg_id: dbMessage.client_msg_id,
-      status: dbMessage.status,
-      context_injected: dbMessage.context_injected
-    };
-  }
-
-  public cleanupRealtimeSubscription() {
-    this.stopHeartbeat(); // Stop heartbeat when cleaning up
-    
-    if (this.realtimeChannel) {
-      supabase.removeChannel(this.realtimeChannel);
-      this.realtimeChannel = null;
-    }
-    
-    // Clear buffer and reset TTS mode
-    this.messageBuffer = [];
-    this.isTtsMode = false;
-  }
-
   public pauseRealtimeSubscription() {
-    if (this.realtimeChannel) {
-      this.realtimeChannel.unsubscribe();
-    }
+    unifiedWebSocketService.pauseRealtimeSubscription();
   }
 
   public resumeRealtimeSubscription() {
-    if (this.realtimeChannel) {
-      this.realtimeChannel.subscribe();
-    }
+    unifiedWebSocketService.resumeRealtimeSubscription();
   }
 
 
   /**
    * Initialize conversation (called when modal closes)
    */
-  initializeConversation(chat_id: string): void {
+  async initializeConversation(chat_id: string): Promise<void> {
     useChatStore.getState().startConversation(chat_id);
-    this.setupRealtimeSubscription(chat_id);
+    
+    // Initialize unified WebSocket service
+    await unifiedWebSocketService.initialize(chat_id, {
+      onMessageReceived: this.handleMessageReceived.bind(this),
+      onMessageUpdated: this.handleMessageUpdated.bind(this),
+      onStatusChange: this.handleStatusChange.bind(this),
+      onOptimisticMessage: this.handleOptimisticMessage.bind(this)
+    });
+    
     this.loadExistingMessages(); // Load conversation history
   }
 
-  sendTextMessage(text: string, mode?: string) {
-    const { chat_id } = useChatStore.getState();
-    if (!chat_id) {
-      console.error('[ChatController] sendTextMessage: No chat_id in store.');
-      return;
-    }
+  // sendTextMessage removed - using unifiedWebSocketService.sendMessageDirect() directly
 
-    // Wake up realtime before sending the user message (fire-and-forget)
-    this.ensureRealtimeReady(chat_id).catch((error) => {
-      console.warn('[ChatController] Realtime wake-up failed:', error);
-    });
-
-    const client_msg_id = uuidv4();
-    this.addOptimisticMessages(chat_id, text, client_msg_id);
-    
-    // Fire-and-forget: Send message to chat-send (don't await)
-    llmService.sendMessage({ 
-      chat_id, 
-      text, 
-      client_msg_id,
-      mode: mode // Pass mode to backend
-    }).catch((error) => {
-      // Store the failed message for retry
-      this.lastFailedMessage = { text, mode };
-      
-      // Use network error handler instead of console.error
-      networkErrorHandler.handleError(error, 'ChatController.sendTextMessage');
-      useChatStore.getState().setError("Failed to send message. Please try again.");
-    });
-    
-    // Assistant response will come via realtime updates
-  }
-
-  private addOptimisticMessages(chat_id: string, text: string, client_msg_id: string, audioUrl?: string) {
-    const optimisticUserMessage: Message = {
-      id: client_msg_id,
-      chat_id: chat_id,
-      role: "user",
-      text,
-      audioUrl,
-      createdAt: new Date().toISOString(),
-      status: "thinking",
-      client_msg_id, // Add client_msg_id for reconciliation
-    };
-
-    // Only add the user message optimistically
-    // Assistant response will come via realtime updates
-    useChatStore.getState().addMessage(optimisticUserMessage);
-    
-    // Imperative scroll alignment after DOM update
-    this.scrollToNewTurn(client_msg_id);
-  }
+  // addOptimisticMessages removed - handled by unifiedWebSocketService.sendMessageDirect()
 
   private scrollToNewTurn(userMessageId: string) {
     // Use double requestAnimationFrame to ensure DOM is fully updated
@@ -360,10 +261,8 @@ class ChatController {
       this.resetTimeout = null;
     }
     
-    // Audio pipeline removed - using universal mic system
-    
-    // Clean up realtime subscription
-    this.cleanupRealtimeSubscription();
+    // Clean up unified WebSocket service
+    unifiedWebSocketService.cleanup();
     
     this.isResetting = false;
     this.isUnlocked = false; // Lock on cleanup
@@ -381,7 +280,7 @@ class ChatController {
       
       // Retry sending the message
       setTimeout(() => {
-        this.sendTextMessage(text, mode);
+        unifiedWebSocketService.sendMessageDirect(text, mode);
       }, 1000); // Small delay before retry
     }
   }
@@ -428,68 +327,15 @@ class ChatController {
     console.log(`[ChatController] Payment flow stop icon: ${show ? 'ON' : 'OFF'}`);
   }
 
-  // Buffering system methods
-  private bufferMessage(message: any): void {
-    // Circular buffer: if at capacity, remove oldest message
-    if (this.messageBuffer.length >= this.BUFFER_CAPACITY) {
-      const dropped = this.messageBuffer.shift();
-      console.warn(`[ChatController] Buffer overflow - dropped message: ${dropped?.id}`);
-    }
-    
-    this.messageBuffer.push(message);
-  }
-
-  private processMessage(message: any): void {
-    const { messages, updateMessage, addMessage } = useChatStore.getState();
-    
-    // Reconciliation logic: check if this is updating an optimistic message
-    if (message.role === 'user' && message.client_msg_id) {
-      // Find and update the optimistic user message
-      const optimisticMessage = messages.find(m => m.id === message.client_msg_id);
-      if (optimisticMessage) {
-        updateMessage(message.client_msg_id, { ...message });
-        return;
-      }
-    }
-    
-    // Only add if not already present and no reconciliation occurred
-    if (!messages.find(m => m.id === message.id)) {
-      addMessage(message);
-    }
-  }
-
   public setTtsMode(enabled: boolean): void {
-    if (this.isTtsMode === enabled) return;
-    
-    this.isTtsMode = enabled;
+    unifiedWebSocketService.setTtsMode(enabled);
     
     if (enabled) {
-      // Pause realtime DB subscription work during conversation mode
-      this.pauseRealtimeSubscription();
       this.stopHeartbeat();
     } else {
-      this.flushMessageBuffer();
-      // Resume realtime and prime history after TTS mode ends
-      const { chat_id } = useChatStore.getState();
-      if (chat_id) {
-        this.resumeRealtimeSubscription();
-        this.loadExistingMessages();
-        this.startHeartbeat();
-      }
+      // Resume heartbeat after TTS mode ends
+      this.startHeartbeat();
     }
-  }
-
-  private flushMessageBuffer(): void {
-    if (this.messageBuffer.length === 0) return;
-    
-    
-    // Process all buffered messages
-    this.messageBuffer.forEach(message => {
-      this.processMessage(message);
-    });
-    
-    // Clear the buffer
-    this.messageBuffer = [];
   }
 
   // Heartbeat system

@@ -273,6 +273,22 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     if (place.placeId) setValue('secondPersonPlaceId', place.placeId);
   };
 
+  // Unified close handler for mobile overlay: restore page state and navigate home
+  const handleClose = () => {
+    try {
+      const html = document.documentElement;
+      const scrollY = html.getAttribute('data-scroll-y');
+      html.classList.remove('lock-scroll');
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY, 10));
+        html.removeAttribute('data-scroll-y');
+      }
+      document.body.classList.remove('astro-form-open');
+    } catch {}
+    onClose();
+    navigate('/', { replace: true });
+  };
+
   const handlePaymentSubmit = async () => {
     setIsProcessingPayment(true);
     try {
@@ -423,7 +439,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 bg-black/50 z-40"
-          onClick={onClose}
+          onClick={handleClose}
         />
       )}
       
@@ -468,7 +484,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
         </div>
         <div className="flex items-center space-x-2">
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
           >
             <X className="w-5 h-5" />
