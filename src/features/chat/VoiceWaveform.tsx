@@ -10,6 +10,8 @@ export const VoiceWaveform: React.FC<VoiceWaveformProps> = ({ audioLevelRef }) =
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>();
   const barsRef = useRef<number[]>([]);
+  const lastLevelRef = useRef<number>(0);
+  const lastAddTimeRef = useRef<number>(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -40,14 +42,28 @@ export const VoiceWaveform: React.FC<VoiceWaveformProps> = ({ audioLevelRef }) =
       // Get current audio level
       const level = audioLevelRef.current || 0;
       
-      // Add new bar
-      barsRef.current.push(level);
+      // Only add new bars when there's significant audio energy
+      const now = Date.now();
+      const energyThreshold = 0.01;
+      const minTimeBetweenBars = 100; // 100ms minimum between bars
       
-      // Keep only recent bars
-      const maxBars = Math.floor(width / 4);
-      if (barsRef.current.length > maxBars) {
-        barsRef.current.shift();
+      // Check if we should add a new bar based on energy and timing
+      const hasSignificantEnergy = level > energyThreshold;
+      const enoughTimePassed = now - lastAddTimeRef.current > minTimeBetweenBars;
+      const energyChanged = Math.abs(level - lastLevelRef.current) > 0.005;
+      
+      if (hasSignificantEnergy && (enoughTimePassed || energyChanged)) {
+        barsRef.current.push(level);
+        lastAddTimeRef.current = now;
+        
+        // Keep only recent bars (limit to screen width)
+        const maxBars = Math.floor(width / 4);
+        if (barsRef.current.length > maxBars) {
+          barsRef.current.shift();
+        }
       }
+      
+      lastLevelRef.current = level;
       
       // Draw bars
       const barWidth = 3;
