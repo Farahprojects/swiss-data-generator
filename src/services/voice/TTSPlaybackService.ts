@@ -198,6 +198,7 @@ class TTSPlaybackService {
       const audioBlob = new Blob([new Uint8Array(audioBytes)], { type: 'audio/mpeg' });
       const audioUrl = URL.createObjectURL(audioBlob);
       const audioEl = new Audio();
+      audioEl.autoplay = true; // align with Safari-safe pattern
       audioEl.preload = 'auto';
       audioEl.muted = false; // audible
       audioEl.volume = 1.0;
@@ -271,6 +272,8 @@ class TTSPlaybackService {
         if (audioEl.readyState < 2) {
           await new Promise<void>((resolve) => setTimeout(resolve, 50));
         }
+        // Hint Safari to fully prepare element
+        try { audioEl.load(); } catch {}
         await audioEl.play();
       } catch (e) {
         // Autoplay restriction or other play error: try fallback decode path
