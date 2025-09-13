@@ -274,18 +274,11 @@ export const ConversationOverlay: React.FC = () => {
           }
           isProcessingRef.current = true;
           setState('thinking');
-          try {
-            // Transcript is already processed by universal mic system
-            // Send to LLM for response
-            const client_msg_id = uuidv4();
-            await llmService.sendMessage({ chat_id, text: transcript, client_msg_id });
-            // TTS will arrive over WS and change UI to "speaking"
-          } catch (error) {
-            console.error('[ConversationOverlay] Processing failed:', error);
-            resetToTapToStart('STT processing failed');
-          } finally {
-            isProcessingRef.current = false;
-          }
+          // STT service already handles the full flow (chat-send → llm-handler → TTS)
+          // No need to call llmService.sendMessage() - that would cause double-sending
+          console.log('[ConversationOverlay] Transcript received, waiting for TTS response...');
+          // TTS will arrive over WS and change UI to "speaking"
+          isProcessingRef.current = false;
         },
         onLevel: (level) => {
           if (!isShuttingDown.current) audioLevelRef.current = level;
