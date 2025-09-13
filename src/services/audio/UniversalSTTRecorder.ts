@@ -53,29 +53,46 @@ export class UniversalSTTRecorder {
       });
 
       console.log('[UniversalSTTRecorder] Microphone access granted');
+      console.log('[UniversalSTTRecorder] MediaStream tracks:', this.mediaStream.getTracks().length);
 
       // Set up MediaRecorder
+      const mimeType = this.getSupportedMimeType();
+      console.log('[UniversalSTTRecorder] Using MIME type:', mimeType);
+      
       this.mediaRecorder = new MediaRecorder(this.mediaStream, {
-        mimeType: this.getSupportedMimeType()
+        mimeType: mimeType
       });
 
       this.audioChunks = [];
       this.mediaRecorder.ondataavailable = (event) => {
+        console.log('[UniversalSTTRecorder] Data available, size:', event.data.size);
         if (event.data.size > 0) {
           this.audioChunks.push(event.data);
         }
       };
 
       this.mediaRecorder.onstop = () => {
+        console.log('[UniversalSTTRecorder] Recording stopped, processing', this.audioChunks.length, 'chunks');
         this.processRecording();
       };
 
+      this.mediaRecorder.onstart = () => {
+        console.log('[UniversalSTTRecorder] MediaRecorder started');
+      };
+
+      this.mediaRecorder.onerror = (event) => {
+        console.error('[UniversalSTTRecorder] MediaRecorder error:', event);
+      };
+
       // Set up silence detection
+      console.log('[UniversalSTTRecorder] Setting up silence detection...');
       this.setupSilenceDetection();
 
       // Start recording
+      console.log('[UniversalSTTRecorder] Starting MediaRecorder...');
       this.mediaRecorder.start();
       this.isRecording = true;
+      console.log('[UniversalSTTRecorder] Recording state set to true');
 
     } catch (error) {
       this.options.onError?.(error as Error);
@@ -92,8 +109,12 @@ export class UniversalSTTRecorder {
   }
 
   private setupSilenceDetection(): void {
-    if (!this.mediaStream) return;
+    if (!this.mediaStream) {
+      console.error('[UniversalSTTRecorder] No mediaStream for silence detection');
+      return;
+    }
 
+    console.log('[UniversalSTTRecorder] Creating AudioContext...');
     this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     const source = this.audioContext.createMediaStreamSource(this.mediaStream);
     
@@ -102,6 +123,7 @@ export class UniversalSTTRecorder {
     this.analyser.smoothingTimeConstant = 0.8;
     
     source.connect(this.analyser);
+    console.log('[UniversalSTTRecorder] Starting audio level monitoring...');
     this.monitorAudioLevel();
   }
 
@@ -128,6 +150,11 @@ export class UniversalSTTRecorder {
       const smoothedLevel = lastLevel * 0.7 + rawLevel * 0.3; // Smoothing
       lastLevel = smoothedLevel;
 
+      // Log first few energy levels for debugging
+      if (Math.random() < 0.01) { // Log ~1% of the time to avoid spam
+        console.log('[UniversalSTTRecorder] Energy level:', smoothedLevel.toFixed(4), 'isSpeaking:', smoothedLevel > this.options.silenceThreshold!);
+      }
+      
       this.options.onLevel?.(smoothedLevel);
 
       // Voice Activity Detection (VAD)
