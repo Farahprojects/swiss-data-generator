@@ -11,7 +11,7 @@ BEGIN
   END IF;
 
   -- Get the timestamp of the last summarized message for this chat
-  SELECT created_at INTO latest_summary_end_time
+  SELECT m.created_at INTO latest_summary_end_time
   FROM messages m
   JOIN message_block_summaries mbs ON m.id = mbs.end_message_id
   WHERE mbs.chat_id = NEW.chat_id
