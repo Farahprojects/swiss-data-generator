@@ -141,7 +141,8 @@ class TTSPlaybackService {
       const audioUrl = URL.createObjectURL(audioBlob);
       const audioEl = new Audio(audioUrl);
       audioEl.preload = 'auto';
-      audioEl.muted = true; // Route through AudioContext to speakers
+      audioEl.muted = false; // Play through element's normal output path
+      audioEl.volume = 1.0;
       (audioEl as any).playsInline = true; // iOS inline playback
 
       const analyser = ctx.createAnalyser();
@@ -149,6 +150,7 @@ class TTSPlaybackService {
       analyser.smoothingTimeConstant = 0.8;
 
       const mediaNode = ctx.createMediaElementSource(audioEl);
+      // Route through AudioContext for audible playback and analysis
       mediaNode.connect(analyser);
       analyser.connect(ctx.destination);
 

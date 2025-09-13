@@ -29,7 +29,7 @@ export class UniversalSTTRecorder {
   constructor(options: STTRecorderOptions = {}) {
     this.options = {
       silenceThreshold: 0.01,
-      silenceDuration: 1200, // 1.2 seconds
+      silenceDuration: 1000, // 1.0 second
       ...options
     };
   }
@@ -153,7 +153,7 @@ export class UniversalSTTRecorder {
     
     this.analyser = this.audioContext.createAnalyser();
     this.analyser.fftSize = 256;
-    this.analyser.smoothingTimeConstant = 0.8;
+    this.analyser.smoothingTimeConstant = 0.9; // smoother energy for UI/VAD
     
     source.connect(this.analyser);
     
@@ -184,7 +184,7 @@ export class UniversalSTTRecorder {
       
       // Smooth level changes for UI (prevent jittery animation)
       const rawLevel = Math.min(1, rms * 15); // Boost sensitivity
-      const smoothedLevel = lastLevel * 0.7 + rawLevel * 0.3; // Smoothing
+      const smoothedLevel = lastLevel * 0.85 + rawLevel * 0.15; // Heavier smoothing
       lastLevel = smoothedLevel;
 
       // Feed energy signal to animation
