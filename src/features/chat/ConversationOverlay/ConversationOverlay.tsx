@@ -256,9 +256,10 @@ export const ConversationOverlay: React.FC = () => {
         throw new Error('Failed to establish TTS WebSocket connection');
       }
       
-      // 5. STEP 3: Enable TTS mode with validation
+      // 5. STEP 3: Enable TTS mode with validation (pauses DB realtime)
       const { chatController } = await import('@/features/chat/ChatController');
       chatController.setTtsMode(true);
+      console.log('[ConversationOverlay] 🛰️ TTS mode ON - DB realtime paused');
       
       // 6. STEP 4: Initialize Universal Recorder
       recorderRef.current = new UniversalSTTRecorder({
@@ -293,13 +294,14 @@ export const ConversationOverlay: React.FC = () => {
       // 7. STEP 5: Start recorder
       await recorderRef.current.start();
       
-      // 8. STEP 7: Final validation - All systems ready
+      // 8. STEP 6: Final validation - All systems ready
       if (!connectionRef.current) {
         throw new Error('TTS WebSocket connection lost during setup');
       }
       if (!recorderRef.current) {
         throw new Error('Audio recorder not initialized');
       }
+      console.log('[ConversationOverlay] ✅ TTS WebSocket established and recorder ready');
       
       // 9. SUCCESS - Mark active only after everything is ready
       isActiveRef.current = true;
@@ -338,6 +340,7 @@ export const ConversationOverlay: React.FC = () => {
     import('@/features/chat/ChatController').then(({ chatController }) => {
       try {
         chatController.setTtsMode(false);
+        console.log('[ConversationOverlay] 🛰️ TTS mode OFF - DB realtime resumed');
       } catch (error) {
         // Ignore mode switch errors
       }

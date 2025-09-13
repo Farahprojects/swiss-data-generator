@@ -138,8 +138,11 @@ class ChatController {
           if (status === 'SUBSCRIBED') {
             // Guaranteed delivery: fetch current state after subscribing
             this.subscriptionRetryCount = 0;
-            this.loadExistingMessages();
-            this.startHeartbeat();
+            // During TTS mode (conversation mode), defer history fetch and heartbeat
+            if (!this.isTtsMode) {
+              this.loadExistingMessages();
+              this.startHeartbeat();
+            }
           } else if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR') {
             const retry = Math.min(++this.subscriptionRetryCount, 5);
             const delay = Math.min(1000 * Math.pow(2, retry), 8000);
@@ -461,8 +464,20 @@ class ChatController {
     this.isTtsMode = enabled;
     
     if (enabled) {
+      // Pause realtime DB subscription work during conversation mode
+      this.pauseRealtimeSubscription();
+      this.stopHeartbeat();
+      console.log('[ChatController] TTS mode enabled: paused DB realtime/heartbeat');
     } else {
       this.flushMessageBuffer();
+      // Resume realtime and prime history after TTS mode ends
+      const { chat_id } = useChatStore.getState();
+      if (chat_id) {
+        this.resumeRealtimeSubscription();
+        this.loadExistingMessages();
+        this.startHeartbeat();
+        console.log('[ChatController] TTS mode disabled: resumed DB realtime/heartbeat');
+      }
     }
   }
 
