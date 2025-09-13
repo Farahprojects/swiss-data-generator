@@ -218,6 +218,7 @@ export class UniversalSTTRecorder {
     let lastLevel = 0;
     let lastFrameTimeMs: number | null = null;
     let speechAboveMs = 0;
+    let speechBelowMs = 0;
     
     const updateAnimation = () => {
       // Always sample analyser while the graph exists
@@ -272,7 +273,7 @@ export class UniversalSTTRecorder {
       const ratioStart = 0.55;
       const ratioEnd = 0.40;
       const minRms = 0.005;
-      const speechStartHoldMs = 150;
+      const speechStartHoldMs = 180;
       const above = (speechRatio > ratioStart) && (rms > minRms);
       if (above) {
         speechAboveMs += deltaMs;
@@ -284,10 +285,21 @@ export class UniversalSTTRecorder {
       // VAD-driven behavior differs by mode
       if (this.options.mode === 'conversation') {
         const vadActive = sustainedBandActive && (speechRatio > ratioEnd) && (smoothedLevel > this.options.silenceThreshold!);
-        if (vadActive && !this.isRecording && this.mediaRecorder) {
-          try { this.mediaRecorder.start(); this.isRecording = true; } catch {}
-        } else if (!vadActive && this.isRecording) {
-          this.stop();
+        if (vadActive) {
+          // speech detected
+          speechBelowMs = 0;
+          if (!this.isRecording && this.mediaRecorder) {
+            try { this.mediaRecorder.start(); this.isRecording = true; } catch {}
+          }
+        } else {
+          // potential silence
+          if (this.isRecording) {
+            speechBelowMs += deltaMs;
+            if (speechBelowMs >= (this.options.silenceDuration || 1200)) {
+              this.stop();
+              speechBelowMs = 0;
+            }
+          }
         }
       } else {
         // Chat bar: use silence timer while recording
