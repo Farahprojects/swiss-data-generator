@@ -6,11 +6,13 @@ class TTSPlaybackService {
   private externalContextProvider: (() => AudioContext | null) | null = null;
   private isUsingExternalContext: boolean = false;
   private currentSource: HTMLAudioElement | null = null;
+  private mediaElementNode: MediaElementAudioSourceNode | null = null;
   private analyser: AnalyserNode | null = null;
   private animationTimer: number | null = null;
   private isPlaying = false;
   private isPaused = false;
   private listeners = new Set<() => void>();
+  private currentUrl: string | null = null;
 
   private notify() {
     this.listeners.forEach((l) => l());
@@ -114,6 +116,13 @@ class TTSPlaybackService {
     directBarsAnimationService.stop();
   }
 
+  private async decodeToBuffer(audioBytes: number[]): Promise<AudioBuffer> {
+    const ctx = this.ensureAudioContext();
+    if (ctx.state === 'suspended') await ctx.resume();
+    const arrayBuffer = new Uint8Array(audioBytes).buffer;
+    return await ctx.decodeAudioData(arrayBuffer);
+  }
+
   async play(audioBytes: number[], onEnded?: () => void): Promise<void> {
     try {
       // 🎵 REQUEST AUDIO CONTROL - Ensure no conflicts
@@ -127,39 +136,49 @@ class TTSPlaybackService {
       // Teardown existing (without releasing control)
       this.internalStop();
 
-      // Create MP3 blob and URL for streaming playback
+      // Create streaming audio element and connect to analyser
       const audioBlob = new Blob([new Uint8Array(audioBytes)], { type: 'audio/mpeg' });
       const audioUrl = URL.createObjectURL(audioBlob);
-      
-      // Create HTMLAudioElement for streaming playback
-      const audioElement = new Audio(audioUrl);
-      audioElement.preload = 'auto';
-      
-      // Create analyser for animation (connected to audio element)
+      const audioEl = new Audio(audioUrl);
+      audioEl.preload = 'auto';
+      audioEl.muted = true; // Route through AudioContext to speakers
+      (audioEl as any).playsInline = true; // iOS inline playback
+
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 256;
       analyser.smoothingTimeConstant = 0.8;
-      
-      // Connect audio element to analyser for animation
-      const source = ctx.createMediaElementSource(audioElement);
-      source.connect(analyser);
+
+      const mediaNode = ctx.createMediaElementSource(audioEl);
+      mediaNode.connect(analyser);
       analyser.connect(ctx.destination);
 
-      this.currentSource = audioElement;
+      this.currentSource = audioEl;
+      this.mediaElementNode = mediaNode;
       this.analyser = analyser;
+      this.currentUrl = audioUrl;
       this.isPlaying = true;
       this.isPaused = false;
       this.notify();
 
-      // Start animation immediately - will be driven by actual audio output
-      this.startAnimation(analyser);
+      audioEl.onplaying = () => {
+        this.startAnimation(analyser);
+      };
 
-      // Handle audio events
-      audioElement.onended = () => {
+      const finalize = () => {
         this.stopAnimation();
-        URL.revokeObjectURL(audioUrl); // Clean up blob URL
-        this.currentSource = null;
+        if (this.mediaElementNode) {
+          try { this.mediaElementNode.disconnect(); } catch {}
+        }
+        this.mediaElementNode = null;
+        if (this.analyser) {
+          try { this.analyser.disconnect(); } catch {}
+        }
         this.analyser = null;
+        if (this.currentUrl) {
+          try { URL.revokeObjectURL(this.currentUrl); } catch {}
+        }
+        this.currentUrl = null;
+        this.currentSource = null;
         this.isPlaying = false;
         this.isPaused = false;
         
@@ -170,16 +189,16 @@ class TTSPlaybackService {
         if (onEnded) onEnded();
       };
 
-      audioElement.onerror = (e) => {
-        console.error('[TTSPlaybackService] Audio playback error:', e);
-        this.internalStop();
-        audioArbitrator.releaseControl('tts');
-        if (onEnded) onEnded();
-      };
+      audioEl.onended = finalize;
+      audioEl.onerror = finalize;
 
-      // Start streaming playback immediately
-      await audioElement.play();
-      
+      // Start playback (stream-decoding by the browser)
+      try {
+        await audioEl.play();
+      } catch (e) {
+        // Autoplay restriction or other play error: finalize gracefully
+        finalize();
+      }
     } catch (e) {
       this.internalStop();
       // 🎵 RELEASE CONTROL on error
@@ -190,26 +209,36 @@ class TTSPlaybackService {
 
   pause(): void {
     if (this.currentSource) {
-      this.currentSource.pause();
+      try { this.currentSource.pause(); } catch {}
+      this.isPaused = true;
+      directBarsAnimationService.pause();
+      this.notify();
     }
-    this.isPaused = true;
-    this.notify();
   }
 
   async resume(): Promise<void> {
     if (this.currentSource) {
-      await this.currentSource.play();
+      try { await this.currentSource.play(); } catch {}
+      this.isPaused = false;
+      directBarsAnimationService.resume();
+      this.notify();
     }
-    this.isPaused = false;
-    this.notify();
   }
 
   private internalStop(): void {
     if (this.currentSource) {
-      this.currentSource.pause();
-      this.currentSource.src = '';
+      try { this.currentSource.pause(); } catch {}
+      try { (this.currentSource as any).src = ''; } catch {}
     }
+    if (this.currentUrl) {
+      try { URL.revokeObjectURL(this.currentUrl); } catch {}
+    }
+    this.currentUrl = null;
     this.currentSource = null;
+    if (this.mediaElementNode) {
+      try { this.mediaElementNode.disconnect(); } catch {}
+    }
+    this.mediaElementNode = null;
     if (this.analyser) {
       try { this.analyser.disconnect(); } catch {}
     }
