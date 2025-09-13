@@ -7,6 +7,7 @@ export interface STTRecorderOptions {
   silenceThreshold?: number;
   silenceDuration?: number;
   mode?: string; // e.g., 'conversation'
+  onProcessingStart?: () => void; // fired when recording stops and processing begins
 }
 
 export class UniversalSTTRecorder {
@@ -254,6 +255,8 @@ export class UniversalSTTRecorder {
     // Snapshot and clear early to free memory
     const blob = this.audioBlob;
     this.audioBlob = null;
+    // Notify processing start (e.g., show spinner)
+    try { this.options.onProcessingStart?.(); } catch {}
     
     // Fire-and-forget STT: schedule to avoid blocking UI thread
     try {
