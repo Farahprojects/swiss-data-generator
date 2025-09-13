@@ -13,6 +13,7 @@ class TTSPlaybackService {
   private isPaused = false;
   private listeners = new Set<() => void>();
   private currentUrl: string | null = null;
+  private bufferSource: AudioBufferSourceNode | null = null; // fallback path tracking
 
   private notify() {
     this.listeners.forEach((l) => l());
@@ -147,6 +148,7 @@ class TTSPlaybackService {
     this.currentSource = null;
     this.mediaElementNode = null;
     this.analyser = analyser;
+    this.bufferSource = source;
     this.isPlaying = true;
     this.isPaused = false;
     this.notify();
@@ -161,6 +163,7 @@ class TTSPlaybackService {
         try { this.analyser.disconnect(); } catch {}
       }
       this.analyser = null;
+      this.bufferSource = null;
       this.isPlaying = false;
       this.isPaused = false;
       audioArbitrator.releaseControl('tts');
@@ -301,15 +304,21 @@ class TTSPlaybackService {
   }
 
   private internalStop(): void {
+    // Stop media element playback if present
     if (this.currentSource) {
       try { this.currentSource.pause(); } catch {}
       try { (this.currentSource as any).src = ''; } catch {}
+    }
+    // Stop buffer source playback if in fallback mode
+    if (this.bufferSource) {
+      try { this.bufferSource.stop(0); } catch {}
     }
     if (this.currentUrl) {
       try { URL.revokeObjectURL(this.currentUrl); } catch {}
     }
     this.currentUrl = null;
     this.currentSource = null;
+    this.bufferSource = null;
     if (this.mediaElementNode) {
       try { this.mediaElementNode.disconnect(); } catch {}
     }
