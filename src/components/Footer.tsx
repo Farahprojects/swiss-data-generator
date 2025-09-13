@@ -4,7 +4,11 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 
-const Footer = () => {
+type FooterProps = {
+  hideMobileAstroToggle?: boolean;
+};
+
+const Footer = ({ hideMobileAstroToggle = false }: FooterProps) => {
   const { user } = useAuth();
   const isLoggedIn = !!user;
   const isMobile = useIsMobile();
@@ -154,7 +158,7 @@ const Footer = () => {
         </div>
         
         {/* Mobile Astro Data Toggle */}
-        {isMobile && (
+        {isMobile && !hideMobileAstroToggle && (
           <div className="border-t border-gray-200/50 mt-16 pt-8">
             <button
               onClick={() => setShowAstroData(!showAstroData)}

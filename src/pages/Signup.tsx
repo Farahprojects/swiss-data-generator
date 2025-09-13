@@ -348,7 +348,7 @@ const Signup = () => {
         </div>
       </main>
 
-      <Footer />
+      <Footer hideMobileAstroToggle />
     </div>
   );
 };

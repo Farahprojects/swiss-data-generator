@@ -287,7 +287,7 @@ const Login = () => {
         </div>
       </main>
 
-      <Footer />
+      <Footer hideMobileAstroToggle />
 
       {showVerificationModal && (
         <LoginVerificationModal
