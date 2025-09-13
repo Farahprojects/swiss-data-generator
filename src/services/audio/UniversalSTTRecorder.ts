@@ -20,6 +20,10 @@ export class UniversalSTTRecorder {
   private analyser: AnalyserNode | null = null;
   private animationFrame: number | null = null;
   private dataArray: Float32Array | null = null;
+  private highPassFilter: BiquadFilterNode | null = null;
+  private lowPassFilter: BiquadFilterNode | null = null;
+  private mediaStreamDestination: MediaStreamAudioDestinationNode | null = null;
+  private filteredStream: MediaStream | null = null;
   
   // Control
   private silenceTimer: NodeJS.Timeout | null = null;
@@ -41,11 +45,11 @@ export class UniversalSTTRecorder {
       // Step 1: Request mic access
       this.mediaStream = await this.requestMicrophoneAccess();
       
-      // Step 2: Setup MediaRecorder for single blob recording
-      this.setupMediaRecorder();
-      
-      // Step 3: Setup energy signal for animation (separate from recording)
+      // Step 2: Setup filtered audio chain and energy monitoring
       this.setupEnergyMonitoring();
+      
+      // Step 3: Setup MediaRecorder against filtered output stream (falls back to raw if needed)
+      this.setupMediaRecorder(this.filteredStream || this.mediaStream!);
       
       // Step 4: Start recording
       this.mediaRecorder!.start();
@@ -117,10 +121,10 @@ export class UniversalSTTRecorder {
     });
   }
 
-  private setupMediaRecorder(): void {
+  private setupMediaRecorder(stream: MediaStream): void {
     const mimeType = this.getSupportedMimeType();
     
-    this.mediaRecorder = new MediaRecorder(this.mediaStream!, {
+    this.mediaRecorder = new MediaRecorder(stream, {
       mimeType: mimeType
     });
 
@@ -147,19 +151,41 @@ export class UniversalSTTRecorder {
       return;
     }
 
-    // Step 3: Setup energy signal for animation (separate from recording)
+    // Create AudioContext and filtered chain
     this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const source = this.audioContext.createMediaStreamSource(this.mediaStream);
-    
+    const sourceNode = this.audioContext.createMediaStreamSource(this.mediaStream);
+
+    // High-pass filter: cut low-frequency rumble
+    this.highPassFilter = this.audioContext.createBiquadFilter();
+    this.highPassFilter.type = 'highpass';
+    this.highPassFilter.frequency.value = 100; // Hz
+    this.highPassFilter.Q.value = 0.8;
+
+    // Low-pass filter: tame high-frequency hiss
+    this.lowPassFilter = this.audioContext.createBiquadFilter();
+    this.lowPassFilter.type = 'lowpass';
+    this.lowPassFilter.frequency.value = 8000; // Hz
+    this.lowPassFilter.Q.value = 0.7;
+
+    // Analyser for energy monitoring
     this.analyser = this.audioContext.createAnalyser();
     this.analyser.fftSize = 256;
     this.analyser.smoothingTimeConstant = 0.8;
-    
-    source.connect(this.analyser);
-    
-    // Create data array for energy calculation
+
+    // Destination for MediaRecorder (record filtered audio)
+    this.mediaStreamDestination = this.audioContext.createMediaStreamDestination();
+
+    // Wire graph: source -> HPF -> LPF -> analyser & destination
+    sourceNode.connect(this.highPassFilter);
+    this.highPassFilter.connect(this.lowPassFilter);
+    this.lowPassFilter.connect(this.analyser);
+    this.lowPassFilter.connect(this.mediaStreamDestination);
+
+    // Expose filtered stream for recording
+    this.filteredStream = this.mediaStreamDestination.stream;
+
+    // Prepare data array and start monitoring
     this.dataArray = new Float32Array(this.analyser.fftSize);
-    
     this.startEnergyMonitoring();
   }
 
@@ -324,6 +350,10 @@ export class UniversalSTTRecorder {
     }
 
     this.analyser = null;
+    this.highPassFilter = null;
+    this.lowPassFilter = null;
+    this.mediaStreamDestination = null;
+    this.filteredStream = null;
     this.dataArray = null;
     this.mediaRecorder = null;
     this.audioBlob = null;
