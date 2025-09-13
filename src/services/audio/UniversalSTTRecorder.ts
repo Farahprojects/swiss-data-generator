@@ -28,7 +28,7 @@ export class UniversalSTTRecorder {
 
   constructor(options: STTRecorderOptions = {}) {
     this.options = {
-      silenceThreshold: 0.01,
+      silenceThreshold: 0.02,
       silenceDuration: 1200, // 1.2 seconds
       ...options
     };
