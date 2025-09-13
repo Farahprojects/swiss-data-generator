@@ -268,18 +268,9 @@ export const ConversationOverlay: React.FC = () => {
       // 6. STEP 4: Initialize Universal Recorder
       recorderRef.current = new UniversalSTTRecorder({
         mode: 'conversation',
-        onTranscriptReady: async (transcript: string) => {
-          if (isShuttingDown.current || isProcessingRef.current) {
-            return;
-          }
-          isProcessingRef.current = true;
-          setState('thinking');
-          // STT service already handles the full flow (chat-send → llm-handler → TTS)
-          // No need to call llmService.sendMessage() - that would cause double-sending
-          console.log('[ConversationOverlay] Transcript received, waiting for TTS response...');
-          // TTS will arrive over WS and change UI to "speaking"
-          isProcessingRef.current = false;
-        },
+        // No onTranscriptReady callback - conversation mode is fire-and-forget
+        // STT service handles: audio → chat-send → llm-handler → TTS
+        // TTS will arrive over WS and change UI to "speaking"
         onLevel: (level) => {
           if (!isShuttingDown.current) audioLevelRef.current = level;
         },

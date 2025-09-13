@@ -273,6 +273,18 @@ export class UniversalSTTRecorder {
         throw new Error('No chat_id available for STT');
       }
       
+      // In conversation mode, STT is fire-and-forget - no transcript return
+      if (this.options.mode === 'conversation') {
+        console.log('[UniversalSTTRecorder] Conversation mode: sending audio blob fire-and-forget');
+        // Fire-and-forget STT call - backend handles everything
+        sttService.transcribe(audioBlob, chat_id, {}, this.options.mode).catch((error) => {
+          console.error('[UniversalSTTRecorder] STT fire-and-forget failed:', error);
+          this.options.onError?.(error as Error);
+        });
+        return;
+      }
+      
+      // For non-conversation mode (chat bar), await transcript and call callback
       const { transcript } = await sttService.transcribe(
         audioBlob,
         chat_id,
