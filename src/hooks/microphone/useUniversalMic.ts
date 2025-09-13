@@ -82,10 +82,6 @@ export const useUniversalMic = (options: UseUniversalMicOptions = {}) => {
         },
         onLevel: (level) => {
           levelRef.current = level;
-          // Debug: Log energy signal occasionally
-          if (Math.random() < 0.05) { // Log ~5% of the time
-            console.log('[useUniversalMic] Energy signal received:', level.toFixed(4));
-          }
         },
         silenceThreshold: options.silenceThreshold || 0.02,
         silenceDuration: options.silenceDuration || 1200,

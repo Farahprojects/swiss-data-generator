@@ -90,7 +90,7 @@ export class UniversalSTTRecorder {
 
     this.mediaRecorder.stop();
     this.isRecording = false;
-    this.cleanup();
+    // Intentionally DO NOT cleanup here so energy monitoring continues
   }
 
   private setupMediaRecorder(): void {
@@ -154,7 +154,8 @@ export class UniversalSTTRecorder {
     let lastLevel = 0;
     
     const updateAnimation = () => {
-      if (!this.isRecording || !this.analyser || !this.dataArray) return;
+      // Always sample analyser while the graph exists
+      if (!this.analyser || !this.dataArray) return;
 
       // Get current audio data
       this.analyser.getFloatTimeDomainData(this.dataArray);
@@ -174,27 +175,28 @@ export class UniversalSTTRecorder {
       // Feed energy signal to animation
       this.options.onLevel?.(smoothedLevel);
 
-      // Log occasionally for debugging
-      if (Math.random() < 0.01) {
-        console.log('[UniversalSTTRecorder] Energy level:', smoothedLevel.toFixed(4), 'isSpeaking:', smoothedLevel > this.options.silenceThreshold!);
-      }
+      // Log occasionally for debugging (removed to reduce noise)
+      // if (Math.random() < 0.01) {
+      //   console.log('[UniversalSTTRecorder] Energy level:', smoothedLevel.toFixed(4), 'isSpeaking:', smoothedLevel > this.options.silenceThreshold!);
+      // }
 
-      // Voice Activity Detection (VAD) for silence detection
-      const isSpeaking = smoothedLevel > this.options.silenceThreshold!;
-      
-      if (!isSpeaking) {
-        // Start silence timer
-        if (!this.silenceTimer) {
-          this.silenceTimer = setTimeout(() => {
-            console.log('[UniversalSTTRecorder] Silence detected, stopping recording');
-            this.stop();
-          }, this.options.silenceDuration);
-        }
-      } else {
-        // Clear silence timer (voice detected)
-        if (this.silenceTimer) {
-          clearTimeout(this.silenceTimer);
-          this.silenceTimer = null;
+      // Only run VAD/silence stop logic while actively recording
+      if (this.isRecording) {
+        const isSpeaking = smoothedLevel > this.options.silenceThreshold!;
+        if (!isSpeaking) {
+          // Start silence timer
+          if (!this.silenceTimer) {
+            this.silenceTimer = setTimeout(() => {
+              console.log('[UniversalSTTRecorder] Silence detected, stopping recording');
+              this.stop();
+            }, this.options.silenceDuration);
+          }
+        } else {
+          // Clear silence timer (voice detected)
+          if (this.silenceTimer) {
+            clearTimeout(this.silenceTimer);
+            this.silenceTimer = null;
+          }
         }
       }
 

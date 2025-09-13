@@ -1,4 +1,4 @@
- very // Simplified voice waveform - basic energy display with debug
+// Simplified voice waveform - basic energy display with debug
 
 import React, { useEffect, useRef, useState } from 'react';
 
@@ -45,11 +45,6 @@ export const VoiceWaveform: React.FC<VoiceWaveformProps> = ({ audioLevelRef }) =
       // Update debug state
       setDebugLevel(level);
       setIsSpeaking(level > 0.02);
-      
-      // Debug: Log if we're getting energy signal
-      if (level > 0 && Math.random() < 0.1) { // Log ~10% of non-zero levels
-        console.log('[VoiceWaveform] Received energy level:', level.toFixed(4));
-      }
       
       // Add new bar
       barsRef.current.push(level);
