@@ -1,6 +1,7 @@
 // src/services/websocket/UnifiedWebSocketService.ts
 import { supabase } from '@/integrations/supabase/client';
 import { llmService } from '@/services/llm/chat';
+import { textStreamService } from '@/services/websocket/TextStreamService';
 import { Message } from '@/core/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -152,17 +153,42 @@ class UnifiedWebSocketService {
     
     this.onOptimisticMessage?.(optimisticMessage);
     
-    // Fire and forget - don't await, just send
-    llmService.sendMessage({
-      chat_id: this.currentChatId,
-      text: text.trim(),
-      client_msg_id,
-      mode
-    }).catch((error) => {
-      console.error('[UnifiedWebSocket] Failed to send direct message:', error);
-    });
-
-    console.log(`[UnifiedWebSocket] Direct fire-and-forget sent with optimistic UI`);
+    // Send over persistent WS – fail fast on error
+    try {
+      textStreamService.initialize(this.currentChatId, {
+        onDelta: (partial, id) => {
+          // Update the optimistic assistant response in-place (append)
+          const { messages, updateMessage, addMessage } = (require('@/core/store') as any).useChatStore.getState();
+          let assistant = messages.find((m: any) => m.meta?.optimistic_for === client_msg_id);
+          if (!assistant) {
+            assistant = {
+              id: `assistant-${client_msg_id}`,
+              chat_id: this.currentChatId,
+              role: 'assistant',
+              text: partial,
+              createdAt: new Date().toISOString(),
+              status: 'thinking',
+              meta: { optimistic_for: client_msg_id, streamed: true }
+            };
+            addMessage(assistant);
+          } else {
+            updateMessage(assistant.id, { ...assistant, text: partial });
+          }
+        },
+        onFinal: (full, id) => {
+          const { messages, updateMessage } = (require('@/core/store') as any).useChatStore.getState();
+          const assistant = messages.find((m: any) => m.meta?.optimistic_for === client_msg_id);
+          if (assistant) {
+            updateMessage(assistant.id, { ...assistant, text: full, status: 'done' });
+          }
+        }
+      });
+      textStreamService.sendMessage(text.trim(), client_msg_id, mode);
+      console.log(`[UnifiedWebSocket] WS send with optimistic UI`);
+    } catch (error) {
+      console.error('[UnifiedWebSocket] WS send failed (fail-fast):', error);
+      throw error;
+    }
   }
 
   /**
