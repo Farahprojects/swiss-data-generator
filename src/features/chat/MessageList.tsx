@@ -67,7 +67,11 @@ const TurnItem = ({ turn, isLastTurn, isFromHistory }: { turn: Turn; isLastTurn:
                   <InlineEllipsis />
                 </span>
               ) : (
-                <Suspense fallback={<span className="whitespace-pre-wrap">{assistantMessage.text || ''}</span>}>
+                <Suspense fallback={
+                  <span className="whitespace-pre-wrap">
+                    {shouldAnimate ? '' : (assistantMessage.text || '')}
+                  </span>
+                }>
                   <TypewriterText 
                     text={assistantMessage.text || ''} 
                     msPerWord={80}
