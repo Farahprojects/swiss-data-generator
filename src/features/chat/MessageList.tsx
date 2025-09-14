@@ -46,7 +46,7 @@ const TurnItem = ({ turn, isLastTurn, isFromHistory }: { turn: Turn; isLastTurn:
       {userMessage && (
         <div className="flex items-end gap-3 justify-end mb-4">
           <div className="px-4 py-3 rounded-2xl max-w-[75%] bg-gray-200 text-black">
-            <p className="text-base font-light leading-relaxed text-left whitespace-pre-wrap">
+            <p className="text-base font-light leading-relaxed text-left whitespace-pre-wrap selectable-text">
               {userMessage.text || ''}
             </p>
           </div>
@@ -60,7 +60,7 @@ const TurnItem = ({ turn, isLastTurn, isFromHistory }: { turn: Turn; isLastTurn:
             className="px-4 py-3 rounded-2xl max-w-2xl lg:max-w-4xl text-black"
             style={{ overflowAnchor: 'none' }}
           >
-            <p className="text-base font-light leading-relaxed text-left">
+            <p className="text-base font-light leading-relaxed text-left selectable-text">
               {assistantMessage.meta?.type === 'payment-progress' ? (
                 <span className="whitespace-pre-wrap">
                   {(assistantMessage.text || 'Generating your personal space')}

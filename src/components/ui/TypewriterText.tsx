@@ -174,7 +174,7 @@ export const TypewriterText: React.FC<TypewriterTextProps> = ({
   const shouldShowCursor = showCursor && cursorVisible && !disabled;
 
   return (
-    <span className={`inline ${className}`}>
+    <span className={`inline selectable-text ${className}`}>
       {displayContent}
       {shouldShowCursor && (
         <span className="animate-pulse text-gray-400">
