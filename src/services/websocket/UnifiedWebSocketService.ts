@@ -177,8 +177,8 @@ class UnifiedWebSocketService {
       chat_id: dbMessage.chat_id,
       role: dbMessage.role,
       text: dbMessage.text,
-      audioUrl: dbMessage.audio_url,
-      timings: dbMessage.timings,
+      // audioUrl omitted (not present in public.messages)
+      // timings omitted (not present / removed)
       createdAt: dbMessage.created_at,
       meta: dbMessage.meta,
       client_msg_id: dbMessage.client_msg_id,

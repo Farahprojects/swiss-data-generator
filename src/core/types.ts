@@ -1,10 +1,6 @@
 export type ProviderName = 'openai' | 'google' | 'deepgram' | 'elevenlabs' | 'local';
 
-export interface Timings {
-  stt_ms?: number;
-  llm_ms?: number;
-  tts_ms?: number;
-}
+// Timings removed
 
 export type MessageRole = 'user' | 'assistant' | 'system';
 
@@ -14,7 +10,6 @@ export interface Message {
   role: MessageRole;
   text: string;
   audioUrl?: string;
-  timings?: Timings;
   createdAt: string;
   meta?: Record<string, any>;
   client_msg_id?: string;

@@ -9,8 +9,8 @@ export const appendMessage = async (message: Omit<Message, 'id' | 'createdAt'>):
       chat_id: message.chat_id,
       role: message.role,
       text: message.text,
-      audio_url: message.audioUrl,
-      timings: message.timings,
+      // audio_url removed
+      // timings removed
       meta: message.meta,
       client_msg_id: message.client_msg_id,
       status: message.status
@@ -26,8 +26,8 @@ export const appendMessage = async (message: Omit<Message, 'id' | 'createdAt'>):
     chat_id: data.chat_id,
     role: data.role,
     text: data.text,
-    audioUrl: data.audio_url,
-    timings: data.timings,
+    // audioUrl removed
+    // timings removed
     createdAt: data.created_at,
     meta: data.meta,
     client_msg_id: data.client_msg_id,
@@ -64,8 +64,8 @@ export const getMessagesForConversation = async (chat_id: string): Promise<Messa
       chat_id: msg.chat_id,
       role: msg.role,
       text: msg.text,
-      audioUrl: msg.audio_url,
-      timings: msg.timings,
+      // audioUrl removed
+      // timings removed
       createdAt: msg.created_at,
       meta: msg.meta,
       client_msg_id: msg.client_msg_id,
