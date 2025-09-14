@@ -5,6 +5,8 @@
 /*  All custom utilities are namespaced to avoid collisions with Tailwind.     */
 /* -------------------------------------------------------------------------- */
 
+@import './styles/mobile-keyboard.css';
+@import './styles/mobile-keyboard.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

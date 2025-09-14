@@ -159,7 +159,7 @@ export const ChatInput = () => {
   };
 
   return (
-    <div className="bg-white/80 backdrop-blur-lg border-t border-gray-100 p-2">
+    <div className="bg-white/80 backdrop-blur-lg border-t border-gray-100 p-2 relative">
       <div className="flex items-end gap-2 max-w-4xl mx-auto">
         <div className="flex-1 relative">
           {isMicRecording ? (
@@ -172,11 +172,12 @@ export const ChatInput = () => {
               onChange={(e) => setText(e.target.value)}
               placeholder={isAssistantGenerating ? "Setting up your space..." : "Share your thoughts..."}
               disabled={isAssistantGenerating}
-              className={`w-full px-4 py-2.5 pr-24 text-base font-light bg-white border-2 rounded-3xl focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-400 resize-none text-black placeholder-gray-500 overflow-y-auto ${
+              className={`w-full px-4 py-2.5 pr-24 text-base font-light bg-white border-2 rounded-3xl focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-400 resize-none text-black placeholder-gray-500 overflow-y-auto mobile-input-focus ${
                 isAssistantGenerating 
                   ? 'border-gray-200 bg-gray-50 cursor-not-allowed' 
                   : 'border-gray-300'
               }`}
+              style={{ fontSize: '16px' }} // Prevents zoom on iOS
               maxRows={4}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey && !isAssistantGenerating) {

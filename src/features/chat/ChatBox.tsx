@@ -202,7 +202,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
           duration: 0.6
         }}
       >
-        <div className="flex flex-row flex-1 bg-white max-w-6xl w-full mx-auto md:border-x border-gray-100 min-h-0" style={{ scrollBehavior: 'smooth', overscrollBehavior: 'contain' as any }}>
+        <div className="flex flex-row flex-1 bg-white max-w-6xl w-full mx-auto md:border-x border-gray-100 min-h-0 mobile-chat-container" style={{ scrollBehavior: 'smooth', overscrollBehavior: 'contain' as any }}>
           {/* Left Sidebar (Desktop) */}
           <div className="hidden md:flex w-64 border-r border-gray-100 flex-col bg-gray-50/50">
             <div className="p-4 h-full flex flex-col">
@@ -216,7 +216,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
           </div>
 
           {/* Main Chat Area */}
-          <div className="flex flex-col flex-1 w-full min-w-0">
+          <div className="flex flex-col flex-1 w-full min-w-0 mobile-chat-container">
             {/* Top Header with User Avatar */}
             <div className="flex items-center justify-between p-3 bg-white border-b border-gray-100">
               <div className="flex-1" />
@@ -285,14 +285,14 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onDelete }) => {
             </div>
 
             {/* Message List - Lazy Loaded */}
-            <div className="flex-1 min-h-0" style={{ overflowAnchor: 'none' as any }}>
+            <div className="flex-1 min-h-0 mobile-messages-area" style={{ overflowAnchor: 'none' as any }}>
               <Suspense fallback={<MessageListSkeleton />}>
                 <MessageList />
               </Suspense>
             </div>
 
             {/* Footer Area (in-flow on mobile to follow keyboard) */}
-            <div className="pb-safe" style={{ transform: 'none' as any }}>
+            <div className="pb-safe mobile-input-area mobile-input-container" style={{ transform: 'none' as any }}>
               {error && (
                 <div className="p-3 text-sm font-medium text-red-700 bg-red-100 border-t border-red-200">
                   {error}

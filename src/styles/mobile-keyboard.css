@@ -1,0 +1,76 @@
+/* Mobile keyboard handling styles */
+
+/* Ensure the viewport adjusts when virtual keyboard appears */
+@supports (height: 100dvh) {
+  .mobile-vh-fix {
+    height: 100dvh;
+  }
+}
+
+/* Handle iOS Safari viewport changes */
+@supports (-webkit-touch-callout: none) {
+  .mobile-input-container {
+    /* Use transform instead of position fixed to avoid keyboard issues */
+    position: relative;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+  }
+}
+
+/* Android Chrome handling */
+@media screen and (max-width: 768px) {
+  .mobile-input-container {
+    /* Ensure chat input stays visible above keyboard */
+    position: relative;
+    bottom: 0;
+  }
+  
+  /* Add padding to prevent keyboard overlap */
+  .mobile-keyboard-padding {
+    padding-bottom: env(keyboard-inset-height, 0px);
+  }
+}
+
+/* Visual viewport API support for modern browsers */
+@supports (height: 100svh) {
+  .mobile-chat-container {
+    height: 100svh;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .mobile-messages-area {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+  }
+  
+  .mobile-input-area {
+    flex-shrink: 0;
+  }
+}
+
+/* Ensure text input is visible when keyboard appears */
+.mobile-input-focus {
+  transform: translateY(0);
+  transition: transform 0.2s ease-in-out;
+}
+
+/* Prevent zoom on input focus (iOS) */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea {
+  font-size: 16px;
+}
+
+@media screen and (max-width: 768px) {
+  input[type="text"],
+  input[type="email"], 
+  input[type="password"],
+  textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+}
