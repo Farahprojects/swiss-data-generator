@@ -45,18 +45,6 @@ const InlineDateTimeSelector = ({
 
   const handleLocalChange = (newValue: string) => {
     setLocalValue(newValue);
-    
-    // For date inputs, convert DD/MM/YYYY to YYYY-MM-DD for storage (like HTML5 inputs)
-    if (type === 'date' && newValue.includes('/')) {
-      const parts = newValue.split('/');
-      if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
-        const [day, month, year] = parts;
-        const isoDate = `${year}-${month}-${day}`;
-        onChange(isoDate);
-        return;
-      }
-    }
-    
     onChange(newValue);
   };
 
@@ -76,19 +64,7 @@ const InlineDateTimeSelector = ({
         inputValue = inputValue.slice(0, 5) + '/' + inputValue.slice(5, 9);
       }
       
-      // Store DD/MM/YYYY for display, but convert to ISO for onChange
       setLocalValue(inputValue);
-      
-      // Convert DD/MM/YYYY to YYYY-MM-DD for storage (like HTML5 inputs)
-      if (inputValue.includes('/')) {
-        const parts = inputValue.split('/');
-        if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
-          const [day, month, year] = parts;
-          const isoDate = `${year}-${month}-${day}`;
-          onChange(isoDate);
-          return;
-        }
-      }
       onChange(inputValue);
       return;
     }

@@ -195,11 +195,32 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
     }
   };
 
+  // Helper function to convert DD/MM/YYYY to YYYY-MM-DD
+  const convertDateFormat = (dateStr: string): string => {
+    if (!dateStr) return dateStr;
+    
+    // If already in YYYY-MM-DD format, return as is
+    if (dateStr.includes('-') && dateStr.length === 10) {
+      return dateStr;
+    }
+    
+    // Convert DD/MM/YYYY to YYYY-MM-DD
+    if (dateStr.includes('/')) {
+      const parts = dateStr.split('/');
+      if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
+        const [day, month, year] = parts;
+        return `${year}-${month}-${day}`;
+      }
+    }
+    
+    return dateStr;
+  };
+
   // Build payload for initiate-auth-report
   const buildAuthReportPayload = (data: ReportFormData, chatId: string) => {
     // Build person_a data
     const personA: any = {
-      birth_date: data.birthDate,
+      birth_date: convertDateFormat(data.birthDate),
       birth_time: data.birthTime,
       location: data.birthLocation,
       latitude: data.birthLatitude,
