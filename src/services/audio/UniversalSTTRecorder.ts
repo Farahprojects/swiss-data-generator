@@ -80,7 +80,7 @@ export class UniversalSTTRecorder {
       audio: {
         noiseSuppression: true,
         echoCancellation: true,
-        autoGainControl: true,
+        autoGainControl: false,
       }
     });
 
