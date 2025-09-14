@@ -663,7 +663,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                 </div>
               </div>
 
-              <div className={`flex gap-3 ${isMobile ? 'sticky bottom-0 bg-white pt-4 pb-safe' : 'pt-4'}`}>
+              <div className={`flex gap-3 ${isMobile ? 'bg-white pt-4 pb-safe' : 'pt-4'}`}>
                 <Button
                   type="button"
                   variant="outline"
@@ -766,7 +766,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
                 </div>
               </div>
 
-              <div className={`flex gap-3 ${isMobile ? 'sticky bottom-0 bg-white pt-4 pb-safe' : 'pt-4'}`}>
+              <div className={`flex gap-3 ${isMobile ? 'bg-white pt-4 pb-safe' : 'pt-4'}`}>
                 <Button
                   type="button"
                   variant="outline"
@@ -874,7 +874,7 @@ export const AstroDataForm: React.FC<AstroDataFormProps> = ({
               </Collapsible>
 
               {/* Action Buttons */}
-              <div className={`flex gap-3 ${isMobile ? 'sticky bottom-0 bg-white pt-4 pb-safe' : 'pt-4'}`}>
+              <div className={`flex gap-3 ${isMobile ? 'bg-white pt-4 pb-safe' : 'pt-4'}`}>
                 <Button
                   type="button"
                   variant="outline"

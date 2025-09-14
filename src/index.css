@@ -417,18 +417,21 @@ gmp-place-autocomplete::part(result-item) {
 /* -------------------------------------------------------------------------- */
 
 /* Global fixed footer rule for portal sheet */
+/* .mobile-footer-fixed disabled to allow chat bar to move with keyboard */
+/*
 .mobile-footer-fixed {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 2147483647; /* win all stacks */
-  contain: paint;                /* avoid size containment to prevent collapse */
+  z-index: 2147483647;
+  contain: paint;
   backface-visibility: hidden;
-  -webkit-transform: translateZ(0); /* pin rendering on some Android builds */
+  -webkit-transform: translateZ(0);
   transform: translateZ(0);
-  touch-action: manipulation;    /* reduce accidental gestures on bar */
+  touch-action: manipulation;
 }
+*/
 
 /* Sheet root/backdrop per guidance */
 .sheet-root { position: fixed; inset: 0; display: flex; flex-direction: column; min-height: 100dvh; min-height: 100svh; }

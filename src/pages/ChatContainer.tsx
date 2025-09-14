@@ -25,10 +25,10 @@ const ChatContainerContent: React.FC = () => {
   const { isOpen, guestId, hideCancelModal } = useCancelModal();
 
   return (
-    <div className="flex h-screen-safe pb-safe" style={{ contain: 'size', overscrollBehavior: 'contain' as any }}>
+    <div className="flex min-h-screen pb-safe" style={{ contain: 'size', overscrollBehavior: 'contain' as any }}>
       <PricingProvider>
         <ReportModalProvider>
-          <MobileViewportLock active>
+          <MobileViewportLock active={false}>
             <ChatBox />
           </MobileViewportLock>
         </ReportModalProvider>
